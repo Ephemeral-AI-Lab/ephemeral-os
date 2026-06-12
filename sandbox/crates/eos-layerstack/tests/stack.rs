@@ -21,12 +21,13 @@ fn squash_coalesces_layers_and_preserves_merged_reads() -> TestResult {
     assert!(stack.can_squash(2)?);
     let squashed = stack
         .squash(2)?
+        .manifest
         .ok_or_else(|| std::io::Error::other("squash should produce a manifest"))?;
 
     assert_eq!(squashed.layers.len(), 1);
     assert_eq!(stack.read_text("a.txt")?.0, "three\n");
     assert_eq!(stack.read_text("b.txt")?.0, "two\n");
-    assert!(stack.squash(2)?.is_none());
+    assert!(stack.squash(2)?.manifest.is_none());
     Ok(())
 }
 
@@ -42,6 +43,7 @@ fn release_lease_gcs_squashed_layers_after_retaining_lease_drops() -> TestResult
     let old_tail: Vec<LayerRef> = lease.manifest.layers[1..].to_vec();
     let squashed = stack
         .squash(2)?
+        .manifest
         .ok_or_else(|| std::io::Error::other("squash should produce a manifest"))?;
     assert_eq!(squashed.layers.len(), 2);
     for layer in &old_tail {
@@ -75,6 +77,7 @@ fn cross_instance_lease_retains_squashed_layers_until_reopened_release() -> Test
     let mut squash_stack = LayerStack::open(fixture.root.clone())?;
     let squashed = squash_stack
         .squash(2)?
+        .manifest
         .ok_or_else(|| std::io::Error::other("squash should produce a manifest"))?;
     assert_eq!(squashed.layers.len(), 2);
     for layer in &old_tail {

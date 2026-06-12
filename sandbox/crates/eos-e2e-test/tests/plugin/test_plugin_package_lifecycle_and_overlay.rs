@@ -4,11 +4,11 @@ use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
 use eos_e2e_test::unique_suffix;
-use eos_operation::core::catalog;
+use eos_operation::{core::catalog, OperationStatus};
 use eos_sandbox_host::protocol::TraceWireContext;
 use serde_json::{json, Value};
 
-use crate::support::{has_trace_event, live_pool_or_skip, trace_record};
+use crate::support::{has_trace_event, live_pool_or_skip, operation_envelope, trace_record};
 
 fn assert_connected_routes(value: &Value, expected: &[&str]) -> Result<()> {
     let mut actual = value
@@ -30,6 +30,58 @@ fn assert_connected_routes(value: &Value, expected: &[&str]) -> Result<()> {
         actual, expected,
         "connected PPC routes should match expected set: {value}"
     );
+    Ok(())
+}
+
+fn ok_envelope_result(response: &Value) -> Result<Value> {
+    let envelope = operation_envelope(response)?;
+    assert_eq!(envelope.status(), OperationStatus::Ok, "{response}");
+    envelope
+        .result()
+        .cloned()
+        .with_context(|| format!("ok envelope missing result: {response}"))
+}
+
+fn assert_fault_envelope(
+    response: &Value,
+    status: OperationStatus,
+    kind: &str,
+    message_contains: &str,
+) -> Result<()> {
+    let envelope = operation_envelope(response)?;
+    assert_eq!(envelope.status(), status, "{response}");
+    let fault = envelope
+        .fault()
+        .with_context(|| format!("fault envelope missing error: {response}"))?;
+    assert_eq!(fault.kind, kind, "{response}");
+    assert!(
+        fault.message.contains(message_contains),
+        "fault message should mention {message_contains}: {response}"
+    );
+    Ok(())
+}
+
+fn assert_structured_plugin_dispatch(response: &Value) -> Result<()> {
+    let envelope = operation_envelope(response)?;
+    match envelope.status() {
+        OperationStatus::Ok => {
+            let result = envelope
+                .result()
+                .with_context(|| format!("ok plugin dispatch missing result: {response}"))?;
+            if !result.is_object() {
+                bail!("ok plugin dispatch result must be an object: {response}");
+            }
+        }
+        OperationStatus::Rejected | OperationStatus::Error => {
+            let fault = envelope.fault().with_context(|| {
+                format!("plugin dispatch fault envelope missing error: {response}")
+            })?;
+            if fault.kind.is_empty() {
+                bail!("plugin dispatch fault must carry a kind: {response}");
+            }
+        }
+        other => bail!("plugin dispatch returned unexpected status {other:?}: {response}"),
+    }
     Ok(())
 }
 
@@ -148,28 +200,12 @@ fn plugin_setup_and_manifest_failures_are_structured() -> Result<()> {
             "start_services": true,
         }),
     )?;
-    assert_eq!(
-        manifest_error.get("success").and_then(Value::as_bool),
-        Some(false),
-        "invalid manifest must return a structured error response: {manifest_error}"
-    );
-    assert!(
-        manifest_error
-            .get("error")
-            .and_then(|error| error.get("kind"))
-            .and_then(Value::as_str)
-            .is_some(),
-        "manifest error must carry a stable error kind: {manifest_error}"
-    );
-    assert!(
-        manifest_error
-            .get("error")
-            .and_then(|error| error.get("message"))
-            .and_then(Value::as_str)
-            .unwrap_or_default()
-            .contains("intent"),
-        "manifest error should identify the missing intent: {manifest_error}"
-    );
+    assert_fault_envelope(
+        &manifest_error,
+        OperationStatus::Error,
+        "internal_error",
+        "intent",
+    )?;
 
     let digest = format!("digest-{}", unique_suffix().replace('-', "_"));
     let setup_digest = format!("setup-{digest}");
@@ -184,28 +220,12 @@ fn plugin_setup_and_manifest_failures_are_structured() -> Result<()> {
             "staged_package_root": staged,
         }),
     )?;
-    assert_eq!(
-        setup_error.get("success").and_then(Value::as_bool),
-        Some(false),
-        "setup failure must return a structured error response: {setup_error}"
-    );
-    assert!(
-        setup_error
-            .get("error")
-            .and_then(|error| error.get("kind"))
-            .and_then(Value::as_str)
-            .is_some(),
-        "setup failure must carry a stable error kind: {setup_error}"
-    );
-    assert!(
-        setup_error
-            .get("error")
-            .and_then(|error| error.get("message"))
-            .and_then(Value::as_str)
-            .unwrap_or_default()
-            .contains("missing-setup"),
-        "setup failure should identify the failing setup command: {setup_error}"
-    );
+    assert_fault_envelope(
+        &setup_error,
+        OperationStatus::Error,
+        "internal_error",
+        "missing-setup",
+    )?;
     Ok(())
 }
 
@@ -323,6 +343,7 @@ fn concurrent_plugin_refresh_singleflight() -> Result<()> {
         let response = handle
             .join()
             .map_err(|_| anyhow::anyhow!("plugin refresh thread panicked"))??;
+        let response = ok_envelope_result(&response)?;
         assert_eq!(response["success"], true, "{response}");
         assert_eq!(response["content"], "after-singleflight\n", "{response}");
     }
@@ -578,8 +599,9 @@ fn live_trace_plugin_callback_occ_publish_parents_under_plugin_op_trace() -> Res
             capture_budget_version: 1,
         },
     )?;
-    assert_eq!(response["success"], true, "{response}");
-    assert_eq!(response["callback"]["files"][0]["status"], "committed");
+    let result = ok_envelope_result(&response)?;
+    assert_eq!(result["success"], true, "{response}");
+    assert_eq!(result["callback"]["files"][0]["status"], "committed");
     let read = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": path}))?;
     assert_eq!(read["content"], content, "{read}");
 
@@ -595,7 +617,7 @@ fn live_trace_plugin_callback_occ_publish_parents_under_plugin_op_trace() -> Res
                 && details.get("op").and_then(Value::as_str) == Some("daemon.occ.apply_changeset")
         }) && has_trace_event(&record, "plugin", "callback_response", |details| {
             details.get("message_id").and_then(Value::as_str)
-                == response.get("callback_message_id").and_then(Value::as_str)
+                == result.get("callback_message_id").and_then(Value::as_str)
                 && details.get("parent_message_id").and_then(Value::as_str)
                     == Some(request_id.as_str())
         }) && has_trace_event(&record, "occ", "commit_finished", |details| {
@@ -707,6 +729,7 @@ fn concurrent_dispatch_during_reload_stays_structured() -> Result<()> {
     let reloaded = reloader
         .join()
         .map_err(|_| anyhow::anyhow!("reload-race reloader panicked"))??;
+    let reloaded = ok_envelope_result(&reloaded)?;
 
     assert_eq!(reloaded["success"], true, "reload must succeed: {reloaded}");
     assert_eq!(
@@ -716,13 +739,7 @@ fn concurrent_dispatch_during_reload_stays_structured() -> Result<()> {
     );
 
     for dispatch in &dispatches {
-        assert!(
-            dispatch.is_object()
-                && (dispatch.get("success").is_some()
-                    || dispatch.get("error").is_some()
-                    || dispatch.get("status").is_some()),
-            "every dispatch during reload must return a structured payload: {dispatch}"
-        );
+        assert_structured_plugin_dispatch(dispatch)?;
     }
 
     // Post-reload steady state routes to the new package via a single worker.

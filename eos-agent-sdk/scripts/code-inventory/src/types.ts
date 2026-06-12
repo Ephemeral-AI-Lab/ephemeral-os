@@ -23,7 +23,7 @@ export type RelationKind =
   | "tests";
 
 export interface WorkspaceInventory {
-  workspace: "eos-agent-core";
+  workspace: "eos-agent-sdk";
   schemaVersion: 1;
   generatedAt: string;
   packageManager?: string;

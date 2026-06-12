@@ -69,6 +69,12 @@ pub struct IsolatedManager {
     by_caller: HashMap<String, IsolatedWorkspaceId>,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct OrphanCleanupReport {
+    pub orphan_lease_ids: Vec<String>,
+    pub cleanup_error: Option<String>,
+}
+
 impl IsolatedManager {
     #[must_use]
     pub fn with_scratch_root(caps: ResourceCaps, scratch_root: PathBuf) -> Self {
@@ -101,6 +107,10 @@ impl IsolatedManager {
     }
 
     pub fn initialize(&mut self) -> Result<Vec<String>, IsolatedError> {
+        Ok(self.initialize_report()?.orphan_lease_ids)
+    }
+
+    pub fn initialize_report(&mut self) -> Result<OrphanCleanupReport, IsolatedError> {
         if !self.caps.enabled {
             return Err(IsolatedError::FeatureDisabled);
         }
@@ -134,8 +144,8 @@ impl IsolatedManager {
         }
     }
 
-    pub fn reap_orphan_resources(&mut self) {
-        self.reap_named_orphans();
+    pub fn reap_orphan_resources(&mut self) -> Option<String> {
+        self.reap_named_orphans()
     }
 }
 

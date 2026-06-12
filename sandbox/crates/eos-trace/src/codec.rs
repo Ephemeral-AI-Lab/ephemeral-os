@@ -31,11 +31,17 @@ impl TraceBatch {
 }
 
 #[derive(Debug)]
-pub struct DecodeTraceError(prost::DecodeError);
+pub enum DecodeTraceError {
+    Protobuf(prost::DecodeError),
+    Invalid(String),
+}
 
 impl std::fmt::Display for DecodeTraceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "failed to decode trace protobuf: {}", self.0)
+        match self {
+            Self::Protobuf(err) => write!(f, "failed to decode trace protobuf: {err}"),
+            Self::Invalid(message) => write!(f, "invalid trace protobuf: {message}"),
+        }
     }
 }
 
@@ -53,8 +59,8 @@ pub fn encode_trace_batch(batch: &TraceBatch) -> Vec<u8> {
 
 pub fn decode_trace_batch(bytes: &[u8]) -> Result<TraceBatch, DecodeTraceError> {
     proto::TraceBatch::decode(bytes)
-        .map(proto_to_batch)
-        .map_err(DecodeTraceError)
+        .map_err(DecodeTraceError::Protobuf)
+        .and_then(proto_to_batch)
 }
 
 #[must_use]
@@ -62,16 +68,17 @@ pub fn encoded_trace_record_len(record: &TraceRecord) -> usize {
     encode_trace_batch(&TraceBatch::single(record.clone())).len()
 }
 
-fn proto_to_batch(batch: proto::TraceBatch) -> TraceBatch {
-    TraceBatch {
+fn proto_to_batch(batch: proto::TraceBatch) -> Result<TraceBatch, DecodeTraceError> {
+    Ok(TraceBatch {
         records: batch
             .records
             .into_iter()
-            .filter_map(proto_to_record)
-            .collect(),
+            .enumerate()
+            .map(|(index, record)| proto_to_record(record, index))
+            .collect::<Result<Vec<_>, _>>()?,
         dropped_traces: batch.dropped_traces,
         daemon_boot_id: (!batch.daemon_boot_id.is_empty()).then_some(batch.daemon_boot_id),
-    }
+    })
 }
 
 fn record_to_proto(record: &TraceRecord) -> proto::TraceRecord {
@@ -94,32 +101,51 @@ fn record_to_proto(record: &TraceRecord) -> proto::TraceRecord {
     }
 }
 
-fn proto_to_record(record: proto::TraceRecord) -> Option<TraceRecord> {
-    let trace_id = TraceId::parse(record.trace_id).ok()?;
+fn proto_to_record(
+    record: proto::TraceRecord,
+    record_index: usize,
+) -> Result<TraceRecord, DecodeTraceError> {
+    let trace_id = TraceId::parse(record.trace_id)
+        .map_err(|err| invalid(format!("records[{record_index}].trace_id: {err}")))?;
     let request_id = if record.request_id.is_empty() {
         None
     } else {
-        Some(RequestId::parse(record.request_id).ok()?)
+        Some(
+            RequestId::parse(record.request_id)
+                .map_err(|err| invalid(format!("records[{record_index}].request_id: {err}")))?,
+        )
     };
-    Some(TraceRecord {
+    Ok(TraceRecord {
         trace_id,
         request_id,
-        kind: trace_kind_from_code(record.kind),
+        kind: trace_kind_from_code(record.kind, record_index)?,
         root_span_id: SpanUid::new(record.root_span_id),
         started_at_unix_ms: record.started_at_unix_ms,
         finished_at_unix_ms: record.finished_at_unix_ms,
-        spans: record.spans.into_iter().filter_map(proto_to_span).collect(),
+        spans: record
+            .spans
+            .into_iter()
+            .enumerate()
+            .map(|(index, span)| proto_to_span(span, record_index, index))
+            .collect::<Result<Vec<_>, _>>()?,
         events: record
             .events
             .into_iter()
-            .filter_map(proto_to_event)
-            .collect(),
-        links: record.links.into_iter().filter_map(proto_to_link).collect(),
+            .enumerate()
+            .map(|(index, event)| proto_to_event(event, record_index, index))
+            .collect::<Result<Vec<_>, _>>()?,
+        links: record
+            .links
+            .into_iter()
+            .enumerate()
+            .map(|(index, link)| proto_to_link(link, record_index, index))
+            .collect::<Result<Vec<_>, _>>()?,
         resources: record
             .resources
             .into_iter()
-            .filter_map(proto_to_resource)
-            .collect(),
+            .enumerate()
+            .map(|(index, resource)| proto_to_resource(resource, record_index, index))
+            .collect::<Result<Vec<_>, _>>()?,
         dropped_children: record.dropped_children,
         truncated: record.truncated,
     })
@@ -143,25 +169,30 @@ fn span_to_proto(span: &SpanRecord) -> proto::TraceSpan {
     }
 }
 
-fn proto_to_span(span: proto::TraceSpan) -> Option<SpanRecord> {
+fn proto_to_span(
+    span: proto::TraceSpan,
+    record_index: usize,
+    span_index: usize,
+) -> Result<SpanRecord, DecodeTraceError> {
     let fields = bounded_from_proto(
         span.fields_json,
         span.fields_truncated,
         span.fields_sha256,
         span.fields_original_len,
+        format!("records[{record_index}].spans[{span_index}].fields_json"),
     )?;
     let parent_span_id = (span.parent_span_id != 0).then(|| SpanUid::new(span.parent_span_id));
-    Some(SpanRecord {
+    Ok(SpanRecord {
         span_id: SpanUid::new(span.span_id),
         parent_span_id,
         name: span.name,
-        kind: span_kind_from_code(span.kind),
-        subsystem: subsystem_from_code(span.subsystem),
+        kind: span_kind_from_code(span.kind, record_index, span_index)?,
+        subsystem: subsystem_from_code(span.subsystem, record_index, span_index)?,
         started_at_unix_ms: span.started_at_unix_ms,
         finished_at_unix_ms: span.finished_at_unix_ms,
         duration_us: span.duration_us,
         fields,
-        status: span_status_from_code(span.status),
+        status: span_status_from_code(span.status, record_index, span_index)?,
     })
 }
 
@@ -178,8 +209,12 @@ fn event_to_proto(event: &EventRecord) -> proto::TraceEvent {
     }
 }
 
-fn proto_to_event(event: proto::TraceEvent) -> Option<EventRecord> {
-    Some(EventRecord {
+fn proto_to_event(
+    event: proto::TraceEvent,
+    record_index: usize,
+    event_index: usize,
+) -> Result<EventRecord, DecodeTraceError> {
+    Ok(EventRecord {
         span_id: SpanUid::new(event.span_id),
         name: event.name,
         module: event.module,
@@ -189,6 +224,7 @@ fn proto_to_event(event: proto::TraceEvent) -> Option<EventRecord> {
             event.details_truncated,
             event.details_sha256,
             event.details_original_len,
+            format!("records[{record_index}].events[{event_index}].details_json"),
         )?,
     })
 }
@@ -200,12 +236,18 @@ fn link_to_proto(link: &TraceLink) -> proto::TraceLink {
     }
 }
 
-fn proto_to_link(link: proto::TraceLink) -> Option<TraceLink> {
+fn proto_to_link(
+    link: proto::TraceLink,
+    record_index: usize,
+    link_index: usize,
+) -> Result<TraceLink, DecodeTraceError> {
     if link.value.is_empty() {
-        return None;
+        return Err(invalid(format!(
+            "records[{record_index}].links[{link_index}].value is empty"
+        )));
     }
-    Some(TraceLink {
-        kind: trace_link_kind_from_code(link.kind),
+    Ok(TraceLink {
+        kind: trace_link_kind_from_code(link.kind, record_index, link_index)?,
         value: link.value,
     })
 }
@@ -228,11 +270,19 @@ fn resource_to_proto(resource: &ResourceStats) -> proto::TraceResource {
     }
 }
 
-fn proto_to_resource(resource: proto::TraceResource) -> Option<ResourceStats> {
-    Some(ResourceStats {
+fn proto_to_resource(
+    resource: proto::TraceResource,
+    record_index: usize,
+    resource_index: usize,
+) -> Result<ResourceStats, DecodeTraceError> {
+    Ok(ResourceStats {
         span_id: (resource.span_id != 0).then(|| SpanUid::new(resource.span_id)),
         meta: ResourceStatsMeta {
-            stats_kind: resource_stats_kind_from_label(&resource.stats_kind),
+            stats_kind: resource_stats_kind_from_label(
+                &resource.stats_kind,
+                record_index,
+                resource_index,
+            )?,
             phase: empty_to_none(resource.phase),
             source: resource.source,
             source_available: resource.source_available,
@@ -246,6 +296,7 @@ fn proto_to_resource(resource: proto::TraceResource) -> Option<ResourceStats> {
             resource.payload_truncated,
             resource.payload_sha256,
             resource.payload_original_len,
+            format!("records[{record_index}].resources[{resource_index}].payload_json"),
         )?,
     })
 }
@@ -255,12 +306,15 @@ fn bounded_from_proto(
     truncated: bool,
     sha256: String,
     original_len: u64,
-) -> Option<BoundedJson> {
-    Some(BoundedJson {
-        value: serde_json::from_str(&json).ok()?,
+    context: impl Into<String>,
+) -> Result<BoundedJson, DecodeTraceError> {
+    let context = context.into();
+    Ok(BoundedJson {
+        value: serde_json::from_str(&json).map_err(|err| invalid(format!("{context}: {err}")))?,
         truncated,
         sha256: empty_to_none(sha256),
-        original_len: usize::try_from(original_len).ok()?,
+        original_len: usize::try_from(original_len)
+            .map_err(|err| invalid(format!("{context}.original_len: {err}")))?,
     })
 }
 
@@ -270,6 +324,10 @@ fn empty_to_none(value: String) -> Option<String> {
 
 fn usize_to_u64(value: usize) -> u64 {
     u64::try_from(value).unwrap_or(u64::MAX)
+}
+
+fn invalid(message: impl Into<String>) -> DecodeTraceError {
+    DecodeTraceError::Invalid(message.into())
 }
 
 fn trace_kind_code(kind: TraceKind) -> i32 {
@@ -282,14 +340,19 @@ fn trace_kind_code(kind: TraceKind) -> i32 {
     }
 }
 
-fn trace_kind_from_code(code: i32) -> TraceKind {
-    match code {
+fn trace_kind_from_code(code: i32, record_index: usize) -> Result<TraceKind, DecodeTraceError> {
+    Ok(match code {
+        1 => TraceKind::OpRequest,
         2 => TraceKind::CommandFinalize,
         3 => TraceKind::ActiveCommandAdvance,
         4 => TraceKind::IdleWorkspaceEvict,
         5 => TraceKind::PluginService,
-        _ => TraceKind::OpRequest,
-    }
+        _ => {
+            return Err(invalid(format!(
+                "records[{record_index}].kind has unknown code {code}"
+            )))
+        }
+    })
 }
 
 fn span_kind_code(kind: SpanKind) -> i32 {
@@ -318,8 +381,12 @@ fn span_kind_code(kind: SpanKind) -> i32 {
     }
 }
 
-fn span_kind_from_code(code: i32) -> SpanKind {
-    match code {
+fn span_kind_from_code(
+    code: i32,
+    record_index: usize,
+    span_index: usize,
+) -> Result<SpanKind, DecodeTraceError> {
+    Ok(match code {
         1 => SpanKind::OpRequest,
         2 => SpanKind::GatewayTransport,
         3 => SpanKind::GatewayRoute,
@@ -340,8 +407,12 @@ fn span_kind_from_code(code: i32) -> SpanKind {
         19 => SpanKind::Checkpoint,
         20 => SpanKind::Resource,
         21 => SpanKind::Control,
-        _ => SpanKind::Operation,
-    }
+        _ => {
+            return Err(invalid(format!(
+                "records[{record_index}].spans[{span_index}].kind has unknown code {code}"
+            )))
+        }
+    })
 }
 
 fn subsystem_code(subsystem: SpanSubsystem) -> i32 {
@@ -358,18 +429,27 @@ fn subsystem_code(subsystem: SpanSubsystem) -> i32 {
     }
 }
 
-fn subsystem_from_code(code: i32) -> SpanSubsystem {
-    match code {
+fn subsystem_from_code(
+    code: i32,
+    record_index: usize,
+    span_index: usize,
+) -> Result<SpanSubsystem, DecodeTraceError> {
+    Ok(match code {
         1 => SpanSubsystem::Wire,
         2 => SpanSubsystem::Dispatch,
+        3 => SpanSubsystem::Op,
         4 => SpanSubsystem::LayerStack,
         5 => SpanSubsystem::Overlay,
         6 => SpanSubsystem::Command,
         7 => SpanSubsystem::Workspace,
         8 => SpanSubsystem::Plugin,
         9 => SpanSubsystem::Control,
-        _ => SpanSubsystem::Op,
-    }
+        _ => {
+            return Err(invalid(format!(
+                "records[{record_index}].spans[{span_index}].subsystem has unknown code {code}"
+            )))
+        }
+    })
 }
 
 fn span_status_code(status: SpanStatus) -> i32 {
@@ -382,15 +462,26 @@ fn span_status_code(status: SpanStatus) -> i32 {
     }
 }
 
-fn span_status_from_code(code: i32) -> Option<SpanStatus> {
-    Some(match code {
+fn span_status_from_code(
+    code: i32,
+    record_index: usize,
+    span_index: usize,
+) -> Result<Option<SpanStatus>, DecodeTraceError> {
+    if code == 0 {
+        return Ok(None);
+    }
+    Ok(Some(match code {
         1 => SpanStatus::Ok,
         2 => SpanStatus::Rejected,
         3 => SpanStatus::Cancelled,
         4 => SpanStatus::TimedOut,
         5 => SpanStatus::Error,
-        _ => return None,
-    })
+        _ => {
+            return Err(invalid(format!(
+                "records[{record_index}].spans[{span_index}].status has unknown code {code}"
+            )))
+        }
+    }))
 }
 
 fn trace_link_kind_code(kind: TraceLinkKind) -> i32 {
@@ -402,20 +493,38 @@ fn trace_link_kind_code(kind: TraceLinkKind) -> i32 {
     }
 }
 
-fn trace_link_kind_from_code(code: i32) -> TraceLinkKind {
-    match code {
+fn trace_link_kind_from_code(
+    code: i32,
+    record_index: usize,
+    link_index: usize,
+) -> Result<TraceLinkKind, DecodeTraceError> {
+    Ok(match code {
+        1 => TraceLinkKind::Command,
         2 => TraceLinkKind::WorkspaceHandle,
         3 => TraceLinkKind::PluginService,
         4 => TraceLinkKind::ManifestVersion,
-        _ => TraceLinkKind::Command,
-    }
+        _ => {
+            return Err(invalid(format!(
+                "records[{record_index}].links[{link_index}].kind has unknown code {code}"
+            )))
+        }
+    })
 }
 
-fn resource_stats_kind_from_label(label: &str) -> ResourceStatsKind {
-    match label {
+fn resource_stats_kind_from_label(
+    label: &str,
+    record_index: usize,
+    resource_index: usize,
+) -> Result<ResourceStatsKind, DecodeTraceError> {
+    Ok(match label {
         "tree" => ResourceStatsKind::Tree,
         "host" => ResourceStatsKind::Host,
         "mount_cost" => ResourceStatsKind::MountCost,
-        _ => ResourceStatsKind::CgroupProcess,
-    }
+        "cgroup_process" => ResourceStatsKind::CgroupProcess,
+        _ => {
+            return Err(invalid(format!(
+                "records[{record_index}].resources[{resource_index}].stats_kind has unknown label {label:?}"
+            )))
+        }
+    })
 }

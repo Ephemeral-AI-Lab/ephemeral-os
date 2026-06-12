@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>contracts/src/json Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-sdk</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/contracts.html">contracts</a></p>
+          <h1>contracts/src/json</h1>
+          <p class="lede">src/contracts/json.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>4</dd></div>
+          <div><dt>Schemas</dt><dd>1</dd></div>
+          <div><dt>Types</dt><dd>2</dd></div>
+          <div><dt>Functions</dt><dd>0</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>1</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>zod</code></td>
+      <td>z</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>json.ts</code>
+        <small>4 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#JsonValue"><code>JsonValue</code></a>
+            <span>type</span>
+            <span class="compact-tags">contract public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#JsonObject"><code>JsonObject</code></a>
+            <span>type</span>
+            <span class="compact-tags">contract public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#JsonValueSchema"><code>JsonValueSchema</code></a>
+            <span>schema</span>
+            <span class="compact-tags">contract public-api schema:zod</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#JsonObjectSchema"><code>JsonObjectSchema</code></a>
+            <span>const</span>
+            <span class="compact-tags">contract public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="JsonValue" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>JsonValue</strong>
+          <span>type · line 4 · public</span>
+        </div>
+        <a href="../modules/contracts-src-json.html#JsonValue">Module</a>
+      </div>
+      <pre><code>export type JsonValue = | string | number | boolean | null | JsonValue[] |</code></pre>
+      <p>Any JSON-representable value.</p>
+      <div class="tags"><span>contract</span><span>exported</span><span>json-boundary</span><span>public-api</span></div>
+
+
+
+
+    <h3>Variants</h3>
+
+    <ul class="variant-list">
+
+        <li><code>string</code></li>
+
+
+        <li><code>number</code></li>
+
+
+        <li><code>boolean</code></li>
+
+
+        <li><code>null</code></li>
+
+
+        <li><code>JsonValue[]</code></li>
+
+
+        <li><code>{ [key: string]: JsonValue }</code></li>
+
+    </ul>
+
+
+    </article>
+
+
+    <article id="JsonObject" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>JsonObject</strong>
+          <span>type · line 13 · public</span>
+        </div>
+        <a href="../modules/contracts-src-json.html#JsonObject">Module</a>
+      </div>
+      <pre><code>export type JsonObject = Record&lt;string, JsonValue&gt;</code></pre>
+      <p>A JSON object map, the shape of tool inputs and schemas.</p>
+      <div class="tags"><span>contract</span><span>exported</span><span>json-boundary</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="JsonValueSchema" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>JsonValueSchema</strong>
+          <span>schema · line 15 · public</span>
+        </div>
+        <a href="../modules/contracts-src-json.html#JsonValueSchema">Module</a>
+      </div>
+      <pre><code>export const JsonValueSchema: z.ZodType&lt;JsonValue&gt; = z.lazy(() =&gt; z.union([ z.string(), z.number(), z.boolean(), z.null(), z.array(JsonValueSchema), z.record(z.string(), JsonValueSchema), ]), )</code></pre>
+
+      <div class="tags"><span>contract</span><span>exported</span><span>json-boundary</span><span>public-api</span><span>schema:union</span><span>schema:zod</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="JsonObjectSchema" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>JsonObjectSchema</strong>
+          <span>const · line 26 · public</span>
+        </div>
+        <a href="../modules/contracts-src-json.html#JsonObjectSchema">Module</a>
+      </div>
+      <pre><code>export const JsonObjectSchema: z.ZodType&lt;JsonObject&gt; = z.record( z.string(), JsonValueSchema, )</code></pre>
+
+      <div class="tags"><span>contract</span><span>exported</span><span>json-boundary</span><span>public-api</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>contracts/src/json</code></td>
+      <td><code>zod</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>uses-schema</td>
+      <td><code>contracts/src/json#JsonObjectSchema</code></td>
+      <td><code>contracts/src/json#JsonValueSchema</code></td>
+      <td>26</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

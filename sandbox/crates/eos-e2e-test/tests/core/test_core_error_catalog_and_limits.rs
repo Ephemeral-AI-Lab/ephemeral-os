@@ -9,7 +9,7 @@ use anyhow::Result;
 use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
-use crate::support::{as_bool, conflict_message, live_pool_or_skip};
+use crate::support::{as_bool, as_str, conflict_message, envelope_result, live_pool_or_skip};
 
 #[test]
 fn read_nonexistent_reports_absent() -> Result<()> {
@@ -44,8 +44,14 @@ fn edit_error_catalog_anchor_not_found_and_count_mismatch() -> Result<()> {
         catalog::SANDBOX_FILE_EDIT,
         json!({"path": "edit/a.txt", "edits": [{"old_text": "ABSENT", "new_text": "x", "replace_all": false}]}),
     )?;
+    assert_eq!(
+        as_str(&not_found, "status")?,
+        "ok",
+        "edit conflict uses ok envelope with result conflict: {not_found}"
+    );
+    let not_found = envelope_result(&not_found)?;
     assert!(
-        conflict_message(&not_found).contains("anchor not found"),
+        conflict_message(not_found).contains("anchor not found"),
         "missing anchor must surface NotFound: {not_found}"
     );
 
@@ -58,8 +64,14 @@ fn edit_error_catalog_anchor_not_found_and_count_mismatch() -> Result<()> {
         catalog::SANDBOX_FILE_EDIT,
         json!({"path": "edit/b.txt", "edits": [{"old_text": "dup", "new_text": "x", "replace_all": false}]}),
     )?;
+    assert_eq!(
+        as_str(&mismatch, "status")?,
+        "ok",
+        "edit conflict uses ok envelope with result conflict: {mismatch}"
+    );
+    let mismatch = envelope_result(&mismatch)?;
     assert!(
-        conflict_message(&mismatch).contains("count mismatch"),
+        conflict_message(mismatch).contains("count mismatch"),
         "ambiguous anchor must surface CountMismatch: {mismatch}"
     );
     Ok(())
@@ -79,6 +91,12 @@ fn write_create_only_conflict() -> Result<()> {
         catalog::SANDBOX_FILE_WRITE,
         json!({"path": "co/only.txt", "content": "second\n", "overwrite": false}),
     )?;
+    assert_eq!(
+        as_str(&rejected, "status")?,
+        "ok",
+        "create-only conflict uses ok envelope with result conflict: {rejected}"
+    );
+    let rejected = envelope_result(&rejected)?;
     let reason = rejected
         .get("conflict")
         .and_then(|c| c.get("reason"))

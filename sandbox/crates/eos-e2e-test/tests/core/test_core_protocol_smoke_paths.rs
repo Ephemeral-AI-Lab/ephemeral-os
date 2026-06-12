@@ -86,26 +86,43 @@ fn direct_file_ops_round_trip_through_protocol() -> Result<()> {
     let lease = pool.acquire()?;
     let path = "e2e/hello.txt";
 
-    let write = lease.call_ok(
+    let write = lease.call(
         catalog::SANDBOX_FILE_WRITE,
         json!({"path": path, "content": "hello from protocol\n", "overwrite": true}),
     )?;
-    assert!(as_bool(&write, "success")?);
+    assert_eq!(
+        write["status"], "ok",
+        "file write uses ok envelope: {write}"
+    );
+    let write = envelope_result(&write)?;
+    assert_eq!(as_str(write, "status")?, "committed");
 
-    let read = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": path}))?;
-    assert_eq!(as_str(&read, "content")?, "hello from protocol\n");
+    let read_wire = lease.call(catalog::SANDBOX_FILE_READ, json!({"path": path}))?;
+    assert_eq!(
+        read_wire["status"], "ok",
+        "file read uses ok envelope: {read_wire}"
+    );
+    let read = envelope_result(&read_wire)?;
+    assert_eq!(as_str(read, "content")?, "hello from protocol\n");
 
-    let edit = lease.call_ok(
+    let edit = lease.call(
         catalog::SANDBOX_FILE_EDIT,
         json!({
             "path": path,
             "edits": [{"old_text": "hello", "new_text": "hi", "replace_all": false}]
         }),
     )?;
-    assert!(as_bool(&edit, "success")?);
+    assert_eq!(edit["status"], "ok", "file edit uses ok envelope: {edit}");
+    let edit = envelope_result(&edit)?;
+    assert_eq!(as_str(edit, "status")?, "committed");
 
-    let read = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": path}))?;
-    assert_eq!(as_str(&read, "content")?, "hi from protocol\n");
+    let read_wire = lease.call(catalog::SANDBOX_FILE_READ, json!({"path": path}))?;
+    assert_eq!(
+        read_wire["status"], "ok",
+        "file read after edit uses ok envelope: {read_wire}"
+    );
+    let read = envelope_result(&read_wire)?;
+    assert_eq!(as_str(read, "content")?, "hi from protocol\n");
     Ok(())
 }
 

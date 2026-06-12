@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use eos_config::configs::daemon::{MAX_FILE_BYTES, MAX_READ_BYTES};
-use eos_operation::file::contract::{EditFileInput, ReadFileInput, ReadFileOutput, WriteFileInput};
+use eos_operation::file::contract::{EditFileInput, ReadFileInput, WriteFileInput};
 use eos_operation::file::{
     edit_file as edit_with_backend, read_file as read_with_backend,
     write_file as write_with_backend, DirectBackend, EditFileOutcome, EditFileRequest,
@@ -120,7 +120,7 @@ pub(crate) fn op_write_file(
     }
     record_occ_trace_events(&context, &outcome.trace_events);
     record_mutation_finished(&context, "write_applied", &outcome);
-    Ok(ok_envelope(outcome))
+    Ok(ok_envelope(mutation_response(outcome)))
 }
 
 /// `sandbox.file.edit` — shared public edit op, routed by active workspace mode.
@@ -159,7 +159,7 @@ pub(crate) fn op_edit_file(
     }
     record_occ_trace_events(&context, &mutation.trace_events);
     record_mutation_finished(&context, "edit_applied", &mutation);
-    Ok(ok_envelope(mutation))
+    Ok(ok_envelope(mutation_response(mutation)))
 }
 
 fn file_context<'a, 'ctx: 'a>(
@@ -379,14 +379,21 @@ fn isolated_backend(binding: &IsolatedWorkspaceBinding) -> IsolatedBackend {
 }
 
 fn read_response(outcome: ReadFileOutcome) -> Value {
-    to_wire_value(ReadFileOutput {
-        workspace_kind: outcome.workspace_kind,
-        success: outcome.success,
-        content: outcome.content,
-        exists: outcome.exists,
-        encoding: outcome.encoding,
-        timings: outcome.timings,
+    json!({
+        "workspace": outcome.workspace_kind,
+        "success": outcome.success,
+        "content": outcome.content,
+        "exists": outcome.exists,
+        "encoding": outcome.encoding,
     })
+}
+
+fn mutation_response(outcome: WriteFileOutcome) -> Value {
+    let mut value = to_wire_value(outcome);
+    if let Some(object) = value.as_object_mut() {
+        object.remove("timings");
+    }
+    value
 }
 
 /// Splice the daemon's latest-state resource sample (manifest depth, tree-key

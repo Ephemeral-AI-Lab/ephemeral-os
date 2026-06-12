@@ -6,6 +6,7 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use serde_json::{json, Value};
 
 use crate::isolated_workspace::error::IsolatedError;
+use crate::isolated_workspace::namespace::HolderKillReport;
 use crate::shared::{create_overlay_dirs, directory_file_bytes, record_phase_ms};
 
 use super::{IsolatedManager, IsolatedSnapshot, IsolatedWorkspaceId, WorkspaceHandle};
@@ -81,13 +82,13 @@ impl IsolatedManager {
     ) -> (Value, HashMap<String, f64>) {
         let mut phases_ms = HashMap::new();
         let phase_start = Instant::now();
-        let holder_kill_error = if handle.holder_pid > 0 {
-            self.runtime
-                .kill_holder(handle.holder_pid, grace_s)
-                .err()
-                .map(|err| err.to_string())
+        let (holder_kill_report, holder_kill_error) = if handle.holder_pid > 0 {
+            match self.runtime.kill_holder(handle.holder_pid, grace_s) {
+                Ok(report) => (report, None),
+                Err(err) => (HolderKillReport::default(), Some(err.to_string())),
+            }
         } else {
-            None
+            (HolderKillReport::default(), None)
         };
         record_phase_ms(&mut phases_ms, "kill_holder", phase_start);
         close_handle_fds(handle);
@@ -111,6 +112,10 @@ impl IsolatedManager {
             "open_handle_count_after": self.handles.len(),
             "open_agent_count_after": self.by_caller.len(),
             "holder_pid": handle.holder_pid,
+            "holder_was_alive": holder_kill_report.holder_was_alive,
+            "holder_exit_status": holder_kill_report.exit_status,
+            "holder_signal": holder_kill_report.signal,
+            "holder_status_raw": holder_kill_report.status_raw,
             "holder_kill_error": holder_kill_error,
             "ns_fd_count": handle.ns_fds.len(),
             "readiness_fd_was_open": handle.readiness_fd >= 0,

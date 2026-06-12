@@ -5,6 +5,8 @@ use std::fs::{File, OpenOptions};
 use std::io::Write;
 #[cfg(target_os = "linux")]
 use std::os::fd::{AsRawFd, IntoRawFd, RawFd};
+#[cfg(all(target_os = "linux", unix))]
+use std::os::unix::process::ExitStatusExt;
 use std::path::PathBuf;
 #[cfg(target_os = "linux")]
 use std::process::{Child, Command, Output, Stdio};
@@ -50,6 +52,14 @@ pub(crate) fn test_harness_enabled() -> bool {
 
 pub(crate) struct NamespaceRuntime {
     stub: bool,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct HolderKillReport {
+    pub(crate) holder_was_alive: bool,
+    pub(crate) exit_status: Option<i32>,
+    pub(crate) signal: Option<i32>,
+    pub(crate) status_raw: Option<i32>,
 }
 
 impl NamespaceRuntime {
@@ -249,34 +259,62 @@ impl NamespaceRuntime {
         Ok(path)
     }
 
-    pub(crate) fn kill_holder(&self, holder_pid: i32, grace_s: f64) -> Result<(), IsolatedError> {
+    pub(crate) fn kill_holder(
+        &self,
+        holder_pid: i32,
+        grace_s: f64,
+    ) -> Result<HolderKillReport, IsolatedError> {
         if self.stub || holder_pid <= 0 {
-            return Ok(());
+            return Ok(HolderKillReport::default());
         }
         #[cfg(not(target_os = "linux"))]
         {
             let _ = grace_s;
+            Ok(HolderKillReport::default())
         }
         #[cfg(target_os = "linux")]
         {
-            let _ = kill(Pid::from_raw(holder_pid), Signal::SIGTERM);
             let child = lock_holder_children()?.remove(&holder_pid);
             if let Some(mut child) = child {
+                if let Some(status) = child.try_wait().map_err(setup_error)? {
+                    return Ok(holder_kill_report(false, status));
+                }
+                let _ = kill(Pid::from_raw(holder_pid), Signal::SIGTERM);
                 let deadline = Instant::now() + Duration::from_secs_f64(grace_s.max(0.0));
                 while Instant::now() < deadline {
-                    if child.try_wait().map_err(setup_error)?.is_some() {
-                        return Ok(());
+                    if let Some(status) = child.try_wait().map_err(setup_error)? {
+                        return Ok(holder_kill_report(true, status));
                     }
                     thread::sleep(Duration::from_millis(10));
                 }
                 let _ = kill(Pid::from_raw(holder_pid), Signal::SIGKILL);
-                let _ = child.wait();
+                let status = child.wait().map_err(setup_error)?;
+                return Ok(holder_kill_report(true, status));
             } else {
-                thread::sleep(Duration::from_secs_f64(grace_s.max(0.0)));
-                let _ = kill(Pid::from_raw(holder_pid), Signal::SIGKILL);
+                let holder_was_alive = kill(Pid::from_raw(holder_pid), Signal::SIGTERM).is_ok();
+                if holder_was_alive {
+                    thread::sleep(Duration::from_secs_f64(grace_s.max(0.0)));
+                    let _ = kill(Pid::from_raw(holder_pid), Signal::SIGKILL);
+                }
+                return Ok(HolderKillReport {
+                    holder_was_alive,
+                    ..HolderKillReport::default()
+                });
             }
         }
-        Ok(())
+    }
+}
+
+#[cfg(all(target_os = "linux", unix))]
+fn holder_kill_report(
+    holder_was_alive: bool,
+    status: std::process::ExitStatus,
+) -> HolderKillReport {
+    HolderKillReport {
+        holder_was_alive,
+        exit_status: status.code(),
+        signal: status.signal(),
+        status_raw: Some(status.into_raw()),
     }
 }
 

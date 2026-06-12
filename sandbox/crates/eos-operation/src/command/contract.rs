@@ -243,6 +243,9 @@ impl CommandResponse {
             .as_object_mut()
             .expect("command response starts as a JSON object");
         for (key, value) in core {
+            if key == "timings" {
+                continue;
+            }
             object.insert(key, value);
         }
         object.insert("workspace".to_owned(), json!(finalized.workspace.as_str()));
@@ -348,6 +351,7 @@ mod tests {
         assert_eq!(response["command_id"], "cmd_1");
         assert_eq!(response["workspace"], "isolated");
         assert_eq!(response["success"], true);
+        assert!(response.get("timings").is_none());
         assert_eq!(response["changed_paths"], json!(["src/main.rs"]));
         assert_eq!(
             response["changed_path_kinds"],
@@ -381,6 +385,7 @@ mod tests {
         assert_eq!(response["status"], "cancelled");
         assert_eq!(response["workspace"], "ephemeral");
         assert_eq!(response["mutation_source"], "");
+        assert!(response.get("timings").is_none());
     }
 
     #[test]
@@ -421,5 +426,6 @@ mod tests {
         .expect("valid command finalize conflict fixture");
 
         assert_eq!(response, fixture);
+        assert!(response.get("timings").is_none());
     }
 }

@@ -550,6 +550,13 @@ fn run_auto_squash(stack: &mut LayerStack) -> AutoSquashTrace {
         };
     }
 
+    let mut events = vec![auto_squash_event(
+        "auto_squash_started",
+        json!({
+            "max_depth": max_depth,
+            "depth_before": depth_before,
+        }),
+    )];
     let squash_start = Instant::now();
     let squashed = stack.squash(max_depth);
     let squash_elapsed_s = squash_start.elapsed().as_secs_f64();
@@ -566,7 +573,20 @@ fn run_auto_squash(stack: &mut LayerStack) -> AutoSquashTrace {
         usize_to_f64_saturating(depth_before),
     );
     match squashed {
-        Ok(Some(manifest)) => {
+        Ok(outcome) => {
+            let Some(manifest) = outcome.manifest else {
+                timings.insert("layer_stack.auto_squash.raced".to_owned(), 1.0);
+                events.push(auto_squash_event(
+                    "auto_squash_skipped",
+                    json!({
+                        "reason": "live_prefix_race",
+                        "max_depth": max_depth,
+                        "depth_before": depth_before,
+                        "duration_s": squash_elapsed_s,
+                    }),
+                ));
+                return AutoSquashTrace { timings, events };
+            };
             timings.insert(
                 "layer_stack.auto_squash.depth_after".to_owned(),
                 usize_to_f64_saturating(manifest.depth()),
@@ -575,39 +595,36 @@ fn run_auto_squash(stack: &mut LayerStack) -> AutoSquashTrace {
                 "layer_stack.auto_squash.manifest_version".to_owned(),
                 i64_to_f64_saturating(manifest.version),
             );
-            AutoSquashTrace {
-                timings,
-                events: vec![auto_squash_event(
-                    "auto_squash_finished",
+            events.push(auto_squash_event(
+                "auto_squash_finished",
+                json!({
+                    "success": true,
+                    "max_depth": max_depth,
+                    "depth_before": depth_before,
+                    "depth_after": manifest.depth(),
+                    "manifest_version": manifest.version,
+                    "duration_s": squash_elapsed_s,
+                    "lease_release_error": outcome
+                        .lease_release_error
+                        .as_ref()
+                        .map(ToString::to_string),
+                }),
+            ));
+            if let Some(release_error) = outcome.lease_release_error {
+                events.push(auto_squash_event(
+                    "lease_release_failed",
                     json!({
-                        "success": true,
-                        "max_depth": max_depth,
-                        "depth_before": depth_before,
-                        "depth_after": manifest.depth(),
+                        "lease_owner": "auto_squash",
+                        "reason": "post_commit_release_failed",
+                        "error": release_error.to_string(),
                         "manifest_version": manifest.version,
-                        "duration_s": squash_elapsed_s,
                     }),
-                )],
+                ));
             }
+            AutoSquashTrace { timings, events }
         }
-        Ok(None) => {
-            timings.insert("layer_stack.auto_squash.raced".to_owned(), 1.0);
-            AutoSquashTrace {
-                timings,
-                events: vec![auto_squash_event(
-                    "auto_squash_skipped",
-                    json!({
-                        "reason": "live_prefix_race",
-                        "max_depth": max_depth,
-                        "depth_before": depth_before,
-                        "duration_s": squash_elapsed_s,
-                    }),
-                )],
-            }
-        }
-        Err(err) => AutoSquashTrace {
-            timings,
-            events: vec![auto_squash_event(
+        Err(err) => {
+            events.push(auto_squash_event(
                 "auto_squash_finished",
                 json!({
                     "success": false,
@@ -616,8 +633,9 @@ fn run_auto_squash(stack: &mut LayerStack) -> AutoSquashTrace {
                     "depth_before": depth_before,
                     "duration_s": squash_elapsed_s,
                 }),
-            )],
-        },
+            ));
+            AutoSquashTrace { timings, events }
+        }
     }
 }
 

@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>background/tests/background-task-supervisor.test Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-sdk</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/background.html">background</a></p>
+          <h1>background/tests/background-task-supervisor.test</h1>
+          <p class="lede">tests/background/background-task-supervisor.test.ts</p>
+          <div class="tags"><span>test</span><span>test-only</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>5</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>3</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>5</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>vitest</code></td>
+      <td>describe, expect, it</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/contracts/index.js</code></td>
+      <td>mintAgentRunId</td>
+      <td>value</td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/notification/index.js</code></td>
+      <td>Notifier</td>
+      <td>type</td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/background/background-task-supervisor.js</code></td>
+      <td>RunBackgroundTaskSupervisor</td>
+      <td>value</td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/background/background-task.js</code></td>
+      <td>BackgroundTask, BackgroundTaskCompletionContext, BackgroundTaskLifecycleEvent, BackgroundTaskOutcome</td>
+      <td>type</td>
+      <td>7</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>background-task-supervisor.test.ts</code>
+        <small>5 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#Fixture"><code>Fixture</code></a>
+            <span>interface</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#fixture"><code>fixture</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ScriptedTask"><code>ScriptedTask</code></a>
+            <span>interface</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#scriptedTask"><code>scriptedTask</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#settled"><code>settled</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="Fixture" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>Fixture</strong>
+          <span>interface · line 14 · internal</span>
+        </div>
+        <a href="../modules/background-tests-background-task-supervisor-test.html#Fixture">Module</a>
+      </div>
+      <pre><code>interface Fixture</code></pre>
+
+      <div class="tags"><span>internal</span><span>test-only</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>supervisor</code></td>
+              <td><code>RunBackgroundTaskSupervisor</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>events</code></td>
+              <td><code>BackgroundTaskLifecycleEvent[]</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>published</code></td>
+              <td><code>string[]</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="fixture" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>fixture</strong>
+          <span>function · line 20 · internal</span>
+        </div>
+        <a href="../modules/background-tests-background-task-supervisor-test.html#fixture">Module</a>
+      </div>
+      <pre><code>function fixture(completionTimeoutMs = 200): Fixture</code></pre>
+
+      <div class="tags"><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="ScriptedTask" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ScriptedTask</strong>
+          <span>interface · line 39 · internal</span>
+        </div>
+        <a href="../modules/background-tests-background-task-supervisor-test.html#ScriptedTask">Module</a>
+      </div>
+      <pre><code>interface ScriptedTask</code></pre>
+
+      <div class="tags"><span>internal</span><span>test-only</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>task</code></td>
+              <td><code>BackgroundTask</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>finish</code></td>
+              <td><code>(outcome: BackgroundTaskOutcome) =&gt; void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>fail</code></td>
+              <td><code>(error: Error) =&gt; void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>cancelled</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>completions</code></td>
+              <td><code>{ outcome: BackgroundTaskOutcome; ctx: BackgroundTaskCompletionContext }[]</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="scriptedTask" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>scriptedTask</strong>
+          <span>function · line 47 · internal</span>
+        </div>
+        <a href="../modules/background-tests-background-task-supervisor-test.html#scriptedTask">Module</a>
+      </div>
+      <pre><code>function scriptedTask( init:</code></pre>
+
+      <div class="tags"><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="settled" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>settled</strong>
+          <span>function · line 89 · internal</span>
+        </div>
+        <a href="../modules/background-tests-background-task-supervisor-test.html#settled">Module</a>
+      </div>
+      <pre><code>async function settled(): Promise&lt;void&gt;</code></pre>
+
+      <div class="tags"><span>async</span><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>background/tests/background-task-supervisor.test</code></td>
+      <td><code>background/src/background-task</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>background/tests/background-task-supervisor.test</code></td>
+      <td><code>background/src/background-task-supervisor</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>background/tests/background-task-supervisor.test</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>background/tests/background-task-supervisor.test</code></td>
+      <td><code>notification/src/index</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>background/tests/background-task-supervisor.test</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>background/tests/background-task-supervisor.test</code></td>
+      <td><code>background/src/background-task</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>background/tests/background-task-supervisor.test</code></td>
+      <td><code>background/src/background-task-supervisor</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>background/tests/background-task-supervisor.test</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>background/tests/background-task-supervisor.test</code></td>
+      <td><code>notification/src/index</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>background/tests/background-task-supervisor.test</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

@@ -20,10 +20,23 @@ use eos_operation::{
 };
 use eos_plugin::PluginServiceState;
 use eos_workspace::TreeResourceStats;
-use serde_json::json;
+use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
+use std::time::Instant;
+
+fn ok_result(response: &Value) -> &Value {
+    assert_eq!(response["status"], "ok", "{response}");
+    assert!(response.get("success").is_none(), "{response}");
+    response.get("result").expect("ok envelope has result")
+}
+
+fn error_fault<'a>(response: &'a Value, status: &str) -> &'a Value {
+    assert_eq!(response["status"], status, "{response}");
+    assert!(response.get("success").is_none(), "{response}");
+    response.get("error").expect("error envelope has fault")
+}
 
 #[test]
 fn ensure_records_manifest_services_and_status_lists_them() -> TestResult {
@@ -319,6 +332,7 @@ fn builtin_dispatch_routes_plugin_status_and_ensure() -> TestResult {
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({"plugin": "demo", "digest": "a"}),
     });
+    let ensure = ok_result(&ensure);
     assert_eq!(ensure["success"], true);
 
     let status = daemon.dispatch(&Request {
@@ -326,6 +340,7 @@ fn builtin_dispatch_routes_plugin_status_and_ensure() -> TestResult {
         invocation_id: "plugin-status-test".to_owned(),
         args: json!({}),
     });
+    let status = ok_result(&status);
     assert_eq!(status["success"], true);
     let loaded = value_array(&status["loaded_plugins"], "loaded_plugins must be an array")?;
     assert!(loaded.iter().any(|plugin| plugin["name"] == "demo"));
@@ -865,6 +880,82 @@ fn overlay_resource_stats_events_include_before_and_after_gauges() {
 }
 
 #[test]
+fn plugin_overlay_response_strips_timings_but_keeps_trace_samples() -> TestResult {
+    let (layer_stack_root, _workspace_root) = test_bound_workspace("plugin-overlay-timings")?;
+    let overlay = PluginOverlayOutcome {
+        layer_stack_root: layer_stack_root.clone(),
+        runner: RunResult {
+            exit_code: 0,
+            payload: json!({
+                "timings": {
+                    "workspace.mount_s": 0.15,
+                    "workspace.unmount_s": 0.05,
+                    "workspace.layer_count": 3,
+                    "workspace.fsconfig_calls": 6,
+                },
+            }),
+        },
+        changeset: ChangesetResult {
+            files: vec![FileResult {
+                path: LayerPath::parse("src/main.rs").expect("valid test layer path"),
+                status: CommitStatus::Committed,
+                message: String::new(),
+                observed_version: None,
+                observed_state: None,
+            }],
+            published_manifest_version: Some(42),
+            timings: BTreeMap::from([("occ.commit.total_s".to_owned(), 0.03)]),
+            events: Vec::new(),
+        },
+        plugin_result: Some(json!({"success": true})),
+        layer_count: 3,
+        path_kinds: vec![("src/main.rs".to_owned(), ChangedPathKind::Write)],
+        lease_acquire_s: 0.1,
+        capture_s: 0.2,
+        occ_s: 0.3,
+        upperdir_stats: TreeResourceStats {
+            files: 1,
+            dirs: 2,
+            symlinks: 0,
+            bytes: 4096,
+            truncated: false,
+            read_error_count: 0,
+            first_error_path: None,
+        },
+    };
+
+    let wire = super::plugin_overlay_response(&overlay, Instant::now())?;
+
+    assert_eq!(wire.response["success"], true);
+    assert_eq!(wire.response["status"], "committed");
+    assert!(
+        wire.response.get("timings").is_none(),
+        "{:?}",
+        wire.response
+    );
+    assert_eq!(
+        wire.timings
+            .get("workspace.mount_s")
+            .and_then(serde_json::Value::as_f64),
+        Some(0.15)
+    );
+    assert!(
+        wire.timings.get("api.plugin_overlay.total_s").is_some(),
+        "{:?}",
+        wire.timings
+    );
+    assert_eq!(
+        wire.timings
+            .get("resource.command_exec.upperdir_tree_bytes")
+            .and_then(serde_json::Value::as_f64),
+        Some(4096.0)
+    );
+
+    remove_test_tree(&layer_stack_root)?;
+    Ok(())
+}
+
+#[test]
 fn registered_plugin_op_routes_to_deferred_dispatch_not_unknown_op() -> TestResult {
     let daemon = TestDaemon::new();
     let ensure = daemon.dispatch(&Request {
@@ -876,6 +967,7 @@ fn registered_plugin_op_routes_to_deferred_dispatch_not_unknown_op() -> TestResu
             "workspace_root": "/eos/plugin/workspace"
         }),
     });
+    let ensure = ok_result(&ensure);
     assert_eq!(ensure["success"], true);
     assert_eq!(
         ensure["operation_routes"][0]["dispatch_mode"],
@@ -887,6 +979,7 @@ fn registered_plugin_op_routes_to_deferred_dispatch_not_unknown_op() -> TestResu
         invocation_id: "plugin-apply-test".to_owned(),
         args: json!({"caller_id": "caller-plugin"}),
     });
+    let routed = ok_result(&routed);
     assert_eq!(routed["success"], false);
     assert_eq!(routed["status"], "deferred");
     assert_eq!(routed["error"]["kind"], "plugin_dispatch_deferred");
@@ -897,7 +990,8 @@ fn registered_plugin_op_routes_to_deferred_dispatch_not_unknown_op() -> TestResu
         invocation_id: "plugin-missing-test".to_owned(),
         args: json!({}),
     });
-    assert_eq!(missing["error"]["kind"], "unknown_op");
+    let missing = error_fault(&missing, "error");
+    assert_eq!(missing["kind"], "unknown_op");
     Ok(())
 }
 
@@ -926,6 +1020,7 @@ fn dynamic_plugin_op_is_blocked_in_isolated_workspace_before_route_lookup() -> T
             "layer_stack_root": layer_stack_root.to_string_lossy(),
         }),
     });
+    let entered = ok_result(&entered);
     assert_eq!(entered["success"], true);
 
     let blocked = daemon.dispatch(&Request {
@@ -933,13 +1028,15 @@ fn dynamic_plugin_op_is_blocked_in_isolated_workspace_before_route_lookup() -> T
         invocation_id: "plugin-dynamic-iws-block".to_owned(),
         args: json!({"caller_id": "caller-plugin"}),
     });
-    assert_eq!(blocked["error"]["kind"], "forbidden_in_isolated_workspace");
+    let blocked = error_fault(&blocked, "error");
+    assert_eq!(blocked["kind"], "forbidden_in_isolated_workspace");
 
     let exited = daemon.dispatch(&Request {
         op: "sandbox.isolation.exit".to_owned(),
         invocation_id: "iws-exit-after-plugin-block".to_owned(),
         args: json!({"caller_id": "caller-plugin"}),
     });
+    let exited = ok_result(&exited);
     assert_eq!(exited["success"], true);
     let _ = daemon.dispatch(&Request {
         op: "sandbox.isolation.test_reset".to_owned(),
@@ -994,6 +1091,7 @@ fn digest_reload_replaces_dynamic_plugin_routes() -> TestResult {
             "workspace_root": "/eos/plugin/workspace"
         }),
     });
+    let first = ok_result(&first);
     assert_eq!(first["registered_ops"], json!(["plugin.generic.hover"]));
 
     let second = daemon.dispatch(&Request {
@@ -1005,6 +1103,7 @@ fn digest_reload_replaces_dynamic_plugin_routes() -> TestResult {
             "workspace_root": "/eos/plugin/workspace"
         }),
     });
+    let second = ok_result(&second);
     assert_eq!(
         second["registered_ops"],
         json!(["plugin.generic.diagnostics"])
@@ -1015,13 +1114,15 @@ fn digest_reload_replaces_dynamic_plugin_routes() -> TestResult {
         invocation_id: "plugin-hover-old".to_owned(),
         args: json!({}),
     });
-    assert_eq!(old["error"]["kind"], "unknown_op");
+    let old = error_fault(&old, "error");
+    assert_eq!(old["kind"], "unknown_op");
 
     let current = daemon.dispatch(&Request {
         op: "plugin.generic.diagnostics".to_owned(),
         invocation_id: "plugin-diagnostics-current".to_owned(),
         args: json!({}),
     });
+    let current = ok_result(&current);
     assert_eq!(current["error"]["kind"], "plugin_dispatch_deferred");
     Ok(())
 }

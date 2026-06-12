@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>llm-client/e2e/codex-coding-plan.e2e Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-sdk</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/llm-client.html">llm-client</a></p>
+          <h1>llm-client/e2e/codex-coding-plan.e2e</h1>
+          <p class="lede">e2e/llm-client/codex-coding-plan.e2e.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>8</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>5</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>5</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>vitest</code></td>
+      <td>describe, expect, it</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/contracts/index.js</code></td>
+      <td>toolUseIdFrom, type Message, type ToolSpec</td>
+      <td>value</td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/llm-client/index.js</code></td>
+      <td>buildLlmRequest, type LlmClient, type LlmRequestInit</td>
+      <td>value</td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../tests/llm-client/contract/llm-client-contract.js</code></td>
+      <td>describeLlmClientContract</td>
+      <td>value</td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./support/llm-clients-config.js</code></td>
+      <td>loadConfiguredCodexClient</td>
+      <td>value</td>
+      <td>11</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>codex-coding-plan.e2e.ts</code>
+        <small>8 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#codex"><code>codex</code></a>
+            <span>const</span>
+            <span class="compact-tags">config internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#SYSTEM_PROMPT"><code>SYSTEM_PROMPT</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#config"><code>config</code></a>
+            <span>function</span>
+            <span class="compact-tags">config internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#liveClient"><code>liveClient</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal provider-client</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#corruptedClient"><code>corruptedClient</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal provider-client</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#request"><code>request</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#user"><code>user</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ECHO_TOOL"><code>ECHO_TOOL</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="codex" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>codex</strong>
+          <span>const · line 13 · internal</span>
+        </div>
+        <a href="../modules/llm-client-e2e-codex-coding-plan-e2e.html#codex">Module</a>
+      </div>
+      <pre><code>const codex = loadConfiguredCodexClient()</code></pre>
+
+      <div class="tags"><span>config</span><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="SYSTEM_PROMPT" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>SYSTEM_PROMPT</strong>
+          <span>const · line 15 · internal</span>
+        </div>
+        <a href="../modules/llm-client-e2e-codex-coding-plan-e2e.html#SYSTEM_PROMPT">Module</a>
+      </div>
+      <pre><code>const SYSTEM_PROMPT = &quot;You are a terse test assistant.&quot;</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="config" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>config</strong>
+          <span>function · line 21 · internal</span>
+        </div>
+        <a href="../modules/llm-client-e2e-codex-coding-plan-e2e.html#config">Module</a>
+      </div>
+      <pre><code>function config()</code></pre>
+
+      <div class="tags"><span>config</span><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="liveClient" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>liveClient</strong>
+          <span>function · line 28 · internal</span>
+        </div>
+        <a href="../modules/llm-client-e2e-codex-coding-plan-e2e.html#liveClient">Module</a>
+      </div>
+      <pre><code>function liveClient(): LlmClient</code></pre>
+
+      <div class="tags"><span>internal</span><span>provider-client</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="corruptedClient" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>corruptedClient</strong>
+          <span>function · line 32 · internal</span>
+        </div>
+        <a href="../modules/llm-client-e2e-codex-coding-plan-e2e.html#corruptedClient">Module</a>
+      </div>
+      <pre><code>function corruptedClient(): LlmClient</code></pre>
+
+      <div class="tags"><span>internal</span><span>provider-client</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="request" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>request</strong>
+          <span>function · line 36 · internal</span>
+        </div>
+        <a href="../modules/llm-client-e2e-codex-coding-plan-e2e.html#request">Module</a>
+      </div>
+      <pre><code>function request(init: Omit&lt;LlmRequestInit, &quot;model&quot;&gt;)</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="user" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>user</strong>
+          <span>function · line 45 · internal</span>
+        </div>
+        <a href="../modules/llm-client-e2e-codex-coding-plan-e2e.html#user">Module</a>
+      </div>
+      <pre><code>function user(text: string): Message</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="ECHO_TOOL" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ECHO_TOOL</strong>
+          <span>const · line 49 · internal</span>
+        </div>
+        <a href="../modules/llm-client-e2e-codex-coding-plan-e2e.html#ECHO_TOOL">Module</a>
+      </div>
+      <pre><code>const ECHO_TOOL: ToolSpec = { name: &quot;echo&quot;, description: &quot;Echo the given text back verbatim.&quot;, input_schema: { type: &quot;object&quot;, properties: { text: { type: &quot;string&quot; } }, required: [&quot;text&quot;], }, }</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>llm-client/e2e/codex-coding-plan.e2e</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>llm-client/e2e/codex-coding-plan.e2e</code></td>
+      <td><code>llm-client/e2e/support/llm-clients-config</code></td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>llm-client/e2e/codex-coding-plan.e2e</code></td>
+      <td><code>llm-client/src/index</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>llm-client/e2e/codex-coding-plan.e2e</code></td>
+      <td><code>llm-client/tests/contract/llm-client-contract</code></td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>llm-client/e2e/codex-coding-plan.e2e</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

@@ -29,6 +29,20 @@ impl TreeResourceStats {
     }
 }
 
+impl From<eos_overlay::CaptureStats> for TreeResourceStats {
+    fn from(stats: eos_overlay::CaptureStats) -> Self {
+        Self {
+            files: stats.files,
+            dirs: stats.dirs,
+            symlinks: stats.symlinks,
+            bytes: stats.bytes,
+            truncated: stats.truncated,
+            read_error_count: stats.read_error_count,
+            first_error_path: stats.first_error_path,
+        }
+    }
+}
+
 /// Count regular-file bytes in a directory tree.
 #[must_use]
 pub fn directory_file_bytes(path: &Path) -> u64 {

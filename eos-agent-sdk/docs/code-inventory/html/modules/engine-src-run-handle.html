@@ -1,0 +1,852 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>engine/src/run-handle Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-sdk</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/engine.html">engine</a></p>
+          <h1>engine/src/run-handle</h1>
+          <p class="lede">src/engine/run-handle.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>8</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>3</dd></div>
+          <div><dt>Functions</dt><dd>0</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>4</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>../contracts/index.js</code></td>
+      <td>AgentRunId, JsonObject, ToolUseId, UserMessage</td>
+      <td>type</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../background/index.js</code></td>
+      <td>BackgroundTaskLifecycleEvent, BackgroundTaskSupervisor</td>
+      <td>type</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../llm-client/index.js</code></td>
+      <td>LlmStreamEvent, UsageSnapshot</td>
+      <td>type</td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../notification/index.js</code></td>
+      <td>Notifier</td>
+      <td>type</td>
+      <td>7</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>run-handle.ts</code>
+        <small>8 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#AgentEventBody"><code>AgentEventBody</code></a>
+            <span>type</span>
+            <span class="compact-tags">event public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#AgentEvent"><code>AgentEvent</code></a>
+            <span>type</span>
+            <span class="compact-tags">event public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#AgentRunError"><code>AgentRunError</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#AgentOutcome"><code>AgentOutcome</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#AgentRunHandle"><code>AgentRunHandle</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api run-handle</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#EventStream"><code>EventStream</code></a>
+            <span>class</span>
+            <span class="compact-tags">event public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#RunHandleDeps"><code>RunHandleDeps</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api run-handle</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#RunHandle"><code>RunHandle</code></a>
+            <span>class</span>
+            <span class="compact-tags">public-api run-handle</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="AgentEventBody" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AgentEventBody</strong>
+          <span>type · line 15 · public</span>
+        </div>
+        <a href="../modules/engine-src-run-handle.html#AgentEventBody">Module</a>
+      </div>
+      <pre><code>export type AgentEventBody = |</code></pre>
+      <p>The run event union before the handle stamps `seq`: run lifecycle,
+tool execution, background-task lifecycle, and the provider stream
+events forwarded unchanged. Older members keep their snake_case payload
+fields; the task events mirror the public camelCase task vocabulary.</p>
+      <div class="tags"><span>event</span><span>exported</span><span>public-api</span></div>
+
+
+
+
+    <h3>Variants</h3>
+
+    <ul class="variant-list">
+
+        <li><code>{ type: &quot;run_started&quot;; run_id: AgentRunId; agent_name: string }</code></li>
+
+
+        <li><code>{ /** A provider call is about to start; 1-based, after the drains. */ type: ...</code></li>
+
+
+        <li><code>LlmStreamEvent</code></li>
+
+
+        <li><code>{ /** A tool call left the queue and began executing. */ type: &quot;tool_executio...</code></li>
+
+
+        <li><code>{ /** A tool call settled (result, mapped error, or unknown tool). */ type: &quot;...</code></li>
+
+
+        <li><code>BackgroundTaskLifecycleEvent</code></li>
+
+
+        <li><code>{ /** Terminal event; the live iterable completes after it. */ type: &quot;run_fin...</code></li>
+
+    </ul>
+
+
+    </article>
+
+
+    <article id="AgentEvent" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AgentEvent</strong>
+          <span>type · line 52 · public</span>
+        </div>
+        <a href="../modules/engine-src-run-handle.html#AgentEvent">Module</a>
+      </div>
+      <pre><code>export type AgentEvent = AgentEventBody &amp;</code></pre>
+      <p>Every event carries `seq`; records serve resume, the stream is live-only.</p>
+      <div class="tags"><span>event</span><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="AgentRunError" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AgentRunError</strong>
+          <span>interface · line 55 · public</span>
+        </div>
+        <a href="../modules/engine-src-run-handle.html#AgentRunError">Module</a>
+      </div>
+      <pre><code>export interface AgentRunError</code></pre>
+      <p>Why a run failed, typed so callers never parse prose.</p>
+      <div class="tags"><span>error</span><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>kind</code></td>
+              <td><code>&quot;max_turns&quot; | &quot;provider_error&quot; | &quot;internal&quot;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>message</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="AgentOutcome" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AgentOutcome</strong>
+          <span>type · line 66 · public</span>
+        </div>
+        <a href="../modules/engine-src-run-handle.html#AgentOutcome">Module</a>
+      </div>
+      <pre><code>export type AgentOutcome&lt;T = string&gt; =</code></pre>
+      <p>The terminal state of one run: the terminal tool's accepted submission
+(or the final text in text mode), a failure, or a cancellation — always
+with the run's summed usage and turn count.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="AgentRunHandle" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AgentRunHandle</strong>
+          <span>interface · line 80 · public</span>
+        </div>
+        <a href="../modules/engine-src-run-handle.html#AgentRunHandle">Module</a>
+      </div>
+      <pre><code>export interface AgentRunHandle&lt;T = string&gt;</code></pre>
+      <p>The public surface of one live run — the only capability for it; hosts
+that need by-id access keep their own map.</p>
+      <div class="tags"><span>exported</span><span>public-api</span><span>run-handle</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>runId</code></td>
+              <td><code>AgentRunId</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>backgroundTaskSupervisor</code></td>
+              <td><code>BackgroundTaskSupervisor</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>notifier</code></td>
+              <td><code>Notifier</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>steer</code></td>
+              <td><code>steer(message: UserMessage): boolean;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>interrupt</code></td>
+              <td><code>interrupt(): void;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>outcome</code></td>
+              <td><code>outcome(): Promise&lt;AgentOutcome&lt;T&gt;&gt;;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>events</code></td>
+              <td><code>events(): AsyncIterable&lt;AgentEvent&gt;;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="EventStream" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>EventStream</strong>
+          <span>class · line 108 · public</span>
+        </div>
+        <a href="../modules/engine-src-run-handle.html#EventStream">Module</a>
+      </div>
+      <pre><code>export class EventStream implements AsyncIterable&lt;AgentEvent&gt;</code></pre>
+      <p>A push-fed queue consumed as one pull-based `AsyncIterable`:
+
+- single consumer: a second `[Symbol.asyncIterator]()` call throws,
+- pushes never block the loop; the buffer is unbounded (the consumer is
+  in-process; fan-out and backpressure are host concerns),
+- `close()` completes iteration once the buffer drains; later pushes
+  are dropped (run-end disposal settles tasks after `run_finished`),
+- an early `break`/`return()` detaches: later pushes are discarded while
+  the run continues; a stream nobody iterates retains every event.</p>
+      <div class="tags"><span>async-iterable</span><span>event</span><span>exported</span><span>public-api</span><span>stateful</span></div>
+
+    <h3>Heritage</h3>
+    <p>AsyncIterable</p>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>#buffer</code></td>
+              <td><code>AgentEvent[]</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#wakers</code></td>
+              <td><code>(() =&gt; void)[]</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#closed</code></td>
+              <td><code>false</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#detached</code></td>
+              <td><code>false</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#consumed</code></td>
+              <td><code>false</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>push</code></td>
+              <td><code>push(event: AgentEvent): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>close</code></td>
+              <td><code>close(): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>[Symbol.asyncIterator]</code></td>
+              <td><code>[Symbol.asyncIterator](): AsyncIterator&lt;AgentEvent, undefined&gt;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#next</code></td>
+              <td><code>async #next(): Promise&lt;IteratorResult&lt;AgentEvent, undefined&gt;&gt;</code></td>
+              <td>async</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#detach</code></td>
+              <td><code>#detach(): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#wake</code></td>
+              <td><code>#wake(): void</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="RunHandleDeps" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>RunHandleDeps</strong>
+          <span>interface · line 168 · public</span>
+        </div>
+        <a href="../modules/engine-src-run-handle.html#RunHandleDeps">Module</a>
+      </div>
+      <pre><code>export interface RunHandleDeps</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span><span>run-handle</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>runId</code></td>
+              <td><code>AgentRunId</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>backgroundTaskSupervisor</code></td>
+              <td><code>BackgroundTaskSupervisor</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>notifier</code></td>
+              <td><code>Notifier</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>tap</code></td>
+              <td><code>(event: AgentEvent) =&gt; void</code></td>
+              <td>optional</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="RunHandle" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>RunHandle</strong>
+          <span>class · line 182 · public</span>
+        </div>
+        <a href="../modules/engine-src-run-handle.html#RunHandle">Module</a>
+      </div>
+      <pre><code>export class RunHandle&lt;T = string&gt; implements AgentRunHandle&lt;T&gt;</code></pre>
+      <p>Run-handle internals shared with the loop: one seq-stamping emitter, one
+event stream, one abort signal, one steer queue drained at boundaries,
+a finishing latch (flipped while a submission commits), and one atomic
+finish.</p>
+      <div class="tags"><span>di-boundary</span><span>exported</span><span>public-api</span><span>run-handle</span><span>stateful</span></div>
+
+    <h3>Heritage</h3>
+    <p>AgentRunHandle</p>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>runId</code></td>
+              <td><code>AgentRunId</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>backgroundTaskSupervisor</code></td>
+              <td><code>BackgroundTaskSupervisor</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>notifier</code></td>
+              <td><code>Notifier</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>signal</code></td>
+              <td><code>AbortSignal</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#tap</code></td>
+              <td><code>((event: AgentEvent) =&gt; void) | undefined</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#stream</code></td>
+              <td><code>new EventStream()</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#controller</code></td>
+              <td><code>new AbortController()</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#seq</code></td>
+              <td><code>0</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#steers</code></td>
+              <td><code>UserMessage[]</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#steerWakers</code></td>
+              <td><code>new Set&lt;() =&gt; void&gt;()</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#finishing</code></td>
+              <td><code>false</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#finished</code></td>
+              <td><code>false</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#resolveOutcome</code></td>
+              <td><code>(outcome: AgentOutcome&lt;T&gt;) =&gt; void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#outcome</code></td>
+              <td><code>Promise&lt;AgentOutcome&lt;T&gt;&gt;</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>emit</code></td>
+              <td><code>(body: AgentEventBody): void =&gt; { const event: AgentEvent = { ...body, seq: t...</code></td>
+              <td>readonly</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>events</code></td>
+              <td><code>events(): AsyncIterable&lt;AgentEvent&gt;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>outcome</code></td>
+              <td><code>outcome(): Promise&lt;AgentOutcome&lt;T&gt;&gt;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>steer</code></td>
+              <td><code>steer(message: UserMessage): boolean</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>interrupt</code></td>
+              <td><code>interrupt(): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>drainSteers</code></td>
+              <td><code>drainSteers(): UserMessage[]</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>hasPendingSteers</code></td>
+              <td><code>hasPendingSteers(): boolean</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>waitForSteer</code></td>
+              <td><code>waitForSteer(signal: AbortSignal): Promise&lt;void&gt;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>beginFinishing</code></td>
+              <td><code>beginFinishing(): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>cancelFinishing</code></td>
+              <td><code>cancelFinishing(): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>finish</code></td>
+              <td><code>finish(outcome: AgentOutcome&lt;T&gt;): void</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>implements</td>
+      <td><code>engine/src/run-handle#EventStream</code></td>
+      <td><code>AsyncIterable</code></td>
+      <td>108</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>implements</td>
+      <td><code>engine/src/run-handle#RunHandle</code></td>
+      <td><code>AgentRunHandle</code></td>
+      <td>182</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>engine/src/run-handle</code></td>
+      <td><code>background/src/index</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>engine/src/run-handle</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>engine/src/run-handle</code></td>
+      <td><code>llm-client/src/index</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>engine/src/run-handle</code></td>
+      <td><code>notification/src/index</code></td>
+      <td>7</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

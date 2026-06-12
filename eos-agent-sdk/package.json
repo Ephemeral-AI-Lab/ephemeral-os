@@ -8,6 +8,10 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./testkit": {
+      "types": "./src/testkit/index.ts",
+      "default": "./src/testkit/index.ts"
     }
   },
   "scripts": {
@@ -19,13 +23,8 @@
     "check": "pnpm run typecheck && pnpm run lint && pnpm run test"
   },
   "dependencies": {
-    "@eos/background": "workspace:*",
-    "@eos/contracts": "workspace:*",
-    "@eos/engine": "workspace:*",
-    "@eos/llm-client": "workspace:*",
-    "@eos/notification": "workspace:*",
-    "@eos/runtime": "workspace:*",
-    "@eos/tool": "workspace:*",
+    "@anthropic-ai/sdk": "0.104.1",
+    "openai": "6.42.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

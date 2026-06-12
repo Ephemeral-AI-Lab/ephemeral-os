@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>runtime/tests/sdk.test Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-sdk</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/runtime.html">runtime</a></p>
+          <h1>runtime/tests/sdk.test</h1>
+          <p class="lede">tests/runtime/sdk.test.ts</p>
+          <div class="tags"><span>test</span><span>test-only</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>2</dd></div>
+          <div><dt>Schemas</dt><dd>1</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>1</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>6</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>vitest</code></td>
+      <td>describe, expect, it</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>zod</code></td>
+      <td>z</td>
+      <td>value</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/testkit/index.js</code></td>
+      <td>ScriptedLlmClient, assistantMessage, complete, scriptedTurn, textBlock, toolUseBlock, userMessage, type ScriptedTurn</td>
+      <td>value</td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/tool/index.js</code></td>
+      <td>createAgentOutcomeFn, defineTool</td>
+      <td>value</td>
+      <td>14</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/runtime/sdk.js</code></td>
+      <td>createAgentSdk</td>
+      <td>value</td>
+      <td>16</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/runtime/llm-clients.js</code></td>
+      <td>buildLlmClientRegistry</td>
+      <td>value</td>
+      <td>17</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>sdk.test.ts</code>
+        <small>2 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#noop"><code>noop</code></a>
+            <span>schema</span>
+            <span class="compact-tags">internal schema:zod test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#sdkWith"><code>sdkWith</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="noop" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>noop</strong>
+          <span>schema · line 19 · internal</span>
+        </div>
+        <a href="../modules/runtime-tests-sdk-test.html#noop">Module</a>
+      </div>
+      <pre><code>const noop = defineTool({ name: &quot;noop&quot;, description: &quot;does nothing&quot;, input: z.object({}), execute: () =&gt; Promise.resolve({ output: &quot;ok&quot; }), })</code></pre>
+
+      <div class="tags"><span>internal</span><span>schema:object</span><span>schema:zod</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="sdkWith" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>sdkWith</strong>
+          <span>function · line 26 · internal</span>
+        </div>
+        <a href="../modules/runtime-tests-sdk-test.html#sdkWith">Module</a>
+      </div>
+      <pre><code>function sdkWith(turns: ScriptedTurn[]): ReturnType&lt;typeof createAgentSdk&gt;</code></pre>
+
+      <div class="tags"><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>runtime/src/llm-clients</code></td>
+      <td>17</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>runtime/src/sdk</code></td>
+      <td>16</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>testkit/src/index</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>tool/src/index</code></td>
+      <td>14</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>zod</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>runtime/src/llm-clients</code></td>
+      <td>17</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>runtime/src/sdk</code></td>
+      <td>16</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>testkit/src/index</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>tool/src/index</code></td>
+      <td>14</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>zod</code></td>
+      <td>2</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

@@ -88,11 +88,13 @@ fn ppc_client_drops_stray_reply_without_failing_in_flight_request() -> TestResul
     assert_eq!(reply.message_id, "msg-1");
     assert_eq!(reply.body, r#"{"ok":true}"#);
     let events = sink.drain();
-    assert_eq!(events.len(), 1);
-    assert_eq!(events[0].name, "ppc_reply_orphaned");
-    assert_eq!(events[0].details["message_id"], "ghost");
-    assert_eq!(events[0].details["direction"], "reply");
-    assert_eq!(events[0].details["reason"], "unknown_message_id");
+    let orphan = events
+        .iter()
+        .find(|event| event.name == "ppc_reply_orphaned")
+        .expect("stray reply should be recorded as orphaned");
+    assert_eq!(orphan.details["message_id"], "ghost");
+    assert_eq!(orphan.details["direction"], "reply");
+    assert_eq!(orphan.details["reason"], "unknown_message_id");
     join_server(server)?;
     Ok(())
 }
@@ -131,7 +133,8 @@ fn ppc_client_matches_out_of_order_replies_by_message_id() -> TestResult {
         Ok(())
     });
 
-    let client = Arc::new(PpcClient::new(client_stream)?);
+    let sink = PpcTraceEventSink::default();
+    let client = Arc::new(PpcClient::new_with_trace_events(client_stream, sink)?);
     let first_client = Arc::clone(&client);
     let first = thread::spawn(move || {
         first_client.round_trip(
@@ -416,6 +419,34 @@ fn ppc_client_routes_concurrent_callbacks_by_parent_message_id() -> TestResult {
     assert_eq!(first_reply.body, r#"{"success":true,"path":"a.txt"}"#);
     assert_eq!(second_reply.message_id, "op-2");
     assert_eq!(second_reply.body, r#"{"success":true,"path":"b.txt"}"#);
+    let first_events = client.drain_trace_events_for("op-1");
+    let second_events = client.drain_trace_events_for("op-2");
+    assert!(
+        first_events
+            .iter()
+            .any(|event| event.name == "callback_request"
+                && event.details["message_id"] == "op-1:occ"),
+        "op-1 trace events must include its callback request: {first_events:?}"
+    );
+    assert!(
+        second_events
+            .iter()
+            .any(|event| event.name == "callback_request"
+                && event.details["message_id"] == "op-2:occ"),
+        "op-2 trace events must include its callback request: {second_events:?}"
+    );
+    assert!(
+        !first_events
+            .iter()
+            .any(|event| event.details["message_id"] == "op-2:occ"),
+        "op-1 trace events must not include op-2 callback facts: {first_events:?}"
+    );
+    assert!(
+        !second_events
+            .iter()
+            .any(|event| event.details["message_id"] == "op-1:occ"),
+        "op-2 trace events must not include op-1 callback facts: {second_events:?}"
+    );
     join_server(server)?;
     Ok(())
 }
@@ -471,12 +502,14 @@ fn ppc_client_records_unknown_parent_callback_as_orphaned() -> TestResult {
 
     assert_eq!(reply.message_id, "msg-1");
     let events = sink.drain();
-    assert_eq!(events.len(), 1);
-    assert_eq!(events[0].name, "ppc_reply_orphaned");
-    assert_eq!(events[0].details["message_id"], "callback-orphan");
-    assert_eq!(events[0].details["parent_message_id"], "missing-parent");
-    assert_eq!(events[0].details["direction"], "request");
-    assert_eq!(events[0].details["reason"], "unknown_parent_message_id");
+    let orphan = events
+        .iter()
+        .find(|event| event.name == "ppc_reply_orphaned")
+        .expect("unknown parent callback should be recorded as orphaned");
+    assert_eq!(orphan.details["message_id"], "callback-orphan");
+    assert_eq!(orphan.details["parent_message_id"], "missing-parent");
+    assert_eq!(orphan.details["direction"], "request");
+    assert_eq!(orphan.details["reason"], "unknown_parent_message_id");
     join_server(server)?;
     Ok(())
 }

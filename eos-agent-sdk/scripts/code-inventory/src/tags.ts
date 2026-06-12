@@ -19,39 +19,40 @@ export function packageTags(
   packageName: string,
   sourceModuleCount: number,
 ): string[] {
+  const base = packageName.split("/").at(-1) ?? packageName;
   const tags = new Set<string>();
   if (sourceModuleCount === 0) {
     tags.add("empty-package");
   }
-  if (packageName.endsWith("/contracts")) {
+  if (base === "contracts") {
     tags.add("contracts");
   }
-  if (packageName.endsWith("/engine") || packageName.endsWith("/runtime")) {
+  if (base === "engine" || base === "runtime") {
     tags.add("runtime");
   }
-  if (packageName.endsWith("/llm-client")) {
+  if (base === "llm-client") {
     tags.add("provider-boundary");
   }
-  if (packageName.endsWith("/testkit")) {
+  if (base === "testkit") {
     tags.add("testkit");
   }
-  if (packageName.endsWith("/db")) {
+  if (base === "db") {
     tags.add("storage");
   }
-  if (packageName.endsWith("/observability")) {
+  if (base === "observability") {
     tags.add("observability");
   }
   return [...tags].sort();
 }
 
 export function moduleKind(path: string): ModuleKind {
-  if (path.endsWith("/src/index.ts")) {
+  if (/^src\/[^/]+\/index\.ts$/.test(path)) {
     return "entrypoint";
   }
-  if (path.includes("/tests/support.ts") || path.includes("/tests/fixtures/")) {
+  if (/^tests\/[^/]+\/support\.ts$/.test(path) || path.includes("/fixtures/")) {
     return "test-support";
   }
-  if (path.includes("/tests/") || path.endsWith(".test.ts")) {
+  if (path.startsWith("tests/") || path.endsWith(".test.ts")) {
     return "test";
   }
   return "source";
@@ -99,7 +100,7 @@ export function symbolTags(input: SymbolTagInput): string[] {
   if (input.moduleKind === "entrypoint") {
     tags.add("package-entrypoint");
   }
-  if (input.packageName.endsWith("/contracts")) {
+  if ((input.packageName.split("/").at(-1) ?? input.packageName) === "contracts") {
     tags.add("contract");
   }
   if (input.kind === "schema") {

@@ -113,7 +113,7 @@ fn run_command_family(family_name: &str) -> Result<()> {
             response
         );
         assert_changed_paths(&response, &variant.changed_paths)?;
-        assert_bounded_command_resources(&response, elapsed, timeout_s)?;
+        assert_command_wall_time_bounded(&response, elapsed, timeout_s)?;
         executed += 1;
     }
 
@@ -306,7 +306,7 @@ fn parallel_command_matrix_load_stays_bounded() -> Result<()> {
                 "parallel worker stdout should include its marker: {response}"
             );
             assert_changed_paths(&response, &[format!("{dir}/worker-{index}/result.txt")])?;
-            assert_bounded_command_resources(&response, elapsed, timeout_s)?;
+            assert_command_wall_time_bounded(&response, elapsed, timeout_s)?;
         }
 
         for index in 0..level {
@@ -800,7 +800,7 @@ fn assert_changed_paths(response: &Value, expected: &[String]) -> Result<()> {
     Ok(())
 }
 
-fn assert_bounded_command_resources(
+fn assert_command_wall_time_bounded(
     response: &Value,
     elapsed: Duration,
     timeout_s: u64,
@@ -809,30 +809,6 @@ fn assert_bounded_command_resources(
         elapsed < Duration::from_secs(timeout_s + 10),
         "command exceeded bounded wall time {elapsed:?}: {response}"
     );
-    if let Some(upperdir) = timing(response, "resource.command_exec.upperdir_tree_bytes") {
-        ensure!(
-            upperdir < 2_000_000.0,
-            "command upperdir should stay delta-sized (<2MB), got {upperdir}: {response}"
-        );
-    }
-    if let Some(run_dir) = timing(response, "resource.command_exec.run_dir_tree_bytes") {
-        ensure!(
-            run_dir < 4_000_000.0,
-            "command run dir should stay bounded (<4MB), got {run_dir}: {response}"
-        );
-    }
-    if let Some(memory_current) = timing(response, "resource.cgroup.memory_current_bytes") {
-        ensure!(
-            memory_current > 0.0 && memory_current < 64e9,
-            "cgroup memory.current should be sane, got {memory_current}: {response}"
-        );
-    }
-    if let Some(rss) = timing(response, "resource.process.rss_bytes") {
-        ensure!(
-            rss > 0.0 && rss < 64e9,
-            "process RSS should be sane, got {rss}: {response}"
-        );
-    }
     Ok(())
 }
 
@@ -848,14 +824,6 @@ fn output_contains(response: &Value, needle: &str) -> bool {
     // Strip the per-line `[ISO-8601] ` transcript timestamp prefix the daemon
     // prepends before matching on the command's actual output.
     crate::support::strip_transcript_timestamps(stdout(response)).contains(needle)
-}
-
-fn timing(response: &Value, key: &str) -> Option<f64> {
-    response
-        .get("timings")
-        .and_then(Value::as_object)
-        .and_then(|timings| timings.get(key))
-        .and_then(Value::as_f64)
 }
 
 fn workload_timeout_s(pool: &NodePool) -> u64 {

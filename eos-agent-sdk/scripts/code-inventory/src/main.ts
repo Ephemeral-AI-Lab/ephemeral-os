@@ -24,13 +24,13 @@ async function findWorkspaceRoot(): Promise<string> {
   let dir = start;
   for (;;) {
     const packageJson = path.join(dir, "package.json");
-    const packagesDir = path.join(dir, "packages");
-    if (await exists(packageJson) && await exists(packagesDir)) {
+    const srcDir = path.join(dir, "src");
+    if (await exists(packageJson) && await exists(srcDir)) {
       return dir;
     }
     const next = path.dirname(dir);
     if (next === dir) {
-      throw new Error(`could not find eos-agent-core root from ${start}`);
+      throw new Error(`could not find eos-agent-sdk root from ${start}`);
     }
     dir = next;
   }

@@ -45,6 +45,12 @@ struct BoundState {
     manager: IsolatedManager,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct LeaseReleaseReport {
+    pub released: Option<bool>,
+    pub error: Option<String>,
+}
+
 impl BoundState {
     /// Acquire a snapshot lease for `caller_id` and shape it for `enter`.
     fn acquire_snapshot(&self, caller_id: &str) -> Result<IsolatedSnapshot, IsolatedError> {
@@ -60,9 +66,19 @@ impl BoundState {
         })
     }
 
-    /// Best-effort lease release; returns whether the lease was held.
-    fn release_lease(&mut self, lease_id: &str) -> Option<bool> {
-        self.stack.release_lease(lease_id).ok()
+    /// Best-effort lease release; returns whether the lease was held and retains
+    /// any release error for request-side tracing.
+    fn release_lease(&mut self, lease_id: &str) -> LeaseReleaseReport {
+        match self.stack.release_lease(lease_id) {
+            Ok(released) => LeaseReleaseReport {
+                released: Some(released),
+                error: None,
+            },
+            Err(err) => LeaseReleaseReport {
+                released: None,
+                error: Some(err.to_string()),
+            },
+        }
     }
 
     /// Exit `caller_id`'s workspace and release its lease, shaping the typed
@@ -73,11 +89,12 @@ impl BoundState {
         grace_s: Option<f64>,
     ) -> Result<ExitOutcome, IsolatedError> {
         let isolated = self.manager.exit(caller_id, grace_s)?;
-        let lease_released = self.release_lease(&isolated.lease_id);
+        let lease_release = self.release_lease(&isolated.lease_id);
         let active_leases_after = self.stack.active_lease_count();
         Ok(ExitOutcome {
             isolated,
-            lease_released,
+            lease_released: lease_release.released,
+            lease_release_error: lease_release.error,
             active_leases_after,
         })
     }
@@ -91,6 +108,8 @@ pub struct ExitOutcome {
     pub isolated: eos_workspace::ExitOutcome,
     /// Whether the workspace's snapshot lease was still held at release.
     pub lease_released: Option<bool>,
+    /// Lease release failure retained for audit-side trace emission.
+    pub lease_release_error: Option<String>,
     /// Active leases remaining on the bound stack after release.
     pub active_leases_after: usize,
 }
@@ -108,9 +127,23 @@ pub struct CallerCancel {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct WorkspaceRecoveryReport {
+    pub attempted: bool,
     pub exited_callers: Vec<String>,
     pub manager_json_error: Option<String>,
     pub orphan_cleanup_error: Option<String>,
+}
+
+impl WorkspaceRecoveryReport {
+    fn merge_orphan_cleanup_error(&mut self, error: Option<String>) {
+        if self.orphan_cleanup_error.is_none() {
+            self.orphan_cleanup_error = error;
+        }
+    }
+}
+
+pub(crate) struct WorkspaceEnterOutcome {
+    pub handle: WorkspaceHandle,
+    pub recovery: WorkspaceRecoveryReport,
 }
 
 /// Failures from opening an isolated workspace through [`WorkspaceRuntime`].
@@ -125,6 +158,16 @@ pub enum WorkspaceEnterError {
     /// The isolated-workspace lifecycle failed.
     #[error(transparent)]
     Isolated(#[from] IsolatedError),
+    /// The isolated-workspace lifecycle failed after acquiring a lease, and the
+    /// follow-up lease release may also have failed.
+    #[error("{source}")]
+    EnterFailed {
+        /// The lifecycle error returned to the caller.
+        #[source]
+        source: IsolatedError,
+        /// Best-effort lease release report for trace emission.
+        lease_release: LeaseReleaseReport,
+    },
 }
 
 /// Instance-owned isolated-workspace service state: the typed config plus the
@@ -157,22 +200,34 @@ impl WorkspaceRuntime {
         caller_id: &str,
         root: &Path,
     ) -> Result<WorkspaceHandle, WorkspaceEnterError> {
+        self.enter_with_report(caller_id, root)
+            .map(|outcome| outcome.handle)
+    }
+
+    pub(crate) fn enter_with_report(
+        &self,
+        caller_id: &str,
+        root: &Path,
+    ) -> Result<WorkspaceEnterOutcome, WorkspaceEnterError> {
         let active_commands = eos_operation::command::active_commands_for_caller(caller_id);
         if active_commands > 0 {
             return Err(WorkspaceEnterError::ActiveCommands { active_commands });
         }
-        self.ensure_state(root)?;
-        Ok(self.with_state(|state| {
-            let snapshot = state.acquire_snapshot(caller_id)?;
-            let lease_id = snapshot.lease_id.clone();
-            match state.manager.enter(caller_id, snapshot) {
-                Ok(handle) => Ok(handle),
-                Err(error) => {
-                    let _ = state.release_lease(&lease_id);
-                    Err(error)
-                }
+        let recovery = self.ensure_state(root)?;
+        let mut guard = self.lock_state_cell();
+        let state = guard.as_mut().ok_or(IsolatedError::FeatureDisabled)?;
+        let snapshot = state.acquire_snapshot(caller_id)?;
+        let lease_id = snapshot.lease_id.clone();
+        match state.manager.enter(caller_id, snapshot) {
+            Ok(handle) => Ok(WorkspaceEnterOutcome { handle, recovery }),
+            Err(error) => {
+                let lease_release = state.release_lease(&lease_id);
+                Err(WorkspaceEnterError::EnterFailed {
+                    source: error,
+                    lease_release,
+                })
             }
-        })?)
+        }
     }
 
     /// Tear down `caller_id`'s isolated workspace if open: namespace/network/
@@ -280,7 +335,7 @@ impl WorkspaceRuntime {
         for caller in &callers {
             let _ = state.exit_caller(caller, grace_s);
         }
-        state.manager.reap_orphan_resources();
+        let _ = state.manager.reap_orphan_resources();
         callers.len()
     }
 
@@ -318,6 +373,7 @@ impl WorkspaceRuntime {
     /// file, and retain recovery facts for request-side tracing.
     pub(crate) fn test_reset_report(&self) -> WorkspaceRecoveryReport {
         let manager_json_error = manager_json_error(&self.config.scratch_root);
+        let mut orphan_cleanup_error = None;
         let exited_callers = {
             let mut guard = self.lock_state_cell();
             let exited_callers = if let Some(state) = guard.as_mut() {
@@ -325,7 +381,7 @@ impl WorkspaceRuntime {
                 for caller_id in &callers {
                     let _ = state.exit_caller(caller_id, Some(0.0));
                 }
-                state.manager.reap_orphan_resources();
+                orphan_cleanup_error = state.manager.reap_orphan_resources();
                 callers
             } else {
                 Vec::new()
@@ -335,16 +391,18 @@ impl WorkspaceRuntime {
         };
         self.reset_test_manager_file();
         WorkspaceRecoveryReport {
+            attempted: true,
             exited_callers,
             manager_json_error,
-            orphan_cleanup_error: None,
+            orphan_cleanup_error,
         }
     }
 
     /// Bind (or rebind) the isolated manager to `root`, initializing caps from
     /// the runtime config and releasing leases orphaned by a prior daemon.
-    fn ensure_state(&self, root: &Path) -> Result<(), IsolatedError> {
+    fn ensure_state(&self, root: &Path) -> Result<WorkspaceRecoveryReport, IsolatedError> {
         let root = normalized_root(root);
+        let mut recovery = WorkspaceRecoveryReport::default();
         {
             let mut guard = self.lock_state_cell();
             if let Some(state) = guard.as_mut() {
@@ -363,7 +421,8 @@ impl WorkspaceRuntime {
                             ),
                         });
                     }
-                    state.manager.reap_orphan_resources();
+                    recovery.attempted = true;
+                    recovery.merge_orphan_cleanup_error(state.manager.reap_orphan_resources());
                     *guard = None;
                 }
             }
@@ -378,9 +437,15 @@ impl WorkspaceRuntime {
                 let mut stack = LayerStack::open(root.clone()).map_err(setup_error)?;
                 let mut manager =
                     IsolatedManager::with_scratch_root(caps, self.config.scratch_root.clone());
-                let orphan_lease_ids = manager.initialize()?;
-                for lease_id in orphan_lease_ids {
-                    let _ = stack.release_lease(&lease_id);
+                let cleanup = manager.initialize_report()?;
+                recovery.attempted = true;
+                recovery.merge_orphan_cleanup_error(cleanup.cleanup_error);
+                for lease_id in cleanup.orphan_lease_ids {
+                    if let Err(err) = stack.release_lease(&lease_id) {
+                        recovery.merge_orphan_cleanup_error(Some(format!(
+                            "release orphan lease {lease_id}: {err}"
+                        )));
+                    }
                 }
                 *guard = Some(BoundState {
                     layer_stack_root: root,
@@ -389,7 +454,7 @@ impl WorkspaceRuntime {
                 });
             }
         }
-        Ok(())
+        Ok(recovery)
     }
 
     fn with_state<T>(

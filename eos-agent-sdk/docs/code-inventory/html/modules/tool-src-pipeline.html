@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>tool/src/pipeline Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-sdk</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/tool.html">tool</a></p>
+          <h1>tool/src/pipeline</h1>
+          <p class="lede">src/tool/pipeline.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>8</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>1</dd></div>
+          <div><dt>Functions</dt><dd>5</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>7</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>../contracts/index.js</code></td>
+      <td>zodIssueSummary, type AgentRunId, type JsonObject, type ToolCallResult, type ToolSpec</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../background/index.js</code></td>
+      <td>BackgroundTaskSupervisor</td>
+      <td>type</td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../engine/index.js</code></td>
+      <td>ToolBatchContext, ToolUseBlock</td>
+      <td>type</td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../notification/index.js</code></td>
+      <td>Notifier</td>
+      <td>type</td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>zod</code></td>
+      <td>z</td>
+      <td>value</td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./contract.js</code></td>
+      <td>ToolCallContext, ToolDefinition, ToolResult</td>
+      <td>type</td>
+      <td>13</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./hooks.js</code></td>
+      <td>HookEngine, ToolCallFacts</td>
+      <td>type</td>
+      <td>14</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>pipeline.ts</code>
+        <small>8 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#PipelineResult"><code>PipelineResult</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#RunScope"><code>RunScope</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#BoundTool"><code>BoundTool</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#toolSpec"><code>toolSpec</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#callFacts"><code>callFacts</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#rejectedResult"><code>rejectedResult</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#bindTool"><code>bindTool</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#stamp"><code>stamp</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="PipelineResult" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>PipelineResult</strong>
+          <span>type · line 20 · public</span>
+        </div>
+        <a href="../modules/tool-src-pipeline.html#PipelineResult">Module</a>
+      </div>
+      <pre><code>export type PipelineResult = Omit&lt;ToolCallResult, &quot;tool_use_id&quot;&gt;</code></pre>
+      <p>Everything the pipeline owns about one settled call. The batch executor
+constructs the `ToolCallResult` - it must pair the `tool_use_id`.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="RunScope" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>RunScope</strong>
+          <span>interface · line 23 · public</span>
+        </div>
+        <a href="../modules/tool-src-pipeline.html#RunScope">Module</a>
+      </div>
+      <pre><code>export interface RunScope</code></pre>
+      <p>Run-scoped dependencies closed over when an executor is built.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>runId</code></td>
+              <td><code>AgentRunId</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>backgroundTaskSupervisor</code></td>
+              <td><code>BackgroundTaskSupervisor</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>notifier</code></td>
+              <td><code>Notifier</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>hooks</code></td>
+              <td><code>HookEngine</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="BoundTool" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>BoundTool</strong>
+          <span>interface · line 31 · public</span>
+        </div>
+        <a href="../modules/tool-src-pipeline.html#BoundTool">Module</a>
+      </div>
+      <pre><code>export interface BoundTool</code></pre>
+      <p>One definition bound through the pipeline; dispatched by the executor.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>name</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>spec</code></td>
+              <td><code>ToolSpec</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>run</code></td>
+              <td><code>run(call: ToolUseBlock, batch: ToolBatchContext): Promise&lt;PipelineResult&gt;;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="toolSpec" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>toolSpec</strong>
+          <span>function · line 38 · public</span>
+        </div>
+        <a href="../modules/tool-src-pipeline.html#toolSpec">Module</a>
+      </div>
+      <pre><code>export function toolSpec(definition: ToolDefinition): ToolSpec</code></pre>
+      <p>Derive the wire declaration from the Zod input contract.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="callFacts" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>callFacts</strong>
+          <span>function · line 48 · public</span>
+        </div>
+        <a href="../modules/tool-src-pipeline.html#callFacts">Module</a>
+      </div>
+      <pre><code>export function callFacts( runId: AgentRunId, call: ToolUseBlock, toolName: string, ): ToolCallFacts</code></pre>
+      <p>Frozen per-call facts shared by pre and post hooks.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="rejectedResult" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>rejectedResult</strong>
+          <span>function · line 62 · public</span>
+        </div>
+        <a href="../modules/tool-src-pipeline.html#rejectedResult">Module</a>
+      </div>
+      <pre><code>export function rejectedResult(content: string): PipelineResult</code></pre>
+      <p>A settled rejection with both clocks at the rejection instant.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="bindTool" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>bindTool</strong>
+          <span>function · line 80 · public</span>
+        </div>
+        <a href="../modules/tool-src-pipeline.html#bindTool">Module</a>
+      </div>
+      <pre><code>export function bindTool(definition: ToolDefinition, scope: RunScope): BoundTool</code></pre>
+      <p>Bind one definition to the per-call pipeline: abort check -&gt; parse -&gt;
+preToolUse -&gt; execute -&gt; postToolUse -&gt; stamping. Never throws; every
+path returns a result the executor can record. Timing brackets
+`execute()` only - pre-execution rejections stamp both times with the
+rejection instant, and slow hooks never masquerade as slow tools.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="stamp" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>stamp</strong>
+          <span>function · line 129 · internal</span>
+        </div>
+        <a href="../modules/tool-src-pipeline.html#stamp">Module</a>
+      </div>
+      <pre><code>function stamp( result: ToolResult, startedAt: number, endedAt: number, ): PipelineResult</code></pre>
+      <p>The pipeline's stamping for ordinary tools: errors are facts mapped by
+the pipeline, never tool claims, and `is_terminal` is always false —
+only the terminal binding stamps true.</p>
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/pipeline</code></td>
+      <td><code>background/src/index</code></td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/src/pipeline</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/pipeline</code></td>
+      <td><code>engine/src/index</code></td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/pipeline</code></td>
+      <td><code>notification/src/index</code></td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/pipeline</code></td>
+      <td><code>tool/src/contract</code></td>
+      <td>13</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/pipeline</code></td>
+      <td><code>tool/src/hooks</code></td>
+      <td>14</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/src/pipeline</code></td>
+      <td><code>zod</code></td>
+      <td>11</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

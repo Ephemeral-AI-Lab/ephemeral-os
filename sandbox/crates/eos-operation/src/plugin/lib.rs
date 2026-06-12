@@ -223,7 +223,18 @@ impl PluginRuntime {
         state
             .service_ppc_clients
             .values()
-            .flat_map(|client| client.drain_trace_events())
+            .flat_map(|client| client.drain_unowned_trace_events())
+            .collect()
+    }
+
+    pub fn drain_ppc_trace_events_for(&self, owner_message_id: &str) -> Vec<PpcTraceEvent> {
+        let Ok(state) = self.lock_state() else {
+            return Vec::new();
+        };
+        state
+            .service_ppc_clients
+            .values()
+            .flat_map(|client| client.drain_trace_events_for(owner_message_id))
             .collect()
     }
 

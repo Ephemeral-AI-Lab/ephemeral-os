@@ -147,6 +147,31 @@ fn file_write_dispatch_returns_status_envelope() -> TestResult {
 }
 
 #[test]
+fn command_count_dispatch_returns_status_envelope() {
+    let response = dispatch(&Request {
+        op: "sandbox.command.count".to_owned(),
+        invocation_id: "command-count-envelope".to_owned(),
+        args: json!({"caller_id": "caller-command-count-envelope"}),
+    });
+
+    assert_eq!(response["status"], json!("ok"), "{response}");
+    assert_eq!(response["result"]["success"], json!(true), "{response}");
+    assert_eq!(
+        response["result"]["caller_id"],
+        json!("caller-command-count-envelope"),
+        "{response}"
+    );
+    assert_eq!(response["result"]["count"], json!(0), "{response}");
+    assert_eq!(response["meta"]["op"], json!("sandbox.command.count"));
+    assert_eq!(
+        response["meta"]["request_id"],
+        json!("command-count-envelope")
+    );
+    assert!(response.get("success").is_none(), "{response}");
+    assert!(response.get("timings").is_none(), "{response}");
+}
+
+#[test]
 fn builtin_parse_gate_preserves_refused_channel() {
     let response = dispatch(&Request {
         op: "sandbox.isolation.enter".to_owned(),

@@ -5,7 +5,7 @@
 - **Depends on:** `eos-agent-sdk_SPEC.md` (the SDK). This project imports **only** the
   SDK's root package — never its internal packages.
 - **Scope:** The product/host that composes the SDK into a coding agent: profiles, every
-  tool, the workflow hub, pursuit as the first workflow provider, advisor/subagent
+  tool, the workflow hub, pursuit as the first workflow, advisor/subagent
   patterns, hooks, notification rules, config loading, and the composition root.
 
 ## 1. Summary
@@ -20,7 +20,7 @@ Dependency rule (load-bearing):
 ```
 eos-coding-agent ──imports──▶ eos-agent-sdk (root package only)
         │
-        └─ owns: .eos-agents/ profiles · all tools · WorkflowHub + providers ·
+        └─ owns: .eos-agents/ profiles · all tools · WorkflowHub + workflows ·
                  pursuit (+db +contracts) · hooks/rules content · config loading ·
                  AgentRegistry · composition root
 ```
@@ -36,15 +36,15 @@ eos-coding-agent/
 ├── .eos-agents/                      profiles · pursuit policy scripts (planner.cjs etc.)
 └── packages/
     ├── workflows/
-    │   ├── hub/                      WorkflowHub + WorkflowProvider contract (host-owned)
-    │   │   └── src/hub.ts · provider.ts (interface + manifest types) · tools.ts
+    │   ├── hub/                      WorkflowHub + WorkflowDefinition contract (host-owned)
+    │   │   └── src/hub.ts · workflow.ts (contract + defineWorkflow) · tools.ts
     │   └── pursuit/
     │       ├── src/                  service.ts · pursuit|leg|attempt|plan|work-item/
     │       │                         {state,transition,context}.ts · context-engine/ ·
     │       │                         pursuit-tree.ts · pursuit-context.ts   (= today)
     │       │   ├── outcome-fns.ts    ★ planner/worker agentOutcomeFn via createAgentOutcomeFn
     │       │   ├── launcher.ts       ★ builds planner/worker Agents, starts runs
-    │       │   └── provider.ts       ★ WorkflowProvider implementation over PursuitService
+    │       │   └── workflow.ts       ★ WorkflowDefinition over PursuitService
     │       ├── db/                   = today's @eos/db (schema · rows · migrations)
     │       └── contracts/            = contracts/pursuit.ts carve-out (entity DTOs,
     │                                   PursuitSettlement; SubmissionBinding deleted)
@@ -78,7 +78,7 @@ const sdk = createAgentSdk({
 
 const agents = buildAgentRegistry(sdk, cfg.profiles);        // §4
 const hub = new WorkflowHub();                               // §6
-hub.register(pursuitProvider({ db: openPursuitDb(cfg), sdk, agents, scripts: cfg.pursuitScripts }));
+hub.register(pursuitWorkflow({ db: openPursuitDb(cfg), sdk, agents, scripts: cfg.pursuitScripts }));
 
 const operator = sdk.createAgent({
   name: "operator",
@@ -197,53 +197,103 @@ return partial output + taskId. The engine knows nothing about any of this.
   the registry the moment completion handling finishes, so a silent task leaves **no
   trace the model can see** — not even in `list_background_task`.
 
-## 6. WorkflowHub and the provider contract (host-owned)
+## 6. WorkflowHub and the workflow contract (host-owned)
 
 ```ts
-// workflows/hub/src/provider.ts — a coding-agent contract, NOT an SDK one
-interface WorkflowProvider {
-  describe(): WorkflowManifest;       // name · description · payloadSchema · titleOf · tool docs
-  delegate(payload: unknown): Promise<WorkflowRunId>;
-  settle(id: WorkflowRunId): Promise<WorkflowOutcome>;
-  cancel(id: WorkflowRunId): Promise<void>;
-  query?(id: WorkflowRunId, q: unknown): Promise<unknown>;   // optional
-  search?(q: unknown): Promise<unknown>;                     // optional
+// workflows/hub/src/workflow.ts — a coding-agent contract, NOT an SDK one
+interface WorkflowDefinition<I> {
+  name: string;                        // "pursuit" — the tool-family prefix
+  description: string;                 // one line; rides the delegate tool + list_workflows row
+  docs: string;                        // the manual; served by read_workflow_definition
+  delegatePayload: z.ZodType<I>;       // written once; I and the model-facing schema derive from it
+  delegate(payload: I): Promise<WorkflowHandle>;   // async (delegation does I/O);
+                                                   //   throw = refuse → in-run tool error
+  tools?: ToolDefinition[];            // optional read tools (query/search …), named `${name}_*`
 }
+
+interface WorkflowHandle {
+  title: string;
+  cancel(): void | Promise<void>;      // idempotent; no-op after settlement
+  done: Promise<BackgroundTaskOutcome>;// workflow authors the outcome string in its own vocabulary
+}
+
+export function defineWorkflow<I>(init: WorkflowDefinition<I>): RegisteredWorkflow;
+// mint site: erases I for the hub registry; enforces `${name}_*` naming on `tools`
 ```
 
-The hub projects providers into tools: `list_workflows()`, `read_workflow_definition(name)`,
-and one `delegate_<name>(payload)` per registered provider (payload schema from
-`describe()`). **Workflow cancellation needs no tool of its own** — delegation registers a
-background task, so `cancel_background_task(taskId)` reaches `provider.cancel()` through
-the task's `cancel`:
+The shape mirrors `defineTool` (`delegatePayload`/`delegate` ↔ `input`/`execute`, same
+single-source inference); each divergence is a real property of workflows — `docs` because
+a workflow needs a manual, a handle because the work outlives the call, `tools` because a
+workflow is a family. `WorkflowHandle` is `BackgroundTask` minus the two hub-owned fields
+(`toolName`, `onCompletion`); that minus is the hub/workflow ownership line. There is no
+`WorkflowRunId`, no `settle`, no per-workflow `onCompletion`, no `silent`: the handle
+subsumes the first two, settlement publishing is hub-owned (below), and a delegation is
+awaited work — the §5 task rule forbids it being silent.
+
+| Field | Sole consumer |
+|---|---|
+| `name` | tool naming (`pursuit_delegate`) · `list_workflows` · task `toolName` |
+| `description` | delegate tool description + `list_workflows` row |
+| `docs` | `read_workflow_definition` |
+| `delegatePayload` | delegate tool `input` (schema in the toolset; SDK-validated pre-`delegate`) |
+| `delegate` | delegate tool `execute` |
+| `title` / `cancel` / `done` | spread into `backgroundTaskSupervisor.register` |
+| `tools` | appended to the hub toolset |
+
+The hub projects two always-present discovery tools — `list_workflows()` (one row per
+workflow: name · description · tool names · ready state) and
+`read_workflow_definition(name)` (returns `docs`; unknown name → error listing the valid
+names) — plus, per workflow, one delegate tool and its `tools` entries.
+**Workflow cancellation needs no tool of its own** — delegation registers a background
+task, so `cancel_background_task(taskId)` reaches `handle.cancel()` through the task:
 
 ```ts
-const delegateTool = (p: WorkflowProvider) => {
-  const m = p.describe();
-  return defineTool({
-    name: `delegate_${m.name}`, description: m.description, input: m.payloadSchema,
-    execute: async (input, ctx) => {
-      const id = await p.delegate(input);
-      const { taskId } = ctx.backgroundTaskSupervisor.register({
-        toolName: `workflow:${m.name}`, title: m.titleOf(input),
-        cancel: () => p.cancel(id),
-        done: p.settle(id).then(toTaskOutcome),
-        ...(m.onCompletion                       // provider authors its settlement message,
-          ? { onCompletion: m.onCompletion(id) } //   or declares the delegation silent —
-          : { silent: true }),                   //   the SDK task type forces the choice
-      });
-      return { output: `delegated ${m.name} · task ${taskId}` };
-    },
-  });
-};
+const delegateTool = <I>(w: WorkflowDefinition<I>) => defineTool({
+  name: `${w.name}_delegate`,
+  description: `${w.description} Before first use: read_workflow_definition("${w.name}").`,
+  input: w.delegatePayload,
+  execute: async (input, ctx) => {
+    const handle = await w.delegate(input);              // throw → tool error → in-run correction
+    const { taskId } = ctx.backgroundTaskSupervisor.register({
+      toolName: `workflow:${w.name}`,
+      title: handle.title,
+      cancel: () => handle.cancel(),
+      done: handle.done,
+      onCompletion: (out, { notifier }) =>               // the ONE settlement publisher
+        notifier.publish(`workflow ${w.name} ${out.status}: ${out.outcome}`,
+                         { key: `workflow:${w.name}:${taskId}` }),
+    });
+    return { output: `delegated ${w.name} · task ${taskId}` };
+  },
+});
 ```
+
+```
+model ── pursuit_delegate(payload) ─▶ hub tool ── w.delegate(payload) ─▶ workflow I/O → handle
+              │                                       (throw = refusal, in-run error)
+              └─ register({title, cancel, done, onCompletion}) ─▶ "delegated · task <id>"
+model ── cancel_background_task(taskId) ─────────▶ handle.cancel()    (no per-workflow cancel tool)
+settlement: done resolves ─▶ hub onCompletion publishes the workflow-authored
+            outcome string ─▶ notifier ─▶ inbox, drained at the next turn boundary
+```
+
+**Preload, not deferral.** Every workflow tool's schema is declared in the toolset from
+turn 1; descriptions stay terse and point at the manual; the prose (payload semantics,
+examples, settlement shape, cancellation path) lives behind `read_workflow_definition`.
+This works on every model and wire, and keeps the encoded tools param byte-stable across a
+run, so prompt caching holds. Platform deferral (Anthropic `defer_loading`, OpenAI
+`tool_search`) is model/API-gated and is the documented growth path, not v1: if workflow
+or MCP schemas ever crowd context (≈10% of the window — the threshold Claude Code uses),
+a `defer` flag and a reveal capability slot in beneath this same protocol
+(`read_workflow_definition` regains a loading side effect); profiles, prompts, and the hub
+surface do not change.
 
 Policies like "one open pursuit per supervisor" generalize to host hooks over
-`ctx.backgroundTaskSupervisor.list()` — e.g. a pre-tool hook on `delegate_*` denying when
-an open `workflow:*` task exists.
+`ctx.backgroundTaskSupervisor.list()` — e.g. a pre-tool hook on the delegate tools denying
+when an open `workflow:*` task exists.
 
 If a workflow is ever written in another language, it enters as another
-`WorkflowProvider` implementation that proxies over a wire; the hub, the projections, and
+`WorkflowDefinition` whose `delegate` proxies over a wire; the hub, the projections, and
 every profile stay untouched.
 
 ## 7. Hooks and the advisor gate
@@ -277,7 +327,7 @@ Failure policy is explicit host policy: if the advisor run itself dies, choose f
 (`passthrough` + warning in the reason channel) or fail-closed (`deny`) **in this
 function** — never leave it implicit.
 
-## 8. Pursuit as a workflow provider
+## 8. Pursuit as a workflow
 
 Pursuit moves wholesale; its state machines, transitions, context-engine, tree, db schema,
 and reconcile logic are unchanged. The changes are confined to the launch/settle edge:
@@ -290,7 +340,7 @@ and reconcile logic are unchanged. The changes are confined to the launch/settle
 | `PursuitAgentSubmissionBinding` | threaded through contracts/engine | deleted (replaced by `onSubmit`) |
 | Planner/worker advisory prompts | `@eos/tool/advisory_prompts/` | move here; ride `createAgentOutcomeFn({description})` |
 | Death / cancel | runtime-synthesized `LaunchSettlement` | `run.outcome().then(...)` → `out.status !== "completed"` → pursuit synthesizes the Failed work item; `cancel()` additionally calls `handle.interrupt()` on live runs |
-| Settlement notification | SDK-rendered session message | `provider.ts` authors it in pursuit vocabulary inside the task's `onCompletion` (e.g. "pursuit settled: Failed — leg_2 budget exhausted · outcome.md: <path>"), publishing via the provided `notifier` — or declaring `silent: true` for internal sub-steps |
+| Settlement notification | SDK-rendered session message | pursuit resolves the handle's `done` with an outcome string authored in pursuit vocabulary (e.g. "Failed — leg_2 budget exhausted · outcome.md: <path>"); the hub's single completion publisher delivers it (§6). No `silent` option — a delegation is awaited work |
 
 One attempt, after the change:
 
@@ -340,10 +390,12 @@ layering (user vs project), and defaults are host policy.
    package name, imports).
    *Verify:* leak checks (SDK spec §7); the e2e suite moves with the host
    (`notification-triggers.e2e.ts` is in flight in the current worktree — coordinate).
-4. **Hub + providers** — `WorkflowHub` host-side, pursuit registered as the first provider;
-   delegate/cancel ride background tasks.
-   *Verify:* operator can delegate, observe via `list_background_task`, cancel via
-   `cancel_background_task`; pursuit settlement message arrives via `onCompletion`.
+4. **Hub + workflows** — `WorkflowHub` host-side, pursuit registered as the first
+   `WorkflowDefinition`; delegation rides background tasks.
+   *Verify:* operator can `list_workflows` → `read_workflow_definition("pursuit")` →
+   `pursuit_delegate`, observe via `list_background_task`, cancel via
+   `cancel_background_task`; the settlement notification carries pursuit-authored outcome
+   text through the hub's completion publisher.
 
 ## 11. Acceptance criteria
 
@@ -354,6 +406,9 @@ layering (user vs project), and defaults are host policy.
   `packages/workflows/hub` — `grep` the SDK for tool definitions → none.
 - Advisor enforcement demonstrably runs **before** `onSubmit` (test: advisor denies → no
   DB row, no budget spent, model receives the denial in-run).
+- `read_workflow_definition` is a pure docs tool: it returns `docs` and mutates nothing;
+  the operator toolset (and therefore the encoded tools param) is identical on every turn
+  of a run.
 - Pursuit behavior parity: existing pursuit service tests pass against the SDK-backed
   launcher with only dependency-shape changes.
 - Inbox exhaustiveness: in a full e2e run, every notification is traceable to a host
@@ -366,6 +421,10 @@ layering (user vs project), and defaults are host policy.
 - Whether `read_agent_run_transcript` should page/filter (records can be large) — tool
   design, not contract.
 - Pursuit context-exploration tools (planned in the operator manual §07) — they become
-  ordinary host tools over the pursuit context store; spec separately when prioritized.
+  ordinary host tools over the pursuit context store, riding pursuit's `tools` array on
+  its `WorkflowDefinition`; spec separately when prioritized.
+- If a second large tool source lands (e.g. MCP servers wrapped as host tool families),
+  generalize `list_workflows` / `read_workflow_definition` into group-based discovery and
+  revisit the §6 deferral growth path against the ≈10%-of-context threshold.
 - Timing of lifting pursuit to a standalone project — trigger is a second host wanting it,
   not before.

@@ -3,7 +3,8 @@ use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
-    as_bool, as_i64, live_pool_or_skip, reset_isolated_workspaces, wait_for_active_leases,
+    as_bool, as_i64, as_str, envelope_result, live_pool_or_skip, reset_isolated_workspaces,
+    wait_for_active_leases,
 };
 
 /// A daemon restart runs `reap_persisted_orphans`
@@ -23,12 +24,14 @@ fn daemon_restart_reaps_orphaned_isolated_handle() -> Result<()> {
     reset_isolated_workspaces(&lease);
 
     let caller = format!("restart-iws-{}", eos_e2e_test::unique_suffix());
-    let enter = lease.call_ok(
+    let enter = lease.call(
         catalog::SANDBOX_ISOLATION_ENTER,
         json!({"caller_id": caller}),
     )?;
+    assert_eq!(as_str(&enter, "status")?, "ok", "{enter}");
+    let enter = envelope_result(&enter)?;
     assert!(
-        as_bool(&enter, "success")?,
+        !as_str(enter, "workspace_handle_id")?.is_empty(),
         "isolated enter should open: {enter}"
     );
     // The open handle holds a snapshot lease on this checkout's LayerStack root.
@@ -38,9 +41,11 @@ fn daemon_restart_reaps_orphaned_isolated_handle() -> Result<()> {
         1,
         "isolated enter should hold one snapshot lease: {held}"
     );
-    let before = lease.call_ok(catalog::SANDBOX_ISOLATION_LIST_OPEN, json!({}))?;
+    let before = lease.call(catalog::SANDBOX_ISOLATION_LIST_OPEN, json!({}))?;
+    assert_eq!(as_str(&before, "status")?, "ok", "{before}");
+    let before = envelope_result(&before)?;
     assert!(
-        open_contains(&before, &caller),
+        open_contains(before, &caller),
         "the handle should be open before restart: {before}"
     );
 
@@ -53,9 +58,11 @@ fn daemon_restart_reaps_orphaned_isolated_handle() -> Result<()> {
         as_bool(&ready, "ready")?,
         "daemon must be ready again after restart: {ready}"
     );
-    let after = lease.call_ok(catalog::SANDBOX_ISOLATION_LIST_OPEN, json!({}))?;
+    let after = lease.call(catalog::SANDBOX_ISOLATION_LIST_OPEN, json!({}))?;
+    assert_eq!(as_str(&after, "status")?, "ok", "{after}");
+    let after = envelope_result(&after)?;
     assert!(
-        !open_contains(&after, &caller),
+        !open_contains(after, &caller),
         "startup reconciliation must reap the orphaned isolated handle: {after}"
     );
     let released = wait_for_active_leases(&lease, 0)?;
@@ -67,12 +74,14 @@ fn daemon_restart_reaps_orphaned_isolated_handle() -> Result<()> {
 
     // The recovered daemon serves fresh isolated enters again.
     let fresh_caller = format!("restart-iws-fresh-{}", eos_e2e_test::unique_suffix());
-    let fresh = lease.call_ok(
+    let fresh = lease.call(
         catalog::SANDBOX_ISOLATION_ENTER,
         json!({"caller_id": fresh_caller}),
     )?;
+    assert_eq!(as_str(&fresh, "status")?, "ok", "{fresh}");
+    let fresh = envelope_result(&fresh)?;
     assert!(
-        as_bool(&fresh, "success")?,
+        !as_str(fresh, "workspace_handle_id")?.is_empty(),
         "a fresh isolated enter should succeed after restart: {fresh}"
     );
     lease.call_ok(

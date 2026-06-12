@@ -74,6 +74,116 @@ error tests, focused no-feature `eos-e2e-test` core/daemon control tests, and
 broad package `cargo check` were stopped after hanging outside the focused test
 assertions.
 
+Phase 05 cleanup evidence, 2026-06-13: the temporary
+`V1FlatteningAdapter` was deleted from `eos-operation`; response rendering now
+goes through `OperationEnvelope` at the daemon dispatch boundary, and
+`rg -n 'V1FlatteningAdapter|from_legacy_value|to_legacy_value' sandbox/crates`
+returns no matches. The mixed-wire `is_success`/`error_kind` helpers remain
+only as Phase 05 migration classifiers until the remaining e2e and host
+consumers are flipped.
+
+Phase 05 file-family evidence, 2026-06-13: direct file e2e assertions now
+unwrap response envelopes for write/edit/read success payloads and edit/write
+conflict payloads, assert envelope error faults for file-size guards, and use
+file/OCC trace events or changed-path results instead of flat direct-file timing
+keys. The `phase3_write_paths` daemon tests no longer assert `timings.*` or
+`resource.*` response fields for file writes. `CARGO_TARGET_DIR=/tmp/eos-phase05-next-target cargo test -p eos-e2e-test --test core --no-default-features direct_file -- --nocapture`,
+`CARGO_TARGET_DIR=/tmp/eos-phase05-next-target cargo test -p eos-e2e-test --test core --no-default-features test_core_error_catalog_and_limits -- --nocapture`,
+`CARGO_TARGET_DIR=/tmp/eos-phase05-next-target cargo test -p eos-daemon --test phase3_write_paths dispatches_layerstack_write_file_and_reads_published_bytes -- --exact --nocapture`,
+`CARGO_TARGET_DIR=/tmp/eos-phase05-next-target-2 cargo test -p eos-daemon --test phase3_write_paths write_file_git_path_is_dropped_by_occ_routing -- --exact --nocapture`,
+`CARGO_TARGET_DIR=/tmp/eos-phase05-next-target cargo test -p eos-operation --lib core::envelope::tests -- --nocapture`,
+and `CARGO_TARGET_DIR=/tmp/eos-phase05-next-target cargo test -p eos-operation --lib core::response::tests -- --nocapture`
+passed for this slice. Phase 05 remains in progress; the daemon/wire,
+isolated, command, and plugin family flips still need the same envelope/meta
+retargeting.
+
+Phase 05 file-family cleanup evidence, 2026-06-13: file read/write/edit wire
+results no longer serialize flat `timings` maps; the daemon file adapter keeps
+internal timing samples only long enough to emit trace/resource events, then
+strips them before wrapping the result envelope. The unused
+`ReadFileOutput { timings }` DTO was deleted from `eos-operation`, and
+`rg -n 'ReadFileOutput|result\["timings"\]|\["timings"\]\["api\.read|api\.write\.occ_apply_s' sandbox/crates/eos-operation sandbox/crates/eos-daemon/tests sandbox/crates/eos-daemon/src/op_adapter/files.rs sandbox/crates/eos-e2e-test/tests/core`
+returns no file-family wire-contract matches. `cargo fmt --check`,
+`CARGO_TARGET_DIR=/tmp/eos-event-trace-review-target cargo check -p eos-operation -p eos-daemon -p eos-sandbox-host -p eos-e2e-test --tests`,
+`CARGO_TARGET_DIR=/tmp/eos-event-trace-review-target cargo test -p eos-daemon --test phase2_read_paths dispatches_layerstack_read_file -- --exact --nocapture`,
+`CARGO_TARGET_DIR=/tmp/eos-event-trace-review-target cargo test -p eos-daemon --test phase3_write_paths -- --nocapture`,
+`CARGO_TARGET_DIR=/tmp/eos-event-trace-review-target cargo test -p eos-e2e-test --test core --no-default-features direct_file -- --nocapture`,
+and `git diff --check` passed for this slice.
+
+Phase 05 isolated-family evidence, 2026-06-13: the
+`workspace-runtime-isolated` e2e slice no longer has direct flat `success`,
+`error_kind`, or `timings.*` assertions; raw public writes, isolated enter/list
+responses, repeated-enter rejection faults, and traced enter/status/heartbeat
+chains now assert the response envelope before inspecting `result` or `error`.
+Daemon isolated dispatch tests likewise rely on `ok`/`rejected` envelopes and
+structured fault details instead of flat success/error payloads.
+`CARGO_TARGET_DIR=/tmp/eos-phase05-isolated-target cargo test -p eos-e2e-test --test workspace-runtime-isolated --no-default-features -- --nocapture`,
+`CARGO_TARGET_DIR=/tmp/eos-phase05-isolated-target cargo test -p eos-daemon --test phase2_read_paths isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled -- --exact --nocapture`,
+and `CARGO_TARGET_DIR=/tmp/eos-phase05-isolated-target-2 cargo test -p eos-daemon --lib op_adapter::isolation::tests -- --nocapture`
+passed for this slice.
+
+Phase 05 command-family evidence, 2026-06-13: finalized command result
+rendering no longer serializes flat `timings`; the command conflict contract
+fixture was updated to the no-timing wire shape while `MutationCore.timings`
+remains internal input for trace/resource event generation. Dispatcher coverage
+now asserts `sandbox.command.count` returns an `OperationEnvelope` with command
+facts under `result`, runtime fields under `meta`, and no top-level `success` or
+`timings`. The `workspace-runtime-command` command matrix no longer reads flat
+response `timings`/`resource.*` keys; bounded-resource assertions for command
+execution are now owned by trace/resource events rather than response payloads.
+`cargo fmt --check`,
+`CARGO_TARGET_DIR=/tmp/eos-phase05-command-target cargo test -p eos-operation --lib command::contract::tests -- --nocapture`,
+`CARGO_TARGET_DIR=/tmp/eos-phase05-command-target cargo test -p eos-daemon --lib dispatcher::tests::command_count_dispatch_returns_status_envelope -- --exact --nocapture`,
+`CARGO_TARGET_DIR=/tmp/eos-phase05-command-target cargo test -p eos-e2e-test --test workspace-runtime-command --no-default-features -- --nocapture`,
+`CARGO_TARGET_DIR=/tmp/eos-phase05-command-target cargo check -p eos-operation -p eos-daemon -p eos-e2e-test --tests`,
+and `git diff --check` passed for this slice. Phase 05 remains in progress;
+plugin, gateway, host, and generated e2e inventory surfaces still need the same
+migration pass.
+
+Phase 05 plugin-overlay evidence, 2026-06-13: oneshot plugin overlay responses
+no longer expose flat public `timings`; the daemon adapter now keeps the final
+timing map in an internal `PluginOverlayWireResponse` solely for
+trace/resource event emission before returning the stripped response body.
+Daemon plugin dispatcher tests now unwrap `OperationEnvelope` status/result or
+error/fault boundaries for ensure/status, deferred dynamic routes, missing
+routes, isolated-workspace rejection, and digest-reload route replacement before
+asserting plugin-domain payload fields. `cargo fmt --check`,
+`CARGO_TARGET_DIR=/tmp/eos-phase05-plugin-target cargo test -p eos-daemon --lib op_adapter::plugin::tests::plugin_overlay_response_strips_timings_but_keeps_trace_samples -- --exact --nocapture`,
+`CARGO_TARGET_DIR=/tmp/eos-phase05-plugin-target cargo test -p eos-daemon --lib op_adapter::plugin::tests:: -- --nocapture`,
+`CARGO_TARGET_DIR=/tmp/eos-phase05-plugin-target cargo check -p eos-daemon -p eos-operation -p eos-e2e-test --tests`,
+`CARGO_TARGET_DIR=/tmp/eos-phase05-plugin-target cargo test -p eos-e2e-test --test plugin --no-default-features -- --nocapture`,
+and `git diff --check` passed for this slice. Phase 05 remains in progress;
+broader plugin live e2e response assertions, gateway, host, and generated e2e
+inventory surfaces still need the same migration pass.
+
+Phase 05 plugin e2e response evidence, 2026-06-13: plugin live-suite raw
+daemon responses now decode `OperationEnvelope` at the assertion boundary for
+manifest/setup failures, isolated-workspace plugin rejection, traced plugin
+callback dispatch, concurrent stale dispatches, and reload-race dispatches.
+The remaining plugin e2e `success` assertions are plugin-domain payload checks
+after `call_ok` or explicit envelope result unwrapping, not public response
+branching; the plugin suite has no flat `timings.*`, `resource.*`,
+`is_success`, or `error_kind` assertions. `cargo fmt --check`,
+`CARGO_TARGET_DIR=/tmp/eos-phase05-plugin-e2e-target cargo test -p eos-e2e-test --test plugin --no-default-features -- --nocapture`,
+`CARGO_TARGET_DIR=/tmp/eos-phase05-plugin-e2e-target cargo check -p eos-e2e-test --tests`,
+`rg -n 'lease\.call\(|client\.request\(|call_traced|\["timings"\]|timings\.|resource\.|is_success\(|error_kind\(' sandbox/crates/eos-e2e-test/tests/plugin`
+showed only raw call sites that are decoded or intentionally fire-and-forget,
+and `git diff --check` passed for this slice. Phase 05 remains in progress;
+gateway, host, generated e2e inventory, and live feature e2e gates still need
+the same migration pass.
+
+Phase 05 workspace-publish-gate evidence, 2026-06-13: route-gating tests no
+longer read nested `timings.occ.*` response counters. Direct/gated/drop routing
+checks now keep raw daemon responses long enough to decode the trace sidecar,
+unwrap `OperationEnvelope.result`, and assert `occ.commit_finished`
+`direct_path_count`, `gated_path_count`, and `dropped_file_count` fields from
+the trace event. `cargo fmt --check`,
+`CARGO_TARGET_DIR=/tmp/eos-phase05-publish-gate-target cargo test -p eos-e2e-test --test workspace-publish-gate --no-default-features -- --nocapture`,
+and `rg -n 'timings\.|timing_f64|\["timings"\]|resource\.|is_success\(|error_kind\(' sandbox/crates/eos-e2e-test/tests/workspace-publish-gate`
+returned no matches for this suite. Phase 05 remains in progress; remaining
+e2e suites, gateway, host, generated e2e inventory, and live feature e2e gates
+still need the same migration pass.
+
 Implementation constraints:
 
 - No daemon hot-path persistence, host RPC, SQLite, fsync, or unbounded JSON
@@ -159,7 +269,7 @@ command/process vocabulary.
 | Persistence strictness | **Fail-closed for mutating ops**: host records the request-start audit entry before forwarding; if that write fails, the mutating op is not forwarded. Read-only ops proceed with a `trace_degraded` marker | Audit-critical framing: an untraceable mutation is worse than a refused one |
 | Workspace route | 4-valued, trace-only: `ephemeral_workspace` \| `isolated_workspace` \| `fast_path` \| `none` | Owner decision. `fast_path` = data-plane work directly against LayerStack with no workspace (direct file merge/read); `none` = pure control plane. Never used for runtime branching — observability only |
 | Response contract | Single typed envelope, `status ∈ {ok, running, rejected, cancelled, timed_out, error}` tagged union; domain payload under `result`, fault under `error`, everything else under `meta` | Most readable: one switch tells the consumer what happened; no `success:false`+error-kind double decode; no null pairs |
-| Compatibility | None preserved. A short-lived v1 flattening adapter exists only as a migration vehicle inside the phase ladder and is **deleted** in the final phase | No technical debt is the explicit goal; all in-repo consumers migrate in lockstep |
+| Compatibility | None preserved. The short-lived v1 flattening adapter was only a migration vehicle and has been deleted; the remaining mixed-wire helpers are Phase 05 classifiers that disappear after all consumers flip | No technical debt is the explicit goal; all in-repo consumers migrate in lockstep |
 
 ### Non-negotiable audit rules
 
@@ -1846,12 +1956,13 @@ classifies any object with a top-level `op` key as a Request
 updated to the new shapes (`status` + `error`) in the same phase that lands
 the envelope.
 
-Migration mechanics: a v1 flattening adapter (typed envelope → today's flat
-shape) exists **only** while families migrate, so each family can flip
-independently; gateway/host/e2e assertions for a family are rewritten in the
-same PR that flips it. The adapter and `is_success`/`error_kind` helpers are
-deleted in the final phase. No deprecation period beyond the ladder itself —
-nothing outside this repo consumes the wire today.
+Migration mechanics: the v1 flattening adapter (typed envelope → the old flat
+shape) existed only as a temporary bridge and has now been deleted; each family
+flip writes envelope responses directly. Gateway/host/e2e assertions for a
+family are rewritten in the same PR that flips it. The remaining
+`is_success`/`error_kind` helpers are shape-aware migration classifiers and are
+deleted after all consumers leave the mixed-wire window. No deprecation period
+beyond the ladder itself — nothing outside this repo consumes the wire today.
 
 ## Extension Model — Introducing New Trace Surfaces
 
@@ -1940,8 +2051,8 @@ Acceptance checklist:
   `serde_json::Value` as the public response contract.
 - [x] Bounded-detail budgets are enforced in shared constructors; truncation
   records `{truncated, original_len, sha256}`.
-- [x] A short-lived v1 flattening adapter exists only inside this migration
-  phase ladder and is marked for deletion in Phase 06.
+- [x] A short-lived v1 flattening adapter existed only inside this migration
+  phase ladder and was deleted during the Phase 05 response cleanup.
 - [x] `cargo test -p eos-trace -p eos-operation`
 - [x] Protobuf golden compatibility fixtures decode successfully after schema
   regeneration.
@@ -2184,9 +2295,10 @@ until then.
 
 Acceptance checklist:
 
-- [ ] Delete the v1 flattening adapter, `is_success`, `error_kind`,
+- [ ] Delete remaining migration/debt surfaces: `is_success`, `error_kind`,
   `OpResponse`, `merge_runner_timings`, flat timing/resource helpers, quirk
-  serializers, and `json!` response envelopes.
+  serializers, and `json!` response envelopes. The v1 flattening adapter is
+  already deleted.
 - [ ] `SpanKind`/event vocabulary exhaustiveness is the only timing/resource
   drift guard.
 - [ ] JSON trace payload helpers remain only for human exports/projections, not

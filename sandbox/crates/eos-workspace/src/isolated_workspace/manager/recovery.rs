@@ -6,16 +6,22 @@ use crate::isolated_workspace::error::IsolatedError;
 use crate::isolated_workspace::network::VethAllocation;
 use serde_json::{json, Value};
 
-use super::IsolatedManager;
+use super::{IsolatedManager, OrphanCleanupReport};
 
 impl IsolatedManager {
-    pub(super) fn reap_persisted_orphans(&mut self) -> Result<Vec<String>, IsolatedError> {
+    pub(super) fn reap_persisted_orphans(&mut self) -> Result<OrphanCleanupReport, IsolatedError> {
         let rows = self.read_persisted_handle_rows();
         self.handles.clear();
         self.by_caller.clear();
+        let mut cleanup_error = None;
         for row in &rows {
             if let Some(ns_ip) = persisted_ipv4(row, "ns_ip") {
-                let _ = self.network.reserve_persisted_ip(ns_ip);
+                if let Err(err) = self.network.reserve_persisted_ip(ns_ip) {
+                    record_cleanup_error(
+                        &mut cleanup_error,
+                        Some(format!("reserve_persisted_ip {ns_ip}: {err}")),
+                    );
+                }
             }
         }
         let orphan_lease_ids = rows
@@ -23,22 +29,28 @@ impl IsolatedManager {
             .filter_map(|row| persisted_string(row, "lease_id"))
             .collect();
         for row in &rows {
-            self.reap_persisted_holder(row);
+            record_cleanup_error(&mut cleanup_error, self.reap_persisted_holder(row));
             self.reap_persisted_veth(row);
-            self.reap_persisted_cgroup(row);
-            self.reap_persisted_scratch(row);
+            record_cleanup_error(&mut cleanup_error, self.reap_persisted_cgroup(row));
+            record_cleanup_error(&mut cleanup_error, self.reap_persisted_scratch(row));
         }
-        self.reap_named_orphans();
+        record_cleanup_error(&mut cleanup_error, self.reap_named_orphans());
         self.persist_handles()?;
-        Ok(orphan_lease_ids)
+        Ok(OrphanCleanupReport {
+            orphan_lease_ids,
+            cleanup_error,
+        })
     }
 
-    fn reap_persisted_holder(&self, row: &Value) {
+    fn reap_persisted_holder(&self, row: &Value) -> Option<String> {
         if let Some(holder_pid) = persisted_i32(row, "holder_pid").filter(|pid| *pid > 0) {
-            let _ = self
+            return self
                 .runtime
-                .kill_holder(holder_pid, self.caps.exit_grace_s.max(0.0));
+                .kill_holder(holder_pid, self.caps.exit_grace_s.max(0.0))
+                .err()
+                .map(|err| format!("kill persisted holder {holder_pid}: {err}"));
         }
+        None
     }
 
     fn reap_persisted_veth(&mut self, row: &Value) {
@@ -61,28 +73,32 @@ impl IsolatedManager {
         let _ = self.network.reserve_persisted_ip(ns_ip);
     }
 
-    fn reap_persisted_cgroup(&self, row: &Value) {
+    fn reap_persisted_cgroup(&self, row: &Value) -> Option<String> {
         if let Some(path) = persisted_existing_path(row, "cgroup_path") {
             kill_cgroup_pids(&path);
-            let _ = std::fs::remove_dir(path);
+            return remove_dir_best_effort(&path, "remove persisted cgroup");
         }
+        None
     }
 
-    fn reap_persisted_scratch(&self, row: &Value) {
+    fn reap_persisted_scratch(&self, row: &Value) -> Option<String> {
         if let Some(path) = persisted_existing_path(row, "scratch_dir") {
-            let _ = std::fs::remove_dir_all(path);
+            return remove_dir_all_best_effort(&path, "remove persisted scratch");
         }
+        None
     }
 
-    pub(super) fn reap_named_orphans(&mut self) {
-        self.reap_named_veth_orphans();
-        self.reap_named_cgroup_orphans();
-        self.reap_named_scratch_orphans();
+    pub(super) fn reap_named_orphans(&mut self) -> Option<String> {
+        let mut cleanup_error = None;
+        record_cleanup_error(&mut cleanup_error, self.reap_named_veth_orphans());
+        record_cleanup_error(&mut cleanup_error, self.reap_named_cgroup_orphans());
+        record_cleanup_error(&mut cleanup_error, self.reap_named_scratch_orphans());
+        cleanup_error
     }
 
-    fn reap_named_veth_orphans(&mut self) {
+    fn reap_named_veth_orphans(&mut self) -> Option<String> {
         let Ok(entries) = std::fs::read_dir("/sys/class/net") else {
-            return;
+            return None;
         };
         for entry in entries.flatten() {
             let name = entry.file_name().to_string_lossy().into_owned();
@@ -91,12 +107,14 @@ impl IsolatedManager {
             }
             self.network.teardown_host_veth(&name);
         }
+        None
     }
 
-    fn reap_named_cgroup_orphans(&self) {
+    fn reap_named_cgroup_orphans(&self) -> Option<String> {
         let Ok(entries) = std::fs::read_dir("/sys/fs/cgroup") else {
-            return;
+            return None;
         };
+        let mut cleanup_error = None;
         for entry in entries.flatten() {
             let path = entry.path();
             let name = entry.file_name().to_string_lossy().into_owned();
@@ -104,22 +122,31 @@ impl IsolatedManager {
                 continue;
             }
             kill_cgroup_pids(&path);
-            let _ = std::fs::remove_dir(&path);
+            record_cleanup_error(
+                &mut cleanup_error,
+                remove_dir_best_effort(&path, "remove named cgroup"),
+            );
         }
+        cleanup_error
     }
 
-    fn reap_named_scratch_orphans(&self) {
+    fn reap_named_scratch_orphans(&self) -> Option<String> {
         let Ok(entries) = std::fs::read_dir(&self.scratch_root) else {
-            return;
+            return None;
         };
+        let mut cleanup_error = None;
         for entry in entries.flatten() {
             let path = entry.path();
             let name = entry.file_name().to_string_lossy().into_owned();
             if name == "manager.json" || !path.is_dir() {
                 continue;
             }
-            let _ = std::fs::remove_dir_all(&path);
+            record_cleanup_error(
+                &mut cleanup_error,
+                remove_dir_all_best_effort(&path, "remove named scratch"),
+            );
         }
+        cleanup_error
     }
 
     fn persisted_handles_path(&self) -> PathBuf {
@@ -227,6 +254,28 @@ fn persisted_path(row: &Value, key: &str) -> Option<PathBuf> {
 
 fn persisted_existing_path(row: &Value, key: &str) -> Option<PathBuf> {
     persisted_path(row, key).filter(|path| path.exists())
+}
+
+fn record_cleanup_error(target: &mut Option<String>, error: Option<String>) {
+    if target.is_none() {
+        *target = error;
+    }
+}
+
+fn remove_dir_best_effort(path: &Path, context: &str) -> Option<String> {
+    match std::fs::remove_dir(path) {
+        Ok(()) => None,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => None,
+        Err(err) => Some(format!("{context} {}: {err}", path.display())),
+    }
+}
+
+fn remove_dir_all_best_effort(path: &Path, context: &str) -> Option<String> {
+    match std::fs::remove_dir_all(path) {
+        Ok(()) => None,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => None,
+        Err(err) => Some(format!("{context} {}: {err}", path.display())),
+    }
 }
 
 fn kill_cgroup_pids(cgroup_path: &Path) {

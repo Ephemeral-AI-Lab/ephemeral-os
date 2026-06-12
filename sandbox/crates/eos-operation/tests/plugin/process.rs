@@ -294,6 +294,7 @@ impl eos_workspace::NsRunnerLauncher for NoLaunch {
     fn spawn_detached(
         &self,
         _request: &eos_namespace::protocol::RunRequest,
+        _stderr_path: &Path,
     ) -> Result<std::process::Child, eos_workspace::LaunchError> {
         Err(eos_workspace::LaunchError::Failed(
             "no launcher in this test".to_owned(),

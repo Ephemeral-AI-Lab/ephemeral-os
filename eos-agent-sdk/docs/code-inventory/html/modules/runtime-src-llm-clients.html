@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>runtime/src/llm-clients Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-sdk</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/runtime.html">runtime</a></p>
+          <h1>runtime/src/llm-clients</h1>
+          <p class="lede">src/runtime/llm-clients.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>6</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>3</dd></div>
+          <div><dt>Functions</dt><dd>1</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>2</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>../contracts/index.js</code></td>
+      <td>DEFAULT_MAX_TOKENS</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../llm-client/index.js</code></td>
+      <td>createLlmClient, type LlmClient, type ProviderConnection, type ReasoningEffort</td>
+      <td>value</td>
+      <td>2</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>llm-clients.ts</code>
+        <small>6 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#LlmRef"><code>LlmRef</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#LlmClientProfile"><code>LlmClientProfile</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#LlmClientConfig"><code>LlmClientConfig</code></a>
+            <span>type</span>
+            <span class="compact-tags">config public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ResolvedLlmProfile"><code>ResolvedLlmProfile</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#LlmClientRegistry"><code>LlmClientRegistry</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#buildLlmClientRegistry"><code>buildLlmClientRegistry</code></a>
+            <span>function</span>
+            <span class="compact-tags">config public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="LlmRef" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>LlmRef</strong>
+          <span>type · line 10 · public</span>
+        </div>
+        <a href="../modules/runtime-src-llm-clients.html#LlmRef">Module</a>
+      </div>
+      <pre><code>export type LlmRef = string</code></pre>
+      <p>A named model profile; `AgentSpec.llm` resolves against the config keys.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="LlmClientProfile" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>LlmClientProfile</strong>
+          <span>type · line 18 · public</span>
+        </div>
+        <a href="../modules/runtime-src-llm-clients.html#LlmClientProfile">Module</a>
+      </div>
+      <pre><code>export type LlmClientProfile =</code></pre>
+      <p>One model profile, as parsed objects — the SDK never reads a config
+file. `connection` is the normal path (provider endpoint + credentials
+as values); `client` is the injection seam for an already-built
+`LlmClient` (tests, custom transports).</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="LlmClientConfig" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>LlmClientConfig</strong>
+          <span>type · line 27 · public</span>
+        </div>
+        <a href="../modules/runtime-src-llm-clients.html#LlmClientConfig">Module</a>
+      </div>
+      <pre><code>export type LlmClientConfig = Record&lt;LlmRef, LlmClientProfile&gt;</code></pre>
+      <p>Provider credentials/model profiles, keyed by `LlmRef`.</p>
+      <div class="tags"><span>config</span><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="ResolvedLlmProfile" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ResolvedLlmProfile</strong>
+          <span>interface · line 29 · public</span>
+        </div>
+        <a href="../modules/runtime-src-llm-clients.html#ResolvedLlmProfile">Module</a>
+      </div>
+      <pre><code>export interface ResolvedLlmProfile</code></pre>
+
+      <div class="tags"><span>di-boundary</span><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>client</code></td>
+              <td><code>LlmClient</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>model</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>maxTokens</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>reasoningEffort</code></td>
+              <td><code>ReasoningEffort</code></td>
+              <td>optional</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="LlmClientRegistry" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>LlmClientRegistry</strong>
+          <span>interface · line 36 · public</span>
+        </div>
+        <a href="../modules/runtime-src-llm-clients.html#LlmClientRegistry">Module</a>
+      </div>
+      <pre><code>export interface LlmClientRegistry</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>require</code></td>
+              <td><code>require(ref: LlmRef): ResolvedLlmProfile;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="buildLlmClientRegistry" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>buildLlmClientRegistry</strong>
+          <span>function · line 45 · public</span>
+        </div>
+        <a href="../modules/runtime-src-llm-clients.html#buildLlmClientRegistry">Module</a>
+      </div>
+      <pre><code>export function buildLlmClientRegistry(config: LlmClientConfig): LlmClientRegistry</code></pre>
+      <p>Build every configured client eagerly: an invalid connection fails
+`createAgentSdk` loudly, never a run.</p>
+      <div class="tags"><span>config</span><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/src/llm-clients</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/src/llm-clients</code></td>
+      <td><code>llm-client/src/index</code></td>
+      <td>2</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

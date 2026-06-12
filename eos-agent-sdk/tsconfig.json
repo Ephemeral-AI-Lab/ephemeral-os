@@ -2,7 +2,8 @@
   "extends": "./tsconfig.base.json",
   "include": [
     "src/**/*.ts",
-    "packages/**/*.ts",
+    "tests/**/*.ts",
+    "e2e/**/*.ts",
     "scripts/**/*.ts",
     "vitest.config.ts",
     "vitest.e2e.config.ts"

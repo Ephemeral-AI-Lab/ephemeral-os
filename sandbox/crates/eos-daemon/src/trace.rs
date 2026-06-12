@@ -250,6 +250,25 @@ pub(crate) fn attach_request_sidecar_with_events(
             "daemon.dispatch",
             json!({"op": op, "family": op_family(op), "verb": op_verb(op)}),
         ),
+        EventRecord::new(
+            SpanUid::new(3),
+            "parse_finished",
+            "daemon.dispatch",
+            json!({
+                "op": op,
+                "success": true,
+                "protocol_version": facts.protocol_version,
+            }),
+        ),
+        EventRecord::new(
+            SpanUid::new(3),
+            "plugin_fallback_checked",
+            "daemon.dispatch",
+            json!({
+                "op": op,
+                "plugin_shaped": op.starts_with("plugin."),
+            }),
+        ),
     ];
     if !request_events
         .iter()

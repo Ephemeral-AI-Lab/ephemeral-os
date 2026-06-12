@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>tool/src/outcome Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-sdk</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/tool.html">tool</a></p>
+          <h1>tool/src/outcome</h1>
+          <p class="lede">src/tool/outcome.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>8</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>1</dd></div>
+          <div><dt>Functions</dt><dd>3</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>2</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>../contracts/index.js</code></td>
+      <td>AgentRunId</td>
+      <td>type</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>zod</code></td>
+      <td>z</td>
+      <td>type</td>
+      <td>2</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>outcome.ts</code>
+        <small>8 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#INTERNAL"><code>INTERNAL</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#SubmitCtx"><code>SubmitCtx</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#SubmitVerdict"><code>SubmitVerdict</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#AgentOutcomeBinding"><code>AgentOutcomeBinding</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#AgentOutcomeFn"><code>AgentOutcomeFn</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#createAgentOutcomeFn"><code>createAgentOutcomeFn</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#unwrapAgentOutcomeFn"><code>unwrapAgentOutcomeFn</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#deriveDescription"><code>deriveDescription</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="INTERNAL" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>INTERNAL</strong>
+          <span>const · line 4 · internal</span>
+        </div>
+        <a href="../modules/tool-src-outcome.html#INTERNAL">Module</a>
+      </div>
+      <pre><code>const INTERNAL = Symbol(&quot;eos-agent-outcome-fn&quot;)</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="SubmitCtx" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>SubmitCtx</strong>
+          <span>interface · line 7 · public</span>
+        </div>
+        <a href="../modules/tool-src-outcome.html#SubmitCtx">Module</a>
+      </div>
+      <pre><code>export interface SubmitCtx</code></pre>
+      <p>What the terminal handler receives alongside the payload.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>runId</code></td>
+              <td><code>AgentRunId</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>submissionId</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="SubmitVerdict" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>SubmitVerdict</strong>
+          <span>type · line 17 · public</span>
+        </div>
+        <a href="../modules/tool-src-outcome.html#SubmitVerdict">Module</a>
+      </div>
+      <pre><code>export type SubmitVerdict&lt;T&gt; =</code></pre>
+      <p>The handler's verdict: commit-and-finish, or send the model back in-run.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    <h3>Variants</h3>
+
+    <ul class="variant-list">
+
+        <li><code>{ accept: T }</code></li>
+
+
+        <li><code>{ reject: string }</code></li>
+
+    </ul>
+
+
+    </article>
+
+
+    <article id="AgentOutcomeBinding" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AgentOutcomeBinding</strong>
+          <span>interface · line 20 · public</span>
+        </div>
+        <a href="../modules/tool-src-outcome.html#AgentOutcomeBinding">Module</a>
+      </div>
+      <pre><code>export interface AgentOutcomeBinding&lt;T&gt;</code></pre>
+      <p>The unwrapped factory product; workspace-internal.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>name</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>description</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>schema</code></td>
+              <td><code>z.ZodType&lt;T&gt;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>onSubmit</code></td>
+              <td><code>(payload: T, ctx: SubmitCtx) =&gt; Promise&lt;SubmitVerdict&lt;T&gt;&gt;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="AgentOutcomeFn" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AgentOutcomeFn</strong>
+          <span>interface · line 33 · public</span>
+        </div>
+        <a href="../modules/tool-src-outcome.html#AgentOutcomeFn">Module</a>
+      </div>
+      <pre><code>export interface AgentOutcomeFn&lt;T = string&gt;</code></pre>
+      <p>How a terminal-tool run completes — opaque; minted only by
+`createAgentOutcomeFn`. Its presence on an `AgentSpec` selects
+terminal-tool termination; its absence selects text mode.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>[INTERNAL]</code></td>
+              <td><code>AgentOutcomeBinding&lt;T&gt;</code></td>
+              <td>readonly</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="createAgentOutcomeFn" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>createAgentOutcomeFn</strong>
+          <span>function · line 44 · public</span>
+        </div>
+        <a href="../modules/tool-src-outcome.html#createAgentOutcomeFn">Module</a>
+      </div>
+      <pre><code>export function createAgentOutcomeFn&lt;T&gt;(spec:</code></pre>
+      <p>Mint the run's terminal contract: the factory owns the terminal tool's
+identity (`name` is what the model calls and what hook matchers see;
+`description` its docstring, derived from the schema when absent), the
+payload schema, and the caller-owned submission handler. The default
+`onSubmit` is the trivial validator — accept the payload unchanged.</p>
+      <div class="tags"><span>exported</span><span>factory</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="unwrapAgentOutcomeFn" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>unwrapAgentOutcomeFn</strong>
+          <span>function · line 65 · public</span>
+        </div>
+        <a href="../modules/tool-src-outcome.html#unwrapAgentOutcomeFn">Module</a>
+      </div>
+      <pre><code>export function unwrapAgentOutcomeFn&lt;T&gt;( fn: AgentOutcomeFn&lt;T&gt;, ): AgentOutcomeBinding&lt;T&gt;</code></pre>
+      <p>Workspace-internal accessor; the root package never re-exports it.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="deriveDescription" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>deriveDescription</strong>
+          <span>function · line 71 · internal</span>
+        </div>
+        <a href="../modules/tool-src-outcome.html#deriveDescription">Module</a>
+      </div>
+      <pre><code>function deriveDescription(schema: z.ZodType): string</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/outcome</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/outcome</code></td>
+      <td><code>zod</code></td>
+      <td>2</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

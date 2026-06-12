@@ -12,6 +12,23 @@ use crate::{LayerChange, LayerPath, OverlayError, Result};
 const WHITEOUT_PREFIX: &str = ".wh.";
 const OPAQUE_MARKER: &str = ".wh..wh..opq";
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct CaptureStats {
+    pub files: u64,
+    pub dirs: u64,
+    pub symlinks: u64,
+    pub bytes: u64,
+    pub truncated: bool,
+    pub read_error_count: u64,
+    pub first_error_path: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CapturedUpperdir {
+    pub changes: Vec<LayerChange>,
+    pub stats: CaptureStats,
+}
+
 /// Walk the overlay `upperdir` and capture the full write set.
 ///
 /// Walks ONLY the upperdir (never the lower layers): capture + publish is one
@@ -24,11 +41,32 @@ const OPAQUE_MARKER: &str = ".wh..wh..opq";
 /// Returns [`OverlayError`] when upperdir traversal, path normalization, xattr
 /// probing, or content/link-target reads fail.
 pub fn capture_upperdir(upperdir: &Path) -> Result<Vec<LayerChange>> {
-    std::fs::create_dir_all(upperdir).map_err(OverlayError::Capture)?;
+    Ok(capture_upperdir_with_stats(upperdir)?.changes)
+}
+
+/// Walk the overlay `upperdir` once, returning both the captured write set and
+/// resource stats counted during that capture walk.
+///
+/// # Errors
+///
+/// Returns [`OverlayError`] when upperdir traversal, path normalization, xattr
+/// probing, or content/link-target reads fail.
+pub fn capture_upperdir_with_stats(upperdir: &Path) -> Result<CapturedUpperdir> {
+    std::fs::create_dir_all(upperdir).map_err(|err| OverlayError::capture(upperdir, err))?;
     let mut emitted_opaque_dirs = HashSet::new();
     let mut changes = Vec::new();
-    walk_upperdir(upperdir, upperdir, &mut emitted_opaque_dirs, &mut changes)?;
-    Ok(changes)
+    let mut stats = CaptureStats {
+        dirs: 1,
+        ..CaptureStats::default()
+    };
+    walk_upperdir(
+        upperdir,
+        upperdir,
+        &mut emitted_opaque_dirs,
+        &mut changes,
+        &mut stats,
+    )?;
+    Ok(CapturedUpperdir { changes, stats })
 }
 
 fn walk_upperdir(
@@ -36,33 +74,39 @@ fn walk_upperdir(
     dir: &Path,
     emitted_opaque_dirs: &mut HashSet<String>,
     changes: &mut Vec<LayerChange>,
+    stats: &mut CaptureStats,
 ) -> Result<()> {
     let mut entries = std::fs::read_dir(dir)
-        .map_err(OverlayError::Capture)?
+        .map_err(|err| OverlayError::capture(dir, err))?
         .collect::<std::result::Result<Vec<_>, _>>()
-        .map_err(OverlayError::Capture)?;
+        .map_err(|err| OverlayError::capture(dir, err))?;
     entries.sort_by_key(std::fs::DirEntry::file_name);
 
     let mut dirs = Vec::new();
     let mut files = Vec::new();
     for entry in entries {
-        let file_type = entry.file_type().map_err(OverlayError::Capture)?;
+        let path = entry.path();
+        let meta =
+            std::fs::symlink_metadata(&path).map_err(|err| OverlayError::capture(&path, err))?;
+        let file_type = meta.file_type();
         if file_type.is_dir() {
-            dirs.push(entry.path());
+            stats.dirs = stats.dirs.saturating_add(1);
+            dirs.push(path);
         } else {
-            files.push(entry.path());
+            record_file_stats(stats, &meta);
+            files.push((path, meta));
         }
     }
 
-    for entry in files {
-        capture_file_entry(root, &entry, emitted_opaque_dirs, changes)?;
+    for (entry, meta) in files {
+        capture_file_entry(root, &entry, &meta, emitted_opaque_dirs, changes)?;
     }
     for entry in dirs {
         if has_overlay_opaque_xattr(&entry) {
             let opaque_path = relative_to_string(&relative_path(root, &entry)?);
             push_opaque_dir(opaque_path, emitted_opaque_dirs, changes)?;
         }
-        walk_upperdir(root, &entry, emitted_opaque_dirs, changes)?;
+        walk_upperdir(root, &entry, emitted_opaque_dirs, changes, stats)?;
     }
     Ok(())
 }
@@ -70,6 +114,7 @@ fn walk_upperdir(
 fn capture_file_entry(
     root: &Path,
     entry: &Path,
+    meta: &std::fs::Metadata,
     emitted_opaque_dirs: &mut HashSet<String>,
     changes: &mut Vec<LayerChange>,
 ) -> Result<()> {
@@ -88,8 +133,7 @@ fn capture_file_entry(
         changes.push(delete_change(&relative_to_string(&target))?);
         return Ok(());
     }
-    let meta = std::fs::symlink_metadata(entry).map_err(OverlayError::Capture)?;
-    if is_overlay_whiteout(entry, &meta)? {
+    if is_overlay_whiteout(entry, meta)? {
         changes.push(delete_change(&relative_to_string(&rel))?);
         return Ok(());
     }
@@ -99,6 +143,16 @@ fn capture_file_entry(
         changes.push(write_change(&relative_to_string(&rel), entry)?);
     }
     Ok(())
+}
+
+fn record_file_stats(stats: &mut CaptureStats, meta: &std::fs::Metadata) {
+    let file_type = meta.file_type();
+    if file_type.is_symlink() {
+        stats.symlinks = stats.symlinks.saturating_add(1);
+    } else if file_type.is_file() {
+        stats.files = stats.files.saturating_add(1);
+        stats.bytes = stats.bytes.saturating_add(meta.len());
+    }
 }
 
 fn push_opaque_dir(
@@ -123,7 +177,7 @@ fn delete_change(path: &str) -> Result<LayerChange> {
 fn write_change(path: &str, entry: &Path) -> Result<LayerChange> {
     Ok(LayerChange::Write {
         path: layer_path(path)?,
-        content: std::fs::read(entry).map_err(OverlayError::Capture)?,
+        content: std::fs::read(entry).map_err(|err| OverlayError::capture(entry, err))?,
     })
 }
 
@@ -131,7 +185,7 @@ fn symlink_change(path: &str, entry: &Path) -> Result<LayerChange> {
     Ok(LayerChange::Symlink {
         path: layer_path(path)?,
         source_path: std::fs::read_link(entry)
-            .map_err(OverlayError::Capture)?
+            .map_err(|err| OverlayError::capture(entry, err))?
             .to_string_lossy()
             .into_owned(),
     })
@@ -202,7 +256,7 @@ fn xattr_value(path: &Path, name: &str) -> Result<Option<Vec<u8>>> {
             }
             Err(Errno::RANGE) => buffer.resize(buffer.len() * 2, 0),
             Err(Errno::NODATA | Errno::OPNOTSUPP) => return Ok(None),
-            Err(err) => return Err(OverlayError::Capture(std::io::Error::from(err))),
+            Err(err) => return Err(OverlayError::capture(path, std::io::Error::from(err))),
         }
     }
 }

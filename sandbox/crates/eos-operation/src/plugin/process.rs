@@ -82,7 +82,7 @@ fn spawn_overlay_runner(
     overlay: &PluginServiceOverlay,
 ) -> Result<PluginServiceProcess, PluginRuntimeError> {
     let request = overlay_run_request(spec, overlay);
-    let child = launcher.spawn_detached(&request)?;
+    let child = launcher.spawn_detached(&request, &spec.stderr_path)?;
     Ok(PluginServiceProcess::from_child(spec.clone(), child))
 }
 

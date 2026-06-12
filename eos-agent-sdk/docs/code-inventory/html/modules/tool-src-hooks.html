@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>tool/src/hooks Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-sdk</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/tool.html">tool</a></p>
+          <h1>tool/src/hooks</h1>
+          <p class="lede">src/tool/hooks.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>9</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>2</dd></div>
+          <div><dt>Functions</dt><dd>4</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>4</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>../contracts/index.js</code></td>
+      <td>AgentRunId, JsonObject, ToolUseId</td>
+      <td>type</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../engine/index.js</code></td>
+      <td>TurnFacts</td>
+      <td>type</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../notification/index.js</code></td>
+      <td>Notifier</td>
+      <td>type</td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./contract.js</code></td>
+      <td>ToolResult</td>
+      <td>type</td>
+      <td>5</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>hooks.ts</code>
+        <small>9 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#HookMatcher"><code>HookMatcher</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#HookDecision"><code>HookDecision</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ToolCallFacts"><code>ToolCallFacts</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#HookEntry"><code>HookEntry</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#HookEngine"><code>HookEngine</code></a>
+            <span>class</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#matches"><code>matches</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#guarded"><code>guarded</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#combine"><code>combine</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#errorMessage"><code>errorMessage</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="HookMatcher" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>HookMatcher</strong>
+          <span>interface · line 8 · public</span>
+        </div>
+        <a href="../modules/tool-src-hooks.html#HookMatcher">Module</a>
+      </div>
+      <pre><code>export interface HookMatcher</code></pre>
+      <p>Exact tool name; absent matches all tools.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>toolName</code></td>
+              <td><code>string</code></td>
+              <td>optional</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="HookDecision" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>HookDecision</strong>
+          <span>type · line 13 · public</span>
+        </div>
+        <a href="../modules/tool-src-hooks.html#HookDecision">Module</a>
+      </div>
+      <pre><code>export type HookDecision = |</code></pre>
+      <p>Pre/post hooks speak only through this — one channel per signal.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    <h3>Variants</h3>
+
+    <ul class="variant-list">
+
+        <li><code>{ decision: &quot;passthrough&quot; }</code></li>
+
+
+        <li><code>{ decision: &quot;deny&quot;; reason: string }</code></li>
+
+    </ul>
+
+
+    </article>
+
+
+    <article id="ToolCallFacts" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ToolCallFacts</strong>
+          <span>interface · line 23 · public</span>
+        </div>
+        <a href="../modules/tool-src-hooks.html#ToolCallFacts">Module</a>
+      </div>
+      <pre><code>export interface ToolCallFacts</code></pre>
+      <p>What pre/post hooks receive — per-call facts only, no conversation
+access. A submission-vetting hook judges the payload alone; terminal
+payload schemas must be self-contained enough to vet. This is a
+designed constraint, not an omission.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>runId</code></td>
+              <td><code>AgentRunId</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>toolUseId</code></td>
+              <td><code>ToolUseId</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>toolName</code></td>
+              <td><code>string</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>input</code></td>
+              <td><code>JsonObject</code></td>
+              <td>readonly</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="HookEntry" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>HookEntry</strong>
+          <span>type · line 36 · public</span>
+        </div>
+        <a href="../modules/tool-src-hooks.html#HookEntry">Module</a>
+      </div>
+      <pre><code>export type HookEntry = |</code></pre>
+      <p>The one extension engine: callbacks on three events, matched by tool
+name. `preToolUse` deny means the call never executes; `postToolUse`
+deny replaces the executed result; `turnBoundary` observes turn facts
+and may publish through the provided notifier — it returns nothing.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    <h3>Variants</h3>
+
+    <ul class="variant-list">
+
+        <li><code>{ event: &quot;preToolUse&quot;; matcher?: HookMatcher; run: (call: ToolCallFacts) =&gt; H...</code></li>
+
+
+        <li><code>{ event: &quot;postToolUse&quot;; matcher?: HookMatcher; run: ( call: ToolCallFacts, re...</code></li>
+
+
+        <li><code>{ event: &quot;turnBoundary&quot;; run: ( turn: TurnFacts, ctx: { notifier: Notifier; r...</code></li>
+
+    </ul>
+
+
+    </article>
+
+
+    <article id="HookEngine" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>HookEngine</strong>
+          <span>class · line 66 · public</span>
+        </div>
+        <a href="../modules/tool-src-hooks.html#HookEngine">Module</a>
+      </div>
+      <pre><code>export class HookEngine</code></pre>
+      <p>Callback dispatch over one run's merged entries (globals first, then
+per-agent). Pre/post entries matching the call run in parallel; any
+deny wins and reasons join. A throwing pre/post hook resolves as deny
+with the thrown message (fail-closed; a host wanting fail-open catches
+inside its callback). A throwing turnBoundary hook is recorded and
+skipped. A broken hook never wedges a batch.</p>
+      <div class="tags"><span>exported</span><span>public-api</span><span>stateful</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>#pre</code></td>
+              <td><code>Extract&lt;HookEntry, { event: &quot;preToolUse&quot; }&gt;[]</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#post</code></td>
+              <td><code>Extract&lt;HookEntry, { event: &quot;postToolUse&quot; }&gt;[]</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#boundary</code></td>
+              <td><code>Extract&lt;HookEntry, { event: &quot;turnBoundary&quot; }&gt;[]</code></td>
+              <td>readonly</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>preToolUse</code></td>
+              <td><code>async preToolUse(call: ToolCallFacts): Promise&lt;HookDecision&gt;</code></td>
+              <td>async</td>
+            </tr>
+
+
+            <tr>
+              <td><code>postToolUse</code></td>
+              <td><code>async postToolUse(call: ToolCallFacts, result: ToolResult): Promise&lt;HookDecision&gt;</code></td>
+              <td>async</td>
+            </tr>
+
+
+            <tr>
+              <td><code>turnBoundary</code></td>
+              <td><code>async turnBoundary( turn: TurnFacts, ctx:</code></td>
+              <td>async</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="matches" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>matches</strong>
+          <span>function · line 114 · internal</span>
+        </div>
+        <a href="../modules/tool-src-hooks.html#matches">Module</a>
+      </div>
+      <pre><code>function matches(matcher: HookMatcher | undefined, toolName: string): boolean</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="guarded" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>guarded</strong>
+          <span>function · line 118 · internal</span>
+        </div>
+        <a href="../modules/tool-src-hooks.html#guarded">Module</a>
+      </div>
+      <pre><code>async function guarded( run: () =&gt; HookDecision | Promise&lt;HookDecision&gt;, ): Promise&lt;HookDecision&gt;</code></pre>
+
+      <div class="tags"><span>async</span><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="combine" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>combine</strong>
+          <span>function · line 128 · internal</span>
+        </div>
+        <a href="../modules/tool-src-hooks.html#combine">Module</a>
+      </div>
+      <pre><code>function combine(decisions: HookDecision[]): HookDecision</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="errorMessage" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>errorMessage</strong>
+          <span>function · line 137 · internal</span>
+        </div>
+        <a href="../modules/tool-src-hooks.html#errorMessage">Module</a>
+      </div>
+      <pre><code>function errorMessage(error: unknown): string</code></pre>
+
+      <div class="tags"><span>error</span><span>internal</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/hooks</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/hooks</code></td>
+      <td><code>engine/src/index</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/hooks</code></td>
+      <td><code>notification/src/index</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/hooks</code></td>
+      <td><code>tool/src/contract</code></td>
+      <td>5</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

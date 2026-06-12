@@ -512,6 +512,7 @@ impl NsRunnerLauncher for FakeNsRunnerLauncher {
     fn spawn_detached(
         &self,
         request: &eos_namespace::protocol::RunRequest,
+        stderr_path: &std::path::Path,
     ) -> Result<std::process::Child, LaunchError> {
         let args = &request.tool_call.args;
         let command: Vec<String> = serde_json::from_value(args["command"].clone())
@@ -523,12 +524,19 @@ impl NsRunnerLauncher for FakeNsRunnerLauncher {
             .split_first()
             .ok_or_else(|| LaunchError::InvalidRequest("empty service command".to_owned()))?;
         let mut child = std::process::Command::new(program);
+        if let Some(parent) = stderr_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let stderr = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(stderr_path)?;
         child
             .args(rest)
             .envs(env)
             .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null());
+            .stderr(stderr);
         {
             use std::os::unix::process::CommandExt;
             child.process_group(0);

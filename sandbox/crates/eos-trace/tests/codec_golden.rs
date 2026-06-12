@@ -1,8 +1,9 @@
 use eos_trace::{
-    decode_trace_batch, encode_trace_batch, EventRecord, RequestId, ResourceStats,
+    decode_trace_batch, encode_trace_batch, proto, EventRecord, RequestId, ResourceStats,
     ResourceStatsKind, SpanKind, SpanRecord, SpanUid, TraceBatch, TraceId, TraceLink,
     TraceLinkKind, TraceRecord,
 };
+use prost::Message;
 use serde_json::json;
 
 fn canonical_batch() -> TraceBatch {
@@ -78,6 +79,58 @@ fn decodes_committed_v1_fixture() {
 
     assert_eq!(decoded.dropped_traces, 7);
     assert!(decoded.records.is_empty());
+}
+
+#[test]
+fn rejects_unknown_link_kind_instead_of_defaulting_to_command() {
+    let batch = proto::TraceBatch {
+        records: vec![proto::TraceRecord {
+            trace_id: "trace-bad-link-kind".to_owned(),
+            kind: 1,
+            root_span_id: 1,
+            links: vec![proto::TraceLink {
+                kind: 99,
+                value: "cmd-1".to_owned(),
+            }],
+            ..proto::TraceRecord::default()
+        }],
+        ..proto::TraceBatch::default()
+    };
+
+    let err = decode_trace_batch(&batch.encode_to_vec()).expect_err("unknown link kind must fail");
+
+    assert!(
+        err.to_string()
+            .contains("links[0].kind has unknown code 99"),
+        "decode error should name the unknown enum code: {err}"
+    );
+}
+
+#[test]
+fn rejects_malformed_child_json_instead_of_dropping_event() {
+    let batch = proto::TraceBatch {
+        records: vec![proto::TraceRecord {
+            trace_id: "trace-bad-event-json".to_owned(),
+            kind: 1,
+            root_span_id: 1,
+            events: vec![proto::TraceEvent {
+                span_id: 1,
+                name: "bad".to_owned(),
+                module: "daemon.dispatch".to_owned(),
+                details_json: "not-json".to_owned(),
+                ..proto::TraceEvent::default()
+            }],
+            ..proto::TraceRecord::default()
+        }],
+        ..proto::TraceBatch::default()
+    };
+
+    let err = decode_trace_batch(&batch.encode_to_vec()).expect_err("bad event JSON must fail");
+
+    assert!(
+        err.to_string().contains("events[0].details_json"),
+        "decode error should name the malformed child field: {err}"
+    );
 }
 
 fn hex_to_bytes(hex: &str) -> Vec<u8> {

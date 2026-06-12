@@ -242,7 +242,7 @@ impl ValidatedMountInputs {
                 }
                 _ => {}
             }
-            fs::create_dir_all(path).map_err(OverlayError::Capture)?;
+            fs::create_dir_all(path).map_err(|err| OverlayError::capture(path, err))?;
             fds.push(open_dir_no_follow(path)?);
         }
 

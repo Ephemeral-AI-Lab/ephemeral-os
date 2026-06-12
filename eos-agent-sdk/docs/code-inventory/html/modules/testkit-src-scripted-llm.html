@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>testkit/src/scripted-llm Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-sdk</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/testkit.html">testkit</a></p>
+          <h1>testkit/src/scripted-llm</h1>
+          <p class="lede">src/testkit/scripted-llm.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>13</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>1</dd></div>
+          <div><dt>Functions</dt><dd>10</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>2</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>../contracts/index.js</code></td>
+      <td>toolUseIdFrom, type ContentBlock, type JsonObject, type Message, type UserMessage</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../llm-client/index.js</code></td>
+      <td>LlmClient, LlmRequest, LlmStreamEvent, LlmStreamOptions, StopReason, UsageSnapshot</td>
+      <td>type</td>
+      <td>8</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>scripted-llm.ts</code>
+        <small>13 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#ScriptedTurn"><code>ScriptedTurn</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ScriptedLlmClient"><code>ScriptedLlmClient</code></a>
+            <span>class</span>
+            <span class="compact-tags">provider-client public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#scriptedTurn"><code>scriptedTurn</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#dynamicTurn"><code>dynamicTurn</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#gatedTurn"><code>gatedTurn</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#hangingTurn"><code>hangingTurn</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#USAGE"><code>USAGE</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#complete"><code>complete</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#assistantMessage"><code>assistantMessage</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#textBlock"><code>textBlock</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#toolUseBlock"><code>toolUseBlock</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#userMessage"><code>userMessage</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#lastToolResult"><code>lastToolResult</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="ScriptedTurn" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ScriptedTurn</strong>
+          <span>type · line 18 · public</span>
+        </div>
+        <a href="../modules/testkit-src-scripted-llm.html#ScriptedTurn">Module</a>
+      </div>
+      <pre><code>export type ScriptedTurn = ( request: LlmRequest, signal: AbortSignal | undefined, ) =&gt; AsyncIterable&lt;LlmStreamEvent&gt;</code></pre>
+      <p>One scripted provider turn; receives the request and the run's signal.</p>
+      <div class="tags"><span>abortable</span><span>async-iterable</span><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="ScriptedLlmClient" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ScriptedLlmClient</strong>
+          <span>class · line 24 · public</span>
+        </div>
+        <a href="../modules/testkit-src-scripted-llm.html#ScriptedLlmClient">Module</a>
+      </div>
+      <pre><code>export class ScriptedLlmClient implements LlmClient</code></pre>
+      <p>In-process `LlmClient` double: one script per provider call, in order.</p>
+      <div class="tags"><span>exported</span><span>provider-client</span><span>public-api</span><span>stateful</span></div>
+
+    <h3>Heritage</h3>
+    <p>LlmClient</p>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>requests</code></td>
+              <td><code>LlmRequest[]</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#turns</code></td>
+              <td><code>ScriptedTurn[]</code></td>
+              <td>readonly</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>streamMessage</code></td>
+              <td><code>streamMessage( request: LlmRequest, options?: LlmStreamOptions, ): AsyncIterable&lt;LlmStreamEvent&gt;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="scriptedTurn" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>scriptedTurn</strong>
+          <span>function · line 46 · public</span>
+        </div>
+        <a href="../modules/testkit-src-scripted-llm.html#scriptedTurn">Module</a>
+      </div>
+      <pre><code>export function scriptedTurn(events: LlmStreamEvent[]): ScriptedTurn</code></pre>
+      <p>A turn that yields the given events, a microtask apart, then completes.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="dynamicTurn" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>dynamicTurn</strong>
+          <span>function · line 56 · public</span>
+        </div>
+        <a href="../modules/testkit-src-scripted-llm.html#dynamicTurn">Module</a>
+      </div>
+      <pre><code>export function dynamicTurn( build: (request: LlmRequest) =&gt; LlmStreamEvent[], ): ScriptedTurn</code></pre>
+      <p>A turn whose events are built from the live request (dynamic ids).</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="gatedTurn" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>gatedTurn</strong>
+          <span>function · line 68 · public</span>
+        </div>
+        <a href="../modules/testkit-src-scripted-llm.html#gatedTurn">Module</a>
+      </div>
+      <pre><code>export function gatedTurn( release: Promise&lt;void&gt;, events: LlmStreamEvent[], ): ScriptedTurn</code></pre>
+      <p>A turn that waits for `release`, then yields its events.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="hangingTurn" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>hangingTurn</strong>
+          <span>function · line 82 · public</span>
+        </div>
+        <a href="../modules/testkit-src-scripted-llm.html#hangingTurn">Module</a>
+      </div>
+      <pre><code>export function hangingTurn(onStart?: () =&gt; void): ScriptedTurn</code></pre>
+      <p>A turn that signals `onStart`, then hangs until the run's signal aborts.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="USAGE" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>USAGE</strong>
+          <span>const · line 97 · internal</span>
+        </div>
+        <a href="../modules/testkit-src-scripted-llm.html#USAGE">Module</a>
+      </div>
+      <pre><code>const USAGE: UsageSnapshot = { input_tokens: 1, output_tokens: 1 }</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="complete" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>complete</strong>
+          <span>function · line 100 · public</span>
+        </div>
+        <a href="../modules/testkit-src-scripted-llm.html#complete">Module</a>
+      </div>
+      <pre><code>export function complete( message: Message, stop_reason: StopReason = &quot;end_turn&quot;, ): LlmStreamEvent</code></pre>
+      <p>The terminal stream event completing one assistant turn.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="assistantMessage" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>assistantMessage</strong>
+          <span>function · line 107 · public</span>
+        </div>
+        <a href="../modules/testkit-src-scripted-llm.html#assistantMessage">Module</a>
+      </div>
+      <pre><code>export function assistantMessage(...content: ContentBlock[]): Message</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="textBlock" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>textBlock</strong>
+          <span>function · line 111 · public</span>
+        </div>
+        <a href="../modules/testkit-src-scripted-llm.html#textBlock">Module</a>
+      </div>
+      <pre><code>export function textBlock(text: string): ContentBlock</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="toolUseBlock" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>toolUseBlock</strong>
+          <span>function · line 115 · public</span>
+        </div>
+        <a href="../modules/testkit-src-scripted-llm.html#toolUseBlock">Module</a>
+      </div>
+      <pre><code>export function toolUseBlock( id: string, name: string, input: JsonObject =</code></pre>
+
+      <div class="tags"><span>exported</span><span>json-boundary</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="userMessage" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>userMessage</strong>
+          <span>function · line 124 · public</span>
+        </div>
+        <a href="../modules/testkit-src-scripted-llm.html#userMessage">Module</a>
+      </div>
+      <pre><code>export function userMessage(text: string): UserMessage</code></pre>
+      <p>A run-seed / steer entry from raw text.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="lastToolResult" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>lastToolResult</strong>
+          <span>function · line 129 · public</span>
+        </div>
+        <a href="../modules/testkit-src-scripted-llm.html#lastToolResult">Module</a>
+      </div>
+      <pre><code>export function lastToolResult( request: LlmRequest, ): Extract&lt;ContentBlock,</code></pre>
+      <p>The last `tool_result` block in the request, most recent first.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>implements</td>
+      <td><code>testkit/src/scripted-llm#ScriptedLlmClient</code></td>
+      <td><code>LlmClient</code></td>
+      <td>24</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>testkit/src/scripted-llm</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>testkit/src/scripted-llm</code></td>
+      <td><code>llm-client/src/index</code></td>
+      <td>8</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

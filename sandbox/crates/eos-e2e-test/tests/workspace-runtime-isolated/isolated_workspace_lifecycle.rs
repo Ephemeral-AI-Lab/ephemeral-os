@@ -15,8 +15,9 @@ use eos_trace::TraceRecord;
 use serde_json::{json, Value};
 
 use crate::support::{
-    as_bool, as_i64, as_str, has_trace_event, live_pool_or_skip, reset_isolated_workspaces,
-    trace_record, wait_for_command_count, wait_for_command_stdout_contains,
+    as_bool, as_i64, as_str, envelope_result, has_trace_event, live_pool_or_skip,
+    reset_isolated_workspaces, trace_record, wait_for_command_count,
+    wait_for_command_stdout_contains,
 };
 
 #[test]
@@ -115,23 +116,19 @@ fn enter_rejects_active_command_and_repeated_enter_reports_already_open() -> Res
     let body = (|| -> Result<()> {
         let rejected = lease.call(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
         assert_eq!(
-            rejected.get("success").and_then(Value::as_bool),
-            Some(false),
-            "enter must reject instead of silently cleaning up an active command: {rejected}"
+            as_str(&rejected, "status")?,
+            "rejected",
+            "enter must reject instead of silently cleaning up an active command: {rejected}",
         );
+        let rejected_error = envelope_fault(&rejected)?;
         assert_eq!(
-            rejected
-                .get("error")
-                .and_then(|error| error.get("kind"))
-                .and_then(Value::as_str),
-            Some("active_background_work"),
+            as_str(rejected_error, "kind")?,
+            "active_background_work",
             "active command rejection should use a stable error kind: {rejected}"
         );
         assert_eq!(
-            rejected
-                .get("error")
-                .and_then(|error| error.get("details"))
-                .and_then(|details| details.get("active_commands"))
+            fault_detail_fields(rejected_error)?
+                .get("active_commands")
                 .and_then(Value::as_i64),
             Some(1),
             "rejection should report active command count: {rejected}"
@@ -143,23 +140,20 @@ fn enter_rejects_active_command_and_repeated_enter_reports_already_open() -> Res
         )?;
         wait_for_command_count(&lease, 0)?;
 
-        let enter = lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
-        assert!(
-            !as_str(&enter, "workspace_handle_id")?.is_empty(),
-            "{enter}"
-        );
+        let enter = lease.call(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
+        assert_eq!(as_str(&enter, "status")?, "ok", "{enter}");
+        let enter = envelope_result(&enter)?;
+        assert!(!as_str(enter, "workspace_handle_id")?.is_empty(), "{enter}");
         let repeated = lease.call(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
         assert_eq!(
-            repeated.get("success").and_then(Value::as_bool),
-            Some(false),
+            as_str(&repeated, "status")?,
+            "rejected",
             "repeated enter must reject while the handle is open: {repeated}"
         );
+        let repeated_error = envelope_fault(&repeated)?;
         assert_eq!(
-            repeated
-                .get("error")
-                .and_then(|error| error.get("kind"))
-                .and_then(Value::as_str),
-            Some("already_open"),
+            as_str(repeated_error, "kind")?,
+            "already_open",
             "repeated enter should report already_open: {repeated}"
         );
         lease.call_ok(catalog::SANDBOX_ISOLATION_EXIT, json!({}))?;
@@ -230,7 +224,8 @@ fn live_trace_isolated_enter_exec_status_exit_records_one_chain() -> Result<()> 
         &trace_context(&trace_id, "enter"),
     )?;
     let body = (|| -> Result<()> {
-        let handle_id = as_str(&enter, "workspace_handle_id")?.to_owned();
+        let enter_result = envelope_result(&enter)?;
+        let handle_id = as_str(enter_result, "workspace_handle_id")?.to_owned();
         let enter_record = trace_record(&enter)?;
 
         let exec = lease.call_traced(
@@ -253,7 +248,8 @@ fn live_trace_isolated_enter_exec_status_exit_records_one_chain() -> Result<()> 
             &trace_context(&trace_id, "status"),
         )?;
         let status_record = trace_record(&status)?;
-        assert!(as_bool(&status, "open")?, "{status}");
+        let status_result = envelope_result(&status)?;
+        assert!(as_bool(status_result, "open")?, "{status}");
 
         let heartbeat = lease.call_traced(
             catalog::SANDBOX_CALL_HEARTBEAT,
@@ -261,7 +257,8 @@ fn live_trace_isolated_enter_exec_status_exit_records_one_chain() -> Result<()> 
             &trace_context(&trace_id, "heartbeat"),
         )?;
         let heartbeat_record = trace_record(&heartbeat)?;
-        assert_eq!(as_i64(&heartbeat, "touched")?, 0, "{heartbeat}");
+        let heartbeat_result = envelope_result(&heartbeat)?;
+        assert_eq!(as_i64(heartbeat_result, "touched")?, 0, "{heartbeat}");
 
         let exit = lease.call_traced(
             catalog::SANDBOX_ISOLATION_EXIT,
@@ -388,6 +385,19 @@ fn trace_context(trace_id: &str, step: &str) -> TraceWireContext {
     }
 }
 
+fn envelope_fault(response: &Value) -> Result<&Value> {
+    response
+        .get("error")
+        .context("envelope response should include error fault")
+}
+
+fn fault_detail_fields(fault: &Value) -> Result<&Value> {
+    fault
+        .get("details")
+        .and_then(|details| details.get("fields"))
+        .context("envelope fault should include details.fields")
+}
+
 fn finalize_traced_command(
     lease: &eos_e2e_test::NodeLease<'_>,
     trace_id: &str,
@@ -395,9 +405,9 @@ fn finalize_traced_command(
     records: &mut Vec<TraceRecord>,
 ) -> Result<Value> {
     if as_str(&response, "status")? != "running" {
-        return Ok(response);
+        return Ok(envelope_result(&response)?.clone());
     }
-    let command_id = as_str(&response, "command_id")?.to_owned();
+    let command_id = as_str(envelope_result(&response)?, "command_id")?.to_owned();
     let deadline = Instant::now() + Duration::from_secs(20);
     let mut poll_index = 0;
     loop {
@@ -409,7 +419,7 @@ fn finalize_traced_command(
         )?;
         records.push(trace_record(&progress)?);
         if as_str(&progress, "status")? != "running" {
-            return Ok(progress);
+            return Ok(envelope_result(&progress)?.clone());
         }
         if Instant::now() >= deadline {
             anyhow::bail!("command {command_id} did not finish before deadline: {progress}");

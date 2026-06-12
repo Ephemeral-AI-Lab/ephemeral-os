@@ -7,7 +7,7 @@ import { defineConfig } from "vitest/config";
  */
 export default defineConfig({
   test: {
-    include: ["packages/*/e2e/**/*.e2e.ts"],
+    include: ["e2e/**/*.e2e.ts"],
     testTimeout: 60_000,
     fileParallelism: false,
     retry: 0,

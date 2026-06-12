@@ -1,0 +1,1521 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>tool Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-sdk</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a></p>
+          <h1>tool</h1>
+          <p class="lede">src/tool</p>
+
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Modules</dt><dd>15</dd></div>
+          <div><dt>Source</dt><dd>9</dd></div>
+          <div><dt>Tests</dt><dd>6</dd></div>
+          <div><dt>Symbols</dt><dd>59</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Package Manifest</h2>
+          <span>module</span>
+        </div>
+        <div class="manifest-grid">
+          <div><strong>exports</strong><ul><li><code>.</code></li></ul></div>
+          <div><strong>dependencies</strong><ul><li><code>background</code></li><li><code>contracts</code></li><li><code>engine</code></li><li><code>notification</code></li><li><code>zod</code></li></ul></div>
+          <div><strong>devDependencies</strong><p>none</p></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>File Tree</h2>
+          <input class="search-input" type="search" placeholder="Filter files, symbols, tags" aria-label="Filter files, symbols, tags">
+        </div>
+        <div class="tree-nav"><div class="tree-children">
+      <details class="tree-folder" open>
+        <summary>
+          <span class="tree-label">tests</span>
+        </summary>
+        <div class="tree-children">
+      <details class="tree-folder" open>
+        <summary>
+          <span class="tree-label">tool</span>
+        </summary>
+        <div class="tree-children">
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/tool-tests-define-test.html"><code>define.test.ts</code></a>
+        <small>test · 0 symbols</small>
+      </div>
+      <div class="tags"><span>test</span><span>test-only</span></div>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/tool-tests-executor-test.html"><code>executor.test.ts</code></a>
+        <small>test · 2 symbols</small>
+      </div>
+      <div class="tags"><span>test</span><span>test-only</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-tests-executor-test.html#OPEN_GATE"><code>OPEN_GATE</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-tests-executor-test.html#probeTool"><code>probeTool</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/tool-tests-hooks-test.html"><code>hooks.test.ts</code></a>
+        <small>test · 1 symbols</small>
+      </div>
+      <div class="tags"><span>test</span><span>test-only</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-tests-hooks-test.html#FACTS"><code>FACTS</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/tool-tests-pipeline-test.html"><code>pipeline.test.ts</code></a>
+        <small>test · 1 symbols</small>
+      </div>
+      <div class="tags"><span>test</span><span>test-only</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-tests-pipeline-test.html#echo"><code>echo</code></a>
+          <span>schema</span>
+          <span class="compact-tags">internal schema:zod test-only</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/tool-tests-support.html"><code>support.ts</code></a>
+        <small>test-support · 7 symbols</small>
+      </div>
+      <div class="tags"><span>test-only</span><span>test-support</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-tests-support.html#RUN_ID"><code>RUN_ID</code></a>
+          <span>const</span>
+          <span class="compact-tags">public-api test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-tests-support.html#ScopeFixture"><code>ScopeFixture</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-tests-support.html#scopeFixture"><code>scopeFixture</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-tests-support.html#BatchFixture"><code>BatchFixture</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-tests-support.html#batchFixture"><code>batchFixture</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-tests-support.html#call"><code>call</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-tests-support.html#contentText"><code>contentText</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api test-only</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/tool-tests-terminal-test.html"><code>terminal.test.ts</code></a>
+        <small>test · 3 symbols</small>
+      </div>
+      <div class="tags"><span>test</span><span>test-only</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-tests-terminal-test.html#SCHEMA"><code>SCHEMA</code></a>
+          <span>schema</span>
+          <span class="compact-tags">internal schema:zod test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-tests-terminal-test.html#GateFixture"><code>GateFixture</code></a>
+          <span>interface</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-tests-terminal-test.html#gateFixture"><code>gateFixture</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+    </ul>
+
+    </div>
+  </div>
+      </details>
+    </div>
+      </details>
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/tool-src-contract.html"><code>contract.ts</code></a>
+        <small>source · 3 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-contract.html#ToolResult"><code>ToolResult</code></a>
+          <span>type</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-contract.html#ToolCallContext"><code>ToolCallContext</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-contract.html#ToolDefinition"><code>ToolDefinition</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/tool-src-define.html"><code>define.ts</code></a>
+        <small>source · 2 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-define.html#ToolDefinitionInit"><code>ToolDefinitionInit</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-define.html#defineTool"><code>defineTool</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/tool-src-executor.html"><code>executor.ts</code></a>
+        <small>source · 8 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-executor.html#MAX_TOOL_CONCURRENCY"><code>MAX_TOOL_CONCURRENCY</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-executor.html#ToolBatchExecutorInput"><code>ToolBatchExecutorInput</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-executor.html#toolBatchExecutor"><code>toolBatchExecutor</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-executor.html#executeCall"><code>executeCall</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-executor.html#projectContent"><code>projectContent</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-executor.html#errorResult"><code>errorResult</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-executor.html#isAborted"><code>isAborted</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-executor.html#settledOrAborted"><code>settledOrAborted</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/tool-src-hooks.html"><code>hooks.ts</code></a>
+        <small>source · 9 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-hooks.html#HookMatcher"><code>HookMatcher</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-hooks.html#HookDecision"><code>HookDecision</code></a>
+          <span>type</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-hooks.html#ToolCallFacts"><code>ToolCallFacts</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-hooks.html#HookEntry"><code>HookEntry</code></a>
+          <span>type</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-hooks.html#HookEngine"><code>HookEngine</code></a>
+          <span>class</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-hooks.html#matches"><code>matches</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-hooks.html#guarded"><code>guarded</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-hooks.html#combine"><code>combine</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-hooks.html#errorMessage"><code>errorMessage</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/tool-src-index.html"><code>index.ts</code></a>
+        <small>entrypoint · 0 symbols</small>
+      </div>
+      <div class="tags"><span>entrypoint</span><span>package-entrypoint</span><span>public-api</span></div>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/tool-src-outcome.html"><code>outcome.ts</code></a>
+        <small>source · 8 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-outcome.html#INTERNAL"><code>INTERNAL</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-outcome.html#SubmitCtx"><code>SubmitCtx</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-outcome.html#SubmitVerdict"><code>SubmitVerdict</code></a>
+          <span>type</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-outcome.html#AgentOutcomeBinding"><code>AgentOutcomeBinding</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-outcome.html#AgentOutcomeFn"><code>AgentOutcomeFn</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-outcome.html#createAgentOutcomeFn"><code>createAgentOutcomeFn</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-outcome.html#unwrapAgentOutcomeFn"><code>unwrapAgentOutcomeFn</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-outcome.html#deriveDescription"><code>deriveDescription</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/tool-src-pipeline.html"><code>pipeline.ts</code></a>
+        <small>source · 8 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-pipeline.html#PipelineResult"><code>PipelineResult</code></a>
+          <span>type</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-pipeline.html#RunScope"><code>RunScope</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-pipeline.html#BoundTool"><code>BoundTool</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-pipeline.html#toolSpec"><code>toolSpec</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-pipeline.html#callFacts"><code>callFacts</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-pipeline.html#rejectedResult"><code>rejectedResult</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-pipeline.html#bindTool"><code>bindTool</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-pipeline.html#stamp"><code>stamp</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/tool-src-terminal.html"><code>terminal.ts</code></a>
+        <small>source · 3 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-terminal.html#TerminalGate"><code>TerminalGate</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-terminal.html#TerminalBinding"><code>TerminalBinding</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-terminal.html#bindTerminalTool"><code>bindTerminalTool</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/tool-src-toolset.html"><code>toolset.ts</code></a>
+        <small>source · 4 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-toolset.html#BuildToolExecutorInput"><code>BuildToolExecutorInput</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-toolset.html#BuiltToolExecutor"><code>BuiltToolExecutor</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-toolset.html#buildToolExecutor"><code>buildToolExecutor</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/tool-src-toolset.html#sortByName"><code>sortByName</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+    </ul>
+
+    </div>
+  </div></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2><span>105</span></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>extends</td>
+      <td><code>tool/tests/support#BatchFixture</code></td>
+      <td><code>ToolBatchContext</code></td>
+      <td>42</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>extends</td>
+      <td><code>tool/tests/terminal.test#GateFixture</code></td>
+      <td><code>TerminalGate</code></td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/contract</code></td>
+      <td><code>background/src/index</code></td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/contract</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/contract</code></td>
+      <td><code>notification/src/index</code></td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/contract</code></td>
+      <td><code>zod</code></td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/define</code></td>
+      <td><code>tool/src/contract</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/define</code></td>
+      <td><code>zod</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/executor</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/executor</code></td>
+      <td><code>engine/src/index</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/executor</code></td>
+      <td><code>tool/src/pipeline</code></td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/hooks</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/hooks</code></td>
+      <td><code>engine/src/index</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/hooks</code></td>
+      <td><code>notification/src/index</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/hooks</code></td>
+      <td><code>tool/src/contract</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/outcome</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/outcome</code></td>
+      <td><code>zod</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/pipeline</code></td>
+      <td><code>background/src/index</code></td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/src/pipeline</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/pipeline</code></td>
+      <td><code>engine/src/index</code></td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/pipeline</code></td>
+      <td><code>notification/src/index</code></td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/pipeline</code></td>
+      <td><code>tool/src/contract</code></td>
+      <td>13</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/pipeline</code></td>
+      <td><code>tool/src/hooks</code></td>
+      <td>14</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/src/pipeline</code></td>
+      <td><code>zod</code></td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/src/terminal</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/terminal</code></td>
+      <td><code>engine/src/index</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/terminal</code></td>
+      <td><code>tool/src/outcome</code></td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/src/terminal</code></td>
+      <td><code>tool/src/pipeline</code></td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/src/terminal</code></td>
+      <td><code>zod</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/toolset</code></td>
+      <td><code>engine/src/index</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/toolset</code></td>
+      <td><code>tool/src/contract</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/src/toolset</code></td>
+      <td><code>tool/src/executor</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/src/toolset</code></td>
+      <td><code>tool/src/outcome</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/src/toolset</code></td>
+      <td><code>tool/src/pipeline</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/src/toolset</code></td>
+      <td><code>tool/src/terminal</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/define.test</code></td>
+      <td><code>tool/src/define</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/define.test</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/define.test</code></td>
+      <td><code>zod</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/executor.test</code></td>
+      <td><code>tool/src/define</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/executor.test</code></td>
+      <td><code>tool/src/outcome</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/tests/executor.test</code></td>
+      <td><code>tool/src/terminal</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/executor.test</code></td>
+      <td><code>tool/src/toolset</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/executor.test</code></td>
+      <td><code>tool/tests/support</code></td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/executor.test</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/executor.test</code></td>
+      <td><code>zod</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/hooks.test</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/hooks.test</code></td>
+      <td><code>tool/src/hooks</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/hooks.test</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/tests/pipeline.test</code></td>
+      <td><code>tool/src/contract</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/pipeline.test</code></td>
+      <td><code>tool/src/define</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/pipeline.test</code></td>
+      <td><code>tool/src/pipeline</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/pipeline.test</code></td>
+      <td><code>tool/tests/support</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/pipeline.test</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/pipeline.test</code></td>
+      <td><code>zod</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/tests/support</code></td>
+      <td><code>background/src/index</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/support</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/tests/support</code></td>
+      <td><code>engine/src/index</code></td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/support</code></td>
+      <td><code>tool/src/hooks</code></td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/tests/support</code></td>
+      <td><code>tool/src/pipeline</code></td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/terminal.test</code></td>
+      <td><code>tool/src/outcome</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/terminal.test</code></td>
+      <td><code>tool/src/terminal</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/terminal.test</code></td>
+      <td><code>tool/tests/support</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/terminal.test</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/tests/terminal.test</code></td>
+      <td><code>zod</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>package-depends-on</td>
+      <td><code>tool</code></td>
+      <td><code>background</code></td>
+      <td></td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>package-depends-on</td>
+      <td><code>tool</code></td>
+      <td><code>contracts</code></td>
+      <td></td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>package-depends-on</td>
+      <td><code>tool</code></td>
+      <td><code>engine</code></td>
+      <td></td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>package-depends-on</td>
+      <td><code>tool</code></td>
+      <td><code>notification</code></td>
+      <td></td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>package-depends-on</td>
+      <td><code>tool</code></td>
+      <td><code>zod</code></td>
+      <td></td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>reexports <small>type</small></td>
+      <td><code>tool/src/index</code></td>
+      <td><code>tool/src/contract</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>reexports</td>
+      <td><code>tool/src/index</code></td>
+      <td><code>tool/src/define</code></td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>reexports</td>
+      <td><code>tool/src/index</code></td>
+      <td><code>tool/src/hooks</code></td>
+      <td>12</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>reexports</td>
+      <td><code>tool/src/index</code></td>
+      <td><code>tool/src/outcome</code></td>
+      <td>19</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>reexports <small>type</small></td>
+      <td><code>tool/src/index</code></td>
+      <td><code>tool/src/pipeline</code></td>
+      <td>27</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>reexports <small>type</small></td>
+      <td><code>tool/src/index</code></td>
+      <td><code>tool/src/terminal</code></td>
+      <td>28</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>reexports</td>
+      <td><code>tool/src/index</code></td>
+      <td><code>tool/src/toolset</code></td>
+      <td>29</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/define.test</code></td>
+      <td><code>tool/src/define</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/define.test</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/define.test</code></td>
+      <td><code>zod</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/executor.test</code></td>
+      <td><code>tool/src/define</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/executor.test</code></td>
+      <td><code>tool/src/outcome</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>tool/tests/executor.test</code></td>
+      <td><code>tool/src/terminal</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/executor.test</code></td>
+      <td><code>tool/src/toolset</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/executor.test</code></td>
+      <td><code>tool/tests/support</code></td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/executor.test</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/executor.test</code></td>
+      <td><code>zod</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/hooks.test</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/hooks.test</code></td>
+      <td><code>tool/src/hooks</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/hooks.test</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>tool/tests/pipeline.test</code></td>
+      <td><code>tool/src/contract</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/pipeline.test</code></td>
+      <td><code>tool/src/define</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/pipeline.test</code></td>
+      <td><code>tool/src/pipeline</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/pipeline.test</code></td>
+      <td><code>tool/tests/support</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/pipeline.test</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/pipeline.test</code></td>
+      <td><code>zod</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>tool/tests/support</code></td>
+      <td><code>background/src/index</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/support</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>tool/tests/support</code></td>
+      <td><code>engine/src/index</code></td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/support</code></td>
+      <td><code>tool/src/hooks</code></td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>tool/tests/support</code></td>
+      <td><code>tool/src/pipeline</code></td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/terminal.test</code></td>
+      <td><code>tool/src/outcome</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/terminal.test</code></td>
+      <td><code>tool/src/terminal</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/terminal.test</code></td>
+      <td><code>tool/tests/support</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/terminal.test</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>tool/tests/terminal.test</code></td>
+      <td><code>zod</code></td>
+      <td>2</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

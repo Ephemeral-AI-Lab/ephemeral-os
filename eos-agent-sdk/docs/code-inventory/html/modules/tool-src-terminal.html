@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>tool/src/terminal Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-sdk</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/tool.html">tool</a></p>
+          <h1>tool/src/terminal</h1>
+          <p class="lede">src/tool/terminal.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>3</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>1</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>5</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>../contracts/index.js</code></td>
+      <td>zodIssueSummary, type JsonObject, type ToolSpec</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../engine/index.js</code></td>
+      <td>ToolBatchContext, ToolUseBlock</td>
+      <td>type</td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>zod</code></td>
+      <td>z</td>
+      <td>value</td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./outcome.js</code></td>
+      <td>AgentOutcomeBinding, SubmitVerdict</td>
+      <td>type</td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./pipeline.js</code></td>
+      <td>callFacts, rejectedResult, type BoundTool, type PipelineResult, type RunScope</td>
+      <td>value</td>
+      <td>10</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>terminal.ts</code>
+        <small>3 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#TerminalGate"><code>TerminalGate</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#TerminalBinding"><code>TerminalBinding</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#bindTerminalTool"><code>bindTerminalTool</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="TerminalGate" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>TerminalGate</strong>
+          <span>interface · line 23 · public</span>
+        </div>
+        <a href="../modules/tool-src-terminal.html#TerminalGate">Module</a>
+      </div>
+      <pre><code>export interface TerminalGate</code></pre>
+      <p>The submission gate the runtime closes over the run's live state. The
+gate is SDK-internal mechanism, not a configurable hook — hosts tune
+nothing here.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>blockers</code></td>
+              <td><code>blockers(): string[];</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>beginFinishing</code></td>
+              <td><code>beginFinishing(): void;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>cancelFinishing</code></td>
+              <td><code>cancelFinishing(): void;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="TerminalBinding" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>TerminalBinding</strong>
+          <span>interface · line 32 · public</span>
+        </div>
+        <a href="../modules/tool-src-terminal.html#TerminalBinding">Module</a>
+      </div>
+      <pre><code>export interface TerminalBinding&lt;T&gt;</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>bound</code></td>
+              <td><code>BoundTool</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>takeAccepted</code></td>
+              <td><code>() =&gt; { value: T } | undefined</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="bindTerminalTool" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>bindTerminalTool</strong>
+          <span>function · line 46 · public</span>
+        </div>
+        <a href="../modules/tool-src-terminal.html#bindTerminalTool">Module</a>
+      </div>
+      <pre><code>export function bindTerminalTool&lt;T&gt;( fn: AgentOutcomeBinding&lt;T&gt;, scope: RunScope, gate: TerminalGate, ): TerminalBinding&lt;T&gt;</code></pre>
+      <p>Bind the minted terminal contract as an ordinary-looking tool whose
+successful result ends the run. Order per call: schema -&gt; gate -&gt; pre
+hooks -&gt; post hooks (on the provisional result) -&gt; `onSubmit`. Hooks
+run BEFORE the handler so a hook deny — like a handler reject — costs
+the host nothing; once `onSubmit` accepts, nothing can stop the finish,
+so the accepted value and host state cannot diverge (single mutator).</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/src/terminal</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/terminal</code></td>
+      <td><code>engine/src/index</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/terminal</code></td>
+      <td><code>tool/src/outcome</code></td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/src/terminal</code></td>
+      <td><code>tool/src/pipeline</code></td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>tool/src/terminal</code></td>
+      <td><code>zod</code></td>
+      <td>7</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

@@ -12,7 +12,7 @@ mod workspace_outcome;
 pub use audit::MutationSource;
 pub use envelope::{
     OperationEnvelope, OperationStatus, OperationWarning, ResourceSummary, ResponseMeta,
-    StepSummary, TraceRef, V1FlatteningAdapter, WorkspaceRouteRef,
+    StepSummary, TraceRef, WorkspaceRouteRef,
 };
 pub use error::OpError;
 pub use fault::{FaultDetails, OperationFault, SourceError};

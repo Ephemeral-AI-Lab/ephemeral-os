@@ -6,7 +6,7 @@ use serde_json::Value;
 use crate::core::request::{
     optional_path, require_raw_string, require_string, ArgProblem, ArgsError,
 };
-use crate::{CallerId, WorkspaceKind, WorkspaceTimings};
+use crate::CallerId;
 
 use super::SearchReplaceEdit;
 
@@ -25,17 +25,6 @@ impl ReadFileInput {
             layer_stack_root: optional_path(args, "layer_stack_root"),
         })
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ReadFileOutput {
-    #[serde(rename = "workspace")]
-    pub workspace_kind: WorkspaceKind,
-    pub success: bool,
-    pub content: String,
-    pub exists: bool,
-    pub encoding: String,
-    pub timings: WorkspaceTimings,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

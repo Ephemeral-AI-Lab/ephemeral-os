@@ -23,6 +23,5 @@ pub use core::{
     InvocationId, MutationCore, MutationSource, MutationStatus, OpError, OpRequest, OpResponse,
     OpResponseError, OpResponseErrorKind, OperationEnvelope, OperationFault, OperationStatus,
     OperationWarning, RequestError, ResourceSummary, ResponseMeta, SourceError, StepSummary,
-    TraceRef, V1FlatteningAdapter, WorkspaceConflict, WorkspaceKind, WorkspaceMutationOutcome,
-    WorkspaceTimings,
+    TraceRef, WorkspaceConflict, WorkspaceKind, WorkspaceMutationOutcome, WorkspaceTimings,
 };

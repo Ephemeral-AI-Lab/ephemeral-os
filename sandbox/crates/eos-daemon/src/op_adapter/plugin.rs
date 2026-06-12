@@ -35,6 +35,14 @@ pub(crate) fn op_ensure(
 ) -> Result<Value, DaemonError> {
     let services = context.require_services()?;
     services.ensure_plugin_caller_allowed(&input.caller)?;
+    context.record_trace_event(
+        "plugin",
+        "ensure_started",
+        json!({
+            "plugin": input.plugin.as_deref(),
+            "digest": input.digest.as_deref(),
+        }),
+    );
     let ensure_result = services.plugin.ensure(&input);
     if let Err(err) = &ensure_result {
         record_plugin_ensure_error_trace_events(&context, err);
@@ -116,7 +124,10 @@ pub(crate) fn dispatch_registered_op(
                 )
             }
         });
-    record_ppc_trace_events(&context, services.plugin.drain_ppc_trace_events());
+    record_ppc_trace_events(
+        &context,
+        services.plugin.drain_ppc_trace_events_for(invocation_id),
+    );
     Some(result)
 }
 
@@ -267,7 +278,7 @@ fn package_report_value(report: &PackageEnsureReport) -> Value {
 fn plugin_overlay_response(
     overlay: &PluginOverlayOutcome,
     total_start: Instant,
-) -> Result<Value, DaemonError> {
+) -> Result<PluginOverlayWireResponse, DaemonError> {
     let manifest = LayerStack::open(overlay.layer_stack_root.clone())?.read_active_manifest()?;
     let mut timings = resource_timings(&manifest, overlay.changeset.published_file_count());
     merge_runner_timings(&mut timings, &overlay.runner);
@@ -319,7 +330,24 @@ fn plugin_overlay_response(
         overlay.changeset.success(),
         worker_success,
     );
-    Ok(response)
+    let timings = response
+        .get("timings")
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
+    strip_plugin_overlay_internal_fields(&mut response);
+    Ok(PluginOverlayWireResponse { response, timings })
+}
+
+struct PluginOverlayWireResponse {
+    response: Value,
+    timings: Map<String, Value>,
+}
+
+fn strip_plugin_overlay_internal_fields(response: &mut Value) {
+    if let Some(object) = response.as_object_mut() {
+        object.remove("timings");
+    }
 }
 
 fn apply_plugin_overlay_status(
@@ -361,22 +389,27 @@ fn plugin_overlay_response_with_trace(
     record_plugin_overlay_resource_stats(context, "before", before_resource_timings);
     record_plugin_overlay_host_resource_stats(context, "before", before_resource_timings);
     record_plugin_overlay_started(context, op, invocation_id, overlay);
+    record_plugin_overlay_workspace_prepared(context, op, invocation_id, overlay);
+    record_plugin_overlay_mount_started(context, op, invocation_id, overlay);
     record_plugin_overlay_mount_finished(context, op, invocation_id, overlay);
     record_plugin_overlay_unmount_finished(context, op, invocation_id, overlay);
     record_plugin_overlay_capture_started(context, op, invocation_id, overlay);
     let result = plugin_overlay_response(overlay, total_start);
-    if let Ok(response) = &result {
-        if let Some(timings) = response.get("timings").and_then(Value::as_object) {
-            record_plugin_overlay_resource_stats(context, "after", timings);
-            record_plugin_overlay_host_resource_stats(context, "after", timings);
-        }
+    if let Ok(wire) = &result {
+        record_plugin_overlay_resource_stats(context, "after", &wire.timings);
+        record_plugin_overlay_host_resource_stats(context, "after", &wire.timings);
     }
     record_plugin_overlay_capture_finished(context, op, invocation_id, overlay);
     record_occ_changeset_trace_events(context, &overlay.changeset);
     match &result {
-        Ok(response) => {
-            record_plugin_overlay_finished(context, op, invocation_id, overlay, response, None)
-        }
+        Ok(wire) => record_plugin_overlay_finished(
+            context,
+            op,
+            invocation_id,
+            overlay,
+            &wire.response,
+            None,
+        ),
         Err(err) => record_plugin_overlay_finished(
             context,
             op,
@@ -386,7 +419,7 @@ fn plugin_overlay_response_with_trace(
             Some(err),
         ),
     }
-    result
+    result.map(|wire| wire.response)
 }
 
 fn record_plugin_overlay_started(
@@ -402,6 +435,44 @@ fn record_plugin_overlay_started(
             "op": op,
             "invocation_id": invocation_id,
             "layer_stack_root": overlay.layer_stack_root,
+        }),
+    );
+}
+
+fn record_plugin_overlay_workspace_prepared(
+    context: &DispatchContext<'_>,
+    op: &str,
+    invocation_id: &str,
+    overlay: &PluginOverlayOutcome,
+) {
+    context.record_trace_event(
+        "overlay",
+        "workspace_prepared",
+        json!({
+            "op": op,
+            "invocation_id": invocation_id,
+            "source": "plugin_oneshot_overlay",
+            "layer_stack_root": overlay.layer_stack_root,
+            "layer_count": overlay.layer_count,
+        }),
+    );
+}
+
+fn record_plugin_overlay_mount_started(
+    context: &DispatchContext<'_>,
+    op: &str,
+    invocation_id: &str,
+    overlay: &PluginOverlayOutcome,
+) {
+    context.record_trace_event(
+        "overlay",
+        "mount_started",
+        json!({
+            "op": op,
+            "invocation_id": invocation_id,
+            "source": "plugin_oneshot_overlay",
+            "layer_stack_root": overlay.layer_stack_root,
+            "layer_count": overlay.layer_count,
         }),
     );
 }
@@ -523,6 +594,7 @@ fn record_plugin_overlay_mount_finished(
             "layer_count": overlay.layer_count,
             "fsconfig_calls": fsconfig_calls,
             "fsconfig_calls_available": fsconfig_calls.is_some(),
+            "upperdir_empty_bytes": 0,
         }),
     );
     context.record_trace_event(
@@ -546,6 +618,7 @@ fn record_plugin_overlay_mount_finished(
                 "layer_count": overlay.layer_count,
                 "fsconfig_calls": fsconfig_calls,
                 "fsconfig_calls_available": fsconfig_calls.is_some(),
+                "upperdir_empty_bytes": 0,
             },
         }),
     );
@@ -736,6 +809,28 @@ fn record_plugin_overlay_finished(
 }
 
 fn record_plugin_ensure_trace_events(context: &DispatchContext<'_>, ready: &EnsureReady) {
+    context.record_trace_event(
+        "plugin",
+        "package_checked",
+        json!({
+            "plugin": ready.plugin_id,
+            "digest": ready.digest,
+            "active": ready.package.active,
+            "needs_upload": ready.package.needs_upload,
+            "package_root": ready
+                .package
+                .package_root
+                .as_ref()
+                .map(|path| path.to_string_lossy().into_owned()),
+            "dependency_root": ready
+                .package
+                .dependency_root
+                .as_ref()
+                .map(|path| path.to_string_lossy().into_owned()),
+            "package_published": ready.package.package_published,
+            "setup_ran": ready.package.setup_ran,
+        }),
+    );
     if let Some(setup) = &ready.package.setup {
         record_plugin_setup_finished(context, setup);
     }

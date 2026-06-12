@@ -13,11 +13,22 @@ pub struct CapturedChanges {
 }
 
 /// Error raised while capturing an overlay upperdir.
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("capture failed: {reason}")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CaptureError {
     pub reason: String,
+    pub failing_path: Option<String>,
 }
+
+impl std::fmt::Display for CaptureError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.failing_path.as_deref() {
+            Some(path) => write!(formatter, "capture failed at {path}: {}", self.reason),
+            None => write!(formatter, "capture failed: {}", self.reason),
+        }
+    }
+}
+
+impl std::error::Error for CaptureError {}
 
 /// Capture an upperdir delta and resource stats.
 ///
@@ -26,12 +37,14 @@ pub struct CaptureError {
 /// Returns [`CaptureError`] when the upperdir walk fails.
 pub fn capture_upperdir(upperdir: &Path) -> Result<CapturedChanges, CaptureError> {
     let start = std::time::Instant::now();
-    let changes = eos_overlay::capture_upperdir(upperdir).map_err(|error| CaptureError {
-        reason: error.to_string(),
-    })?;
+    let captured =
+        eos_overlay::capture_upperdir_with_stats(upperdir).map_err(|error| CaptureError {
+            failing_path: error.failing_path().map(|path| path.display().to_string()),
+            reason: error.to_string(),
+        })?;
     Ok(CapturedChanges {
-        changes,
-        stats: TreeResourceStats::collect(upperdir),
+        changes: captured.changes,
+        stats: TreeResourceStats::from(captured.stats),
         capture_s: start.elapsed().as_secs_f64(),
     })
 }

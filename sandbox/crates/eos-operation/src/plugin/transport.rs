@@ -51,13 +51,24 @@ impl PpcTraceEvent {
 
 #[derive(Clone, Default)]
 pub struct PpcTraceEventSink {
-    events: Arc<Mutex<Vec<PpcTraceEvent>>>,
+    events: Arc<Mutex<Vec<StoredPpcTraceEvent>>>,
 }
 
 impl PpcTraceEventSink {
     fn push(&self, event: PpcTraceEvent) {
+        self.push_inner(None, event);
+    }
+
+    fn push_for(&self, owner_message_id: &str, event: PpcTraceEvent) {
+        self.push_inner(Some(owner_message_id.to_owned()), event);
+    }
+
+    fn push_inner(&self, owner_message_id: Option<String>, event: PpcTraceEvent) {
         if let Ok(mut events) = self.events.lock() {
-            events.push(event);
+            events.push(StoredPpcTraceEvent {
+                owner_message_id,
+                event,
+            });
         }
     }
 
@@ -65,9 +76,44 @@ impl PpcTraceEventSink {
     pub fn drain(&self) -> Vec<PpcTraceEvent> {
         self.events
             .lock()
-            .map(|mut events| events.drain(..).collect())
+            .map(|mut events| events.drain(..).map(|stored| stored.event).collect())
             .unwrap_or_default()
     }
+
+    #[must_use]
+    pub fn drain_for(&self, owner_message_id: &str) -> Vec<PpcTraceEvent> {
+        self.drain_matching(|stored| stored.owner_message_id.as_deref() == Some(owner_message_id))
+    }
+
+    #[must_use]
+    pub fn drain_unowned(&self) -> Vec<PpcTraceEvent> {
+        self.drain_matching(|stored| stored.owner_message_id.is_none())
+    }
+
+    fn drain_matching(
+        &self,
+        mut matches: impl FnMut(&StoredPpcTraceEvent) -> bool,
+    ) -> Vec<PpcTraceEvent> {
+        let Ok(mut events) = self.events.lock() else {
+            return Vec::new();
+        };
+        let mut drained = Vec::new();
+        let mut index = 0;
+        while index < events.len() {
+            if matches(&events[index]) {
+                drained.push(events.remove(index).event);
+            } else {
+                index += 1;
+            }
+        }
+        drained
+    }
+}
+
+#[derive(Debug, Clone)]
+struct StoredPpcTraceEvent {
+    owner_message_id: Option<String>,
+    event: PpcTraceEvent,
 }
 
 /// A connected plugin service's PPC client: a synchronous request/reply façade
@@ -113,6 +159,16 @@ impl PpcClient {
     #[must_use]
     pub fn drain_trace_events(&self) -> Vec<PpcTraceEvent> {
         self.trace_events.drain()
+    }
+
+    #[must_use]
+    pub fn drain_trace_events_for(&self, owner_message_id: &str) -> Vec<PpcTraceEvent> {
+        self.trace_events.drain_for(owner_message_id)
+    }
+
+    #[must_use]
+    pub fn drain_unowned_trace_events(&self) -> Vec<PpcTraceEvent> {
+        self.trace_events.drain_unowned()
     }
 
     /// Send a request and await its reply (no callbacks serviced).
@@ -167,6 +223,8 @@ impl PpcClient {
             let _ = self.pending.discard(&message_id);
             return Err(err);
         }
+        self.trace_events
+            .push_for(&message_id, ppc_message_event("ppc_message_sent", request));
 
         match reply_rx.recv_timeout(timeout) {
             Ok(result) => result,
@@ -228,7 +286,10 @@ fn handle_callback(
     let callback_message_id = message.message_id.clone();
     let (owner_id, handler) = match pending.callback_handler_for_message(&message) {
         Ok(found) => {
-            trace_events.push(callback_event("callback_request", &message, Some(&found.0)));
+            trace_events.push_for(
+                &found.0,
+                callback_event("callback_request", &message, Some(&found.0)),
+            );
             found
         }
         Err(error) => {
@@ -260,9 +321,12 @@ fn handle_callback(
             if let Err(err) = writer.write(&reply) {
                 pending.fail_one(&owner_id, err.to_string());
             } else {
-                trace_events.push(callback_event("callback_response", &reply, Some(&owner_id)));
+                trace_events.push_for(
+                    &owner_id,
+                    callback_event("callback_response", &reply, Some(&owner_id)),
+                );
                 if let Some(event) = callback_occ_commit_event(&message, &reply, &owner_id) {
-                    trace_events.push(event);
+                    trace_events.push_for(&owner_id, event);
                 }
             }
         }
@@ -404,6 +468,10 @@ impl PendingCalls {
             return;
         };
         if let Some(pending_request) = pending_request {
+            trace_events.push_for(
+                &message_id,
+                ppc_message_event("ppc_message_received", &message),
+            );
             let _ = pending_request.reply_tx.send(Ok(message));
         } else {
             trace_events.push(PpcTraceEvent::new(
@@ -553,6 +621,19 @@ fn callback_event(
             "parent_message_id": message.parent_message_id.as_deref().or(owner_id),
             "direction": direction_label(message.direction),
             "op": message.op,
+        }),
+    )
+}
+
+fn ppc_message_event(name: &'static str, message: &PpcMessage) -> PpcTraceEvent {
+    PpcTraceEvent::new(
+        name,
+        json!({
+            "message_id": message.message_id,
+            "parent_message_id": message.parent_message_id,
+            "direction": direction_label(message.direction),
+            "op": message.op,
+            "body_bytes": message.body.len(),
         }),
     )
 }

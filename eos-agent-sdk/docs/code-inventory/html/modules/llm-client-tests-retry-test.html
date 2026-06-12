@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>llm-client/tests/retry.test Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-sdk</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/llm-client.html">llm-client</a></p>
+          <h1>llm-client/tests/retry.test</h1>
+          <p class="lede">tests/llm-client/retry.test.ts</p>
+          <div class="tags"><span>test</span><span>test-only</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>5</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>1</dd></div>
+          <div><dt>Functions</dt><dd>3</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>7</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>vitest</code></td>
+      <td>describe, expect, it</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/contracts/index.js</code></td>
+      <td>toolUseIdFrom</td>
+      <td>value</td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/llm-client/config.js</code></td>
+      <td>RetryConfig</td>
+      <td>type</td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/llm-client/errors.js</code></td>
+      <td>ProviderError</td>
+      <td>value</td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/llm-client/events.js</code></td>
+      <td>LlmStreamEvent</td>
+      <td>type</td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/llm-client/retry.js</code></td>
+      <td>retryStream</td>
+      <td>value</td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./support.js</code></td>
+      <td>collect, collectUntilError</td>
+      <td>value</td>
+      <td>9</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>retry.test.ts</code>
+        <small>5 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#FAST"><code>FAST</code></a>
+            <span>const</span>
+            <span class="compact-tags">config internal test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#text"><code>text</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#complete"><code>complete</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#Scripted"><code>Scripted</code></a>
+            <span>type</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#scripted"><code>scripted</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="FAST" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>FAST</strong>
+          <span>const · line 11 · internal</span>
+        </div>
+        <a href="../modules/llm-client-tests-retry-test.html#FAST">Module</a>
+      </div>
+      <pre><code>const FAST: RetryConfig = { max_retries: 3, base_delay_s: 0, max_delay_s: 0, status_codes: [429, 500, 502, 503, 529], }</code></pre>
+
+      <div class="tags"><span>config</span><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="text" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>text</strong>
+          <span>function · line 18 · internal</span>
+        </div>
+        <a href="../modules/llm-client-tests-retry-test.html#text">Module</a>
+      </div>
+      <pre><code>function text(value: string): LlmStreamEvent</code></pre>
+
+      <div class="tags"><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="complete" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>complete</strong>
+          <span>function · line 22 · internal</span>
+        </div>
+        <a href="../modules/llm-client-tests-retry-test.html#complete">Module</a>
+      </div>
+      <pre><code>function complete(): LlmStreamEvent</code></pre>
+
+      <div class="tags"><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="Scripted" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>Scripted</strong>
+          <span>type · line 30 · internal</span>
+        </div>
+        <a href="../modules/llm-client-tests-retry-test.html#Scripted">Module</a>
+      </div>
+      <pre><code>type Scripted = (LlmStreamEvent | ProviderError)[][]</code></pre>
+
+      <div class="tags"><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="scripted" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>scripted</strong>
+          <span>function · line 33 · internal</span>
+        </div>
+        <a href="../modules/llm-client-tests-retry-test.html#scripted">Module</a>
+      </div>
+      <pre><code>function scripted(attempts: Scripted):</code></pre>
+      <p>Replay scripted attempts in order; an error element throws mid-stream.</p>
+      <div class="tags"><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>llm-client/tests/retry.test</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>llm-client/tests/retry.test</code></td>
+      <td><code>llm-client/src/config</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>llm-client/tests/retry.test</code></td>
+      <td><code>llm-client/src/errors</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>llm-client/tests/retry.test</code></td>
+      <td><code>llm-client/src/events</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>llm-client/tests/retry.test</code></td>
+      <td><code>llm-client/src/retry</code></td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>llm-client/tests/retry.test</code></td>
+      <td><code>llm-client/tests/support</code></td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>llm-client/tests/retry.test</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>llm-client/tests/retry.test</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>llm-client/tests/retry.test</code></td>
+      <td><code>llm-client/src/config</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>llm-client/tests/retry.test</code></td>
+      <td><code>llm-client/src/errors</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>llm-client/tests/retry.test</code></td>
+      <td><code>llm-client/src/events</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>llm-client/tests/retry.test</code></td>
+      <td><code>llm-client/src/retry</code></td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>llm-client/tests/retry.test</code></td>
+      <td><code>llm-client/tests/support</code></td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>llm-client/tests/retry.test</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

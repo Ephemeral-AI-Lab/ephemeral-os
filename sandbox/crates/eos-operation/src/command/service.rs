@@ -885,6 +885,12 @@ fn command_response_trace_events(response: &CommandResponse) -> Vec<CommandTrace
         .get("workspace.mount_s")
         .cloned()
         .unwrap_or(Value::Null);
+    let unmount_duration_s = finalized
+        .core
+        .timings
+        .get("workspace.unmount_s")
+        .cloned()
+        .unwrap_or(Value::Null);
     let layer_count = finalized
         .core
         .timings
@@ -893,12 +899,37 @@ fn command_response_trace_events(response: &CommandResponse) -> Vec<CommandTrace
         .unwrap_or(Value::Null);
     vec![
         CommandTraceEvent::new(
+            "overlay_workspace_prepared",
+            json!({
+                "command_id": command_id,
+                "workspace": workspace,
+                "layer_count": layer_count,
+            }),
+        ),
+        CommandTraceEvent::new(
+            "overlay_mount_started",
+            json!({
+                "command_id": command_id,
+                "workspace": workspace,
+                "layer_count": layer_count,
+            }),
+        ),
+        CommandTraceEvent::new(
             "overlay_mount_finished",
             json!({
                 "command_id": command_id,
                 "workspace": workspace,
                 "layer_count": layer_count,
                 "duration_s": mount_duration_s,
+                "upperdir_empty_bytes": 0,
+            }),
+        ),
+        CommandTraceEvent::new(
+            "overlay_unmount_finished",
+            json!({
+                "command_id": command_id,
+                "workspace": workspace,
+                "duration_s": unmount_duration_s,
             }),
         ),
         CommandTraceEvent::new(

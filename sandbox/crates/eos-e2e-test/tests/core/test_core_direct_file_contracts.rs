@@ -4,7 +4,6 @@ use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
 use eos_config::configs::daemon::{MAX_FILE_BYTES, MAX_READ_BYTES};
-use eos_e2e_test::client::error_kind;
 use eos_e2e_test::next_invocation_id;
 use eos_operation::core::catalog;
 use serde_json::{json, Value};
@@ -14,14 +13,6 @@ use crate::support::{
     finalize_foreground_command, has_trace_event, live_pool_or_skip, trace_record,
     wait_for_active_leases,
 };
-
-/// Read a nested `timings.<key>` number from a response.
-fn timing_f64(value: &Value, key: &str) -> Option<f64> {
-    value
-        .get("timings")
-        .and_then(|timings| timings.get(key))
-        .and_then(Value::as_f64)
-}
 
 #[test]
 fn write_read_roundtrip() -> Result<()> {
@@ -130,8 +121,9 @@ fn edit_anchor_not_found() -> Result<()> {
             "edits": [{"old_text": "absent", "new_text": "x", "replace_all": false}]
         }),
     )?;
+    let edit = envelope_result(&edit)?;
     assert!(
-        conflict_message(&edit).contains("anchor not found"),
+        conflict_message(edit).contains("anchor not found"),
         "missing anchor should surface the edit error catalog: {edit}"
     );
     Ok(())
@@ -154,8 +146,9 @@ fn edit_count_mismatch() -> Result<()> {
             "edits": [{"old_text": "dup", "new_text": "x", "replace_all": false}]
         }),
     )?;
+    let edit = envelope_result(&edit)?;
     assert!(
-        conflict_message(&edit).contains("count mismatch"),
+        conflict_message(edit).contains("count mismatch"),
         "ambiguous anchor should surface the edit error catalog: {edit}"
     );
     Ok(())
@@ -199,10 +192,11 @@ fn read_max_bytes_guard() -> Result<()> {
         catalog::SANDBOX_FILE_READ,
         json!({"path": "tool/too-big-read.txt"}),
     )?;
-    assert_eq!(error_kind(&read), Some("invalid_request"));
+    let error = error_fault(&read)?;
+    assert_eq!(error["kind"], "invalid_request", "{read}");
     assert!(
-        read.get("error")
-            .and_then(|error| error.get("message"))
+        error
+            .get("message")
             .and_then(Value::as_str)
             .context("error message")?
             .contains("file too large"),
@@ -246,28 +240,52 @@ fn fast_path_write_publishes_without_holding_a_lease() -> Result<()> {
 }
 
 #[test]
-fn fast_path_surfaces_occ_and_read_timings() -> Result<()> {
+fn fast_path_records_occ_and_read_trace_events() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let write = lease.call_ok(
+    let write = lease.call(
         catalog::SANDBOX_FILE_WRITE,
-        json!({"path": "fastpath/timings.txt", "content": "t\n", "overwrite": true}),
+        json!({"path": "fastpath/trace-events.txt", "content": "t\n", "overwrite": true}),
     )?;
-    // The fast path accounts its work as a direct LayerStack/OCC operation
-    // (occ_apply / layer_stack_read), not via overlay-capture timing keys.
+    assert_eq!(as_str(&write, "status")?, "ok", "{write}");
+    let write_result = envelope_result(&write)?;
+    assert_eq!(as_str(write_result, "status")?, "committed");
+    let write_record = trace_record(&write)?;
     assert!(
-        timing_f64(&write, "api.write.occ_apply_s").is_some(),
-        "fast-path write should surface api.write.occ_apply_s: {write}"
+        has_trace_event(&write_record, "occ", "commit_finished", |details| {
+            details["success"] == true
+                && details["published_file_count"]
+                    .as_i64()
+                    .is_some_and(|count| count >= 1)
+        }),
+        "fast-path write should record OCC commit facts: {write_record:?}"
     );
-    let read = lease.call_ok(
-        catalog::SANDBOX_FILE_READ,
-        json!({"path": "fastpath/timings.txt"}),
-    )?;
     assert!(
-        timing_f64(&read, "api.read.layer_stack_read_s").is_some(),
-        "fast-path read should surface api.read.layer_stack_read_s: {read}"
+        has_trace_event(&write_record, "file", "write_applied", |details| {
+            details["changed_paths"]
+                .as_array()
+                .is_some_and(|paths| paths.iter().any(|path| path == "fastpath/trace-events.txt"))
+        }),
+        "fast-path write should record file write facts: {write_record:?}"
+    );
+
+    let read = lease.call(
+        catalog::SANDBOX_FILE_READ,
+        json!({"path": "fastpath/trace-events.txt"}),
+    )?;
+    assert_eq!(as_str(&read, "status")?, "ok", "{read}");
+    let read_result = envelope_result(&read)?;
+    assert_eq!(as_str(read_result, "content")?, "t\n");
+    let read_record = trace_record(&read)?;
+    assert!(
+        has_trace_event(&read_record, "file", "read_finished", |details| {
+            details["success"] == true
+                && details["exists"] == true
+                && details["workspace"] == "ephemeral"
+        }),
+        "fast-path read should record file read facts: {read_record:?}"
     );
     Ok(())
 }
@@ -376,7 +394,7 @@ fn direct_file_ops_concurrency_ladder() -> Result<()> {
             })
             .collect();
 
-        for handle in handles {
+        for (index, handle) in handles.into_iter().enumerate() {
             let response = handle.join().expect("direct write thread panicked")?;
             assert_eq!(
                 as_str(&response, "status")?,
@@ -385,9 +403,12 @@ fn direct_file_ops_concurrency_ladder() -> Result<()> {
             );
             let result = envelope_result(&response)?;
             assert_eq!(as_str(result, "status")?, "committed");
+            let expected_path = format!("fastpath/ladder-{level}-{index}.txt");
             assert!(
-                timing_f64(result, "api.write.occ_apply_s").is_some(),
-                "direct write ladder should surface OCC timing: {response}"
+                array(result, "changed_paths")?
+                    .iter()
+                    .any(|path| path.as_str() == Some(expected_path.as_str())),
+                "direct write ladder should report changed path: {response}"
             );
         }
         for index in 0..level {
@@ -424,11 +445,11 @@ fn write_max_file_bytes_guard() -> Result<()> {
             "overwrite": true
         }),
     )?;
-    assert_eq!(error_kind(&write), Some("invalid_request"));
+    let error = error_fault(&write)?;
+    assert_eq!(error["kind"], "invalid_request", "{write}");
     assert!(
-        write
-            .get("error")
-            .and_then(|error| error.get("message"))
+        error
+            .get("message")
             .and_then(Value::as_str)
             .context("error message")?
             .contains("file too large"),
@@ -451,10 +472,7 @@ fn write_above_legacy_two_mib_cap_succeeds() -> Result<()> {
         catalog::SANDBOX_FILE_WRITE,
         json!({"path": "tool/three-mib.txt", "content": "x".repeat(size), "overwrite": true}),
     )?;
-    assert!(
-        as_bool(&write, "success")?,
-        "3 MiB write should publish under the raised cap: {write}"
-    );
+    assert_eq!(as_str(&write, "status")?, "committed");
     let read = lease.call_ok(
         catalog::SANDBOX_FILE_READ,
         json!({"path": "tool/three-mib.txt"}),
@@ -465,4 +483,11 @@ fn write_above_legacy_two_mib_cap_succeeds() -> Result<()> {
         "3 MiB readback should match the written length"
     );
     Ok(())
+}
+
+fn error_fault(response: &Value) -> Result<&Value> {
+    assert_eq!(as_str(response, "status")?, "error", "{response}");
+    response
+        .get("error")
+        .context("error envelope should include fault")
 }

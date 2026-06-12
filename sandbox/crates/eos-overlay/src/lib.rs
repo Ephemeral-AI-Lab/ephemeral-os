@@ -38,7 +38,9 @@ pub mod path_change;
 pub use eos_layerstack::{LayerChange, LayerPath};
 
 pub use kernel_mount::{mount_overlay, unmount_overlay, OverlayHandle, OverlayMount};
-pub use path_change::capture_upperdir;
+pub use path_change::{
+    capture_upperdir, capture_upperdir_with_stats, CaptureStats, CapturedUpperdir,
+};
 
 /// Failures raised by the overlay kernel-mount and upper-dir capture paths.
 #[derive(Debug, Error)]
@@ -61,8 +63,14 @@ pub enum OverlayError {
     },
 
     /// An upper-dir walk / capture I/O error.
-    #[error("upperdir capture failed: {0}")]
-    Capture(#[source] io::Error),
+    #[error("upperdir capture failed at {path}: {source}")]
+    Capture {
+        /// Path whose metadata, directory entries, xattrs, content, or link
+        /// target could not be read.
+        path: PathBuf,
+        #[source]
+        source: io::Error,
+    },
 
     /// A captured overlay path did not normalize to a valid relative layer path.
     #[error(transparent)]
@@ -75,6 +83,23 @@ pub enum OverlayError {
     /// The current target OS provides no overlayfs mount syscalls.
     #[error("overlay mounts are only supported on linux")]
     Unsupported,
+}
+
+impl OverlayError {
+    pub fn capture(path: impl Into<PathBuf>, source: io::Error) -> Self {
+        Self::Capture {
+            path: path.into(),
+            source,
+        }
+    }
+
+    #[must_use]
+    pub fn failing_path(&self) -> Option<&Path> {
+        match self {
+            Self::Capture { path, .. } => Some(path.as_path()),
+            _ => None,
+        }
+    }
 }
 
 /// Crate result alias.
@@ -101,7 +126,7 @@ pub fn overlay_writable_root() -> Result<PathBuf> {
         .unwrap_or_else(|| {
             std::env::temp_dir().join(format!("eos-overlay-writable-root-{}", std::process::id()))
         });
-    std::fs::create_dir_all(&root).map_err(OverlayError::Capture)?;
+    std::fs::create_dir_all(&root).map_err(|err| OverlayError::capture(&root, err))?;
     Ok(root)
 }
 
@@ -117,7 +142,7 @@ pub fn overlay_writable_root() -> Result<PathBuf> {
 pub fn overlay_writable_root() -> Result<PathBuf> {
     let root = PathBuf::from("/eos/scratch/overlay");
     if root.parent().is_some_and(Path::is_dir) {
-        std::fs::create_dir_all(&root).map_err(OverlayError::Capture)?;
+        std::fs::create_dir_all(&root).map_err(|err| OverlayError::capture(&root, err))?;
     }
     if root.is_dir() {
         Ok(root)
@@ -137,8 +162,8 @@ pub fn overlay_writable_root() -> Result<PathBuf> {
 pub fn allocate_overlay_writable_dirs(run_dir: &Path) -> Result<OverlayWritableDirs> {
     let upperdir = run_dir.join("upper");
     let workdir = run_dir.join("work");
-    std::fs::create_dir_all(&upperdir).map_err(OverlayError::Capture)?;
-    std::fs::create_dir_all(&workdir).map_err(OverlayError::Capture)?;
+    std::fs::create_dir_all(&upperdir).map_err(|err| OverlayError::capture(&upperdir, err))?;
+    std::fs::create_dir_all(&workdir).map_err(|err| OverlayError::capture(&workdir, err))?;
     Ok(OverlayWritableDirs { upperdir, workdir })
 }
 

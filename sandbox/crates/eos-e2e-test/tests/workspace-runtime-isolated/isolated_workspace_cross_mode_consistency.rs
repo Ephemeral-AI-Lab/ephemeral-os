@@ -4,7 +4,8 @@ use eos_operation::core::catalog;
 use serde_json::json;
 
 use crate::support::{
-    as_bool, as_i64, as_str, live_pool_or_skip, reset_isolated_workspaces, wait_for_active_leases,
+    as_bool, as_i64, as_str, envelope_result, live_pool_or_skip, reset_isolated_workspaces,
+    wait_for_active_leases,
 };
 
 #[test]
@@ -45,8 +46,14 @@ fn isolated_private_same_path_does_not_overwrite_public_publish() -> Result<()> 
                 "overwrite": true
             }),
         )?;
+        assert_eq!(
+            as_str(&public, "status")?,
+            "ok",
+            "foreign public write should return an ok envelope: {public}"
+        );
+        let public = envelope_result(&public)?;
         ensure!(
-            as_bool(&public, "success")?,
+            as_str(public, "status")? == "committed",
             "foreign public write should publish while isolated caller remains open: {public}"
         );
 
@@ -107,8 +114,14 @@ fn isolated_pin_hides_later_public_paths_until_exit() -> Result<()> {
                     "overwrite": true
                 }),
             )?;
+            assert_eq!(
+                as_str(&public, "status")?,
+                "ok",
+                "public write after isolated enter should return an ok envelope: {public}"
+            );
+            let public = envelope_result(&public)?;
             ensure!(
-                as_bool(&public, "success")?,
+                as_str(public, "status")? == "committed",
                 "public write after isolated enter should publish: {public}"
             );
         }

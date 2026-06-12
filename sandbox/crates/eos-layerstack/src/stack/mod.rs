@@ -39,6 +39,12 @@ pub struct Lease {
     pub layer_paths: Vec<String>,
 }
 
+#[derive(Debug)]
+pub struct SquashOutcome {
+    pub manifest: Option<Manifest>,
+    pub lease_release_error: Option<LayerStackError>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct LayerStackLeaseRecord {
     lease_id: String,
@@ -323,7 +329,7 @@ impl LayerStack {
         Ok((depth, decision))
     }
 
-    pub fn squash(&mut self, max_depth: usize) -> Result<Option<Manifest>, LayerStackError> {
+    pub fn squash(&mut self, max_depth: usize) -> Result<SquashOutcome, LayerStackError> {
         let _guard = self.writer_lock.exclusive()?;
         let active = self.read_active_manifest()?;
         let squasher = LayerCheckpointSquasher::new(self.storage_root.clone());
@@ -332,7 +338,10 @@ impl LayerStack {
             leases.lease_head_layers()
         };
         let Some(plan) = squasher.plan(&active, max_depth, &lease_head_layers, 1)? else {
-            return Ok(None);
+            return Ok(SquashOutcome {
+                manifest: None,
+                lease_release_error: None,
+            });
         };
         let squash_lease = {
             let mut leases = lock_shared_registry(&self.leases)?;
@@ -386,10 +395,16 @@ impl LayerStack {
         };
         match (outcome, release) {
             (Err(err), _) => Err(err),
-            (Ok(manifest), Ok(_)) => Ok(manifest),
+            (Ok(manifest), Ok(_)) => Ok(SquashOutcome {
+                manifest,
+                lease_release_error: None,
+            }),
             (Ok(manifest), Err(release_err)) => {
                 if committed {
-                    Ok(manifest)
+                    Ok(SquashOutcome {
+                        manifest,
+                        lease_release_error: Some(release_err),
+                    })
                 } else {
                     Err(release_err)
                 }

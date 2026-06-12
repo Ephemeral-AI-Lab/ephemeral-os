@@ -15,10 +15,10 @@ fn host_ram_pressure_error_keeps_capacity_details() {
         budget_bytes: 29,
     })
     .into_wire();
-    assert_eq!(response["success"], false);
+    assert_eq!(response["status"], "rejected");
     assert_eq!(response["error"]["kind"], "host_ram_pressure");
-    assert_eq!(response["error"]["details"]["required_bytes"], 30);
-    assert_eq!(response["error"]["details"]["budget_bytes"], 29);
+    assert_eq!(response["error"]["details"]["fields"]["required_bytes"], 30);
+    assert_eq!(response["error"]["details"]["fields"]["budget_bytes"], 29);
 }
 
 #[test]
@@ -86,11 +86,16 @@ fn exit_trace_events_include_teardown_phases_and_mountinfo_marker() {
             phases_ms: phases,
             inspection: json!({
                 "holder_pid": 42,
+                "holder_was_alive": true,
+                "holder_exit_status": 0,
+                "holder_signal": null,
+                "holder_status_raw": 0,
                 "holder_kill_error": null,
                 "mountinfo_reference_count_after": null,
             }),
         },
         lease_released: Some(true),
+        lease_release_error: None,
         active_leases_after: 0,
     };
 
@@ -103,6 +108,8 @@ fn exit_trace_events_include_teardown_phases_and_mountinfo_marker() {
     assert_eq!(events[1].name, "teardown_phase_finished");
     assert_eq!(events[1].details["phase"], "kill_holder");
     assert_eq!(events[1].details["holder_was_alive"], true);
+    assert_eq!(events[1].details["exit_status"], 0);
+    assert_eq!(events[1].details["signal"], Value::Null);
     assert_eq!(events[2].details["phase"], "rmtree_scratch");
     assert_eq!(events[3].name, "exited");
     assert_eq!(events[3].details["workspace_handle_id"], "workspace-handle");
@@ -115,6 +122,7 @@ fn recovery_trace_events_include_manager_json_and_cleanup_errors() {
     let sink = crate::trace::RequestTraceEventSink::default();
     let context = DispatchContext::empty().with_trace_events(sink.clone());
     let recovery = WorkspaceRecoveryReport {
+        attempted: true,
         exited_callers: vec!["caller-isolated".to_owned()],
         manager_json_error: Some(
             "manager_json_schema: expected schema_version 1, got 999".to_owned(),

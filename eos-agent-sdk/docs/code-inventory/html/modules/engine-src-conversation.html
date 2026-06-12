@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>engine/src/conversation Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-sdk</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/engine.html">engine</a></p>
+          <h1>engine/src/conversation</h1>
+          <p class="lede">src/engine/conversation.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>5</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>4</dd></div>
+          <div><dt>Functions</dt><dd>0</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>1</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>../contracts/index.js</code></td>
+      <td>ContentBlock, Message, UserMessage</td>
+      <td>type</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>conversation.ts</code>
+        <small>5 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#ToolResultBlock"><code>ToolResultBlock</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#PartialReason"><code>PartialReason</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#UserMessageOrigin"><code>UserMessageOrigin</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ConversationRecord"><code>ConversationRecord</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#Conversation"><code>Conversation</code></a>
+            <span>class</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="ToolResultBlock" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ToolResultBlock</strong>
+          <span>type · line 4 · public</span>
+        </div>
+        <a href="../modules/engine-src-conversation.html#ToolResultBlock">Module</a>
+      </div>
+      <pre><code>export type ToolResultBlock = Extract&lt;ContentBlock,</code></pre>
+      <p>A `tool_result` content block, the unit `appendToolResults` wraps.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="PartialReason" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>PartialReason</strong>
+          <span>type · line 7 · public</span>
+        </div>
+        <a href="../modules/engine-src-conversation.html#PartialReason">Module</a>
+      </div>
+      <pre><code>export type PartialReason = &quot;interrupted&quot; | &quot;provider_error&quot;</code></pre>
+      <p>Why a salvaged partial assistant message never completed.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    <h3>Variants</h3>
+
+    <ul class="variant-list">
+
+        <li><code>&quot;interrupted&quot;</code></li>
+
+
+        <li><code>&quot;provider_error&quot;</code></li>
+
+    </ul>
+
+
+    </article>
+
+
+    <article id="UserMessageOrigin" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>UserMessageOrigin</strong>
+          <span>type · line 10 · public</span>
+        </div>
+        <a href="../modules/engine-src-conversation.html#UserMessageOrigin">Module</a>
+      </div>
+      <pre><code>export type UserMessageOrigin = &quot;initial&quot; | &quot;steer&quot; | &quot;notification&quot;</code></pre>
+      <p>Where one appended user message came from.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    <h3>Variants</h3>
+
+    <ul class="variant-list">
+
+        <li><code>&quot;initial&quot;</code></li>
+
+
+        <li><code>&quot;steer&quot;</code></li>
+
+
+        <li><code>&quot;notification&quot;</code></li>
+
+    </ul>
+
+
+    </article>
+
+
+    <article id="ConversationRecord" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ConversationRecord</strong>
+          <span>type · line 17 · public</span>
+        </div>
+        <a href="../modules/engine-src-conversation.html#ConversationRecord">Module</a>
+      </div>
+      <pre><code>export type ConversationRecord = |</code></pre>
+      <p>One line of the `messages.jsonl` conversation artifact, fed to the
+records sink as it is appended. `assistant_partial` is salvage only —
+it never reaches `llmMessages()`.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    <h3>Variants</h3>
+
+    <ul class="variant-list">
+
+        <li><code>{ kind: &quot;user&quot;; origin: UserMessageOrigin; message: Message }</code></li>
+
+
+        <li><code>{ kind: &quot;assistant&quot;; message: Message }</code></li>
+
+
+        <li><code>{ kind: &quot;assistant_partial&quot;; reason: PartialReason; message: Message }</code></li>
+
+
+        <li><code>{ kind: &quot;tool_results&quot;; message: Message }</code></li>
+
+    </ul>
+
+
+    </article>
+
+
+    <article id="Conversation" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>Conversation</strong>
+          <span>class · line 29 · public</span>
+        </div>
+        <a href="../modules/engine-src-conversation.html#Conversation">Module</a>
+      </div>
+      <pre><code>export class Conversation</code></pre>
+      <p>The single provider-history list plus the records sink. Every append
+writes both in one call (single-writer rule); `llmMessages()` is the
+only history source for a provider request, and the read-only snapshot
+handed to every tool batch.</p>
+      <div class="tags"><span>exported</span><span>public-api</span><span>stateful</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>#llm</code></td>
+              <td><code>Message[]</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#record</code></td>
+              <td><code>((entry: ConversationRecord) =&gt; void) | undefined</code></td>
+              <td>readonly</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>appendUser</code></td>
+              <td><code>appendUser(message: UserMessage, origin: UserMessageOrigin): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>appendAssistant</code></td>
+              <td><code>appendAssistant(message: Message): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>appendToolResults</code></td>
+              <td><code>appendToolResults(blocks: ToolResultBlock[]): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>appendPartialAssistant</code></td>
+              <td><code>appendPartialAssistant(partial: Message, reason: PartialReason): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>llmMessages</code></td>
+              <td><code>llmMessages(): readonly Message[]</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>engine/src/conversation</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>1</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

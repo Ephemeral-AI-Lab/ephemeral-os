@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>llm-client/src/factory Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-sdk</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/llm-client.html">llm-client</a></p>
+          <h1>llm-client/src/factory</h1>
+          <p class="lede">src/llm-client/factory.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>1</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>1</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>5</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>./client.js</code></td>
+      <td>LlmClient</td>
+      <td>type</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./config.js</code></td>
+      <td>ProviderClientOptions</td>
+      <td>type</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./profiles.js</code></td>
+      <td>resolveProfile, type ProviderConnection</td>
+      <td>value</td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./stream-client.js</code></td>
+      <td>LlmStreamClient</td>
+      <td>value</td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./wires/wire.js</code></td>
+      <td>WireTransport</td>
+      <td>type</td>
+      <td>5</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>factory.ts</code>
+        <small>1 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#createLlmClient"><code>createLlmClient</code></a>
+            <span>function</span>
+            <span class="compact-tags">provider-client public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="createLlmClient" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>createLlmClient</strong>
+          <span>function · line 15 · public</span>
+        </div>
+        <a href="../modules/llm-client-src-factory.html#createLlmClient">Module</a>
+      </div>
+      <pre><code>export function createLlmClient( connection: ProviderConnection, options: ProviderClientOptions =</code></pre>
+      <p>Construct an `LlmClient` for a named provider connection: resolve the
+profile, bind the access scheme to the wire as its transport, and wrap the
+composition in the generic stream client. Invalid connections and codex
+JWT-claim failures throw here (`ZodError` / `ProviderError` kind
+`request`); the returned client honors the Phase 02 `LlmClient` leg
+contract unchanged.</p>
+      <div class="tags"><span>exported</span><span>factory</span><span>provider-client</span><span>public-api</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>llm-client/src/factory</code></td>
+      <td><code>llm-client/src/client</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>llm-client/src/factory</code></td>
+      <td><code>llm-client/src/config</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>llm-client/src/factory</code></td>
+      <td><code>llm-client/src/profiles</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>llm-client/src/factory</code></td>
+      <td><code>llm-client/src/stream-client</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>llm-client/src/factory</code></td>
+      <td><code>llm-client/src/wires/wire</code></td>
+      <td>5</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

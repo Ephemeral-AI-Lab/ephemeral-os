@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>runtime/src/records Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-sdk</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/runtime.html">runtime</a></p>
+          <h1>runtime/src/records</h1>
+          <p class="lede">src/runtime/records.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>2</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>0</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>4</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>node:fs</code></td>
+      <td>mkdirSync</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>node:fs/promises</code></td>
+      <td>appendFile</td>
+      <td>value</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>node:path</code></td>
+      <td>join</td>
+      <td>value</td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../engine/index.js</code></td>
+      <td>AgentEvent, ConversationRecord</td>
+      <td>type</td>
+      <td>5</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>records.ts</code>
+        <small>2 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#RECORDED_EVENT_TYPES"><code>RECORDED_EVENT_TYPES</code></a>
+            <span>const</span>
+            <span class="compact-tags">event internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#JsonlRunRecorder"><code>JsonlRunRecorder</code></a>
+            <span>class</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="RECORDED_EVENT_TYPES" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>RECORDED_EVENT_TYPES</strong>
+          <span>const · line 8 · internal</span>
+        </div>
+        <a href="../modules/runtime-src-records.html#RECORDED_EVENT_TYPES">Module</a>
+      </div>
+      <pre><code>const RECORDED_EVENT_TYPES = new Set&lt;AgentEvent[&quot;type&quot;]&gt;([ &quot;run_started&quot;, &quot;turn_started&quot;, &quot;tool_execution_started&quot;, &quot;tool_execution_completed&quot;, &quot;task_registered&quot;, &quot;task_settled&quot;, &quot;run_finished&quot;, ])</code></pre>
+
+      <div class="tags"><span>event</span><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="JsonlRunRecorder" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>JsonlRunRecorder</strong>
+          <span>class · line 28 · public</span>
+        </div>
+        <a href="../modules/runtime-src-records.html#JsonlRunRecorder">Module</a>
+      </div>
+      <pre><code>export class JsonlRunRecorder</code></pre>
+      <p>The per-run records writer: `&lt;recordsDir&gt;/&lt;runId&gt;/events.jsonl` (every
+lifecycle event, engine `seq` preserved) and `messages.jsonl` (the
+conversation artifact). Wired at construction, so records are lossless
+from the first line regardless of when (or whether) anyone consumes
+`events()`. Append-only and line-buffered: one ordered write queue, no
+fsync guarantee — a crash can truncate at most the final line, and one
+writer owns a run directory. A failed write latches and resurfaces on
+`flush()`; it never disturbs the run.</p>
+      <div class="tags"><span>exported</span><span>public-api</span><span>stateful</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>#runDir</code></td>
+              <td><code>string</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#eventsPath</code></td>
+              <td><code>string</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#messagesPath</code></td>
+              <td><code>string</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#messageSeq</code></td>
+              <td><code>0</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#queue</code></td>
+              <td><code>Promise&lt;void&gt;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#directoryReady</code></td>
+              <td><code>false</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#failure</code></td>
+              <td><code>Error | undefined</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>event</code></td>
+              <td><code>event(event: AgentEvent): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>message</code></td>
+              <td><code>message(record: ConversationRecord): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>flush</code></td>
+              <td><code>flush(): Promise&lt;void&gt;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#enqueue</code></td>
+              <td><code>#enqueue(path: string, line: object): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#write</code></td>
+              <td><code>async #write(path: string, line: object): Promise&lt;void&gt;</code></td>
+              <td>async</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>runtime/src/records</code></td>
+      <td><code>engine/src/index</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/src/records</code></td>
+      <td><code>node:fs</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/src/records</code></td>
+      <td><code>node:fs</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/src/records</code></td>
+      <td><code>node:path</code></td>
+      <td>3</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

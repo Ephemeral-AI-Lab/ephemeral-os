@@ -92,7 +92,11 @@ impl NsRunnerLauncher for NoLaunch {
         ))
     }
 
-    fn spawn_detached(&self, _request: &RunRequest) -> Result<Child, LaunchError> {
+    fn spawn_detached(
+        &self,
+        _request: &RunRequest,
+        _stderr_path: &std::path::Path,
+    ) -> Result<Child, LaunchError> {
         Err(LaunchError::Failed(
             "test launcher does not start ns-runner".to_owned(),
         ))

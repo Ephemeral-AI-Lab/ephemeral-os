@@ -37,10 +37,9 @@ interface ScannedWorkspace {
 export async function scanWorkspace(root: string): Promise<WorkspaceInventory> {
   const packageManager = await readPackageManager(root);
   const tsconfig = await readTsConfig(root);
-  const packagesRoot = path.join(root, "packages");
-  const packageDirs = await packageDirectories(packagesRoot);
+  const groups = await moduleGroups(root);
   const packages = await Promise.all(
-    packageDirs.map((packageDir) => scanPackage(root, packageDir)),
+    groups.map((group) => scanGroup(root, group)),
   );
   packages.sort((left, right) => left.name.localeCompare(right.name));
 
@@ -58,7 +57,7 @@ export async function scanWorkspace(root: string): Promise<WorkspaceInventory> {
   const stats = workspaceStats(packagesWithRelationCounts, relations.length);
 
   return {
-    workspace: "eos-agent-core",
+    workspace: "eos-agent-sdk",
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
     packageManager,
@@ -69,15 +68,20 @@ export async function scanWorkspace(root: string): Promise<WorkspaceInventory> {
   };
 }
 
-async function scanPackage(
+async function scanGroup(
   workspaceRoot: string,
-  packageDir: string,
+  group: string,
 ): Promise<PackageInventory> {
-  const manifest = await readPackageJson(path.join(packageDir, "package.json"));
-  const name = manifest.name;
-  const files = await collectTsFiles(packageDir);
+  const dirs: string[] = [];
+  for (const top of ["src", "tests", "e2e"]) {
+    const dir = path.join(workspaceRoot, top, group);
+    if (await exists(dir)) {
+      dirs.push(dir);
+    }
+  }
+  const files = (await Promise.all(dirs.map(collectTsFiles))).flat().sort();
   const modules = await Promise.all(
-    files.map((file) => scanModule(workspaceRoot, packageDir, name, file)),
+    files.map((file) => scanModule(workspaceRoot, group, file)),
   );
   modules.sort((left, right) => left.path.localeCompare(right.path));
   const sourceModuleCount = modules.filter((module) =>
@@ -85,19 +89,56 @@ async function scanPackage(
   ).length;
 
   return {
-    id: name,
-    name,
-    path: relativePath(workspaceRoot, packageDir),
-    packageJson: manifest,
-    tags: packageTags(name, sourceModuleCount),
+    id: group,
+    name: group,
+    path: `src/${group}`,
+    packageJson: groupManifest(modules),
+    tags: packageTags(group, sourceModuleCount),
     modules,
     stats: packageStats(modules, sourceModuleCount),
   };
 }
 
+/** Synthesized manifest: the single-package layout has no per-group
+    package.json, so dependencies are derived from source imports. */
+function groupManifest(modules: readonly ModuleInventory[]): PackageJsonInventory {
+  const dependencies = new Set<string>();
+  for (const module of modules) {
+    if (module.kind === "test" || module.kind === "test-support") {
+      continue;
+    }
+    for (const edge of module.imports) {
+      const dependency = importedGroup(module, edge.source);
+      if (dependency !== undefined && dependency !== module.packageName) {
+        dependencies.add(dependency);
+      }
+    }
+  }
+  return {
+    private: true,
+    type: "module",
+    exports: ["."],
+    dependencies: [...dependencies].sort(),
+    devDependencies: [],
+  };
+}
+
+function importedGroup(module: ModuleInventory, source: string): string | undefined {
+  if (source.startsWith("node:")) {
+    return undefined;
+  }
+  if (source.startsWith(".")) {
+    const resolved = path.posix.normalize(
+      path.posix.join(path.posix.dirname(module.path), source),
+    );
+    const [top, group] = resolved.split("/");
+    return top === "src" || top === "tests" || top === "e2e" ? group : undefined;
+  }
+  return scopedPackageName(source) ?? source.split("/")[0];
+}
+
 async function scanModule(
   workspaceRoot: string,
-  packageDir: string,
   packageName: string,
   file: string,
 ): Promise<ModuleInventory> {
@@ -128,7 +169,7 @@ async function scanModule(
   );
 
   return {
-    id: moduleId(packageName, packageDir, file),
+    id: moduleId(packageName, modulePath),
     packageName,
     path: modulePath,
     kind,
@@ -748,19 +789,12 @@ function indexWorkspace(packages: readonly PackageInventory[]): ScannedWorkspace
   return { packages: [...packages], moduleByPath, moduleById };
 }
 
-async function packageDirectories(packagesRoot: string): Promise<string[]> {
-  const entries = await fs.readdir(packagesRoot, { withFileTypes: true });
-  const dirs: string[] = [];
-  for (const entry of entries) {
-    if (!entry.isDirectory()) {
-      continue;
-    }
-    const packageDir = path.join(packagesRoot, entry.name);
-    if (await exists(path.join(packageDir, "package.json"))) {
-      dirs.push(packageDir);
-    }
-  }
-  return dirs.sort();
+async function moduleGroups(root: string): Promise<string[]> {
+  const entries = await fs.readdir(path.join(root, "src"), { withFileTypes: true });
+  return entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
 }
 
 async function collectTsFiles(root: string): Promise<string[]> {
@@ -800,22 +834,6 @@ async function readTsConfig(root: string): Promise<TsConfigInventory> {
   };
 }
 
-async function readPackageJson(file: string): Promise<PackageJsonInventory & { name: string }> {
-  const record = await readJsonRecord(file);
-  const name = optionalString(record, "name");
-  if (name === undefined) {
-    throw new Error(`package manifest ${file} is missing a string name`);
-  }
-  return {
-    name,
-    private: optionalBoolean(record, "private"),
-    type: optionalString(record, "type"),
-    exports: packageExportKeys(record.exports),
-    dependencies: dependencyKeys(record, "dependencies"),
-    devDependencies: dependencyKeys(record, "devDependencies"),
-  };
-}
-
 async function readJsonRecord(file: string): Promise<Record<string, unknown>> {
   const text = await fs.readFile(file, "utf8");
   const parsed: unknown = JSON.parse(text);
@@ -823,27 +841,6 @@ async function readJsonRecord(file: string): Promise<Record<string, unknown>> {
     throw new Error(`expected object JSON in ${file}`);
   }
   return parsed;
-}
-
-function packageExportKeys(value: unknown): string[] {
-  if (value === undefined) {
-    return [];
-  }
-  if (typeof value === "string") {
-    return ["."];
-  }
-  if (Array.isArray(value)) {
-    return value.filter((entry): entry is string => typeof entry === "string");
-  }
-  if (isRecord(value)) {
-    return Object.keys(value).sort();
-  }
-  return [];
-}
-
-function dependencyKeys(record: Record<string, unknown>, key: string): string[] {
-  const dependencies = optionalRecord(record, key);
-  return Object.keys(dependencies).sort();
 }
 
 function optionalRecord(
@@ -1250,13 +1247,19 @@ function lineOf(sourceFile: ts.SourceFile, node: ts.Node): number {
   return sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
 }
 
-function moduleId(packageName: string, packageDir: string, file: string): string {
-  return `${packageName}/${relativePath(packageDir, file).replace(/\.ts$/, "")}`;
+// "src/engine/agent-loop.ts" → "engine/src/agent-loop"; the group's own
+// segment moves to the front, keeping the old per-package id shape.
+function moduleId(packageName: string, modulePath: string): string {
+  return `${packageName}/${groupLocalPath(modulePath)}`;
 }
 
 function symbolId(packageName: string, modulePath: string, name: string): string {
-  const packagePath = modulePath.split("/").slice(2).join("/").replace(/\.ts$/, "");
-  return `${packageName}/${packagePath}#${name}`;
+  return `${packageName}/${groupLocalPath(modulePath)}#${name}`;
+}
+
+function groupLocalPath(modulePath: string): string {
+  const [top, , ...rest] = modulePath.split("/");
+  return [top, ...rest].join("/").replace(/\.ts$/, "");
 }
 
 function relativePath(root: string, file: string): string {

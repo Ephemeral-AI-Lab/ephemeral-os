@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>background/src/background-task Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-sdk</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/background.html">background</a></p>
+          <h1>background/src/background-task</h1>
+          <p class="lede">src/background/background-task.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>6</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>2</dd></div>
+          <div><dt>Functions</dt><dd>0</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>2</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>../contracts/index.js</code></td>
+      <td>AgentRunId, BackgroundTaskId</td>
+      <td>type</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../notification/index.js</code></td>
+      <td>Notifier</td>
+      <td>type</td>
+      <td>2</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>background-task.ts</code>
+        <small>6 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#BackgroundTaskOutcome"><code>BackgroundTaskOutcome</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#BackgroundTaskCompletionContext"><code>BackgroundTaskCompletionContext</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#BackgroundTask"><code>BackgroundTask</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#BackgroundTaskRow"><code>BackgroundTaskRow</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#BackgroundTaskSupervisor"><code>BackgroundTaskSupervisor</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#BackgroundTaskLifecycleEvent"><code>BackgroundTaskLifecycleEvent</code></a>
+            <span>type</span>
+            <span class="compact-tags">event public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="BackgroundTaskOutcome" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>BackgroundTaskOutcome</strong>
+          <span>interface · line 5 · public</span>
+        </div>
+        <a href="../modules/background-src-background-task.html#BackgroundTaskOutcome">Module</a>
+      </div>
+      <pre><code>export interface BackgroundTaskOutcome</code></pre>
+      <p>How one background task ended; `outcome` is the task's one-line result.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>status</code></td>
+              <td><code>&quot;success&quot; | &quot;failed&quot; | &quot;cancelled&quot;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>outcome</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="BackgroundTaskCompletionContext" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>BackgroundTaskCompletionContext</strong>
+          <span>interface · line 11 · public</span>
+        </div>
+        <a href="../modules/background-src-background-task.html#BackgroundTaskCompletionContext">Module</a>
+      </div>
+      <pre><code>export interface BackgroundTaskCompletionContext</code></pre>
+      <p>What a completion handler receives alongside the outcome.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>notifier</code></td>
+              <td><code>Notifier</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>runId</code></td>
+              <td><code>AgentRunId</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>taskId</code></td>
+              <td><code>BackgroundTaskId</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="BackgroundTask" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>BackgroundTask</strong>
+          <span>type · line 24 · public</span>
+        </div>
+        <a href="../modules/background-src-background-task.html#BackgroundTask">Module</a>
+      </div>
+      <pre><code>export type BackgroundTask =</code></pre>
+      <p>The capability record a spawn site hands over. Every task declares how
+its completion is handled — the type forces the choice; there is no
+implicit default. Any task the model is expected to await must publish
+in its `onCompletion` (the model has no other way to observe it);
+`silent: true` is strictly for fire-and-forget work.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="BackgroundTaskRow" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>BackgroundTaskRow</strong>
+          <span>interface · line 47 · public</span>
+        </div>
+        <a href="../modules/background-src-background-task.html#BackgroundTaskRow">Module</a>
+      </div>
+      <pre><code>export interface BackgroundTaskRow</code></pre>
+      <p>One `list()` row. No status field: a listed task is running (or briefly
+settling while its completion handler runs); completed tasks are removed
+— history lives in the event stream.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>taskId</code></td>
+              <td><code>BackgroundTaskId</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>toolName</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>title</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>startedAt</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="BackgroundTaskSupervisor" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>BackgroundTaskSupervisor</strong>
+          <span>interface · line 56 · public</span>
+        </div>
+        <a href="../modules/background-src-background-task.html#BackgroundTaskSupervisor">Module</a>
+      </div>
+      <pre><code>export interface BackgroundTaskSupervisor</code></pre>
+      <p>The run-scoped capability surface — exactly register / list / cancel.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>register</code></td>
+              <td><code>register(task: BackgroundTask): { taskId: BackgroundTaskId };</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>list</code></td>
+              <td><code>list(): BackgroundTaskRow[];</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>cancel</code></td>
+              <td><code>cancel(taskId: BackgroundTaskId): Promise&lt;boolean&gt;;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="BackgroundTaskLifecycleEvent" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>BackgroundTaskLifecycleEvent</strong>
+          <span>type · line 72 · public</span>
+        </div>
+        <a href="../modules/background-src-background-task.html#BackgroundTaskLifecycleEvent">Module</a>
+      </div>
+      <pre><code>export type BackgroundTaskLifecycleEvent = |</code></pre>
+      <p>Task lifecycle facts for the run's event stream and records; the engine
+stamps `seq`. Fields mirror the public camelCase task vocabulary.</p>
+      <div class="tags"><span>event</span><span>exported</span><span>public-api</span></div>
+
+
+
+
+    <h3>Variants</h3>
+
+    <ul class="variant-list">
+
+        <li><code>{ type: &quot;task_registered&quot;; task: BackgroundTaskRow }</code></li>
+
+
+        <li><code>{ type: &quot;task_settled&quot;; taskId: BackgroundTaskId; toolName: string; title: st...</code></li>
+
+    </ul>
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>background/src/background-task</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>background/src/background-task</code></td>
+      <td><code>notification/src/index</code></td>
+      <td>2</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

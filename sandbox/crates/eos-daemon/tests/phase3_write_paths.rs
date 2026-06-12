@@ -44,9 +44,10 @@ fn dispatches_layerstack_write_file_and_reads_published_bytes() -> TestResult {
         Value::String("api_write".to_owned())
     );
     assert_eq!(result["status"], Value::String("committed".to_owned()));
-    assert!(result["timings"]["api.write.occ_apply_s"]
-        .as_f64()
-        .is_some());
+    assert!(
+        result.get("timings").is_none(),
+        "file write response timings should live in trace/meta, not the result payload: {response}"
+    );
 
     let read = Request {
         op: "sandbox.file.read".to_owned(),
@@ -154,9 +155,9 @@ fn write_file_git_path_is_dropped_by_occ_routing() -> TestResult {
     let result = &response["result"];
     assert_eq!(result["status"], Value::String("committed".to_owned()));
     assert_eq!(result["changed_paths"], json!([]));
-    assert_eq!(
-        result["timings"]["resource.command_exec.changed_path_count"],
-        json!(0.0)
+    assert!(
+        result.get("timings").is_none(),
+        "file write response timings should live in trace/meta, not the result payload: {response}"
     );
 
     let read = Request {

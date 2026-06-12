@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>tool/src/contract Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-sdk</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/tool.html">tool</a></p>
+          <h1>tool/src/contract</h1>
+          <p class="lede">src/tool/contract.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>3</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>1</dd></div>
+          <div><dt>Functions</dt><dd>0</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>4</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>../contracts/index.js</code></td>
+      <td>AgentRunId, JsonObject, JsonValue, Message, ToolUseId</td>
+      <td>type</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../background/index.js</code></td>
+      <td>BackgroundTaskSupervisor</td>
+      <td>type</td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../notification/index.js</code></td>
+      <td>Notifier</td>
+      <td>type</td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>zod</code></td>
+      <td>z</td>
+      <td>type</td>
+      <td>10</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>contract.ts</code>
+        <small>3 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#ToolResult"><code>ToolResult</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ToolCallContext"><code>ToolCallContext</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ToolDefinition"><code>ToolDefinition</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="ToolResult" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ToolResult</strong>
+          <span>type · line 16 · public</span>
+        </div>
+        <a href="../modules/tool-src-contract.html#ToolResult">Module</a>
+      </div>
+      <pre><code>export type ToolResult = |</code></pre>
+      <p>What a tool execution yields: an output the engine stringifies exactly
+once, or a model-facing error. `metadata` is records/observability only.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    <h3>Variants</h3>
+
+    <ul class="variant-list">
+
+        <li><code>{ output: JsonValue; metadata?: JsonObject }</code></li>
+
+
+        <li><code>{ error: string }</code></li>
+
+    </ul>
+
+
+    </article>
+
+
+    <article id="ToolCallContext" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ToolCallContext</strong>
+          <span>interface · line 27 · public</span>
+        </div>
+        <a href="../modules/tool-src-contract.html#ToolCallContext">Module</a>
+      </div>
+      <pre><code>export interface ToolCallContext</code></pre>
+      <p>What `execute()` receives: per-call facts plus the run-scoped
+capabilities — the same supervisor and notifier instances the handle
+exposes. `llmMessages` is a read-only snapshot taken at batch start: a
+deliberate capability (transcript-aware tools); hosts that run
+third-party tools should treat it as part of their trust decision.</p>
+      <div class="tags"><span>di-boundary</span><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>runId</code></td>
+              <td><code>AgentRunId</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>toolUseId</code></td>
+              <td><code>ToolUseId</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>signal</code></td>
+              <td><code>AbortSignal</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>llmMessages</code></td>
+              <td><code>readonly Message[]</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>backgroundTaskSupervisor</code></td>
+              <td><code>BackgroundTaskSupervisor</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>notifier</code></td>
+              <td><code>Notifier</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="ToolDefinition" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ToolDefinition</strong>
+          <span>interface · line 44 · public</span>
+        </div>
+        <a href="../modules/tool-src-contract.html#ToolDefinition">Module</a>
+      </div>
+      <pre><code>export interface ToolDefinition&lt;I = unknown&gt;</code></pre>
+      <p>The authoring surface — name, docstring, input contract, behavior.
+There is no flag metadata: foreground / background / yield are runtime
+patterns of `execute`, and the engine never branches on them. Build
+instances through `defineTool`.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>name</code></td>
+              <td><code>string</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>description</code></td>
+              <td><code>string</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>input</code></td>
+              <td><code>z.ZodType&lt;I&gt;</code></td>
+              <td>readonly</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>execute</code></td>
+              <td><code>execute(input: I, ctx: ToolCallContext): Promise&lt;ToolResult&gt;;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/contract</code></td>
+      <td><code>background/src/index</code></td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/contract</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/contract</code></td>
+      <td><code>notification/src/index</code></td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>tool/src/contract</code></td>
+      <td><code>zod</code></td>
+      <td>10</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

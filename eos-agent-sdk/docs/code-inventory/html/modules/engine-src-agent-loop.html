@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>engine/src/agent-loop Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-sdk</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/engine.html">engine</a></p>
+          <h1>engine/src/agent-loop</h1>
+          <p class="lede">src/engine/agent-loop.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>11</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>1</dd></div>
+          <div><dt>Functions</dt><dd>6</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>7</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>../contracts/index.js</code></td>
+      <td>assistantText, toolUses, type Message, type ToolCallResult</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../llm-client/index.js</code></td>
+      <td>ProviderError, type UsageSnapshot</td>
+      <td>value</td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../notification/index.js</code></td>
+      <td>systemNotificationMessage, type NotificationInbox</td>
+      <td>value</td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./conversation.js</code></td>
+      <td>Conversation, ToolResultBlock</td>
+      <td>type</td>
+      <td>13</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./run-handle.js</code></td>
+      <td>AgentRunError, RunHandle</td>
+      <td>type</td>
+      <td>14</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./tool-executor.js</code></td>
+      <td>ToolExecutor, ToolUseBlock</td>
+      <td>type</td>
+      <td>15</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./turn.js</code></td>
+      <td>addUsage, runAssistantTurn, type TurnConfig</td>
+      <td>value</td>
+      <td>16</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>agent-loop.ts</code>
+        <small>11 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#RUN_FINISHED_DISPOSE_REASON"><code>RUN_FINISHED_DISPOSE_REASON</code></a>
+            <span>const</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#TurnFacts"><code>TurnFacts</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#TaskRegistryGate"><code>TaskRegistryGate</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#TerminationMode"><code>TerminationMode</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#AgentLoopContext"><code>AgentLoopContext</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#runAgentLoop"><code>runAgentLoop</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#waitForWake"><code>waitForWake</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#normalizeBatch"><code>normalizeBatch</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#projectToolResult"><code>projectToolResult</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#classifyLoopError"><code>classifyLoopError</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#isAborted"><code>isAborted</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="RUN_FINISHED_DISPOSE_REASON" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>RUN_FINISHED_DISPOSE_REASON</strong>
+          <span>const · line 19 · public</span>
+        </div>
+        <a href="../modules/engine-src-agent-loop.html#RUN_FINISHED_DISPOSE_REASON">Module</a>
+      </div>
+      <pre><code>export const RUN_FINISHED_DISPOSE_REASON = &quot;run finished&quot;</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="TurnFacts" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>TurnFacts</strong>
+          <span>interface · line 27 · public</span>
+        </div>
+        <a href="../modules/engine-src-agent-loop.html#TurnFacts">Module</a>
+      </div>
+      <pre><code>export interface TurnFacts</code></pre>
+      <p>Loop facts handed to `turnBoundary` hooks after each committed assistant
+turn; in-process camelCase. Two axes: the SHAPE of the turn that just
+committed (`toolCalls`, `backgroundTaskCount`, `hasPendingSteers`) and
+the run's BUDGET position (`turn`, `maxTurns`).</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>turn</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>maxTurns</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>toolCalls</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>backgroundTaskCount</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>hasPendingSteers</code></td>
+              <td><code>boolean</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="TaskRegistryGate" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>TaskRegistryGate</strong>
+          <span>interface · line 45 · public</span>
+        </div>
+        <a href="../modules/engine-src-agent-loop.html#TaskRegistryGate">Module</a>
+      </div>
+      <pre><code>export interface TaskRegistryGate</code></pre>
+      <p>The loop's view of the run's task registry — the same registry the
+public supervisor mutates; the gates are SDK-internal mechanism, so
+these members are deliberately absent from the public interface.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>isEmpty</code></td>
+              <td><code>isEmpty(): boolean;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>count</code></td>
+              <td><code>count(): number;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>changeCount</code></td>
+              <td><code>changeCount(): number;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>waitForChange</code></td>
+              <td><code>waitForChange(since: number, signal: AbortSignal): Promise&lt;void&gt;;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>disposeAll</code></td>
+              <td><code>disposeAll(reason: string): Promise&lt;void&gt;;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="TerminationMode" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>TerminationMode</strong>
+          <span>type · line 54 · public</span>
+        </div>
+        <a href="../modules/engine-src-agent-loop.html#TerminationMode">Module</a>
+      </div>
+      <pre><code>export type TerminationMode&lt;T&gt; = |</code></pre>
+      <p>How the run completes; fixed at assembly from `agentOutcomeFn` presence.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    <h3>Variants</h3>
+
+    <ul class="variant-list">
+
+        <li><code>{ kind: &quot;text&quot; }</code></li>
+
+
+        <li><code>{ /** Reads the submission the terminal tool accepted in this batch. */ kind:...</code></li>
+
+    </ul>
+
+
+    </article>
+
+
+    <article id="AgentLoopContext" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AgentLoopContext</strong>
+          <span>interface · line 63 · public</span>
+        </div>
+        <a href="../modules/engine-src-agent-loop.html#AgentLoopContext">Module</a>
+      </div>
+      <pre><code>export interface AgentLoopContext&lt;T&gt;</code></pre>
+      <p>Everything one run's loop needs; assembled by the runtime.</p>
+      <div class="tags"><span>di-boundary</span><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>handle</code></td>
+              <td><code>RunHandle&lt;T&gt;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>conversation</code></td>
+              <td><code>Conversation</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>tools</code></td>
+              <td><code>ToolExecutor</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>turnConfig</code></td>
+              <td><code>TurnConfig</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>maxTurns</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>inbox</code></td>
+              <td><code>NotificationInbox</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>tasks</code></td>
+              <td><code>TaskRegistryGate</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>onTurnBoundary</code></td>
+              <td><code>(facts: TurnFacts) =&gt; Promise&lt;void&gt;</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>mode</code></td>
+              <td><code>TerminationMode&lt;T&gt;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="runAgentLoop" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>runAgentLoop</strong>
+          <span>function · line 94 · public</span>
+        </div>
+        <a href="../modules/engine-src-agent-loop.html#runAgentLoop">Module</a>
+      </div>
+      <pre><code>export async function runAgentLoop&lt;T&gt;(ctx: AgentLoopContext&lt;T&gt;): Promise&lt;void&gt;</code></pre>
+      <p>The loop spine — control flow only; streaming, records, and tool
+dispatch live in their own modules. Never throws: every exit classifies
+into exactly one `finish`, committed in the same synchronous block as
+its decision so a late steer is never accepted-but-dropped.
+
+One predicate gates both exits: `calls == 0 ∧ no pending steers ∧ task
+registry empty ∧ inbox drained`. In text mode a bare-text turn finishes
+the run when the gate is open; in terminal-tool mode only an accepted
+submission does (the terminal binding evaluates the same gate at
+submission time). `calls == 0 ∧ no steers ∧ inbox drained ∧ registry
+non-empty` parks the run; wake sources are any inbox publish, any task
+removal, any steer, and interrupt. A wake whose drain yields nothing
+re-evaluates the gate: text mode completes with the existing final
+text, terminal mode re-prompts the model (`maxTurns` backstops spin).</p>
+      <div class="tags"><span>async</span><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="waitForWake" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>waitForWake</strong>
+          <span>function · line 249 · internal</span>
+        </div>
+        <a href="../modules/engine-src-agent-loop.html#waitForWake">Module</a>
+      </div>
+      <pre><code>async function waitForWake&lt;T&gt;( ctx: AgentLoopContext&lt;T&gt;, tasksSince: number, ): Promise&lt;void&gt;</code></pre>
+      <p>Park until any wake source fires: a steer, an inbox publish, a task
+removal, or abort. The race loser would otherwise stay registered until
+an unrelated wake, so a race-scoped signal unhooks it as soon as the
+winner settles.</p>
+      <div class="tags"><span>async</span><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="normalizeBatch" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>normalizeBatch</strong>
+          <span>function · line 271 · internal</span>
+        </div>
+        <a href="../modules/engine-src-agent-loop.html#normalizeBatch">Module</a>
+      </div>
+      <pre><code>function normalizeBatch( calls: ToolUseBlock[], results: ToolCallResult[], ): ToolCallResult[]</code></pre>
+      <p>The engine-owned invariant: every `tool_use_id` is answered, in
+`tool_use` order, regardless of executor behavior. A missing result
+becomes a synthetic error; no event is emitted for it.</p>
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="projectToolResult" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>projectToolResult</strong>
+          <span>function · line 292 · internal</span>
+        </div>
+        <a href="../modules/engine-src-agent-loop.html#projectToolResult">Module</a>
+      </div>
+      <pre><code>function projectToolResult(result: ToolCallResult): ToolResultBlock</code></pre>
+      <p>The ONE serialization point: non-string content is stringified here.</p>
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="classifyLoopError" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>classifyLoopError</strong>
+          <span>function · line 304 · internal</span>
+        </div>
+        <a href="../modules/engine-src-agent-loop.html#classifyLoopError">Module</a>
+      </div>
+      <pre><code>function classifyLoopError( error: unknown, signal: AbortSignal, ):</code></pre>
+
+      <div class="tags"><span>abortable</span><span>error</span><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="isAborted" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>isAborted</strong>
+          <span>function · line 320 · internal</span>
+        </div>
+        <a href="../modules/engine-src-agent-loop.html#isAborted">Module</a>
+      </div>
+      <pre><code>function isAborted(signal: AbortSignal): boolean</code></pre>
+      <p>Read through a call so control-flow narrowing never caches `aborted`.</p>
+      <div class="tags"><span>abortable</span><span>internal</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>engine/src/agent-loop</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>engine/src/agent-loop</code></td>
+      <td><code>engine/src/conversation</code></td>
+      <td>13</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>engine/src/agent-loop</code></td>
+      <td><code>engine/src/run-handle</code></td>
+      <td>14</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>engine/src/agent-loop</code></td>
+      <td><code>engine/src/tool-executor</code></td>
+      <td>15</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>engine/src/agent-loop</code></td>
+      <td><code>engine/src/turn</code></td>
+      <td>16</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>engine/src/agent-loop</code></td>
+      <td><code>llm-client/src/index</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>engine/src/agent-loop</code></td>
+      <td><code>notification/src/index</code></td>
+      <td>8</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

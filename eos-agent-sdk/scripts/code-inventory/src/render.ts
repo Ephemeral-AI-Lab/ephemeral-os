@@ -91,12 +91,12 @@ function indexPage(inventory: WorkspaceInventory): string {
   const relationRows = inventory.relations.slice(0, 240).map(relationRow).join("\n");
 
   return shell({
-    title: "eos-agent-core Code Inventory",
+    title: "eos-agent-sdk Code Inventory",
     assetPrefix: "assets/",
     body: `
       <section class="page-head">
         <div>
-          <p class="eyebrow">eos-agent-core</p>
+          <p class="eyebrow">eos-agent-sdk</p>
           <h1>TypeScript Code Inventory</h1>
           <p class="lede">Package boundaries, module surfaces, symbols, Zod contracts, and graph relations generated from the live TypeScript workspace.</p>
         </div>
@@ -314,7 +314,7 @@ function shell(input: {
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="${input.assetPrefix === "assets/" ? "index.html" : "../index.html"}">eos-agent-core</a>
+    <a class="brand" href="${input.assetPrefix === "assets/" ? "index.html" : "../index.html"}">eos-agent-sdk</a>
     <nav>
       <a href="${input.assetPrefix}inventory.json">JSON</a>
       <a href="${input.assetPrefix}graph.json">Graph</a>

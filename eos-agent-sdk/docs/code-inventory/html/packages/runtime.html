@@ -1,0 +1,949 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>runtime Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-sdk</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a></p>
+          <h1>runtime</h1>
+          <p class="lede">src/runtime</p>
+          <div class="tags"><span>runtime</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Modules</dt><dd>7</dd></div>
+          <div><dt>Source</dt><dd>4</dd></div>
+          <div><dt>Tests</dt><dd>3</dd></div>
+          <div><dt>Symbols</dt><dd>34</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Package Manifest</h2>
+          <span>module</span>
+        </div>
+        <div class="manifest-grid">
+          <div><strong>exports</strong><ul><li><code>.</code></li></ul></div>
+          <div><strong>dependencies</strong><ul><li><code>background</code></li><li><code>contracts</code></li><li><code>engine</code></li><li><code>llm-client</code></li><li><code>notification</code></li><li><code>tool</code></li></ul></div>
+          <div><strong>devDependencies</strong><p>none</p></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>File Tree</h2>
+          <input class="search-input" type="search" placeholder="Filter files, symbols, tags" aria-label="Filter files, symbols, tags">
+        </div>
+        <div class="tree-nav"><div class="tree-children">
+      <details class="tree-folder" open>
+        <summary>
+          <span class="tree-label">tests</span>
+        </summary>
+        <div class="tree-children">
+      <details class="tree-folder" open>
+        <summary>
+          <span class="tree-label">runtime</span>
+        </summary>
+        <div class="tree-children">
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/runtime-tests-invariants-test.html"><code>invariants.test.ts</code></a>
+        <small>test · 12 symbols</small>
+      </div>
+      <div class="tags"><span>test</span><span>test-only</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-tests-invariants-test.html#SdkFixture"><code>SdkFixture</code></a>
+          <span>interface</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-tests-invariants-test.html#sdkFixture"><code>sdkFixture</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-tests-invariants-test.html#baseSpec"><code>baseSpec</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-tests-invariants-test.html#TaskControls"><code>TaskControls</code></a>
+          <span>interface</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-tests-invariants-test.html#taskTool"><code>taskTool</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-tests-invariants-test.html#OUTCOME_SCHEMA"><code>OUTCOME_SCHEMA</code></a>
+          <span>schema</span>
+          <span class="compact-tags">internal schema:zod test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-tests-invariants-test.html#submitTurn"><code>submitTurn</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-tests-invariants-test.html#textTurn"><code>textTurn</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-tests-invariants-test.html#start"><code>start</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-tests-invariants-test.html#until"><code>until</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-tests-invariants-test.html#requestTexts"><code>requestTexts</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-tests-invariants-test.html#lastToolResultContent"><code>lastToolResultContent</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/runtime-tests-records-test.html"><code>records.test.ts</code></a>
+        <small>test · 2 symbols</small>
+      </div>
+      <div class="tags"><span>test</span><span>test-only</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-tests-records-test.html#recorderFixture"><code>recorderFixture</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-tests-records-test.html#lines"><code>lines</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/runtime-tests-sdk-test.html"><code>sdk.test.ts</code></a>
+        <small>test · 2 symbols</small>
+      </div>
+      <div class="tags"><span>test</span><span>test-only</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-tests-sdk-test.html#noop"><code>noop</code></a>
+          <span>schema</span>
+          <span class="compact-tags">internal schema:zod test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-tests-sdk-test.html#sdkWith"><code>sdkWith</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+    </ul>
+
+    </div>
+  </div>
+      </details>
+    </div>
+      </details>
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/runtime-src-index.html"><code>index.ts</code></a>
+        <small>entrypoint · 0 symbols</small>
+      </div>
+      <div class="tags"><span>entrypoint</span><span>package-entrypoint</span><span>public-api</span></div>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/runtime-src-llm-clients.html"><code>llm-clients.ts</code></a>
+        <small>source · 6 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-src-llm-clients.html#LlmRef"><code>LlmRef</code></a>
+          <span>type</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-src-llm-clients.html#LlmClientProfile"><code>LlmClientProfile</code></a>
+          <span>type</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-src-llm-clients.html#LlmClientConfig"><code>LlmClientConfig</code></a>
+          <span>type</span>
+          <span class="compact-tags">config public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-src-llm-clients.html#ResolvedLlmProfile"><code>ResolvedLlmProfile</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-src-llm-clients.html#LlmClientRegistry"><code>LlmClientRegistry</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-src-llm-clients.html#buildLlmClientRegistry"><code>buildLlmClientRegistry</code></a>
+          <span>function</span>
+          <span class="compact-tags">config public-api</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/runtime-src-records.html"><code>records.ts</code></a>
+        <small>source · 2 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-src-records.html#RECORDED_EVENT_TYPES"><code>RECORDED_EVENT_TYPES</code></a>
+          <span>const</span>
+          <span class="compact-tags">event internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-src-records.html#JsonlRunRecorder"><code>JsonlRunRecorder</code></a>
+          <span>class</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/runtime-src-sdk.html"><code>sdk.ts</code></a>
+        <small>source · 10 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-src-sdk.html#DEFAULT_MAX_TURNS"><code>DEFAULT_MAX_TURNS</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-src-sdk.html#DEFAULT_TASK_COMPLETION_TIMEOUT_MS"><code>DEFAULT_TASK_COMPLETION_TIMEOUT_MS</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-src-sdk.html#AgentSdkConfig"><code>AgentSdkConfig</code></a>
+          <span>interface</span>
+          <span class="compact-tags">config public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-src-sdk.html#AgentSdk"><code>AgentSdk</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-src-sdk.html#AgentSpec"><code>AgentSpec</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-src-sdk.html#Agent"><code>Agent</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-src-sdk.html#createAgentSdk"><code>createAgentSdk</code></a>
+          <span>function</span>
+          <span class="compact-tags">config public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-src-sdk.html#StartRunArgs"><code>StartRunArgs</code></a>
+          <span>interface</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-src-sdk.html#startRun"><code>startRun</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/runtime-src-sdk.html#validateToolNames"><code>validateToolNames</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+    </ul>
+
+    </div>
+  </div></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2><span>68</span></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/src/llm-clients</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/src/llm-clients</code></td>
+      <td><code>llm-client/src/index</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>runtime/src/records</code></td>
+      <td><code>engine/src/index</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/src/records</code></td>
+      <td><code>node:fs</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/src/records</code></td>
+      <td><code>node:fs</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/src/records</code></td>
+      <td><code>node:path</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/src/sdk</code></td>
+      <td><code>background/src/index</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/src/sdk</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/src/sdk</code></td>
+      <td><code>engine/src/index</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/src/sdk</code></td>
+      <td><code>notification/src/index</code></td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/src/sdk</code></td>
+      <td><code>runtime/src/llm-clients</code></td>
+      <td>22</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/src/sdk</code></td>
+      <td><code>runtime/src/records</code></td>
+      <td>28</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/src/sdk</code></td>
+      <td><code>tool/src/index</code></td>
+      <td>12</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>background/src/index</code></td>
+      <td>20</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>19</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>24</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>engine/src/index</code></td>
+      <td>26</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>node:fs</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>node:os</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>node:path</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>runtime/src/sdk</code></td>
+      <td>28</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>testkit/src/index</code></td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>tool/src/index</code></td>
+      <td>25</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>vitest</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>zod</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/records.test</code></td>
+      <td><code>node:fs</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/records.test</code></td>
+      <td><code>node:os</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/records.test</code></td>
+      <td><code>node:path</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/records.test</code></td>
+      <td><code>runtime/src/records</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/records.test</code></td>
+      <td><code>vitest</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>runtime/src/llm-clients</code></td>
+      <td>17</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>runtime/src/sdk</code></td>
+      <td>16</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>testkit/src/index</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>tool/src/index</code></td>
+      <td>14</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>zod</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>package-depends-on</td>
+      <td><code>runtime</code></td>
+      <td><code>background</code></td>
+      <td></td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>package-depends-on</td>
+      <td><code>runtime</code></td>
+      <td><code>contracts</code></td>
+      <td></td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>package-depends-on</td>
+      <td><code>runtime</code></td>
+      <td><code>engine</code></td>
+      <td></td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>package-depends-on</td>
+      <td><code>runtime</code></td>
+      <td><code>llm-client</code></td>
+      <td></td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>package-depends-on</td>
+      <td><code>runtime</code></td>
+      <td><code>notification</code></td>
+      <td></td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>package-depends-on</td>
+      <td><code>runtime</code></td>
+      <td><code>tool</code></td>
+      <td></td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>reexports</td>
+      <td><code>runtime/src/index</code></td>
+      <td><code>runtime/src/llm-clients</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>reexports</td>
+      <td><code>runtime/src/index</code></td>
+      <td><code>runtime/src/records</code></td>
+      <td>12</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>reexports</td>
+      <td><code>runtime/src/index</code></td>
+      <td><code>runtime/src/sdk</code></td>
+      <td>13</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>background/src/index</code></td>
+      <td>20</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>19</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>contracts/src/index</code></td>
+      <td>24</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>engine/src/index</code></td>
+      <td>26</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>node:fs</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>node:os</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>node:path</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>runtime/src/sdk</code></td>
+      <td>28</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>testkit/src/index</code></td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>tool/src/index</code></td>
+      <td>25</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>vitest</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/invariants.test</code></td>
+      <td><code>zod</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/records.test</code></td>
+      <td><code>node:fs</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/records.test</code></td>
+      <td><code>node:os</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/records.test</code></td>
+      <td><code>node:path</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/records.test</code></td>
+      <td><code>runtime/src/records</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/records.test</code></td>
+      <td><code>vitest</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>runtime/src/llm-clients</code></td>
+      <td>17</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>runtime/src/sdk</code></td>
+      <td>16</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>testkit/src/index</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>tool/src/index</code></td>
+      <td>14</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>runtime/tests/sdk.test</code></td>
+      <td><code>zod</code></td>
+      <td>2</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

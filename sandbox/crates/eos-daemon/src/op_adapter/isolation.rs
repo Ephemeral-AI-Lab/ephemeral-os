@@ -13,6 +13,7 @@ use eos_workspace::{IsolatedError, WorkspaceHandle};
 use serde_json::{json, Value};
 
 use crate::error::DaemonError;
+use crate::workspace_runtime::LeaseReleaseReport;
 use crate::DispatchContext;
 use crate::{ExitOutcome, WorkspaceEnterError, WorkspaceRecoveryReport};
 
@@ -36,8 +37,13 @@ pub(crate) fn op_enter(
     );
     record_enter_started(&context, &caller_id, &root);
     let workspace = &context.require_services()?.workspace;
-    match workspace.enter(&caller_id, &root) {
-        Ok(handle) => {
+    match workspace.enter_with_report(&caller_id, &root) {
+        Ok(outcome) => {
+            if outcome.recovery.attempted {
+                record_recovery_started(&context);
+                record_recovery_finished(&context, &outcome.recovery);
+            }
+            let handle = outcome.handle;
             record_entered(&context, &handle);
             Ok(success_response(to_wire_value(IsolationEnterOutput {
                 success: true,
@@ -52,6 +58,13 @@ pub(crate) fn op_enter(
             "cannot enter isolated workspace while commands are active",
             json!({"active_commands": active_commands}),
         )),
+        Err(WorkspaceEnterError::EnterFailed {
+            source,
+            lease_release,
+        }) => {
+            record_lease_release_failed(&context, "isolation_enter_rollback", &lease_release);
+            Ok(error_payload(&source))
+        }
         Err(WorkspaceEnterError::Isolated(error)) => Ok(error_payload(&error)),
     }
 }
@@ -160,6 +173,10 @@ pub(crate) fn exit_response(exit: ExitOutcome) -> Value {
     if let Some(object) = inspection.as_object_mut() {
         object.insert("lease_released".to_owned(), json!(exit.lease_released));
         object.insert(
+            "lease_release_error".to_owned(),
+            json!(exit.lease_release_error),
+        );
+        object.insert(
             "active_leases_after".to_owned(),
             json!(exit.active_leases_after),
         );
@@ -186,6 +203,38 @@ fn record_enter_started(context: &DispatchContext<'_>, caller_id: &str, root: &s
 }
 
 fn record_entered(context: &DispatchContext<'_>, handle: &WorkspaceHandle) {
+    context.record_trace_event(
+        "layer_stack",
+        "binding_loaded",
+        json!({
+            "caller_id": handle.caller_id.as_str(),
+            "workspace_handle_id": handle.workspace_id.0.as_str(),
+            "workspace_root": handle.workspace_root.as_str(),
+        }),
+    );
+    context.record_trace_event(
+        "layer_stack",
+        "manifest_read",
+        json!({
+            "caller_id": handle.caller_id.as_str(),
+            "workspace_handle_id": handle.workspace_id.0.as_str(),
+            "manifest_version": handle.manifest_version,
+            "manifest_root_hash": handle.manifest_root_hash.as_str(),
+            "layer_count": handle.layer_paths.len(),
+        }),
+    );
+    context.record_trace_event(
+        "layer_stack",
+        "snapshot_acquired",
+        json!({
+            "caller_id": handle.caller_id.as_str(),
+            "workspace_handle_id": handle.workspace_id.0.as_str(),
+            "lease_id": handle.lease_id.as_str(),
+            "manifest_version": handle.manifest_version,
+            "manifest_root_hash": handle.manifest_root_hash.as_str(),
+            "layer_count": handle.layer_paths.len(),
+        }),
+    );
     let common = json!({
         "caller_id": handle.caller_id.as_str(),
         "workspace_handle_id": handle.workspace_id.0.as_str(),
@@ -255,6 +304,20 @@ fn record_recovery_finished(context: &DispatchContext<'_>, recovery: &WorkspaceR
 }
 
 fn record_exited(context: &DispatchContext<'_>, exit: &ExitOutcome) {
+    record_lease_release_failed_for_exit(context, exit);
+    if exit.lease_release_error.is_none() {
+        context.record_trace_event(
+            "layer_stack",
+            "lease_released",
+            json!({
+                "caller_id": exit.isolated.caller_id.as_str(),
+                "workspace_handle_id": exit.isolated.workspace_id.0.as_str(),
+                "lease_id": exit.isolated.lease_id.as_str(),
+                "released": exit.lease_released,
+                "active_leases_after": exit.active_leases_after,
+            }),
+        );
+    }
     for (phase, duration_ms) in sorted_phases(&exit.isolated.phases_ms) {
         context.record_trace_event(
             "isolated_workspace",
@@ -272,6 +335,7 @@ fn record_exited(context: &DispatchContext<'_>, exit: &ExitOutcome) {
             "total_ms": exit.isolated.total_ms,
             "evicted_upperdir_bytes": exit.isolated.evicted_upperdir_bytes,
             "lease_released": exit.lease_released,
+            "lease_release_error": exit.lease_release_error.as_deref(),
             "active_leases_after": exit.active_leases_after,
             "mountinfo_scan_error": exit
                 .isolated
@@ -300,10 +364,31 @@ fn teardown_phase_details(phase: &str, duration_ms: f64, inspection: &Value) -> 
         if let Some(object) = details.as_object_mut() {
             object.insert(
                 "holder_was_alive".to_owned(),
-                json!(inspection
-                    .get("holder_pid")
-                    .and_then(Value::as_i64)
-                    .is_some_and(|holder_pid| holder_pid > 0)),
+                inspection
+                    .get("holder_was_alive")
+                    .cloned()
+                    .unwrap_or(Value::Bool(false)),
+            );
+            object.insert(
+                "exit_status".to_owned(),
+                inspection
+                    .get("holder_exit_status")
+                    .cloned()
+                    .unwrap_or(Value::Null),
+            );
+            object.insert(
+                "signal".to_owned(),
+                inspection
+                    .get("holder_signal")
+                    .cloned()
+                    .unwrap_or(Value::Null),
+            );
+            object.insert(
+                "status_raw".to_owned(),
+                inspection
+                    .get("holder_status_raw")
+                    .cloned()
+                    .unwrap_or(Value::Null),
             );
             object.insert(
                 "holder_kill_error".to_owned(),
@@ -315,6 +400,33 @@ fn teardown_phase_details(phase: &str, duration_ms: f64, inspection: &Value) -> 
         }
     }
     details
+}
+
+fn record_lease_release_failed_for_exit(context: &DispatchContext<'_>, exit: &ExitOutcome) {
+    let report = LeaseReleaseReport {
+        released: exit.lease_released,
+        error: exit.lease_release_error.clone(),
+    };
+    record_lease_release_failed(context, "isolation_exit", &report);
+}
+
+fn record_lease_release_failed(
+    context: &DispatchContext<'_>,
+    reason: &'static str,
+    report: &LeaseReleaseReport,
+) {
+    let Some(error) = report.error.as_deref() else {
+        return;
+    };
+    context.record_trace_event(
+        "layer_stack",
+        "lease_release_failed",
+        json!({
+            "reason": reason,
+            "lease_released": report.released,
+            "error": error,
+        }),
+    );
 }
 
 /// Serialize tests that toggle the process-wide

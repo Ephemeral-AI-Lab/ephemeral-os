@@ -80,7 +80,11 @@ impl NsRunnerLauncher for NoLaunch {
         ))
     }
 
-    fn spawn_detached(&self, _request: &RunRequest) -> Result<Child, LaunchError> {
+    fn spawn_detached(
+        &self,
+        _request: &RunRequest,
+        _stderr_path: &std::path::Path,
+    ) -> Result<Child, LaunchError> {
         Err(LaunchError::Failed(
             "test launcher does not start ns-runner".to_owned(),
         ))
@@ -121,7 +125,10 @@ fn dispatches_layerstack_read_file() -> TestResult {
     assert_eq!(result["workspace"], Value::String("ephemeral".to_owned()));
     assert_eq!(result["content"], Value::String("# README\n".to_owned()));
     assert_eq!(result["exists"], Value::Bool(true));
-    assert!(result["timings"]["api.read.layer_stack_read_s"].is_number());
+    assert!(
+        result.get("timings").is_none(),
+        "file read response timings should live in trace/meta, not the result payload: {response}"
+    );
     Ok(())
 }
 
@@ -278,7 +285,6 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() -> 
         }),
     );
     let enter = ok_result(&enter_response);
-    assert_eq!(enter["success"], Value::Bool(true));
     assert_eq!(enter["manifest_version"], json!(1));
     assert_eq!(enter["manifest_root_hash"].as_str().map(str::len), Some(64));
     let handle_id = enter["workspace_handle_id"]
@@ -1074,7 +1080,7 @@ fn assert_isolated_test_reset(daemon: &TestDaemon, invocation_id: &str) {
         json!({}),
     );
     let reset = ok_result(&reset);
-    assert_eq!(reset["success"], Value::Bool(true));
+    assert_eq!(reset["reset"], Value::Bool(true));
 }
 
 fn assert_isolated_open_state(daemon: &TestDaemon, root: &Path) {
@@ -1085,7 +1091,6 @@ fn assert_isolated_open_state(daemon: &TestDaemon, root: &Path) {
         json!({"caller_id": "caller-enabled"}),
     );
     let status = ok_result(&status);
-    assert_eq!(status["success"], Value::Bool(true));
     assert_eq!(status["open"], Value::Bool(true));
     assert_eq!(status["manifest_version"], json!(1));
 
@@ -1103,13 +1108,11 @@ fn assert_isolated_open_state(daemon: &TestDaemon, root: &Path) {
 
     let open = dispatch_request(daemon, "sandbox.isolation.list_open", "iws-list", json!({}));
     let open = ok_result(&open);
-    assert_eq!(open["success"], Value::Bool(true));
     assert_eq!(open["open_caller_ids"], json!(["caller-enabled"]));
 }
 
 fn assert_isolated_exit(exit: &Value, handle_scratch: &Path) -> TestResult {
     let exit = ok_result(exit);
-    assert_eq!(exit["success"], Value::Bool(true));
     assert!(exit["evicted_upperdir_bytes"].as_u64().unwrap_or(0) > 0);
     assert_eq!(exit["inspection"]["handle_registered_after"], json!(false));
     assert_eq!(exit["inspection"]["agent_registered_after"], json!(false));
@@ -1133,7 +1136,6 @@ fn assert_isolated_status_closed(daemon: &TestDaemon) {
         json!({"caller_id": "caller-enabled"}),
     );
     let status = ok_result(&status);
-    assert_eq!(status["success"], Value::Bool(true));
     assert_eq!(status["open"], Value::Bool(false));
 }
 

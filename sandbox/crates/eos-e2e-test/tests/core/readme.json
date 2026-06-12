@@ -65,7 +65,7 @@
     {
       "id": "core-direct-file-ops",
       "title": "Direct File Ops",
-      "description": "Direct read/write/edit paths publish through OCC, bypass overlay leasing, expose direct timing counters, and keep lease counts at zero under repeated writes.",
+      "description": "Direct read/write/edit paths publish through OCC, bypass overlay leasing, record route/OCC/file trace events, and keep lease counts at zero under repeated writes.",
       "tags": [
         "core"
       ]
@@ -104,7 +104,7 @@
     {
       "id": "core-direct-file-occ-path",
       "name": "core-direct-file-occ-path",
-      "description": "Groups direct file correctness and resource behavior: `direct_file_ops_round_trip_through_protocol`, `write_read_roundtrip`, `write_publishes_changed_paths`, `edit_search_replace_applied`, `edit_replace_all`, `fast_path_write_publishes_without_holding_a_lease`, `fast_path_surfaces_occ_and_read_timings`, `repeated_fast_path_writes_keep_leases_zero`, and `direct_file_ops_concurrency_ladder` cover OCC publish, timing counters, no overlay lease leakage, and concurrent readback across the configured `1/3/6/12` ladder.",
+      "description": "Groups direct file correctness and resource behavior: `direct_file_ops_round_trip_through_protocol`, `write_read_roundtrip`, `write_publishes_changed_paths`, `edit_search_replace_applied`, `edit_replace_all`, `fast_path_write_publishes_without_holding_a_lease`, `fast_path_records_occ_and_read_trace_events`, `repeated_fast_path_writes_keep_leases_zero`, and `direct_file_ops_concurrency_ladder` cover OCC publish, trace events and changed-path results, no overlay lease leakage, and concurrent readback across the configured `1/3/6/12` ladder.",
       "command": "cargo test -p eos-e2e-test --features e2e --test core -- --nocapture",
       "checklist": [
         "core-direct-file-ops",

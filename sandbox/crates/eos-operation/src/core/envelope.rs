@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value};
 
 use eos_trace::{RequestId, SpanStatus, SpanSubsystem, SpanUid, TraceId, WorkspaceRoute};
 
@@ -294,65 +294,10 @@ impl<T> OperationEnvelope<T> {
     }
 }
 
-/// Phase-01 migration bridge for old v1 flat responses. Phase 06 deletes this.
-pub struct V1FlatteningAdapter;
-
-impl V1FlatteningAdapter {
-    #[must_use]
-    pub fn from_legacy_value(value: Value) -> OperationEnvelope<Value> {
-        if value.get("success").and_then(Value::as_bool) == Some(false) {
-            let error = value.get("error").cloned().unwrap_or_else(|| json!({}));
-            return OperationEnvelope::error(legacy_fault(error), ResponseMeta::default());
-        }
-        OperationEnvelope::ok(value, ResponseMeta::default())
-    }
-
-    pub fn to_legacy_value<T: Serialize>(envelope: &OperationEnvelope<T>) -> Value {
-        match envelope {
-            // Legacy responses only know `success`; cancelled/timed-out work
-            // reported its finalized facts in a success-shaped payload.
-            OperationEnvelope::Ok { result, .. }
-            | OperationEnvelope::Running { result, .. }
-            | OperationEnvelope::Cancelled { result, .. }
-            | OperationEnvelope::TimedOut { result, .. } => {
-                let mut value = serde_json::to_value(result).unwrap_or_else(|_| json!({}));
-                if let Value::Object(object) = &mut value {
-                    object
-                        .entry("success".to_owned())
-                        .or_insert(Value::Bool(true));
-                }
-                value
-            }
-            OperationEnvelope::Rejected { error, .. } | OperationEnvelope::Error { error, .. } => {
-                json!({
-                    "success": false,
-                    "warnings": envelope.meta().warnings.iter().map(|warning| {
-                        json!({"kind": warning.kind, "message": warning.message})
-                    }).collect::<Vec<_>>(),
-                    "timings": {},
-                    "error": error,
-                })
-            }
-        }
-    }
-}
-
-fn legacy_fault(error: Value) -> OperationFault {
-    let kind = error
-        .get("kind")
-        .and_then(Value::as_str)
-        .unwrap_or("internal_error");
-    let message = error
-        .get("message")
-        .and_then(Value::as_str)
-        .unwrap_or("operation failed");
-    let details = error.get("details").cloned().unwrap_or_else(|| json!({}));
-    OperationFault::new(kind, message)
-        .with_details(super::fault::FaultDetails::default().with_field("legacy_details", details))
-}
-
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
+
     use super::*;
     use crate::core::FaultDetails;
 
@@ -459,47 +404,5 @@ mod tests {
         assert_eq!(meta["protocol_version"], 2);
         assert_eq!(meta["workspace_route"]["kind"], "none");
         assert_eq!(meta["trace"]["store"], "pending_host_ingest");
-    }
-
-    #[test]
-    fn v1_adapter_flattens_every_status_arm() {
-        for envelope in six_envelopes() {
-            let value = V1FlatteningAdapter::to_legacy_value(&envelope);
-            match envelope.status() {
-                OperationStatus::Ok
-                | OperationStatus::Running
-                | OperationStatus::Cancelled
-                | OperationStatus::TimedOut => {
-                    assert_eq!(value["success"], true, "{:?}", envelope.status());
-                }
-                OperationStatus::Rejected | OperationStatus::Error => {
-                    assert_eq!(value["success"], false, "{:?}", envelope.status());
-                    assert!(value["error"]["kind"].is_string());
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn v1_adapter_is_confined_to_legacy_wire_shape() {
-        let legacy = json!({
-            "success": false,
-            "error": {
-                "kind": "bad_json",
-                "message": "bad request",
-                "details": {"line": 1}
-            }
-        });
-
-        let envelope = V1FlatteningAdapter::from_legacy_value(legacy);
-        assert_eq!(envelope.status(), OperationStatus::Error);
-        assert_eq!(envelope.fault().expect("fault").kind, "bad_json");
-
-        let legacy_again = V1FlatteningAdapter::to_legacy_value(&OperationEnvelope::ok(
-            json!({"ready": true}),
-            ResponseMeta::default(),
-        ));
-        assert_eq!(legacy_again["success"], true);
-        assert_eq!(legacy_again["ready"], true);
     }
 }

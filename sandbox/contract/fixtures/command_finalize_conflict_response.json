@@ -20,8 +20,5 @@
     "message": "conflict on src/main.rs"
   },
   "conflict_reason": "conflict on src/main.rs",
-  "timings": {
-    "command_exec.total_s": 1.25
-  },
   "workspace": "ephemeral"
 }

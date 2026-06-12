@@ -9,12 +9,12 @@ export {
   type AgentSdk,
   type AgentSdkConfig,
   type AgentSpec,
-} from "@eos/runtime";
+} from "./runtime/index.js";
 export type {
   LlmClientConfig,
   LlmClientProfile,
   LlmRef,
-} from "@eos/runtime";
+} from "./runtime/index.js";
 
 // ── agents & runs ───────────────────────────────────────────────
 export type {
@@ -23,7 +23,7 @@ export type {
   AgentRunError,
   AgentRunHandle,
   TurnFacts,
-} from "@eos/engine";
+} from "./engine/index.js";
 
 // ── run-scoped capabilities ─────────────────────────────────────
 export type {
@@ -32,8 +32,8 @@ export type {
   BackgroundTaskOutcome,
   BackgroundTaskRow,
   BackgroundTaskSupervisor,
-} from "@eos/background";
-export type { Notifier } from "@eos/notification";
+} from "./background/index.js";
+export type { Notifier } from "./notification/index.js";
 
 // ── authoring ───────────────────────────────────────────────────
 export {
@@ -49,7 +49,7 @@ export {
   type ToolDefinition,
   type ToolDefinitionInit,
   type ToolResult,
-} from "@eos/tool";
+} from "./tool/index.js";
 
 // ── exported types (no values, no schemas) ──────────────────────
 export type {
@@ -61,9 +61,10 @@ export type {
   Message,
   ToolUseId,
   UserMessage,
-} from "@eos/contracts";
+} from "./contracts/index.js";
 export type {
+  LlmClient,
   ProviderConnection,
   ReasoningEffort,
   UsageSnapshot,
-} from "@eos/llm-client";
+} from "./llm-client/index.js";

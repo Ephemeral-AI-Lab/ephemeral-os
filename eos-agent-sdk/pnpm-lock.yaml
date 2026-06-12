@@ -8,27 +8,12 @@ importers:
 
   .:
     dependencies:
-      '@eos/background':
-        specifier: workspace:*
-        version: link:packages/background
-      '@eos/contracts':
-        specifier: workspace:*
-        version: link:packages/contracts
-      '@eos/engine':
-        specifier: workspace:*
-        version: link:packages/engine
-      '@eos/llm-client':
-        specifier: workspace:*
-        version: link:packages/llm-client
-      '@eos/notification':
-        specifier: workspace:*
-        version: link:packages/notification
-      '@eos/runtime':
-        specifier: workspace:*
-        version: link:packages/runtime
-      '@eos/tool':
-        specifier: workspace:*
-        version: link:packages/tool
+      '@anthropic-ai/sdk':
+        specifier: 0.104.1
+        version: 0.104.1(zod@4.4.3)
+      openai:
+        specifier: 6.42.0
+        version: 6.42.0(zod@4.4.3)
       zod:
         specifier: ^4.4.3
         version: 4.4.3

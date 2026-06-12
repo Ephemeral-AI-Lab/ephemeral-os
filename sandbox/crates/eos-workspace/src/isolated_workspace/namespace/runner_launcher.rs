@@ -5,9 +5,11 @@
 //! remount helpers. The embedding binary must provide the `ns-runner`
 //! subcommand on its current executable.
 
+use std::fs::OpenOptions;
 use std::io::Write;
 #[cfg(unix)]
 use std::os::unix::process::CommandExt;
+use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
@@ -34,7 +36,11 @@ pub trait NsRunnerLauncher: Send + Sync {
     ///
     /// Returns a [`LaunchError`] when the request cannot be encoded or the
     /// child cannot be spawned/fed.
-    fn spawn_detached(&self, request: &RunRequest) -> Result<Child, LaunchError>;
+    fn spawn_detached(
+        &self,
+        request: &RunRequest,
+        stderr_path: &Path,
+    ) -> Result<Child, LaunchError>;
 
     /// Re-run a remount request inside an existing child's namespaces.
     ///
@@ -97,13 +103,18 @@ impl NsRunnerLauncher for CurrentExeNsRunnerLauncher {
             .map_err(|err| LaunchError::Failed(format!("invalid ns-runner output: {err}")))
     }
 
-    fn spawn_detached(&self, request: &RunRequest) -> Result<Child, LaunchError> {
+    fn spawn_detached(
+        &self,
+        request: &RunRequest,
+        stderr_path: &Path,
+    ) -> Result<Child, LaunchError> {
         let payload = request_payload(request)?;
+        let stderr = open_append(stderr_path)?;
         let mut command = current_exe_ns_runner_command()?;
         command
             .stdin(Stdio::piped())
             .stdout(Stdio::null())
-            .stderr(Stdio::null());
+            .stderr(stderr);
         let mut child = command.spawn()?;
         write_child_stdin(
             &mut child,
@@ -157,6 +168,17 @@ impl NsRunnerLauncher for CurrentExeNsRunnerLauncher {
             String::from_utf8_lossy(&output.stderr).trim()
         )))
     }
+}
+
+fn open_append(path: &Path) -> Result<std::fs::File, LaunchError> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+        .map_err(LaunchError::from)
 }
 
 fn request_payload(request: &RunRequest) -> Result<Vec<u8>, LaunchError> {

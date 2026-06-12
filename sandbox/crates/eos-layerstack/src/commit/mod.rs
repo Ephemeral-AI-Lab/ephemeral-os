@@ -176,6 +176,28 @@ impl ChangesetResult {
     pub fn trace_events(&self) -> Vec<OccTraceEvent> {
         let mut events = vec![OccTraceEvent::new(
             "occ",
+            "commit_started",
+            json!({
+                "file_count": self.files.len(),
+                "gated_path_count": self.timings.get("occ.commit.gated_path_count").copied(),
+                "direct_path_count": self.timings.get("occ.commit.direct_path_count").copied(),
+            }),
+        )];
+        events.push(OccTraceEvent::new(
+            "occ",
+            "validate_groups_finished",
+            json!({
+                "file_count": self.files.len(),
+                "accepted_file_count": self.status_count(CommitStatus::Accepted),
+                "committed_file_count": self.status_count(CommitStatus::Committed),
+                "dropped_file_count": self.status_count(CommitStatus::Dropped),
+                "aborted_version_file_count": self.status_count(CommitStatus::AbortedVersion),
+                "failed_file_count": self.status_count(CommitStatus::Failed),
+                "duration_s": self.timings.get("occ.commit.validate_groups_s").copied(),
+            }),
+        ));
+        events.push(OccTraceEvent::new(
+            "occ",
             "commit_finished",
             json!({
                 "success": self.success(),
@@ -191,7 +213,7 @@ impl ChangesetResult {
                 "direct_path_count": self.timings.get("occ.commit.direct_path_count").copied(),
                 "duration_s": self.timings.get("occ.commit.total_s").copied(),
             }),
-        )];
+        ));
         events.extend(self.events.clone());
         events.extend(
             self.files
