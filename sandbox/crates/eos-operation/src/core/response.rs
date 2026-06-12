@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use super::OpError;
+use super::{FaultDetails, OpError, OperationEnvelope, OperationFault, ResponseMeta};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum OpResponse {
@@ -14,7 +14,7 @@ impl OpResponse {
     #[must_use]
     pub fn into_wire(self) -> Value {
         match self {
-            Self::Success(value) => value,
+            Self::Success(value) => ok_response(value),
             Self::Refused(error) => refused_response(error),
             Self::Error(error) => error_response(error),
         }
@@ -59,29 +59,63 @@ pub enum OpResponseErrorKind {
 }
 
 fn refused_response(error: OpError) -> Value {
-    json!({
-        "success": false,
-        "error": {
-            "kind": error.kind,
-            "message": error.message,
-            "details": error.details.unwrap_or_else(|| json!({})),
-        },
-    })
+    envelope_value(OperationEnvelope::<Value>::rejected(
+        op_fault(error.kind, error.message, error.details.unwrap_or_else(|| json!({}))),
+        ResponseMeta::default(),
+    ))
 }
 
 fn error_response(error: OpResponseError) -> Value {
     let is_internal_error = error.kind == OpResponseErrorKind::InternalError;
-    let kind = serde_json::to_value(error.kind).unwrap_or(Value::Null);
-    json!({
-        "success": false,
-        "warnings": [],
-        "timings": {},
-        "error": {
-            "kind": kind,
-            "message": error.message,
-            "details": error_details(is_internal_error, error.details),
-        },
-    })
+    let kind = serde_json::to_value(error.kind)
+        .ok()
+        .and_then(|value| value.as_str().map(str::to_owned))
+        .unwrap_or_else(|| "internal_error".to_owned());
+    let details = error_details(is_internal_error, error.details);
+    let fault = if is_internal_error {
+        OperationFault::internal(error.message, fault_details(details))
+    } else {
+        op_fault(kind, error.message, details)
+    };
+    envelope_value(OperationEnvelope::<Value>::error(
+        fault,
+        ResponseMeta::default(),
+    ))
+}
+
+fn ok_response(value: Value) -> Value {
+    if is_operation_envelope(&value) {
+        return value;
+    }
+    envelope_value(OperationEnvelope::ok(value, ResponseMeta::default()))
+}
+
+fn envelope_value<T: serde::Serialize>(envelope: OperationEnvelope<T>) -> Value {
+    serde_json::to_value(envelope).expect("operation envelope serializes")
+}
+
+fn is_operation_envelope(value: &Value) -> bool {
+    let Some(object) = value.as_object() else {
+        return false;
+    };
+    let Some("ok" | "running" | "rejected" | "cancelled" | "timed_out" | "error") =
+        object.get("status").and_then(Value::as_str)
+    else {
+        return false;
+    };
+    object.contains_key("meta") && (object.contains_key("result") || object.contains_key("error"))
+}
+
+fn op_fault(kind: impl Into<String>, message: impl Into<String>, details: Value) -> OperationFault {
+    OperationFault::new(kind, message).with_details(fault_details(details))
+}
+
+fn fault_details(details: Value) -> FaultDetails {
+    if details.is_null() {
+        FaultDetails::default()
+    } else {
+        FaultDetails::default().with_field("details", details)
+    }
 }
 
 fn error_details(is_internal_error: bool, details: Value) -> Value {

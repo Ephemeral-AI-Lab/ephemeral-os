@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use eos_operation::core::catalog::BuiltinOp;
-use eos_operation::{OpRequest, RequestError};
+use eos_operation::{OpResponse, OpResponseError, OpResponseErrorKind, OpRequest, RequestError};
 use serde_json::{json, Value};
 
 use crate::wire::{ErrorKind, Request};
@@ -17,7 +17,7 @@ use eos_layerstack::LayerStack;
 use crate::builtin;
 #[cfg(test)]
 use crate::invocation_registry::InFlightRegistry;
-use crate::op_adapter::plugin;
+use crate::op_adapter::{is_operation_envelope, ok_envelope, plugin};
 #[cfg(test)]
 use crate::response::{insert_tree_resource_timings, resource_timings, TreeResourceStats};
 use crate::DispatchContext;
@@ -32,8 +32,16 @@ pub fn dispatch_with_context(request: &Request, context: DispatchContext<'_>) ->
     let dispatch_start = Instant::now();
     let boot_to_dispatch_s = daemon_uptime_s();
     let read_request_s = context.read_request_s().unwrap_or(0.0);
-    let finalize =
-        |response| finalize_response(response, boot_to_dispatch_s, dispatch_start, read_request_s);
+    let finalize = |response| {
+        finalize_response(
+            response,
+            &request.op,
+            &request.invocation_id,
+            boot_to_dispatch_s,
+            dispatch_start,
+            read_request_s,
+        )
+    };
     if request.op.trim().is_empty() {
         return finalize(error_response(
             ErrorKind::InvalidRequest,
@@ -68,7 +76,7 @@ fn plugin_fallback_or_unknown(request: &Request, context: DispatchContext<'_>) -
         plugin::dispatch_registered_op(&request.op, &request.invocation_id, &request.args, context)
     {
         return match response {
-            Ok(response) => response,
+            Ok(response) => ok_envelope(response),
             Err(err) => error_response(err.wire_kind(), &err.to_string(), json!({})),
         };
     }
@@ -81,13 +89,17 @@ fn plugin_fallback_or_unknown(request: &Request, context: DispatchContext<'_>) -
 
 fn finalize_response(
     mut response: Value,
+    op: &str,
+    invocation_id: &str,
     boot_to_dispatch_s: f64,
     dispatch_start: Instant,
     read_request_s: f64,
 ) -> Value {
     let dispatch_s = dispatch_start.elapsed().as_secs_f64();
-    attach_runtime_timings(
+    attach_runtime_observations(
         &mut response,
+        op,
+        invocation_id,
         boot_to_dispatch_s,
         dispatch_s,
         read_request_s,
@@ -97,57 +109,30 @@ fn finalize_response(
 
 #[must_use]
 pub(crate) fn error_response(kind: ErrorKind, message: &str, details: Value) -> Value {
-    let is_internal_error = kind == ErrorKind::InternalError;
-    let kind_str = serde_json::to_value(kind).unwrap_or(Value::Null);
-    let details = error_details(is_internal_error, details);
-    json!({
-        "success": false,
-        "warnings": [],
-        "timings": {},
-        "error": {
-            "kind": kind_str,
-            "message": message,
-            "details": details,
-        },
-    })
+    OpResponse::Error(OpResponseError::new(
+        response_error_kind(kind),
+        message,
+        details,
+    ))
+    .into_wire()
 }
 
-fn error_details(is_internal_error: bool, details: Value) -> Value {
-    if !is_internal_error {
-        return if details.is_null() {
-            json!({})
-        } else {
-            details
-        };
-    }
-    let mut details = match details {
-        Value::Null => serde_json::Map::new(),
-        Value::Object(details) => details,
-        other => {
-            let mut object = serde_json::Map::new();
-            object.insert("value".to_owned(), other);
-            object
-        }
-    };
-    details
-        .entry("error_id")
-        .or_insert_with(|| Value::String(new_error_id()));
-    Value::Object(details)
-}
-
-fn new_error_id() -> String {
-    uuid::Uuid::new_v4().simple().to_string()
-}
-
-fn attach_runtime_timings(
+fn attach_runtime_observations(
     response: &mut Value,
+    op: &str,
+    invocation_id: &str,
     boot_to_dispatch_s: f64,
     dispatch_s: f64,
     read_request_s: f64,
 ) {
+    let envelope = is_operation_envelope(response);
     let Some(obj) = response.as_object_mut() else {
         return;
     };
+    if envelope {
+        attach_envelope_runtime_meta(obj, op, invocation_id, dispatch_s);
+        return;
+    }
     let timings = obj
         .entry("timings")
         .or_insert_with(|| Value::Object(serde_json::Map::new()));
@@ -158,6 +143,66 @@ fn attach_runtime_timings(
         );
         timings.insert("runtime.dispatch_s".to_owned(), json!(dispatch_s));
         timings.insert("runtime.read_request_s".to_owned(), json!(read_request_s));
+    }
+}
+
+fn attach_envelope_runtime_meta(
+    object: &mut serde_json::Map<String, Value>,
+    op: &str,
+    invocation_id: &str,
+    dispatch_s: f64,
+) {
+    let meta = object
+        .entry("meta".to_owned())
+        .or_insert_with(|| json!({}))
+        .as_object_mut();
+    let Some(meta) = meta else {
+        return;
+    };
+    if !op.is_empty() {
+        meta.entry("op".to_owned())
+            .or_insert_with(|| Value::String(op.to_owned()));
+    }
+    if !invocation_id.is_empty() {
+        meta.entry("request_id".to_owned())
+            .or_insert_with(|| Value::String(invocation_id.to_owned()));
+    }
+    meta.entry("duration_ms".to_owned())
+        .or_insert_with(|| json!(dispatch_s * 1000.0));
+    meta.entry("steps".to_owned()).or_insert_with(|| {
+        json!([{
+            "kind": "runtime.dispatch",
+            "duration_us": seconds_to_us(dispatch_s),
+            "status": "ok",
+        }])
+    });
+}
+
+fn seconds_to_us(seconds: f64) -> u64 {
+    if !seconds.is_finite() || seconds <= 0.0 {
+        return 0;
+    }
+    let micros = seconds * 1_000_000.0;
+    if micros >= u64::MAX as f64 {
+        u64::MAX
+    } else {
+        micros as u64
+    }
+}
+
+fn response_error_kind(kind: ErrorKind) -> OpResponseErrorKind {
+    match kind {
+        ErrorKind::InvalidRequest => OpResponseErrorKind::InvalidRequest,
+        ErrorKind::BadJson => OpResponseErrorKind::BadJson,
+        ErrorKind::RequestTooLarge => OpResponseErrorKind::RequestTooLarge,
+        ErrorKind::Unauthorized => OpResponseErrorKind::Unauthorized,
+        ErrorKind::UnknownOp => OpResponseErrorKind::UnknownOp,
+        ErrorKind::InternalError => OpResponseErrorKind::InternalError,
+        ErrorKind::Forbidden => OpResponseErrorKind::Forbidden,
+        ErrorKind::ForbiddenInIsolatedWorkspace => {
+            OpResponseErrorKind::ForbiddenInIsolatedWorkspace
+        }
+        ErrorKind::LifecycleInProgress => OpResponseErrorKind::LifecycleInProgress,
     }
 }
 

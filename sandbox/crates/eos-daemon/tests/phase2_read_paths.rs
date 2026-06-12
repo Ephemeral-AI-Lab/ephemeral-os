@@ -112,11 +112,12 @@ fn dispatches_layerstack_read_file() -> TestResult {
 
     let response = eos_daemon::dispatch(&request);
 
-    assert_eq!(response["success"], Value::Bool(true));
-    assert_eq!(response["workspace"], Value::String("ephemeral".to_owned()));
-    assert_eq!(response["content"], Value::String("# README\n".to_owned()));
-    assert_eq!(response["exists"], Value::Bool(true));
-    assert!(response["timings"]["api.read.layer_stack_read_s"].is_number());
+    assert_eq!(response["status"], Value::String("ok".to_owned()), "{response}");
+    let result = &response["result"];
+    assert_eq!(result["workspace"], Value::String("ephemeral".to_owned()));
+    assert_eq!(result["content"], Value::String("# README\n".to_owned()));
+    assert_eq!(result["exists"], Value::Bool(true));
+    assert!(result["timings"]["api.read.layer_stack_read_s"].is_number());
     Ok(())
 }
 
@@ -664,7 +665,7 @@ async fn tcp_server_sidecar_records_file_fast_path_route() -> TestResult {
     shutdown.cancel();
     let _ = timeout(Duration::from_secs(2), task).await??;
 
-    assert_eq!(response["success"], Value::Bool(true), "{response}");
+    assert_eq!(response["status"], Value::String("ok".to_owned()), "{response}");
     let sidecar = response["_trace_events"]
         .as_str()
         .ok_or("response carries sidecar")?;
@@ -760,7 +761,7 @@ async fn tcp_server_sidecar_records_file_mutation_events() -> TestResult {
     shutdown.cancel();
     let _ = timeout(Duration::from_secs(2), task).await??;
 
-    assert_eq!(response["success"], Value::Bool(true), "{response}");
+    assert_eq!(response["status"], Value::String("ok".to_owned()), "{response}");
     let sidecar = response["_trace_events"]
         .as_str()
         .ok_or("response carries sidecar")?;
@@ -964,8 +965,11 @@ fn assert_read_content(daemon: &TestDaemon, root: &Path, path: &Value, content: 
             "path": path,
         }),
     );
-    assert_eq!(read["success"], Value::Bool(true));
-    assert_eq!(read["content"], Value::String(content.to_owned()));
+    assert_eq!(read["status"], Value::String("ok".to_owned()), "{read}");
+    assert_eq!(
+        read["result"]["content"],
+        Value::String(content.to_owned())
+    );
 }
 
 fn assert_workspace_base_idempotent(daemon: &TestDaemon, root: &Path, workspace: &Path) {

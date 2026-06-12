@@ -21,10 +21,23 @@ pub(crate) fn to_wire_value(output: impl serde::Serialize) -> Value {
 }
 
 pub(crate) fn ok_envelope(output: impl Serialize) -> Value {
-    to_wire_value(OperationEnvelope::ok(
-        to_wire_value(output),
-        ResponseMeta::default(),
-    ))
+    let output = to_wire_value(output);
+    if is_operation_envelope(&output) {
+        return output;
+    }
+    to_wire_value(OperationEnvelope::ok(output, ResponseMeta::default()))
+}
+
+pub(crate) fn is_operation_envelope(value: &Value) -> bool {
+    let Some(object) = value.as_object() else {
+        return false;
+    };
+    let Some("ok" | "running" | "rejected" | "cancelled" | "timed_out" | "error") =
+        object.get("status").and_then(Value::as_str)
+    else {
+        return false;
+    };
+    object.contains_key("meta") && (object.contains_key("result") || object.contains_key("error"))
 }
 
 #[cfg(test)]
