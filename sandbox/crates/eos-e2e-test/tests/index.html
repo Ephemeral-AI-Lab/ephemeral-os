@@ -118,7 +118,7 @@
         {
           "id": "core-runtime-base",
           "title": "Runtime Base",
-          "description": "Runtime readiness, probes, workspace binding, base-layer metrics, rebuild timing, heartbeat idle state, and base-binding fields remain protocol-visible and coherent.",
+          "description": "Runtime readiness, probes, workspace binding, base-layer metrics, rebuild trace events, heartbeat idle state, and base-binding fields remain protocol-visible and coherent.",
           "tags": [
             "core"
           ]
@@ -211,7 +211,7 @@
         "markdown": "readme.md"
       },
       "overview": {
-        "summary": "`daemon` owns the live daemon control-plane contract: in-sandbox identity, dispatch timings, built-in op registration, invocation registry accounting, heartbeat touch semantics, cancellation responses, TTL reaping, and dynamic plugin background registry participation. It exercises daemon ops including `api.runtime.ready`, `api.v1.inflight_count`, `api.v1.heartbeat`, `api.v1.cancel`, `api.v1.exec_command`, `api.plugin.ensure`, `api.plugin.status`, dynamic `plugin.daemonplug.query`, and every non-mutating entry in `BUILTIN_DAEMON_OPS`, with state-toggling ops covered by dedicated module tests. Module config: `crates/eos-e2e-test/tests/daemon/config/default.test.yml`, which shortens `daemon.inflight` TTL/reaper timing for bounded live checks.",
+        "summary": "`daemon` owns the live daemon control-plane contract: in-sandbox identity, response meta trace refs, built-in op registration, invocation registry accounting, heartbeat touch semantics, cancellation responses, TTL reaping, and dynamic plugin background registry participation. It exercises daemon ops including `api.runtime.ready`, `api.v1.inflight_count`, `api.v1.heartbeat`, `api.v1.cancel`, `api.v1.exec_command`, `api.plugin.ensure`, `api.plugin.status`, dynamic `plugin.daemonplug.query`, and every non-mutating entry in `BUILTIN_DAEMON_OPS`, with state-toggling ops covered by dedicated module tests. Module config: `crates/eos-e2e-test/tests/daemon/config/default.test.yml`, which shortens `daemon.inflight` TTL/reaper intervals for bounded live checks.",
         "moduleConfig": "crates/eos-e2e-test/tests/daemon/config/default.test.yml",
         "ops": [
           "api.runtime.ready",
@@ -231,7 +231,7 @@
         {
           "id": "daemon-ready-identity",
           "title": "Ready Identity",
-          "description": "Runtime readiness exposes daemon PID, uptime, successful probes, and dispatch timing counters on success and error responses.",
+          "description": "Runtime readiness exposes daemon PID, uptime, successful probes, and envelope status/meta on success and error responses.",
           "tags": [
             "daemon"
           ]
@@ -297,7 +297,7 @@
         {
           "id": "daemon-identity-registry-wire-contract",
           "name": "daemon-identity-registry-wire-contract",
-          "description": "Groups `runtime_ready_exposes_daemon_identity`, `every_response_carries_dispatch_timings`, and `every_builtin_op_is_wire_routed` to prove daemon identity, dispatch timings, registered op routing, and `unknown_op` rejection over the live wire.",
+          "description": "Groups `runtime_ready_exposes_daemon_identity`, `every_response_carries_dispatch_timings`, and `every_builtin_op_is_wire_routed` to prove daemon identity, response meta trace refs, registered op routing, and `unknown_op` rejection over the live wire.",
           "command": "cargo test -p eos-e2e-test --features e2e --test daemon -- --nocapture",
           "checklist": [
             "daemon-ready-identity",
@@ -419,7 +419,7 @@
         {
           "id": "ephemeral_workspace-route-edges",
           "title": "Route Edges",
-          "description": "Multi-path shell capture, command/publish timing fields, and read-intent no-publish behavior stay observable through daemon responses and metrics.",
+          "description": "Multi-path shell capture, command/publish trace events, and read-intent no-publish behavior stay observable through response meta and trace-store queries.",
           "tags": [
             "ephemeral_workspace"
           ]
@@ -474,7 +474,7 @@
         {
           "id": "ephemeral_workspace_route_edges_and_read_intent",
           "name": "ephemeral_workspace_route_edges_and_read_intent",
-          "description": "Uses `exec_multi_path_route_timings_and_read_intent_no_publish`: a multi-path shell write reports every changed path plus command and OCC timings, while a read-only exec over the same paths publishes no changes.",
+          "description": "Uses `exec_multi_path_route_timings_and_read_intent_no_publish`: a multi-path shell write reports every changed path plus command and OCC trace events, while a read-only exec over the same paths publishes no changes.",
           "command": "cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace exec_multi_path_route_timings_and_read_intent_no_publish -- --nocapture",
           "checklist": [
             "ephemeral_workspace-route-edges",
@@ -511,7 +511,7 @@
         {
           "id": "ephemeral_workspace_overlay_disk_o1",
           "name": "ephemeral_workspace_overlay_disk_o1",
-          "description": "Groups `exec_upperdir_is_flat_across_base_sizes` and `exec_run_dir_scratch_stays_bounded`: a tiny overlay delta over a 15x-growing multi-file lowerdir base keeps `resource.command_exec.upperdir_tree_bytes` flat and delta-sized, while `resource.command_exec.run_dir_tree_bytes` stays bounded and untruncated, proving O(1) overlay disk with respect to workspace size.",
+          "description": "Groups `exec_upperdir_is_flat_across_base_sizes` and `exec_run_dir_scratch_stays_bounded`: a tiny overlay delta over a 15x-growing multi-file lowerdir base keeps upperdir `trace_resources` flat and delta-sized, while run-dir tree resources stay bounded and untruncated, proving O(1) overlay disk with respect to workspace size.",
           "command": "cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace -- --nocapture",
           "checklist": [
             "ephemeral_workspace-overlay-disk-o1",
@@ -643,7 +643,7 @@
         {
           "id": "isolated_workspace-audit-trail",
           "title": "Isolated Workspace Audit Trail",
-          "description": "Enter, exit, and isolated tool calls keep teardown timings, discarded-byte counters, and no-publish behavior observable through op responses and metrics.",
+          "description": "Enter, exit, and isolated tool calls keep teardown trace events, discarded-byte facts, and no-publish behavior observable through response meta and trace-store rows.",
           "tags": [
             "workspace-runtime-isolated"
           ]
@@ -688,7 +688,7 @@
         {
           "id": "isolated_workspace_lifecycle_gates_and_audit",
           "name": "isolated_workspace_lifecycle_gates_and_audit",
-          "description": "Uses `enter_rejects_active_command_and_repeated_enter_reports_already_open`: active commands block enter and repeated enter reports already-open, with teardown keeping cleanup and no-publish fields response-visible.",
+          "description": "Uses `enter_rejects_active_command_and_repeated_enter_reports_already_open`: active commands block enter and repeated enter reports already-open, with teardown cleanup and no-publish facts trace-visible.",
           "command": "cargo test -p eos-e2e-test --features e2e --test workspace-runtime-isolated -- --nocapture",
           "checklist": [
             "isolated_workspace-lifecycle-gates",
@@ -890,7 +890,7 @@
         {
           "id": "layerstack-git-commit-overlay",
           "title": "Layerstack Git Commit Overlay",
-          "description": "commit-to-git after repeated squash commits the overlay snapshot, honors path filters, reports timing phases, and records bounded LayerStack depth.",
+          "description": "commit-to-git after repeated squash commits the overlay snapshot, honors path filters, records checkpoint trace phases, and records bounded LayerStack depth.",
           "tags": [
             "eos-layerstack"
           ]
@@ -906,7 +906,7 @@
         {
           "id": "layerstack-projection-roundtrip",
           "title": "Layerstack Projection Roundtrip",
-          "description": "Workspace projection preserves delete and whiteout masking, symlinks, replacement writes, timing fields, and storage-writer lock integrity.",
+          "description": "Workspace projection preserves delete and whiteout masking, symlinks, replacement writes, checkpoint trace phases, and storage-writer lock integrity.",
           "tags": [
             "eos-layerstack"
           ]
@@ -969,7 +969,7 @@
         {
           "id": "layerstack-projection-roundtrip",
           "name": "layerstack-projection-roundtrip",
-          "description": "Uses `commit_projects_delete_symlink_and_replacement_write`: commit-to-workspace projection preserves delete masking, symlink target, replacement writes, and projection/rebuild timing fields.",
+          "description": "Uses `commit_projects_delete_symlink_and_replacement_write`: commit-to-workspace projection preserves delete masking, symlink target, replacement writes, and projection/rebuild checkpoint events.",
           "command": "cargo test -p eos-e2e-test --features e2e --test eos-layerstack commit_projects_delete_symlink_and_replacement_write -- --nocapture",
           "checklist": [
             "layerstack-projection-roundtrip",
@@ -1000,7 +1000,7 @@
         {
           "id": "layerstack-git-overlay-commit-after-squash",
           "name": "layerstack-git-overlay-commit-after-squash",
-          "description": "Covers `commit_to_git_commits_overlay_snapshot_after_repeated_squash`: repeated squash before Git commit, overlay worktree mode, committed blob content, path filtering, timing phases, and reported LayerStack depth.",
+          "description": "Covers `commit_to_git_commits_overlay_snapshot_after_repeated_squash`: repeated squash before Git commit, overlay worktree mode, committed blob content, path filtering, checkpoint events, and reported LayerStack depth.",
           "command": "cargo test -p eos-e2e-test --features e2e --test eos-layerstack commit_to_git_commits_overlay_snapshot_after_repeated_squash -- --nocapture",
           "checklist": [
             "layerstack-git-commit-overlay",
@@ -1070,7 +1070,7 @@
         {
           "id": "occ-tracked-gated",
           "title": "Occ Tracked Gated",
-          "description": "non-gitignored paths route gated, publish through OCC, and expose route timing counters.",
+          "description": "non-gitignored paths route gated, publish through OCC, and expose OCC route events.",
           "tags": [
             "workspace-publish-gate"
           ]
@@ -1144,7 +1144,7 @@
         {
           "id": "occ-route-gating-and-direct-paths",
           "name": "occ-route-gating-and-direct-paths",
-          "description": "Covers `git_writes_are_dropped_and_unreadable`, `gitignored_writes_bypass_the_occ_gate`, and `concurrent_gitignored_same_path_direct_writes`: `.git/**` drops stay unreadable, ignored writes route direct, tracked siblings route gated, route counters remain protocol-visible, and same-path ignored races leave one whole writer payload.",
+          "description": "Covers `git_writes_are_dropped_and_unreadable`, `gitignored_writes_bypass_the_occ_gate`, and `concurrent_gitignored_same_path_direct_writes`: `.git/**` drops stay unreadable, ignored writes route direct, tracked siblings route gated, OCC route events remain trace-visible, and same-path ignored races leave one whole writer payload.",
           "command": "cargo test -p eos-e2e-test --features e2e --test workspace-publish-gate gating -- --nocapture",
           "checklist": [
             "occ-git-drop",
@@ -1190,7 +1190,7 @@
         {
           "id": "occ-publish-audit-accounting",
           "name": "occ-publish-audit-accounting",
-          "description": "Covers `publish_accounting` plus the route counters from `gitignored_writes_bypass_the_occ_gate`: successful tracked publishes emit nonempty `changed_paths`, advance the manifest version, and surface direct/gated timing counters.",
+          "description": "Covers `publish_accounting` plus route events from `gitignored_writes_bypass_the_occ_gate`: successful tracked publishes emit nonempty `changed_paths`, advance the manifest version, and record direct/gated path counts in trace events.",
           "command": "cargo test -p eos-e2e-test --features e2e --test workspace-publish-gate -- --nocapture",
           "checklist": [
             "occ-tracked-gated",
@@ -1310,7 +1310,7 @@
         {
           "id": "workspace-runtime-command-command-matrix",
           "title": "Command Matrix",
-          "description": "At least ten shell command families run through `exec_command` with multiple variants, foreground completion, changed-path assertions, and bounded timing/resource telemetry.",
+          "description": "At least ten shell command families run through `exec_command` with multiple variants, foreground completion, changed-path assertions, and bounded trace/resource telemetry.",
           "tags": [
             "workspace-runtime-command"
           ]
@@ -1619,7 +1619,7 @@
         {
           "id": "pressure-resource-report",
           "title": "Resource Report",
-          "description": "E2E runs emit JSON summaries for latency shape, resource counters, and leak counters before strict regression thresholds are introduced.",
+          "description": "E2E runs emit JSON summaries from response meta, trace_resources, and leak counters before strict regression thresholds are introduced.",
           "tags": [
             "pressure"
           ]
@@ -1635,7 +1635,7 @@
         {
           "id": "pressure-sandbox-only-boundary",
           "title": "Sandbox Only Boundary",
-          "description": "Pressure capstone coverage remains limited to sandbox protocol and resource behavior, leaving TaskCenter state, advisor gates, and notification-loop assertions to agent-core tests.",
+          "description": "Pressure capstone coverage remains limited to sandbox protocol and trace/resource behavior, leaving TaskCenter state, advisor gates, and notification-loop assertions to agent-core tests.",
           "tags": [
             "pressure"
           ]
@@ -1751,7 +1751,7 @@
         {
           "id": "pressure-resource-report-and-leak-oracles",
           "name": "pressure-resource-report-and-leak-oracles",
-          "description": "`resource_report_smoke` emits one JSON artifact covering timing keys, resource counters, cgroup memory.current gauges, runtime readiness, plugin status, isolated-open state, and leak counters after file, exec, command, and OCC-backed write samples.",
+          "description": "`resource_report_smoke` emits one JSON artifact covering response meta steps, trace resource samples, cgroup memory.current gauges, runtime readiness, plugin status, isolated-open state, and leak counters after file, exec, command, and OCC-backed write samples.",
           "command": "cargo test -p eos-e2e-test --features e2e --test pressure resource_report_smoke -- --nocapture",
           "checklist": [
             "pressure-resource-report",
@@ -1873,7 +1873,7 @@
         {
           "id": "plugin-dispatch-roundtrip",
           "title": "Dispatch Roundtrip",
-          "description": "Dynamic daemon PPC dispatch preserves operation name, request body, success response, package root, and dependency root.",
+          "description": "Dynamic daemon PPC dispatch preserves operation name, request body, envelope success result, package root, and dependency root.",
           "tags": [
             "plugin"
           ]

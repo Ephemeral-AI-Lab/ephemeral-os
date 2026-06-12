@@ -31,6 +31,26 @@ static ISOLATED_ENV_LOCK: Mutex<()> = Mutex::new(());
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
+fn trace_sidecar_bytes(response: &Value, context: &'static str) -> TestResult<Vec<u8>> {
+    let sidecar = response.get("_trace_events").ok_or(context)?;
+    let encoded = if let Some(encoded) = sidecar.as_str() {
+        encoded
+    } else {
+        let object = sidecar.as_object().ok_or(context)?;
+        assert_eq!(
+            object.get("schema").and_then(Value::as_str),
+            Some("eos.trace.v1.TraceBatch")
+        );
+        assert_eq!(
+            object.get("encoding").and_then(Value::as_str),
+            Some("base64+protobuf")
+        );
+        assert!(object.get("spool_pending").is_some_and(Value::is_boolean));
+        object.get("data").and_then(Value::as_str).ok_or(context)?
+    };
+    Ok(base64::engine::general_purpose::STANDARD.decode(encoded)?)
+}
+
 /// One daemon under test with its own runtime services.
 struct TestDaemon {
     services: RuntimeServices,
@@ -568,10 +588,7 @@ async fn tcp_server_sidecar_records_transport_dispatch_and_op_spans() -> TestRes
         WireMessage::Response(value) => value,
         other => return Err(format!("expected response, got {other:?}").into()),
     };
-    let sidecar = response["_trace_events"]
-        .as_str()
-        .ok_or("response carries sidecar")?;
-    let batch = decode_trace_batch(&base64::engine::general_purpose::STANDARD.decode(sidecar)?)?;
+    let batch = decode_trace_batch(&trace_sidecar_bytes(&response, "response carries sidecar")?)?;
     let record = batch.records.first().ok_or("trace record")?;
     assert_eq!(record.trace_id.as_str(), "trace-sidecar");
     assert_eq!(
@@ -685,10 +702,7 @@ async fn tcp_server_sidecar_records_file_fast_path_route() -> TestResult {
         Value::String("ok".to_owned()),
         "{response}"
     );
-    let sidecar = response["_trace_events"]
-        .as_str()
-        .ok_or("response carries sidecar")?;
-    let batch = decode_trace_batch(&base64::engine::general_purpose::STANDARD.decode(sidecar)?)?;
+    let batch = decode_trace_batch(&trace_sidecar_bytes(&response, "response carries sidecar")?)?;
     let record = batch.records.first().ok_or("trace record")?;
     let route_events: Vec<_> = record
         .events
@@ -785,10 +799,7 @@ async fn tcp_server_sidecar_records_file_mutation_events() -> TestResult {
         Value::String("ok".to_owned()),
         "{response}"
     );
-    let sidecar = response["_trace_events"]
-        .as_str()
-        .ok_or("response carries sidecar")?;
-    let batch = decode_trace_batch(&base64::engine::general_purpose::STANDARD.decode(sidecar)?)?;
+    let batch = decode_trace_batch(&trace_sidecar_bytes(&response, "response carries sidecar")?)?;
     let record = batch.records.first().ok_or("trace record")?;
     assert!(
         record.events.iter().any(|event| event.module == "file"
@@ -919,10 +930,10 @@ fn assert_error_sidecar_event(
 ) -> TestResult {
     let error = error_fault(response, "error");
     assert_eq!(error["kind"], json!(kind), "{response}");
-    let sidecar = response["_trace_events"]
-        .as_str()
-        .ok_or("error response carries sidecar")?;
-    let batch = decode_trace_batch(&base64::engine::general_purpose::STANDARD.decode(sidecar)?)?;
+    let batch = decode_trace_batch(&trace_sidecar_bytes(
+        response,
+        "error response carries sidecar",
+    )?)?;
     let record = batch.records.first().ok_or("trace record")?;
     let events: Vec<_> = record
         .events

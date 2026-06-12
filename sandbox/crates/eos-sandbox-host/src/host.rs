@@ -11,9 +11,9 @@ use serde_json::{json, Value};
 use sha2::Digest as _;
 
 use crate::protocol::{
-    encode_request_with_metadata, encode_request_with_trace_metadata, is_success, response_status,
-    take_trace_sidecar_checked, ClientError, ProtocolClient, TraceWireContext, TraceWireLinkHint,
-    DEFAULT_LAYER_STACK_ROOT, HEARTBEAT_OP, READY_OP,
+    encode_request_with_metadata, encode_request_with_trace_metadata, response_classification,
+    response_status, take_trace_sidecar_checked, ClientError, ProtocolClient, TraceWireContext,
+    TraceWireLinkHint, DEFAULT_LAYER_STACK_ROOT, HEARTBEAT_OP, READY_OP,
 };
 use crate::runtime::{
     container_labels, docker, resolve_published_addr, running_container_ids, ContainerLifetime,
@@ -279,7 +279,7 @@ impl SandboxHost {
             "status-probe",
             &json!({"layer_stack_root": DEFAULT_LAYER_STACK_ROOT}),
         ) {
-            Ok(resp) if is_success(&resp) => resp,
+            Ok(resp) if response_classification(&resp).success => resp,
             Ok(resp) => json!({"ready": false, "error": resp}),
             Err(err) => json!({"ready": false, "error": err.to_string()}),
         }
@@ -768,7 +768,7 @@ fn restore_if_unreachable(attempt: &ForwardAttempt<'_>) {
         line.push(b'\n');
         client.request_raw(&line).ok()
     });
-    if probe.is_some_and(|resp| is_success(&resp)) {
+    if probe.is_some_and(|resp| response_classification(&resp).success) {
         return;
     }
     let _ = respawn_and_gate_traced(attempt);

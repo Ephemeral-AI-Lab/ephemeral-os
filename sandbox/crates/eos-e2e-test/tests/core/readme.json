@@ -33,7 +33,7 @@
     {
       "id": "core-runtime-base",
       "title": "Runtime Base",
-      "description": "Runtime readiness, probes, workspace binding, base-layer metrics, rebuild timing, heartbeat idle state, and base-binding fields remain protocol-visible and coherent.",
+      "description": "Runtime readiness, probes, workspace binding, base-layer metrics, rebuild trace events, heartbeat idle state, and base-binding fields remain protocol-visible and coherent.",
       "tags": [
         "core"
       ]

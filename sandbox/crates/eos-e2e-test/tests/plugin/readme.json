@@ -46,7 +46,7 @@
     {
       "id": "plugin-dispatch-roundtrip",
       "title": "Dispatch Roundtrip",
-      "description": "Dynamic daemon PPC dispatch preserves operation name, request body, success response, package root, and dependency root.",
+      "description": "Dynamic daemon PPC dispatch preserves operation name, request body, envelope success result, package root, and dependency root.",
       "tags": [
         "plugin"
       ]

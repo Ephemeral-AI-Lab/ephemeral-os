@@ -333,13 +333,14 @@ impl TraceStore {
         &self,
         input: ResponsePersistedInput<'_>,
     ) -> Result<(), TraceStoreError> {
-        let status = response_status(input.response);
-        let error_kind = crate::protocol::error_kind(input.response).map(ToOwned::to_owned);
+        let classification = crate::protocol::response_classification(input.response);
+        let status = classification.status.to_owned();
+        let error_kind = classification.error_kind.map(ToOwned::to_owned);
         let summary = BoundedJson::capture(input.response.clone(), DetailBudget::ResponseSummary);
         let payload = ResponsePersistedPayload {
             trace_id: input.trace_id.to_string(),
             request_id: input.request_id.to_string(),
-            status: status.clone(),
+            status,
             error_kind: error_kind.clone(),
             received_at_ms: now_ms(),
             host_rtt_ms: input.host_rtt_ms,

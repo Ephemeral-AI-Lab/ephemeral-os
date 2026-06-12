@@ -6,7 +6,7 @@
 
 ## Checklist
 
-- [ ] core-runtime-base: Runtime readiness, probes, workspace binding, base-layer metrics, rebuild timing, heartbeat idle state, and base-binding fields remain protocol-visible and coherent.
+- [ ] core-runtime-base: Runtime readiness, probes, workspace binding, base-layer metrics, rebuild trace events, heartbeat idle state, and base-binding fields remain protocol-visible and coherent.
 - [ ] core-host-default-layer-stack-root: Host and protocol workspace setup inject the LayerStack root from workspace configuration without requiring a separate caller routing parameter.
 - [ ] core-workspace-commit: Committing the LayerStack view to the workspace survives a base rebuild and keeps the committed content readable after the rebuild.
 - [ ] core-wire-message-guards: Unknown ops, malformed frames, oversized requests, bad or missing auth, and isolated-mode plugin-family ops return deterministic structured errors.

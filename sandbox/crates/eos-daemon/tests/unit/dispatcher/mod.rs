@@ -263,7 +263,13 @@ fn traced_dispatch_hot_path_stays_sub_millisecond_without_host_store() {
         let response =
             crate::trace::attach_request_sidecar(response, Some(&trace), &request.op, &facts);
         assert_eq!(response["status"], json!("ok"));
-        assert!(response["_trace_events"].is_string());
+        assert_eq!(
+            response["_trace_events"]["schema"],
+            "eos.trace.v1.TraceBatch"
+        );
+        assert_eq!(response["_trace_events"]["encoding"], "base64+protobuf");
+        assert_eq!(response["_trace_events"]["spool_pending"], false);
+        assert!(response["_trace_events"]["data"].is_string());
     }
     let average_us = started.elapsed().as_micros() / iterations;
     assert!(

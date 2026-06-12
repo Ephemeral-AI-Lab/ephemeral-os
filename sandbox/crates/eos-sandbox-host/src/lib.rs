@@ -12,9 +12,10 @@ pub use protocol::MAX_REQUEST_BYTES;
 
 pub mod e2e_support {
     pub use crate::protocol::{
-        decode_trace_sidecar_base64, error_kind, is_success, response_classification,
-        response_status, take_trace_sidecar_checked, ClientError, ProtocolClient,
-        ResponseClassification, ResponseShape, TraceSidecarError, DAEMON_TRACE_SIDECAR_FIELD,
+        decode_trace_sidecar_base64, response_classification, response_status,
+        take_trace_sidecar_checked, ClientError, ProtocolClient, ResponseClassification,
+        ResponseShape, TraceSidecarError, DAEMON_TRACE_SIDECAR_ENCODING,
+        DAEMON_TRACE_SIDECAR_FIELD, DAEMON_TRACE_SIDECAR_SCHEMA,
     };
     pub use crate::runtime::{
         container_label, docker_available, remove_labeled_containers, running_container_ids,

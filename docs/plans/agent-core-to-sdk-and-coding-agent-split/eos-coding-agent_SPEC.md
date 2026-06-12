@@ -46,10 +46,9 @@ eos-coding-agent/
     ├── config/                       ✂ moved from agent-runtime: config-root.ts ·
     │                                 config-file.ts · hook-config.ts ·
     │                                 notification-rules-config.ts · profile/workflow loading
-    ├── agents/                       AgentFactory: profiles + SDK -> role/profile Agents
+    ├── agents/                       singleton AgentFactory: profiles + SDK -> Agents
     │   ├── agent-factory.ts
-    │   ├── profiles.ts
-    │   └── workflow-agents.ts
+    │   └── profiles.ts
     ├── tools/                        every model-visible tool: one file per tool
     │   ├── agent/
     │   │   ├── run-subagent.ts       subagent pattern (foreground + background)
@@ -58,18 +57,22 @@ eos-coding-agent/
     │   ├── background/
     │   │   ├── list-background-task.ts
     │   │   └── cancel-background-task.ts
+    │   ├── workflow/
+    │   │   ├── list-workflows.ts      generic discovery tool
+    │   │   ├── read-workflow-definition.ts
+    │   │   ├── delegate-workflow.ts   projects `${instance.name}_delegate`
+    │   │   └── index.ts              workflow tool aggregation
     │   └── index.ts                  export aggregation only
     └── workflows/
         ├── registry.ts               WorkflowHub + configured workflow instances
         ├── workflow.ts               WorkflowDefinition contract + defineWorkflow
-        ├── tools.ts                  list/read/delegate workflow tools
         └── pursuit/
             ├── service.ts
             ├── pursuit|leg|attempt|plan|work-item/
             │                         {state,transition,context}.ts
             ├── context-engine/
             ├── outcome-fns.ts        planner/worker agentOutcomeFn via createAgentOutcomeFn
-            ├── launcher.ts           builds planner/worker Agents from WorkflowInit.agents
+            ├── launcher.ts           builds planner/worker Agents from AgentFactory
             ├── workflow.ts           WorkflowDefinition over PursuitService
             ├── index.ts              WorkflowModule export; opens pursuit-owned store
             ├── store/                embedded storage (today's @eos/db: schema · rows · migrations)
@@ -90,7 +93,7 @@ const sdk = createAgentSdk({
   recordsDir: cfg.recordsDir,
 });
 
-const agents = buildAgentFactory(sdk, cfg.profiles);         // §4
+const agents = buildAgentFactory(sdk, cfg.profiles);         // §4: one factory per app bootstrap
 const hub = new WorkflowHub({ agents, workflows: cfg.workflow }); // §6
 await hub.register(pursuit);                                 // no instance-specific wiring in this file
 const advisor = agents.create("advisor", { tools: [] });
@@ -102,7 +105,7 @@ const operator = sdk.createAgent({
   tools: [
     runSubagent(agents),
     askAdvisor(advisor),
-    ...hub.toolset(),                                        // enable/allow gating from .eos-agents/workflow.json
+    ...workflowTools(hub),                                   // list/read/delegate from tools/workflow/*
     listBackgroundTask,
     cancelBackgroundTask,
     readAgentRun(cfg.recordsDir),
@@ -135,22 +138,23 @@ const operator = sdk.createAgent({
 }
 ```
 
-- `AgentFactory` maps profile names to constructed `Agent`s only at the point the caller has
-  the final tools and terminal contract. It does **not** prebuild agents, because SDK
-  `AgentSpec.tools` and `agentOutcomeFn` are fixed at `sdk.createAgent(...)` time:
+- `AgentFactory` is a composition-root singleton: build it once during app bootstrap from
+  the parsed profiles and pass that same object to tools, hooks, `WorkflowHub`, and workflow
+  modules. Do **not** re-register or re-parse profiles inside workflow/tool files. On config
+  reload, rebuild the app composition root and replace the singleton as a unit.
+- The singleton owns profile lookup, launchable-name policy, and shared startup validation.
+  Workflow role-to-profile bindings stay in `.eos-agents/workflow.json` and are read from
+  the `WorkflowInstance.args` passed by the hub. `AgentFactory` maps profile names to
+  constructed `Agent`s only at the point the caller has the final tools and terminal
+  contract. It does **not** prebuild every `Agent`, because SDK `AgentSpec.tools` and
+  `agentOutcomeFn` are fixed at `sdk.createAgent(...)` time:
 
 ```ts
 type AgentProfileName = string;
-type WorkflowRoleName = string;
 
 interface AgentFactory {
   create<T = string>(profile: AgentProfileName, init: AgentBuildInit<T>): Agent<T>;
   names(): string[];                 // launchable-by-subagent subset
-  forWorkflow(args: Record<WorkflowRoleName, AgentProfileName>): WorkflowAgentFactory;
-}
-
-interface WorkflowAgentFactory {
-  create<T = string>(role: WorkflowRoleName, init: AgentBuildInit<T>): Agent<T>;
 }
 
 interface AgentBuildInit<T = string> {
@@ -158,6 +162,14 @@ interface AgentBuildInit<T = string> {
   agentOutcomeFn?: AgentOutcomeFn<T>;
   hooks?: HookEntry[];
 }
+```
+
+- There is no `WorkflowAgentFactory`. Workflow modules receive the same `AgentFactory` plus
+  their `WorkflowInstance`; they resolve roles explicitly:
+
+```ts
+const plannerProfile = init.instance.args.planner;
+const planner = init.agents.create(plannerProfile, { tools, agentOutcomeFn });
 ```
 
 - Strictness that used to live in the SDK's profile loader moves here: **pursuit's startup
@@ -252,8 +264,6 @@ interface WorkflowDefinition<I> {
   delegatePayload: z.ZodType<I>;       // written once; I and the model-facing schema derive from it
   delegate(payload: I): Promise<WorkflowHandle>;   // async (delegation does I/O);
                                                    //   throw = refuse → in-run tool error
-  tools?: (instance: WorkflowInstance) => ToolDefinition[];  // optional read tools,
-                                                             // named `${instance.name}_*`
 }
 
 interface WorkflowHandle {
@@ -263,30 +273,33 @@ interface WorkflowHandle {
 }
 
 export function defineWorkflow<I>(init: WorkflowDefinition<I>): RegisteredWorkflow;
-// mint site: erases I for the hub registry; enforces `${name}_*` naming on `tools`
+// mint site: erases I for the hub registry and keeps module/instance metadata typed.
 
 // registration: each workflow exports ONE module from its index.ts
 interface WorkflowModule {
   name: string;                        // module key, e.g. "pursuit"
   create(init: WorkflowInit): Promise<RegisteredWorkflow>;
 }
+type WorkflowRoleName = string;
 interface WorkflowInstance {
   name: string;                        // instance key from workflow.json, e.g. "pursuit1"
   type: string;                        // module key, e.g. "pursuit"
   args: Record<WorkflowRoleName, AgentProfileName>;
 }
-interface WorkflowInit { agents: WorkflowAgentFactory }
-// The factory is scoped to one workflow instance from .eos-agents/workflow.json.
-// For pursuit1, agents.create("planner", ...) resolves the planner role to the
-// "planner" profile and agents.create("worker", ...) resolves worker -> "worker".
+interface WorkflowInit {
+  instance: WorkflowInstance;
+  agents: AgentFactory;                // the same singleton from the composition root
+}
+// For pursuit1, init.instance.args.planner === "planner" and
+// init.instance.args.worker === "worker"; pursuit passes those profile names
+// directly to init.agents.create(...).
 // Workflow-specific storage/scripts remain module-owned (e.g. .eos-agents/pursuit/).
 ```
 
 `hub.register(module)` resolves the module against `.eos-agents/workflow.json`: every
-enabled instance whose `type` equals `module.name` gets its own role-scoped
-`WorkflowAgentFactory` and `RegisteredWorkflow`. The composition root therefore contains
-**no instance-specific wiring** — one import plus one `register` line per workflow module
-(§3). With:
+enabled instance whose `type` equals `module.name` is passed to the module with the same
+singleton `AgentFactory`. The composition root therefore contains **no instance-specific
+wiring** — one import plus one `register` line per workflow module (§3). With:
 
 ```json
 {
@@ -301,12 +314,13 @@ enabled instance whose `type` equals `module.name` gets its own role-scoped
 ```
 
 the hub creates the `pursuit1` workflow instance from the `pursuit` module, and pursuit
-builds its planner/worker agents by role through `WorkflowInit.agents`.
+builds its planner/worker agents by resolving `init.instance.args` and calling
+`init.agents.create(...)`.
 
 The shape mirrors `defineTool` (`delegatePayload`/`delegate` ↔ `input`/`execute`, same
 single-source inference); each divergence is a real property of workflows — `docs` because
-a workflow needs a manual, a handle because the work outlives the call, `tools` because a
-workflow is a family. `WorkflowHandle` is `BackgroundTask` minus the two hub-owned fields
+a workflow needs a manual, and a handle because the work outlives the call.
+`WorkflowHandle` is `BackgroundTask` minus the two hub-owned fields
 (`toolName`, `onCompletion`); that minus is the hub/workflow ownership line. There is no
 `WorkflowRunId`, no `settle`, no per-workflow `onCompletion`, no `silent`: the handle
 subsumes the first two, settlement publishing is hub-owned (below), and a delegation is
@@ -317,20 +331,27 @@ awaited work — the §5 task rule forbids it being silent.
 | `name` | module naming (`pursuit`) · instance delegate tools (`pursuit1_delegate`) |
 | `description` | delegate tool description + `list_workflows` row |
 | `docs` | `read_workflow_definition` |
-| `delegatePayload` | delegate tool `input` (schema in the toolset; SDK-validated pre-`delegate`) |
-| `delegate` | delegate tool `execute` |
+| `delegatePayload` | `tools/workflow/delegate-workflow.ts` input schema (SDK-validated pre-`delegate`) |
+| `delegate` | `tools/workflow/delegate-workflow.ts` execute handler |
 | `title` / `cancel` / `done` | spread into `backgroundTaskSupervisor.register` |
-| `tools` | appended to the hub toolset |
 
-The hub projects two always-present discovery tools — `list_workflows()` (one row per
-configured instance: name · workflow · description · tool names · ready state) and
-`read_workflow_definition(name)` (returns `docs` for that instance; unknown name → error
-listing the valid instance names) — plus, per workflow instance, one delegate tool and
-its `tools(instance)` entries.
+`WorkflowHub` is not a tool package. It owns registration and instance lookup. The
+model-visible workflow tools live in `src/tools/workflow/`, one file per tool:
+
+| Tool file | Tool |
+|---|---|
+| `tools/workflow/list-workflows.ts` | `list_workflows()` — one row per configured instance: name · workflow · description · tool names · ready state |
+| `tools/workflow/read-workflow-definition.ts` | `read_workflow_definition(name)` — returns `docs`; unknown name errors with valid instance names |
+| `tools/workflow/delegate-workflow.ts` | projects one `${instance.name}_delegate` tool per configured workflow instance |
+
+If a workflow later needs workflow-specific read/action tools, those model-visible files
+also live under `tools/workflow/{tool-name}.ts` and consume registered workflow/service
+capabilities from the hub. Do not add ad hoc tool definitions under `workflows/`.
 **Workflow cancellation needs no tool of its own** — delegation registers a background
 task, so `cancel_background_task(taskId)` reaches `handle.cancel()` through the task:
 
 ```ts
+// tools/workflow/delegate-workflow.ts
 const delegateTool = <I>(instance: WorkflowInstance, w: WorkflowDefinition<I>) => defineTool({
   name: `${instance.name}_delegate`,
   description: `${w.description} Before first use: read_workflow_definition("${instance.name}").`,
@@ -417,8 +438,8 @@ and reconcile logic are unchanged. The changes are confined to the launch/settle
 
 | Pursuit internal | Before (in eos-agent-core) | After (here) |
 |---|---|---|
-| `agent-launcher.ts` (`AgentLaunchPort`, `LaunchSettlement`, `LaunchedAgent`) | port implemented by agent-runtime | **deleted** — `launcher.ts` calls `init.agents.create(role, ...).start(...)` directly |
-| `PursuitServiceDependencies` | `{db, compose, resolve, launch port}` | `{compose, agents}` — store and pursuit scripts stay pursuit-owned; planner/worker profile binding arrives through the role-scoped `WorkflowAgentFactory` built from `.eos-agents/workflow.json` |
+| `agent-launcher.ts` (`AgentLaunchPort`, `LaunchSettlement`, `LaunchedAgent`) | port implemented by agent-runtime | **deleted** — `launcher.ts` resolves profiles from `init.instance.args` and calls `init.agents.create(profile, ...).start(...)` directly |
+| `PursuitServiceDependencies` | `{db, compose, resolve, launch port}` | `{compose, agents, instance}` — store and pursuit scripts stay pursuit-owned; planner/worker profile binding is read directly from `.eos-agents/workflow.json` via `WorkflowInstance.args` |
 | Submission entry | runtime routes `submit_planner_outcome` payloads into service claim methods | the **same claim/transition methods**, invoked from `onSubmit` closures in `outcome-fns.ts` — transactional, keyed by `ctx.submissionId`; invalid transitions (e.g. refocus in predefined mode) return `{reject}` → in-run correction, budget intact |
 | `PursuitAgentSubmissionBinding` | threaded through contracts/engine | deleted (replaced by `onSubmit`) |
 | Planner/worker advisory prompts | `@eos/tool/advisory_prompts/` | move here; ride `createAgentOutcomeFn({description})` |
@@ -428,7 +449,7 @@ and reconcile logic are unchanged. The changes are confined to the launch/settle
 One attempt, after the change:
 
 ```ts
-const planner = deps.agents.create("planner", {
+const planner = deps.agents.create(deps.instance.args.planner, {
   tools: plannerTools(),
   agentOutcomeFn: plannerOutcomeFn(this),                  // outcome-fns.ts: name + schema + description +
 });                                                        //   onSubmit -> applyPlanSubmission(trx)
@@ -482,7 +503,7 @@ here. Reload/watch semantics, layering (user vs project), and defaults are host 
 3. **Extract eos-coding-agent** — move pursuit (+db +contracts), tool families, advisory
    prompts, config loaders, profile loading, context scripts; create
    `src/agents`, `src/tools`, `src/workflows`, and `src/main.ts`; pursuit consumes
-   `WorkflowInit.agents` directly (launch port deleted);
+   `WorkflowInit.agents` and `WorkflowInit.instance.args` directly (launch port deleted);
    rename the SDK workspace **`eos-agent-core` → `eos-agent-sdk`** (directory, root
    package name, imports).
    *Verify:* leak checks (SDK spec §7); the e2e suite moves with the host
@@ -504,8 +525,9 @@ here. Reload/watch semantics, layering (user vs project), and defaults are host 
   `hub.register` line in `app/main.ts` — nothing else; the hub then registers nothing and
   the operator keeps every non-workflow tool. The composition root contains no other
   workflow-specific code.
-- Every tool the operator sees is defined in one file under `src/tools/` or projected by
-  `src/workflows/tools.ts` — `grep` the SDK for tool definitions → none.
+- Every tool the operator sees is defined in one file under `src/tools/`, including
+  workflow tools under `src/tools/workflow/{tool-name}.ts` — `grep` the SDK for tool
+  definitions → none.
 - `.eos-agents/workflow.json` is the only shared workflow-instance registry; there is no
   `.eos-agents/workflows/<name>` config directory convention.
 - Advisor enforcement demonstrably runs **before** `onSubmit` (test: advisor denies → no
@@ -525,8 +547,8 @@ here. Reload/watch semantics, layering (user vs project), and defaults are host 
 - Whether `read_agent_run` should page/filter (records can be large) — tool design, not
   contract.
 - Pursuit context-exploration tools (planned in the operator manual §07) — they become
-  ordinary host tools over the pursuit context store, riding pursuit's `tools` array on
-  its `WorkflowDefinition`; spec separately when prioritized.
+  ordinary host tools under `src/tools/workflow/{tool-name}.ts` over the registered pursuit
+  context store; spec separately when prioritized.
 - If a second large tool source lands (e.g. MCP servers wrapped as host tool families),
   generalize `list_workflows` / `read_workflow_definition` into group-based discovery and
   revisit the §6 deferral growth path against the ≈10%-of-context threshold.

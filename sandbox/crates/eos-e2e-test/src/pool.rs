@@ -14,7 +14,7 @@ use eos_operation::core::catalog;
 use eos_sandbox_host::protocol::TraceWireContext;
 use serde_json::{json, Map, Value};
 
-use crate::client::{error_kind, is_success, ProtocolClient};
+use crate::client::{response_classification, ProtocolClient};
 use crate::config::{Config, NodeMode, WorkloadConfig};
 use crate::container::{self, reap_e2e_containers, DaemonContainer};
 use crate::{next_invocation_id, unique_suffix};
@@ -190,7 +190,7 @@ impl<'p> NodeLease<'p> {
             }),
         );
         match ensure {
-            Ok(resp) if is_success(&resp) => Ok(Self {
+            Ok(resp) if response_classification(&resp).success => Ok(Self {
                 pool,
                 node: Some(node),
                 stack_root,
@@ -290,12 +290,15 @@ impl<'p> NodeLease<'p> {
     /// Returns an error on transport failure or a non-success response.
     pub fn call_ok(&self, op: &str, args: Value) -> Result<Value> {
         let resp = self.call(op, args)?;
-        if is_success(&resp) {
+        let classification = response_classification(&resp);
+        if classification.success {
             Ok(success_payload(resp))
         } else {
             bail!(
                 "{op} returned error{}: {resp}",
-                error_kind(&resp).map_or(String::new(), |k| format!(" ({k})"))
+                classification
+                    .error_kind
+                    .map_or(String::new(), |k| format!(" ({k})"))
             )
         }
     }

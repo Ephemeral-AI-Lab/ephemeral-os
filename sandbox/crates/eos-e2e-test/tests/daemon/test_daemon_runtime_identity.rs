@@ -1,4 +1,4 @@
-//! Daemon identity + per-response dispatch timings.
+//! Daemon identity + per-response runtime envelope meta.
 
 use anyhow::Result;
 use eos_operation::core::catalog;

@@ -108,7 +108,7 @@
     {
       "id": "pressure-resource-report",
       "title": "Resource Report",
-      "description": "E2E runs emit JSON summaries for latency shape, resource counters, and leak counters before strict regression thresholds are introduced.",
+      "description": "E2E runs emit JSON summaries from response meta, trace_resources, and leak counters before strict regression thresholds are introduced.",
       "tags": [
         "pressure"
       ]
@@ -124,7 +124,7 @@
     {
       "id": "pressure-sandbox-only-boundary",
       "title": "Sandbox Only Boundary",
-      "description": "Pressure capstone coverage remains limited to sandbox protocol and resource behavior, leaving TaskCenter state, advisor gates, and notification-loop assertions to agent-core tests.",
+      "description": "Pressure capstone coverage remains limited to sandbox protocol and trace/resource behavior, leaving TaskCenter state, advisor gates, and notification-loop assertions to agent-core tests.",
       "tags": [
         "pressure"
       ]
@@ -240,7 +240,7 @@
     {
       "id": "pressure-resource-report-and-leak-oracles",
       "name": "pressure-resource-report-and-leak-oracles",
-      "description": "`resource_report_smoke` emits one JSON artifact covering timing keys, resource counters, cgroup memory.current gauges, runtime readiness, plugin status, isolated-open state, and leak counters after file, exec, command, and OCC-backed write samples.",
+      "description": "`resource_report_smoke` emits one JSON artifact covering response meta steps, trace resource samples, cgroup memory.current gauges, runtime readiness, plugin status, isolated-open state, and leak counters after file, exec, command, and OCC-backed write samples.",
       "command": "cargo test -p eos-e2e-test --features e2e --test pressure resource_report_smoke -- --nocapture",
       "checklist": [
         "pressure-resource-report",

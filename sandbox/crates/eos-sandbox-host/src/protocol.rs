@@ -9,6 +9,8 @@ pub const DAEMON_AUTH_FIELD: &str = "_eos_daemon_auth_token";
 pub const DAEMON_PROTOCOL_FIELD: &str = "_eos_daemon_protocol_version";
 pub const DAEMON_TRACE_FIELD: &str = "trace";
 pub const DAEMON_TRACE_SIDECAR_FIELD: &str = "_trace_events";
+pub const DAEMON_TRACE_SIDECAR_SCHEMA: &str = "eos.trace.v1.TraceBatch";
+pub const DAEMON_TRACE_SIDECAR_ENCODING: &str = "base64+protobuf";
 pub const DAEMON_PROTOCOL_VERSION: i64 = 1;
 pub const MAX_REQUEST_BYTES: usize = 16 * 1024 * 1024;
 pub const CONNECT_RETRY_DELAYS_S: [f64; 4] = [0.25, 0.5, 1.0, 2.0];
@@ -213,13 +215,33 @@ pub fn take_trace_sidecar_checked(
     let Some(sidecar) = object.remove(DAEMON_TRACE_SIDECAR_FIELD) else {
         return Ok(None);
     };
-    let encoded = sidecar
-        .as_str()
-        .ok_or(TraceSidecarError::NonString)?
-        .to_owned();
+    let encoded = trace_sidecar_payload(&sidecar)?.to_owned();
     decode_trace_sidecar_base64(&encoded)
         .ok_or(TraceSidecarError::InvalidBase64)
         .map(Some)
+}
+
+fn trace_sidecar_payload(sidecar: &Value) -> Result<&str, TraceSidecarError> {
+    match sidecar {
+        Value::String(encoded) => Ok(encoded.as_str()),
+        Value::Object(object) => {
+            if object.get("schema").and_then(Value::as_str) != Some(DAEMON_TRACE_SIDECAR_SCHEMA) {
+                return Err(TraceSidecarError::InvalidEnvelope);
+            }
+            if object.get("encoding").and_then(Value::as_str) != Some(DAEMON_TRACE_SIDECAR_ENCODING)
+            {
+                return Err(TraceSidecarError::InvalidEnvelope);
+            }
+            if !object.get("spool_pending").is_some_and(Value::is_boolean) {
+                return Err(TraceSidecarError::InvalidEnvelope);
+            }
+            object
+                .get("data")
+                .and_then(Value::as_str)
+                .ok_or(TraceSidecarError::InvalidEnvelope)
+        }
+        _ => Err(TraceSidecarError::NonString),
+    }
 }
 
 pub fn decode_trace_sidecar_base64(encoded: &str) -> Option<Vec<u8>> {
@@ -232,6 +254,7 @@ pub fn decode_trace_sidecar_base64(encoded: &str) -> Option<Vec<u8>> {
 pub enum TraceSidecarError {
     NonString,
     InvalidBase64,
+    InvalidEnvelope,
 }
 
 impl TraceSidecarError {
@@ -240,6 +263,7 @@ impl TraceSidecarError {
         match self {
             Self::NonString => "non_string_sidecar",
             Self::InvalidBase64 => "invalid_base64",
+            Self::InvalidEnvelope => "invalid_sidecar_envelope",
         }
     }
 }
@@ -374,13 +398,6 @@ fn classify_legacy_response(response: &Value) -> ResponseClassification<'_> {
     }
 }
 
-pub fn is_success(response: &Value) -> bool {
-    response_classification(response).success
-}
-pub fn error_kind(response: &Value) -> Option<&str> {
-    response_classification(response).error_kind
-}
-
 pub fn response_status(response: &Value) -> &str {
     response_classification(response).status
 }
@@ -388,8 +405,9 @@ pub fn response_status(response: &Value) -> &str {
 #[cfg(test)]
 mod tests {
     use super::{
-        decode_trace_sidecar_base64, error_kind, is_success, response_classification,
-        take_trace_sidecar_checked, ResponseShape, TraceSidecarError,
+        decode_trace_sidecar_base64, response_classification, take_trace_sidecar_checked,
+        ResponseShape, TraceSidecarError, DAEMON_TRACE_SIDECAR_ENCODING,
+        DAEMON_TRACE_SIDECAR_SCHEMA,
     };
     use serde_json::json;
 
@@ -460,8 +478,6 @@ mod tests {
             assert_eq!(classification.status, status, "{label}: response status");
             assert_eq!(classification.success, success, "{label}: success flag");
             assert_eq!(classification.error_kind, kind, "{label}: error kind");
-            assert_eq!(is_success(&response), success, "{label}: helper success");
-            assert_eq!(error_kind(&response), kind, "{label}: helper error kind");
         }
     }
 
@@ -476,6 +492,31 @@ mod tests {
 
     #[test]
     fn checked_sidecar_decoder_strips_and_reports_malformed_values() {
+        let mut wrapped = json!({
+            "_trace_events": {
+                "schema": DAEMON_TRACE_SIDECAR_SCHEMA,
+                "encoding": DAEMON_TRACE_SIDECAR_ENCODING,
+                "spool_pending": false,
+                "data": "AQID",
+            },
+        });
+        assert_eq!(
+            take_trace_sidecar_checked(&mut wrapped)
+                .expect("wrapped sidecar decodes")
+                .as_deref(),
+            Some(&[1, 2, 3][..])
+        );
+        assert!(wrapped.get("_trace_events").is_none());
+
+        let mut legacy = json!({"_trace_events": "AQID"});
+        assert_eq!(
+            take_trace_sidecar_checked(&mut legacy)
+                .expect("legacy sidecar decodes")
+                .as_deref(),
+            Some(&[1, 2, 3][..])
+        );
+        assert!(legacy.get("_trace_events").is_none());
+
         let mut invalid_base64 = json!({"_trace_events": "not base64"});
         assert_eq!(
             take_trace_sidecar_checked(&mut invalid_base64),
@@ -483,7 +524,14 @@ mod tests {
         );
         assert!(invalid_base64.get("_trace_events").is_none());
 
-        let mut non_string = json!({"_trace_events": {"batch": "AQID"}});
+        let mut invalid_envelope = json!({"_trace_events": {"batch": "AQID"}});
+        assert_eq!(
+            take_trace_sidecar_checked(&mut invalid_envelope),
+            Err(TraceSidecarError::InvalidEnvelope)
+        );
+        assert!(invalid_envelope.get("_trace_events").is_none());
+
+        let mut non_string = json!({"_trace_events": 42});
         assert_eq!(
             take_trace_sidecar_checked(&mut non_string),
             Err(TraceSidecarError::NonString)

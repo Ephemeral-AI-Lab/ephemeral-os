@@ -14,7 +14,7 @@
 - [ ] workspace-runtime-command-detached-child-contract: `nohup` and `setsid nohup` descendants have an explicit tested contract instead of an accidental leak policy.
 - [ ] workspace-runtime-command-ephemeral-process-group: Ephemeral workspace commands stay running until all same-pgid subprocesses exit and collect exactly one terminal result.
 - [ ] workspace-runtime-command-isolated-cleanup: Isolated workspace command cancellation and exit discard mode make same-port re-entry reusable.
-- [ ] workspace-runtime-command-command-matrix: At least ten shell command families run through `exec_command` with multiple variants, foreground completion, changed-path assertions, and bounded timing/resource telemetry.
+- [ ] workspace-runtime-command-command-matrix: At least ten shell command families run through `exec_command` with multiple variants, foreground completion, changed-path assertions, and bounded trace/resource telemetry.
 - [ ] workspace-runtime-command-prompt-read-cancel: Prompt-style stdin input, read_progress tail reads, collect-completed reads, and cancellation behave coherently without replaying consumed output.
 - [ ] workspace-runtime-command-long-running-stderr-stdin: Long-lived commands that emit stderr, consume stdin, and then keep sleeping remain running and uncollectable until terminal action.
 - [ ] workspace-runtime-command-external-process-death: Externally signaled children and process groups finalize or become observable through `write_stdin` without leaking commands, leases, or marker processes.

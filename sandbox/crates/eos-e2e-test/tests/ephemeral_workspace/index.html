@@ -87,7 +87,7 @@
     {
       "id": "ephemeral_workspace-route-edges",
       "title": "Route Edges",
-      "description": "Multi-path shell capture, command/publish timing fields, and read-intent no-publish behavior stay observable through daemon responses and metrics.",
+      "description": "Multi-path shell capture, command/publish trace events, and read-intent no-publish behavior stay observable through response meta and trace-store queries.",
       "tags": [
         "ephemeral_workspace"
       ]
@@ -142,7 +142,7 @@
     {
       "id": "ephemeral_workspace_route_edges_and_read_intent",
       "name": "ephemeral_workspace_route_edges_and_read_intent",
-      "description": "Uses `exec_multi_path_route_timings_and_read_intent_no_publish`: a multi-path shell write reports every changed path plus command and OCC timings, while a read-only exec over the same paths publishes no changes.",
+      "description": "Uses `exec_multi_path_route_timings_and_read_intent_no_publish`: a multi-path shell write reports every changed path plus command and OCC trace events, while a read-only exec over the same paths publishes no changes.",
       "command": "cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace exec_multi_path_route_timings_and_read_intent_no_publish -- --nocapture",
       "checklist": [
         "ephemeral_workspace-route-edges",
@@ -179,7 +179,7 @@
     {
       "id": "ephemeral_workspace_overlay_disk_o1",
       "name": "ephemeral_workspace_overlay_disk_o1",
-      "description": "Groups `exec_upperdir_is_flat_across_base_sizes` and `exec_run_dir_scratch_stays_bounded`: a tiny overlay delta over a 15x-growing multi-file lowerdir base keeps `resource.command_exec.upperdir_tree_bytes` flat and delta-sized, while `resource.command_exec.run_dir_tree_bytes` stays bounded and untruncated, proving O(1) overlay disk with respect to workspace size.",
+      "description": "Groups `exec_upperdir_is_flat_across_base_sizes` and `exec_run_dir_scratch_stays_bounded`: a tiny overlay delta over a 15x-growing multi-file lowerdir base keeps upperdir `trace_resources` flat and delta-sized, while run-dir tree resources stay bounded and untruncated, proving O(1) overlay disk with respect to workspace size.",
       "command": "cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace -- --nocapture",
       "checklist": [
         "ephemeral_workspace-overlay-disk-o1",

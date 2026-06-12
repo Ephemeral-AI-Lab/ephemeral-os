@@ -898,15 +898,9 @@ mod tests {
             &facts,
             &oversize,
         );
-        let encoded = response[TRACE_SIDECAR_FIELD]
-            .as_str()
-            .expect("trace sidecar");
-        let batch = decode_trace_batch(
-            &base64::engine::general_purpose::STANDARD
-                .decode(encoded)
-                .expect("base64"),
-        )
-        .expect("trace batch decodes");
+        let batch =
+            decode_trace_batch(&trace_sidecar_bytes(&response).expect("trace sidecar bytes"))
+                .expect("trace batch decodes");
         let record = batch.records.first().expect("request trace record");
         assert!(record.truncated, "oversize record is marked truncated");
         assert!(
@@ -967,15 +961,9 @@ mod tests {
                 ),
             ],
         );
-        let encoded = response[TRACE_SIDECAR_FIELD]
-            .as_str()
-            .expect("trace sidecar");
-        let batch = decode_trace_batch(
-            &base64::engine::general_purpose::STANDARD
-                .decode(encoded)
-                .expect("base64"),
-        )
-        .expect("trace batch decodes");
+        let batch =
+            decode_trace_batch(&trace_sidecar_bytes(&response).expect("trace sidecar bytes"))
+                .expect("trace batch decodes");
         let record = batch.records.first().expect("request trace record");
 
         assert!(
@@ -1048,7 +1036,18 @@ mod tests {
         );
         assert_eq!(response["meta"]["workspace_route"]["kind"], "fast_path");
         assert_eq!(response["meta"]["workspace_route"]["reason"], "unit");
-        assert!(response[TRACE_SIDECAR_FIELD].as_str().is_some());
+        assert_eq!(
+            response[TRACE_SIDECAR_FIELD]["schema"],
+            TRACE_SIDECAR_SCHEMA
+        );
+        assert_eq!(
+            response[TRACE_SIDECAR_FIELD]["encoding"],
+            TRACE_SIDECAR_ENCODING
+        );
+        assert_eq!(response[TRACE_SIDECAR_FIELD]["spool_pending"], false);
+        assert!(response[TRACE_SIDECAR_FIELD]["data"]
+            .as_str()
+            .is_some_and(|data| !data.is_empty()));
     }
 
     #[test]
@@ -1163,15 +1162,9 @@ mod tests {
             ],
         );
 
-        let encoded = response[TRACE_SIDECAR_FIELD]
-            .as_str()
-            .expect("trace sidecar");
-        let batch = decode_trace_batch(
-            &base64::engine::general_purpose::STANDARD
-                .decode(encoded)
-                .expect("base64"),
-        )
-        .expect("trace batch decodes");
+        let batch =
+            decode_trace_batch(&trace_sidecar_bytes(&response).expect("trace sidecar bytes"))
+                .expect("trace batch decodes");
         let record = batch.records.first().expect("request trace record");
         let spawn_span = record
             .spans
