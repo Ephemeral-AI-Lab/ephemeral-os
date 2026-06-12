@@ -1,28 +1,35 @@
-// stdin: WorkerContextInput JSON
-// stdout: { initial_messages: UserMessage[] }
 const { create_variable_reference_map } = require("./variable_reference_map.cjs");
 
-function get_initial_messages(vars) {
-  const user = (text) => ({ role: "user", content: [{ type: "text", text }] });
-  const messages = [user(`# Pursuit goal\n${vars.pursuit_goal}`)];
+function user(text) {
+  return { role: "user", content: [{ type: "text", text }] };
+}
 
-  messages.push(user(`# Leg focus\n${vars.current_leg_goal ?? ""}`));
-  messages.push(user(`# Work item description\n${vars.work_item_description ?? ""}`));
-  messages.push(user(`# Work item\n${vars.work_item_spec ?? ""}`));
+function get_initial_messages(vars) {
+  const messages = [
+    user(`# Current leg goal\n${vars.current_leg_goal ?? ""}`),
+    user(`# Work item path\n${vars.work_item_context_path ?? ""}`),
+    user(`# Work item title\n${vars.work_item_title ?? ""}`),
+    user(`# Work item spec\n${vars.assigned_work_spec ?? ""}`),
+  ];
   if (vars.dependency_outcomes.length > 0) {
-    messages.push(
-      user(`# Dependencies\n${JSON.stringify(vars.dependency_outcomes)}`),
+    messages.splice(
+      1,
+      0,
+      user(`# Direct dependency outcomes\n${JSON.stringify(vars.dependency_outcomes)}`),
     );
   }
-  messages.push(user("Submit worker outcome for this work item."));
+  messages.push(
+    user(
+      "Complete only this assigned work item. Do not plan, refocus, or change legs. " +
+        "Submit worker outcome for this work item.",
+    ),
+  );
   return messages;
 }
 
 let input = "";
-process.stdin.on("data", (c) => (input += c));
+process.stdin.on("data", (chunk) => (input += chunk));
 process.stdin.on("end", () => {
-  const ctx = JSON.parse(input);
-  const vars = create_variable_reference_map(ctx);
-  const initial_messages = get_initial_messages(vars);
-  process.stdout.write(JSON.stringify({ initial_messages }));
+  const vars = create_variable_reference_map(JSON.parse(input));
+  process.stdout.write(JSON.stringify({ initial_messages: get_initial_messages(vars) }));
 });

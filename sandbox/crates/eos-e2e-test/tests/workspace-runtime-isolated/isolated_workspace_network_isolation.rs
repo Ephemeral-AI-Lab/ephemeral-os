@@ -67,7 +67,7 @@ fn start_bound_socket(
 }
 
 fn cancel(lease: &eos_e2e_test::NodeLease<'_>, caller_id: Option<&str>, id: &str) {
-    let mut args = json!({"command_session_id": id});
+    let mut args = json!({"command_id": id});
     if let Some(caller) = caller_id {
         args["caller_id"] = json!(caller);
     }
@@ -83,12 +83,12 @@ fn wait_for_output(
     if stdout(response).contains(marker) {
         return Ok(());
     }
-    let session_id = as_str(response, "command_session_id")?;
+    let session_id = as_str(response, "command_id")?;
     let deadline = Instant::now() + Duration::from_secs(5);
     let mut last = response.clone();
     loop {
         let mut poll_args = json!({
-            "command_session_id": session_id,
+            "command_id": session_id,
             "last_n_lines": 8,
         });
         if let Some(caller) = caller_id {
@@ -101,7 +101,7 @@ fn wait_for_output(
             last = poll;
         }
 
-        let mut collect_args = json!({"command_session_ids": [session_id]});
+        let mut collect_args = json!({"command_ids": [session_id]});
         if let Some(caller) = caller_id {
             collect_args["caller_id"] = json!(caller);
         }
@@ -186,9 +186,7 @@ fn cross_mode_same_port_no_conflict() -> Result<()> {
 
     // Caller A: an ephemeral server holding the port in the container netns.
     let server_a = start_server(&lease, None, port)?;
-    let id_a = as_str(&server_a, "command_session_id")
-        .ok()
-        .map(ToOwned::to_owned);
+    let id_a = as_str(&server_a, "command_id").ok().map(ToOwned::to_owned);
 
     let body = (|| -> Result<()> {
         ensure!(
@@ -214,7 +212,7 @@ fn cross_mode_same_port_no_conflict() -> Result<()> {
         );
         wait_for_output(&lease, Some(&caller_b), &bind_b, "BOUND")
             .with_context(|| format!("isolated server must bind the same port: {bind_b}"))?;
-        if let Some(id_b) = bind_b.get("command_session_id").and_then(Value::as_str) {
+        if let Some(id_b) = bind_b.get("command_id").and_then(Value::as_str) {
             cancel(&lease, Some(&caller_b), id_b);
         }
         Ok(())
@@ -240,9 +238,7 @@ fn same_mode_same_port_conflicts() -> Result<()> {
 
     // Two ephemeral execs share the container netns: the second bind collides.
     let server = start_server(&lease, None, port)?;
-    let id = as_str(&server, "command_session_id")
-        .ok()
-        .map(ToOwned::to_owned);
+    let id = as_str(&server, "command_id").ok().map(ToOwned::to_owned);
 
     let body = (|| -> Result<()> {
         ensure!(
@@ -310,7 +306,7 @@ fn isolated_loopback_service_is_not_reachable_from_peer_session() -> Result<()> 
         wait_for_output(&lease, Some(&caller_a), &server_a, "SERVER_READY")?;
         sessions.push((
             caller_a.clone(),
-            as_str(&server_a, "command_session_id")?.to_owned(),
+            as_str(&server_a, "command_id")?.to_owned(),
         ));
 
         let own_probe = lease.call_ok(
@@ -423,7 +419,7 @@ fn isolated_to_isolated_same_port_matrix() -> Result<()> {
             .with_context(|| format!("caller A must bind the selected port: {server_a}"))?;
         sessions.push((
             caller_a.clone(),
-            as_str(&server_a, "command_session_id")?.to_owned(),
+            as_str(&server_a, "command_id")?.to_owned(),
         ));
 
         let server_b = start_bound_socket(&lease, &caller_b, port, "B")?;
@@ -435,7 +431,7 @@ fn isolated_to_isolated_same_port_matrix() -> Result<()> {
             .with_context(|| format!("caller B must bind the same port: {server_b}"))?;
         sessions.push((
             caller_b.clone(),
-            as_str(&server_b, "command_session_id")?.to_owned(),
+            as_str(&server_b, "command_id")?.to_owned(),
         ));
 
         let same_namespace = lease.call_ok(

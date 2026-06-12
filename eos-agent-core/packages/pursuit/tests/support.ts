@@ -6,12 +6,12 @@ import {
   agentRunIdFrom,
   mintAgentRunId,
   type AgentRunId,
-  type DelegatedPursuit,
   type InitialUserMessage,
   type PlannerOutcomePayload,
+  type PursuitHandle,
+  type PursuitId,
   type SubmissionResult,
   type WorkerOutcomePayload,
-  type PursuitId,
 } from "@eos/contracts";
 import { createPursuitDatabase, type PursuitDb } from "@eos/db";
 
@@ -23,19 +23,17 @@ import type {
   AgentLaunchOptions,
   AgentLaunchPort,
   LaunchSettlement,
-} from "../src/launcher.js";
-import { PursuitService, type PursuitServiceDependencies } from "../src/service.js";
+} from "../src/agent-launcher.js";
 import { loadPursuitTree, type PursuitTree } from "../src/pursuit-tree.js";
+import { PursuitService, type PursuitServiceDependencies } from "../src/service.js";
 
 const PARENT_RUN = agentRunIdFrom("parent-run");
 
-/** One recorded `port.launch`, drivable like a scripted child run. */
 export interface ScriptedLaunch {
   agentName: string;
   messages: readonly InitialUserMessage[];
   options: AgentLaunchOptions | undefined;
   runId: AgentRunId;
-  interruptReason: string | undefined;
   settle(settlement: LaunchSettlement): void;
   submitPlanner(payload: PlannerOutcomePayload): Promise<SubmissionResult>;
   submitWorker(payload: WorkerOutcomePayload): Promise<SubmissionResult>;
@@ -46,7 +44,10 @@ export interface Harness {
   service: PursuitService;
   launches: ScriptedLaunch[];
   contextRoot: string;
-  delegate(goal?: string, maxAttempts?: number): Promise<DelegatedPursuit>;
+  create(
+    pursuitGoal?: string,
+    options?: { maxAttempts?: number; legGoals?: readonly string[] },
+  ): Promise<PursuitHandle>;
   tree(pursuitId: PursuitId): Promise<PursuitTree>;
 }
 
@@ -70,7 +71,6 @@ export function harness(
         messages: initialMessages,
         options,
         runId: mintAgentRunId(),
-        interruptReason: undefined,
         settle: resolve,
         submitPlanner: (payload) => {
           const binding = options?.submission;
@@ -91,9 +91,7 @@ export function harness(
       return {
         runId: launch.runId,
         outcome,
-        interrupt: (reason) => {
-          launch.interruptReason ??= reason;
-        },
+        interrupt: () => undefined,
       };
     },
   };
@@ -114,9 +112,15 @@ export function harness(
     service,
     launches,
     contextRoot,
-    delegate: (goal = "ship the feature", maxAttempts) =>
-      service.delegate(
-        { goal, ...(maxAttempts !== undefined && { max_attempts: maxAttempts }) },
+    create: (pursuitGoal = "ship the feature", options = {}) =>
+      service.createPursuit(
+        {
+          pursuit_goal: pursuitGoal,
+          ...(options.legGoals !== undefined && { leg_goals: [...options.legGoals] }),
+          ...(options.maxAttempts !== undefined && {
+            max_attempts: options.maxAttempts,
+          }),
+        },
         PARENT_RUN,
       ),
     tree: async (pursuitId) => {
@@ -131,18 +135,30 @@ export function plannerPayload(
   overrides: Partial<PlannerOutcomePayload> = {},
 ): PlannerOutcomePayload {
   return {
-    summary: "planned the slice",
-    leg_goal: "the first slice",
+    summary: "planned the leg",
     work_items: [
       {
         id: "w1",
         agent_name: "worker",
-        description: "implement the slice",
-        work_item_spec: "write the code for the slice",
-        needs: [],
+        title: "implement the leg",
+        spec: "write the code for the leg",
+        depends_on: [],
       },
     ],
     ...overrides,
+  };
+}
+
+export function workItem(
+  id: string,
+  dependsOn: readonly string[] = [],
+): PlannerOutcomePayload["work_items"][number] {
+  return {
+    id,
+    agent_name: "worker",
+    title: `item ${id}`,
+    spec: `spec ${id}`,
+    depends_on: [...dependsOn],
   };
 }
 
@@ -152,12 +168,11 @@ export function workerPayload(
   return {
     summary: "did the work",
     is_pass: true,
-    outcome: "the slice is implemented",
+    outcome: "the leg is implemented",
     ...overrides,
   };
 }
 
-/** Poll until `check` holds; the suite is engine-free, so ticks are cheap. */
 export async function until(
   check: () => boolean | Promise<boolean>,
   label = "condition",

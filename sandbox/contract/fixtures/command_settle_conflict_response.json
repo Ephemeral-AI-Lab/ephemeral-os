@@ -5,7 +5,7 @@
     "stdout": "",
     "stderr": ""
   },
-  "command_session_id": "cmd_conflict",
+  "command_id": "cmd_conflict",
   "success": false,
   "changed_paths": [
     "src/main.rs"

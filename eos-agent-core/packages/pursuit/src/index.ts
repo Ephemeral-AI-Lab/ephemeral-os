@@ -11,7 +11,7 @@ export {
   type AgentLaunchPort,
   type LaunchSettlement,
   type LaunchedAgent,
-} from "./launcher.js";
+} from "./agent-launcher.js";
 export {
   PursuitService,
   type PursuitServiceDependencies,

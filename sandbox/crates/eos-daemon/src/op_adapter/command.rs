@@ -3,7 +3,7 @@
 
 use std::path::PathBuf;
 
-use eos_command_session::{
+use eos_command::{
     CancelCommandSession, CollectCompleted, CommandSessionError, ReadCommandProgress,
     StartCommandSession, WriteStdin,
 };
@@ -72,7 +72,7 @@ pub(crate) fn op_exec_command(
     if running {
         Ok(wire)
     } else {
-        Ok(strip_session_id(wire))
+        Ok(strip_command_id(wire))
     }
 }
 
@@ -161,7 +161,7 @@ pub(crate) fn command_session_write_stdin(
     _context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let request = WriteStdin {
-        command_session_id: input.command_session_id.to_string(),
+        command_id: input.command_id.to_string(),
         chars: input.chars,
         yield_time_ms: input
             .yield_time_ms
@@ -175,7 +175,7 @@ pub(crate) fn command_session_read_progress(
     _context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let request = ReadCommandProgress {
-        command_session_id: input.command_session_id.to_string(),
+        command_id: input.command_id.to_string(),
         last_n_lines: input.last_n_lines,
     };
     command_session_response_to_wire(command_ops().read_command_progress(request))
@@ -186,7 +186,7 @@ pub(crate) fn command_session_cancel(
     _context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let request = CancelCommandSession {
-        command_session_id: input.command_session_id.to_string(),
+        command_id: input.command_id.to_string(),
     };
     command_session_response_to_wire(command_ops().cancel(request))
 }
@@ -205,9 +205,9 @@ fn command_session_response_to_wire(
     }
 }
 
-fn strip_session_id(mut response: Value) -> Value {
+fn strip_command_id(mut response: Value) -> Value {
     if let Some(object) = response.as_object_mut() {
-        object.remove("command_session_id");
+        object.remove("command_id");
     }
     response
 }
@@ -231,9 +231,9 @@ fn command_op_error(error: CommandOpError) -> DaemonError {
 
 fn collect_completed_request(input: CollectCompletedInput) -> CollectCompleted {
     CollectCompleted {
-        command_session_ids: input.command_session_ids.map(|ids| {
+        command_ids: input.command_ids.map(|ids| {
             ids.into_iter()
-                .map(|command_session_id| command_session_id.to_string())
+                .map(|command_id| command_id.to_string())
                 .collect()
         }),
         caller_id: input.caller.map(|caller| caller.to_string()),

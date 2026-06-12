@@ -7,8 +7,8 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use std::path::PathBuf;
 
-use eos_command_session::session::CommandSession;
-use eos_command_session::CollectCompleted;
+use eos_command::session::CommandSession;
+use eos_command::CollectCompleted;
 use eos_layerstack::service::Snapshot;
 use eos_workspace::EphemeralWorkspace;
 use eos_workspace::IsolatedWorkspaceBinding;
@@ -130,7 +130,7 @@ impl CommandRegistry {
         let seq = self.completed_seq.fetch_add(1, Ordering::Relaxed);
         let mut completed = lock(&self.completed);
         completed.insert(
-            completion.command_session_id.clone(),
+            completion.command_id.clone(),
             CompletedEntry { seq, completion },
         );
         while completed.len() > MAX_COMPLETED_ENTRIES {
@@ -161,7 +161,7 @@ impl CommandRegistry {
     #[must_use]
     pub(crate) fn collect_completed(&self, request: &CollectCompleted) -> CollectCompletedOutput {
         let wanted: Option<HashSet<String>> = request
-            .command_session_ids
+            .command_ids
             .as_ref()
             .map(|ids| ids.iter().cloned().collect());
         let caller_id = request.caller_id.as_deref();

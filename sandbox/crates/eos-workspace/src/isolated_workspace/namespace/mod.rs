@@ -436,7 +436,7 @@ fn run_ns_runner_configure_dns_child(request: &RunRequest) -> Result<bool, Isola
         }
     })?;
     Ok(result
-        .tool_result
+        .payload
         .get("applied_fallback")
         .and_then(Value::as_bool)
         .unwrap_or(false))

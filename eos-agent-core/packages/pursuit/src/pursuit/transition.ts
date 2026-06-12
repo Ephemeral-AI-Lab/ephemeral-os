@@ -110,7 +110,7 @@ export async function cancelPursuit(
 }
 
 function requireLegGoal(legGoals: readonly string[], index: number): string {
-  const goal = legGoals[index];
+  const goal = legGoals.at(index);
   if (goal === undefined) {
     throw new Error(`missing predefined leg goal at index ${String(index)}`);
   }

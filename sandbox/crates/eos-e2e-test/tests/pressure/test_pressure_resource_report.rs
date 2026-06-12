@@ -92,7 +92,7 @@ fn resource_report_smoke() -> Result<()> {
         // than `call_ok`, then assert the structured status below.
         let cancel = lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_session_id": as_str(&session, "command_session_id")?}),
+            json!({"command_id": as_str(&session, "command_id")?}),
         )?;
         assert!(
             matches!(as_str(&cancel, "status")?, "cancelled" | "ok" | "error"),

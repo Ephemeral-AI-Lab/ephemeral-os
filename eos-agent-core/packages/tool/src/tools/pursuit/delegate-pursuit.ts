@@ -1,10 +1,10 @@
 import type {
   AgentRunId,
   DelegatePursuitInput,
-  DelegatedPursuit,
+  PursuitHandle,
 } from "@eos/contracts";
+import { DelegatePursuitInputSchema } from "@eos/contracts";
 import type { BackgroundSessionSupervisor } from "@eos/background";
-import { z } from "zod";
 
 import type { ToolDefinition } from "../../contract.js";
 import { defineTool } from "../../define.js";
@@ -12,11 +12,6 @@ import { DESCRIPTION } from "../description_prompts/delegate_pursuit_prompt.js";
 
 /** The family's name universe: `delegate_pursuit`, alone (§2.18). */
 export const PURSUIT_TOOL_NAMES = ["delegate_pursuit"] as const;
-
-const DelegatePursuitInputSchema = z.object({
-  goal: z.string().min(1),
-  max_attempts: z.number().int().positive().optional(),
-});
 
 /**
  * The pursuit family over one bound function plus the per-run supervisor
@@ -28,7 +23,7 @@ export function pursuitTools(
   delegate: (
     input: DelegatePursuitInput,
     parent: AgentRunId,
-  ) => Promise<DelegatedPursuit>,
+  ) => Promise<PursuitHandle>,
   supervisor: BackgroundSessionSupervisor,
 ): ToolDefinition[] {
   return [
@@ -53,7 +48,7 @@ export function pursuitTools(
         // pattern: the submission guard covers the pursuit before the
         // model's next token.
         supervisor.registerBackgroundSession(
-          { type: "pursuit", id: pursuit.pursuitId },
+          { type: "pursuit", id: pursuit.pursuit_id },
           {
             settled: pursuit.terminal.then((terminal) => ({
               status:
@@ -68,7 +63,7 @@ export function pursuitTools(
             describe: () => pursuit.describe(),
           },
         );
-        return { content: { pursuit_id: pursuit.pursuitId } };
+        return { content: { pursuit_id: pursuit.pursuit_id } };
       },
     }),
   ];

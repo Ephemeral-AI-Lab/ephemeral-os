@@ -274,7 +274,7 @@ mod tests {
         let RequestError::Args(error) = error else {
             panic!("expected args error");
         };
-        assert_eq!(error.message(), "command_session_id is required");
+        assert_eq!(error.message(), "command_id is required");
     }
 
     #[test]

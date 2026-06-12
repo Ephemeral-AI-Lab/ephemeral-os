@@ -166,13 +166,13 @@ fn stdin_prompt_progress_collect_and_cancel_variants() -> Result<()> {
         output_contains(&started, "prompt:one"),
         "prompt session should expose the first prompt: {started}"
     );
-    let session_id = as_str(&started, "command_session_id")?.to_owned();
+    let session_id = as_str(&started, "command_id")?.to_owned();
 
     let body = (|| -> Result<()> {
         let first = lease.call_ok(
             catalog::SANDBOX_COMMAND_WRITE_STDIN,
             json!({
-                "command_session_id": &session_id,
+                "command_id": &session_id,
                 "chars": "alpha payload\n",
                 "yield_time_ms": 1500,}),
         )?;
@@ -189,7 +189,7 @@ fn stdin_prompt_progress_collect_and_cancel_variants() -> Result<()> {
         let progress = lease.call_ok(
             catalog::SANDBOX_COMMAND_POLL,
             json!({
-                "command_session_id": &session_id,
+                "command_id": &session_id,
                 "last_n_lines": 4,
             }),
         )?;
@@ -201,7 +201,7 @@ fn stdin_prompt_progress_collect_and_cancel_variants() -> Result<()> {
         let second = lease.call_ok(
             catalog::SANDBOX_COMMAND_WRITE_STDIN,
             json!({
-                "command_session_id": &session_id,
+                "command_id": &session_id,
                 "chars": "beta payload\n",
                 "yield_time_ms": 1500,}),
         )?;
@@ -216,7 +216,7 @@ fn stdin_prompt_progress_collect_and_cancel_variants() -> Result<()> {
 
         let not_done = lease.call_ok(
             catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-            json!({"command_session_ids": [session_id.clone()]}),
+            json!({"command_ids": [session_id.clone()]}),
         )?;
         ensure!(
             array(&not_done, "completions")?.is_empty(),
@@ -225,7 +225,7 @@ fn stdin_prompt_progress_collect_and_cancel_variants() -> Result<()> {
 
         let cancel = lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_session_id": &session_id}),
+            json!({"command_id": &session_id}),
         )?;
         ensure_terminalish_status(&cancel)?;
         wait_for_session_count(&lease, 0)?;
@@ -237,7 +237,7 @@ fn stdin_prompt_progress_collect_and_cancel_variants() -> Result<()> {
     if body.is_err() {
         let _ = lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_session_id": &session_id}),
+            json!({"command_id": &session_id}),
         );
         let _ = wait_for_session_count(&lease, 0);
     }
@@ -382,7 +382,7 @@ time.sleep(60)'"
                         as_str(&started, "status")? == "running",
                         "parallel prompt worker should stay running: {started}"
                     );
-                    let session_id = as_str(&started, "command_session_id")?.to_owned();
+                    let session_id = as_str(&started, "command_id")?.to_owned();
                     let prompt_needle = format!("prompt:{marker}");
                     let reply_needle = format!("reply:{marker}:payload-{level}-{index}");
                     // Under emulation python startup can outlast the 500ms yield,
@@ -411,7 +411,7 @@ time.sleep(60)'"
                         &root,
                         &caller_id,
                         json!({
-                            "command_session_id": &session_id,
+                            "command_id": &session_id,
                             "chars": format!("payload-{level}-{index}\n"),
                             "yield_time_ms": 1500,}),
                     )?;
@@ -442,7 +442,7 @@ time.sleep(60)'"
                         &root,
                         &caller_id,
                         json!({
-                            "command_session_id": &session_id,
+                            "command_id": &session_id,
                             "last_n_lines": 4,
                         }),
                     )?;
@@ -456,7 +456,7 @@ time.sleep(60)'"
                         catalog::SANDBOX_COMMAND_CANCEL,
                         &root,
                         &caller_id,
-                        json!({"command_session_id": &session_id}),
+                        json!({"command_id": &session_id}),
                     )?;
                     ensure_terminalish_status(&cancel)?;
                     Ok(())
@@ -500,7 +500,7 @@ fn poll_read_progress_until_contains(
             root,
             caller_id,
             json!({
-                "command_session_id": session_id,
+                "command_id": session_id,
                 "last_n_lines": 8,
             }),
         )?;
@@ -775,7 +775,7 @@ fn assert_command_ok(response: &Value, family: &str, variant: &str) -> Result<()
         "{family}:{variant} should exit 0: {response}"
     );
     ensure!(
-        response.get("command_session_id").is_none(),
+        response.get("command_id").is_none(),
         "{family}:{variant} should not leave a command session handle: {response}"
     );
     Ok(())

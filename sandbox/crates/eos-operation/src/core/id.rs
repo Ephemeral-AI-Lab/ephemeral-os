@@ -60,9 +60,9 @@ impl fmt::Display for InvocationId {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct CommandSessionId(String);
+pub struct CommandId(String);
 
-impl CommandSessionId {
+impl CommandId {
     #[must_use]
     pub fn new(value: impl Into<String>) -> Self {
         Self(value.into())
@@ -74,7 +74,7 @@ impl CommandSessionId {
     }
 }
 
-impl fmt::Display for CommandSessionId {
+impl fmt::Display for CommandId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())
     }

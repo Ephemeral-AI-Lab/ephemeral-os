@@ -8,11 +8,11 @@ use serde_json::{json, Map, Value};
 
 use super::contract::{u64_to_f64_saturating, CommandMetadata, CommandResponse};
 use super::outcome::{
-    ChangedPathKinds, FinalizeCommandRequest, MutationSource, WorkspaceApiError,
-    WorkspaceConflict, WorkspaceKind, WorkspaceTimings,
+    ChangedPathKinds, FinalizeCommandRequest, MutationSource, WorkspaceApiError, WorkspaceConflict,
+    WorkspaceKind, WorkspaceTimings,
 };
 use crate::core::changed_path_kind_pairs;
-use crate::{CommandSessionId, MutationCore};
+use crate::{CommandId, MutationCore};
 
 pub(crate) fn settle_ephemeral(
     root: &Path,
@@ -32,8 +32,7 @@ pub(crate) fn settle_ephemeral(
     .map_err(finalize_error)?;
     let publish_s = publish_start.elapsed().as_secs_f64();
 
-    let changed_path_kinds: ChangedPathKinds =
-        changed_path_kind_pairs(&captured.changes).collect();
+    let changed_path_kinds: ChangedPathKinds = changed_path_kind_pairs(&captured.changes).collect();
     let first_conflict = changeset.first_conflict();
     let command_success = request.command_succeeded();
     let publish_success = changeset.success();
@@ -88,8 +87,7 @@ pub(crate) fn settle_isolated(
     let mut timings = base_timings(&binding.layer_stack_root)?;
     let captured = capture_upperdir(&binding.upperdir)
         .map_err(|err| finalize_error(format!("capture isolated upperdir: {err}")))?;
-    let changed_path_kinds: ChangedPathKinds =
-        changed_path_kind_pairs(&captured.changes).collect();
+    let changed_path_kinds: ChangedPathKinds = changed_path_kind_pairs(&captured.changes).collect();
     let changed_paths: Vec<String> = changed_path_kinds.keys().cloned().collect();
     merge_runner_timings(&mut timings, request.runner_result.as_ref());
     let command_success = request.command_succeeded();
@@ -172,7 +170,7 @@ fn command_response(
         exit_code: request.exit_code,
         stdout: request.stdout,
         stderr: request.stderr,
-        command_session_id: request.command_session_id.map(CommandSessionId::new),
+        command_id: request.command_id.map(CommandId::new),
         settled: Some(CommandMetadata {
             core: MutationCore {
                 success: settlement.success,

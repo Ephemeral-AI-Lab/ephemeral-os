@@ -108,8 +108,8 @@ pub struct RunRequest {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RunResult {
-    pub tool_result: Value,
     pub exit_code: i32,
+    pub payload: Value,
 }
 
 #[cfg(test)]

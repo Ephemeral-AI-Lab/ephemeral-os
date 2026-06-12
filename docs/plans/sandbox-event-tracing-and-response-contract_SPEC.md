@@ -2,7 +2,7 @@
 
 Status: Proposed (rev 4 — destructive posture; verified against the four
 audit-system rules: ingestion decoupling, storage immutability,
-serialization/schema evolution, visibility/lineage — 13 confirmed gaps closed.
+serialization/schema evolution, visibility/lineage — confirmed gaps closed.
 Rev 4 adds the six-scope explorer sweep of every printed/response-visible/
 dropped datum, dispositioned as drop / populate / add with spot-checked code
 anchors — see "Inventory-verified deltas" — and the Extension Model: normative
@@ -464,8 +464,9 @@ is `none` (registry read, no workspace entry); plugin `ensure`/`status` are
 Assume nothing useful is recorded today. Every span records its **inputs' key
 parameters and outputs' key results** as typed fields — op args summary (paths,
 caller, flags), manifest versions, lease ids, changed-path counts, exit codes,
-kill reasons, byte counts, depths, veth/cgroup names, worker exit codes, PPC
-message ids. Bounded by rule: sizes, hashes, counts, ids, and references to
+kill reasons, byte counts, depths, veth/cgroup names, worker exit codes/raw
+statuses/signals, PPC message ids, and network configuration decisions.
+Bounded by rule: sizes, hashes, counts, ids, and references to
 content that already exists elsewhere (transcripts, response rows) — never raw
 stdout/stderr, file contents, or plugin result blobs in trace events.
 
@@ -541,8 +542,8 @@ adding a row here first, per the Extension Model's vocabulary governance):
 | `occ` | commit_started, validate_groups_finished, publish_layer_finished, conflict_detected {path, reason, observed_version?, observed_state?} per conflicting file, commit_finished |
 | `overlay` | workspace_prepared, mount_started/finished {layer_count, fsconfig_calls, duration_us, upperdir_empty_bytes}, capture_started/finished {failing_path on error, bytes, file_count, dir_count, entry_count, truncated}, unmount_finished |
 | `command_session` | prepared, spawned, yielded, stdin_written {bytes, wait_ms, waited_for_output}, progress_read, cancelled, timed_out, reaped {kill_reason, signal}, settled, session_artifact_written/failed, final_persisted, final_persist_failed, transcript_failed |
-| `isolated_workspace` | enter_started, holder_started, network_configured {dns_fallback_applied}, status_read, exit_started, teardown_phase_finished (×4; kill_holder carries {holder_was_alive, exit_status}), exited {mountinfo_scan_error?}, recovery_started/finished {manager_json_error?, orphan_cleanup_error?} |
-| `plugin` | ensure_started, package_checked, setup_finished {exit_code?, output_tail?, spawn_error?}, service_started {stderr_path}, service_health_checked {state, restart_count, refresh_count, last_error}, ppc_message_sent/received, overlay_started/finished, callback_request/response |
+| `isolated_workspace` | enter_started, holder_started, network_configured {dns_fallback_applied, previous_first_nameserver?}, status_read, exit_started, teardown_phase_finished (×4; kill_holder carries {holder_was_alive, exit_status, signal?}), exited {mountinfo_scan_error?}, recovery_started/finished {manager_json_error?, orphan_cleanup_error?} |
+| `plugin` | ensure_started, package_checked, setup_finished {exit_code?, output_tail?, spawn_error?}, service_started {stderr_path}, service_exited {exit_code?, signal?, status_raw?}, service_health_checked {state, restart_count, refresh_count, last_error}, ppc_message_sent/received, ppc_reply_orphaned {message_id, direction, reason}, overlay_started/finished, callback_request/response |
 | `file` | read_started/finished, mutation_started, edit_applied, write_applied |
 | `checkpoint` | worktree_mode_selected {mode}, git_command_finished {argv_summary, exit_code, stderr_tail} |
 | `resource` | resource_stats {ResourceStats payload above; per-source error markers — a failed read is never a silent absence} |
@@ -592,7 +593,7 @@ the capture lands):
 | Squash-skip reason (too shallow, min-reduction unmet, lease-blocked, planner returned none, live-prefix race, post-commit release failure) unobservable | squash planner / stack apply path | `auto_squash_skipped {reason}` and `lease_release_failed` (Phase 04) |
 | OCC conflict reports aggregate outcome only; per-file reason is flattened and observed version is present only on some CAS/manifest conflicts | `commit/worker.rs` validate path | `conflict_detected {path, reason, observed_version?, observed_state?}` + the same detail in `OperationFault.details` (Phase 04/05) |
 | Command settle emits a response-visible wrong stat: `resource.layer_stack.manifest_path_count` is sourced from manifest depth | `eos-operation/src/command/settle.rs:230-233` | Typed resource summary derives path/layer counts from one shared sampler with a golden test (Phase 04/05/08) |
-| DNS fallback decision discarded: `let _dns_fallback_applied` | `isolated_workspace/manager/lifecycle.rs:51` | `network_configured {dns_fallback_applied}` (Phase 04) |
+| DNS fallback decision discarded: `let _dns_fallback_applied`; helper also knows the previous nameserver when fallback is applied | `isolated_workspace/manager/lifecycle.rs:51`, `eos-namespace/src/runner/setns.rs` | `network_configured {dns_fallback_applied, previous_first_nameserver?}` (Phase 04) |
 | Holder liveness at teardown unknown (crashed earlier vs killed now) | lifecycle teardown | `isolated.exit.kill_holder` fields `{holder_was_alive, exit_status}` (Phase 04) |
 | Capture-walk abort loses the failing path; only an error string survives | `eos-workspace/src/shared/capture.rs` | `capture_finished` error detail `{failing_path}` (Phase 04) |
 | Capture-settle does a second tree walk after `capture_upperdir` already enumerated changes | `eos-operation/src/command/settle.rs:41-49` | Capture bytes/file/dir/entry counts during the existing capture walk; no duplicate pass (Phase 04) |
@@ -600,7 +601,8 @@ the capture lands):
 | Service-cache gauges (hits/misses/creates/evictions, `lock_wait_s_total/max`) visible only when an operator happens to call `layer_metrics` | `eos-layerstack/src/service.rs:22-36,214-240` | Heartbeat layerstack section samples `cache_snapshot()` continuously (Phase 08) |
 | Plugin service state machine (`starting\|ready\|refreshing\|stale\|restarting\|stopped\|failed`), `restart_count`, `refresh_count`, `last_error` are serialized in `services[]` but missing from `service_health`, heartbeat, and lifecycle trace events | `eos-plugin/src/service_registry.rs:15-40`, `op_adapter/plugin.rs:149-170` | Preserve the typed `services[]` result, add `service_health_checked` fields + heartbeat `details_json` (Phase 04/08) |
 | Plugin service worker stdout/stderr -> `Stdio::null` - a crashing service is forensically silent | `eos-operation/src/plugin/process.rs:64-66` | Per-service stderr file in-sandbox, path recorded on `service_started`, archived at release beside `daemon.log.jsonl` (Phase 04/09) |
-| Kill signal number lost or normalized into exit codes; service worker status also keeps only `status.code()` | session/worker wait sites, plugin service status | `{signal}` on `reaped`, settle facts, and worker/service exits (Phase 04) |
+| Plugin service exit status keeps only `status.code()`, losing raw status and signal | `eos-operation/src/plugin/process.rs:154-163` | `service_exited {exit_code?, signal?, status_raw?}` and the same fields in service health/heartbeat projections (Phase 04/08) |
+| Kill signal number lost or normalized into exit codes | session/worker wait sites, plugin service status | `{signal}` on `reaped`, settle facts, and worker/service exits (Phase 04) |
 | Plugin setup success output is dropped; nonzero exit output is flattened into one error string; spawn failures have command/cwd/error but no exit/output fields | `eos-operation/src/plugin/package.rs` | `setup_finished {exit_code?, output_tail?, spawn_error?}` (budgeted) (Phase 04) |
 | `commit_to_git` git-step semantics stringified into error messages; exit codes unmapped | `op_adapter/checkpoint.rs` | `checkpoint` events `git_command_finished {argv_summary, exit_code, stderr_tail}` (Phase 04) |
 | Transport facts dropped: gateway UDS read/parse/write, catalog route decision, host TCP connect latency/retry/fallback, docker-exec thin-client fallback, endpoint refresh, request write/read duration, daemon accept id, TCP peer address, request/response byte counts, response write/shutdown failures | `eos-sandbox-gateway/src/gateway.rs`, `eos-sandbox-host/src/protocol.rs`, `eos-sandbox-host/src/host.rs`, `transport/server.rs` | Gateway `gateway.*` events + host `host.transport.*` events + daemon `daemon.transport.*` events; daemon root span gains `{connection_id, listener_kind, peer_addr?, request_bytes}`; host `response_persisted` payload gains `response_len` beside `response_digest` (Phase 03) |
@@ -612,7 +614,8 @@ the capture lands):
 | CPU throttling, memory events/OOM, PSI pressure, source availability, and sampler duration are not response-visible today | cgroup/procfs samplers | Add to `ResourceStats` so slow/failed ops can distinguish resource pressure from command behavior (Phase 04/08) |
 | Cheap OS gauges are currently emitted as response-only flat timing keys, not paired around the command/plugin work they describe | `runtime/response.rs:198-270` | Before/after `resource_stats` pairs on `command.session.wait` and `plugin.overlay.run`, projected to `trace_resources` (Phase 04) |
 | Host RAM-pressure probe falls back silently when `/proc/meminfo` cannot be read | isolated workspace manager | `resource_stats {host_meminfo_error?}` / heartbeat marker (Phase 04/08) |
-| ns-runner `tool_result` is projected into response shell fields, but trace lacks parse status, size, and digest | plugin overlay path | Bounded `{tool_result_present, parsed, len, sha256}` span field (Phase 04) |
+| Completed command-session responses are evicted from the in-memory completed buffer after the cap with no durable loss marker | `eos-operation/src/command/registry.rs:129-144` | `completion_buffer_evicted {command_session_id, seq, max_entries}` after the settle trace has been recorded (Phase 04) |
+| Unknown, late, or ambiguous PPC replies/callbacks can be dropped or returned as transient callback errors without durable lineage | `eos-operation/src/plugin/transport.rs:314-395` | `ppc_reply_orphaned {message_id, direction, reason}` and refused callback roots linked to `service_instance_id` (Phase 04) |
 
 Confirmed already-covered by rev ≤3 mechanisms (no new spec text): sweeper-
 cancelled session visibility (`CommandSettle` background roots, context rule
@@ -2015,13 +2018,14 @@ Acceptance checklist:
   walk counters, failing paths, and real truncation.
 - [ ] Command session adds `ActiveCommand` origin `trace_id`/`request_id`,
   background `CommandSettle` roots, stdin wait/backpressure facts, kill
-  signals, artifact write/failure events, and transcript failure events.
+  signals, artifact write/failure events, transcript failure events, and
+  completed-buffer eviction loss markers.
 - [ ] Isolated workspace emits enter/status/exit/recovery lifecycle facts,
-  DNS fallback, holder liveness, manager JSON errors, mountinfo scan errors,
-  and orphan cleanup results.
+  DNS fallback with previous nameserver when available, holder liveness,
+  manager JSON errors, mountinfo scan errors, and orphan cleanup results.
 - [ ] Plugin/PPC emits setup/service health/state facts, typed
-  `parent_message_id`, service stderr path, overlay/callback parent handoff,
-  and bounded `tool_result` parse/size/digest facts.
+  `parent_message_id`, service stderr path, service exit raw status/signal,
+  PPC orphan/late reply events, and overlay/callback parent handoff.
 - [ ] Checkpoint/git operations emit command step events with exit codes and
   bounded stderr tails.
 - [ ] `ResourceStats` covers cgroup CPU/memory/io/PSI where available,

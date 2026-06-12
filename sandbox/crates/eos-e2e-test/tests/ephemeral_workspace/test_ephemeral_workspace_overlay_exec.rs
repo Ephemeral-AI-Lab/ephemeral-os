@@ -225,7 +225,7 @@ fn foreground_exec_recycles_overlay_scratch() -> Result<()> {
             "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
-    assert!(exec.get("command_session_id").is_none(), "{exec}");
+    assert!(exec.get("command_id").is_none(), "{exec}");
     // The overlay scratch (upperdir + workdir) is torn down on finalize and the
     // lease is released — observable as active_leases back to 0.
     let metrics = wait_for_active_leases(&lease, 0)?;
@@ -451,10 +451,10 @@ fn cancelled_background_exec_does_not_publish_partial_workspace_mutation() -> Re
         stdout(&exec).contains("READY"),
         "background command must reach the pre-write point before cancel: {exec}"
     );
-    let session_id = as_str(&exec, "command_session_id")?.to_owned();
+    let session_id = as_str(&exec, "command_id")?.to_owned();
     lease.call(
         catalog::SANDBOX_COMMAND_CANCEL,
-        json!({"command_session_id": session_id}),
+        json!({"command_id": session_id}),
     )?;
     wait_for_session_count(&lease, 0)?;
     let metrics = wait_for_active_leases(&lease, 0)?;
@@ -525,7 +525,7 @@ fn long_running_exec_conflicts_after_direct_write() -> Result<()> {
         stdout(&exec).contains("SNAPSHOT_READY"),
         "exec must have started before the direct write races it: {exec}"
     );
-    let session_id = as_str(&exec, "command_session_id")?.to_owned();
+    let session_id = as_str(&exec, "command_id")?.to_owned();
 
     let body = (|| -> Result<()> {
         let direct = lease.call_ok(
@@ -575,7 +575,7 @@ fn long_running_exec_conflicts_after_direct_write() -> Result<()> {
     if body.is_err() {
         let _ = lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_session_id": session_id}),
+            json!({"command_id": session_id}),
         );
         let _ = wait_for_session_count(&lease, 0);
     }
@@ -587,7 +587,7 @@ fn wait_for_completion(lease: &NodeLease<'_>, session_id: &str) -> Result<Value>
     loop {
         let collected = lease.call_ok(
             catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-            json!({"command_session_ids": [session_id]}),
+            json!({"command_ids": [session_id]}),
         )?;
         if let Some(completion) = array(&collected, "completions")?.first() {
             return completion

@@ -6,328 +6,181 @@ import {
   plannerPayload,
   until,
   workerPayload,
+  workItem,
 } from "./support.js";
 
-describe("delegation (§16 case 4)", () => {
-  it("creates pursuit/leg/attempt/plan and launches the planner after commit", async () => {
+describe("pursuit creation and planner declarations", () => {
+  it("creates a dynamic first leg with pursuit_goal as leg_goal and accepts keep payloads", async () => {
     const h = harness();
-    const wf = await h.delegate("ship the parser");
+    const pursuit = await h.create("ship the parser");
 
-    expect(h.launches, "exactly one launch").toHaveLength(1);
-    const planner = h.launches[0];
-    expect(planner.agentName).toBe("planner");
-    expect(planner.options?.parent).toBe("parent-run");
-    expect(planner.options?.submission?.kind).toBe("planner");
+    expect(h.launches).toHaveLength(1);
+    expect(h.launches[0].agentName).toBe("planner");
+    expect(h.launches[0].options?.parent).toBe("parent-run");
 
-    const tree = await h.tree(wf.pursuitId);
-    expect(tree.pursuit.status).toBe("Running");
-    expect(tree.pursuit.goal).toBe("ship the parser");
-    expect(tree.pursuit.activeGoal).toBe("ship the parser");
-    expect(tree.legs).toHaveLength(1);
-    expect(tree.legs[0].status).toBe("Running");
-    expect(tree.legs[0].origin).toBe("initial");
-    expect(tree.legs[0].focus, "no focus until the planner declares").toBeNull();
-    const attempt = tree.legs[0].attempts[0];
-    expect(attempt.status).toBe("Running");
-    expect(attempt.plan.status).toBe("Running");
-    expect(attempt.plan.agentRunId, "agent_run_id stamped at launch").toBe(
-      planner.runId,
+    const initial = await h.tree(pursuit.pursuit_id);
+    expect(initial.pursuit.pursuitGoal).toBe("ship the parser");
+    expect(initial.pursuit.legGoalMode).toBe("dynamic");
+    expect(initial.legs[0]).toMatchObject({
+      legGoal: "ship the parser",
+      legGoalVersion: 1,
+      nextLegGoal: null,
+      isLegGoalMutatable: true,
+    });
+    expect(allMessageText(h.launches[0].messages)).toContain(
+      "# Current leg goal\nship the parser",
+    );
+
+    const accepted = await h.launches[0].submitPlanner(plannerPayload());
+    expect(accepted.ok).toBe(true);
+    expect(h.launches, "root work item launched").toHaveLength(2);
+    const afterPlan = await h.tree(pursuit.pursuit_id);
+    expect(afterPlan.legs[0].attempts[0].plan.declaredLegGoal).toBeNull();
+    expect(afterPlan.legs[0].attempts[0].workItems[0].title).toBe(
+      "implement the leg",
     );
   });
 
-  it("composes the default initial-planner policy: goal plus declaration directive", async () => {
+  it("predefined mode rejects planner leg-goal declarations and promotes fixed legs", async () => {
     const h = harness();
-    await h.delegate("ship the parser");
-    const text = allMessageText(h.launches[0].messages);
-    expect(text).toContain("# Current goal\nship the parser");
-    expect(text).toContain("leg_goal");
-    expect(text).toContain("submit_planner_outcome");
-  });
-});
+    const pursuit = await h.create("ship all", { legGoals: ["parser", "printer"] });
 
-describe("submission validation (§16 case 5)", () => {
-  it("rejects a first payload without leg_goal, then accepts the corrected resubmission exactly once", async () => {
-    const h = harness();
-    const wf = await h.delegate();
-    const planner = h.launches[0];
+    const initial = await h.tree(pursuit.pursuit_id);
+    expect(initial.pursuit.legGoalMode).toBe("predefined");
+    expect(initial.legs[0].legGoal).toBe("parser");
+    expect(initial.legs[0].nextLegGoal).toBe("printer");
 
-    const missingFocus = await planner.submitPlanner(
-      plannerPayload({ leg_goal: undefined }),
+    const rejected = await h.launches[0].submitPlanner(
+      plannerPayload({ leg_goal: "new parser" }),
     );
-    expect(missingFocus.ok).toBe(false);
-    if (!missingFocus.ok) expect(missingFocus.error).toContain("leg_goal");
+    expect(rejected.ok).toBe(false);
+    if (!rejected.ok) expect(rejected.error).toContain("predefined");
     expect(
-      (await h.tree(wf.pursuitId)).legs[0].attempts[0].workItems,
-      "no mutation on a correctable payload",
+      (await h.tree(pursuit.pursuit_id)).legs[0].attempts[0].workItems,
+      "correctable declaration error does not materialize work",
     ).toHaveLength(0);
 
-    const unknownWorker = await planner.submitPlanner(
-      plannerPayload({
-        work_items: [
-          {
-            id: "w1",
-            agent_name: "ghost",
-            description: "x",
-            work_item_spec: "y",
-            needs: [],
-          },
-        ],
-      }),
-    );
-    expect(unknownWorker.ok).toBe(false);
-    if (!unknownWorker.ok) expect(unknownWorker.error).toContain("ghost");
-
-    const accepted = await planner.submitPlanner(plannerPayload());
-    expect(accepted.ok).toBe(true);
-    const tree = await h.tree(wf.pursuitId);
-    expect(tree.legs[0].focus).toBe("the first slice");
-    expect(
-      tree.legs[0].attempts[0].workItems,
-      "the accepted resubmission mutates exactly once",
-    ).toHaveLength(1);
-    expect(h.launches, "the ready work item launched").toHaveLength(2);
-    expect(h.launches[1].agentName).toBe("worker");
-    expect(h.launches[1].options?.submission?.kind).toBe("worker");
-  });
-
-  it("launches roots immediately and dependents only when their needs succeed", async () => {
-    const h = harness();
-    const wf = await h.delegate();
-    await h.launches[0].submitPlanner(
-      plannerPayload({
-        work_items: [
-          {
-            id: "root",
-            agent_name: "worker",
-            description: "root item",
-            work_item_spec: "do the root",
-            needs: [],
-          },
-          {
-            id: "dependent",
-            agent_name: "worker",
-            description: "dependent item",
-            work_item_spec: "do the follow-up",
-            needs: ["root"],
-          },
-        ],
-      }),
-    );
-    expect(h.launches, "only the root launched").toHaveLength(2);
-
-    await h.launches[1].submitWorker(workerPayload());
-    expect(h.launches, "the dependent launched on the unblocking success").toHaveLength(3);
-    const tree = await h.tree(wf.pursuitId);
-    const items = tree.legs[0].attempts[0].workItems;
-    expect(items.map((item) => item.status).sort()).toEqual(["Running", "Success"]);
-  });
-});
-
-describe("success cascade (§16 case 7)", () => {
-  it("promotes the deferral into the next leg and the goal advances by derivation", async () => {
-    const h = harness();
-    const wf = await h.delegate("whole goal");
-    await h.launches[0].submitPlanner(
-      plannerPayload({ leg_goal: "first half", next_leg_goal: "second half" }),
-    );
-    await h.launches[1].submitWorker(workerPayload());
-
-    const tree = await h.tree(wf.pursuitId);
-    expect(tree.legs, "promotion created the next leg").toHaveLength(2);
-    expect(tree.legs[0].status).toBe("Success");
-    expect(tree.legs[1].origin).toBe("next_leg_goal");
-    expect(tree.legs[1].status).toBe("Running");
-    expect(tree.pursuit.activeGoal, "active goal advanced to the deferral").toBe(
-      "second half",
-    );
-    expect(tree.pursuit.status).toBe("Running");
-
-    expect(h.launches, "the promoted planner launched").toHaveLength(3);
-    expect(h.launches[2].agentName).toBe("planner");
-    expect(
-      allMessageText(h.launches[2].messages),
-      "the next planner sees the promoted deferral as its current goal",
-    ).toContain("# Current goal\nsecond half");
-  });
-
-  it("closes the pursuit Success when no deferral is declared and resolves the terminal", async () => {
-    const h = harness();
-    const wf = await h.delegate();
     await h.launches[0].submitPlanner(plannerPayload());
     await h.launches[1].submitWorker(workerPayload());
 
-    const tree = await h.tree(wf.pursuitId);
-    expect(tree.pursuit.status).toBe("Success");
-    expect(tree.legs[0].status).toBe("Success");
-    await expect(wf.terminal).resolves.toEqual({
-      status: "Success",
-      summary: "planned the slice",
+    const promoted = await h.tree(pursuit.pursuit_id);
+    expect(promoted.legs).toHaveLength(2);
+    expect(promoted.legs[1]).toMatchObject({
+      origin: "predefined",
+      legGoal: "printer",
+      isLegGoalMutatable: false,
     });
   });
 });
 
-describe("failure and retry (§16 case 8)", () => {
-  it("fails the attempt, cancels siblings in the same transaction, advances the abort generation, and retries", async () => {
+describe("scheduler dependency and failure behavior", () => {
+  it("blocks only not-started dependents and waits for unrelated running work before failing", async () => {
     const h = harness();
-    const wf = await h.delegate();
+    const pursuit = await h.create("ship graph", { maxAttempts: 2 });
     await h.launches[0].submitPlanner(
       plannerPayload({
         work_items: [
-          {
-            id: "a",
-            agent_name: "worker",
-            description: "item a",
-            work_item_spec: "spec a",
-            needs: [],
-          },
-          {
-            id: "b",
-            agent_name: "worker",
-            description: "item b",
-            work_item_spec: "spec b",
-            needs: [],
-          },
+          workItem("root"),
+          workItem("dependent", ["root"]),
+          workItem("unrelated"),
         ],
       }),
     );
-    expect(h.launches).toHaveLength(3);
-    const [, workerA, workerB] = h.launches;
-    const firstGeneration = workerB.options?.signal;
-
-    await workerA.submitWorker(
-      workerPayload({ is_pass: false, summary: "broke the build" }),
-    );
-
-    const tree = await h.tree(wf.pursuitId);
-    const attempt1 = tree.legs[0].attempts[0];
-    expect(attempt1.status).toBe("Failed");
-    expect(attempt1.failureReasons).toContain("broke the build");
-    expect(
-      attempt1.workItems.map((item) => item.status).sort(),
-      "the failing item failed; its sibling was cancelled in the same transaction",
-    ).toEqual(["Cancelled", "Failed"]);
-    expect(
-      attempt1.workItems.every((item) => item.status !== "Running"),
-      "no zombie Running rows",
-    ).toBe(true);
-
-    expect(firstGeneration?.aborted, "abort generation advanced").toBe(true);
-    expect(firstGeneration?.reason).toBe("attempt_failed");
-
-    expect(tree.legs[0].attempts, "a retry attempt exists").toHaveLength(2);
-    expect(h.launches, "the retry planner launched").toHaveLength(4);
-    const retryPlanner = h.launches[3];
-    expect(retryPlanner.agentName).toBe("planner");
-    expect(
-      retryPlanner.options?.signal?.aborted,
-      "the retry planner rides the NEXT generation",
-    ).toBe(false);
-
-    // The cancelled sibling's late settlement is a no-op.
-    workerB.settle({ status: "cancelled" });
-    await until(async () => {
-      const fresh = await h.tree(wf.pursuitId);
-      return fresh.legs[0].attempts[0].workItems.length === 2;
-    });
-    const fresh = await h.tree(wf.pursuitId);
-    expect(
-      fresh.legs[0].attempts[0].workItems.map((item) => item.status).sort(),
-    ).toEqual(["Cancelled", "Failed"]);
-  });
-
-  it("exhausting max_attempts closes leg and pursuit Failed with the fail reason recorded", async () => {
-    const h = harness();
-    const wf = await h.delegate("goal", 2);
-    await h.launches[0].submitPlanner(plannerPayload());
-    await h.launches[1].submitWorker(
-      workerPayload({ is_pass: false, summary: "first failure" }),
-    );
-    await h.launches[2].submitPlanner(plannerPayload({ leg_goal: undefined }));
-    await h.launches[3].submitWorker(
-      workerPayload({ is_pass: false, summary: "second failure" }),
-    );
-
-    const tree = await h.tree(wf.pursuitId);
-    expect(tree.legs[0].status).toBe("Failed");
-    expect(tree.pursuit.status).toBe("Failed");
-    await expect(wf.terminal).resolves.toEqual({
-      status: "Failed",
-      summary: expect.stringContaining("second failure") as string,
-    });
-  });
-
-  it("retry context carries the failed attempt expanded and the budget counts all attempts", async () => {
-    const h = harness();
-    await h.delegate("goal", 3);
-    await h.launches[0].submitPlanner(plannerPayload());
-    await h.launches[1].submitWorker(
-      workerPayload({ is_pass: false, summary: "broke it", outcome: "details here" }),
-    );
-    const retryText = allMessageText(h.launches[2].messages);
-    expect(retryText).toContain("# Leg focus\nthe first slice");
-    expect(retryText).toContain("Failed attempt 1");
-    expect(retryText).toContain("broke it");
-    expect(retryText).toContain("details here");
-    expect(retryText).toContain("refocus");
-  });
-});
-
-describe("death and compose synthesis (§16 case 9)", () => {
-  it("a run that settles without ever submitting synthesizes a failed submission and retries", async () => {
-    const h = harness();
-    const wf = await h.delegate();
-    h.launches[0].settle({ status: "failed" });
-
-    await until(() => h.launches.length === 2, "the retry planner launched");
-    const tree = await h.tree(wf.pursuitId);
-    expect(tree.legs[0].attempts[0].status).toBe("Failed");
-    expect(tree.legs[0].attempts[0].failureReasons).toContain(
-      "run settled 'failed' without a submission",
-    );
-    expect(tree.legs[0].attempts[0].plan.status).toBe("Failed");
-    expect(h.launches, "the retry planner launched").toHaveLength(2);
-  });
-
-  it("a settlement after an in-run submission is a no-op against the terminal entity", async () => {
-    const h = harness();
-    const wf = await h.delegate();
-    await h.launches[0].submitPlanner(plannerPayload());
-    await h.launches[1].submitWorker(workerPayload());
-    h.launches[0].settle({ status: "completed" });
-    h.launches[1].settle({ status: "completed" });
-
-    await new Promise((resolve) => setTimeout(resolve, 5));
-    const tree = await h.tree(wf.pursuitId);
-    expect(tree.pursuit.status).toBe("Success");
-    expect(tree.legs[0].attempts, "no synthesized retry").toHaveLength(1);
-  });
-
-  it("a composer failure synthesizes context_script_error and the ordinary retry path bounds it", async () => {
-    const h = harness({
-      compose: () => Promise.reject(new Error("script exploded")),
-    });
-    const wf = await h.delegate("goal", 2);
-
-    await until(async () => {
-      const tree = await h.tree(wf.pursuitId);
-      return tree.pursuit.status === "Failed";
-    }, "pursuit failed after compose failures exhausted the budget");
-    const tree = await h.tree(wf.pursuitId);
-    expect(h.launches, "the launch never happens on compose failure").toHaveLength(0);
-    expect(tree.legs[0].attempts).toHaveLength(2);
-    for (const attempt of tree.legs[0].attempts) {
-      expect(attempt.status).toBe("Failed");
-      expect(attempt.failureReasons).toContain("context_script_error: script exploded");
-    }
-    await expect(wf.terminal).resolves.toMatchObject({ status: "Failed" });
-
-    const statuses = tree.legs[0].attempts.flatMap((attempt) => [
-      attempt.status,
-      attempt.plan.status,
+    expect(h.launches.map((launch) => launch.agentName)).toEqual([
+      "planner",
+      "worker",
+      "worker",
     ]);
+
+    await h.launches[1].submitWorker(
+      workerPayload({ is_pass: false, summary: "root failed" }),
+    );
+    const afterRootFailure = await h.tree(pursuit.pursuit_id);
+    const attempt = afterRootFailure.legs[0].attempts[0];
+    expect(attempt.status, "attempt stays open while unrelated work runs").toBe(
+      "Running",
+    );
     expect(
-      statuses.every((status) => status !== "Running" && status !== "NotStarted"),
-      "no entity stays Running",
-    ).toBe(true);
+      attempt.workItems.map((item) => [String(item.id), item.status]).sort(),
+    ).toEqual([
+      ["dependent", "Blocked"],
+      ["root", "Failed"],
+      ["unrelated", "Running"],
+    ]);
+
+    await h.launches[2].submitWorker(workerPayload());
+    const closed = await h.tree(pursuit.pursuit_id);
+    expect(closed.legs[0].attempts[0].status).toBe("Failed");
+    expect(closed.legs[0].attempts[0].failureReasons).toEqual([
+      "work_item root failed: root failed",
+      "work_item dependent blocked by failed dependency",
+    ]);
+    expect(closed.legs[0].attempts, "retry created after failed close").toHaveLength(2);
+    expect(h.launches.at(-1)?.agentName).toBe("planner");
+  });
+
+  it("allows retry plans to depend on successful prior-attempt work in the same leg-goal version", async () => {
+    const h = harness();
+    await h.create("ship retry", { maxAttempts: 2 });
+    await h.launches[0].submitPlanner(
+      plannerPayload({ work_items: [workItem("base"), workItem("breaker")] }),
+    );
+    await h.launches[1].submitWorker(workerPayload({ summary: "base done" }));
+    await h.launches[2].submitWorker(
+      workerPayload({ is_pass: false, summary: "breaker failed" }),
+    );
+
+    const retryPlanner = h.launches[3];
+    const accepted = await retryPlanner.submitPlanner(
+      plannerPayload({ work_items: [workItem("followup", ["base"])] }),
+    );
+    expect(accepted.ok).toBe(true);
+    expect(h.launches.at(-1)?.options?.submission?.kind).toBe("worker");
+    expect(allMessageText(h.launches.at(-1)?.messages ?? [])).toContain(
+      "base done",
+    );
+  });
+
+  it("closes failed after compose failures exhaust the attempt budget", async () => {
+    const h = harness({ compose: () => Promise.reject(new Error("script exploded")) });
+    const pursuit = await h.create("doomed", { maxAttempts: 2 });
+
+    await until(async () => {
+      const tree = await h.tree(pursuit.pursuit_id);
+      return tree.pursuit.status === "Failed";
+    }, "pursuit failed after compose failures");
+
+    const tree = await h.tree(pursuit.pursuit_id);
+    expect(tree.legs[0].attempts).toHaveLength(2);
+    expect(tree.legs[0].attempts[0].failureReasons).toEqual([
+      "context_script_error: script exploded",
+    ]);
+    await expect(pursuit.settle()).resolves.toMatchObject({ status: "Failed" });
+  });
+});
+
+describe("dynamic refocus", () => {
+  it("increments leg_goal_version, clears omitted next_leg_goal, and supersedes older attempts", async () => {
+    const h = harness();
+    const pursuit = await h.create("whole goal", { maxAttempts: 3 });
+    await h.launches[0].submitPlanner(
+      plannerPayload({ next_leg_goal: "later", work_items: [workItem("old")] }),
+    );
+    await h.launches[1].submitWorker(
+      workerPayload({ is_pass: false, summary: "old failed" }),
+    );
+
+    const retry = h.launches[2];
+    await retry.submitPlanner(
+      plannerPayload({ leg_goal: "narrowed goal", work_items: [workItem("new")] }),
+    );
+
+    const tree = await h.tree(pursuit.pursuit_id);
+    const leg = tree.legs[0];
+    expect(leg.legGoal).toBe("narrowed goal");
+    expect(leg.legGoalVersion).toBe(2);
+    expect(leg.nextLegGoal, "omitted successor cleared during refocus").toBeNull();
+    expect(leg.attempts[0].isConsistentWithLegGoal).toBe(false);
+    expect(leg.attempts[1].isConsistentWithLegGoal).toBe(true);
   });
 });

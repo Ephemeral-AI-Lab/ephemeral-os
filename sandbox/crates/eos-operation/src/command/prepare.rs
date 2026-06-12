@@ -101,7 +101,7 @@ fn finish_prepare(
     std::fs::write(
         inputs.session_dir.join("metadata.json"),
         serde_json::to_vec_pretty(&json!({
-            "command_session_id": inputs.command_id,
+            "command_id": inputs.command_id,
             "caller_id": inputs.caller_id,
             "invocation_id": inputs.invocation_id,
             "workspace": inputs.workspace_label,

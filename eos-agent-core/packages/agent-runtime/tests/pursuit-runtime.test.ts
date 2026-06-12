@@ -49,7 +49,7 @@ function create_variable_reference_map(ctx) {
       ? all_work_items.find((item) => item.id === ctx.current.work_item_id) ?? null
       : null;
   const dependencies = current_work_item
-    ? current_work_item.needs.map(
+    ? current_work_item.depends_on.map(
         (id) => all_work_items.find((item) => item.id === id) ?? { id },
       )
     : [];
@@ -70,7 +70,7 @@ function create_variable_reference_map(ctx) {
         };
   const goal_for_leg = (leg_id) => {
     const index = pursuit.legs.findIndex((leg) => leg.id === leg_id);
-    let goal = pursuit.goal;
+    let goal = pursuit.pursuit_goal;
     for (let cursor = 1; cursor <= index; cursor += 1) {
       goal = pursuit.legs[cursor - 1].next_leg_goal ?? goal;
     }
@@ -79,13 +79,13 @@ function create_variable_reference_map(ctx) {
   return {
     kind: ctx.kind,
     pursuit_goal: goal_for_leg(ctx.current.leg_id),
-    current_leg_goal: current_leg ? current_leg.focus : null,
+    current_leg_goal: current_leg ? current_leg.leg_goal : null,
     previous_attempt_outcome: attempt_outcome(previous_attempt),
-    work_item_description: current_work_item ? current_work_item.description : null,
-    work_item_spec: current_work_item ? current_work_item.spec : null,
+    work_item_title: current_work_item ? current_work_item.title : null,
+    item_spec: current_work_item ? current_work_item.spec : null,
     dependency_outcomes: dependencies.map((item) => ({
       id: item.id,
-      description: item.description ?? null,
+      title: item.title ?? null,
       status: item.status ?? "Unknown",
       summary: item.summary ?? null,
       outcome: item.outcome ?? null,
@@ -105,7 +105,7 @@ function get_initial_messages(vars) {
   if (vars.current_leg_goal === null) {
     messages.push(user("Declare this leg's focus and work items."));
   } else {
-    messages.push(user("# Leg focus\\n" + vars.current_leg_goal));
+    messages.push(user("# Current leg goal\\n" + vars.current_leg_goal));
     if (vars.previous_attempt_outcome !== null) {
       messages.push(user("# Previous attempt\\n" + JSON.stringify(vars.previous_attempt_outcome)));
     }
@@ -130,9 +130,9 @@ const { create_variable_reference_map } = require("./variable_reference_map.cjs"
 function get_initial_messages(vars) {
   const user = (text) => ({ role: "user", content: [{ type: "text", text }] });
   const messages = [user("# Pursuit goal\\n" + vars.pursuit_goal)];
-  messages.push(user("# Leg focus\\n" + (vars.current_leg_goal ?? "")));
-  messages.push(user("# Work item description\\n" + (vars.work_item_description ?? "")));
-  messages.push(user("# Work item\\n" + (vars.work_item_spec ?? "")));
+  messages.push(user("# Current leg goal\\n" + (vars.current_leg_goal ?? "")));
+  messages.push(user("# Work item title\\n" + (vars.work_item_title ?? "")));
+  messages.push(user("# Work item spec\\n" + (vars.item_spec ?? "")));
   if (vars.dependency_outcomes.length > 0) {
     messages.push(user("# Dependencies\\n" + JSON.stringify(vars.dependency_outcomes)));
   }
@@ -213,7 +213,9 @@ function pursuitRuntimeFixture(options: PursuitFixtureOptions): {
 function delegateTurn(goal: string): ScriptedTurn {
   return scriptedTurn([
     complete(
-      assistantMessage(toolUseBlock("tu_d", "delegate_pursuit", { goal })),
+      assistantMessage(
+        toolUseBlock("tu_d", "delegate_pursuit", { pursuit_goal: goal }),
+      ),
       "tool_use",
     ),
   ]);
@@ -268,16 +270,16 @@ describe("pursuit runtime end-to-end (§16 case 12)", () => {
         {
           id: "a",
           agent_name: "worker",
-          description: "first item",
-          work_item_spec: "do the first item",
-          needs: [],
+          title: "first item",
+          spec: "do the first item",
+          depends_on: [],
         },
         {
           id: "b",
           agent_name: "worker",
-          description: "second item",
-          work_item_spec: "do the second item",
-          needs: ["a"],
+          title: "second item",
+          spec: "do the second item",
+          depends_on: ["a"],
         },
       ]),
     ]);
@@ -305,16 +307,17 @@ describe("pursuit runtime end-to-end (§16 case 12)", () => {
     const plannerRequest = must(plannerClient.requests.at(0));
     expect(plannerRequest.messages).toEqual([
       userMessage("# Pursuit goal\nbuild the thing"),
-      userMessage("Declare this leg's focus and work items."),
+      userMessage("# Current leg goal\nbuild the thing"),
+      userMessage("Submit planner outcome with work items for this focus."),
     ]);
 
-    // Worker A: description + spec from the snapshot, no dependencies.
+    // Worker A: title + spec from the snapshot, no dependencies.
     const workerARequest = must(workerClient.requests.at(0));
     expect(workerARequest.messages).toEqual([
       userMessage("# Pursuit goal\nbuild the thing"),
-      userMessage("# Leg focus\nthe whole goal"),
-      userMessage("# Work item description\nfirst item"),
-      userMessage("# Work item\ndo the first item"),
+      userMessage("# Current leg goal\nthe whole goal"),
+      userMessage("# Work item title\nfirst item"),
+      userMessage("# Work item spec\ndo the first item"),
       userMessage("Submit worker outcome for this work item."),
     ]);
 
@@ -323,7 +326,7 @@ describe("pursuit runtime end-to-end (§16 case 12)", () => {
     const texts = workerBRequest.messages.flatMap((message) =>
       message.content.flatMap((block) => (block.type === "text" ? [block.text] : [])),
     );
-    expect(texts).toContain("# Work item description\nsecond item");
+    expect(texts).toContain("# Work item title\nsecond item");
     expect(
       texts.some(
         (text) =>

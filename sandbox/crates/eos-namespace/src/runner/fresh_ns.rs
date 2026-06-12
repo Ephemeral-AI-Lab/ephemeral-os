@@ -154,7 +154,7 @@ fn execute_plugin_service(
     }
     Ok(RunResult {
         exit_code,
-        tool_result: serde_json::json!({
+        payload: serde_json::json!({
             "success": exit_code == 0,
             "workspace": "ephemeral",
             "timings": {
@@ -209,7 +209,7 @@ fn execute_shell(
     };
     Ok(RunResult {
         exit_code,
-        tool_result: serde_json::json!({
+        payload: serde_json::json!({
             "success": exit_code == 0,
             "workspace": "ephemeral",
             "timings": {
@@ -255,7 +255,7 @@ fn write_if_exists(path: impl AsRef<Path>, value: impl AsRef<OsStr>) -> Result<(
 fn error_result(exit_code: i32, kind: &str, message: &str) -> RunResult {
     RunResult {
         exit_code,
-        tool_result: serde_json::json!({
+        payload: serde_json::json!({
             "success": false,
             "workspace": "ephemeral",
             "status": "error",

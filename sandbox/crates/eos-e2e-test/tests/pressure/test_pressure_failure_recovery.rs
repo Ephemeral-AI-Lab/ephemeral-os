@@ -19,7 +19,7 @@ fn start_sleep(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> Result<Stri
             "timeout_seconds": 120,}),
     )?;
     assert_eq!(as_str(&started, "status")?, "running");
-    Ok(as_str(&started, "command_session_id")?.to_owned())
+    Ok(as_str(&started, "command_id")?.to_owned())
 }
 
 #[test]
@@ -29,10 +29,7 @@ fn daemon_recovers_after_midflight_cancel() -> Result<()> {
     };
     let lease = pool.acquire()?;
     let id = start_sleep(&lease, "midflight")?;
-    lease.call(
-        catalog::SANDBOX_COMMAND_CANCEL,
-        json!({"command_session_id": id}),
-    )?;
+    lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": id}))?;
     let ready = lease.call_ok(catalog::SANDBOX_RUNTIME_READY, json!({}))?;
     assert!(
         as_bool(&ready, "ready")?,
@@ -67,10 +64,7 @@ fn cancel_burst_returns_sessions_and_leases_to_zero() -> Result<()> {
     );
 
     for id in ids {
-        lease.call(
-            catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_session_id": id}),
-        )?;
+        lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": id}))?;
     }
     // Both surfaces must drain together: a leak in either (stranded PTY child OR
     // stranded layer lease) leaves a nonzero count.
@@ -121,7 +115,7 @@ fn command_sessions_ladder_1_3_6_12() -> Result<()> {
                 "running",
                 "command ladder should start long-running sessions at level {level}: {response}"
             );
-            ids.push(as_str(&response, "command_session_id")?.to_owned());
+            ids.push(as_str(&response, "command_id")?.to_owned());
         }
 
         let count = lease.call_ok(catalog::SANDBOX_COMMAND_COUNT, json!({}))?;
@@ -137,10 +131,7 @@ fn command_sessions_ladder_1_3_6_12() -> Result<()> {
         );
 
         for id in ids {
-            let cancel = lease.call(
-                catalog::SANDBOX_COMMAND_CANCEL,
-                json!({"command_session_id": id}),
-            )?;
+            let cancel = lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": id}))?;
             assert!(
                 matches!(as_str(&cancel, "status")?, "cancelled" | "ok" | "error"),
                 "cancel should return structured status at level {level}: {cancel}"
@@ -167,10 +158,7 @@ fn cancel_storm() -> Result<()> {
         .map(|index| start_sleep(&lease, &format!("storm-{index}")))
         .collect::<Result<_>>()?;
     for id in ids {
-        let cancel = lease.call(
-            catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_session_id": id}),
-        )?;
+        let cancel = lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": id}))?;
         assert!(
             matches!(as_str(&cancel, "status")?, "cancelled" | "ok" | "error"),
             "cancel storm should return structured status: {cancel}"

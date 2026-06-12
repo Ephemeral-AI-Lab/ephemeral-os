@@ -45,7 +45,7 @@ export function submitPlannerOutcomeTool(
   });
 }
 
-/** Unique local ids, declared `needs`, no cycles - correctable in-run. */
+/** Unique local ids and no in-payload cycles - correctable in-run. */
 export function plannerStructureError(
   payload: PlannerOutcomePayload,
 ): string | undefined {
@@ -54,29 +54,27 @@ export function plannerStructureError(
     if (ids.has(item.id)) return `duplicate work item id "${item.id}"`;
     ids.add(item.id);
   }
-  for (const item of payload.work_items) {
-    for (const need of item.needs) {
-      if (!ids.has(need)) {
-        return `work item "${item.id}" needs undeclared id "${need}"`;
-      }
-    }
-  }
-  const needsOf = new Map(payload.work_items.map((item) => [item.id, item.needs]));
+  const dependsOn = new Map(
+    payload.work_items.map((item) => [
+      item.id,
+      item.depends_on.filter((dependency) => ids.has(dependency)),
+    ]),
+  );
   const done = new Set<string>();
   const visiting = new Set<string>();
   const hasCycle = (id: string): boolean => {
     if (done.has(id)) return false;
     if (visiting.has(id)) return true;
     visiting.add(id);
-    for (const need of needsOf.get(id) ?? []) {
-      if (hasCycle(need)) return true;
+    for (const dependency of dependsOn.get(id) ?? []) {
+      if (hasCycle(dependency)) return true;
     }
     visiting.delete(id);
     done.add(id);
     return false;
   };
   for (const item of payload.work_items) {
-    if (hasCycle(item.id)) return "work item `needs` contain a dependency cycle";
+    if (hasCycle(item.id)) return "work item `depends_on` contains a dependency cycle";
   }
   return undefined;
 }
@@ -87,9 +85,9 @@ function plannerContent(payload: PlannerOutcomePayload): JsonObject {
     work_items: payload.work_items.map((item) => ({
       id: item.id,
       agent_name: item.agent_name,
-      description: item.description,
-      work_item_spec: item.work_item_spec,
-      needs: [...item.needs],
+      title: item.title,
+      spec: item.spec,
+      depends_on: [...item.depends_on],
     })),
   };
   if (payload.leg_goal !== undefined) {

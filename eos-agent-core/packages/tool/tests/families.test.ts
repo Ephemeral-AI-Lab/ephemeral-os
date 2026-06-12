@@ -153,9 +153,9 @@ describe("submission tool family", () => {
           {
             id: "w1",
             agent_name: "worker",
-            description: "do it",
-            work_item_spec: "spec",
-            needs: [],
+            title: "do it",
+            spec: "spec",
+            depends_on: [],
           },
         ],
       },
@@ -169,9 +169,9 @@ describe("submission tool family", () => {
         {
           id: "w1",
           agent_name: "worker",
-          description: "do it",
-          work_item_spec: "spec",
-          needs: [],
+          title: "do it",
+          spec: "spec",
+          depends_on: [],
         },
       ],
     });

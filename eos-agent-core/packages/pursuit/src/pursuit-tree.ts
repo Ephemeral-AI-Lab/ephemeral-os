@@ -138,7 +138,7 @@ export function decodeStringList(raw: string): string[] {
   if (!Array.isArray(parsed) || parsed.some((value) => typeof value !== "string")) {
     throw new Error(`expected JSON string array: ${raw}`);
   }
-  return parsed;
+  return parsed.map((value) => String(value));
 }
 
 function decodeDependsOn(raw: string): WorkItemState["dependsOn"][number][] {

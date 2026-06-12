@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
     "crates/eos-operation",
-    "crates/eos-command-session",
+    "crates/eos-command",
     "crates/eos-config",
     "crates/eosd",
     "crates/eos-daemon",
@@ -50,7 +50,7 @@ netlink-sys = "0.8"
 toml = "0.8"
 
 # Internal crates — path deps (the edges below ARE the architecture).
-eos-command-session = { path = "crates/eos-command-session" }
+eos-command = { path = "crates/eos-command" }
 eos-config = { path = "crates/eos-config" }
 eos-layerstack = { path = "crates/eos-layerstack" }
 eos-operation = { path = "crates/eos-operation" }

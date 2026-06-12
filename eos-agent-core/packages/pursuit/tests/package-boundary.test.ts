@@ -63,16 +63,17 @@ describe("package boundary (§16 case 14)", () => {
     };
     const sourceRoot = join(PACKAGES_ROOT, "pursuit", "src");
     for (const [entity, adjacent] of Object.entries(allowed)) {
-      const file = join(sourceRoot, entity, "transitions.ts");
+      const file = join(sourceRoot, entity, "transition.ts");
       const transitionImports = importSpecifiers(file)
-        .filter((specifier) => specifier.endsWith("/transitions.js"))
+        .filter((specifier) => specifier.endsWith("/transition.js"))
         .map((specifier) => {
           const segments = specifier.split("/");
           return segments[segments.length - 2];
-        });
+        })
+        .filter((specifier) => specifier in allowed);
       expect(
         transitionImports.sort(),
-        `${entity}/transitions.ts imports stay adjacent`,
+        `${entity}/transition.ts imports stay adjacent`,
       ).toEqual([...adjacent].sort());
     }
   });

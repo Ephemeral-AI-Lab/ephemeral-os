@@ -75,7 +75,7 @@ fn command_sessions_accept_stdin_and_release_on_cancel() -> Result<()> {
             "timeout_seconds": 120,}),
     )?;
     assert_eq!(as_str(&started, "status")?, "running");
-    let session_id = as_str(&started, "command_session_id")?.to_owned();
+    let session_id = as_str(&started, "command_id")?.to_owned();
     assert!(
         started["output"]["stdout"]
             .as_str()
@@ -92,7 +92,7 @@ fn command_sessions_accept_stdin_and_release_on_cancel() -> Result<()> {
     let stdin = lease.call_ok(
         catalog::SANDBOX_COMMAND_WRITE_STDIN,
         json!({
-            "command_session_id": session_id,
+            "command_id": session_id,
             "chars": "line-one\n",
             "yield_time_ms": 2000,}),
     )?;
@@ -109,7 +109,7 @@ fn command_sessions_accept_stdin_and_release_on_cancel() -> Result<()> {
 
     let cancel = lease.call(
         catalog::SANDBOX_COMMAND_CANCEL,
-        json!({"command_session_id": &session_id}),
+        json!({"command_id": &session_id}),
     )?;
     assert!(matches!(
         as_str(&cancel, "status")?,
@@ -143,7 +143,7 @@ fn command_sessions_cancel_cleans_descendant_processes() -> Result<()> {
             "timeout_seconds": 120,}),
     )?;
     assert_eq!(as_str(&started, "status")?, "running");
-    let session_id = as_str(&started, "command_session_id")?.to_owned();
+    let session_id = as_str(&started, "command_id")?.to_owned();
     // Emulation can slip the `echo descendant-ready` past the first 500ms yield;
     // poll the transcript for it instead of reading only the initial snapshot.
     wait_for_command_stdout_contains(&lease, &session_id, "descendant-ready")?;
@@ -160,7 +160,7 @@ fn command_sessions_cancel_cleans_descendant_processes() -> Result<()> {
 
     let cancel = lease.call(
         catalog::SANDBOX_COMMAND_CANCEL,
-        json!({"command_session_id": &session_id}),
+        json!({"command_id": &session_id}),
     )?;
     assert!(matches!(
         as_str(&cancel, "status")?,

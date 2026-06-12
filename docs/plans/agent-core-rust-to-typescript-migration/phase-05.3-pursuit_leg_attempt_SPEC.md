@@ -51,28 +51,28 @@ Current phase status:
 
 Acceptance checklist:
 
-- [ ] Rename `eos-agent-core/packages/workflow/` to
+- [x] Rename `eos-agent-core/packages/workflow/` to
   `eos-agent-core/packages/pursuit/`.
-- [ ] Rename package metadata from `@eos/workflow` to `@eos/pursuit`.
-- [ ] Update workspace package references from `@eos/workflow` to
+- [x] Rename package metadata from `@eos/workflow` to `@eos/pursuit`.
+- [x] Update workspace package references from `@eos/workflow` to
   `@eos/pursuit`.
-- [ ] Rename product source files according to the active file-level map:
+- [x] Rename product source files according to the active file-level map:
   `launcher.ts` to `agent-launcher.ts`, every entity `transitions.ts` to
   singular `transition.ts`, `workflow-tree.ts` to `pursuit-tree.ts`, and
   `workflow-context.ts` to `pursuit-context.ts`.
-- [ ] Move projection code under `context-engine/projection/`:
+- [x] Move projection code under `context-engine/projection/`:
   `context-projection.ts` to `context-engine/projection/mirror.ts`,
   `archive/listing.ts` to `context-engine/projection/listing.ts`,
   `archive/paths.ts` to `context-engine/projection/paths.ts`, and
   `archive/resolve.ts` to `context-engine/projection/resolve.ts`.
-- [ ] Keep package exports narrow: pursuit service, composer seam, launch port
+- [x] Keep package exports narrow: pursuit service, composer seam, launch port
   types, and public DTO/contract types only.
-- [ ] Ensure `@eos/pursuit` imports only allowed package dependencies:
+- [x] Ensure `@eos/pursuit` imports only allowed package dependencies:
   `@eos/contracts`, `@eos/db`, and standard/library modules.
-- [ ] Ensure `@eos/pursuit` does not import `@eos/agent-runtime`,
+- [x] Ensure `@eos/pursuit` does not import `@eos/agent-runtime`,
   `@eos/tool`, supervisor/background packages, profile loading, runtime
   composition, or engine internals.
-- [ ] Run a layout/import boundary scan and record evidence in the tracker.
+- [x] Run a layout/import boundary scan and record evidence in the tracker.
 
 Phase gate:
 
@@ -85,26 +85,26 @@ and dependency direction match this spec. Phase 02 remains Blocked until then.
 
 Acceptance checklist:
 
-- [ ] Rename public contract IDs, schemas, and DTOs from workflow/iteration to
+- [x] Rename public contract IDs, schemas, and DTOs from workflow/iteration to
   pursuit/leg vocabulary.
-- [ ] Add `CreatePursuitInput` with dynamic and predefined shapes.
-- [ ] Validate `leg_goal_mode` from payload shape and reject mismatches.
-- [ ] Treat every `leg_goals` entry as an opaque prose string, equivalent in kind
+- [x] Add `CreatePursuitInput` with dynamic and predefined shapes.
+- [x] Validate `leg_goal_mode` from payload shape and reject mismatches.
+- [x] Treat every `leg_goals` entry as an opaque prose string, equivalent in kind
   to `pursuit_goal`.
-- [ ] Add `leg_goal`, `leg_goal_version`, `leg_goal_provenance`,
+- [x] Add `leg_goal`, `leg_goal_version`, `leg_goal_provenance`,
   `is_leg_goal_mutatable`, and `next_leg_goal` to leg contracts.
-- [ ] Add nullable `outcome` fields to pursuit, leg, attempt, and work-item
+- [x] Add nullable `outcome` fields to pursuit, leg, attempt, and work-item
   snapshots.
-- [ ] Add work-item `Blocked` status without adding `Blocked` to pursuit, leg, or
+- [x] Add work-item `Blocked` status without adding `Blocked` to pursuit, leg, or
   attempt status unions.
-- [ ] Replace scalar attempt `fail_reason` with list-shaped
+- [x] Replace scalar attempt `fail_reason` with list-shaped
   `failure_reasons`.
-- [ ] Rename DB row types and migration schema to `pursuits` / `legs`.
-- [ ] Persist predefined leg goals, plan declarations
+- [x] Rename DB row types and migration schema to `pursuits` / `legs`.
+- [x] Persist predefined leg goals, plan declarations
   `declared_leg_goal` / `declared_next_leg_goal`, `leg_goal_version` audit
   stamps, work-item `title`, `spec`, leg-scoped dependency edges, `Blocked`
   status, and attempt failure-reason lists.
-- [ ] Add or update contract and schema tests covering dynamic input,
+- [x] Add or update contract and schema tests covering dynamic input,
   predefined input, old field rejection, `Blocked`, and `leg_goal_version`.
 
 Phase gate:
@@ -119,25 +119,25 @@ product surfaces. Phase 03 remains Blocked until then.
 
 Acceptance checklist:
 
-- [ ] Expose caller-agnostic `createPursuit(...)` / handle behavior with
+- [x] Expose caller-agnostic `createPursuit(...)` / handle behavior with
   `pursuit_id`, `cancel(...)`, and `settle()`.
-- [ ] Keep human-mode router/frontend implementation out of this phase while
+- [x] Keep human-mode router/frontend implementation out of this phase while
   avoiding agent-tool-only assumptions in the service.
-- [ ] Create the first leg and first attempt at pursuit creation time.
-- [ ] Dynamic mode sets first `leg_goal` from `pursuit_goal`.
-- [ ] Predefined mode sets each leg goal from `leg_goals[sequence - 1]`.
-- [ ] Dynamic successor legs inherit `leg_goal` from the previous successful
+- [x] Create the first leg and first attempt at pursuit creation time.
+- [x] Dynamic mode sets first `leg_goal` from `pursuit_goal`.
+- [x] Predefined mode sets each leg goal from `leg_goals[sequence - 1]`.
+- [x] Dynamic successor legs inherit `leg_goal` from the previous successful
   leg's `next_leg_goal`.
-- [ ] Reject planner `leg_goal` / `next_leg_goal` declarations in predefined
+- [x] Reject planner `leg_goal` / `next_leg_goal` declarations in predefined
   mode without consuming attempt budget.
-- [ ] Support dynamic refocus by `leg_goal`, incrementing `leg_goal_version`,
+- [x] Support dynamic refocus by `leg_goal`, incrementing `leg_goal_version`,
   relocating prior live attempts under `superseded/`, and clearing standing
   `next_leg_goal` when the same payload omits it.
-- [ ] Reject any attempt to clear standing `next_leg_goal` without a refocusing
+- [x] Reject any attempt to clear standing `next_leg_goal` without a refocusing
   `leg_goal`.
-- [ ] Keep effective goal truth derived from append-only declarations, with
+- [x] Keep effective goal truth derived from append-only declarations, with
   `leg_goal_version` used only as audit metadata.
-- [ ] Add creation, refocus, predefined-mode, and declaration-derivation tests.
+- [x] Add creation, refocus, predefined-mode, and declaration-derivation tests.
 
 Phase gate:
 
@@ -151,29 +151,29 @@ semantics all pass focused tests. Phase 04 remains Blocked until then.
 
 Acceptance checklist:
 
-- [ ] Replace planner work-item payload fields with `title`, `spec`, and
+- [x] Replace planner work-item payload fields with `title`, `spec`, and
   `depends_on`.
-- [ ] Reject old planner work-item fields `description`, `work_item_spec`, and
+- [x] Reject old planner work-item fields `description`, `work_item_spec`, and
   `needs` according to the active schema strictness policy.
-- [ ] Accept dynamic planner payloads that omit both `leg_goal` and
+- [x] Accept dynamic planner payloads that omit both `leg_goal` and
   `next_leg_goal`.
-- [ ] Accept successor-only dynamic payloads containing `next_leg_goal` without
+- [x] Accept successor-only dynamic payloads containing `next_leg_goal` without
   `leg_goal`.
-- [ ] Reject cross-attempt `depends_on` when the same planner payload submits a
+- [x] Reject cross-attempt `depends_on` when the same planner payload submits a
   replacement `leg_goal`.
-- [ ] Validate `depends_on` targets against the current non-superseded
+- [x] Validate `depends_on` targets against the current non-superseded
   `leg_goal_version`.
-- [ ] Permit `depends_on` on previous attempts only when the target is in the
+- [x] Permit `depends_on` on previous attempts only when the target is in the
   same leg, not superseded, and shares the same effective leg-goal version.
-- [ ] Reject `depends_on` targets from future attempts, another leg, superseded
+- [x] Reject `depends_on` targets from future attempts, another leg, superseded
   attempts, or earlier leg-goal versions.
-- [ ] Enforce work-item id uniqueness across the current attempt plus all
+- [x] Enforce work-item id uniqueness across the current attempt plus all
   non-superseded prior attempts in the same leg-goal version.
-- [ ] Stamp accepted work items and dependency edges with current
+- [x] Stamp accepted work items and dependency edges with current
   `leg_goal_version` audit metadata.
-- [ ] Keep correctable validation failures in-run and avoid consuming attempt
+- [x] Keep correctable validation failures in-run and avoid consuming attempt
   budget for correctable planner payload errors.
-- [ ] Add dependency-validation tests for same-attempt, prior-attempt,
+- [x] Add dependency-validation tests for same-attempt, prior-attempt,
   superseded, refocused, dangling, duplicate, and cyclic cases.
 
 Phase gate:
@@ -188,31 +188,31 @@ leg-goal versions. Phase 05 remains Blocked until then.
 
 Acceptance checklist:
 
-- [ ] Implement scheduler operations as domain steps:
+- [x] Implement scheduler operations as domain steps:
   `applyPlannerSettlement`, `applyWorkItemSettlement`,
   `propagateDependencyBlocks`, `claimReadyWorkItems`, and
   `reconcileAttemptStatus`.
-- [ ] Enforce the hard launch gate: a work item is claimable only when every
+- [x] Enforce the hard launch gate: a work item is claimable only when every
   direct `depends_on` target is terminal `Success`.
-- [ ] Recheck the launch gate in the claim query, post-commit launch guard, and
+- [x] Recheck the launch gate in the claim query, post-commit launch guard, and
   stale-claim recheck.
-- [ ] Ensure a `Running` work item is never converted to `Blocked`.
-- [ ] Mark only `NotStarted` descendants as `Blocked` when dependency block
+- [x] Ensure a `Running` work item is never converted to `Blocked`.
+- [x] Mark only `NotStarted` descendants as `Blocked` when dependency block
   propagation finds direct dependencies in `Failed` or `Blocked`.
-- [ ] Repeat dependency block propagation until stable so transitive dependents
+- [x] Repeat dependency block propagation until stable so transitive dependents
   become `Blocked`.
-- [ ] Leave unrelated `Running` work items running after a sibling fails.
-- [ ] Allow unrelated `NotStarted` work items to launch later when their own
+- [x] Leave unrelated `Running` work items running after a sibling fails.
+- [x] Allow unrelated `NotStarted` work items to launch later when their own
   dependencies become `Success`.
-- [ ] Derive attempt `Success` only when every work item is `Success`.
-- [ ] Derive attempt `Failed` only after at least one work item is
+- [x] Derive attempt `Success` only when every work item is `Success`.
+- [x] Derive attempt `Failed` only after at least one work item is
   `Failed` / `Blocked` and no work item remains `Running` or `NotStarted`.
-- [ ] Preserve planner-death behavior for attempts with no accepted work graph.
-- [ ] Create retry attempts only after `reconcileAttemptStatus` closes the
+- [x] Preserve planner-death behavior for attempts with no accepted work graph.
+- [x] Create retry attempts only after `reconcileAttemptStatus` closes the
   current attempt `Failed` and retry budget remains.
-- [ ] Render and persist list-shaped failure reasons for planner failures,
+- [x] Render and persist list-shaped failure reasons for planner failures,
   context-composition failures, failed work items, and blocked work items.
-- [ ] Add scheduler tests for launch gating, transitive blocking, unrelated work
+- [x] Add scheduler tests for launch gating, transitive blocking, unrelated work
   continuation, delayed failure close, retry creation, and no running-to-blocked
   transition.
 
@@ -228,25 +228,25 @@ Phase 06 remains Blocked until then.
 
 Acceptance checklist:
 
-- [ ] Render context paths under `pursuit_<id>/leg_<id>/...`.
-- [ ] Render `leg_goal.md` at leg creation with provenance and current effective
+- [x] Render context paths under `pursuit_<id>/leg_<id>/...`.
+- [x] Render `leg_goal.md` at leg creation with provenance and current effective
   goal.
-- [ ] Render `next_leg_goal.md` only when an effective successor exists.
-- [ ] Render `superseded/attempt_<id>/` for attempts displaced by dynamic
+- [x] Render `next_leg_goal.md` only when an effective successor exists.
+- [x] Render `superseded/attempt_<id>/` for attempts displaced by dynamic
   refocus.
-- [ ] Remove active rendered paths containing `/plan_`, `workflow_`,
+- [x] Remove active rendered paths containing `/plan_`, `workflow_`,
   `iteration_`, `focus.md`, `deferred_goal.md`, or `archived/`.
-- [ ] Render work item static files as `title.md` and `spec.md`.
-- [ ] Render `failure_reasons.md` as a list only for failed attempts.
-- [ ] Render attempt, leg, and pursuit `outcome.md` according to Phase 05.2
+- [x] Render work item static files as `title.md` and `spec.md`.
+- [x] Render `failure_reasons.md` as a list only for failed attempts.
+- [x] Render attempt, leg, and pursuit `outcome.md` according to Phase 05.2
   aggregation renamed to pursuit/leg vocabulary.
-- [ ] Expose snapshot `outcome` fields as `null` while their entities are not
+- [x] Expose snapshot `outcome` fields as `null` while their entities are not
   terminal.
-- [ ] Expose snapshot `leg_goal_version` audit stamps for legs, attempts, and
+- [x] Expose snapshot `leg_goal_version` audit stamps for legs, attempts, and
   work items.
-- [ ] Write disk mirror output under `.eos-agents/pursuit/context`.
-- [ ] Make context search exclude `superseded/` by default unless scoped.
-- [ ] Add projection, mirror, snapshot, search/listing, and creation-schedule
+- [x] Write disk mirror output under `.eos-agents/pursuit/context`.
+- [x] Make context search exclude `superseded/` by default unless scoped.
+- [x] Add projection, mirror, snapshot, search/listing, and creation-schedule
   tests.
 
 Phase gate:
@@ -261,25 +261,25 @@ Phase 07 remains Blocked until then.
 
 Acceptance checklist:
 
-- [ ] Rename `delegate_workflow` to `delegate_pursuit`.
-- [ ] Expose background session type `"pursuit"`.
-- [ ] Keep cancellation routed through `cancel_background_session`.
-- [ ] Make `delegate_pursuit` an adapter over `createPursuit(...)`.
-- [ ] Rename runtime config fields such as `workflowDb`,
+- [x] Rename `delegate_workflow` to `delegate_pursuit`.
+- [x] Expose background session type `"pursuit"`.
+- [x] Keep cancellation routed through `cancel_background_session`.
+- [x] Make `delegate_pursuit` an adapter over `createPursuit(...)`.
+- [x] Rename runtime config fields such as `workflowDb`,
   `workflowContextRoot`, and `workflowScriptsDir` to pursuit equivalents.
-- [ ] Implement the `@eos/pursuit` launch port in `@eos/agent-runtime` using
+- [x] Implement the `@eos/pursuit` launch port in `@eos/agent-runtime` using
   `startRun(...)`, parent run stamping, cancellation signals, transcript wiring,
   and submission binding.
-- [ ] Rename profile field `workflow_context_script` to
+- [x] Rename profile field `workflow_context_script` to
   `pursuit_context_script`.
-- [ ] Move active scripts to `.eos-agents/pursuit/scripts/`.
-- [ ] Rewrite `planner.cjs`, `worker.cjs`, and `variable_reference_map.cjs` for
+- [x] Move active scripts to `.eos-agents/pursuit/scripts/`.
+- [x] Rewrite `planner.cjs`, `worker.cjs`, and `variable_reference_map.cjs` for
   pursuit/leg DTOs and path-addressed initial messages.
-- [ ] Ensure planner prompts include dynamic/predefined payload rules,
+- [x] Ensure planner prompts include dynamic/predefined payload rules,
   successor-scope guidance, and the no-standalone-clear rule.
-- [ ] Ensure worker prompts include only assigned work, current leg goal, direct
+- [x] Ensure worker prompts include only assigned work, current leg goal, direct
   successful dependency outcomes, and the prohibition on planning/changing legs.
-- [ ] Update tool descriptions, terminal submission guidance, advisory prompts,
+- [x] Update tool descriptions, terminal submission guidance, advisory prompts,
   runtime tests, and tool-family tests.
 
 Phase gate:
@@ -294,21 +294,21 @@ end. Phase 08 remains Blocked until then.
 
 Acceptance checklist:
 
-- [ ] Run focused Vitest suites listed in this spec and record command output.
-- [ ] Run `pnpm run typecheck`.
-- [ ] Run `pnpm run lint`.
-- [ ] Run `pnpm run test`.
-- [ ] Run docs hygiene with `git diff --check -- docs/plans/agent-core-rust-to-typescript-migration eos-agent-core .eos-agents/pursuit/scripts`.
-- [ ] Run identifier-boundary scans for old active vocabulary.
-- [ ] Confirm no active `@eos/workflow`, `packages/workflow`,
+- [x] Run focused Vitest suites listed in this spec and record command output.
+- [x] Run `pnpm run typecheck`.
+- [x] Run `pnpm run lint`.
+- [x] Run `pnpm run test`.
+- [x] Run docs hygiene with `git diff --check -- docs/plans/agent-core-rust-to-typescript-migration eos-agent-core .eos-agents/pursuit/scripts`.
+- [x] Run identifier-boundary scans for old active vocabulary.
+- [x] Confirm no active `@eos/workflow`, `packages/workflow`,
   `delegate_workflow`, `workflow_context`, `workflow_<id>`, `iteration_<id>`,
   `focus.md`, `deferred_goal.md`, `archived/`, work-item `description.md`, or
   work-item `needs` remains in product code/scripts/tests.
-- [ ] Confirm historical specs/notes are the only remaining old-vocabulary
+- [x] Confirm historical specs/notes are the only remaining old-vocabulary
   references outside one-time migration aliases.
-- [ ] Confirm `packages/pursuit/src/projection` does not exist and projection
+- [x] Confirm `packages/pursuit/src/projection` does not exist and projection
   lives under `context-engine/projection/`.
-- [ ] Update this tracker with final evidence and mark Phase 08 `Complete`.
+- [x] Update this tracker with final evidence and mark Phase 08 `Complete`.
 
 Phase gate:
 

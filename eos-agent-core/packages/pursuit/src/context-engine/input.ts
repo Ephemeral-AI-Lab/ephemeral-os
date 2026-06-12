@@ -3,16 +3,19 @@ import type {
   LegId,
   PlanId,
   PlannerContextInput,
-  WorkItemId,
-  WorkerContextInput,
   PursuitContextAttempt,
   PursuitContextLeg,
   PursuitContextSnapshot,
+  WorkItemId,
+  WorkerContextInput,
 } from "@eos/contracts";
 
-import { attemptDirPath, legDirName, pursuitRootPath } from "../archive/paths.js";
+import { composeAttemptOutcome } from "../attempt/context.js";
 import type { AttemptState } from "../attempt/state.js";
+import { composeLegOutcome } from "../leg/context.js";
 import type { LegState } from "../leg/state.js";
+import { composePursuitOutcome } from "../pursuit/context.js";
+import { attemptDirPath, legDirName, pursuitRootPath } from "./projection/paths.js";
 import type { PursuitTree } from "../pursuit-tree.js";
 
 export interface PlannerLaunchLocator {
@@ -27,12 +30,6 @@ export interface WorkerLaunchLocator {
   workItemId: WorkItemId;
 }
 
-/**
- * Pure §7 script-input builders over the `PursuitTree`: the full
- * serialized `pursuit_context` snapshot plus the current launch locator.
- * No convenience variables are precomputed - the composer (default policy
- * or user script) derives its own locals from `pursuit_context`.
- */
 export function buildPlannerContextInput(
   tree: PursuitTree,
   locator: PlannerLaunchLocator,
@@ -65,38 +62,41 @@ export function buildWorkerContextInput(
   };
 }
 
-/** ALL facts, including ones the default policy hides - hiding is policy. */
 export function snapshotPursuitContext(tree: PursuitTree): PursuitContextSnapshot {
   const root = pursuitRootPath(tree.pursuit.id);
   return {
     pursuit: {
       id: tree.pursuit.id,
-      goal: tree.pursuit.goal,
+      pursuit_goal: tree.pursuit.pursuitGoal,
+      leg_goal_mode: tree.pursuit.legGoalMode,
       status: tree.pursuit.status,
       context_path: root,
-      legs: tree.legs.map((leg) =>
-        snapshotLeg(root, leg),
-      ),
+      outcome: tree.pursuit.status === "Running" || tree.pursuit.status === "NotStarted"
+        ? null
+        : composePursuitOutcome(tree.pursuit, tree.legs),
+      legs: tree.legs.map((leg) => snapshotLeg(root, leg)),
     },
   };
 }
 
-function snapshotLeg(
-  root: string,
-  leg: LegState,
-): PursuitContextLeg {
+function snapshotLeg(root: string, leg: LegState): PursuitContextLeg {
   return {
     id: leg.id,
     sequence: leg.sequence,
     origin: leg.origin,
     status: leg.status,
-    focus: leg.focus,
+    leg_goal: leg.legGoal,
+    leg_goal_version: leg.legGoalVersion,
+    leg_goal_provenance: leg.legGoalProvenance,
+    is_leg_goal_mutatable: leg.isLegGoalMutatable,
     next_leg_goal: leg.nextLegGoal,
     max_attempts: leg.maxAttempts,
     context_path: `${root}/${legDirName(leg.id)}`,
-    attempts: leg.attempts.map((attempt) =>
-      snapshotAttempt(root, leg, attempt),
-    ),
+    outcome:
+      leg.status === "Success" || leg.status === "Failed"
+        ? composeLegOutcome(leg)
+        : null,
+    attempts: leg.attempts.map((attempt) => snapshotAttempt(root, leg, attempt)),
   };
 }
 
@@ -110,11 +110,14 @@ function snapshotAttempt(
     id: attempt.id,
     sequence: attempt.sequence,
     status: attempt.status,
-    failure_reasons: attempt.failureReasons,
+    failure_reasons: [...attempt.failureReasons],
     is_consistent_with_leg_goal: attempt.isConsistentWithLegGoal,
     context_path: attemptPath,
-    // No plan context_path: the rendered planner summary is the
-    // attempt-owned `${attemptPath}/plan_summary.md` (§2.7).
+    outcome:
+      attempt.status === "Success" || attempt.status === "Failed"
+        ? composeAttemptOutcome(attempt)
+        : null,
+    leg_goal_version: attempt.legGoalVersion,
     plan: {
       id: attempt.plan.id,
       status: attempt.plan.status,
@@ -122,18 +125,20 @@ function snapshotAttempt(
       declared_next_leg_goal: attempt.plan.declaredNextLegGoal,
       summary: attempt.plan.summary,
       agent_run_id: attempt.plan.agentRunId,
+      leg_goal_version: attempt.plan.legGoalVersion,
     },
     work_items: attempt.workItems.map((item) => ({
       id: item.id,
       agent_name: item.agentName,
-      description: item.description,
+      title: item.title,
       spec: item.spec,
-      needs: [...item.needs],
+      depends_on: [...item.dependsOn],
       status: item.status,
       summary: item.summary,
       outcome: item.outcome,
       agent_run_id: item.agentRunId,
       context_path: `${attemptPath}/work_item_${item.id}`,
+      leg_goal_version: item.legGoalVersion,
     })),
   };
 }

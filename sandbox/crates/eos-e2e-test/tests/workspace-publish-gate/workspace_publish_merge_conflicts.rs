@@ -257,7 +257,7 @@ fn atomic_overlay_changeset_drops_all_paths_on_stale_conflict() -> Result<()> {
             "timeout_seconds": 30,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
-    let session_id = as_str(&exec, "command_session_id")?.to_owned();
+    let session_id = as_str(&exec, "command_id")?.to_owned();
     // The marker can slip past the 500ms yield window under emulation (a slow
     // boot-to-dispatch leaves stdout uncaptured at yield), so poll read_progress
     // until it surfaces instead of asserting on the yielded snapshot. This also
@@ -308,7 +308,7 @@ fn atomic_overlay_changeset_drops_all_paths_on_stale_conflict() -> Result<()> {
     if body.is_err() {
         let _ = lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_session_id": session_id}),
+            json!({"command_id": session_id}),
         );
         let _ = wait_for_session_count(&lease, 0);
     }
@@ -340,7 +340,7 @@ fn wait_for_completion(lease: &eos_e2e_test::NodeLease<'_>, session_id: &str) ->
     loop {
         let collected = lease.call_ok(
             catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-            json!({"command_session_ids": [session_id]}),
+            json!({"command_ids": [session_id]}),
         )?;
         if let Some(completion) = array(&collected, "completions")?.first() {
             return completion

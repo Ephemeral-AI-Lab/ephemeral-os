@@ -2,12 +2,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use eos_command_session::process::{spawn_current_exe_ns_runner, KillReason};
-use eos_command_session::session::{
+use eos_command::process::{spawn_current_exe_ns_runner, KillReason};
+use eos_command::session::{
     CommandSession, CommandSessionSpec, ReapedCommand, RunningCommandSessionParts,
 };
-use eos_command_session::yield_wait_loop::{wait_for_yield, WaitOutcome};
-use eos_command_session::{
+use eos_command::yield_wait_loop::{wait_for_yield, WaitOutcome};
+use eos_command::{
     CancelCommandSession, CollectCompleted, CommandSessionConfig, CommandSessionError,
     ReadCommandProgress, StartCommandSession, WriteStdin,
 };
@@ -237,7 +237,7 @@ impl CommandOps {
     pub fn write_stdin(&self, request: WriteStdin) -> Result<CommandResponse, CommandSessionError> {
         if is_teardown_control(&request.chars) {
             return self.cancel(CancelCommandSession {
-                command_session_id: request.command_session_id,
+                command_id: request.command_id,
             });
         }
         if contains_teardown_control(&request.chars) {
@@ -245,20 +245,20 @@ impl CommandOps {
                 "Ctrl-C/Ctrl-D must be sent alone to cancel command session".to_owned(),
             ));
         }
-        let Some(run) = self.registry.get(&request.command_session_id) else {
-            return Err(CommandSessionError::NotFound(request.command_session_id));
+        let Some(run) = self.registry.get(&request.command_id) else {
+            return Err(CommandSessionError::NotFound(request.command_id));
         };
         if request.chars.is_empty() {
             return Err(CommandSessionError::InvalidRequest(
                 "chars must be non-empty".to_owned(),
             ));
         }
-        let command_session_id = request.command_session_id.clone();
+        let command_id = request.command_id.clone();
         let start_offset = run.session().transcript_len();
         run.session().write_process_stdin(&request.chars)?;
         Ok(
             self.wait_on_run(run, request.yield_time_ms, start_offset, |stdout| {
-                CommandResponse::running(command_session_id, stdout)
+                CommandResponse::running(command_id, stdout)
             }),
         )
     }
@@ -272,12 +272,12 @@ impl CommandOps {
                 "last_n_lines must be >= 1".to_owned(),
             ));
         }
-        let Some(run) = self.registry.get(&request.command_session_id) else {
+        let Some(run) = self.registry.get(&request.command_id) else {
             return self
                 .registry
-                .completed_result(&request.command_session_id)
+                .completed_result(&request.command_id)
                 .map(|result| result.with_last_lines(request.last_n_lines))
-                .ok_or(CommandSessionError::NotFound(request.command_session_id));
+                .ok_or(CommandSessionError::NotFound(request.command_id));
         };
         if let Some(reaped) = run.session().reap() {
             return Ok(self
@@ -285,7 +285,7 @@ impl CommandOps {
                 .with_last_lines(request.last_n_lines));
         }
         Ok(CommandResponse::running(
-            request.command_session_id,
+            request.command_id,
             run.session().read_recent_output(request.last_n_lines),
         ))
     }
@@ -294,11 +294,11 @@ impl CommandOps {
         &self,
         request: CancelCommandSession,
     ) -> Result<CommandResponse, CommandSessionError> {
-        let Some(run) = self.registry.get(&request.command_session_id) else {
+        let Some(run) = self.registry.get(&request.command_id) else {
             return self
                 .registry
-                .take_completed_result(&request.command_session_id)
-                .ok_or(CommandSessionError::NotFound(request.command_session_id));
+                .take_completed_result(&request.command_id)
+                .ok_or(CommandSessionError::NotFound(request.command_id));
         };
         let start_offset = run.session().transcript_len();
         run.session().cancel_process();
@@ -408,7 +408,7 @@ impl CommandOps {
             exit_code: Some(reaped.exit_code),
             stdout: reaped.stdout,
             stderr: String::new(),
-            command_session_id: Some(run.session().id().to_owned()),
+            command_id: Some(run.session().id().to_owned()),
         };
         let cancelled = reaped.kill.is_some();
         let outcome = match &*run {
@@ -439,13 +439,13 @@ impl CommandOps {
             Err(error) => CommandResponse::error(error.to_string()),
         };
         run.session().persist_final(&response.to_wire_value());
-        let command_session_id = run.session().id().to_owned();
+        let command_id = run.session().id().to_owned();
         let caller_id = run.session().caller_id().to_owned();
         let command = run.session().command().to_owned();
-        self.registry.remove(&command_session_id);
+        self.registry.remove(&command_id);
         if publish_completion {
             self.registry.push_completed(CommandSessionCompletion {
-                command_session_id,
+                command_id,
                 caller_id,
                 command,
                 result: response.clone(),

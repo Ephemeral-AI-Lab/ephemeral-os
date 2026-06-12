@@ -88,7 +88,7 @@ fn mixed_workload_soak_keeps_counters_and_storage_bounded() -> Result<()> {
         assert_eq!(as_str(&session, "status")?, "running", "{session}");
         lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_session_id": as_str(&session, "command_session_id")?}),
+            json!({"command_id": as_str(&session, "command_id")?}),
         )?;
         wait_for_session_count(&lease, 0)?;
 

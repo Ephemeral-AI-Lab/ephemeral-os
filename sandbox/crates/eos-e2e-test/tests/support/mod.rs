@@ -92,9 +92,9 @@ pub(crate) fn wait_for_session_count(lease: &NodeLease<'_>, expected: i64) -> Re
 /// status `"ok"` directly. Under x86-on-arm64 emulation the ns-runner spawn,
 /// PTY setup, and (for python workers) interpreter startup can outlast the
 /// 1s yield, so `exec_command` legitimately returns status `"running"` with a
-/// `command_session_id`. This polls `read_progress` (which reaps and finalizes
+/// `command_id`. This polls `read_progress` (which reaps and finalizes
 /// the run the moment its child exits) until the status is terminal, then
-/// reconstructs the terminal-exec wire shape by stripping `command_session_id`
+/// reconstructs the terminal-exec wire shape by stripping `command_id`
 /// — exactly what `exec_command` does for a non-`running` status. The returned
 /// value carries the full finalized payload (`exit_code`, `changed_paths`,
 /// `timings`), so the caller's real assertions still hold post-settlement.
@@ -110,14 +110,14 @@ pub(crate) fn settle_foreground_command(
     if as_str(&response, "status")? != "running" {
         return Ok(response);
     }
-    let session_id = as_str(&response, "command_session_id")?.to_owned();
+    let session_id = as_str(&response, "command_id")?.to_owned();
     loop {
         // `call` (not `call_ok`): a command that settles to a NON-zero exit
         // returns `success:false`, which is a valid terminal outcome here, not a
         // transport error. `call_ok` would reject it and break error-exit settles.
         let progress = lease.call(
             catalog::SANDBOX_COMMAND_POLL,
-            json!({"command_session_id": &session_id, "last_n_lines": 50}),
+            json!({"command_id": &session_id, "last_n_lines": 50}),
         )?;
         // A reaping `read_progress` finalizes with `publish_completion = false`
         // and removes the run, so a second poll would 404. Stop on the first
@@ -127,7 +127,7 @@ pub(crate) fn settle_foreground_command(
         if as_str(&progress, "status")? != "running" {
             let mut progress = progress;
             if let Some(object) = progress.as_object_mut() {
-                object.remove("command_session_id");
+                object.remove("command_id");
             }
             return Ok(progress);
         }
@@ -155,7 +155,7 @@ pub(crate) fn wait_for_command_stdout_contains(
     loop {
         let progress = lease.call_ok(
             catalog::SANDBOX_COMMAND_POLL,
-            json!({"command_session_id": session_id, "last_n_lines": 50}),
+            json!({"command_id": session_id, "last_n_lines": 50}),
         )?;
         if clean_stdout(&progress).contains(needle) {
             return Ok(());

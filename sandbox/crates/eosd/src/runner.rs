@@ -32,7 +32,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
         }
         RunnerCliMode::ConfigureDns => eos_namespace::protocol::RunResult {
             exit_code: 0,
-            tool_result: eos_namespace::runner::setns::configure_dns(&request)
+            payload: eos_namespace::runner::setns::configure_dns(&request)
                 .context("ns-runner configure dns failed")?,
         },
         RunnerCliMode::Run => {
@@ -46,7 +46,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
 fn ok_result() -> eos_namespace::protocol::RunResult {
     eos_namespace::protocol::RunResult {
         exit_code: 0,
-        tool_result: serde_json::json!({"success": true, "status": "ok"}),
+        payload: serde_json::json!({"success": true, "status": "ok"}),
     }
 }
 

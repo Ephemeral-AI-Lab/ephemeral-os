@@ -60,14 +60,14 @@ fn lingering_child_keeps_session_running() -> Result<()> {
         stdout(&exec).contains("done"),
         "the foreground must have completed before yield: {exec}"
     );
-    let id = as_str(&exec, "command_session_id")?.to_owned();
+    let id = as_str(&exec, "command_id")?.to_owned();
 
     let count = lease.call_ok(catalog::SANDBOX_COMMAND_COUNT, json!({}))?;
     assert_eq!(as_i64(&count, "count")?, 1, "session must be live: {count}");
 
     let collected = lease.call_ok(
         catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-        json!({"command_session_ids": [id.clone()]}),
+        json!({"command_ids": [id.clone()]}),
     )?;
     assert!(
         array(&collected, "completions")?.is_empty(),
@@ -92,7 +92,7 @@ fn session_completes_only_after_all_subprocesses_exit() -> Result<()> {
             "timeout_seconds": 60,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
-    let id = as_str(&exec, "command_session_id")?.to_owned();
+    let id = as_str(&exec, "command_id")?.to_owned();
 
     // The completion must NOT arrive before the 3s child exits; it does once the
     // whole process group is gone (exit condition = all subprocesses complete).
@@ -100,7 +100,7 @@ fn session_completes_only_after_all_subprocesses_exit() -> Result<()> {
     let completion = loop {
         let collected = lease.call_ok(
             catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-            json!({"command_session_ids": [id.clone()]}),
+            json!({"command_ids": [id.clone()]}),
         )?;
         if let Some(completion) = array(&collected, "completions")?.first() {
             break completion.clone();
@@ -111,7 +111,7 @@ fn session_completes_only_after_all_subprocesses_exit() -> Result<()> {
         }
         std::thread::sleep(Duration::from_millis(100));
     };
-    assert_eq!(completion["command_session_id"], json!(&id));
+    assert_eq!(completion["command_id"], json!(&id));
     assert_eq!(
         completion
             .get("result")
@@ -141,14 +141,11 @@ fn cancel_kills_whole_session() -> Result<()> {
             "timeout_seconds": 120,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
-    let id = as_str(&exec, "command_session_id")?.to_owned();
+    let id = as_str(&exec, "command_id")?.to_owned();
 
     // Cancel kills the whole session, so its hardened outcome is
     // success:false; use `call` to read the terminal response, not `call_ok`.
-    let cancelled = lease.call(
-        catalog::SANDBOX_COMMAND_CANCEL,
-        json!({"command_session_id": &id}),
-    )?;
+    let cancelled = lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": &id}))?;
     assert!(
         matches!(as_str(&cancelled, "status")?, "cancelled" | "ok" | "error"),
         "cancel must drive the session to a terminal status: {cancelled}"
@@ -173,7 +170,7 @@ fn cancel_reaps_lingering_descendant() -> Result<()> {
             "timeout_seconds": 120,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
-    let id = as_str(&exec, "command_session_id")?.to_owned();
+    let id = as_str(&exec, "command_id")?.to_owned();
     assert!(
         marker_count(&lease, &marker)? > 0,
         "the descendant must be alive before cancel"
@@ -186,10 +183,7 @@ fn cancel_reaps_lingering_descendant() -> Result<()> {
 }
 
 fn cancel(lease: &NodeLease<'_>, id: &str) -> Result<()> {
-    lease.call(
-        catalog::SANDBOX_COMMAND_CANCEL,
-        json!({"command_session_id": id}),
-    )?;
+    lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": id}))?;
     wait_for_command_session_transcript_recycled(lease, id)?;
     Ok(())
 }
@@ -282,7 +276,7 @@ fn live_background_emitter_keeps_session_running() -> Result<()> {
         stdout(&exec).contains("fg-done"),
         "foreground must finish before yield: {exec}"
     );
-    let id = as_str(&exec, "command_session_id")?.to_owned();
+    let id = as_str(&exec, "command_id")?.to_owned();
 
     let mut seen_max = 0;
     let deadline = Instant::now() + Duration::from_secs(8);
@@ -290,7 +284,7 @@ fn live_background_emitter_keeps_session_running() -> Result<()> {
         let poll = lease.call_ok(
             catalog::SANDBOX_COMMAND_POLL,
             json!({
-                "command_session_id": &id,
+                "command_id": &id,
                 "last_n_lines": 8,
             }),
         )?;
@@ -310,7 +304,7 @@ fn live_background_emitter_keeps_session_running() -> Result<()> {
     let completion = loop {
         let collected = lease.call_ok(
             catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-            json!({ "command_session_ids": [id.clone()] }),
+            json!({ "command_ids": [id.clone()] }),
         )?;
         if let Some(completion) = array(&collected, "completions")?.first() {
             break completion.clone();
@@ -321,7 +315,7 @@ fn live_background_emitter_keeps_session_running() -> Result<()> {
         }
         std::thread::sleep(Duration::from_millis(100));
     };
-    assert_eq!(completion["command_session_id"], json!(&id), "{completion}");
+    assert_eq!(completion["command_id"], json!(&id), "{completion}");
     wait_for_session_count(&lease, 0)?;
     wait_for_command_session_transcript_recycled(&lease, &id)?;
     Ok(())
@@ -362,7 +356,7 @@ fn running_stderr_only_emitter_is_visible() -> Result<()> {
         structured_stderr.is_empty(),
         "merged PTY keeps the structured stderr field empty: {exec}"
     );
-    let id = as_str(&exec, "command_session_id")?.to_owned();
+    let id = as_str(&exec, "command_id")?.to_owned();
     cancel(&lease, &id)?;
     wait_for_session_count(&lease, 0)?;
     Ok(())
@@ -397,7 +391,7 @@ fn setsid_descendant_escapes_and_leaks_in_ephemeral() -> Result<()> {
         "a setsid child escapes the pgid, so the session completes: {completed}"
     );
     assert!(
-        completed.get("command_session_id").is_none(),
+        completed.get("command_id").is_none(),
         "a completed escaped-child command must not leave a session handle: {completed}"
     );
     assert!(stdout(&completed).contains("escaped-ready"), "{completed}");
@@ -439,10 +433,10 @@ fn nonsetsid_detach_vectors_stay_tracked() -> Result<()> {
             "running",
             "{label}: a same-pgid background child must keep the session running: {exec}"
         );
-        let id = as_str(&exec, "command_session_id")?.to_owned();
+        let id = as_str(&exec, "command_id")?.to_owned();
         let collected = lease.call_ok(
             catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-            json!({ "command_session_ids": [id.clone()] }),
+            json!({ "command_ids": [id.clone()] }),
         )?;
         assert!(
             array(&collected, "completions")?.is_empty(),

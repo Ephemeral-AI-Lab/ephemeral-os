@@ -26,7 +26,7 @@ fn start_sleeping(lease: &NodeLease<'_>, caller_id: Option<&str>, marker: &str) 
     }
     let started = lease.call_ok(catalog::SANDBOX_COMMAND_EXEC, args)?;
     assert_eq!(as_str(&started, "status")?, "running", "{started}");
-    Ok(as_str(&started, "command_session_id")?.to_owned())
+    Ok(as_str(&started, "command_id")?.to_owned())
 }
 
 /// Live command-session count for one caller (empty `caller_id` counts all).
@@ -45,7 +45,7 @@ fn wait_for_progress(lease: &NodeLease<'_>, session_id: &str, marker: &str) -> R
     loop {
         let progress = lease.call_ok(
             catalog::SANDBOX_COMMAND_POLL,
-            json!({"command_session_id": session_id, "last_n_lines": 10}),
+            json!({"command_id": session_id, "last_n_lines": 10}),
         )?;
         if stdout(&progress).contains(marker) {
             return Ok(());
@@ -100,7 +100,7 @@ fn cancel_workspace_runs_by_caller_id_discards_owner_and_spares_sibling() -> Res
     // Cancel discards — no completion is parked for the torn-down sessions.
     let drained = lease.call_ok(
         catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-        json!({"command_session_ids": [a, b]}),
+        json!({"command_ids": [a, b]}),
     )?;
     assert!(
         array(&drained, "completions")?.is_empty(),
@@ -171,7 +171,7 @@ fn cancel_workspace_runs_by_caller_id_discards_overlay_writes() -> Result<()> {
         }),
     )?;
     assert_eq!(as_str(&started, "status")?, "running", "{started}");
-    let session_id = as_str(&started, "command_session_id")?.to_owned();
+    let session_id = as_str(&started, "command_id")?.to_owned();
     wait_for_progress(&lease, &session_id, "wrote")?;
 
     // Cancel the caller's run mid-write via the per-caller op.
@@ -224,13 +224,13 @@ fn background_timeout_parks_collectable_completion() -> Result<()> {
         }),
     )?;
     assert_eq!(as_str(&started, "status")?, "running", "{started}");
-    let id = as_str(&started, "command_session_id")?.to_owned();
+    let id = as_str(&started, "command_id")?.to_owned();
 
     let deadline = Instant::now() + Duration::from_secs(15);
     let completion = loop {
         let collected = lease.call_ok(
             catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-            json!({"command_session_ids": [&id]}),
+            json!({"command_ids": [&id]}),
         )?;
         if let Some(completion) = array(&collected, "completions")?.first() {
             break completion.clone();
@@ -252,7 +252,7 @@ fn background_timeout_parks_collectable_completion() -> Result<()> {
     // A re-collect must not redeliver the drained completion.
     let redelivered = lease.call_ok(
         catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-        json!({"command_session_ids": [&id]}),
+        json!({"command_ids": [&id]}),
     )?;
     assert!(
         array(&redelivered, "completions")?.is_empty(),

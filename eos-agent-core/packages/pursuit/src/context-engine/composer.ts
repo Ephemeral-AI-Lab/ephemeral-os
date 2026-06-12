@@ -1,29 +1,17 @@
 import type {
   InitialUserMessage,
   PlannerContextInput,
-  WorkerContextInput,
   PursuitContextAttempt,
   PursuitContextWorkItem,
+  WorkerContextInput,
 } from "@eos/contracts";
 
-/**
- * The one composer seam (§2.11): called after commit, before
- * `port.launch`; its result IS the launch's complete ordered initial
- * messages - replace, never merge. A rejection is a compose failure and
- * synthesizes a failed settlement (§2.14). Subprocess composers inherit
- * the launch's pursuit signal.
- */
 export type ComposeLaunchContext = (
   agentName: string,
   input: PlannerContextInput | WorkerContextInput,
   signal?: AbortSignal,
 ) => Promise<InitialUserMessage[]>;
 
-/**
- * The §2.13 default policy as a pure function - the in-package fallback
- * for engine-free suites that bypass runtime profiles. Profile-based
- * planner/worker runtime launches name a context script instead.
- */
 export const defaultComposeLaunchContext: ComposeLaunchContext = (
   _agentName,
   input,
@@ -38,65 +26,45 @@ function user(text: string): InitialUserMessage {
 
 function plannerMessages(input: PlannerContextInput): InitialUserMessage[] {
   const pursuit = input.pursuit_context.pursuit;
-  const leg = pursuit.legs.find(
-    (candidate) => candidate.id === input.current.leg_id,
-  );
-  const messages = [user(`# Current goal\n${goalForLeg(input)}`)];
-
-  const standingLegGoal = leg?.focus ?? null;
-  if (!leg || standingLegGoal === null) {
+  const leg = pursuit.legs.find((candidate) => candidate.id === input.current.leg_id);
+  const messages = [
+    user(`# Pursuit goal\n${pursuit.pursuit_goal}`),
+    user(`# Current leg goal\n${leg?.leg_goal ?? ""}`),
+  ];
+  if (pursuit.leg_goal_mode === "predefined") {
     messages.push(
       user(
-        "Declare this leg's focus (`leg_goal`): the slice of the " +
-          "current goal this leg will complete. Optionally declare " +
-          "`next_leg_goal` for the remainder. Plan the work items for that " +
-          "focus and submit via submit_planner_outcome.",
+        "Plan work items for the current predefined leg goal. Do not submit " +
+          "`leg_goal` or `next_leg_goal`; predefined pursuits own the leg sequence.",
       ),
     );
-    return messages;
+  } else {
+    messages.push(
+      user(
+        "Use the current leg goal as-is unless it needs refocus. You may submit " +
+          "`leg_goal` to replace this leg's goal, submit successor-only " +
+          "`next_leg_goal`, or omit both. Clearing `next_leg_goal` requires a " +
+          "replacement `leg_goal` in the same payload.",
+      ),
+    );
   }
 
-  messages.push(user(`# Leg focus\n${standingLegGoal}`));
-  // Only attempts consistent with the standing focus, fully expanded; the
-  // standing next_leg_goal and superseded attempts are deliberately omitted
-  // (§2.5) - a refocus would re-peel from an unchanged pursuit goal.
-  const failed = leg.attempts.filter(
-    (attempt) =>
-      attempt.is_consistent_with_leg_goal && attempt.status === "Failed",
-  );
-  for (const attempt of failed) {
-    messages.push(user(failedAttemptReport(attempt)));
+  for (const attempt of leg?.attempts ?? []) {
+    if (attempt.is_consistent_with_leg_goal && attempt.status === "Failed") {
+      messages.push(user(failedAttemptReport(attempt)));
+    }
   }
-  messages.push(
-    user(
-      "Re-plan work items within the standing focus, or declare a new " +
-        "`leg_goal` to refocus - refocusing resets BOTH " +
-        "`leg_goal` and `next_leg_goal`. Submit via " +
-        "submit_planner_outcome.",
-    ),
-  );
+  messages.push(user("Submit the plan via submit_planner_outcome."));
   return messages;
-}
-
-function goalForLeg(input: PlannerContextInput | WorkerContextInput): string {
-  const pursuit = input.pursuit_context.pursuit;
-  const index = pursuit.legs.findIndex(
-    (leg) => leg.id === input.current.leg_id,
-  );
-  let goal = pursuit.goal;
-  for (let cursor = 1; cursor <= index; cursor += 1) {
-    goal = pursuit.legs[cursor - 1]?.next_leg_goal ?? goal;
-  }
-  return goal;
 }
 
 function failedAttemptReport(attempt: PursuitContextAttempt): string {
   const lines = [`# Failed attempt ${String(attempt.sequence)}`];
-  if (attempt.failure_reasons !== null) lines.push(`failure_reasons: ${attempt.failure_reasons}`);
+  for (const reason of attempt.failure_reasons) lines.push(`- ${reason}`);
   if (attempt.plan.summary !== null) lines.push(`plan summary: ${attempt.plan.summary}`);
   for (const item of attempt.work_items) {
     lines.push(
-      `- work_item ${item.id} [${item.status}] (${item.agent_name}): ${item.description}`,
+      `- work_item ${item.id} [${item.status}] (${item.agent_name}): ${item.title}`,
     );
     if (item.summary !== null) lines.push(`  summary: ${item.summary}`);
     if (item.outcome !== null) lines.push(`  outcome: ${item.outcome}`);
@@ -106,30 +74,33 @@ function failedAttemptReport(attempt: PursuitContextAttempt): string {
 
 function workerMessages(input: WorkerContextInput): InitialUserMessage[] {
   const pursuit = input.pursuit_context.pursuit;
-  const leg = pursuit.legs.find(
-    (candidate) => candidate.id === input.current.leg_id,
-  );
-  const items =
-    leg?.attempts.flatMap((attempt) => attempt.work_items) ?? [];
+  const leg = pursuit.legs.find((candidate) => candidate.id === input.current.leg_id);
+  const items = leg?.attempts.flatMap((attempt) => attempt.work_items) ?? [];
   const item = items.find((candidate) => candidate.id === input.current.work_item_id);
-
-  const messages = [user(`# Leg focus\n${leg?.focus ?? ""}`)];
-  const dependencies = (item?.needs ?? [])
+  const dependencies = (item?.depends_on ?? [])
     .map((id) => items.find((candidate) => candidate.id === id))
-    .filter((dependency): dependency is PursuitContextWorkItem => dependency !== undefined);
-  if (dependencies.length > 0) {
-    messages.push(user(dependencyReport(dependencies)));
-  }
-  messages.push(user(`# Work item description\n${item?.description ?? ""}`));
-  messages.push(user(`# Work item spec\n${item?.spec ?? ""}`));
+    .filter(
+      (dependency): dependency is PursuitContextWorkItem =>
+        dependency?.status === "Success",
+    );
+
+  const messages = [
+    user(`# Current leg goal\n${leg?.leg_goal ?? ""}`),
+    user(`# Work item title\n${item?.title ?? ""}`),
+    user(`# Work item spec\n${item?.spec ?? ""}`),
+  ];
+  if (dependencies.length > 0) messages.splice(1, 0, user(dependencyReport(dependencies)));
   messages.push(
-    user("Complete this work item, then submit via submit_worker_outcome."),
+    user(
+      "Complete only this assigned work item. Do not plan, refocus, or change legs. " +
+        "Submit via submit_worker_outcome.",
+    ),
   );
   return messages;
 }
 
 function dependencyReport(dependencies: readonly PursuitContextWorkItem[]): string {
-  const lines = ["# Dependency outcomes"];
+  const lines = ["# Direct dependency outcomes"];
   for (const dependency of dependencies) {
     lines.push(
       `- work_item ${dependency.id} [${dependency.status}]: ${dependency.summary ?? "(no summary)"}`,

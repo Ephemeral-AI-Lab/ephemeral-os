@@ -26,14 +26,11 @@ fn start_sleeping_session(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> 
         stdout(&started).contains(marker),
         "session should print marker before returning: {started}"
     );
-    Ok(as_str(&started, "command_session_id")?.to_owned())
+    Ok(as_str(&started, "command_id")?.to_owned())
 }
 
 fn cancel_session(lease: &eos_e2e_test::NodeLease<'_>, id: &str) -> Result<Value> {
-    let cancelled = lease.call(
-        catalog::SANDBOX_COMMAND_CANCEL,
-        json!({"command_session_id": id}),
-    )?;
+    let cancelled = lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": id}))?;
     wait_for_command_session_transcript_recycled(lease, id)?;
     Ok(cancelled)
 }
@@ -80,13 +77,13 @@ fn assert_teardown_control_reaps_marker_process(
         stdout(&started).contains(&format!("{label}-ready")),
         "stdin reader should be ready before {label} teardown: {started}"
     );
-    let id = as_str(&started, "command_session_id")?.to_owned();
+    let id = as_str(&started, "command_id")?.to_owned();
     wait_for_marker_at_least(lease, &marker, 1)?;
 
     let cancelled = lease.call(
         catalog::SANDBOX_COMMAND_WRITE_STDIN,
         json!({
-            "command_session_id": &id,
+            "command_id": &id,
             "chars": chars,
             "yield_time_ms": 3000
         }),
@@ -204,13 +201,13 @@ fn write_stdin_echo() -> Result<()> {
             "timeout_seconds": 120
         }),
     )?;
-    let id = as_str(&started, "command_session_id")?.to_owned();
+    let id = as_str(&started, "command_id")?.to_owned();
     let transcript_path = command_session_transcript_path(&id);
     wait_for_container_path(&lease, &transcript_path, true, Duration::from_secs(3))?;
     let stdin = lease.call_ok(
         catalog::SANDBOX_COMMAND_WRITE_STDIN,
         json!({
-            "command_session_id": &id,
+            "command_id": &id,
             "chars": "payload\n",
             "yield_time_ms": 2000
         }),
@@ -251,12 +248,12 @@ fn read_command_progress_returns_stateless_tail_snapshot() -> Result<()> {
         stdout(&started).contains("progress-first"),
         "initial poll should return first output: {started}"
     );
-    let id = as_str(&started, "command_session_id")?.to_owned();
+    let id = as_str(&started, "command_id")?.to_owned();
 
     let second = lease.call_ok(
         catalog::SANDBOX_COMMAND_WRITE_STDIN,
         json!({
-            "command_session_id": &id,
+            "command_id": &id,
             "chars": "payload\n",
             "yield_time_ms": 1500
         }),
@@ -273,7 +270,7 @@ fn read_command_progress_returns_stateless_tail_snapshot() -> Result<()> {
     let progress = lease.call_ok(
         catalog::SANDBOX_COMMAND_POLL,
         json!({
-            "command_session_id": &id,
+            "command_id": &id,
             "last_n_lines": 10
         }),
     )?;
@@ -285,7 +282,7 @@ fn read_command_progress_returns_stateless_tail_snapshot() -> Result<()> {
     let tail = lease.call_ok(
         catalog::SANDBOX_COMMAND_POLL,
         json!({
-            "command_session_id": &id,
+            "command_id": &id,
             "last_n_lines": 1
         }),
     )?;
@@ -313,7 +310,7 @@ fn read_command_progress_finalizes_completed_session_and_recycles_transcript() -
         }),
     )?;
     assert_eq!(as_str(&started, "status")?, "running", "{started}");
-    let id = as_str(&started, "command_session_id")?.to_owned();
+    let id = as_str(&started, "command_id")?.to_owned();
     let transcript_path = command_session_transcript_path(&id);
     wait_for_container_path(&lease, &transcript_path, true, Duration::from_secs(3))?;
 
@@ -322,7 +319,7 @@ fn read_command_progress_finalizes_completed_session_and_recycles_transcript() -
         let progress = lease.call_ok(
             catalog::SANDBOX_COMMAND_POLL,
             json!({
-                "command_session_id": &id,
+                "command_id": &id,
                 "last_n_lines": 10
             }),
         )?;
@@ -359,16 +356,16 @@ fn collect_completed_drains() -> Result<()> {
             "timeout_seconds": 10
         }),
     )?;
-    let id = as_str(&started, "command_session_id")?.to_owned();
+    let id = as_str(&started, "command_id")?.to_owned();
     let deadline = Instant::now() + Duration::from_secs(5);
     loop {
         let collected = lease.call_ok(
             catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-            json!({"command_session_ids": [&id]}),
+            json!({"command_ids": [&id]}),
         )?;
         let completions = array(&collected, "completions")?;
         if let Some(completion) = completions.first() {
-            assert_eq!(completion["command_session_id"], id);
+            assert_eq!(completion["command_id"], id);
             assert!(
                 stdout(completion.get("result").context("completion result")?).contains("done"),
                 "completion should carry final stdout: {completion}"
@@ -382,7 +379,7 @@ fn collect_completed_drains() -> Result<()> {
     }
     let redelivered = lease.call_ok(
         catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-        json!({"command_session_ids": [&id]}),
+        json!({"command_ids": [&id]}),
     )?;
     assert!(
         array(&redelivered, "completions")?.is_empty(),
@@ -422,7 +419,7 @@ fn collect_completed_preserves_full_timestamped_transcript() -> Result<()> {
         stdout(&started).contains(&first),
         "initial yield should consume the first marker: {started}"
     );
-    let id = as_str(&started, "command_session_id")?.to_owned();
+    let id = as_str(&started, "command_id")?.to_owned();
 
     let completion = collect_completion(&lease, &id, Duration::from_secs(10))?;
     let result = completion.get("result").context("completion result")?;
@@ -465,7 +462,7 @@ fn finite_exec_before_yield_recycles_transient_transcript_file() -> Result<()> {
         "finite command should complete inside the initial yield: {completed}"
     );
     assert!(
-        completed.get("command_session_id").is_none(),
+        completed.get("command_id").is_none(),
         "finite command should not expose a background session handle: {completed}"
     );
     assert!(
@@ -495,7 +492,7 @@ fn completed_session_removes_transcript_file() -> Result<()> {
         }),
     )?;
     assert_eq!(as_str(&started, "status")?, "running", "{started}");
-    let id = as_str(&started, "command_session_id")?.to_owned();
+    let id = as_str(&started, "command_id")?.to_owned();
     let transcript_path = command_session_transcript_path(&id);
     wait_for_container_path(&lease, &transcript_path, true, Duration::from_secs(3))?;
 
@@ -582,7 +579,7 @@ fn exec_timeout() -> Result<()> {
         "timeout may surface as runner timeout or daemon reaper kill: {timed_out}"
     );
     assert!(
-        timed_out.get("command_session_id").is_none(),
+        timed_out.get("command_id").is_none(),
         "foreground timeout should not expose a recycled background handle: {timed_out}"
     );
     wait_for_session_count(&lease, 0)?;
@@ -612,7 +609,7 @@ fn output_burst_returns_full_timestamped_transcript() -> Result<()> {
         stdout(&exec).len()
     );
     assert_timestamped_lines(stdout(&exec), &exec);
-    let id = as_str(&exec, "command_session_id")?;
+    let id = as_str(&exec, "command_id")?;
     cancel_session(&lease, id)?;
     Ok(())
 }
@@ -663,13 +660,13 @@ fn nohup_child_keeps_session_running() -> Result<()> {
         "running",
         "plain nohup stays in the runner process group and keeps the session live: {started}"
     );
-    let id = as_str(&started, "command_session_id")?.to_owned();
+    let id = as_str(&started, "command_id")?.to_owned();
     wait_for_session_stdout(&lease, &id, &started, "nohup-ready")?;
     wait_for_marker_at_least(&lease, &marker, 1)?;
 
     let collected = lease.call_ok(
         catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-        json!({"command_session_ids": [id.clone()]}),
+        json!({"command_ids": [id.clone()]}),
     )?;
     assert!(
         array(&collected, "completions")?.is_empty(),
@@ -704,7 +701,7 @@ fn setsid_nohup_contract() -> Result<()> {
         "setsid nohup escapes the runner process group, so the protocol command completes: {completed}"
     );
     assert!(
-        completed.get("command_session_id").is_none(),
+        completed.get("command_id").is_none(),
         "completed setsid command must not leave a command session handle: {completed}"
     );
     assert!(
@@ -736,7 +733,7 @@ fn wait_for_session_stdout(
         let poll = lease.call_ok(
             catalog::SANDBOX_COMMAND_POLL,
             json!({
-                "command_session_id": session_id,
+                "command_id": session_id,
                 "last_n_lines": 20
             }),
         )?;
@@ -840,7 +837,7 @@ fn collect_completion(lease: &NodeLease<'_>, id: &str, within: Duration) -> Resu
     loop {
         let collected = lease.call_ok(
             catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-            json!({ "command_session_ids": [id] }),
+            json!({ "command_ids": [id] }),
         )?;
         if let Some(completion) = array(&collected, "completions")?.first() {
             return Ok(completion.clone());
@@ -881,7 +878,7 @@ fn external_signal_kill_is_structured() -> Result<()> {
     )?;
     assert_eq!(as_str(&started, "status")?, "running", "{started}");
     assert!(stdout(&started).contains("kill-ready"), "{started}");
-    let id = as_str(&started, "command_session_id")?.to_owned();
+    let id = as_str(&started, "command_id")?.to_owned();
     wait_for_marker_at_least(&lease, &marker, 1)?;
 
     kill_marker(&lease, &marker, 9)?;
@@ -927,7 +924,7 @@ fn self_kill_reports_signal_exit() -> Result<()> {
         }),
     )?;
     if as_str(&exec, "status")? == "running" {
-        let id = as_str(&exec, "command_session_id")?.to_owned();
+        let id = as_str(&exec, "command_id")?.to_owned();
         let completion = collect_completion(&lease, &id, Duration::from_secs(10))?;
         let result = completion.get("result").context("completion result")?;
         assert_ne!(as_str(result, "status")?, "ok", "{completion}");
@@ -976,7 +973,7 @@ fn external_kill_of_foreground_keeps_group_running() -> Result<()> {
     )?;
     assert_eq!(as_str(&started, "status")?, "running", "{started}");
     assert!(stdout(&started).contains("group-ready"), "{started}");
-    let id = as_str(&started, "command_session_id")?.to_owned();
+    let id = as_str(&started, "command_id")?.to_owned();
     wait_for_marker_at_least(&lease, &fg, 1)?;
     wait_for_marker_at_least(&lease, &peer, 1)?;
 
@@ -993,7 +990,7 @@ fn external_kill_of_foreground_keeps_group_running() -> Result<()> {
     );
     let still = lease.call_ok(
         catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-        json!({ "command_session_ids": [id.clone()] }),
+        json!({ "command_ids": [id.clone()] }),
     )?;
     assert!(
         array(&still, "completions")?.is_empty(),
@@ -1004,7 +1001,7 @@ fn external_kill_of_foreground_keeps_group_running() -> Result<()> {
     kill_marker(&lease, &peer, 9)?;
     wait_for_marker_count(&lease, &peer, 0, Duration::from_secs(3))?;
     let completion = collect_completion(&lease, &id, Duration::from_secs(10))?;
-    assert_eq!(completion["command_session_id"], json!(&id), "{completion}");
+    assert_eq!(completion["command_id"], json!(&id), "{completion}");
     wait_for_session_count(&lease, 0)?;
     wait_for_command_session_transcript_recycled(&lease, &id)?;
     wait_for_active_leases(&lease, 0)?;
@@ -1029,7 +1026,7 @@ fn write_stdin_to_completed_session_is_structured() -> Result<()> {
             "timeout_seconds": 30
         }),
     )?;
-    let id = as_str(&started, "command_session_id")?.to_owned();
+    let id = as_str(&started, "command_id")?.to_owned();
     // Count returning to zero means the session left the live registry (finished);
     // its completion is parked but uncollected.
     wait_for_session_count(&lease, 0)?;
@@ -1038,7 +1035,7 @@ fn write_stdin_to_completed_session_is_structured() -> Result<()> {
     let late = lease.call(
         catalog::SANDBOX_COMMAND_WRITE_STDIN,
         json!({
-            "command_session_id": &id,
+            "command_id": &id,
             "chars": "late\n",
             "yield_time_ms": 200
         }),
@@ -1051,7 +1048,7 @@ fn write_stdin_to_completed_session_is_structured() -> Result<()> {
     // Drain the parked completion so a recycled container starts clean.
     lease.call_ok(
         catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-        json!({ "command_session_ids": [&id] }),
+        json!({ "command_ids": [&id] }),
     )?;
     wait_for_active_leases(&lease, 0)?;
     Ok(())

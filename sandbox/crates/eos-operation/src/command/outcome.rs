@@ -7,7 +7,7 @@ pub use crate::{
     WorkspaceKind, WorkspaceTimings,
 };
 
-impl From<WorkspaceApiError> for eos_command_session::CommandSessionError {
+impl From<WorkspaceApiError> for eos_command::CommandSessionError {
     fn from(error: WorkspaceApiError) -> Self {
         Self::Workspace(error.to_string())
     }
@@ -27,7 +27,7 @@ pub struct FinalizeCommandRequest {
     #[serde(default)]
     pub stderr: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub command_session_id: Option<String>,
+    pub command_id: Option<String>,
 }
 
 impl FinalizeCommandRequest {

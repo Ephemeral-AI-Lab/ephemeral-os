@@ -118,7 +118,7 @@ fn command_poll_parse_gate_preserves_id_first_error() {
     assert_eq!(response["error"]["kind"], json!("invalid_request"));
     assert_eq!(
         response["error"]["message"],
-        json!("invalid request: command_session_id is required")
+        json!("invalid request: command_id is required")
     );
 }
 

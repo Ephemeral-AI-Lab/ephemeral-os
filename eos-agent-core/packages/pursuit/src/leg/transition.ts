@@ -125,7 +125,7 @@ async function nextLegInit(
   }
 
   const legGoals = decodeStringList(pursuit.leg_goals ?? "[]");
-  const nextGoal = legGoals[leg.sequence];
+  const nextGoal = legGoals.at(leg.sequence);
   if (nextGoal === undefined) return null;
   return {
     sequence: leg.sequence + 1,

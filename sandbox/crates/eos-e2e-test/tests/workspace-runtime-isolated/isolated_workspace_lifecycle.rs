@@ -103,7 +103,7 @@ fn enter_rejects_active_command_session_and_repeated_enter_reports_already_open(
             "timeout_seconds": 60,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
-    let session_id = as_str(&exec, "command_session_id")?.to_owned();
+    let session_id = as_str(&exec, "command_id")?.to_owned();
     // `printf ACTIVE` may not reach the transcript within the 500ms yield under
     // emulation; poll until it does (still proves the session is actively live).
     wait_for_command_stdout_contains(&lease, &session_id, "ACTIVE")?;
@@ -135,7 +135,7 @@ fn enter_rejects_active_command_session_and_repeated_enter_reports_already_open(
 
         lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_session_id": session_id}),
+            json!({"command_id": session_id}),
         )?;
         wait_for_session_count(&lease, 0)?;
 
@@ -165,7 +165,7 @@ fn enter_rejects_active_command_session_and_repeated_enter_reports_already_open(
     if body.is_err() {
         let _ = lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_session_id": session_id}),
+            json!({"command_id": session_id}),
         );
         let _ = lease.call(catalog::SANDBOX_ISOLATION_EXIT, json!({"grace_s": 0.0}));
         let _ = wait_for_session_count(&lease, 0);

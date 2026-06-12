@@ -1,31 +1,50 @@
-// stdin: PlannerContextInput JSON
-// stdout: { initial_messages: UserMessage[] }
 const { create_variable_reference_map } = require("./variable_reference_map.cjs");
 
-function get_initial_messages(vars) {
-  const user = (text) => ({ role: "user", content: [{ type: "text", text }] });
-  const messages = [user(`# Pursuit goal\n${vars.pursuit_goal}`)];
+function user(text) {
+  return { role: "user", content: [{ type: "text", text }] };
+}
 
-  if (vars.current_leg_goal === null) {
-    messages.push(user("Declare this leg's focus and work items."));
+function get_initial_messages(vars) {
+  const messages = [
+    user(`# Pursuit goal\n${vars.pursuit_goal}`),
+    user(`# Current leg goal\n${vars.current_leg_goal ?? ""}`),
+    user(`# Current leg context\n${vars.current_leg_context_path ?? ""}`),
+  ];
+
+  if (vars.pursuit_leg_goal_mode === "predefined") {
+    messages.push(
+      user(
+        "Plan work items for this predefined leg goal. Omit leg_goal and " +
+          "next_leg_goal in submit_planner_outcome.",
+      ),
+    );
   } else {
-    messages.push(user(`# Leg focus\n${vars.current_leg_goal}`));
-    if (vars.previous_attempt_outcome !== null) {
-      messages.push(
-        user(`# Previous attempt\n${JSON.stringify(vars.previous_attempt_outcome)}`),
-      );
-    }
-    messages.push(user("Submit planner outcome with work items for this focus."));
+    messages.push(
+      user(
+        "Dynamic mode: omit leg_goal to keep the current leg goal, submit " +
+          "leg_goal to refocus, or submit successor-only next_leg_goal for the " +
+          "next leg. Clearing a standing next_leg_goal requires submitting a " +
+          "replacement leg_goal.",
+      ),
+    );
   }
 
+  if (vars.previous_attempt_outcome !== null) {
+    messages.push(user(`# Previous attempt\n${JSON.stringify(vars.previous_attempt_outcome)}`));
+  }
+  messages.push(
+    user(
+      "Submit work_items with id, agent_name, title, spec, and depends_on. " +
+        "depends_on may reference current payload ids or visible prior work items " +
+        "in this leg-goal version.",
+    ),
+  );
   return messages;
 }
 
 let input = "";
-process.stdin.on("data", (c) => (input += c));
+process.stdin.on("data", (chunk) => (input += chunk));
 process.stdin.on("end", () => {
-  const ctx = JSON.parse(input);
-  const vars = create_variable_reference_map(ctx);
-  const initial_messages = get_initial_messages(vars);
-  process.stdout.write(JSON.stringify({ initial_messages }));
+  const vars = create_variable_reference_map(JSON.parse(input));
+  process.stdout.write(JSON.stringify({ initial_messages: get_initial_messages(vars) }));
 });

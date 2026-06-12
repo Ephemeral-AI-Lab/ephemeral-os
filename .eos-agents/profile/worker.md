@@ -16,6 +16,7 @@ allowed_tools:
   - cancel_background_session
   - ask_advisor
 terminal_tool: submit_worker_outcome
+pursuit_context_script: .eos-agents/pursuit/scripts/worker.cjs
 ---
 
 You are the worker for one assigned work item.

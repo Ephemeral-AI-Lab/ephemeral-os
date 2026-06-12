@@ -100,7 +100,7 @@ fn silent_redirected_subprocess_keeps_session_running() -> Result<()> {
 
         let not_done = lease.call_ok(
             catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-            json!({"command_session_ids": [session.id.clone()]}),
+            json!({"command_ids": [session.id.clone()]}),
         )?;
         ensure!(
             array(&not_done, "completions")?.is_empty(),
@@ -110,7 +110,7 @@ fn silent_redirected_subprocess_keeps_session_running() -> Result<()> {
         let progress = lease.call_ok(
             catalog::SANDBOX_COMMAND_POLL,
             json!({
-                "command_session_id": &session.id,
+                "command_id": &session.id,
                 "last_n_lines": 4,
             }),
         )?;
@@ -185,7 +185,7 @@ fn start_marker_session(
         as_str(&started, "status")? == "running",
         "marker command should stay running: {started}"
     );
-    let id = as_str(&started, "command_session_id")?.to_owned();
+    let id = as_str(&started, "command_id")?.to_owned();
     let marker = wait_for_stdout_marker(lease, &id, &started)?;
     wait_for_session_stdout_contains(lease, &id, &started, readiness)?;
     Ok(MarkerSession { id, marker })
@@ -245,7 +245,7 @@ fn poll_session_output(
     lease.call_ok(
         catalog::SANDBOX_COMMAND_POLL,
         json!({
-            "command_session_id": session_id,
+            "command_id": session_id,
             "last_n_lines": last_n_lines,
         }),
     )
@@ -342,7 +342,7 @@ fn wait_for_completion(
     loop {
         let collected = lease.call_ok(
             catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-            json!({"command_session_ids": [session_id]}),
+            json!({"command_ids": [session_id]}),
         )?;
         if let Some(completion) = array(&collected, "completions")?.first() {
             return Ok(completion.clone());
@@ -365,7 +365,7 @@ fn wait_for_read_progress_terminal(
         let response = lease.call(
             catalog::SANDBOX_COMMAND_POLL,
             json!({
-                "command_session_id": session_id,
+                "command_id": session_id,
                 "last_n_lines": 8,
             }),
         )?;
@@ -439,10 +439,7 @@ fn wait_for_marker_count(
 }
 
 fn cancel_session(lease: &NodeLease<'_>, id: &str) -> Result<Value> {
-    let cancelled = lease.call(
-        catalog::SANDBOX_COMMAND_CANCEL,
-        json!({"command_session_id": id}),
-    )?;
+    let cancelled = lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": id}))?;
     wait_for_command_session_transcript_recycled(lease, id)?;
     Ok(cancelled)
 }

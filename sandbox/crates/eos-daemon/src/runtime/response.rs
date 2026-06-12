@@ -51,22 +51,22 @@ impl TreeResourceStats {
 
 pub(crate) fn attach_runner_shell_fields(response: &mut Value, runner: &RunResult) {
     response["exit_code"] = runner
-        .tool_result
+        .payload
         .get("exit_code")
         .cloned()
         .unwrap_or_else(|| json!(runner.exit_code));
     response["stdout"] = runner
-        .tool_result
+        .payload
         .get("stdout")
         .cloned()
         .unwrap_or_else(|| json!(""));
     response["stderr"] = runner
-        .tool_result
+        .payload
         .get("stderr")
         .cloned()
         .unwrap_or_else(|| json!(""));
     response["warnings"] = runner
-        .tool_result
+        .payload
         .get("warnings")
         .cloned()
         .unwrap_or_else(|| json!([]));
@@ -76,7 +76,7 @@ pub(crate) fn merge_runner_timings(
     timings: &mut serde_json::Map<String, Value>,
     runner: &RunResult,
 ) {
-    if let Some(runner_timings) = runner.tool_result.get("timings").and_then(Value::as_object) {
+    if let Some(runner_timings) = runner.payload.get("timings").and_then(Value::as_object) {
         for (key, value) in runner_timings {
             timings.entry(key.clone()).or_insert_with(|| value.clone());
         }

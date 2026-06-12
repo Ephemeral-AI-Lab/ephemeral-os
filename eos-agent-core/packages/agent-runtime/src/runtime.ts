@@ -358,7 +358,7 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
       ),
       ...(pursuitService
         ? pursuitTools(
-            (input, parent) => pursuitService.delegate(input, parent),
+            (input, parent) => pursuitService.createPursuit(input, parent),
             supervisor,
           )
         : []),

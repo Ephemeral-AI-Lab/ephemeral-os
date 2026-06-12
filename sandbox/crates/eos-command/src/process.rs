@@ -145,9 +145,9 @@ impl CommandRunnerResult {
                 .or_else(|| value.as_u64().and_then(|value| i64::try_from(value).ok()))
         })?;
         let status = value
-            .get("tool_result")
+            .get("payload")
             .and_then(Value::as_object)
-            .and_then(|tool_result| tool_result.get("status"))
+            .and_then(|payload| payload.get("status"))
             .and_then(Value::as_str)
             .map(str::to_owned);
         Some(Self {

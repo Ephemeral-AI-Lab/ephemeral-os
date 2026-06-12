@@ -7,7 +7,7 @@ use crate::core::request::{
     optional_path, optional_u64, require_command_string, require_nonempty_string, ArgProblem,
     ArgsError,
 };
-use crate::{CallerId, CommandSessionId, InvocationId, MutationCore, WorkspaceKind};
+use crate::{CallerId, CommandId, InvocationId, MutationCore, WorkspaceKind};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ExecCommandInput {
@@ -26,7 +26,8 @@ impl ExecCommandInput {
             cmd: require_command_string(args, "cmd")?,
             caller: CallerId::from_wire(args),
             layer_stack_root: optional_path(args, "layer_stack_root"),
-            timeout: optional_u64(args, "timeout").or_else(|| optional_u64(args, "timeout_seconds")),
+            timeout: optional_u64(args, "timeout")
+                .or_else(|| optional_u64(args, "timeout_seconds")),
             yield_time_ms: optional_u64(args, "yield_time_ms"),
             invocation_id: InvocationId::new(
                 args.get("invocation_id")
@@ -40,7 +41,7 @@ impl ExecCommandInput {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WriteStdinInput {
-    pub command_session_id: CommandSessionId,
+    pub command_id: CommandId,
     pub chars: String,
     pub yield_time_ms: Option<u64>,
 }
@@ -48,10 +49,7 @@ pub struct WriteStdinInput {
 impl WriteStdinInput {
     pub(crate) fn parse(args: &Value) -> Result<Self, ArgsError> {
         Ok(Self {
-            command_session_id: CommandSessionId::new(require_command_string(
-                args,
-                "command_session_id",
-            )?),
+            command_id: CommandId::new(require_command_string(args, "command_id")?),
             chars: require_nonempty_string(args, "chars")?,
             yield_time_ms: optional_u64(args, "yield_time_ms"),
         })
@@ -60,17 +58,16 @@ impl WriteStdinInput {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ReadProgressInput {
-    pub command_session_id: CommandSessionId,
+    pub command_id: CommandId,
     pub last_n_lines: usize,
 }
 
 impl ReadProgressInput {
     pub(crate) fn parse(args: &Value) -> Result<Self, ArgsError> {
-        let command_session_id =
-            CommandSessionId::new(require_command_string(args, "command_session_id")?);
+        let command_id = CommandId::new(require_command_string(args, "command_id")?);
         let last_n_lines = optional_u64(args, "last_n_lines").unwrap_or(50);
         Ok(Self {
-            command_session_id,
+            command_id,
             last_n_lines: last_n_lines.try_into().map_err(|_| ArgsError {
                 key: "last_n_lines",
                 problem: ArgProblem::Invalid("last_n_lines is too large".to_owned()),
@@ -81,35 +78,32 @@ impl ReadProgressInput {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CancelCommandInput {
-    pub command_session_id: CommandSessionId,
+    pub command_id: CommandId,
 }
 
 impl CancelCommandInput {
     pub(crate) fn parse(args: &Value) -> Result<Self, ArgsError> {
         Ok(Self {
-            command_session_id: CommandSessionId::new(require_command_string(
-                args,
-                "command_session_id",
-            )?),
+            command_id: CommandId::new(require_command_string(args, "command_id")?),
         })
     }
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CollectCompletedInput {
-    pub command_session_ids: Option<Vec<CommandSessionId>>,
+    pub command_ids: Option<Vec<CommandId>>,
     pub caller: Option<CallerId>,
 }
 
 impl CollectCompletedInput {
     pub(crate) fn parse(args: &Value) -> Self {
-        let command_session_ids = args
-            .get("command_session_ids")
+        let command_ids = args
+            .get("command_ids")
             .and_then(Value::as_array)
             .map(|ids| {
                 ids.iter()
                     .filter_map(Value::as_str)
-                    .map(CommandSessionId::new)
+                    .map(CommandId::new)
                     .collect::<Vec<_>>()
             });
         // Optional caller filter: absent means "collect across all callers",
@@ -121,7 +115,7 @@ impl CollectCompletedInput {
             .filter(|caller| !caller.is_empty())
             .map(CallerId::new);
         Self {
-            command_session_ids,
+            command_ids,
             caller,
         }
     }
@@ -177,19 +171,19 @@ pub struct CommandResponse {
     pub exit_code: Option<i64>,
     pub stdout: String,
     pub stderr: String,
-    pub command_session_id: Option<CommandSessionId>,
+    pub command_id: Option<CommandId>,
     pub settled: Option<CommandMetadata>,
 }
 
 impl CommandResponse {
     #[must_use]
-    pub fn running(command_session_id: String, stdout: String) -> Self {
+    pub fn running(command_id: String, stdout: String) -> Self {
         Self {
             status: CommandStatus::Running,
             exit_code: None,
             stdout,
             stderr: String::new(),
-            command_session_id: Some(CommandSessionId::new(command_session_id)),
+            command_id: Some(CommandId::new(command_id)),
             settled: None,
         }
     }
@@ -201,7 +195,7 @@ impl CommandResponse {
             exit_code: None,
             stdout,
             stderr: String::new(),
-            command_session_id: None,
+            command_id: None,
             settled: None,
         }
     }
@@ -213,14 +207,14 @@ impl CommandResponse {
             exit_code: None,
             stdout: String::new(),
             stderr: stderr.into(),
-            command_session_id: None,
+            command_id: None,
             settled: None,
         }
     }
 
     #[must_use]
     pub fn with_last_lines(mut self, last_n_lines: usize) -> Self {
-        self.stdout = eos_command_session::tail_lines(&self.stdout, last_n_lines);
+        self.stdout = eos_command::tail_lines(&self.stdout, last_n_lines);
         self
     }
 
@@ -234,8 +228,8 @@ impl CommandResponse {
                 "stderr": self.stderr,
             },
         });
-        if let Some(command_session_id) = self.command_session_id.as_ref() {
-            response["command_session_id"] = json!(command_session_id.as_str());
+        if let Some(command_id) = self.command_id.as_ref() {
+            response["command_id"] = json!(command_id.as_str());
         }
         let Some(settled) = self.settled.as_ref() else {
             return response;
@@ -268,7 +262,7 @@ pub(crate) fn u64_to_f64_saturating(value: u64) -> f64 {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CommandSessionCompletion {
-    pub command_session_id: String,
+    pub command_id: String,
     pub caller_id: String,
     pub command: String,
     pub result: CommandResponse,
@@ -278,7 +272,7 @@ impl CommandSessionCompletion {
     #[must_use]
     pub fn to_wire_value(&self) -> Value {
         json!({
-            "command_session_id": self.command_session_id,
+            "command_id": self.command_id,
             "caller_id": self.caller_id,
             "command": self.command,
             "result": self.result.to_wire_value(),
@@ -333,7 +327,7 @@ mod tests {
             exit_code: Some(0),
             stdout: "done\n".to_owned(),
             stderr: String::new(),
-            command_session_id: Some(CommandSessionId::new("cmd_1")),
+            command_id: Some(CommandId::new("cmd_1")),
             settled: Some(CommandMetadata {
                 core: MutationCore {
                     success: true,
@@ -351,7 +345,7 @@ mod tests {
         .to_wire_value();
 
         assert_eq!(response["status"], "ok");
-        assert_eq!(response["command_session_id"], "cmd_1");
+        assert_eq!(response["command_id"], "cmd_1");
         assert_eq!(response["workspace"], "isolated");
         assert_eq!(response["success"], true);
         assert_eq!(response["changed_paths"], json!(["src/main.rs"]));
@@ -371,7 +365,7 @@ mod tests {
             exit_code: Some(130),
             stdout: String::new(),
             stderr: String::new(),
-            command_session_id: None,
+            command_id: None,
             settled: Some(CommandMetadata {
                 core: MutationCore {
                     success: false,
@@ -401,7 +395,7 @@ mod tests {
             exit_code: Some(0),
             stdout: String::new(),
             stderr: String::new(),
-            command_session_id: Some(CommandSessionId::new("cmd_conflict")),
+            command_id: Some(CommandId::new("cmd_conflict")),
             settled: Some(CommandMetadata {
                 core: MutationCore {
                     success: false,

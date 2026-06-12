@@ -37,10 +37,10 @@ fn iws_same_port_discard() -> Result<()> {
             as_str(&first, "status")? == "running",
             "isolated command should start: {first}"
         );
-        let first_id = as_str(&first, "command_session_id")?.to_owned();
+        let first_id = as_str(&first, "command_id")?.to_owned();
         lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_session_id": &first_id}),
+            json!({"command_id": &first_id}),
         )?;
         wait_for_isolated_command_session_transcript_recycled(&lease, &first_handle_id, &first_id)?;
         Ok(())
@@ -63,11 +63,8 @@ fn iws_same_port_discard() -> Result<()> {
             as_str(&second, "status")? == "running",
             "same isolated port should be reusable after exit discard: {second}"
         );
-        let id = as_str(&second, "command_session_id")?.to_owned();
-        lease.call(
-            catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_session_id": &id}),
-        )?;
+        let id = as_str(&second, "command_id")?.to_owned();
+        lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": &id}))?;
         wait_for_isolated_command_session_transcript_recycled(&lease, &second_handle_id, &id)?;
         Ok(())
     })();
@@ -112,7 +109,7 @@ time.sleep(60)'"
         as_str(&started, "status")? == "running" && stdout(&started).contains("iws-prompt"),
         "isolated prompt command should start and expose prompt: {started}"
     );
-    let session_id = as_str(&started, "command_session_id")?.to_owned();
+    let session_id = as_str(&started, "command_id")?.to_owned();
     let transcript_path = isolated_command_session_transcript_path(&handle_id, &session_id);
     let body = (|| -> Result<()> {
         wait_for_container_path(&lease, &transcript_path, true, Duration::from_secs(3))?;
@@ -120,7 +117,7 @@ time.sleep(60)'"
         let answered = lease.call_ok(
             catalog::SANDBOX_COMMAND_WRITE_STDIN,
             json!({
-                "command_session_id": session_id,
+                "command_id": session_id,
                 "chars": "private-payload\n",
                 "yield_time_ms": 1500,}),
         )?;
@@ -156,7 +153,7 @@ time.sleep(60)'"
         let progress = lease.call_ok(
             catalog::SANDBOX_COMMAND_POLL,
             json!({
-                "command_session_id": session_id,
+                "command_id": session_id,
                 "last_n_lines": 8,
             }),
         )?;
@@ -167,7 +164,7 @@ time.sleep(60)'"
 
         let not_done = lease.call_ok(
             catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-            json!({"command_session_ids": [session_id.clone()]}),
+            json!({"command_ids": [session_id.clone()]}),
         )?;
         ensure!(
             array(&not_done, "completions")?.is_empty(),
@@ -176,7 +173,7 @@ time.sleep(60)'"
 
         let cancelled = lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_session_id": &session_id}),
+            json!({"command_id": &session_id}),
         )?;
         ensure!(
             matches!(as_str(&cancelled, "status")?, "cancelled" | "ok" | "error"),
@@ -190,7 +187,7 @@ time.sleep(60)'"
     if body.is_err() {
         let _ = lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_session_id": &session_id}),
+            json!({"command_id": &session_id}),
         );
     }
     let exit = lease.call_ok(catalog::SANDBOX_ISOLATION_EXIT, json!({"grace_s": 0.1}));
@@ -221,7 +218,7 @@ fn poll_read_progress_until_stdout_contains(
         let poll = lease.call_ok(
             catalog::SANDBOX_COMMAND_POLL,
             json!({
-                "command_session_id": session_id,
+                "command_id": session_id,
                 "last_n_lines": 8,
             }),
         )?;

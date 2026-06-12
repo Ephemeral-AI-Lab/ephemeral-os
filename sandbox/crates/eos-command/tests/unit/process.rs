@@ -3,7 +3,7 @@ use serde_json::json;
 use super::*;
 
 fn runner_ok() -> Option<CommandRunnerResult> {
-    CommandRunnerResult::from_value(json!({"exit_code": 0, "tool_result": {"status": "ok"}}))
+    CommandRunnerResult::from_value(json!({"exit_code": 0, "payload": {"status": "ok"}}))
 }
 
 #[test]
