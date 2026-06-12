@@ -24,6 +24,15 @@ fn closes_root_into_one_request_trace() {
         let dispatch = span!(Level::INFO, "dispatch", span_kind = "dispatch");
         dispatch.in_scope(|| {
             event!(Level::INFO, event = "op_resolved", op = "sandbox.ready");
+            let op = span!(
+                Level::INFO,
+                "op.runtime.ready",
+                span_kind = "operation",
+                op = "sandbox.runtime.ready",
+            );
+            op.in_scope(|| {
+                event!(Level::INFO, event = "ready_checked", ready = true);
+            });
         });
     });
 
@@ -32,13 +41,19 @@ fn closes_root_into_one_request_trace() {
         .expect("finished request trace");
 
     assert_eq!(record.trace_id, trace_id);
-    assert_eq!(record.spans.len(), 2);
+    assert_eq!(record.spans.len(), 3);
     assert_eq!(record.spans[0].kind, SpanKind::OpRequest);
     assert_eq!(record.spans[1].kind, SpanKind::Dispatch);
+    assert_eq!(record.spans[2].kind, SpanKind::Operation);
+    assert_eq!(record.spans[2].name, "op.runtime.ready");
     assert_eq!(
         record.spans[1].parent_span_id,
         Some(record.spans[0].span_id)
     );
-    assert_eq!(record.events.len(), 2);
+    assert_eq!(
+        record.spans[2].parent_span_id,
+        Some(record.spans[1].span_id)
+    );
+    assert_eq!(record.events.len(), 3);
     assert!(layer.take_finished(&record.trace_id).is_none());
 }

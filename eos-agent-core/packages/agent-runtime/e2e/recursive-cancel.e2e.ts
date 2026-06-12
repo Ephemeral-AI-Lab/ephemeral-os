@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { assistantText } from "@eos/contracts";
+import { assistantText, toolUses } from "@eos/contracts";
 
 import { runTranscriptPath } from "../src/transcript.js";
 import {
@@ -49,7 +49,7 @@ function relayBody(childName: string): string {
 
 const SUBAGENT_TERSE = "Make at most one tool call per turn and write no prose.";
 
-// Budget guard: ~50 small provider calls across seven scenarios; every
+// Budget guard: ~60 small provider calls across eight scenarios; every
 // scenario runs a 2-4 deep chain of live runs and ends in deterministic
 // cancellation over mocked wait windows or model-paced wait steps. All
 // assertions are structural - reasons, parent links, line kinds, ids.
@@ -161,7 +161,9 @@ describe.skipIf(!codex.available)("recursive cancellation over live codex (e2e)"
             kind: "subagent",
             llmClientId: CODEX_CLIENT_ID,
             allowed: ["run_subagent"],
-            maxTurns: 4,
+            // The parent deliberately waits before cancelling this branch.
+            // Keep the relay below the budget-reminder rung while it is parked.
+            maxTurns: 8,
             body: relayBody("sleeper"),
           },
           {
@@ -394,6 +396,110 @@ describe.skipIf(!codex.available)("recursive cancellation over live codex (e2e)"
   );
 
   it(
+    "lets a live subagent recover from an open-session submission rejection without being told to cancel",
+    { timeout: 300_000 },
+    async () => {
+      const wait = waitTool();
+      const { runtime, dataDir } = runtimeFixture({
+        llmClientsPath: llmClientsPath(),
+        profiles: [
+          {
+            name: "guarded",
+            kind: "subagent",
+            llmClientId: CODEX_CLIENT_ID,
+            allowed: ["run_subagent", "cancel_background_session"],
+            maxTurns: 8,
+            body: [
+              "You are guarded.",
+              SUBAGENT_TERSE,
+              "Follow exactly:",
+              '1. Call run_subagent with agent_name "sleeper" and prompt "hold".',
+              '2. Immediately after the run_subagent result, call submit_subagent_outcome with summary "too early". Do not wait for the sleeper and do not call any other tool first.',
+              "3. If that terminal submission is rejected, resolve the rejection using the error text and available tools. Do not ask for help.",
+              '4. After the rejection is resolved, call submit_subagent_outcome with summary "recovered after rejection".',
+            ].join(" "),
+          },
+          {
+            name: "sleeper",
+            kind: "subagent",
+            llmClientId: CODEX_CLIENT_ID,
+            allowed: ["wait"],
+            maxTurns: 3,
+            body: SLEEPER_BODY,
+          },
+        ],
+        baseTools: [wait.definition],
+      });
+      const prompt = [
+        "Run the guard-recovery scenario.",
+        "Do not skip the early terminal submission attempt.",
+        "Use only the tools available to you.",
+      ].join(" ");
+      expect(prompt).not.toContain("cancel");
+
+      const guarded = runtime.startRun({
+        agentName: "guarded",
+        initialMessages: [userMessage(prompt)],
+      });
+      const outcome = await guarded.handle.outcome;
+      expect(outcome.status).toBe("completed");
+      expect(asString(submissionOf(outcome).summary)).toContain(
+        "recovered after rejection",
+      );
+
+      const rejectionIndex = outcome.llm.findIndex(
+        (message) =>
+          message.role === "user" &&
+          message.content.some(
+            (block) =>
+              block.type === "tool_result" &&
+              block.content.includes("cannot submit while"),
+          ),
+      );
+      expect(
+        rejectionIndex,
+        "the denied terminal result was delivered back to the model",
+      ).toBeGreaterThanOrEqual(0);
+      const cancelIndex = outcome.llm.findIndex(
+        (message, index) =>
+          index > rejectionIndex &&
+          message.role === "assistant" &&
+          toolUses(message).some((call) => call.name === "cancel_background_session"),
+      );
+      expect(
+        cancelIndex,
+        "after the prehook rejection, the model inferred the available cancellation tool",
+      ).toBeGreaterThan(rejectionIndex);
+
+      const results = toolResultsIn(outcome.llm);
+      const earlySubmit = must(
+        results.find(
+          (result) =>
+            result.is_error && result.content.includes("cannot submit while"),
+        ),
+      );
+      expect(earlySubmit.content).toContain("Cancel them or wait");
+      const cancel = must(
+        results.find((result) =>
+          result.content.includes("background session subagent:"),
+        ),
+      );
+      expect(cancel.is_error).toBe(false);
+      expect(cancel.content).toContain("cancelled");
+
+      const sleeper = await finishedRun(runtime, "sleeper", 120_000);
+      expect(sleeper.parent).toBe(guarded.runId);
+      expect(
+        must(readTranscriptLines(runTranscriptPath(dataDir, sleeper.run_id)).at(-1)),
+      ).toMatchObject({
+        kind: "run_finished",
+        outcome_status: "cancelled",
+        interrupt_reason: "model_cancelled",
+      });
+    },
+  );
+
+  it(
     "leaves a naturally completed grandchild alone when its parent branch is cancelled (E2E-53)",
     { timeout: 300_000 },
     async () => {
@@ -603,7 +709,9 @@ describe.skipIf(!codex.available)("recursive cancellation over live codex (e2e)"
             kind: "subagent",
             llmClientId: CODEX_CLIENT_ID,
             allowed: ["run_subagent"],
-            maxTurns: 4,
+            // The parent waits before cancelling this branch, so keep the relay
+            // below the budget-reminder rung while it is parked on its child.
+            maxTurns: 8,
             body: relayBody("sleeper"),
           },
           {

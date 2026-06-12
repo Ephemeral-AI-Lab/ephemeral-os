@@ -172,7 +172,7 @@ export async function claimLaunchable(
   return claims;
 }
 
-export async function claimReadyWorkItems(
+async function claimReadyWorkItems(
   trx: PursuitTransaction,
   pursuitId: PursuitId,
   queuedRows: readonly LaunchQueueRow[],

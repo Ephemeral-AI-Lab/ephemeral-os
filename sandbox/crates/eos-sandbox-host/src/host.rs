@@ -13,7 +13,7 @@ use sha2::Digest as _;
 use crate::protocol::{
     encode_request_with_metadata, encode_request_with_trace_metadata, is_success,
     take_trace_sidecar, ClientError, ProtocolClient, TraceWireContext, TraceWireLinkHint,
-    CONNECT_RETRY_DELAYS_S, DEFAULT_LAYER_STACK_ROOT, HEARTBEAT_OP, READY_OP,
+    DEFAULT_LAYER_STACK_ROOT, HEARTBEAT_OP, READY_OP,
 };
 use crate::runtime::{
     container_labels, docker, resolve_published_addr, running_container_ids, ContainerLifetime,
@@ -684,12 +684,7 @@ fn run_recovery(attempt: &ForwardAttempt<'_>) -> Result<Value, ForwardError> {
         Ok(value) => Ok(value),
         Err(err) if err.is_connect_failure() => match resolve_endpoint(attempt.record) {
             Ok(addr) => {
-                record_event(
-                    attempt,
-                    "host.transport",
-                    "endpoint_refreshed",
-                    json!({"old_endpoint": endpoint.to_string(), "new_endpoint": addr.to_string()}),
-                );
+                record_endpoint_refreshed(attempt, endpoint, addr);
                 match tcp_once(attempt, addr, retry_attempt_index()) {
                     Ok(value) => Ok(value),
                     Err(err) => {
@@ -752,7 +747,7 @@ fn tcp_with_connect_backoff(
         Err(err) if err.is_connect_failure() => err,
         Err(err) => return Err(err),
     };
-    for delay_s in CONNECT_RETRY_DELAYS_S {
+    for delay_s in connect_retry_delays_s().iter().copied() {
         attempt_index = attempt_index.saturating_add(1);
         record_event(
             attempt,
@@ -1020,6 +1015,9 @@ fn record_client_error(
         _ => unreachable!("json object"),
     };
     let (event, duration_field) = match error {
+        ClientError::Connect { source, .. } if source.kind() == std::io::ErrorKind::TimedOut => {
+            ("connect_timeout", "connect_duration_us")
+        }
         ClientError::Connect { .. } => ("connect_failed", "connect_duration_us"),
         ClientError::Write(_) => ("write_failed", "write_duration_us"),
         ClientError::EmptyResponse => ("empty_response", "read_duration_us"),
@@ -1028,6 +1026,19 @@ fn record_client_error(
     };
     details.insert(duration_field.to_owned(), json!(elapsed_us(started)));
     record_event(attempt, "host.transport", event, Value::Object(details));
+}
+
+fn record_endpoint_refreshed(
+    attempt: &ForwardAttempt<'_>,
+    old_endpoint: SocketAddr,
+    new_endpoint: SocketAddr,
+) {
+    record_event(
+        attempt,
+        "host.transport",
+        "endpoint_refreshed",
+        json!({"old_endpoint": old_endpoint.to_string(), "new_endpoint": new_endpoint.to_string()}),
+    );
 }
 
 fn record_event(attempt: &ForwardAttempt<'_>, module: &str, event: &str, details: Value) {
@@ -1081,6 +1092,9 @@ fn record_missing(attempt: &ForwardAttempt<'_>, status: &str, error_kind: &str, 
 
 fn client_error_kind(error: &ClientError) -> &'static str {
     match error {
+        ClientError::Connect { source, .. } if source.kind() == std::io::ErrorKind::TimedOut => {
+            "connect_timeout"
+        }
         ClientError::Connect { .. } => "connect_failed",
         ClientError::Io(_) => "transport_io",
         ClientError::Write(_) => "write_failed",
@@ -1114,7 +1128,17 @@ fn response_status(response: &Value) -> String {
 }
 
 fn retry_attempt_index() -> u32 {
-    u32::try_from(CONNECT_RETRY_DELAYS_S.len()).unwrap_or(u32::MAX)
+    u32::try_from(connect_retry_delays_s().len()).unwrap_or(u32::MAX)
+}
+
+#[cfg(not(test))]
+fn connect_retry_delays_s() -> &'static [f64] {
+    &crate::protocol::CONNECT_RETRY_DELAYS_S
+}
+
+#[cfg(test)]
+fn connect_retry_delays_s() -> &'static [f64] {
+    &[0.0, 0.0]
 }
 
 fn elapsed_us(started: Instant) -> u64 {

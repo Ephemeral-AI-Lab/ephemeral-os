@@ -22,7 +22,31 @@ mod commit;
 use std::collections::BTreeMap;
 use std::path::Path;
 
-pub use commit::commit_to_git;
+use serde_json::Value;
+
+pub use commit::{commit_to_git, commit_to_git_with_trace_recorder};
+
+/// Bounded checkpoint trace event emitted by the git/worktree pipeline.
+#[derive(Debug, Clone)]
+pub struct CheckpointTraceEvent {
+    /// Trace module, currently `checkpoint`.
+    pub module: &'static str,
+    /// Event name from the Phase 04 vocabulary.
+    pub event: &'static str,
+    /// Bounded event payload.
+    pub details: Value,
+}
+
+impl CheckpointTraceEvent {
+    #[must_use]
+    pub fn new(module: &'static str, event: &'static str, details: Value) -> Self {
+        Self {
+            module,
+            event,
+            details,
+        }
+    }
+}
 
 /// Typed input for [`commit_to_git`].
 ///

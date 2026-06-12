@@ -336,7 +336,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
             invocation_id: "count".to_owned(),
             args: json!({"caller_id": "caller-a"}),
         },
-        context,
+        context.clone(),
     );
     assert_eq!(count["success"], Value::Bool(true));
     assert_eq!(count["count"], json!(1));
@@ -347,7 +347,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
             invocation_id: "command-count".to_owned(),
             args: json!({"caller_id": "caller-a"}),
         },
-        context,
+        context.clone(),
     );
     assert_eq!(command_count["success"], Value::Bool(true));
     assert_eq!(command_count["count"], json!(0));
@@ -358,7 +358,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
             invocation_id: "heartbeat".to_owned(),
             args: json!({"invocation_ids": ["bg-shell", "missing"]}),
         },
-        context,
+        context.clone(),
     );
     assert_eq!(heartbeat["success"], Value::Bool(true));
     assert_eq!(heartbeat["touched"], json!(1));
@@ -369,7 +369,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
             invocation_id: "cancel".to_owned(),
             args: json!({"invocation_id": "bg-shell"}),
         },
-        context,
+        context.clone(),
     );
     assert_eq!(cancel["success"], Value::Bool(true));
     assert_eq!(cancel["cancelled"], Value::Bool(true));
@@ -567,6 +567,25 @@ async fn tcp_server_sidecar_records_transport_dispatch_and_op_spans() -> TestRes
     assert!(spans.contains(&"daemon.transport"), "{spans:?}");
     assert!(spans.contains(&"dispatch"), "{spans:?}");
     assert!(spans.contains(&"op.runtime.ready"), "{spans:?}");
+    let root = record
+        .spans
+        .iter()
+        .find(|span| span.name == "op_request")
+        .ok_or("root span")?;
+    assert_eq!(root.fields.value["listener_kind"], json!("tcp"));
+    assert_eq!(root.fields.value["request_bytes"], json!(bytes.len()));
+    assert!(
+        root.fields.value["peer_addr"]
+            .as_str()
+            .is_some_and(|addr| addr.starts_with("127.0.0.1:")),
+        "root fields: {:?}",
+        root.fields.value
+    );
+    let expected_local_addr = format!("127.0.0.1:{port}");
+    assert_eq!(
+        root.fields.value["local_addr"].as_str(),
+        Some(expected_local_addr.as_str())
+    );
     let events: Vec<_> = record
         .events
         .iter()
@@ -595,12 +614,116 @@ async fn tcp_server_sidecar_records_transport_dispatch_and_op_spans() -> TestRes
     Ok(())
 }
 
+#[tokio::test]
+async fn tcp_server_sidecar_records_wire_error_paths() -> TestResult {
+    let (root, _workspace) = seed_layer_stack("tcp_trace_wire_errors")?;
+    let runtime_dir = root
+        .parent()
+        .ok_or("seeded layer-stack root must have parent")?
+        .join("runtime");
+    std::fs::create_dir_all(&runtime_dir)?;
+    let probe = TcpListener::bind(("127.0.0.1", 0)).await?;
+    let port = probe.local_addr()?.port();
+    drop(probe);
+    let config = ServerConfig {
+        socket_path: runtime_dir.join("runtime.sock"),
+        pid_path: runtime_dir.join("runtime.pid"),
+        tcp_host: Some("127.0.0.1".to_owned()),
+        tcp_port: Some(port),
+        auth_token: Some("secret".to_owned()),
+    };
+    let server = DaemonServer::new(config.clone());
+    let shutdown = server.shutdown_token();
+    let task = tokio::spawn(server.serve());
+    for _ in 0..50 {
+        if TcpStream::connect(("127.0.0.1", port)).await.is_ok() {
+            break;
+        }
+        sleep(Duration::from_millis(10)).await;
+    }
+
+    let bad_json = send_tcp_line(port, b"{not json\n").await?;
+    assert_error_sidecar_event(&bad_json, "bad_json", "daemon.transport", "decoded")?;
+
+    let unauthorized = json!({
+        "op": "sandbox.runtime.ready",
+        "invocation_id": "wire-unauthorized",
+        "args": {"layer_stack_root": root},
+        "trace": {
+            "trace_id": "trace-wire-unauthorized",
+            "request_id": "wire-unauthorized",
+            "link_hints": [],
+            "capture_budget_version": 1,
+        },
+        DAEMON_AUTH_FIELD: "wrong",
+    });
+    let mut unauthorized_line = serde_json::to_vec(&unauthorized)?;
+    unauthorized_line.push(b'\n');
+    let unauthorized = send_tcp_line(port, &unauthorized_line).await?;
+    assert_error_sidecar_event(
+        &unauthorized,
+        "unauthorized",
+        "daemon.transport",
+        "auth_checked",
+    )?;
+
+    let invalid = json!({
+        "args": {"layer_stack_root": root},
+        "trace": {
+            "trace_id": "trace-wire-invalid",
+            "request_id": "wire-invalid",
+            "link_hints": [],
+            "capture_budget_version": 1,
+        },
+        DAEMON_AUTH_FIELD: "secret",
+    });
+    let mut invalid_line = serde_json::to_vec(&invalid)?;
+    invalid_line.push(b'\n');
+    let invalid = send_tcp_line(port, &invalid_line).await?;
+    assert_error_sidecar_event(&invalid, "invalid_request", "daemon.transport", "decoded")?;
+
+    shutdown.cancel();
+    let _ = timeout(Duration::from_secs(2), task).await??;
+    Ok(())
+}
+
 fn dispatch_request(daemon: &TestDaemon, op: &str, invocation_id: &str, args: Value) -> Value {
     daemon.dispatch(&Request {
         op: op.to_owned(),
         invocation_id: invocation_id.to_owned(),
         args,
     })
+}
+
+async fn send_tcp_line(port: u16, line: &[u8]) -> TestResult<Value> {
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).await?;
+    stream.write_all(line).await?;
+    stream.shutdown().await?;
+    let mut response = Vec::new();
+    timeout(Duration::from_secs(2), stream.read_to_end(&mut response)).await??;
+    Ok(serde_json::from_slice(response.as_slice())?)
+}
+
+fn assert_error_sidecar_event(
+    response: &Value,
+    kind: &str,
+    module: &str,
+    event: &str,
+) -> TestResult {
+    assert_eq!(response["success"], Value::Bool(false), "{response}");
+    assert_eq!(response["error"]["kind"], json!(kind), "{response}");
+    let sidecar = response["_trace_events"]
+        .as_str()
+        .ok_or("error response carries sidecar")?;
+    let batch = decode_trace_batch(&base64::engine::general_purpose::STANDARD.decode(sidecar)?)?;
+    let record = batch.records.first().ok_or("trace record")?;
+    let events: Vec<_> = record
+        .events
+        .iter()
+        .map(|event| (event.module.as_str(), event.name.as_str()))
+        .collect();
+    assert!(events.contains(&(module, event)), "{events:?}");
+    Ok(())
 }
 
 fn seed_workspace_base_fixture() -> TestResult<(PathBuf, PathBuf, PathBuf)> {

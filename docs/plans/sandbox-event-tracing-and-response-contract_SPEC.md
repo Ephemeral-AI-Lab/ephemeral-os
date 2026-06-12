@@ -55,8 +55,8 @@ Current phase status:
 | --- | --- | --- |
 | Phase 01 - Contracts first | Complete | `cargo test -p eos-trace -p eos-operation` passed on 2026-06-12 after adding `eos-trace`, protobuf codec/layer tests, `OperationEnvelope`, and the temporary v1 flattening adapter. |
 | Phase 02 - Host store | Complete | `cargo test -p eos-sandbox-host` passed on 2026-06-12 after adding the host SQLite trace store, request-start fail-closed gate, projection rebuild, startup reconciliation, seal/prune verification, and indexed acceptance-query tests. |
-| Phase 03 - Gateway, host, and daemon propagation | In progress | Additive request trace context, daemon protobuf sidecar assembly, host sidecar ingest/strip, and gateway declassification landed; `cargo test -p eos-daemon -p eos-sandbox-host -p eos-sandbox-gateway` passed on 2026-06-12. Remaining Phase 03 work: full transport event coverage, export spool/drainer, crash-log boot events, and end-to-end replay assertions. |
-| Phase 04 - Subsystem events and resource stats | Blocked | |
+| Phase 03 - Gateway, host, and daemon propagation | Complete | `cargo test -p eos-daemon -p eos-sandbox-host -p eos-sandbox-gateway -p eos-trace` passed on 2026-06-12 after adding additive trace propagation, daemon protobuf sidecars with accepted-before-read root timing, bounded export spool/drainer, daemon peer/local transport facts, daemon response write/shutdown failure spooling, wire-error sidecars, host transport edge coverage, host sidecar ingest/strip, gateway declassification/write-failure events, boot `config_loaded`/`listen_bound` events, hot-path traced dispatch coverage, and host-store replay assertions. |
+| Phase 04 - Subsystem events and resource stats | In progress | Checkpoint/git command-step events are implemented through request-scoped daemon sidecar events; `cargo test -p eos-operation -p eos-daemon` passed on 2026-06-12 for the checkpoint slice. |
 | Phase 05 - Response and e2e migration | Blocked | |
 | Phase 06 - Debt deletion | Blocked | |
 | Phase 07 - TypeScript mirror | Blocked | |
@@ -1984,48 +1984,48 @@ pass. Phase 03 remains Blocked until then.
 
 Acceptance checklist:
 
-- [ ] `Request` carries a trace field encoded by host/gateway with
+- [x] `Request` carries a trace field encoded by host/gateway with
   `trace_id`, `request_id`, parent/link hints, and capture budget version.
-- [ ] Gateway UDS handling starts or adopts the request trace, records inbound
+- [x] Gateway UDS handling starts or adopts the request trace, records inbound
   read/parse/write events, records catalog route decisions, and wraps the
   in-process `Engine::forward` call with start/finish/failure events.
-- [ ] Host forwarding records outbound TCP connect/retry/fallback, request
+- [x] Host forwarding records outbound TCP connect/retry/fallback, request
   write, response read, empty response, decode failure, and timeout facts in
   the host audit store even when no daemon response/sidecar is received.
-- [ ] `handle_connection` opens the root `op_request` span before reading the
+- [x] `handle_connection` opens the root `op_request` span before reading the
   request line and records `connection_id`, listener kind, `peer_addr`,
   `local_addr`, `request_bytes`, bad JSON, oversized payloads, timeouts, auth
   failures, cancellations, response-write failures, and shutdown failures.
-- [ ] Dispatch and `op.<family>.<verb>` spans are emitted at the existing
+- [x] Dispatch and `op.<family>.<verb>` spans are emitted at the existing
   dispatcher/op-adapter boundaries, with route decisions recorded at the
   decision site.
-- [ ] Finalization assembles a protobuf sidecar for request traces; background
+- [x] Finalization assembles a protobuf sidecar for request traces; background
   roots use a bounded non-blocking spool drained by `sandbox.trace.export`.
-- [ ] The host background drainer is single-flight per sandbox and never runs
+- [x] The host background drainer is single-flight per sandbox and never runs
   on the request-forwarding caller's thread.
-- [ ] Crash-log formatting is installed before the listener binds and records
+- [x] Crash-log formatting is installed before the listener binds and records
   `config_loaded` and `listen_bound`.
-- [ ] `cargo test -p eos-daemon`
-- [ ] Gateway tests cover UDS malformed JSON, unknown op, forbidden surface,
+- [x] `cargo test -p eos-daemon`
+- [x] Gateway tests cover UDS malformed JSON, unknown op, forbidden surface,
   catalog daemon route, host route, plugin fallback route, response-write
   failure, and `Engine::forward` success/error event emission.
-- [ ] Wire tests cover accepted requests, decode failures, oversized messages,
+- [x] Wire tests cover accepted requests, decode failures, oversized messages,
   auth failures, timeouts, cancellations, and response-write/shutdown failure
   handling.
-- [ ] Host transport tests cover connect refusal, connect timeout, endpoint
+- [x] Host transport tests cover connect refusal, connect timeout, endpoint
   refresh after stale Docker port, retry backoff, write failure, empty
   response, response decode failure, and read timeout.
-- [ ] Trace tree tests use current-thread `with_default` and assert root,
+- [x] Trace tree tests use current-thread `with_default` and assert root,
   dispatch, op-family, sidecar, and export-spool behavior.
-- [ ] Store replay test reconstructs one successful daemon op as:
+- [x] Store replay test reconstructs one successful daemon op as:
   gateway UDS -> catalog route -> host forward -> TCP connect/write/read ->
   daemon accept/read/auth/decode -> dispatch -> op_adapter -> subsystem ->
   daemon response write -> host response read -> gateway response write.
-- [ ] A dependency guard proves daemon crates do not depend on `rusqlite` or
+- [x] A dependency guard proves daemon crates do not depend on `rusqlite` or
   host-store modules.
-- [ ] A hot-path unit/bench test asserts representative dispatch/route
+- [x] A hot-path unit/bench test asserts representative dispatch/route
   decisions stay bounded with tracing enabled and a slow host store.
-- [ ] Update the progress tracker with Phase 03 evidence and mark Phase 03
+- [x] Update the progress tracker with Phase 03 evidence and mark Phase 03
   `Complete`.
 
 Phase gate:
@@ -2055,7 +2055,7 @@ Acceptance checklist:
 - [ ] Plugin/PPC emits setup/service health/state facts, typed
   `parent_message_id`, service stderr path, service exit raw status/signal,
   PPC orphan/late reply events, and overlay/callback parent handoff.
-- [ ] Checkpoint/git operations emit command step events with exit codes and
+- [x] Checkpoint/git operations emit command step events with exit codes and
   bounded stderr tails.
 - [ ] `ResourceStats` covers cgroup CPU/memory/io/PSI where available,
   daemon RSS/HWM, tree stats, mount cost, source availability/error markers,

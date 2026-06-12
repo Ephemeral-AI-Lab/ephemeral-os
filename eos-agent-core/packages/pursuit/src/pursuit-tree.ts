@@ -150,7 +150,7 @@ export function decodeStringList(raw: string): string[] {
   return parsed.map((value) => String(value));
 }
 
-export function decodeFailureReasons(raw: string): AttemptFailureReason[] {
+function decodeFailureReasons(raw: string): AttemptFailureReason[] {
   const parsed: unknown = JSON.parse(raw);
   if (!Array.isArray(parsed)) {
     throw new Error(`expected JSON failure reason array: ${raw}`);

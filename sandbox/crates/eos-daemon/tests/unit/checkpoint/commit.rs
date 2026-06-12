@@ -94,6 +94,38 @@ fn commit_to_git_rejects_git_pathspecs() -> TestResult {
     Ok(())
 }
 
+#[test]
+fn commit_to_git_records_checkpoint_trace_events() -> TestResult {
+    let fixture = Fixture::new("trace-events")?;
+    LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
+        path: eos_layerstack::LayerPath::parse("checkpoint/included.txt")?,
+        content: b"included\n".to_vec(),
+    }])?;
+    let sink = crate::trace::RequestTraceEventSink::default();
+    let context = DispatchContext::empty().with_trace_events(sink.clone());
+
+    let response = commit_to_git(
+        parse_commit_input(json!({
+            "layer_stack_root": fixture.root,
+            "workspace_root": fixture.workspace,
+            "paths": ["checkpoint/included.txt"],
+            "message": "checkpoint trace events",
+        })),
+        context,
+    )?;
+
+    assert_response_keys(&response);
+    let events = sink.drain();
+    assert!(
+        events.iter().any(|event| event.module == "checkpoint"
+            && event.name == "git_command_finished"
+            && event.details["argv_summary"] == "git commit -m <message>"
+            && event.details["exit_code"] == 0),
+        "checkpoint commit event recorded"
+    );
+    Ok(())
+}
+
 fn parse_commit_input(args: serde_json::Value) -> CommitInput {
     match OpRequest::parse(BuiltinOp::CommitToGit, &args).expect("valid commit input") {
         OpRequest::CommitToGit(input) => input,

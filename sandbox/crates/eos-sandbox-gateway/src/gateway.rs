@@ -431,7 +431,12 @@ fn accept_loop(
     }
 }
 
-fn handle_connection(stream: UnixStream, surface: Surface, catalog: &Catalog, engine: &dyn Engine) {
+pub(crate) fn handle_connection(
+    stream: UnixStream,
+    surface: Surface,
+    catalog: &Catalog,
+    engine: &dyn Engine,
+) {
     let _ = stream.set_read_timeout(Some(REQUEST_READ_TIMEOUT));
     let read_started = Instant::now();
     let parsed = read_request_line(&stream).and_then(|line| {

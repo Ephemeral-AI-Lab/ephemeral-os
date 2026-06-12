@@ -4,7 +4,7 @@ use std::sync::{
     Arc,
 };
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde_json::json;
 
@@ -147,6 +147,50 @@ fn dispatch_attaches_real_runtime_timings() {
             >= 0.0
     );
     assert_eq!(response["timings"]["runtime.read_request_s"], json!(0.125));
+}
+
+#[test]
+fn traced_dispatch_hot_path_stays_sub_millisecond_without_host_store() {
+    let request = Request {
+        op: "sandbox.call.heartbeat".to_owned(),
+        invocation_id: "hot-path-request".to_owned(),
+        args: json!({"invocation_ids": []}),
+    };
+    let trace = crate::wire::RequestTraceContext {
+        trace_id: "trace-hot-path".to_owned(),
+        request_id: "hot-path-request".to_owned(),
+        parent_span_id: None,
+        link_hints: Vec::new(),
+        capture_budget_version: 1,
+    };
+    let facts = crate::trace::RequestTraceFacts {
+        connection_id: "daemon-conn-hot-path".to_owned(),
+        accepted_at_unix_ms: u64::MAX,
+        listener_kind: "tcp",
+        peer_addr: Some("127.0.0.1:51000".to_owned()),
+        local_addr: Some("127.0.0.1:50000".to_owned()),
+        is_tcp: true,
+        request_bytes: 256,
+        read_duration_us: 10,
+        auth_required: true,
+        auth_ok: true,
+        protocol_version: Some(1),
+    };
+
+    let iterations = 128_u128;
+    let started = Instant::now();
+    for _ in 0..iterations {
+        let response = dispatch_with_context(&request, DispatchContext::with_read_request_s(0.0));
+        let response =
+            crate::trace::attach_request_sidecar(response, Some(&trace), &request.op, &facts);
+        assert_eq!(response["success"], json!(true));
+        assert!(response["_trace_events"].is_string());
+    }
+    let average_us = started.elapsed().as_micros() / iterations;
+    assert!(
+        average_us < 1_000,
+        "traced dispatch averaged {average_us}us"
+    );
 }
 
 #[tokio::test]

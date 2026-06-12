@@ -143,7 +143,7 @@ export async function cancelWorkItem(
     .execute();
 }
 
-export function workItemStorageKey(
+function workItemStorageKey(
   legId: LegId,
   legGoalVersion: number,
   workItemId: WorkItemId,

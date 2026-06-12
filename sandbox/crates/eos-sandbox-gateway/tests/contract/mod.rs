@@ -324,6 +324,29 @@ fn unix_socket_records_forward_and_response_write_events() {
     let _ = std::fs::remove_file(&socket);
 }
 
+#[test]
+fn unix_socket_records_response_write_failure() {
+    let catalog = Catalog::load_builtin().expect("catalog");
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let engine = RecordingEngine::new(Arc::clone(&events));
+    let (mut client, server) = UnixStream::pair().expect("socket pair");
+    client
+        .write_all(
+            b"{\"op\":\"sandbox.file.read\",\"sandbox_id\":\"sb-stub\",\"invocation_id\":\"i4\",\"args\":{}}\n",
+        )
+        .expect("write request");
+    client.shutdown(std::net::Shutdown::Both).ok();
+    drop(client);
+
+    gateway::handle_connection(server, Surface::Client, &catalog, &engine);
+
+    let snapshot = events.lock().expect("events lock").clone();
+    assert!(
+        snapshot.contains(&("gateway.transport".to_owned(), "write_failed".to_owned())),
+        "gateway events not recorded: {snapshot:?}"
+    );
+}
+
 fn test_socket_path(tag: &str) -> PathBuf {
     PathBuf::from(format!("/tmp/esg-{tag}-{}.sock", std::process::id()))
 }

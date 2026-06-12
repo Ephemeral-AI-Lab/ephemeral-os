@@ -2,6 +2,7 @@
 //! connection, dispatch through the daemon dispatcher, and token-driven
 //! shutdown. Connection handlers keep mutex guards out of await points.
 
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::{mpsc as std_mpsc, Arc};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -25,7 +26,10 @@ use crate::DispatchContext;
 use crate::RuntimeServices;
 
 const MAX_REQUEST_BYTES: usize = crate::wire::MAX_REQUEST_BYTES;
+#[cfg(not(test))]
 const REQUEST_READ_TIMEOUT_S: f64 = crate::wire::REQUEST_READ_TIMEOUT_S;
+#[cfg(test)]
+const REQUEST_READ_TIMEOUT_S: f64 = 0.1;
 
 /// Where the daemon binds + writes its pid, plus the optional TCP listener.
 #[derive(Debug, Clone)]
@@ -214,7 +218,7 @@ impl DaemonServer {
                             let (stream, _) = accepted?;
                             let server = Arc::clone(&server);
                             tokio::spawn(async move {
-                                let _ = server.handle_connection(stream, false).await;
+                                let _ = server.handle_connection(stream, false, None, None).await;
                             });
                         }
                     }
@@ -240,10 +244,18 @@ impl DaemonServer {
                         tokio::select! {
                             () = server.shutdown.cancelled() => break,
                             accepted = listener.accept() => {
-                                let (stream, _) = accepted?;
+                                let (stream, peer_addr) = accepted?;
+                                let local_addr = stream.local_addr().ok();
                                 let server = Arc::clone(&server);
                                 tokio::spawn(async move {
-                                    let _ = server.handle_connection(stream, true).await;
+                                    let _ = server
+                                        .handle_connection(
+                                            stream,
+                                            true,
+                                            Some(peer_addr),
+                                            local_addr,
+                                        )
+                                        .await;
                                 });
                             }
                         }
@@ -274,12 +286,19 @@ impl DaemonServer {
     /// Handle one accepted connection: read one capped, timed request line, pop
     /// the TCP-only auth token, decode the request, dispatch, write one framed
     /// response. Per-connection; never holds a lock across the await points.
-    async fn handle_connection<S>(&self, stream: S, is_tcp: bool) -> Result<(), DaemonError>
+    async fn handle_connection<S>(
+        &self,
+        stream: S,
+        is_tcp: bool,
+        peer_addr: Option<SocketAddr>,
+        local_addr: Option<SocketAddr>,
+    ) -> Result<(), DaemonError>
     where
         S: AsyncRead + AsyncWrite + Unpin,
     {
         let (mut reader, mut writer) = tokio::io::split(stream);
         let connection_id = crate::trace::next_connection_id();
+        let accepted_at_unix_ms = unix_ms();
         let read_start = Instant::now();
         let bytes = read_request_line(&mut reader).await;
         let read_duration_us = elapsed_us(read_start);
@@ -292,6 +311,9 @@ impl DaemonServer {
                     read_request_s,
                     read_duration_us,
                     connection_id,
+                    accepted_at_unix_ms,
+                    peer_addr,
+                    local_addr,
                 )
                 .await
             }
@@ -304,6 +326,9 @@ impl DaemonServer {
                     self.tcp_auth_required(is_tcp),
                     false,
                     None,
+                    accepted_at_unix_ms,
+                    peer_addr,
+                    local_addr,
                 );
                 crate::trace::attach_request_sidecar(
                     crate::dispatcher::error_response(
@@ -325,6 +350,9 @@ impl DaemonServer {
                     self.tcp_auth_required(is_tcp),
                     false,
                     None,
+                    accepted_at_unix_ms,
+                    peer_addr,
+                    local_addr,
                 );
                 crate::trace::attach_request_sidecar(
                     crate::dispatcher::error_response(
@@ -338,9 +366,23 @@ impl DaemonServer {
                 )
             }
         };
-        let framed = encode(&WireMessage::Response(response))?;
-        writer.write_all(&framed).await?;
-        writer.shutdown().await?;
+        let framed = encode(&WireMessage::Response(response.clone()))?;
+        if let Err(err) = writer.write_all(&framed).await {
+            crate::trace::push_transport_failure_from_sidecar(
+                &response,
+                "response_write_failed",
+                &err,
+            );
+            return Err(DaemonError::Io(err));
+        }
+        if let Err(err) = writer.shutdown().await {
+            crate::trace::push_transport_failure_from_sidecar(
+                &response,
+                "response_shutdown_failed",
+                &err,
+            );
+            return Err(DaemonError::Io(err));
+        }
         Ok(())
     }
 
@@ -351,6 +393,9 @@ impl DaemonServer {
         read_request_s: f64,
         read_duration_us: u64,
         connection_id: String,
+        accepted_at_unix_ms: u64,
+        peer_addr: Option<SocketAddr>,
+        local_addr: Option<SocketAddr>,
     ) -> serde_json::Value {
         let request_bytes = bytes.len();
         let auth_required = self.tcp_auth_required(is_tcp);
@@ -362,6 +407,9 @@ impl DaemonServer {
             auth_required,
             false,
             None,
+            accepted_at_unix_ms,
+            peer_addr,
+            local_addr,
         );
         let value = match serde_json::from_slice::<serde_json::Value>(&bytes) {
             Ok(value) => value,
@@ -394,6 +442,9 @@ impl DaemonServer {
                         auth_required,
                         false,
                         None,
+                        accepted_at_unix_ms,
+                        peer_addr,
+                        local_addr,
                     );
                     let response = crate::dispatcher::error_response(
                         err.wire_kind(),
@@ -423,6 +474,9 @@ impl DaemonServer {
             auth_required,
             true,
             protocol_version,
+            accepted_at_unix_ms,
+            peer_addr,
+            local_addr,
         );
         match decode_value(value) {
             Ok(WireMessage::Request(request)) => {
@@ -471,6 +525,8 @@ impl DaemonServer {
         let task_registry = Arc::clone(&registry);
         let task_services = Arc::clone(&self.services);
         let file_limits = self.file_limits;
+        let trace_events = crate::trace::RequestTraceEventSink::default();
+        let task_trace_events = trace_events.clone();
         let (start_tx, start_rx) = std_mpsc::channel::<()>();
         let task = tokio::task::spawn_blocking(move || {
             let _ = start_rx.recv();
@@ -481,7 +537,8 @@ impl DaemonServer {
                     &task_registry,
                     file_limits,
                     read_request_s,
-                ),
+                )
+                .with_trace_events(task_trace_events),
             )
         });
         registry.register(&invocation_id, task.abort_handle(), &caller_id, background);
@@ -500,7 +557,14 @@ impl DaemonServer {
             ),
         };
         registry.deregister(&invocation_id);
-        crate::trace::attach_request_sidecar(response, trace.as_ref(), &op, &facts)
+        let request_events = trace_events.drain();
+        crate::trace::attach_request_sidecar_with_events(
+            response,
+            trace.as_ref(),
+            &op,
+            &facts,
+            &request_events,
+        )
     }
 
     fn tcp_auth_required(&self, is_tcp: bool) -> bool {
@@ -586,10 +650,16 @@ fn trace_facts(
     auth_required: bool,
     auth_ok: bool,
     protocol_version: Option<i64>,
+    accepted_at_unix_ms: u64,
+    peer_addr: Option<SocketAddr>,
+    local_addr: Option<SocketAddr>,
 ) -> crate::trace::RequestTraceFacts {
     crate::trace::RequestTraceFacts {
         connection_id,
+        accepted_at_unix_ms,
         listener_kind: if is_tcp { "tcp" } else { "unix" },
+        peer_addr: peer_addr.map(|addr| addr.to_string()),
+        local_addr: local_addr.map(|addr| addr.to_string()),
         is_tcp,
         request_bytes,
         read_duration_us,
@@ -622,4 +692,36 @@ fn unix_ms() -> u64 {
         .unwrap_or_default()
         .as_millis();
     u64::try_from(millis).unwrap_or(u64::MAX)
+}
+
+#[cfg(test)]
+mod tests {
+    use tokio::io::AsyncReadExt as _;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn read_request_line_rejects_oversized_payloads() {
+        let mut reader = tokio::io::repeat(b'x').take(
+            u64::try_from(MAX_REQUEST_BYTES)
+                .expect("max request bytes fits u64")
+                .saturating_add(1),
+        );
+        let err = read_request_line(&mut reader)
+            .await
+            .expect_err("oversized request rejected");
+        assert!(matches!(err, DaemonError::RequestTooLarge { .. }));
+    }
+
+    #[tokio::test]
+    async fn read_request_line_times_out_waiting_for_line() {
+        let (_writer, mut reader) = tokio::io::duplex(64);
+        let err = read_request_line(&mut reader)
+            .await
+            .expect_err("hanging request times out");
+        assert!(
+            matches!(err, DaemonError::Io(ref source) if source.kind() == std::io::ErrorKind::TimedOut),
+            "{err:?}"
+        );
+    }
 }

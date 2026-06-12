@@ -142,14 +142,17 @@ pub(crate) fn commit_to_workspace(
 
 pub(crate) fn commit_to_git(
     input: CommitInput,
-    _context: DispatchContext<'_>,
+    context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
-    let outcome = eos_operation::checkpoint::commit_to_git(&CommitRequest {
-        layer_stack_root: &input.layer_stack_root,
-        workspace_root: &input.workspace_root,
-        message: &input.message,
-        raw_paths: input.paths,
-    })?;
+    let outcome = eos_operation::checkpoint::commit_to_git_with_trace_recorder(
+        &CommitRequest {
+            layer_stack_root: &input.layer_stack_root,
+            workspace_root: &input.workspace_root,
+            message: &input.message,
+            raw_paths: input.paths,
+        },
+        |event| context.record_trace_event(event.module, event.event, event.details),
+    )?;
     Ok(commit_response(&outcome))
 }
 

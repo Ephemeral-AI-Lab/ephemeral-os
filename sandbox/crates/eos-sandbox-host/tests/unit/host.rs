@@ -2,13 +2,15 @@ use super::*;
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use eos_trace::{
     encode_trace_batch, EventRecord, RequestId, SpanKind, SpanRecord, SpanUid, TraceBatch, TraceId,
     TraceRecord,
 };
 use serde_json::json;
+
+use crate::trace_store::TraceEventRow;
 
 #[test]
 fn registry_round_trips_records_and_tokens() -> Result<()> {
@@ -67,11 +69,80 @@ fn forward_request_persists_transport_events_and_strips_sidecar() -> Result<()> 
             SpanKind::OpRequest,
             json!({"op": "sandbox.runtime.ready"}),
         ));
+        record.spans.push(SpanRecord::new(
+            SpanUid::new(2),
+            Some(SpanUid::ROOT),
+            "daemon.transport",
+            SpanKind::DaemonTransport,
+            json!({"listener_kind": "tcp"}),
+        ));
+        record.spans.push(SpanRecord::new(
+            SpanUid::new(3),
+            Some(SpanUid::ROOT),
+            "dispatch",
+            SpanKind::Dispatch,
+            json!({"op": "sandbox.runtime.ready"}),
+        ));
+        record.spans.push(SpanRecord::new(
+            SpanUid::new(4),
+            Some(SpanUid::new(3)),
+            "op.runtime.ready",
+            SpanKind::Operation,
+            json!({"op": "sandbox.runtime.ready"}),
+        ));
         record.events.push(EventRecord::new(
-            SpanUid::ROOT,
+            SpanUid::new(2),
             "accepted",
             "daemon.transport",
             json!({"listener_kind": "tcp", "request_bytes": line.len()}),
+        ));
+        record.events.push(EventRecord::new(
+            SpanUid::new(2),
+            "read_finished",
+            "daemon.transport",
+            json!({"request_bytes": line.len()}),
+        ));
+        record.events.push(EventRecord::new(
+            SpanUid::new(2),
+            "auth_checked",
+            "daemon.transport",
+            json!({"auth_required": true, "auth_ok": true}),
+        ));
+        record.events.push(EventRecord::new(
+            SpanUid::new(2),
+            "decoded",
+            "daemon.transport",
+            json!({"protocol_version": 1}),
+        ));
+        record.events.push(EventRecord::new(
+            SpanUid::new(3),
+            "dispatch_started",
+            "daemon.dispatch",
+            json!({"op": "sandbox.runtime.ready"}),
+        ));
+        record.events.push(EventRecord::new(
+            SpanUid::new(3),
+            "op_resolved",
+            "daemon.dispatch",
+            json!({"op": "sandbox.runtime.ready"}),
+        ));
+        record.events.push(EventRecord::new(
+            SpanUid::new(4),
+            "route_selected",
+            "workspace.route",
+            json!({"kind": "none"}),
+        ));
+        record.events.push(EventRecord::new(
+            SpanUid::new(4),
+            "ready_checked",
+            "sandbox.runtime",
+            json!({"ready": true}),
+        ));
+        record.events.push(EventRecord::new(
+            SpanUid::new(2),
+            "response_write_finished",
+            "daemon.transport",
+            json!({"response_bytes": 64}),
         ));
         let sidecar = base64::engine::general_purpose::STANDARD
             .encode(encode_trace_batch(&TraceBatch::single(record)));
@@ -112,6 +183,11 @@ fn forward_request_persists_transport_events_and_strips_sidecar() -> Result<()> 
     let mut trace = ForwardTraceContext::new("request-forward");
     trace.push_gateway_event(
         "gateway.transport",
+        "accepted",
+        json!({"surface": "client"}),
+    );
+    trace.push_gateway_event(
+        "gateway.transport",
         "request_read",
         json!({"surface": "client", "request_bytes": 81}),
     );
@@ -139,6 +215,17 @@ fn forward_request_persists_transport_events_and_strips_sidecar() -> Result<()> 
         .request_by_id("request-forward")?
         .expect("request row");
     assert_eq!(request.status.as_deref(), Some("ok"));
+    let replay_trace_id = TraceId::parse(request.trace_id.clone())?;
+    let replay_request_id = RequestId::parse(request.request_id.clone())?;
+    store.append_trace_event(TraceEventInput {
+        sandbox_id: &request.sandbox_id,
+        trace_id: &replay_trace_id,
+        request_id: Some(&replay_request_id),
+        span_id: None,
+        module: "gateway.transport",
+        event: "response_written",
+        details: json!({"response_bytes": 32}),
+    })?;
     let events = store.events_for_trace(&request.trace_id)?;
     let event_names: Vec<_> = events
         .iter()
@@ -167,6 +254,28 @@ fn forward_request_persists_transport_events_and_strips_sidecar() -> Result<()> 
     assert!(
         event_names.contains(&("daemon.transport", "accepted")),
         "{event_names:?}"
+    );
+    assert_ordered_events(
+        &event_names,
+        &[
+            ("gateway.transport", "accepted"),
+            ("gateway.transport", "request_read"),
+            ("gateway.route", "route_selected"),
+            ("host.protocol", "forward_started"),
+            ("host.transport", "connect_started"),
+            ("host.transport", "request_written"),
+            ("daemon.transport", "accepted"),
+            ("daemon.transport", "read_finished"),
+            ("daemon.transport", "auth_checked"),
+            ("daemon.transport", "decoded"),
+            ("daemon.dispatch", "dispatch_started"),
+            ("daemon.dispatch", "op_resolved"),
+            ("workspace.route", "route_selected"),
+            ("sandbox.runtime", "ready_checked"),
+            ("daemon.transport", "response_write_finished"),
+            ("host.transport", "response_read"),
+            ("gateway.transport", "response_written"),
+        ],
     );
 
     server.join().expect("server thread")?;
@@ -231,6 +340,88 @@ fn tcp_once_records_transport_failure_events() -> Result<()> {
     Ok(())
 }
 
+#[test]
+fn host_transport_records_retry_endpoint_refresh_write_and_connect_timeout_facts() -> Result<()> {
+    let dir = temp_host_dir("transport-edge-facts");
+    let store = TraceStore::open(&dir)?;
+    let endpoint: std::net::SocketAddr = "127.0.0.1:9".parse().expect("discard port");
+    let refreshed_endpoint: std::net::SocketAddr = "127.0.0.1:10".parse().expect("refresh port");
+    let config = HostConfig {
+        image: "test-image".to_owned(),
+        platform: None,
+        eosd_path: dir.join("eosd"),
+        config_yaml_path: dir.join("config.yml"),
+        remote_daemon_dir: PathBuf::from("/eos/runtime"),
+        remote_eosd_path: PathBuf::from("/eos/eosd"),
+        remote_config_path: PathBuf::from("/eos/config.yml"),
+        tcp_port: endpoint.port(),
+        ready_timeout: Duration::from_millis(100),
+        request_timeout: Duration::from_millis(100),
+        created_by: "test".to_owned(),
+        state_dir: dir.clone(),
+    };
+    let record = SandboxRecord::new(
+        "sb-transport-edges".to_owned(),
+        "sb-transport-edges".to_owned(),
+        "token".to_owned(),
+        endpoint.port(),
+        "test".to_owned(),
+        Some(endpoint),
+    );
+    let trace_id = TraceId::parse("trace-transport-edges")?;
+    let request_id = RequestId::parse("request-transport-edges")?;
+    let args = json!({});
+    let mut tcp_line =
+        encode_request_with_metadata("sandbox.runtime.ready", request_id.as_str(), &args, None);
+    tcp_line.push(b'\n');
+    let attempt = ForwardAttempt {
+        record: &record,
+        config: &config,
+        trace_store: &store,
+        trace_id: trace_id.clone(),
+        request_id,
+        mutates_state: false,
+        tcp_line,
+        op: "sandbox.runtime.ready",
+        invocation_id: "transport-edge-test",
+        args: &args,
+    };
+
+    let write_failure = ClientError::Write(std::io::Error::new(
+        std::io::ErrorKind::BrokenPipe,
+        "closed",
+    ));
+    record_client_error(&attempt, endpoint, 0, Instant::now(), &write_failure);
+    let connect_timeout = ClientError::Connect {
+        addr: endpoint,
+        source: std::io::Error::new(std::io::ErrorKind::TimedOut, "connect timed out"),
+    };
+    record_client_error(&attempt, endpoint, 1, Instant::now(), &connect_timeout);
+    record_endpoint_refreshed(&attempt, endpoint, refreshed_endpoint);
+    let _ = tcp_with_connect_backoff(&attempt, endpoint);
+
+    let events = store.events_for_trace(trace_id.as_str())?;
+    assert_event(&events, "host.transport", "write_failed");
+    assert_event(&events, "host.transport", "connect_timeout");
+    assert_event(&events, "host.transport", "endpoint_refreshed");
+    assert_event(&events, "host.transport", "retry_scheduled");
+    assert!(
+        events.iter().any(|event| {
+            if event.module != "host.transport" || event.event != "connect_timeout" {
+                return false;
+            }
+            serde_json::from_str::<serde_json::Value>(&event.details_json)
+                .ok()
+                .and_then(|details| details.get("error_kind").cloned())
+                == Some(json!("connect_timeout"))
+        }),
+        "connect_timeout details missing: {events:?}"
+    );
+
+    let _ = fs::remove_dir_all(dir);
+    Ok(())
+}
+
 fn run_tcp_once_failure(
     name: &str,
     endpoint: std::net::SocketAddr,
@@ -281,9 +472,33 @@ fn run_tcp_once_failure(
     Ok((store, trace_id))
 }
 
+fn assert_event(events: &[TraceEventRow], module: &str, event: &str) {
+    assert!(
+        events
+            .iter()
+            .any(|row| row.module == module && row.event == event),
+        "missing {module}/{event}: {events:?}"
+    );
+}
+
 fn temp_host_dir(name: &str) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("eos-host-{name}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).expect("create temp host dir");
     dir
+}
+
+fn assert_ordered_events(actual: &[(&str, &str)], expected: &[(&str, &str)]) {
+    let mut next = 0;
+    for event in actual {
+        if expected.get(next) == Some(event) {
+            next += 1;
+        }
+    }
+    assert_eq!(
+        next,
+        expected.len(),
+        "missing ordered replay suffix starting at {:?}; actual events: {actual:?}",
+        expected.get(next)
+    );
 }

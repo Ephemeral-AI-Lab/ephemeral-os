@@ -1,16 +1,19 @@
 use eos_config::configs::daemon::FileLimitsConfig;
+use serde_json::Value;
 
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
+use crate::trace::{RequestTraceEvent, RequestTraceEventSink};
 use crate::RuntimeServices;
 
 /// Per-dispatch daemon services used by handlers that need runtime state.
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Default)]
 pub struct DispatchContext<'ctx> {
     services: Option<&'ctx RuntimeServices>,
     invocation_registry: Option<&'ctx InFlightRegistry>,
     file_limits: Option<FileLimitsConfig>,
     read_request_s: Option<f64>,
+    trace_events: Option<RequestTraceEventSink>,
 }
 
 impl<'ctx> DispatchContext<'ctx> {
@@ -22,6 +25,7 @@ impl<'ctx> DispatchContext<'ctx> {
             invocation_registry: None,
             file_limits: None,
             read_request_s: None,
+            trace_events: None,
         }
     }
 
@@ -30,7 +34,10 @@ impl<'ctx> DispatchContext<'ctx> {
     pub const fn with_services(services: &'ctx RuntimeServices) -> Self {
         Self {
             services: Some(services),
-            ..Self::empty()
+            invocation_registry: None,
+            file_limits: None,
+            read_request_s: None,
+            trace_events: None,
         }
     }
 
@@ -38,8 +45,11 @@ impl<'ctx> DispatchContext<'ctx> {
     #[must_use]
     pub const fn with_invocation_registry(invocation_registry: &'ctx InFlightRegistry) -> Self {
         Self {
+            services: None,
             invocation_registry: Some(invocation_registry),
-            ..Self::empty()
+            file_limits: None,
+            read_request_s: None,
+            trace_events: None,
         }
     }
 
@@ -57,7 +67,14 @@ impl<'ctx> DispatchContext<'ctx> {
             invocation_registry: Some(invocation_registry),
             file_limits: Some(file_limits),
             read_request_s: Some(read_request_s),
+            trace_events: None,
         }
+    }
+
+    #[must_use]
+    pub(crate) fn with_trace_events(mut self, trace_events: RequestTraceEventSink) -> Self {
+        self.trace_events = Some(trace_events);
+        self
     }
 
     /// The owned daemon services, when threaded. Operations that can degrade
@@ -89,11 +106,25 @@ impl<'ctx> DispatchContext<'ctx> {
         self.read_request_s
     }
 
+    pub(crate) fn record_trace_event(
+        &self,
+        module: impl Into<String>,
+        name: impl Into<String>,
+        details: Value,
+    ) {
+        if let Some(events) = &self.trace_events {
+            events.push(RequestTraceEvent::operation(module, name, details));
+        }
+    }
+
     #[cfg(test)]
     pub(crate) const fn with_read_request_s(read_request_s: f64) -> Self {
         Self {
+            services: None,
+            invocation_registry: None,
+            file_limits: None,
             read_request_s: Some(read_request_s),
-            ..Self::empty()
+            trace_events: None,
         }
     }
 }

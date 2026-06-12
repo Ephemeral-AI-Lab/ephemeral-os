@@ -11,8 +11,9 @@ use eos_overlay::{
     allocate_overlay_writable_dirs, mount_overlay, overlay_writable_root, OverlayError,
     OverlayHandle, OverlayMount,
 };
+use serde_json::json;
 
-use super::{CheckpointError, CommitOutcome, CommitRequest};
+use super::{CheckpointError, CheckpointTraceEvent, CommitOutcome, CommitRequest};
 
 /// Run the checkpoint commit pipeline for a single request.
 ///
@@ -21,6 +22,15 @@ use super::{CheckpointError, CommitOutcome, CommitRequest};
 /// differs from `HEAD`. The lease is always released, and the worktree is torn
 /// down by [`PreparedWorktree`]'s `Drop`.
 pub fn commit_to_git(request: &CommitRequest<'_>) -> Result<CommitOutcome, CheckpointError> {
+    commit_to_git_with_trace_recorder(request, |_| {})
+}
+
+/// Run the checkpoint commit pipeline and emit bounded git-step trace events as
+/// each subprocess finishes.
+pub fn commit_to_git_with_trace_recorder(
+    request: &CommitRequest<'_>,
+    mut record_trace: impl FnMut(CheckpointTraceEvent),
+) -> Result<CommitOutcome, CheckpointError> {
     let total_start = Instant::now();
     let root = request.layer_stack_root;
     let workspace_root = request.workspace_root;
@@ -28,7 +38,7 @@ pub fn commit_to_git(request: &CommitRequest<'_>) -> Result<CommitOutcome, Check
     let binding = eos_layerstack::require_workspace_binding(root)?;
     ensure_bound_workspace(&binding, workspace_root)?;
     let paths = normalize_paths(&request.raw_paths, &binding)?;
-    let git_dir = resolve_git_dir(workspace_root)?;
+    let git_dir = resolve_git_dir(workspace_root, &mut record_trace)?;
 
     let lease_owner = format!("commit_to_git:{}", uuid::Uuid::new_v4().simple());
     let lease = stack.acquire_snapshot(&lease_owner)?;
@@ -41,19 +51,24 @@ pub fn commit_to_git(request: &CommitRequest<'_>) -> Result<CommitOutcome, Check
 
     let outcome = (|| {
         let worktree = prepare_worktree(root, &lease, &mut timings)?;
+        record_trace(CheckpointTraceEvent::new(
+            "checkpoint",
+            "worktree_mode_selected",
+            json!({"mode": worktree.mode()}),
+        ));
         let git_add_start = Instant::now();
-        git_add(&git_dir, worktree.path(), &paths)?;
+        git_add(&git_dir, worktree.path(), &paths, &mut record_trace)?;
         record_elapsed(&mut timings, "api.commit_to_git.git_add_s", git_add_start);
 
         let diff_start = Instant::now();
-        let has_changes = git_index_has_changes(&git_dir, worktree.path())?;
+        let has_changes = git_index_has_changes(&git_dir, worktree.path(), &mut record_trace)?;
         record_elapsed(
             &mut timings,
             "api.commit_to_git.git_diff_cached_s",
             diff_start,
         );
         if !has_changes {
-            let commit_sha = current_head(&git_dir, worktree.path())?;
+            let commit_sha = current_head(&git_dir, worktree.path(), &mut record_trace)?;
             return Ok(Committed {
                 committed: false,
                 commit_sha,
@@ -62,9 +77,14 @@ pub fn commit_to_git(request: &CommitRequest<'_>) -> Result<CommitOutcome, Check
         }
 
         let commit_start = Instant::now();
-        git_commit(&git_dir, worktree.path(), request.message)?;
+        git_commit(
+            &git_dir,
+            worktree.path(),
+            request.message,
+            &mut record_trace,
+        )?;
         record_elapsed(&mut timings, "api.commit_to_git.git_commit_s", commit_start);
-        let commit_sha = current_head(&git_dir, worktree.path())?;
+        let commit_sha = current_head(&git_dir, worktree.path(), &mut record_trace)?;
         Ok(Committed {
             committed: true,
             commit_sha,
@@ -273,14 +293,18 @@ fn prepare_projected_worktree(
     })
 }
 
-fn resolve_git_dir(workspace_root: &Path) -> Result<PathBuf, CheckpointError> {
-    let output = Command::new("git")
+fn resolve_git_dir(
+    workspace_root: &Path,
+    record_trace: &mut impl FnMut(CheckpointTraceEvent),
+) -> Result<PathBuf, CheckpointError> {
+    let mut command = Command::new("git");
+    command
         .arg("-C")
         .arg(workspace_root)
         .arg("-c")
         .arg("safe.directory=*")
-        .args(["rev-parse", "--absolute-git-dir"])
-        .output()?;
+        .args(["rev-parse", "--absolute-git-dir"]);
+    let output = run_recorded_command(command, "git rev-parse --absolute-git-dir", record_trace)?;
     if !output.status.success() {
         return Err(CheckpointError::InvalidRequest(format!(
             "workspace_root must be a git repository: {}",
@@ -296,21 +320,37 @@ fn resolve_git_dir(workspace_root: &Path) -> Result<PathBuf, CheckpointError> {
     Ok(PathBuf::from(path))
 }
 
-fn git_add(git_dir: &Path, worktree: &Path, paths: &[String]) -> Result<(), CheckpointError> {
+fn git_add(
+    git_dir: &Path,
+    worktree: &Path,
+    paths: &[String],
+    record_trace: &mut impl FnMut(CheckpointTraceEvent),
+) -> Result<(), CheckpointError> {
     let mut args = vec!["add", "-A", "--"];
     if paths.is_empty() {
         args.push(".");
     } else {
         args.extend(paths.iter().map(String::as_str));
     }
-    run_git_checked(git_dir, worktree, &args).map(|_| ())
+    let argv_summary = if paths.is_empty() {
+        "git add -A -- .".to_owned()
+    } else {
+        "git add -A -- <paths>".to_owned()
+    };
+    run_git_checked(git_dir, worktree, &args, &argv_summary, record_trace).map(|_| ())
 }
 
-fn git_index_has_changes(git_dir: &Path, worktree: &Path) -> Result<bool, CheckpointError> {
+fn git_index_has_changes(
+    git_dir: &Path,
+    worktree: &Path,
+    record_trace: &mut impl FnMut(CheckpointTraceEvent),
+) -> Result<bool, CheckpointError> {
     let output = run_git(
         git_dir,
         worktree,
         &["diff", "--cached", "--quiet", "--exit-code"],
+        "git diff --cached --quiet --exit-code",
+        record_trace,
     )?;
     match output.status.code() {
         Some(0) => Ok(false),
@@ -319,12 +359,34 @@ fn git_index_has_changes(git_dir: &Path, worktree: &Path) -> Result<bool, Checkp
     }
 }
 
-fn git_commit(git_dir: &Path, worktree: &Path, message: &str) -> Result<(), CheckpointError> {
-    run_git_checked(git_dir, worktree, &["commit", "-m", message]).map(|_| ())
+fn git_commit(
+    git_dir: &Path,
+    worktree: &Path,
+    message: &str,
+    record_trace: &mut impl FnMut(CheckpointTraceEvent),
+) -> Result<(), CheckpointError> {
+    run_git_checked(
+        git_dir,
+        worktree,
+        &["commit", "-m", message],
+        "git commit -m <message>",
+        record_trace,
+    )
+    .map(|_| ())
 }
 
-fn current_head(git_dir: &Path, worktree: &Path) -> Result<Option<String>, CheckpointError> {
-    let output = run_git(git_dir, worktree, &["rev-parse", "--verify", "HEAD"])?;
+fn current_head(
+    git_dir: &Path,
+    worktree: &Path,
+    record_trace: &mut impl FnMut(CheckpointTraceEvent),
+) -> Result<Option<String>, CheckpointError> {
+    let output = run_git(
+        git_dir,
+        worktree,
+        &["rev-parse", "--verify", "HEAD"],
+        "git rev-parse --verify HEAD",
+        record_trace,
+    )?;
     if output.status.success() {
         return Ok(Some(command_stdout(&output)));
     }
@@ -335,8 +397,10 @@ fn run_git_checked(
     git_dir: &Path,
     worktree: &Path,
     args: &[&str],
+    argv_summary: &str,
+    record_trace: &mut impl FnMut(CheckpointTraceEvent),
 ) -> Result<Output, CheckpointError> {
-    let output = run_git(git_dir, worktree, args)?;
+    let output = run_git(git_dir, worktree, args, argv_summary, record_trace)?;
     if output.status.success() {
         Ok(output)
     } else {
@@ -344,8 +408,15 @@ fn run_git_checked(
     }
 }
 
-fn run_git(git_dir: &Path, worktree: &Path, args: &[&str]) -> Result<Output, CheckpointError> {
-    Ok(Command::new("git")
+fn run_git(
+    git_dir: &Path,
+    worktree: &Path,
+    args: &[&str],
+    argv_summary: &str,
+    record_trace: &mut impl FnMut(CheckpointTraceEvent),
+) -> Result<Output, CheckpointError> {
+    let mut command = Command::new("git");
+    command
         .arg("-c")
         .arg("safe.directory=*")
         .env("GIT_DIR", git_dir)
@@ -354,8 +425,62 @@ fn run_git(git_dir: &Path, worktree: &Path, args: &[&str]) -> Result<Output, Che
         .env("GIT_AUTHOR_EMAIL", "ephemeralos@example.invalid")
         .env("GIT_COMMITTER_NAME", "EphemeralOS")
         .env("GIT_COMMITTER_EMAIL", "ephemeralos@example.invalid")
-        .args(args)
-        .output()?)
+        .args(args);
+    run_recorded_command(command, argv_summary, record_trace)
+}
+
+fn run_recorded_command(
+    mut command: Command,
+    argv_summary: &str,
+    record_trace: &mut impl FnMut(CheckpointTraceEvent),
+) -> Result<Output, CheckpointError> {
+    match command.output() {
+        Ok(output) => {
+            record_git_command_finished(argv_summary, Some(&output), None, record_trace);
+            Ok(output)
+        }
+        Err(err) => {
+            record_git_command_finished(argv_summary, None, Some(&err), record_trace);
+            Err(err.into())
+        }
+    }
+}
+
+fn record_git_command_finished(
+    argv_summary: &str,
+    output: Option<&Output>,
+    spawn_error: Option<&std::io::Error>,
+    record_trace: &mut impl FnMut(CheckpointTraceEvent),
+) {
+    let details = match (output, spawn_error) {
+        (Some(output), _) => json!({
+            "argv_summary": argv_summary,
+            "exit_code": output.status.code(),
+            "status": output.status.to_string(),
+            "success": output.status.success(),
+            "stderr_tail": bounded_tail(&String::from_utf8_lossy(&output.stderr), 512),
+        }),
+        (None, Some(error)) => json!({
+            "argv_summary": argv_summary,
+            "exit_code": null,
+            "status": "spawn_error",
+            "success": false,
+            "stderr_tail": "",
+            "spawn_error": error.to_string(),
+        }),
+        (None, None) => json!({
+            "argv_summary": argv_summary,
+            "exit_code": null,
+            "status": "unknown",
+            "success": false,
+            "stderr_tail": "",
+        }),
+    };
+    record_trace(CheckpointTraceEvent::new(
+        "checkpoint",
+        "git_command_finished",
+        details,
+    ));
 }
 
 fn git_error(command: &str, output: &Output) -> CheckpointError {
@@ -381,6 +506,18 @@ fn command_stderr(output: &Output) -> String {
     } else {
         stderr
     }
+}
+
+fn bounded_tail(text: &str, max_chars: usize) -> String {
+    let trimmed = text.trim();
+    let char_count = trimmed.chars().count();
+    if char_count <= max_chars {
+        return trimmed.to_owned();
+    }
+    trimmed
+        .chars()
+        .skip(char_count.saturating_sub(max_chars))
+        .collect()
 }
 
 fn record_elapsed(timings: &mut BTreeMap<String, f64>, key: &str, start: Instant) {
