@@ -716,3 +716,32 @@ Rules for this run:
   aggregate failure was a startup stall, not a plugin assertion failure.
 - Fix: no additional code fix needed; clean plugin containers before the next
   serialized full live gate.
+
+### 2026-06-13 Attempt 74 - Serialized full live e2e gate after focused plugin suite
+
+- Command: `cargo test -p eos-e2e-test --features e2e -- --test-threads=1 --nocapture`
+- Result: stopped; the unit test binary passed 1/1, core passed 33/33,
+  daemon passed 12/12, layerstack passed 20/20, ephemeral_workspace passed
+  12/12, plugin passed 15/15, then the pressure binary produced no Rust test
+  output.
+- Finding: `sample` showed the pressure binary parked at `_dyld_start` and no
+  live E2E containers were running, so this was a pre-discovery pressure startup
+  stall, not a pressure assertion failure.
+- Fix: stop the aggregate run and target the focused pressure suite once before
+  another full-gate attempt.
+
+### 2026-06-13 Attempt 75 - Focused live pressure suite after aggregate startup stall
+
+- Command: `cargo test -p eos-e2e-test --features e2e --test pressure -- --nocapture`
+- Result: passed; 23 passed, 0 failed.
+- Finding: the pressure binary also sat at `_dyld_start` initially, but it moved
+  past startup after a longer wait and all pressure tests passed.
+- Fix: no code fix needed; allow longer startup patience for pressure in the
+  next serialized full gate.
+
+### 2026-06-13 Attempt 76 - E2E stale-container cleanup before full live gate retry
+
+- Command: `docker rm -f eos-e2e-86206-18b88510516f8c38-1 eos-e2e-86206-18b88510516fd288-7 eos-e2e-86206-18b88510516f97f0-3 eos-e2e-86206-18b88510516fa3a8-4`
+- Result: passed; removed 4 stale `eos-e2e` containers.
+- Finding: the focused pressure suite left live E2E containers.
+- Fix: cleanup complete; rerun the serialized full live e2e gate once.
