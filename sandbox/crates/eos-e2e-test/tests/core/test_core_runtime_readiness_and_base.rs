@@ -2,7 +2,9 @@ use anyhow::Result;
 use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
-use crate::support::{as_bool, as_i64, envelope_meta, envelope_result, live_pool_or_skip};
+use crate::support::{
+    as_bool, as_i64, container_path_exists, envelope_meta, envelope_result, live_pool_or_skip,
+};
 
 #[test]
 fn runtime_ready_handshake() -> Result<()> {
@@ -48,6 +50,32 @@ fn ensure_base_creates_single_base_layer() -> Result<()> {
         as_i64(&metrics, "referenced_layers")?,
         1,
         "fresh root should reference only the base layer: {metrics}"
+    );
+    Ok(())
+}
+
+#[test]
+fn lease_checkout_resets_stale_git_workspace_state() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let first = pool.acquire()?;
+    let git_dir = format!("{}/.git", first.workspace_root());
+    let stale_marker = format!("{git_dir}/eos-stale-reset-probe");
+    first.container().exec(&["mkdir", "-p", "--", &git_dir])?;
+    first
+        .container()
+        .exec(&["sh", "-lc", "printf stale > \"$1\"", "sh", &stale_marker])?;
+    assert!(
+        container_path_exists(&first, &stale_marker)?,
+        "test setup should create stale git marker before lease reset"
+    );
+    drop(first);
+
+    let second = pool.acquire()?;
+    assert!(
+        !container_path_exists(&second, &stale_marker)?,
+        "lease checkout must remove stale .git state before each test"
     );
     Ok(())
 }

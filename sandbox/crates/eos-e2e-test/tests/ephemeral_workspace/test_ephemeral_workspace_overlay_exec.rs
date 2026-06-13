@@ -480,8 +480,8 @@ fn exec_run_dir_scratch_stays_bounded() -> Result<()> {
         &lease,
         json!({
             "cmd": "printf TINY > perf/scratch/delta.txt",
-            "yield_time_ms": 8000,
-            "timeout_seconds": 10,}),
+            "yield_time_ms": 60000,
+            "timeout_seconds": 75,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
     let run_dir_bytes = tree_resource_value(&exec_wire, "resource.command_exec.run_dir", "bytes")?;

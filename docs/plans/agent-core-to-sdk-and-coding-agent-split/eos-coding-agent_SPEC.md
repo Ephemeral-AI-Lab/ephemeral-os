@@ -40,7 +40,7 @@ and pursuit's own contract keeps pursuit/leg/attempt names.
 | Workflow type implementation | `WorkflowProvider` | Matches the SDK spec's vocabulary. Not "module". |
 | Configured workflow | `.eos-agents/workflow/<name>.md` (`WorkflowConfig`) | Profile-shaped markdown: frontmatter config + skill-style docs body. Not "instance". |
 | First configured workflow | `pursuit` | Concrete product vocabulary follows Phase 05.3. |
-| Workflow tools | `delegate_<name>` / `cancel_<name>` / `<verb>_<name>` | Per-workflow, hub-derived from the provider's `delegate` / `cancel` / `extras` roles. Factory-injects them only for a profile that lists the workflow. |
+| Workflow tools | `delegate_<name>` / `<verb>_<name>` | Per-workflow, hub-derived from the provider's `delegate` and `extras` roles; cancellation is the SDK supervisor's job (`cancel_background_task`), not a workflow tool. Factory-injects them only for a profile that lists the workflow. |
 | Workflow docs surface | system-prompt fragment + `read_workflow_docs` | The injected fragment lists available workflows by `description`; `read_workflow_docs(name)` serves one workflow's full manual. There is no `list_workflows` tool. |
 | Context scripts | `.eos-agents/pursuit/scripts/` | Do not use `.eos-agents/workflow/scripts/` as an active script root. |
 | Profile context script field | `pursuit_context_script` | Do not use `workflow_context_script`. |
@@ -54,7 +54,7 @@ are supersessions, not drift; the §14 hygiene scans are this split's completion
 
 | Phase 05.3 surface | This split | Reason |
 | --- | --- | --- |
-| Hand-authored `delegate_pursuit` tool | Hub-derived `delegate_pursuit` from the pursuit provider's `delegate` tool role, joined by `cancel_pursuit` and provider `extras` | Per-workflow tools are the design, but the hub owns naming and gating: it derives `<role>_<name>` and the factory injects them only for profiles that list the workflow. Pursuit no longer hand-writes the tool, and no generic `delegate_workflow` exists. |
+| Hand-authored `delegate_pursuit` tool | Hub-derived `delegate_pursuit` from the pursuit provider's `delegate` role, plus provider `extras`; cancellation routes through `cancel_background_task` | Per-workflow tools are the design, but the hub owns naming and gating: it derives `delegate_<name>` / `<verb>_<name>`, injects them only for profiles that list the workflow, and wires the run's cancel into the SDK background supervisor. Pursuit no longer hand-writes the tool, and no generic `delegate_workflow` exists. |
 | Background session type `"pursuit"`, `cancel_background_session`, `list_background_sessions` | SDK background task with `toolName: "workflow:pursuit"`; `cancel_background_task`, `list_background_tasks` | SDK background-task rename; no model-facing session typing survives. |
 | `AgentLaunchPort` / `LaunchedAgent` / `LaunchSettlement` | Pursuit consumes SDK `Agent` handles directly through the narrow `PursuitAgents` slice (§11) | SDK decision log: launch seam deleted. |
 | `PursuitAgentSubmissionBinding` | `onSubmit` in `createAgentOutcomeFn` | Single-mutator submission is now SDK terminal-contract mechanism. |
@@ -283,7 +283,7 @@ name: operator
 llm_client_id: codex_operator
 terminal_tool: submit_main_outcome
 workflows:
-  - pursuit              # injects delegate_pursuit, cancel_pursuit, read_workflow_docs + the prompt fragment
+  - pursuit              # injects delegate_pursuit, read_workflow_docs + the prompt fragment
 subagents:
   - subagent
 allowed_tools:
@@ -357,15 +357,13 @@ worker attempts against an attempt budget.
 ## Operating loop
 
 Call `delegate_pursuit` to start one, watch the background task it registers, read the
-`pursuit_<id>/` context paths for progress, and `cancel_pursuit` to stop one by id.
+`pursuit_<id>/` context paths for progress, and `cancel_background_task` to stop it.
 
 ## Tools
 
 ### delegate_pursuit
-Payload semantics; the returned task id and title both embed `pursuit_<id>`.
-
-### cancel_pursuit
-Domain cancel by `pursuit_<id>`; idempotent; distinct from `cancel_background_task`.
+Payload semantics; the returned task id and title both embed `pursuit_<id>`. Cancel a
+running pursuit with `cancel_background_task` on that task id.
 ```
 
 The file basename is the workflow `name`, and must be a valid tool-name fragment
@@ -440,8 +438,8 @@ Creation rules:
 - Workflow tools are gated on `profile.workflows`, their single authority (the same
   pattern as `ask_advisor`). When it is non-empty, `AgentFactory` asks the hub for a view
   scoped to those names, then:
-  - appends the view's `delegate_<name>` / `cancel_<name>` / extras tools, built via
-    `view.tools({ agents: this })`;
+  - appends the view's `delegate_<name>` and extras tools, built via
+    `view.tools({ agents: this })` (cancellation is `cancel_background_task`, not a tool);
   - appends one `read_workflow_docs` tool over the same view; and
   - prepends `view.promptFragment()` to the system prompt.
   It never passes the whole hub registry to model-visible tools. When `profile.workflows`
@@ -698,7 +696,7 @@ interface WorkflowConfig {
   name: string;                        // basename of .eos-agents/workflow/<name>.md
   type: string;                        // frontmatter; selects the provider
   args: unknown;                       // frontmatter; validated by the provider's args schema
-  description: string;                 // frontmatter; the prompt-fragment line
+  description: string;                 // frontmatter; prompt-fragment line + delegate_<name> description
   docs: string;                        // markdown body; the read_workflow_docs manual
 }
 
@@ -715,17 +713,20 @@ interface WorkflowToolContext {
 /** A nameless tool spec; the hub assigns the model-visible name from the workflow name. */
 type WorkflowToolSpec = Omit<ToolSpec<unknown>, "name">;
 
-interface WorkflowToolSet {
-  delegate: WorkflowToolSpec;                  // hub names it delegate_<name>
-  cancel: WorkflowToolSpec;                    // hub names it cancel_<name>
-  extras?: Record<string, WorkflowToolSpec>;   // verb -> spec; hub names <verb>_<name>
+/** A live delegated run. `cancel` is the cancellation method the SDK background
+ *  supervisor invokes; the workflow exposes no cancel tool of its own (#3). */
+interface WorkflowHandle {
+  title: string;                       // embeds the workflow-assigned id (§9)
+  cancel(): void | Promise<void>;
+  done: Promise<BackgroundTaskOutcome>;
 }
 
-interface RegisteredWorkflow {
+interface RegisteredWorkflow<I = unknown> {
   name: string;
   type: string;
-  /** Build this workflow's model-visible tool set, closed over the agent factory. */
-  tools(ctx: WorkflowToolContext): WorkflowToolSet;
+  delegatePayload: z.ZodType<I>;
+  delegate(input: I, ctx: WorkflowToolContext): Promise<WorkflowHandle>;
+  extras?(ctx: WorkflowToolContext): Record<string, WorkflowToolSpec>;  // delegator-facing tools
 }
 
 interface WorkflowHubInit {
@@ -741,7 +742,7 @@ declare class WorkflowHub {
 }
 
 interface ProfileWorkflowView {
-  /** Named delegate_/cancel_/<verb>_ tools across this profile's workflows. */
+  /** Named delegate_<name> + <verb>_<name> tools across this profile's workflows. */
   tools(ctx: WorkflowToolContext): ToolDefinition[];
   /** The system-prompt block listing this profile's workflows. */
   promptFragment(): string;

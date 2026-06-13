@@ -168,14 +168,7 @@ impl<'p> NodeLease<'p> {
         if let Err(err) = node
             .container
             .exec(&["mkdir", "-p", &stack_root])
-            .and_then(|_| {
-                node.container
-                    .exec(&["rm", "-rf", "--", workspace_root.as_str()])
-            })
-            .and_then(|_| {
-                node.container
-                    .exec(&["mkdir", "-p", "--", workspace_root.as_str()])
-            })
+            .and_then(|_| reset_workspace_root(&node.container, &workspace_root))
         {
             return Err(Box::new((node, err)));
         }
@@ -314,6 +307,18 @@ impl<'p> NodeLease<'p> {
         let daemon = container::daemon_spec(&self.pool.config, &self.pool.config_yaml)?;
         self.node().container.restart_daemon(&daemon)
     }
+}
+
+/// Reset the per-test workspace root before binding a fresh LayerStack lease.
+///
+/// This removes any stale Git repository state (`.git`, index, ignored files,
+/// and untracked files) left by a previous checkout on a warm E2E container.
+/// Tests that need a Git repository initialize one explicitly after acquiring
+/// their lease.
+fn reset_workspace_root(container: &DaemonContainer, workspace_root: &str) -> Result<()> {
+    container.exec(&["rm", "-rf", "--", workspace_root])?;
+    container.exec(&["mkdir", "-p", "--", workspace_root])?;
+    Ok(())
 }
 
 fn success_payload(response: Value) -> Value {

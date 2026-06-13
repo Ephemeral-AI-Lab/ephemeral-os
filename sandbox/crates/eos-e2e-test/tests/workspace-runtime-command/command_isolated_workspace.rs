@@ -262,14 +262,17 @@ fn setsid_descendant_reaped_on_isolated_exit() -> Result<()> {
                 "cmd": format!(
                     "bash -lc 'setsid bash -c \"exec -a {marker} sleep 30\" >/dev/null 2>&1 & sleep 3; echo iws-escaped-ready'"
                 ),
-                "yield_time_ms": 1500,
+                "yield_time_ms": 20000,
                 "timeout_seconds": 60,}),
         )?;
-        // The `sleep 3` pushes completion past the yield window, so finalize first.
+        // The foreground yield is intentionally longer than the `sleep 3` guard
+        // so the response normally carries the terminal command result instead
+        // of racing completed-buffer cleanup through a follow-up poll. Keep the
+        // finalize fallback for slow emulated launches.
         let completed = finalize_foreground_command(
             &lease,
             completed,
-            Instant::now() + Duration::from_secs(30),
+            Instant::now() + Duration::from_secs(45),
         )?;
         ensure!(
             as_str(&completed, "status")? == "ok",
