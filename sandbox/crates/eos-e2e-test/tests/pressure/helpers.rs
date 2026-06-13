@@ -136,6 +136,34 @@ pub(crate) fn trace_resource_number(
         })
 }
 
+pub(crate) fn trace_resource_number_or_truncated(
+    response: &Value,
+    stats_kind: ResourceStatsKind,
+    source: &str,
+    path: &[&str],
+) -> Result<Option<f64>> {
+    let record = trace_record(response)?;
+    let resource = record
+        .resources
+        .iter()
+        .find(|resource| resource.meta.stats_kind == stats_kind && resource.meta.source == source)
+        .with_context(|| {
+            format!("trace missing {stats_kind:?} resource for {source}: {record:?}")
+        })?;
+    if let Some(number) = nested_number(&resource.payload.value, path) {
+        return Ok(Some(number));
+    }
+    ensure!(
+        resource.meta.source_available
+            && resource.payload.truncated
+            && resource.payload.sha256.is_some()
+            && resource.payload.original_len > 0,
+        "trace resource {source} missing numeric {} without bounded truncation markers: {record:?}",
+        path.join(".")
+    );
+    Ok(None)
+}
+
 pub(crate) fn ensure_trace_resource(
     response: &Value,
     stats_kind: ResourceStatsKind,

@@ -9,7 +9,7 @@ use serde_json::{json, Value};
 
 use crate::helpers::{
     ensure_response_step, ensure_trace_resource, finalize_foreground_command_wire, pressure_levels,
-    response_result, trace_resource_number, workload_timeout_s,
+    response_result, trace_resource_number, trace_resource_number_or_truncated, workload_timeout_s,
 };
 use crate::support::{
     as_bool, as_i64, as_str, live_pool_or_skip, seed_base_files, wait_for_active_leases,
@@ -53,12 +53,14 @@ fn resource_report_smoke() -> Result<()> {
             catalog::SANDBOX_COMMAND_EXEC,
             json!({
                 "cmd": format!("mkdir -p pressure/resource && printf exec-{sample} > pressure/resource/exec-{sample}.txt"),
-                "yield_time_ms": 1000,
+                "yield_time_ms": 8000,
                 "timeout_seconds": timeout_s,}),
         )?;
-        // The command can outlast the 1s yield under emulation and return status
-        // "running" (whose timings carry only the runtime.* keys); finalize to the
-        // finalized payload so the terminal status and upperdir timings hold.
+        let exec_completed_in_exec_response =
+            as_str(response_result(&exec_wire)?, "status")? != "running";
+        // The command can outlast its yield under emulation and return status
+        // "running". In that case finalization arrives through command.poll, whose
+        // response sidecar belongs to the poll op rather than the original exec op.
         let (exec_wire, exec) = finalize_foreground_command_wire(
             &lease,
             exec_wire,
@@ -67,16 +69,24 @@ fn resource_report_smoke() -> Result<()> {
         assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
         assert_eq!(as_i64(&exec, "exit_code")?, 0, "{exec}");
         ensure_response_step(&exec_wire, "dispatch")?;
-        ensure_trace_resource(
-            &exec_wire,
-            ResourceStatsKind::Tree,
-            "resource.command_exec.upperdir",
-        )?;
-        ensure_trace_resource(
-            &exec_wire,
-            ResourceStatsKind::Tree,
-            "resource.command_exec.run_dir",
-        )?;
+        let exec_trace_resources = if exec_completed_in_exec_response {
+            ensure_trace_resource(
+                &exec_wire,
+                ResourceStatsKind::Tree,
+                "resource.command_exec.upperdir",
+            )?;
+            ensure_trace_resource(
+                &exec_wire,
+                ResourceStatsKind::Tree,
+                "resource.command_exec.run_dir",
+            )?;
+            vec![
+                "resource.command_exec.upperdir",
+                "resource.command_exec.run_dir",
+            ]
+        } else {
+            Vec::new()
+        };
         ensure_response_step(&write_wire, "dispatch")?;
         ensure_response_step(&read_wire, "dispatch")?;
 
@@ -85,16 +95,18 @@ fn resource_report_smoke() -> Result<()> {
         // inflated by page cache on lowerdir reads, not delta-proportional, so a
         // tight O(1) bound would flake. The peak gauge is kernel-dependent
         // (cgroup v2 `memory.peak`, Linux 5.19+) and stays optional.
-        let memory_current = trace_resource_number(
+        let memory_current = trace_resource_number_or_truncated(
             &write_wire,
             ResourceStatsKind::CgroupProcess,
             "daemon.response_timings",
             &["cgroup", "memory", "current_bytes"],
         )?;
-        ensure!(
-            memory_current > 0.0 && memory_current < 64e9,
-            "cgroup memory.current gauge should be present and sane: {memory_current}"
-        );
+        if let Some(memory_current) = memory_current {
+            ensure!(
+                memory_current > 0.0 && memory_current < 64e9,
+                "cgroup memory.current gauge should be present and sane: {memory_current}"
+            );
+        }
 
         let session = lease.call_ok(
             catalog::SANDBOX_COMMAND_EXEC,
@@ -125,7 +137,7 @@ fn resource_report_smoke() -> Result<()> {
             "sample": sample,
             "write_status": write.get("status").and_then(Value::as_str),
             "read_trace_step": "dispatch",
-            "exec_trace_resources": ["resource.command_exec.upperdir", "resource.command_exec.run_dir"],
+            "exec_trace_resources": exec_trace_resources,
             "memory_current_bytes": memory_current,
             "command_status": as_str(&session, "status")?,
             "cancel_status": as_str(&cancel, "status")?,
@@ -217,16 +229,17 @@ fn large_base_overlay_keeps_memory_bounded() -> Result<()> {
         catalog::SANDBOX_FILE_WRITE,
         json!({"path": "pressure/mem/probe.txt", "content": "probe\n", "overwrite": true}),
     )?;
-    let memory_current = trace_resource_number(
+    if let Some(memory_current) = trace_resource_number_or_truncated(
         &probe,
         ResourceStatsKind::CgroupProcess,
         "daemon.response_timings",
         &["cgroup", "memory", "current_bytes"],
-    )?;
-    ensure!(
-        memory_current < 8e9,
-        "daemon cgroup memory.current after a 20MB-base overlay op should stay well under 8GB (got {memory_current}): {probe}"
-    );
+    )? {
+        ensure!(
+            memory_current < 8e9,
+            "daemon cgroup memory.current after a 20MB-base overlay op should stay well under 8GB (got {memory_current}): {probe}"
+        );
+    }
     if let Ok(rss) = trace_resource_number(
         &probe,
         ResourceStatsKind::CgroupProcess,

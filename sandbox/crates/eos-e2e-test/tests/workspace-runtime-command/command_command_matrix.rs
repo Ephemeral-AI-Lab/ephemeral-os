@@ -9,7 +9,8 @@ use serde_json::{json, Value};
 
 use crate::support::{
     array, as_i64, as_str, command_transcript_logs, finalize_foreground_command, live_pool_or_skip,
-    stdout, wait_for_active_leases, wait_for_command_count, wait_for_command_transcript_recycled,
+    stdout, unwrap_operation_result, wait_for_active_leases, wait_for_command_count,
+    wait_for_command_transcript_recycled,
 };
 
 struct CommandFamily {
@@ -222,10 +223,10 @@ fn stdin_prompt_progress_collect_and_cancel_variants() -> Result<()> {
             "sleeping prompt command must not produce a completion before cancellation: {not_done}"
         );
 
-        let cancel = lease.call(
+        let cancel = unwrap_operation_result(lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
             json!({"command_id": &command_id}),
-        )?;
+        )?)?;
         ensure_terminalish_status(&cancel)?;
         wait_for_command_count(&lease, 0)?;
         wait_for_active_leases(&lease, 0)?;
@@ -761,7 +762,7 @@ fn request_with_identity(
         .or_insert_with(|| json!(root));
     args.entry("caller_id".to_owned())
         .or_insert_with(|| json!(caller_id));
-    Ok(client.request(op, &next_invocation_id(), &Value::Object(args))?)
+    unwrap_operation_result(client.request(op, &next_invocation_id(), &Value::Object(args))?)
 }
 
 fn assert_command_ok(response: &Value, family: &str, variant: &str) -> Result<()> {

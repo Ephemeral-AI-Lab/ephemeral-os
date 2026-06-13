@@ -8,9 +8,17 @@ use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_bool, as_i64, as_str, conflict_reason, live_pool_or_skip, wait_for_command_count,
-    wait_for_command_stdout_contains,
+    array, as_bool, as_i64, as_str, conflict_reason, envelope_result, live_pool_or_skip,
+    wait_for_command_count, wait_for_command_stdout_contains,
 };
+
+fn domain_result(response: &Value) -> Result<&Value> {
+    if response.get("status").and_then(Value::as_str).is_some() {
+        envelope_result(response)
+    } else {
+        Ok(response)
+    }
+}
 
 #[test]
 fn concurrent_conflicting_writes() -> Result<()> {
@@ -47,14 +55,17 @@ fn concurrent_conflicting_writes() -> Result<()> {
         .map(|handle| Ok(handle.join().expect("writer thread panicked")?))
         .collect::<Result<_>>()?;
     assert!(
-        responses
-            .iter()
-            .any(|response| response.get("status").and_then(Value::as_str) == Some("committed")),
+        responses.iter().any(
+            |response| domain_result(response).ok().is_some_and(|result| {
+                result.get("status").and_then(Value::as_str) == Some("committed")
+            })
+        ),
         "at least one writer should publish: {responses:?}"
     );
     for response in &responses {
+        let result = domain_result(response)?;
         assert!(
-            as_bool(response, "success").unwrap_or(false) || response.get("conflict").is_some(),
+            as_bool(result, "success").unwrap_or(false) || result.get("conflict").is_some(),
             "write should either commit or surface a conflict: {response}"
         );
     }
@@ -100,8 +111,9 @@ fn concurrent_disjoint_writes() -> Result<()> {
         .collect();
     for handle in handles {
         let response = handle.join().expect("writer thread panicked")?;
+        let result = domain_result(&response)?;
         assert!(
-            as_bool(&response, "success")?,
+            as_bool(result, "success")?,
             "disjoint write should commit: {response}"
         );
     }
@@ -132,8 +144,9 @@ fn edit_overlap_conflict() -> Result<()> {
             "edits": [{"old_text": "dup", "new_text": "x", "replace_all": false}]
         }),
     )?;
+    let edit = domain_result(&edit)?;
     assert_eq!(
-        conflict_reason(&edit),
+        conflict_reason(edit),
         "aborted_overlap",
         "overlap conflict expected: {edit}"
     );
@@ -163,12 +176,13 @@ fn edit_anchor_errors_do_not_publish_or_advance_manifest() -> Result<()> {
                 "edits": [{"old_text": old_text, "new_text": "changed", "replace_all": false}]
             }),
         )?;
-        assert!(!as_bool(&edit, "success")?, "{edit}");
-        assert_eq!(as_str(&edit, "status")?, "aborted_overlap", "{edit}");
-        assert_eq!(conflict_reason(&edit), "aborted_overlap", "{edit}");
-        assert_eq!(as_i64(&edit, "applied_edits")?, 0, "{edit}");
+        let edit = domain_result(&edit)?;
+        assert!(!as_bool(edit, "success")?, "{edit}");
+        assert_eq!(as_str(edit, "status")?, "aborted_overlap", "{edit}");
+        assert_eq!(conflict_reason(edit), "aborted_overlap", "{edit}");
+        assert_eq!(as_i64(edit, "applied_edits")?, 0, "{edit}");
         assert!(
-            array(&edit, "changed_paths")?.is_empty(),
+            array(edit, "changed_paths")?.is_empty(),
             "anchor conflict must not publish changed paths: {edit}"
         );
 
@@ -370,8 +384,9 @@ fn route_fileresult_catalog() -> Result<()> {
         catalog::SANDBOX_FILE_WRITE,
         json!({"path": "occ/catalog.txt", "content": "two\n", "overwrite": false}),
     )?;
-    assert_eq!(as_str(&rejected, "status")?, "rejected");
-    assert_eq!(conflict_reason(&rejected), "create_only_existing");
+    let rejected = domain_result(&rejected)?;
+    assert_eq!(as_str(rejected, "status")?, "rejected");
+    assert_eq!(conflict_reason(rejected), "create_only_existing");
     let missing_edit = lease.call(
         catalog::SANDBOX_FILE_EDIT,
         json!({
@@ -379,6 +394,7 @@ fn route_fileresult_catalog() -> Result<()> {
             "edits": [{"old_text": "x", "new_text": "y", "replace_all": false}]
         }),
     )?;
-    assert_eq!(conflict_reason(&missing_edit), "aborted_version");
+    let missing_edit = domain_result(&missing_edit)?;
+    assert_eq!(conflict_reason(missing_edit), "aborted_version");
     Ok(())
 }

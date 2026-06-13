@@ -58,9 +58,7 @@ fn every_response_carries_runtime_envelope_meta() -> Result<()> {
         "ok responses must carry nonnegative duration meta: {ready}"
     );
     assert!(
-        meta.steps
-            .iter()
-            .any(|step| step.kind == "dispatch"),
+        meta.steps.iter().any(|step| step.kind == "dispatch"),
         "ok responses must carry dispatch step meta: {ready}"
     );
 
@@ -73,9 +71,7 @@ fn every_response_carries_runtime_envelope_meta() -> Result<()> {
     let meta = envelope_meta(&bogus)?;
     assert_eq!(meta.op, "api.totally.bogus.op");
     assert!(
-        meta.steps
-            .iter()
-            .any(|step| step.kind == "dispatch"),
+        meta.steps.iter().any(|step| step.kind == "dispatch"),
         "error responses must still carry dispatch step meta: {bogus}"
     );
     Ok(())

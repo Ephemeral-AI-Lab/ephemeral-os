@@ -48,7 +48,7 @@ pub enum DaemonError {
 impl DaemonError {
     /// Map this error onto the wire error `kind`.
     #[must_use]
-    pub const fn wire_kind(&self) -> crate::wire::ErrorKind {
+    pub fn wire_kind(&self) -> crate::wire::ErrorKind {
         use crate::wire::ErrorKind;
         match self {
             Self::Protocol(_) => ErrorKind::BadJson,
@@ -56,12 +56,28 @@ impl DaemonError {
             Self::RequestTooLarge { .. } => ErrorKind::RequestTooLarge,
             Self::Unauthorized => ErrorKind::Unauthorized,
             Self::Forbidden(_) => ErrorKind::Forbidden,
+            Self::LayerStack(error) if layer_stack_lifecycle_in_progress(error) => {
+                ErrorKind::LifecycleInProgress
+            }
+            Self::Commit(eos_layerstack::CommitError::Storage(error))
+                if layer_stack_lifecycle_in_progress(error) =>
+            {
+                ErrorKind::LifecycleInProgress
+            }
             Self::Plugin(eos_plugin::PluginError::ForbiddenInIsolatedWorkspace) => {
                 ErrorKind::ForbiddenInIsolatedWorkspace
             }
             _ => ErrorKind::InternalError,
         }
     }
+}
+
+fn layer_stack_lifecycle_in_progress(error: &eos_layerstack::LayerStackError) -> bool {
+    matches!(
+        error,
+        eos_layerstack::LayerStackError::Storage(message)
+            if message.contains("blocked by active leases")
+    )
 }
 
 impl From<eos_operation::plugin::PluginRuntimeError> for DaemonError {

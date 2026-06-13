@@ -48,7 +48,7 @@ Two rules produced this surface, and keep it stable:
   the tool-call boundary is the seam that would carry it).
 - Subprocess execution. The SDK never spawns a process; hosts wrap commands into callback
   hooks.
-- Workflow hub and its `WorkflowProvider` registry, MCP-style anything (host-side; see
+- Workflow hub and its `WorkflowModule` registry, MCP-style anything (host-side; see
   coding-agent spec).
 - Sandbox integration, profile/config file formats, persistence beyond run records.
 
@@ -193,6 +193,9 @@ export function createAgentOutcomeFn<T>(spec: {
   onSubmit?: (payload: T, ctx: SubmitCtx) => Promise<{ accept: T } | { reject: string }>;
 }): AgentOutcomeFn<T>;                // default onSubmit: accept(payload) — the trivial validator
 
+export function agentOutcomeToolName(fn: AgentOutcomeFn<unknown>): string;
+                                      // terminal-tool-name read-back; the fn stays otherwise opaque
+
 interface SubmitCtx { runId: AgentRunId; submissionId: string /* stable = toolUseId */ }
 
 // ── exported types (no values, no schemas) ──────────────────────
@@ -201,7 +204,7 @@ interface SubmitCtx { runId: AgentRunId; submissionId: string /* stable = toolUs
 //   task_registered · task_settled · run_finished — plus today's LlmStreamEvent
 //   members carried unchanged (token/message stream; granularity revisited per §9) ·
 // AgentOutcome<T> · UsageSnapshot ·
-// AgentOutcomeFn<T> (opaque; minted only by createAgentOutcomeFn) · ToolDefinition ·
+// AgentOutcomeFn<T> (opaque; minted by createAgentOutcomeFn; name via agentOutcomeToolName) · ToolDefinition ·
 // ToolDefinitionInit · ToolResult · ToolCallContext · ToolCallFacts · TurnFacts ·
 // SubmitCtx · UserMessage · Message · AgentRunId · ToolUseId ·
 // BackgroundTaskId · BackgroundTaskRow · BackgroundTaskOutcome ·
@@ -221,9 +224,9 @@ Notes on the shape:
 - "Advisor" is not an SDK concept. The outcome tool's identity is caller-supplied (`name`,
   `description`); advisory enforcement (e.g. an advisor agent vetting submissions) is a
   host hook pattern (see coding-agent spec §7).
-- "Notification rules" are not an SDK concept. A host notification rule is a
-  `turnBoundary` hook entry that publishes; the host compiles its rule files into such
-  entries (§4.3, §4.7).
+- "Notification rules" are not a concept anywhere — SDK or host. What was a notification
+  rule is just a `turnBoundary` hook entry that publishes; a host declares such entries in
+  its hook config (§4.3, §4.7). There is no separate rule file.
 - There are no exported Zod schemas. Hooks are callbacks; the host owns config files,
   validates them itself, and wraps any subprocess command into a callback (the
   JSON-on-stdin runner moves to the host with `scripts`).
@@ -310,8 +313,9 @@ The loop is the existing `agent-loop.ts` eleven-step structure, unchanged in spi
     that call's tool-result error, in-run.
   - `postToolUse` deny → the executed result is replaced by an error carrying `reason`.
   - `turnBoundary` → runs at the inbox-drain boundary, observes turn facts, and may
-    `publish` through the provided notifier; it returns nothing. This event is where host
-    notification rules live — the host compiles its rule files into these callbacks.
+    `publish` through the provided notifier; it returns nothing. This event is where hosts
+    publish turn-driven reminders and status messages, declared as ordinary entries in the
+    host hook config.
   Pre/post hooks receive `ToolCallFacts` only — no conversation access. A
   submission-vetting hook therefore judges the payload alone; terminal payload schemas
   must be self-contained enough to vet. This is a designed constraint, not an omission.
@@ -374,7 +378,7 @@ The loop is the existing `agent-loop.ts` eleven-step structure, unchanged in spi
   turn boundary. Publishing never interrupts a streaming turn. An undrained message with
   the same `key` is replaced.
 - **Who publishes: only the host.** From tools, from `BackgroundTask.onCompletion`, from
-  `turnBoundary` hooks (its notification rules), or through the handle's `notifier` for
+  `turnBoundary` hooks, or through the handle's `notifier` for
   external/app events. The SDK itself never publishes.
 - Exhaustiveness property a host may rely on: **every message in an agent's inbox is a
   publish the host made.** The SDK injects nothing.
@@ -430,8 +434,8 @@ workspace mechanics.
 | `background` | internal · rename `BackgroundSessionSupervisor` → `BackgroundTaskSupervisor`; **remove-on-completion registry** — public surface `register/list/cancel`, rows `{taskId, toolName, title, startedAt}`, no status enum, explicit-silence task contract (`onCompletion` \| `silent: true`), no source-specific session typing |
 | `engine` | internal (agent-loop, conversation, turn, tool-executor port, run handle) · gains the internal terminal-submission gate aligned with the text-exit gate (incl. the `inbox drained` conjunct) · emits `task_registered`/`task_settled` events |
 | `tool` | internal: `contract / define / executor / pipeline / toolset / run-state` stay; `hooks/*` reduced to callback dispatch (the subprocess protocol moves to the host); **new** `outcome.ts` (`createAgentOutcomeFn`); **deleted:** `tools/*` (all families — agent, background, pursuit, submission), `advisory_prompts/*`, `description_prompts/*` (host-side now, or replaced by the factory) |
-| `agent-runtime` | **split**: assembly (`runtime.ts` minus pursuit wiring), `run-registry.ts`, `transcript.ts`, `llm-client-registry.ts` stay internal under `src/runtime` · config loaders (`config-root/config-file/hook-config/notification-rules-config`), profile loaders/registry, `pursuit-context-scripts.ts`, and `pursuitWiring()` move to `eos-coding-agent` |
-| `pursuit` | moves to `eos-coding-agent/packages/workflows/pursuit` |
+| `agent-runtime` | **split**: assembly (`runtime.ts` minus pursuit wiring), `run-registry.ts`, `transcript.ts`, `llm-client-registry.ts` stay internal under `src/runtime` · config loaders (`config-root/config-file/hook-config`), profile loaders/registry, `pursuit-context-scripts.ts`, and `pursuitWiring()` move to `eos-coding-agent` · `notification-rules-config` **deleted** — former rules become `turnBoundary` entries in the host hook config |
+| `pursuit` | moves to `eos-coding-agent/src/workflows/pursuit` |
 | `db` | moves with pursuit (it is `createPursuitDatabase`) |
 | `testkit` | split: scripted `LlmClient`, `scripted-tools`, `transcript-fixture` stay; `.eos-agents` fixture building moves to the coding agent · published as the `eos-agent-sdk/testkit` subpath export |
 
@@ -442,7 +446,8 @@ pursuit's own startup validation), per-name submission tools (identity now comes
 `getRun`, run-end callback on the handle, task status enum / settled rows, supervisor
 `count()` (redundant with `list().length`), `displayMessages` on `ToolCallContext` and
 public `DisplayedMessage` (presentation concern — hosts derive rendering from
-records/events), the trigger engine and `TriggerRuleEntry`, subprocess hook commands and
+records/events), the trigger engine, `TriggerRuleEntry`, and the `notification-rules-config`
+loader, subprocess hook commands and
 exported config schemas, `toSSE` and `events({afterSeq})` replay.
 
 ## 6. Invariants (regression tests to write first)
@@ -484,11 +489,11 @@ exported config schemas, `toSSE` and `events({afterSeq})` replay.
 - `grep -r "child_process"` in the SDK → 0 hits (no subprocess execution).
 - The supervisor source contains no `toolName`-specific branches and no status enum.
 - `AgentSdkConfig` / `AgentSpec` / `AgentRunHandle` mention no filesystem path except `recordsDir`.
-- A consumer can implement `run_subagent`, `ask_advisor`, `list_background_task` (live
-  rows only), `cancel_background_task`, a transcript reader over records, an advisor gate
-  (`preToolUse`), its notification rules (`turnBoundary`), and a workflow hub **using only
-  §3** — this is the proof the surface is sufficient (demonstrated in the coding-agent
-  spec).
+- A consumer can implement `run_subagent`, `ask_advisor`, `list_background_tasks` (live
+  rows only), `cancel_background_task`, a run-records reader, an advisor gate
+  (`preToolUse`), its turn-boundary reminder hooks (`turnBoundary`), and a workflow hub
+  **using only §3** — this is the proof the surface is sufficient (demonstrated in the
+  coding-agent spec).
 - Every identifier used in the coding-agent spec's code snippets exists verbatim in §3.
 - `AgentSdk` has exactly one method.
 
@@ -498,7 +503,7 @@ exported config schemas, `toSSE` and `events({afterSeq})` replay.
 |---|---|
 | SDK name | **Renamed `eos-agent-sdk`** — workspace directory, root package, and spec filename (supersedes the earlier keep-`eos-agent-core` decision) |
 | Built-in tools | **None.** Earlier carve-outs (subagent/advisor tools, background-task tools, workflow toolset) all reversed; capabilities on `ToolCallContext` instead |
-| Workflow hub | Host-side (`eos-coding-agent`); `WorkflowProvider` is a host contract |
+| Workflow hub | Host-side (`eos-coding-agent`); `WorkflowModule` is a host contract |
 | Advisor / subagent | Host patterns (registry + tools + advisor-gate hook); SDK has no such concepts; outcome tool identity is `name` + `description` |
 | `behavior` metadata | Removed; runtime patterns only |
 | Settlement notifications | Supervisor **never** publishes; `BackgroundTask.onCompletion` (host) owns publication, receives `notifier` as an argument; exit gate = "owed completion handler"; silence is opt-in (`silent: true`) — the task type forces handler-or-silent, no implicit default |
@@ -507,7 +512,7 @@ exported config schemas, `toSSE` and `events({afterSeq})` replay.
 | Run-end channel | `outcome(): Promise<AgentOutcome>` on the handle; run-end callback dropped (`onSubmit` name reserved for the terminal handler) |
 | Outcome payload | `AgentOutcome` carries `usage` and `turns` on every status (hosts must not parse records for hot-path accounting) |
 | Outcome typing | `T` threaded through `createAgentOutcomeFn<T>` → `AgentSpec<T>` → `Agent<T>` → `AgentRunHandle<T>` → `AgentOutcome<T>`; text mode `T = string`; no casts at the `outcome()` site |
-| Notification rules | Deleted as an SDK concept; the trigger engine folds into the `turnBoundary` hook event; hosts compile their rule files into callbacks |
+| Notification rules | Deleted everywhere — not an SDK or host concept; the trigger engine folds into the `turnBoundary` hook event; former rule files become `turnBoundary` entries in the host hook config (no separate file, loader, or vocabulary) |
 | Hook transport | Callbacks only; subprocess JSON-on-stdin moves to the host (with `scripts`); no exported config schemas |
 | Hook channels | pre/post speak only through `HookDecision` (deny → that call's tool-result error); `turnBoundary` speaks only through the notifier |
 | Hook inputs | pre/post receive `ToolCallFacts` only — no conversation access; submission vetting judges the payload alone, so terminal schemas must be self-contained. Engine-level pre/post exist because the terminal tool is opaque (hosts can wrap ordinary tools' `execute`, never the minted terminal tool) |
@@ -527,8 +532,8 @@ exported config schemas, `toSSE` and `events({afterSeq})` replay.
 - `LlmRef` resolution shape (string id vs structured ref) — decide when wiring
   `llm-client-registry` into the new `runtime` module.
 - `TurnFacts` shape for `turnBoundary` hooks — fix when folding the trigger engine's
-  turn-fact extraction into hook dispatch; it must cover today's notification-rule needs
-  (`notification-triggers.e2e.ts` is the behavioral reference).
+  turn-fact extraction into hook dispatch; it must cover the behaviors previously
+  expressed as trigger rules (`notification-triggers.e2e.ts` is the behavioral reference).
 - Stream deltas (token-level events) in `AgentEvent` — the union keeps today's
   `LlmStreamEvent` members; refining granularity is out of scope for the split; revisit
   for UI needs.

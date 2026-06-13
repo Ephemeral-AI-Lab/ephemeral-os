@@ -6,7 +6,8 @@ use serde_json::{json, Value};
 
 use crate::support::{
     array, as_i64, as_str, clean_stdout, finalize_foreground_command, live_pool_or_skip, stdout,
-    wait_for_active_leases, wait_for_command_count, wait_for_command_transcript_recycled,
+    unwrap_operation_result, wait_for_active_leases, wait_for_command_count,
+    wait_for_command_transcript_recycled,
 };
 
 #[test]
@@ -115,10 +116,10 @@ fn stderr_and_stdin_output_keep_long_lived_session_running() -> Result<()> {
             "sleeping stderr/stdin command must not collect before cancellation: {not_done}"
         );
 
-        let cancelled = lease.call(
+        let cancelled = unwrap_operation_result(lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
             json!({"command_id": &command_id}),
-        )?;
+        )?)?;
         ensure!(
             matches!(as_str(&cancelled, "status")?, "cancelled" | "ok" | "error"),
             "cancel should return terminal-ish status after long-lived stderr/stdin output: {cancelled}"
@@ -145,13 +146,13 @@ fn missing_command_and_invalid_command_ids_are_structured() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let missing = lease.call(
+    let missing = unwrap_operation_result(lease.call(
         catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "definitely_missing_eos_e2e_command",
             "yield_time_ms": 1000,
             "timeout_seconds": 10,}),
-    )?;
+    )?)?;
     ensure!(
         as_str(&missing, "status")? == "error",
         "missing command should return an error status: {missing}"
@@ -169,13 +170,13 @@ fn missing_command_and_invalid_command_ids_are_structured() -> Result<()> {
         "missing-command-{}",
         eos_e2e_test::unique_suffix().replace('-', "_")
     );
-    let stdin = lease.call(
+    let stdin = unwrap_operation_result(lease.call(
         catalog::SANDBOX_COMMAND_WRITE_STDIN,
         json!({
             "command_id": bogus,
             "chars": "ignored\n",
             "yield_time_ms": 100,}),
-    )?;
+    )?)?;
     ensure!(
         as_str(&stdin, "status")? == "error",
         "write_stdin against an unknown command should return a structured error: {stdin}"
@@ -185,10 +186,10 @@ fn missing_command_and_invalid_command_ids_are_structured() -> Result<()> {
         "write_stdin unknown-command error should carry a stable diagnostic: {stdin}"
     );
 
-    let cancel = lease.call(
+    let cancel = unwrap_operation_result(lease.call(
         catalog::SANDBOX_COMMAND_CANCEL,
         json!({"command_id": bogus}),
-    )?;
+    )?)?;
     ensure!(
         as_str(&cancel, "status")? == "error",
         "cancel against an unknown command should return a structured error: {cancel}"
@@ -250,10 +251,10 @@ fn output_backpressure_preserves_utf8_and_drains_on_cancel() -> Result<()> {
             );
             ensure_valid_utf8_prefix(&poll)?;
         }
-        let cancelled = lease.call(
+        let cancelled = unwrap_operation_result(lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
             json!({"command_id": &command_id}),
-        )?;
+        )?)?;
         ensure!(
             matches!(as_str(&cancelled, "status")?, "cancelled" | "ok" | "error"),
             "cancel should return a terminal-ish status after output pressure: {cancelled}"
@@ -362,7 +363,9 @@ fn stdin_to_non_reading_consumer_stays_bounded_and_cancellable() -> Result<()> {
         write_started.elapsed()
     );
 
-    let cancelled = lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": &id}))?;
+    let cancelled = unwrap_operation_result(
+        lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": &id}))?,
+    )?;
     ensure!(
         matches!(as_str(&cancelled, "status")?, "cancelled" | "ok" | "error"),
         "command must stay cancellable after stdin pressure: {cancelled}"
@@ -403,14 +406,14 @@ fn over_buffer_stdin_to_non_reading_consumer_returns_backpressure() -> Result<()
     // accumulated unread lines fill the input queue and exert real backpressure.
     let payload = "eos-e2e-backpressure-line\n".repeat(16384);
     let write_started = Instant::now();
-    let pushed = lease.call(
+    let pushed = unwrap_operation_result(lease.call(
         catalog::SANDBOX_COMMAND_WRITE_STDIN,
         json!({
             "command_id": &id,
             "chars": payload,
             "yield_time_ms": 300,
         }),
-    )?;
+    )?)?;
     let elapsed = write_started.elapsed();
     ensure!(
         elapsed < Duration::from_secs(15),
@@ -421,7 +424,9 @@ fn over_buffer_stdin_to_non_reading_consumer_returns_backpressure() -> Result<()
         "over-buffer stdin to a non-reading consumer should surface a backpressure diagnostic: {pushed}"
     );
 
-    let cancelled = lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": &id}))?;
+    let cancelled = unwrap_operation_result(
+        lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": &id}))?,
+    )?;
     ensure!(
         matches!(as_str(&cancelled, "status")?, "cancelled" | "ok" | "error"),
         "command must stay cancellable after backpressure: {cancelled}"

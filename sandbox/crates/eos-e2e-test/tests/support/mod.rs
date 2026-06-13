@@ -19,6 +19,27 @@ pub(crate) use trace::{
     ResponseTraceIds, StoredTraceSummary,
 };
 
+pub(crate) fn unwrap_operation_result(response: Value) -> Result<Value> {
+    if !is_operation_envelope(&response) {
+        return Ok(response);
+    }
+    envelope_result(&response)
+        .cloned()
+        .with_context(|| format!("operation envelope missing result: {response}"))
+}
+
+fn is_operation_envelope(response: &Value) -> bool {
+    let Some(object) = response.as_object() else {
+        return false;
+    };
+    let Some("ok" | "running" | "rejected" | "cancelled" | "timed_out" | "error") =
+        object.get("status").and_then(Value::as_str)
+    else {
+        return false;
+    };
+    object.contains_key("meta") && (object.contains_key("result") || object.contains_key("error"))
+}
+
 pub(crate) fn live_pool_or_skip() -> Result<Option<Arc<NodePool>>> {
     let Some(pool) = live_pool_with_config(crate::E2E_CONFIG)? else {
         eprintln!("skipping live eos-e2e-test; enable with `--features e2e`");
@@ -106,8 +127,9 @@ pub(crate) fn wait_for_command_count(lease: &NodeLease<'_>, expected: i64) -> Re
 /// finalizes the run the moment its child exits) until the status is terminal,
 /// then reconstructs the terminal-exec wire shape by stripping `command_id`
 /// — exactly what `exec_command` does for a non-`running` status. The returned
-/// value carries the full finalized payload (`exit_code`, `changed_paths`,
-/// `timings`), so the caller's real assertions still hold post-finalization.
+/// value carries the full finalized result payload (`exit_code`,
+/// `changed_paths`), so the caller's real assertions still hold
+/// post-finalization.
 ///
 /// # Errors
 /// Returns an error if `read_progress` fails or the run does not finalize before
@@ -117,6 +139,7 @@ pub(crate) fn finalize_foreground_command(
     response: Value,
     deadline: Instant,
 ) -> Result<Value> {
+    let response = unwrap_operation_result(response)?;
     if as_str(&response, "status")? != "running" {
         return Ok(response);
     }
@@ -130,6 +153,7 @@ pub(crate) fn finalize_foreground_command(
             catalog::SANDBOX_COMMAND_POLL,
             json!({"command_id": &command_id, "last_n_lines": 50}),
         )?;
+        let progress = unwrap_operation_result(progress)?;
         // A `read_progress` finalizes with `publish_completion = false`
         // and removes the run, so a second poll would 404. Stop on the first
         // terminal status. The finalized response still carries the command id

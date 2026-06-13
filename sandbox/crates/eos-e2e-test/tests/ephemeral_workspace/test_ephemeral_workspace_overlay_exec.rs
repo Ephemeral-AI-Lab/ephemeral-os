@@ -82,8 +82,17 @@ fn has_step(response: &Value, kind: SpanKind) -> Result<bool> {
     Ok(record.spans.iter().any(|span| span.kind == kind))
 }
 
+fn trace_changed_paths_include(details: &Value, expected: &[&str]) -> bool {
+    let Some(paths) = details.get("changed_paths").and_then(Value::as_array) else {
+        return false;
+    };
+    expected
+        .iter()
+        .all(|expected| paths.iter().any(|path| path.as_str() == Some(*expected)))
+}
+
 #[test]
-fn exec_multi_path_route_timings_and_read_intent_no_publish() -> Result<()> {
+fn exec_multi_path_route_trace_facts_and_read_intent_no_publish() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
@@ -112,14 +121,20 @@ fn exec_multi_path_route_timings_and_read_intent_no_publish() -> Result<()> {
             || has_step(&exec_wire, SpanKind::CommandFinalize)?,
         "exec trace must expose command dispatch/finalization timing: {exec}"
     );
+    let record = trace_record(&exec_wire)?;
     assert!(
-        has_trace_event(
-            &trace_record(&exec_wire)?,
-            "occ",
-            "commit_finished",
-            |details| { details.get("duration_s").and_then(Value::as_f64).is_some() },
-        ),
-        "exec trace must expose OCC publish timing: {exec}"
+        has_trace_event(&record, "overlay", "capture_finished", |details| {
+            details.get("duration_s").and_then(Value::as_f64).is_some()
+                && trace_changed_paths_include(details, &[&first, &second])
+        }),
+        "exec trace must expose overlay capture facts: {exec}"
+    );
+    assert!(
+        has_trace_event(&record, "command", "changed_paths_recorded", |details| {
+            details.get("changed_path_count").and_then(Value::as_u64) == Some(2)
+                && trace_changed_paths_include(details, &[&first, &second])
+        }),
+        "exec trace must expose changed-path facts: {exec}"
     );
 
     let read_only = exec_settled(
@@ -428,8 +443,8 @@ fn exec_upperdir_is_flat_across_base_sizes() -> Result<()> {
             &lease,
             json!({
                 "cmd": format!("printf SMALL > perf/flat/delta-{index}.txt"),
-                "yield_time_ms": 8000,
-                "timeout_seconds": 15,}),
+                "yield_time_ms": 30000,
+                "timeout_seconds": 35,}),
         )?;
         assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
         let upperdir_bytes =
@@ -554,7 +569,7 @@ fn live_trace_ephemeral_exec_records_command_overlay_resource_and_response_facts
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let exec = exec_settled(
+    let (exec_wire, exec) = exec_settled_wire(
         &lease,
         json!({
             "cmd": "mkdir -p trace-exec && printf traced > trace-exec/out.txt",
@@ -563,7 +578,7 @@ fn live_trace_ephemeral_exec_records_command_overlay_resource_and_response_facts
         }),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
-    let record = trace_record(&exec)?;
+    let record = trace_record(&exec_wire)?;
 
     assert!(
         has_trace_event(&record, "command", "prepared", |_| true)

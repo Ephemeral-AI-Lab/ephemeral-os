@@ -7,8 +7,8 @@
   - `docs/plans/agent-core-rust-to-typescript-migration/phase-05.3-pursuit_leg_attempt_SPEC.md`
 - **Scope:** The host application that composes `eos-agent-sdk` into the coding-agent
   product. It owns profiles, config files, all tools, the WorkflowHub, pursuit as the
-  first registered workflow, advisor/subagent patterns, hooks, notification rules,
-  pursuit scripts, and the composition root.
+  first registered workflow, advisor/subagent patterns, hooks, pursuit scripts, and the
+  composition root.
 
 ## 1. Source-of-truth Alignment
 
@@ -28,10 +28,10 @@ contract back to generic workflow names.
 
 | Surface | Active term in this spec | Notes |
 | --- | --- | --- |
-| SDK dependency | `eos-agent-sdk` root package only | No deep imports such as `@eos/tool`, `@eos/engine`, or `@eos/pursuit`. |
+| SDK dependency | `eos-agent-sdk` root package only | No deep imports past the SDK package's `exports` field. |
 | Generic host registry | `WorkflowHub` | Required host-owned registry. Not an SDK concept. |
 | First registered workflow | `pursuit` | Concrete product vocabulary follows Phase 05.3. |
-| Delegate tool | `delegate_pursuit` | Do not reintroduce `delegate_workflow`. |
+| Workflow delegation tool | `delegate_workflow` | One generic hub tool. Do not create per-workflow or per-instance delegate tools. |
 | Context scripts | `.eos-agents/pursuit/scripts/` | Do not use `.eos-agents/workflow/scripts/` as an active script root. |
 | Profile context script field | `pursuit_context_script` | Do not use `workflow_context_script`. |
 | Context paths | `pursuit_<id>/leg_<id>/.../superseded/` | Do not render `workflow_<id>`, `iteration_<id>`, `focus.md`, `deferred_goal.md`, or `archived/`. |
@@ -46,7 +46,7 @@ mechanics.
 eos-coding-agent
   imports only eos-agent-sdk root package
   owns:
-    .eos-agents/ profile, workflow, hook, notification, and pursuit config
+    .eos-agents/ profile, workflow, hook, and pursuit config
     every model-visible tool
     AgentFactory over host profiles
     WorkflowHub and registered workflow instances
@@ -72,9 +72,11 @@ eos-coding-agent/
       planner.md
       worker.md
       advisor.md
+      subagent.md                    launchable only when another profile lists it
+    llm_clients.json
     workflow.json
     hooks.json
-    notification_rules.json
+    hooks/                           .cjs command hook scripts
     pursuit/
       scripts/
         planner.cjs
@@ -88,133 +90,100 @@ eos-coding-agent/
       config-root.ts
       config-file.ts
       hook-config.ts
-      notification-rules-config.ts
       profile-loader.ts
       workflow-config.ts
-      pursuit-config.ts
     agents/
       agent-factory.ts
       profiles.ts
-      advisory-prompts.ts
     tools/
       agent/
         run-subagent.ts
         ask-advisor.ts
         read-agent-run.ts
       background/
-        list-background-task.ts
+        list-background-tasks.ts
         cancel-background-task.ts
       workflow/
         list-workflows.ts
         read-workflow-definition.ts
-      pursuit/
-        delegate-pursuit.ts
+        delegate-workflow.ts
       index.ts
     workflows/
       hub.ts                           WorkflowHub
-      contract.ts                      WorkflowModule, RegisteredWorkflow
+      contract.ts                      WorkflowModule, WorkflowInstanceConfig, WorkflowHandle
       index.ts
-  packages/
-    workflows/
       pursuit/
-        package.json
-        src/
-          index.ts                     exports the pursuit WorkflowModule
-          service.ts
-          agent-launcher.ts
-          pursuit-tree.ts
-          pursuit-context.ts
-          pursuit/
-            state.ts
-            transition.ts
-            context.ts
-          leg/
-            state.ts
-            transition.ts
-            context.ts
-          attempt/
-            state.ts
-            transition.ts
-            context.ts
-          plan/
-            state.ts
-            transition.ts
-          work-item/
-            state.ts
-            transition.ts
-            context.ts
-          context-engine/
-            composer.ts
-            input.ts
-            projection/
-              listing.ts
-              paths.ts
-              resolve.ts
-              mirror.ts
-          store/
-            schema.ts
-            migrations.ts
-          contracts.ts
+        index.ts                       exports the pursuit WorkflowModule
+        service.ts
+        agent-launcher.ts
+        pursuit-tree.ts
+        pursuit-context.ts
+        pursuit/
+          state.ts
+          transition.ts
+          context.ts
+        leg/
+          state.ts
+          transition.ts
+          context.ts
+        attempt/
+          state.ts
+          transition.ts
+          context.ts
+        plan/
+          state.ts
+          transition.ts
+        work-item/
+          state.ts
+          transition.ts
+          context.ts
+        context-engine/
+          composer.ts
+          input.ts
+          projection/
+            listing.ts
+            paths.ts
+            resolve.ts
+            mirror.ts
+        store/
+          schema.ts
+          migrations.ts
+        contracts.ts
 ```
 
-The top-level `src/workflows` folder owns generic hub contracts. The concrete pursuit
-implementation lives under `packages/workflows/pursuit` so the former `@eos/pursuit`
-boundary remains visible after it leaves the SDK workspace.
+The `src/workflows` folder owns both generic hub contracts and host-local workflow
+implementations. Pursuit lives under `src/workflows/pursuit/`; it is not a separate
+package and it does not need a standalone config loader.
 
 ## 4. Composition Root
 
-The application bootstrap builds every singleton once and wires only public SDK values.
+The application bootstrap builds each composition-root value once and wires only public SDK
+values.
 
 ```ts
 import {
   createAgentOutcomeFn,
   createAgentSdk,
 } from "eos-agent-sdk";
-import { agentFactory, buildAgentFactory, installAgentFactory } from "./agents/agent-factory.js";
+import { buildAgentFactory } from "./agents/agent-factory.js";
 import { loadEosConfig } from "./config/config-file.js";
-import { cancelBackgroundTask } from "./tools/background/cancel-background-task.js";
-import { listBackgroundTask } from "./tools/background/list-background-task.js";
-import { askAdvisor } from "./tools/agent/ask-advisor.js";
-import { readAgentRun } from "./tools/agent/read-agent-run.js";
-import { runSubagent } from "./tools/agent/run-subagent.js";
-import { delegatePursuit } from "./tools/pursuit/delegate-pursuit.js";
-import { readWorkflowDefinition } from "./tools/workflow/read-workflow-definition.js";
-import { listWorkflows } from "./tools/workflow/list-workflows.js";
 import { WorkflowHub } from "./workflows/hub.js";
-import { pursuitWorkflow } from "../packages/workflows/pursuit/src/index.js";
+import { pursuitWorkflow } from "./workflows/pursuit/index.js";
 
 const cfg = loadEosConfig(".eos-agents");
 
 const sdk = createAgentSdk({
   llmClients: cfg.llmClients,
-  hooks: [
-    ...cfg.globalHooks,
-    ...compileNotificationRules(cfg.notificationRules),
-  ],
+  hooks: cfg.hooks,
   recordsDir: cfg.recordsDir,
 });
 
 const hub = new WorkflowHub({
-  instances: cfg.workflowInstances,
+  configs: cfg.workflowInstanceConfigs,
+  modules: [pursuitWorkflow],
 });
-await hub.register(pursuitWorkflow);
 
-const availableTools = [
-  runSubagent,
-  listBackgroundTask,
-  cancelBackgroundTask,
-  readAgentRun(cfg.recordsDir),
-  listWorkflows(hub),
-  readWorkflowDefinition(hub),
-  delegatePursuit(hub),
-];
-
-const agents = buildAgentFactory(sdk, cfg.profiles, {
-  availableTools,
-  askAdvisor,
-  advisoryPrompts: cfg.advisoryPrompts,
-});
-installAgentFactory(agents);
+const agents = buildAgentFactory(sdk, cfg.profiles, cfg.recordsDir, hub);
 
 const mainOutcomeFn = createAgentOutcomeFn({
   name: "submit_main_outcome",
@@ -222,13 +191,21 @@ const mainOutcomeFn = createAgentOutcomeFn({
   schema: MainOutcome,
 });
 
-const operator = agentFactory().create("operator", mainOutcomeFn);
+const operator = agents.create("operator", mainOutcomeFn, MAIN_ADVISOR_PROMPT);
 ```
 
 Rules:
 
 - The composition root imports `eos-agent-sdk` and local host modules only.
-- The WorkflowHub is initialized before tool assembly so workflow tools can read it.
+- `new WorkflowHub({ configs, modules })` does construction only: it pairs each instance
+  config with the module whose `type` matches and validates `args` synchronously. Unknown
+  types and invalid args are startup errors. Opening workflow state (for example the
+  pursuit store) happens lazily inside the module on first delegation.
+- Advisory prompts are caller-supplied at `create` time beside the outcome function
+  (`MAIN_ADVISOR_PROMPT` lives beside `SUBMIT_MAIN_DESCRIPTION`); there is no advisory
+  prompt registry.
+- The WorkflowHub is initialized before `AgentFactory` construction so profiles can bind
+  workflow tools to only the workflow instances they declare.
 - Pursuit is registered through the hub. Do not wire pursuit directly into the operator
   tool list while bypassing the hub.
 - The SDK receives parsed objects and callbacks. File discovery, profile loading,
@@ -241,9 +218,10 @@ Rules:
 ```text
 .eos-agents/
   profile/*.md
+  llm_clients.json
   workflow.json
   hooks.json
-  notification_rules.json
+  hooks/*.cjs
   pursuit/scripts/*.cjs
   pursuit/context/
 ```
@@ -252,22 +230,63 @@ Rules:
 
 Profiles are host-owned records. The SDK never reads profile files.
 
-Required profile fields:
+Profile fields:
 
 - `name`
-- LLM client reference
-- system prompt
+- `description`
+- `llm_client_id`
+- `max_turns`
+- system prompt (the markdown body)
 - `allowed_tools`
+- optional `workflows`
+- optional `subagents`
 - optional `terminal_tool`
 - optional `pursuit_context_script` for planner and worker profiles
 
 `pursuit_context_script` resolves under `.eos-agents/pursuit/scripts/`. Startup must reject
 profiles that still use `workflow_context_script` for active runtime wiring.
 
+`workflows` is profile policy, not hub policy. It lists workflow instance names from
+`.eos-agents/workflow.json` that this profile may inspect or delegate:
+
+```yaml
+name: operator
+workflows:
+  - pursuit
+subagents:
+  - subagent
+allowed_tools:
+  - list_workflows
+  - read_workflow_definition
+  - delegate_workflow
+  - run_subagent
+```
+
+Startup validation must reject any profile `workflows` entry that is not a configured
+workflow instance. If a profile exposes `delegate_workflow` or `read_workflow_definition`, it
+must declare at least one workflow instance. `list_workflows` is generated from the same
+profile list, so two agents can have different visible workflows even though they share one
+host hub.
+
+`subagents` is also profile policy. It lists profile names that this profile may launch
+through `run_subagent`. Startup validation must reject unknown names and names of
+terminal profiles, because a subagent launch supplies no outcome function. If a profile exposes
+`run_subagent`, it must declare at least one subagent name. The target profile is still a
+normal profile; there is no target role field, subagent registry, or kind classifier.
+
+`subagent.md` is a normal profile file. It becomes a subagent only from the caller's
+allow-list:
+
+```yaml
+name: subagent
+allowed_tools:
+  - read_agent_run
+```
+
 ### 5.2 Workflow Instances
 
-`workflow.json` is the WorkflowHub instance registry. It is generic host config, not
-pursuit context state.
+`workflow.json` declares the workflow instances available at startup. It is generic host
+config, not profile policy and not pursuit context state.
 
 ```json
 {
@@ -277,19 +296,28 @@ pursuit context state.
       "planner": "planner",
       "worker": "worker",
       "store": ".eos-agents/pursuit/pursuit.sqlite",
-      "context_root": ".eos-agents/pursuit/context"
+      "context_root": ".eos-agents/pursuit/context",
+      "scripts_root": ".eos-agents/pursuit/scripts",
+      "default_max_attempts": 2
     }
   }
 }
 ```
 
-The `planner` and `worker` values are `Agent.name` values. The hub validates the row with
-the registered workflow module's `args` schema, then passes the parsed values to
-`WorkflowModule.create`.
+The `planner` and `worker` values are agent names (profile names; they become
+`AgentSpec.name`). The hub validates each instance config with the matching module's
+`args` schema at construction; the parsed values reach the module's `delegate` as
+`instance.args`. `scripts_root` and `default_max_attempts` are schema-defaulted to the
+values shown and may be omitted.
+
+Registering an instance here does not expose it to every agent. Exposure happens only when
+an agent profile lists that instance in `workflows` and selects one or more workflow tools
+in `allowed_tools`.
 
 V1 should configure one pursuit instance named `pursuit`. If multiple pursuit instances
-are later required, add an explicit tool naming policy. Do not fall back to
-`delegate_workflow` or automatic `${instance}_delegate` names without a spec update.
+are later required, they are still delegated through `delegate_workflow`; the workflow
+instance name selects which registered schema validates the payload. Do not add
+per-workflow or per-instance delegate tools.
 
 ## 6. AgentFactory
 
@@ -297,41 +325,56 @@ are later required, add an explicit tool naming policy. Do not fall back to
 
 ```ts
 interface AgentFactory {
-  create<T = string>(name: string, agentOutcomeFn?: AgentOutcomeFn<T>): Agent<T>;
-  names(): string[];
+  create<T = string>(
+    name: string,
+    agentOutcomeFn?: AgentOutcomeFn<T>,
+    advisoryPrompt?: string,
+  ): Agent<T>;
 }
 
 export function buildAgentFactory(
   sdk: AgentSdk,
   profiles: AgentProfileRegistry,
-  deps: {
-    availableTools: readonly ToolDefinition[];
-    askAdvisor: (prompt: string) => ToolDefinition;
-    advisoryPrompts: ReadonlyMap<string, string>;
-  },
+  recordsDir: string,
+  workflowHub: WorkflowHub,
 ): AgentFactory;
 
-export function installAgentFactory(factory: AgentFactory): void;
-export function agentFactory(): AgentFactory;
 ```
 
 Creation rules:
 
-- `profile.allowed_tools` selects ordinary tools by `ToolDefinition.name`.
-- `ask_advisor` is the only parameterized tool name. If a profile allows it, the factory
-  requires a terminal outcome function, resolves the terminal tool name, looks up its
-  advisory prompt, and injects `askAdvisor(prompt)`.
+- `profile.allowed_tools` in the markdown is the source of truth for tool selection.
+- `AgentFactory` resolves each selected name against the host's built-in tool definitions
+  in `src/tools/`; no extra bootstrap tool wiring is required.
+- For workflow tools, `AgentFactory` first asks the hub for a view scoped to
+  `profile.workflows`, then builds `list_workflows`, `read_workflow_definition`, and
+  `delegate_workflow` from that view. It must not pass the whole hub registry to model-visible
+  tools.
+- `ask_advisor` is an ordinary host tool selected by `allowed_tools`. Its advisory prompt
+  is supplied by the caller of `create`, at the same call site as the outcome function;
+  there is no advisory prompt registry or bootstrap parameterization.
+- Startup/profile validation must still reject a profile that exposes `ask_advisor`
+  without a terminal tool, because the advisor gate protects terminal submissions.
+- If the profile lists `ask_advisor`, the caller must supply both `agentOutcomeFn` and
+  `advisoryPrompt`; the factory wires `askAdvisor(agents, advisoryPrompt)` into the
+  toolset and installs the `preToolUse` gate on `profile.terminal_tool`. Supplying an
+  `advisoryPrompt` for a profile that does not list `ask_advisor` is a creation error.
 - If `profile.terminal_tool` is present, the caller must provide an `AgentOutcomeFn` with
-  the same tool name.
+  the same tool name (checked with the SDK's `agentOutcomeToolName`).
 - If `profile.terminal_tool` is absent, the caller must not provide an `AgentOutcomeFn`;
   the agent runs in SDK text termination mode.
 - Planner and worker startup validation is pursuit-owned: the configured profiles must be
   terminal profiles whose terminal tools can bind to pursuit planner/worker outcome
   functions.
+- `run_subagent` target validation is caller-profile-owned: the tool's input schema
+  enumerates that profile's `subagents` list, and startup validation guarantees each entry
+  resolves to a known, non-terminal profile. Profiles not listed by the caller are not
+  launchable through that caller's `run_subagent` tool.
 
-The singleton is read by host tools and pursuit launch code through `agentFactory()`.
-Do not pass the factory through `ToolCallContext`, `WorkflowHub`, or workflow service
-constructors.
+`AgentFactory` is a composition-root value, not a singleton. Tools that need to launch
+agents are tool factories closed over it, and workflows that launch agents receive it in
+`WorkflowDelegateContext` when `delegate_workflow` runs. Do not put `AgentFactory` on SDK
+`ToolCallContext`.
 
 ## 7. Tool Surface
 
@@ -341,9 +384,8 @@ contract. The SDK ships none.
 | Folder | Tools | Owner notes |
 | --- | --- | --- |
 | `tools/agent/` | `run_subagent`, `ask_advisor`, `read_agent_run` | Host agent patterns over SDK handles and records. |
-| `tools/background/` | `list_background_task`, `cancel_background_task` | Thin projections over `ctx.backgroundTaskSupervisor`. |
-| `tools/workflow/` | `list_workflows`, `read_workflow_definition` | Generic WorkflowHub discovery and docs. |
-| `tools/pursuit/` | `delegate_pursuit` | Concrete pursuit delegate tool from Phase 05.3. |
+| `tools/background/` | `list_background_tasks`, `cancel_background_task` | Thin projections over `ctx.backgroundTaskSupervisor`. |
+| `tools/workflow/` | `list_workflows`, `read_workflow_definition`, `delegate_workflow` | Generic WorkflowHub discovery, docs, and delegation action. |
 
 There is no coding-agent-specific tool context. Tool code receives only the SDK
 `ToolCallContext`:
@@ -359,15 +401,15 @@ interface ToolCallContext {
 }
 ```
 
-Host state enters tools by closure (`readAgentRun(recordsDir)`, `delegatePursuit(hub)`) or
-through host singletons (`agentFactory()`). Do not add `agents`, `workflow`, or
-`advisorPromptFor` fields to SDK context.
+Host resource state enters tool definitions inside `AgentFactory` assembly, using the
+`recordsDir`, `workflowHub`, and `AgentFactory` values from bootstrap. Do not add
+`agents`, `workflow`, or advisory-prompt fields to SDK context.
 
 ### 7.1 Background Task Tools
 
 ```ts
-export const listBackgroundTask = defineTool({
-  name: "list_background_task",
+export const listBackgroundTasks = defineTool({
+  name: "list_background_tasks",
   description: "List this run's active background tasks.",
   input: z.object({}),
   execute: async (_input, ctx) => ({
@@ -389,67 +431,85 @@ export const cancelBackgroundTask = defineTool({
 
 This split intentionally uses SDK background-task vocabulary. Current Phase 05.3
 implementation evidence still mentions background session type `"pursuit"` because it
-predates the SDK split. In this host spec, the pursuit delegate registers a background
-task with a `toolName` such as `pursuit:pursuit`; no model-facing background-session API
+predates the SDK split. In this host spec, `delegate_workflow` registers the returned
+workflow handle as a background task with a `toolName` such as `workflow:pursuit`;
+no model-facing background-session API
 survives.
 
 ### 7.2 Subagent Tool
 
-`run_subagent` starts another profile by `Agent.name`. It supports foreground and
-background execution through one tool. Background execution registers exactly one
-background task, and the task's `onCompletion` is the only completion publisher.
+`run_subagent` starts another profile by agent name, but only when the caller profile
+lists that target in `subagents`. It supports foreground and background execution through
+one tool. Background execution registers exactly one background task, and the task's
+`onCompletion` is the only completion publisher.
 
 ```ts
-export const runSubagent = defineTool({
-  name: "run_subagent",
-  description: "Run another configured agent.",
-  input: z.object({
-    agent_name: z.string().min(1),
-    prompt: z.string().min(1),
-    wait: z.boolean().default(true),
-  }),
-  execute: async (input, ctx) => {
-    const child = agentFactory().create(input.agent_name);
-    const run = child.start({
-      messages: [{ role: "user", content: input.prompt }],
-    });
+export function runSubagent(
+  agents: AgentFactory,
+  subagents: readonly [string, ...string[]],
+): ToolDefinition {
+  return defineTool({
+    name: "run_subagent",
+    description: "Run another configured agent.",
+    input: z.object({
+      agent_name: z.enum(subagents),
+      prompt: z.string().min(1),
+      wait: z.boolean().default(true),
+    }),
+    execute: async (input, ctx) => {
+      const child = agents.create(input.agent_name);
+      const run = child.start({
+        messages: [{ role: "user", content: input.prompt }],
+      });
+      ctx.signal.addEventListener("abort", () => run.interrupt());
 
-    if (input.wait) {
-      return { output: renderAgentOutcome(await run.outcome()) };
-    }
+      if (input.wait) {
+        return { output: renderAgentOutcome(await run.outcome()) };
+      }
 
-    const { taskId } = ctx.backgroundTaskSupervisor.register({
-      toolName: "run_subagent",
-      title: `${input.agent_name}: ${input.prompt.slice(0, 80)}`,
-      cancel: () => run.interrupt(),
-      done: run.outcome().then(toBackgroundTaskOutcome),
-      onCompletion: (out, { notifier }) => {
-        notifier.publish(renderSubagentCompletion(input.agent_name, run.runId, out), {
-          key: `subagent:${run.runId}`,
-        });
-      },
-    });
+      const { taskId } = ctx.backgroundTaskSupervisor.register({
+        toolName: "run_subagent",
+        title: `${input.agent_name}: ${input.prompt.slice(0, 80)}`,
+        cancel: () => run.interrupt(),
+        done: run.outcome().then(toBackgroundTaskOutcome),
+        onCompletion: (out, { notifier }) => {
+          notifier.publish(renderSubagentCompletion(input.agent_name, run.runId, out), {
+            key: `subagent:${run.runId}`,
+          });
+        },
+      });
 
-    return { output: `subagent started: ${taskId}` };
-  },
-});
+      return { output: `subagent started: ${taskId}` };
+    },
+  });
+}
 ```
 
 ### 7.3 Advisor Tool and Gate
 
-Advisor is a host pattern, not SDK metadata. `ask_advisor` is injected only into profiles
-that allow it.
+Advisor is a host pattern, not SDK metadata. Profiles opt in by listing `ask_advisor` in
+their markdown `allowed_tools`.
 
 ```ts
 const ADVISOR_AGENT_NAME = "advisor";
 
+const AdvisorVerdict = z.object({
+  verdict: z.enum(["pass", "fail"]),
+  tool_name: z.string().min(1),
+  payload: z.object({}).passthrough(),
+  reason: z.string().min(1),
+});
+
 const advisorOutcomeFn = createAgentOutcomeFn({
   name: "submit_advisor_outcome",
   description: SUBMIT_ADVISOR_DESCRIPTION,
-  schema: AdvisorOutcome,
+  schema: AdvisorVerdict,
 });
 
-export function askAdvisor(advisoryPrompt: string): ToolDefinition {
+export function askAdvisor(
+  agents: AgentFactory,
+  advisoryPrompt: string,
+): ToolDefinition {
   return defineTool({
     name: "ask_advisor",
     description: "Ask the configured advisor to review a terminal submission.",
@@ -457,39 +517,48 @@ export function askAdvisor(advisoryPrompt: string): ToolDefinition {
       tool_name: z.string().min(1),
       payload: z.object({}).passthrough(),
     }),
-    execute: async (input) => {
-      const advisor = agentFactory().create(ADVISOR_AGENT_NAME, advisorOutcomeFn);
+    execute: async (input, ctx) => {
+      const advisor = agents.create(ADVISOR_AGENT_NAME, advisorOutcomeFn);
       const run = advisor.start({
-        messages: asAdvisorReviewMessages(advisoryPrompt, input),
+        messages: [
+          userText(renderCallerMessages(ctx.llmMessages)),
+          userText(`${advisoryPrompt} Verify against the exact target below.\n${canonicalJson(input)}`),
+        ],
       });
-      return { output: renderAgentOutcome(await run.outcome()) };
+      ctx.signal.addEventListener("abort", () => run.interrupt());
+      return { output: renderAdvisorVerdict(await run.outcome()) };
     },
   });
 }
 ```
 
+Because the prompt is bound per launch, an agent's `ask_advisor` always carries the review
+standard for its own terminal tool. `input.tool_name` stays in the input because the
+gate's exact-match contract needs the model to state the tool and payload it intends to
+submit. `renderAdvisorVerdict` embeds the verdict as canonical JSON, because the gate
+re-parses it from the run's records.
+
 The terminal gate is a `preToolUse` hook installed by `AgentFactory` for profiles whose
 ordinary tool list includes `ask_advisor`.
 
 ```ts
-function advisoryHooksFor(
-  profile: AgentProfile,
-  agentOutcomeFn?: AgentOutcomeFn<unknown>,
-): HookEntry[] {
-  if (!agentOutcomeFn || !profile.allowed_tools.includes("ask_advisor")) {
+function advisoryHooksFor(profile: AgentProfile, recordsDir: string): HookEntry[] {
+  if (!profile.allowed_tools.includes("ask_advisor")) {
     return [];
   }
 
   return [
     requireAdvisoryPass({
-      toolName: agentOutcomeToolName(agentOutcomeFn),
+      toolName: profile.terminal_tool,
+      recordsDir,
     }),
   ];
 }
 ```
 
-The hook checks transcript records for the latest exact pass matching
-`{ tool_name, payload }`. It never starts an advisor itself. A denial reaches the live
+The hook reads the run's records (`messages.jsonl`) for the latest exact pass matching
+`{ tool_name, payload }` under `canonicalJson` deep-equality. It never starts an advisor
+itself. A denial reaches the live
 model as a tool error, mutates no pursuit state, and consumes no attempt budget.
 
 Pre/post hooks receive `ToolCallFacts` only, so terminal submission payloads must be
@@ -504,23 +573,27 @@ registration. It is not part of the SDK.
 ```ts
 type WorkflowArgs = Record<string, unknown>;
 
-interface WorkflowModule<A extends WorkflowArgs = WorkflowArgs> {
+interface WorkflowInstanceConfig {
+  instanceName: string;               // key of the .eos-agents/workflow.json entry
   type: string;
-  args: z.ZodType<A>;
-  create(init: {
-    instanceName: string;
-    args: A;
-  }): Promise<RegisteredWorkflow>;
+  args: unknown;                      // validated by the matching module's args schema
 }
 
-interface RegisteredWorkflow<I = unknown> {
-  instanceName: string;
+interface WorkflowDelegateContext {
+  agents: AgentFactory;
+}
+
+interface WorkflowModule<A extends WorkflowArgs = WorkflowArgs, I = unknown> {
   type: string;
+  args: z.ZodType<A>;
   description: string;
   docs: string;
-  delegateToolName: string;
   delegatePayload: z.ZodType<I>;
-  delegate(input: I): Promise<WorkflowHandle>;
+  delegate(
+    instance: { instanceName: string; args: A },
+    input: I,
+    ctx: WorkflowDelegateContext,
+  ): Promise<WorkflowHandle>;
 }
 
 interface WorkflowHandle {
@@ -529,12 +602,22 @@ interface WorkflowHandle {
   done: Promise<BackgroundTaskOutcome>;
 }
 
+// new WorkflowHub({ configs, modules }) pairs each config with the module whose
+// type matches and validates args synchronously; it performs no I/O and holds no
+// workflow state.
 interface WorkflowHub {
-  register(module: WorkflowModule): Promise<void>;
+  workflowNames(): readonly string[];
+  forProfile(instanceNames: readonly string[]): ProfileWorkflowView;
+}
+
+interface ProfileWorkflowView {
   list(): WorkflowListRow[];
-  get(instanceName: string): RegisteredWorkflow | undefined;
-  getByDelegateTool(toolName: string): RegisteredWorkflow | undefined;
-  requireType(type: string): RegisteredWorkflow;
+  readDefinition(instanceName: string): string;
+  delegateWorkflowInputSchema(): z.ZodType<DelegateWorkflowInput>;
+  delegate(
+    input: DelegateWorkflowInput,
+    ctx: WorkflowDelegateContext,
+  ): Promise<WorkflowHandle>;
 }
 ```
 
@@ -542,29 +625,43 @@ Registration flow:
 
 ```text
 load .eos-agents/workflow.json
-  -> new WorkflowHub({ instances })
-  -> hub.register(pursuitWorkflow)
-  -> hub validates rows whose type == "pursuit"
-  -> hub stores one RegisteredWorkflow for the configured pursuit instance
+  -> new WorkflowHub({ configs, modules: [pursuitWorkflow] })
+       pairs each instance config with the module whose type matches
+       validates args synchronously; no I/O, no workflow state
+load .eos-agents/profile/operator.md
+  -> profile.workflows == ["pursuit"]
+  -> hub.forProfile(["pursuit"])
+  -> workflow tools see and delegate only that scoped view
 ```
 
-The hub does not auto-mint delegate tools. A workflow declares its
-`delegateToolName`; pursuit declares `delegate_pursuit`. This avoids reintroducing
-`delegate_workflow` while still keeping generic hub discovery.
+The hub does not auto-mint tools. There is one model-visible delegation tool,
+`delegate_workflow`. Its input schema is generated from the current profile's workflow
+view, not from every configured instance:
+
+```ts
+type DelegateWorkflowInput =
+  | { name: "pursuit"; payload: CreatePursuitInput }
+  // one union arm per workflow instance declared by this profile
+```
+
+Implementation rule: `ProfileWorkflowView.delegateWorkflowInputSchema()` builds a
+discriminated union on `name`. Each arm uses the exact `delegatePayload` schema from the
+module backing the instance selected by the profile. The SDK therefore validates `delegate_workflow`
+like any other tool before `execute(...)` runs: workflows outside the profile and
+malformed payloads return normal in-run tool errors and register no background task.
 
 Generic workflow tools:
 
-- `list_workflows()` returns configured instances, type, description, delegate tool name,
-  and readiness/error state.
-- `read_workflow_definition(name)` returns the registered workflow docs for that instance.
-  It mutates nothing.
+- `list_workflows()` returns only the current profile's workflow instances, including
+  type, description, and readiness/error state.
+- `read_workflow_definition(name)` returns docs only for instances in the current
+  profile's workflow view. It mutates nothing.
+- `delegate_workflow(name, payload)` uses the generated per-instance schema, delegates to
+  the selected profile-visible workflow, and registers the returned handle as one SDK
+  background task.
 
-Concrete delegate tools:
-
-- `delegate_pursuit` lives under `tools/pursuit/` and resolves the registered pursuit
-  workflow through the hub.
-- Future workflows may add their own concrete delegate tools or a separately specified
-  generic delegate pattern. Do not infer that pattern from pursuit.
+There are no `delegate_pursuit`, `delegate_research`, or `${workflow}_delegate` tools.
+Adding a workflow means registering a `WorkflowModule`; it does not add a tool.
 
 ## 9. Pursuit Registration
 
@@ -589,38 +686,39 @@ export const pursuitWorkflow: WorkflowModule<PursuitWorkflowArgs> = {
       type: "pursuit",
       description: "Delegate a multi-leg coding pursuit.",
       docs: renderPursuitManual(),
-      delegateToolName: "delegate_pursuit",
       delegatePayload: CreatePursuitInputSchema,
-      delegate: (input) => service.createPursuit(input),
+      delegate: (input, ctx) => service.createPursuit(input, { agents: ctx.agents }),
     };
   },
 };
 ```
 
-`delegate_pursuit` is a host adapter over the registered pursuit handle:
+`delegate_workflow` is the single host adapter over profile-visible workflow handles:
 
 ```ts
-export function delegatePursuit(hub: WorkflowHub): ToolDefinition {
+export function delegateWorkflow(
+  workflows: ProfileWorkflowView,
+  agents: AgentFactory,
+): ToolDefinition {
   return defineTool({
-    name: "delegate_pursuit",
-    description: DELEGATE_PURSUIT_DESCRIPTION,
-    input: CreatePursuitInputSchema,
+    name: "delegate_workflow",
+    description: DELEGATE_WORKFLOW_DESCRIPTION,
+    input: workflows.delegateWorkflowInputSchema(),
     execute: async (input, ctx) => {
-      const workflow = hub.requireType("pursuit");
-      const handle = await workflow.delegate(input);
+      const handle = await workflows.delegate(input, { agents });
       const { taskId } = ctx.backgroundTaskSupervisor.register({
-        toolName: `pursuit:${workflow.instanceName}`,
+        toolName: `workflow:${input.name}`,
         title: handle.title,
         cancel: () => handle.cancel(),
         done: handle.done,
         onCompletion: (out, { notifier }) => {
           notifier.publish(
-            `pursuit ${workflow.instanceName} ${out.status}: ${out.outcome}`,
-            { key: `pursuit:${workflow.instanceName}:${taskId}` },
+            `workflow ${input.name} ${out.status}: ${out.outcome}`,
+            { key: `workflow:${input.name}:${taskId}` },
           );
         },
       });
-      return { output: `pursuit delegated: ${taskId}` };
+      return { output: `workflow delegated: ${taskId}` };
     },
   });
 }
@@ -639,15 +737,17 @@ This host split must preserve Phase 05.3 behavior.
 type CreatePursuitInput =
   | {
       pursuit_goal: string;
-      leg_goal_mode?: "dynamic";
       leg_goals?: undefined;
     }
   | {
       pursuit_goal: string;
-      leg_goal_mode?: "predefined";
       leg_goals: readonly [string, ...string[]];
     };
 ```
+
+Mode is derived from payload shape: omitting `leg_goals` starts dynamic mode; providing
+non-empty `leg_goals` starts predefined mode. Do not expose or require a separate
+`leg_goal_mode` field in `delegate_workflow`.
 
 Dynamic mode:
 
@@ -758,7 +858,7 @@ Pursuit launches planner and worker agents by using the host `AgentFactory` and 
 handles directly.
 
 ```ts
-const planner = agentFactory().create(
+const planner = agents.create(
   plannerAgentName,
   plannerOutcome(service, target),
 );
@@ -806,22 +906,24 @@ Rules:
 - Do not also mutate pursuit state from the `outcome()` observer after a successful
   `onSubmit`. The observer reconciles and performs death synthesis only.
 
-## 12. Hooks and Notification Rules
+## 12. Hooks
 
 Host hooks are callback `HookEntry` values passed to `createAgentSdk`.
 
 - `preToolUse` gates terminal submissions with advisor pass checks.
 - `postToolUse` is available for host policy replacement of ordinary tool results.
-- `turnBoundary` is where notification rules run and publish through the notifier.
+- `turnBoundary` hooks may publish reminders or status messages through the notifier.
 
-Notification rule files stay host config:
+Hook files stay host config:
 
 ```text
-.eos-agents/notification_rules.json
+.eos-agents/hooks.json
+.eos-agents/hooks/*.cjs
 ```
 
-The host compiles them into `turnBoundary` callbacks. The SDK never parses rule files and
-never publishes notification content by itself.
+`hook-config.ts` loads every configured hook event into `cfg.hooks`. There is no separate
+notification-rule file, loader, compiler, or vocabulary. The SDK never parses hook config
+and never publishes notification content by itself.
 
 ## 13. Migration Sequencing
 
@@ -829,33 +931,47 @@ never publishes notification content by itself.
    tools, profile/config loading, trigger-rule evaluation, and pursuit from the SDK
    public surface.
 2. **Host bootstrap:** create `eos-coding-agent`, move config/profile loaders, hook script
-   wrapping, notification rule compilation, records readers, agent tools, and background
-   task tools into the host.
-3. **WorkflowHub:** add the host hub and keep it in the composition root. Register pursuit
-   through the hub, not as direct operator-only wiring.
-4. **Pursuit move:** move Phase 05.3 pursuit into
-   `packages/workflows/pursuit`; preserve `pursuit/leg/attempt` vocabulary, scripts,
-   context mirror, planner/worker payloads, and scheduler semantics.
-5. **Tool renames:** expose `delegate_pursuit`; keep `list_workflows` and
-   `read_workflow_definition` as generic hub tools; do not expose `delegate_workflow`.
+   wrapping, records readers, agent tools, and background task tools into the host.
+3. **WorkflowHub:** add the host hub and keep it in the composition root. Construct it
+   with available workflow instances and host-owned workflow modules, including
+   `pursuitWorkflow`.
+4. **Pursuit move:** move Phase 05.3 pursuit into `src/workflows/pursuit/`; preserve
+   `pursuit/leg/attempt` vocabulary, scripts, context mirror, planner/worker payloads,
+   and scheduler semantics.
+5. **Workflow tools:** expose only the generic hub tools `list_workflows`,
+   `read_workflow_definition`, and `delegate_workflow`. Do not expose `delegate_pursuit`
+   or any other per-workflow/per-instance delegate tool. Build these tools from each
+   profile's `workflows` list, not from the full hub registry.
 6. **Vocabulary cleanup:** run identifier scans against active TypeScript source,
    profiles, and pursuit scripts to prevent old product terms from leaking back in.
 
 ## 14. Acceptance Criteria
 
 - `eos-coding-agent` imports only the `eos-agent-sdk` root package from the SDK.
-- `WorkflowHub` remains a first-class host component with `register`, `list`, and docs
-  lookup behavior.
-- Removing pursuit requires deleting its package import plus one `hub.register(...)` call;
-  generic hub tools still exist and report no ready pursuit workflow.
+- `WorkflowHub` remains a first-class host component with construction-time workflow
+  module registration and profile-scoped workflow views for list, docs lookup, and
+  delegation behavior.
+- Removing pursuit requires deleting its workflow import plus one constructor entry from
+  `workflows: [...]`; profiles that still reference `pursuit` fail startup validation
+  until their `workflows` lists are updated.
 - Every model-visible tool is defined under `src/tools/`; the SDK contains no tool
   implementations.
-- `delegate_pursuit` is the concrete pursuit delegate tool. `delegate_workflow` is absent
-  from active host tools.
+- `delegate_workflow` is the only workflow delegation tool. No active host tool is named
+  `delegate_pursuit` or `${workflow}_delegate`.
+- `delegate_workflow` exposes a generated discriminated-union schema over the current
+  profile's workflow instances, so each workflow keeps its own payload validation without
+  receiving its own tool or becoming visible to every agent.
+- `list_workflows` is dynamically loaded from the current profile's `workflows` list; it
+  must not return workflow instances that the active profile did not declare.
 - `.eos-agents/workflow.json` is the only generic workflow instance registry.
 - `.eos-agents/pursuit/scripts/` is the only active pursuit initial-message script root.
 - Profiles use `pursuit_context_script`; active runtime wiring rejects
   `workflow_context_script`.
+- Profiles do not define a role/kind discriminator; active profile validation rejects any
+  legacy profile-kind field if present.
+- `run_subagent` validates `agent_name` from the caller profile's `subagents` list. The
+  default config includes a normal `profile/subagent.md` profile that is launchable only
+  when another profile lists `subagent` under `subagents`.
 - Pursuit context paths use `pursuit_<id>/leg_<id>/superseded/` and never render
   `workflow_<id>`, `iteration_<id>`, `focus.md`, `deferred_goal.md`, `archived/`, or
   `/plan_`.
@@ -872,7 +988,7 @@ never publishes notification content by itself.
   explicit migration notes:
 
 ```bash
-rg -n "delegate_workflow|workflow_context_script|workflow_context|workflow_<id>|iteration_<id>|deferred_goal|archived/|focus\\.md|description\\.md|work_item_spec|\\bneeds\\b" eos-coding-agent .eos-agents/profile .eos-agents/pursuit/scripts
+rg -n "agent[_-]kind|delegate_pursuit|[a-zA-Z0-9_-]+_delegate|workflow_context_script|workflow_context|workflow_<id>|iteration_<id>|deferred_goal|archived/|focus\\.md|description\\.md|work_item_spec|\\bneeds\\b" eos-coding-agent .eos-agents/profile .eos-agents/pursuit/scripts
 rg -n "@eos/(tool|engine|agent-runtime|pursuit)|packages/workflow|\\.eos-agents/workflow/scripts" eos-coding-agent
 git diff --check -- docs/plans/agent-core-to-sdk-and-coding-agent-split
 ```
@@ -881,8 +997,6 @@ git diff --check -- docs/plans/agent-core-to-sdk-and-coding-agent-split
 
 - Whether `list_workflows` should include future disabled/config-error rows or only ready
   rows. V1 should include config-error rows so operators can diagnose startup state.
-- Whether future non-pursuit workflows choose concrete delegate tools like
-  `delegate_research` or a generic delegate tool. Do not decide this from pursuit alone.
 - Whether pursuit should remain a local package forever or move to a shared project when a
   second host needs it.
 - Whether `read_agent_run` needs paging before extraction, since SDK records can grow large.

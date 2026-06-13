@@ -9,7 +9,8 @@ use serde_json::{json, Value};
 use crate::support::{
     array, as_i64, as_str, command_transcript_logs, command_transcript_path,
     finalize_foreground_command, live_pool_or_skip, stdout, wait_for_active_leases,
-    wait_for_command_count, wait_for_command_transcript_recycled, wait_for_container_path,
+    unwrap_operation_result, wait_for_command_count, wait_for_command_transcript_recycled,
+    wait_for_container_path,
 };
 
 fn start_sleeping_command(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> Result<String> {
@@ -32,7 +33,7 @@ fn start_sleeping_command(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> 
 fn cancel_command(lease: &eos_e2e_test::NodeLease<'_>, id: &str) -> Result<Value> {
     let cancelled = lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": id}))?;
     wait_for_command_transcript_recycled(lease, id)?;
-    Ok(cancelled)
+    unwrap_operation_result(cancelled)
 }
 
 fn wait_for_transcript_logs(lease: &NodeLease<'_>, expected: &[String]) -> Result<()> {
@@ -77,14 +78,14 @@ fn assert_teardown_control_removes_marker_process(
     let id = as_str(&started, "command_id")?.to_owned();
     wait_for_marker_at_least(lease, &marker, 1)?;
 
-    let cancelled = lease.call(
+    let cancelled = unwrap_operation_result(lease.call(
         catalog::SANDBOX_COMMAND_WRITE_STDIN,
         json!({
             "command_id": &id,
             "chars": chars,
             "yield_time_ms": 3000
         }),
-    )?;
+    )?)?;
     assert_eq!(
         as_str(&cancelled, "status")?,
         "cancelled",
@@ -554,13 +555,13 @@ fn exec_timeout() -> Result<()> {
     let lease = pool.acquire()?;
     let before = command_transcript_logs(&lease)?;
     let start = Instant::now();
-    let timed_out = lease.call(
+    let timed_out = unwrap_operation_result(lease.call(
         catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "sleep 5",
             "yield_time_ms": 2500
         }),
-    )?;
+    )?)?;
     assert!(
         start.elapsed() < Duration::from_secs(4),
         "omitted timeout should return before the 5s command can finish: {timed_out}"
@@ -913,14 +914,14 @@ fn self_kill_reports_signal_exit() -> Result<()> {
     // process itself, not by the cancel API, but must still surface a signal-coded
     // terminal exit. Fast self-kill usually completes within the yield window, so
     // read the structured response with `call` rather than `call_ok`.
-    let exec = lease.call(
+    let exec = unwrap_operation_result(lease.call(
         catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "sh -c 'echo bye; kill -9 $$'",
             "yield_time_ms": 2000,
             "timeout_seconds": 30
         }),
-    )?;
+    )?)?;
     if as_str(&exec, "status")? == "running" {
         let id = as_str(&exec, "command_id")?.to_owned();
         let completion = collect_completion(&lease, &id, Duration::from_secs(10))?;
@@ -1030,14 +1031,14 @@ fn write_stdin_to_completed_command_is_structured() -> Result<()> {
     wait_for_command_count(&lease, 0)?;
     wait_for_command_transcript_recycled(&lease, &id)?;
 
-    let late = lease.call(
+    let late = unwrap_operation_result(lease.call(
         catalog::SANDBOX_COMMAND_WRITE_STDIN,
         json!({
             "command_id": &id,
             "chars": "late\n",
             "yield_time_ms": 200
         }),
-    )?;
+    )?)?;
     assert!(
         matches!(as_str(&late, "status")?, "ok" | "error" | "cancelled"),
         "write_stdin to a finished command must return a structured terminal status: {late}"

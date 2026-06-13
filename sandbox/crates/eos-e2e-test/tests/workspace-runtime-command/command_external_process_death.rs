@@ -7,8 +7,8 @@ use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_i64, as_str, clean_stdout, live_pool_or_skip, stdout, wait_for_active_leases,
-    wait_for_command_count, wait_for_command_transcript_recycled,
+    array, as_i64, as_str, clean_stdout, live_pool_or_skip, stdout, unwrap_operation_result,
+    wait_for_active_leases, wait_for_command_count, wait_for_command_transcript_recycled,
 };
 
 struct MarkerCommand {
@@ -362,13 +362,13 @@ fn wait_for_read_progress_terminal(
     let deadline = Instant::now() + timeout;
     let mut last = None;
     loop {
-        let response = lease.call(
+        let response = unwrap_operation_result(lease.call(
             catalog::SANDBOX_COMMAND_POLL,
             json!({
                 "command_id": command_id,
                 "last_n_lines": 8,
             }),
-        )?;
+        )?)?;
         if as_str(&response, "status").unwrap_or_default() != "running" {
             return Ok(response);
         }
@@ -441,5 +441,5 @@ fn wait_for_marker_count(
 fn cancel_command(lease: &NodeLease<'_>, id: &str) -> Result<Value> {
     let cancelled = lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": id}))?;
     wait_for_command_transcript_recycled(lease, id)?;
-    Ok(cancelled)
+    unwrap_operation_result(cancelled)
 }

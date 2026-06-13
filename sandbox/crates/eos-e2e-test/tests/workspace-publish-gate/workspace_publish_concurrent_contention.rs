@@ -8,9 +8,17 @@ use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_bool, as_i64, as_str, conflict_reason, finalize_foreground_command,
+    array, as_bool, as_i64, as_str, conflict_reason, envelope_result, finalize_foreground_command,
     live_pool_or_skip, wait_for_active_leases,
 };
+
+fn domain_result(response: &Value) -> Result<&Value> {
+    if response.get("status").and_then(Value::as_str).is_some() {
+        envelope_result(response)
+    } else {
+        Ok(response)
+    }
+}
 
 /// `docs/architecture/sandbox/occ.html` §4.4 (Throughput Model): the single
 /// CommitQueue worker "batches disjoint non-atomic non-overlay changes into a
@@ -150,17 +158,19 @@ fn concurrent_disjoint_anchor_edits_stay_atomic_and_coherent() -> Result<()> {
         .collect::<Result<_>>()?;
 
     assert!(
-        responses
-            .iter()
-            .any(|response| as_bool(response, "success").unwrap_or(false)),
+        responses.iter().any(|response| domain_result(response)
+            .ok()
+            .and_then(|result| as_bool(result, "success").ok())
+            .unwrap_or(false)),
         "at least one concurrent disjoint-anchor edit should apply: {responses:?}"
     );
     for response in &responses {
+        let result = domain_result(response)?;
         assert!(
-            as_bool(response, "success").unwrap_or(false)
-                || response.get("conflict").is_some()
-                || !conflict_reason(response).is_empty()
-                || response.get("error").is_some(),
+            as_bool(result, "success").unwrap_or(false)
+                || result.get("conflict").is_some()
+                || !conflict_reason(result).is_empty()
+                || result.get("error").is_some(),
             "every concurrent edit should apply or surface a structured conflict: {response}"
         );
     }
@@ -246,18 +256,24 @@ fn concurrent_same_anchor_edits_resolve_to_one_winner() -> Result<()> {
 
     let winners = responses
         .iter()
-        .filter(|response| as_bool(response, "success").unwrap_or(false))
+        .filter(|response| {
+            domain_result(response)
+                .ok()
+                .and_then(|result| as_bool(result, "success").ok())
+                .unwrap_or(false)
+        })
         .count();
     assert_eq!(
         winners, 1,
         "exactly one same-anchor editor may win the consumed anchor: {responses:?}"
     );
     for response in &responses {
+        let result = domain_result(response)?;
         assert!(
-            as_bool(response, "success").unwrap_or(false)
-                || response.get("conflict").is_some()
-                || !conflict_reason(response).is_empty()
-                || response.get("error").is_some(),
+            as_bool(result, "success").unwrap_or(false)
+                || result.get("conflict").is_some()
+                || !conflict_reason(result).is_empty()
+                || result.get("error").is_some(),
             "every same-anchor loser should surface a structured conflict: {response}"
         );
     }

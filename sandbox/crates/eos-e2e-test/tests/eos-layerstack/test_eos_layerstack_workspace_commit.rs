@@ -9,8 +9,9 @@ use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
-    as_bool, as_i64, as_str, envelope_result, finalize_foreground_command, has_trace_event,
-    live_pool_or_skip, trace_record, wait_for_active_leases,
+    as_bool, as_i64, as_str, envelope_error_kind, envelope_result, envelope_status,
+    finalize_foreground_command, has_trace_event, live_pool_or_skip, trace_record,
+    wait_for_active_leases,
 };
 
 #[test]
@@ -120,9 +121,14 @@ fn commit_refuses_active_snapshot_lease_then_succeeds_after_release() -> Result<
     )?;
     let outcome: Result<()> = {
         assert_eq!(
-            blocked.get("success").and_then(Value::as_bool),
-            Some(false),
+            envelope_status(&blocked)?,
+            "error",
             "commit_to_workspace must reject while an isolated snapshot lease is active: {blocked}"
+        );
+        assert_eq!(
+            envelope_error_kind(&blocked)?,
+            "lifecycle_in_progress",
+            "active-lease rejection should use lifecycle_in_progress: {blocked}"
         );
         let message = blocked
             .get("error")
@@ -483,16 +489,33 @@ fn commit_races_inflight_writes_stays_structured_and_coherent() -> Result<()> {
 
     // The racing commit must be structured: a clean success, or the active-lease
     // guard (a transient per-op write lease was live), never a crash.
-    if !as_bool(&commit_response, "success").unwrap_or(false) {
-        let message = commit_response
-            .get("error")
-            .and_then(|error| error.get("message"))
-            .and_then(Value::as_str)
-            .unwrap_or_default();
-        assert!(
-            message.contains("active leases"),
-            "a refused racing commit must be the structured active-lease guard: {commit_response}"
-        );
+    match envelope_status(&commit_response)? {
+        "ok" => {
+            let result = envelope_result(&commit_response)?;
+            assert!(
+                as_bool(result, "success")?,
+                "a successful racing commit must report success in the envelope result: {commit_response}"
+            );
+        }
+        "error" => {
+            assert_eq!(
+                envelope_error_kind(&commit_response)?,
+                "lifecycle_in_progress",
+                "a refused racing commit must be the active-lease guard: {commit_response}"
+            );
+            let message = commit_response
+                .get("error")
+                .and_then(|error| error.get("message"))
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            assert!(
+                message.contains("active leases"),
+                "a refused racing commit must identify the active-lease guard: {commit_response}"
+            );
+        }
+        status => {
+            panic!("racing commit returned unexpected envelope status {status}: {commit_response}")
+        }
     }
     for response in &writer_responses {
         assert!(
@@ -526,7 +549,12 @@ fn commit_races_inflight_writes_stays_structured_and_coherent() -> Result<()> {
     // Every writer that claimed success must be durable and coherent after the
     // concurrent commit + rebuild.
     for (index, response) in writer_responses.iter().enumerate() {
-        if as_bool(response, "success").unwrap_or(false) {
+        if envelope_status(response).ok() == Some("ok")
+            && envelope_result(response)
+                .ok()
+                .and_then(|result| as_bool(result, "success").ok())
+                .unwrap_or(false)
+        {
             let read = lease.call_ok(
                 catalog::SANDBOX_FILE_READ,
                 json!({"path": format!("commit/race/w-{index}.txt")}),
