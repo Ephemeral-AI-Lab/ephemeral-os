@@ -99,11 +99,6 @@ impl TraceStore {
     }
 
     #[must_use]
-    pub fn host_boot_id(&self) -> &BootId {
-        &self.host_boot_id
-    }
-
-    #[must_use]
     pub fn db_path(&self) -> &Path {
         &self.db_path
     }
@@ -338,9 +333,9 @@ impl TraceStore {
         &self,
         input: ResponsePersistedInput<'_>,
     ) -> Result<(), TraceStoreError> {
-        let classification = crate::protocol::response_classification(input.response);
-        let status = classification.status.to_owned();
-        let error_kind = classification.error_kind.map(ToOwned::to_owned);
+        let status = crate::protocol::response_status(input.response).to_owned();
+        let error_kind =
+            crate::protocol::response_fault_kind(input.response).map(ToOwned::to_owned);
         let summary = BoundedJson::capture(input.response.clone(), DetailBudget::ResponseSummary);
         let payload = ResponsePersistedPayload {
             trace_id: input.trace_id.to_string(),

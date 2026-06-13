@@ -31,7 +31,7 @@ impl Engine for StubEngine {
 
     fn status(&self, sandbox_id: &str) -> Option<Value> {
         (sandbox_id == KNOWN_SANDBOX)
-            .then(|| json!({"success": true, "sandbox_id": sandbox_id, "daemon": {"ready": true}}))
+            .then(|| json!({"sandbox_id": sandbox_id, "daemon": {"ready": true}}))
     }
 
     fn list(&self) -> Vec<Value> {
@@ -53,13 +53,11 @@ impl Engine for StubEngine {
         Some(match op {
             "sandbox.file.write" => Err(ForwardError::UncertainOutcome("stub".into())),
             "sandbox.command.poll" => Err(ForwardError::SandboxUnavailable("stub".into())),
-            _ => Ok(json!({
-                "success": true,
+            _ => Ok(ok_envelope_with_sidecar(json!({
                 "forwarded_op": op,
                 "mutates_state": mutates_state,
-                "invocation_id": invocation_id,
-                "_trace_events": "internal-sidecar",
-            })),
+                "invocation_id": invocation_id
+            }))),
         })
     }
 }
@@ -85,7 +83,7 @@ impl Engine for RecordingEngine {
     }
 
     fn status(&self, sandbox_id: &str) -> Option<Value> {
-        (sandbox_id == KNOWN_SANDBOX).then(|| json!({"success": true}))
+        (sandbox_id == KNOWN_SANDBOX).then(|| json!({"sandbox_id": sandbox_id}))
     }
 
     fn list(&self) -> Vec<Value> {
@@ -101,7 +99,7 @@ impl Engine for RecordingEngine {
         _args: &Value,
         _trace: ForwardTraceContext,
     ) -> Option<Result<Value, ForwardError>> {
-        (sandbox_id == KNOWN_SANDBOX).then(|| Ok(json!({"success": true, "forwarded_op": op})))
+        (sandbox_id == KNOWN_SANDBOX).then(|| Ok(ok_envelope(json!({"forwarded_op": op}))))
     }
 
     fn record_trace_event(
@@ -130,6 +128,41 @@ fn request(op: &str, sandbox_id: Option<&str>) -> ClientRequest {
 
 fn kind(response: &Value) -> Option<&str> {
     response.get("error")?.get("kind")?.as_str()
+}
+
+fn result(response: &Value) -> &Value {
+    response.get("result").unwrap_or(response)
+}
+
+fn ok_envelope(result: Value) -> Value {
+    json!({
+        "status": "ok",
+        "result": result,
+        "meta": {
+            "protocol_version": 2,
+            "op": "stub",
+            "request_id": "stub-request",
+            "trace": {
+                "trace_id": "stub-trace",
+                "request_id": "stub-request",
+                "store": "pending_host_ingest",
+                "event_count": 0,
+                "degraded": false,
+            },
+            "workspace_route": {"kind": "none"},
+            "duration_ms": 0.0,
+            "modules_touched": [],
+            "steps": [],
+            "resource_summary": {"fields": {}},
+            "warnings": [],
+        },
+    })
+}
+
+fn ok_envelope_with_sidecar(result: Value) -> Value {
+    let mut response = ok_envelope(result);
+    response["_trace_events"] = json!("internal-sidecar");
+    response
 }
 
 #[test]
@@ -171,7 +204,7 @@ fn daemon_ops_route_under_canonical_names_only() {
             &request(name, Some(KNOWN_SANDBOX)),
         );
         // The daemon's response comes back verbatim.
-        assert_eq!(response["forwarded_op"], json!(name));
+        assert_eq!(result(&response)["forwarded_op"], json!(name));
         assert_eq!(response["_trace_events"], Value::Null);
     }
     // The retired legacy spellings are no longer in the catalog.
@@ -248,8 +281,8 @@ fn api_error_kinds_are_produced() {
         Surface::Client,
         &request("plugin.lsp.query", Some(KNOWN_SANDBOX)),
     );
-    assert_eq!(response["forwarded_op"], json!("plugin.lsp.query"));
-    assert_eq!(response["mutates_state"], json!(true));
+    assert_eq!(result(&response)["forwarded_op"], json!("plugin.lsp.query"));
+    assert_eq!(result(&response)["mutates_state"], json!(true));
 }
 
 #[test]
@@ -264,8 +297,8 @@ fn unix_socket_round_trip_serves_one_request_per_connection() {
         &socket,
         b"{\"op\":\"sandbox.acquire\",\"invocation_id\":\"i1\",\"args\":{}}\n",
     );
-    assert_eq!(response["success"], json!(true));
-    assert_eq!(response["sandbox_id"], json!(KNOWN_SANDBOX));
+    assert_eq!(response["status"], json!("ok"));
+    assert_eq!(result(&response)["sandbox_id"], json!(KNOWN_SANDBOX));
 
     // Malformed JSON surfaces bad_json; the server half-closes after one line.
     let response = round_trip_when_ready(&socket, b"{not json\n");
@@ -277,7 +310,7 @@ fn unix_socket_round_trip_serves_one_request_per_connection() {
     assert_eq!(kind(&response), Some("forbidden"));
     let response = round_trip_when_ready(&gateway::operator_socket_path(&socket), metrics);
     assert_eq!(
-        response["forwarded_op"],
+        result(&response)["forwarded_op"],
         json!("sandbox.checkpoint.layer_metrics")
     );
 
@@ -300,7 +333,7 @@ fn unix_socket_records_forward_and_response_write_events() {
         &socket,
         b"{\"op\":\"sandbox.file.read\",\"sandbox_id\":\"sb-stub\",\"invocation_id\":\"i3\",\"args\":{}}\n",
     );
-    assert_eq!(response["success"], json!(true));
+    assert_eq!(response["status"], json!("ok"));
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
     loop {
         let snapshot = events.lock().expect("events lock").clone();
@@ -397,7 +430,7 @@ fn host_routes_record_route_selected_events() {
         Surface::Client,
         &request("sandbox.status", Some(KNOWN_SANDBOX)),
     );
-    assert_eq!(response["success"], json!(true));
+    assert_eq!(response["status"], json!("ok"));
 
     let snapshot = events.lock().expect("events lock").clone();
     assert!(

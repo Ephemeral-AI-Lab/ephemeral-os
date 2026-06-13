@@ -363,7 +363,7 @@ mod tests {
     }
 
     #[test]
-    fn discarded_response_renders_empty_mutation_source() {
+    fn discarded_response_omits_mutation_source() {
         let response = CommandResponse {
             status: CommandStatus::Cancelled,
             exit_code: Some(130),
@@ -384,7 +384,7 @@ mod tests {
 
         assert_eq!(response["status"], "cancelled");
         assert_eq!(response["workspace"], "ephemeral");
-        assert_eq!(response["mutation_source"], "");
+        assert!(response.get("mutation_source").is_none());
         assert!(response.get("timings").is_none());
     }
 

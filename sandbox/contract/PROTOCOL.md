@@ -31,8 +31,9 @@ normative subset both sides build against.
 | `invocation_id` | yes | uuid4 hex; correlates cancellation/heartbeat |
 | `args` | yes (may be `{}`) | op-specific |
 
-- **Response:** for forwarded ops, the daemon's response verbatim; for host
-  ops, a host-built object. Both carry `success: bool`.
+- **Response:** for forwarded ops, the daemon's operation envelope verbatim;
+  for host ops, a host-built operation envelope with the same
+  `status`/`result`/`error`/`meta` shape.
 - **Routing is pure catalog lookup** (`crates/eos-operation/ops.json`):
   `visibility != public` → `forbidden`; `served_by == "host"` → host engine; `served_by == "daemon"`
   (and dynamic `plugin.*`) → forward to the sandbox daemon; unknown op →
@@ -76,7 +77,7 @@ normative subset both sides build against.
 ## 4. Error Response (Both Hops)
 
 ```json
-{"success":false,"warnings":[],"timings":{},"error":{"kind":"…","message":"…","details":{}}}
+{"status":"error","error":{"kind":"…","message":"…","details":{}},"meta":{"protocol_version":2,"op":"…","request_id":"…","trace":{"trace_id":"…","store":"pending_host_ingest","event_count":0,"degraded":false},"workspace_route":{"kind":"none"},"duration_ms":0.0,"modules_touched":[],"steps":[],"resource_summary":{"fields":{}},"warnings":[]}}
 ```
 
 Daemon error kinds: `invalid_request`, `bad_json`, `request_too_large`,
@@ -87,13 +88,11 @@ responses built by `eos-sandbox-gateway` use the same shape with the §1 kinds.
 
 ## 5. Canonicalization (response comparison bar)
 
-Requests and error responses are **byte-identity**: decode → encode must
-reproduce the fixture bytes exactly (compact separators, key order preserved,
-one trailing `\n`).
+Requests are **byte-identity**: decode → encode must reproduce the fixture
+bytes exactly (compact separators, key order preserved, one trailing `\n`).
 
-Success responses are **canonical-equal**: before comparison, drop the
-non-deterministic fields — the entire `timings` object, `daemon_pid`, and
-`uptime_s` — then sort object keys recursively. Everything else must match the
+Operation responses, including error envelopes, are **canonical-equal**: sort
+object keys recursively before comparison. Everything else must match the
 fixtures in `fixtures/wire_messages/` exactly.
 
 ## 6. CAS byte-identity

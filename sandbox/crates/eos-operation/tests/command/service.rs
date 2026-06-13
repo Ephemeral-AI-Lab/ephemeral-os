@@ -383,11 +383,15 @@ fn spawn_process_returns_runner_request_artifact_failure_event() {
             ..
         }
     ));
-    assert_eq!(trace_events.len(), 1);
-    assert_eq!(trace_events[0].name, "artifact_failed");
-    assert_eq!(trace_events[0].details["artifact"], "runner_request");
+    assert_eq!(trace_events.len(), 2);
+    assert_eq!(trace_events[0].name, "spawned");
+    assert_eq!(trace_events[0].details["command_id"], "cmd_artifact_failed");
+    assert_eq!(trace_events[0].details["success"], false);
+    assert!(trace_events[0].details["error"].is_string());
+    assert_eq!(trace_events[1].name, "artifact_failed");
+    assert_eq!(trace_events[1].details["artifact"], "runner_request");
     assert_eq!(
-        trace_events[0].details["path"],
+        trace_events[1].details["path"],
         request_path.display().to_string()
     );
     assert_eq!(error.trace_events(), trace_events.as_slice());

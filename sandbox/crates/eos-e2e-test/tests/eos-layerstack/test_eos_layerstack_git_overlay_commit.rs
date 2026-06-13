@@ -55,10 +55,10 @@ fn commit_to_git_commits_overlay_snapshot_after_repeated_squash() -> Result<()> 
     let commit = envelope_result(&commit_wire)?;
     let record = trace_record(&commit_wire)?;
 
-    assert!(as_bool(&commit, "success")?);
-    assert!(as_bool(&commit, "committed")?);
+    assert!(as_bool(commit, "success")?);
+    assert!(as_bool(commit, "committed")?);
     assert_eq!(
-        as_str(&commit, "worktree_mode")?,
+        as_str(commit, "worktree_mode")?,
         "overlay",
         "live e2e must exercise the overlay-mounted worktree path: {commit}"
     );
@@ -88,7 +88,7 @@ fn commit_to_git_commits_overlay_snapshot_after_repeated_squash() -> Result<()> 
         as_i64(&metrics, "manifest_depth")?,
         "commit_to_git should report the snapshot depth it committed: commit={commit} metrics={metrics}"
     );
-    let commit_sha = as_str(&commit, "commit_sha")?;
+    let commit_sha = as_str(commit, "commit_sha")?;
     let show = lease
         .container()
         .exec(&[

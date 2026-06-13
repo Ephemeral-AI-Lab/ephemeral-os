@@ -79,7 +79,7 @@ fn plugin_fallback_or_unknown(request: &Request, context: DispatchContext<'_>) -
     }
     error_response(
         ErrorKind::UnknownOp,
-        &format!("unknown op: {}", request.op),
+        format!("unknown op: {}", request.op),
         json!({"op": request.op}),
     )
 }

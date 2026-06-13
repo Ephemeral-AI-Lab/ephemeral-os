@@ -91,7 +91,7 @@ function taskTool(options: {
     taskIds: [],
   };
   const base = {
-    toolName: "start_work",
+    tag: { type: "start_work", id: "work" },
     title: "scripted work",
     cancel: () => {
       controls.cancelled += 1;
@@ -440,11 +440,11 @@ describe("invariant 9: cancel race", () => {
     });
     const run = start(fixture.sdk, { ...baseSpec([tool]) });
     await until(() => controls.taskIds.length === 1, "the task to register");
-    const taskId = controls.taskIds[0] as never;
-    expect(await run.backgroundTaskSupervisor.cancel(taskId), "running → true").toBe(true);
+    const { tag } = run.backgroundTaskSupervisor.list()[0];
+    expect(await run.backgroundTaskSupervisor.cancel(tag), "running → true").toBe(true);
     expect(controls.cancelled, "teardown ran").toBe(1);
     expect(
-      await run.backgroundTaskSupervisor.cancel(taskId),
+      await run.backgroundTaskSupervisor.cancel(tag),
       "already removed → false",
     ).toBe(false);
     expect(controls.completions[0]?.status, "one completion path, cancelled").toBe(

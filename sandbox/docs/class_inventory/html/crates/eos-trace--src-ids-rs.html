@@ -22,10 +22,10 @@
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
-  <div><b>9</b><span>modules</span></div>
-  <div><b>82</b><span>items</span></div>
-  <div><b>75</b><span>fields</span></div>
-  <div><b>39</b><span>methods</span></div>
+  <div><b>7</b><span>modules</span></div>
+  <div><b>69</b><span>items</span></div>
+  <div><b>57</b><span>fields</span></div>
+  <div><b>25</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-trace.html"><span>budget.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-trace--src-codec-rs.html"><span>codec.rs</span><small>2/28</small></a></li><li><a class="file-link active" href="eos-trace--src-ids-rs.html"><span>ids.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-trace--src-layer-rs.html"><span>layer.rs</span><small>5/3</small></a></li><li><a class="file-link" href="eos-trace--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-trace--src-record-rs.html"><span>record.rs</span><small>10/0</small></a></li><li><a class="file-link" href="eos-trace--src-resource-stats-rs.html"><span>resource_stats.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-trace--src-spool-rs.html"><span>spool.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-trace--src-subscriber-rs.html"><span>subscriber.rs</span><small>0/1</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-trace.html"><span>budget.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-trace--src-codec-rs.html"><span>codec.rs</span><small>2/29</small></a></li><li><a class="file-link active" href="eos-trace--src-ids-rs.html"><span>ids.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-trace--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-trace--src-record-rs.html"><span>record.rs</span><small>10/0</small></a></li><li><a class="file-link" href="eos-trace--src-resource-stats-rs.html"><span>resource_stats.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-trace--src-spool-rs.html"><span>spool.rs</span><small>2/0</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="ids crates/eos-trace/src/ids.rs IdError impl IdError impl fmt :: Display for IdError impl std :: error :: Error for IdError SpanUid impl SpanUid">
   <div class="module-head">
     <div>
@@ -70,9 +70,9 @@
         <span class="rs-self">Self</span> { label }
     }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Display for <a class="symbol-link" href="eos-trace--src-ids-rs.html#item-struct-IdError-5">IdError</a></code></summary><table><tbody><tr id="method-fmt-17"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-trace--src-codec-rs.html#method-fmt-35">fmt</a> (&amp; self , f : &amp; mut fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; fmt :: Result</code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Display for <a class="symbol-link" href="eos-trace--src-ids-rs.html#item-struct-IdError-5">IdError</a></code></summary><table><tbody><tr id="method-fmt-17"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-trace--src-codec-rs.html#method-fmt-40">fmt</a> (&amp; self , f : &amp; mut fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; fmt :: Result</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-trace--src-codec-rs.html#method-fmt-35">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-trace--src-codec-rs.html#method-fmt-40">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
         write!(f, &quot;{} must not be empty&quot;, <span class="rs-self">self</span>.label)
     }
 </code></pre>
@@ -128,7 +128,7 @@
 }
 
 <span class="rs-kw">impl</span> fmt::<span class="rs-type">Display</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-trace--src-ids-rs.html#item-struct-IdError-5">IdError</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-trace--src-codec-rs.html#method-fmt-35">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-trace--src-codec-rs.html#method-fmt-40">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
         write!(f, &quot;{} must not be empty&quot;, <span class="rs-self">self</span>.label)
     }
 }
@@ -156,20 +156,20 @@ macro_rules! string_id {
             }
 
             #[must_use]
-            <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-trace--src-resource-stats-rs.html#method-as-str-16">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+            <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-trace--src-resource-stats-rs.html#method-as-str-17">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
                 &amp;<span class="rs-self">self</span>.0
             }
         }
 
         <span class="rs-kw">impl</span> <span class="rs-type">Default</span> <span class="rs-kw">for</span> $name {
-            <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-trace--src-layer-rs.html#method-default-42">default</a>() -&gt; <span class="rs-self">Self</span> {
+            <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-trace--src-spool-rs.html#method-default-83">default</a>() -&gt; <span class="rs-self">Self</span> {
                 <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-trace--src-ids-rs.html#method-new-77">new</a>()
             }
         }
 
         <span class="rs-kw">impl</span> fmt::<span class="rs-type">Display</span> <span class="rs-kw">for</span> $name {
-            <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-trace--src-codec-rs.html#method-fmt-35">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
-                f.write_str(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-trace--src-resource-stats-rs.html#method-as-str-16">as_str</a>())
+            <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-trace--src-codec-rs.html#method-fmt-40">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+                f.write_str(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-trace--src-resource-stats-rs.html#method-as-str-17">as_str</a>())
             }
         }
     };

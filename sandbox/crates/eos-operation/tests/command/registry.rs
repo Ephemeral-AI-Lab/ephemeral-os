@@ -91,19 +91,19 @@ fn push_completed_evicts_oldest_beyond_cap() {
 
     assert_eq!(lock(&registry.completed).len(), MAX_COMPLETED_ENTRIES);
     assert_eq!(evictions.len(), overflow);
-    for index in 0..overflow {
+    for (index, eviction) in evictions.iter().enumerate().take(overflow) {
         assert_eq!(
-            evictions[index].command_id,
+            eviction.command_id,
             format!("cmd_{index}"),
             "eviction marker names the lost command"
         );
         assert_eq!(
-            evictions[index].seq,
+            eviction.seq,
             u64::try_from(index + 1).expect("eviction seq fits u64"),
             "eviction marker preserves completion seq"
         );
         assert_eq!(
-            evictions[index].max_entries, MAX_COMPLETED_ENTRIES,
+            eviction.max_entries, MAX_COMPLETED_ENTRIES,
             "eviction marker records the cap"
         );
         assert!(registry

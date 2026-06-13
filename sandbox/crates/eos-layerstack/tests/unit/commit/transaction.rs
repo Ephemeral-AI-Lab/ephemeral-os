@@ -81,17 +81,17 @@ fn gated_stale_base_aborts_without_publish() -> TestResult {
         Some("content_changed")
     );
     let events = result.trace_events();
-    assert_eq!(events.len(), 2);
-    assert_eq!(events[0].module, "occ");
-    assert_eq!(events[0].name, "commit_finished");
-    assert_eq!(events[0].details["success"], false);
-    assert_eq!(events[0].details["aborted_version_file_count"], 1);
-    assert_eq!(events[1].module, "occ");
-    assert_eq!(events[1].name, "conflict_detected");
-    assert_eq!(events[1].details["path"], "README.md");
-    assert_eq!(events[1].details["reason"], "aborted_version");
-    assert_eq!(events[1].details["message"], "content changed");
-    assert_eq!(events[1].details["observed_state"], "content_changed");
+    assert_eq!(events.len(), 4);
+    assert_eq!(events[2].module, "occ");
+    assert_eq!(events[2].name, "commit_finished");
+    assert_eq!(events[2].details["success"], false);
+    assert_eq!(events[2].details["aborted_version_file_count"], 1);
+    assert_eq!(events[3].module, "occ");
+    assert_eq!(events[3].name, "conflict_detected");
+    assert_eq!(events[3].details["path"], "README.md");
+    assert_eq!(events[3].details["reason"], "aborted_version");
+    assert_eq!(events[3].details["message"], "content changed");
+    assert_eq!(events[3].details["observed_state"], "content_changed");
     assert_eq!(fixture.read_text("README.md")?, "# theirs\n");
     Ok(())
 }
@@ -175,14 +175,18 @@ fn auto_squash_finished_event_records_depth_and_manifest() -> TestResult {
     let trace = run_auto_squash(&mut stack);
     configure_auto_squash_max_depth(crate::AUTO_SQUASH_MAX_DEPTH);
 
-    assert_eq!(trace.events.len(), 1);
+    assert_eq!(trace.events.len(), 2);
     assert_eq!(trace.events[0].module, "layer_stack");
-    assert_eq!(trace.events[0].name, "auto_squash_finished");
-    assert_eq!(trace.events[0].details["success"], true);
+    assert_eq!(trace.events[0].name, "auto_squash_started");
     assert_eq!(trace.events[0].details["max_depth"], 2);
     assert_eq!(trace.events[0].details["depth_before"], 4);
-    assert_eq!(trace.events[0].details["depth_after"], 1);
-    assert_eq!(trace.events[0].details["manifest_version"], 5);
+    assert_eq!(trace.events[1].module, "layer_stack");
+    assert_eq!(trace.events[1].name, "auto_squash_finished");
+    assert_eq!(trace.events[1].details["success"], true);
+    assert_eq!(trace.events[1].details["max_depth"], 2);
+    assert_eq!(trace.events[1].details["depth_before"], 4);
+    assert_eq!(trace.events[1].details["depth_after"], 1);
+    assert_eq!(trace.events[1].details["manifest_version"], 5);
     assert!(trace
         .timings
         .contains_key("layer_stack.auto_squash.total_s"));
@@ -207,13 +211,17 @@ fn auto_squash_failure_finishes_with_error_reason() -> TestResult {
     let trace = run_auto_squash(&mut stack);
     configure_auto_squash_max_depth(crate::AUTO_SQUASH_MAX_DEPTH);
 
-    assert_eq!(trace.events.len(), 1);
+    assert_eq!(trace.events.len(), 2);
     assert_eq!(trace.events[0].module, "layer_stack");
-    assert_eq!(trace.events[0].name, "auto_squash_finished");
-    assert_eq!(trace.events[0].details["success"], false);
+    assert_eq!(trace.events[0].name, "auto_squash_started");
     assert_eq!(trace.events[0].details["max_depth"], 2);
     assert_eq!(trace.events[0].details["depth_before"], 4);
-    assert!(trace.events[0].details["error"].is_string());
+    assert_eq!(trace.events[1].module, "layer_stack");
+    assert_eq!(trace.events[1].name, "auto_squash_finished");
+    assert_eq!(trace.events[1].details["success"], false);
+    assert_eq!(trace.events[1].details["max_depth"], 2);
+    assert_eq!(trace.events[1].details["depth_before"], 4);
+    assert!(trace.events[1].details["error"].is_string());
     assert!(trace
         .timings
         .contains_key("layer_stack.auto_squash.total_s"));

@@ -12,6 +12,7 @@ import type {
   BackgroundTaskOutcome,
   BackgroundTaskRow,
   BackgroundTaskSupervisor,
+  BackgroundTaskTag,
 } from "./background-task.js";
 
 export interface RunBackgroundTaskSupervisorDeps {
@@ -55,24 +56,31 @@ export class RunBackgroundTaskSupervisor implements BackgroundTaskSupervisor {
   /**
    * Adopt a task. The supervisor owns rejection mapping: a `done` that
    * rejects settles as `failed`, so spawn sites hand over raw promise
-   * chains. After run-end disposal the supervisor is latched: a late
-   * registration (an abandoned `execute()` continuation finishing after
-   * the run) is immediately cancelled and leaves no trace.
+   * chains. A task whose `tag` matches one already active is rejected
+   * (throws); a tag is free for reuse once its task settles. After run-end
+   * disposal the supervisor is latched: a late registration (an abandoned
+   * `execute()` continuation finishing after the run) is immediately
+   * cancelled and leaves no trace.
    */
   register(task: BackgroundTask): { taskId: BackgroundTaskId } {
     const taskId = mintBackgroundTaskId();
     if (this.#disposedReason !== undefined) {
       task.done.catch(() => undefined);
       void Promise.resolve()
-        .then(() => task.cancel())
+        .then(() => task.cancel(this.#disposedReason))
         .catch(() => undefined);
       return { taskId };
+    }
+    if (this.#findActive(task.tag) !== undefined) {
+      throw new Error(
+        `background task tag already active: ${task.tag.type}/${task.tag.id}`,
+      );
     }
     const entry: TaskEntry = {
       task,
       row: {
         taskId,
-        toolName: task.toolName,
+        tag: task.tag,
         title: task.title,
         startedAt: Date.now(),
       },
@@ -95,13 +103,26 @@ export class RunBackgroundTaskSupervisor implements BackgroundTaskSupervisor {
     return [...this.#entries.values()].map((entry) => ({ ...entry.row }));
   }
 
-  async cancel(taskId: BackgroundTaskId): Promise<boolean> {
-    const entry = this.#entries.get(taskId);
+  async cancel(tag: BackgroundTaskTag, reason?: string): Promise<boolean> {
+    const entry = this.#findActive(tag);
     if (entry === undefined || entry.settling) return false;
     entry.settling = true;
-    await this.#teardown(entry);
-    await this.#complete(entry, { status: "cancelled", outcome: "cancelled" });
+    await this.#teardown(entry, reason);
+    await this.#complete(entry, {
+      status: "cancelled",
+      outcome: reason ?? "cancelled",
+    });
     return true;
+  }
+
+  /** The lone tag lookup: the tag is opaque, matched by `type` and `id`. */
+  #findActive(tag: BackgroundTaskTag): TaskEntry | undefined {
+    for (const entry of this.#entries.values()) {
+      if (entry.row.tag.type === tag.type && entry.row.tag.id === tag.id) {
+        return entry;
+      }
+    }
+    return undefined;
   }
 
   // --- engine-facing internals (not on the public interface) -------------
@@ -153,7 +174,7 @@ export class RunBackgroundTaskSupervisor implements BackgroundTaskSupervisor {
     for (const entry of open) entry.settling = true;
     await Promise.all(
       open.map(async (entry) => {
-        await this.#teardown(entry);
+        await this.#teardown(entry, reason);
         await this.#complete(entry, { status: "cancelled", outcome: reason });
       }),
     );
@@ -170,9 +191,9 @@ export class RunBackgroundTaskSupervisor implements BackgroundTaskSupervisor {
   }
 
   /** Teardown failures never undo a recorded cancellation. */
-  async #teardown(entry: TaskEntry): Promise<void> {
+  async #teardown(entry: TaskEntry, reason?: string): Promise<void> {
     try {
-      await entry.task.cancel();
+      await entry.task.cancel(reason);
     } catch {
       // cancel() is best-effort by contract.
     }
@@ -210,7 +231,7 @@ export class RunBackgroundTaskSupervisor implements BackgroundTaskSupervisor {
     this.#deps.emit({
       type: "task_settled",
       taskId: entry.row.taskId,
-      toolName: entry.row.toolName,
+      tag: entry.row.tag,
       title: entry.row.title,
       outcome,
       ...(completionError !== undefined && { completionError }),

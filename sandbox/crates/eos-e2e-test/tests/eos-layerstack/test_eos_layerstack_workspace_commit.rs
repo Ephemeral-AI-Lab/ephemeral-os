@@ -196,7 +196,7 @@ fn commit_projects_delete_symlink_and_replacement_write() -> Result<()> {
     )?;
     let commit = envelope_result(&commit_wire)?;
     let commit_record = trace_record(&commit_wire)?;
-    assert!(as_bool(&commit, "success")?, "{commit}");
+    assert!(as_bool(commit, "success")?, "{commit}");
     for key in [
         "layer_stack.commit_to_workspace.project_s",
         "layer_stack.commit_to_workspace.replace_workspace_s",

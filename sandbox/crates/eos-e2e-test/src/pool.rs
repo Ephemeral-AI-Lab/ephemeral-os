@@ -14,7 +14,7 @@ use eos_operation::core::catalog;
 use eos_sandbox_host::protocol::TraceWireContext;
 use serde_json::{json, Map, Value};
 
-use crate::client::{response_classification, ProtocolClient};
+use crate::client::{response_fault_kind, response_is_accepted, ProtocolClient};
 use crate::config::{Config, NodeMode, WorkloadConfig};
 use crate::container::{self, reap_e2e_containers, DaemonContainer};
 use crate::{next_invocation_id, unique_suffix};
@@ -183,7 +183,7 @@ impl<'p> NodeLease<'p> {
             }),
         );
         match ensure {
-            Ok(resp) if response_classification(&resp).success => Ok(Self {
+            Ok(resp) if response_is_accepted(&resp) => Ok(Self {
                 pool,
                 node: Some(node),
                 stack_root,
@@ -235,7 +235,7 @@ impl<'p> NodeLease<'p> {
     /// Invoke `op` with `args`, auto-injecting `layer_stack_root` and `caller_id`
     /// (unless the caller already set them) plus a fresh invocation id.
     ///
-    /// Returns the decoded response (success payload OR daemon error response).
+    /// Returns the decoded operation envelope.
     ///
     /// # Errors
     /// Returns an error only on transport failure.
@@ -283,16 +283,11 @@ impl<'p> NodeLease<'p> {
     /// Returns an error on transport failure or a non-success response.
     pub fn call_ok(&self, op: &str, args: Value) -> Result<Value> {
         let resp = self.call(op, args)?;
-        let classification = response_classification(&resp);
-        if classification.success {
+        if response_is_accepted(&resp) {
             Ok(success_payload(resp))
         } else {
-            bail!(
-                "{op} returned error{}: {resp}",
-                classification
-                    .error_kind
-                    .map_or(String::new(), |k| format!(" ({k})"))
-            )
+            let kind = response_fault_kind(&resp).map_or(String::new(), |k| format!(" ({k})"));
+            bail!("{op} returned error{kind}: {resp}")
         }
     }
 

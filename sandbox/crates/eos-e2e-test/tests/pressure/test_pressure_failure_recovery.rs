@@ -136,7 +136,7 @@ fn commands_ladder_1_3_6_12() -> Result<()> {
                 lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": id}))?;
             let cancel = response_result(&cancel_wire)?;
             assert!(
-                matches!(as_str(&cancel, "status")?, "cancelled" | "ok" | "error"),
+                matches!(as_str(cancel, "status")?, "cancelled" | "ok" | "error"),
                 "cancel should return structured status at level {level}: {cancel_wire}"
             );
         }
@@ -164,7 +164,7 @@ fn cancel_storm() -> Result<()> {
         let cancel_wire = lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": id}))?;
         let cancel = response_result(&cancel_wire)?;
         assert!(
-            matches!(as_str(&cancel, "status")?, "cancelled" | "ok" | "error"),
+            matches!(as_str(cancel, "status")?, "cancelled" | "ok" | "error"),
             "cancel storm should return structured status: {cancel_wire}"
         );
     }

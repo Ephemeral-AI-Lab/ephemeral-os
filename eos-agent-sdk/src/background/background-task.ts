@@ -7,6 +7,16 @@ export interface BackgroundTaskOutcome {
   outcome: string;
 }
 
+/**
+ * Host-chosen addressing handle for a background task — the key `list`/`cancel`
+ * use to name it. The supervisor treats it as opaque (no per-`type` behavior)
+ * and only enforces uniqueness among active tasks.
+ */
+export interface BackgroundTaskTag {
+  type: string;
+  id: string;
+}
+
 /** What a completion handler receives alongside the outcome. */
 export interface BackgroundTaskCompletionContext {
   notifier: Notifier;
@@ -22,12 +32,12 @@ export interface BackgroundTaskCompletionContext {
  * `silent: true` is strictly for fire-and-forget work.
  */
 export type BackgroundTask = {
-  /** Provenance, e.g. "exec_command". */
-  toolName: string;
+  /** Host-chosen addressing handle; unique among active tasks. */
+  tag: BackgroundTaskTag;
   /** List row / human description. */
   title: string;
   /** Idempotent; no-op after completion. */
-  cancel(): void | Promise<void>;
+  cancel(reason?: string): void | Promise<void>;
   done: Promise<BackgroundTaskOutcome>;
 } & (
   | {
@@ -46,7 +56,7 @@ export type BackgroundTask = {
  */
 export interface BackgroundTaskRow {
   taskId: BackgroundTaskId;
-  toolName: string;
+  tag: BackgroundTaskTag;
   title: string;
   /** Epoch ms registration time. */
   startedAt: number;
@@ -54,15 +64,18 @@ export interface BackgroundTaskRow {
 
 /** The run-scoped capability surface — exactly register / list / cancel. */
 export interface BackgroundTaskSupervisor {
+  /** Rejects (throws) a task whose `tag` matches one already active. */
   register(task: BackgroundTask): { taskId: BackgroundTaskId };
   /** Registry contents: running plus settling tasks. */
   list(): BackgroundTaskRow[];
   /**
-   * `true` iff it transitioned a running task to cancelling; `false` when
-   * the task is not found (already completed and removed) or already
-   * settling. Cancellation loses the race to completion by design.
+   * Resolves the active task by `tag` and passes `reason` to its `cancel`
+   * callback. `true` iff it transitioned a running task to cancelling;
+   * `false` when the tag names no active task (already completed and
+   * removed) or that task is already settling. Cancellation loses the race
+   * to completion by design.
    */
-  cancel(taskId: BackgroundTaskId): Promise<boolean>;
+  cancel(tag: BackgroundTaskTag, reason?: string): Promise<boolean>;
 }
 
 /**
@@ -74,7 +87,7 @@ export type BackgroundTaskLifecycleEvent =
   | {
       type: "task_settled";
       taskId: BackgroundTaskId;
-      toolName: string;
+      tag: BackgroundTaskTag;
       title: string;
       outcome: BackgroundTaskOutcome;
       /** A throwing or timed-out `onCompletion`, recorded — never rethrown. */

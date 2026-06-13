@@ -192,7 +192,7 @@ fn dispatches_workspace_base_control_ops_for_fresh_stack() -> TestResult {
         }),
     );
     let ensure = ok_result(&ensure_response);
-    assert_workspace_base_created(&ensure, &root, &workspace);
+    assert_workspace_base_created(ensure, &root, &workspace);
     assert_workspace_base_symlinks(&root, &outside_target)?;
 
     let binding_response = dispatch_request(
@@ -214,7 +214,7 @@ fn dispatches_workspace_base_control_ops_for_fresh_stack() -> TestResult {
     );
     assert_workspace_base_idempotent(&daemon, &root, &workspace);
 
-    rebuild_workspace_base(&daemon, &root, &workspace, &ensure)?;
+    rebuild_workspace_base(&daemon, &root, &workspace, ensure)?;
     assert_read_content(&daemon, &root, &json!("README.md"), "# reset\n");
     Ok(())
 }

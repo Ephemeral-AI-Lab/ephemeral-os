@@ -32,11 +32,13 @@ export type {
   BackgroundTaskOutcome,
   BackgroundTaskRow,
   BackgroundTaskSupervisor,
+  BackgroundTaskTag,
 } from "./background/index.js";
 export type { Notifier } from "./notification/index.js";
 
 // ── authoring ───────────────────────────────────────────────────
 export {
+  agentOutcomeToolName,
   createAgentOutcomeFn,
   defineTool,
   type AgentOutcomeFn,

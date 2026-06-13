@@ -411,7 +411,7 @@ fn ensure_setup(
                 cwd.display()
             );
             PpcError::SetupFailed {
-                report: PluginSetupReport {
+                report: Box::new(PluginSetupReport {
                     plugin: manifest.plugin_id.clone(),
                     digest: manifest.plugin_digest.clone(),
                     ran: false,
@@ -419,7 +419,7 @@ fn ensure_setup(
                     exit_code: None,
                     output_tail: None,
                     spawn_error: Some(spawn_error),
-                },
+                }),
                 message,
             }
         })?;
@@ -440,7 +440,10 @@ fn ensure_setup(
             String::from_utf8_lossy(&output.stdout),
             String::from_utf8_lossy(&output.stderr)
         );
-        return Err(PpcError::SetupFailed { report, message });
+        return Err(PpcError::SetupFailed {
+            report: Box::new(report),
+            message,
+        });
     }
     fs::write(setup_marker, &setup.setup_marker_digest)?;
     Ok(Some(report))

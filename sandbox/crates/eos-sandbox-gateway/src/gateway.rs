@@ -208,7 +208,6 @@ impl Engine for SandboxHost {
 
 fn status_value(status: &SandboxStatus, embed_daemon: bool) -> Value {
     let mut value = json!({
-        "success": true,
         "sandbox_id": status.sandbox_id,
         "container": status.container,
         "endpoint": status.endpoint.map(|addr| addr.to_string()),
@@ -268,7 +267,11 @@ pub(crate) fn handle(
                 "error_kind": "unknown_op",
             }),
         );
-        return error_response("unknown_op", &format!("unknown op: {}", request.op));
+        return error_response_for(
+            request,
+            "unknown_op",
+            &format!("unknown op: {}", request.op),
+        );
     };
     if !surface.allows(entry.visibility) {
         record_route_event(
@@ -283,7 +286,8 @@ pub(crate) fn handle(
                 "error_kind": "forbidden",
             }),
         );
-        return error_response(
+        return error_response_for(
+            request,
             "forbidden",
             &format!("op {} is not served on this socket", entry.name),
         );
@@ -327,7 +331,11 @@ fn forward(
     visibility: &str,
 ) -> Value {
     let Some(sandbox_id) = request.sandbox_id.as_deref() else {
-        return error_response("invalid_request", "sandbox_id is required for this op");
+        return error_response_for(
+            request,
+            "invalid_request",
+            "sandbox_id is required for this op",
+        );
     };
     let mut trace = request.trace.clone();
     trace.push_gateway_event(
@@ -380,7 +388,7 @@ fn forward(
                 "engine_forward_failed",
                 json!({"op": request.op, "sandbox_id": sandbox_id, "error_kind": "trace_unavailable", "duration_us": elapsed_us(started)}),
             );
-            error_response("trace_unavailable", &message.to_string())
+            error_response_for(request, "trace_unavailable", &message.to_string())
         }
         Some(Err(ForwardError::UncertainOutcome(message))) => {
             engine.record_trace_event(
@@ -390,7 +398,7 @@ fn forward(
                 "engine_forward_failed",
                 json!({"op": request.op, "sandbox_id": sandbox_id, "error_kind": "uncertain_outcome", "duration_us": elapsed_us(started)}),
             );
-            error_response("uncertain_outcome", &message)
+            error_response_for(request, "uncertain_outcome", &message)
         }
         Some(Err(ForwardError::SandboxUnavailable(message))) => {
             engine.record_trace_event(
@@ -400,34 +408,42 @@ fn forward(
                 "engine_forward_failed",
                 json!({"op": request.op, "sandbox_id": sandbox_id, "error_kind": "sandbox_unavailable", "duration_us": elapsed_us(started)}),
             );
-            error_response("sandbox_unavailable", &message)
+            error_response_for(request, "sandbox_unavailable", &message)
         }
-        None => unknown_sandbox(sandbox_id),
+        None => unknown_sandbox(request, sandbox_id),
     }
 }
 
 fn host_call(engine: &dyn Engine, verb: HostVerb, request: &ClientRequest) -> Value {
     match verb {
         HostVerb::Acquire => match engine.acquire() {
-            Ok(sandbox_id) => json!({"success": true, "sandbox_id": sandbox_id}),
-            Err(err) => error_response("sandbox_unavailable", &format!("acquire failed: {err:#}")),
+            Ok(sandbox_id) => ok_response(request, json!({"sandbox_id": sandbox_id})),
+            Err(err) => error_response_for(
+                request,
+                "sandbox_unavailable",
+                &format!("acquire failed: {err:#}"),
+            ),
         },
-        HostVerb::List => json!({"success": true, "sandboxes": engine.list()}),
+        HostVerb::List => ok_response(request, json!({"sandboxes": engine.list()})),
         HostVerb::Release | HostVerb::Status => {
             let Some(sandbox_id) = request.sandbox_id.as_deref() else {
-                return error_response("invalid_request", "sandbox_id is required for this op");
+                return error_response_for(
+                    request,
+                    "invalid_request",
+                    "sandbox_id is required for this op",
+                );
             };
             match verb {
                 HostVerb::Release => {
                     if engine.release(sandbox_id) {
-                        json!({"success": true, "sandbox_id": sandbox_id})
+                        ok_response(request, json!({"sandbox_id": sandbox_id}))
                     } else {
-                        unknown_sandbox(sandbox_id)
+                        unknown_sandbox(request, sandbox_id)
                     }
                 }
                 HostVerb::Status => match engine.status(sandbox_id) {
-                    Some(status) => status,
-                    None => unknown_sandbox(sandbox_id),
+                    Some(status) => ok_response(request, status),
+                    None => unknown_sandbox(request, sandbox_id),
                 },
                 HostVerb::Acquire | HostVerb::List => unreachable!(),
             }
@@ -435,8 +451,12 @@ fn host_call(engine: &dyn Engine, verb: HostVerb, request: &ClientRequest) -> Va
     }
 }
 
-fn unknown_sandbox(sandbox_id: &str) -> Value {
-    error_response("unknown_sandbox", &format!("unknown sandbox: {sandbox_id}"))
+fn unknown_sandbox(request: &ClientRequest, sandbox_id: &str) -> Value {
+    error_response_for(
+        request,
+        "unknown_sandbox",
+        &format!("unknown sandbox: {sandbox_id}"),
+    )
 }
 
 pub(crate) fn operator_socket_path(listen: &Path) -> PathBuf {
@@ -729,16 +749,75 @@ fn take_string(object: &mut Map<String, Value>, field: &str) -> Result<String, W
     }
 }
 
+fn ok_response(request: &ClientRequest, result: Value) -> Value {
+    let mut response = envelope_base("ok", request_meta(request));
+    response["result"] = result;
+    response
+}
+
+fn error_response_for(request: &ClientRequest, kind: &str, message: &str) -> Value {
+    error_response_with_meta(kind, message, request_meta(request))
+}
+
 fn error_response(kind: &str, message: &str) -> Value {
+    error_response_with_meta(kind, message, bare_meta())
+}
+
+fn error_response_with_meta(kind: &str, message: &str, meta: Value) -> Value {
+    let mut response = envelope_base("error", meta);
+    response["error"] = json!({
+        "kind": kind,
+        "message": message,
+        "details": {},
+    });
+    response
+}
+
+fn envelope_base(status: &str, meta: Value) -> Value {
     json!({
-        "success": false,
-        "warnings": [],
-        "timings": {},
-        "error": {
-            "kind": kind,
-            "message": message,
-            "details": {},
+        "status": status,
+        "meta": meta,
+    })
+}
+
+fn request_meta(request: &ClientRequest) -> Value {
+    json!({
+        "protocol_version": 2,
+        "op": request.op.as_str(),
+        "request_id": request.trace.request_id.as_str(),
+        "trace": {
+            "trace_id": request.trace.trace_id.as_str(),
+            "request_id": request.trace.request_id.as_str(),
+            "store": "pending_host_ingest",
+            "event_count": 0,
+            "degraded": false,
         },
+        "workspace_route": {"kind": "none"},
+        "duration_ms": 0.0,
+        "modules_touched": [],
+        "steps": [],
+        "resource_summary": {"fields": {}},
+        "warnings": [],
+    })
+}
+
+fn bare_meta() -> Value {
+    json!({
+        "protocol_version": 2,
+        "op": "",
+        "request_id": "",
+        "trace": {
+            "trace_id": "",
+            "store": "pending_host_ingest",
+            "event_count": 0,
+            "degraded": false,
+        },
+        "workspace_route": {"kind": "none"},
+        "duration_ms": 0.0,
+        "modules_touched": [],
+        "steps": [],
+        "resource_summary": {"fields": {}},
+        "warnings": [],
     })
 }
 

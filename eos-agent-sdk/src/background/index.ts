@@ -5,5 +5,6 @@ export type {
   BackgroundTaskOutcome,
   BackgroundTaskRow,
   BackgroundTaskSupervisor,
+  BackgroundTaskTag,
 } from "./background-task.js";
 export { RunBackgroundTaskSupervisor } from "./background-task-supervisor.js";

@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>3</b><span>modules</span></div>
-  <div><b>26</b><span>items</span></div>
+  <div><b>28</b><span>items</span></div>
   <div><b>14</b><span>fields</span></div>
   <div><b>4</b><span>methods</span></div>
 </section>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eosd.html"><span>daemon.rs</span><small>2/9</small></a></li><li><a class="file-link active" href="eosd--src-main-rs.html"><span>main.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eosd--src-runner-rs.html"><span>runner.rs</span><small>3/6</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eosd.html"><span>daemon.rs</span><small>2/11</small></a></li><li><a class="file-link active" href="eosd--src-main-rs.html"><span>main.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eosd--src-runner-rs.html"><span>runner.rs</span><small>3/6</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="bin crates/eosd/src/main.rs main run_ns_holder parse_fd">
   <div class="module-head">
     <div>
@@ -75,8 +75,8 @@
             println!(&quot;eosd {}&quot;, env!(&quot;<span class="rs-type">CARGO_PKG_VERSION</span>&quot;));
             <span class="rs-type">Ok</span>(())
         }
-        <span class="rs-type">Some</span>(&quot;daemon&quot;) =&gt; daemon::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-15">run</a>(args),
-        <span class="rs-type">Some</span>(&quot;ns-runner&quot;) =&gt; runner::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-15">run</a>(args),
+        <span class="rs-type">Some</span>(&quot;daemon&quot;) =&gt; daemon::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-16">run</a>(args),
+        <span class="rs-type">Some</span>(&quot;ns-runner&quot;) =&gt; runner::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-16">run</a>(args),
         <span class="rs-type">Some</span>(&quot;ns-holder&quot;) =&gt; <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-run-ns-holder-67">run_ns_holder</a>(args),
         <span class="rs-comment">// The committed `crates/eos-operation/ops.json`; `cargo xtask</span>
         <span class="rs-comment">// check-contract` fails when this output drifts from the artifact.</span>
@@ -120,7 +120,7 @@
     <span class="rs-kw">let</span> readiness_fd = <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-parse-fd-104">parse_fd</a>(args.next(), &quot;readiness_fd&quot;)?;
     <span class="rs-kw">let</span> control_fd = <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-parse-fd-104">parse_fd</a>(args.next(), &quot;control_fd&quot;)?;
 
-    <span class="rs-kw">match</span> eos_namespace::holder::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-15">run</a>(readiness_fd, control_fd) {
+    <span class="rs-kw">match</span> eos_namespace::holder::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-16">run</a>(readiness_fd, control_fd) {
         <span class="rs-type">Ok</span>(()) =&gt; <span class="rs-type">Ok</span>(()),
         <span class="rs-type">Err</span>(err) =&gt; {
             <span class="rs-kw">let</span> code = <span class="rs-kw">match</span> &amp;err {
@@ -225,8 +225,8 @@
             println!(&quot;eosd {}&quot;, env!(&quot;<span class="rs-type">CARGO_PKG_VERSION</span>&quot;));
             <span class="rs-type">Ok</span>(())
         }
-        <span class="rs-type">Some</span>(&quot;daemon&quot;) =&gt; daemon::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-15">run</a>(args),
-        <span class="rs-type">Some</span>(&quot;ns-runner&quot;) =&gt; runner::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-15">run</a>(args),
+        <span class="rs-type">Some</span>(&quot;daemon&quot;) =&gt; daemon::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-16">run</a>(args),
+        <span class="rs-type">Some</span>(&quot;ns-runner&quot;) =&gt; runner::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-16">run</a>(args),
         <span class="rs-type">Some</span>(&quot;ns-holder&quot;) =&gt; <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-run-ns-holder-67">run_ns_holder</a>(args),
         <span class="rs-comment">// The committed `crates/eos-operation/ops.json`; `cargo xtask</span>
         <span class="rs-comment">// check-contract` fails when this output drifts from the artifact.</span>
@@ -256,7 +256,7 @@
     <span class="rs-kw">let</span> readiness_fd = <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-parse-fd-104">parse_fd</a>(args.next(), &quot;readiness_fd&quot;)?;
     <span class="rs-kw">let</span> control_fd = <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-parse-fd-104">parse_fd</a>(args.next(), &quot;control_fd&quot;)?;
 
-    <span class="rs-kw">match</span> eos_namespace::holder::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-15">run</a>(readiness_fd, control_fd) {
+    <span class="rs-kw">match</span> eos_namespace::holder::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-16">run</a>(readiness_fd, control_fd) {
         <span class="rs-type">Ok</span>(()) =&gt; <span class="rs-type">Ok</span>(()),
         <span class="rs-type">Err</span>(err) =&gt; {
             <span class="rs-kw">let</span> code = <span class="rs-kw">match</span> &amp;err {

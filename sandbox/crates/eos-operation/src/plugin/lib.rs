@@ -72,7 +72,7 @@ pub enum PpcError {
     /// A package setup command failed after producing bounded trace facts.
     #[error("{message}")]
     SetupFailed {
-        report: self::package::PluginSetupReport,
+        report: Box<self::package::PluginSetupReport>,
         message: String,
     },
 

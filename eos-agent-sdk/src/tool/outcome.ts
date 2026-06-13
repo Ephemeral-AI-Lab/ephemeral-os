@@ -68,6 +68,15 @@ export function unwrapAgentOutcomeFn<T>(
   return fn[INTERNAL];
 }
 
+/**
+ * Terminal-tool-name read-back: the name the model calls and hook matchers
+ * see. The minted fn stays otherwise opaque — this is the only public
+ * field a host reads (e.g. to check a profile's declared terminal tool).
+ */
+export function agentOutcomeToolName(fn: AgentOutcomeFn<unknown>): string {
+  return fn[INTERNAL].name;
+}
+
 function deriveDescription(schema: z.ZodType): string {
   const base =
     "Finish the run by submitting its terminal outcome as this tool's input. A successful call ends the run.";

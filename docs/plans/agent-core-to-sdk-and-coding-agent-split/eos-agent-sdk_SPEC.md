@@ -112,10 +112,10 @@ type AgentOutcome<T = string> = {
 
 // ── run-scoped capabilities (same instances on handle and tool ctx) ──
 interface BackgroundTaskSupervisor {
-  register(task: BackgroundTask): { taskId: BackgroundTaskId };
+  register(task: BackgroundTask): { taskId: BackgroundTaskId };  // rejects a duplicate active tag
   list(): BackgroundTaskRow[];        // registry contents: running + settling tasks;
                                       // completed tasks are removed (§4.4)
-  cancel(taskId: BackgroundTaskId): Promise<boolean>;
+  cancel(tag: BackgroundTaskTag, reason?: string): Promise<boolean>;
 }
 
 interface Notifier {
@@ -137,9 +137,9 @@ interface ToolCallContext {
 // Every task declares how its completion is handled — the type forces the
 // choice; there is no implicit default (§4.4).
 type BackgroundTask = {
-  toolName: string;                   // provenance, e.g. "exec_command", "run_subagent", "workflow:pursuit"
+  tag: BackgroundTaskTag;             // host-chosen addressing handle; unique among active tasks
   title: string;                      // list row / human description
-  cancel(): void | Promise<void>;     // idempotent; no-op after completion
+  cancel(reason?: string): void | Promise<void>;  // idempotent; no-op after completion
   done: Promise<BackgroundTaskOutcome>;
 } & (
   | { onCompletion: (
@@ -150,8 +150,11 @@ type BackgroundTask = {
 );
 
 type BackgroundTaskOutcome = { status: "success" | "failed" | "cancelled"; outcome: string };
+// Host-chosen tag: the addressing handle for list/cancel. The supervisor treats it as
+// opaque (no per-type behavior) and only enforces uniqueness among active tasks.
+type BackgroundTaskTag = { type: string; id: string };
 type BackgroundTaskRow = {
-  taskId: BackgroundTaskId; toolName: string; title: string;
+  taskId: BackgroundTaskId; tag: BackgroundTaskTag; title: string;
   startedAt: number;                  // epoch ms — no status field: a listed task is
                                       // running (or briefly settling, §4.4)
 };
@@ -361,7 +364,8 @@ The loop is the existing `agent-loop.ts` eleven-step structure, unchanged in spi
 - A throwing or timed-out `onCompletion` must not wedge the run: the SDK removes the task,
   writes the error to the events stream and records, and does nothing else (no fallback
   notification). The bound is `taskCompletionTimeoutMs` (default 30s).
-- `cancel(taskId)`: returns `true` iff it transitioned a running task to cancelling;
+- `cancel(tag, reason?)`: resolves the active task by `tag`, passes `reason` to its
+  `cancel` callback, and returns `true` iff it transitioned a running task to cancelling;
   returns `false` when the task is not found (already completed and removed) or already
   settling. Cancellation loses the race to completion by design. Cancelled tasks flow
   through the same completion handling with `status: "cancelled"` — one completion path,
@@ -431,7 +435,7 @@ workspace mechanics.
 | `llm-client` | internal, unchanged (access/, wires/, retry, stream-client) |
 | `scripts` | **moves to `eos-coding-agent`** (`executeJsonCommand` powers the host's subprocess→callback hook wrapping) |
 | `notification` | internal (inbox, loop-observer) · **trigger engine deleted** — rule evaluation compiles host-side into `turnBoundary` hook callbacks; loop-observer's turn-fact extraction feeds `turnBoundary` dispatch |
-| `background` | internal · rename `BackgroundSessionSupervisor` → `BackgroundTaskSupervisor`; **remove-on-completion registry** — public surface `register/list/cancel`, rows `{taskId, toolName, title, startedAt}`, no status enum, explicit-silence task contract (`onCompletion` \| `silent: true`), no source-specific session typing |
+| `background` | internal · rename `BackgroundSessionSupervisor` → `BackgroundTaskSupervisor`; **remove-on-completion registry** — public surface `register/list/cancel`, rows `{taskId, tag, title, startedAt}`, host-chosen `tag {type, id}` (unique among active tasks) as the `cancel(tag, reason)` address, no status enum, explicit-silence task contract (`onCompletion` \| `silent: true`), no source-specific session typing |
 | `engine` | internal (agent-loop, conversation, turn, tool-executor port, run handle) · gains the internal terminal-submission gate aligned with the text-exit gate (incl. the `inbox drained` conjunct) · emits `task_registered`/`task_settled` events |
 | `tool` | internal: `contract / define / executor / pipeline / toolset / run-state` stay; `hooks/*` reduced to callback dispatch (the subprocess protocol moves to the host); **new** `outcome.ts` (`createAgentOutcomeFn`); **deleted:** `tools/*` (all families — agent, background, pursuit, submission), `advisory_prompts/*`, `description_prompts/*` (host-side now, or replaced by the factory) |
 | `agent-runtime` | **split**: assembly (`runtime.ts` minus pursuit wiring), `run-registry.ts`, `transcript.ts`, `llm-client-registry.ts` stay internal under `src/runtime` · config loaders (`config-root/config-file/hook-config`), profile loaders/registry, `pursuit-context-scripts.ts`, and `pursuitWiring()` move to `eos-coding-agent` · `notification-rules-config` **deleted** — former rules become `turnBoundary` entries in the host hook config |
@@ -487,7 +491,8 @@ exported config schemas, `toSSE` and `events({afterSeq})` replay.
 - `grep -r "@eos/pursuit"` in the SDK → 0 hits; `grep -ri "pursuit\|planner\|worker\|advisor\|subagent\|workflow\|sandbox"`
   over public types → 0 hits.
 - `grep -r "child_process"` in the SDK → 0 hits (no subprocess execution).
-- The supervisor source contains no `toolName`-specific branches and no status enum.
+- The supervisor source contains no `tag`-specific branches and no status enum: the tag
+  is opaque (it only keys uniqueness and `cancel` lookup).
 - `AgentSdkConfig` / `AgentSpec` / `AgentRunHandle` mention no filesystem path except `recordsDir`.
 - A consumer can implement `run_subagent`, `ask_advisor`, `list_background_tasks` (live
   rows only), `cancel_background_task`, a run-records reader, an advisor gate
@@ -508,7 +513,7 @@ exported config schemas, `toSSE` and `events({afterSeq})` replay.
 | `behavior` metadata | Removed; runtime patterns only |
 | Settlement notifications | Supervisor **never** publishes; `BackgroundTask.onCompletion` (host) owns publication, receives `notifier` as an argument; exit gate = "owed completion handler"; silence is opt-in (`silent: true`) — the task type forces handler-or-silent, no implicit default |
 | `onSettled` | Renamed `onCompletion`; the SDK is the listener (it gates task removal on the callback finishing) |
-| Task registry | **Remove-on-completion:** registry = the open set; public surface `register/list/cancel` (`count()` cut — redundant with `list().length`; the gates read the registry internally); rows `{taskId, toolName, title, startedAt}` with no status enum; history via `task_registered`/`task_settled` events; run-end disposal cancels survivors |
+| Task registry | **Remove-on-completion:** registry = the open set; public surface `register/list/cancel` (`count()` cut — redundant with `list().length`; the gates read the registry internally); rows `{taskId, tag, title, startedAt}` with no status enum; `cancel(tag, reason)` addresses by the host-chosen `tag`; history via `task_registered`/`task_settled` events; run-end disposal cancels survivors |
 | Run-end channel | `outcome(): Promise<AgentOutcome>` on the handle; run-end callback dropped (`onSubmit` name reserved for the terminal handler) |
 | Outcome payload | `AgentOutcome` carries `usage` and `turns` on every status (hosts must not parse records for hot-path accounting) |
 | Outcome typing | `T` threaded through `createAgentOutcomeFn<T>` → `AgentSpec<T>` → `Agent<T>` → `AgentRunHandle<T>` → `AgentOutcome<T>`; text mode `T = string`; no casts at the `outcome()` site |

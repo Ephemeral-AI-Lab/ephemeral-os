@@ -323,113 +323,48 @@ fn request_object(
     request
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ResponseShape {
-    Envelope,
-    Legacy,
+pub fn response_status(response: &Value) -> &str {
+    response
+        .get("status")
+        .and_then(Value::as_str)
+        .filter(|status| {
+            matches!(
+                *status,
+                "ok" | "running" | "rejected" | "cancelled" | "timed_out" | "error"
+            )
+        })
+        .unwrap_or("error")
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ResponseClassification<'a> {
-    pub shape: ResponseShape,
-    pub status: &'a str,
-    pub success: bool,
-    pub error_kind: Option<&'a str>,
-}
-
-pub fn response_classification(response: &Value) -> ResponseClassification<'_> {
-    if let Some(status) = response.get("status").and_then(Value::as_str) {
-        return classify_envelope_response(response, status);
-    }
-    classify_legacy_response(response)
-}
-
-fn classify_envelope_response<'a>(
-    response: &'a Value,
-    status: &'a str,
-) -> ResponseClassification<'a> {
-    let error_kind = response
+pub fn response_fault_kind(response: &Value) -> Option<&str> {
+    response
         .get("error")
         .and_then(|error| error.get("kind"))
-        .and_then(Value::as_str);
-    match status {
-        "ok" | "running" => ResponseClassification {
-            shape: ResponseShape::Envelope,
-            status,
-            success: true,
-            error_kind: None,
-        },
-        "rejected" | "cancelled" | "timed_out" | "error" => ResponseClassification {
-            shape: ResponseShape::Envelope,
-            status,
-            success: false,
-            error_kind: error_kind.or(Some(status)),
-        },
-        _ => ResponseClassification {
-            shape: ResponseShape::Envelope,
-            status: "error",
-            success: false,
-            error_kind: Some("invalid_status"),
-        },
-    }
+        .and_then(Value::as_str)
+        .or_else(|| {
+            (response.get("status").and_then(Value::as_str).is_none()).then_some("missing_status")
+        })
 }
 
-fn classify_legacy_response(response: &Value) -> ResponseClassification<'_> {
-    if response.get("success") == Some(&Value::Bool(false)) {
-        return ResponseClassification {
-            shape: ResponseShape::Legacy,
-            status: "error",
-            success: false,
-            error_kind: response
-                .get("error")
-                .and_then(|error| error.get("kind"))
-                .and_then(Value::as_str),
-        };
-    }
-    ResponseClassification {
-        shape: ResponseShape::Legacy,
-        status: "ok",
-        success: true,
-        error_kind: None,
-    }
-}
-
-pub fn response_status(response: &Value) -> &str {
-    response_classification(response).status
+pub fn response_is_accepted(response: &Value) -> bool {
+    matches!(response_status(response), "ok" | "running")
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        decode_trace_sidecar_base64, response_classification, take_trace_sidecar_checked,
-        ResponseShape, TraceSidecarError, DAEMON_TRACE_SIDECAR_ENCODING,
+        decode_trace_sidecar_base64, response_fault_kind, response_is_accepted, response_status,
+        take_trace_sidecar_checked, TraceSidecarError, DAEMON_TRACE_SIDECAR_ENCODING,
         DAEMON_TRACE_SIDECAR_SCHEMA,
     };
     use serde_json::json;
 
     #[test]
-    fn classifies_mixed_legacy_and_envelope_responses() {
+    fn reads_operation_envelope_statuses() {
         let cases = [
-            (
-                "legacy success",
-                json!({"success": true, "ready": true}),
-                ResponseShape::Legacy,
-                "ok",
-                true,
-                None,
-            ),
-            (
-                "legacy error",
-                json!({"success": false, "error": {"kind": "bad_json", "message": "bad"}}),
-                ResponseShape::Legacy,
-                "error",
-                false,
-                Some("bad_json"),
-            ),
             (
                 "envelope ok",
                 json!({"status": "ok", "result": {"ready": true}, "meta": {}}),
-                ResponseShape::Envelope,
                 "ok",
                 true,
                 None,
@@ -437,7 +372,6 @@ mod tests {
             (
                 "envelope running",
                 json!({"status": "running", "result": {"command_id": "cmd-1"}, "meta": {}}),
-                ResponseShape::Envelope,
                 "running",
                 true,
                 None,
@@ -445,7 +379,6 @@ mod tests {
             (
                 "envelope error",
                 json!({"status": "error", "error": {"kind": "internal_error", "message": "failed"}, "meta": {}}),
-                ResponseShape::Envelope,
                 "error",
                 false,
                 Some("internal_error"),
@@ -453,27 +386,38 @@ mod tests {
             (
                 "envelope rejected without kind",
                 json!({"status": "rejected", "error": {"message": "blocked"}, "meta": {}}),
-                ResponseShape::Envelope,
                 "rejected",
                 false,
-                Some("rejected"),
+                None,
             ),
             (
                 "invalid envelope status",
                 json!({"status": "mystery", "meta": {}}),
-                ResponseShape::Envelope,
                 "error",
                 false,
-                Some("invalid_status"),
+                None,
+            ),
+            (
+                "missing envelope status",
+                json!({"ready": true}),
+                "error",
+                false,
+                Some("missing_status"),
             ),
         ];
 
-        for (label, response, shape, status, success, kind) in cases {
-            let classification = response_classification(&response);
-            assert_eq!(classification.shape, shape, "{label}: response shape");
-            assert_eq!(classification.status, status, "{label}: response status");
-            assert_eq!(classification.success, success, "{label}: success flag");
-            assert_eq!(classification.error_kind, kind, "{label}: error kind");
+        for (label, response, status, accepted, kind) in cases {
+            assert_eq!(
+                response_status(&response),
+                status,
+                "{label}: response status"
+            );
+            assert_eq!(
+                response_is_accepted(&response),
+                accepted,
+                "{label}: accepted response"
+            );
+            assert_eq!(response_fault_kind(&response), kind, "{label}: fault kind");
         }
     }
 

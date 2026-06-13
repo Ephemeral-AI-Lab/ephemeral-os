@@ -610,7 +610,7 @@ impl CommandOps {
             self.config.cancel_wait_ms,
             start_offset,
             true,
-            |stdout| CommandResponse::cancelled(stdout),
+            CommandResponse::cancelled,
         ))
     }
 

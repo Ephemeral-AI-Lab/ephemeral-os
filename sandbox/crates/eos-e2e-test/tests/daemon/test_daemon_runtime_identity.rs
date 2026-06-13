@@ -20,7 +20,7 @@ fn runtime_ready_exposes_daemon_identity() -> Result<()> {
     let ready = envelope_result(&ready_wire)?;
     // The daemon is the in-sandbox parent process: ready exposes its pid + uptime.
     assert!(
-        as_i64(&ready, "daemon_pid")? > 0,
+        as_i64(ready, "daemon_pid")? > 0,
         "runtime.ready must expose a positive daemon_pid: {ready}"
     );
     assert!(
@@ -30,7 +30,7 @@ fn runtime_ready_exposes_daemon_identity() -> Result<()> {
             .is_some_and(|uptime| uptime >= 0.0),
         "runtime.ready must expose a non-negative uptime_s: {ready}"
     );
-    for probe in array(&ready, "probes")? {
+    for probe in array(ready, "probes")? {
         assert_eq!(
             probe.get("status").and_then(Value::as_str),
             Some("ok"),

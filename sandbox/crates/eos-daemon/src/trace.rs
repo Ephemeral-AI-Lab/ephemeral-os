@@ -256,6 +256,16 @@ pub(crate) fn attach_request_sidecar_with_events(
                 "listener_kind": facts.listener_kind,
                 "peer_addr": facts.peer_addr,
                 "local_addr": facts.local_addr,
+                "daemon_boot_id": daemon_boot_id().to_string(),
+            }),
+        ),
+        EventRecord::new(
+            SpanUid::new(2),
+            "read_started",
+            "daemon.transport",
+            json!({
+                "connection_id": facts.connection_id,
+                "is_tcp": facts.is_tcp,
             }),
         ),
         EventRecord::new(
@@ -357,6 +367,12 @@ pub(crate) fn attach_request_sidecar_with_events(
             "response_write_finished",
             "daemon.transport",
             json!({"connection_id": facts.connection_id, "response_bytes": response_bytes}),
+        ),
+        EventRecord::new(
+            SpanUid::new(2),
+            "shutdown_finished",
+            "daemon.transport",
+            json!({"connection_id": facts.connection_id}),
         ),
     ]);
     for event in &mut events {
@@ -510,13 +526,44 @@ fn stamp_pending_envelope_meta(
         duration_ms: duration_us as f64 / 1000.0,
         modules_touched: modules_touched(record),
         steps: step_summaries(record),
-        resource_summary: ResourceSummary::default(),
+        resource_summary: resource_summary(record),
         warnings: Vec::new(),
     };
     object.insert(
         "meta".to_owned(),
         serde_json::to_value(meta).expect("response meta serializes"),
     );
+}
+
+/// Bounded rollup of the record's resource samples, rendered from the trace
+/// record (never hand-inserted). Empty when no resources were sampled so
+/// control/no-resource ops keep an empty summary.
+fn resource_summary(record: &TraceRecord) -> ResourceSummary {
+    if record.resources.is_empty() {
+        return ResourceSummary::default();
+    }
+    let mut kinds: std::collections::BTreeMap<&str, u64> = std::collections::BTreeMap::new();
+    let mut unavailable = 0u64;
+    let mut source_errors = 0u64;
+    for resource in &record.resources {
+        *kinds.entry(resource.meta.stats_kind.as_str()).or_default() += 1;
+        if !resource.meta.source_available {
+            unavailable += 1;
+        }
+        if resource.meta.read_error.is_some() || resource.meta.parse_error.is_some() {
+            source_errors += 1;
+        }
+    }
+    let mut fields = serde_json::Map::new();
+    fields.insert("samples".to_owned(), json!(record.resources.len()));
+    fields.insert("kinds".to_owned(), json!(kinds));
+    if unavailable > 0 {
+        fields.insert("unavailable".to_owned(), json!(unavailable));
+    }
+    if source_errors > 0 {
+        fields.insert("source_errors".to_owned(), json!(source_errors));
+    }
+    ResourceSummary { fields }
 }
 
 fn workspace_route_ref(record: &TraceRecord) -> WorkspaceRouteRef {

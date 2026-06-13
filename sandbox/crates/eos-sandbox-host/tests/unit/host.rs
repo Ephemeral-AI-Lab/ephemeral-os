@@ -224,17 +224,17 @@ fn forward_request_persists_transport_events_and_strips_sidecar() -> Result<()> 
         json!({"op": "sandbox.runtime.ready", "route": "daemon"}),
     );
 
-    let response = forward_request(
-        &record,
-        &config,
-        &store,
-        &TraceExportDrainer::default(),
-        trace,
-        false,
-        "sandbox.runtime.ready",
-        "request-forward",
-        &json!({"caller_id": "caller-1"}),
-    )?;
+    let response = forward_request(ForwardRequestInput {
+        record: &record,
+        config: &config,
+        trace_store: &store,
+        trace_drainer: &TraceExportDrainer::default(),
+        trace_context: trace,
+        mutates_state: false,
+        op: "sandbox.runtime.ready",
+        invocation_id: "request-forward",
+        args: &json!({"caller_id": "caller-1"}),
+    })?;
     assert_eq!(response["_trace_events"], serde_json::Value::Null);
     assert_eq!(response["result"]["ready"], json!(true));
     assert_eq!(response["meta"]["request_id"], json!("request-forward"));

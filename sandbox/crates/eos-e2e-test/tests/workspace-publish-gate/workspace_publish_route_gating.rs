@@ -63,10 +63,10 @@ fn git_writes_are_dropped_and_unreadable() -> Result<()> {
     let write = envelope_result(&write_wire)?;
     // .git/* routes Route::Drop -> OccStatus::Dropped, so the result payload is
     // committed/success with NO published path.
-    assert_eq!(as_str(&write, "status")?, "committed", "{write}");
-    assert!(as_bool(&write, "success")?, "{write}");
+    assert_eq!(as_str(write, "status")?, "committed", "{write}");
+    assert!(as_bool(write, "success")?, "{write}");
     assert!(
-        array(&write, "changed_paths")?.is_empty(),
+        array(write, "changed_paths")?.is_empty(),
         "a .git write must publish nothing: {write}"
     );
     assert_occ_commit_counts(&write_wire, 0.0, 0.0, 1.0)?;
@@ -99,7 +99,7 @@ fn gitignored_writes_bypass_the_occ_gate() -> Result<()> {
         json!({"path": "ignore-probe/secret.txt", "content": "ignored\n", "overwrite": true}),
     )?;
     let ignored = envelope_result(&ignored_wire)?;
-    assert!(as_bool(&ignored, "success")?, "{ignored}");
+    assert!(as_bool(ignored, "success")?, "{ignored}");
     assert_occ_commit_counts(&ignored_wire, 1.0, 0.0, 0.0)?;
 
     // Control: a non-ignored sibling (.log not matched by *.txt) stays Gated.
@@ -108,7 +108,7 @@ fn gitignored_writes_bypass_the_occ_gate() -> Result<()> {
         json!({"path": "ignore-probe/tracked.log", "content": "tracked\n", "overwrite": true}),
     )?;
     let tracked = envelope_result(&tracked_wire)?;
-    assert!(as_bool(&tracked, "success")?, "{tracked}");
+    assert!(as_bool(tracked, "success")?, "{tracked}");
     assert_occ_commit_counts(&tracked_wire, 0.0, 1.0, 0.0)?;
     Ok(())
 }

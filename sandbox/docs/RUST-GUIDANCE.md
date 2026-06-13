@@ -108,10 +108,9 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
   Do NOT invent a `ping` op.
 - Exit codes are constants: `CONNECT_FAILED = 97`, `IO_FAILED = 98`. `MAX_REQUEST_BYTES = 16 MiB`,
   `REQUEST_READ_TIMEOUT_S = 30.0`, `_CONNECT_RETRY_DELAYS_S = [0.25,0.5,1.0,2.0]`.
-- **Canonical comparison (AV-1)**: success responses carry non-deterministic `timings.*`,
-  `daemon_pid`, `uptime_s`. Provide a `canonicalize()` that drops a `timings` subtree + a pid/uptime
-  allowlist and compares keys sorted, floats within 1e-9 — used by fixture tests for *responses*.
-  *Requests*, error responses, and the CAS hashes are byte/structurally exact.
+- **Canonical comparison (AV-1)**: operation responses use the `OperationEnvelope`
+  shape and are compared with keys sorted. *Requests* and the CAS hashes are
+  byte/structurally exact.
 
 ---
 

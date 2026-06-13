@@ -11,7 +11,7 @@ use serde_json::{json, Value};
 use sha2::Digest as _;
 
 use crate::protocol::{
-    encode_request_with_metadata, encode_request_with_trace_metadata, response_classification,
+    encode_request_with_metadata, encode_request_with_trace_metadata, response_is_accepted,
     response_status, take_trace_sidecar_checked, ClientError, ProtocolClient, TraceWireContext,
     TraceWireLinkHint, DEFAULT_LAYER_STACK_ROOT, HEARTBEAT_OP, READY_OP,
 };
@@ -210,17 +210,17 @@ impl SandboxHost {
         args: &Value,
     ) -> Option<Result<Value, ForwardError>> {
         let record = self.registry.get(sandbox_id)?;
-        Some(forward_request(
-            &record,
-            &self.config,
-            &self.trace_store,
-            &self.trace_drainer,
-            ForwardTraceContext::new(invocation_id),
+        Some(forward_request(ForwardRequestInput {
+            record: record.as_ref(),
+            config: &self.config,
+            trace_store: &self.trace_store,
+            trace_drainer: &self.trace_drainer,
+            trace_context: ForwardTraceContext::new(invocation_id),
             mutates_state,
             op,
             invocation_id,
             args,
-        ))
+        }))
     }
 
     pub fn forward_with_trace(
@@ -233,17 +233,17 @@ impl SandboxHost {
         trace: ForwardTraceContext,
     ) -> Option<Result<Value, ForwardError>> {
         let record = self.registry.get(sandbox_id)?;
-        Some(forward_request(
-            &record,
-            &self.config,
-            &self.trace_store,
-            &self.trace_drainer,
-            trace,
+        Some(forward_request(ForwardRequestInput {
+            record: record.as_ref(),
+            config: &self.config,
+            trace_store: &self.trace_store,
+            trace_drainer: &self.trace_drainer,
+            trace_context: trace,
             mutates_state,
             op,
             invocation_id,
             args,
-        ))
+        }))
     }
 
     pub fn record_trace_event(
@@ -279,7 +279,7 @@ impl SandboxHost {
             "status-probe",
             &json!({"layer_stack_root": DEFAULT_LAYER_STACK_ROOT}),
         ) {
-            Ok(resp) if response_classification(&resp).success => resp,
+            Ok(resp) if response_is_accepted(&resp) => resp,
             Ok(resp) => json!({"ready": false, "error": resp}),
             Err(err) => json!({"ready": false, "error": err.to_string()}),
         }
@@ -470,17 +470,30 @@ fn resolve_endpoint(record: &SandboxRecord) -> Result<SocketAddr> {
     }
 }
 
-fn forward_request(
-    record: &SandboxRecord,
-    config: &HostConfig,
-    trace_store: &Arc<TraceStore>,
-    trace_drainer: &TraceExportDrainer,
+struct ForwardRequestInput<'a> {
+    record: &'a SandboxRecord,
+    config: &'a HostConfig,
+    trace_store: &'a Arc<TraceStore>,
+    trace_drainer: &'a TraceExportDrainer,
     trace_context: ForwardTraceContext,
     mutates_state: bool,
-    op: &str,
-    invocation_id: &str,
-    args: &Value,
-) -> Result<Value, ForwardError> {
+    op: &'a str,
+    invocation_id: &'a str,
+    args: &'a Value,
+}
+
+fn forward_request(input: ForwardRequestInput<'_>) -> Result<Value, ForwardError> {
+    let ForwardRequestInput {
+        record,
+        config,
+        trace_store,
+        trace_drainer,
+        trace_context,
+        mutates_state,
+        op,
+        invocation_id,
+        args,
+    } = input;
     let trace = TraceWireContext {
         trace_id: trace_context.trace_id.to_string(),
         request_id: trace_context.request_id.to_string(),
@@ -768,7 +781,7 @@ fn restore_if_unreachable(attempt: &ForwardAttempt<'_>) {
         line.push(b'\n');
         client.request_raw(&line).ok()
     });
-    if probe.is_some_and(|resp| response_classification(&resp).success) {
+    if probe.is_some_and(|resp| response_is_accepted(&resp)) {
         return;
     }
     let _ = respawn_and_gate_traced(attempt);

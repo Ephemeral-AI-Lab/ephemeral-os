@@ -9,6 +9,7 @@ import type {
   BackgroundTaskCompletionContext,
   BackgroundTaskLifecycleEvent,
   BackgroundTaskOutcome,
+  BackgroundTaskTag,
 } from "../../src/background/background-task.js";
 
 interface Fixture {
@@ -41,12 +42,16 @@ interface ScriptedTask {
   finish: (outcome: BackgroundTaskOutcome) => void;
   fail: (error: Error) => void;
   cancelled: number;
+  cancelReason: string | undefined;
   completions: { outcome: BackgroundTaskOutcome; ctx: BackgroundTaskCompletionContext }[];
 }
+
+let nextTagId = 0;
 
 function scriptedTask(
   init: {
     silent?: boolean;
+    tag?: BackgroundTaskTag;
     onCompletion?: (
       outcome: BackgroundTaskOutcome,
       ctx: BackgroundTaskCompletionContext,
@@ -63,13 +68,15 @@ function scriptedTask(
     finish,
     fail,
     cancelled: 0,
+    cancelReason: undefined as string | undefined,
     completions: [] as ScriptedTask["completions"],
   };
   const base = {
-    toolName: "exec_command",
+    tag: init.tag ?? { type: "exec_command", id: `task-${String((nextTagId += 1))}` },
     title: "scripted task",
-    cancel: () => {
+    cancel: (reason?: string) => {
       record.cancelled += 1;
+      record.cancelReason = reason;
     },
     done,
   };
@@ -97,7 +104,7 @@ describe("RunBackgroundTaskSupervisor", () => {
     const { taskId } = supervisor.register(scripted.task);
 
     expect(supervisor.list(), "registered task is listed").toEqual([
-      expect.objectContaining({ taskId, toolName: "exec_command", title: "scripted task" }),
+      expect.objectContaining({ taskId, tag: scripted.task.tag, title: "scripted task" }),
     ]);
     expect(events[0]).toMatchObject({
       type: "task_registered",
@@ -114,7 +121,7 @@ describe("RunBackgroundTaskSupervisor", () => {
     expect(events[1]).toEqual({
       type: "task_settled",
       taskId,
-      toolName: "exec_command",
+      tag: scripted.task.tag,
       title: "scripted task",
       outcome: { status: "success", outcome: "done" },
     });
@@ -182,8 +189,8 @@ describe("RunBackgroundTaskSupervisor", () => {
   it("cancel() transitions a running task, runs teardown, and completes as cancelled", async () => {
     const { supervisor } = fixture();
     const scripted = scriptedTask();
-    const { taskId } = supervisor.register(scripted.task);
-    expect(await supervisor.cancel(taskId)).toBe(true);
+    supervisor.register(scripted.task);
+    expect(await supervisor.cancel(scripted.task.tag)).toBe(true);
     expect(scripted.cancelled, "task.cancel() ran").toBe(1);
     expect(scripted.completions[0].outcome).toEqual({
       status: "cancelled",
@@ -198,11 +205,42 @@ describe("RunBackgroundTaskSupervisor", () => {
   it("cancel() returns false for unknown and already-completed tasks", async () => {
     const { supervisor } = fixture();
     const scripted = scriptedTask();
-    const { taskId } = supervisor.register(scripted.task);
+    supervisor.register(scripted.task);
     scripted.finish({ status: "success", outcome: "done" });
     await settled();
-    expect(await supervisor.cancel(taskId), "completed task is not found").toBe(false);
+    expect(await supervisor.cancel(scripted.task.tag), "completed task is not found").toBe(
+      false,
+    );
     expect(scripted.completions, "no second completion").toHaveLength(1);
+  });
+
+  it("cancel(tag, reason) forwards the reason to teardown and the cancelled outcome", async () => {
+    const { supervisor } = fixture();
+    const scripted = scriptedTask();
+    supervisor.register(scripted.task);
+    expect(await supervisor.cancel(scripted.task.tag, "host stopped it")).toBe(true);
+    expect(scripted.cancelReason, "reason reaches task.cancel").toBe("host stopped it");
+    expect(scripted.completions[0].outcome).toEqual({
+      status: "cancelled",
+      outcome: "host stopped it",
+    });
+  });
+
+  it("rejects a duplicate active tag and frees it once the first task settles", async () => {
+    const { supervisor } = fixture();
+    const tag = { type: "exec_command", id: "shared" };
+    const first = scriptedTask({ tag });
+    supervisor.register(first.task);
+    expect(
+      () => supervisor.register(scriptedTask({ tag }).task),
+      "a live tag cannot be reused",
+    ).toThrow();
+    first.finish({ status: "success", outcome: "done" });
+    await settled();
+    expect(
+      () => supervisor.register(scriptedTask({ tag }).task),
+      "the settled tag is reusable",
+    ).not.toThrow();
   });
 
   it("disposeAll cancels survivors, runs handlers with the reason, and empties the registry", async () => {
@@ -214,6 +252,7 @@ describe("RunBackgroundTaskSupervisor", () => {
     await supervisor.disposeAll("run finished");
     expect(first.cancelled).toBe(1);
     expect(second.cancelled).toBe(1);
+    expect(first.cancelReason, "disposal reason reaches teardown").toBe("run finished");
     expect(first.completions[0].outcome).toEqual({
       status: "cancelled",
       outcome: "run finished",

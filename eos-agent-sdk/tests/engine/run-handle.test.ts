@@ -87,7 +87,7 @@ describe("RunHandle", () => {
     handle.emit({
       type: "task_settled",
       taskId: "task-1" as never,
-      toolName: "exec",
+      tag: { type: "exec", id: "1" },
       title: "late",
       outcome: { status: "cancelled", outcome: "run finished" },
     });

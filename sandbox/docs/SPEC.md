@@ -285,9 +285,9 @@ sandbox/
 
 1. `eosd dump-ops` output must equal the committed
    `crates/eos-operation/ops.json`.
-2. Daemon conformance: decodes request fixtures byte-exactly; error responses
-   match fixture shapes after the documented canonicalization (drop `timings`,
-   `daemon_pid`, `uptime_s`).
+2. Daemon conformance: decodes request fixtures byte-exactly; operation
+   responses, including errors, match fixture shapes after documented
+   canonicalization.
 3. Host conformance: `eos-sandbox-host` encodes requests that reproduce the
    request fixtures; `eos-sandbox-gateway` refuses non-public ops; router covers every
    catalog entry.

@@ -20,7 +20,7 @@ fn setup_readiness_and_metrics_are_protocol_visible() -> Result<()> {
     );
     assert_eq!(ready_meta.op, catalog::SANDBOX_RUNTIME_READY);
     let ready = envelope_result(&ready_wire)?;
-    assert!(as_bool(&ready, "ready")?);
+    assert!(as_bool(ready, "ready")?);
 
     let heartbeat_wire = lease.call(
         catalog::SANDBOX_CALL_HEARTBEAT,
@@ -31,7 +31,7 @@ fn setup_readiness_and_metrics_are_protocol_visible() -> Result<()> {
         "heartbeat uses ok envelope: {heartbeat_wire}"
     );
     let heartbeat = envelope_result(&heartbeat_wire)?;
-    assert!(as_bool(&heartbeat, "success")?);
+    assert!(as_bool(heartbeat, "success")?);
 
     let binding_wire = lease.call(catalog::SANDBOX_CHECKPOINT_BINDING, json!({}))?;
     assert_eq!(
@@ -50,8 +50,8 @@ fn setup_readiness_and_metrics_are_protocol_visible() -> Result<()> {
         "layer metrics uses ok envelope: {metrics_wire}"
     );
     let metrics = envelope_result(&metrics_wire)?;
-    assert!(as_bool(&metrics, "workspace_bound")?);
-    assert_eq!(as_i64(&metrics, "active_leases")?, 0);
+    assert!(as_bool(metrics, "workspace_bound")?);
+    assert_eq!(as_i64(metrics, "active_leases")?, 0);
 
     let ensure_wire = lease.call(
         catalog::SANDBOX_CHECKPOINT_ENSURE_BASE,
@@ -62,7 +62,7 @@ fn setup_readiness_and_metrics_are_protocol_visible() -> Result<()> {
         "ensure_base uses ok envelope: {ensure_wire}"
     );
     let ensure = envelope_result(&ensure_wire)?;
-    assert!(as_bool(&ensure, "success")?);
+    assert!(as_bool(ensure, "success")?);
     let ensured = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert_eq!(
         as_i64(&ensured, "manifest_version")?,
@@ -147,7 +147,7 @@ fn commit_to_workspace_survives_protocol_rebuild() -> Result<()> {
         "commit_to_workspace uses ok envelope: {commit_wire}"
     );
     let commit = envelope_result(&commit_wire)?;
-    assert!(as_bool(&commit, "success")?);
+    assert!(as_bool(commit, "success")?);
 
     let rebuilt_wire = lease.call(
         catalog::SANDBOX_CHECKPOINT_BUILD_BASE,
@@ -158,7 +158,7 @@ fn commit_to_workspace_survives_protocol_rebuild() -> Result<()> {
         "build_base uses ok envelope: {rebuilt_wire}"
     );
     let rebuilt = envelope_result(&rebuilt_wire)?;
-    assert!(as_bool(&rebuilt, "success")?);
+    assert!(as_bool(rebuilt, "success")?);
 
     let read = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": path}))?;
     assert_eq!(as_str(&read, "content")?, "committed through protocol\n");

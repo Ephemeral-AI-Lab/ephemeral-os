@@ -1,6 +1,5 @@
-//! Daemon conformance (SPEC §9.2): wire-message fixtures decode byte-stably
-//! for requests/errors and canonical-equal (drop timings/daemon_pid/uptime_s)
-//! for responses. Fixtures are immutable ground truth from the live runtime
+//! Daemon conformance (SPEC §9.2): request fixtures decode byte-stably and
+//! response fixtures decode canonical-equal. Fixtures are immutable ground truth from the live runtime
 //! (`json.dumps(separators=(",",":")) + "\n"`).
 
 use eos_daemon::wire::message::{decode, encode, WireMessage};
@@ -22,23 +21,21 @@ macro_rules! fixture {
     };
 }
 
-/// Requests and error responses are byte-identity: decode -> encode == original.
+/// Requests are byte-identity: decode -> encode == original.
 #[test]
-fn requests_and_errors_byte_stable() -> TestResult {
+fn requests_byte_stable() -> TestResult {
     let raws: &[&[u8]] = &[
         fixture!("read_file_request.json"),
         fixture!("heartbeat_request.json"),
         fixture!("readiness_request.json"),
-        fixture!("error_unknown_op.json"),
-        fixture!("error_request_too_large.json"),
     ];
     for raw in raws {
         let env = decode(raw)?;
         match &env {
-            WireMessage::Request(_) | WireMessage::Error(_) => {}
+            WireMessage::Request(_) => {}
             WireMessage::Response(_) => {
                 return Err(std::io::Error::other(format!(
-                    "expected request/error, got response: {env:?}"
+                    "expected request, got response: {env:?}"
                 ))
                 .into());
             }
@@ -54,13 +51,15 @@ fn requests_and_errors_byte_stable() -> TestResult {
     Ok(())
 }
 
-/// Responses are canonical-equal (the `timings`/pid/uptime allowlist is dropped).
+/// Responses are canonical-equal.
 #[test]
 fn responses_canonical_stable() -> TestResult {
     let raws: &[&[u8]] = &[
         fixture!("read_file_response.json"),
         fixture!("heartbeat_response.json"),
         fixture!("readiness_response.json"),
+        fixture!("error_unknown_op.json"),
+        fixture!("error_request_too_large.json"),
     ];
     for raw in raws {
         let env = decode(raw)?;
@@ -84,13 +83,6 @@ fn responses_canonical_stable() -> TestResult {
             }
         };
         assert_eq!(canonicalize(&value), canonicalize(&value2));
-
-        // And the canonical form drops timings entirely.
-        let canon = canonicalize(&value);
-        assert!(
-            canon.get("timings").is_none(),
-            "timings should be dropped by canonicalize"
-        );
     }
     Ok(())
 }

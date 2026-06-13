@@ -24,7 +24,7 @@
 <section class="summary">
   <div><b>8</b><span>modules</span></div>
   <div><b>46</b><span>items</span></div>
-  <div><b>77</b><span>fields</span></div>
+  <div><b>78</b><span>fields</span></div>
   <div><b>19</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -98,7 +98,7 @@
     <h3>encode</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#method-encode-54">encode</a> (message : &amp; <a class="symbol-link" href="eos-plugin--src-wire-rs.html#item-enum-Message-41">Message</a>) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; Vec &lt; u8 &gt; , <a class="symbol-link" href="eos-plugin--src-wire-rs.html#item-enum-WireError-17">WireError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#method-encode-57">encode</a> (message : &amp; <a class="symbol-link" href="eos-plugin--src-wire-rs.html#item-enum-Message-41">Message</a>) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; Vec &lt; u8 &gt; , <a class="symbol-link" href="eos-plugin--src-wire-rs.html#item-enum-WireError-17">WireError</a> &gt;</code>
   <p class="docstring">Serialize a message as compact JSON plus a single trailing `\n`.<br># Errors<br>Returns [`WireError::BadJson`] when serde cannot serialize the message.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -107,7 +107,7 @@
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">/// Returns [`WireError::BadJson`] when serde cannot serialize the message.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-ppc-rs.html#method-encode-54">encode</a>(message: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-wire-rs.html#item-enum-Message-41">Message</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-wire-rs.html#item-enum-WireError-17">WireError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-ppc-rs.html#method-encode-57">encode</a>(message: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-wire-rs.html#item-enum-Message-41">Message</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-wire-rs.html#item-enum-WireError-17">WireError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> bytes = <span class="rs-kw">match</span> message {
         <a class="symbol-link rs-type" href="eos-plugin--src-wire-rs.html#item-enum-Message-41">Message</a>::<span class="rs-type">Request</span>(request) =&gt; serde_json::to_vec(request)?,
         <a class="symbol-link rs-type" href="eos-plugin--src-wire-rs.html#item-enum-Message-41">Message</a>::<span class="rs-type">Other</span>(value) =&gt; serde_json::to_vec(value)?,
@@ -125,7 +125,7 @@
     <h3>decode</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#method-decode-67">decode</a> (bytes : &amp; [u8]) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; <a class="symbol-link" href="eos-plugin--src-wire-rs.html#item-enum-Message-41">Message</a> , <a class="symbol-link" href="eos-plugin--src-wire-rs.html#item-enum-WireError-17">WireError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#method-decode-70">decode</a> (bytes : &amp; [u8]) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; <a class="symbol-link" href="eos-plugin--src-wire-rs.html#item-enum-Message-41">Message</a> , <a class="symbol-link" href="eos-plugin--src-wire-rs.html#item-enum-WireError-17">WireError</a> &gt;</code>
   <p class="docstring">Decode one newline-delimited message; a trailing `\n` is tolerated.<br># Errors<br>Returns [`WireError::BadJson`] for invalid JSON and<br>[`WireError::NotAnObject`] when the value is not a JSON object.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -135,7 +135,7 @@
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">/// Returns [`WireError::BadJson`] for invalid JSON and</span>
 <span class="rs-comment">/// [`WireError::NotAnObject`] when the value is not a JSON object.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-ppc-rs.html#method-decode-67">decode</a>(bytes: &amp;[u8]) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-wire-rs.html#item-enum-Message-41">Message</a>, <a class="symbol-link rs-type" href="eos-plugin--src-wire-rs.html#item-enum-WireError-17">WireError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-ppc-rs.html#method-decode-70">decode</a>(bytes: &amp;[u8]) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-wire-rs.html#item-enum-Message-41">Message</a>, <a class="symbol-link rs-type" href="eos-plugin--src-wire-rs.html#item-enum-WireError-17">WireError</a>&gt; {
     <span class="rs-kw">let</span> value: <span class="rs-type">Value</span> = serde_json::from_slice(bytes)?;
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(object) = value.as_object() <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin--src-wire-rs.html#item-enum-WireError-17">WireError</a>::<span class="rs-type">NotAnObject</span>);
@@ -212,7 +212,7 @@
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">/// Returns [`WireError::BadJson`] when serde cannot serialize the message.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-ppc-rs.html#method-encode-54">encode</a>(message: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-wire-rs.html#item-enum-Message-41">Message</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-wire-rs.html#item-enum-WireError-17">WireError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-ppc-rs.html#method-encode-57">encode</a>(message: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-wire-rs.html#item-enum-Message-41">Message</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-wire-rs.html#item-enum-WireError-17">WireError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> bytes = <span class="rs-kw">match</span> message {
         <a class="symbol-link rs-type" href="eos-plugin--src-wire-rs.html#item-enum-Message-41">Message</a>::<span class="rs-type">Request</span>(request) =&gt; serde_json::to_vec(request)?,
         <a class="symbol-link rs-type" href="eos-plugin--src-wire-rs.html#item-enum-Message-41">Message</a>::<span class="rs-type">Other</span>(value) =&gt; serde_json::to_vec(value)?,
@@ -226,7 +226,7 @@
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">/// Returns [`WireError::BadJson`] for invalid JSON and</span>
 <span class="rs-comment">/// [`WireError::NotAnObject`] when the value is not a JSON object.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-ppc-rs.html#method-decode-67">decode</a>(bytes: &amp;[u8]) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-wire-rs.html#item-enum-Message-41">Message</a>, <a class="symbol-link rs-type" href="eos-plugin--src-wire-rs.html#item-enum-WireError-17">WireError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-ppc-rs.html#method-decode-70">decode</a>(bytes: &amp;[u8]) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-wire-rs.html#item-enum-Message-41">Message</a>, <a class="symbol-link rs-type" href="eos-plugin--src-wire-rs.html#item-enum-WireError-17">WireError</a>&gt; {
     <span class="rs-kw">let</span> value: <span class="rs-type">Value</span> = serde_json::from_slice(bytes)?;
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(object) = value.as_object() <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin--src-wire-rs.html#item-enum-WireError-17">WireError</a>::<span class="rs-type">NotAnObject</span>);

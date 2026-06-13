@@ -21,7 +21,7 @@ pub(crate) struct PreparedCommand {
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct CommandPrepareError {
-    pub(crate) error: WorkspaceApiError,
+    pub(crate) error: Box<WorkspaceApiError>,
     pub(crate) trace_events: Vec<CommandTraceEvent>,
 }
 
@@ -160,7 +160,10 @@ fn prepare_artifact_error(
     error: impl std::fmt::Display,
 ) -> CommandPrepareError {
     CommandPrepareError {
-        error: WorkspaceApiError::new("command_prepare_failed", error.to_string()),
+        error: Box::new(WorkspaceApiError::new(
+            "command_prepare_failed",
+            error.to_string(),
+        )),
         trace_events: vec![CommandTraceEvent::artifact_failed(artifact, path, error)],
     }
 }

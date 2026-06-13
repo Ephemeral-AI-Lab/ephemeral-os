@@ -2,8 +2,8 @@
 //!
 //! Invariant: one compact JSON object per message + a single trailing `\n`
 //! (`json.dumps(obj, separators=(",",":")) + "\n"`). [`encode`]/[`decode`] are
-//! byte-stable for requests and error responses; responses are heterogeneous
-//! `Value`s compared at the canonical bar (see [`super::canonical`]).
+//! byte-stable for requests; responses are heterogeneous `Value`s compared at
+//! the canonical bar (see [`super::canonical`]).
 //!
 //! The protocol-version field `_eos_daemon_protocol_version` lives INSIDE `args`
 //! and the daemon NEVER reads it (an inert versioning hook). We reproduce its
@@ -54,27 +54,6 @@ pub struct TraceLinkHint {
     pub value: String,
 }
 
-/// Daemon error response (`success:false`). `warnings`/`timings` are always
-/// `[]`/`{}` at the builder.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ErrorResponse {
-    pub success: bool,
-    #[serde(default)]
-    pub warnings: Vec<Value>,
-    #[serde(default)]
-    pub timings: serde_json::Map<String, Value>,
-    pub error: ErrorBody,
-}
-
-/// The `error` body of an [`ErrorResponse`].
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ErrorBody {
-    pub kind: ErrorKind,
-    pub message: String,
-    #[serde(default)]
-    pub details: Value,
-}
-
 /// Verified daemon error `kind` values. Serialized `snake_case` on the wire.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -100,16 +79,13 @@ pub enum ErrorKind {
     LifecycleInProgress,
 }
 
-/// A framed wire message: a request, an error response, or any response
-/// `Value`. Untagged: a request has `op`; an error has `success:false` + `error`;
-/// any other object is a response.
+/// A framed wire message: a request or any response `Value`.
+/// Untagged: a request has `op`; any other object is a response envelope.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum WireMessage {
     /// Host -> daemon request.
     Request(Request),
-    /// Daemon -> host error response.
-    Error(ErrorResponse),
     /// Daemon -> host response (heterogeneous; compared canonically).
     Response(Value),
 }
@@ -147,7 +123,7 @@ pub fn decode(bytes: &[u8]) -> Result<WireMessage, ProtocolError> {
 /// # Errors
 ///
 /// Returns [`ProtocolError::NotAnObject`] when `value` is not a JSON object, or
-/// [`ProtocolError::BadJson`] when a request/error response fails to deserialize.
+/// [`ProtocolError::BadJson`] when a request fails to deserialize.
 pub fn decode_value(value: Value) -> Result<WireMessage, ProtocolError> {
     // Disambiguate so a request never deserializes as a bare `Response(Value)`.
     let Some(obj) = value.as_object() else {
@@ -156,10 +132,6 @@ pub fn decode_value(value: Value) -> Result<WireMessage, ProtocolError> {
     if obj.contains_key("op") {
         let req: Request = serde_json::from_value(value)?;
         return Ok(WireMessage::Request(req));
-    }
-    if obj.get("success") == Some(&Value::Bool(false)) && obj.contains_key("error") {
-        let err: ErrorResponse = serde_json::from_value(value)?;
-        return Ok(WireMessage::Error(err));
     }
     Ok(WireMessage::Response(value))
 }

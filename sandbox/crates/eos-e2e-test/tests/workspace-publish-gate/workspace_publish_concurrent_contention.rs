@@ -169,8 +169,7 @@ fn concurrent_disjoint_anchor_edits_stay_atomic_and_coherent() -> Result<()> {
         assert!(
             as_bool(result, "success").unwrap_or(false)
                 || result.get("conflict").is_some()
-                || !conflict_reason(result).is_empty()
-                || result.get("error").is_some(),
+                || !conflict_reason(result).is_empty(),
             "every concurrent edit should apply or surface a structured conflict: {response}"
         );
     }
@@ -272,8 +271,7 @@ fn concurrent_same_anchor_edits_resolve_to_one_winner() -> Result<()> {
         assert!(
             as_bool(result, "success").unwrap_or(false)
                 || result.get("conflict").is_some()
-                || !conflict_reason(result).is_empty()
-                || result.get("error").is_some(),
+                || !conflict_reason(result).is_empty(),
             "every same-anchor loser should surface a structured conflict: {response}"
         );
     }

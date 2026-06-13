@@ -583,7 +583,7 @@ fn ensure_error_trace_events_include_setup_finished_failure_report() {
     let sink = crate::trace::RequestTraceEventSink::default();
     let context = crate::DispatchContext::empty().with_trace_events(sink.clone());
     let err = PluginRuntimeError::Ppc(PpcError::SetupFailed {
-        report: PluginSetupReport {
+        report: Box::new(PluginSetupReport {
             plugin: "generic".to_owned(),
             digest: "digest-a".to_owned(),
             ran: true,
@@ -591,7 +591,7 @@ fn ensure_error_trace_events_include_setup_finished_failure_report() {
             exit_code: Some(7),
             output_tail: Some("boom\n".to_owned()),
             spawn_error: None,
-        },
+        }),
         message: "plugin setup failed with status Some(7): boom".to_owned(),
     });
 

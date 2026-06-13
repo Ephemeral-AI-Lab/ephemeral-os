@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>3</b><span>modules</span></div>
-  <div><b>26</b><span>items</span></div>
+  <div><b>28</b><span>items</span></div>
   <div><b>14</b><span>fields</span></div>
   <div><b>4</b><span>methods</span></div>
 </section>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eosd.html"><span>daemon.rs</span><small>2/9</small></a></li><li><a class="file-link" href="eosd--src-main-rs.html"><span>main.rs</span><small>0/3</small></a></li><li><a class="file-link active" href="eosd--src-runner-rs.html"><span>runner.rs</span><small>3/6</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eosd.html"><span>daemon.rs</span><small>2/11</small></a></li><li><a class="file-link" href="eosd--src-main-rs.html"><span>main.rs</span><small>0/3</small></a></li><li><a class="file-link active" href="eosd--src-runner-rs.html"><span>runner.rs</span><small>3/6</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="runner crates/eosd/src/runner.rs run ok_result load_runner_config RunnerCliMode RunnerCliConfig impl RunnerCliConfig remount_overlay_from_request read_payload OutputTarget impl OutputTarget write_payload">
   <div class="module-head">
     <div>
@@ -64,9 +64,9 @@
   </div>
   <code class="signature">struct <a class="symbol-link" href="eosd--src-runner-rs.html#item-struct-RunnerCliConfig-70">RunnerCliConfig</a></code>
   <div class="tags"><span>config</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>request_path</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>private</td><td>output_path</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>private</td><td>mode</td><td><code><a class="symbol-link" href="eosd--src-runner-rs.html#item-enum-RunnerCliMode-62">RunnerCliMode</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-parse-77"><td>associated-fn</td><td>parse</td><td><code>fn <a class="symbol-link" href="eosd.html#method-parse-101">parse</a> (args : std :: env :: Args) -&gt; Result &lt; Self &gt;</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>request_path</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>private</td><td>output_path</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>private</td><td>mode</td><td><code><a class="symbol-link" href="eosd--src-runner-rs.html#item-enum-RunnerCliMode-62">RunnerCliMode</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-parse-77"><td>associated-fn</td><td>parse</td><td><code>fn <a class="symbol-link" href="eosd.html#method-parse-112">parse</a> (args : std :: env :: Args) -&gt; Result &lt; Self &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eosd.html#method-parse-101">parse</a>(args: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eosd.html#method-parse-112">parse</a>(args: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> request_path = <span class="rs-type">None</span>;
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> output_path = <span class="rs-type">None</span>;
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> mode = <span class="rs-type">None</span>;
@@ -174,7 +174,7 @@
     <h3>run</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eosd.html#item-fn-run-15">run</a> (args : std :: env :: Args) -&gt; Result &lt; () &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eosd.html#item-fn-run-16">run</a> (args : std :: env :: Args) -&gt; Result &lt; () &gt;</code>
   <p class="docstring">Execute one tool call inside a namespace (fresh-ns or setns), reading the<br>resolved `RunRequest` payload and emitting the `RunResult` JSON.<br>This is a thin call into `eos-namespace`'s runner module: read the request<br>payload from stdin or `--request &lt;path&gt;`, load the runner config, dispatch<br>the selected [`RunnerCliMode`], and write the compact `RunResult` JSON to<br>stdout or `--output &lt;path&gt;`.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -186,8 +186,8 @@
 <span class="rs-comment">/// payload from stdin or `--request &lt;path&gt;`, load the runner config, dispatch</span>
 <span class="rs-comment">/// the selected [`RunnerCliMode`], and write the compact `RunResult` JSON to</span>
 <span class="rs-comment">/// stdout or `--output &lt;path&gt;`.</span>
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eosd.html#item-fn-run-15">run</a>(args: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
-    <span class="rs-kw">let</span> config = <a class="symbol-link rs-type" href="eosd--src-runner-rs.html#item-struct-RunnerCliConfig-70">RunnerCliConfig</a>::<a class="symbol-link rs-fn" href="eosd.html#method-parse-101">parse</a>(args)?;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eosd.html#item-fn-run-16">run</a>(args: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> config = <a class="symbol-link rs-type" href="eosd--src-runner-rs.html#item-struct-RunnerCliConfig-70">RunnerCliConfig</a>::<a class="symbol-link rs-fn" href="eosd.html#method-parse-112">parse</a>(args)?;
     <span class="rs-kw">let</span> request_json = <a class="symbol-link rs-fn" href="eosd--src-runner-rs.html#item-fn-read-payload-161">read_payload</a>(config.request_path.as_ref())?;
     <span class="rs-kw">let</span> request: eos_namespace::protocol::<span class="rs-type">RunRequest</span> =
         serde_json::from_str(&amp;request_json).context(&quot;failed to decode ns-runner request <span class="rs-type">JSON</span>&quot;)?;
@@ -209,7 +209,7 @@
                 .context(&quot;ns-runner configure dns failed&quot;)?,
         },
         <a class="symbol-link rs-type" href="eosd--src-runner-rs.html#item-enum-RunnerCliMode-62">RunnerCliMode</a>::<span class="rs-type">Run</span> =&gt; {
-            eos_namespace::runner::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-15">run</a>(&amp;request, &amp;runner_config).context(&quot;ns-runner failed&quot;)?
+            eos_namespace::runner::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-16">run</a>(&amp;request, &amp;runner_config).context(&quot;ns-runner failed&quot;)?
         }
     };
     <span class="rs-kw">let</span> output = serde_json::to_vec(&amp;result).context(&quot;failed to encode ns-runner result <span class="rs-type">JSON</span>&quot;)?;
@@ -381,8 +381,8 @@
 <span class="rs-comment">/// payload from stdin or `--request &lt;path&gt;`, load the runner config, dispatch</span>
 <span class="rs-comment">/// the selected [`RunnerCliMode`], and write the compact `RunResult` JSON to</span>
 <span class="rs-comment">/// stdout or `--output &lt;path&gt;`.</span>
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eosd.html#item-fn-run-15">run</a>(args: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
-    <span class="rs-kw">let</span> config = <a class="symbol-link rs-type" href="eosd--src-runner-rs.html#item-struct-RunnerCliConfig-70">RunnerCliConfig</a>::<a class="symbol-link rs-fn" href="eosd.html#method-parse-101">parse</a>(args)?;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eosd.html#item-fn-run-16">run</a>(args: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> config = <a class="symbol-link rs-type" href="eosd--src-runner-rs.html#item-struct-RunnerCliConfig-70">RunnerCliConfig</a>::<a class="symbol-link rs-fn" href="eosd.html#method-parse-112">parse</a>(args)?;
     <span class="rs-kw">let</span> request_json = <a class="symbol-link rs-fn" href="eosd--src-runner-rs.html#item-fn-read-payload-161">read_payload</a>(config.request_path.as_ref())?;
     <span class="rs-kw">let</span> request: eos_namespace::protocol::<span class="rs-type">RunRequest</span> =
         serde_json::from_str(&amp;request_json).context(&quot;failed to decode ns-runner request <span class="rs-type">JSON</span>&quot;)?;
@@ -404,7 +404,7 @@
                 .context(&quot;ns-runner configure dns failed&quot;)?,
         },
         <a class="symbol-link rs-type" href="eosd--src-runner-rs.html#item-enum-RunnerCliMode-62">RunnerCliMode</a>::<span class="rs-type">Run</span> =&gt; {
-            eos_namespace::runner::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-15">run</a>(&amp;request, &amp;runner_config).context(&quot;ns-runner failed&quot;)?
+            eos_namespace::runner::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-16">run</a>(&amp;request, &amp;runner_config).context(&quot;ns-runner failed&quot;)?
         }
     };
     <span class="rs-kw">let</span> output = serde_json::to_vec(&amp;result).context(&quot;failed to encode ns-runner result <span class="rs-type">JSON</span>&quot;)?;
@@ -442,7 +442,7 @@
 }
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eosd--src-runner-rs.html#item-struct-RunnerCliConfig-70">RunnerCliConfig</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eosd.html#method-parse-101">parse</a>(args: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eosd.html#method-parse-112">parse</a>(args: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> request_path = <span class="rs-type">None</span>;
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> output_path = <span class="rs-type">None</span>;
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> mode = <span class="rs-type">None</span>;

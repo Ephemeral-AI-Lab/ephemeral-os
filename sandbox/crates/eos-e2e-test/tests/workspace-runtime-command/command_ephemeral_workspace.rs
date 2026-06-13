@@ -144,8 +144,8 @@ fn cancel_kills_whole_session() -> Result<()> {
     assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
     let id = as_str(&exec, "command_id")?.to_owned();
 
-    // Cancel kills the whole command, so its hardened outcome is
-    // success:false; use `call` to read the terminal response, not `call_ok`.
+    // Cancel kills the whole command, so use `call` to read the terminal
+    // envelope instead of forcing the `call_ok` success path.
     let cancelled = unwrap_operation_result(
         lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": &id}))?,
     )?;

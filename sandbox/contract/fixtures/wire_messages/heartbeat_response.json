@@ -1,1 +1,1 @@
-{"success":true,"touched":0}
+{"status":"ok","result":{"success":true,"touched":0},"meta":{"protocol_version":2,"op":"sandbox.call.heartbeat","request_id":"00000000000000000000000000000001","trace":{"trace_id":"","store":"pending_host_ingest","event_count":0,"degraded":false},"workspace_route":{"kind":"none"},"duration_ms":0.0,"modules_touched":[],"steps":[],"resource_summary":{"fields":{}},"warnings":[]}}

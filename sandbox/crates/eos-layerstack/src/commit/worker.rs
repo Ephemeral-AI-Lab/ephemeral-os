@@ -403,10 +403,12 @@ impl CommitTransaction {
                 Ok(committed_changeset_result(
                     combined,
                     validations,
-                    manifest_version_u64_optional(manifest.version),
-                    &active,
-                    active_lease_count,
-                    &manifest,
+                    CommittedManifestContext {
+                        published_manifest_version: manifest_version_u64_optional(manifest.version),
+                        active_manifest: &active,
+                        active_lease_count,
+                        published_manifest: &manifest,
+                    },
                     validate_s,
                     publish_s,
                     auto_squash,
@@ -643,13 +645,17 @@ fn auto_squash_event(name: &'static str, details: serde_json::Value) -> OccTrace
     OccTraceEvent::new("layer_stack", name, details)
 }
 
+struct CommittedManifestContext<'a> {
+    published_manifest_version: Option<u64>,
+    active_manifest: &'a Manifest,
+    active_lease_count: usize,
+    published_manifest: &'a Manifest,
+}
+
 fn committed_changeset_result(
     combined: &PreparedChangeset,
     validations: Vec<FileResult>,
-    published_manifest_version: Option<u64>,
-    active_manifest: &Manifest,
-    active_lease_count: usize,
-    published_manifest: &Manifest,
+    manifest_context: CommittedManifestContext<'_>,
     validate_s: f64,
     publish_s: f64,
     auto_squash: AutoSquashTrace,
@@ -667,10 +673,10 @@ fn committed_changeset_result(
             "layer_stack",
             "manifest_validated",
             json!({
-                "manifest_version": active_manifest.version,
-                "manifest_depth": active_manifest.depth(),
-                "manifest_path_count": active_manifest.layers.len(),
-                "active_lease_count": active_lease_count,
+                "manifest_version": manifest_context.active_manifest.version,
+                "manifest_depth": manifest_context.active_manifest.depth(),
+                "manifest_path_count": manifest_context.active_manifest.layers.len(),
+                "active_lease_count": manifest_context.active_lease_count,
             }),
         ),
         OccTraceEvent::new(
@@ -678,10 +684,14 @@ fn committed_changeset_result(
             "publish_layer_finished",
             json!({
                 "success": true,
-                "manifest_version_before": active_manifest.version,
-                "manifest_version_after": published_manifest.version,
-                "published_manifest_version": published_manifest_version,
-                "published_layer_count": published_manifest.layers.len().saturating_sub(active_manifest.layers.len()),
+                "manifest_version_before": manifest_context.active_manifest.version,
+                "manifest_version_after": manifest_context.published_manifest.version,
+                "published_manifest_version": manifest_context.published_manifest_version,
+                "published_layer_count": manifest_context
+                    .published_manifest
+                    .layers
+                    .len()
+                    .saturating_sub(manifest_context.active_manifest.layers.len()),
                 "duration_s": publish_s,
             }),
         ),
@@ -701,7 +711,7 @@ fn committed_changeset_result(
                 }
             })
             .collect(),
-        published_manifest_version,
+        published_manifest_version: manifest_context.published_manifest_version,
         timings,
         events,
     }

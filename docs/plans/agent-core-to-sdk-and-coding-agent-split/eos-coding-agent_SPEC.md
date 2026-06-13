@@ -54,7 +54,7 @@ are supersessions, not drift; the §14 hygiene scans are this split's completion
 | Phase 05.3 surface | This split | Reason |
 | --- | --- | --- |
 | Hand-authored `delegate_pursuit` tool | Provider-authored `delegate_pursuit`, named off the configured workflow name; cancellation routes through `cancel_background_task` | Per-workflow tools are the design: the provider authors them as a plain `ToolDefinition[]`, the factory injects them only for profiles that list the workflow, and the delegate tool wires the run's cancel handle into the SDK background supervisor. Pursuit no longer hand-writes a generic adapter, and no `delegate_workflow` exists. |
-| Background session type `"pursuit"`, `cancel_background_session`, `list_background_sessions` | SDK background task with `toolName: "workflow:pursuit"`; `cancel_background_task`, `list_background_tasks` | SDK background-task rename; no model-facing session typing survives. |
+| Background session type `"pursuit"`, `cancel_background_session`, `list_background_sessions` | SDK background task under a host-chosen `{ type: "pursuit", id: pursuit_<id> }` tag; `cancel_background_task(type, id, reason)`, `list_background_tasks` | The tag is a host-injected addressing handle the supervisor treats as opaque — not a session type with built-in behavior. The old session-type cancel and its "one open pursuit per run" semantics are gone. |
 | `AgentLaunchPort` / `LaunchedAgent` / `LaunchSettlement` | Pursuit consumes SDK `Agent` handles directly through the narrow `PursuitAgents` slice (§11) | SDK decision log: launch seam deleted. |
 | `PursuitAgentSubmissionBinding` | `onSubmit` in `createAgentOutcomeFn` | Single-mutator submission is now SDK terminal-contract mechanism. |
 | Optional diagnostic `leg_goal_mode` on creation input | Dropped; mode derives from payload shape only (§10.1) | Narrower creation contract; one way to say each thing. |
@@ -419,6 +419,16 @@ interface AgentOutcomeFnWithAdvisory<T> {
   advisoryPrompt: string;
 }
 
+/** The single constructor for the host advisory binding. Both the spec helper
+ *  below and the pursuit adapter (§11) go through it, so the `kind` discriminator
+ *  is stamped in exactly one place. */
+export function withAdvisory<T>(
+  outcomeFn: AgentOutcomeFn<T>,
+  advisoryPrompt: string,
+): AgentOutcomeFnWithAdvisory<T> {
+  return { kind: "with_advisory", outcomeFn, advisoryPrompt };
+}
+
 export function createAgentOutcomeFnWithAdvisory<T>(spec: {
   name: string;
   description?: string;
@@ -427,11 +437,7 @@ export function createAgentOutcomeFnWithAdvisory<T>(spec: {
   advisoryPrompt: string;
 }): AgentOutcomeFnWithAdvisory<T> {
   const { advisoryPrompt, ...outcome } = spec;
-  return {
-    kind: "with_advisory",
-    outcomeFn: createAgentOutcomeFn(outcome),
-    advisoryPrompt,
-  };
+  return withAdvisory(createAgentOutcomeFn(outcome), advisoryPrompt);
 }
 
 interface AgentFactory {
@@ -551,10 +557,17 @@ export const listBackgroundTasks = defineTool({
 
 export const cancelBackgroundTask = defineTool({
   name: "cancel_background_task",
-  description: "Cancel one active background task in this run.",
-  input: z.object({ task_id: z.string().min(1) }),
+  description: "Cancel one active background task in this run, addressed by its {type, id} tag.",
+  input: z.object({
+    type: z.string().min(1),
+    id: z.string().min(1),
+    reason: z.string().min(1),
+  }),
   execute: async (input, ctx) => ({
-    output: (await ctx.backgroundTaskSupervisor.cancel(input.task_id))
+    output: (await ctx.backgroundTaskSupervisor.cancel(
+      { type: input.type, id: input.id },
+      input.reason,
+    ))
       ? "cancelled"
       : "not found",
   }),
@@ -564,8 +577,16 @@ export const cancelBackgroundTask = defineTool({
 This split intentionally uses SDK background-task vocabulary. Current Phase 05.3
 implementation evidence still mentions background session type `"pursuit"` because it
 predates the SDK split (§1.1). In this host spec, a workflow's `delegate_<name>` tool
-registers its run as a background task with a `toolName` such as `workflow:pursuit`; no
-model-facing background-session API survives.
+registers its run as a background task under a host-chosen `{ type, id }` tag — for
+pursuit, `{ type: "pursuit", id: pursuit_<id> }` — and the model cancels it with
+`cancel_background_task(type, id, reason)`. No model-facing background-session API
+survives, and cancellation is keyed on the register-time tag, not the supervisor's
+internal task id.
+
+**Dependency:** this requires the SDK `BackgroundTaskSupervisor` contract
+(`eos-agent-sdk_SPEC.md`) to take a `tag: { type, id }` at `register` (unique among
+active tasks), expose it on `list()` rows, pass `reason` to each task's `cancel`
+callback, and resolve `cancel(tag, reason)` by that tag.
 
 ### 7.2 Subagent Tool
 
@@ -598,10 +619,10 @@ export function runSubagent(
         return { output: renderAgentOutcome(await run.outcome()) };
       }
 
-      const { taskId } = ctx.backgroundTaskSupervisor.register({
-        toolName: "run_subagent",
+      ctx.backgroundTaskSupervisor.register({
+        tag: { type: "subagent", id: run.runId },
         title: `${input.agent_name}: ${input.prompt.slice(0, 80)}`,
-        cancel: () => run.interrupt(),
+        cancel: () => run.interrupt(),   // interrupt() carries no reason; the supervisor still records it
         done: run.outcome().then(toBackgroundTaskOutcome),
         onCompletion: (out, { notifier }) => {
           notifier.publish(renderSubagentCompletion(input.agent_name, run.runId, out), {
@@ -610,7 +631,7 @@ export function runSubagent(
         },
       });
 
-      return { output: `subagent started: ${taskId}` };
+      return { output: `subagent started: ${run.runId}` };
     },
   });
 }
@@ -641,8 +662,6 @@ const ADVISOR_AGENT_NAME = "advisor";
 
 const AdvisorVerdict = z.object({
   verdict: z.enum(["pass", "fail"]),
-  tool_name: z.string().min(1),
-  payload: z.object({}).passthrough(),
   reason: z.string().min(1),
 });
 
@@ -763,7 +782,6 @@ interface WorkflowHubInit {
 declare class WorkflowHub {
   /** Fail-fast join of config files and providers (sync). */
   static open(init: WorkflowHubInit): WorkflowHub;
-  workflowNames(): readonly string[];
   forProfile(names: readonly [string, ...string[]]): ProfileWorkflowView;
 }
 
@@ -912,27 +930,28 @@ function delegatePursuit(
     description: DELEGATE_PURSUIT_DESCRIPTION,
     input: CreatePursuitInputSchema,
     execute: async (input, ctx) => {
-      const handle = await service.createPursuit(input, { agents });  // -> { title, cancel, done }
-      const { taskId } = ctx.backgroundTaskSupervisor.register({
-        toolName: `workflow:${name}`,
+      const handle = await service.createPursuit(input, { agents });  // -> { pursuitId, title, cancel, done }
+      ctx.backgroundTaskSupervisor.register({
+        tag: { type: name, id: handle.pursuitId },   // delegate_pursuit -> { type: "pursuit", id: "pursuit_<id>" }
         title: handle.title,
-        cancel: () => handle.cancel(),
+        cancel: (reason) => handle.cancel(reason),
         done: handle.done,
         onCompletion: (out, { notifier }) =>
           notifier.publish(`${name} ${out.status}: ${out.outcome}`, {
-            key: `workflow:${name}:${taskId}`,
+            key: `${name}:${handle.pursuitId}`,
           }),
       });
-      return { output: `pursuit delegated: ${taskId} — ${handle.title}` };
+      return { output: `pursuit delegated: ${handle.pursuitId} — ${handle.title}` };
     },
   });
 }
 ```
 
-Correlation rule: `handle.title` must embed the delegated domain id — for pursuit,
-`pursuit pursuit_<id>: <goal first line>` — so the delegating model can connect task
-rows, completion notifications, and `pursuit_<id>/` context paths. The tool result
-echoes the title for the same reason.
+Correlation rule: the background task's tag id is the delegated domain id (`pursuit_<id>`),
+and `handle.title` embeds it too — `pursuit pursuit_<id>: <goal first line>` — so the
+delegating model connects task rows, completion notifications, `pursuit_<id>/` context
+paths, and `cancel_background_task("pursuit", "pursuit_<id>", …)` through one id it
+already holds. The tool result echoes the id and title for the same reason.
 
 The background task completion message is the single settlement publisher. Pursuit
 authors the outcome text in pursuit vocabulary; the tool adapter publishes it. Because
@@ -1121,10 +1140,10 @@ forwarding to `AgentFactory`; pursuit sees only plain SDK `AgentOutcomeFn` value
 function pursuitAgentsWithAdvisory(agents: AgentFactory): PursuitAgents {
   return {
     create<T>(agentName: string, outcomeFn: AgentOutcomeFn<T>): Agent<T> {
-      return agents.create(agentName, {
-        outcomeFn,
-        advisoryPrompt: pursuitAdvisoryPromptFor(agentOutcomeToolName(outcomeFn)),
-      });
+      return agents.create(
+        agentName,
+        withAdvisory(outcomeFn, pursuitAdvisoryPromptFor(agentOutcomeToolName(outcomeFn))),
+      );
     },
   };
 }
@@ -1329,9 +1348,10 @@ Steps 1-2 are substantially complete on disk; they are listed for the record.
   mutates no pursuit state and consumes no attempt budget; advisor enforcement runs before
   `onSubmit`.
 - Background work uses SDK `BackgroundTaskSupervisor`; host tools are
-  `list_background_tasks` and `cancel_background_task`. Workflow settlement
-  notifications are published exactly once, by the delegate tool's `onCompletion`
-  handler.
+  `list_background_tasks` and `cancel_background_task(type, id, reason)`, which addresses
+  tasks by their register-time `{ type, id }` tag and forwards `reason` to the task's
+  cancel callback. Workflow settlement notifications are published exactly once, by the
+  delegate tool's `onCompletion` handler.
 - The following hygiene checks have no active-source matches outside historical docs or
   explicit migration notes (the legacy planner work-item field `needs` is asserted by
   the planner payload schema tests rather than a repo-wide word grep):

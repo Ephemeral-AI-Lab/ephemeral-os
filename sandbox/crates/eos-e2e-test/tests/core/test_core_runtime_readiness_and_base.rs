@@ -18,7 +18,7 @@ fn runtime_ready_handshake() -> Result<()> {
         "runtime.ready uses ok envelope: {ready_wire}"
     );
     let ready = envelope_result(&ready_wire)?;
-    assert!(as_bool(&ready, "ready")?, "daemon must be ready: {ready}");
+    assert!(as_bool(ready, "ready")?, "daemon must be ready: {ready}");
     assert!(
         ready
             .get("probes")
@@ -42,12 +42,12 @@ fn ensure_base_creates_single_base_layer() -> Result<()> {
     );
     let metrics = envelope_result(&metrics_wire)?;
     assert_eq!(
-        as_i64(&metrics, "manifest_depth")?,
+        as_i64(metrics, "manifest_depth")?,
         1,
         "fresh root should start at the base manifest: {metrics}"
     );
     assert_eq!(
-        as_i64(&metrics, "referenced_layers")?,
+        as_i64(metrics, "referenced_layers")?,
         1,
         "fresh root should reference only the base layer: {metrics}"
     );
@@ -98,14 +98,14 @@ fn ensure_base_idempotent() -> Result<()> {
     );
     let ensure = envelope_result(&ensure_wire)?;
     assert!(
-        !as_bool(&ensure, "created")?,
+        !as_bool(ensure, "created")?,
         "second ensure should not rebuild an existing base: {ensure}"
     );
     let after_wire = lease.call(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     let after = envelope_result(&after_wire)?;
     assert_eq!(
-        as_i64(&after, "manifest_depth")?,
-        as_i64(&before, "manifest_depth")?,
+        as_i64(after, "manifest_depth")?,
+        as_i64(before, "manifest_depth")?,
         "idempotent ensure must preserve depth: before={before} after={after}"
     );
     Ok(())
@@ -131,7 +131,7 @@ fn build_base_reset_rebuilds() -> Result<()> {
     );
     let rebuilt_meta = envelope_meta(&rebuilt_wire)?;
     let rebuilt = envelope_result(&rebuilt_wire)?;
-    assert!(as_bool(&rebuilt, "success")?);
+    assert!(as_bool(rebuilt, "success")?);
     assert!(
         rebuilt_meta
             .steps
@@ -142,7 +142,7 @@ fn build_base_reset_rebuilds() -> Result<()> {
     let metrics_wire = lease.call(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     let metrics = envelope_result(&metrics_wire)?;
     assert_eq!(
-        as_i64(&metrics, "manifest_depth")?,
+        as_i64(metrics, "manifest_depth")?,
         1,
         "reset rebuild should collapse to a fresh base: {metrics}"
     );
@@ -184,7 +184,7 @@ fn heartbeat_inflight_idle_zero() -> Result<()> {
         "heartbeat uses ok envelope: {heartbeat_wire}"
     );
     let heartbeat = envelope_result(&heartbeat_wire)?;
-    assert!(as_bool(&heartbeat, "success")?);
+    assert!(as_bool(heartbeat, "success")?);
     let inflight_wire = lease.call(catalog::SANDBOX_CALL_COUNT, json!({}))?;
     assert_eq!(
         inflight_wire["status"], "ok",
@@ -192,7 +192,7 @@ fn heartbeat_inflight_idle_zero() -> Result<()> {
     );
     let inflight = envelope_result(&inflight_wire)?;
     assert_eq!(
-        as_i64(&inflight, "count")?,
+        as_i64(inflight, "count")?,
         0,
         "idle lease should not have background invocations: {inflight}"
     );

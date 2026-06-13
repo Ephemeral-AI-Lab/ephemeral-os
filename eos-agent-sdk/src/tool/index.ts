@@ -17,6 +17,7 @@ export {
   type ToolCallFacts,
 } from "./hooks.js";
 export {
+  agentOutcomeToolName,
   createAgentOutcomeFn,
   unwrapAgentOutcomeFn,
   type AgentOutcomeFn,

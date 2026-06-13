@@ -302,36 +302,28 @@ impl DaemonServer {
         let read_start = Instant::now();
         let bytes = read_request_line(&mut reader).await;
         let read_duration_us = elapsed_us(read_start);
+        let transport_context = TransportTraceContext {
+            connection_id,
+            is_tcp,
+            read_duration_us,
+            accepted_at_unix_ms,
+            peer_addr,
+            local_addr,
+        };
         let response = match bytes {
-            Ok(bytes) => {
-                self.dispatch_bytes(
-                    bytes,
-                    is_tcp,
-                    read_duration_us,
-                    connection_id,
-                    accepted_at_unix_ms,
-                    peer_addr,
-                    local_addr,
-                )
-                .await
-            }
+            Ok(bytes) => self.dispatch_bytes(bytes, transport_context).await,
             Err(err @ DaemonError::RequestTooLarge { .. }) => {
                 let facts = trace_facts(
-                    connection_id,
-                    is_tcp,
+                    &transport_context,
                     MAX_REQUEST_BYTES.saturating_add(1),
-                    read_duration_us,
-                    self.tcp_auth_required(is_tcp),
+                    self.tcp_auth_required(transport_context.is_tcp),
                     false,
                     None,
-                    accepted_at_unix_ms,
-                    peer_addr,
-                    local_addr,
                 );
                 crate::trace::attach_request_sidecar(
                     crate::dispatcher::error_response(
                         err.wire_kind(),
-                        &format!("daemon request exceeds {MAX_REQUEST_BYTES} byte limit"),
+                        format!("daemon request exceeds {MAX_REQUEST_BYTES} byte limit"),
                         serde_json::json!({"limit": MAX_REQUEST_BYTES}),
                     ),
                     None,
@@ -341,21 +333,16 @@ impl DaemonServer {
             }
             Err(err) => {
                 let facts = trace_facts(
-                    connection_id,
-                    is_tcp,
+                    &transport_context,
                     0,
-                    read_duration_us,
-                    self.tcp_auth_required(is_tcp),
+                    self.tcp_auth_required(transport_context.is_tcp),
                     false,
                     None,
-                    accepted_at_unix_ms,
-                    peer_addr,
-                    local_addr,
                 );
                 crate::trace::attach_request_sidecar(
                     crate::dispatcher::error_response(
                         err.wire_kind(),
-                        &err.to_string(),
+                        err.to_string(),
                         serde_json::json!({}),
                     ),
                     None,
@@ -387,26 +374,16 @@ impl DaemonServer {
     async fn dispatch_bytes(
         &self,
         bytes: Vec<u8>,
-        is_tcp: bool,
-        read_duration_us: u64,
-        connection_id: String,
-        accepted_at_unix_ms: u64,
-        peer_addr: Option<SocketAddr>,
-        local_addr: Option<SocketAddr>,
+        transport_context: TransportTraceContext,
     ) -> serde_json::Value {
         let request_bytes = bytes.len();
-        let auth_required = self.tcp_auth_required(is_tcp);
+        let auth_required = self.tcp_auth_required(transport_context.is_tcp);
         let parse_error_facts = trace_facts(
-            connection_id.clone(),
-            is_tcp,
+            &transport_context,
             request_bytes,
-            read_duration_us,
             auth_required,
             false,
             None,
-            accepted_at_unix_ms,
-            peer_addr,
-            local_addr,
         );
         let value = match serde_json::from_slice::<serde_json::Value>(&bytes) {
             Ok(value) => value,
@@ -414,7 +391,7 @@ impl DaemonServer {
                 return crate::trace::attach_request_sidecar(
                     crate::dispatcher::error_response(
                         ErrorKind::BadJson,
-                        &crate::wire::ProtocolError::from(err).to_string(),
+                        crate::wire::ProtocolError::from(err).to_string(),
                         serde_json::json!({}),
                     ),
                     None,
@@ -427,25 +404,20 @@ impl DaemonServer {
             .get("trace")
             .cloned()
             .and_then(|value| serde_json::from_value::<RequestTraceContext>(value).ok());
-        let value = if is_tcp {
+        let value = if transport_context.is_tcp {
             match self.strip_tcp_auth(value) {
                 Ok(value) => value,
                 Err(err) => {
                     let facts = trace_facts(
-                        connection_id,
-                        is_tcp,
+                        &transport_context,
                         request_bytes,
-                        read_duration_us,
                         auth_required,
                         false,
                         None,
-                        accepted_at_unix_ms,
-                        peer_addr,
-                        local_addr,
                     );
                     let response = crate::dispatcher::error_response(
                         err.wire_kind(),
-                        &err.to_string(),
+                        err.to_string(),
                         serde_json::json!({}),
                     );
                     return crate::trace::attach_request_sidecar(
@@ -464,16 +436,11 @@ impl DaemonServer {
             .and_then(|args| args.get(crate::wire::DAEMON_PROTOCOL_FIELD))
             .and_then(serde_json::Value::as_i64);
         let facts = trace_facts(
-            connection_id,
-            is_tcp,
+            &transport_context,
             request_bytes,
-            read_duration_us,
             auth_required,
             true,
             protocol_version,
-            accepted_at_unix_ms,
-            peer_addr,
-            local_addr,
         );
         match decode_value(value) {
             Ok(WireMessage::Request(request)) => self.dispatch_request(request, trace, facts).await,
@@ -490,7 +457,7 @@ impl DaemonServer {
             Err(err) => crate::trace::attach_request_sidecar(
                 crate::dispatcher::error_response(
                     ErrorKind::BadJson,
-                    &err.to_string(),
+                    err.to_string(),
                     serde_json::json!({}),
                 ),
                 trace.as_ref(),
@@ -543,7 +510,7 @@ impl DaemonServer {
             ),
             Err(err) => crate::dispatcher::error_response(
                 ErrorKind::InternalError,
-                &format!("daemon invocation failed: {err}"),
+                format!("daemon invocation failed: {err}"),
                 serde_json::json!({"op": op}),
             ),
         };
@@ -633,27 +600,35 @@ fn trimmed_string(args: &serde_json::Value, key: &str) -> String {
         .to_owned()
 }
 
-fn trace_facts(
+struct TransportTraceContext {
     connection_id: String,
     is_tcp: bool,
-    request_bytes: usize,
     read_duration_us: u64,
-    auth_required: bool,
-    auth_ok: bool,
-    protocol_version: Option<i64>,
     accepted_at_unix_ms: u64,
     peer_addr: Option<SocketAddr>,
     local_addr: Option<SocketAddr>,
+}
+
+fn trace_facts(
+    transport_context: &TransportTraceContext,
+    request_bytes: usize,
+    auth_required: bool,
+    auth_ok: bool,
+    protocol_version: Option<i64>,
 ) -> crate::trace::RequestTraceFacts {
     crate::trace::RequestTraceFacts {
-        connection_id,
-        accepted_at_unix_ms,
-        listener_kind: if is_tcp { "tcp" } else { "unix" },
-        peer_addr: peer_addr.map(|addr| addr.to_string()),
-        local_addr: local_addr.map(|addr| addr.to_string()),
-        is_tcp,
+        connection_id: transport_context.connection_id.clone(),
+        accepted_at_unix_ms: transport_context.accepted_at_unix_ms,
+        listener_kind: if transport_context.is_tcp {
+            "tcp"
+        } else {
+            "unix"
+        },
+        peer_addr: transport_context.peer_addr.map(|addr| addr.to_string()),
+        local_addr: transport_context.local_addr.map(|addr| addr.to_string()),
+        is_tcp: transport_context.is_tcp,
         request_bytes,
-        read_duration_us,
+        read_duration_us: transport_context.read_duration_us,
         auth_required,
         auth_ok,
         protocol_version,

@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>3</b><span>modules</span></div>
-  <div><b>35</b><span>items</span></div>
-  <div><b>14</b><span>fields</span></div>
-  <div><b>17</b><span>methods</span></div>
+  <div><b>46</b><span>items</span></div>
+  <div><b>16</b><span>fields</span></div>
+  <div><b>22</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-sandbox-gateway.html"><span>gateway.rs</span><small>9/18</small></a></li><li><a class="file-link" href="eos-sandbox-gateway--src-main-rs.html"><span>main.rs</span><small>0/1</small></a></li><li><a class="file-link active" href="eos-sandbox-gateway--src-serve-rs.html"><span>serve.rs</span><small>1/1</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-sandbox-gateway.html"><span>gateway.rs</span><small>9/27</small></a></li><li><a class="file-link" href="eos-sandbox-gateway--src-main-rs.html"><span>main.rs</span><small>0/1</small></a></li><li><a class="file-link active" href="eos-sandbox-gateway--src-serve-rs.html"><span>serve.rs</span><small>1/1</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="serve crates/eos-sandbox-gateway/src/serve.rs run ServeArgs impl ServeArgs">
   <div class="module-head">
     <div>
@@ -64,9 +64,9 @@
   </div>
   <code class="signature">struct <a class="symbol-link" href="eos-sandbox-gateway--src-serve-rs.html#item-struct-ServeArgs-17">ServeArgs</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>listen</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>host</td><td><code>HostConfig</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-parse-23"><td>associated-fn</td><td>parse</td><td><code>fn <a class="symbol-link" href="eos-sandbox-gateway.html#method-parse-56">parse</a> (mut argv : std :: env :: Args) -&gt; Result &lt; Self &gt;</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>listen</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>host</td><td><code>HostConfig</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-parse-23"><td>associated-fn</td><td>parse</td><td><code>fn <a class="symbol-link" href="eos-sandbox-gateway.html#method-parse-67">parse</a> (mut argv : std :: env :: Args) -&gt; Result &lt; Self &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-56">parse</a>(<span class="rs-kw">mut</span> argv: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-67">parse</a>(<span class="rs-kw">mut</span> argv: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
         <span class="rs-comment">// The gateway and eosd are built from the same sandbox workspace, so</span>
         <span class="rs-comment">// daemon config and packaged binary defaults are derivable here.</span>
         <span class="rs-kw">let</span> workspace = <span class="rs-type">PathBuf</span>::from(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;))
@@ -100,15 +100,15 @@
                 &quot;--remote-config&quot; =&gt; remote_config_path = value(&quot;--remote-config&quot;)?.into(),
                 &quot;--remote-daemon-dir&quot; =&gt; remote_daemon_dir = value(&quot;--remote-daemon-dir&quot;)?.into(),
                 &quot;--state-dir&quot; =&gt; state_dir = <span class="rs-type">Some</span>(value(&quot;--state-dir&quot;)?.into()),
-                &quot;--tcp-port&quot; =&gt; tcp_port = value(&quot;--tcp-port&quot;)?.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-56">parse</a>().context(&quot;--tcp-port&quot;)?,
+                &quot;--tcp-port&quot; =&gt; tcp_port = value(&quot;--tcp-port&quot;)?.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-67">parse</a>().context(&quot;--tcp-port&quot;)?,
                 &quot;--ready-timeout-s&quot; =&gt; {
                     ready_timeout_s = value(&quot;--ready-timeout-s&quot;)?
-                        .<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-56">parse</a>()
+                        .<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-67">parse</a>()
                         .context(&quot;--ready-timeout-s&quot;)?;
                 }
                 &quot;--request-timeout-s&quot; =&gt; {
                     request_timeout_s = value(&quot;--request-timeout-s&quot;)?
-                        .<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-56">parse</a>()
+                        .<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-67">parse</a>()
                         .context(&quot;--request-timeout-s&quot;)?;
                 }
                 &quot;--created-by&quot; =&gt; created_by = value(&quot;--created-by&quot;)?,
@@ -119,7 +119,7 @@
         <span class="rs-kw">let</span> state_dir = state_dir.unwrap_or_else(|| {
             listen
                 .parent()
-                .unwrap_or_else(|| std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;/tmp&quot;))
+                .unwrap_or_else(|| std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-665">new</a>(&quot;/tmp&quot;))
                 .join(&quot;eos-sandbox-gateway-state&quot;)
         });
         <span class="rs-kw">let</span> remote_eosd_path = remote_daemon_dir.join(&quot;eosd&quot;);
@@ -156,9 +156,9 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway--src-serve-rs.html#item-fn-run-11">run</a>(argv: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
-    <span class="rs-kw">let</span> config = <a class="symbol-link rs-type" href="eos-sandbox-gateway--src-serve-rs.html#item-struct-ServeArgs-17">ServeArgs</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-56">parse</a>(argv)?;
+    <span class="rs-kw">let</span> config = <a class="symbol-link rs-type" href="eos-sandbox-gateway--src-serve-rs.html#item-struct-ServeArgs-17">ServeArgs</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-67">parse</a>(argv)?;
     <span class="rs-kw">let</span> host = <span class="rs-type">SandboxHost</span>::open(config.host)?;
-    gateway::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-serve-282">serve</a>(&amp;config.listen, <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(host))
+    gateway::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-serve-468">serve</a>(&amp;config.listen, <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-665">new</a>(host))
 }
 </code></pre>
 </details>
@@ -183,9 +183,9 @@
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::gateway;
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway--src-serve-rs.html#item-fn-run-11">run</a>(argv: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
-    <span class="rs-kw">let</span> config = <a class="symbol-link rs-type" href="eos-sandbox-gateway--src-serve-rs.html#item-struct-ServeArgs-17">ServeArgs</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-56">parse</a>(argv)?;
+    <span class="rs-kw">let</span> config = <a class="symbol-link rs-type" href="eos-sandbox-gateway--src-serve-rs.html#item-struct-ServeArgs-17">ServeArgs</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-67">parse</a>(argv)?;
     <span class="rs-kw">let</span> host = <span class="rs-type">SandboxHost</span>::open(config.host)?;
-    gateway::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-serve-282">serve</a>(&amp;config.listen, <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(host))
+    gateway::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-serve-468">serve</a>(&amp;config.listen, <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-665">new</a>(host))
 }
 
 <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway--src-serve-rs.html#item-struct-ServeArgs-17">ServeArgs</a> {
@@ -194,7 +194,7 @@
 }
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway--src-serve-rs.html#item-struct-ServeArgs-17">ServeArgs</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-56">parse</a>(<span class="rs-kw">mut</span> argv: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-67">parse</a>(<span class="rs-kw">mut</span> argv: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
         <span class="rs-comment">// The gateway and eosd are built from the same sandbox workspace, so</span>
         <span class="rs-comment">// daemon config and packaged binary defaults are derivable here.</span>
         <span class="rs-kw">let</span> workspace = <span class="rs-type">PathBuf</span>::from(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;))
@@ -228,15 +228,15 @@
                 &quot;--remote-config&quot; =&gt; remote_config_path = value(&quot;--remote-config&quot;)?.into(),
                 &quot;--remote-daemon-dir&quot; =&gt; remote_daemon_dir = value(&quot;--remote-daemon-dir&quot;)?.into(),
                 &quot;--state-dir&quot; =&gt; state_dir = <span class="rs-type">Some</span>(value(&quot;--state-dir&quot;)?.into()),
-                &quot;--tcp-port&quot; =&gt; tcp_port = value(&quot;--tcp-port&quot;)?.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-56">parse</a>().context(&quot;--tcp-port&quot;)?,
+                &quot;--tcp-port&quot; =&gt; tcp_port = value(&quot;--tcp-port&quot;)?.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-67">parse</a>().context(&quot;--tcp-port&quot;)?,
                 &quot;--ready-timeout-s&quot; =&gt; {
                     ready_timeout_s = value(&quot;--ready-timeout-s&quot;)?
-                        .<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-56">parse</a>()
+                        .<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-67">parse</a>()
                         .context(&quot;--ready-timeout-s&quot;)?;
                 }
                 &quot;--request-timeout-s&quot; =&gt; {
                     request_timeout_s = value(&quot;--request-timeout-s&quot;)?
-                        .<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-56">parse</a>()
+                        .<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-67">parse</a>()
                         .context(&quot;--request-timeout-s&quot;)?;
                 }
                 &quot;--created-by&quot; =&gt; created_by = value(&quot;--created-by&quot;)?,
@@ -247,7 +247,7 @@
         <span class="rs-kw">let</span> state_dir = state_dir.unwrap_or_else(|| {
             listen
                 .parent()
-                .unwrap_or_else(|| std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;/tmp&quot;))
+                .unwrap_or_else(|| std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-665">new</a>(&quot;/tmp&quot;))
                 .join(&quot;eos-sandbox-gateway-state&quot;)
         });
         <span class="rs-kw">let</span> remote_eosd_path = remote_daemon_dir.join(&quot;eosd&quot;);

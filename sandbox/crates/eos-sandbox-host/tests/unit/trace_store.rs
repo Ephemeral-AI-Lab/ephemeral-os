@@ -163,8 +163,8 @@ fn response_finalization_and_host_events_rebuild_from_audit_entries() -> Result<
         event: "connect_failed",
         details: json!({"endpoint": "127.0.0.1:9", "error_kind": "connect_failed"}),
     })?;
-    let response = json!({"success": true, "content": "ok"});
-    let raw = br#"{"success":true,"content":"ok","_trace_events":"encoded"}"#;
+    let response = json!({"status": "ok", "result": {"content": "ok"}, "meta": {}});
+    let raw = br#"{"status":"ok","result":{"content":"ok"},"meta":{},"_trace_events":"encoded"}"#;
     store.record_response_persisted(ResponsePersistedInput {
         sandbox_id: "sb-1",
         trace_id: &trace_id,
@@ -220,54 +220,54 @@ fn response_finalization_and_host_events_rebuild_from_audit_entries() -> Result<
 }
 
 #[test]
-fn legacy_response_persisted_audit_entry_rebuilds_projection() -> Result<(), TraceStoreError> {
-    let store = temp_store("legacy-response-persisted")?;
-    let request = request_input(
-        "sb-1",
-        "sandbox.file.read",
-        false,
-        "request-legacy-finalized",
-    );
+fn json_response_persisted_audit_entry_rebuilds_projection() -> Result<(), TraceStoreError> {
+    let store = temp_store("json-response-persisted")?;
+    let request = request_input("sb-1", "sandbox.file.read", false, "request-json-finalized");
     let trace_id = request.trace_id.clone();
     let request_id = request.request_id.clone();
     store.append_request_start(request)?;
 
-    let response = json!({"success": false, "error": {"kind": "legacy_error"}});
+    let response = json!({
+        "status": "error",
+        "error": {"kind": "internal_error", "message": "failed"},
+        "meta": {}
+    });
     store.record_response_persisted(ResponsePersistedInput {
         sandbox_id: "sb-1",
         trace_id: &trace_id,
         request_id: &request_id,
         response: &response,
-        raw_response_bytes: br#"{"success":false,"error":{"kind":"legacy_error"}}"#,
+        raw_response_bytes:
+            br#"{"status":"error","error":{"kind":"internal_error","message":"failed"},"meta":{}}"#,
         host_rtt_ms: 11,
     })?;
-    let legacy_payload = ResponsePersistedPayload {
+    let json_payload = ResponsePersistedPayload {
         trace_id: trace_id.to_string(),
         request_id: request_id.to_string(),
         status: "error".to_owned(),
-        error_kind: Some("legacy_error".to_owned()),
+        error_kind: Some("internal_error".to_owned()),
         received_at_ms: 123,
         host_rtt_ms: 11,
-        response_digest: "legacy-digest".to_owned(),
-        response_len: 53,
-        response_summary: "{\"success\":false}".to_owned(),
+        response_digest: "json-digest".to_owned(),
+        response_len: 82,
+        response_summary: "{\"status\":\"error\"}".to_owned(),
     };
     store.lock().execute(
         "UPDATE audit_entries
          SET schema_name=?1, payload=?2
          WHERE entry_kind='response_persisted'",
-        rusqlite::params![AUDIT_SCHEMA, encode_audit_payload(&legacy_payload)],
+        rusqlite::params![AUDIT_SCHEMA, encode_audit_payload(&json_payload)],
     )?;
 
     store.rebuild_projections()?;
 
     let rebuilt = store
         .request_by_id(request_id.as_str())?
-        .expect("rebuilt legacy response row");
+        .expect("rebuilt response row");
     assert_eq!(rebuilt.status.as_deref(), Some("error"));
     assert_eq!(
         trace_request_error_kind(&store, request_id.as_str())?.as_deref(),
-        Some("legacy_error")
+        Some("internal_error")
     );
     Ok(())
 }

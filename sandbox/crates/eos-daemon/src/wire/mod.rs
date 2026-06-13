@@ -9,8 +9,8 @@
 pub mod message;
 
 pub use message::{
-    decode, decode_value, encode, ErrorKind, ErrorResponse, ProtocolError, Request,
-    RequestTraceContext, TraceLinkHint, WireMessage,
+    decode, decode_value, encode, ErrorKind, ProtocolError, Request, RequestTraceContext,
+    TraceLinkHint, WireMessage,
 };
 
 pub const DAEMON_PROTOCOL_VERSION: i64 = eos_operation::core::catalog::PROTOCOL_VERSION;

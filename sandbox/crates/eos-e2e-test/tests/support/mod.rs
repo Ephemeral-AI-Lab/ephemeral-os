@@ -146,9 +146,9 @@ pub(crate) fn finalize_foreground_command(
     }
     let command_id = as_str(&response, "command_id")?.to_owned();
     loop {
-        // `call` (not `call_ok`): a command that finalizes to a NON-zero exit
-        // returns `success:false`, which is a valid terminal outcome here, not a
-        // transport error. `call_ok` would reject it and break error-exit
+        // `call` (not `call_ok`): a command that finalizes to a non-zero exit
+        // returns a terminal envelope, which is valid command data rather than
+        // a transport error. `call_ok` would reject it and break error-exit
         // finalization.
         let progress = lease.call(
             catalog::SANDBOX_COMMAND_POLL,

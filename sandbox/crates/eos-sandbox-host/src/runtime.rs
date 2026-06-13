@@ -9,7 +9,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use anyhow::{bail, Context, Result};
 use serde_json::json;
 
-use crate::protocol::{response_classification, ProtocolClient, HEARTBEAT_OP};
+use crate::protocol::{response_is_accepted, ProtocolClient, HEARTBEAT_OP};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ContainerLifetime {
@@ -295,7 +295,7 @@ fn await_ready(client: &ProtocolClient, budget: Duration) -> Result<()> {
     let mut delay = Duration::from_millis(150);
     loop {
         let observed = match client.request(HEARTBEAT_OP, "ready-probe", &json!({})) {
-            Ok(resp) if response_classification(&resp).success => return Ok(()),
+            Ok(resp) if response_is_accepted(&resp) => return Ok(()),
             Ok(resp) => format!("non-success heartbeat: {resp}"),
             Err(err) => err.to_string(),
         };

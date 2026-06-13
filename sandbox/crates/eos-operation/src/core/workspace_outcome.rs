@@ -127,7 +127,7 @@ pub struct MutationCore {
     pub changed_paths: Vec<String>,
     #[serde(default)]
     pub changed_path_kinds: ChangedPathKinds,
-    #[serde(serialize_with = "serialize_mutation_source")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mutation_source: Option<MutationSource>,
     pub conflict: Option<WorkspaceConflict>,
     pub conflict_reason: Option<String>,
@@ -143,27 +143,8 @@ pub struct WorkspaceMutationOutcome {
     pub workspace_kind: WorkspaceKind,
     pub published: bool,
     pub status: MutationStatus,
-    #[serde(serialize_with = "serialize_null")]
-    pub error: (),
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub applied_edits: Option<i64>,
     #[serde(skip)]
     pub trace_events: Vec<eos_layerstack::OccTraceEvent>,
-}
-
-fn serialize_mutation_source<S>(
-    source: &Option<MutationSource>,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    serializer.serialize_str(source.map(MutationSource::as_str).unwrap_or(""))
-}
-
-fn serialize_null<S>(_value: &(), serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    serializer.serialize_none()
 }
