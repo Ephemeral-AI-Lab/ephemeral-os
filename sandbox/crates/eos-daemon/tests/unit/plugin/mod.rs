@@ -502,24 +502,25 @@ fn ensure_trace_events_include_service_started_stderr_path() {
     super::record_plugin_ensure_trace_events(&context, &ready);
 
     let events = sink.drain();
-    assert_eq!(events.len(), 1);
-    assert_eq!(events[0].module, "plugin");
-    assert_eq!(events[0].name, "service_started");
-    assert_eq!(events[0].details["plugin"], "generic");
-    assert_eq!(events[0].details["service_id"], "worker");
+    assert_eq!(events.len(), 2);
+    assert_eq!(events[0].name, "package_checked");
+    assert_eq!(events[1].module, "plugin");
+    assert_eq!(events[1].name, "service_started");
+    assert_eq!(events[1].details["plugin"], "generic");
+    assert_eq!(events[1].details["service_id"], "worker");
     assert_eq!(
-        events[0].details["service_instance_id"],
+        events[1].details["service_instance_id"],
         "generic:worker:profile-a"
     );
-    assert_eq!(events[0].details["pid"], 1234);
-    assert_eq!(events[0].details["process_group_id"], 1234);
-    assert_eq!(events[0].details["running"], true);
+    assert_eq!(events[1].details["pid"], 1234);
+    assert_eq!(events[1].details["process_group_id"], 1234);
+    assert_eq!(events[1].details["running"], true);
     assert_eq!(
-        events[0].details["socket_path"],
+        events[1].details["socket_path"],
         "/eos/plugin/ppc/worker.sock"
     );
     assert_eq!(
-        events[0].details["stderr_path"],
+        events[1].details["stderr_path"],
         "/eos/plugin/ppc/worker.stderr.log"
     );
 }
@@ -564,16 +565,17 @@ fn ensure_trace_events_include_setup_finished_success_report() {
     super::record_plugin_ensure_trace_events(&context, &ready);
 
     let events = sink.drain();
-    assert_eq!(events.len(), 1);
-    assert_eq!(events[0].module, "plugin");
-    assert_eq!(events[0].name, "setup_finished");
-    assert_eq!(events[0].details["plugin"], "generic");
-    assert_eq!(events[0].details["digest"], "digest-a");
-    assert_eq!(events[0].details["ran"], true);
-    assert_eq!(events[0].details["success"], true);
-    assert_eq!(events[0].details["exit_code"], 0);
-    assert_eq!(events[0].details["output_tail"], "setup ok\n");
-    assert!(events[0].details["spawn_error"].is_null());
+    assert_eq!(events.len(), 2);
+    assert_eq!(events[0].name, "package_checked");
+    assert_eq!(events[1].module, "plugin");
+    assert_eq!(events[1].name, "setup_finished");
+    assert_eq!(events[1].details["plugin"], "generic");
+    assert_eq!(events[1].details["digest"], "digest-a");
+    assert_eq!(events[1].details["ran"], true);
+    assert_eq!(events[1].details["success"], true);
+    assert_eq!(events[1].details["exit_code"], 0);
+    assert_eq!(events[1].details["output_tail"], "setup ok\n");
+    assert!(events[1].details["spawn_error"].is_null());
 }
 
 #[test]

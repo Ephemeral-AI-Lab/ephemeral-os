@@ -12,7 +12,6 @@ pub struct DispatchContext<'ctx> {
     services: Option<&'ctx RuntimeServices>,
     invocation_registry: Option<&'ctx InFlightRegistry>,
     file_limits: Option<FileLimitsConfig>,
-    read_request_s: Option<f64>,
     trace_events: Option<RequestTraceEventSink>,
     trace_id: Option<String>,
     request_id: Option<String>,
@@ -26,7 +25,6 @@ impl<'ctx> DispatchContext<'ctx> {
             services: None,
             invocation_registry: None,
             file_limits: None,
-            read_request_s: None,
             trace_events: None,
             trace_id: None,
             request_id: None,
@@ -40,7 +38,6 @@ impl<'ctx> DispatchContext<'ctx> {
             services: Some(services),
             invocation_registry: None,
             file_limits: None,
-            read_request_s: None,
             trace_events: None,
             trace_id: None,
             request_id: None,
@@ -54,27 +51,24 @@ impl<'ctx> DispatchContext<'ctx> {
             services: None,
             invocation_registry: Some(invocation_registry),
             file_limits: None,
-            read_request_s: None,
             trace_events: None,
             trace_id: None,
             request_id: None,
         }
     }
 
-    /// Context carrying the server's services, invocation registry, file byte
-    /// limits, and measured request read duration.
+    /// Context carrying the server's services, invocation registry, and file
+    /// byte limits.
     #[must_use]
     pub const fn with_runtime_config(
         services: &'ctx RuntimeServices,
         invocation_registry: &'ctx InFlightRegistry,
         file_limits: FileLimitsConfig,
-        read_request_s: f64,
     ) -> Self {
         Self {
             services: Some(services),
             invocation_registry: Some(invocation_registry),
             file_limits: Some(file_limits),
-            read_request_s: Some(read_request_s),
             trace_events: None,
             trace_id: None,
             request_id: None,
@@ -119,10 +113,6 @@ impl<'ctx> DispatchContext<'ctx> {
         self.file_limits
     }
 
-    pub(crate) const fn read_request_s(&self) -> Option<f64> {
-        self.read_request_s
-    }
-
     pub(crate) fn trace_id(&self) -> Option<&str> {
         self.trace_id.as_deref()
     }
@@ -139,19 +129,6 @@ impl<'ctx> DispatchContext<'ctx> {
     ) {
         if let Some(events) = &self.trace_events {
             events.push(RequestTraceEvent::operation(module, name, details));
-        }
-    }
-
-    #[cfg(test)]
-    pub(crate) const fn with_read_request_s(read_request_s: f64) -> Self {
-        Self {
-            services: None,
-            invocation_registry: None,
-            file_limits: None,
-            read_request_s: Some(read_request_s),
-            trace_events: None,
-            trace_id: None,
-            request_id: None,
         }
     }
 }

@@ -86,34 +86,6 @@ impl SpanKind {
             Self::Resource | Self::Control => SpanSubsystem::Control,
         }
     }
-
-    #[must_use]
-    pub fn parse_label(label: &str) -> Option<Self> {
-        Some(match label {
-            "op_request" => Self::OpRequest,
-            "gateway.transport" | "gateway_transport" => Self::GatewayTransport,
-            "gateway.route" | "gateway_route" => Self::GatewayRoute,
-            "host.protocol" | "host_protocol" => Self::HostProtocol,
-            "host.transport" | "host_transport" => Self::HostTransport,
-            "daemon.transport" | "daemon_transport" => Self::DaemonTransport,
-            "dispatch" | "daemon.dispatch" => Self::Dispatch,
-            "op" | "operation" => Self::Operation,
-            "layerstack" => Self::LayerStack,
-            "occ" => Self::Occ,
-            "overlay" => Self::Overlay,
-            "command.process.spawn" | "command_process_spawn" => Self::CommandProcessSpawn,
-            "command.process.wait" | "command_process_wait" => Self::CommandProcessWait,
-            "command.finalize" | "command_finalize" => Self::CommandFinalize,
-            "workspace.route" | "workspace_route" => Self::WorkspaceRoute,
-            "isolated_workspace" => Self::IsolatedWorkspace,
-            "plugin" => Self::Plugin,
-            "file" => Self::File,
-            "checkpoint" => Self::Checkpoint,
-            "resource" => Self::Resource,
-            "control" => Self::Control,
-            _ => return None,
-        })
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

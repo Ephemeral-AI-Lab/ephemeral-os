@@ -765,3 +765,14 @@ Rules for this run:
 - Result: passed; removed 5 stale `eos-e2e` containers.
 - Finding: the successful full live gate left warm containers running.
 - Fix: cleanup complete; continue Phase 05 non-live verification.
+
+### 2026-06-13 Attempt 79 - E2E inventory list after Git-reset test
+
+- Command: `cargo test -p eos-e2e-test -- --list`
+- Result: passed; listed unit 1, core 33, daemon 12, eos-layerstack 20,
+  ephemeral_workspace 12, plugin 15, pressure 23, workspace-publish-gate 14,
+  workspace-runtime-command 67, workspace-runtime-isolated 21, doc-tests 0.
+- Finding: the inventory reflects the new core
+  `lease_checkout_resets_stale_git_workspace_state` test and the migrated
+  suite counts.
+- Fix: no additional inventory fix needed.

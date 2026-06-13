@@ -302,13 +302,11 @@ impl DaemonServer {
         let read_start = Instant::now();
         let bytes = read_request_line(&mut reader).await;
         let read_duration_us = elapsed_us(read_start);
-        let read_request_s = read_duration_us as f64 / 1_000_000.0;
         let response = match bytes {
             Ok(bytes) => {
                 self.dispatch_bytes(
                     bytes,
                     is_tcp,
-                    read_request_s,
                     read_duration_us,
                     connection_id,
                     accepted_at_unix_ms,
@@ -390,7 +388,6 @@ impl DaemonServer {
         &self,
         bytes: Vec<u8>,
         is_tcp: bool,
-        read_request_s: f64,
         read_duration_us: u64,
         connection_id: String,
         accepted_at_unix_ms: u64,
@@ -480,8 +477,7 @@ impl DaemonServer {
         );
         match decode_value(value) {
             Ok(WireMessage::Request(request)) => {
-                self.dispatch_request(request, trace, facts, read_request_s)
-                    .await
+                self.dispatch_request(request, trace, facts).await
             }
             Ok(_) => crate::trace::attach_request_sidecar(
                 crate::dispatcher::error_response(
@@ -511,7 +507,6 @@ impl DaemonServer {
         request: Request,
         trace: Option<RequestTraceContext>,
         facts: crate::trace::RequestTraceFacts,
-        read_request_s: f64,
     ) -> serde_json::Value {
         let invocation_id = request.invocation_id.clone();
         let caller_id = trimmed_string(&request.args, "caller_id");
@@ -531,13 +526,9 @@ impl DaemonServer {
         let (start_tx, start_rx) = std_mpsc::channel::<()>();
         let task = tokio::task::spawn_blocking(move || {
             let _ = start_rx.recv();
-            let mut context = DispatchContext::with_runtime_config(
-                &task_services,
-                &task_registry,
-                file_limits,
-                read_request_s,
-            )
-            .with_trace_events(task_trace_events);
+            let mut context =
+                DispatchContext::with_runtime_config(&task_services, &task_registry, file_limits)
+                    .with_trace_events(task_trace_events);
             if let Some(trace) = task_trace_identity {
                 context = context.with_trace_identity(trace.trace_id, trace.request_id);
             }

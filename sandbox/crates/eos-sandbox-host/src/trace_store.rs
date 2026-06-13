@@ -137,7 +137,11 @@ impl TraceStore {
                 degraded: false,
             }),
             Err(err) if !mutates_state && err.allows_read_only_degraded() => {
-                self.append_trace_degraded(&degraded_input, &err)?;
+                // Best-effort marker: a read-only op proceeds degraded even when the
+                // store is too unavailable to record the marker. An untraceable read
+                // is acceptable; an untraceable mutation is not, and fails closed in
+                // the catch-all arm below.
+                let _ = self.append_trace_degraded(&degraded_input, &err);
                 Ok(ForwardTraceDecision {
                     trace_id,
                     request_id,
@@ -892,8 +896,16 @@ impl TraceStore {
 }
 
 impl TraceStoreError {
+    /// Read-only ops proceed with a `trace_degraded` marker when the
+    /// request-start append fails because the store itself is unavailable: the
+    /// test injection or a real sqlite error (disk-full, lock contention, I/O).
+    /// Schema/seal/decode errors are not request-start append failures and never
+    /// reach this path; mutating ops always fail closed regardless.
     const fn allows_read_only_degraded(&self) -> bool {
-        matches!(self, Self::InjectedRequestStartFailure)
+        matches!(
+            self,
+            Self::InjectedRequestStartFailure | Self::Sqlite(_)
+        )
     }
 }
 

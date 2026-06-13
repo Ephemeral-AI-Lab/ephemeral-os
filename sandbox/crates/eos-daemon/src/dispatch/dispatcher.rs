@@ -31,18 +31,8 @@ pub fn dispatch(request: &Request) -> Value {
 #[must_use]
 pub fn dispatch_with_context(request: &Request, context: DispatchContext<'_>) -> Value {
     let dispatch_start = Instant::now();
-    let boot_to_dispatch_s = daemon_uptime_s();
-    let read_request_s = context.read_request_s().unwrap_or(0.0);
-    let finalize = |response| {
-        finalize_response(
-            response,
-            &request.op,
-            &request.invocation_id,
-            boot_to_dispatch_s,
-            dispatch_start,
-            read_request_s,
-        )
-    };
+    let finalize =
+        |response| finalize_response(response, &request.op, &request.invocation_id, dispatch_start);
     if request.op.trim().is_empty() {
         return finalize(error_response(
             ErrorKind::InvalidRequest,
@@ -92,19 +82,10 @@ fn finalize_response(
     mut response: Value,
     op: &str,
     invocation_id: &str,
-    boot_to_dispatch_s: f64,
     dispatch_start: Instant,
-    read_request_s: f64,
 ) -> Value {
     let dispatch_s = dispatch_start.elapsed().as_secs_f64();
-    attach_runtime_observations(
-        &mut response,
-        op,
-        invocation_id,
-        boot_to_dispatch_s,
-        dispatch_s,
-        read_request_s,
-    );
+    attach_runtime_observations(&mut response, op, invocation_id, dispatch_s);
     response
 }
 
@@ -113,32 +94,12 @@ pub(crate) fn error_response(kind: ErrorKind, message: impl Into<String>, detail
     error_envelope(kind, message, details)
 }
 
-fn attach_runtime_observations(
-    response: &mut Value,
-    op: &str,
-    invocation_id: &str,
-    boot_to_dispatch_s: f64,
-    dispatch_s: f64,
-    read_request_s: f64,
-) {
-    let envelope = is_operation_envelope(response);
-    let Some(obj) = response.as_object_mut() else {
-        return;
-    };
-    if envelope {
-        attach_envelope_runtime_meta(obj, op, invocation_id, dispatch_s);
+fn attach_runtime_observations(response: &mut Value, op: &str, invocation_id: &str, dispatch_s: f64) {
+    if !is_operation_envelope(response) {
         return;
     }
-    let timings = obj
-        .entry("timings")
-        .or_insert_with(|| Value::Object(serde_json::Map::new()));
-    if let Value::Object(timings) = timings {
-        timings.insert(
-            "runtime.boot_to_dispatch_s".to_owned(),
-            json!(boot_to_dispatch_s),
-        );
-        timings.insert("runtime.dispatch_s".to_owned(), json!(dispatch_s));
-        timings.insert("runtime.read_request_s".to_owned(), json!(read_request_s));
+    if let Some(obj) = response.as_object_mut() {
+        attach_envelope_runtime_meta(obj, op, invocation_id, dispatch_s);
     }
 }
 

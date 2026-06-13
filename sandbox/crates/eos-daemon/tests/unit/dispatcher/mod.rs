@@ -213,7 +213,7 @@ fn dispatch_attaches_runtime_envelope_meta() {
             invocation_id: "timings-test".to_owned(),
             args: json!({"invocation_ids": []}),
         },
-        DispatchContext::with_read_request_s(0.125),
+        DispatchContext::empty(),
     );
 
     assert_eq!(response["status"], json!("ok"));
@@ -259,7 +259,7 @@ fn traced_dispatch_hot_path_stays_sub_millisecond_without_host_store() {
     let iterations = 128_u128;
     let started = Instant::now();
     for _ in 0..iterations {
-        let response = dispatch_with_context(&request, DispatchContext::with_read_request_s(0.0));
+        let response = dispatch_with_context(&request, DispatchContext::empty());
         let response =
             crate::trace::attach_request_sidecar(response, Some(&trace), &request.op, &facts);
         assert_eq!(response["status"], json!("ok"));
