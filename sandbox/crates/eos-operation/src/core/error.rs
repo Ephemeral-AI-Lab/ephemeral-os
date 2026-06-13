@@ -17,17 +17,4 @@ impl OpError {
             details: None,
         }
     }
-
-    #[must_use]
-    pub fn with_details(
-        kind: &'static str,
-        message: impl Into<String>,
-        details: impl Into<Value>,
-    ) -> Self {
-        Self {
-            kind,
-            message: message.into(),
-            details: Some(details.into()),
-        }
-    }
 }

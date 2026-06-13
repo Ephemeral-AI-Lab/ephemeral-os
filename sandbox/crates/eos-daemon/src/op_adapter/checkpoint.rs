@@ -86,7 +86,6 @@ pub(crate) fn build_workspace_base(
         success: true,
         created: true,
         binding,
-        timings,
     }))
 }
 
@@ -109,7 +108,6 @@ pub(crate) fn ensure_workspace_base(
         success: true,
         created,
         binding,
-        timings,
     }))
 }
 
@@ -145,7 +143,6 @@ pub(crate) fn commit_to_workspace(
     Ok(to_wire_value(CommitToWorkspaceOutput {
         success: true,
         manifest_version: manifest.version,
-        timings,
     }))
 }
 
@@ -254,7 +251,6 @@ fn commit_response(outcome: &CommitOutcome) -> Value {
         manifest_root_hash: outcome.manifest_root_hash.clone(),
         paths: outcome.paths.clone(),
         worktree_mode: outcome.worktree_mode.to_owned(),
-        timings: outcome.timings.clone(),
     })
 }
 

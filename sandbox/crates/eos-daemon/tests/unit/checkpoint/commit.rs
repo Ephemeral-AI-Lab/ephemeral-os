@@ -43,7 +43,10 @@ fn commit_to_git_response_shape_for_committed_and_noop() -> TestResult {
         committed["worktree_mode"].as_str(),
         Some("overlay" | "projection")
     ));
-    assert!(committed["timings"].is_object());
+    assert!(
+        committed.get("timings").is_none(),
+        "commit_to_git timings live in trace/meta, not the result payload"
+    );
 
     // committed = false: re-committing the same staged paths is a no-op that
     // still reports the prior HEAD and the full response shape.
@@ -70,7 +73,6 @@ fn assert_response_keys(response: &serde_json::Value) {
         "manifest_root_hash",
         "paths",
         "worktree_mode",
-        "timings",
     ]
     .into_iter()
     .collect();

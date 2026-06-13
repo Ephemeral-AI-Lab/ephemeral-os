@@ -77,29 +77,6 @@ pub enum ChangedPathKind {
     OpaqueDir,
 }
 
-impl ChangedPathKind {
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Write => "write",
-            Self::Delete => "delete",
-            Self::Symlink => "symlink",
-            Self::OpaqueDir => "opaque_dir",
-        }
-    }
-
-    #[must_use]
-    pub fn from_wire_str(raw: &str) -> Option<Self> {
-        match raw {
-            "write" => Some(Self::Write),
-            "delete" => Some(Self::Delete),
-            "symlink" => Some(Self::Symlink),
-            "opaque_dir" => Some(Self::OpaqueDir),
-            _ => None,
-        }
-    }
-}
-
 impl From<&LayerChange> for ChangedPathKind {
     fn from(change: &LayerChange) -> Self {
         match change {

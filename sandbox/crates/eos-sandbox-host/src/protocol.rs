@@ -202,10 +202,6 @@ pub fn encode_request_with_trace_metadata(
     serde_json::to_vec(&Value::Object(request)).unwrap_or_default()
 }
 
-pub fn take_trace_sidecar(response: &mut Value) -> Option<Vec<u8>> {
-    take_trace_sidecar_checked(response).ok().flatten()
-}
-
 pub fn take_trace_sidecar_checked(
     response: &mut Value,
 ) -> Result<Option<Vec<u8>>, TraceSidecarError> {

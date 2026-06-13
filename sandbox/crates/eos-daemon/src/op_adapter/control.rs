@@ -1,7 +1,7 @@
 //! Runtime, heartbeat, cancel, and in-flight daemon ops.
 
 use std::path::PathBuf;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use base64::Engine as _;
 use eos_layerstack::{require_workspace_binding, LayerStack};
@@ -23,38 +23,24 @@ pub(crate) fn op_runtime_ready(
     input: RuntimeReadyInput,
     _context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
-    let total_start = Instant::now();
     let root = input.layer_stack_root.to_string_lossy().into_owned();
-    let mut timings = serde_json::Map::new();
     let probes = vec![
-        run_probe("control_plane", || probe_control_plane(&root), &mut timings),
-        run_probe(
-            "data_plane",
-            || {
-                Ok(json!({
-                    "handlers_services_ready": true,
-                    "shell_services_ready": true,
-                    "workspace_mount_mode": "private_namespace",
-                }))
-            },
-            &mut timings,
-        ),
-        run_probe(
-            "mutation_gate",
-            || {
-                Ok(json!({
-                    "backend_ready": true,
-                    "backend_fields": ["layer_stack", "occ_service", "occ_client", "gitignore", "layer_stack_manager"],
-                    "occ_client_class": "OccClient",
-                }))
-            },
-            &mut timings,
-        ),
+        run_probe("control_plane", || probe_control_plane(&root)),
+        run_probe("data_plane", || {
+            Ok(json!({
+                "handlers_services_ready": true,
+                "shell_services_ready": true,
+                "workspace_mount_mode": "private_namespace",
+            }))
+        }),
+        run_probe("mutation_gate", || {
+            Ok(json!({
+                "backend_ready": true,
+                "backend_fields": ["layer_stack", "occ_service", "occ_client", "gitignore", "layer_stack_manager"],
+                "occ_client_class": "OccClient",
+            }))
+        }),
     ];
-    timings.insert(
-        "runtime.ready.total_s".to_owned(),
-        json!(total_start.elapsed().as_secs_f64()),
-    );
     Ok(to_wire_value(RuntimeReadyOutput {
         success: true,
         ready: probes
@@ -63,7 +49,6 @@ pub(crate) fn op_runtime_ready(
         probes,
         daemon_pid: std::process::id(),
         uptime_s: crate::dispatcher::daemon_uptime_s(),
-        timings: Value::Object(timings),
     }))
 }
 
@@ -138,11 +123,10 @@ pub(crate) fn op_trace_export(input: TraceExportInput) -> Value {
     })
 }
 
-fn run_probe<F>(name: &str, probe: F, timings: &mut serde_json::Map<String, Value>) -> Value
+fn run_probe<F>(name: &str, probe: F) -> Value
 where
     F: FnOnce() -> Result<Value, DaemonError>,
 {
-    let start = Instant::now();
     let (status, details) = match probe() {
         Ok(details) => ("ok", details),
         Err(err) => (
@@ -150,10 +134,6 @@ where
             json!({"error_type": error_type(&err), "error": err.to_string()}),
         ),
     };
-    timings.insert(
-        format!("runtime.ready.{name}_s"),
-        json!(start.elapsed().as_secs_f64()),
-    );
     json!({"name": name, "status": status, "details": details})
 }
 

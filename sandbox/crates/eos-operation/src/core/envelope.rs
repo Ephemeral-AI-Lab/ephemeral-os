@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use eos_trace::{RequestId, SpanStatus, SpanSubsystem, SpanUid, TraceId, WorkspaceRoute};
+use eos_trace::{SpanStatus, SpanSubsystem, WorkspaceRoute};
 
 use super::fault::OperationFault;
 
@@ -39,46 +39,6 @@ impl Default for TraceRef {
             event_count: 0,
             degraded: false,
         }
-    }
-}
-
-impl TraceRef {
-    #[must_use]
-    pub fn new(trace_id: &TraceId) -> Self {
-        Self {
-            trace_id: trace_id.to_string(),
-            ..Self::default()
-        }
-    }
-
-    #[must_use]
-    pub fn with_request(mut self, request_id: &RequestId) -> Self {
-        self.request_id = Some(request_id.to_string());
-        self
-    }
-
-    #[must_use]
-    pub fn with_root_span(mut self, span_id: SpanUid) -> Self {
-        self.root_span_id = Some(span_id.get());
-        self
-    }
-
-    #[must_use]
-    pub fn with_event_count(mut self, count: u64) -> Self {
-        self.event_count = count;
-        self
-    }
-
-    #[must_use]
-    pub fn with_store(mut self, store: impl Into<String>) -> Self {
-        self.store = store.into();
-        self
-    }
-
-    #[must_use]
-    pub fn degraded(mut self) -> Self {
-        self.degraded = true;
-        self
     }
 }
 
@@ -152,14 +112,6 @@ impl Default for ResponseMeta {
             resource_summary: ResourceSummary::default(),
             warnings: Vec::new(),
         }
-    }
-}
-
-impl ResponseMeta {
-    #[must_use]
-    pub fn with_trace(mut self, trace: TraceRef) -> Self {
-        self.trace = trace;
-        self
     }
 }
 

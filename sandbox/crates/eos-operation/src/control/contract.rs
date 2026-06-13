@@ -100,7 +100,6 @@ pub struct RuntimeReadyOutput {
     pub probes: Vec<Value>,
     pub daemon_pid: u32,
     pub uptime_s: f64,
-    pub timings: Value,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

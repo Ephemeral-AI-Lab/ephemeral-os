@@ -977,7 +977,10 @@ fn assert_workspace_base_created(ensure: &Value, root: &Path, workspace: &Path) 
         ensure["binding"]["base_root_hash"].as_str().map(str::len),
         Some(64)
     );
-    assert!(ensure["timings"]["api.workspace_base.total_s"].is_number());
+    assert!(
+        ensure.get("timings").is_none(),
+        "workspace-base timings live in trace/meta, not the result payload: {ensure}"
+    );
 }
 
 fn assert_workspace_base_symlinks(root: &Path, outside_target: &Path) -> TestResult {
