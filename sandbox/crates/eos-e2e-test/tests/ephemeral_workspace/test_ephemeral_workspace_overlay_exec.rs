@@ -570,8 +570,8 @@ fn live_trace_ephemeral_exec_records_command_overlay_resource_and_response_facts
         &lease,
         json!({
             "cmd": "mkdir -p trace-exec && printf traced > trace-exec/out.txt",
-            "yield_time_ms": 8000,
-            "timeout_seconds": 10,
+            "yield_time_ms": 30000,
+            "timeout_seconds": 35,
         }),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");

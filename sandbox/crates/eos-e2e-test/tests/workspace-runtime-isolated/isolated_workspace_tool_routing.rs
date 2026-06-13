@@ -4,7 +4,7 @@ use serde_json::json;
 
 use crate::support::{
     array, as_bool, as_i64, as_str, conflict_message, conflict_reason, live_pool_or_skip,
-    reset_isolated_workspaces,
+    reset_isolated_workspaces, unwrap_operation_result,
 };
 
 #[test]
@@ -82,6 +82,7 @@ fn isolated_enter_status_reports_manifest_pin() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
+    reset_isolated_workspaces(&lease);
     let enter = lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
     let version = as_i64(&enter, "manifest_version")?;
     let hash = as_str(&enter, "manifest_root_hash")?.to_owned();
@@ -107,6 +108,7 @@ fn isolated_write_response_fields() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
+    reset_isolated_workspaces(&lease);
     lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
     let write = lease.call_ok(
         catalog::SANDBOX_FILE_WRITE,
@@ -132,6 +134,7 @@ fn isolated_read_file_sees_private_upperdir() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
+    reset_isolated_workspaces(&lease);
     lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
     lease.call_ok(
         catalog::SANDBOX_FILE_WRITE,
@@ -153,6 +156,7 @@ fn isolated_edit_conflict_response_fields() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
+    reset_isolated_workspaces(&lease);
     lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
     lease.call_ok(
         catalog::SANDBOX_FILE_WRITE,
@@ -165,20 +169,24 @@ fn isolated_edit_conflict_response_fields() -> Result<()> {
             "edits": [{"old_text": "absent", "new_text": "replacement", "replace_all": false}]
         }),
     )?;
+    let edit = unwrap_operation_result(edit)?;
 
-    assert_eq!(as_str(&edit, "workspace")?, "isolated", "{edit}");
-    assert_eq!(as_str(&edit, "status")?, "aborted_overlap", "{edit}");
-    assert!(!as_bool(&edit, "published")?);
-    assert_eq!(as_i64(&edit, "applied_edits")?, 0);
-    assert_eq!(conflict_reason(&edit), "aborted_overlap");
-    assert!(
-        conflict_message(&edit).contains("anchor not found"),
-        "isolated edit should preserve conflict message: {edit}"
-    );
-    assert!(
-        array(&edit, "changed_paths")?.is_empty(),
-        "conflicted isolated edit should not report changed paths: {edit}"
-    );
+    let result = (|| -> Result<()> {
+        ensure!(as_str(&edit, "workspace")? == "isolated", "{edit}");
+        ensure!(as_str(&edit, "status")? == "aborted_overlap", "{edit}");
+        ensure!(!as_bool(&edit, "published")?, "{edit}");
+        ensure!(as_i64(&edit, "applied_edits")? == 0, "{edit}");
+        ensure!(conflict_reason(&edit) == "aborted_overlap", "{edit}");
+        ensure!(
+            conflict_message(&edit).contains("anchor not found"),
+            "isolated edit should preserve conflict message: {edit}"
+        );
+        ensure!(
+            array(&edit, "changed_paths")?.is_empty(),
+            "conflicted isolated edit should not report changed paths: {edit}"
+        );
+        Ok(())
+    })();
     lease.call_ok(catalog::SANDBOX_ISOLATION_EXIT, json!({}))?;
-    Ok(())
+    result
 }

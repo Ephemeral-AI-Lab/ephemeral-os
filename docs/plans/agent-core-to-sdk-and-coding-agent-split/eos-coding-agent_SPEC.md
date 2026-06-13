@@ -23,9 +23,10 @@ source-of-truth decisions:
 
 The hub layer uses exactly two nouns, and nothing else:
 
-- A **workflow** is a named, configured row in `.eos-agents/workflow.json` — the thing
-  profiles list under `workflows`, `list_workflows` shows, and `delegate_workflow`
-  names. There is no separate "instance" term.
+- A **workflow** is a named, configured `.eos-agents/workflow/<name>.md` file — the thing
+  profiles list under `workflows`, the injected system-prompt fragment names, and the
+  derived `delegate_<name>` / `cancel_<name>` tools act on. There is no separate
+  "instance" term.
 - A **workflow provider** is the compiled implementation of a workflow *type* that the
   hub uses to open configured workflows. There is no "module" term.
 
@@ -37,10 +38,10 @@ and pursuit's own contract keeps pursuit/leg/attempt names.
 | SDK dependency | `eos-agent-sdk` root package only | No deep imports past the SDK package's `exports` field. |
 | Generic host registry | `WorkflowHub` | Required host-owned registry. Not an SDK concept. |
 | Workflow type implementation | `WorkflowProvider` | Matches the SDK spec's vocabulary. Not "module". |
-| Configured workflow | `workflow.json` row (`WorkflowConfig`) | Named workflow; not "instance". |
+| Configured workflow | `.eos-agents/workflow/<name>.md` (`WorkflowConfig`) | Profile-shaped markdown: frontmatter config + skill-style docs body. Not "instance". |
 | First configured workflow | `pursuit` | Concrete product vocabulary follows Phase 05.3. |
-| Workflow delegation tool | `delegate_workflow` | One generic hub tool. Do not create per-workflow delegate tools. |
-| Workflow docs tool | `describe_workflow` | Verb trio: `list_workflows` / `describe_workflow` / `delegate_workflow`. |
+| Workflow tools | `delegate_<name>` / `cancel_<name>` / `<verb>_<name>` | Per-workflow, hub-derived from the provider's `delegate` / `cancel` / `extras` roles. Factory-injects them only for a profile that lists the workflow. |
+| Workflow docs surface | system-prompt fragment + `read_workflow_docs` | The injected fragment lists available workflows by `description`; `read_workflow_docs(name)` serves one workflow's full manual. There is no `list_workflows` tool. |
 | Context scripts | `.eos-agents/pursuit/scripts/` | Do not use `.eos-agents/workflow/scripts/` as an active script root. |
 | Profile context script field | `pursuit_context_script` | Do not use `workflow_context_script`. |
 | Context paths | `pursuit_<id>/leg_<id>/.../superseded/` | Do not render `workflow_<id>`, `iteration_<id>`, `focus.md`, `deferred_goal.md`, or `archived/`. |
@@ -49,12 +50,11 @@ and pursuit's own contract keeps pursuit/leg/attempt names.
 ### 1.1 Phase 05.3 Supersessions
 
 This split deliberately reverses or replaces the following Phase 05.3 decisions. They
-are supersessions, not drift; Phase 05.3's hygiene scans that ban `delegate_workflow`
-are completion evidence of that phase and are superseded by §14.
+are supersessions, not drift; the §14 hygiene scans are this split's completion evidence.
 
 | Phase 05.3 surface | This split | Reason |
 | --- | --- | --- |
-| `delegate_pursuit` tool | `delegate_workflow` hub tool with a per-profile union schema | One generic delegation tool; per-workflow tools are banned. The delegation tool is hub infrastructure, not pursuit's contract — pursuit's own vocabulary is untouched. |
+| Hand-authored `delegate_pursuit` tool | Hub-derived `delegate_pursuit` from the pursuit provider's `delegate` tool role, joined by `cancel_pursuit` and provider `extras` | Per-workflow tools are the design, but the hub owns naming and gating: it derives `<role>_<name>` and the factory injects them only for profiles that list the workflow. Pursuit no longer hand-writes the tool, and no generic `delegate_workflow` exists. |
 | Background session type `"pursuit"`, `cancel_background_session`, `list_background_sessions` | SDK background task with `toolName: "workflow:pursuit"`; `cancel_background_task`, `list_background_tasks` | SDK background-task rename; no model-facing session typing survives. |
 | `AgentLaunchPort` / `LaunchedAgent` / `LaunchSettlement` | Pursuit consumes SDK `Agent` handles directly through the narrow `PursuitAgents` slice (§11) | SDK decision log: launch seam deleted. |
 | `PursuitAgentSubmissionBinding` | `onSubmit` in `createAgentOutcomeFn` | Single-mutator submission is now SDK terminal-contract mechanism. |
@@ -102,7 +102,8 @@ eos-coding-agent/
       advisor.md
       subagent.md                      launchable only when another profile lists it
     llm_clients.json
-    workflow.json
+    workflow/
+      pursuit.md                       frontmatter config + skill-style docs body
     hooks.json
     hooks/                             .cjs command hook scripts
     pursuit/
@@ -125,18 +126,16 @@ eos-coding-agent/
         agent-factory.ts
         profiles.ts
       workflows/
-        hub.ts                         WorkflowHub
-        contract.ts                    WorkflowProvider, RegisteredWorkflow, WorkflowConfig
-        pursuit-provider.ts            adapter over openPursuitService
+        hub.ts                         WorkflowHub + tool-name derivation + prompt fragment
+        contract.ts                    WorkflowProvider, RegisteredWorkflow, WorkflowConfig, WorkflowToolSet
+        pursuit-provider.ts            adapter over openPursuitService; supplies the pursuit tool set
         pursuit-context-scripts.ts     script resolution + ComposeLaunchContext composer
       tools/
         agent/
           run-subagent.ts
           ask-advisor.ts
         workflow/
-          list-workflows.ts
-          describe-workflow.ts
-          delegate-workflow.ts
+          read-workflow-docs.ts        the one app-authored workflow tool; delegate/cancel/extras come from providers
         advisor-pass-registry.ts
     tools/                             mechanical tool families (no composition values)
       background/
@@ -255,7 +254,7 @@ Rules:
 .eos-agents/
   profile/*.md
   llm_clients.json
-  workflow.json
+  workflow/*.md
   hooks.json
   hooks/*.cjs
   pursuit/scripts/*.cjs
@@ -275,7 +274,7 @@ markdown file: YAML frontmatter plus the system prompt as the body.
 | `max_turns` | no | Feeds SDK `AgentSpec.maxTurns`; SDK default applies when absent. |
 | `allowed_tools` | yes | The profile's ordinary model-visible tool list (`ask_advisor` is never listed; §6). |
 | `terminal_tool` | no | Present → terminal-tool mode; absent → SDK text termination mode. |
-| `workflows` | no | Workflow names from `workflow.json` this profile may inspect or delegate. |
+| `workflows` | no | Workflow names from `.eos-agents/workflow/` this profile may use; a non-empty list injects that workflow's tools and a prompt fragment (§6). |
 | `subagents` | no | Profile names this profile may launch through `run_subagent`. |
 | `pursuit_context_script` | no | Initial-message script; required for any profile referenced as a pursuit `planner` or `worker` (§9). Resolves under `.eos-agents/pursuit/scripts/`. |
 
@@ -284,15 +283,15 @@ name: operator
 llm_client_id: codex_operator
 terminal_tool: submit_main_outcome
 workflows:
-  - pursuit
+  - pursuit              # injects delegate_pursuit, cancel_pursuit, read_workflow_docs + the prompt fragment
 subagents:
   - subagent
 allowed_tools:
-  - list_workflows
-  - describe_workflow
-  - delegate_workflow
   - run_subagent
 ```
+
+The operator lists no workflow tools: declaring `pursuit` under `workflows` is what makes
+them appear (§6).
 
 ```yaml
 name: planner
@@ -309,11 +308,12 @@ allowed_tools:
 
 Startup validation:
 
-- Every `workflows` entry must name a configured workflow from `workflow.json`. A
-  profile that exposes `delegate_workflow`, `describe_workflow`, or `list_workflows`
-  must declare at least one workflow. `list_workflows` is generated from the same
-  profile list, so two agents can have different visible workflows even though they
-  share one host hub.
+- Every `workflows` entry must name a configured workflow from `.eos-agents/workflow/`.
+  Workflow tools are never listed in `allowed_tools`: the factory injects
+  `delegate_<name>`, `cancel_<name>`, the provider's extras, and `read_workflow_docs`
+  (plus the system-prompt fragment) exactly when `workflows` is non-empty, and startup
+  rejects a profile that names any workflow tool in `allowed_tools`. Two agents can
+  therefore have different visible workflows even though they share one host hub.
 - Every `subagents` entry must name a known, non-terminal profile — a subagent launch
   supplies no outcome function. A profile that exposes `run_subagent` must declare at
   least one subagent name. The target is a normal profile; there is no role field,
@@ -332,39 +332,64 @@ allowed_tools:
   - read_agent_run
 ```
 
-### 5.2 Workflows (`workflow.json`)
+### 5.2 Workflows (`.eos-agents/workflow/`)
 
-`workflow.json` is the configured workflow registry: one row per named workflow. It is
-generic host config, not profile policy and not pursuit context state.
+Each configured workflow is one markdown file, profile-shaped: YAML frontmatter for
+config, the body as the workflow's skill-style manual. `workflow/pursuit.md`:
 
-```json
-{
-  "pursuit": {
-    "type": "pursuit",
-    "args": {
-      "planner": "planner",
-      "worker": "worker",
-      "store": ".eos-agents/pursuit/pursuit.sqlite",
-      "context_root": ".eos-agents/pursuit/context",
-      "default_max_attempts": 2
-    }
-  }
-}
+```markdown
+---
+name: pursuit
+type: pursuit
+description: Delegate a multi-leg coding pursuit.
+args:
+  planner: planner
+  worker: worker
+  store: .eos-agents/pursuit/pursuit.sqlite
+  context_root: .eos-agents/pursuit/context
+  default_max_attempts: 2
+---
+# pursuit
+
+Long-running goal pursuit: a pursuit owns ordered legs; each leg runs planner then
+worker attempts against an attempt budget.
+
+## Operating loop
+
+Call `delegate_pursuit` to start one, watch the background task it registers, read the
+`pursuit_<id>/` context paths for progress, and `cancel_pursuit` to stop one by id.
+
+## Tools
+
+### delegate_pursuit
+Payload semantics; the returned task id and title both embed `pursuit_<id>`.
+
+### cancel_pursuit
+Domain cancel by `pursuit_<id>`; idempotent; distinct from `cancel_background_task`.
 ```
 
-The key is the workflow's `name`. `type` selects the provider; `args` is validated by
-that provider's schema at `WorkflowHub.open` (§8). The `planner` and `worker` values are
-agent names (profile names). `default_max_attempts` is schema-defaulted to the value
-shown and may be omitted. Context-script selection is not workflow config: it stays on
-the planner/worker profiles (`pursuit_context_script`), resolved by the app (§11).
+The file basename is the workflow `name`, and must be a valid tool-name fragment
+(`snake_case`) because the hub derives tool names from it (§8). Frontmatter `type`
+selects the provider; `args` is validated by that provider's schema at `WorkflowHub.open`
+(§8); `description` is the one-line text the system-prompt fragment shows. The body is
+the `read_workflow_docs` manual. The `planner` / `worker` values are agent names;
+`default_max_attempts` is schema-defaulted and may be omitted. Context-script selection
+is not workflow config: it stays on the planner/worker profiles
+(`pursuit_context_script`), resolved by the app (§11).
 
-Configuring a workflow here does not expose it to any agent. Exposure happens only when
-a profile lists the workflow's name in `workflows` and selects workflow tools in
-`allowed_tools`.
+This placement follows one boundary rule, used consistently across the host: model-facing
+prose about a *configured capability* (`description`, the docs body) lives in
+`.eos-agents` markdown; prose bound to a *code contract* (a tool's one-line description, a
+payload field's `.describe()`, an advisory prompt) stays beside the code. The provider
+supplies the tools; the markdown supplies the words around them.
 
-V1 configures one workflow named `pursuit`. A second pursuit (different store,
-different planner/worker pair) is one more row with `type: "pursuit"` — the provider is
-reused and `delegate_workflow`'s union gains an arm per workflow name. No new tools.
+Configuring a workflow here does not expose it to any agent. Exposure happens only when a
+profile lists the workflow's `name` in `workflows` (§6).
+
+V1 configures one workflow, `workflow/pursuit.md`. A second pursuit (different store,
+different planner/worker pair) is one more file with `type: pursuit` — say
+`workflow/pursuit_staging.md`, whose tools derive as `delegate_pursuit_staging`,
+`cancel_pursuit_staging`, and so on. The provider is reused; no new tool authoring.
 
 ## 6. AgentFactory
 
@@ -407,14 +432,21 @@ export function buildAgentFactory(
 
 Creation rules:
 
-- `profile.allowed_tools` in the markdown is the source of truth for ordinary tool
-  selection; factory-injected `ask_advisor` is the one exception (below).
+- `profile.allowed_tools` is the source of truth for ordinary tool selection. Two tool
+  groups are factory-injected rather than selected: `ask_advisor` (from the advisory
+  binding, below) and the workflow tools (from `profile.workflows`, next).
 - `AgentFactory` resolves each selected name against the host tool registry (§7); an
   unknown name is a startup error.
-- For workflow tools, `AgentFactory` first asks the hub for a view scoped to
-  `profile.workflows`, then builds `list_workflows`, `describe_workflow`, and
-  `delegate_workflow` from that view. It must not pass the whole hub registry to
-  model-visible tools.
+- Workflow tools are gated on `profile.workflows`, their single authority (the same
+  pattern as `ask_advisor`). When it is non-empty, `AgentFactory` asks the hub for a view
+  scoped to those names, then:
+  - appends the view's `delegate_<name>` / `cancel_<name>` / extras tools, built via
+    `view.tools({ agents: this })`;
+  - appends one `read_workflow_docs` tool over the same view; and
+  - prepends `view.promptFragment()` to the system prompt.
+  It never passes the whole hub registry to model-visible tools. When `profile.workflows`
+  is empty the agent has no workflow surface, and a profile naming any workflow tool in
+  `allowed_tools` is a startup error (§5.1).
 - `ask_advisor` is never selected through `allowed_tools`. Profiles do not list it, and
   startup validation rejects a profile that names it; only the factory injects it.
 - Binding an `AgentOutcomeFnWithAdvisory` is the advisory opt-in: the factory appends
@@ -439,9 +471,9 @@ Creation rules:
   performs it at registration (§9).
 
 `AgentFactory` is a composition-root value, not a singleton. Tools that need to launch
-agents are tool factories closed over it, and workflows that launch agents receive it in
-`WorkflowDelegateContext` when `delegate_workflow` runs. Do not put `AgentFactory` on
-SDK `ToolCallContext`.
+agents are tool factories closed over it, and workflows that launch agents receive it as
+`WorkflowToolContext` when the factory builds their tools (`view.tools({ agents })`). Do
+not put `AgentFactory` on SDK `ToolCallContext`.
 
 ## 7. Tool Surface
 
@@ -451,7 +483,7 @@ contract. The SDK ships none.
 | Family | Tools | Package | Notes |
 | --- | --- | --- | --- |
 | agent patterns | `run_subagent`, `ask_advisor` | `app/tools/agent/` | Close over `AgentFactory`. `ask_advisor` is factory-injected via the advisory binding, never profile-selected. |
-| workflow | `list_workflows`, `describe_workflow`, `delegate_workflow` | `app/tools/workflow/` | Built from each profile's hub view. |
+| workflow | `read_workflow_docs` (app) + per-workflow `delegate_<name>` / `cancel_<name>` / extras (provider) | `app/tools/workflow/`, `app/workflows/*-provider.ts` | Factory-injected from `profile.workflows`, never in `allowed_tools`. The hub names the provider's tool roles; `read_workflow_docs` and the prompt fragment come from the profile view. |
 | background | `list_background_tasks`, `cancel_background_task` | `tools/background/` | Thin projections over `ctx.backgroundTaskSupervisor`. |
 | records | `read_agent_run` | `tools/records/` | Factory over `recordsDir`. |
 | sandbox | `read`, `multi_read`, `write`, `edit`, `exec_command`, `command_stdin`, `read_command_transcript` | `tools/sandbox/` | The coding capability, bridged to the sandbox daemon. Migrated as-is; out of this split's redesign scope, but the names must exist in the registry or every current planner/worker profile fails `allowed_tools` validation. |
@@ -500,9 +532,9 @@ export const cancelBackgroundTask = defineTool({
 
 This split intentionally uses SDK background-task vocabulary. Current Phase 05.3
 implementation evidence still mentions background session type `"pursuit"` because it
-predates the SDK split (§1.1). In this host spec, `delegate_workflow` registers the
-returned workflow handle as a background task with a `toolName` such as
-`workflow:pursuit`; no model-facing background-session API survives.
+predates the SDK split (§1.1). In this host spec, a workflow's `delegate_<name>` tool
+registers its run as a background task with a `toolName` such as `workflow:pursuit`; no
+model-facing background-session API survives.
 
 ### 7.2 Subagent Tool
 
@@ -663,9 +695,11 @@ the SDK.
 type WorkflowArgs = Record<string, unknown>;
 
 interface WorkflowConfig {
-  name: string;                        // key of the .eos-agents/workflow.json entry
-  type: string;                        // selects the provider
-  args: unknown;                       // validated by the provider's args schema
+  name: string;                        // basename of .eos-agents/workflow/<name>.md
+  type: string;                        // frontmatter; selects the provider
+  args: unknown;                       // frontmatter; validated by the provider's args schema
+  description: string;                 // frontmatter; the prompt-fragment line
+  docs: string;                        // markdown body; the read_workflow_docs manual
 }
 
 interface WorkflowProvider<A extends WorkflowArgs = WorkflowArgs> {
@@ -674,23 +708,24 @@ interface WorkflowProvider<A extends WorkflowArgs = WorkflowArgs> {
   create(init: { name: string; args: A }): Promise<RegisteredWorkflow>;
 }
 
-interface WorkflowDelegateContext {
+interface WorkflowToolContext {
   agents: AgentFactory;
 }
 
-interface RegisteredWorkflow<I = unknown> {
-  name: string;
-  type: string;
-  description: string;                 // one line, shown by list_workflows
-  docs: string;                        // full manual, shown by describe_workflow
-  delegatePayload: z.ZodType<I>;
-  delegate(input: I, ctx: WorkflowDelegateContext): Promise<WorkflowHandle>;
+/** A nameless tool spec; the hub assigns the model-visible name from the workflow name. */
+type WorkflowToolSpec = Omit<ToolSpec<unknown>, "name">;
+
+interface WorkflowToolSet {
+  delegate: WorkflowToolSpec;                  // hub names it delegate_<name>
+  cancel: WorkflowToolSpec;                    // hub names it cancel_<name>
+  extras?: Record<string, WorkflowToolSpec>;   // verb -> spec; hub names <verb>_<name>
 }
 
-interface WorkflowHandle {
-  title: string;                       // must embed the workflow-assigned id (§9)
-  cancel(): void | Promise<void>;
-  done: Promise<BackgroundTaskOutcome>;
+interface RegisteredWorkflow {
+  name: string;
+  type: string;
+  /** Build this workflow's model-visible tool set, closed over the agent factory. */
+  tools(ctx: WorkflowToolContext): WorkflowToolSet;
 }
 
 interface WorkflowHubInit {
@@ -699,81 +734,82 @@ interface WorkflowHubInit {
 }
 
 declare class WorkflowHub {
-  /** Fail-fast join of config rows and providers; awaits every create. */
+  /** Fail-fast join of config files and providers; awaits every create. */
   static open(init: WorkflowHubInit): Promise<WorkflowHub>;
   workflowNames(): readonly string[];
   forProfile(names: readonly string[]): ProfileWorkflowView;
 }
 
-interface WorkflowListRow {
-  name: string;
-  type: string;
-  description: string;
-}
-
 interface ProfileWorkflowView {
-  list(): WorkflowListRow[];
-  describe(name: string): string;
-  delegateWorkflowInputSchema(): z.ZodType<DelegateWorkflowInput>;
-  delegate(
-    input: DelegateWorkflowInput,
-    ctx: WorkflowDelegateContext,
-  ): Promise<WorkflowHandle>;
+  /** Named delegate_/cancel_/<verb>_ tools across this profile's workflows. */
+  tools(ctx: WorkflowToolContext): ToolDefinition[];
+  /** The system-prompt block listing this profile's workflows. */
+  promptFragment(): string;
+  /** The read_workflow_docs manual for one profile-visible workflow. */
+  docs(name: string): string;
 }
 ```
 
-The `open` join, per `workflow.json` row:
+The `open` join, per `workflow/<name>.md` file:
 
 ```text
-provider = providers.find(p => p.type === row.type)     unknown type      -> startup error
-args     = provider.args.parse(row.args)                schema mismatch   -> startup error
+provider = providers.find(p => p.type === cfg.type)     unknown type      -> startup error
+args     = provider.args.parse(cfg.args)                schema mismatch   -> startup error
 await provider.create({ name, args })                   create rejection  -> startup error
-  -> RegisteredWorkflow                                 what profiles see and delegate to
+  -> RegisteredWorkflow                                 paired with cfg.description / cfg.docs
 ```
 
 Fail-fast is a resolved decision: a workflow that cannot open (for example, pursuit's
 store path is unwritable) aborts startup with an error naming the workflow. There are no
-readiness or error rows; every row `list_workflows` returns is delegatable. The startup
-error message is the diagnosis surface.
+readiness or error rows; every workflow a profile view exposes is delegatable. The
+startup error message is the diagnosis surface.
 
-The hub does not auto-mint tools. There is one model-visible delegation tool,
-`delegate_workflow`. Its input schema is generated from the current profile's workflow
-view, not from every configured workflow:
+### 8.1 Tool Naming and the Profile View
 
-```ts
-type DelegateWorkflowInput =
-  | { name: "pursuit"; payload: CreatePursuitInput }
-  // one union arm per workflow declared by this profile
-```
+The hub mints no tools at `open`. Tools are built per profile, when `AgentFactory`
+assembles an agent that lists the workflow (§6): the hub calls `registered.tools(ctx)`
+and names the result from the workflow `name` and the role keys.
 
-`ProfileWorkflowView.delegateWorkflowInputSchema()` builds a discriminated union on
-`name`. Each arm uses the exact `delegatePayload` schema of the registered workflow.
-The SDK therefore validates `delegate_workflow` like any other tool before
-`execute(...)` runs: workflows outside the profile and malformed payloads return normal
-in-run tool errors and register no background task.
+| Role key | Tool name | Required |
+| --- | --- | --- |
+| `delegate` | `delegate_<name>` | yes |
+| `cancel` | `cancel_<name>` | yes |
+| `extras[verb]` | `<verb>_<name>` | no |
 
-Progressive doc discovery — what lives where:
+`delegate` and `cancel` are reserved; an `extras` key equal to a reserved verb, or any
+derived name that collides with another tool in the assembled set, is an assembly error.
+Because the name is hub-owned, a provider authors its tool set once and it is correctly
+named for every configured workflow of that type — `delegate_pursuit`,
+`delegate_pursuit_staging`, and so on.
 
-- **Union-arm schema `.describe()` text** carries only short field-level usage rules the
-  model needs while constructing the call (for pursuit: "use dynamic leg goals by
-  default; provide `leg_goals` only when the caller already knows the complete ordered
-  list"). This text rides the always-visible tool schema, so keep it terse.
-- **`docs`** (behind `describe_workflow`) carries everything longer: mode semantics,
-  refocus and successor rules, the context path universe, settlement vocabulary.
-- **`description`** is one list row line.
+`ProfileWorkflowView` exposes exactly three things to the factory:
 
-Generic workflow tools:
+- `tools(ctx)` — the named `ToolDefinition[]` above, each closed over `ctx.agents`.
+- `promptFragment()` — the system-prompt block listing this profile's workflows by
+  `description`, with the instruction to call `read_workflow_docs(<name>)` before first
+  use. This replaces a `list_workflows` tool: the list is fixed at assembly, so it is
+  prompt text, not a model round trip.
+- `docs(name)` — the `read_workflow_docs` body for one profile-visible workflow.
 
-- `list_workflows()` returns only the current profile's workflows: `name`, `type`,
-  `description`.
-- `describe_workflow(name)` returns `docs` for one profile-visible workflow. It mutates
-  nothing.
-- `delegate_workflow(name, payload)` validates through the generated union, delegates to
-  the selected workflow, and registers the returned handle as one SDK background task.
+Progressive discovery — light at the surface, detail one read away:
 
-There are no `delegate_pursuit`, `delegate_research`, or `${workflow}_delegate` tools.
-Adding a workflow type means registering a provider; configuring one means adding a
-`workflow.json` row. Neither adds a tool.
+- **Tool `description` and payload-field `.describe()` text** stay terse, a line each. A
+  profile can carry many workflow tools, so the always-visible surface must be cheap.
+- **`read_workflow_docs(<name>)`** returns the full manual (the `workflow/<name>.md`
+  body): operating loop, payload semantics, mode and successor rules, the context-path
+  universe, settlement vocabulary, and a `## Tools` section documenting each derived tool.
+- **`promptFragment()`** is the always-on index: one `description` line per workflow plus
+  the read-the-docs instruction.
+
+The docs body is authored to name every derived tool under `## Tools`. The hub may assert
+that coverage when it builds a profile's tools, since both the derived names (from the
+tool-set role keys) and the body (`cfg.docs`) are then in hand.
+
+`read_workflow_docs` is the only app-authored workflow tool; `delegate_<name>`,
+`cancel_<name>`, and the extras are provider-authored and hub-named. Adding a workflow
+*type* means registering a provider; configuring one means adding a `workflow/<name>.md`
+file. Configuring reuses the provider's tool set under a new name; only a new type adds
+tool authoring.
 
 ## 9. Pursuit Registration
 

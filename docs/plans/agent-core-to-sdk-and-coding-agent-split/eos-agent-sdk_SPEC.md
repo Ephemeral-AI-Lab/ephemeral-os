@@ -173,9 +173,9 @@ type ToolCallFacts = {
 };
 
 // ── authoring ───────────────────────────────────────────────────
-export function defineTool<I>(init: ToolDefinitionInit<I>): ToolDefinition<I>;  // NO behavior field
+export function defineTool<I>(spec: ToolSpec<I>): ToolDefinition<I>;  // NO behavior field
 
-interface ToolDefinitionInit<I> {
+interface ToolSpec<I> {
   name: string;
   description: string;
   input: ZodType<I>;
@@ -205,7 +205,7 @@ interface SubmitCtx { runId: AgentRunId; submissionId: string /* stable = toolUs
 //   members carried unchanged (token/message stream; granularity revisited per §9) ·
 // AgentOutcome<T> · UsageSnapshot ·
 // AgentOutcomeFn<T> (opaque; minted by createAgentOutcomeFn; name via agentOutcomeToolName) · ToolDefinition ·
-// ToolDefinitionInit · ToolResult · ToolCallContext · ToolCallFacts · TurnFacts ·
+// ToolSpec · ToolResult · ToolCallContext · ToolCallFacts · TurnFacts ·
 // SubmitCtx · UserMessage · Message · AgentRunId · ToolUseId ·
 // BackgroundTaskId · BackgroundTaskRow · BackgroundTaskOutcome ·
 // HookEntry · HookMatcher · HookDecision
@@ -289,7 +289,7 @@ The loop is the existing `agent-loop.ts` eleven-step structure, unchanged in spi
 
 ### 4.3 Tools and hooks
 
-- The SDK ships the authoring contract (`defineTool`, `ToolDefinitionInit`, `ToolResult`,
+- The SDK ships the authoring contract (`defineTool`, `ToolSpec`, `ToolResult`,
   `ToolCallContext`), the batch executor, and the hook engine. It ships **zero tool
   implementations** — no subagent, advisor, transcript, background-task, or workflow tools.
 - There is **no `behavior` field**. Foreground / background / yield are runtime patterns of

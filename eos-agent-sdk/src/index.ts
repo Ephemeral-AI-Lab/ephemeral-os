@@ -47,7 +47,7 @@ export {
   type ToolCallContext,
   type ToolCallFacts,
   type ToolDefinition,
-  type ToolDefinitionInit,
+  type ToolSpec,
   type ToolResult,
 } from "./tool/index.js";
 

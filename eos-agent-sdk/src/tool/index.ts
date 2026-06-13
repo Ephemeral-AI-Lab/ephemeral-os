@@ -8,7 +8,7 @@ export type {
   ToolDefinition,
   ToolResult,
 } from "./contract.js";
-export { defineTool, type ToolDefinitionInit } from "./define.js";
+export { defineTool, type ToolSpec } from "./define.js";
 export {
   HookEngine,
   type HookDecision,
