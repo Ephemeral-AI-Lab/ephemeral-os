@@ -50,7 +50,7 @@ export const ProviderConnectionSchema = z.discriminatedUnion("provider", [
 export type ProviderConnection = z.input<typeof ProviderConnectionSchema>;
 
 /** A profile resolved to its composition parts; consumed by the factory. */
-export interface ResolvedProfile {
+interface ResolvedProfile {
   wire: WireFactory;
   wireOptions: WireOptions;
   access: Access;

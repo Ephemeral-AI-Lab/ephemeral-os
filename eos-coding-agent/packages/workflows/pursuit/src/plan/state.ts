@@ -3,7 +3,7 @@ import type {
   AttemptId,
   PlanId,
   PursuitEntityRunStatus,
-} from "@eos/contracts";
+} from "../../contracts/pursuit.js";
 
 export interface PlanState {
   readonly id: PlanId;

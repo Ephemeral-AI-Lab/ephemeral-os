@@ -7,7 +7,7 @@ export type ToolResultBlock = Extract<ContentBlock, { type: "tool_result" }>;
 export type PartialReason = "interrupted" | "provider_error";
 
 /** Where one appended user message came from. */
-export type UserMessageOrigin = "initial" | "steer" | "notification";
+type UserMessageOrigin = "initial" | "steer" | "notification";
 
 /**
  * One line of the `messages.jsonl` conversation artifact, fed to the

@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  agentRunIdFrom,
   attemptIdFrom,
   planIdFrom,
   pursuitIdFrom,
   workItemIdFrom,
-} from "@eos/contracts";
+} from "../contracts/pursuit.js";
 
 import {
   allMessageText,
@@ -18,28 +17,12 @@ import {
 } from "./support.js";
 
 describe("pursuit creation and planner declarations", () => {
-  it("rejects creation payloads whose explicit leg_goal_mode conflicts with their shape", async () => {
-    const h = harness();
-
-    await expect(
-      h.service.createPursuit(
-        {
-          pursuit_goal: "ship it",
-          leg_goal_mode: "dynamic",
-          leg_goals: ["parser"],
-        },
-        agentRunIdFrom("parent-run"),
-      ),
-    ).rejects.toThrow("leg_goal_mode dynamic does not match predefined payload shape");
-  });
-
   it("creates a dynamic first leg with pursuit_goal as leg_goal and accepts keep payloads", async () => {
     const h = harness();
     const pursuit = await h.create("ship the parser");
 
     expect(h.launches).toHaveLength(1);
     expect(h.launches[0].agentName).toBe("planner");
-    expect(h.launches[0].options?.parent).toBe("parent-run");
 
     const initial = await h.tree(pursuit.pursuit_id);
     expect(initial.pursuit.pursuitGoal).toBe("ship the parser");
@@ -67,22 +50,23 @@ describe("pursuit creation and planner declarations", () => {
   it("lets non-agent callers create, launch without a parent, cancel, and settle", async () => {
     const h = harness();
 
-    const pursuit = await h.service.createPursuit({
-      pursuit_goal: "standalone call",
-    });
+    const handle = await h.service.createPursuit(
+      { pursuit_goal: "standalone call" },
+      { agents: h.agents },
+    );
+    const pursuitId = pursuitIdFrom(handle.pursuitId.replace(/^pursuit_/, ""));
 
-    expect(h.launches[0].options?.parent).toBeUndefined();
     await expect(
       h.db
         .selectFrom("pursuits")
         .select("parent_run_id")
-        .where("id", "=", pursuit.pursuit_id)
+        .where("id", "=", pursuitId)
         .executeTakeFirstOrThrow(),
     ).resolves.toMatchObject({ parent_run_id: null });
 
-    await pursuit.cancel("operator stopped it");
+    await handle.cancel("operator stopped it");
 
-    await expect(pursuit.settle()).resolves.toMatchObject({
+    await expect(handle.done).resolves.toMatchObject({
       status: "Cancelled",
       summary: "operator stopped it",
     });
@@ -130,7 +114,7 @@ describe("scheduler dependency and failure behavior", () => {
       }),
     );
 
-    expect(h.launches.map((launch) => launch.options?.submission?.kind)).toEqual([
+    expect(h.launches.map((launch) => launch.kind)).toEqual([
       "planner",
       "worker",
     ]);
@@ -138,7 +122,7 @@ describe("scheduler dependency and failure behavior", () => {
 
     await h.launches[1].submitWorker(workerPayload({ summary: "base done" }));
 
-    expect(h.launches.map((launch) => launch.options?.submission?.kind)).toEqual([
+    expect(h.launches.map((launch) => launch.kind)).toEqual([
       "planner",
       "worker",
       "worker",
@@ -356,7 +340,7 @@ describe("scheduler dependency and failure behavior", () => {
       plannerPayload({ work_items: [workItem("followup", ["base"])] }),
     );
     expect(accepted.ok).toBe(true);
-    expect(h.launches.at(-1)?.options?.submission?.kind).toBe("worker");
+    expect(h.launches.at(-1)?.kind).toBe("worker");
     expect(allMessageText(h.launches.at(-1)?.messages ?? [])).toContain(
       "base done",
     );

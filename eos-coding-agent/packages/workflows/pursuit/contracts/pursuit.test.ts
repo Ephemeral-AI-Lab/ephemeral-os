@@ -13,7 +13,7 @@ import {
   isWorkItemTerminal,
   mintPursuitId,
   pursuitIdFrom,
-} from "../src/index.js";
+} from "./pursuit.js";
 
 const WORK_ITEM = {
   id: "wi-1",
@@ -106,37 +106,28 @@ describe("create pursuit input", () => {
     expect(parsed.leg_goals).toBeUndefined();
   });
 
-  it("accepts predefined mode with an ordered non-empty leg list", () => {
+  it("derives predefined mode from an ordered non-empty leg list", () => {
     const parsed = CreatePursuitInputSchema.parse({
       pursuit_goal: "ship it",
-      leg_goal_mode: "predefined",
       leg_goals: ["parser", "printer"],
     });
     expect(parsed.leg_goals).toEqual(["parser", "printer"]);
   });
 
-  it("rejects predefined mode with an empty leg list", () => {
+  it("rejects an empty leg list", () => {
     expect(
       CreatePursuitInputSchema.safeParse({
         pursuit_goal: "ship it",
-        leg_goal_mode: "predefined",
         leg_goals: [],
       }).success,
     ).toBe(false);
   });
 
-  it("rejects explicit mode and payload-shape mismatches", () => {
+  it("rejects the dropped leg_goal_mode field", () => {
     expect(
       CreatePursuitInputSchema.safeParse({
         pursuit_goal: "ship it",
         leg_goal_mode: "dynamic",
-        leg_goals: ["parser"],
-      }).success,
-    ).toBe(false);
-    expect(
-      CreatePursuitInputSchema.safeParse({
-        pursuit_goal: "ship it",
-        leg_goal_mode: "predefined",
       }).success,
     ).toBe(false);
   });

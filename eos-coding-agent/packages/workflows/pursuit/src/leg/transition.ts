@@ -3,8 +3,8 @@ import {
   mintLegId,
   type LegId,
   type PursuitId,
-} from "@eos/contracts";
-import type { LegRow, PursuitTransaction } from "@eos/db";
+} from "../../contracts/pursuit.js";
+import type { LegRow, PursuitTransaction } from "../../db/src/index.js";
 
 import { cancelAttempt, createAttempt } from "../attempt/transition.js";
 import { reconcilePursuit } from "../pursuit/transition.js";

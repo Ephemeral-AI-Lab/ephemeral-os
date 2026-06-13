@@ -2,6 +2,10 @@ import { z } from "zod";
 
 import { MessageSchema } from "./messages.js";
 
+// SDK primitives the pursuit domain references, re-exported so internal
+// modules keep a single contracts barrel for both domain and shared types.
+export type { AgentRunId, JsonValue } from "eos-agent-sdk";
+
 // --- entity ids ---------------------------------------------------------------
 
 export const PursuitIdSchema = z.string().min(1).brand<"PursuitId">();
@@ -107,28 +111,15 @@ export type LegGoalMode = z.infer<typeof LegGoalModeSchema>;
 
 const NonEmptyStringListSchema = z.tuple([z.string().min(1)], z.string().min(1));
 
-export const CreatePursuitInputSchema = z
-  .strictObject({
-    pursuit_goal: z.string().min(1),
-    leg_goal_mode: LegGoalModeSchema.optional(),
-    leg_goals: NonEmptyStringListSchema.optional(),
-  })
-  .superRefine((payload, ctx) => {
-    const derived = payload.leg_goals === undefined ? "dynamic" : "predefined";
-    if (payload.leg_goal_mode !== undefined && payload.leg_goal_mode !== derived) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["leg_goal_mode"],
-        message: `leg_goal_mode ${payload.leg_goal_mode} does not match ${derived} payload shape`,
-      });
-    }
-  });
-export type CreatePursuitInput = z.infer<typeof CreatePursuitInputSchema>;
-
-export const DelegatePursuitInputSchema = CreatePursuitInputSchema.extend({
-  max_attempts: z.number().int().positive().optional(),
+// Mode derives from payload shape only (spec §10.1): omitting `leg_goals`
+// starts dynamic mode, a non-empty list starts predefined mode. There is no
+// diagnostic `leg_goal_mode` field and no per-call `max_attempts`; the attempt
+// budget is the configured `default_max_attempts`.
+export const CreatePursuitInputSchema = z.strictObject({
+  pursuit_goal: z.string().min(1),
+  leg_goals: NonEmptyStringListSchema.optional(),
 });
-export type DelegatePursuitInput = z.infer<typeof DelegatePursuitInputSchema>;
+export type CreatePursuitInput = z.infer<typeof CreatePursuitInputSchema>;
 
 export const PlannerWorkItemSpecSchema = z.strictObject({
   id: z.string().min(1),
@@ -306,19 +297,30 @@ export interface PursuitSettlement {
 }
 
 export interface PursuitHandle {
-  pursuit_id: PursuitId;
+  /** Display id (`pursuit_<id>`): the background-task tag id, the context-path
+   *  root, and the cancel/correlation handle the delegating model already holds. */
+  pursuitId: string;
+  /** `pursuit pursuit_<id>: <goal first line>` — embeds the same id. */
+  title: string;
   cancel(reason?: string): Promise<void>;
-  settle(): Promise<PursuitSettlement>;
+  done: Promise<PursuitSettlement>;
 }
 
 export type SubmissionResult = { ok: true } | { ok: false; error: string };
 
-export type PursuitAgentSubmissionBinding =
-  | {
-      kind: "planner";
-      submit(payload: PlannerOutcomePayload): Promise<SubmissionResult>;
-    }
-  | {
-      kind: "worker";
-      submit(payload: WorkerOutcomePayload): Promise<SubmissionResult>;
-    };
+// Submission targets carry domain identity only; launch-queue claim data
+// (queue ids, launch tokens) stays inside agent-launcher.ts (spec §11).
+export interface PlannerSubmissionTarget {
+  pursuitId: PursuitId;
+  legId: LegId;
+  attemptId: AttemptId;
+  planId: PlanId;
+}
+
+export interface WorkerSubmissionTarget {
+  pursuitId: PursuitId;
+  legId: LegId;
+  attemptId: AttemptId;
+  workItemId: WorkItemId;
+  workItemKey: string;
+}

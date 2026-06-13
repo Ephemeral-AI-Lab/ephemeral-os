@@ -3,7 +3,7 @@ import type {
   LegGoalMode,
   PursuitEntityRunStatus,
   PursuitId,
-} from "@eos/contracts";
+} from "../../contracts/pursuit.js";
 
 export interface PursuitState {
   readonly id: PursuitId;

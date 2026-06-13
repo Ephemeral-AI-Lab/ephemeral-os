@@ -1,4 +1,4 @@
-import type { AttemptFailureReason } from "@eos/contracts";
+import type { AttemptFailureReason } from "../../contracts/pursuit.js";
 
 import type { EntityFieldFile } from "../work-item/context.js";
 import type { AttemptState } from "./state.js";

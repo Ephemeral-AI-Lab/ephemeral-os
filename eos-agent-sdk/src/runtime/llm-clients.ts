@@ -33,7 +33,7 @@ export interface ResolvedLlmProfile {
   reasoningEffort?: ReasoningEffort;
 }
 
-export interface LlmClientRegistry {
+interface LlmClientRegistry {
   /** Throws on an unknown ref — at `createAgent`, never mid-run. */
   require(ref: LlmRef): ResolvedLlmProfile;
 }

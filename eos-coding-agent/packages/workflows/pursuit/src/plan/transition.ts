@@ -7,8 +7,8 @@ import {
   type PlanId,
   type PlannerOutcomePayload,
   type PursuitId,
-} from "@eos/contracts";
-import type { PursuitTransaction } from "@eos/db";
+} from "../../contracts/pursuit.js";
+import type { PursuitTransaction } from "../../db/src/index.js";
 
 import {
   plannerFailureReason,

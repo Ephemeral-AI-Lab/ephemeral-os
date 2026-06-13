@@ -1,18 +1,28 @@
-// The only public package surface: the service and the port/DTO types
-// (§14). Entity state, context, and transition modules stay
-// package-internal; outside packages construct pursuits exclusively
-// through `PursuitService` and the contracts-level DTOs.
+// The public package surface: the service factory, the narrow agent slice the
+// host adapts to, the compose seam, and the contracts-level DTOs the host needs
+// to delegate, compose context, and validate workflow args. Entity state,
+// transitions, and projection stay package-internal.
+export {
+  openPursuitService,
+  type OpenPursuitServiceDeps,
+  type PursuitService,
+  type PursuitServiceDependencies,
+} from "./service.js";
+export { type PursuitAgents } from "./agent-launcher.js";
 export {
   defaultComposeLaunchContext,
   type ComposeLaunchContext,
 } from "./context-engine/composer.js";
 export {
-  type AgentLaunchOptions,
-  type AgentLaunchPort,
-  type LaunchSettlement,
-  type LaunchedAgent,
-} from "./agent-launcher.js";
-export {
-  PursuitService,
-  type PursuitServiceDependencies,
-} from "./service.js";
+  CreatePursuitInputSchema,
+  ContextScriptOutputSchema,
+  InitialUserMessageSchema,
+  type ContextScriptOutput,
+  type CreatePursuitInput,
+  type InitialUserMessage,
+  type PlannerContextInput,
+  type PursuitHandle,
+  type PursuitId,
+  type PursuitSettlement,
+  type WorkerContextInput,
+} from "../contracts/pursuit.js";

@@ -1,9 +1,10 @@
 ---
 name: worker
-description: Worker
 llm_client_id: codex_coding_plan
+description: Implements one assigned pursuit work item.
 max_turns: 100
-agent_kind: worker
+terminal_tool: submit_worker_outcome
+pursuit_context_script: .eos-agents/pursuit/scripts/worker.cjs
 allowed_tools:
   - read
   - multi_read
@@ -12,14 +13,14 @@ allowed_tools:
   - exec_command
   - command_stdin
   - read_command_transcript
-  - list_background_sessions
-  - cancel_background_session
-  - ask_advisor
-terminal_tool: submit_worker_outcome
-pursuit_context_script: .eos-agents/pursuit/scripts/worker.cjs
+  - list_background_tasks
+  - cancel_background_task
 ---
 
-You are the worker for one assigned work item.
+You are a worker. Complete only the single work item you are assigned. Do not
+plan, refocus, or change legs.
 
 Before terminal submission, call `ask_advisor` with
-`tool_name="submit_worker_outcome"` and the exact payload you intend to send.
+`tool_name="submit_worker_outcome"` and the exact payload you intend to send,
+then submit it with `submit_worker_outcome` (set `is_pass` to report success or
+failure).

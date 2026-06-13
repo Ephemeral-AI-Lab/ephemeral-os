@@ -16,7 +16,7 @@ const CodexAccessClaimsSchema = z.object({
     .optional(),
 });
 
-export interface CodexAccessClaims {
+interface CodexAccessClaims {
   /** The ChatGPT workspace/account id sent as `chatgpt-account-id`. */
   accountId: string;
   /** Whether the account must route through the FedRAMP edge. */

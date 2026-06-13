@@ -165,7 +165,7 @@ class EventStream implements AsyncIterable<AgentEvent> {
   }
 }
 
-export interface RunHandleDeps {
+interface RunHandleDeps {
   runId: AgentRunId;
   backgroundTaskSupervisor: BackgroundTaskSupervisor;
   notifier: Notifier;

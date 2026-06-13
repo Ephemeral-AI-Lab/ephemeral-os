@@ -4,7 +4,7 @@ import type {
   PursuitContextAttempt,
   PursuitContextWorkItem,
   WorkerContextInput,
-} from "@eos/contracts";
+} from "../../contracts/pursuit.js";
 
 import { formatAttemptFailureReason } from "../attempt/context.js";
 

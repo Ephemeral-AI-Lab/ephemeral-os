@@ -29,7 +29,7 @@ export interface TerminalGate {
   cancelFinishing(): void;
 }
 
-export interface TerminalBinding<T> {
+interface TerminalBinding<T> {
   bound: BoundTool;
   /** The submission accepted in the current batch, if any (read-once). */
   takeAccepted: () => { value: T } | undefined;

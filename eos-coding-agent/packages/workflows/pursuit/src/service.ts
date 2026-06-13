@@ -1,27 +1,30 @@
+import type { AgentOutcome, AgentRunId } from "eos-agent-sdk";
+
 import {
   isPursuitEntityTerminal,
   mintPursuitId,
-  type AgentRunId,
-  type DelegatePursuitInput,
-  DelegatePursuitInputSchema,
+  type CreatePursuitInput,
+  CreatePursuitInputSchema,
   type InitialUserMessage,
   type PlannerOutcomePayload,
+  type PlannerSubmissionTarget,
   type PursuitHandle,
   type PursuitId,
   type PursuitSettlement,
-  type PursuitAgentSubmissionBinding,
   type SubmissionResult,
   type WorkerOutcomePayload,
-} from "@eos/contracts";
-import type { PursuitDb, PursuitTransaction } from "@eos/db";
+  type WorkerSubmissionTarget,
+} from "../contracts/pursuit.js";
+import { createPursuitDatabase, type PursuitDb, type PursuitTransaction } from "../db/src/index.js";
 
 import {
   claimLaunchable,
+  plannerOutcome,
   stampAgentRunId,
   verifyClaimLaunchable,
-  type AgentLaunchPort,
+  workerOutcome,
   type ClaimedLaunch,
-  type LaunchSettlement,
+  type PursuitAgents,
 } from "./agent-launcher.js";
 import { formatAttemptFailureReason } from "./attempt/context.js";
 import type { ComposeLaunchContext } from "./context-engine/composer.js";
@@ -29,7 +32,7 @@ import {
   buildPlannerContextInput,
   buildWorkerContextInput,
 } from "./context-engine/input.js";
-import { buildPursuitContext } from "./context-engine/projection/paths.js";
+import { buildPursuitContext, pursuitRootPath } from "./context-engine/projection/paths.js";
 import { projectPursuitContextMirror } from "./context-engine/projection/mirror.js";
 import { applyPlannerSettlement } from "./plan/transition.js";
 import { cancelPursuit, createPursuitRows } from "./pursuit/transition.js";
@@ -40,13 +43,50 @@ const DEFAULT_MAX_ATTEMPTS = 2;
 
 export interface PursuitServiceDependencies {
   db: PursuitDb;
-  port: AgentLaunchPort;
   compose: ComposeLaunchContext;
   contextRoot: string;
   plannerAgentName: string;
   isRegisteredWorkerAgent: (agentName: string) => boolean;
   defaultMaxAttempts?: number;
   logMirrorFailure?: (pursuitId: PursuitId, error: unknown) => void;
+}
+
+/** The app-owned factory deps (spec §11): the service opens its own store and
+ *  derives worker membership from the configured worker name. */
+export interface OpenPursuitServiceDeps {
+  plannerAgentName: string;
+  workerAgentName: string;
+  storePath: string;
+  contextRoot: string;
+  defaultMaxAttempts?: number;
+  compose: ComposeLaunchContext;
+}
+
+export function openPursuitService(deps: OpenPursuitServiceDeps): PursuitService {
+  return new PursuitService({
+    db: createPursuitDatabase(deps.storePath),
+    compose: deps.compose,
+    contextRoot: deps.contextRoot,
+    plannerAgentName: deps.plannerAgentName,
+    isRegisteredWorkerAgent: (agentName) => agentName === deps.workerAgentName,
+    ...(deps.defaultMaxAttempts !== undefined && {
+      defaultMaxAttempts: deps.defaultMaxAttempts,
+    }),
+  });
+}
+
+interface PlannerSubmission {
+  target: PlannerSubmissionTarget;
+  payload: PlannerOutcomePayload;
+  runId: AgentRunId;
+  submissionId: string;
+}
+
+interface WorkerSubmission {
+  target: WorkerSubmissionTarget;
+  payload: WorkerOutcomePayload;
+  runId: AgentRunId;
+  submissionId: string;
 }
 
 interface TerminalResolver {
@@ -63,6 +103,7 @@ function terminalResolver(): TerminalResolver {
 }
 
 interface ActivePursuit {
+  agents: PursuitAgents;
   controller: AbortController;
   terminal: TerminalResolver;
   cancelReason?: string;
@@ -77,12 +118,13 @@ export class PursuitService {
   }
 
   async createPursuit(
-    input: DelegatePursuitInput,
-    parentRunId?: AgentRunId | null,
+    input: CreatePursuitInput,
+    opts: { agents: PursuitAgents },
   ): Promise<PursuitHandle> {
-    const parsedInput = DelegatePursuitInputSchema.parse(input);
+    const parsedInput = CreatePursuitInputSchema.parse(input);
     const pursuitId = mintPursuitId();
     const active: ActivePursuit = {
+      agents: opts.agents,
       controller: new AbortController(),
       terminal: terminalResolver(),
     };
@@ -90,18 +132,17 @@ export class PursuitService {
     await this.#mutate(pursuitId, (trx) =>
       createPursuitRows(trx, {
         pursuitId,
-        parentRunId,
+        parentRunId: null,
         input: parsedInput,
-        maxAttempts:
-          parsedInput.max_attempts ??
-          this.#deps.defaultMaxAttempts ??
-          DEFAULT_MAX_ATTEMPTS,
+        maxAttempts: this.#deps.defaultMaxAttempts ?? DEFAULT_MAX_ATTEMPTS,
       }),
     );
+    const displayId = pursuitRootPath(pursuitId);
     return {
-      pursuit_id: pursuitId,
+      pursuitId: displayId,
+      title: `pursuit ${displayId}: ${firstLine(parsedInput.pursuit_goal)}`,
       cancel: (reason = "pursuit_cancelled") => this.cancel(pursuitId, reason),
-      settle: () => active.terminal.promise,
+      done: active.terminal.promise,
     };
   }
 
@@ -114,6 +155,58 @@ export class PursuitService {
     await this.#mutate(pursuitId, async (trx, tree) => {
       if (tree) await cancelPursuit(trx, tree.pursuit.id);
     });
+  }
+
+  /** The single successful-submission writer for planner outcomes (spec §11). */
+  async submitPlannerOutcome(submission: PlannerSubmission): Promise<SubmissionResult> {
+    const { target, payload } = submission;
+    let error: string | undefined;
+    await this.#mutate(target.pursuitId, async (trx, tree) => {
+      if (!tree) {
+        error = "unknown pursuit";
+        return;
+      }
+      error = plannerSubmissionError(tree, target, payload, {
+        isRegisteredWorkerAgent: this.#deps.isRegisteredWorkerAgent,
+      });
+      if (error !== undefined) return;
+      await applyPlannerSettlement(trx, tree, target.planId, {
+        kind: "submitted",
+        payload,
+      });
+    });
+    return error === undefined ? { ok: true } : { ok: false, error };
+  }
+
+  async submitWorkerOutcome(submission: WorkerSubmission): Promise<SubmissionResult> {
+    const { target, payload } = submission;
+    await this.#mutate(target.pursuitId, async (trx, tree) => {
+      if (!tree) return;
+      await applyWorkItemSettlement(trx, tree, target, {
+        isPass: payload.is_pass,
+        summary: payload.summary,
+        outcome: payload.outcome,
+      });
+    });
+    return { ok: true };
+  }
+
+  /**
+   * Death/cancel synthesis observed at `run.outcome()`. A completed run already
+   * settled its entity through `onSubmit`, so the observer never touches state
+   * after success — it only synthesizes failed/cancelled settlements.
+   */
+  async reconcileRun(
+    pursuitId: PursuitId,
+    claim: ClaimedLaunch,
+    outcome: AgentOutcome<unknown>,
+  ): Promise<void> {
+    if (outcome.status === "completed") return;
+    await this.#synthesizeFailure(
+      pursuitId,
+      claim,
+      `run settled '${outcome.status}' without a submission`,
+    );
   }
 
   async #mutate(
@@ -206,85 +299,24 @@ export class PursuitService {
     }
 
     const permitted = await verifyClaimLaunchable(this.#deps.db, claim);
-    if (!permitted) return;
+    if (!permitted || !active) return;
 
-    const launched = this.#deps.port.launch(claim.agentName, messages, {
-      submission: this.#buildBinding(pursuitId, claim),
-      ...(active && { signal: active.controller.signal }),
-      ...(tree.pursuit.parentRunId !== null && { parent: tree.pursuit.parentRunId }),
+    const run =
+      claim.kind === "plan"
+        ? active.agents
+            .create(claim.agentName, plannerOutcome(this, plannerTarget(claim)))
+            .start({ messages })
+        : active.agents
+            .create(claim.agentName, workerOutcome(this, workerTarget(claim)))
+            .start({ messages });
+    active.controller.signal.addEventListener("abort", () => {
+      run.interrupt();
     });
-    await stampAgentRunId(this.#deps.db, claim, launched.runId);
-    void launched.outcome
-      .catch((): LaunchSettlement => ({ status: "failed" }))
-      .then((settlement) => this.#onSettlement(pursuitId, claim, settlement))
+    await stampAgentRunId(this.#deps.db, claim, run.runId);
+    void run
+      .outcome()
+      .then((outcome) => this.reconcileRun(pursuitId, claim, outcome))
       .catch(() => undefined);
-  }
-
-  #buildBinding(
-    pursuitId: PursuitId,
-    claim: ClaimedLaunch,
-  ): PursuitAgentSubmissionBinding {
-    if (claim.kind === "plan") {
-      return {
-        kind: "planner",
-        submit: (payload) => this.#submitPlanner(pursuitId, claim, payload),
-      };
-    }
-    return {
-      kind: "worker",
-      submit: (payload) => this.#submitWorker(pursuitId, claim, payload),
-    };
-  }
-
-  async #submitPlanner(
-    pursuitId: PursuitId,
-    claim: Extract<ClaimedLaunch, { kind: "plan" }>,
-    payload: PlannerOutcomePayload,
-  ): Promise<SubmissionResult> {
-    let error: string | undefined;
-    await this.#mutate(pursuitId, async (trx, tree) => {
-      if (!tree) {
-        error = "unknown pursuit";
-        return;
-      }
-      error = plannerSubmissionError(tree, claim, payload, {
-        isRegisteredWorkerAgent: this.#deps.isRegisteredWorkerAgent,
-      });
-      if (error !== undefined) return;
-      await applyPlannerSettlement(trx, tree, claim.planId, {
-        kind: "submitted",
-        payload,
-      });
-    });
-    return error === undefined ? { ok: true } : { ok: false, error };
-  }
-
-  async #submitWorker(
-    pursuitId: PursuitId,
-    claim: Extract<ClaimedLaunch, { kind: "work_item" }>,
-    payload: WorkerOutcomePayload,
-  ): Promise<SubmissionResult> {
-    await this.#mutate(pursuitId, async (trx, tree) => {
-      if (!tree) return;
-      await applyWorkItemSettlement(trx, tree, claim, {
-        isPass: payload.is_pass,
-        summary: payload.summary,
-        outcome: payload.outcome,
-      });
-    });
-    return { ok: true };
-  }
-
-  async #onSettlement(
-    pursuitId: PursuitId,
-    claim: ClaimedLaunch,
-    settlement: LaunchSettlement,
-  ): Promise<void> {
-    await this.#synthesizeFailure(
-      pursuitId,
-      claim,
-      `run settled '${settlement.status}' without a submission`,
-    );
   }
 
   async #synthesizeFailure(
@@ -301,7 +333,7 @@ export class PursuitService {
         });
         return;
       }
-      await applyWorkItemSettlement(trx, tree, claim, {
+      await applyWorkItemSettlement(trx, tree, workerTarget(claim), {
         isPass: false,
         summary: reason,
         outcome: reason,
@@ -322,14 +354,37 @@ export class PursuitService {
   }
 }
 
+function plannerTarget(
+  claim: Extract<ClaimedLaunch, { kind: "plan" }>,
+): PlannerSubmissionTarget {
+  return {
+    pursuitId: claim.pursuitId,
+    legId: claim.legId,
+    attemptId: claim.attemptId,
+    planId: claim.planId,
+  };
+}
+
+function workerTarget(
+  claim: Extract<ClaimedLaunch, { kind: "work_item" }>,
+): WorkerSubmissionTarget {
+  return {
+    pursuitId: claim.pursuitId,
+    legId: claim.legId,
+    attemptId: claim.attemptId,
+    workItemId: claim.workItemId,
+    workItemKey: claim.workItemKey,
+  };
+}
+
 function plannerSubmissionError(
   tree: PursuitTree,
-  claim: Extract<ClaimedLaunch, { kind: "plan" }>,
+  target: PlannerSubmissionTarget,
   payload: PlannerOutcomePayload,
   deps: { isRegisteredWorkerAgent(agentName: string): boolean },
 ): string | undefined {
-  const leg = tree.legs.find((candidate) => candidate.id === claim.legId);
-  const attempt = leg?.attempts.find((candidate) => candidate.id === claim.attemptId);
+  const leg = tree.legs.find((candidate) => candidate.id === target.legId);
+  const attempt = leg?.attempts.find((candidate) => candidate.id === target.attemptId);
   if (!leg || !attempt) return "unknown leg attempt";
 
   if (
@@ -357,53 +412,53 @@ function plannerSubmissionError(
       })),
     ),
   );
-	  const existingInVersion = allExisting.filter(
-	    (entry) =>
-	      entry.leg.id === leg.id &&
-	      entry.attempt.isConsistentWithLegGoal &&
-	      entry.item.legGoalVersion === leg.legGoalVersion,
-	  );
-	  if (payload.leg_goal === undefined) {
-	    for (const item of payload.work_items) {
-	      if (existingInVersion.some((entry) => String(entry.item.id) === item.id)) {
-	        return `duplicate work item id "${item.id}" in current leg goal version`;
-	      }
-	    }
-	  }
+  const existingInVersion = allExisting.filter(
+    (entry) =>
+      entry.leg.id === leg.id &&
+      entry.attempt.isConsistentWithLegGoal &&
+      entry.item.legGoalVersion === leg.legGoalVersion,
+  );
+  if (payload.leg_goal === undefined) {
+    for (const item of payload.work_items) {
+      if (existingInVersion.some((entry) => String(entry.item.id) === item.id)) {
+        return `duplicate work item id "${item.id}" in current leg goal version`;
+      }
+    }
+  }
 
-	  for (const item of payload.work_items) {
-	    for (const dependency of item.depends_on) {
-	      if (currentIds.has(dependency)) continue;
-	      if (payload.leg_goal !== undefined) {
-	        return "replacement leg_goal submissions cannot depend_on prior work items";
-	      }
-	      const matching = allExisting.filter(
-	        (entry) => String(entry.item.id) === dependency,
-	      );
-	      if (matching.length === 0) {
-	        return `work item "${item.id}" depends_on unknown id "${dependency}"`;
-	      }
-	      const existing = matching.find(
-	        (entry) =>
-	          entry.leg.id === leg.id &&
-	          entry.attempt.sequence < attempt.sequence &&
-	          entry.attempt.isConsistentWithLegGoal &&
-	          entry.item.legGoalVersion === leg.legGoalVersion,
-	      );
-	      if (existing) continue;
-	      const first = matching[0];
-	      if (first.leg.id !== leg.id) {
-	        return `work item "${item.id}" depends_on item from another leg`;
-	      }
-	      if (first.attempt.sequence >= attempt.sequence) {
-	        return `work item "${item.id}" depends_on future attempt item "${dependency}"`;
-	      }
-	      if (
-	        !first.attempt.isConsistentWithLegGoal ||
-	        first.item.legGoalVersion !== leg.legGoalVersion
-	      ) {
-	        return `work item "${item.id}" depends_on superseded leg-goal version item "${dependency}"`;
-	      }
+  for (const item of payload.work_items) {
+    for (const dependency of item.depends_on) {
+      if (currentIds.has(dependency)) continue;
+      if (payload.leg_goal !== undefined) {
+        return "replacement leg_goal submissions cannot depend_on prior work items";
+      }
+      const matching = allExisting.filter(
+        (entry) => String(entry.item.id) === dependency,
+      );
+      if (matching.length === 0) {
+        return `work item "${item.id}" depends_on unknown id "${dependency}"`;
+      }
+      const existing = matching.find(
+        (entry) =>
+          entry.leg.id === leg.id &&
+          entry.attempt.sequence < attempt.sequence &&
+          entry.attempt.isConsistentWithLegGoal &&
+          entry.item.legGoalVersion === leg.legGoalVersion,
+      );
+      if (existing) continue;
+      const first = matching[0];
+      if (first.leg.id !== leg.id) {
+        return `work item "${item.id}" depends_on item from another leg`;
+      }
+      if (first.attempt.sequence >= attempt.sequence) {
+        return `work item "${item.id}" depends_on future attempt item "${dependency}"`;
+      }
+      if (
+        !first.attempt.isConsistentWithLegGoal ||
+        first.item.legGoalVersion !== leg.legGoalVersion
+      ) {
+        return `work item "${item.id}" depends_on superseded leg-goal version item "${dependency}"`;
+      }
     }
   }
 
@@ -454,6 +509,10 @@ function terminalSummary(tree: PursuitTree, cancelReason?: string): string {
     default:
       return cancelReason ?? "pursuit cancelled";
   }
+}
+
+function firstLine(text: string): string {
+  return text.split("\n", 1)[0] ?? text;
 }
 
 function describeError(error: unknown): string {

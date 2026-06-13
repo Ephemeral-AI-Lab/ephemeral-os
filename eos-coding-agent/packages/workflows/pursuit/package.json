@@ -10,7 +10,10 @@
     }
   },
   "dependencies": {
-    "@eos/contracts": "workspace:*",
-    "@eos/db": "workspace:*"
+    "better-sqlite3": "^12.10.0",
+    "kysely": "^0.29.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13"
   }
 }

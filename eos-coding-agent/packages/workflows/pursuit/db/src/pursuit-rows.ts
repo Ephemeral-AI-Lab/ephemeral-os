@@ -1,4 +1,4 @@
-import type { PursuitId } from "@eos/contracts";
+import type { PursuitId } from "../../contracts/pursuit.js";
 import { sql, type Kysely, type Transaction } from "kysely";
 
 import type {

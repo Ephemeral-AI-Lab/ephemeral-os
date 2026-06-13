@@ -23,7 +23,7 @@ export interface TurnConfig {
 }
 
 /** One successfully completed assistant turn. */
-export interface CompletedTurn {
+interface CompletedTurn {
   message: Message;
   usage: UsageSnapshot;
   stop_reason?: StopReason;

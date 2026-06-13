@@ -6,7 +6,7 @@ import { unwrapAgentOutcomeFn, type AgentOutcomeFn } from "./outcome.js";
 import { bindTool, type RunScope } from "./pipeline.js";
 import { bindTerminalTool, type TerminalGate } from "./terminal.js";
 
-export interface BuildToolExecutorInput<T> {
+interface BuildToolExecutorInput<T> {
   scope: RunScope;
   /** ALL tools arrive here — the SDK ships none. */
   tools: readonly ToolDefinition[];
@@ -14,7 +14,7 @@ export interface BuildToolExecutorInput<T> {
   outcome?: { fn: AgentOutcomeFn<T>; gate: TerminalGate };
 }
 
-export interface BuiltToolExecutor<T> {
+interface BuiltToolExecutor<T> {
   executor: ToolExecutor;
   /** Defined when an outcome fn is bound (terminal-tool mode). */
   takeAccepted?: () => { value: T } | undefined;

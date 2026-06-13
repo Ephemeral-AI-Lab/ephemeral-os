@@ -8,7 +8,7 @@ import type {
   PursuitId,
   WorkItemId,
   WorkItemRunStatus,
-} from "@eos/contracts";
+} from "../../contracts/pursuit.js";
 import type { Generated, Selectable } from "kysely";
 
 export interface PursuitsTable {

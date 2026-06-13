@@ -2,7 +2,7 @@ import type {
   AttemptFailureReason,
   AttemptId,
   PursuitEntityRunStatus,
-} from "@eos/contracts";
+} from "../../contracts/pursuit.js";
 
 import type { PlanState } from "../plan/state.js";
 import type { WorkItemState } from "../work-item/state.js";

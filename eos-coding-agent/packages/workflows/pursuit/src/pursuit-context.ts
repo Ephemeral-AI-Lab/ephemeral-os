@@ -1,4 +1,4 @@
-import type { ContextPage, ContextSearch } from "@eos/contracts";
+import type { ContextPage, ContextSearch } from "../contracts/pursuit.js";
 
 import {
   listContextSubtree,

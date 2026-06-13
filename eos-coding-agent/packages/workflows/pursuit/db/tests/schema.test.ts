@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { sql } from "kysely";
 
-import { pursuitIdFrom, workItemIdFrom } from "@eos/contracts";
+import { pursuitIdFrom, workItemIdFrom } from "../../contracts/pursuit.js";
 
 import { createPursuitDatabase } from "../src/index.js";
 

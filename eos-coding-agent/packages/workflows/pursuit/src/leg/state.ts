@@ -1,4 +1,4 @@
-import type { LegId, PursuitEntityRunStatus } from "@eos/contracts";
+import type { LegId, PursuitEntityRunStatus } from "../../contracts/pursuit.js";
 
 import type { AttemptState } from "../attempt/state.js";
 

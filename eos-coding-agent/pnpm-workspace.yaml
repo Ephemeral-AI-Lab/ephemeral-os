@@ -1,0 +1,6 @@
+packages:
+  - "packages/app"
+  - "packages/tools"
+  - "packages/scripts"
+  - "packages/testkit"
+  - "packages/workflows/pursuit"

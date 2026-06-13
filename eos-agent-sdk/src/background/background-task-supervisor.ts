@@ -15,7 +15,7 @@ import type {
   BackgroundTaskTag,
 } from "./background-task.js";
 
-export interface RunBackgroundTaskSupervisorDeps {
+interface RunBackgroundTaskSupervisorDeps {
   runId: AgentRunId;
   /** Handed to completion handlers; the supervisor itself never publishes. */
   notifier: Notifier;

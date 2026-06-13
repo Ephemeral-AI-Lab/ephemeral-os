@@ -16,7 +16,7 @@ export type ProviderErrorKind =
   | "transport"
   | "decode";
 
-export interface ProviderErrorOptions {
+interface ProviderErrorOptions {
   status_code?: number;
   request_id?: string;
   retry_after_s?: number;

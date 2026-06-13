@@ -1,4 +1,4 @@
-import { isPursuitEntityTerminal } from "@eos/contracts";
+import { isPursuitEntityTerminal } from "../../contracts/pursuit.js";
 
 import { composeLegOutcome } from "../leg/context.js";
 import type { LegState } from "../leg/state.js";

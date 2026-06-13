@@ -1,51 +1,92 @@
 import { randomUUID } from "node:crypto";
 
 import {
+  createAgentOutcomeFn,
+  type Agent,
+  type AgentOutcomeFn,
+  type AgentRunId,
+} from "eos-agent-sdk";
+
+import {
   isPursuitEntityTerminal,
   planIdFrom,
-  type AgentRunId,
+  PlannerOutcomePayloadSchema,
+  WorkerOutcomePayloadSchema,
   type AttemptId,
-  type InitialUserMessage,
   type LegId,
-  type JsonValue,
   type PlanId,
-  type PursuitAgentSubmissionBinding,
-  type WorkItemId,
+  type PlannerOutcomePayload,
+  type PlannerSubmissionTarget,
   type PursuitId,
-} from "@eos/contracts";
-import type { LaunchQueueRow, PursuitDb, PursuitTransaction } from "@eos/db";
+  type WorkerOutcomePayload,
+  type WorkerSubmissionTarget,
+  type WorkItemId,
+} from "../contracts/pursuit.js";
+import type { LaunchQueueRow, PursuitDb, PursuitTransaction } from "../db/src/index.js";
 
+import type { PursuitService } from "./service.js";
 import { workItemReady } from "./work-item/state.js";
 
-// --- the launch port (Phase 05 §2.16 contract + the §2.19/§2.21 seams) ---------
+// --- agent slice + terminal outcome factories (spec §11) -------------------------
 
-export interface LaunchSettlement {
-  status: "completed" | "failed" | "cancelled";
-  /** `outcome.submission` verbatim; unused by the bound-submission model. */
-  submission?: JsonValue;
+/**
+ * The narrow agent capability pursuit consumes: create an SDK agent bound to a
+ * terminal outcome and start it. The host adapts `AgentFactory` to this slice
+ * (and wraps advisory) before handing it in; pursuit never sees host vocabulary.
+ */
+export interface PursuitAgents {
+  create<T>(agentName: string, outcome: AgentOutcomeFn<T>): Agent<T>;
 }
 
-export interface LaunchedAgent {
-  runId: AgentRunId;
-  outcome: Promise<LaunchSettlement>;
-  interrupt(reason: string): void;
+const SUBMIT_PLANNER_DESCRIPTION =
+  "Finish the planner run by submitting its leg plan: a one-paragraph summary, " +
+  "optional leg_goal/next_leg_goal, and the leg's work items.";
+const SUBMIT_WORKER_DESCRIPTION =
+  "Finish the worker run by submitting the assigned work item's result: a " +
+  "summary, the is_pass verdict, and the outcome text.";
+
+/**
+ * Planner terminal contract: an accepted submission routes straight to the
+ * service's single-mutator writer; a correctable error reopens the run.
+ */
+export function plannerOutcome(
+  service: Pick<PursuitService, "submitPlannerOutcome">,
+  target: PlannerSubmissionTarget,
+): AgentOutcomeFn<PlannerOutcomePayload> {
+  return createAgentOutcomeFn({
+    name: "submit_planner_outcome",
+    description: SUBMIT_PLANNER_DESCRIPTION,
+    schema: PlannerOutcomePayloadSchema,
+    onSubmit: async (payload, ctx) => {
+      const result = await service.submitPlannerOutcome({
+        target,
+        payload,
+        runId: ctx.runId,
+        submissionId: ctx.submissionId,
+      });
+      return result.ok ? { accept: payload } : { reject: result.error };
+    },
+  });
 }
 
-export interface AgentLaunchOptions {
-  /** The §2.19 entity-bound submission seam for the child's terminal tool. */
-  submission?: PursuitAgentSubmissionBinding;
-  /** The shared pursuit cancellation signal (§2.21). */
-  signal?: AbortSignal;
-  /** The delegating run, stamped as the child's parent. */
-  parent?: AgentRunId;
-}
-
-export interface AgentLaunchPort {
-  launch(
-    agentName: string,
-    initialMessages: readonly InitialUserMessage[],
-    options?: AgentLaunchOptions,
-  ): LaunchedAgent;
+export function workerOutcome(
+  service: Pick<PursuitService, "submitWorkerOutcome">,
+  target: WorkerSubmissionTarget,
+): AgentOutcomeFn<WorkerOutcomePayload> {
+  return createAgentOutcomeFn({
+    name: "submit_worker_outcome",
+    description: SUBMIT_WORKER_DESCRIPTION,
+    schema: WorkerOutcomePayloadSchema,
+    onSubmit: async (payload, ctx) => {
+      const result = await service.submitWorkerOutcome({
+        target,
+        payload,
+        runId: ctx.runId,
+        submissionId: ctx.submissionId,
+      });
+      return result.ok ? { accept: payload } : { reject: result.error };
+    },
+  });
 }
 
 // --- launch queue ----------------------------------------------------------------
@@ -285,9 +326,9 @@ function decodeDependsOn(raw: string): string[] {
 }
 
 /**
- * Stamp the run-to-entity binding. The port mints the run id at launch, so
- * the stamp lands immediately after `port.launch`; it is audit data and
- * stays correct even when the entity settled in the launch window.
+ * Stamp the run-to-entity binding. The run id is minted at `start`, so the
+ * stamp lands immediately after launch; it is audit data and stays correct
+ * even when the entity settled in the launch window.
  */
 export async function stampAgentRunId(
   db: PursuitDb,
@@ -303,9 +344,9 @@ export async function stampAgentRunId(
       .execute();
     return;
   }
-	  await db
-	    .updateTable("work_items")
-	    .set({ agent_run_id: runId, updated_at: now })
-	    .where("key", "=", claim.workItemKey)
-	    .execute();
+  await db
+    .updateTable("work_items")
+    .set({ agent_run_id: runId, updated_at: now })
+    .where("key", "=", claim.workItemKey)
+    .execute();
 }

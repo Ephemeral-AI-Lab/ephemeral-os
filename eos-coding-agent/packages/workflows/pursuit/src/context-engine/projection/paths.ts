@@ -2,7 +2,7 @@ import type {
   LegId,
   PursuitContextEntityStatus,
   PursuitId,
-} from "@eos/contracts";
+} from "../../../contracts/pursuit.js";
 
 import { supersededDeclarationFiles, attemptFieldFiles } from "../../attempt/context.js";
 import type { AttemptState } from "../../attempt/state.js";

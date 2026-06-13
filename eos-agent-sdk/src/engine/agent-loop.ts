@@ -60,7 +60,7 @@ export type TerminationMode<T> =
     };
 
 /** Everything one run's loop needs; assembled by the runtime. */
-export interface AgentLoopContext<T> {
+interface AgentLoopContext<T> {
   handle: RunHandle<T>;
   conversation: Conversation;
   tools: ToolExecutor;

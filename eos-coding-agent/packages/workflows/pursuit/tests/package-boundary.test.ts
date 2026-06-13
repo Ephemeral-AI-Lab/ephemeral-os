@@ -27,10 +27,13 @@ function importSpecifiers(file: string): string[] {
 }
 
 describe("package boundary (§16 case 14)", () => {
-  it("index.ts re-exports only the service, the composer seam, and port types", () => {
+  it("index.ts re-exports the service factory, the composer seam, and host-facing schemas", () => {
     expect(Object.keys(publicSurface).sort()).toEqual([
-      "PursuitService",
+      "ContextScriptOutputSchema",
+      "CreatePursuitInputSchema",
+      "InitialUserMessageSchema",
       "defaultComposeLaunchContext",
+      "openPursuitService",
     ]);
   });
 

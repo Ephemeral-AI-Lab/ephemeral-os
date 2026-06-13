@@ -6,8 +6,8 @@ import {
   type LegId,
   type PursuitId,
   type WorkItemRunStatus,
-} from "@eos/contracts";
-import type { PursuitTransaction } from "@eos/db";
+} from "../../contracts/pursuit.js";
+import type { PursuitTransaction } from "../../db/src/index.js";
 
 import { reconcileLeg } from "../leg/transition.js";
 import { cancelPlan, createPlan } from "../plan/transition.js";

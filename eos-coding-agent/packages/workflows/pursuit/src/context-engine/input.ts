@@ -8,7 +8,7 @@ import type {
   PursuitContextSnapshot,
   WorkItemId,
   WorkerContextInput,
-} from "@eos/contracts";
+} from "../../contracts/pursuit.js";
 
 import { composeAttemptOutcome } from "../attempt/context.js";
 import type { AttemptState } from "../attempt/state.js";

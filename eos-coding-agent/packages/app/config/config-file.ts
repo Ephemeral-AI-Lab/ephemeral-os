@@ -1,7 +1,39 @@
 import { readFileSync } from "node:fs";
-import { basename, dirname, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 
+import type { HookEntry, LlmClientConfig } from "eos-agent-sdk";
 import type { z } from "zod";
+
+import type { WorkflowConfig } from "../workflows/contract.js";
+import { loadHookConfig } from "./hook-config.js";
+import { loadLlmClients } from "./llm-client-config.js";
+import { loadAgentProfiles, type AgentProfileRegistry } from "./profiles.js";
+import { loadWorkflowConfigs } from "./workflow-config.js";
+
+/**
+ * The single composition-root config value: every host config parsed into the
+ * shapes the SDK and host wiring consume. `configRoot` is the absolute
+ * `.eos-agents` directory (from `eosAgentsRoot()`); per-path resolution of
+ * scripts/store/context stays in their consumers, keyed off the config base.
+ */
+export interface EosConfig {
+  llmClients: LlmClientConfig;
+  hooks: HookEntry[];
+  recordsDir: string;
+  profiles: AgentProfileRegistry;
+  workflows: WorkflowConfig[];
+}
+
+export function loadEosConfig(configRoot: string): EosConfig {
+  const root = resolve(configRoot);
+  return {
+    llmClients: loadLlmClients(join(root, "llm_clients.json")),
+    hooks: loadHookConfig(join(root, "hooks.json")),
+    recordsDir: join(root, "runs"),
+    profiles: loadAgentProfiles(join(root, "profile")),
+    workflows: loadWorkflowConfigs(join(root, "workflow")),
+  };
+}
 
 /**
  * The mechanics shared by the operator config loaders (`hooks.json`,
@@ -45,6 +77,13 @@ export function loadEntriesFile<E>(
 
 export function withDefaultCwd<C extends { cwd?: string }>(command: C, cwd: string): C {
   return command.cwd === undefined ? { ...command, cwd } : command;
+}
+
+/** One-line `path: message; …` summary of a Zod error, for startup diagnostics. */
+export function zodIssues(error: z.ZodError): string {
+  return error.issues
+    .map((issue) => `${issue.path.map(String).join(".")}: ${issue.message}`)
+    .join("; ");
 }
 
 function commandCwdFor(path: string): string {

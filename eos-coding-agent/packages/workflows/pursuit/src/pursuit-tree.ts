@@ -3,7 +3,7 @@ import {
   workItemIdFrom,
   type AttemptFailureReason,
   type PursuitId,
-} from "@eos/contracts";
+} from "../contracts/pursuit.js";
 import {
   loadPursuitRows,
   type AttemptRow,
@@ -11,7 +11,7 @@ import {
   type PursuitDbReader,
   type PursuitRows,
   type WorkItemRow,
-} from "@eos/db";
+} from "../db/src/index.js";
 
 import type { AttemptState } from "./attempt/state.js";
 import type { LegState } from "./leg/state.js";

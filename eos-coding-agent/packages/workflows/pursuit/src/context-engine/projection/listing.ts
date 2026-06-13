@@ -1,4 +1,4 @@
-import type { PursuitContextEntityStatus } from "@eos/contracts";
+import type { PursuitContextEntityStatus } from "../../../contracts/pursuit.js";
 
 import { legDirName, type PursuitContext } from "./paths.js";
 

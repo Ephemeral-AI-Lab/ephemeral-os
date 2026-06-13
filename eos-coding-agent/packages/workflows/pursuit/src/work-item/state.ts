@@ -3,7 +3,7 @@ import type {
   PlanId,
   WorkItemId,
   WorkItemRunStatus,
-} from "@eos/contracts";
+} from "../../contracts/pursuit.js";
 
 export interface WorkItemState {
   readonly id: WorkItemId;

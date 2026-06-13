@@ -4,8 +4,8 @@ import {
   type CreatePursuitInput,
   type LegGoalMode,
   type PursuitId,
-} from "@eos/contracts";
-import type { PursuitTransaction } from "@eos/db";
+} from "../../contracts/pursuit.js";
+import type { PursuitTransaction } from "../../db/src/index.js";
 
 import { cancelLeg, createLeg } from "../leg/transition.js";
 import { encodeStringList, type PursuitTree } from "../pursuit-tree.js";

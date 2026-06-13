@@ -9,7 +9,7 @@ import type { BoundTool, PipelineResult } from "./pipeline.js";
 
 const MAX_TOOL_CONCURRENCY = 8;
 
-export interface ToolBatchExecutorInput {
+interface ToolBatchExecutorInput {
   /** Already bound and deterministically ordered by the assembler. */
   tools: BoundTool[];
   /** The terminal tool's name, when the run has one. */
