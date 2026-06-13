@@ -4,7 +4,7 @@ import {
   type JsonObject,
   type Message,
   type UserMessage,
-} from "../contracts/index.js";
+} from "../src/contracts/index.js";
 import type {
   LlmClient,
   LlmRequest,
@@ -12,7 +12,7 @@ import type {
   LlmStreamOptions,
   StopReason,
   UsageSnapshot,
-} from "../llm-client/index.js";
+} from "../src/llm-client/index.js";
 
 /** One scripted provider turn; receives the request and the run's signal. */
 export type ScriptedTurn = (

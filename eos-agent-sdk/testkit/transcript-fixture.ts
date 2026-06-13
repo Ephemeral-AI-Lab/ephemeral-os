@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { JsonObject } from "../contracts/index.js";
+import type { JsonObject } from "../src/contracts/index.js";
 
 /** Write an append-only JSONL fixture and return its path. */
 export function writeTranscriptFixture(

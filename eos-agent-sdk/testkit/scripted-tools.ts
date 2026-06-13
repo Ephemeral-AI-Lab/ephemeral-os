@@ -1,10 +1,10 @@
-import { JsonObjectSchema, type JsonObject } from "../contracts/index.js";
+import { JsonObjectSchema, type JsonObject } from "../src/contracts/index.js";
 import {
   defineTool,
   type ToolCallContext,
   type ToolDefinition,
   type ToolResult,
-} from "../tool/index.js";
+} from "../src/tool/index.js";
 
 /** A scripted definition: permissive JSON-object input. */
 export function scriptedTool(options: {
