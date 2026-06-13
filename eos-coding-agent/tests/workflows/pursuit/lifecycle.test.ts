@@ -5,7 +5,7 @@ import {
   planIdFrom,
   pursuitIdFrom,
   workItemIdFrom,
-} from "../contracts/pursuit.js";
+} from "../../../src/workflows/pursuit/contracts/pursuit.js";
 
 import {
   allMessageText,

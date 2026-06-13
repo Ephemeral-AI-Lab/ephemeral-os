@@ -21,5 +21,5 @@
     "vitest.config.ts",
     "vitest.e2e.config.ts"
   ],
-  "exclude": ["**/node_modules", "e2e/agent-runtime/**"]
+  "exclude": ["**/node_modules", "e2e/coding-agent/**"]
 }

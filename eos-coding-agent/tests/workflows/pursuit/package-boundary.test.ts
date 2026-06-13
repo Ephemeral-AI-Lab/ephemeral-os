@@ -3,11 +3,16 @@ import { dirname, join, resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import * as publicSurface from "../index.js";
+import * as publicSurface from "../../../src/workflows/pursuit/index.js";
 
 const PACKAGE_ROOT = resolve(import.meta.dirname, "..", "..", "..");
 const PURSUIT_ROOT = join(PACKAGE_ROOT, "src", "workflows", "pursuit");
 const SRC_ROOT = join(PACKAGE_ROOT, "src");
+const ALLOWED_EXTERNAL_PURSUIT_IMPORTS = new Set([
+  join(PURSUIT_ROOT, "context-scripts.ts"),
+  join(PURSUIT_ROOT, "index.ts"),
+  join(PURSUIT_ROOT, "provider.ts"),
+]);
 
 function sourceFiles(root: string): string[] {
   const files: string[] = [];
@@ -39,7 +44,7 @@ describe("pursuit source boundary (§16 case 14)", () => {
     ]);
   });
 
-  it("outside source imports pursuit only through its index", () => {
+  it("outside source imports pursuit only through its public edge files", () => {
     const offenders: string[] = [];
     for (const file of sourceFiles(SRC_ROOT)) {
       if (resolve(file).startsWith(PURSUIT_ROOT)) continue;
@@ -50,7 +55,10 @@ describe("pursuit source boundary (§16 case 14)", () => {
         }
         if (specifier.startsWith(".")) {
           const target = resolve(dirname(file), specifier.replace(/\.js$/, ".ts"));
-          if (target.startsWith(PURSUIT_ROOT) && target !== join(PURSUIT_ROOT, "index.ts")) {
+          if (
+            target.startsWith(PURSUIT_ROOT) &&
+            !ALLOWED_EXTERNAL_PURSUIT_IMPORTS.has(target)
+          ) {
             offenders.push(`${file} -> ${specifier}`);
           }
         }

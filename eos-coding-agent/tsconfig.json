@@ -14,5 +14,5 @@
     "types": ["node"]
   },
   "include": ["src/**/*.ts", "tests/**/*.ts", "vitest.config.ts", "eslint.config.js"],
-  "exclude": ["**/node_modules", "**/legacy/**", "**/legacy-tests/**"]
+  "exclude": ["**/node_modules"]
 }

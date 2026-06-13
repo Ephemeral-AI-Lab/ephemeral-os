@@ -19,25 +19,25 @@ import {
   type PursuitSettlement,
   type SubmissionResult,
   type WorkerOutcomePayload,
-} from "../contracts/pursuit.js";
+} from "../../../src/workflows/pursuit/contracts/pursuit.js";
 import {
   createPursuitDatabase,
   type PursuitDb,
-} from "../db/index.js";
+} from "../../../src/workflows/pursuit/db/index.js";
 
-import type { PursuitAgents } from "../agent-launcher.js";
+import type { PursuitAgents } from "../../../src/workflows/pursuit/agent-launcher.js";
 import {
   defaultComposeLaunchContext,
   type ComposeLaunchContext,
-} from "../context-engine/composer.js";
+} from "../../../src/workflows/pursuit/context-engine/composer.js";
 import {
   loadPursuitTree,
   type PursuitTree,
-} from "../pursuit-tree.js";
+} from "../../../src/workflows/pursuit/pursuit-tree.js";
 import {
   PursuitService,
   type PursuitServiceDependencies,
-} from "../service.js";
+} from "../../../src/workflows/pursuit/service.js";
 
 // --- a directive queue: each scripted provider turn waits for one directive ------
 

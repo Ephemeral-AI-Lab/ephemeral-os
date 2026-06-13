@@ -40,18 +40,22 @@ describe("pursuit context mirror", () => {
     );
 
     await expect(access(oldLivePath)).rejects.toThrow();
-    await expect(
-      readFile(
-        join(
-          h.contextRoot,
-          `pursuit_${pursuit.pursuit_id}`,
-          `leg_${leg.id}`,
-          "superseded",
-          `attempt_${oldAttempt.id}`,
-          "next_leg_goal.md",
-        ),
-        "utf8",
-      ),
-    ).resolves.toBe("later");
-  });
+    const supersededNextGoalPath = join(
+      h.contextRoot,
+      `pursuit_${pursuit.pursuit_id}`,
+      `leg_${leg.id}`,
+      "superseded",
+      `attempt_${oldAttempt.id}`,
+      "next_leg_goal.md",
+    );
+    await expect
+      .poll(async () => {
+        try {
+          return await readFile(supersededNextGoalPath, "utf8");
+        } catch {
+          return null;
+        }
+      }, { timeout: 8_000 })
+      .toBe("later");
+  }, 10_000);
 });

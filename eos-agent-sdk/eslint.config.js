@@ -4,7 +4,7 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import tseslint from "typescript-eslint";
 
 export default defineConfig(
-  globalIgnores(["**/dist/", "e2e/agent-runtime/**"]),
+  globalIgnores(["**/dist/", "e2e/coding-agent/**"]),
   {
     files: ["**/*.ts"],
     extends: [

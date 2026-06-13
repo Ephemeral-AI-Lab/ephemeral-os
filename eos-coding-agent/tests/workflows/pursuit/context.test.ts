@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { snapshotPursuitContext } from "../context-engine/input.js";
-import { buildPursuitContext } from "../context-engine/projection/paths.js";
-import { readPursuitContext, searchPursuitContext } from "../pursuit-context.js";
+import { snapshotPursuitContext } from "../../../src/workflows/pursuit/context-engine/input.js";
+import { buildPursuitContext } from "../../../src/workflows/pursuit/context-engine/projection/paths.js";
+import { readPursuitContext, searchPursuitContext } from "../../../src/workflows/pursuit/pursuit-context.js";
 import { harness, plannerPayload, workerPayload, workItem } from "./support.js";
 
 describe("pursuit context projection", () => {
