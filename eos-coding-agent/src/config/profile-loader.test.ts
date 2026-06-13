@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { tempProfileDir, writeProfile } from "@eos/testkit";
+import { tempProfileDir, writeProfile } from "../testkit/eos-agents.js";
 
 import { loadAgentProfile } from "./profile-loader.js";
 

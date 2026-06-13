@@ -8,12 +8,12 @@ import {
 } from "./agents/agent-factory.js";
 import { loadEosConfig } from "./config/config-file.js";
 import { eosAgentsRoot } from "./config/config-root.js";
-import { WorkflowHub } from "./workflows/hub.js";
+import { WorkflowHub } from "./workflows/core/hub.js";
 import {
   pursuitContextScriptComposer,
   resolvePursuitContextScripts,
-} from "./workflows/pursuit-context-scripts.js";
-import { pursuitWorkflowProvider } from "./workflows/pursuit-provider.js";
+} from "./workflows/pursuit/context-scripts.js";
+import { pursuitWorkflowProvider } from "./workflows/pursuit/provider.js";
 
 const MainOutcomeSchema = z.object({ summary: z.string().min(1) });
 type MainOutcome = z.infer<typeof MainOutcomeSchema>;

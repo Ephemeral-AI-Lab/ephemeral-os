@@ -60,7 +60,7 @@ are supersessions, not drift; the §14 hygiene scans are this split's completion
 | Optional diagnostic `leg_goal_mode` on creation input | Dropped; mode derives from payload shape only (§10.1) | Narrower creation contract; one way to say each thing. |
 | Profile field `agent_kind` | Deleted; the pursuit provider validates its configured planner/worker profiles at registration (§9) | Profiles carry no role/kind discriminator. |
 | `ask_advisor` in profile `allowed_tools`, `isAdvisoryRequired`/`advisorPrompt` tool metadata | Factory-injected `ask_advisor` from the `AgentOutcomeFnWithAdvisory` terminal binding (§6, §7.3) | Advisory is host meta-policy on the terminal binding, not tool metadata and not profile tool selection. |
-| `@eos/workflow` → `@eos/pursuit` package rename | Pursuit lives at `packages/workflows/pursuit/` in this host workspace | The SDK no longer ships pursuit; package naming inside the host workspace is host-internal. |
+| `@eos/workflow` package rename | Pursuit lives at `src/workflows/pursuit/` in this host source tree | The SDK no longer ships pursuit; the host keeps pursuit as source, not an internal workspace package. |
 
 ## 2. Boundary Summary
 
@@ -87,10 +87,9 @@ into a shared package.
 
 ## 3. Target Layout
 
-The target host remains a pnpm workspace, but the root package is the application.
-Host-private composition, config, agent policy, and workflow-provider wiring live under
-root `src/`. `packages/` is reserved for real package boundaries; `packages/app` is
-intentionally absent.
+The target host is a single pnpm package. Host-private composition, config, agent policy,
+tools, workflow core, concrete workflows, scripts, and test fixtures all live under root
+`src/`. There is no internal `packages/` directory.
 
 ```text
 eos-coding-agent/
@@ -114,7 +113,6 @@ eos-coding-agent/
         variable_reference_map.cjs
       context/                         machine-written pursuit context mirror
       pursuit.sqlite                   or configured store path
-  packages/
   src/                                  composition root and host policy
     bootstrap.ts
     config/
@@ -141,27 +139,25 @@ eos-coding-agent/
         delegate-pursuit.ts             pursuit delegate tool factory
       sandbox/                         exec/file family (§7), migrated as-is
     workflows/
-      hub.ts                            WorkflowHub + per-profile view + prompt fragment
-      contract.ts                       WorkflowProvider, WorkflowConfig, BuildWorkflowTools
-      pursuit-provider.ts               adapter over openPursuitService; imports src/tools/pursuit
-      pursuit-context-scripts.ts        script resolution + ComposeLaunchContext composer
-  packages/
-    workflows/
+      core/
+        hub.ts                          WorkflowHub + per-profile view + prompt fragment
+        contract.ts                     WorkflowProvider, WorkflowConfig, BuildWorkflowTools
       pursuit/
+        provider.ts                     adapter over openPursuitService; imports src/tools/pursuit
+        context-scripts.ts              script resolution + ComposeLaunchContext composer
         contracts/
         db/                            absorbed former @eos/db (createPursuitDatabase)
-        src/
-          service.ts
-          agent-launcher.ts            launch queue, claims, post-commit guards
-          pursuit-tree.ts
-          pursuit-context.ts
-          pursuit/   leg/   attempt/   plan/   work-item/
-            state.ts transition.ts context.ts (per entity; plan has no context)
-          context-engine/
-            composer.ts                ComposeLaunchContext seam
-            input.ts
-            projection/
-              listing.ts paths.ts resolve.ts mirror.ts
+        service.ts
+        agent-launcher.ts              launch queue, claims, post-commit guards
+        pursuit-tree.ts
+        pursuit-context.ts
+        pursuit/   leg/   attempt/   plan/   work-item/
+          state.ts transition.ts context.ts (per entity; plan has no context)
+        context-engine/
+          composer.ts                  ComposeLaunchContext seam
+          input.ts
+          projection/
+            listing.ts paths.ts resolve.ts mirror.ts
         tests/
     scripts/                           executeJsonCommand subprocess runner
     testkit/                           .eos-agents fixture building
@@ -169,19 +165,18 @@ eos-coding-agent/
 
 Ownership rules for the layout:
 
-- The hub contract lives in `src/workflows`, not in pursuit. Pursuit stays
+- The hub contract lives in `src/workflows/core`, not in pursuit. Pursuit stays
   caller-agnostic (Phase 05.3 §4) and never imports hub vocabulary; the
-  `pursuit-provider.ts` adapter in root `src` wraps `openPursuitService` into a
+  `src/workflows/pursuit/provider.ts` adapter wraps `openPursuitService` into a
   `WorkflowProvider`.
 - `src/tools` holds model-visible tool implementations. Agent tools that close over the
   concrete `AgentFactory` and advisory policy live in `src/tools/agent/`.
 - Provider-authored workflow tools live in `src/tools/<workflow>/` when they are plain
   tool factories such as `(name, service, agents) => ToolDefinition`. The provider in
-  `src/workflows/<name>-provider.ts` imports them and supplies `service` + `agents` from
-  its `BuildWorkflowTools` builder. `read-workflow-docs.ts` lives under
+  `src/workflows/<workflow>/provider.ts` imports them and supplies `service` + `agents`
+  from its `BuildWorkflowTools` builder. `read-workflow-docs.ts` lives under
   `src/tools/workflow/` because it is provider-agnostic over a structural docs view.
-- Pursuit is not a standalone product package; lifting it out is gated on a second host
-  (§2).
+- Pursuit is not a standalone package; lifting it out is gated on a second host (§2).
 
 ## 4. Composition Root
 
@@ -194,12 +189,12 @@ import { createAgentOutcomeFnWithAdvisory } from "./agents/agent-factory.js";
 
 import { buildAgentFactory } from "./agents/agent-factory.js";
 import { loadEosConfig } from "./config/config-file.js";
-import { WorkflowHub } from "./workflows/hub.js";
-import { pursuitWorkflowProvider } from "./workflows/pursuit-provider.js";
+import { WorkflowHub } from "./workflows/core/hub.js";
+import { pursuitWorkflowProvider } from "./workflows/pursuit/provider.js";
 import {
   pursuitContextScriptComposer,
   resolvePursuitContextScripts,
-} from "./workflows/pursuit-context-scripts.js";
+} from "./workflows/pursuit/context-scripts.js";
 
 const cfg = loadEosConfig(".eos-agents");
 
@@ -902,8 +897,8 @@ export function pursuitWorkflowProvider(init: {
 Any failure rejects `create`, so `WorkflowHub.open` fails startup naming the workflow.
 
 `delegate_pursuit` is an ordinary tool. It is authored in
-`src/tools/pursuit/delegate-pursuit.ts` and imported by `pursuit-provider.ts`,
-which supplies `service` and `agents` from its
+`src/tools/pursuit/delegate-pursuit.ts` and imported by
+`src/workflows/pursuit/provider.ts`, which supplies `service` and `agents` from its
 builder. It calls the pursuit service, which returns a cancel handle, and registers that
 handle as a background task. The provider supplies no `description`/`docs`; those live on
 the workflow's `WorkflowConfig` (frontmatter `description`, md body). Only the tool's own
@@ -1101,7 +1096,7 @@ agents directly through the narrow slice it declares; the host provider adapts
 implementation: pursuit never spawns a subprocess.
 
 ```ts
-// declared by pursuit (packages/workflows/pursuit)
+// declared by pursuit (src/workflows/pursuit)
 interface PursuitAgents {
   create<T>(agentName: string, outcome: AgentOutcomeFn<T>): Agent<T>;
 }
@@ -1118,7 +1113,7 @@ contextRoot, defaultMaxAttempts, compose }`. There is no `workflowName` or `scri
 parameter: workflow naming and script selection are the app adapter's concern. The app
 resolves each relevant profile's `pursuit_context_script` at startup into a
 per-profile-name map and wraps it with the `executeJsonCommand` runner from
-`packages/scripts` (`pursuit-context-scripts.ts`) — hook-parity subprocess semantics,
+`src/scripts` (`src/workflows/pursuit/context-scripts.ts`) — hook-parity subprocess semantics,
 JSON snapshot on stdin, `initial_messages` JSON on stdout, replace-never-merge. The
 provider adapts `AgentFactory` into `PursuitAgents` when it builds the `delegate_<name>`
 tool (`view.tools(agents)`), passes that adapter into `service.createPursuit`, and
@@ -1252,7 +1247,7 @@ Hook files stay host config:
 
 `hook-config.ts` loads every configured hook event into `cfg.hooks`, wrapping subprocess
 hook scripts into callbacks with the `executeJsonCommand` runner from
-`packages/scripts`. There is no separate notification-rule file, loader, compiler, or
+`src/scripts`. There is no separate notification-rule file, loader, compiler, or
 vocabulary. The SDK never parses hook config and never publishes notification content by
 itself.
 
@@ -1262,11 +1257,10 @@ Steps 1-2 are substantially complete on disk; they are listed for the record.
 
 1. **SDK flattening (done):** `eos-agent-sdk` is the single flattened package. Finish
    removing any remaining host concepts from its public surface.
-2. **Host workspace bootstrap (done):** root `src/` and
-   `packages/{workflows/pursuit,scripts,testkit}` exist. `packages/app` is absent.
-   `legacy/` and `legacy-tests/` folders and the notification-rules config remain; the
-   steps below retire them.
-3. **WorkflowHub:** implement `hub.ts` and `contract.ts` in `src/workflows/`;
+2. **Host source bootstrap (done):** root `src/` owns tools, workflows, scripts, and
+   testkit. There is no internal workspace package layer. `legacy/` and `legacy-tests/`
+   folders and the notification-rules config remain; the steps below retire them.
+3. **WorkflowHub:** implement `hub.ts` and `contract.ts` in `src/workflows/core/`;
    wire `pursuitWorkflowProvider`; switch the composition root to `WorkflowHub.open`.
 4. **Pursuit launch seam:** replace `AgentLaunchPort` / `LaunchSettlement` /
    `PursuitAgentSubmissionBinding` with `PursuitAgents`, SDK run handles, and the

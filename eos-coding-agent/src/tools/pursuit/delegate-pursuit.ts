@@ -4,7 +4,7 @@ import {
   type PursuitAgents,
   type PursuitService,
   type PursuitSettlement,
-} from "@eos/pursuit";
+} from "../../workflows/pursuit/index.js";
 
 const DELEGATE_PURSUIT_DESCRIPTION =
   "Delegate a multi-leg coding pursuit. It registers a background task you can watch with " +

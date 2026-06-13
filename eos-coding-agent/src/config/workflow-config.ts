@@ -4,7 +4,7 @@ import { basename, join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 
-import type { WorkflowConfig } from "../workflows/contract.js";
+import type { WorkflowConfig } from "../workflows/core/contract.js";
 import { zodIssues } from "./config-file.js";
 
 /** A valid tool-name fragment: snake_case, so providers can name tools off it. */

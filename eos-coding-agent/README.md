@@ -2,9 +2,8 @@
 
 Host project for composing `eos-agent-sdk` into the coding-agent product.
 
-The root package is the application. Keep host-private composition, config, and
-profile wiring under `src/`; reserve `packages/` for real package boundaries.
-Nothing should live under `packages/app`.
+The root package is the application. Keep all implementation code under `src/`;
+there is no internal `packages/` workspace.
 
 | Location | Owner |
 |---|---|
@@ -12,9 +11,9 @@ Nothing should live under `packages/app`.
 | `src/config/` | `.eos-agents` config, profile, hook, LLM-client, and workflow loaders |
 | `src/agents/` | concrete `buildAgentFactory` and advisory support |
 | `src/tools/` | model-visible tool implementations |
-| `src/workflows/` | `WorkflowHub`, provider contracts, pursuit provider adapter, and context-script wiring |
-| `packages/workflows/pursuit/` | pursuit domain contracts, state, DB, context projection, and service |
-| `packages/scripts/` | subprocess JSON command runner |
-| `packages/testkit/` | `.eos-agents` fixture building |
+| `src/workflows/core/` | `WorkflowHub`, provider contracts, and generic workflow registry code |
+| `src/workflows/pursuit/` | pursuit provider, context-script wiring, domain contracts, state, DB, context projection, and service |
+| `src/scripts/` | subprocess JSON command runner |
+| `src/testkit/` | `.eos-agents` fixture building |
 
 Run package-manager commands from this directory with `pnpm`.

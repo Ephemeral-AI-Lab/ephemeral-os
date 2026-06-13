@@ -28,7 +28,7 @@ import {
 import { runSubagent } from "../tools/agent/run-subagent.js";
 import type { AgentProfile } from "../config/profile-loader.js";
 import type { AgentProfileRegistry } from "../config/profiles.js";
-import type { WorkflowHub } from "../workflows/hub.js";
+import type { WorkflowHub } from "../workflows/core/hub.js";
 
 /**
  * Host-owned terminal binding: the SDK outcome contract plus the advisory

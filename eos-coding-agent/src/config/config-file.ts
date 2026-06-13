@@ -4,7 +4,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import type { HookEntry, LlmClientConfig } from "eos-agent-sdk";
 import type { z } from "zod";
 
-import type { WorkflowConfig } from "../workflows/contract.js";
+import type { WorkflowConfig } from "../workflows/core/contract.js";
 import { loadHookConfig } from "./hook-config.js";
 import { loadLlmClients } from "./llm-client-config.js";
 import { loadAgentProfiles, type AgentProfileRegistry } from "./profiles.js";

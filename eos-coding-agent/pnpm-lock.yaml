@@ -8,15 +8,15 @@ importers:
 
   .:
     dependencies:
-      '@eos/pursuit':
-        specifier: workspace:*
-        version: link:packages/workflows/pursuit
-      '@eos/scripts':
-        specifier: workspace:*
-        version: link:packages/scripts
+      better-sqlite3:
+        specifier: ^12.10.0
+        version: 12.10.0
       eos-agent-sdk:
         specifier: link:../eos-agent-sdk
         version: link:../eos-agent-sdk
+      kysely:
+        specifier: ^0.29.2
+        version: 0.29.2
       yaml:
         specifier: ^2.6.1
         version: 2.9.0
@@ -24,12 +24,12 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@eos/testkit':
-        specifier: workspace:*
-        version: link:packages/testkit
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.5.0)
+      '@types/better-sqlite3':
+        specifier: ^7.6.13
+        version: 7.6.13
       '@types/node':
         specifier: ^25.9.2
         version: 25.9.3

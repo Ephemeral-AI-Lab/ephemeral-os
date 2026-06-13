@@ -14,10 +14,10 @@ import {
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { tempProfileDir } from "@eos/testkit";
+import { tempProfileDir } from "../testkit/eos-agents.js";
 
 import { loadAgentProfiles } from "../config/profiles.js";
-import { WorkflowHub } from "../workflows/hub.js";
+import { WorkflowHub } from "../workflows/core/hub.js";
 import { buildAgentFactory, createAgentOutcomeFnWithAdvisory } from "./agent-factory.js";
 
 const MainOutcome = z.object({ summary: z.string().min(1) });

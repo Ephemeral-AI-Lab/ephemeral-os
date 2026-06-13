@@ -1,4 +1,0 @@
-packages:
-  - "packages/scripts"
-  - "packages/testkit"
-  - "packages/workflows/pursuit"

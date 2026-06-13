@@ -1,4 +1,4 @@
-import { executeJsonCommand } from "@eos/scripts";
+import { executeJsonCommand } from "../scripts/index.js";
 import type { HookDecision, HookEntry } from "eos-agent-sdk";
 import { z } from "zod";
 
