@@ -63,5 +63,6 @@ describe("pursuit context mirror", () => {
       }, { timeout: 8_000 })
       .toBe("later");
     await expect(access(oldLivePath)).rejects.toThrow();
+    await expect(readFile(supersededNextGoalPath, "utf8")).resolves.toBe("later");
   }, 10_000);
 });

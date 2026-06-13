@@ -313,6 +313,8 @@ export class PursuitService {
       run.interrupt();
     });
     await stampAgentRunId(this.#deps.db, claim, run.runId);
+    const stampedTree = await loadPursuitTree(this.#deps.db, pursuitId);
+    if (stampedTree) await this.#mirror(pursuitId, stampedTree);
     void run
       .outcome()
       .then((outcome) => this.reconcileRun(pursuitId, claim, outcome))
