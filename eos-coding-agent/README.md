@@ -14,6 +14,6 @@ there is no internal `packages/` workspace.
 | `src/workflows/core/` | `WorkflowHub`, provider contracts, and generic workflow registry code |
 | `src/workflows/pursuit/` | pursuit provider, context-script wiring, domain contracts, state, DB, context projection, and service |
 | `src/scripts/` | subprocess JSON command runner |
-| `src/testkit/` | `.eos-agents` fixture building |
+| `tests/testkit/` | `.eos-agents` fixture building |
 
 Run package-manager commands from this directory with `pnpm`.

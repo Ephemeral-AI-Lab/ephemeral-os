@@ -14,7 +14,7 @@ import {
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { tempProfileDir } from "../testkit/eos-agents.js";
+import { tempProfileDir } from "../../tests/testkit/eos-agents.js";
 
 import { loadAgentProfiles } from "../config/profiles.js";
 import { WorkflowHub } from "../workflows/core/hub.js";
