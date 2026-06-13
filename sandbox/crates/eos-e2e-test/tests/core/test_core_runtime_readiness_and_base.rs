@@ -108,7 +108,7 @@ fn build_base_reset_rebuilds() -> Result<()> {
         rebuilt_meta
             .steps
             .iter()
-            .any(|step| step.kind == "runtime.dispatch"),
+            .any(|step| step.kind == "dispatch"),
         "build_base envelope should expose dispatch step meta: {rebuilt_wire}"
     );
     let metrics_wire = lease.call(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;

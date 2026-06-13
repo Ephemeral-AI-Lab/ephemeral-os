@@ -25,6 +25,11 @@ anyhow = { workspace = true }
 # dev hosts run plain `cargo test` and skip the docker tiers cleanly.
 e2e = []
 
+[[bin]]
+name = "e2e-reap"
+path = "src/bin/e2e-reap.rs"
+test = false
+
 [[test]]
 name = "core"
 path = "tests/core/mod.rs"

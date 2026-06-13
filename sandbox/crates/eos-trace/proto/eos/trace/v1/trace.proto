@@ -88,6 +88,18 @@ message RequestStart {
   string args_digest = 14;
 }
 
+message ResponsePersisted {
+  string trace_id = 1;
+  string request_id = 2;
+  string status = 3;
+  string error_kind = 4;
+  uint64 received_at_unix_ms = 5;
+  uint64 host_rtt_ms = 6;
+  string response_digest = 7;
+  uint64 response_len = 8;
+  string response_summary_json = 9;
+}
+
 message SandboxStatusSnapshot {
   string sandbox_id = 1;
   string host_boot_id = 2;

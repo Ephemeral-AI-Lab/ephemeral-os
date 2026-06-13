@@ -17,6 +17,7 @@ const STORE_SCHEMA_VERSION: u32 = 1;
 const HOST_SANDBOX_ID: &str = "_host";
 const AUDIT_SCHEMA: &str = "eos.trace.v1.AuditEntry";
 const REQUEST_START_SCHEMA: &str = "eos.trace.v1.RequestStart";
+const RESPONSE_PERSISTED_SCHEMA: &str = "eos.trace.v1.ResponsePersisted";
 const TRACE_BATCH_SCHEMA: &str = "eos.trace.v1.TraceBatch";
 
 #[derive(Debug, thiserror::Error)]
@@ -348,7 +349,7 @@ impl TraceStore {
             response_len: usize_to_u64(input.raw_response_bytes.len()),
             response_summary: summary.encoded_value(),
         };
-        let payload_bytes = encode_audit_payload(&payload);
+        let payload_bytes = response_persisted_to_proto(&payload).encode_to_vec();
         let mut conn = self.lock();
         let tx = conn.transaction()?;
         append_audit_entry_tx(
@@ -358,7 +359,7 @@ impl TraceStore {
                 trace_id: input.trace_id.as_str(),
                 request_id: Some(input.request_id.as_str()),
                 entry_kind: "response_persisted",
-                schema_name: AUDIT_SCHEMA,
+                schema_name: RESPONSE_PERSISTED_SCHEMA,
                 schema_version: 1,
                 received_at_ms: payload.received_at_ms,
                 payload: &payload_bytes,
@@ -443,7 +444,8 @@ impl TraceStore {
                     project_trace_degraded_tx(&tx, &payload)?;
                 }
                 "response_persisted" => {
-                    let payload = decode_audit_payload::<ResponsePersistedPayload>(&row.payload)?;
+                    let payload =
+                        decode_response_persisted_payload(&row.schema_name, &row.payload)?;
                     project_response_persisted_tx(&tx, &payload)?;
                 }
                 "loss" => {
@@ -1037,6 +1039,7 @@ struct ProjectRequestStart<'a> {
 #[derive(Debug)]
 struct RebuildAuditRow {
     entry_kind: String,
+    schema_name: String,
     payload: Vec<u8>,
 }
 
@@ -1101,6 +1104,48 @@ struct ResponsePersistedPayload {
     response_digest: String,
     response_len: u64,
     response_summary: String,
+}
+
+fn response_persisted_to_proto(payload: &ResponsePersistedPayload) -> proto::ResponsePersisted {
+    proto::ResponsePersisted {
+        trace_id: payload.trace_id.clone(),
+        request_id: payload.request_id.clone(),
+        status: payload.status.clone(),
+        error_kind: payload.error_kind.clone().unwrap_or_default(),
+        received_at_unix_ms: payload.received_at_ms,
+        host_rtt_ms: payload.host_rtt_ms,
+        response_digest: payload.response_digest.clone(),
+        response_len: payload.response_len,
+        response_summary_json: payload.response_summary.clone(),
+    }
+}
+
+fn response_persisted_from_proto(payload: proto::ResponsePersisted) -> ResponsePersistedPayload {
+    ResponsePersistedPayload {
+        trace_id: payload.trace_id,
+        request_id: payload.request_id,
+        status: payload.status,
+        error_kind: empty_to_none(payload.error_kind),
+        received_at_ms: payload.received_at_unix_ms,
+        host_rtt_ms: payload.host_rtt_ms,
+        response_digest: payload.response_digest,
+        response_len: payload.response_len,
+        response_summary: payload.response_summary_json,
+    }
+}
+
+fn empty_to_none(value: String) -> Option<String> {
+    (!value.is_empty()).then_some(value)
+}
+
+fn decode_response_persisted_payload(
+    schema_name: &str,
+    payload: &[u8],
+) -> Result<ResponsePersistedPayload, prost::DecodeError> {
+    if schema_name == RESPONSE_PERSISTED_SCHEMA {
+        return proto::ResponsePersisted::decode(payload).map(response_persisted_from_proto);
+    }
+    decode_audit_payload::<ResponsePersistedPayload>(payload)
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -1503,7 +1548,7 @@ fn clear_projections_tx(tx: &Transaction<'_>) -> Result<(), rusqlite::Error> {
 
 fn audit_rows_for_rebuild(tx: &Transaction<'_>) -> Result<Vec<RebuildAuditRow>, rusqlite::Error> {
     let mut stmt = tx.prepare(
-        "SELECT entry_kind, payload FROM audit_entries
+        "SELECT entry_kind, schema_name, payload FROM audit_entries
          WHERE entry_kind IN ('request_start', 'trace_batch', 'trace_event', 'trace_degraded', 'response_persisted', 'loss')
          ORDER BY audit_seq",
     )?;
@@ -1511,7 +1556,8 @@ fn audit_rows_for_rebuild(tx: &Transaction<'_>) -> Result<Vec<RebuildAuditRow>, 
         .query_map([], |row| {
             Ok(RebuildAuditRow {
                 entry_kind: row.get(0)?,
-                payload: row.get(1)?,
+                schema_name: row.get(1)?,
+                payload: row.get(2)?,
             })
         })?
         .collect();

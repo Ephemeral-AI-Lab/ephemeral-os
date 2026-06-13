@@ -332,8 +332,7 @@ fn package(args: &PackageArgs) -> Result<()> {
     }
 
     let arch = arch_for_target(&args.target)?;
-    let built = root
-        .join("target")
+    let built = cargo_target_dir(&root)
         .join(&args.target)
         .join("release")
         .join("eosd");
@@ -400,6 +399,13 @@ fn absolutize(root: &Path, path: &Path) -> PathBuf {
     } else {
         root.join(path)
     }
+}
+
+fn cargo_target_dir(root: &Path) -> PathBuf {
+    env::var_os("CARGO_TARGET_DIR").map_or_else(
+        || root.join("target"),
+        |target_dir| absolutize(root, Path::new(&target_dir)),
+    )
 }
 
 fn arch_for_target(target: &str) -> Result<&'static str> {

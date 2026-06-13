@@ -60,7 +60,7 @@ fn every_response_carries_runtime_envelope_meta() -> Result<()> {
     assert!(
         meta.steps
             .iter()
-            .any(|step| step.kind == "runtime.dispatch"),
+            .any(|step| step.kind == "dispatch"),
         "ok responses must carry dispatch step meta: {ready}"
     );
 
@@ -75,7 +75,7 @@ fn every_response_carries_runtime_envelope_meta() -> Result<()> {
     assert!(
         meta.steps
             .iter()
-            .any(|step| step.kind == "runtime.dispatch"),
+            .any(|step| step.kind == "dispatch"),
         "error responses must still carry dispatch step meta: {bogus}"
     );
     Ok(())

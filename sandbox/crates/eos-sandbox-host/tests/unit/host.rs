@@ -10,6 +10,9 @@ use eos_trace::{
 };
 use serde_json::json;
 
+use crate::protocol::{
+    DAEMON_TRACE_SIDECAR_ENCODING, DAEMON_TRACE_SIDECAR_FIELD, DAEMON_TRACE_SIDECAR_SCHEMA,
+};
 use crate::trace_store::TraceEventRow;
 
 #[test]
@@ -146,7 +149,7 @@ fn forward_request_persists_transport_events_and_strips_sidecar() -> Result<()> 
         ));
         let sidecar = base64::engine::general_purpose::STANDARD
             .encode(encode_trace_batch(&TraceBatch::single(record)));
-        let response = json!({
+        let mut response = json!({
             "status": "ok",
             "result": {"ready": true},
             "meta": {
@@ -168,7 +171,12 @@ fn forward_request_persists_transport_events_and_strips_sidecar() -> Result<()> 
                 "resource_summary": {"fields": {}},
                 "warnings": []
             },
-            "_trace_events": sidecar,
+        });
+        response[DAEMON_TRACE_SIDECAR_FIELD] = json!({
+            "schema": DAEMON_TRACE_SIDECAR_SCHEMA,
+            "encoding": DAEMON_TRACE_SIDECAR_ENCODING,
+            "spool_pending": false,
+            "data": sidecar,
         });
         writeln!(stream, "{}", serde_json::to_string(&response)?)?;
         Ok(())
