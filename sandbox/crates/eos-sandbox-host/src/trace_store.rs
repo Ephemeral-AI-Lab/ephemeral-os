@@ -902,10 +902,7 @@ impl TraceStoreError {
     /// Schema/seal/decode errors are not request-start append failures and never
     /// reach this path; mutating ops always fail closed regardless.
     const fn allows_read_only_degraded(&self) -> bool {
-        matches!(
-            self,
-            Self::InjectedRequestStartFailure | Self::Sqlite(_)
-        )
+        matches!(self, Self::InjectedRequestStartFailure | Self::Sqlite(_))
     }
 }
 

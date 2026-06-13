@@ -476,9 +476,7 @@ impl DaemonServer {
             local_addr,
         );
         match decode_value(value) {
-            Ok(WireMessage::Request(request)) => {
-                self.dispatch_request(request, trace, facts).await
-            }
+            Ok(WireMessage::Request(request)) => self.dispatch_request(request, trace, facts).await,
             Ok(_) => crate::trace::attach_request_sidecar(
                 crate::dispatcher::error_response(
                     ErrorKind::InvalidRequest,

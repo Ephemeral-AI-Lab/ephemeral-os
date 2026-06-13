@@ -31,8 +31,14 @@ pub fn dispatch(request: &Request) -> Value {
 #[must_use]
 pub fn dispatch_with_context(request: &Request, context: DispatchContext<'_>) -> Value {
     let dispatch_start = Instant::now();
-    let finalize =
-        |response| finalize_response(response, &request.op, &request.invocation_id, dispatch_start);
+    let finalize = |response| {
+        finalize_response(
+            response,
+            &request.op,
+            &request.invocation_id,
+            dispatch_start,
+        )
+    };
     if request.op.trim().is_empty() {
         return finalize(error_response(
             ErrorKind::InvalidRequest,
@@ -94,7 +100,12 @@ pub(crate) fn error_response(kind: ErrorKind, message: impl Into<String>, detail
     error_envelope(kind, message, details)
 }
 
-fn attach_runtime_observations(response: &mut Value, op: &str, invocation_id: &str, dispatch_s: f64) {
+fn attach_runtime_observations(
+    response: &mut Value,
+    op: &str,
+    invocation_id: &str,
+    dispatch_s: f64,
+) {
     if !is_operation_envelope(response) {
         return;
     }

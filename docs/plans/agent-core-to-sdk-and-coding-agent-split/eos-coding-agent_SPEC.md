@@ -1344,7 +1344,24 @@ test ! -f eos-coding-agent/.eos-agents/workflow.json
 git diff --check -- docs/plans/agent-core-to-sdk-and-coding-agent-split
 ```
 
-## 15. Open Questions
+## 15. Review Change List
+
+These changes address the naming, logic-gap, redundancy, and round-trip review findings.
+They do not change the core boundary: the SDK stays mechanism-only, and accepted pursuit
+submissions still mutate pursuit state directly through `onSubmit`.
+
+| Area | Change to make | Reason |
+| --- | --- | --- |
+| Advisory contract | Define the advisor profile validation rule: if any `AgentOutcomeFnWithAdvisory` can be created, startup must require a known `advisor` profile whose terminal tool is `submit_advisor_outcome`. | `askAdvisor` currently hard-codes `ADVISOR_AGENT_NAME = "advisor"` without a matching config invariant. |
+| Advisory prompt source | Replace the mixed wording around "no advisory prompt registry" and `pursuitAdvisoryPromptFor(...)` with one explicit app-owned prompt source, such as `advisoryPromptForTerminalTool(toolName)`, and fail startup when a gated terminal tool has no prompt. | The current text rejects registries but still needs a lookup for planner/worker/main prompts. |
+| Workflow tool names | Remove `WorkflowConfig.tools` as a markdown-authored source of tool names, or make it a generated/provider-owned declaration such as `provider.toolNames(name, args)`. | The current frontmatter `tools` duplicates provider-authored names and creates rename drift. |
+| Workflow docs round trip | Change the prompt-fragment rule from "call `read_workflow_docs(<name>)` before first use" to "call it only when the compact prompt fragment is insufficient"; for V1 `pursuit`, inject the compact operating contract directly. | This keeps `list_workflows` deleted without forcing a mandatory docs tool round trip for the only configured workflow. |
+| Advisory round trips | State exactly which terminal tools are advisory-gated by default (`submit_main_outcome`, `submit_planner_outcome`, `submit_worker_outcome`) and which can opt out. | Planner/worker fanout currently implies an advisor call before every terminal submission, which is expensive and should be an explicit policy choice. |
+| Workflow vocabulary | Decide whether `workflow` is allowed to be model-facing. If not, rename model-visible surfaces such as `read_workflow_docs` and `workflow:pursuit` to a neutral capability term; if yes, soften the "host-infrastructure only" rule. | The current naming rule says workflow is not pursuit domain vocabulary, but the model still sees workflow-labeled tools and task provenance. |
+| Layout and sequencing | Separate "current checkout shape" from "target layout"; either add the missing `eos-coding-agent/package.json`/workspace root to the target work, or stop describing the root workspace bootstrap as done. Align target filenames with live names or list the intended renames. | The current tree has package groups, but not the target root package file, and live config files still use names such as `agent-profile-loader.ts`. |
+| Migration checks | Expand §14 hygiene checks to cover profile/config cleanup: no active profile lists `ask_advisor`, no `.eos-agents/notification_rules.json`, no `.eos-agents/notification-rules/`, no legacy workflow script root, no `agent_kind` outside historical test fixtures. | Current checks focus on source symbols and miss several config-level stale surfaces that this spec explicitly retires. |
+
+## 16. Open Questions
 
 - Whether `read_agent_run` needs paging before extraction, since SDK records can grow
   large.

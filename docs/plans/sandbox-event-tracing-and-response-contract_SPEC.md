@@ -57,8 +57,8 @@ Current phase status:
 | Phase 02 - Host store | Complete | `cargo test -p eos-sandbox-host` passed on 2026-06-12 after adding the host SQLite trace store, request-start fail-closed gate, projection rebuild, startup reconciliation, seal/prune verification, and indexed acceptance-query tests. |
 | Phase 03 - Gateway, host, and daemon propagation | Complete | `cargo test -p eos-daemon -p eos-sandbox-host -p eos-sandbox-gateway -p eos-trace` passed on 2026-06-12 after adding additive trace propagation, daemon protobuf sidecars with accepted-before-read root timing, bounded export spool/drainer, daemon peer/local transport facts, daemon response write/shutdown failure spooling, wire-error sidecars, host transport edge coverage, host sidecar ingest/strip, gateway declassification/write-failure events, boot `config_loaded`/`listen_bound` events, hot-path traced dispatch coverage, and host-store replay assertions. |
 | Phase 04 - Subsystem events and resource stats | Complete | Checkpoint worktree-mode/git command-step events, daemon-side `workspace.route` fast-path attribution, file read/write sidecar events, direct-file `resource_stats` projections from existing cheap samples with explicit cgroup CPU/memory/io/PSI/process groupings, source markers, and measured `sampler_duration_us`, command foreground wait before/after `resource_stats` pairs around `command.process.wait` with daemon `inflight_requests`, command foreground host `resource_stats` for daemon RSS/HWM gauges, command finalization tree `resource_stats` for existing upperdir/run-dir tree timings, command finalized sidecar overlay/capture, changed-path, and response-meta facts, plugin overlay before/after `resource_stats` and host RSS/HWM resource samples around `plugin.overlay.run`, typed sidecar-to-`trace_resources` promotion with span ids for same-span before/after resource queries, real bounded tree-walk truncation markers, plugin overlay `mount_cost` resource samples and host resource-query coverage for command/plugin before-after rows, tree truncation, and `duration_us`/`layer_count`/`fsconfig_calls`, `ActiveCommand` trace-origin fields, background `CommandFinalize` roots, background-finalize completed-buffer eviction loss markers, request-sidecar `stdin_written` wait/backpressure facts, request-sidecar `progress_read` facts, explicit command `cancelled`/`timed_out` finalize events, command final-response persistence/transcript failure trace events, `exit_taken` signal facts, command start `prepared`/`spawned` plus metadata/runner-request `artifact_written`/`artifact_failed` events, isolated enter/status/exit/recovery lifecycle sidecar events with DNS fallback/previous nameserver, teardown/mountinfo markers, and manager-json recovery errors, PPC typed `parent_message_id` plus orphan reply/refused-callback trace facts, plugin callback OCC `commit_finished` parent facts, plugin `setup_finished` exit/output/spawn facts, plugin `service_started` stderr-path facts with stderr capture, plugin `service_health_checked` state/restart/refresh/last-error facts plus `service_exited` exit-code/signal/raw-status facts, plugin overlay `overlay_started`/`overlay_finished` lifecycle facts plus `overlay.mount_finished`/`overlay.unmount_finished` from ns-runner `workspace.mount_s`/`workspace.unmount_s` with `layer_count` and `fsconfig_calls`, `overlay.capture_started`/`overlay.capture_finished` capture facts, OCC `commit_finished`/`conflict_detected` result facts with observed manifest version/state forwarding for file fast-path and plugin overlay publishes, OCC `worker_handoff`/`worker_batch_finished` queue facts, LayerStack `manifest_validated`/`publish_layer_finished` manifest and active-lease facts, and LayerStack auto-squash `auto_squash_skipped`/`auto_squash_finished`/`auto_squash_failed` trace facts are implemented; `cargo test -p eos-command -p eos-daemon`, `cargo test -p eos-operation`, focused command-origin/background-finalize/stdin-trace/progress-trace/persistence/signal/artifact tests, `cargo test -p eos-workspace -p eos-daemon`, `cargo test -p eos-plugin -p eos-operation`, `cargo test -p eos-operation --lib`, `cargo test -p eos-operation --test plugin_service_runtime`, `cargo test -p eos-layerstack --lib`, `cargo test -p eos-trace`, `cargo test -p eos-sandbox-host --lib`, `cargo test -p eos-daemon --lib`, `cargo test -p eos-daemon plugin::`, `cargo run -p xtask -- package --builder rust-lld`, `cargo test -p eos-e2e-test --features e2e --test core test_core_direct_file_contracts::live_trace_file_fast_path_records_route_occ_and_no_workspace_facts -- --exact --nocapture`, `cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace test_ephemeral_workspace_overlay_exec::live_trace_ephemeral_exec_records_command_overlay_resource_and_response_facts -- --exact --nocapture`, `cargo test -p eos-e2e-test --features e2e --test workspace-runtime-isolated isolated_workspace_lifecycle::live_trace_isolated_enter_exec_status_exit_records_one_chain -- --exact --nocapture`, `cargo test -p eos-e2e-test --features e2e --test workspace-runtime-command command_cancel_runs::live_trace_background_command_finalize_exports_root_linked_to_origin -- --exact --nocapture`, and `cargo test -p eos-e2e-test --features e2e --test plugin test_plugin_package_lifecycle_and_overlay::live_trace_plugin_callback_occ_publish_parents_under_plugin_op_trace -- --exact --nocapture` passed on 2026-06-12/13 for these Phase 04 slices. |
-| Phase 05 - Response and e2e migration | In progress | Step 0 mixed-wire decoder landed in `eos-sandbox-host::protocol`, exported through `e2e_support`, and reused by host/trace-store status projection; Step 1 shared e2e trace helpers landed in `eos-e2e-test/tests/support/trace.rs` with envelope/meta trace extraction, sidecar/export decoding, gateway sidecar stripping assertions, and host-store correlation helpers. `CARGO_TARGET_DIR=/tmp/eos-phase05-target cargo check -p eos-operation -p eos-sandbox-host -p eos-e2e-test --tests`, `cargo test -p eos-operation --lib core::envelope::tests`, `cargo test -p eos-sandbox-host --lib protocol::tests`, `cargo test -p eos-sandbox-host --lib trace_store::tests::response_projection_classifies_new_envelope_errors`, and `cargo fmt --check` passed on 2026-06-13 for this slice. The next file-response envelope slice added daemon `OperationEnvelope` rendering for direct file successes, daemon-side response-meta stamping from trace records, host `local_sqlite` trace-ref stamping after sidecar ingest, and e2e result-unwrapping compatibility for non-flipped suites; `cargo check -p eos-daemon -p eos-sandbox-host -p eos-e2e-test --tests`, `cargo test -p eos-daemon --lib op_adapter::tests::ok_envelope_wraps_result_without_flattening_domain_status -- --exact --nocapture`, `cargo test -p eos-daemon --lib trace::tests::request_sidecar_stamps_envelope_meta_from_trace_record -- --exact --nocapture`, `cargo test -p eos-daemon --lib dispatcher::tests::file_write_dispatch_returns_status_envelope -- --exact --nocapture`, `cargo test -p eos-sandbox-host --lib host::tests::forward_request_persists_transport_events_and_strips_sidecar -- --exact`, `cargo run -p xtask -- package --builder rust-lld` (without `CARGO_TARGET_DIR`; packaged `dist/eosd-linux-amd64` sha256 `dd23c4e000f236d657cec6595f278e631acf65c9ec1562ec08c2e66cc73b1b28`), `cargo run -p eos-e2e-test --bin e2e-reap`, `cargo test -p eos-e2e-test --features e2e --test core test_core_direct_file_contracts::live_trace_file_fast_path_records_route_occ_and_no_workspace_facts -- --exact --nocapture`, and `cargo test -p eos-e2e-test --features e2e --test core test_core_direct_file_contracts::direct_file_ops_concurrency_ladder -- --exact --nocapture` passed on 2026-06-13. `cargo test -p eos-e2e-test -- --list` printed crate/core/daemon inventories but was stopped after hanging in the `eos-layerstack` inventory. |
-| Phase 06 - Debt deletion | Blocked | |
+| Phase 05 - Response and e2e migration | Complete | Final Phase 05 closeout passed on 2026-06-13 after all response families were migrated to `OperationEnvelope`/trace-resource assertions, the temporary flattening adapter was deleted, generated e2e inventory pages were regenerated, per-test E2E lease checkout explicitly resets stale Git workspace state, and the live E2E report `sandbox-e2e-jun13.md` recorded every retry/finding/fix. Verification: `cargo test -p eos-e2e-test --features e2e -- --test-threads=1 --nocapture` passed with unit 1/1, core 33/33, daemon 12/12, eos-layerstack 20/20, ephemeral_workspace 12/12, plugin 15/15, pressure 23/23, workspace-publish-gate 14/14, workspace-runtime-command 67/67, workspace-runtime-isolated 21/21, doc-tests 0/0; `cargo test -p eos-e2e-test -- --list` passed with matching inventory counts; `cargo check -p eos-e2e-test --tests`, `cargo fmt --check`, `git diff --check`, and stale-surface greps for `timings.`, `is_success`, and `error_kind` in E2E/host/gateway surfaces passed. |
+| Phase 06 - Debt deletion | In progress | |
 | Phase 07 - TypeScript mirror | Blocked | |
 | Phase 08 - Heartbeat monitoring | Blocked | |
 | Phase 09 - Transcript archival | Blocked | |
@@ -2301,26 +2301,26 @@ Acceptance checklist:
   `request_id`, assert gateway-facing responses do not expose `_trace_events`,
   drain `sandbox.trace.export`, query the host trace store, and compare
   response `meta.trace_ref` against stored spans/resources/events.
-- [ ] Family flips proceed in this order: control/checkpoint -> files ->
+- [x] Family flips proceed in this order: control/checkpoint -> files ->
   isolated -> command -> plugin. Each flip rewrites that family's gateway,
   host, and e2e assertions in the same change.
-- [ ] `timings.*`, `resource.*` flat keys, and response `success` branching are
+- [x] `timings.*`, `resource.*` flat keys, and response `success` branching are
   not accepted in a flipped family; equivalent checks use span durations,
   `trace_resources`, `trace_events`, `trace_requests`, and response
   `meta.resource_summary`.
-- [ ] Generated e2e inventory docs under `sandbox/crates/eos-e2e-test/tests`
+- [x] Generated e2e inventory docs under `sandbox/crates/eos-e2e-test/tests`
   are regenerated only after the migrated tests reflect the new contracts.
 - [x] Mixed-wire decoder unit test covers legacy success, legacy error, new
   `ok`, new `running`, and new `error` where legacy `is_success` would have
   misclassified the response.
-- [ ] `cargo test -p eos-e2e-test -- --list`
-- [ ] After each family flip: `cargo test --workspace` or the narrow owning
+- [x] `cargo test -p eos-e2e-test -- --list`
+- [x] After each family flip: `cargo test --workspace` or the narrow owning
   package set plus the focused live e2e suite listed in the retarget matrix.
-- [ ] Final migration gate:
+- [x] Final migration gate:
   `EOS_LIVE_E2E_IMAGE=<image> cargo test -p eos-e2e-test --features e2e -- --test-threads=1 --nocapture`
-- [ ] `rg -n "timings\\.|\\bis_success\\(|\\berror_kind\\(" sandbox/crates/eos-e2e-test sandbox/crates/eos-sandbox-host sandbox/crates/eos-sandbox-gateway`
+- [x] `rg -n "timings\\.|\\bis_success\\(|\\berror_kind\\(" sandbox/crates/eos-e2e-test sandbox/crates/eos-sandbox-host sandbox/crates/eos-sandbox-gateway`
   returns only legacy-adapter code until Phase 06, and nothing after Phase 06.
-- [ ] Update the progress tracker with Phase 05 evidence and mark Phase 05
+- [x] Update the progress tracker with Phase 05 evidence and mark Phase 05
   `Complete`.
 
 E2E retargeting matrix:
@@ -2340,23 +2340,23 @@ E2E retargeting matrix:
 
 Focused live e2e commands for Phase 05 flips:
 
-- [ ] `cargo test -p eos-e2e-test --features e2e --test core -- --nocapture`
-- [ ] `cargo test -p eos-e2e-test --features e2e --test daemon -- --nocapture`
-- [ ] `cargo test -p eos-e2e-test --features e2e --test eos-layerstack -- --nocapture`
-- [ ] `cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace -- --nocapture`
-- [ ] `cargo test -p eos-e2e-test --features e2e --test workspace-publish-gate -- --nocapture`
-- [ ] `cargo test -p eos-e2e-test --features e2e --test workspace-runtime-command -- --nocapture`
-- [ ] `cargo test -p eos-e2e-test --features e2e --test workspace-runtime-isolated -- --nocapture`
-- [ ] `cargo test -p eos-e2e-test --features e2e --test plugin -- --nocapture`
-- [ ] `cargo test -p eos-e2e-test --features e2e --test pressure -- --nocapture`
+- [x] `cargo test -p eos-e2e-test --features e2e --test core -- --nocapture`
+- [x] `cargo test -p eos-e2e-test --features e2e --test daemon -- --nocapture`
+- [x] `cargo test -p eos-e2e-test --features e2e --test eos-layerstack -- --nocapture`
+- [x] `cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace -- --nocapture`
+- [x] `cargo test -p eos-e2e-test --features e2e --test workspace-publish-gate -- --nocapture`
+- [x] `cargo test -p eos-e2e-test --features e2e --test workspace-runtime-command -- --nocapture`
+- [x] `cargo test -p eos-e2e-test --features e2e --test workspace-runtime-isolated -- --nocapture`
+- [x] `cargo test -p eos-e2e-test --features e2e --test plugin -- --nocapture`
+- [x] `cargo test -p eos-e2e-test --features e2e --test pressure -- --nocapture`
 
 Phase gate:
 
 ```text
 Phase 05 is Complete only when all in-repo response consumers and e2e suites
 use the new envelope/meta/store assertions, mixed-wire decoding is safe during
-the transition, and the full live e2e gate passes. Phase 06 remains Blocked
-until then.
+the transition, and the full live e2e gate passes. Completed on 2026-06-13;
+Phase 06 is now the active phase.
 ```
 
 ### Phase 06 - Debt Deletion
