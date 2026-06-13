@@ -986,6 +986,15 @@ fn plugin_overlay_response_strips_timings_but_keeps_trace_samples() -> TestResul
             .and_then(serde_json::Value::as_f64),
         Some(4096.0)
     );
+    // Quirk serializers are gone: the committed wire body carries the typed
+    // mutation source and no `error: null` placeholder (it appears only on
+    // failure, set by apply_plugin_overlay_status).
+    assert_eq!(wire.response["mutation_source"], "plugin_overlay");
+    assert!(
+        wire.response.get("error").is_none(),
+        "committed overlay response must not carry an `error: null` placeholder: {:?}",
+        wire.response
+    );
 
     remove_test_tree(&layer_stack_root)?;
     Ok(())

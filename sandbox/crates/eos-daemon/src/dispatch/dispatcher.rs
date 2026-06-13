@@ -18,7 +18,7 @@ use eos_layerstack::LayerStack;
 use crate::builtin;
 #[cfg(test)]
 use crate::invocation_registry::InFlightRegistry;
-use crate::op_adapter::{error_envelope, is_operation_envelope, ok_envelope, plugin};
+use crate::op_adapter::{error_envelope, ok_envelope, plugin};
 #[cfg(test)]
 use crate::response::{insert_tree_resource_timings, resource_timings, TreeResourceStats};
 use crate::DispatchContext;
@@ -30,42 +30,31 @@ pub fn dispatch(request: &Request) -> Value {
 
 #[must_use]
 pub fn dispatch_with_context(request: &Request, context: DispatchContext<'_>) -> Value {
-    let dispatch_start = Instant::now();
-    let finalize = |response| {
-        finalize_response(
-            response,
-            &request.op,
-            &request.invocation_id,
-            dispatch_start,
-        )
-    };
+    // Dispatch returns the typed envelope; response `meta` (op, request_id,
+    // duration, steps, route, resources) is owned solely by the span-derived
+    // stamp on the transport path (`trace::stamp_pending_envelope_meta`). The
+    // dispatcher never hand-maintains a parallel meta map.
     if request.op.trim().is_empty() {
-        return finalize(error_response(
-            ErrorKind::InvalidRequest,
-            "op is required",
-            json!({}),
-        ));
+        return error_response(ErrorKind::InvalidRequest, "op is required", json!({}));
     }
     if !request.args.is_object() {
-        return finalize(error_response(
+        return error_response(
             ErrorKind::InvalidRequest,
             "args must be an object",
             json!({}),
-        ));
+        );
     }
     let Some(op) = BuiltinOp::from_op_name(&request.op) else {
-        return finalize(plugin_fallback_or_unknown(request, context));
+        return plugin_fallback_or_unknown(request, context);
     };
     let parsed = match OpRequest::parse(op, &request.args) {
         Ok(parsed) => parsed,
-        Err(RequestError::Args(error)) => {
-            return finalize(builtin::parse_error_response(op, error))
-        }
+        Err(RequestError::Args(error)) => return builtin::parse_error_response(op, error),
         Err(RequestError::NotDaemonServed(_)) => {
-            return finalize(plugin_fallback_or_unknown(request, context));
+            return plugin_fallback_or_unknown(request, context);
         }
     };
-    finalize(builtin::dispatch(parsed, context))
+    builtin::dispatch(parsed, context)
 }
 
 fn plugin_fallback_or_unknown(request: &Request, context: DispatchContext<'_>) -> Value {
@@ -84,98 +73,9 @@ fn plugin_fallback_or_unknown(request: &Request, context: DispatchContext<'_>) -
     )
 }
 
-fn finalize_response(
-    mut response: Value,
-    op: &str,
-    invocation_id: &str,
-    dispatch_start: Instant,
-) -> Value {
-    let dispatch_s = dispatch_start.elapsed().as_secs_f64();
-    attach_runtime_observations(&mut response, op, invocation_id, dispatch_s);
-    response
-}
-
 #[must_use]
 pub(crate) fn error_response(kind: ErrorKind, message: impl Into<String>, details: Value) -> Value {
     error_envelope(kind, message, details)
-}
-
-fn attach_runtime_observations(
-    response: &mut Value,
-    op: &str,
-    invocation_id: &str,
-    dispatch_s: f64,
-) {
-    if !is_operation_envelope(response) {
-        return;
-    }
-    if let Some(obj) = response.as_object_mut() {
-        attach_envelope_runtime_meta(obj, op, invocation_id, dispatch_s);
-    }
-}
-
-fn attach_envelope_runtime_meta(
-    object: &mut serde_json::Map<String, Value>,
-    op: &str,
-    invocation_id: &str,
-    dispatch_s: f64,
-) {
-    let meta = object
-        .entry("meta".to_owned())
-        .or_insert_with(|| json!({}))
-        .as_object_mut();
-    let Some(meta) = meta else {
-        return;
-    };
-    if !op.is_empty() {
-        fill_empty_string(meta, "op", op);
-    }
-    if !invocation_id.is_empty() {
-        fill_empty_string(meta, "request_id", invocation_id);
-    }
-    if meta
-        .get("duration_ms")
-        .and_then(Value::as_f64)
-        .is_none_or(|duration_ms| duration_ms <= 0.0)
-    {
-        meta.insert("duration_ms".to_owned(), json!(dispatch_s * 1000.0));
-    }
-    if meta
-        .get("steps")
-        .and_then(Value::as_array)
-        .is_none_or(Vec::is_empty)
-    {
-        meta.insert(
-            "steps".to_owned(),
-            json!([{
-                "kind": "runtime.dispatch",
-                "duration_us": seconds_to_us(dispatch_s),
-                "status": "ok",
-            }]),
-        );
-    }
-}
-
-fn fill_empty_string(meta: &mut serde_json::Map<String, Value>, key: &str, value: &str) {
-    if meta
-        .get(key)
-        .and_then(Value::as_str)
-        .is_none_or(str::is_empty)
-    {
-        meta.insert(key.to_owned(), Value::String(value.to_owned()));
-    }
-}
-
-fn seconds_to_us(seconds: f64) -> u64 {
-    if !seconds.is_finite() || seconds <= 0.0 {
-        return 0;
-    }
-    let micros = seconds * 1_000_000.0;
-    if micros >= u64::MAX as f64 {
-        u64::MAX
-    } else {
-        micros as u64
-    }
 }
 
 pub(crate) fn daemon_uptime_s() -> f64 {

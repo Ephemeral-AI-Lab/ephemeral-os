@@ -162,11 +162,6 @@ fn command_count_dispatch_returns_status_envelope() {
         "{response}"
     );
     assert_eq!(response["result"]["count"], json!(0), "{response}");
-    assert_eq!(response["meta"]["op"], json!("sandbox.command.count"));
-    assert_eq!(
-        response["meta"]["request_id"],
-        json!("command-count-envelope")
-    );
     assert!(response.get("success").is_none(), "{response}");
     assert!(response.get("timings").is_none(), "{response}");
 }
@@ -206,7 +201,11 @@ fn command_poll_parse_gate_preserves_id_first_error() {
 }
 
 #[test]
-fn dispatch_attaches_runtime_envelope_meta() {
+fn dispatch_does_not_synthesize_a_parallel_meta() {
+    // Meta (op, request_id, duration, steps) is owned solely by the span-derived
+    // transport stamp. The dispatcher must not hand-maintain a parallel meta map,
+    // so at the dispatch boundary meta carries only envelope defaults and there is
+    // no synthetic "runtime.dispatch" step.
     let response = dispatch_with_context(
         &Request {
             op: "sandbox.call.heartbeat".to_owned(),
@@ -218,12 +217,13 @@ fn dispatch_attaches_runtime_envelope_meta() {
 
     assert_eq!(response["status"], json!("ok"));
     assert_eq!(response["result"]["success"], json!(true));
-    assert_eq!(response["meta"]["op"], json!("sandbox.call.heartbeat"));
-    assert_eq!(response["meta"]["request_id"], json!("timings-test"));
-    assert!(response["meta"]["duration_ms"].as_f64().unwrap_or_default() >= 0.0);
     assert_eq!(
-        response["meta"]["steps"][0]["kind"],
-        json!("runtime.dispatch")
+        response["meta"]["op"], json!(""),
+        "dispatcher must not fill meta.op; the transport stamp owns it: {response}"
+    );
+    assert!(
+        response["meta"]["steps"].as_array().is_none_or(Vec::is_empty),
+        "dispatcher must not synthesize a runtime.dispatch step: {response}"
     );
     assert!(response.get("timings").is_none(), "{response}");
 }

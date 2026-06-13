@@ -7,8 +7,8 @@ use eos_layerstack::ChangesetResult;
 use eos_layerstack::Manifest;
 use eos_namespace::protocol::RunResult;
 use eos_operation::{
-    ChangedPathKind, ChangedPathKinds, MutationCore, MutationStatus, WorkspaceConflict,
-    WorkspaceKind,
+    ChangedPathKind, ChangedPathKinds, MutationCore, MutationSource, MutationStatus,
+    WorkspaceConflict, WorkspaceKind,
 };
 use serde::Serialize;
 
@@ -93,12 +93,12 @@ struct PluginOverlayMutationResponse {
     core: MutationCore,
     workspace: WorkspaceKind,
     status: MutationStatus,
-    error: Option<()>,
 }
 
 /// Daemon-owned plugin-overlay response synthesis over [`MutationCore`].
-/// `"plugin_overlay"` is deliberately a daemon literal: it is not a
-/// [`MutationSource`] variant, so it is spliced after serialization.
+/// The mutation source is the typed [`MutationSource::PluginOverlay`] variant,
+/// set before serialization — no post-hoc string splice and no `error: null`
+/// placeholder. Failure detail is materialized by `apply_plugin_overlay_status`.
 pub(crate) fn plugin_overlay_changeset_response(
     result: &ChangesetResult,
     mut timings: serde_json::Map<String, Value>,
@@ -117,12 +117,12 @@ pub(crate) fn plugin_overlay_changeset_response(
         changed_path_kinds.insert(path.to_owned(), ChangedPathKind::Write);
     }
     let conflict = result.first_conflict();
-    let mut response = serde_json::to_value(PluginOverlayMutationResponse {
+    serde_json::to_value(PluginOverlayMutationResponse {
         core: MutationCore {
             success: result.success(),
             changed_paths,
             changed_path_kinds,
-            mutation_source: None,
+            mutation_source: Some(MutationSource::PluginOverlay),
             conflict: conflict.as_ref().map(|file| {
                 let reason = file.status.wire_str();
                 WorkspaceConflict::path(reason, file.path.as_str(), file.conflict_message(reason))
@@ -136,11 +136,8 @@ pub(crate) fn plugin_overlay_changeset_response(
         status: conflict
             .as_ref()
             .map_or(MutationStatus::Committed, |file| file.status.into()),
-        error: None,
     })
-    .expect("changeset mutation response serializes");
-    response["mutation_source"] = json!("plugin_overlay");
-    response
+    .expect("changeset mutation response serializes")
 }
 
 pub(crate) fn resource_timings(
