@@ -7,7 +7,8 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use eos_operation::core::catalog::BuiltinOp;
-use eos_operation::{OpRequest, OpResponse, OpResponseError, OpResponseErrorKind, RequestError};
+use eos_operation::OpRequest;
+use eos_operation::RequestError;
 use serde_json::{json, Value};
 
 use crate::wire::{ErrorKind, Request};
@@ -17,7 +18,7 @@ use eos_layerstack::LayerStack;
 use crate::builtin;
 #[cfg(test)]
 use crate::invocation_registry::InFlightRegistry;
-use crate::op_adapter::{is_operation_envelope, ok_envelope, plugin};
+use crate::op_adapter::{error_envelope, is_operation_envelope, ok_envelope, plugin};
 #[cfg(test)]
 use crate::response::{insert_tree_resource_timings, resource_timings, TreeResourceStats};
 use crate::DispatchContext;
@@ -62,13 +63,13 @@ pub fn dispatch_with_context(request: &Request, context: DispatchContext<'_>) ->
     let parsed = match OpRequest::parse(op, &request.args) {
         Ok(parsed) => parsed,
         Err(RequestError::Args(error)) => {
-            return finalize(builtin::parse_error_response(op, error).into_wire())
+            return finalize(builtin::parse_error_response(op, error))
         }
         Err(RequestError::NotDaemonServed(_)) => {
             return finalize(plugin_fallback_or_unknown(request, context));
         }
     };
-    finalize(builtin::dispatch(parsed, context).into_wire())
+    finalize(builtin::dispatch(parsed, context))
 }
 
 fn plugin_fallback_or_unknown(request: &Request, context: DispatchContext<'_>) -> Value {
@@ -77,7 +78,7 @@ fn plugin_fallback_or_unknown(request: &Request, context: DispatchContext<'_>) -
     {
         return match response {
             Ok(response) => ok_envelope(response),
-            Err(err) => error_response(err.wire_kind(), &err.to_string(), json!({})),
+            Err(err) => error_response(err.wire_kind(), err.to_string(), json!({})),
         };
     }
     error_response(
@@ -108,13 +109,8 @@ fn finalize_response(
 }
 
 #[must_use]
-pub(crate) fn error_response(kind: ErrorKind, message: &str, details: Value) -> Value {
-    OpResponse::Error(OpResponseError::new(
-        response_error_kind(kind),
-        message,
-        details,
-    ))
-    .into_wire()
+pub(crate) fn error_response(kind: ErrorKind, message: impl Into<String>, details: Value) -> Value {
+    error_envelope(kind, message, details)
 }
 
 fn attach_runtime_observations(
@@ -207,22 +203,6 @@ fn seconds_to_us(seconds: f64) -> u64 {
         u64::MAX
     } else {
         micros as u64
-    }
-}
-
-fn response_error_kind(kind: ErrorKind) -> OpResponseErrorKind {
-    match kind {
-        ErrorKind::InvalidRequest => OpResponseErrorKind::InvalidRequest,
-        ErrorKind::BadJson => OpResponseErrorKind::BadJson,
-        ErrorKind::RequestTooLarge => OpResponseErrorKind::RequestTooLarge,
-        ErrorKind::Unauthorized => OpResponseErrorKind::Unauthorized,
-        ErrorKind::UnknownOp => OpResponseErrorKind::UnknownOp,
-        ErrorKind::InternalError => OpResponseErrorKind::InternalError,
-        ErrorKind::Forbidden => OpResponseErrorKind::Forbidden,
-        ErrorKind::ForbiddenInIsolatedWorkspace => {
-            OpResponseErrorKind::ForbiddenInIsolatedWorkspace
-        }
-        ErrorKind::LifecycleInProgress => OpResponseErrorKind::LifecycleInProgress,
     }
 }
 

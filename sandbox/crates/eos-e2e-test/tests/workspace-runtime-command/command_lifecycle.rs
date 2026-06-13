@@ -8,8 +8,8 @@ use serde_json::{json, Value};
 
 use crate::support::{
     array, as_i64, as_str, command_transcript_logs, command_transcript_path,
-    finalize_foreground_command, live_pool_or_skip, stdout, wait_for_active_leases,
-    unwrap_operation_result, wait_for_command_count, wait_for_command_transcript_recycled,
+    finalize_foreground_command, live_pool_or_skip, stdout, unwrap_operation_result,
+    wait_for_active_leases, wait_for_command_count, wait_for_command_transcript_recycled,
     wait_for_container_path,
 };
 

@@ -109,7 +109,7 @@ pub(crate) fn finalize_isolated_command(
         "resource.command_exec.upperdir_tree_sampler_duration_us".to_owned(),
         json!(captured.capture_s * 1_000_000.0),
     );
-    merge_runner_timings(&mut timings, request.runner_result.as_ref());
+    copy_runner_timings(&mut timings, request.runner_result.as_ref());
     let command_success = request.command_succeeded();
     insert_command_timings(
         &mut timings,
@@ -401,7 +401,7 @@ fn insert_process_resource_timings(timings: &mut WorkspaceTimings) {
     }
 }
 
-fn merge_runner_timings(timings: &mut WorkspaceTimings, runner_result: Option<&Value>) {
+fn copy_runner_timings(timings: &mut WorkspaceTimings, runner_result: Option<&Value>) {
     let Some(runner_timings) = runner_result
         .and_then(|result| result.get("timings"))
         .and_then(Value::as_object)

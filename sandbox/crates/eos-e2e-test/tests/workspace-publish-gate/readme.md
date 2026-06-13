@@ -6,7 +6,7 @@ OCC tests cover the workspace publish gate in front of LayerStack through `api.v
 
 ## Checklist
 
-- [ ] occ-git-drop: `.git/**` writes return a committed success response without published paths, stay unreadable, and must not advance manifest-visible state.
+- [ ] occ-git-drop: `.git/**` writes return a committed ok envelope result without published paths, stay unreadable, and must not advance manifest-visible state.
 - [ ] occ-gitignored-direct: gitignored paths route direct, bypass stale-base gated OCC checks, and remain whole-payload safe under same-path direct-write races.
 - [ ] occ-tracked-gated: non-gitignored paths route gated, publish through OCC, and expose OCC route events.
 - [ ] occ-disjoint-merge: concurrent tracked writes to disjoint paths all commit and remain readable without lost updates.

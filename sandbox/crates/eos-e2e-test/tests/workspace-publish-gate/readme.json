@@ -30,7 +30,7 @@
     {
       "id": "occ-git-drop",
       "title": "Occ Git Drop",
-      "description": "`.git/**` writes return a committed success response without published paths, stay unreadable, and must not advance manifest-visible state.",
+      "description": "`.git/**` writes return a committed ok envelope result without published paths, stay unreadable, and must not advance manifest-visible state.",
       "tags": [
         "workspace-publish-gate"
       ]

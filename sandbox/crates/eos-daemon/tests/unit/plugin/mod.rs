@@ -968,6 +968,12 @@ fn plugin_overlay_response_strips_timings_but_keeps_trace_samples() -> TestResul
         Some(0.15)
     );
     assert!(
+        wire.timings.get("command_exec.mount_workspace_s").is_none()
+            && wire.timings.get("command_exec.run_command_s").is_none(),
+        "runner timing aliases should not be reintroduced: {:?}",
+        wire.timings
+    );
+    assert!(
         wire.timings.get("api.plugin_overlay.total_s").is_some(),
         "{:?}",
         wire.timings

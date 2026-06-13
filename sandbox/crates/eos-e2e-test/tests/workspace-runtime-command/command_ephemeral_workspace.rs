@@ -16,7 +16,8 @@ use serde_json::json;
 
 use crate::support::{
     array, as_i64, as_str, finalize_foreground_command, live_pool_or_skip, stdout,
-    wait_for_active_leases, wait_for_command_count, wait_for_command_transcript_recycled,
+    unwrap_operation_result, wait_for_active_leases, wait_for_command_count,
+    wait_for_command_transcript_recycled,
 };
 
 #[test]
@@ -145,7 +146,9 @@ fn cancel_kills_whole_session() -> Result<()> {
 
     // Cancel kills the whole command, so its hardened outcome is
     // success:false; use `call` to read the terminal response, not `call_ok`.
-    let cancelled = lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": &id}))?;
+    let cancelled = unwrap_operation_result(
+        lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": &id}))?,
+    )?;
     assert!(
         matches!(as_str(&cancelled, "status")?, "cancelled" | "ok" | "error"),
         "cancel must drive the command to a terminal status: {cancelled}"

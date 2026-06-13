@@ -131,8 +131,8 @@
     {
       "id": "ephemeral_workspace_route_edges_and_read_intent",
       "name": "ephemeral_workspace_route_edges_and_read_intent",
-      "description": "Uses `exec_multi_path_route_timings_and_read_intent_no_publish`: a multi-path shell write reports every changed path plus command and OCC trace events, while a read-only exec over the same paths publishes no changes.",
-      "command": "cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace exec_multi_path_route_timings_and_read_intent_no_publish -- --nocapture",
+      "description": "Uses `exec_multi_path_route_trace_facts_and_read_intent_no_publish`: a multi-path shell write reports every changed path plus command and overlay trace facts, while a read-only exec over the same paths publishes no changes.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace exec_multi_path_route_trace_facts_and_read_intent_no_publish -- --nocapture",
       "checklist": [
         "ephemeral_workspace-route-edges",
         "ephemeral_workspace-occ-publish-readback"

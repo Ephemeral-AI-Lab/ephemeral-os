@@ -7,8 +7,9 @@ use serde_json::{json, Value};
 
 use crate::support::{
     array, as_bool, as_str, finalize_foreground_command, isolated_command_transcript_path,
-    live_pool_or_skip, reset_isolated_workspaces, stdout, wait_for_active_leases,
-    wait_for_command_count, wait_for_container_path, wait_for_isolated_command_transcript_recycled,
+    live_pool_or_skip, reset_isolated_workspaces, stdout, unwrap_operation_result,
+    wait_for_active_leases, wait_for_command_count, wait_for_container_path,
+    wait_for_isolated_command_transcript_recycled,
 };
 
 #[test]
@@ -170,10 +171,10 @@ time.sleep(60)'"
             "sleeping isolated command should not collect before cancellation: {not_done}"
         );
 
-        let cancelled = lease.call(
+        let cancelled = unwrap_operation_result(lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
             json!({"command_id": &command_id}),
-        )?;
+        )?)?;
         ensure!(
             matches!(as_str(&cancelled, "status")?, "cancelled" | "ok" | "error"),
             "isolated command cancel should return terminal-ish status: {cancelled}"

@@ -107,7 +107,7 @@
     {
       "id": "daemon-identity-registry-wire-contract",
       "name": "daemon-identity-registry-wire-contract",
-      "description": "Groups `runtime_ready_exposes_daemon_identity`, `every_response_carries_dispatch_timings`, and `every_builtin_op_is_wire_routed` to prove daemon identity, response meta trace refs, registered op routing, and `unknown_op` rejection over the live wire.",
+      "description": "Groups `runtime_ready_exposes_daemon_identity`, `every_response_carries_trace_meta`, and `every_builtin_op_is_wire_routed` to prove daemon identity, response meta trace refs, registered op routing, and `unknown_op` rejection over the live wire.",
       "command": "cargo test -p eos-e2e-test --features e2e --test daemon -- --nocapture",
       "checklist": [
         "daemon-ready-identity",

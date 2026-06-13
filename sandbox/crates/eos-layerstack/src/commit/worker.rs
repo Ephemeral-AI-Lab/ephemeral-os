@@ -808,7 +808,7 @@ fn parent_absent_from_manifest(root: &Path, manifest: &Manifest, parent: &str) -
 }
 
 const fn is_validation_failure(status: CommitStatus) -> bool {
-    !status.is_success()
+    !status.is_non_conflicting()
 }
 
 fn failed_changeset_with_timings(

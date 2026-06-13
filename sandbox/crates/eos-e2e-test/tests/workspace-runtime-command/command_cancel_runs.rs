@@ -13,7 +13,8 @@ use serde_json::{json, Value};
 
 use crate::support::{
     array, as_bool, as_i64, as_str, has_trace_event, live_pool_or_skip, stdout,
-    trace_export_records, trace_record, wait_for_active_leases, wait_for_command_count,
+    trace_export_records, trace_record, unwrap_operation_result, wait_for_active_leases,
+    wait_for_command_count,
 };
 
 /// Start a `sleep 60` command for `caller_id` (or the lease default when `None`).
@@ -272,7 +273,7 @@ fn live_trace_background_command_finalize_exports_root_linked_to_origin() -> Res
     let suffix = unique_suffix();
     let trace_id = format!("phase04-background-finalize-{suffix}");
     let request_id = format!("{trace_id}-start");
-    let started = lease.call_traced(
+    let started_wire = lease.call_traced(
         catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "sh -c 'echo background-finalize-ready; sleep 60'",
@@ -287,9 +288,10 @@ fn live_trace_background_command_finalize_exports_root_linked_to_origin() -> Res
             capture_budget_version: 1,
         },
     )?;
+    let started = unwrap_operation_result(started_wire.clone())?;
     assert_eq!(as_str(&started, "status")?, "running", "{started}");
     let command_id = as_str(&started, "command_id")?.to_owned();
-    let start_record = trace_record(&started)?;
+    let start_record = trace_record(&started_wire)?;
     assert_eq!(start_record.trace_id.as_str(), trace_id);
     assert_eq!(
         start_record

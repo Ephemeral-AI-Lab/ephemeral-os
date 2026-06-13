@@ -8,7 +8,6 @@ use eos_operation::isolation::contract::{
     IsolationEnterInput, IsolationEnterOutput, IsolationExitInput, IsolationExitOutput,
     IsolationStatusInput, IsolationStatusOutput, ListOpenOutput, TestResetOutput,
 };
-use eos_operation::{OpError, OpResponse};
 use eos_workspace::{IsolatedError, WorkspaceHandle};
 use serde_json::{json, Value};
 
@@ -17,14 +16,14 @@ use crate::workspace_runtime::LeaseReleaseReport;
 use crate::DispatchContext;
 use crate::{ExitOutcome, WorkspaceEnterError, WorkspaceRecoveryReport};
 
-use super::to_wire_value;
+use super::{ok_envelope, rejected_fault_envelope, to_wire_value};
 
 const TEST_HARNESS_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_HARNESS";
 
 pub(crate) fn op_enter(
     input: IsolationEnterInput,
     context: DispatchContext<'_>,
-) -> Result<OpResponse, DaemonError> {
+) -> Result<Value, DaemonError> {
     let caller_id = input.caller.to_string();
     let root = input.layer_stack_root;
     context.record_trace_event(
@@ -72,7 +71,7 @@ pub(crate) fn op_enter(
 pub(crate) fn op_exit(
     input: IsolationExitInput,
     context: DispatchContext<'_>,
-) -> Result<OpResponse, DaemonError> {
+) -> Result<Value, DaemonError> {
     let caller_id = input.caller.to_string();
     context.record_trace_event(
         "workspace.route",
@@ -102,7 +101,7 @@ pub(crate) fn op_exit(
 pub(crate) fn op_status(
     input: IsolationStatusInput,
     context: DispatchContext<'_>,
-) -> Result<OpResponse, DaemonError> {
+) -> Result<Value, DaemonError> {
     let caller_id = input.caller.to_string();
     let workspace = &context.require_services()?.workspace;
     match workspace.status(&caller_id) {
@@ -126,7 +125,7 @@ pub(crate) fn op_status(
     }
 }
 
-pub(crate) fn op_list_open(context: DispatchContext<'_>) -> Result<OpResponse, DaemonError> {
+pub(crate) fn op_list_open(context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let workspace = &context.require_services()?.workspace;
     Ok(success_response(to_wire_value(ListOpenOutput {
         success: true,
@@ -134,7 +133,7 @@ pub(crate) fn op_list_open(context: DispatchContext<'_>) -> Result<OpResponse, D
     })))
 }
 
-pub(crate) fn op_test_reset(context: DispatchContext<'_>) -> Result<OpResponse, DaemonError> {
+pub(crate) fn op_test_reset(context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     if !env_true(TEST_HARNESS_ENV) {
         return Ok(refused_response(
             "forbidden",
@@ -441,19 +440,15 @@ pub(crate) fn lock_isolated_test_state() -> MutexGuard<'static, ()> {
 
 /// Map an [`IsolatedError`] onto the structured error payload, carrying the
 /// variant-specific detail fields.
-fn success_response(value: Value) -> OpResponse {
-    OpResponse::Success(value)
+fn success_response(value: Value) -> Value {
+    ok_envelope(value)
 }
 
-fn refused_response(kind: &'static str, message: impl Into<String>, details: Value) -> OpResponse {
-    OpResponse::Refused(OpError {
-        kind,
-        message: message.into(),
-        details: Some(details),
-    })
+fn refused_response(kind: &'static str, message: impl Into<String>, details: Value) -> Value {
+    rejected_fault_envelope(kind, message, details)
 }
 
-fn error_payload(error: &IsolatedError) -> OpResponse {
+fn error_payload(error: &IsolatedError) -> Value {
     let details = match error {
         IsolatedError::AlreadyOpen {
             created_at,

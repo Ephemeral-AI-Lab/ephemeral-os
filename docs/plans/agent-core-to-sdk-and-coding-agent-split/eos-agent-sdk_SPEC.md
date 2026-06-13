@@ -48,7 +48,7 @@ Two rules produced this surface, and keep it stable:
   the tool-call boundary is the seam that would carry it).
 - Subprocess execution. The SDK never spawns a process; hosts wrap commands into callback
   hooks.
-- Workflow hub and its `WorkflowModule` registry, MCP-style anything (host-side; see
+- Workflow hub and its `WorkflowProvider` registry, MCP-style anything (host-side; see
   coding-agent spec).
 - Sandbox integration, profile/config file formats, persistence beyond run records.
 
@@ -162,7 +162,7 @@ type HookEntry =
       run: (call: ToolCallFacts) => HookDecision | Promise<HookDecision> }
   | { event: "postToolUse"; matcher?: HookMatcher;
       run: (call: ToolCallFacts, result: ToolResult) => HookDecision | Promise<HookDecision> }
-  | { event: "turnBoundary";                     // where host notification rules live
+  | { event: "turnBoundary";                     // where hosts publish turn-driven reminders
       run: (turn: TurnFacts, ctx: { notifier: Notifier; runId: AgentRunId }) => void | Promise<void> };
 
 interface HookMatcher { toolName?: string }
@@ -503,7 +503,7 @@ exported config schemas, `toSSE` and `events({afterSeq})` replay.
 |---|---|
 | SDK name | **Renamed `eos-agent-sdk`** — workspace directory, root package, and spec filename (supersedes the earlier keep-`eos-agent-core` decision) |
 | Built-in tools | **None.** Earlier carve-outs (subagent/advisor tools, background-task tools, workflow toolset) all reversed; capabilities on `ToolCallContext` instead |
-| Workflow hub | Host-side (`eos-coding-agent`); `WorkflowModule` is a host contract |
+| Workflow hub | Host-side (`eos-coding-agent`); `WorkflowProvider` is a host contract |
 | Advisor / subagent | Host patterns (registry + tools + advisor-gate hook); SDK has no such concepts; outcome tool identity is `name` + `description` |
 | `behavior` metadata | Removed; runtime patterns only |
 | Settlement notifications | Supervisor **never** publishes; `BackgroundTask.onCompletion` (host) owns publication, receives `notifier` as an argument; exit gate = "owed completion handler"; silence is opt-in (`silent: true`) — the task type forces handler-or-silent, no implicit default |

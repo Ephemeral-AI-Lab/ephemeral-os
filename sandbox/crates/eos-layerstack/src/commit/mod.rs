@@ -85,7 +85,7 @@ impl CommitStatus {
     }
 
     #[must_use]
-    pub const fn is_success(self) -> bool {
+    pub const fn is_non_conflicting(self) -> bool {
         matches!(self, Self::Accepted | Self::Committed | Self::Dropped)
     }
 }
@@ -147,12 +147,14 @@ pub struct ChangesetResult {
 impl ChangesetResult {
     #[must_use]
     pub fn success(&self) -> bool {
-        self.files.iter().all(|f| f.status.is_success())
+        self.files.iter().all(|f| f.status.is_non_conflicting())
     }
 
     #[must_use]
     pub fn first_conflict(&self) -> Option<&FileResult> {
-        self.files.iter().find(|file| !file.status.is_success())
+        self.files
+            .iter()
+            .find(|file| !file.status.is_non_conflicting())
     }
 
     #[must_use]
@@ -218,7 +220,7 @@ impl ChangesetResult {
         events.extend(
             self.files
                 .iter()
-                .filter(|file| !file.status.is_success())
+                .filter(|file| !file.status.is_non_conflicting())
                 .map(|file| {
                     OccTraceEvent::new(
                         "occ",

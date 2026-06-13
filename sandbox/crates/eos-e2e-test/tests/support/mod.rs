@@ -23,9 +23,10 @@ pub(crate) fn unwrap_operation_result(response: Value) -> Result<Value> {
     if !is_operation_envelope(&response) {
         return Ok(response);
     }
-    envelope_result(&response)
-        .cloned()
-        .with_context(|| format!("operation envelope missing result: {response}"))
+    if let Some(result) = response.get("result").cloned() {
+        return Ok(result);
+    }
+    Ok(response)
 }
 
 fn is_operation_envelope(response: &Value) -> bool {

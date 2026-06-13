@@ -20,8 +20,8 @@ pub mod workspace_run;
 
 pub use core::{
     ArgProblem, ArgsError, CallerId, ChangedPathKind, ChangedPathKinds, CommandId, FaultDetails,
-    InvocationId, MutationCore, MutationSource, MutationStatus, OpError, OpRequest, OpResponse,
-    OpResponseError, OpResponseErrorKind, OperationEnvelope, OperationFault, OperationStatus,
-    OperationWarning, RequestError, ResourceSummary, ResponseMeta, SourceError, StepSummary,
-    TraceRef, WorkspaceConflict, WorkspaceKind, WorkspaceMutationOutcome, WorkspaceTimings,
+    InvocationId, MutationCore, MutationSource, MutationStatus, OpError, OpRequest,
+    OperationEnvelope, OperationFault, OperationStatus, OperationWarning, RequestError,
+    ResourceSummary, ResponseMeta, SourceError, StepSummary, TraceRef, WorkspaceConflict,
+    WorkspaceKind, WorkspaceMutationOutcome, WorkspaceTimings,
 };

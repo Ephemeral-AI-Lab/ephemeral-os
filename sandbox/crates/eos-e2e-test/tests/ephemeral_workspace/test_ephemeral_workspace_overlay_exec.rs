@@ -9,7 +9,7 @@ use serde_json::{json, Value};
 use crate::support::{
     array, as_bool, as_i64, as_str, clean_stdout, conflict_reason, envelope_result,
     has_trace_event, live_pool_or_skip, seed_base_files, stdout, strip_transcript_timestamps,
-    trace_record, wait_for_active_leases, wait_for_command_count,
+    trace_record, wait_for_active_leases, wait_for_command_count, wait_for_command_stdout_contains,
 };
 
 /// Run a foreground `exec_command` and finalize it to its terminal outcome. Under
@@ -513,11 +513,8 @@ fn cancelled_background_exec_does_not_publish_partial_workspace_mutation() -> Re
             "timeout_seconds": 60,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
-    assert!(
-        stdout(&exec).contains("READY"),
-        "background command must reach the pre-write point before cancel: {exec}"
-    );
     let command_id = as_str(&exec, "command_id")?.to_owned();
+    wait_for_command_stdout_contains(&lease, &command_id, "READY")?;
     lease.call(
         catalog::SANDBOX_COMMAND_CANCEL,
         json!({"command_id": command_id}),
@@ -661,11 +658,8 @@ fn long_running_exec_conflicts_after_direct_write() -> Result<()> {
         "running",
         "long-running exec must hold its old snapshot: {exec}"
     );
-    assert!(
-        stdout(&exec).contains("SNAPSHOT_READY"),
-        "exec must have started before the direct write races it: {exec}"
-    );
     let command_id = as_str(&exec, "command_id")?.to_owned();
+    wait_for_command_stdout_contains(&lease, &command_id, "SNAPSHOT_READY")?;
 
     let body = (|| -> Result<()> {
         let direct = lease.call_ok(

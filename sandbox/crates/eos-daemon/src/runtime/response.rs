@@ -76,7 +76,7 @@ pub(crate) fn attach_runner_shell_fields(response: &mut Value, runner: &RunResul
         .unwrap_or_else(|| json!([]));
 }
 
-pub(crate) fn merge_runner_timings(
+pub(crate) fn copy_runner_timings(
     timings: &mut serde_json::Map<String, Value>,
     runner: &RunResult,
 ) {
@@ -84,16 +84,6 @@ pub(crate) fn merge_runner_timings(
         for (key, value) in runner_timings {
             timings.entry(key.clone()).or_insert_with(|| value.clone());
         }
-    }
-    if let Some(value) = timings.get("workspace.mount_s").cloned() {
-        timings
-            .entry("command_exec.mount_workspace_s".to_owned())
-            .or_insert(value);
-    }
-    if let Some(value) = timings.get("workspace.tool_s").cloned() {
-        timings
-            .entry("command_exec.run_command_s".to_owned())
-            .or_insert(value);
     }
 }
 

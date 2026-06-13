@@ -1,31 +1,26 @@
 //! Exhaustive builtin dispatch: one arm per [`OpRequest`] variant, plus the
-//! family→channel map for parse failures and the `DaemonError` →
-//! [`OpResponseError`] boundary conversion.
+//! family→channel map for parse failures and the `DaemonError` envelope
+//! boundary conversion.
 
 use eos_operation::core::catalog::{BuiltinOp, OpFamily};
-use eos_operation::{
-    ArgsError, OpError, OpRequest, OpResponse, OpResponseError, OpResponseErrorKind,
-};
+use eos_operation::{ArgsError, OpRequest};
 use serde_json::json;
+use serde_json::Value;
 
 use crate::error::DaemonError;
-use crate::op_adapter::{checkpoint, command, control, files, isolation, plugin, workspace_run};
-use crate::wire::ErrorKind;
+use crate::op_adapter::{
+    checkpoint, command, control, error_envelope, files, isolation, ok_envelope, plugin,
+    rejected_fault_envelope, workspace_run,
+};
 use crate::DispatchContext;
 
-pub(crate) fn dispatch(request: OpRequest, context: DispatchContext<'_>) -> OpResponse {
+pub(crate) fn dispatch(request: OpRequest, context: DispatchContext<'_>) -> Value {
     match request {
         OpRequest::RuntimeReady(input) => daemon_result(control::op_runtime_ready(input, context)),
-        OpRequest::InvocationHeartbeat(input) => {
-            OpResponse::Success(control::op_heartbeat(input, context))
-        }
-        OpRequest::InvocationCancel(input) => {
-            OpResponse::Success(control::op_cancel(input, context))
-        }
-        OpRequest::InflightCount(input) => {
-            OpResponse::Success(control::op_inflight_count(input, context))
-        }
-        OpRequest::TraceExport(input) => OpResponse::Success(control::op_trace_export(input)),
+        OpRequest::InvocationHeartbeat(input) => ok_envelope(control::op_heartbeat(input, context)),
+        OpRequest::InvocationCancel(input) => ok_envelope(control::op_cancel(input, context)),
+        OpRequest::InflightCount(input) => ok_envelope(control::op_inflight_count(input, context)),
+        OpRequest::TraceExport(input) => ok_envelope(control::op_trace_export(input)),
         OpRequest::LayerMetrics(input) => daemon_result(checkpoint::layer_metrics(input, context)),
         OpRequest::EnsureWorkspaceBase(input) => {
             daemon_result(checkpoint::ensure_workspace_base(input, context))
@@ -67,11 +62,9 @@ pub(crate) fn dispatch(request: OpRequest, context: DispatchContext<'_>) -> OpRe
         }
         OpRequest::CommandCancel(input) => daemon_result(command::command_cancel(input, context)),
         OpRequest::CommandCollectCompleted(input) => {
-            OpResponse::Success(command::op_command_collect_completed(input, context))
+            ok_envelope(command::op_command_collect_completed(input, context))
         }
-        OpRequest::CommandCount(input) => {
-            OpResponse::Success(command::op_command_count(input, context))
-        }
+        OpRequest::CommandCount(input) => ok_envelope(command::op_command_count(input, context)),
         OpRequest::CancelWorkspaceRunsByCaller(input) => daemon_result(
             workspace_run::op_cancel_workspace_runs_by_caller_id(input, context),
         ),
@@ -84,54 +77,35 @@ pub(crate) fn dispatch(request: OpRequest, context: DispatchContext<'_>) -> OpRe
 /// The per-family parse-failure channel: workspace families refuse in-band,
 /// every other family answers with a structured `invalid_request` error
 /// response.
-pub(crate) fn parse_error_response(op: BuiltinOp, error: ArgsError) -> OpResponse {
+pub(crate) fn parse_error_response(op: BuiltinOp, error: ArgsError) -> Value {
     match op.contract().family {
-        OpFamily::IsolatedWorkspace | OpFamily::WorkspaceRun => OpResponse::Refused(OpError {
-            kind: "invalid_argument",
-            message: error.message(),
-            details: Some(json!({"key": error.key})),
-        }),
-        _ => OpResponse::Error(OpResponseError::invalid_request(format!(
-            "invalid request: {}",
-            error.message()
-        ))),
+        OpFamily::IsolatedWorkspace | OpFamily::WorkspaceRun => rejected_fault_envelope(
+            "invalid_argument",
+            error.message(),
+            json!({"key": error.key}),
+        ),
+        _ => error_envelope(
+            crate::wire::ErrorKind::InvalidRequest,
+            format!("invalid request: {}", error.message()),
+            json!({"message": error.message()}),
+        ),
     }
 }
 
-fn daemon_result(result: Result<serde_json::Value, DaemonError>) -> OpResponse {
+fn daemon_result(result: Result<serde_json::Value, DaemonError>) -> Value {
     match result {
-        Ok(value) => OpResponse::Success(value),
+        Ok(value) => ok_envelope(value),
         Err(err) => daemon_error(err),
     }
 }
 
-fn daemon_response_result(result: Result<OpResponse, DaemonError>) -> OpResponse {
+fn daemon_response_result(result: Result<Value, DaemonError>) -> Value {
     match result {
         Ok(response) => response,
         Err(err) => daemon_error(err),
     }
 }
 
-fn daemon_error(err: DaemonError) -> OpResponse {
-    OpResponse::Error(OpResponseError::new(
-        response_error_kind(err.wire_kind()),
-        err.to_string(),
-        json!({}),
-    ))
-}
-
-fn response_error_kind(kind: ErrorKind) -> OpResponseErrorKind {
-    match kind {
-        ErrorKind::InvalidRequest => OpResponseErrorKind::InvalidRequest,
-        ErrorKind::BadJson => OpResponseErrorKind::BadJson,
-        ErrorKind::RequestTooLarge => OpResponseErrorKind::RequestTooLarge,
-        ErrorKind::Unauthorized => OpResponseErrorKind::Unauthorized,
-        ErrorKind::UnknownOp => OpResponseErrorKind::UnknownOp,
-        ErrorKind::InternalError => OpResponseErrorKind::InternalError,
-        ErrorKind::Forbidden => OpResponseErrorKind::Forbidden,
-        ErrorKind::ForbiddenInIsolatedWorkspace => {
-            OpResponseErrorKind::ForbiddenInIsolatedWorkspace
-        }
-        ErrorKind::LifecycleInProgress => OpResponseErrorKind::LifecycleInProgress,
-    }
+fn daemon_error(err: DaemonError) -> Value {
+    error_envelope(err.wire_kind(), err.to_string(), json!({}))
 }

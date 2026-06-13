@@ -16,9 +16,9 @@ use serde_json::{json, Map, Value};
 
 use crate::error::DaemonError;
 use crate::response::{
-    attach_runner_shell_fields, insert_cgroup_process_resource_timings,
-    insert_tree_resource_timings, merge_runner_timings, plugin_overlay_changeset_response,
-    resource_timings, TreeResourceStats,
+    attach_runner_shell_fields, copy_runner_timings, insert_cgroup_process_resource_timings,
+    insert_tree_resource_timings, plugin_overlay_changeset_response, resource_timings,
+    TreeResourceStats,
 };
 use crate::DispatchContext;
 use eos_operation::plugin::{
@@ -281,7 +281,7 @@ fn plugin_overlay_response(
 ) -> Result<PluginOverlayWireResponse, DaemonError> {
     let manifest = LayerStack::open(overlay.layer_stack_root.clone())?.read_active_manifest()?;
     let mut timings = resource_timings(&manifest, overlay.changeset.published_file_count());
-    merge_runner_timings(&mut timings, &overlay.runner);
+    copy_runner_timings(&mut timings, &overlay.runner);
     insert_tree_resource_timings(
         &mut timings,
         "resource.command_exec.upperdir",

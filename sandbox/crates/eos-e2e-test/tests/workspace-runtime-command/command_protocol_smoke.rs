@@ -7,8 +7,8 @@ use eos_operation::core::catalog;
 use serde_json::json;
 
 use crate::support::{
-    as_i64, as_str, live_pool_or_skip, wait_for_active_leases, wait_for_command_stdout_contains,
-    wait_for_command_transcript_recycled,
+    as_i64, as_str, live_pool_or_skip, unwrap_operation_result, wait_for_active_leases,
+    wait_for_command_stdout_contains, wait_for_command_transcript_recycled,
 };
 
 fn command_line_marker_count(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> Result<i64> {
@@ -107,10 +107,10 @@ fn commands_accept_stdin_and_release_on_cancel() -> Result<()> {
         "expected stdin echo in stdout: {stdin}"
     );
 
-    let cancel = lease.call(
+    let cancel = unwrap_operation_result(lease.call(
         catalog::SANDBOX_COMMAND_CANCEL,
         json!({"command_id": &command_id}),
-    )?;
+    )?)?;
     assert!(matches!(
         as_str(&cancel, "status")?,
         "cancelled" | "ok" | "error"
@@ -158,10 +158,10 @@ fn commands_cancel_cleans_descendant_processes() -> Result<()> {
         thread::sleep(Duration::from_millis(50));
     }
 
-    let cancel = lease.call(
+    let cancel = unwrap_operation_result(lease.call(
         catalog::SANDBOX_COMMAND_CANCEL,
         json!({"command_id": &command_id}),
-    )?;
+    )?)?;
     assert!(matches!(
         as_str(&cancel, "status")?,
         "cancelled" | "ok" | "error"
