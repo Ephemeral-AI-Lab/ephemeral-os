@@ -39,7 +39,6 @@ describe("pursuit context mirror", () => {
       plannerPayload({ leg_goal: "new goal", work_items: [workItem("old")] }),
     );
 
-    await expect(access(oldLivePath)).rejects.toThrow();
     const supersededNextGoalPath = join(
       h.contextRoot,
       `pursuit_${pursuit.pursuit_id}`,
@@ -51,11 +50,18 @@ describe("pursuit context mirror", () => {
     await expect
       .poll(async () => {
         try {
+          await access(oldLivePath);
+          return null;
+        } catch {
+          // The old live path has been pruned; now verify the relocated file.
+        }
+        try {
           return await readFile(supersededNextGoalPath, "utf8");
         } catch {
           return null;
         }
       }, { timeout: 8_000 })
       .toBe("later");
+    await expect(access(oldLivePath)).rejects.toThrow();
   }, 10_000);
 });
