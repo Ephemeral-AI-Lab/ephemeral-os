@@ -21,7 +21,7 @@ use std::time::{Duration, Instant};
 
 #[cfg(target_os = "linux")]
 use namespace::protocol::{
-    Fd, Intent, NsFds, RunMode, RunRequest, RunResult, RunnerVerb, ToolCall, WorkspaceRoot,
+    Fd, NsFds, RunMode, RunRequest, RunResult, RunnerVerb, ToolCall, WorkspaceRoot,
 };
 #[cfg(target_os = "linux")]
 use nix::errno::Errno;
@@ -210,7 +210,6 @@ impl NamespaceRuntime {
                 handle,
                 "mount",
                 "setns_overlay_mount",
-                Intent::WriteAllowed,
                 json!({}),
                 layer_paths.to_vec(),
             );
@@ -238,7 +237,6 @@ impl NamespaceRuntime {
                 handle,
                 "configure-dns",
                 "configure_dns",
-                Intent::ReadOnly,
                 json!({"fallback_dns": fallback_dns}),
                 Vec::new(),
             );
@@ -364,7 +362,6 @@ fn ns_runner_request(
     handle: &WorkspaceHandle,
     invocation: &str,
     verb: &str,
-    intent: Intent,
     args: serde_json::Value,
     layer_paths: Vec<PathBuf>,
 ) -> RunRequest {
@@ -374,7 +371,6 @@ fn ns_runner_request(
             invocation_id: format!("isolated-{invocation}-{}", handle.workspace_id.0),
             caller_id: handle.caller_id.clone(),
             verb: RunnerVerb::from(verb),
-            intent,
             args,
             background: false,
         },

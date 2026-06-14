@@ -1,7 +1,6 @@
 use super::{
     normalize_lexical, plugin_service_argv, plugin_setup_argv, plugin_setup_cwd, shell_argv,
 };
-use crate::protocol::Intent;
 use crate::protocol::{RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
 use std::path::Path;
 
@@ -109,7 +108,6 @@ fn request(verb: &str, args: serde_json::Value) -> RunRequest {
             invocation_id: "test".to_owned(),
             caller_id: "caller".to_owned(),
             verb: RunnerVerb::from(verb),
-            intent: Intent::WriteAllowed,
             args,
             background: false,
         },

@@ -184,9 +184,9 @@ Tasks:
   document the singleton as a process invariant with reset hooks for tests.
 - Make `host::protocol` and `host::trace_store` private or crate-private.
   Re-export only stable facades and explicit `e2e_support`.
-- Move plugin operation intent out of `namespace::protocol::Intent` and into a
-  neutral contract DTO owned by `plugin` or `protocol`; convert to namespace
-  intent inside operation/runtime code.
+- Keep plugin operation policy in the static operation catalog and typed plugin
+  DTOs; do not reintroduce namespace-runner intent fields or user-provided
+  plugin operation intents.
 - Move duplicated host/daemon wire constants into the shared `protocol` crate
   when doing so does not reintroduce host/box compiled coupling beyond constants
   and DTO contracts.

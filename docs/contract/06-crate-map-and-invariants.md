@@ -39,7 +39,7 @@ instead of linking those runtime children into `eos-isolated`.
 |---|-------|------------------------------------------|-------------------|-----------------|
 | 1 | **eos-protocol** | **(none — must depend on nothing internal)** | `serde`, `serde_json` | N/A (pure types) |
 | 2 | **eos-ns-holder** | **(none internal)** | `libc`, `thiserror`; Linux target `rustix`; dev tests `nix` | **single-threaded, syscall-only, NO tokio** (kernel requirement: `unshare(CLONE_NEWUSER\|NS\|PID\|NET)` must run single-threaded) |
-| 3 | **eos-runner** | `overlay` (uses `kernel_mount`), `eos-protocol` (ToolCallRequest/Result, Intent) | `serde`, `serde_json`, `thiserror`; Linux target `rustix`, `libc`, `regex` | **single-threaded, syscall-only, NO tokio** for namespace entry; no direct `nix` edge |
+| 3 | **eos-runner** | `overlay` (uses `kernel_mount`), `eos-protocol` (ToolCallRequest/Result) | `serde`, `serde_json`, `thiserror`; Linux target `rustix`, `libc`, `regex` | **single-threaded, syscall-only, NO tokio** for namespace entry; no direct `nix` edge |
 | 4 | **layerstack** | `eos-protocol` | `serde`, `serde_json`, `rustix`, `sha2`, `thiserror` | single-threaded core + per-root `RLock`-equivalent (reentrant) mutex; no tokio |
 | 5 | **overlay** | `eos-protocol` | `sha2`, `thiserror`; Linux target `rustix`, `libc` (raw `fsopen`/`fsconfig`/`fsmount`/`move_mount`) | syscall path single-threaded; no tokio required |
 | 6 | **eos-occ** | `overlay` (one-way only), `eos-protocol` | `serde`, `thiserror` | dedicated single **writer thread** per `layer_stack_root` (`occ-commit-queue`); daemon injects layer-stack-backed maintenance/transaction ports |

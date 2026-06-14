@@ -9,14 +9,6 @@ use serde_json::Value;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum Intent {
-    ReadOnly,
-    WriteAllowed,
-    Lifecycle,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub enum RunMode {
     FreshNs,
     SetNs,
@@ -84,7 +76,6 @@ pub struct ToolCall {
     pub invocation_id: String,
     pub caller_id: String,
     pub verb: RunnerVerb,
-    pub intent: Intent,
     pub args: Value,
     #[serde(default)]
     pub background: bool,
@@ -114,10 +105,6 @@ pub struct RunResult {
     pub exit_code: i32,
     pub payload: Value,
 }
-
-#[cfg(test)]
-#[path = "../../tests/unit/protocol/intent.rs"]
-mod intent_tests;
 
 #[cfg(test)]
 #[path = "../../tests/unit/protocol/runner.rs"]

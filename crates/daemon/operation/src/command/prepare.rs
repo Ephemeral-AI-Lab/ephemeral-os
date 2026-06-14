@@ -1,8 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use namespace::protocol::{
-    Intent, NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot,
-};
+use namespace::protocol::{NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
 use serde_json::{json, Value};
 use workspace::IsolatedWorkspaceBinding;
 use workspace::OverlayDirs;
@@ -93,7 +91,6 @@ fn tool_call(inputs: &PrepareInputs<'_>) -> ToolCall {
         invocation_id: inputs.invocation_id.to_owned(),
         caller_id: inputs.caller_id.to_owned(),
         verb: RunnerVerb::ExecCommand,
-        intent: Intent::WriteAllowed,
         args: json!({ "command": inputs.cmd, "cwd": "." }),
         background: false,
     }

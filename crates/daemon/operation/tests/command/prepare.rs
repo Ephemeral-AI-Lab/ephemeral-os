@@ -1,4 +1,4 @@
-use namespace::protocol::{Intent, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
+use namespace::protocol::{RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
 
 use super::*;
 
@@ -27,7 +27,6 @@ fn finish_prepare_records_prepared_and_metadata_artifact_events() {
                 invocation_id: "invoke".to_owned(),
                 caller_id: "caller".to_owned(),
                 verb: RunnerVerb::ExecCommand,
-                intent: Intent::WriteAllowed,
                 args: serde_json::json!({"command": "echo ok"}),
                 background: false,
             },
@@ -98,7 +97,6 @@ fn finish_prepare_reports_metadata_artifact_write_failure() {
                 invocation_id: "invoke".to_owned(),
                 caller_id: "caller".to_owned(),
                 verb: RunnerVerb::ExecCommand,
-                intent: Intent::WriteAllowed,
                 args: serde_json::json!({"command": "echo ok"}),
                 background: false,
             },

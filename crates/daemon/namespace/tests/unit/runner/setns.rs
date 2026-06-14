@@ -1,5 +1,4 @@
 use super::{first_nameserver, needs_fallback_dns, overlay_layer_paths, require_ns_fds};
-use crate::protocol::Intent;
 use crate::protocol::{Fd, NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
 use std::path::Path;
 
@@ -54,7 +53,6 @@ fn request(ns_fds: Option<NsFds>) -> RunRequest {
             invocation_id: "test".to_owned(),
             caller_id: "caller".to_owned(),
             verb: RunnerVerb::ExecCommand,
-            intent: Intent::WriteAllowed,
             args: serde_json::json!({"command": "true"}),
             background: false,
         },
