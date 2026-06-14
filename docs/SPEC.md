@@ -306,7 +306,6 @@ When crate boundaries move, clean these surfaces in the same change:
 
 - `crates/operation/ops.json` via `cargo run -p eosd -- dump-ops` and
   `docs/API.md` via `cargo run -p xtask -- gen-docs`.
-- `docs/class_inventory/html/` via `cargo run --manifest-path scripts/class-inventory/Cargo.toml`.
 - Stale prose in `README.md`, `docs/SPEC.md`, and `docs/RUST-GUIDANCE.md`.
 - Ignored local junk such as `.DS_Store`, `.omc/`, and `target/` leftovers.
 

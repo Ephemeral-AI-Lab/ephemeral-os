@@ -25,7 +25,7 @@ Out of scope:
 - Replacing Docker as the sandbox provider.
 - Reopening retired `api.*` wire vocabulary.
 - A broad package rename unless explicitly split into a dedicated migration.
-- Hand-editing generated class inventory or E2E generated HTML.
+- Hand-editing generated inventory artifacts or E2E generated HTML.
 
 ## 2. Current Baseline
 
@@ -215,8 +215,6 @@ Split candidates:
 | `crates/daemon/src/trace/sidecar.rs` | `sidecar/build.rs`, `sidecar/events.rs`, `sidecar/resources.rs`, `sidecar/budget.rs`, `sidecar/transport_failure.rs`. |
 | `crates/daemon/src/transport/server.rs` | Extract auth, decode, dispatch bridge, and lifecycle helpers once config-path changes are landed. |
 | `crates/operation/src/plugin/transport.rs` | Separate PPC wire transport from plugin operation orchestration. |
-| `scripts/class-inventory/src/main.rs` | Lower priority dev-tool split: `scan`, `model`, `render`, `io`. |
-
 Rules:
 
 - Preserve public module paths through parent re-exports where needed.

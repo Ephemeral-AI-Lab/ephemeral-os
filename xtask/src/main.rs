@@ -177,7 +177,6 @@ fn check_contract() -> Result<()> {
         bail!("docs/API.md is stale: regenerate with `cargo run -p xtask -- gen-docs`");
     }
     check_live_docs_do_not_teach_stale_terms(&root)?;
-    check_class_inventory_paths(&root)?;
 
     for suite in CONFORMANCE_SUITES {
         check_conformance_tests_are_present(&root, suite)?;
@@ -320,57 +319,6 @@ fn check_name_integrity(ops_json: &str) -> Result<()> {
     Ok(())
 }
 
-fn check_class_inventory_paths(root: &Path) -> Result<()> {
-    let path = root.join("docs/class_inventory/html/assets/inventory.json");
-    let document: serde_json::Value = serde_json::from_str(
-        &fs::read_to_string(&path).with_context(|| format!("read {}", path.display()))?,
-    )
-    .with_context(|| format!("parse {}", path.display()))?;
-    let crates = document
-        .get("crates")
-        .and_then(serde_json::Value::as_array)
-        .context("class inventory missing `crates` array")?;
-    let mut missing = Vec::new();
-    for krate in crates {
-        check_inventory_path(root, krate, "path", &mut missing)?;
-        if let Some(modules) = krate.get("modules").and_then(serde_json::Value::as_array) {
-            for module in modules {
-                check_inventory_path(root, module, "path", &mut missing)?;
-                if let Some(items) = module.get("items").and_then(serde_json::Value::as_array) {
-                    for item in items {
-                        check_inventory_path(root, item, "file", &mut missing)?;
-                    }
-                }
-            }
-        }
-    }
-    if !missing.is_empty() {
-        missing.sort();
-        missing.dedup();
-        bail!(
-            "class inventory references missing source paths; regenerate with \
-             `cargo run --manifest-path scripts/class-inventory/Cargo.toml`:\n{}",
-            missing.join("\n")
-        );
-    }
-    Ok(())
-}
-
-fn check_inventory_path(
-    root: &Path,
-    value: &serde_json::Value,
-    key: &str,
-    missing: &mut Vec<String>,
-) -> Result<()> {
-    let Some(relative) = value.get(key).and_then(serde_json::Value::as_str) else {
-        return Ok(());
-    };
-    if !root.join(relative).exists() {
-        missing.push(relative.to_owned());
-    }
-    Ok(())
-}
-
 const STALE_LIVE_DOC_TERMS: &[&str] = &[
     "api.v1",
     "api.runtime",
@@ -399,7 +347,7 @@ const HISTORICAL_DOC_PATHS: &[&str] = &[
     "improvement.spec.md",
 ];
 
-const HISTORICAL_DOC_PREFIXES: &[&str] = &["docs/contract/", "docs/class_inventory/"];
+const HISTORICAL_DOC_PREFIXES: &[&str] = &["docs/contract/"];
 
 fn check_live_docs_do_not_teach_stale_terms(root: &Path) -> Result<()> {
     let mut docs = Vec::new();
