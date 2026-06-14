@@ -26,7 +26,7 @@ After confronting the codebase:
 
 | Directive | What ships | Why the delta |
 |---|---|---|
-| `OpRequest` tagged enum, one variant per op | Yes — 28 variants, one per `ServedBy::Daemon` builtin, in `core/request.rs` | The 4 host ops cannot have variants (trust boundary, §8); dynamic `plugin.*` stays the untyped fallback (the open namespace is contract) |
+| `OpRequest` tagged enum, one variant per op | Yes -- one per `ServedBy::Daemon` builtin, in `core/request.rs` | The 4 host ops cannot have variants (trust boundary, §8); first-party plugin providers use static catalog ops |
 | `#[serde(tag = "op")]` | No — `BuiltinOp::from_op_name` + hand-written per-op parse fns over shared helpers | Serde derive cannot reproduce the five wire-pinned string semantics (`is required` / `must be a string` / `must be non-empty` / bytes-preserving / trim-folding), per-op key-check order, or ignore-unknown-keys with caller args left untouched |
 | Macro derives metadata AND variants | Macro derives metadata, `from_op_name`, and `contract()`; variant totality is enforced by within-crate exhaustive `match BuiltinOp` | Equal drift-proofing without a push-down-accumulation macro that still couldn't generate parse bodies. Honesty note (verifier): the totality guarantee is weak-form on the daemon side — a new catalog row always forces a `from_op_name` + parse arm (compile error), but forces a new dispatch arm only if the parse arm introduces a NEW `OpRequest` variant; mapping a new row onto an existing variant compiles silently. The conformance suites remain the behavioral gate |
 | `OpResponse` enum + shared error envelope, core-owned | `OpReply` channel enum (daemon) + `MutationWire` renderer (core) + typed `CommandMetadata` (operation) | The error envelope stays deliberately duplicated across the trust boundary (§8); success payloads stay per-op typed DTOs; what unifies is the *channel* and the one guarded-mutation envelope three families already share |
@@ -58,8 +58,7 @@ AFTER
         │                CommandResponse::to_wire_value (operation) /
         │                json! (runtime-state families)
         ─ dispatcher splices runtime.* timings (unchanged), encodes (unchanged)
-  miss  ─ "plugin." registry fallback (raw Value, gate-before-route unchanged)
-        ─ else unknown_op envelope (unchanged, details {"op": name})
+  miss  ─ unknown_op envelope (unchanged, details {"op": name})
 ```
 
 ## 3. Final layout
@@ -230,22 +229,8 @@ pub struct ExecCommandArgs {
     pub yield_time_ms: Option<u64>,         // default injected in the dispatch arm
 }
 
-/// Plugin builtins are opaque by design (ParsedEnsure::from_args + package
-/// re-reads the whole object): typed envelope around a raw Value.
-/// Defaults verified against live code: start_services defaults FALSE
-/// (op_ensure); probe_services FALSE + probe_timeout_ms are STATUS-only args.
-#[derive(Debug, Clone)]
-pub struct PluginEnsureArgs {
-    pub start_services: bool,               // default false; infallible lift
-    pub raw: serde_json::Value,             // one clone; PPC gate runs on it in the arm
-}
-
-#[derive(Debug, Clone)]
-pub struct PluginStatusArgs {
-    pub probe_services: bool,               // default false
-    pub probe_timeout_ms: Option<u64>,
-    pub raw: serde_json::Value,
-}
+/// Plugin builtins are static provider contracts. There is no raw dynamic
+/// ensure/status payload, manifest upload, or dynamic fallback.
 
 impl WriteFileArgs {
     #[must_use]
@@ -320,10 +305,15 @@ pub fn dispatch_with_context(request: &Request, context: DispatchContext<'_>) ->
                 );
             }
         },
-        // Unknown names: "plugin." registry fallback first (raw Value,
-        // gate-before-route unchanged), then the unknown_op envelope with
-        // details {"op": name} — both built OUTSIDE the funnel, as today.
-        None => return finalize(plugin_fallback_or_unknown(request, context)),
+        // Unknown names: the unknown_op envelope with details {"op": name},
+        // built OUTSIDE the funnel, as today.
+        None => {
+            return error_response(
+                ErrorKind::UnknownOp,
+                format!("unknown op: {}", request.op),
+                json!({"op": request.op}),
+            );
+        }
     };
     finalize(reply.into_wire())   // runtime.* timings splice unchanged
 }
@@ -347,7 +337,7 @@ pub(crate) fn dispatch(request: OpRequest, context: DispatchContext<'_>) -> OpRe
 | boot-time panic: daemon op without handler (`dispatcher.rs:45-46`) | compile error: catalog row without a parse arm; dispatch arm forced when the row adds a variant (weak-form caveat in §1) |
 | `fn_addr_eq` registration dedup (`dispatcher.rs:58-64`) | no registrations to police; deleted |
 | sync fn pointer in `spawn_blocking` | sync free fn in the same `spawn_blocking` |
-| `plugin.*` fallback after table miss (`dispatcher.rs:102-118`) | identical fallback after name-resolve miss; host-served built-ins return the structured daemon boundary error |
+| Dynamic plugin fallback | retired; first-party plugin providers are cataloged `sandbox.plugin.*` ops |
 
 Dispatch arms keep all behavior: config injection — file byte caps from
 `DispatchContext.file_limits()`; command timeout/yield defaults from the
@@ -356,9 +346,8 @@ process-global `operation::command::command_session_config()` (NOT
 caller's binding **before** `MissingLayerStackRoot` with identical error text;
 post-op `workspace.touch`; the exec isolated branch's explicit
 `binding.caller_id` overwrite of the parsed value (one post-parse line, as
-today, `op_adapter/command.rs:103-113`); family error mapping; plugin PPC gate
-before any use of lifted fields (the lifts are infallible bools, so lifting at
-parse is unobservable).
+today, `op_adapter/command.rs:103-113`); family error mapping; static plugin
+provider caller gates before provider work.
 
 ## 7. Unified output
 
@@ -382,8 +371,8 @@ impl From<Result<Value, DaemonError>> for OpReply { /* mechanical arm migration 
 Deliberately NOT in the funnel (verifier-verified expressiveness gaps): the
 envelope shell-check errors (raw messages, no Display prefix), the unknown_op
 envelope (carries `details {"op": name}`, byte-pinned by fixture), and the
-`plugin.*` registry fallback — all early-return finished `Value`s through
-`finalize`, exactly as today. The command `NotFound` sentinel stays a
+unknown_op envelope — all early-return finished `Value`s. The command
+`NotFound` sentinel stays a
 success-shaped output (it was never an error envelope). The **five**
 `#[expect(clippy::unnecessary_wraps)]` handlers (control.rs
 `op_cancel`/`op_heartbeat`/`op_inflight_count`, command.rs
@@ -435,11 +424,8 @@ both conflict renderings now have exactly one documented owner each.
 `#[serde(flatten)]` composition was considered and rejected: key order and
 membership must stay byte-provable, not emergent from serde internals.
 
-Explicitly NOT consolidated: `plugin_overlay.changed_paths` ordering. The
-upperdir capture walk emits files before sibling dirs per level
-(`overlay` sorts per-directory by file name), so capture order ≠
-lexicographic; that array's order is wire contract and stays a capture-ordered
-`Vec<(String, String)>` in `PluginOverlayOutcome` — no `BTreeMap` retype.
+The retired dynamic plugin overlay path is no longer a live wire contract.
+Static plugin providers expose typed provider-specific outputs.
 
 ### 7.3 Command contract — `command/contract.rs`
 
@@ -527,12 +513,12 @@ pub struct OpError { pub kind: &'static str, pub message: String }
 ### 7.5 What deliberately stays per-op
 
 `ReadFileOutcome`, `CommitOutcome` (wire-exact, `f64` timings — the type split
-mirrors its wire shape one-to-one), plugin outcome enums, and the
+mirrors its wire shape one-to-one), static plugin provider outputs, and the
 runtime-state families' `json!` shapes (control/isolation/workspace_run)
 remain distinct. No payload mega-struct, no dead optional fields. Module error
-enums (`CheckpointError`, `PluginRuntimeError`/`PpcError`, `IsolatedError`)
-are NOT unified — variant identity is load-bearing for `wire_kind()`
-classification; only the boundary vocabulary (`OpError`) unifies.
+enums (`CheckpointError`, `PluginRuntimeError`, `IsolatedError`) are NOT
+unified — variant identity is load-bearing for `wire_kind()` classification;
+only the boundary vocabulary (`OpError`) unifies.
 
 ## 8. The trust boundary
 
@@ -553,7 +539,7 @@ and operation's Linux dep tree cannot live in a darwin host binary.
 |---|---|---|
 | Defaults come from config/`DispatchContext`, unavailable at deserialization | **Overridden** | Payloads are wire projections: every defaultable field is `Option`; injection stays in the dispatch arm with `ctx` (file caps) or the process-global command config in scope. Only `DEFAULT_CALLER_ID` (a literal, never config) moves into core |
 | Routing precedes validation (isolated-vs-direct, then `layer_stack_root`) | **Overridden** | Parse never enforces route-conditional presence: `layer_stack_root: Option<PathBuf>`; `MissingLayerStackRoot` raised in the arm after the binding lookup, same string, same ordering. Parse enforces only what adapters enforced unconditionally pre-routing. (`CommitToGit` legitimately requires it at parse — that op has no route decision) |
-| `Handler` is a sync fn-pointer ABI | **Overridden** | `OpTable` replaced wholesale (the accepted churn). Still sync, same `spawn_blocking`. `fn_addr_eq` policed a table that no longer exists; the boot-time totality panic upgrades to compile-time exhaustiveness. `plugin.*` fallback untouched |
+| `Handler` is a sync fn-pointer ABI | **Overridden** | `OpTable` replaced wholesale (the accepted churn). Still sync, same `spawn_blocking`. `fn_addr_eq` policed a table that no longer exists; the boot-time totality panic upgrades to compile-time exhaustiveness. Dynamic `plugin.*` fallback deleted |
 | Error shaping differs per family | **Overridden, typed** | Channel-agnostic `ArgsError` + one family→channel map + `OpReply::Refused`; message bytes reproduced by `ArgsError::Display`, pinned by the parity test. All three failure *encodings* survive verbatim |
 | Unified outcome adds dead optional fields | **Upheld as shape, overridden as seam** | No payload mega-struct. `OpReply` variants carry no per-op fields; `MutationWire`'s field set is exactly today's `GuardedResponse`, every field live on both consuming paths |
 | Per-family typed enums had zero consumers (F1) | **Overridden, whole-surface** | `OpRequest` is structurally incapable of the FAMILY_OPS failure: every variant has exactly one producer (its parse arm) and one consumer (its dispatch arm), both on the hot path of every request; deleting an op deletes variant + both arms or the workspace does not compile; per-variant payloads mean no field exists "for another op" |
@@ -601,10 +587,8 @@ and operation's Linux dep tree cannot live in a darwin host binary.
 
 **Untouched in every phase:** wire envelope codec, error envelope shape,
 `DispatchContext`, the 16MiB/30s transport policy, all existing fixtures,
-`ops.json` bytes, `eosd dump-ops`, host, gateway,
-plugin ensure/status defaults (**false** — verified against
-`plugin.rs:27-53`), dynamic `plugin.*` gate-before-route ordering, the
-runtime.* timings splice.
+`ops.json` bytes, `eosd dump-ops`, host, gateway, static plugin provider
+catalog entries, and the runtime.* timings splice.
 
 ## 12. Migration plan
 
@@ -618,7 +602,7 @@ conformance suite reverts the phase, never the fixtures
 | P2 | `catalog.rs` rename; generated `contract()`; `from_op_name`; drop `#[non_exhaustive]`; ~55-file import rename | `cargo check --workspace`; `builtin_contracts_are_returned_by_ops` identity test; `cargo xtask check-contract` (ops.json byte-identical) |
 | P3a | `core/request.rs` (all 28 parse fns + payloads + `ArgsError`) + **parity test** (legacy-vs-new error strings/channels, table-driven; named pins: edits-before-path, poll id-before-last_n_lines, checkpoint `{}`-args precedence, caller_id whitespace-only ⇒ `Some("")`); rewire control/checkpoint/isolation/workspace_run behind a temporary legacy-table fallback (named transitional scaffolding, deleted in P3c) | `cargo test -p daemon`; e2e registration sweep (`{}` args → non-`unknown_op`); isolation e2e tier |
 | P3b | Rewire files/command; move `SearchReplaceEdit`; re-point `transport/server.rs` | daemon unit + phase2/phase3 + contract fixtures; e2e core + command tiers |
-| P3c | Rewire plugin builtins; delete `OpTable`/`builtin_handlers`/legacy helpers/fallback; rewrite dispatcher unit tests | `cargo test -p daemon`; `cargo xtask check-contract`; e2e plugin tier |
+| P3c | Rewire plugin builtins; delete `OpTable`/`builtin_handlers`/legacy helpers/dynamic fallback; rewrite dispatcher unit tests | `cargo test -p daemon`; `cargo xtask check-contract`; e2e plugin tier |
 | P4 | `OpReply` channel enum; convert arms; drop the five `unnecessary_wraps` expects | daemon unit + contract; e2e isolation + command NotFound cases |
 | P5 | `MutationWire` + `WorkspaceMutationOutcome::into_wire` to core; rewrite `guarded_changeset_response` (post-splices after `into_value`, dead verb arms dropped) | `phase3_write_paths` (direct_write/direct_edit/key order); `read_file_response` canonical; e2e file + plugin overlay (overlay `changed_paths` order asserted) |
 | P6 | `core/audit.rs` `MutationSource` (+ `FileBackend` retype) and `core/error.rs` `OpError` + re-exports + `From`s | daemon contract tests pin wire strings; e2e isolated routing; kind-comparison test churn |
@@ -639,9 +623,9 @@ plugin-overlay call site must keep capture order regardless, §7.2).
   line. It qualifies under the carve-out for mechanically cohesive parser
   code; if transcription pushes it past ~800, split per family while keeping
   the single `OpRequest::parse` entry point.
-- **Plugin args clone**: `PluginEnsureArgs.raw`/`PluginStatusArgs.raw` clone
-  the args object once per ensure/status call; manifests are small, and the
-  dynamic `plugin.*` hot path is untouched.
+- **Plugin args clone**: legacy plugin provisioning args were removed with the
+  dynamic provider migration; public plugin traffic uses cataloged
+  `sandbox.plugin.*` ops.
 - **Test churn is real and accepted**: `tests/unit/dispatcher`
   (registration/collision semantics) is rewritten around parse/dispatch;
   phase2/phase3 swap `OpTable::with_builtins()` for the new entry point;

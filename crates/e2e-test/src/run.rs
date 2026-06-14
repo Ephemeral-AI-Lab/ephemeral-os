@@ -38,7 +38,7 @@ impl RunContext {
         let root_dir = report_root(&run_id, artifacts);
         let trace_dir = child_dir(&root_dir, artifacts.trace_dir.as_ref(), "traces");
         let event_dir = child_dir(&root_dir, artifacts.event_dir.as_ref(), "events");
-        let audit_dir = child_dir(&root_dir, artifacts.audit_dir.as_ref(), "audit");
+        let audit_dir = audit_dir(&root_dir, artifacts.audit_dir.as_ref(), &suite);
         let suite_dir = root_dir.join("suites").join(&suite);
         let daemon_log_dir = child_dir(&suite_dir, artifacts.daemon_log_dir.as_ref(), "containers");
         let perf_dir = child_dir(&root_dir, artifacts.perf_dir.as_ref(), "perf");
@@ -272,6 +272,13 @@ fn child_dir(root: &Path, override_dir: Option<&PathBuf>, default_name: &str) ->
                 root.join(dir)
             }
         },
+    )
+}
+
+fn audit_dir(root: &Path, override_dir: Option<&PathBuf>, suite: &str) -> PathBuf {
+    override_dir.map_or_else(
+        || root.join("audit").join(suite),
+        |dir| child_dir(root, Some(dir), "audit"),
     )
 }
 

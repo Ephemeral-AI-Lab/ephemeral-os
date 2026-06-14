@@ -61,9 +61,9 @@ module boundaries.
    fsync, or host RPC in the execution path.
 5. **Runtime config is explicit.** Host-selected daemon config paths must be
    passed to the daemon as runtime input, not inferred from build-time paths.
-6. **Operation policy has one source of truth.** Static built-ins come from
-   `protocol::catalog`; dynamic plugin operations must have equivalent policy
-   metadata or be formally constrained.
+6. **Operation policy has one source of truth.** Static built-ins and
+   first-party plugin providers come from `protocol::catalog`; dynamic plugin
+   operations are not part of the public operation surface.
 7. **Resource-owning services are instance-owned.** Long-lived daemon services
    such as command execution and layerstack state should be owned by runtime
    construction, not hidden behind process-wide globals.
@@ -156,19 +156,18 @@ Tasks:
   family and mutability through the forwarding path.
 - Replace host lifecycle string literals such as `sandbox.acquire` and
   `sandbox.release` with catalog-owned constants or typed contracts.
-- Decide dynamic plugin operation policy:
-  - Add a gateway-visible plugin metadata cache/query that includes visibility
-    and mutability, or
-  - formally constrain `plugin.*` to public-only and derive mutability from
-    manifest `Intent`.
+- Keep plugin operation policy catalog-owned:
+  - first-party providers use static `sandbox.plugin.*` rows with visibility and
+    mutability in `ops.json`;
+  - unknown plugin-shaped names are rejected as `unknown_op`.
 
 Acceptance:
 
 - Non-default remote config path works in live Docker E2E.
 - Gateway contract tests prove static public/operator/internal/test gating still
   works.
-- Dynamic plugin op tests prove mutability and visibility are not hard-coded to
-  public plus mutating unless that is the documented constraint.
+- Static plugin provider tests prove mutability and visibility come from
+  catalog metadata, not hard-coded plugin-name checks.
 - `cargo test -p gateway contract`, `cargo test -p host --test contract`, and
   `cargo test -p daemon --test contract` are green.
 
@@ -289,7 +288,7 @@ drain, isolated workspace, plugin PPC, or config propagation.
 | Over-redaction | Can make trace data useless for debugging. | Redact by key/path policy; keep sizes, hashes, and typed status fields. |
 | Under-redaction | Can persist secrets in local audit DB. | Central redactor plus fixtures for common secret shapes. |
 | Runtime singleton migration | Can destabilize tests and background tasks. | Move one service at a time; add instance-isolation tests. |
-| Dynamic plugin policy | Can block plugin workflows if metadata discovery is too strict. | Start with public-only documented constraint or cache metadata after `plugin.ensure`. |
+| Static plugin provider policy | Can block provider workflows if catalog metadata drifts. | Keep provider rows in `ops.json` and contract tests in sync. |
 | Package renames | Can create broad churn and generated-doc drift. | Keep as a final dedicated phase after correctness work. |
 
 ## 8. Final 9/10 Definition
@@ -301,7 +300,8 @@ The sandbox reaches the target when all of the following are true:
 - Heartbeat/status lineage is either audit-backed or clearly excluded from audit
   verification claims.
 - Daemon config path flow is explicit and live-tested.
-- Static and dynamic operation policy decisions are traceable to typed metadata.
+- Static operation policy decisions, including plugin providers, are traceable
+  to typed catalog metadata.
 - Command and layerstack runtime state are owned by runtime construction or
   documented process invariants with test reset hooks.
 - Host public API exposes facades, not raw trace-store or wire internals.

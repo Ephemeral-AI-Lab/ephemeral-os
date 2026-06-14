@@ -1,0 +1,32 @@
+[package]
+name = "operation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+command.workspace = true
+config.workspace = true
+layerstack.workspace = true
+namespace.workspace = true
+overlay.workspace = true
+protocol.workspace = true
+trace.workspace = true
+workspace.workspace = true
+nix = { workspace = true, features = ["process", "signal"] }
+serde.workspace = true
+# preserve_order keeps parsed request/response objects in insertion order on the wire.
+serde_json = { workspace = true, features = ["preserve_order"] }
+thiserror.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+overlay = { workspace = true, features = ["test-root-override"] }
+
+[[test]]
+name = "checkpoint_commit"
+path = "tests/checkpoint/commit.rs"
+
+[lints]
+workspace = true

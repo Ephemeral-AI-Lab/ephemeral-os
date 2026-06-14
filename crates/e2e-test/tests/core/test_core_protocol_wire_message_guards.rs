@@ -118,7 +118,10 @@ fn forbidden_in_isolated_workspace_rejected() -> Result<()> {
         "isolated enter must succeed before checking plugin isolation gate: {entered}"
     );
 
-    let blocked = lease.call("plugin.lsp.not_loaded_yet", json!({}))?;
+    let blocked = lease.call(
+        catalog::SANDBOX_PLUGIN_PYRIGHT_LSP_QUERY_SYMBOLS,
+        json!({"file_path": "anything.py"}),
+    )?;
     let _ = lease.call(catalog::SANDBOX_ISOLATION_EXIT, json!({}));
     assert_eq!(
         envelope_error_kind(&blocked)?,

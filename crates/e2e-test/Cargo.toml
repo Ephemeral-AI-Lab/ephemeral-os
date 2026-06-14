@@ -75,5 +75,9 @@ path = "tests/pressure/mod.rs"
 name = "plugin"
 path = "tests/plugin/mod.rs"
 
+[[test]]
+name = "plugin-disabled"
+path = "tests/plugin-disabled/mod.rs"
+
 [lints]
 workspace = true

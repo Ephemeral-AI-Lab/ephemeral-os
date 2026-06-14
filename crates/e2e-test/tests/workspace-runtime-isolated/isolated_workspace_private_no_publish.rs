@@ -1,8 +1,13 @@
-use anyhow::{Context, Result};
+use std::time::{Duration, Instant};
+
+use anyhow::{ensure, Context, Result};
 use protocol::catalog;
 use serde_json::{json, Value};
 
-use crate::support::{array, as_bool, as_str, live_pool_or_skip, reset_isolated_workspaces};
+use crate::support::{
+    array, as_bool, as_str, finalize_foreground_command, live_pool_or_skip,
+    reset_isolated_workspaces,
+};
 
 #[test]
 fn isolated_write_is_discarded_on_exit() -> Result<()> {
@@ -99,21 +104,22 @@ fn isolated_exec_write_is_private_and_discarded() -> Result<()> {
         .context("manifest_version before isolated exec")?;
 
     let body = (|| -> Result<()> {
-        let exec = lease.call_ok(
+        let exec = lease.call(
             catalog::SANDBOX_COMMAND_EXEC,
             json!({
                 "cmd": format!("mkdir -p iso-exec && printf isolated-exec > {path}"),
                 "yield_time_ms": 2000,
                 "timeout_seconds": 10,}),
         )?;
-        assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
-        assert_eq!(as_str(&exec, "workspace")?, "isolated", "{exec}");
-        assert_eq!(
-            as_str(&exec, "mutation_source")?,
-            "isolated_workspace",
+        let exec =
+            finalize_foreground_command(&lease, exec, Instant::now() + Duration::from_secs(25))?;
+        ensure!(as_str(&exec, "status")? == "ok", "{exec}");
+        ensure!(as_str(&exec, "workspace")? == "isolated", "{exec}");
+        ensure!(
+            as_str(&exec, "mutation_source")? == "isolated_workspace",
             "{exec}"
         );
-        assert!(
+        ensure!(
             array(&exec, "changed_paths")?
                 .iter()
                 .any(|changed| changed.as_str() == Some(path.as_str())),
@@ -122,23 +128,22 @@ fn isolated_exec_write_is_private_and_discarded() -> Result<()> {
         let isolated = exec
             .get("isolated_workspace")
             .context("isolated command response missing isolated_workspace metadata")?;
-        assert_eq!(
-            isolated.get("published").and_then(Value::as_bool),
-            Some(false),
+        ensure!(
+            isolated.get("published").and_then(Value::as_bool) == Some(false),
             "isolated exec must not publish to OCC: {exec}"
         );
         let version_after = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?
             ["manifest_version"]
             .as_i64()
             .context("manifest_version after isolated exec")?;
-        assert_eq!(
-            version_after, version_before,
+        ensure!(
+            version_after == version_before,
             "isolated exec must not publish a new manifest version"
         );
 
         let read_inside = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": path}))?;
-        assert_eq!(as_str(&read_inside, "workspace")?, "isolated");
-        assert_eq!(as_str(&read_inside, "content")?, "isolated-exec");
+        ensure!(as_str(&read_inside, "workspace")? == "isolated");
+        ensure!(as_str(&read_inside, "content")? == "isolated-exec");
         Ok(())
     })();
 

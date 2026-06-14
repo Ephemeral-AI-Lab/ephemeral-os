@@ -276,7 +276,7 @@ corrections are folded in). Effort: S/M/L/XL · Risk: low/med/high.
 | Claim | Source |
 |---|---|
 | Client hop: UDS, one line/conn, half-close, 16 MiB, 30 s | `gateway/src/gateway.rs:16,499-573,679-698`; `host/src/protocol.rs:15` |
-| Routing is pure catalog lookup; `plugin.*` dynamic fallback | `gateway.rs:249-318` |
+| Routing is pure catalog lookup; unknown names are rejected as `unknown_op` | `gateway.rs:249-318` |
 | Two surfaces; visibility gate | `gateway.rs:222-247` |
 | Envelope union + `meta` shape | `protocol/src/envelope.rs` |
 | Bare adapter output auto-wrapped (the §8.2 resolution) | `daemon/src/dispatch/builtin.rs:58,95-100`; `op_adapter/mod.rs:26-32,69-78` |

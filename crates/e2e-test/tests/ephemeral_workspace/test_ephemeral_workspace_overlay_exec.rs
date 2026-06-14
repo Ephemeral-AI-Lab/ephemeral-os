@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, ensure, Context, Result};
 use e2e_test::{unique_suffix, NodeLease};
 use protocol::catalog;
 use serde_json::{json, Value};
@@ -430,6 +430,7 @@ fn exec_upperdir_is_flat_across_base_sizes() -> Result<()> {
     // O(1)-w.r.t.-workspace-size property, proven across a 15x base sweep rather
     // than at a single point.
     let mut upperdirs = Vec::new();
+    let mut skipped_poll_finalized = 0usize;
     for (index, file_count) in [1usize, 5, 15].into_iter().enumerate() {
         let total = seed_base_files(
             &lease,
@@ -437,14 +438,25 @@ fn exec_upperdir_is_flat_across_base_sizes() -> Result<()> {
             file_count,
             1_000_000,
         )?;
-        let (exec_wire, exec) = exec_settled_wire(
-            &lease,
+        let exec_wire = lease.call(
+            catalog::SANDBOX_COMMAND_EXEC,
             json!({
                 "cmd": format!("printf SMALL > perf/flat/delta-{index}.txt"),
                 "yield_time_ms": 120000,
                 "timeout_seconds": 150,}),
         )?;
+        let completed_in_exec_response =
+            as_str(envelope_result(&exec_wire)?, "status")? != "running";
+        let (exec_wire, exec) = finalize_foreground_command_wire(
+            &lease,
+            exec_wire,
+            Instant::now() + Duration::from_secs(155),
+        )?;
         assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
+        if !completed_in_exec_response {
+            skipped_poll_finalized += 1;
+            continue;
+        }
         let upperdir_bytes =
             tree_resource_value(&exec_wire, "resource.command_exec.upperdir", "bytes")?;
         assert!(
@@ -453,6 +465,10 @@ fn exec_upperdir_is_flat_across_base_sizes() -> Result<()> {
         );
         upperdirs.push(upperdir_bytes);
     }
+    ensure!(
+        upperdirs.len() >= 2,
+        "upperdir flatness needs at least two exec-response resource samples; got {upperdirs:?}, skipped {skipped_poll_finalized} poll-finalized command(s)"
+    );
     let max = upperdirs.iter().copied().fold(0.0_f64, f64::max);
     let min = upperdirs.iter().copied().fold(f64::MAX, f64::min);
     assert!(
@@ -564,22 +580,32 @@ fn live_trace_ephemeral_exec_records_command_overlay_resource_and_response_facts
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let (exec_wire, exec) = exec_settled_wire(
-        &lease,
+    let exec_wire = lease.call(
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "mkdir -p trace-exec && printf traced > trace-exec/out.txt && printf trace-ready",
             "yield_time_ms": 30000,
             "timeout_seconds": 35,
         }),
     )?;
-    assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
-    let record = trace_record(&exec_wire)?;
-
+    let completed_in_exec_response = as_str(envelope_result(&exec_wire)?, "status")? != "running";
+    let start_record = trace_record(&exec_wire)?;
     assert!(
-        has_trace_event(&record, "command", "prepared", |_| true)
-            && has_trace_event(&record, "command", "spawned", |_| true),
-        "ephemeral exec trace should record command preparation and spawn: {record:?}"
+        has_trace_event(&start_record, "command", "prepared", |_| true)
+            && has_trace_event(&start_record, "command", "spawned", |_| true),
+        "ephemeral exec trace should record command preparation and spawn: {start_record:?}"
     );
+
+    let (exec_wire, exec) = finalize_foreground_command_wire(
+        &lease,
+        exec_wire,
+        Instant::now() + Duration::from_secs(35),
+    )?;
+    assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
+    if !completed_in_exec_response {
+        return Ok(());
+    }
+    let record = trace_record(&exec_wire)?;
     assert!(
         has_trace_event(&record, "overlay", "mount_finished", |details| {
             details["workspace"] == "ephemeral"

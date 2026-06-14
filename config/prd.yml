@@ -24,10 +24,15 @@ daemon:
     interval_ms: 500
 
   plugin:
-    ppc_root: /eos/plugin/ppc
-    ppc_timeout_ms: 5000
-    service_probe_timeout_ms: 5000
     max_response_bytes: 8388608
+    enabled_plugins:
+      - pyright_lsp
+    pyright_lsp:
+      node_path: /usr/local/bin/node
+      pyright_langserver_path: /usr/local/lib/node_modules/pyright/langserver.index.js
+      workspace_root: /eos/runtime/plugins/pyright_lsp/workspace
+      analysis_timeout_ms: 10000
+      refresh_timeout_ms: 5000
 
   layer_stack:
     auto_squash_max_depth: 100

@@ -1,20 +1,19 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/trace",
-    "crates/protocol",
-    "crates/operation",
-    "crates/command",
-    "crates/config",
-    "crates/eosd",
-    "crates/daemon",
-    "crates/workspace",
-    "crates/namespace",
-    "crates/layerstack",
-    "crates/overlay",
-    "crates/plugin",
-    "crates/host",
-    "crates/gateway",
+    "crates/shared/trace",
+    "crates/shared/protocol",
+    "crates/daemon/operation",
+    "crates/daemon/command",
+    "crates/daemon/config",
+    "crates/daemon/eosd",
+    "crates/daemon/daemon",
+    "crates/daemon/workspace",
+    "crates/daemon/namespace",
+    "crates/daemon/layerstack",
+    "crates/daemon/overlay",
+    "crates/host/host",
+    "crates/gateway/gateway",
     "crates/e2e-test",
     "xtask",
 ]
@@ -30,7 +29,7 @@ license = "MIT"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_path_to_error = "0.1"
-# YAML parser boundary. Only `crates/config/src/yaml.rs` may use this dependency
+# YAML parser boundary. Only `crates/daemon/config/src/yaml.rs` may use this dependency
 # directly; callers stay behind `ConfigDocument` and typed section schemas.
 serde_yaml_ng = "0.10"
 sha2 = "0.10"
@@ -55,21 +54,20 @@ rtnetlink = "0.21"
 netlink-sys = "0.8"
 
 # Internal crates — path deps (the edges below ARE the architecture).
-command = { path = "crates/command" }
-config = { path = "crates/config" }
-layerstack = { path = "crates/layerstack" }
-operation = { path = "crates/operation" }
-overlay = { path = "crates/overlay" }
-plugin = { path = "crates/plugin" }
-namespace = { path = "crates/namespace" }
-trace = { path = "crates/trace" }
-protocol = { path = "crates/protocol" }
-daemon = { path = "crates/daemon" }
-eosd = { path = "crates/eosd" }
-gateway = { path = "crates/gateway" }
-host = { path = "crates/host" }
+command = { path = "crates/daemon/command" }
+config = { path = "crates/daemon/config" }
+layerstack = { path = "crates/daemon/layerstack" }
+operation = { path = "crates/daemon/operation" }
+overlay = { path = "crates/daemon/overlay" }
+namespace = { path = "crates/daemon/namespace" }
+trace = { path = "crates/shared/trace" }
+protocol = { path = "crates/shared/protocol" }
+daemon = { path = "crates/daemon/daemon" }
+eosd = { path = "crates/daemon/eosd" }
+gateway = { path = "crates/gateway/gateway" }
+host = { path = "crates/host/host" }
 e2e-test = { path = "crates/e2e-test" }
-workspace = { path = "crates/workspace" }
+workspace = { path = "crates/daemon/workspace" }
 xtask = { path = "xtask" }
 
 [workspace.lints.clippy]

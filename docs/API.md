@@ -22,8 +22,12 @@ The complete public vocabulary served on the `gateway` client socket.
 | `sandbox.file.read` | daemon | Files | no | `operation.file.ReadFileInput` | `operation.file.ReadFileResponse` | Read one file from the layer stack or isolated workspace. |
 | `sandbox.file.write` | daemon | Files | yes | `operation.file.WriteFileInput` | `operation.file.WriteFileResponse` | Write one file through the OCC gate. |
 | `sandbox.file.edit` | daemon | Files | yes | `operation.file.EditFileInput` | `operation.file.EditFileResponse` | Edit one file through the OCC gate. |
-| `sandbox.plugin.ensure` | daemon | Plugins | yes | `operation.plugin.PluginEnsureInput` | `operation.plugin.PluginEnsureOutput` | Ensure a plugin service is installed and running. |
-| `sandbox.plugin.status` | daemon | Plugins | no | `operation.plugin.PluginStatusInput` | `operation.plugin.PluginStatusOutput` | Inspect plugin service status. |
+| `sandbox.plugin.list` | daemon | Plugins | no | `operation.plugin.PluginListInput` | `operation.plugin.PluginListOutput` | List configured first-party plugin providers without probing them. |
+| `sandbox.plugin.health` | daemon | Plugins | no | `operation.plugin.PluginHealthInput` | `operation.plugin.PluginHealthOutput` | Actively probe enabled first-party plugin providers. |
+| `sandbox.plugin.pyright_lsp.query_symbols` | daemon | Plugins | no | `operation.plugin.PyrightLspQuerySymbolsInput` | `operation.plugin.PyrightLspQuerySymbolsOutput` | Return Pyright document symbols for a Python file. |
+| `sandbox.plugin.pyright_lsp.definition` | daemon | Plugins | no | `operation.plugin.PyrightLspDefinitionInput` | `operation.plugin.PyrightLspLocationsOutput` | Resolve a Pyright definition location. |
+| `sandbox.plugin.pyright_lsp.references` | daemon | Plugins | no | `operation.plugin.PyrightLspReferencesInput` | `operation.plugin.PyrightLspLocationsOutput` | Resolve Pyright reference locations. |
+| `sandbox.plugin.pyright_lsp.diagnostics` | daemon | Plugins | no | `operation.plugin.PyrightLspDiagnosticsInput` | `operation.plugin.PyrightLspDiagnosticsOutput` | Return current Pyright diagnostics for a Python file. |
 | `sandbox.isolation.enter` | daemon | IsolatedWorkspace | yes | `operation.isolation.IsolationEnterInput` | `operation.isolation.IsolationEnterOutput` | Enter isolated workspace mode for a caller. |
 | `sandbox.isolation.exit` | daemon | IsolatedWorkspace | yes | `operation.isolation.IsolationExitInput` | `operation.isolation.IsolationExitOutput` | Exit isolated workspace mode for a caller. |
 | `sandbox.isolation.status` | daemon | IsolatedWorkspace | no | `operation.isolation.IsolationStatusInput` | `operation.isolation.IsolationStatusOutput` | Inspect isolated workspace status. |
@@ -71,6 +75,6 @@ Daemon-side test hooks; refused by `gateway` and exercised only by direct-daemon
 |---|---|---|---|---|---|---|
 | `sandbox.isolation.test_reset` | daemon | IsolatedWorkspace | yes | `operation.core.NoArgs` | `operation.isolation.TestResetOutput` | Test-only isolated workspace reset hook. |
 
-## Dynamic plugin ops
+## Plugin providers
 
-`plugin.<id>.<op>` names are registered at runtime by plugin services inside a sandbox. They are daemon-served, public, and treated as mutating (fail-closed) by the recovery ladder; they never appear in the static catalog.
+First-party plugin providers are static catalog entries under `sandbox.plugin.*`. The initial provider is `sandbox.plugin.pyright_lsp.*`; dynamic plugin-op forwarding is not part of the public API.

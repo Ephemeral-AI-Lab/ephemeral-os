@@ -10,17 +10,14 @@
     "markdown": "readme.md"
   },
   "overview": {
-    "summary": "`daemon` owns the live daemon control-plane contract: in-sandbox identity, response meta trace refs, built-in op registration, invocation registry accounting, heartbeat touch semantics, cancellation responses, TTL reaping, and dynamic plugin background registry participation. It exercises daemon ops including `sandbox.runtime.ready`, `sandbox.call.count`, `sandbox.call.heartbeat`, `sandbox.call.cancel`, `sandbox.command.exec`, `sandbox.plugin.ensure`, `sandbox.plugin.status`, dynamic `plugin.daemonplug.query`, and every non-mutating entry in `BUILTIN_DAEMON_OPS`, with state-toggling ops covered by dedicated module tests. Module config: `crates/e2e-test/tests/daemon/config/default.test.yml`, which shortens `daemon.inflight` TTL/reaper intervals for bounded live checks.",
-    "moduleConfig": "crates/e2e-test/tests/daemon/config/default.test.yml",
+    "summary": "`daemon` owns the live daemon control-plane contract: in-sandbox identity, response meta trace refs, built-in op registration, invocation registry accounting, heartbeat touch semantics, cancellation responses, and TTL reaping. It exercises daemon ops including `sandbox.runtime.ready`, `sandbox.call.count`, `sandbox.call.heartbeat`, `sandbox.call.cancel`, `sandbox.command.exec`, and every non-mutating entry in `BUILTIN_DAEMON_OPS`, with state-toggling ops covered by dedicated module tests. Module config lives at `crates/e2e-test/tests/daemon/config/default.test.yml`, which shortens `daemon.inflight` TTL/reaper intervals for bounded live checks.",
+    "moduleConfig": null,
     "ops": [
       "sandbox.runtime.ready",
       "sandbox.call.count",
       "sandbox.call.heartbeat",
       "sandbox.call.cancel",
-      "sandbox.command.exec",
-      "sandbox.plugin.ensure",
-      "sandbox.plugin.status",
-      "plugin.daemonplug.query"
+      "sandbox.command.exec"
     ],
     "tags": [
       "daemon"
@@ -74,22 +71,6 @@
       "tags": [
         "daemon"
       ]
-    },
-    {
-      "id": "daemon-plugin-control",
-      "title": "Plugin Control",
-      "description": "Dynamic plugin operations marked `background: true` participate in inflight, heartbeat, and cancel request control. Plugin process-group cancellation is not asserted: `eos-sandbox/crates/daemon/src/transport/server.rs` registers every background request, while plugin process-group teardown lives in `eos-sandbox/crates/operation/src/plugin/process.rs` (`terminate_process_group`).",
-      "tags": [
-        "daemon"
-      ]
-    },
-    {
-      "id": "daemon-plugin-background-boundary",
-      "title": "Plugin Background Boundary",
-      "description": "Dynamic plugin background requests use daemon inflight, heartbeat, and cancel control while plugin publish, setup failure, and worker replacement semantics stay plugin-owned.",
-      "tags": [
-        "daemon"
-      ]
     }
   ],
   "test": [
@@ -124,18 +105,6 @@
         "daemon-inflight",
         "daemon-cancel-control",
         "daemon-heartbeat"
-      ]
-    },
-    {
-      "id": "daemon-plugin-background-control-contract",
-      "name": "daemon-plugin-background-control-contract",
-      "description": "Uses `background_plugin_operation_control`: a slow dynamic plugin request marked `background: true` is counted, heartbeat-visible, and found by cancel. Process-group kill semantics are not claimed because plugin PPC dispatch does not currently register a process group.",
-      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites daemon --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
-      "checklist": [
-        "daemon-plugin-control",
-        "daemon-inflight",
-        "daemon-heartbeat",
-        "daemon-cancel-control"
       ]
     }
   ]

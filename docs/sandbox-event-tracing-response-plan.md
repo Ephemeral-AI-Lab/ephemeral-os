@@ -84,7 +84,7 @@ serial. Nested and concurrent work is represented by `span_id`,
 | --- | --- | --- |
 | Timeline chain | `trace_id` ordered by `seq` | Audit replay, total elapsed narrative, "what happened next?" |
 | Causal tree | `span_id` / `parent_span_id` | Nested work, parallel branches, subsystem ownership. |
-| Cross-op chain | `sandbox_trace_links` | Long-lived command sessions, isolated workspace handles, plugin PPC messages, manifest versions. |
+| Cross-op chain | `sandbox_trace_links` | Long-lived command sessions, isolated workspace handles, manifest versions. |
 
 Example:
 
@@ -108,7 +108,6 @@ Long-lived resources get their own link ids:
 | --- | --- |
 | `command_session_id` | A running command returns before final settlement; later stdin/poll/collect/cancel ops must link back. |
 | `workspace_handle_id` | Isolated workspace enter/status/exit and private operations must link to the same lifecycle. |
-| `plugin_service_instance_id` | Plugin ensure/status/PPC/overlay events need stable service correlation. |
 | `layer_manifest_version` | LayerStack/OCC events should identify the snapshot or published layer they touched. |
 
 ### Workspace Route Taxonomy
@@ -133,7 +132,7 @@ Subsystem events use a stable phase vocabulary:
 | --- | --- |
 | `host.protocol` | request_received, request_persisted, forward_started, forward_finished, response_missing, uncertain_outcome |
 | `daemon.transport` | read_started, read_finished, auth_checked, decoded, response_written |
-| `daemon.dispatch` | dispatch_started, op_resolved, parse_finished, plugin_fallback_checked, dispatch_finished |
+| `daemon.dispatch` | dispatch_started, op_resolved, parse_finished, unknown_op_checked, dispatch_finished |
 | `workspace.route` | route_selected with `ephemeral_workspace`, `isolated_workspace`, or `skip` |
 | `layerstack` | binding_loaded, snapshot_acquired, lease_released, manifest_read, auto_squash_started, auto_squash_finished |
 | `overlay` | workspace_prepared, mount_started, mount_finished, capture_started, capture_finished, unmount_finished |
@@ -360,8 +359,8 @@ Verification:
 
 1. Extend daemon `Request` and host request encoding with optional `trace`.
 2. Carry `TraceContext` and a per-op event collector through `DispatchContext`.
-3. Emit mandatory dispatcher events for every op, including parse failures,
-   plugin fallback, and unknown-op errors.
+3. Emit mandatory dispatcher events for every op, including parse failures and
+   unknown-op errors.
 4. Attach `meta.trace` and internal `_trace_events` at `finalize_response`.
 
 Verification:
@@ -379,7 +378,7 @@ Instrument the stubs with bounded facts:
 4. Command session prepare/spawn/yield/stdin/progress/cancel/reap/settle
    events.
 5. Isolated enter/status/exit/teardown phase events.
-6. Plugin ensure/status/PPC/overlay/callback events.
+6. Static plugin provider health, projection, and analyzer events.
 7. Resource samples using existing cgroup/process/tree/layer metrics.
 
 Verification:

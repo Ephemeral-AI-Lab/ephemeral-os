@@ -341,6 +341,13 @@ fn suite_plan(heavy_test_threads: usize) -> Vec<Suite> {
             test_threads: 1,
             wave: 5,
         },
+        Suite {
+            name: "plugin-disabled",
+            binary_prefix: "plugin_disabled",
+            weight: 1,
+            test_threads: 1,
+            wave: 5,
+        },
     ]
 }
 

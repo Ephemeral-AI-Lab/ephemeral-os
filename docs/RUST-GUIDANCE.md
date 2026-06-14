@@ -129,9 +129,10 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
 - **The dependency edges ARE the architecture.** The single sharpest invariant —
   *isolated keeps writes private and NEVER publishes* — is encoded inside
   **`workspace::isolated_workspace`**, which must not own publish paths.
-  `plugin` is even narrower now:
-  it is a pure contract/PPC crate, while snapshot/overlay/publish/process
-  behavior stays in `operation::plugin`. Verified edges (get these EXACTLY right):
+  static plugin support is intentionally narrow now: first-party provider
+  request/response contracts and runtime code live in `operation::plugin`, with
+  no separate dynamic plugin crate or PPC/package pipeline. Verified edges (get
+  these EXACTLY right):
   - `crates/operation/ops.json` → reviewed static op catalog.
   - `contract/` → protocol fixtures/prose only; no compiled crate.
   - `layerstack` → storage, leases, CAS hashes, route/commit policy.
@@ -146,10 +147,8 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
     shared operation outcome contracts.
   - `operation::file` → file operation semantics over direct and isolated
     backends.
-  - `plugin` → plugin contracts and PPC framing; **NOT overlay/layerstack
-    process ownership**.
-  - `operation::plugin` → plugin package publishing, service processes, PPC
-    transport, dispatch, refresh, OCC callbacks, and oneshot overlays.
+  - `operation::plugin` → static first-party provider contracts and runtime
+    implementation, currently `pyright_lsp`.
   - `operation::checkpoint` → checkpoint commit pipeline.
   - `daemon` → transport, dispatch, wire-message codec, op adapters, service
     composition, daemon-owned plugin/checkpoint process glue.

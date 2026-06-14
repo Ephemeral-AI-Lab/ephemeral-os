@@ -146,21 +146,18 @@ The inspection object includes registration status, holder PID, namespace FD cou
 
 Isolated command and file tool responses also carry `workspace: "isolated"`, `mutation_source: "isolated_workspace"`, and `published: false` under isolated metadata. These are the response-visible no-publish audit fields.
 
-## Plugin Status And Plugin Overlay
+## Plugin Provider Status And Plugin Overlay
 
-`sandbox.plugin.ensure` and `sandbox.plugin.status` parse request-side `audit` fields (`invocation_id`, `caller`, `caller_id`) but do not serialize those audit fields back into output.
+Static plugin provider ops parse request-side `audit` fields (`invocation_id`, `caller`, `caller_id`) but do not serialize those audit fields back into output.
 
-Plugin status outputs include:
+Static plugin list and health outputs include:
 
 | Field | Meaning |
 |---|---|
-| `loaded_plugins` | Loaded plugin registry view. |
-| `running_service_processes` | Process snapshots with PID, process group, running flag, exit status, and socket path. |
-| `connected_ppc_routes` / `connected_ppc_services` | Connected PPC surfaces. |
-| `setup_failures` | Stored setup failures. |
-| `service_health` | Probe status, accepted flag, manifest key, error, and teardown error. |
+| `providers` | Configured first-party provider state. For `pyright_lsp`, health includes enabled/running state, process id, resolved command, initialize metadata, projection root, manifest key, and last error fields. |
 
-Registered plugin ops that use oneshot overlay get the richer mutation response from `daemon/src/op_adapter/plugin.rs` and `daemon/src/runtime/response.rs`:
+Static provider ops return typed provider-specific outputs. There is no
+retired plugin overlay response path.
 
 | Field | Meaning |
 |---|---|

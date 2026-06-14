@@ -46,14 +46,14 @@ Gateway, host, and fixtures are blast radius, never redesigned here.
 |---|---|---|
 | D1 | Schema trait naming | `Operation` (identity) + `OperationInput` + `OperationOutput` in `core/schema.rs`. The `io` abbreviation is banned from names. |
 | D2 | Schema granularity | Input and output are separate traits; per-op marker types implement both. Identity (`const OP`) lives once, on `Operation`. |
-| D3 | Scope | The 28 `ServedBy::Daemon` ops. The 4 host `sandbox.*` ops are excluded (trust boundary — host/gateway consume `ops.json` as data, F13). Dynamic `plugin.<id>.*` payloads stay `Value` by nature. |
+| D3 | Scope | The `ServedBy::Daemon` ops. The 4 host `sandbox.*` ops are excluded (trust boundary -- host/gateway consume `ops.json` as data, F13). Static first-party plugin providers use cataloged `sandbox.plugin.*` ops. |
 | D4 | Family contract file | `contract.rs` per family. All 8 `ops.rs` scaffolds deleted; "ops" vocabulary is reserved for the core catalog. |
 | D5 | DTO suffixes | Standardized `*Input` / `*Output`. Exception: `WorkspaceMutationOutcome` keeps its name (shared semantic block, known to daemon contract tests). |
 | D6 | Catalog prefix | Catalog types keep `Op*` (`OpContract`, `OpFamily`, `OpVisibility`, `OpError`). No `Operation*` rename of catalog types. |
 | D7 | Typed IDs | `CallerId`, `InvocationId` in `core/id.rs` now; `CommandSessionId` lands with the command relocation. Substrate crates keep `String` fields; conversion at their boundary (possible because of F14's dependency direction). |
 | D8 | Mutation block | Full `MutationCore` composition via `#[serde(flatten)]`; `WorkspaceMutationOutcome` and `CommandMetadata` both compose it. Daemon `GuardedResponse` is deleted — core serialization becomes the wire. |
-| D9 | Errors | One boundary type `OpError { kind, message, details }`. `FileOpsError`/`WorkspaceApiError` become documented re-exports of it; the adapter `error_json` channel folds into it. Family-internal typed errors (`CheckpointError`, `PluginRuntimeError`, `PpcError`, `IsolatedError`) stay heterogeneous. |
-| D10 | Plugin inputs | Typed `PluginEnsureInput` + shared `CallerFields`; `&Value` no longer penetrates `ensure`/`overlay`/`dispatch` except the dynamic payload field. |
+| D9 | Errors | One boundary type `OpError { kind, message, details }`. `FileOpsError`/`WorkspaceApiError` become documented re-exports of it; the adapter `error_json` channel folds into it. Family-internal typed errors (`CheckpointError`, `PluginRuntimeError`, `IsolatedError`) stay heterogeneous. |
+| D10 | Plugin inputs | Static provider inputs live in `plugin/contract.rs`; legacy provisioning DTOs and dynamic plugin payloads are removed from compiled code and are no longer part of the public catalog/API. |
 | D11 | Command contract | Relocates to `command/contract.rs` (§11); `CommandResponse.metadata: Value` → `Option<CommandMetadata>`; `status: String` → `CommandStatus` enum (typing becomes possible only because the DTO moves above the substrate). |
 | D12 | v1 §9 rule 2 ("adapter-inline parsing is the design") | **Overturned.** Control/isolation/workspace_run/checkpoint get typed input/output DTOs in operation; behavior stays daemon-side. operation owns the contract for every daemon-served op; the daemon implements against it. |
 
@@ -80,7 +80,7 @@ crates/operation/src/
 │                    CommandStatus), outcome.rs, prepare.rs, registry.rs,
 │                    runtime.rs, service.rs, settle.rs                                (§11)
 ├── file/            lib.rs, contract.rs, direct.rs, isolated.rs, port.rs, tests.rs
-├── plugin/          lib.rs, contract.rs (PluginEnsureInput/PluginStatusInput/…),
+├── plugin/          lib.rs, contract.rs (PluginListInput/PluginHealthInput/Pyright DTOs),
 │                    + existing modules
 ├── control/         lib.rs, contract.rs              (DTOs + markers only; behavior
 ├── isolation/       lib.rs, contract.rs               stays in the daemon — D12)
@@ -367,8 +367,8 @@ not-found synthetic is **not** an error: it is a `CommandResponse`-shaped
 output and stays one.
 
 Module-internal error enums are **not** unified: `CheckpointError`,
-`PluginRuntimeError`/`PpcError`, and `IsolatedError` stay heterogeneous; they
-map into `OpError` at the op boundary via `From`.
+`PluginRuntimeError`, and `IsolatedError` stay heterogeneous; they map into
+`OpError` at the op boundary via `From`.
 
 ## 9. `core/id.rs` — typed identities (new)
 
@@ -409,9 +409,12 @@ Output field sets are today's wire keys, verbatim (canonical-equal bar, §13.1).
 | `sandbox.file.write` | `WriteFileInput { path, content, overwrite, layer_stack_root? }` | `WorkspaceMutationOutcome` | |
 | `sandbox.file.edit` | `EditFileInput { path, edits, layer_stack_root? }` | `WorkspaceMutationOutcome` | |
 | **plugin/contract.rs** | | | operation::plugin |
-| `sandbox.plugin.ensure` | `PluginEnsureInput { plugin?, digest?, manifest?, start_services, caller: CallerFields }` | `PluginEnsureOutput` (enum: `NeedsUpload` \| `Ready`) | |
-| `sandbox.plugin.status` | `PluginStatusInput { probe_services, probe_timeout_ms? }` | `PluginStatusOutput { loaded_plugins, running_service_processes, … }` | |
-| *(dynamic `plugin.<id>.*`)* | payload stays `Value` — runtime-discovered, outside the static schema by design | `PluginDispatchOutcome` unchanged | |
+| `sandbox.plugin.list` | `PluginListInput` | `PluginListOutput { providers }` | |
+| `sandbox.plugin.health` | `PluginHealthInput` | `PluginHealthOutput { providers }` | |
+| `sandbox.plugin.pyright_lsp.query_symbols` | `PyrightLspQuerySymbolsInput { file_path, query?, workspace? }` | `PyrightLspQuerySymbolsOutput { provider, manifest_key, freshness, stale, symbols }` | |
+| `sandbox.plugin.pyright_lsp.definition` | `PyrightLspDefinitionInput { file_path, position }` | `PyrightLspLocationsOutput { provider, manifest_key, freshness, stale, locations }` | |
+| `sandbox.plugin.pyright_lsp.references` | `PyrightLspReferencesInput { file_path, position, include_declaration? }` | `PyrightLspLocationsOutput { provider, manifest_key, freshness, stale, locations }` | |
+| `sandbox.plugin.pyright_lsp.diagnostics` | `PyrightLspDiagnosticsInput { file_path }` | `PyrightLspDiagnosticsOutput { provider, manifest_key, freshness, stale, diagnostics }` | |
 | **command/contract.rs** (§11) | | | operation::command |
 | `sandbox.command.exec` | `ExecCommandInput { cmd, caller_id, layer_stack_root?, timeout_seconds?, yield_time_ms? }` | `CommandResponse { status: CommandStatus, exit_code, stdout, stderr, command_session_id?, workspace?, metadata: Option<CommandMetadata> }` | top-level `invocation_id` is the exec identity |
 | `sandbox.command.write_stdin` | `WriteStdinInput { command_session_id, chars, yield_time_ms? }` | `CommandResponse` | |
@@ -544,8 +547,8 @@ Upheld:
 | `core/envelope.rs` shared across trust boundaries | `host` runs inside untrusted sandboxes, depends only on `anyhow/serde_json/thiserror`, and must not gain an operation dep (verified). The shared artifact is `ops.json` + `contract/` fixtures (F13). Hence D3: host ops excluded from the schema layer. |
 | `AuditRecord` / journal types | Revives a feature removed 2026-06-11; the live remainder is exactly §7. |
 | Checkpoint timing type split | `BTreeMap<String, f64>` mirrors its wire one-to-one; stays distinct from `WorkspaceTimings`. |
-| Module-internal error unification | `CheckpointError` / `PluginRuntimeError` / `PpcError` / `IsolatedError` are heterogeneous by design; only the boundary unifies (§8). |
-| Dynamic plugin payloads | Runtime-discovered ops are genuinely dynamic; their payload staying `Value` is a boundary, not a gap (D3). |
+| Module-internal error unification | `CheckpointError` / `PluginRuntimeError` / `IsolatedError` are heterogeneous by design; only the boundary unifies (§8). |
+| Dynamic plugin payloads | Retired. First-party plugin providers are cataloged `sandbox.plugin.*` ops with typed inputs. |
 
 ## 15. Migration plan
 
@@ -559,6 +562,6 @@ next.
 | 3 | Rename `core/ops.rs` → `core/catalog.rs`; add `OpFamily::contracts()`; mechanical import rename (§4 table) | `cargo check --workspace`; `cargo xtask check-contract` (rendering code unchanged) |
 | 4 | `core/schema.rs`; **files** family end-to-end: `file/contract.rs` (wire-pure inputs, markers), `FileLimits` param, generic daemon wrapper, `MutationCore` flatten restructure, files stop using `GuardedResponse` | contract fixtures + files e2e + flatten round-trip test (§13.2) |
 | 5 | Command relocation (§11): move DTOs + tests, re-cut `persist_final`, type `CommandMetadata`/`CommandStatus`, update `settle.rs` and daemon/e2e imports | `cargo xtask check-contract` (all three suites) + `CommandMetadata` → `to_wire_value` round-trip against `contract/fixtures/envelopes/` |
-| 6 | Plugin typed inputs (`plugin/contract.rs`, `PluginEnsureInput`, `CallerFields`); `ensure`/`overlay`/`dispatch` stop seeing `&Value`; plugin-overlay synthesis reads `MutationCore`; delete `GuardedResponse` | plugin tests + fixtures |
+| 6 | Static plugin typed inputs (`plugin/contract.rs`, provider list/health and Pyright LSP DTOs); legacy ensure/upload DTOs are internal-only; plugin-overlay synthesis reads `MutationCore`; delete `GuardedResponse` | plugin tests + fixtures |
 | 7 | Control/isolation/workspace_run/checkpoint contracts + markers; fold `error_json` refusals into `OpError` (§13.3); delete `eos-sandbox/` module; completeness test (28/28 schema rows vs catalog) | full e2e + fixtures; grep gate: no `error_json` / `require_arg` producers remain |
 | 8 *(opt)* | schemars: `input_schema`/`output_schema` per op emitted into `ops.json` → gateway / TypeScript `@eos/contracts` codegen | extended `xtask check-contract` drift gate |

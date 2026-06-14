@@ -74,6 +74,13 @@
       "cargoTestName": "plugin",
       "path": "plugin/readme.json",
       "page": "plugin/index.html"
+    },
+    {
+      "name": "plugin-disabled",
+      "displayName": "plugin-disabled",
+      "cargoTestName": "plugin-disabled",
+      "path": "plugin-disabled/readme.json",
+      "page": "plugin-disabled/index.html"
     }
   ]
 }

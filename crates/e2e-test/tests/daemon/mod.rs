@@ -27,7 +27,6 @@ mod test_daemon_cancel_control;
 mod test_daemon_heartbeat_control;
 mod test_daemon_inflight_control;
 mod test_daemon_inflight_ttl_reaper;
-mod test_daemon_plugin_background_control;
 mod test_daemon_runtime_identity;
 
 /// Fire a backgrounded `exec_command` on its own thread under an explicit

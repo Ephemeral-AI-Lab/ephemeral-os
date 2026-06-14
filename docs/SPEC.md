@@ -37,7 +37,8 @@ host   (lib, host)   owns and reaches sandboxes: host engine,
    ▼
 eosd / daemon  (bin+lib, in-container)   executes in-box ops: files (layer
                                  stack + OCC), commands (PTY), isolated
-                                 workspaces, plugins (PPC), checkpoint.
+                                 workspaces, static plugin providers,
+                                 checkpoint.
 ```
 
 | Component | Kind | Job | Must never |
@@ -114,9 +115,10 @@ from `docs/contract/01-wire-protocol.md`):
 
 ## 4. Op catalog
 
-Canonical grammar: `sandbox.<verb>` for host ops, `sandbox.<service>.<verb>`
-for daemon ops, `plugin.<id>.<op>` for dynamic plugin ops. Each op has exactly
-one wire spelling — its canonical name; the legacy `api.*` aliases are retired.
+Canonical grammar: `sandbox.<verb>` for host ops and `sandbox.<service>.<verb>`
+for daemon ops, including static first-party plugin providers under
+`sandbox.plugin.*`. Each op has exactly one wire spelling -- its canonical name;
+the legacy `api.*` aliases are retired.
 The token `v1` is dead: protocol versioning lives in `args`/`ops.json`, never
 in names.
 
@@ -145,9 +147,12 @@ in names.
 | isolation | `sandbox.isolation.enter` |
 | | `sandbox.isolation.exit` |
 | | `sandbox.isolation.status` |
-| plugin | `sandbox.plugin.ensure` |
-| | `sandbox.plugin.status` |
-| | `plugin.<id>.<op>` (dynamic) |
+| plugin | `sandbox.plugin.list` |
+| | `sandbox.plugin.health` |
+| | `sandbox.plugin.pyright_lsp.query_symbols` |
+| | `sandbox.plugin.pyright_lsp.definition` |
+| | `sandbox.plugin.pyright_lsp.references` |
+| | `sandbox.plugin.pyright_lsp.diagnostics` |
 | run | `sandbox.run.end` |
 | call | `sandbox.call.heartbeat` |
 | | `sandbox.call.cancel` |
@@ -233,7 +238,7 @@ host behavior).
 ```
 visibility != public                  → forbidden            (client socket)
 served_by == host                     → host call
-served_by == daemon (incl. plugin.*)  -> host::forward(sandbox_id, request)
+served_by == daemon (incl. static sandbox.plugin.* providers) -> host::forward(sandbox_id, request)
 op not in catalog                     → unknown_op
 ```
 
@@ -265,13 +270,13 @@ eos-sandbox/
 │   ├── namespace/              holder + runner namespace child support
 │   ├── command/        PTY-backed commands
 │   ├── workspace/              ephemeral + isolated workspace policy
-│   ├── plugin/                 plugin contracts and PPC protocol
 │   ├── operation/
 │   │   ├── ops.json                reviewed static op catalog
 │   │   └── src/
 │   │       ├── core/               static op contracts + outcomes
 │   │       ├── command/            command lifecycle/runtime policy
 │   │       ├── file/               file operation semantics
+│   │       ├── plugin/             static first-party plugin providers
 │   │       ├── plugin/             plugin package/process/dispatch runtime
 │   │       └── checkpoint/         checkpoint commit pipeline
 │   └── e2e-test/               live protocol tests

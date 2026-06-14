@@ -86,6 +86,13 @@
         "cargoTestName": "plugin",
         "path": "plugin/readme.json",
         "page": "plugin/index.html"
+      },
+      {
+        "name": "plugin-disabled",
+        "displayName": "plugin-disabled",
+        "cargoTestName": "plugin-disabled",
+        "path": "plugin-disabled/readme.json",
+        "page": "plugin-disabled/index.html"
       }
     ]
   },
@@ -218,17 +225,14 @@
         "markdown": "readme.md"
       },
       "overview": {
-        "summary": "`daemon` owns the live daemon control-plane contract: in-sandbox identity, response meta trace refs, built-in op registration, invocation registry accounting, heartbeat touch semantics, cancellation responses, TTL reaping, and dynamic plugin background registry participation. It exercises daemon ops including `sandbox.runtime.ready`, `sandbox.call.count`, `sandbox.call.heartbeat`, `sandbox.call.cancel`, `sandbox.command.exec`, `sandbox.plugin.ensure`, `sandbox.plugin.status`, dynamic `plugin.daemonplug.query`, and every non-mutating entry in `BUILTIN_DAEMON_OPS`, with state-toggling ops covered by dedicated module tests. Module config: `crates/e2e-test/tests/daemon/config/default.test.yml`, which shortens `daemon.inflight` TTL/reaper intervals for bounded live checks.",
-        "moduleConfig": "crates/e2e-test/tests/daemon/config/default.test.yml",
+        "summary": "`daemon` owns the live daemon control-plane contract: in-sandbox identity, response meta trace refs, built-in op registration, invocation registry accounting, heartbeat touch semantics, cancellation responses, and TTL reaping. It exercises daemon ops including `sandbox.runtime.ready`, `sandbox.call.count`, `sandbox.call.heartbeat`, `sandbox.call.cancel`, `sandbox.command.exec`, and every non-mutating entry in `BUILTIN_DAEMON_OPS`, with state-toggling ops covered by dedicated module tests. Module config lives at `crates/e2e-test/tests/daemon/config/default.test.yml`, which shortens `daemon.inflight` TTL/reaper intervals for bounded live checks.",
+        "moduleConfig": null,
         "ops": [
           "sandbox.runtime.ready",
           "sandbox.call.count",
           "sandbox.call.heartbeat",
           "sandbox.call.cancel",
-          "sandbox.command.exec",
-          "sandbox.plugin.ensure",
-          "sandbox.plugin.status",
-          "plugin.daemonplug.query"
+          "sandbox.command.exec"
         ],
         "tags": [
           "daemon"
@@ -282,22 +286,6 @@
           "tags": [
             "daemon"
           ]
-        },
-        {
-          "id": "daemon-plugin-control",
-          "title": "Plugin Control",
-          "description": "Dynamic plugin operations marked `background: true` participate in inflight, heartbeat, and cancel request control. Plugin process-group cancellation is not asserted: `eos-sandbox/crates/daemon/src/transport/server.rs` registers every background request, while plugin process-group teardown lives in `eos-sandbox/crates/operation/src/plugin/process.rs` (`terminate_process_group`).",
-          "tags": [
-            "daemon"
-          ]
-        },
-        {
-          "id": "daemon-plugin-background-boundary",
-          "title": "Plugin Background Boundary",
-          "description": "Dynamic plugin background requests use daemon inflight, heartbeat, and cancel control while plugin publish, setup failure, and worker replacement semantics stay plugin-owned.",
-          "tags": [
-            "daemon"
-          ]
         }
       ],
       "test": [
@@ -332,18 +320,6 @@
             "daemon-inflight",
             "daemon-cancel-control",
             "daemon-heartbeat"
-          ]
-        },
-        {
-          "id": "daemon-plugin-background-control-contract",
-          "name": "daemon-plugin-background-control-contract",
-          "description": "Uses `background_plugin_operation_control`: a slow dynamic plugin request marked `background: true` is counted, heartbeat-visible, and found by cancel. Process-group kill semantics are not claimed because plugin PPC dispatch does not currently register a process group.",
-          "command": "cargo run -p e2e-test --bin e2e-runner -- --suites daemon --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
-          "checklist": [
-            "daemon-plugin-control",
-            "daemon-inflight",
-            "daemon-heartbeat",
-            "daemon-cancel-control"
           ]
         }
       ]
@@ -1582,8 +1558,8 @@
         "markdown": "readme.md"
       },
       "overview": {
-        "summary": "`pressure` owns cross-subsystem stress coverage for live `eosd`: concurrent direct file ops, reads, ephemeral exec, LayerStack auto-squash, OCC disjoint publish, command cancellation, plugin refresh, isolated handle pressure, post-cancel daemon readiness, and JSON resource reports. It exercises daemon ops including `sandbox.file.write`, `sandbox.file.read`, `sandbox.command.exec`, `sandbox.command.cancel`, `sandbox.command.count`, `sandbox.checkpoint.layer_metrics`, `sandbox.runtime.ready`, `sandbox.plugin.ensure`, `sandbox.plugin.status`, `plugin.generic.query`, and `sandbox.isolation.*`. Module config: `crates/e2e-test/tests/pressure/config/default.test.yml`. This is one unified E2E contract. Configured pressure concurrency is fixed at level `12`; the runner no longer exposes fast/full/heavy pressure lanes.",
-        "moduleConfig": "crates/e2e-test/tests/pressure/config/default.test.yml",
+        "summary": "`pressure` owns cross-subsystem stress coverage for live `eosd`: concurrent direct file ops, reads, ephemeral exec, LayerStack auto-squash, OCC disjoint publish, command cancellation, isolated handle pressure, post-cancel daemon readiness, and JSON resource reports. It exercises daemon ops including `sandbox.file.write`, `sandbox.file.read`, `sandbox.command.exec`, `sandbox.command.cancel`, `sandbox.command.count`, `sandbox.checkpoint.layer_metrics`, `sandbox.runtime.ready`, `sandbox.plugin.list`, and `sandbox.isolation.*`. Module config lives at `crates/e2e-test/tests/pressure/config/default.test.yml`. This is one unified E2E contract. Configured pressure concurrency is fixed at level `12`; the runner no longer exposes fast/full/heavy pressure lanes.",
+        "moduleConfig": null,
         "ops": [
           "sandbox.file.write",
           "sandbox.file.read",
@@ -1592,9 +1568,7 @@
           "sandbox.command.count",
           "sandbox.checkpoint.layer_metrics",
           "sandbox.runtime.ready",
-          "sandbox.plugin.ensure",
-          "sandbox.plugin.status",
-          "plugin.generic.query",
+          "sandbox.plugin.list",
           "sandbox.isolation.*"
         ],
         "tags": [
@@ -1635,14 +1609,6 @@
           ]
         },
         {
-          "id": "pressure-ladder-plugin",
-          "title": "Ladder Plugin",
-          "description": "Plugin refresh/dispatch pressure remains coherent at configured levels and keeps refresh/process counts bounded.",
-          "tags": [
-            "pressure"
-          ]
-        },
-        {
           "id": "pressure-isolated-cap",
           "title": "Isolated Cap",
           "description": "Isolated handle pressure either runs under a high-cap config or asserts configured cap rejection above the default limit.",
@@ -1669,7 +1635,7 @@
         {
           "id": "pressure-resource-report",
           "title": "Resource Report",
-          "description": "E2E runs emit JSON summaries from response meta, trace_resources, and leak counters before strict regression thresholds are introduced.",
+          "description": "E2E runs emit JSON summaries from response meta, trace_resources, plugin list, and leak counters before strict regression thresholds are introduced.",
           "tags": [
             "pressure"
           ]
@@ -1677,7 +1643,7 @@
         {
           "id": "pressure-bundled-sandbox-capstone",
           "title": "Bundled Sandbox Capstone",
-          "description": "A protocol-only mini-bundle combines scaffold, disjoint writes, same-path conflict, squash, background command, isolated private write, commit projection, and plugin dispatch without agent-loop assertions.",
+          "description": "A protocol-only mini-bundle combines scaffold, disjoint writes, same-path conflict, squash, background command, isolated private write, and commit projection without agent-loop assertions.",
           "tags": [
             "pressure"
           ]
@@ -1774,12 +1740,11 @@
           ]
         },
         {
-          "id": "pressure-plugin-isolated-cap-matrix",
-          "name": "pressure-plugin-isolated-cap-matrix",
-          "description": "Groups `plugin_refresh_at_12` and `isolated_handle_cap_ladder` to prove plugin refresh/dispatch stays coherent under configured concurrency and isolated handle pressure either succeeds within cap or rejects above cap with a stable payload.",
+          "id": "pressure-isolated-cap-ladder",
+          "name": "pressure-isolated-cap-ladder",
+          "description": "Uses `isolated_handle_cap_ladder` to prove isolated handle pressure either succeeds within cap or rejects above cap with a stable payload.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "pressure-ladder-plugin",
             "pressure-isolated-cap",
             "pressure-recovery-cleanup"
           ]
@@ -1787,12 +1752,11 @@
         {
           "id": "pressure-bundled-sandbox-capstone",
           "name": "pressure-bundled-sandbox-capstone",
-          "description": "Uses `protocol_only_bundled_sandbox_capstone`: one live protocol flow combines scaffold write, ephemeral exec publish, same-path OCC contention, squash pressure, isolated private write/discard, lease cleanup, commit-to-workspace, and generic plugin dispatch without asserting agent-loop state.",
+          "description": "Uses `protocol_only_bundled_sandbox_capstone`: one live protocol flow combines scaffold write, ephemeral exec publish, same-path OCC contention, squash pressure, isolated private write/discard, lease cleanup, and commit-to-workspace without asserting agent-loop state.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
             "pressure-bundled-sandbox-capstone",
             "pressure-sandbox-only-boundary",
-            "pressure-ladder-plugin",
             "pressure-isolated-cap",
             "pressure-ladder-occ",
             "pressure-squash-bound"
@@ -1801,7 +1765,7 @@
         {
           "id": "pressure-resource-report-and-leak-oracles",
           "name": "pressure-resource-report-and-leak-oracles",
-          "description": "`resource_report_smoke` emits one JSON artifact covering response meta steps, trace resource samples, cgroup memory.current gauges, runtime readiness, plugin status, isolated-open state, and leak counters after file, exec, command, and OCC-backed write samples.",
+          "description": "`resource_report_smoke` emits one JSON artifact covering response meta steps, trace resource samples, cgroup memory.current gauges, runtime readiness, plugin list, isolated-open state, and leak counters after file, exec, command, and OCC-backed write samples.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
             "pressure-resource-report",
@@ -1810,7 +1774,6 @@
             "pressure-ladder-exec",
             "pressure-ladder-command",
             "pressure-ladder-occ",
-            "pressure-ladder-plugin",
             "pressure-isolated-cap",
             "pressure-squash-bound",
             "pressure-recovery-cleanup"
@@ -1865,7 +1828,7 @@
         {
           "id": "pressure-mixed-workload-soak",
           "name": "pressure-mixed-workload-soak",
-          "description": "Uses `mixed_workload_soak_keeps_counters_and_storage_bounded`: a mixed fanout-write / overlay-exec / command-cancel round over a fixed working set runs many times; active leases and commands return to zero every round, auto-squash keeps manifest depth bounded and reclaims storage (sawtooth, no per-round creep), and the daemon stays ready after the soak.",
+          "description": "Uses `mixed_workload_soak_keeps_counters_and_storage_bounded`: a mixed fanout-write / overlay-exec / command-cancel round over a fixed working set runs many times; active leases and commands return to zero every round, auto-squash keeps manifest depth bounded and reclaims storage as a sawtooth so storage does not creep with round count, and the daemon stays ready after the soak.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
             "pressure-soak",
@@ -1887,17 +1850,16 @@
         "markdown": "readme.md"
       },
       "overview": {
-        "summary": "This module owns the unified live E2E contract for plugin package setup, daemon-hosted PPC service dispatch, workspace refresh, restart behavior, LSP dispatch, and isolated-gating coverage for the sandbox plugin subsystem. It exercises daemon ops `sandbox.plugin.ensure`, `sandbox.plugin.status`, dynamic plugin ops `plugin.generic.query` and `plugin.lsp.query_symbols`, plus `sandbox.file.write`, `sandbox.command.exec`, `sandbox.isolation.enter`, and `sandbox.isolation.exit` for fixture setup and routing gates. Module config lives at `crates/e2e-test/tests/plugin/config/default.test.yml`.",
+        "summary": "This module owns live E2E coverage for the static first-party Pyright LSP provider. It exercises daemon ops `sandbox.plugin.list`, `sandbox.plugin.health`, `sandbox.plugin.pyright_lsp.query_symbols`, `sandbox.plugin.pyright_lsp.definition`, `sandbox.plugin.pyright_lsp.references`, `sandbox.plugin.pyright_lsp.diagnostics`, and `sandbox.file.write` for fixture setup and workspace refresh. Module config lives at `crates/e2e-test/tests/plugin/config/default.test.yml`.",
         "moduleConfig": null,
         "ops": [
-          "sandbox.plugin.ensure",
-          "sandbox.plugin.status",
-          "plugin.generic.query",
-          "plugin.lsp.query_symbols",
-          "sandbox.file.write",
-          "sandbox.command.exec",
-          "sandbox.isolation.enter",
-          "sandbox.isolation.exit"
+          "sandbox.plugin.list",
+          "sandbox.plugin.health",
+          "sandbox.plugin.pyright_lsp.query_symbols",
+          "sandbox.plugin.pyright_lsp.definition",
+          "sandbox.plugin.pyright_lsp.references",
+          "sandbox.plugin.pyright_lsp.diagnostics",
+          "sandbox.file.write"
         ],
         "tags": [
           "plugin"
@@ -1905,113 +1867,41 @@
       },
       "checklist": [
         {
-          "id": "plugin-package-ensure",
-          "title": "Package Ensure",
-          "description": "Warm/cold ensure requests upload when missing, publishes digest-keyed package roots, runs setup, and creates dependency/scratch setup artifacts.",
+          "id": "plugin-pyright-health",
+          "title": "Pyright Health",
+          "description": "Static provider listing and health report Pyright as enabled, initialized, running, and bound to a projected LayerStack manifest.",
           "tags": [
             "plugin"
           ]
         },
         {
-          "id": "plugin-setup-idempotent",
-          "title": "Setup Idempotent",
-          "description": "Re-ensure with matching package and setup digests skips upload/setup and keeps the setup count at one.",
+          "id": "plugin-pyright-symbols",
+          "title": "Pyright Symbols",
+          "description": "Query-symbol requests return live document symbols from the projected workspace.",
           "tags": [
             "plugin"
           ]
         },
         {
-          "id": "plugin-dispatch-roundtrip",
-          "title": "Dispatch Roundtrip",
-          "description": "Dynamic daemon PPC dispatch preserves operation name, request body, envelope success result, package root, and dependency root.",
+          "id": "plugin-pyright-navigation",
+          "title": "Pyright Navigation",
+          "description": "Definition and references requests return locations with repo-relative file paths.",
           "tags": [
             "plugin"
           ]
         },
         {
-          "id": "plugin-service-hosted",
-          "title": "Service Hosted",
-          "description": "Daemon-hosted plugin services start as live PPC workers, connect routes, and report accepted health probes.",
+          "id": "plugin-pyright-refresh",
+          "title": "Pyright Refresh",
+          "description": "Workspace edits refresh the projection and Pyright process before returning navigation results.",
           "tags": [
             "plugin"
           ]
         },
         {
-          "id": "plugin-service-cleanup",
-          "title": "Service Cleanup",
-          "description": "Reload removes old routes, PPC clients, service snapshots, staged uploads, and worker processes. Socket-path unlink is not asserted: `eos-sandbox/crates/operation/src/plugin/process.rs` removes stale socket paths before bind, while `PluginServiceProcess::teardown` only terminates the child process.",
-          "tags": [
-            "plugin"
-          ]
-        },
-        {
-          "id": "plugin-refresh-remount",
-          "title": "Refresh Remount",
-          "description": "A read-only service sees the latest workspace after a LayerStack update and records bounded refresh activity.",
-          "tags": [
-            "plugin"
-          ]
-        },
-        {
-          "id": "plugin-refresh-singleflight",
-          "title": "Refresh Singleflight",
-          "description": "Concurrent refreshes after one workspace edit all observe new content while refresh counts stay bounded.",
-          "tags": [
-            "plugin"
-          ]
-        },
-        {
-          "id": "plugin-restart-policy",
-          "title": "Restart Policy",
-          "description": "The `restart_service` strategy restarts the worker process instead of remounting the workspace.",
-          "tags": [
-            "plugin"
-          ]
-        },
-        {
-          "id": "plugin-isolated-gate",
-          "title": "Isolated Gate",
-          "description": "Plugin dynamic ops are rejected while the caller is in isolated workspace mode and the handle exits cleanly.",
-          "tags": [
-            "plugin"
-          ]
-        },
-        {
-          "id": "plugin-lsp-lifecycle",
-          "title": "Lsp Lifecycle",
-          "description": "The LSP package uses the generic lifecycle, installs node/pyright dependency roots, connects `plugin.lsp.query_symbols`, and returns live workspace symbols.",
-          "tags": [
-            "plugin"
-          ]
-        },
-        {
-          "id": "plugin-write-allowed",
-          "title": "Write Allowed",
-          "description": "Write-allowed or oneshot plugin operations publish only through daemon-owned OCC paths and report changed paths.",
-          "tags": [
-            "plugin"
-          ]
-        },
-        {
-          "id": "plugin-lsp-apply-and-failures",
-          "title": "Lsp Apply And Failures",
-          "description": "LSP read-only queries, workspace edit application, stale edit conflict/retry, and structured setup failures are covered through daemon plugin/LSP flows.",
-          "tags": [
-            "plugin"
-          ]
-        },
-        {
-          "id": "plugin-intent-contract",
-          "title": "Intent Contract",
-          "description": "Missing intent, non-write caller misuse, unbootstrapped plugin calls, and foreign/lifecycle misuse fail fast with stable error payloads.",
-          "tags": [
-            "plugin"
-          ]
-        },
-        {
-          "id": "plugin-reload-dispatch-race",
-          "title": "Reload Dispatch Race",
-          "description": "Concurrent plugin dispatches during a package reload each return a structured payload (success, or a structured error through the worker swap window), the reload succeeds and reconnects the route, and the post-reload steady state runs the reloaded digest with a single worker process.",
+          "id": "plugin-pyright-diagnostics",
+          "title": "Pyright Diagnostics",
+          "description": "Diagnostics reflect broken Python files and clear after a workspace update fixes the file.",
           "tags": [
             "plugin"
           ]
@@ -2019,76 +1909,96 @@
       ],
       "test": [
         {
-          "id": "plugin_package_setup_lifecycle",
-          "name": "plugin_package_setup_lifecycle",
-          "description": "Groups `generic_plugin_lifecycle_reuses_package_setup` and the package/setup portion of `lsp_package_uses_generic_lifecycle_and_dispatches_symbols`: missing packages request upload, staged packages publish digest roots, setup artifacts are created, repeated ensure skips setup, and the generic lifecycle reuses one package setup across phases.",
+          "id": "pyright_lsp_setup_and_health",
+          "name": "pyright_lsp_setup_and_health",
+          "description": "Verifies `sandbox.plugin.list` and `sandbox.plugin.health` expose the static `pyright_lsp` provider, initialized process metadata, capabilities, projection root, and active manifest key.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites plugin --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "plugin-package-ensure",
-            "plugin-setup-idempotent",
-            "plugin-lsp-lifecycle"
+            "plugin-pyright-health"
           ]
         },
         {
-          "id": "plugin_failure_contracts",
-          "name": "plugin_failure_contracts",
-          "description": "Uses `plugin_setup_and_manifest_failures_are_structured`: manifest intent validation and setup-command failures return structured daemon error responses with stable kind/message payloads.",
+          "id": "pyright_lsp_query_symbols",
+          "name": "pyright_lsp_query_symbols",
+          "description": "Writes a Python file through `sandbox.file.write`, queries `sandbox.plugin.pyright_lsp.query_symbols`, and asserts the live function symbol is returned with fresh analyzer state.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites plugin --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "plugin-lsp-apply-and-failures",
-            "plugin-intent-contract"
+            "plugin-pyright-symbols",
+            "plugin-pyright-refresh"
           ]
         },
         {
-          "id": "plugin_service_dispatch_and_health",
-          "name": "plugin_service_dispatch_and_health",
-          "description": "Groups the dispatch and health phases of `generic_plugin_lifecycle_reuses_package_setup` with the LSP dispatch portion of `lsp_package_uses_generic_lifecycle_and_dispatches_symbols`: dynamic PPC routes preserve request/responses, service health probes are accepted, and `plugin.lsp.query_symbols` returns live workspace symbols.",
+          "id": "pyright_lsp_definition_and_references",
+          "name": "pyright_lsp_definition_and_references",
+          "description": "Seeds a small Python package and validates `definition` and `references` return repo-relative locations for the target symbol.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites plugin --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "plugin-dispatch-roundtrip",
-            "plugin-service-hosted",
-            "plugin-lsp-lifecycle"
+            "plugin-pyright-navigation"
           ]
         },
         {
-          "id": "plugin_workspace_refresh_and_restart",
-          "name": "plugin_workspace_refresh_and_restart",
-          "description": "Groups the refresh phase of `generic_plugin_lifecycle_reuses_package_setup`, `concurrent_plugin_refresh_singleflight`, and `restart_service_strategy_restarts_on_workspace_edit`: services must observe LayerStack updates, concurrent stale dispatch shares one daemon refresh, and `restart_service` restarts rather than remounts.",
+          "id": "pyright_lsp_navigation_refreshes_after_update",
+          "name": "pyright_lsp_navigation_refreshes_after_update",
+          "description": "Moves a referenced symbol to another module and proves the static provider refreshes before returning the new definition.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites plugin --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "plugin-refresh-remount",
-            "plugin-refresh-singleflight",
-            "plugin-restart-policy"
+            "plugin-pyright-navigation",
+            "plugin-pyright-refresh"
           ]
         },
         {
-          "id": "plugin_isolated_gate",
-          "name": "plugin_isolated_gate",
-          "description": "Uses `generic_plugin_rejected_in_isolated_workspace`: dynamic plugin operations are rejected with `forbidden_in_isolated_workspace` while the caller is isolated, and the isolated handle exits cleanly afterward.",
+          "id": "pyright_lsp_diagnostics_refreshes_after_update",
+          "name": "pyright_lsp_diagnostics_refreshes_after_update",
+          "description": "Creates a syntax error, verifies diagnostics are returned, rewrites the file, and verifies diagnostics clear with fresh analyzer state.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites plugin --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "plugin-isolated-gate"
+            "plugin-pyright-diagnostics",
+            "plugin-pyright-refresh"
           ]
-        },
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "name": "plugin-disabled",
+      "displayName": "plugin-disabled",
+      "cargoTestName": "plugin-disabled",
+      "folder": "plugin-disabled",
+      "path": "tests/plugin-disabled/mod.rs",
+      "page": "plugin-disabled/index.html",
+      "source": {
+        "markdown": "readme.md"
+      },
+      "overview": {
+        "summary": "This module owns live E2E coverage for disabled static plugin provider rejection. It exercises `sandbox.plugin.pyright_lsp.query_symbols` against a module-local daemon config with `daemon.plugin.enabled_plugins: []`. Module config lives at `crates/e2e-test/tests/plugin-disabled/config/default.test.yml`.",
+        "moduleConfig": null,
+        "ops": [
+          "sandbox.plugin.pyright_lsp.query_symbols"
+        ],
+        "tags": [
+          "plugin-disabled",
+          "plugin",
+          "disabled"
+        ]
+      },
+      "checklist": [
         {
-          "id": "plugin_cleanup_and_write_publish",
-          "name": "plugin_cleanup_and_write_publish",
-          "description": "Groups `package_reload_reaps_old_service_and_routes` and `oneshot_overlay_plugin_write_publishes_through_occ`: package reload replaces dynamic routes, old worker processes, service status, and staged upload roots; write-allowed oneshot overlay operations publish changed paths through daemon-owned OCC. Socket unlink remains unsupported as described in `plugin-service-cleanup`.",
-          "command": "cargo run -p e2e-test --bin e2e-runner -- --suites plugin --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
-          "checklist": [
-            "plugin-service-cleanup",
-            "plugin-write-allowed"
+          "id": "plugin-disabled-pyright",
+          "title": "Pyright",
+          "description": "Disabled Pyright LSP requests return a typed `plugin_disabled` rejection instead of falling through to dynamic dispatch.",
+          "tags": [
+            "plugin-disabled"
           ]
-        },
+        }
+      ],
+      "test": [
         {
-          "id": "plugin_reload_dispatch_race",
-          "name": "plugin_reload_dispatch_race",
-          "description": "Uses `concurrent_dispatch_during_reload_stays_structured`: N `plugin.generic.query` dispatches race an `sandbox.plugin.ensure` package reload; every dispatch returns a structured payload through the worker swap, the reload reconnects the route, and the steady state routes to the reloaded digest with a single worker process.",
-          "command": "cargo run -p e2e-test --bin e2e-runner -- --suites plugin --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+          "id": "pyright_lsp_rejects_when_disabled",
+          "name": "pyright_lsp_rejects_when_disabled",
+          "description": "Calls the static Pyright query-symbol op with the provider disabled and asserts the daemon returns a rejected envelope with `plugin_disabled`.",
+          "command": "cargo run -p e2e-test --bin e2e-runner -- --suites plugin-disabled --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "plugin-reload-dispatch-race",
-            "plugin-service-cleanup",
-            "plugin-refresh-singleflight"
+            "plugin-disabled-pyright"
           ]
         }
       ]

@@ -21,8 +21,8 @@
     "markdown": "readme.md"
   },
   "overview": {
-    "summary": "`pressure` owns cross-subsystem stress coverage for live `eosd`: concurrent direct file ops, reads, ephemeral exec, LayerStack auto-squash, OCC disjoint publish, command cancellation, plugin refresh, isolated handle pressure, post-cancel daemon readiness, and JSON resource reports. It exercises daemon ops including `sandbox.file.write`, `sandbox.file.read`, `sandbox.command.exec`, `sandbox.command.cancel`, `sandbox.command.count`, `sandbox.checkpoint.layer_metrics`, `sandbox.runtime.ready`, `sandbox.plugin.ensure`, `sandbox.plugin.status`, `plugin.generic.query`, and `sandbox.isolation.*`. Module config: `crates/e2e-test/tests/pressure/config/default.test.yml`. This is one unified E2E contract. Configured pressure concurrency is fixed at level `12`; the runner no longer exposes fast/full/heavy pressure lanes.",
-    "moduleConfig": "crates/e2e-test/tests/pressure/config/default.test.yml",
+    "summary": "`pressure` owns cross-subsystem stress coverage for live `eosd`: concurrent direct file ops, reads, ephemeral exec, LayerStack auto-squash, OCC disjoint publish, command cancellation, isolated handle pressure, post-cancel daemon readiness, and JSON resource reports. It exercises daemon ops including `sandbox.file.write`, `sandbox.file.read`, `sandbox.command.exec`, `sandbox.command.cancel`, `sandbox.command.count`, `sandbox.checkpoint.layer_metrics`, `sandbox.runtime.ready`, `sandbox.plugin.list`, and `sandbox.isolation.*`. Module config lives at `crates/e2e-test/tests/pressure/config/default.test.yml`. This is one unified E2E contract. Configured pressure concurrency is fixed at level `12`; the runner no longer exposes fast/full/heavy pressure lanes.",
+    "moduleConfig": null,
     "ops": [
       "sandbox.file.write",
       "sandbox.file.read",
@@ -31,9 +31,7 @@
       "sandbox.command.count",
       "sandbox.checkpoint.layer_metrics",
       "sandbox.runtime.ready",
-      "sandbox.plugin.ensure",
-      "sandbox.plugin.status",
-      "plugin.generic.query",
+      "sandbox.plugin.list",
       "sandbox.isolation.*"
     ],
     "tags": [
@@ -74,14 +72,6 @@
       ]
     },
     {
-      "id": "pressure-ladder-plugin",
-      "title": "Ladder Plugin",
-      "description": "Plugin refresh/dispatch pressure remains coherent at configured levels and keeps refresh/process counts bounded.",
-      "tags": [
-        "pressure"
-      ]
-    },
-    {
       "id": "pressure-isolated-cap",
       "title": "Isolated Cap",
       "description": "Isolated handle pressure either runs under a high-cap config or asserts configured cap rejection above the default limit.",
@@ -108,7 +98,7 @@
     {
       "id": "pressure-resource-report",
       "title": "Resource Report",
-      "description": "E2E runs emit JSON summaries from response meta, trace_resources, and leak counters before strict regression thresholds are introduced.",
+      "description": "E2E runs emit JSON summaries from response meta, trace_resources, plugin list, and leak counters before strict regression thresholds are introduced.",
       "tags": [
         "pressure"
       ]
@@ -116,7 +106,7 @@
     {
       "id": "pressure-bundled-sandbox-capstone",
       "title": "Bundled Sandbox Capstone",
-      "description": "A protocol-only mini-bundle combines scaffold, disjoint writes, same-path conflict, squash, background command, isolated private write, commit projection, and plugin dispatch without agent-loop assertions.",
+      "description": "A protocol-only mini-bundle combines scaffold, disjoint writes, same-path conflict, squash, background command, isolated private write, and commit projection without agent-loop assertions.",
       "tags": [
         "pressure"
       ]
@@ -213,12 +203,11 @@
       ]
     },
     {
-      "id": "pressure-plugin-isolated-cap-matrix",
-      "name": "pressure-plugin-isolated-cap-matrix",
-      "description": "Groups `plugin_refresh_at_12` and `isolated_handle_cap_ladder` to prove plugin refresh/dispatch stays coherent under configured concurrency and isolated handle pressure either succeeds within cap or rejects above cap with a stable payload.",
+      "id": "pressure-isolated-cap-ladder",
+      "name": "pressure-isolated-cap-ladder",
+      "description": "Uses `isolated_handle_cap_ladder` to prove isolated handle pressure either succeeds within cap or rejects above cap with a stable payload.",
       "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
-        "pressure-ladder-plugin",
         "pressure-isolated-cap",
         "pressure-recovery-cleanup"
       ]
@@ -226,12 +215,11 @@
     {
       "id": "pressure-bundled-sandbox-capstone",
       "name": "pressure-bundled-sandbox-capstone",
-      "description": "Uses `protocol_only_bundled_sandbox_capstone`: one live protocol flow combines scaffold write, ephemeral exec publish, same-path OCC contention, squash pressure, isolated private write/discard, lease cleanup, commit-to-workspace, and generic plugin dispatch without asserting agent-loop state.",
+      "description": "Uses `protocol_only_bundled_sandbox_capstone`: one live protocol flow combines scaffold write, ephemeral exec publish, same-path OCC contention, squash pressure, isolated private write/discard, lease cleanup, and commit-to-workspace without asserting agent-loop state.",
       "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
         "pressure-bundled-sandbox-capstone",
         "pressure-sandbox-only-boundary",
-        "pressure-ladder-plugin",
         "pressure-isolated-cap",
         "pressure-ladder-occ",
         "pressure-squash-bound"
@@ -240,7 +228,7 @@
     {
       "id": "pressure-resource-report-and-leak-oracles",
       "name": "pressure-resource-report-and-leak-oracles",
-      "description": "`resource_report_smoke` emits one JSON artifact covering response meta steps, trace resource samples, cgroup memory.current gauges, runtime readiness, plugin status, isolated-open state, and leak counters after file, exec, command, and OCC-backed write samples.",
+      "description": "`resource_report_smoke` emits one JSON artifact covering response meta steps, trace resource samples, cgroup memory.current gauges, runtime readiness, plugin list, isolated-open state, and leak counters after file, exec, command, and OCC-backed write samples.",
       "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
         "pressure-resource-report",
@@ -249,7 +237,6 @@
         "pressure-ladder-exec",
         "pressure-ladder-command",
         "pressure-ladder-occ",
-        "pressure-ladder-plugin",
         "pressure-isolated-cap",
         "pressure-squash-bound",
         "pressure-recovery-cleanup"
@@ -304,7 +291,7 @@
     {
       "id": "pressure-mixed-workload-soak",
       "name": "pressure-mixed-workload-soak",
-      "description": "Uses `mixed_workload_soak_keeps_counters_and_storage_bounded`: a mixed fanout-write / overlay-exec / command-cancel round over a fixed working set runs many times; active leases and commands return to zero every round, auto-squash keeps manifest depth bounded and reclaims storage (sawtooth, no per-round creep), and the daemon stays ready after the soak.",
+      "description": "Uses `mixed_workload_soak_keeps_counters_and_storage_bounded`: a mixed fanout-write / overlay-exec / command-cancel round over a fixed working set runs many times; active leases and commands return to zero every round, auto-squash keeps manifest depth bounded and reclaims storage as a sawtooth so storage does not creep with round count, and the daemon stays ready after the soak.",
       "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
         "pressure-soak",

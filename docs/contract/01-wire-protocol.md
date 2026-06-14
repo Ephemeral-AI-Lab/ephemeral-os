@@ -441,7 +441,7 @@ accept-queue refusal right after spawn / under parallel load.
 2. **If result is NOT 97 AND not (empty-response-98 AND op is retryable)** → return it
    (`:300-303`). Retryable = NOT a mutation op: excludes `api.edit_file`,
    `api.v1.edit_file`, `api.write_file`, `api.v1.write_file`, `api.v1.shell`, and any
-   `plugin.*` op (`_can_retry_empty_response`, `:577-592`). Mutation ops **fail closed**
+   static `sandbox.plugin.*` op (`_can_retry_empty_response`, `:577-592`). Mutation ops **fail closed**
    on empty response to avoid replaying a write after a daemon respawn.
 3. Otherwise **respawn the daemon** via `exec_fn(... _daemon_spawn_command ...)`,
    timeout `_DAEMON_SPAWN_TIMEOUT = 20`s (`:40,305-309`). If spawn exits non-zero,

@@ -8,7 +8,7 @@
 
 use std::time::{Duration, Instant};
 
-use anyhow::{Context, Result};
+use anyhow::{ensure, Context, Result};
 use e2e_test::client::TraceWireContext;
 use protocol::catalog;
 use serde_json::{json, Value};
@@ -240,7 +240,7 @@ fn live_trace_isolated_enter_exec_status_exit_records_one_chain() -> Result<()> 
         )?;
         let mut records = vec![enter_record, trace_record(&exec)?];
         let exec = finalize_traced_command(&lease, &trace_id, exec, &mut records)?;
-        assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
+        ensure!(as_str(&exec, "status")? == "ok", "{exec}");
 
         let status = lease.call_traced(
             catalog::SANDBOX_ISOLATION_STATUS,
@@ -249,7 +249,7 @@ fn live_trace_isolated_enter_exec_status_exit_records_one_chain() -> Result<()> 
         )?;
         let status_record = trace_record(&status)?;
         let status_result = envelope_result(&status)?;
-        assert!(as_bool(status_result, "open")?, "{status}");
+        ensure!(as_bool(status_result, "open")?, "{status}");
 
         let heartbeat = lease.call_traced(
             catalog::SANDBOX_CALL_HEARTBEAT,
@@ -258,7 +258,7 @@ fn live_trace_isolated_enter_exec_status_exit_records_one_chain() -> Result<()> 
         )?;
         let heartbeat_record = trace_record(&heartbeat)?;
         let heartbeat_result = envelope_result(&heartbeat)?;
-        assert_eq!(as_i64(heartbeat_result, "touched")?, 0, "{heartbeat}");
+        ensure!(as_i64(heartbeat_result, "touched")? == 0, "{heartbeat}");
 
         let exit = lease.call_traced(
             catalog::SANDBOX_ISOLATION_EXIT,
@@ -404,10 +404,11 @@ fn finalize_traced_command(
     response: Value,
     records: &mut Vec<TraceRecord>,
 ) -> Result<Value> {
-    if as_str(&response, "status")? != "running" {
-        return Ok(envelope_result(&response)?.clone());
+    let response_result = envelope_result(&response)?.clone();
+    if as_str(&response_result, "status")? != "running" {
+        return Ok(response_result);
     }
-    let command_id = as_str(envelope_result(&response)?, "command_id")?.to_owned();
+    let command_id = as_str(&response_result, "command_id")?.to_owned();
     let deadline = Instant::now() + Duration::from_secs(20);
     let mut poll_index = 0;
     loop {
@@ -418,8 +419,9 @@ fn finalize_traced_command(
             &trace_context(trace_id, &format!("poll-{poll_index}")),
         )?;
         records.push(trace_record(&progress)?);
-        if as_str(&progress, "status")? != "running" {
-            return Ok(envelope_result(&progress)?.clone());
+        let progress_result = envelope_result(&progress)?.clone();
+        if as_str(&progress_result, "status")? != "running" {
+            return Ok(progress_result);
         }
         if Instant::now() >= deadline {
             anyhow::bail!("command {command_id} did not finish before deadline: {progress}");

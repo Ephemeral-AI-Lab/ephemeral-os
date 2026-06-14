@@ -37,7 +37,8 @@ fn main() -> Result<()> {
     }
 }
 
-/// Regenerate `docs/API.md` from the committed `crates/operation/ops.json`.
+/// Regenerate `docs/API.md` from the committed
+/// `crates/daemon/operation/ops.json`.
 fn gen_docs() -> Result<()> {
     let root = workspace_root()?;
     let rendered = render_api_doc(&root)?;
@@ -47,13 +48,14 @@ fn gen_docs() -> Result<()> {
     Ok(())
 }
 
-/// Render the API doc deterministically from `crates/operation/ops.json`.
+/// Render the API doc deterministically from
+/// `crates/daemon/operation/ops.json`.
 fn render_api_doc(root: &Path) -> Result<String> {
     let ops_path = op_catalog_path(root);
     let document: serde_json::Value = serde_json::from_str(
         &fs::read_to_string(&ops_path).with_context(|| format!("read {}", ops_path.display()))?,
     )
-    .context("parse crates/operation/ops.json")?;
+    .context("parse crates/daemon/operation/ops.json")?;
     let protocol_version = document
         .get("protocol_version")
         .and_then(serde_json::Value::as_i64)
@@ -100,7 +102,7 @@ fn render_api_doc(root: &Path) -> Result<String> {
     let mut body = String::new();
     body.push_str("# Sandbox API — op catalog\n\n");
     body.push_str(
-        "GENERATED from `crates/operation/ops.json` by `cargo run -p xtask -- gen-docs`.\n\
+        "GENERATED from `crates/daemon/operation/ops.json` by `cargo run -p xtask -- gen-docs`.\n\
          Do not edit by hand: `cargo run -p xtask -- check-contract` fails when\n\
          this file drifts from the committed catalog.\n\n",
     );
@@ -140,15 +142,16 @@ fn render_api_doc(root: &Path) -> Result<String> {
         body.push('\n');
     }
     body.push_str(
-        "## Dynamic plugin ops\n\n`plugin.<id>.<op>` names are registered at runtime by plugin \
-         services inside a sandbox. They are daemon-served, public, and treated as mutating \
-         (fail-closed) by the recovery ladder; they never appear in the static catalog.\n",
+        "## Plugin providers\n\nFirst-party plugin providers are static catalog entries under \
+         `sandbox.plugin.*`. The initial provider is `sandbox.plugin.pyright_lsp.*`; dynamic \
+         plugin-op forwarding is not part of the public API.\n",
     );
     Ok(body)
 }
 
 /// The CI drift gate for the sandbox contract:
-/// 1. `eosd dump-ops` must equal the committed `crates/operation/ops.json`.
+/// 1. `eosd dump-ops` must equal the committed
+///    `crates/daemon/operation/ops.json`.
 /// 2. Name integrity: canonical names unique.
 /// 3. Both sides' conformance test suites pass against `contract/fixtures/`.
 fn check_contract() -> Result<()> {
@@ -164,8 +167,8 @@ fn check_contract() -> Result<()> {
     )?;
     if committed != generated {
         bail!(
-            "crates/operation/ops.json is stale: regenerate with \
-             `cargo run -p eosd -- dump-ops > crates/operation/ops.json`"
+            "crates/daemon/operation/ops.json is stale: regenerate with \
+             `cargo run -p eosd -- dump-ops > crates/daemon/operation/ops.json`"
         );
     }
     check_name_integrity(&committed)?;
@@ -270,11 +273,11 @@ fn listed_test_count(stdout: &str) -> usize {
 
 fn check_name_integrity(ops_json: &str) -> Result<()> {
     let document: serde_json::Value =
-        serde_json::from_str(ops_json).context("parse crates/operation/ops.json")?;
+        serde_json::from_str(ops_json).context("parse crates/daemon/operation/ops.json")?;
     let ops = document
         .get("ops")
         .and_then(serde_json::Value::as_array)
-        .context("crates/operation/ops.json must carry an `ops` array")?;
+        .context("crates/daemon/operation/ops.json must carry an `ops` array")?;
 
     let mut names = std::collections::BTreeSet::new();
     for op in ops {
@@ -283,7 +286,7 @@ fn check_name_integrity(ops_json: &str) -> Result<()> {
             .and_then(serde_json::Value::as_str)
             .context("catalog op missing `name`")?;
         if !names.insert(name) {
-            bail!("canonical name claimed twice in crates/operation/ops.json: {name}");
+            bail!("canonical name claimed twice in crates/daemon/operation/ops.json: {name}");
         }
         let served_by = op
             .get("served_by")
@@ -582,7 +585,10 @@ fn workspace_root() -> Result<PathBuf> {
 }
 
 fn op_catalog_path(root: &Path) -> PathBuf {
-    root.join("crates").join("operation").join("ops.json")
+    root.join("crates")
+        .join("daemon")
+        .join("operation")
+        .join("ops.json")
 }
 
 fn absolutize(root: &Path, path: &Path) -> PathBuf {
@@ -688,11 +694,11 @@ fn read_protocol_version(root: &Path) -> Result<i64> {
     let document: serde_json::Value = serde_json::from_str(
         &fs::read_to_string(&path).with_context(|| format!("read {}", path.display()))?,
     )
-    .context("parse crates/operation/ops.json")?;
+    .context("parse crates/daemon/operation/ops.json")?;
     document
         .get("protocol_version")
         .and_then(serde_json::Value::as_i64)
-        .context("crates/operation/ops.json missing protocol_version")
+        .context("crates/daemon/operation/ops.json missing protocol_version")
 }
 
 fn write_protocol_version(out_dir: &Path, protocol_version: i64) -> Result<()> {
@@ -786,10 +792,10 @@ fn print_help() {
 xtask commands:
   package [--target <triple>] [--out-dir <dir>] [--builder rust-lld|cargo|cross] [--no-build]
           [--sign --minisign-key <path>]
-  check-contract    verify crates/operation/ops.json matches `eosd dump-ops`, alias
+  check-contract    verify crates/daemon/operation/ops.json matches `eosd dump-ops`, alias
                     integrity holds, docs/API.md is fresh, and the
                     conformance suites pass
-  gen-docs          regenerate docs/API.md from crates/operation/ops.json
+  gen-docs          regenerate docs/API.md from crates/daemon/operation/ops.json
 
 Targets:
   {AMD64_TARGET} -> eosd-linux-amd64

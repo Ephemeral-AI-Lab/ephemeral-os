@@ -119,7 +119,7 @@ legacy wrapper vocabulary.
 | Serde-derived inputs (`type Input: DeserializeOwned`) | v2 | Breaks the five pinned parse-error spellings and key-check order (§4); inputs are hand-parsed, **outputs** are serde-rendered — the asymmetry is the design |
 | `MutationWire` explicit-key renderer with `Value`-typed fields | op-io | Superseded by `MutationCore` + typed enums under the corrected acceptance bar (§1.4). Keeping a hand-rolled renderer forever forfeits "core types are the contract" |
 | Runtime-state families exempt from typed outputs | op-io | The D12 inversion closes the hole; accepted churn |
-| Untyped `raw: Value` plugin input objects | op-io | v2's D10 typed `PluginEnsureInput`/`PluginStatusInput` end F9 (`&Value` penetrating two layers into operation); only the dynamic `plugin.<id>.*` payload stays `Value` by nature |
+| Untyped `raw: Value` plugin input objects | op-io | Static first-party plugin DTOs end F9 (`&Value` penetrating two layers into operation); legacy dynamic provisioning DTOs are internal-only |
 
 ### 1.4 The one bar change, stated honestly
 
@@ -171,7 +171,7 @@ crates/operation/src/
 ├── command/      contract.rs (relocated DTOs + CommandMetadata + CommandStatus),
 │                 lib.rs, outcome.rs, prepare.rs, registry.rs, runtime.rs,
 │                 service.rs, settle.rs
-├── plugin/       contract.rs (PluginEnsureInput/PluginStatusInput/outputs),
+├── plugin/       contract.rs (PluginListInput/PluginHealthInput/Pyright DTOs),
 │                 + existing modules
 ├── control/      contract.rs ONLY   (DTOs + parse; behavior stays daemon — D12)
 ├── isolation/    contract.rs ONLY
@@ -218,9 +218,9 @@ the shared helpers, and the `parse` entry point are the only core-owned parts.
    │ dispatcher: request shell checks (unchanged, OUTSIDE the funnel — raw messages)
    ▼
 BuiltinOp::from_op_name(op)                      ── catalog, macro-generated
-   │  None ──────────────────────────────► "plugin." registry fallback (raw Value,
-   │  Err(NotDaemonServed) ──────────────►  gate-before-route unchanged), else
-   ▼                                        unknown_op error response (details {"op": name})
+   │  None ──────────────────────────────► unknown_op error response (details {"op": name})
+   │  Err(NotDaemonServed) ──────────────► host-boundary forbidden error
+   ▼
 OpRequest::parse(op, &args, invocation_id)       ── ONE parse site (core/request.rs →
    │  Err(Args) ── family→channel map ──►   family contract.rs), wire-pure inputs
    ▼
@@ -281,8 +281,12 @@ pub enum OpRequest {
     ReadFile(ReadFileInput),
     WriteFile(WriteFileInput),
     EditFile(EditFileInput),
-    PluginEnsure(PluginEnsureInput),
-    PluginStatus(PluginStatusInput),
+    PluginList(PluginListInput),
+    PluginHealth(PluginHealthInput),
+    PyrightLspQuerySymbols(PyrightLspQuerySymbolsInput),
+    PyrightLspDefinition(PyrightLspDefinitionInput),
+    PyrightLspReferences(PyrightLspReferencesInput),
+    PyrightLspDiagnostics(PyrightLspDiagnosticsInput),
     IsolatedWorkspaceEnter(IsolationEnterInput),
     IsolatedWorkspaceExit(IsolationExitInput),
     IsolatedWorkspaceStatus(IsolationStatusInput),
@@ -344,22 +348,16 @@ impl WriteFileInput {
 ```
 
 ```rust
-// plugin/contract.rs — D10: &Value stops penetrating ensure/overlay/dispatch (F9).
-// Defaults verified against live code (plugin.rs:27-53): start_services FALSE;
-// probe_services FALSE and probe_timeout_ms are STATUS-only args.
-pub struct PluginEnsureInput {
-    pub plugin: Option<String>,
-    pub digest: Option<String>,
-    pub manifest: Option<serde_json::Value>,  // the genuinely dynamic part
-    pub start_services: bool,                 // default false
+// plugin/contract.rs — D10: static first-party provider DTOs.
+pub struct PyrightLspDefinitionInput {
+    pub file_path: String,
+    pub position: LspPositionInput,
     pub caller: CallerId,
 }
-pub struct PluginStatusInput {
-    pub probe_services: bool,                 // default false
-    pub probe_timeout_ms: Option<u64>,
+pub struct PluginHealthInput {
+    pub layer_stack_root: Option<String>,
+    pub caller: CallerId,
 }
-// Dynamic `plugin.<id>.*` payloads stay Value — runtime-discovered, outside
-// the static schema by design.
 ```
 
 **Binding parse rules** (all carried from the verified record):
@@ -503,8 +501,8 @@ pub struct OpError {
 // today travel as Ok(error_json(…)) become OpResponse::Refused(OpError) with
 // byte-identical rendering. The command not-found synthetic is NOT an error —
 // it stays a CommandResponse-shaped output. Family-internal enums
-// (CheckpointError, PluginRuntimeError/PpcError, IsolatedError) stay
-// heterogeneous; they map via From at the op boundary.
+// (CheckpointError, PluginRuntimeError, IsolatedError) stay heterogeneous;
+// they map via From at the op boundary.
 
 // id.rs — F14: nothing below owns identity types; conversion at the
 // substrate boundary, no dependency changes.
@@ -556,18 +554,17 @@ pub enum OpResponseErrorKind {
 ```
 
 Deliberately OUTSIDE the funnel (verified expressiveness gaps): request
-shell-check errors (raw messages, no Display prefix), the unknown_op error response
-(`details {"op": name}`, byte-pinned by fixture), and the `plugin.*` registry
-fallback — all early-return finished `Value`s through `finalize`, exactly as
-today. The **five** `#[expect(clippy::unnecessary_wraps)]` handlers
+shell-check errors (raw messages, no Display prefix) and the unknown_op error response
+(`details {"op": name}`, byte-pinned by fixture) early-return finished `Value`s.
+The **five** `#[expect(clippy::unnecessary_wraps)]` handlers
 (`control.rs:65,92,119`, `command.rs:142,159`) become honest infallible
 returns.
 
 `DaemonError` stays daemon-internal. Builtin dispatch arms convert it into
 `OpResponseError` before returning an `OpResponse`, so `operation` owns the
 response contract without depending on `daemon`. The daemon still owns final
-transport duties: shell-check early returns, plugin fallback/unknown-op
-short-circuiting, runtime timing splices, and newline framing.
+transport duties: shell-check early returns, unknown-op short-circuiting,
+runtime timing splices, and newline framing.
 
 ### 7.2 Dispatcher
 
@@ -587,7 +584,13 @@ pub fn dispatch_with_context(request: &Request, context: DispatchContext<'_>) ->
                 );
             }
         },
-        None => return finalize(plugin_fallback_or_unknown(request, context)),
+        None => {
+            return error_response(
+                ErrorKind::UnknownOp,
+                format!("unknown op: {}", request.op),
+                json!({"op": request.op}),
+            );
+        }
     };
     finalize(response.into_wire())
 }
@@ -609,7 +612,7 @@ command defaults from the process-global config; binding-probe-then-
 `MissingLayerStackRoot` ordering with identical error text; post-op
 `workspace.touch`; the exec isolated-branch `binding.caller_id` overwrite of
 the parsed value (one explicit post-parse line, `op_adapter/command.rs:103-113`);
-plugin PPC gate before any use of lifted fields.
+static plugin provider caller gates run before provider work.
 
 ### 7.3 Command contract relocation
 
@@ -704,9 +707,12 @@ and `Output` structs live in the named `contract.rs`.
 | `sandbox.file.write` | `WriteFileInput { path, content, overwrite, caller, layer_stack_root? }` | `WorkspaceMutationOutcome` | |
 | `sandbox.file.edit` | `EditFileInput { edits, path, caller, layer_stack_root? }` | `WorkspaceMutationOutcome` | |
 | **plugin/contract.rs** | | | operation::plugin |
-| `sandbox.plugin.ensure` | `PluginEnsureInput` (§4) | `PluginEnsureOutput` (enum `NeedsUpload` \| `Ready`) | |
-| `sandbox.plugin.status` | `PluginStatusInput` (§4) | `PluginStatusOutput { loaded_plugins, running_service_processes, … }` | |
-| *(dynamic `plugin.<id>.*`)* | `Value` by design | `PluginDispatchOutcome` unchanged | |
+| `sandbox.plugin.list` | `PluginListInput` | `PluginListOutput { providers }` | |
+| `sandbox.plugin.health` | `PluginHealthInput` | `PluginHealthOutput { providers }` | |
+| `sandbox.plugin.pyright_lsp.query_symbols` | `PyrightLspQuerySymbolsInput` | `PyrightLspQuerySymbolsOutput { provider, manifest_key, freshness, stale, symbols }` | |
+| `sandbox.plugin.pyright_lsp.definition` | `PyrightLspDefinitionInput` | `PyrightLspLocationsOutput { provider, manifest_key, freshness, stale, locations }` | |
+| `sandbox.plugin.pyright_lsp.references` | `PyrightLspReferencesInput` | `PyrightLspLocationsOutput { provider, manifest_key, freshness, stale, locations }` | |
+| `sandbox.plugin.pyright_lsp.diagnostics` | `PyrightLspDiagnosticsInput` | `PyrightLspDiagnosticsOutput { provider, manifest_key, freshness, stale, diagnostics }` | |
 | **command/contract.rs** | | | operation::command |
 | `sandbox.command.exec` | `ExecCommandInput { cmd, caller, layer_stack_root?, timeout?, yield_time_ms? }` | `CommandResponse` (§7.3) | top-level `invocation_id` is the exec identity |
 | `sandbox.command.write_stdin` | `WriteStdinInput { command_session_id, chars, yield_time_ms? }` | `CommandResponse` | |
@@ -772,7 +778,7 @@ and `Output` structs live in the named `contract.rs`.
 | Shared wire-message wrapper across the trust boundary | **Upheld rejection** | §10.5 |
 | `AuditRecord`/journal revival | **Upheld rejection** | Removed 2026-06-11; live remainder is `MutationSource` |
 | Checkpoint `f64` timings split | **Upheld** | Wire-mirror one-to-one |
-| Dynamic `plugin.*` typed payloads | **Upheld rejection** | Open namespace is contract |
+| Dynamic `plugin.*` typed payloads | **Upheld rejection** | The open namespace is retired; static providers use cataloged `sandbox.plugin.*` ops |
 
 ## 12. Migration plan
 
