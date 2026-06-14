@@ -1,4 +1,4 @@
-use operation::plugin::contract::{PluginHealthInput, PluginListInput};
+use plugin_contract::{PluginHealthInput, PluginListInput};
 use serde_json::Value;
 
 use crate::error::DaemonError;
@@ -10,7 +10,7 @@ pub(crate) fn op_list(
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let services = context.require_services()?;
-    services.ensure_plugin_caller_allowed(&input.caller)?;
+    services.ensure_plugin_caller_allowed(input.caller.as_str())?;
     Ok(ok_envelope(services.plugin.builtin_plugin_list()))
 }
 
@@ -19,7 +19,7 @@ pub(crate) fn op_health(
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let services = context.require_services()?;
-    services.ensure_plugin_caller_allowed(&input.caller)?;
+    services.ensure_plugin_caller_allowed(input.caller.as_str())?;
     let output = services
         .plugin
         .builtin_plugin_health(input.layer_stack_root.as_deref())?;

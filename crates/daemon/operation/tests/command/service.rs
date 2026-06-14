@@ -1,5 +1,6 @@
 use crate::command::registry::CompletionBufferEviction;
 use command::process::{CommandFinalResponsePersistence, CommandPersistenceOutcome, KillReason};
+use command::CollectCompleted;
 use std::path::PathBuf;
 use trace::{SpanKind, SpanStatus, TraceKind, TraceLinkKind};
 
@@ -398,6 +399,53 @@ fn spawn_process_returns_runner_request_artifact_failure_event() {
     let _ = std::fs::remove_dir_all(root);
 }
 
+#[test]
+fn recover_orphaned_command_without_process_metadata_finalizes_prepared_never_started() {
+    let (ops, scratch_root, command_dir) = command_ops_with_orphan_dir("cmd_prepared_only");
+    write_orphan_metadata(&command_dir, "cmd_prepared_only");
+
+    ops.recover_orphaned_commands();
+
+    let output = ops.collect_completed(&CollectCompleted {
+        command_ids: Some(vec!["cmd_prepared_only".to_owned()]),
+        caller_id: None,
+    });
+    assert_eq!(output.completions.len(), 1);
+    assert_eq!(
+        output.completions[0].result.stderr,
+        "orphan_recovered: prepared command never started before daemon restart"
+    );
+    assert!(!command_dir.exists());
+
+    let _ = std::fs::remove_dir_all(scratch_root);
+}
+
+#[test]
+fn recover_orphaned_command_with_malformed_process_metadata_records_recovery_reason() {
+    let (ops, scratch_root, command_dir) = command_ops_with_orphan_dir("cmd_malformed_process");
+    write_orphan_metadata(&command_dir, "cmd_malformed_process");
+    std::fs::write(
+        command_dir.join(command::process::PROCESS_METADATA_FILE),
+        b"{bad-json",
+    )
+    .expect("write malformed process metadata");
+
+    ops.recover_orphaned_commands();
+
+    let output = ops.collect_completed(&CollectCompleted {
+        command_ids: Some(vec!["cmd_malformed_process".to_owned()]),
+        caller_id: None,
+    });
+    assert_eq!(output.completions.len(), 1);
+    assert_eq!(
+        output.completions[0].result.stderr,
+        "orphan_recovered: malformed process metadata after daemon restart"
+    );
+    assert!(!command_dir.exists());
+
+    let _ = std::fs::remove_dir_all(scratch_root);
+}
+
 fn command_ops_with_inactive_isolated_run(id: &str, caller_id: &str) -> CommandOps {
     let ops = CommandOps::new(command::CommandConfig::default());
     let root = std::env::temp_dir().join(format!(
@@ -445,4 +493,32 @@ fn command_ops_with_inactive_isolated_run(id: &str, caller_id: &str) -> CommandO
             },
         })));
     ops
+}
+
+fn command_ops_with_orphan_dir(id: &str) -> (CommandOps, PathBuf, PathBuf) {
+    let scratch_root = std::env::temp_dir().join(format!(
+        "operation-command-orphan-{}-{id}",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&scratch_root);
+    let command_dir = scratch_root.join(id);
+    std::fs::create_dir_all(&command_dir).expect("create orphan command dir");
+    let ops = CommandOps::new(command::CommandConfig {
+        scratch_root: scratch_root.clone(),
+        ..command::CommandConfig::default()
+    });
+    (ops, scratch_root, command_dir)
+}
+
+fn write_orphan_metadata(command_dir: &std::path::Path, command_id: &str) {
+    std::fs::write(
+        command_dir.join("metadata.json"),
+        serde_json::to_vec(&json!({
+            "command_id": command_id,
+            "caller_id": "caller",
+            "command": "echo ok",
+        }))
+        .expect("orphan metadata serializes"),
+    )
+    .expect("write orphan metadata");
 }

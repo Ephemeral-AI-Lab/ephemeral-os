@@ -4,6 +4,7 @@
 |---|---|
 | `SPEC.md` | The target architecture spec the sandbox system implements (components, wire protocol, op catalog, lifecycle, recovery, conformance). |
 | `sandbox-architecture-7-to-9_SPEC.md` | Draft remediation spec for moving the live sandbox architecture from the review baseline toward a 9/10 target. |
+| `daemon-workspace-7-to-9_SPEC.md` | Draft daemon-only remediation spec for moving `crates/daemon` from the June 14 review baseline toward a 9/10 target. |
 | `API.md` | The public op reference. **Generated** from `../crates/daemon/operation/ops.json` via `cargo run -p xtask -- gen-docs`; `check-contract` fails when stale. |
 | `contract/01-wire-protocol.md` | FROZEN: the full daemon wire contract (framing, wire messages, auth, limits, error catalog) with source citations. |
 | `contract/02-cas-byte-identity.md` | FROZEN: the two CAS content hashes, byte-for-byte, plus the 18 golden cases' law. |

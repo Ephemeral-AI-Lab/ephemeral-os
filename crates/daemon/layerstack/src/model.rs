@@ -22,6 +22,10 @@ pub enum CasError {
 pub struct LayerPath(String);
 
 impl LayerPath {
+    /// Parse a daemon layer path.
+    ///
+    /// Layer paths are UTF-8 contract paths. Overlay capture rejects
+    /// non-UTF-8 filesystem paths before constructing this type.
     pub fn parse(path: &str) -> Result<Self, CasError> {
         let raw = path.replace('\\', "/");
         let raw = raw.trim();

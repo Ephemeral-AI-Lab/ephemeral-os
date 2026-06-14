@@ -195,7 +195,8 @@ impl CommandOps {
                         .and_then(Value::as_str)
                         .unwrap_or_default();
                     if !id.is_empty() {
-                        terminate_recovered_process_group(recovered_process_group_id(&path));
+                        let recovered_process = classify_recovered_command(&path);
+                        terminate_recovered_process_group(recovered_process.process_group_id());
                         let caller_id = meta
                             .get("caller_id")
                             .and_then(Value::as_str)
@@ -208,7 +209,7 @@ impl CommandOps {
                             status: CommandStatus::Error,
                             exit_code: Some(1),
                             stdout: String::new(),
-                            stderr: "orphan_recovered: daemon restarted".to_owned(),
+                            stderr: recovered_process.stderr().to_owned(),
                             command_id: Some(crate::CommandId::new(id.to_owned())),
                             finalized: None,
                         };
@@ -348,12 +349,55 @@ impl CommandOps {
     }
 }
 
-fn recovered_process_group_id(command_dir: &std::path::Path) -> Option<i32> {
-    let bytes = std::fs::read(command_dir.join(PROCESS_METADATA_FILE)).ok()?;
-    CommandProcessMetadata::from_slice(&bytes)
-        .ok()?
-        .process_group_id
-        .filter(|pgid| *pgid > 0)
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum RecoveredCommandProcess {
+    PreparedNeverStarted,
+    SpawnedTracked { process_group_id: Option<i32> },
+    MalformedProcessMetadata { error: String },
+}
+
+impl RecoveredCommandProcess {
+    const fn process_group_id(&self) -> Option<i32> {
+        match self {
+            Self::SpawnedTracked { process_group_id } => *process_group_id,
+            Self::PreparedNeverStarted | Self::MalformedProcessMetadata { .. } => None,
+        }
+    }
+
+    fn stderr(&self) -> &str {
+        match self {
+            Self::PreparedNeverStarted => {
+                "orphan_recovered: prepared command never started before daemon restart"
+            }
+            Self::SpawnedTracked { .. } => "orphan_recovered: daemon restarted",
+            Self::MalformedProcessMetadata { .. } => {
+                "orphan_recovered: malformed process metadata after daemon restart"
+            }
+        }
+    }
+}
+
+fn classify_recovered_command(command_dir: &std::path::Path) -> RecoveredCommandProcess {
+    let path = command_dir.join(PROCESS_METADATA_FILE);
+    let bytes = match std::fs::read(&path) {
+        Ok(bytes) => bytes,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return RecoveredCommandProcess::PreparedNeverStarted;
+        }
+        Err(error) => {
+            return RecoveredCommandProcess::MalformedProcessMetadata {
+                error: error.to_string(),
+            };
+        }
+    };
+    match CommandProcessMetadata::from_slice(&bytes) {
+        Ok(metadata) => RecoveredCommandProcess::SpawnedTracked {
+            process_group_id: metadata.process_group_id.filter(|pgid| *pgid > 0),
+        },
+        Err(error) => RecoveredCommandProcess::MalformedProcessMetadata {
+            error: error.to_string(),
+        },
+    }
 }
 
 fn terminate_recovered_process_group(process_group_id: Option<i32>) {
@@ -386,18 +430,48 @@ mod recovery_tests {
             serde_json::to_vec(&CommandProcessMetadata::new(Some(12345)))?,
         )?;
 
-        assert_eq!(recovered_process_group_id(&root), Some(12345));
+        assert_eq!(
+            classify_recovered_command(&root).process_group_id(),
+            Some(12345)
+        );
 
         std::fs::write(
             root.join(PROCESS_METADATA_FILE),
             serde_json::to_vec(&CommandProcessMetadata::new(Some(0)))?,
         )?;
-        assert_eq!(recovered_process_group_id(&root), None);
+        assert_eq!(classify_recovered_command(&root).process_group_id(), None);
         std::fs::write(
             root.join(PROCESS_METADATA_FILE),
             br#"{"process_group_id":2147483648}"#,
         )?;
-        assert_eq!(recovered_process_group_id(&root), None);
+        assert_eq!(classify_recovered_command(&root).process_group_id(), None);
+
+        let _ = std::fs::remove_dir_all(root);
+        Ok(())
+    }
+
+    #[test]
+    fn classify_recovered_command_distinguishes_missing_and_malformed_process_metadata(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let root = std::env::temp_dir().join(format!(
+            "operation-command-recovery-classify-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)?
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&root)?;
+
+        assert_eq!(
+            classify_recovered_command(&root),
+            RecoveredCommandProcess::PreparedNeverStarted
+        );
+
+        std::fs::write(root.join(PROCESS_METADATA_FILE), b"{not-json")?;
+        assert!(matches!(
+            classify_recovered_command(&root),
+            RecoveredCommandProcess::MalformedProcessMetadata { .. }
+        ));
 
         let _ = std::fs::remove_dir_all(root);
         Ok(())

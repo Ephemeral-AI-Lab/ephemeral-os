@@ -3,7 +3,6 @@ use serde_json::json;
 use command::{CollectCompleted, ReadCommandProgress};
 use config::configs::daemon::PluginRuntimeConfig;
 use config::configs::isolated_workspace::IsolatedWorkspaceConfig;
-use namespace::protocol::{RunRequest, RunResult};
 use operation::command::contract::{
     CancelCommandInput, CommandCompletion, CommandResponse, CommandStatus, ExecCommandInput,
     ReadProgressInput, WriteStdinInput,
@@ -11,11 +10,6 @@ use operation::command::contract::{
 use operation::control::contract::CallerCountInput;
 use operation::{CommandId, OpRequest};
 use protocol::catalog::BuiltinOp;
-use std::path::Path;
-use std::process::Child;
-use std::sync::Arc;
-use std::time::Duration;
-use workspace::{LaunchError, NsRunnerLauncher};
 
 use super::*;
 
@@ -340,39 +334,7 @@ fn test_services() -> crate::RuntimeServices {
         PluginRuntimeConfig::default(),
         IsolatedWorkspaceConfig::default(),
         command::CommandConfig::default(),
-        Arc::new(NoLaunch),
     )
-}
-
-struct NoLaunch;
-
-impl NsRunnerLauncher for NoLaunch {
-    fn run(&self, _request: &RunRequest) -> Result<RunResult, LaunchError> {
-        Err(LaunchError::Failed(
-            "command unit tests do not start ns-runner".to_owned(),
-        ))
-    }
-
-    fn spawn_detached(
-        &self,
-        _request: &RunRequest,
-        _stderr_path: &Path,
-    ) -> Result<Child, LaunchError> {
-        Err(LaunchError::Failed(
-            "command unit tests do not start ns-runner".to_owned(),
-        ))
-    }
-
-    fn remount_in(
-        &self,
-        _target_pid: u32,
-        _request: &RunRequest,
-        _timeout: Duration,
-    ) -> Result<(), LaunchError> {
-        Err(LaunchError::Failed(
-            "command unit tests do not start ns-runner".to_owned(),
-        ))
-    }
 }
 
 fn parse_exec_input(args: serde_json::Value) -> Result<ExecCommandInput, operation::RequestError> {

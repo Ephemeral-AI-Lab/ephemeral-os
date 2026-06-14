@@ -29,8 +29,8 @@ impl TreeResourceStats {
     }
 }
 
-impl From<overlay::CaptureStats> for TreeResourceStats {
-    fn from(stats: overlay::CaptureStats) -> Self {
+impl From<layerstack::CaptureStats> for TreeResourceStats {
+    fn from(stats: layerstack::CaptureStats) -> Self {
         Self {
             files: stats.files,
             dirs: stats.dirs,

@@ -15,7 +15,6 @@ use config::configs::{
     isolated_workspace::IsolatedWorkspaceConfig,
 };
 use tokio_util::sync::CancellationToken;
-use workspace::CurrentExeNsRunnerLauncher;
 
 use crate::invocation_registry::InFlightRegistry;
 use crate::RuntimeServices;
@@ -65,7 +64,6 @@ impl DaemonServer {
                 config::configs::daemon::PluginRuntimeConfig::default(),
                 IsolatedWorkspaceConfig::default(),
                 command::CommandConfig::default(),
-                Arc::new(CurrentExeNsRunnerLauncher),
             )),
             file_limits: FileLimitsConfig {
                 max_read_bytes: config::configs::daemon::MAX_READ_BYTES,
@@ -94,7 +92,6 @@ impl DaemonServer {
                 daemon_config.plugin.clone(),
                 isolated_config.clone(),
                 daemon_config.commands.clone(),
-                Arc::new(CurrentExeNsRunnerLauncher),
                 layerstack::CommitOptions::new(daemon_config.layer_stack.auto_squash_max_depth),
             )),
             file_limits: daemon_config.files,

@@ -177,11 +177,11 @@ impl IsolatedManager {
         self.check_host_capacity()?;
 
         let workspace_id = IsolatedWorkspaceId(next_handle_id());
-        let dirs = create_overlay_dirs(self.scratch_root.join(&workspace_id.0)).map_err(|err| {
-            IsolatedError::SetupFailed {
+        let dirs = create_overlay_dirs(self.owned_scratch_root().join(&workspace_id.0)).map_err(
+            |err| IsolatedError::SetupFailed {
                 step: format!("{}: {}", err.path.display(), err.reason),
-            }
-        })?;
+            },
+        )?;
 
         let now = monotonic_seconds();
         let mut handle = WorkspaceHandle {
@@ -211,8 +211,13 @@ impl IsolatedManager {
 
         self.by_caller
             .insert(caller_id.to_owned(), workspace_id.clone());
-        self.handles.insert(workspace_id, handle.clone());
-        let _ = self.persist_handles();
+        self.handles.insert(workspace_id.clone(), handle.clone());
+        if let Err(err) = self.persist_handles() {
+            self.by_caller.remove(caller_id);
+            self.handles.remove(&workspace_id);
+            self.rollback_partial(&handle);
+            return Err(err);
+        }
         Ok(handle)
     }
 
@@ -249,9 +254,14 @@ impl IsolatedManager {
         };
         let timer = Instant::now();
         let upperdir_bytes = directory_file_bytes(&handle.dirs.upperdir);
-        let (inspection, phases_ms) =
+        let (mut inspection, mut phases_ms) =
             self.teardown_handle(&handle, grace_s.unwrap_or(self.caps.exit_grace_s));
-        let _ = self.persist_handles();
+        let phase_start = Instant::now();
+        let persistence_error = self.persist_handles().err().map(|err| err.to_string());
+        record_phase_ms(&mut phases_ms, "persist_handles", phase_start);
+        if let (Some(error), Some(object)) = (persistence_error, inspection.as_object_mut()) {
+            object.insert("persistence_error".to_owned(), json!(error));
+        }
         let lifetime_s = (monotonic_seconds() - handle.created_at).max(0.0);
         Ok(ExitOutcome {
             workspace_id: handle.workspace_id,

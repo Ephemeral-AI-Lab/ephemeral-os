@@ -1,6 +1,4 @@
 use std::future;
-use std::path::Path;
-use std::process::Child;
 use std::sync::{
     atomic::{AtomicBool, AtomicU64, Ordering},
     Arc,
@@ -12,10 +10,8 @@ use serde_json::json;
 
 use config::configs::daemon::PluginRuntimeConfig;
 use config::configs::isolated_workspace::IsolatedWorkspaceConfig;
-use namespace::protocol::{RunRequest, RunResult};
 
 use crate::RuntimeServices;
-use workspace::{LaunchError, NsRunnerLauncher};
 
 use super::*;
 
@@ -414,39 +410,7 @@ fn test_services() -> RuntimeServices {
         PluginRuntimeConfig::default(),
         IsolatedWorkspaceConfig::default(),
         command::CommandConfig::default(),
-        Arc::new(NoLaunch),
     )
-}
-
-struct NoLaunch;
-
-impl NsRunnerLauncher for NoLaunch {
-    fn run(&self, _request: &RunRequest) -> Result<RunResult, LaunchError> {
-        Err(LaunchError::Failed(
-            "dispatcher unit tests do not start ns-runner".to_owned(),
-        ))
-    }
-
-    fn spawn_detached(
-        &self,
-        _request: &RunRequest,
-        _stderr_path: &Path,
-    ) -> Result<Child, LaunchError> {
-        Err(LaunchError::Failed(
-            "dispatcher unit tests do not start ns-runner".to_owned(),
-        ))
-    }
-
-    fn remount_in(
-        &self,
-        _target_pid: u32,
-        _request: &RunRequest,
-        _timeout: Duration,
-    ) -> Result<(), LaunchError> {
-        Err(LaunchError::Failed(
-            "dispatcher unit tests do not start ns-runner".to_owned(),
-        ))
-    }
 }
 
 struct Fixture {

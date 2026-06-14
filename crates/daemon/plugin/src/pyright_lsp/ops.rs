@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use config::configs::daemon::PYRIGHT_LSP_PLUGIN_ID;
-use operation::plugin::contract::{
+use plugin_contract::{
     PyrightLspDefinitionInput, PyrightLspDiagnosticsInput, PyrightLspQuerySymbolsInput,
     PyrightLspReferencesInput,
 };

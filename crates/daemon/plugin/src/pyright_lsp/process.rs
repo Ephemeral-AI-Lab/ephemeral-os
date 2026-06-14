@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -19,11 +19,17 @@ use super::lsp_values::{
 };
 use super::LANGUAGE_ID;
 
+type LspResponse = Result<Value, String>;
+type PendingRequestSender = Sender<LspResponse>;
+type PendingRequests = BTreeMap<String, PendingRequestSender>;
+type SharedPendingRequests = Arc<Mutex<PendingRequests>>;
+type SharedStdin = Arc<Mutex<ChildStdin>>;
+
 pub(super) struct LspProcess {
     child: Child,
     process_group_id: Option<i32>,
-    stdin: Arc<Mutex<ChildStdin>>,
-    pending: Arc<Mutex<BTreeMap<String, Sender<Result<Value, String>>>>>,
+    stdin: SharedStdin,
+    pending: SharedPendingRequests,
     diagnostics: Arc<DiagnosticsState>,
     open_documents: BTreeMap<String, i64>,
     next_id: AtomicU64,
@@ -373,8 +379,8 @@ impl DiagnosticsState {
 
 fn spawn_reader(
     stdout: std::process::ChildStdout,
-    stdin: Arc<Mutex<ChildStdin>>,
-    pending: Arc<Mutex<BTreeMap<String, Sender<Result<Value, String>>>>>,
+    stdin: SharedStdin,
+    pending: SharedPendingRequests,
     diagnostics: Arc<DiagnosticsState>,
     max_response_bytes: usize,
 ) -> JoinHandle<()> {
@@ -383,7 +389,10 @@ fn spawn_reader(
         loop {
             let message = match read_lsp_message(&mut reader, max_response_bytes) {
                 Ok(Some(message)) => message,
-                Ok(None) => return,
+                Ok(None) => {
+                    fail_pending_on_eof(&pending);
+                    return;
+                }
                 Err(err) => {
                     fail_pending(&pending, err);
                     return;
@@ -396,8 +405,8 @@ fn spawn_reader(
 
 fn handle_lsp_message(
     message: &Value,
-    stdin: &Arc<Mutex<ChildStdin>>,
-    pending: &Arc<Mutex<BTreeMap<String, Sender<Result<Value, String>>>>>,
+    stdin: &SharedStdin,
+    pending: &SharedPendingRequests,
     diagnostics: &DiagnosticsState,
 ) {
     if let Some(method) = message.get("method").and_then(Value::as_str) {
@@ -427,6 +436,10 @@ fn handle_lsp_message(
     let Some(id) = message.get("id").map(lsp_id_key) else {
         return;
     };
+    dispatch_response_message(pending, id, message);
+}
+
+fn dispatch_response_message(pending: &SharedPendingRequests, id: String, message: &Value) {
     let sender = pending
         .lock()
         .ok()
@@ -440,7 +453,7 @@ fn handle_lsp_message(
     }
 }
 
-fn respond_to_server_request(message: &Value, stdin: &Arc<Mutex<ChildStdin>>) {
+fn respond_to_server_request(message: &Value, stdin: &SharedStdin) {
     let Some(id) = message.get("id").cloned() else {
         return;
     };
@@ -471,10 +484,11 @@ fn respond_to_server_request(message: &Value, stdin: &Arc<Mutex<ChildStdin>>) {
     }
 }
 
-fn fail_pending(
-    pending: &Arc<Mutex<BTreeMap<String, Sender<Result<Value, String>>>>>,
-    error: String,
-) {
+fn fail_pending_on_eof(pending: &SharedPendingRequests) {
+    fail_pending(pending, "pyright_lsp stdout closed".to_owned());
+}
+
+fn fail_pending(pending: &SharedPendingRequests, error: String) {
     if let Ok(mut pending) = pending.lock() {
         let senders = std::mem::take(&mut *pending);
         for sender in senders.into_values() {
@@ -484,7 +498,7 @@ fn fail_pending(
 }
 
 fn read_lsp_message(
-    reader: &mut BufReader<std::process::ChildStdout>,
+    reader: &mut impl BufRead,
     max_response_bytes: usize,
 ) -> Result<Option<Value>, String> {
     let mut content_length = None;
@@ -544,4 +558,110 @@ fn terminate_process_group(process_group_id: Option<i32>) {
         std::thread::sleep(Duration::from_millis(50));
     }
     let _ = nix::sys::signal::killpg(pid, nix::sys::signal::Signal::SIGKILL);
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::{BufReader, Cursor};
+    use std::sync::mpsc;
+
+    use serde_json::json;
+
+    use super::*;
+
+    fn framed_message(value: &Value) -> Vec<u8> {
+        let body = serde_json::to_vec(value).expect("message serializes");
+        format!("Content-Length: {}\r\n\r\n", body.len())
+            .into_bytes()
+            .into_iter()
+            .chain(body)
+            .collect()
+    }
+
+    #[test]
+    fn read_lsp_message_parses_response_frame() {
+        let expected = json!({"jsonrpc": "2.0", "id": 7, "result": {"ok": true}});
+        let bytes = framed_message(&expected);
+        let mut reader = BufReader::new(Cursor::new(bytes));
+
+        let parsed = read_lsp_message(&mut reader, 1024)
+            .expect("frame parses")
+            .expect("message exists");
+
+        assert_eq!(parsed, expected);
+    }
+
+    #[test]
+    fn read_lsp_message_rejects_oversized_response() {
+        let expected = json!({"jsonrpc": "2.0", "id": 7, "result": {"ok": true}});
+        let bytes = framed_message(&expected);
+        let mut reader = BufReader::new(Cursor::new(bytes));
+
+        let error = read_lsp_message(&mut reader, 1).expect_err("oversized frame should fail");
+
+        assert!(error.contains("response exceeds 1 byte limit"), "{error}");
+    }
+
+    #[test]
+    fn read_lsp_message_returns_none_on_eof() {
+        let mut reader = BufReader::new(Cursor::new(Vec::new()));
+
+        let parsed = read_lsp_message(&mut reader, 1024).expect("eof is not malformed");
+
+        assert_eq!(parsed, None);
+    }
+
+    #[test]
+    fn dispatch_response_message_resolves_pending_request() {
+        let pending = SharedPendingRequests::default();
+        let (tx, rx) = mpsc::channel();
+        pending.lock().unwrap().insert("7".to_owned(), tx);
+
+        dispatch_response_message(
+            &pending,
+            "7".to_owned(),
+            &json!({"jsonrpc": "2.0", "id": 7, "result": {"answer": 42}}),
+        );
+
+        assert_eq!(
+            rx.recv().expect("response delivered"),
+            Ok(json!({"answer": 42}))
+        );
+        assert!(pending.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn fail_pending_fans_out_errors_and_clears_map() {
+        let pending = SharedPendingRequests::default();
+        let (first_tx, first_rx) = mpsc::channel();
+        let (second_tx, second_rx) = mpsc::channel();
+        pending.lock().unwrap().insert("1".to_owned(), first_tx);
+        pending.lock().unwrap().insert("2".to_owned(), second_tx);
+
+        fail_pending(&pending, "reader failed".to_owned());
+
+        assert_eq!(
+            first_rx.recv().expect("first error delivered"),
+            Err("reader failed".to_owned())
+        );
+        assert_eq!(
+            second_rx.recv().expect("second error delivered"),
+            Err("reader failed".to_owned())
+        );
+        assert!(pending.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn fail_pending_on_eof_reports_closed_stdout() {
+        let pending = SharedPendingRequests::default();
+        let (tx, rx) = mpsc::channel();
+        pending.lock().unwrap().insert("1".to_owned(), tx);
+
+        fail_pending_on_eof(&pending);
+
+        assert_eq!(
+            rx.recv().expect("eof error delivered"),
+            Err("pyright_lsp stdout closed".to_owned())
+        );
+    }
 }

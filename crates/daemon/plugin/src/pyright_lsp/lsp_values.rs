@@ -179,3 +179,68 @@ fn hex_value(byte: u8) -> Option<u8> {
         _ => None,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use serde_json::json;
+
+    use super::*;
+
+    #[test]
+    fn target_file_uri_normalizes_layer_path_and_percent_encodes() {
+        let uri = target_file_uri_string(Path::new("/tmp/projection root"), "./pkg/main file.py")
+            .expect("target file uri should be valid");
+
+        assert_eq!(uri, "file:///tmp/projection%20root/pkg/main%20file.py");
+    }
+
+    #[test]
+    fn target_file_uri_rejects_parent_traversal() {
+        let error = target_file_uri_string(Path::new("/tmp/projection"), "../escape.py")
+            .expect_err("parent traversal should be rejected");
+
+        assert!(error.to_string().contains("invalid file_path"), "{error}");
+    }
+
+    #[test]
+    fn locations_project_file_uri_back_to_layer_path() {
+        let result = json!({
+            "uri": "file:///tmp/projection/pkg/main.py",
+            "range": {"start": {"line": 1, "character": 2}},
+        });
+
+        let locations = locations_from_lsp_result(&result, Path::new("/tmp/projection"));
+
+        assert_eq!(locations[0]["file_path"], "pkg/main.py");
+        assert_eq!(locations[0]["range"]["start"]["line"], 1);
+    }
+
+    #[test]
+    fn diagnostic_value_projects_file_uri_back_to_layer_path() {
+        let diagnostic = diagnostic_value(
+            "file:///tmp/projection/pkg/main.py",
+            Path::new("/tmp/projection"),
+            json!({
+                "range": {"start": {"line": 0, "character": 0}},
+                "severity": 1,
+                "message": "bad import",
+            }),
+        );
+
+        assert_eq!(diagnostic["file_path"], "pkg/main.py");
+        assert_eq!(diagnostic["message"], "bad import");
+    }
+
+    #[test]
+    fn malformed_percent_encoding_does_not_project() {
+        assert_eq!(
+            file_path_from_uri(
+                "file:///tmp/projection/%ZZ.py",
+                Path::new("/tmp/projection")
+            ),
+            None
+        );
+    }
+}

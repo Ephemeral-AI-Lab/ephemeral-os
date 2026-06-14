@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use overlay::LayerChange;
+use layerstack::LayerChange;
 
 use crate::tree::TreeResourceStats;
 
@@ -38,7 +38,7 @@ impl std::error::Error for CaptureError {}
 pub fn capture_upperdir(upperdir: &Path) -> Result<CapturedChanges, CaptureError> {
     let start = std::time::Instant::now();
     let captured =
-        overlay::capture_upperdir_with_stats(upperdir).map_err(|error| CaptureError {
+        layerstack::capture_upperdir_with_stats(upperdir).map_err(|error| CaptureError {
             failing_path: error.failing_path().map(|path| path.display().to_string()),
             reason: error.to_string(),
         })?;

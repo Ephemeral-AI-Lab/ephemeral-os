@@ -1,8 +1,8 @@
-use operation::plugin::contract::{
+use plugin::PluginRuntimeError;
+use plugin_contract::{
     PyrightLspDefinitionInput, PyrightLspDiagnosticsInput, PyrightLspQuerySymbolsInput,
     PyrightLspReferencesInput,
 };
-use plugin::PluginRuntimeError;
 use serde_json::{json, Value};
 
 use crate::error::DaemonError;
@@ -14,7 +14,7 @@ pub(crate) fn op_pyright_lsp_query_symbols(
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let services = context.require_services()?;
-    services.ensure_plugin_caller_allowed(&input.caller)?;
+    services.ensure_plugin_caller_allowed(input.caller.as_str())?;
     pyright_response(services.plugin.pyright_lsp_query_symbols(&input))
 }
 
@@ -23,7 +23,7 @@ pub(crate) fn op_pyright_lsp_definition(
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let services = context.require_services()?;
-    services.ensure_plugin_caller_allowed(&input.caller)?;
+    services.ensure_plugin_caller_allowed(input.caller.as_str())?;
     pyright_response(services.plugin.pyright_lsp_definition(&input))
 }
 
@@ -32,7 +32,7 @@ pub(crate) fn op_pyright_lsp_references(
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let services = context.require_services()?;
-    services.ensure_plugin_caller_allowed(&input.caller)?;
+    services.ensure_plugin_caller_allowed(input.caller.as_str())?;
     pyright_response(services.plugin.pyright_lsp_references(&input))
 }
 
@@ -41,7 +41,7 @@ pub(crate) fn op_pyright_lsp_diagnostics(
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let services = context.require_services()?;
-    services.ensure_plugin_caller_allowed(&input.caller)?;
+    services.ensure_plugin_caller_allowed(input.caller.as_str())?;
     pyright_response(services.plugin.pyright_lsp_diagnostics(&input))
 }
 

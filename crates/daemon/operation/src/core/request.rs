@@ -15,12 +15,12 @@ use crate::control::contract::{
 };
 use crate::file::contract::{EditFileInput, ReadFileInput, WriteFileInput};
 use crate::isolation::contract::{IsolationEnterInput, IsolationExitInput, IsolationStatusInput};
-use crate::plugin::contract::{
+use crate::workspace_run::contract::{RunCancelAllInput, RunEndInput};
+use crate::CallerId;
+use plugin_contract::{
     PluginHealthInput, PluginListInput, PyrightLspDefinitionInput, PyrightLspDiagnosticsInput,
     PyrightLspQuerySymbolsInput, PyrightLspReferencesInput,
 };
-use crate::workspace_run::contract::{RunCancelAllInput, RunEndInput};
-use crate::CallerId;
 use protocol::catalog::{BuiltinOp, ServedBy};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -191,6 +191,33 @@ impl OpRequest {
 impl From<ArgsError> for RequestError {
     fn from(error: ArgsError) -> Self {
         Self::Args(error)
+    }
+}
+
+impl From<plugin_contract::ArgsError> for RequestError {
+    fn from(error: plugin_contract::ArgsError) -> Self {
+        Self::Args(error.into())
+    }
+}
+
+impl From<plugin_contract::ArgsError> for ArgsError {
+    fn from(error: plugin_contract::ArgsError) -> Self {
+        Self {
+            key: error.key,
+            problem: error.problem.into(),
+        }
+    }
+}
+
+impl From<plugin_contract::ArgProblem> for ArgProblem {
+    fn from(problem: plugin_contract::ArgProblem) -> Self {
+        match problem {
+            plugin_contract::ArgProblem::Required => Self::Required,
+            plugin_contract::ArgProblem::MustBeString => Self::MustBeString,
+            plugin_contract::ArgProblem::MustBeNonEmpty => Self::MustBeNonEmpty,
+            plugin_contract::ArgProblem::MustBeList => Self::MustBeList,
+            plugin_contract::ArgProblem::Invalid(message) => Self::Invalid(message),
+        }
     }
 }
 

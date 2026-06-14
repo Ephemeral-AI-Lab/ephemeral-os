@@ -6,6 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+layerstack.workspace = true
 namespace.workspace = true
 overlay.workspace = true
 serde.workspace = true

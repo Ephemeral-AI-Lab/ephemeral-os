@@ -3,7 +3,7 @@
 //! The daemon loads this through `config` and injects it into the isolated
 //! workspace lifecycle.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
@@ -81,6 +81,7 @@ impl IsolatedWorkspaceConfig {
         require_f64_at_least(self.exit_grace_s, 0.0, "isolated_workspace.exit_grace_s")?;
         require_non_empty(&self.fallback_dns, "isolated_workspace.fallback_dns")?;
         require_absolute(&self.workspace_root, "isolated_workspace.workspace_root")?;
+        reject_dangerous_scratch_root(&self.scratch_root, &self.workspace_root)?;
         if self.sample_interval_s.is_finite() && self.sample_interval_s >= 0.01 {
             Ok(())
         } else {
@@ -90,6 +91,41 @@ impl IsolatedWorkspaceConfig {
             ))
         }
     }
+}
+
+fn reject_dangerous_scratch_root(
+    scratch_root: &Path,
+    workspace_root: &Path,
+) -> Result<(), ConfigFieldError> {
+    if is_filesystem_root(scratch_root) {
+        return Err(ConfigFieldError::new(
+            "isolated_workspace.scratch_root",
+            "must not be the filesystem root",
+        ));
+    }
+    if paths_match_or_resolve_equal(scratch_root, workspace_root) {
+        return Err(ConfigFieldError::new(
+            "isolated_workspace.scratch_root",
+            "must not resolve to isolated_workspace.workspace_root",
+        ));
+    }
+    Ok(())
+}
+
+fn is_filesystem_root(path: &Path) -> bool {
+    path.parent().is_none()
+        || path
+            .canonicalize()
+            .ok()
+            .is_some_and(|canonical| canonical.parent().is_none())
+}
+
+fn paths_match_or_resolve_equal(left: &Path, right: &Path) -> bool {
+    left == right
+        || match (left.canonicalize(), right.canonicalize()) {
+            (Ok(left), Ok(right)) => left == right,
+            _ => false,
+        }
 }
 
 #[cfg(test)]

@@ -55,7 +55,7 @@ fn regular_file_capture_rejects_symlink_replacement_after_classification() -> Te
     )
     .expect_err("swapped symlink must not be captured as regular file content");
 
-    assert!(matches!(error, OverlayError::Capture { .. }));
+    assert!(matches!(error, CaptureError::Capture { .. }));
     assert!(changes.is_empty());
     Ok(())
 }
@@ -70,13 +70,47 @@ fn regular_file_capture_rejects_oversized_files_before_write_change() -> TestRes
     let error = write_change_limited("large.txt", &entry, &meta, 2)
         .expect_err("oversized file capture must be rejected");
 
-    assert!(matches!(error, OverlayError::Capture { .. }));
+    assert!(matches!(error, CaptureError::Capture { .. }));
     assert!(
         error
             .to_string()
             .contains("overlay regular file too large: 6 > 2 bytes"),
         "{error}"
     );
+    Ok(())
+}
+
+#[cfg(unix)]
+#[test]
+fn relative_path_conversion_rejects_non_utf8_component() -> TestResult {
+    use std::ffi::OsString;
+    use std::os::unix::ffi::OsStringExt;
+
+    let bad_name = OsString::from_vec(vec![b'b', 0xff, b'd']);
+
+    let error = relative_to_string(&PathBuf::from(bad_name))
+        .expect_err("non-UTF-8 layer paths are rejected");
+
+    assert!(matches!(error, CaptureError::InvalidPathChange(_)));
+    assert!(error.to_string().contains("not valid UTF-8"), "{error}");
+    Ok(())
+}
+
+#[cfg(unix)]
+#[test]
+fn capture_rejects_non_utf8_symlink_target() -> TestResult {
+    use std::ffi::OsString;
+    use std::os::unix::ffi::OsStringExt;
+
+    let fixture = Fixture::new("capture_non_utf8_symlink")?;
+    let bad_target = PathBuf::from(OsString::from_vec(vec![b't', 0xff, b'g']));
+    std::os::unix::fs::symlink(bad_target, fixture.base.join("link"))?;
+
+    let error =
+        capture_upperdir(&fixture.base).expect_err("non-UTF-8 symlink targets are rejected");
+
+    assert!(matches!(error, CaptureError::InvalidPathChange(_)));
+    assert!(error.to_string().contains("not valid UTF-8"), "{error}");
     Ok(())
 }
 
@@ -88,7 +122,7 @@ impl Fixture {
     fn new(label: &str) -> TestResult<Self> {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let base = std::env::temp_dir().join(format!(
-            "overlay-{label}-{}-{}",
+            "layerstack-{label}-{}-{}",
             std::process::id(),
             COUNTER.fetch_add(1, Ordering::Relaxed)
         ));

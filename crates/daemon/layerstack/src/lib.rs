@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+mod capture;
 mod commit;
 mod error;
 pub(crate) mod fs;
@@ -18,6 +19,9 @@ pub use model::{
     LayerRef, Manifest, MANIFEST_SCHEMA_VERSION,
 };
 
+pub use capture::{
+    capture_upperdir, capture_upperdir_with_stats, CaptureError, CaptureStats, CapturedUpperdir,
+};
 pub use commit::{
     hash_current, ChangesetResult, CommitError, CommitOptions, CommitStatus, FileResult,
     OccTraceEvent,

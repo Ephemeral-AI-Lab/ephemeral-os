@@ -1,8 +1,6 @@
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Mutex, MutexGuard};
 
 use config::configs::daemon::PluginRuntimeConfig;
-use layerstack::CommitOptions;
-use workspace::NsRunnerLauncher;
 
 use crate::pyright_lsp::PyrightLspRuntime;
 use crate::PluginRuntimeError;
@@ -16,16 +14,7 @@ pub struct PluginRuntime {
 impl PluginRuntime {
     /// Build a plugin runtime over its typed config.
     #[must_use]
-    pub fn new(config: PluginRuntimeConfig, launcher: Arc<dyn NsRunnerLauncher>) -> Self {
-        Self::with_commit_options(config, launcher, CommitOptions::default())
-    }
-
-    #[must_use]
-    pub fn with_commit_options(
-        config: PluginRuntimeConfig,
-        _launcher: Arc<dyn NsRunnerLauncher>,
-        _commit_options: CommitOptions,
-    ) -> Self {
+    pub fn new(config: PluginRuntimeConfig) -> Self {
         Self {
             pyright_lsp: Mutex::new(PyrightLspRuntime::new(&config.pyright_lsp)),
             config,

@@ -1,4 +1,4 @@
-//! Layer changes captured from a snapshot overlay.
+//! Layer changes captured from a snapshot overlay upperdir.
 //!
 //! Capture walks ONLY the overlay `upperdir`: capture + publish is one atomic
 //! unit per op, so a consumer never observes a partial write set. Other agents
@@ -10,11 +10,56 @@ use std::io::{self, Read};
 use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
-use crate::{LayerChange, LayerPath, OverlayError, Result};
+use thiserror::Error;
+
+use crate::{CasError, LayerChange, LayerPath};
 
 const WHITEOUT_PREFIX: &str = ".wh.";
 const OPAQUE_MARKER: &str = ".wh..wh..opq";
 const MAX_CAPTURE_FILE_BYTES: usize = 8 * 1024 * 1024;
+
+/// Failures raised while capturing layer changes from an overlay upperdir.
+#[derive(Debug, Error)]
+#[non_exhaustive]
+pub enum CaptureError {
+    /// An upper-dir walk / capture I/O error.
+    #[error("upperdir capture failed at {path}: {source}")]
+    Capture {
+        /// Path whose metadata, directory entries, xattrs, content, or link
+        /// target could not be read.
+        path: PathBuf,
+        #[source]
+        source: io::Error,
+    },
+
+    /// A captured overlay path did not normalize to a valid relative layer path.
+    #[error(transparent)]
+    Path(#[from] CasError),
+
+    /// A captured overlay path could not be expressed as a layer path.
+    #[error("invalid overlay path change: {0}")]
+    InvalidPathChange(String),
+}
+
+impl CaptureError {
+    fn capture(path: impl Into<PathBuf>, source: io::Error) -> Self {
+        Self::Capture {
+            path: path.into(),
+            source,
+        }
+    }
+
+    #[must_use]
+    pub fn failing_path(&self) -> Option<&Path> {
+        match self {
+            Self::Capture { path, .. } => Some(path.as_path()),
+            _ => None,
+        }
+    }
+}
+
+/// Crate result alias for upperdir capture.
+pub type Result<T> = std::result::Result<T, CaptureError>;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CaptureStats {
@@ -42,7 +87,7 @@ pub struct CapturedUpperdir {
 ///
 /// # Errors
 ///
-/// Returns [`OverlayError`] when upperdir traversal, path normalization, xattr
+/// Returns [`CaptureError`] when upperdir traversal, path normalization, xattr
 /// probing, or content/link-target reads fail.
 pub fn capture_upperdir(upperdir: &Path) -> Result<Vec<LayerChange>> {
     Ok(capture_upperdir_with_stats(upperdir)?.changes)
@@ -53,10 +98,10 @@ pub fn capture_upperdir(upperdir: &Path) -> Result<Vec<LayerChange>> {
 ///
 /// # Errors
 ///
-/// Returns [`OverlayError`] when upperdir traversal, path normalization, xattr
+/// Returns [`CaptureError`] when upperdir traversal, path normalization, xattr
 /// probing, or content/link-target reads fail.
 pub fn capture_upperdir_with_stats(upperdir: &Path) -> Result<CapturedUpperdir> {
-    std::fs::create_dir_all(upperdir).map_err(|err| OverlayError::capture(upperdir, err))?;
+    std::fs::create_dir_all(upperdir).map_err(|err| CaptureError::capture(upperdir, err))?;
     let mut emitted_opaque_dirs = HashSet::new();
     let mut changes = Vec::new();
     let mut stats = CaptureStats {
@@ -81,9 +126,9 @@ fn walk_upperdir(
     stats: &mut CaptureStats,
 ) -> Result<()> {
     let mut entries = std::fs::read_dir(dir)
-        .map_err(|err| OverlayError::capture(dir, err))?
+        .map_err(|err| CaptureError::capture(dir, err))?
         .collect::<std::result::Result<Vec<_>, _>>()
-        .map_err(|err| OverlayError::capture(dir, err))?;
+        .map_err(|err| CaptureError::capture(dir, err))?;
     entries.sort_by_key(std::fs::DirEntry::file_name);
 
     let mut dirs = Vec::new();
@@ -91,7 +136,7 @@ fn walk_upperdir(
     for entry in entries {
         let path = entry.path();
         let meta =
-            std::fs::symlink_metadata(&path).map_err(|err| OverlayError::capture(&path, err))?;
+            std::fs::symlink_metadata(&path).map_err(|err| CaptureError::capture(&path, err))?;
         let file_type = meta.file_type();
         if file_type.is_dir() {
             stats.dirs = stats.dirs.saturating_add(1);
@@ -107,7 +152,7 @@ fn walk_upperdir(
     }
     for entry in dirs {
         if has_overlay_opaque_xattr(&entry) {
-            let opaque_path = relative_to_string(&relative_path(root, &entry)?);
+            let opaque_path = relative_to_string(&relative_path(root, &entry)?)?;
             push_opaque_dir(opaque_path, emitted_opaque_dirs, changes)?;
         }
         walk_upperdir(root, &entry, emitted_opaque_dirs, changes, stats)?;
@@ -128,23 +173,27 @@ fn capture_file_entry(
         .and_then(|name| name.to_str())
         .unwrap_or_default();
     if name == OPAQUE_MARKER {
-        let opaque_path = rel.parent().map(relative_to_string).unwrap_or_default();
+        let opaque_path = rel
+            .parent()
+            .map(relative_to_string)
+            .transpose()?
+            .unwrap_or_default();
         push_opaque_dir(opaque_path, emitted_opaque_dirs, changes)?;
         return Ok(());
     }
     if is_whiteout_marker(name) {
         let target = whiteout_target(&rel);
-        changes.push(delete_change(&relative_to_string(&target))?);
+        changes.push(delete_change(&relative_to_string(&target)?)?);
         return Ok(());
     }
     if is_overlay_whiteout(entry, meta)? {
-        changes.push(delete_change(&relative_to_string(&rel))?);
+        changes.push(delete_change(&relative_to_string(&rel)?)?);
         return Ok(());
     }
     if meta.file_type().is_symlink() {
-        changes.push(symlink_change(&relative_to_string(&rel), entry)?);
+        changes.push(symlink_change(&relative_to_string(&rel)?, entry)?);
     } else if meta.is_file() {
-        changes.push(write_change(&relative_to_string(&rel), entry, meta)?);
+        changes.push(write_change(&relative_to_string(&rel)?, entry, meta)?);
     }
     Ok(())
 }
@@ -201,10 +250,10 @@ fn read_regular_file(
 ) -> Result<Vec<u8>> {
     ensure_capture_file_size(entry, expected_meta.len(), max_bytes)?;
     let file =
-        open_regular_file_no_follow(entry).map_err(|err| OverlayError::capture(entry, err))?;
+        open_regular_file_no_follow(entry).map_err(|err| CaptureError::capture(entry, err))?;
     let actual_meta = file
         .metadata()
-        .map_err(|err| OverlayError::capture(entry, err))?;
+        .map_err(|err| CaptureError::capture(entry, err))?;
     if !actual_meta.is_file() || !same_file(expected_meta, &actual_meta) {
         return Err(changed_during_capture(entry));
     }
@@ -216,7 +265,7 @@ fn read_regular_file(
         .saturating_add(1);
     file.take(limit)
         .read_to_end(&mut content)
-        .map_err(|err| OverlayError::capture(entry, err))?;
+        .map_err(|err| CaptureError::capture(entry, err))?;
     if content.len() > max_bytes {
         return Err(capture_file_too_large(
             entry,
@@ -263,8 +312,8 @@ fn same_file(_left: &std::fs::Metadata, _right: &std::fs::Metadata) -> bool {
     true
 }
 
-fn changed_during_capture(entry: &Path) -> OverlayError {
-    OverlayError::capture(
+fn changed_during_capture(entry: &Path) -> CaptureError {
+    CaptureError::capture(
         entry,
         io::Error::new(
             io::ErrorKind::InvalidData,
@@ -273,8 +322,8 @@ fn changed_during_capture(entry: &Path) -> OverlayError {
     )
 }
 
-fn capture_file_too_large(entry: &Path, size: u64, max_bytes: usize) -> OverlayError {
-    OverlayError::capture(
+fn capture_file_too_large(entry: &Path, size: u64, max_bytes: usize) -> CaptureError {
+    CaptureError::capture(
         entry,
         io::Error::new(
             io::ErrorKind::InvalidData,
@@ -286,29 +335,47 @@ fn capture_file_too_large(entry: &Path, size: u64, max_bytes: usize) -> OverlayE
 fn symlink_change(path: &str, entry: &Path) -> Result<LayerChange> {
     Ok(LayerChange::Symlink {
         path: layer_path(path)?,
-        source_path: std::fs::read_link(entry)
-            .map_err(|err| OverlayError::capture(entry, err))?
-            .to_string_lossy()
-            .into_owned(),
+        source_path: path_string(
+            &std::fs::read_link(entry).map_err(|err| CaptureError::capture(entry, err))?,
+        )?,
     })
 }
 
 fn layer_path(path: &str) -> Result<LayerPath> {
-    LayerPath::parse(path).map_err(OverlayError::Path)
+    LayerPath::parse(path).map_err(CaptureError::Path)
 }
 
 fn relative_path(root: &Path, entry: &Path) -> Result<PathBuf> {
     entry
         .strip_prefix(root)
         .map(Path::to_path_buf)
-        .map_err(|err| OverlayError::InvalidPathChange(err.to_string()))
+        .map_err(|err| CaptureError::InvalidPathChange(err.to_string()))
 }
 
-fn relative_to_string(path: &Path) -> String {
-    path.components()
-        .map(|component| component.as_os_str().to_string_lossy())
-        .collect::<Vec<_>>()
-        .join("/")
+fn relative_to_string(path: &Path) -> Result<String> {
+    let mut parts = Vec::new();
+    for component in path.components() {
+        parts.push(path_component_string(component.as_os_str())?);
+    }
+    Ok(parts.join("/"))
+}
+
+fn path_string(path: &Path) -> Result<String> {
+    path.to_str().map(str::to_owned).ok_or_else(|| {
+        CaptureError::InvalidPathChange(format!(
+            "overlay path is not valid UTF-8: {}",
+            path.display()
+        ))
+    })
+}
+
+fn path_component_string(component: &std::ffi::OsStr) -> Result<String> {
+    component.to_str().map(str::to_owned).ok_or_else(|| {
+        let bytes = component.as_encoded_bytes();
+        CaptureError::InvalidPathChange(format!(
+            "overlay path component is not valid UTF-8: {bytes:?}"
+        ))
+    })
 }
 
 fn is_whiteout_marker(name: &str) -> bool {
@@ -358,7 +425,7 @@ fn xattr_value(path: &Path, name: &str) -> Result<Option<Vec<u8>>> {
             }
             Err(Errno::RANGE) => buffer.resize(buffer.len() * 2, 0),
             Err(Errno::NODATA | Errno::OPNOTSUPP) => return Ok(None),
-            Err(err) => return Err(OverlayError::capture(path, std::io::Error::from(err))),
+            Err(err) => return Err(CaptureError::capture(path, std::io::Error::from(err))),
         }
     }
 }
@@ -375,5 +442,5 @@ const fn xattr_value(_path: &Path, _name: &str) -> Result<Option<Vec<u8>>> {
 }
 
 #[cfg(test)]
-#[path = "../tests/unit/path_change.rs"]
+#[path = "../tests/unit/capture.rs"]
 mod tests;

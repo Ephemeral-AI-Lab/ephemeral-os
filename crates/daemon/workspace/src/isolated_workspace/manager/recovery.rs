@@ -1,3 +1,4 @@
+use std::io::Write;
 use std::net::Ipv4Addr;
 use std::path::{Path, PathBuf};
 
@@ -83,6 +84,9 @@ impl IsolatedManager {
 
     fn reap_persisted_scratch(&self, row: &Value) -> Option<String> {
         if let Some(path) = persisted_existing_path(row, "scratch_dir") {
+            if !self.is_owned_scratch_path(&path) {
+                return None;
+            }
             return remove_dir_all_best_effort(&path, "remove persisted scratch");
         }
         None
@@ -131,14 +135,14 @@ impl IsolatedManager {
     }
 
     fn reap_named_scratch_orphans(&self) -> Option<String> {
-        let Ok(entries) = std::fs::read_dir(&self.scratch_root) else {
+        let Ok(entries) = std::fs::read_dir(self.owned_scratch_root()) else {
             return None;
         };
         let mut cleanup_error = None;
         for entry in entries.flatten() {
             let path = entry.path();
             let name = entry.file_name().to_string_lossy().into_owned();
-            if name == "manager.json" || !path.is_dir() {
+            if !is_workspace_id_shape(&name) || !path.is_dir() {
                 continue;
             }
             record_cleanup_error(
@@ -196,19 +200,39 @@ impl IsolatedManager {
         });
         let path = self.persisted_handles_path();
         let tmp = path.with_extension("json.tmp");
-        std::fs::write(
-            &tmp,
+        let bytes =
             serde_json::to_vec_pretty(&payload).map_err(|err| IsolatedError::SetupFailed {
                 step: format!("manager_serialize: {err}"),
-            })?,
-        )
-        .map_err(|err| IsolatedError::SetupFailed {
-            step: format!("manager_write: {err}"),
-        })?;
-        std::fs::rename(tmp, path).map_err(|err| IsolatedError::SetupFailed {
+            })?;
+        let mut file = std::fs::OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(&tmp)
+            .map_err(|err| IsolatedError::SetupFailed {
+                step: format!("manager_write: {err}"),
+            })?;
+        file.write_all(&bytes)
+            .and_then(|()| file.sync_all())
+            .map_err(|err| IsolatedError::SetupFailed {
+                step: format!("manager_write: {err}"),
+            })?;
+        drop(file);
+        std::fs::rename(&tmp, &path).map_err(|err| IsolatedError::SetupFailed {
             step: format!("manager_rename: {err}"),
         })?;
+        sync_directory(&self.scratch_root).map_err(|err| IsolatedError::SetupFailed {
+            step: format!("manager_fsync: {err}"),
+        })?;
         Ok(())
+    }
+
+    fn is_owned_scratch_path(&self, path: &Path) -> bool {
+        path.parent() == Some(self.owned_scratch_root().as_path())
+            && path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(is_workspace_id_shape)
     }
 
     pub(super) fn read_persisted_handle_rows(&self) -> Vec<Value> {
@@ -229,6 +253,25 @@ impl IsolatedManager {
             .cloned()
             .unwrap_or_default()
     }
+}
+
+fn sync_directory(path: &Path) -> std::io::Result<()> {
+    match std::fs::File::open(path).and_then(|file| file.sync_all()) {
+        Ok(()) => Ok(()),
+        Err(error)
+            if matches!(
+                error.kind(),
+                std::io::ErrorKind::InvalidInput | std::io::ErrorKind::Unsupported
+            ) =>
+        {
+            Ok(())
+        }
+        Err(error) => Err(error),
+    }
+}
+
+fn is_workspace_id_shape(value: &str) -> bool {
+    value.len() == 22 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
 
 fn persisted_string(row: &Value, key: &str) -> Option<String> {

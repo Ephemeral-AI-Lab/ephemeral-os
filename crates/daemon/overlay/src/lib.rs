@@ -1,17 +1,9 @@
-//! Overlay kernel-mount path and upper-dir capture.
+//! Overlay kernel-mount path and writable directory helpers.
 //!
 //! # Invariant
 //!
-//! **Capture + publish is ONE atomic unit per op.** The write set for an
-//! operation is captured by walking ONLY the overlay `upperdir` (never the
-//! lower layers); other agents never observe a partial write set. The overlay
-//! mount itself is built with the RAW new-mount API
+//! The overlay mount itself is built with the RAW new-mount API
 //! (`fsopen`/`fsconfig`/`fsmount`/`move_mount`) — NOT the `mount(8)` binary.
-//!
-//! Overlay produces the layer stack's change vocabulary one-way; the only
-//! `layerstack` edge is those model types. Workspace crates consume the
-//! re-exported vocabulary from here without linking the storage engine's write
-//! surface directly.
 //!
 //! # Build-time guarantee / platform
 //!
@@ -27,24 +19,15 @@
 use std::io;
 use std::path::{Path, PathBuf};
 
-use layerstack::CasError;
 use thiserror::Error;
 
 pub mod kernel_mount;
-pub mod path_change;
-
-// The capture vocabulary, re-exported so overlay consumers (the workspace
-// crates) never import the storage engine directly.
-pub use layerstack::{LayerChange, LayerPath};
 
 pub use kernel_mount::{
     mount_overlay, mount_overlay_legacy, unmount_overlay, OverlayHandle, OverlayMount,
 };
-pub use path_change::{
-    capture_upperdir, capture_upperdir_with_stats, CaptureStats, CapturedUpperdir,
-};
 
-/// Failures raised by the overlay kernel-mount and upper-dir capture paths.
+/// Failures raised by the overlay kernel-mount and writable-dir paths.
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum OverlayError {
@@ -73,14 +56,6 @@ pub enum OverlayError {
         #[source]
         source: io::Error,
     },
-
-    /// A captured overlay path did not normalize to a valid relative layer path.
-    #[error(transparent)]
-    Path(#[from] CasError),
-
-    /// A captured overlay path could not be expressed as a layer path.
-    #[error("invalid overlay path change: {0}")]
-    InvalidPathChange(String),
 
     /// The current target OS provides no overlayfs mount syscalls.
     #[error("overlay mounts are only supported on linux")]

@@ -21,6 +21,14 @@ fn config_validation_rejects_invalid_isolated_values() {
     assert_invalid(cfg, "isolated_workspace.scratch_root");
 
     let mut cfg = prd_config();
+    cfg.scratch_root = PathBuf::from("/");
+    assert_invalid(cfg, "isolated_workspace.scratch_root");
+
+    let mut cfg = prd_config();
+    cfg.scratch_root = cfg.workspace_root.clone();
+    assert_invalid(cfg, "isolated_workspace.scratch_root");
+
+    let mut cfg = prd_config();
     cfg.enabled = true;
     cfg.total_cap = 0;
     assert_invalid(cfg, "isolated_workspace.total_cap");

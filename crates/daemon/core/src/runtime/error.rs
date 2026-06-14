@@ -95,17 +95,6 @@ impl From<plugin::PluginRuntimeError> for DaemonError {
     }
 }
 
-impl From<workspace::LaunchError> for DaemonError {
-    fn from(err: workspace::LaunchError) -> Self {
-        use workspace::LaunchError;
-        match err {
-            LaunchError::InvalidRequest(message) => Self::InvalidRequest(message),
-            LaunchError::Io(source) => Self::Io(source),
-            LaunchError::Failed(message) => Self::OverlayPipeline(message),
-        }
-    }
-}
-
 impl From<operation::checkpoint::CheckpointError> for DaemonError {
     fn from(err: operation::checkpoint::CheckpointError) -> Self {
         use operation::checkpoint::CheckpointError;

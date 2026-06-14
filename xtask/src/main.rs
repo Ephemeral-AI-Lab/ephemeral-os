@@ -220,6 +220,11 @@ const CONFORMANCE_SUITES: &[ConformanceSuite] = &[
         tests: &["cas_fixtures"],
         features: &[],
     },
+    ConformanceSuite {
+        package: "operation",
+        tests: &["contract"],
+        features: &[],
+    },
     // Host side: request-fixture encoding + router/visibility coverage.
     ConformanceSuite {
         package: "host",

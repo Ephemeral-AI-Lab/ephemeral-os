@@ -11,6 +11,7 @@ namespace.workspace = true
 config.workspace = true
 layerstack.workspace = true
 operation.workspace = true
+plugin-contract.workspace = true
 plugin.workspace = true
 protocol.workspace = true
 trace.workspace = true

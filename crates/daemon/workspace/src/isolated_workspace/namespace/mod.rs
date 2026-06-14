@@ -10,6 +10,8 @@ use std::os::unix::process::ExitStatusExt;
 use std::path::PathBuf;
 #[cfg(target_os = "linux")]
 use std::process::{Child, Command, Output, Stdio};
+#[cfg(test)]
+use std::sync::Arc;
 #[cfg(target_os = "linux")]
 use std::sync::{Mutex, MutexGuard, OnceLock};
 #[cfg(target_os = "linux")]
@@ -35,8 +37,6 @@ use serde_json::{json, Value};
 use crate::isolated_workspace::error::IsolatedError;
 use crate::isolated_workspace::manager::{DnsConfiguration, WorkspaceHandle};
 
-pub mod runner_launcher;
-
 pub(crate) const TEST_HARNESS_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_HARNESS";
 
 pub(crate) fn setup_error(error: impl std::fmt::Display) -> IsolatedError {
@@ -52,6 +52,10 @@ pub(crate) fn test_harness_enabled() -> bool {
 
 pub(crate) struct NamespaceRuntime {
     stub: bool,
+    #[cfg(test)]
+    stub_holder_pid: i32,
+    #[cfg(test)]
+    killed_holders: Option<Arc<std::sync::Mutex<Vec<i32>>>>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -66,11 +70,33 @@ impl NamespaceRuntime {
     pub(crate) fn from_env() -> Self {
         Self {
             stub: test_harness_enabled(),
+            #[cfg(test)]
+            stub_holder_pid: 0,
+            #[cfg(test)]
+            killed_holders: None,
         }
     }
 
     pub(crate) fn stubbed() -> Self {
-        Self { stub: true }
+        Self {
+            stub: true,
+            #[cfg(test)]
+            stub_holder_pid: 0,
+            #[cfg(test)]
+            killed_holders: None,
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn stubbed_with_holder(
+        pid: i32,
+        killed_holders: Arc<std::sync::Mutex<Vec<i32>>>,
+    ) -> Self {
+        Self {
+            stub: true,
+            stub_holder_pid: pid,
+            killed_holders: Some(killed_holders),
+        }
     }
 
     pub(crate) fn spawn_ns_holder(
@@ -79,6 +105,12 @@ impl NamespaceRuntime {
         setup_timeout_s: f64,
     ) -> Result<i32, IsolatedError> {
         if self.stub {
+            #[cfg(test)]
+            {
+                let _ = (handle, setup_timeout_s);
+                return Ok(self.stub_holder_pid);
+            }
+            #[cfg(not(test))]
             return Ok(0);
         }
         #[cfg(not(target_os = "linux"))]
@@ -265,6 +297,15 @@ impl NamespaceRuntime {
         grace_s: f64,
     ) -> Result<HolderKillReport, IsolatedError> {
         if self.stub || holder_pid <= 0 {
+            #[cfg(test)]
+            if self.stub && holder_pid > 0 {
+                if let Some(killed_holders) = self.killed_holders.as_ref() {
+                    killed_holders
+                        .lock()
+                        .map_err(|_| setup_error("stub holder kill log lock poisoned"))?
+                        .push(holder_pid);
+                }
+            }
             return Ok(HolderKillReport::default());
         }
         #[cfg(not(target_os = "linux"))]

@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/shared/trace",
     "crates/shared/protocol",
+    "crates/daemon/plugin-contract",
     "crates/daemon/operation",
     "crates/daemon/command",
     "crates/daemon/config",
@@ -63,6 +64,7 @@ overlay = { path = "crates/daemon/overlay" }
 namespace = { path = "crates/daemon/namespace" }
 trace = { path = "crates/shared/trace" }
 protocol = { path = "crates/shared/protocol" }
+plugin-contract = { path = "crates/daemon/plugin-contract" }
 daemon = { path = "crates/daemon/core" }
 plugin = { path = "crates/daemon/plugin" }
 eosd = { path = "crates/daemon/eosd" }

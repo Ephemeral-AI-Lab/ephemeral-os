@@ -1,7 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::process::Child;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
 use std::sync::Mutex;
 
 // Integration test crates receive every normal `daemon` dependency even
@@ -19,7 +17,6 @@ use daemon::wire::{
 use daemon::{DaemonServer, RuntimeServices, ServerConfig};
 use daemon::{DispatchContext, InFlightRegistry};
 use layerstack as _;
-use namespace::protocol::{RunRequest, RunResult};
 use serde as _;
 use serde_json::{json, Value};
 use thiserror as _;
@@ -28,7 +25,6 @@ use tokio::net::{TcpListener, TcpStream, UnixStream};
 use tokio::time::{sleep, timeout, Duration};
 use tokio_util as _;
 use trace::decode_trace_batch;
-use workspace::{LaunchError, NsRunnerLauncher};
 
 static ISOLATED_ENV_LOCK: Mutex<()> = Mutex::new(());
 
@@ -95,39 +91,7 @@ fn test_services(
         plugin,
         isolated_workspace,
         command::CommandConfig::default(),
-        Arc::new(NoLaunch),
     )
-}
-
-struct NoLaunch;
-
-impl NsRunnerLauncher for NoLaunch {
-    fn run(&self, _request: &RunRequest) -> Result<RunResult, LaunchError> {
-        Err(LaunchError::Failed(
-            "test launcher does not start ns-runner".to_owned(),
-        ))
-    }
-
-    fn spawn_detached(
-        &self,
-        _request: &RunRequest,
-        _stderr_path: &std::path::Path,
-    ) -> Result<Child, LaunchError> {
-        Err(LaunchError::Failed(
-            "test launcher does not start ns-runner".to_owned(),
-        ))
-    }
-
-    fn remount_in(
-        &self,
-        _target_pid: u32,
-        _request: &RunRequest,
-        _timeout: std::time::Duration,
-    ) -> Result<(), LaunchError> {
-        Err(LaunchError::Failed(
-            "test launcher does not start ns-runner".to_owned(),
-        ))
-    }
 }
 
 #[test]
@@ -322,7 +286,7 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() -> 
         handle_id.len() >= 6 && handle_id.bytes().all(|byte| byte.is_ascii_hexdigit()),
         "workspace handle id should be a hex filesystem component: {handle_id}"
     );
-    let handle_scratch = env.scratch.join(handle_id);
+    let handle_scratch = env.scratch.join("eos-isolated").join(handle_id);
     let private_file = handle_scratch.join("upper").join("private.txt");
     std::fs::write(&private_file, "private scratch\n")?;
 

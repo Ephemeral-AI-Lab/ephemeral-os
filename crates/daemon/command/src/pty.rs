@@ -1,5 +1,6 @@
 use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Write};
+use std::os::fd::AsRawFd;
 use std::os::unix::process::{CommandExt, ExitStatusExt};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, ExitStatus, Stdio};
@@ -11,6 +12,8 @@ use nix::sys::signal::{killpg, Signal};
 use nix::unistd::Pid;
 use rustix::event::{poll, PollFd, PollFlags};
 use rustix::fs::{fcntl_getfl, fcntl_setfl, OFlags};
+use rustix::io::{fcntl_setfd, FdFlags};
+use rustix::pipe::pipe;
 #[cfg(target_os = "linux")]
 use rustix::pty::ioctl_tiocgptpeer;
 #[cfg(not(target_os = "linux"))]
@@ -30,6 +33,11 @@ pub(crate) struct PtyProcess {
     writer: Mutex<File>,
     reader_done: Mutex<Option<mpsc::Receiver<()>>>,
     child: Mutex<Option<Child>>,
+}
+
+pub(crate) struct PendingPtyProcess {
+    process: PtyProcess,
+    start_ack: std::os::fd::OwnedFd,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -271,16 +279,36 @@ impl PtyProcess {
     }
 }
 
+impl PendingPtyProcess {
+    #[must_use]
+    pub(crate) const fn process_group_id(&self) -> Option<i32> {
+        self.process.process_group_id()
+    }
+
+    pub(crate) fn terminate(&self) {
+        self.process.terminate();
+    }
+
+    pub(crate) fn allow_start(self) -> io::Result<PtyProcess> {
+        let Self { process, start_ack } = self;
+        let mut start_ack = File::from(start_ack);
+        start_ack.write_all(b"1")?;
+        Ok(process)
+    }
+}
+
 pub(crate) fn spawn_current_exe_ns_runner(
     request_path: &Path,
     run_request: &Value,
     output_path: &Path,
     transcript_path: PathBuf,
     transcript_timestamp_timezone: &str,
-) -> Result<PtyProcess, CommandError> {
+) -> Result<PendingPtyProcess, CommandError> {
     write_run_request(request_path, run_request)
         .map_err(|error| CommandError::artifact_write("runner_request", request_path, error))?;
     let (master, slave) = open_pty_pair()?;
+    let (start_ack_read, start_ack_write) = start_ack_pipe()?;
+    let start_ack_fd = start_ack_read.as_raw_fd();
     // Non-blocking master OFD (shared by the writer dup and the reader): writes
     // can't wedge on a non-draining consumer, and the reader polls instead.
     set_nonblocking(&master)?;
@@ -291,11 +319,14 @@ pub(crate) fn spawn_current_exe_ns_runner(
         .arg(request_path)
         .arg("--output")
         .arg(output_path)
+        .arg("--start-ack-fd")
+        .arg(start_ack_fd.to_string())
         .stdin(Stdio::from(slave.try_clone()?))
         .stdout(Stdio::from(slave.try_clone()?))
         .stderr(Stdio::from(slave))
         .process_group(0);
     let child = child_command.spawn()?;
+    drop(start_ack_read);
     let pgid = i32::try_from(child.id()).map_err(|_| {
         io::Error::new(
             io::ErrorKind::InvalidData,
@@ -312,12 +343,22 @@ pub(crate) fn spawn_current_exe_ns_runner(
         })?;
     let reader_done = spawn_command_output_reader(master, transcript_path, transcript_prefixer);
 
-    Ok(PtyProcess {
-        pgid: Some(pgid),
-        writer: Mutex::new(writer),
-        reader_done: Mutex::new(Some(reader_done)),
-        child: Mutex::new(Some(child)),
+    Ok(PendingPtyProcess {
+        process: PtyProcess {
+            pgid: Some(pgid),
+            writer: Mutex::new(writer),
+            reader_done: Mutex::new(Some(reader_done)),
+            child: Mutex::new(Some(child)),
+        },
+        start_ack: start_ack_write,
     })
+}
+
+fn start_ack_pipe() -> io::Result<(std::os::fd::OwnedFd, std::os::fd::OwnedFd)> {
+    let (read, write) = pipe()?;
+    fcntl_setfd(&read, FdFlags::empty())?;
+    fcntl_setfd(&write, FdFlags::CLOEXEC)?;
+    Ok((read, write))
 }
 
 fn spawn_command_output_reader(

@@ -1,6 +1,7 @@
 //! One command process: the child process, PTY transcript, kill/exit state,
 //! and final-response persistence.
 
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
@@ -191,6 +192,9 @@ impl CommandProcess {
             process.terminate();
             return Err(error);
         }
+        let process = process.allow_start().map_err(|error| {
+            CommandError::artifact_write("process_start_ack", &process_path, error)
+        })?;
         Ok(Self::with_runtime(
             spec,
             CommandProcessRuntime::new(
@@ -419,9 +423,35 @@ fn process_metadata_path(final_path: &Path) -> Result<PathBuf, CommandError> {
 
 fn write_process_metadata(path: &Path, process_group_id: Option<i32>) -> Result<(), CommandError> {
     let bytes = CommandProcessMetadata::new(process_group_id).to_pretty_vec()?;
-    std::fs::write(path, bytes)
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .open(path)
         .map_err(|error| CommandError::artifact_write("process_metadata", path, error))?;
+    file.write_all(&bytes)
+        .and_then(|()| file.sync_all())
+        .map_err(|error| CommandError::artifact_write("process_metadata", path, error))?;
+    if let Some(parent) = path.parent() {
+        sync_directory(parent)
+            .map_err(|error| CommandError::artifact_write("process_metadata_dir", parent, error))?;
+    }
     Ok(())
+}
+
+fn sync_directory(path: &Path) -> std::io::Result<()> {
+    match std::fs::File::open(path).and_then(|file| file.sync_all()) {
+        Ok(()) => Ok(()),
+        Err(error)
+            if matches!(
+                error.kind(),
+                std::io::ErrorKind::InvalidInput | std::io::ErrorKind::Unsupported
+            ) =>
+        {
+            Ok(())
+        }
+        Err(error) => Err(error),
+    }
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {

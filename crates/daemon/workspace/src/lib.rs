@@ -18,8 +18,7 @@ pub use capture::{capture_upperdir, CaptureError, CapturedChanges};
 pub use dirs::{DirAllocationError, OverlayDirs, OverlayDirsGuard};
 pub use ephemeral_workspace::{overlay_run_dirs, EphemeralWorkspace, EphemeralWorkspaceError};
 pub use isolated_workspace::{
-    CurrentExeNsRunnerLauncher, DnsConfiguration, ExitOutcome, IsolatedError, IsolatedManager,
-    IsolatedSnapshot, IsolatedWorkspaceBinding, IsolatedWorkspaceId, LaunchError, NsRunnerLauncher,
-    ResourceCaps, Rfc1918Egress, WorkspaceHandle,
+    DnsConfiguration, ExitOutcome, IsolatedError, IsolatedManager, IsolatedSnapshot,
+    IsolatedWorkspaceBinding, IsolatedWorkspaceId, ResourceCaps, Rfc1918Egress, WorkspaceHandle,
 };
 pub use tree::TreeResourceStats;

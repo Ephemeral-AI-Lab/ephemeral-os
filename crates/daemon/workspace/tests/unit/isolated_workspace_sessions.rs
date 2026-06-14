@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 use super::lifecycle::next_handle_id;
 use super::{
@@ -8,6 +9,7 @@ use super::{
 };
 use crate::isolated_workspace::caps::ResourceCaps;
 use crate::isolated_workspace::error::IsolatedError;
+use crate::isolated_workspace::namespace::NamespaceRuntime;
 
 #[test]
 fn parses_memavailable_from_proc_meminfo() {
@@ -128,6 +130,112 @@ fn evict_idle_workspaces_skips_callers_with_active_commands(
     assert_eq!(evicted[0].caller_id, "idle");
     assert_eq!(evicted[0].lease_id, "lease-2");
     assert!(sessions.get_handle("busy").is_some());
+
+    let _ = std::fs::remove_dir_all(scratch_root);
+    Ok(())
+}
+
+#[test]
+fn enter_persistence_failure_rolls_back_holder_and_state() -> Result<(), Box<dyn std::error::Error>>
+{
+    let scratch_root = unique_temp_dir("isolated-enter-persist-fail");
+    std::fs::create_dir_all(&scratch_root)?;
+    std::fs::create_dir(scratch_root.join("manager.json.tmp"))?;
+    let killed_holders = Arc::new(Mutex::new(Vec::new()));
+    let runtime = NamespaceRuntime::stubbed_with_holder(4242, Arc::clone(&killed_holders));
+    let mut sessions = IsolatedManager::with_runtime(enabled_caps(), scratch_root.clone(), runtime);
+
+    let error = sessions
+        .enter("caller-persist-fail", snapshot())
+        .expect_err("persist failure should fail enter");
+
+    assert_eq!(error.kind(), "setup_failed");
+    assert!(error.to_string().contains("manager_write"));
+    assert!(sessions.list_open_callers().is_empty());
+    assert!(sessions.get_handle("caller-persist-fail").is_none());
+    assert_eq!(*killed_holders.lock().unwrap(), vec![4242]);
+    let owned_root = scratch_root.join("eos-isolated");
+    assert!(
+        !owned_root.exists() || std::fs::read_dir(&owned_root)?.next().is_none(),
+        "rollback should remove the allocated run dir"
+    );
+
+    let _ = std::fs::remove_dir_all(scratch_root);
+    Ok(())
+}
+
+#[test]
+fn exit_persistence_failure_is_reported_in_inspection() -> Result<(), Box<dyn std::error::Error>> {
+    let scratch_root = unique_temp_dir("isolated-exit-persist-fail");
+    let mut sessions = IsolatedManager::stubbed(enabled_caps(), scratch_root.clone());
+    sessions.enter("caller", snapshot())?;
+    std::fs::create_dir(scratch_root.join("manager.json.tmp"))?;
+
+    let exit = sessions.exit("caller", Some(0.0))?;
+
+    let persistence_error = exit
+        .inspection
+        .get("persistence_error")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_default();
+    assert!(
+        persistence_error.contains("manager_write"),
+        "{persistence_error}"
+    );
+
+    let _ = std::fs::remove_dir_all(scratch_root);
+    Ok(())
+}
+
+#[test]
+fn recovery_reaps_only_owned_scratch_directories() -> Result<(), Box<dyn std::error::Error>> {
+    let scratch_root = unique_temp_dir("isolated-owned-scratch");
+    let owned_root = scratch_root.join("eos-isolated");
+    let owned = owned_root.join("0000010123456789abcdef");
+    let invalid_owned = owned_root.join("not-a-workspace");
+    let foreign = scratch_root.join("foreign");
+    std::fs::create_dir_all(&owned)?;
+    std::fs::create_dir_all(&invalid_owned)?;
+    std::fs::create_dir_all(&foreign)?;
+    let mut sessions = IsolatedManager::stubbed(enabled_caps(), scratch_root.clone());
+
+    let cleanup_error = sessions.reap_orphan_resources();
+
+    assert_eq!(cleanup_error, None);
+    assert!(!owned.exists(), "owned workspace scratch should be reaped");
+    assert!(
+        invalid_owned.exists(),
+        "invalid owned-root directory should survive"
+    );
+    assert!(foreign.exists(), "foreign scratch sibling should survive");
+
+    let _ = std::fs::remove_dir_all(scratch_root);
+    Ok(())
+}
+
+#[test]
+fn recovery_kills_persisted_holder_pid() -> Result<(), Box<dyn std::error::Error>> {
+    let scratch_root = unique_temp_dir("isolated-persisted-holder");
+    std::fs::create_dir_all(&scratch_root)?;
+    std::fs::write(
+        scratch_root.join("manager.json"),
+        serde_json::json!({
+            "schema_version": 1,
+            "handles": [{
+                "lease_id": "lease-orphan",
+                "holder_pid": 5150
+            }]
+        })
+        .to_string(),
+    )?;
+    let killed_holders = Arc::new(Mutex::new(Vec::new()));
+    let runtime = NamespaceRuntime::stubbed_with_holder(0, Arc::clone(&killed_holders));
+    let mut sessions = IsolatedManager::with_runtime(enabled_caps(), scratch_root.clone(), runtime);
+
+    let report = sessions.reap_persisted_orphans()?;
+
+    assert_eq!(report.orphan_lease_ids, vec!["lease-orphan"]);
+    assert_eq!(*killed_holders.lock().unwrap(), vec![5150]);
 
     let _ = std::fs::remove_dir_all(scratch_root);
     Ok(())

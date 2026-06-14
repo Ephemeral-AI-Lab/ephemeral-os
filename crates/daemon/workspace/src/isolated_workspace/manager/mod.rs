@@ -21,6 +21,7 @@ pub use lifecycle::ExitOutcome;
 
 const HOST_BUDGET_FALLBACK_BYTES: u64 = 1_u64 << 62;
 const KIB_BYTES: u64 = 1_024;
+const OWNED_SCRATCH_DIR: &str = "eos-isolated";
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct IsolatedWorkspaceId(pub String);
@@ -142,6 +143,10 @@ impl IsolatedManager {
 
     pub fn reap_orphan_resources(&mut self) -> Option<String> {
         self.reap_named_orphans()
+    }
+
+    fn owned_scratch_root(&self) -> PathBuf {
+        self.scratch_root.join(OWNED_SCRATCH_DIR)
     }
 }
 

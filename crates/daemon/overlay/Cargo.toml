@@ -6,7 +6,6 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
-layerstack.workspace = true
 rustix.workspace = true
 thiserror.workspace = true
 

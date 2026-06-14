@@ -2,6 +2,8 @@
 
 use std::fs::File;
 use std::io::{Read, Write};
+#[cfg(unix)]
+use std::os::fd::RawFd;
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Context, Result};
@@ -15,6 +17,7 @@ use anyhow::{anyhow, Context, Result};
 /// stdout or `--output <path>`.
 pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let config = RunnerCliConfig::parse(args)?;
+    wait_for_start_ack(config.start_ack_fd)?;
     let request_json = read_payload(config.request_path.as_ref())?;
     let request: namespace::protocol::RunRequest =
         serde_json::from_str(&request_json).context("failed to decode ns-runner request JSON")?;
@@ -70,6 +73,7 @@ enum RunnerCliMode {
 struct RunnerCliConfig {
     request_path: Option<PathBuf>,
     output_path: Option<PathBuf>,
+    start_ack_fd: Option<RawFd>,
     mode: RunnerCliMode,
 }
 
@@ -77,6 +81,7 @@ impl RunnerCliConfig {
     fn parse(args: std::env::Args) -> Result<Self> {
         let mut request_path = None;
         let mut output_path = None;
+        let mut start_ack_fd = None;
         let mut mode = None;
         let mut set_mode = |selected: RunnerCliMode| {
             if mode.is_some() {
@@ -106,6 +111,14 @@ impl RunnerCliConfig {
                             .ok_or_else(|| anyhow!("--output requires a path"))?,
                     ));
                 }
+                "--start-ack-fd" => {
+                    start_ack_fd = Some(
+                        args.next()
+                            .ok_or_else(|| anyhow!("--start-ack-fd requires a file descriptor"))?
+                            .parse::<RawFd>()
+                            .context("--start-ack-fd must be an integer file descriptor")?,
+                    );
+                }
                 "--help" | "-h" => {
                     println!(
                         "usage: eosd ns-runner [--mount-overlay | --remount-overlay | --configure-dns] [--request PATH] [--output PATH]"
@@ -128,9 +141,30 @@ impl RunnerCliConfig {
         Ok(Self {
             request_path,
             output_path,
+            start_ack_fd,
             mode: mode.unwrap_or(RunnerCliMode::Run),
         })
     }
+}
+
+fn wait_for_start_ack(fd: Option<RawFd>) -> Result<()> {
+    let Some(fd) = fd else {
+        return Ok(());
+    };
+    let file = open_fd_for_read(fd)
+        .with_context(|| format!("failed to open ns-runner start ack fd {fd}"))?;
+    wait_for_start_ack_reader(file)
+}
+
+fn wait_for_start_ack_reader(mut reader: impl Read) -> Result<()> {
+    let mut byte = [0_u8; 1];
+    reader
+        .read_exact(&mut byte)
+        .context("ns-runner start ack closed before command start")
+}
+
+fn open_fd_for_read(fd: RawFd) -> std::io::Result<File> {
+    File::open(format!("/proc/self/fd/{fd}")).or_else(|_| File::open(format!("/dev/fd/{fd}")))
 }
 
 fn remount_overlay_from_request(request: &namespace::protocol::RunRequest) -> Result<()> {
@@ -162,6 +196,40 @@ fn remount_overlay_from_request(request: &namespace::protocol::RunRequest) -> Re
     };
     std::mem::forget(mount);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::os::unix::net::UnixStream;
+
+    use super::*;
+
+    #[test]
+    fn wait_for_start_ack_returns_after_parent_byte() -> Result<()> {
+        let (read_end, mut write_end) = UnixStream::pair().context("create ack pair")?;
+        write_end.write_all(b"1").context("write ack")?;
+
+        wait_for_start_ack_reader(read_end)?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn wait_for_start_ack_errors_on_eof_before_ack() -> Result<()> {
+        let (read_end, write_end) = UnixStream::pair().context("create ack pair")?;
+        drop(write_end);
+
+        let error = wait_for_start_ack_reader(read_end)
+            .expect_err("closed ack fd should fail before runner start");
+
+        assert!(
+            error
+                .to_string()
+                .contains("start ack closed before command start"),
+            "{error}"
+        );
+        Ok(())
+    }
 }
 
 fn is_fsopen_unimplemented(err: &overlay::OverlayError) -> bool {

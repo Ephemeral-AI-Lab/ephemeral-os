@@ -10,10 +10,12 @@ command.workspace = true
 layerstack.workspace = true
 namespace.workspace = true
 overlay.workspace = true
+plugin-contract.workspace = true
 protocol.workspace = true
 trace.workspace = true
 workspace.workspace = true
 nix = { workspace = true, features = ["process", "signal"] }
+rustix = { workspace = true, features = ["fs"] }
 serde.workspace = true
 # preserve_order keeps parsed request/response objects in insertion order on the wire.
 serde_json = { workspace = true, features = ["preserve_order"] }
