@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>daemon · src/op_adapter/mod.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>38</b><span>modules</span></div>
+  <div><b>277</b><span>items</span></div>
+  <div><b>142</b><span>fields</span></div>
+  <div><b>74</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">dispatch</span><ul class="file-tree"><li><a class="file-link" href="daemon.html"><span>builtin.rs</span><small>0/5</small></a></li><li><a class="file-link" href="daemon--src-dispatch-dispatcher-rs.html"><span>dispatcher.rs</span><small>0/5</small></a></li><li><a class="file-link" href="daemon--src-dispatch-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="daemon--src-lib-rs.html"><span>lib.rs</span><small>0/1</small></a></li><li><span class="folder">op_adapter</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-op-adapter-checkpoint-rs.html"><span>checkpoint.rs</span><small>0/13</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-command-rs.html"><span>command.rs</span><small>2/17</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-control-rs.html"><span>control.rs</span><small>0/11</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-files-rs.html"><span>files.rs</span><small>4/19</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-isolation-rs.html"><span>isolation.rs</span><small>0/23</small></a></li><li><a class="file-link active" href="daemon--src-op-adapter-mod-rs.html"><span>mod.rs</span><small>0/12</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-plugin-rs.html"><span>plugin.rs</span><small>1/17</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-workspace-run-rs.html"><span>workspace_run.rs</span><small>0/2</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-runtime-context-rs.html"><span>context.rs</span><small>1/0</small></a></li><li><a class="file-link" href="daemon--src-runtime-error-rs.html"><span>error.rs</span><small>1/1</small></a></li><li><a class="file-link" href="daemon--src-runtime-invocation-registry-rs.html"><span>invocation_registry.rs</span><small>4/2</small></a></li><li><a class="file-link" href="daemon--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="daemon--src-runtime-response-rs.html"><span>response.rs</span><small>2/11</small></a></li><li><a class="file-link" href="daemon--src-runtime-services-rs.html"><span>services.rs</span><small>1/3</small></a></li><li><a class="file-link" href="daemon--src-runtime-workspace-rs.html"><span>workspace.rs</span><small>10/5</small></a></li></ul></li><li><span class="folder">trace</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-trace-envelope-meta-rs.html"><span>envelope_meta.rs</span><small>0/6</small></a></li><li><a class="file-link" href="daemon--src-trace-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="daemon--src-trace-plugin-trace-rs.html"><span>plugin_trace.rs</span><small>0/21</small></a></li><li><span class="folder">sidecar</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-trace-sidecar-budget-rs.html"><span>budget.rs</span><small>0/1</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-build-rs.html"><span>build.rs</span><small>0/2</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-events-rs.html"><span>events.rs</span><small>0/7</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-resources-rs.html"><span>resources.rs</span><small>0/4</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-tests-rs.html"><span>tests.rs</span><small>0/5</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-transport-failure-rs.html"><span>transport_failure.rs</span><small>0/2</small></a></li></ul></li><li><a class="file-link" href="daemon--src-trace-sidecar-rs.html"><span>sidecar.rs</span><small>0/0</small></a></li><li><a class="file-link" href="daemon--src-trace-spool-rs.html"><span>spool.rs</span><small>3/9</small></a></li></ul></li><li><span class="folder">transport</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-transport-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">server</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-transport-server-connection-rs.html"><span>connection.rs</span><small>0/3</small></a></li><li><a class="file-link" href="daemon--src-transport-server-dispatch-rs.html"><span>dispatch.rs</span><small>0/6</small></a></li><li><a class="file-link" href="daemon--src-transport-server-lifecycle-rs.html"><span>lifecycle.rs</span><small>0/2</small></a></li><li><a class="file-link" href="daemon--src-transport-server-trace-context-rs.html"><span>trace_context.rs</span><small>1/3</small></a></li></ul></li><li><a class="file-link" href="daemon--src-transport-server-rs.html"><span>server.rs</span><small>2/0</small></a></li></ul></li><li><span class="folder">wire</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-wire-message-rs.html"><span>message.rs</span><small>5/3</small></a></li><li><a class="file-link" href="daemon--src-wire-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="op_adapter crates/daemon/src/op_adapter/mod.rs to_wire_value ok_envelope rejected_envelope rejected_fault_envelope error_envelope is_operation_envelope operation_fault fault_details error_kind_wire_name ok_envelope_wraps_result_without_flattening_domain_status rejected_envelope_preserves_structured_detail_fields internal_error_envelope_uses_explicit_error_id_and_detail_fields">
+  <div class="module-head">
+    <div>
+      <h2>src/op_adapter/mod.rs</h2>
+      <p class="path">module <code>op_adapter</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>12 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-to-wire-value-22" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn to_wire_value pub(crate) pub(crate) fn to_wire_value (output : impl serde :: Serialize) -&gt; Value crates/daemon/src/op_adapter/mod.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>to_wire_value</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a> (output : impl serde :: Serialize) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(output: <span class="rs-kw">impl</span> serde::<span class="rs-type">Serialize</span>) -&gt; <span class="rs-type">Value</span> {
+    serde_json::to_value(output).expect(&quot;operation output <span class="rs-type">DTO</span> serializes to <span class="rs-type">JSON</span>&quot;)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/mod.rs:22</p>
+</article><article id="item-fn-ok-envelope-26" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ok_envelope pub(crate) pub(crate) fn ok_envelope (output : impl Serialize) -&gt; Value crates/daemon/src/op_adapter/mod.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ok_envelope</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="daemon--src-op-adapter-mod-rs.html#item-fn-ok-envelope-26">ok_envelope</a> (output : impl Serialize) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-ok-envelope-26">ok_envelope</a>(output: <span class="rs-kw">impl</span> <span class="rs-type">Serialize</span>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> output = <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(output);
+    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-is-operation-envelope-69">is_operation_envelope</a>(&amp;output) {
+        <span class="rs-kw">return</span> output;
+    }
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(<span class="rs-type">OperationEnvelope</span>::ok(output, <span class="rs-type">ResponseMeta</span>::default()))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/mod.rs:26</p>
+</article><article id="item-fn-rejected-envelope-34" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejected_envelope pub(crate) pub(crate) fn rejected_envelope (error : OpError) -&gt; Value crates/daemon/src/op_adapter/mod.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>rejected_envelope</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="daemon--src-op-adapter-mod-rs.html#item-fn-rejected-envelope-34">rejected_envelope</a> (error : OpError) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-rejected-envelope-34">rejected_envelope</a>(error: <span class="rs-type">OpError</span>) -&gt; <span class="rs-type">Value</span> {
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(<span class="rs-type">OperationEnvelope</span>::&lt;<span class="rs-type">Value</span>&gt;::rejected(
+        <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-operation-fault-81">operation_fault</a>(
+            error.kind,
+            error.message,
+            error.details.unwrap_or_else(|| serde_json::json!({})),
+        ),
+        <span class="rs-type">ResponseMeta</span>::default(),
+    ))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/mod.rs:34</p>
+</article><article id="item-fn-rejected-fault-envelope-45" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejected_fault_envelope pub(crate) pub(crate) fn rejected_fault_envelope (kind : &amp; 'static str , message : impl Into &lt; String &gt; , details : Value ,) -&gt; Value crates/daemon/src/op_adapter/mod.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>rejected_fault_envelope</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="daemon--src-op-adapter-mod-rs.html#item-fn-rejected-fault-envelope-45">rejected_fault_envelope</a> (kind : &amp; &#x27;static str , message : impl Into &lt; String &gt; , details : Value ,) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-rejected-fault-envelope-45">rejected_fault_envelope</a>(
+    kind: &amp;&#x27;<span class="rs-kw">static</span> str,
+    message: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;,
+    details: <span class="rs-type">Value</span>,
+) -&gt; <span class="rs-type">Value</span> {
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-rejected-envelope-34">rejected_envelope</a>(<span class="rs-type">OpError</span> {
+        kind,
+        message: message.into(),
+        details: <span class="rs-type">Some</span>(details),
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/mod.rs:45</p>
+</article><article id="item-fn-error-envelope-57" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_envelope pub(crate) pub(crate) fn error_envelope (kind : ErrorKind , message : impl Into &lt; String &gt; , details : Value) -&gt; Value crates/daemon/src/op_adapter/mod.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>error_envelope</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="daemon--src-op-adapter-mod-rs.html#item-fn-error-envelope-57">error_envelope</a> (kind : ErrorKind , message : impl Into &lt; String &gt; , details : Value) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-error-envelope-57">error_envelope</a>(kind: <span class="rs-type">ErrorKind</span>, message: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;, details: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> fault = <span class="rs-kw">if</span> kind == <span class="rs-type">ErrorKind</span>::<span class="rs-type">InternalError</span> {
+        <span class="rs-type">OperationFault</span>::internal(message, <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-fault-details-89">fault_details</a>(details))
+    } <span class="rs-kw">else</span> {
+        <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-operation-fault-81">operation_fault</a>(<a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-error-kind-wire-name-102">error_kind_wire_name</a>(kind), message, details)
+    };
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(<span class="rs-type">OperationEnvelope</span>::&lt;<span class="rs-type">Value</span>&gt;::error(
+        fault,
+        <span class="rs-type">ResponseMeta</span>::default(),
+    ))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/mod.rs:57</p>
+</article><article id="item-fn-is-operation-envelope-69" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_operation_envelope pub(crate) pub(crate) fn is_operation_envelope (value : &amp; Value) -&gt; bool crates/daemon/src/op_adapter/mod.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>is_operation_envelope</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="daemon--src-op-adapter-mod-rs.html#item-fn-is-operation-envelope-69">is_operation_envelope</a> (value : &amp; Value) -&gt; bool</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-is-operation-envelope-69">is_operation_envelope</a>(value: &amp;<span class="rs-type">Value</span>) -&gt; bool {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(object) = value.as_object() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
+    };
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(&quot;ok&quot; | &quot;running&quot; | &quot;rejected&quot; | &quot;cancelled&quot; | &quot;timed_out&quot; | &quot;error&quot;) =
+        object.get(&quot;status&quot;).and_then(<span class="rs-type">Value</span>::as_str)
+    <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
+    };
+    object.contains_key(&quot;meta&quot;) &amp;&amp; (object.contains_key(&quot;result&quot;) || object.contains_key(&quot;error&quot;))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/mod.rs:69</p>
+</article><article id="item-fn-operation-fault-81" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn operation_fault private fn operation_fault (kind : impl Into &lt; String &gt; , message : impl Into &lt; String &gt; , details : Value ,) -&gt; OperationFault crates/daemon/src/op_adapter/mod.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>operation_fault</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-mod-rs.html#item-fn-operation-fault-81">operation_fault</a> (kind : impl Into &lt; String &gt; , message : impl Into &lt; String &gt; , details : Value ,) -&gt; OperationFault</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-operation-fault-81">operation_fault</a>(
+    kind: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;,
+    message: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;,
+    details: <span class="rs-type">Value</span>,
+) -&gt; <span class="rs-type">OperationFault</span> {
+    <span class="rs-type">OperationFault</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(kind, message).with_details(<a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-fault-details-89">fault_details</a>(details))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/mod.rs:81</p>
+</article><article id="item-fn-fault-details-89" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn fault_details private fn fault_details (details : Value) -&gt; FaultDetails crates/daemon/src/op_adapter/mod.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>fault_details</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-mod-rs.html#item-fn-fault-details-89">fault_details</a> (details : Value) -&gt; FaultDetails</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-fault-details-89">fault_details</a>(details: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">FaultDetails</span> {
+    <span class="rs-kw">match</span> details {
+        <span class="rs-type">Value</span>::<span class="rs-type">Null</span> =&gt; <span class="rs-type">FaultDetails</span>::default(),
+        <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(fields) <span class="rs-kw">if</span> fields.is_empty() =&gt; <span class="rs-type">FaultDetails</span>::default(),
+        <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(fields) =&gt; fields
+            .into_iter()
+            .fold(<span class="rs-type">FaultDetails</span>::default(), |details, (key, value)| {
+                details.with_field(key, value)
+            }),
+        value =&gt; <span class="rs-type">FaultDetails</span>::default().with_field(&quot;value&quot;, value),
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/mod.rs:89</p>
+</article><article id="item-fn-error-kind-wire-name-102" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_kind_wire_name private fn error_kind_wire_name (kind : ErrorKind) -&gt; &amp; 'static str crates/daemon/src/op_adapter/mod.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>error_kind_wire_name</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-mod-rs.html#item-fn-error-kind-wire-name-102">error_kind_wire_name</a> (kind : ErrorKind) -&gt; &amp; &#x27;static str</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-error-kind-wire-name-102">error_kind_wire_name</a>(kind: <span class="rs-type">ErrorKind</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    kind.as_str()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/mod.rs:102</p>
+</article><article id="item-fn-ok-envelope-wraps-result-without-flattening-domain-status-113" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ok_envelope_wraps_result_without_flattening_domain_status private fn ok_envelope_wraps_result_without_flattening_domain_status () crates/daemon/src/op_adapter/mod.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ok_envelope_wraps_result_without_flattening_domain_status</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-mod-rs.html#item-fn-ok-envelope-wraps-result-without-flattening-domain-status-113">ok_envelope_wraps_result_without_flattening_domain_status</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-ok-envelope-wraps-result-without-flattening-domain-status-113">ok_envelope_wraps_result_without_flattening_domain_status</a>() {
+        <span class="rs-kw">let</span> value = <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-ok-envelope-26">ok_envelope</a>(json!({&quot;success&quot;: <span class="rs-kw">true</span>, &quot;status&quot;: &quot;committed&quot;}));
+
+        assert_eq!(value[&quot;status&quot;], &quot;ok&quot;);
+        assert_eq!(value[&quot;result&quot;][&quot;status&quot;], &quot;committed&quot;);
+        assert_eq!(value[&quot;result&quot;][&quot;success&quot;], <span class="rs-kw">true</span>);
+        assert!(value.get(&quot;meta&quot;).is_some());
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/mod.rs:113</p>
+</article><article id="item-fn-rejected-envelope-preserves-structured-detail-fields-123" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejected_envelope_preserves_structured_detail_fields private fn rejected_envelope_preserves_structured_detail_fields () crates/daemon/src/op_adapter/mod.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>rejected_envelope_preserves_structured_detail_fields</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-mod-rs.html#item-fn-rejected-envelope-preserves-structured-detail-fields-123">rejected_envelope_preserves_structured_detail_fields</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-rejected-envelope-preserves-structured-detail-fields-123">rejected_envelope_preserves_structured_detail_fields</a>() {
+        <span class="rs-kw">let</span> value = <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-rejected-fault-envelope-45">rejected_fault_envelope</a>(
+            &quot;invalid_argument&quot;,
+            &quot;caller_id is required&quot;,
+            json!({&quot;key&quot;: &quot;caller_id&quot;}),
+        );
+
+        assert_eq!(value[&quot;status&quot;], &quot;rejected&quot;);
+        assert_eq!(value[&quot;error&quot;][&quot;kind&quot;], &quot;invalid_argument&quot;);
+        assert_eq!(
+            value[&quot;error&quot;][&quot;details&quot;][&quot;fields&quot;],
+            json!({&quot;key&quot;: &quot;caller_id&quot;})
+        );
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/mod.rs:123</p>
+</article><article id="item-fn-internal-error-envelope-uses-explicit-error-id-and-detail-fields-139" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn internal_error_envelope_uses_explicit_error_id_and_detail_fields private fn internal_error_envelope_uses_explicit_error_id_and_detail_fields () crates/daemon/src/op_adapter/mod.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>internal_error_envelope_uses_explicit_error_id_and_detail_fields</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-mod-rs.html#item-fn-internal-error-envelope-uses-explicit-error-id-and-detail-fields-139">internal_error_envelope_uses_explicit_error_id_and_detail_fields</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-internal-error-envelope-uses-explicit-error-id-and-detail-fields-139">internal_error_envelope_uses_explicit_error_id_and_detail_fields</a>() {
+        <span class="rs-kw">let</span> value = <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-error-envelope-57">error_envelope</a>(
+            <span class="rs-type">ErrorKind</span>::<span class="rs-type">InternalError</span>,
+            &quot;daemon invocation failed&quot;,
+            json!({&quot;op&quot;: &quot;api.test.failure&quot;}),
+        );
+
+        assert_eq!(value[&quot;status&quot;], &quot;error&quot;);
+        assert_eq!(value[&quot;error&quot;][&quot;kind&quot;], &quot;internal_error&quot;);
+        assert_eq!(
+            value[&quot;error&quot;][&quot;details&quot;][&quot;fields&quot;][&quot;op&quot;],
+            &quot;api.test.failure&quot;
+        );
+        assert_eq!(value[&quot;error&quot;][&quot;error_id&quot;].as_str().map(str::len), <span class="rs-type">Some</span>(32));
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/mod.rs:139</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/daemon/src/op_adapter/mod.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Daemon JSON operation adapters.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! These modules parse wire `args`, call the owning service/crate, and shape</span>
+<span class="rs-comment">//! the stable response object. Domain lifecycle policy should live below this</span>
+<span class="rs-comment">//! adapter layer.</span>
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">mod</span> checkpoint;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">mod</span> command;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">mod</span> control;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">mod</span> files;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">mod</span> isolation;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">mod</span> plugin;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">mod</span> workspace_run;
+
+<span class="rs-kw">use</span> operation::<span class="rs-type">OpError</span>;
+<span class="rs-kw">use</span> protocol::{<span class="rs-type">FaultDetails</span>, <span class="rs-type">OperationEnvelope</span>, <span class="rs-type">OperationFault</span>, <span class="rs-type">ResponseMeta</span>};
+<span class="rs-kw">use</span> serde::<span class="rs-type">Serialize</span>;
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::wire::<span class="rs-type">ErrorKind</span>;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(output: <span class="rs-kw">impl</span> serde::<span class="rs-type">Serialize</span>) -&gt; <span class="rs-type">Value</span> {
+    serde_json::to_value(output).expect(&quot;operation output <span class="rs-type">DTO</span> serializes to <span class="rs-type">JSON</span>&quot;)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-ok-envelope-26">ok_envelope</a>(output: <span class="rs-kw">impl</span> <span class="rs-type">Serialize</span>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> output = <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(output);
+    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-is-operation-envelope-69">is_operation_envelope</a>(&amp;output) {
+        <span class="rs-kw">return</span> output;
+    }
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(<span class="rs-type">OperationEnvelope</span>::ok(output, <span class="rs-type">ResponseMeta</span>::default()))
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-rejected-envelope-34">rejected_envelope</a>(error: <span class="rs-type">OpError</span>) -&gt; <span class="rs-type">Value</span> {
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(<span class="rs-type">OperationEnvelope</span>::&lt;<span class="rs-type">Value</span>&gt;::rejected(
+        <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-operation-fault-81">operation_fault</a>(
+            error.kind,
+            error.message,
+            error.details.unwrap_or_else(|| serde_json::json!({})),
+        ),
+        <span class="rs-type">ResponseMeta</span>::default(),
+    ))
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-rejected-fault-envelope-45">rejected_fault_envelope</a>(
+    kind: &amp;&#x27;<span class="rs-kw">static</span> str,
+    message: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;,
+    details: <span class="rs-type">Value</span>,
+) -&gt; <span class="rs-type">Value</span> {
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-rejected-envelope-34">rejected_envelope</a>(<span class="rs-type">OpError</span> {
+        kind,
+        message: message.into(),
+        details: <span class="rs-type">Some</span>(details),
+    })
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-error-envelope-57">error_envelope</a>(kind: <span class="rs-type">ErrorKind</span>, message: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;, details: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> fault = <span class="rs-kw">if</span> kind == <span class="rs-type">ErrorKind</span>::<span class="rs-type">InternalError</span> {
+        <span class="rs-type">OperationFault</span>::internal(message, <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-fault-details-89">fault_details</a>(details))
+    } <span class="rs-kw">else</span> {
+        <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-operation-fault-81">operation_fault</a>(<a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-error-kind-wire-name-102">error_kind_wire_name</a>(kind), message, details)
+    };
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(<span class="rs-type">OperationEnvelope</span>::&lt;<span class="rs-type">Value</span>&gt;::error(
+        fault,
+        <span class="rs-type">ResponseMeta</span>::default(),
+    ))
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-is-operation-envelope-69">is_operation_envelope</a>(value: &amp;<span class="rs-type">Value</span>) -&gt; bool {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(object) = value.as_object() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
+    };
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(&quot;ok&quot; | &quot;running&quot; | &quot;rejected&quot; | &quot;cancelled&quot; | &quot;timed_out&quot; | &quot;error&quot;) =
+        object.get(&quot;status&quot;).and_then(<span class="rs-type">Value</span>::as_str)
+    <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
+    };
+    object.contains_key(&quot;meta&quot;) &amp;&amp; (object.contains_key(&quot;result&quot;) || object.contains_key(&quot;error&quot;))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-operation-fault-81">operation_fault</a>(
+    kind: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;,
+    message: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;,
+    details: <span class="rs-type">Value</span>,
+) -&gt; <span class="rs-type">OperationFault</span> {
+    <span class="rs-type">OperationFault</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(kind, message).with_details(<a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-fault-details-89">fault_details</a>(details))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-fault-details-89">fault_details</a>(details: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">FaultDetails</span> {
+    <span class="rs-kw">match</span> details {
+        <span class="rs-type">Value</span>::<span class="rs-type">Null</span> =&gt; <span class="rs-type">FaultDetails</span>::default(),
+        <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(fields) <span class="rs-kw">if</span> fields.is_empty() =&gt; <span class="rs-type">FaultDetails</span>::default(),
+        <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(fields) =&gt; fields
+            .into_iter()
+            .fold(<span class="rs-type">FaultDetails</span>::default(), |details, (key, value)| {
+                details.with_field(key, value)
+            }),
+        value =&gt; <span class="rs-type">FaultDetails</span>::default().with_field(&quot;value&quot;, value),
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-error-kind-wire-name-102">error_kind_wire_name</a>(kind: <span class="rs-type">ErrorKind</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    kind.as_str()
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> serde_json::json;
+
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::{error_envelope, ok_envelope, rejected_fault_envelope};
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::wire::<span class="rs-type">ErrorKind</span>;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-ok-envelope-wraps-result-without-flattening-domain-status-113">ok_envelope_wraps_result_without_flattening_domain_status</a>() {
+        <span class="rs-kw">let</span> value = <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-ok-envelope-26">ok_envelope</a>(json!({&quot;success&quot;: <span class="rs-kw">true</span>, &quot;status&quot;: &quot;committed&quot;}));
+
+        assert_eq!(value[&quot;status&quot;], &quot;ok&quot;);
+        assert_eq!(value[&quot;result&quot;][&quot;status&quot;], &quot;committed&quot;);
+        assert_eq!(value[&quot;result&quot;][&quot;success&quot;], <span class="rs-kw">true</span>);
+        assert!(value.get(&quot;meta&quot;).is_some());
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-rejected-envelope-preserves-structured-detail-fields-123">rejected_envelope_preserves_structured_detail_fields</a>() {
+        <span class="rs-kw">let</span> value = <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-rejected-fault-envelope-45">rejected_fault_envelope</a>(
+            &quot;invalid_argument&quot;,
+            &quot;caller_id is required&quot;,
+            json!({&quot;key&quot;: &quot;caller_id&quot;}),
+        );
+
+        assert_eq!(value[&quot;status&quot;], &quot;rejected&quot;);
+        assert_eq!(value[&quot;error&quot;][&quot;kind&quot;], &quot;invalid_argument&quot;);
+        assert_eq!(
+            value[&quot;error&quot;][&quot;details&quot;][&quot;fields&quot;],
+            json!({&quot;key&quot;: &quot;caller_id&quot;})
+        );
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-internal-error-envelope-uses-explicit-error-id-and-detail-fields-139">internal_error_envelope_uses_explicit_error_id_and_detail_fields</a>() {
+        <span class="rs-kw">let</span> value = <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-error-envelope-57">error_envelope</a>(
+            <span class="rs-type">ErrorKind</span>::<span class="rs-type">InternalError</span>,
+            &quot;daemon invocation failed&quot;,
+            json!({&quot;op&quot;: &quot;api.test.failure&quot;}),
+        );
+
+        assert_eq!(value[&quot;status&quot;], &quot;error&quot;);
+        assert_eq!(value[&quot;error&quot;][&quot;kind&quot;], &quot;internal_error&quot;);
+        assert_eq!(
+            value[&quot;error&quot;][&quot;details&quot;][&quot;fields&quot;][&quot;op&quot;],
+            &quot;api.test.failure&quot;
+        );
+        assert_eq!(value[&quot;error&quot;][&quot;error_id&quot;].as_str().map(str::len), <span class="rs-type">Some</span>(32));
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

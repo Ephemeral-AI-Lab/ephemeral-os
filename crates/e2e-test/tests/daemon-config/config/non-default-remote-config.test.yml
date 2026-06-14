@@ -1,0 +1,5 @@
+e2e_test:
+  docker:
+    remote_config_path: /eos/runtime/daemon/non-default-config.yml
+  pool:
+    keep_container: false

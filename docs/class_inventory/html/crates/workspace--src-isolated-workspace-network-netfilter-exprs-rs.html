@@ -1,0 +1,875 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>workspace · src/isolated_workspace/network/netfilter/exprs.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>workspace File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>20</b><span>modules</span></div>
+  <div><b>166</b><span>items</span></div>
+  <div><b>106</b><span>fields</span></div>
+  <div><b>64</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="workspace.html"><span>capture.rs</span><small>2/1</small></a></li><li><a class="file-link" href="workspace--src-dirs-rs.html"><span>dirs.rs</span><small>3/4</small></a></li><li><span class="folder">ephemeral_workspace</span><ul class="file-tree"><li><a class="file-link" href="workspace--src-ephemeral-workspace-mod-rs.html"><span>mod.rs</span><small>1/1</small></a></li><li><a class="file-link" href="workspace--src-ephemeral-workspace-workspace-rs.html"><span>workspace.rs</span><small>1/0</small></a></li></ul></li><li><span class="folder">isolated_workspace</span><ul class="file-tree"><li><a class="file-link" href="workspace--src-isolated-workspace-binding-rs.html"><span>binding.rs</span><small>1/0</small></a></li><li><a class="file-link" href="workspace--src-isolated-workspace-caps-rs.html"><span>caps.rs</span><small>2/0</small></a></li><li><a class="file-link" href="workspace--src-isolated-workspace-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><span class="folder">manager</span><ul class="file-tree"><li><a class="file-link" href="workspace--src-isolated-workspace-manager-lifecycle-rs.html"><span>lifecycle.rs</span><small>1/5</small></a></li><li><a class="file-link" href="workspace--src-isolated-workspace-manager-mod-rs.html"><span>mod.rs</span><small>6/5</small></a></li><li><a class="file-link" href="workspace--src-isolated-workspace-manager-recovery-rs.html"><span>recovery.rs</span><small>0/9</small></a></li></ul></li><li><a class="file-link" href="workspace--src-isolated-workspace-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">namespace</span><ul class="file-tree"><li><a class="file-link" href="workspace--src-isolated-workspace-namespace-mod-rs.html"><span>mod.rs</span><small>2/15</small></a></li><li><a class="file-link" href="workspace--src-isolated-workspace-namespace-runner-launcher-rs.html"><span>runner_launcher.rs</span><small>3/9</small></a></li></ul></li><li><span class="folder">network</span><ul class="file-tree"><li><a class="file-link" href="workspace--src-isolated-workspace-network-mod-rs.html"><span>mod.rs</span><small>3/3</small></a></li><li><span class="folder">netfilter</span><ul class="file-tree"><li><a class="file-link active" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html"><span>exprs.rs</span><small>1/17</small></a></li><li><a class="file-link" href="workspace--src-isolated-workspace-network-netfilter-mod-rs.html"><span>mod.rs</span><small>0/5</small></a></li><li><a class="file-link" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html"><span>wire.rs</span><small>0/30</small></a></li></ul></li><li><a class="file-link" href="workspace--src-isolated-workspace-network-rtnl-rs.html"><span>rtnl.rs</span><small>0/11</small></a></li></ul></li></ul></li><li><a class="file-link" href="workspace--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="workspace--src-tree-rs.html"><span>tree.rs</span><small>1/5</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="isolated_workspace::network::netfilter::exprs crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs nft_masquerade_rule_exprs nft_imds_drop_rule_exprs nft_peer_isolation_rule_exprs nft_bridge_peer_isolation_rule_exprs nft_rfc1918_drop_rule_exprs nft_ipv4_network_match nft_ipv4_addr_match nft_ipv4_guard_exprs nft_payload_ipv4_expr nft_payload_expr nft_meta_expr nft_bitwise_mask_expr nft_cmp_expr nft_drop_expr nft_expr gateway_addr bridge_network IpHeader">
+  <div class="module-head">
+    <div>
+      <h2>src/isolated_workspace/network/netfilter/exprs.rs</h2>
+      <p class="path">module <code>isolated_workspace::network::netfilter::exprs</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>0 impls</span>
+      <span>17 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-IpHeader-265" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum IpHeader private enum IpHeader crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>IpHeader</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">enum <a class="symbol-link" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Bridge</td><td><code></code></td></tr><tr><td>Inet</td><td><code></code></td></tr></tbody></table>
+
+  <p class="source">crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs:265</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-nft-masquerade-rule-exprs-11" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_masquerade_rule_exprs pub(super) pub(super) fn nft_masquerade_rule_exprs (bridge_index : u32) -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt; crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_masquerade_rule_exprs</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-masquerade-rule-exprs-11">nft_masquerade_rule_exprs</a> (bridge_index : u32) -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , <a class="symbol-link" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-masquerade-rule-exprs-11">nft_masquerade_rule_exprs</a>(bridge_index: u32) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+    <span class="rs-kw">let</span> (bridge_net, bridge_prefix) = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-bridge-network-261">bridge_network</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expressions = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-network-match-128">nft_ipv4_network_match</a>(
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Inet</span>,
+        <span class="rs-type">IPV4_SADDR_OFFSET</span>,
+        bridge_net,
+        bridge_prefix,
+        <span class="rs-type">NFT_CMP_EQ</span>,
+    )?;
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-meta-expr-206">nft_meta_expr</a>(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-libc-c-int-to-u32-282">libc_c_int_to_u32</a>(
+        libc::<span class="rs-type">NFT_META_OIF</span>,
+        &quot;<span class="rs-type">NFT_META_OIF</span>&quot;,
+    )?));
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-cmp-expr-223">nft_cmp_expr</a>(
+        <span class="rs-type">NFT_CMP_NEQ</span>,
+        bridge_index.to_ne_bytes().as_slice(),
+    ));
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-expr-248">nft_expr</a>(&quot;masq&quot;, &amp;[]));
+    <span class="rs-type">Ok</span>(expressions)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs:11</p>
+</article><article id="item-fn-nft-imds-drop-rule-exprs-32" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_imds_drop_rule_exprs pub(super) pub(super) fn nft_imds_drop_rule_exprs () -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt; crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_imds_drop_rule_exprs</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-imds-drop-rule-exprs-32">nft_imds_drop_rule_exprs</a> () -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , <a class="symbol-link" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-imds-drop-rule-exprs-32">nft_imds_drop_rule_exprs</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+    <span class="rs-kw">let</span> imds = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-parse-ipv4-addr-235">parse_ipv4_addr</a>(<span class="rs-type">IMDS_ADDR</span>)?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expressions = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-guard-exprs-154">nft_ipv4_guard_exprs</a>(<a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Inet</span>)?;
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-payload-ipv4-expr-186">nft_payload_ipv4_expr</a>(<span class="rs-type">IPV4_DADDR_OFFSET</span>)?);
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-cmp-expr-223">nft_cmp_expr</a>(<span class="rs-type">NFT_CMP_EQ</span>, &amp;imds.octets()));
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-drop-expr-231">nft_drop_expr</a>()?);
+    <span class="rs-type">Ok</span>(expressions)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs:32</p>
+</article><article id="item-fn-nft-peer-isolation-rule-exprs-41" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_peer_isolation_rule_exprs pub(super) pub(super) fn nft_peer_isolation_rule_exprs () -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt; crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_peer_isolation_rule_exprs</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-peer-isolation-rule-exprs-41">nft_peer_isolation_rule_exprs</a> () -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , <a class="symbol-link" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-peer-isolation-rule-exprs-41">nft_peer_isolation_rule_exprs</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+    <span class="rs-kw">let</span> gateway = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-gateway-addr-257">gateway_addr</a>();
+    <span class="rs-kw">let</span> (bridge_net, bridge_prefix) = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-bridge-network-261">bridge_network</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expressions = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-network-match-128">nft_ipv4_network_match</a>(
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Inet</span>,
+        <span class="rs-type">IPV4_SADDR_OFFSET</span>,
+        bridge_net,
+        bridge_prefix,
+        <span class="rs-type">NFT_CMP_EQ</span>,
+    )?;
+    expressions.extend(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-addr-match-142">nft_ipv4_addr_match</a>(
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Inet</span>,
+        <span class="rs-type">IPV4_SADDR_OFFSET</span>,
+        gateway,
+        <span class="rs-type">NFT_CMP_NEQ</span>,
+    )?);
+    expressions.extend(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-network-match-128">nft_ipv4_network_match</a>(
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Inet</span>,
+        <span class="rs-type">IPV4_DADDR_OFFSET</span>,
+        bridge_net,
+        bridge_prefix,
+        <span class="rs-type">NFT_CMP_EQ</span>,
+    )?);
+    expressions.extend(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-addr-match-142">nft_ipv4_addr_match</a>(
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Inet</span>,
+        <span class="rs-type">IPV4_DADDR_OFFSET</span>,
+        gateway,
+        <span class="rs-type">NFT_CMP_NEQ</span>,
+    )?);
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-drop-expr-231">nft_drop_expr</a>()?);
+    <span class="rs-type">Ok</span>(expressions)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs:41</p>
+</article><article id="item-fn-nft-bridge-peer-isolation-rule-exprs-74" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_bridge_peer_isolation_rule_exprs pub(super) pub(super) fn nft_bridge_peer_isolation_rule_exprs () -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt; crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_bridge_peer_isolation_rule_exprs</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-bridge-peer-isolation-rule-exprs-74">nft_bridge_peer_isolation_rule_exprs</a> () -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , <a class="symbol-link" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-bridge-peer-isolation-rule-exprs-74">nft_bridge_peer_isolation_rule_exprs</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+    <span class="rs-kw">let</span> gateway = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-gateway-addr-257">gateway_addr</a>();
+    <span class="rs-kw">let</span> (bridge_net, bridge_prefix) = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-bridge-network-261">bridge_network</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expressions = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-network-match-128">nft_ipv4_network_match</a>(
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Bridge</span>,
+        <span class="rs-type">IPV4_SADDR_OFFSET</span>,
+        bridge_net,
+        bridge_prefix,
+        <span class="rs-type">NFT_CMP_EQ</span>,
+    )?;
+    expressions.extend(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-addr-match-142">nft_ipv4_addr_match</a>(
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Bridge</span>,
+        <span class="rs-type">IPV4_SADDR_OFFSET</span>,
+        gateway,
+        <span class="rs-type">NFT_CMP_NEQ</span>,
+    )?);
+    expressions.extend(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-network-match-128">nft_ipv4_network_match</a>(
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Bridge</span>,
+        <span class="rs-type">IPV4_DADDR_OFFSET</span>,
+        bridge_net,
+        bridge_prefix,
+        <span class="rs-type">NFT_CMP_EQ</span>,
+    )?);
+    expressions.extend(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-addr-match-142">nft_ipv4_addr_match</a>(
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Bridge</span>,
+        <span class="rs-type">IPV4_DADDR_OFFSET</span>,
+        gateway,
+        <span class="rs-type">NFT_CMP_NEQ</span>,
+    )?);
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-drop-expr-231">nft_drop_expr</a>()?);
+    <span class="rs-type">Ok</span>(expressions)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs:74</p>
+</article><article id="item-fn-nft-rfc1918-drop-rule-exprs-107" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_rfc1918_drop_rule_exprs pub(super) pub(super) fn nft_rfc1918_drop_rule_exprs (cidr : &amp; str) -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt; crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_rfc1918_drop_rule_exprs</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-rfc1918-drop-rule-exprs-107">nft_rfc1918_drop_rule_exprs</a> (cidr : &amp; str) -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , <a class="symbol-link" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-rfc1918-drop-rule-exprs-107">nft_rfc1918_drop_rule_exprs</a>(cidr: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+    <span class="rs-kw">let</span> (private_net, private_prefix) = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-parse-ipv4-cidr-217">parse_ipv4_cidr</a>(cidr)?;
+    <span class="rs-kw">let</span> (bridge_net, bridge_prefix) = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-bridge-network-261">bridge_network</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expressions = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-network-match-128">nft_ipv4_network_match</a>(
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Inet</span>,
+        <span class="rs-type">IPV4_DADDR_OFFSET</span>,
+        private_net,
+        private_prefix,
+        <span class="rs-type">NFT_CMP_EQ</span>,
+    )?;
+    expressions.extend(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-network-match-128">nft_ipv4_network_match</a>(
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Inet</span>,
+        <span class="rs-type">IPV4_DADDR_OFFSET</span>,
+        bridge_net,
+        bridge_prefix,
+        <span class="rs-type">NFT_CMP_NEQ</span>,
+    )?);
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-drop-expr-231">nft_drop_expr</a>()?);
+    <span class="rs-type">Ok</span>(expressions)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs:107</p>
+</article><article id="item-fn-nft-ipv4-network-match-128" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_ipv4_network_match private fn nft_ipv4_network_match (header : IpHeader , offset : u32 , network : Ipv4Addr , prefix_len : u8 , op : u32 ,) -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt; crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_ipv4_network_match</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-network-match-128">nft_ipv4_network_match</a> (header : <a class="symbol-link" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a> , offset : u32 , network : Ipv4Addr , prefix_len : u8 , op : u32 ,) -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , <a class="symbol-link" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-network-match-128">nft_ipv4_network_match</a>(
+    header: <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>,
+    offset: u32,
+    network: <span class="rs-type">Ipv4Addr</span>,
+    prefix_len: u8,
+    op: u32,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expressions = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-guard-exprs-154">nft_ipv4_guard_exprs</a>(header)?;
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-payload-ipv4-expr-186">nft_payload_ipv4_expr</a>(offset)?);
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-bitwise-mask-expr-213">nft_bitwise_mask_expr</a>(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-ipv4-mask-241">ipv4_mask</a>(prefix_len)?));
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-cmp-expr-223">nft_cmp_expr</a>(op, &amp;network.octets()));
+    <span class="rs-type">Ok</span>(expressions)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs:128</p>
+</article><article id="item-fn-nft-ipv4-addr-match-142" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_ipv4_addr_match private fn nft_ipv4_addr_match (header : IpHeader , offset : u32 , address : Ipv4Addr , op : u32 ,) -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt; crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_ipv4_addr_match</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-addr-match-142">nft_ipv4_addr_match</a> (header : <a class="symbol-link" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a> , offset : u32 , address : Ipv4Addr , op : u32 ,) -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , <a class="symbol-link" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-addr-match-142">nft_ipv4_addr_match</a>(
+    header: <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>,
+    offset: u32,
+    address: <span class="rs-type">Ipv4Addr</span>,
+    op: u32,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expressions = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-guard-exprs-154">nft_ipv4_guard_exprs</a>(header)?;
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-payload-ipv4-expr-186">nft_payload_ipv4_expr</a>(offset)?);
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-cmp-expr-223">nft_cmp_expr</a>(op, &amp;address.octets()));
+    <span class="rs-type">Ok</span>(expressions)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs:142</p>
+</article><article id="item-fn-nft-ipv4-guard-exprs-154" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_ipv4_guard_exprs private fn nft_ipv4_guard_exprs (header : IpHeader) -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , IsolatedError &gt; crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_ipv4_guard_exprs</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-guard-exprs-154">nft_ipv4_guard_exprs</a> (header : <a class="symbol-link" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>) -&gt; Result &lt; Vec &lt; Vec &lt; u8 &gt; &gt; , <a class="symbol-link" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-guard-exprs-154">nft_ipv4_guard_exprs</a>(header: <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+    <span class="rs-kw">match</span> header {
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Bridge</span> =&gt; {
+            <span class="rs-kw">let</span> eth_p_ip = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-libc-c-int-to-u16-276">libc_c_int_to_u16</a>(libc::<span class="rs-type">ETH_P_IP</span>, &quot;<span class="rs-type">ETH_P_IP</span>&quot;)?;
+            <span class="rs-type">Ok</span>(vec![
+                <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-payload-expr-197">nft_payload_expr</a>(
+                    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-libc-c-int-to-u32-282">libc_c_int_to_u32</a>(libc::<span class="rs-type">NFT_PAYLOAD_LL_HEADER</span>, &quot;<span class="rs-type">NFT_PAYLOAD_LL_HEADER</span>&quot;)?,
+                    <span class="rs-type">ETHER_TYPE_OFFSET</span>,
+                    <span class="rs-type">ETHER_TYPE_LEN</span>,
+                )?,
+                <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-cmp-expr-223">nft_cmp_expr</a>(<span class="rs-type">NFT_CMP_EQ</span>, &amp;eth_p_ip.to_be_bytes()),
+            ])
+        }
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Inet</span> =&gt; {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="workspace--src-dirs-rs.html#method-new-84">new</a>();
+            <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_META_DREG</span>, <span class="rs-type">NFT_REG_1</span>);
+            <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(
+                &amp;<span class="rs-kw">mut</span> data,
+                <span class="rs-type">NFTA_META_KEY</span>,
+                <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-libc-c-int-to-u32-282">libc_c_int_to_u32</a>(libc::<span class="rs-type">NFT_META_NFPROTO</span>, &quot;<span class="rs-type">NFT_META_NFPROTO</span>&quot;)?,
+            );
+            <span class="rs-type">Ok</span>(vec![
+                <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-expr-248">nft_expr</a>(&quot;meta&quot;, &amp;data),
+                <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-cmp-expr-223">nft_cmp_expr</a>(
+                    <span class="rs-type">NFT_CMP_EQ</span>,
+                    &amp;[<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-libc-c-int-to-u8-270">libc_c_int_to_u8</a>(libc::<span class="rs-type">NFPROTO_IPV4</span>, &quot;<span class="rs-type">NFPROTO_IPV4</span>&quot;)?],
+                ),
+            ])
+        }
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs:154</p>
+</article><article id="item-fn-nft-payload-ipv4-expr-186" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_payload_ipv4_expr private fn nft_payload_ipv4_expr (offset : u32) -&gt; Result &lt; Vec &lt; u8 &gt; , IsolatedError &gt; crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_payload_ipv4_expr</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-payload-ipv4-expr-186">nft_payload_ipv4_expr</a> (offset : u32) -&gt; Result &lt; Vec &lt; u8 &gt; , <a class="symbol-link" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-payload-ipv4-expr-186">nft_payload_ipv4_expr</a>(offset: u32) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-payload-expr-197">nft_payload_expr</a>(
+        <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-libc-c-int-to-u32-282">libc_c_int_to_u32</a>(
+            libc::<span class="rs-type">NFT_PAYLOAD_NETWORK_HEADER</span>,
+            &quot;<span class="rs-type">NFT_PAYLOAD_NETWORK_HEADER</span>&quot;,
+        )?,
+        offset,
+        <span class="rs-type">IPV4_ADDR_LEN</span>,
+    )
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs:186</p>
+</article><article id="item-fn-nft-payload-expr-197" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_payload_expr private fn nft_payload_expr (base : u32 , offset : u32 , len : u32) -&gt; Result &lt; Vec &lt; u8 &gt; , IsolatedError &gt; crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_payload_expr</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-payload-expr-197">nft_payload_expr</a> (base : u32 , offset : u32 , len : u32) -&gt; Result &lt; Vec &lt; u8 &gt; , <a class="symbol-link" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-payload-expr-197">nft_payload_expr</a>(base: u32, offset: u32, len: u32) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="workspace--src-dirs-rs.html#method-new-84">new</a>();
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_PAYLOAD_DREG</span>, <span class="rs-type">NFT_REG_1</span>);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_PAYLOAD_BASE</span>, base);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_PAYLOAD_OFFSET</span>, offset);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_PAYLOAD_LEN</span>, len);
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-expr-248">nft_expr</a>(&quot;payload&quot;, &amp;data))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs:197</p>
+</article><article id="item-fn-nft-meta-expr-206" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_meta_expr private fn nft_meta_expr (key : u32) -&gt; Vec &lt; u8 &gt; crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_meta_expr</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-meta-expr-206">nft_meta_expr</a> (key : u32) -&gt; Vec &lt; u8 &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-meta-expr-206">nft_meta_expr</a>(key: u32) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="workspace--src-dirs-rs.html#method-new-84">new</a>();
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_META_DREG</span>, <span class="rs-type">NFT_REG_1</span>);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_META_KEY</span>, key);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-expr-248">nft_expr</a>(&quot;meta&quot;, &amp;data)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs:206</p>
+</article><article id="item-fn-nft-bitwise-mask-expr-213" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_bitwise_mask_expr private fn nft_bitwise_mask_expr (mask : [u8 ; 4]) -&gt; Vec &lt; u8 &gt; crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_bitwise_mask_expr</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-bitwise-mask-expr-213">nft_bitwise_mask_expr</a> (mask : [u8 ; 4]) -&gt; Vec &lt; u8 &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-bitwise-mask-expr-213">nft_bitwise_mask_expr</a>(mask: [u8; 4]) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="workspace--src-dirs-rs.html#method-new-84">new</a>();
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_BITWISE_SREG</span>, <span class="rs-type">NFT_REG_1</span>);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_BITWISE_DREG</span>, <span class="rs-type">NFT_REG_1</span>);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_BITWISE_LEN</span>, <span class="rs-type">IPV4_ADDR_LEN</span>);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-data-value-attr-199">append_data_value_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_BITWISE_MASK</span>, &amp;mask);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-data-value-attr-199">append_data_value_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_BITWISE_XOR</span>, &amp;[0, 0, 0, 0]);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-expr-248">nft_expr</a>(&quot;bitwise&quot;, &amp;data)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs:213</p>
+</article><article id="item-fn-nft-cmp-expr-223" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_cmp_expr private fn nft_cmp_expr (op : u32 , value : &amp; [u8]) -&gt; Vec &lt; u8 &gt; crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_cmp_expr</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-cmp-expr-223">nft_cmp_expr</a> (op : u32 , value : &amp; [u8]) -&gt; Vec &lt; u8 &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-cmp-expr-223">nft_cmp_expr</a>(op: u32, value: &amp;[u8]) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="workspace--src-dirs-rs.html#method-new-84">new</a>();
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_CMP_SREG</span>, <span class="rs-type">NFT_REG_1</span>);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_CMP_OP</span>, op);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-data-value-attr-199">append_data_value_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_CMP_DATA</span>, value);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-expr-248">nft_expr</a>(&quot;cmp&quot;, &amp;data)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs:223</p>
+</article><article id="item-fn-nft-drop-expr-231" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_drop_expr private fn nft_drop_expr () -&gt; Result &lt; Vec &lt; u8 &gt; , IsolatedError &gt; crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_drop_expr</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-drop-expr-231">nft_drop_expr</a> () -&gt; Result &lt; Vec &lt; u8 &gt; , <a class="symbol-link" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-drop-expr-231">nft_drop_expr</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> verdict = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="workspace--src-dirs-rs.html#method-new-84">new</a>();
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(
+        &amp;<span class="rs-kw">mut</span> verdict,
+        <span class="rs-type">NFTA_VERDICT_CODE</span>,
+        <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-libc-c-int-to-u32-282">libc_c_int_to_u32</a>(libc::<span class="rs-type">NF_DROP</span>, &quot;<span class="rs-type">NF_DROP</span>&quot;)?,
+    );
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data_value = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="workspace--src-dirs-rs.html#method-new-84">new</a>();
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-nested-attr-205">append_nested_attr</a>(&amp;<span class="rs-kw">mut</span> data_value, <span class="rs-type">NFTA_DATA_VERDICT</span>, &amp;verdict);
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="workspace--src-dirs-rs.html#method-new-84">new</a>();
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_IMMEDIATE_DREG</span>, <span class="rs-type">NFT_REG_VERDICT</span>);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-nested-attr-205">append_nested_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_IMMEDIATE_DATA</span>, &amp;data_value);
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-expr-248">nft_expr</a>(&quot;immediate&quot;, &amp;data))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs:231</p>
+</article><article id="item-fn-nft-expr-248" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn nft_expr private fn nft_expr (name : &amp; str , data : &amp; [u8]) -&gt; Vec &lt; u8 &gt; crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>nft_expr</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-expr-248">nft_expr</a> (name : &amp; str , data : &amp; [u8]) -&gt; Vec &lt; u8 &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-expr-248">nft_expr</a>(name: &amp;str, data: &amp;[u8]) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expression = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="workspace--src-dirs-rs.html#method-new-84">new</a>();
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-cstr-attr-185">append_cstr_attr</a>(&amp;<span class="rs-kw">mut</span> expression, <span class="rs-type">NFTA_EXPR_NAME</span>, name);
+    <span class="rs-kw">if</span> !data.is_empty() {
+        <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-nested-attr-205">append_nested_attr</a>(&amp;<span class="rs-kw">mut</span> expression, <span class="rs-type">NFTA_EXPR_DATA</span>, data);
+    }
+    expression
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs:248</p>
+</article><article id="item-fn-gateway-addr-257" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn gateway_addr private const fn gateway_addr () -&gt; Ipv4Addr crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>gateway_addr</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">const fn <a class="symbol-link" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-gateway-addr-257">gateway_addr</a> () -&gt; Ipv4Addr</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-gateway-addr-257">gateway_addr</a>() -&gt; <span class="rs-type">Ipv4Addr</span> {
+    <span class="rs-type">Ipv4Addr</span>::<a class="symbol-link rs-fn" href="workspace--src-dirs-rs.html#method-new-84">new</a>(10, 244, 0, 1)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs:257</p>
+</article><article id="item-fn-bridge-network-261" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn bridge_network private const fn bridge_network () -&gt; (Ipv4Addr , u8) crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>bridge_network</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">const fn <a class="symbol-link" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-bridge-network-261">bridge_network</a> () -&gt; (Ipv4Addr , u8)</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-bridge-network-261">bridge_network</a>() -&gt; (<span class="rs-type">Ipv4Addr</span>, u8) {
+    (<span class="rs-type">Ipv4Addr</span>::<a class="symbol-link rs-fn" href="workspace--src-dirs-rs.html#method-new-84">new</a>(10, 244, 0, 0), <span class="rs-type">BRIDGE_PREFIX_LEN</span>)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs:261</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/workspace/src/isolated_workspace/network/netfilter/exprs.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::net::<span class="rs-type">Ipv4Addr</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::isolated_workspace::error::<a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::isolated_workspace::network::{<span class="rs-type">BRIDGE_PREFIX_LEN</span>, <span class="rs-type">IMDS_ADDR</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::wire::{
+    append_be_u32_attr, append_cstr_attr, append_data_value_attr, append_nested_attr, ipv4_mask,
+    libc_c_int_to_u16, libc_c_int_to_u32, libc_c_int_to_u8, parse_ipv4_addr, parse_ipv4_cidr,
+};
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-masquerade-rule-exprs-11">nft_masquerade_rule_exprs</a>(bridge_index: u32) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+    <span class="rs-kw">let</span> (bridge_net, bridge_prefix) = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-bridge-network-261">bridge_network</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expressions = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-network-match-128">nft_ipv4_network_match</a>(
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Inet</span>,
+        <span class="rs-type">IPV4_SADDR_OFFSET</span>,
+        bridge_net,
+        bridge_prefix,
+        <span class="rs-type">NFT_CMP_EQ</span>,
+    )?;
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-meta-expr-206">nft_meta_expr</a>(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-libc-c-int-to-u32-282">libc_c_int_to_u32</a>(
+        libc::<span class="rs-type">NFT_META_OIF</span>,
+        &quot;<span class="rs-type">NFT_META_OIF</span>&quot;,
+    )?));
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-cmp-expr-223">nft_cmp_expr</a>(
+        <span class="rs-type">NFT_CMP_NEQ</span>,
+        bridge_index.to_ne_bytes().as_slice(),
+    ));
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-expr-248">nft_expr</a>(&quot;masq&quot;, &amp;[]));
+    <span class="rs-type">Ok</span>(expressions)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-imds-drop-rule-exprs-32">nft_imds_drop_rule_exprs</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+    <span class="rs-kw">let</span> imds = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-parse-ipv4-addr-235">parse_ipv4_addr</a>(<span class="rs-type">IMDS_ADDR</span>)?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expressions = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-guard-exprs-154">nft_ipv4_guard_exprs</a>(<a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Inet</span>)?;
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-payload-ipv4-expr-186">nft_payload_ipv4_expr</a>(<span class="rs-type">IPV4_DADDR_OFFSET</span>)?);
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-cmp-expr-223">nft_cmp_expr</a>(<span class="rs-type">NFT_CMP_EQ</span>, &amp;imds.octets()));
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-drop-expr-231">nft_drop_expr</a>()?);
+    <span class="rs-type">Ok</span>(expressions)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-peer-isolation-rule-exprs-41">nft_peer_isolation_rule_exprs</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+    <span class="rs-kw">let</span> gateway = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-gateway-addr-257">gateway_addr</a>();
+    <span class="rs-kw">let</span> (bridge_net, bridge_prefix) = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-bridge-network-261">bridge_network</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expressions = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-network-match-128">nft_ipv4_network_match</a>(
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Inet</span>,
+        <span class="rs-type">IPV4_SADDR_OFFSET</span>,
+        bridge_net,
+        bridge_prefix,
+        <span class="rs-type">NFT_CMP_EQ</span>,
+    )?;
+    expressions.extend(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-addr-match-142">nft_ipv4_addr_match</a>(
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Inet</span>,
+        <span class="rs-type">IPV4_SADDR_OFFSET</span>,
+        gateway,
+        <span class="rs-type">NFT_CMP_NEQ</span>,
+    )?);
+    expressions.extend(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-network-match-128">nft_ipv4_network_match</a>(
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Inet</span>,
+        <span class="rs-type">IPV4_DADDR_OFFSET</span>,
+        bridge_net,
+        bridge_prefix,
+        <span class="rs-type">NFT_CMP_EQ</span>,
+    )?);
+    expressions.extend(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-addr-match-142">nft_ipv4_addr_match</a>(
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Inet</span>,
+        <span class="rs-type">IPV4_DADDR_OFFSET</span>,
+        gateway,
+        <span class="rs-type">NFT_CMP_NEQ</span>,
+    )?);
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-drop-expr-231">nft_drop_expr</a>()?);
+    <span class="rs-type">Ok</span>(expressions)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-bridge-peer-isolation-rule-exprs-74">nft_bridge_peer_isolation_rule_exprs</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+    <span class="rs-kw">let</span> gateway = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-gateway-addr-257">gateway_addr</a>();
+    <span class="rs-kw">let</span> (bridge_net, bridge_prefix) = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-bridge-network-261">bridge_network</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expressions = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-network-match-128">nft_ipv4_network_match</a>(
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Bridge</span>,
+        <span class="rs-type">IPV4_SADDR_OFFSET</span>,
+        bridge_net,
+        bridge_prefix,
+        <span class="rs-type">NFT_CMP_EQ</span>,
+    )?;
+    expressions.extend(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-addr-match-142">nft_ipv4_addr_match</a>(
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Bridge</span>,
+        <span class="rs-type">IPV4_SADDR_OFFSET</span>,
+        gateway,
+        <span class="rs-type">NFT_CMP_NEQ</span>,
+    )?);
+    expressions.extend(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-network-match-128">nft_ipv4_network_match</a>(
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Bridge</span>,
+        <span class="rs-type">IPV4_DADDR_OFFSET</span>,
+        bridge_net,
+        bridge_prefix,
+        <span class="rs-type">NFT_CMP_EQ</span>,
+    )?);
+    expressions.extend(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-addr-match-142">nft_ipv4_addr_match</a>(
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Bridge</span>,
+        <span class="rs-type">IPV4_DADDR_OFFSET</span>,
+        gateway,
+        <span class="rs-type">NFT_CMP_NEQ</span>,
+    )?);
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-drop-expr-231">nft_drop_expr</a>()?);
+    <span class="rs-type">Ok</span>(expressions)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-rfc1918-drop-rule-exprs-107">nft_rfc1918_drop_rule_exprs</a>(cidr: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+    <span class="rs-kw">let</span> (private_net, private_prefix) = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-parse-ipv4-cidr-217">parse_ipv4_cidr</a>(cidr)?;
+    <span class="rs-kw">let</span> (bridge_net, bridge_prefix) = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-bridge-network-261">bridge_network</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expressions = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-network-match-128">nft_ipv4_network_match</a>(
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Inet</span>,
+        <span class="rs-type">IPV4_DADDR_OFFSET</span>,
+        private_net,
+        private_prefix,
+        <span class="rs-type">NFT_CMP_EQ</span>,
+    )?;
+    expressions.extend(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-network-match-128">nft_ipv4_network_match</a>(
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Inet</span>,
+        <span class="rs-type">IPV4_DADDR_OFFSET</span>,
+        bridge_net,
+        bridge_prefix,
+        <span class="rs-type">NFT_CMP_NEQ</span>,
+    )?);
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-drop-expr-231">nft_drop_expr</a>()?);
+    <span class="rs-type">Ok</span>(expressions)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-network-match-128">nft_ipv4_network_match</a>(
+    header: <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>,
+    offset: u32,
+    network: <span class="rs-type">Ipv4Addr</span>,
+    prefix_len: u8,
+    op: u32,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expressions = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-guard-exprs-154">nft_ipv4_guard_exprs</a>(header)?;
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-payload-ipv4-expr-186">nft_payload_ipv4_expr</a>(offset)?);
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-bitwise-mask-expr-213">nft_bitwise_mask_expr</a>(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-ipv4-mask-241">ipv4_mask</a>(prefix_len)?));
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-cmp-expr-223">nft_cmp_expr</a>(op, &amp;network.octets()));
+    <span class="rs-type">Ok</span>(expressions)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-addr-match-142">nft_ipv4_addr_match</a>(
+    header: <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>,
+    offset: u32,
+    address: <span class="rs-type">Ipv4Addr</span>,
+    op: u32,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expressions = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-guard-exprs-154">nft_ipv4_guard_exprs</a>(header)?;
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-payload-ipv4-expr-186">nft_payload_ipv4_expr</a>(offset)?);
+    expressions.push(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-cmp-expr-223">nft_cmp_expr</a>(op, &amp;address.octets()));
+    <span class="rs-type">Ok</span>(expressions)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-ipv4-guard-exprs-154">nft_ipv4_guard_exprs</a>(header: <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+    <span class="rs-kw">match</span> header {
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Bridge</span> =&gt; {
+            <span class="rs-kw">let</span> eth_p_ip = <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-libc-c-int-to-u16-276">libc_c_int_to_u16</a>(libc::<span class="rs-type">ETH_P_IP</span>, &quot;<span class="rs-type">ETH_P_IP</span>&quot;)?;
+            <span class="rs-type">Ok</span>(vec![
+                <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-payload-expr-197">nft_payload_expr</a>(
+                    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-libc-c-int-to-u32-282">libc_c_int_to_u32</a>(libc::<span class="rs-type">NFT_PAYLOAD_LL_HEADER</span>, &quot;<span class="rs-type">NFT_PAYLOAD_LL_HEADER</span>&quot;)?,
+                    <span class="rs-type">ETHER_TYPE_OFFSET</span>,
+                    <span class="rs-type">ETHER_TYPE_LEN</span>,
+                )?,
+                <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-cmp-expr-223">nft_cmp_expr</a>(<span class="rs-type">NFT_CMP_EQ</span>, &amp;eth_p_ip.to_be_bytes()),
+            ])
+        }
+        <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a>::<span class="rs-type">Inet</span> =&gt; {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="workspace--src-dirs-rs.html#method-new-84">new</a>();
+            <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_META_DREG</span>, <span class="rs-type">NFT_REG_1</span>);
+            <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(
+                &amp;<span class="rs-kw">mut</span> data,
+                <span class="rs-type">NFTA_META_KEY</span>,
+                <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-libc-c-int-to-u32-282">libc_c_int_to_u32</a>(libc::<span class="rs-type">NFT_META_NFPROTO</span>, &quot;<span class="rs-type">NFT_META_NFPROTO</span>&quot;)?,
+            );
+            <span class="rs-type">Ok</span>(vec![
+                <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-expr-248">nft_expr</a>(&quot;meta&quot;, &amp;data),
+                <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-cmp-expr-223">nft_cmp_expr</a>(
+                    <span class="rs-type">NFT_CMP_EQ</span>,
+                    &amp;[<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-libc-c-int-to-u8-270">libc_c_int_to_u8</a>(libc::<span class="rs-type">NFPROTO_IPV4</span>, &quot;<span class="rs-type">NFPROTO_IPV4</span>&quot;)?],
+                ),
+            ])
+        }
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-payload-ipv4-expr-186">nft_payload_ipv4_expr</a>(offset: u32) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-payload-expr-197">nft_payload_expr</a>(
+        <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-libc-c-int-to-u32-282">libc_c_int_to_u32</a>(
+            libc::<span class="rs-type">NFT_PAYLOAD_NETWORK_HEADER</span>,
+            &quot;<span class="rs-type">NFT_PAYLOAD_NETWORK_HEADER</span>&quot;,
+        )?,
+        offset,
+        <span class="rs-type">IPV4_ADDR_LEN</span>,
+    )
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-payload-expr-197">nft_payload_expr</a>(base: u32, offset: u32, len: u32) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="workspace--src-dirs-rs.html#method-new-84">new</a>();
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_PAYLOAD_DREG</span>, <span class="rs-type">NFT_REG_1</span>);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_PAYLOAD_BASE</span>, base);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_PAYLOAD_OFFSET</span>, offset);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_PAYLOAD_LEN</span>, len);
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-expr-248">nft_expr</a>(&quot;payload&quot;, &amp;data))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-meta-expr-206">nft_meta_expr</a>(key: u32) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="workspace--src-dirs-rs.html#method-new-84">new</a>();
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_META_DREG</span>, <span class="rs-type">NFT_REG_1</span>);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_META_KEY</span>, key);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-expr-248">nft_expr</a>(&quot;meta&quot;, &amp;data)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-bitwise-mask-expr-213">nft_bitwise_mask_expr</a>(mask: [u8; 4]) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="workspace--src-dirs-rs.html#method-new-84">new</a>();
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_BITWISE_SREG</span>, <span class="rs-type">NFT_REG_1</span>);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_BITWISE_DREG</span>, <span class="rs-type">NFT_REG_1</span>);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_BITWISE_LEN</span>, <span class="rs-type">IPV4_ADDR_LEN</span>);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-data-value-attr-199">append_data_value_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_BITWISE_MASK</span>, &amp;mask);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-data-value-attr-199">append_data_value_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_BITWISE_XOR</span>, &amp;[0, 0, 0, 0]);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-expr-248">nft_expr</a>(&quot;bitwise&quot;, &amp;data)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-cmp-expr-223">nft_cmp_expr</a>(op: u32, value: &amp;[u8]) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="workspace--src-dirs-rs.html#method-new-84">new</a>();
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_CMP_SREG</span>, <span class="rs-type">NFT_REG_1</span>);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_CMP_OP</span>, op);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-data-value-attr-199">append_data_value_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_CMP_DATA</span>, value);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-expr-248">nft_expr</a>(&quot;cmp&quot;, &amp;data)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-drop-expr-231">nft_drop_expr</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> verdict = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="workspace--src-dirs-rs.html#method-new-84">new</a>();
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(
+        &amp;<span class="rs-kw">mut</span> verdict,
+        <span class="rs-type">NFTA_VERDICT_CODE</span>,
+        <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-libc-c-int-to-u32-282">libc_c_int_to_u32</a>(libc::<span class="rs-type">NF_DROP</span>, &quot;<span class="rs-type">NF_DROP</span>&quot;)?,
+    );
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data_value = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="workspace--src-dirs-rs.html#method-new-84">new</a>();
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-nested-attr-205">append_nested_attr</a>(&amp;<span class="rs-kw">mut</span> data_value, <span class="rs-type">NFTA_DATA_VERDICT</span>, &amp;verdict);
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> data = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="workspace--src-dirs-rs.html#method-new-84">new</a>();
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-be-u32-attr-191">append_be_u32_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_IMMEDIATE_DREG</span>, <span class="rs-type">NFT_REG_VERDICT</span>);
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-nested-attr-205">append_nested_attr</a>(&amp;<span class="rs-kw">mut</span> data, <span class="rs-type">NFTA_IMMEDIATE_DATA</span>, &amp;data_value);
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-expr-248">nft_expr</a>(&quot;immediate&quot;, &amp;data))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-nft-expr-248">nft_expr</a>(name: &amp;str, data: &amp;[u8]) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> expression = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="workspace--src-dirs-rs.html#method-new-84">new</a>();
+    <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-cstr-attr-185">append_cstr_attr</a>(&amp;<span class="rs-kw">mut</span> expression, <span class="rs-type">NFTA_EXPR_NAME</span>, name);
+    <span class="rs-kw">if</span> !data.is_empty() {
+        <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-wire-rs.html#item-fn-append-nested-attr-205">append_nested_attr</a>(&amp;<span class="rs-kw">mut</span> expression, <span class="rs-type">NFTA_EXPR_DATA</span>, data);
+    }
+    expression
+}
+
+<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-gateway-addr-257">gateway_addr</a>() -&gt; <span class="rs-type">Ipv4Addr</span> {
+    <span class="rs-type">Ipv4Addr</span>::<a class="symbol-link rs-fn" href="workspace--src-dirs-rs.html#method-new-84">new</a>(10, 244, 0, 1)
+}
+
+<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-fn-bridge-network-261">bridge_network</a>() -&gt; (<span class="rs-type">Ipv4Addr</span>, u8) {
+    (<span class="rs-type">Ipv4Addr</span>::<a class="symbol-link rs-fn" href="workspace--src-dirs-rs.html#method-new-84">new</a>(10, 244, 0, 0), <span class="rs-type">BRIDGE_PREFIX_LEN</span>)
+}
+
+#[derive(<span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>)]
+<span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="workspace--src-isolated-workspace-network-netfilter-exprs-rs.html#item-enum-IpHeader-265">IpHeader</a> {
+    <span class="rs-type">Bridge</span>,
+    <span class="rs-type">Inet</span>,
+}
+
+<span class="rs-kw">const</span> <span class="rs-type">NFT_REG_VERDICT</span>: u32 = 0;
+<span class="rs-kw">const</span> <span class="rs-type">NFT_REG_1</span>: u32 = 1;
+<span class="rs-kw">const</span> <span class="rs-type">NFT_CMP_EQ</span>: u32 = 0;
+<span class="rs-kw">const</span> <span class="rs-type">NFT_CMP_NEQ</span>: u32 = 1;
+<span class="rs-kw">const</span> <span class="rs-type">IPV4_SADDR_OFFSET</span>: u32 = 12;
+<span class="rs-kw">const</span> <span class="rs-type">IPV4_DADDR_OFFSET</span>: u32 = 16;
+<span class="rs-kw">const</span> <span class="rs-type">IPV4_ADDR_LEN</span>: u32 = 4;
+<span class="rs-kw">const</span> <span class="rs-type">ETHER_TYPE_OFFSET</span>: u32 = 12;
+<span class="rs-kw">const</span> <span class="rs-type">ETHER_TYPE_LEN</span>: u32 = 2;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">NFTA_TABLE_NAME</span>: u16 = 1;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">NFTA_TABLE_FLAGS</span>: u16 = 2;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">NFTA_CHAIN_TABLE</span>: u16 = 1;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">NFTA_CHAIN_NAME</span>: u16 = 3;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">NFTA_CHAIN_HOOK</span>: u16 = 4;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">NFTA_CHAIN_TYPE</span>: u16 = 7;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">NFTA_HOOK_HOOKNUM</span>: u16 = 1;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">NFTA_HOOK_PRIORITY</span>: u16 = 2;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">NFTA_RULE_TABLE</span>: u16 = 1;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">NFTA_RULE_CHAIN</span>: u16 = 2;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">NFTA_RULE_EXPRESSIONS</span>: u16 = 4;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">NFTA_LIST_ELEM</span>: u16 = 1;
+<span class="rs-kw">const</span> <span class="rs-type">NFTA_EXPR_NAME</span>: u16 = 1;
+<span class="rs-kw">const</span> <span class="rs-type">NFTA_EXPR_DATA</span>: u16 = 2;
+<span class="rs-kw">const</span> <span class="rs-type">NFTA_PAYLOAD_DREG</span>: u16 = 1;
+<span class="rs-kw">const</span> <span class="rs-type">NFTA_PAYLOAD_BASE</span>: u16 = 2;
+<span class="rs-kw">const</span> <span class="rs-type">NFTA_PAYLOAD_OFFSET</span>: u16 = 3;
+<span class="rs-kw">const</span> <span class="rs-type">NFTA_PAYLOAD_LEN</span>: u16 = 4;
+<span class="rs-kw">const</span> <span class="rs-type">NFTA_META_DREG</span>: u16 = 1;
+<span class="rs-kw">const</span> <span class="rs-type">NFTA_META_KEY</span>: u16 = 2;
+<span class="rs-kw">const</span> <span class="rs-type">NFTA_CMP_SREG</span>: u16 = 1;
+<span class="rs-kw">const</span> <span class="rs-type">NFTA_CMP_OP</span>: u16 = 2;
+<span class="rs-kw">const</span> <span class="rs-type">NFTA_CMP_DATA</span>: u16 = 3;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">NFTA_DATA_VALUE</span>: u16 = 1;
+<span class="rs-kw">const</span> <span class="rs-type">NFTA_DATA_VERDICT</span>: u16 = 2;
+<span class="rs-kw">const</span> <span class="rs-type">NFTA_IMMEDIATE_DREG</span>: u16 = 1;
+<span class="rs-kw">const</span> <span class="rs-type">NFTA_IMMEDIATE_DATA</span>: u16 = 2;
+<span class="rs-kw">const</span> <span class="rs-type">NFTA_VERDICT_CODE</span>: u16 = 1;
+<span class="rs-kw">const</span> <span class="rs-type">NFTA_BITWISE_SREG</span>: u16 = 1;
+<span class="rs-kw">const</span> <span class="rs-type">NFTA_BITWISE_DREG</span>: u16 = 2;
+<span class="rs-kw">const</span> <span class="rs-type">NFTA_BITWISE_LEN</span>: u16 = 3;
+<span class="rs-kw">const</span> <span class="rs-type">NFTA_BITWISE_MASK</span>: u16 = 4;
+<span class="rs-kw">const</span> <span class="rs-type">NFTA_BITWISE_XOR</span>: u16 = 5;
+
+#[cfg(test)]
+#[path = &quot;../../../../tests/unit/network/netfilter/exprs.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

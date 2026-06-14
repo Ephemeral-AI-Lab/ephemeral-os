@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>host · src/trace_store/mod.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>host File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>23</b><span>modules</span></div>
+  <div><b>215</b><span>items</span></div>
+  <div><b>363</b><span>fields</span></div>
+  <div><b>115</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">host</span><ul class="file-tree"><li><a class="file-link" href="host.html"><span>drain.rs</span><small>3/10</small></a></li><li><span class="folder">forward</span><ul class="file-tree"><li><a class="file-link" href="host--src-host-forward-audit-rs.html"><span>audit.rs</span><small>0/3</small></a></li><li><a class="file-link" href="host--src-host-forward-recovery-rs.html"><span>recovery.rs</span><small>0/6</small></a></li><li><a class="file-link" href="host--src-host-forward-response-meta-rs.html"><span>response_meta.rs</span><small>0/3</small></a></li><li><a class="file-link" href="host--src-host-forward-trace-ingest-rs.html"><span>trace_ingest.rs</span><small>1/2</small></a></li></ul></li><li><a class="file-link" href="host--src-host-forward-rs.html"><span>forward.rs</span><small>3/12</small></a></li><li><a class="file-link" href="host--src-host-mod-rs.html"><span>mod.rs</span><small>6/6</small></a></li><li><a class="file-link" href="host--src-host-registry-rs.html"><span>registry.rs</span><small>6/2</small></a></li></ul></li><li><a class="file-link" href="host--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-protocol-rs.html"><span>protocol.rs</span><small>6/17</small></a></li><li><a class="file-link" href="host--src-runtime-rs.html"><span>runtime.rs</span><small>6/27</small></a></li><li><span class="folder">trace_store</span><ul class="file-tree"><li><a class="file-link" href="host--src-trace-store-audit-rs.html"><span>audit.rs</span><small>2/4</small></a></li><li><a class="file-link" href="host--src-trace-store-events-rs.html"><span>events.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-ingest-rs.html"><span>ingest.rs</span><small>0/3</small></a></li><li><a class="file-link active" href="host--src-trace-store-mod-rs.html"><span>mod.rs</span><small>2/4</small></a></li><li><a class="file-link" href="host--src-trace-store-payload-rs.html"><span>payload.rs</span><small>6/2</small></a></li><li><a class="file-link" href="host--src-trace-store-projection-rs.html"><span>projection.rs</span><small>1/8</small></a></li><li><a class="file-link" href="host--src-trace-store-query-rs.html"><span>query.rs</span><small>9/15</small></a></li><li><a class="file-link" href="host--src-trace-store-read-rs.html"><span>read.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-response-rs.html"><span>response.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-schema-rs.html"><span>schema.rs</span><small>0/2</small></a></li><li><a class="file-link" href="host--src-trace-store-sidecar-rs.html"><span>sidecar.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-types-rs.html"><span>types.rs</span><small>12/1</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="trace_store crates/host/src/trace_store/mod.rs TraceStoreError TraceStore impl TraceStore impl TraceStoreError write_transaction now_ms u64_to_i64 usize_to_u64">
+  <div class="module-head">
+    <div>
+      <h2>src/trace_store/mod.rs</h2>
+      <p class="path">module <code>trace_store</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>2 types</span>
+      <span>2 impls</span>
+      <span>4 fns</span>
+      <span>12 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-TraceStore-73" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct TraceStore pub pub struct TraceStore crates/host/src/trace_store/mod.rs db_path PathBuf conn Mutex &lt; Connection &gt; host_boot_id BootId fail_next_request_start AtomicBool fail_next_response_persisted AtomicBool fail_next_trace_batch_ingest AtomicBool fail_next_trace_event AtomicBool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>TraceStore</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-struct-TraceStore-73">TraceStore</a></code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>db_path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>conn</td><td><code>Mutex &lt; Connection &gt;</code></td></tr><tr><td>private</td><td>host_boot_id</td><td><code>BootId</code></td></tr><tr><td>private</td><td>fail_next_request_start</td><td><code>AtomicBool</code></td></tr><tr><td>private</td><td>fail_next_response_persisted</td><td><code>AtomicBool</code></td></tr><tr><td>private</td><td>fail_next_trace_batch_ingest</td><td><code>AtomicBool</code></td></tr><tr><td>private</td><td>fail_next_trace_event</td><td><code>AtomicBool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-db-path-125"><td>method</td><td>db_path</td><td><code>pub fn <a class="symbol-link" href="host--src-trace-store-mod-rs.html#method-db-path-125">db_path</a> (&amp; self) -&gt; &amp; Path</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(any(test, feature = &quot;e2e-support&quot;))]
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-db-path-125">db_path</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">Path</span> {
+        &amp;<span class="rs-self">self</span>.db_path
+    }
+</code></pre>
+</details></td></tr><tr id="method-fail-next-request-start-for-tests-131"><td>method</td><td>fail_next_request_start_for_tests</td><td><code>pub fn <a class="symbol-link" href="host--src-trace-store-mod-rs.html#method-fail-next-request-start-for-tests-131">fail_next_request_start_for_tests</a> (&amp; self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(test)]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-fail-next-request-start-for-tests-131">fail_next_request_start_for_tests</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-self">self</span>.fail_next_request_start.store(<span class="rs-kw">true</span>, <span class="rs-type">Ordering</span>::<span class="rs-type">SeqCst</span>);
+    }
+</code></pre>
+</details></td></tr><tr id="method-fail-next-response-persisted-for-tests-136"><td>method</td><td>fail_next_response_persisted_for_tests</td><td><code>pub fn <a class="symbol-link" href="host--src-trace-store-mod-rs.html#method-fail-next-response-persisted-for-tests-136">fail_next_response_persisted_for_tests</a> (&amp; self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(test)]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-fail-next-response-persisted-for-tests-136">fail_next_response_persisted_for_tests</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-self">self</span>.fail_next_response_persisted
+            .store(<span class="rs-kw">true</span>, <span class="rs-type">Ordering</span>::<span class="rs-type">SeqCst</span>);
+    }
+</code></pre>
+</details></td></tr><tr id="method-fail-next-trace-batch-ingest-for-tests-142"><td>method</td><td>fail_next_trace_batch_ingest_for_tests</td><td><code>pub fn <a class="symbol-link" href="host--src-trace-store-mod-rs.html#method-fail-next-trace-batch-ingest-for-tests-142">fail_next_trace_batch_ingest_for_tests</a> (&amp; self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(test)]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-fail-next-trace-batch-ingest-for-tests-142">fail_next_trace_batch_ingest_for_tests</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-self">self</span>.fail_next_trace_batch_ingest
+            .store(<span class="rs-kw">true</span>, <span class="rs-type">Ordering</span>::<span class="rs-type">SeqCst</span>);
+    }
+</code></pre>
+</details></td></tr><tr id="method-fail-next-trace-event-for-tests-148"><td>method</td><td>fail_next_trace_event_for_tests</td><td><code>pub fn <a class="symbol-link" href="host--src-trace-store-mod-rs.html#method-fail-next-trace-event-for-tests-148">fail_next_trace_event_for_tests</a> (&amp; self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(test)]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-fail-next-trace-event-for-tests-148">fail_next_trace_event_for_tests</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-self">self</span>.fail_next_trace_event.store(<span class="rs-kw">true</span>, <span class="rs-type">Ordering</span>::<span class="rs-type">SeqCst</span>);
+    }
+</code></pre>
+</details></td></tr><tr id="method-pending-sidecar-count-for-tests-153"><td>method</td><td>pending_sidecar_count_for_tests</td><td><code>pub fn <a class="symbol-link" href="host--src-trace-store-mod-rs.html#method-pending-sidecar-count-for-tests-153">pending_sidecar_count_for_tests</a> (&amp; self) -&gt; Result &lt; usize , <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(test)]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-pending-sidecar-count-for-tests-153">pending_sidecar_count_for_tests</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;usize, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+        <span class="rs-kw">let</span> count: i64 =
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>()
+                .query_row(&quot;<span class="rs-type">SELECT</span> <span class="rs-type">COUNT</span>(*) <span class="rs-type">FROM</span> pending_trace_sidecars&quot;, [], |row| {
+                    row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0)
+                })?;
+        <span class="rs-type">Ok</span>(usize::try_from(count).unwrap_or(usize::<span class="rs-type">MAX</span>))
+    }
+</code></pre>
+</details></td></tr><tr id="method-prepare-forward-163"><td>method</td><td>prepare_forward</td><td><code>pub fn <a class="symbol-link" href="host--src-trace-store-mod-rs.html#method-prepare-forward-163">prepare_forward</a> (&amp; self , input : <a class="symbol-link" href="host--src-trace-store-types-rs.html#item-struct-RequestStartInput-4">RequestStartInput</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; <a class="symbol-link" href="host--src-trace-store-types-rs.html#item-struct-ForwardTraceDecision-86">ForwardTraceDecision</a> , <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-prepare-forward-163">prepare_forward</a>(
+        &amp;<span class="rs-self">self</span>,
+        input: <a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-RequestStartInput-4">RequestStartInput</a>&lt;&#x27;_&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-ForwardTraceDecision-86">ForwardTraceDecision</a>, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+        <span class="rs-kw">let</span> degraded_input = <a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-DegradedRequestInput-15">DegradedRequestInput</a> {
+            sandbox_id: input.sandbox_id,
+            trace_id: input.trace_id.clone(),
+            request_id: input.request_id.clone(),
+            op: input.op,
+            family: input.family,
+            caller_id: input.caller_id,
+            args: input.args.clone(),
+        };
+        <span class="rs-kw">let</span> trace_id = input.trace_id.clone();
+        <span class="rs-kw">let</span> request_id = input.request_id.clone();
+        <span class="rs-kw">let</span> mutates_state = input.mutates_state;
+        <span class="rs-kw">match</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-append-request-start-201">append_request_start</a>(input) {
+            <span class="rs-type">Ok</span>(()) =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-ForwardTraceDecision-86">ForwardTraceDecision</a> {
+                trace_id,
+                request_id,
+                degraded: <span class="rs-kw">false</span>,
+            }),
+            <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> !mutates_state &amp;&amp; err.<a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-allows-read-only-degraded-320">allows_read_only_degraded</a>() =&gt; {
+                <span class="rs-comment">// Best-effort marker: a read-only op proceeds degraded even when the</span>
+                <span class="rs-comment">// store is too unavailable to record the marker. An untraceable read</span>
+                <span class="rs-comment">// is acceptable; an untraceable mutation is not, and fails closed in</span>
+                <span class="rs-comment">// the catch-all arm below.</span>
+                <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-append-trace-degraded-269">append_trace_degraded</a>(&amp;degraded_input, &amp;err);
+                <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-ForwardTraceDecision-86">ForwardTraceDecision</a> {
+                    trace_id,
+                    request_id,
+                    degraded: <span class="rs-kw">true</span>,
+                })
+            }
+            <span class="rs-type">Err</span>(err) =&gt; <span class="rs-type">Err</span>(err),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-append-request-start-201"><td>method</td><td>append_request_start</td><td><code>pub fn <a class="symbol-link" href="host--src-trace-store-mod-rs.html#method-append-request-start-201">append_request_start</a> (&amp; self , input : <a class="symbol-link" href="host--src-trace-store-types-rs.html#item-struct-RequestStartInput-4">RequestStartInput</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; () , <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-append-request-start-201">append_request_start</a>(
+        &amp;<span class="rs-self">self</span>,
+        input: <a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-RequestStartInput-4">RequestStartInput</a>&lt;&#x27;_&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.fail_next_request_start.swap(<span class="rs-kw">false</span>, <span class="rs-type">Ordering</span>::<span class="rs-type">SeqCst</span>) {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>::<span class="rs-type">InjectedRequestStartFailure</span>);
+        }
+
+        <span class="rs-kw">let</span> args_summary =
+            <span class="rs-type">BoundedJson</span>::capture(input.args.clone(), <span class="rs-type">DetailBudget</span>::<span class="rs-type">RequestArgsSummary</span>);
+        <span class="rs-kw">let</span> redacted_args = trace::budget::redact_for_audit(input.args.clone());
+        <span class="rs-comment">// Digest/length describe the request args only. They are never computed</span>
+        <span class="rs-comment">// over the forwarded TCP frame, which carries `_eos_daemon_auth_token`;</span>
+        <span class="rs-comment">// the security rule forbids recording, hashing, or length-recording the</span>
+        <span class="rs-comment">// auth token (SPEC: Transport connection lifecycle -&gt; Security rules).</span>
+        <span class="rs-kw">let</span> args_bytes = serde_json::to_vec(&amp;redacted_args).unwrap_or_default();
+        <span class="rs-kw">let</span> payload = proto::<span class="rs-type">RequestStart</span> {
+            trace_id: input.trace_id.to_string(),
+            request_id: input.request_id.to_string(),
+            sandbox_id: input.sandbox_id.to_owned(),
+            op: input.op.to_owned(),
+            mutates_state: input.mutates_state,
+            args_summary_json: args_summary.encoded_value(),
+            args_summary_truncated: args_summary.truncated,
+            args_summary_sha256: args_summary.sha256.clone().unwrap_or_default(),
+            args_summary_original_len: <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-usize-to-u64-346">usize_to_u64</a>(args_summary.original_len),
+            started_at_unix_ms: <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-now-ms-334">now_ms</a>(),
+            caller_id: input.caller_id.unwrap_or_default().to_owned(),
+            host_boot_id: <span class="rs-self">self</span>.host_boot_id.to_string(),
+            args_len: <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-usize-to-u64-346">usize_to_u64</a>(args_bytes.len()),
+            args_digest: sha256_hex(&amp;args_bytes),
+        }
+        .encode_to_vec();
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> conn = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>();
+        <span class="rs-kw">let</span> tx = <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-write-transaction-330">write_transaction</a>(&amp;<span class="rs-kw">mut</span> conn)?;
+        <a class="symbol-link rs-fn" href="host--src-trace-store-audit-rs.html#item-fn-append-audit-entry-tx-122">append_audit_entry_tx</a>(
+            &amp;tx,
+            <a class="symbol-link rs-type" href="host--src-trace-store-audit-rs.html#item-struct-AuditAppend-16">AuditAppend</a> {
+                sandbox_id: input.sandbox_id,
+                trace_id: input.trace_id.as_str(),
+                request_id: <span class="rs-type">Some</span>(input.request_id.as_str()),
+                entry_kind: &quot;request_start&quot;,
+                schema_name: <span class="rs-type">REQUEST_START_SCHEMA</span>,
+                schema_version: 1,
+                received_at_ms: <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-now-ms-334">now_ms</a>(),
+                payload: &amp;payload,
+            },
+        )?;
+        <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-project-request-start-tx-20">project_request_start_tx</a>(
+            &amp;tx,
+            <a class="symbol-link rs-type" href="host--src-trace-store-projection-rs.html#item-struct-ProjectRequestStart-7">ProjectRequestStart</a> {
+                sandbox_id: input.sandbox_id,
+                trace_id: input.trace_id.as_str(),
+                request_id: input.request_id.as_str(),
+                op: input.op,
+                family: input.family,
+                caller_id: input.caller_id,
+                args_summary: &amp;args_summary.encoded_value(),
+                args_digest: &amp;sha256_hex(&amp;args_bytes),
+                sent_at_ms: <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-now-ms-334">now_ms</a>(),
+                host_boot_id: <span class="rs-self">self</span>.host_boot_id.as_str(),
+            },
+        )?;
+        tx.commit()?;
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr><tr id="method-append-trace-degraded-269"><td>method</td><td>append_trace_degraded</td><td><code>fn <a class="symbol-link" href="host--src-trace-store-mod-rs.html#method-append-trace-degraded-269">append_trace_degraded</a> (&amp; self , input : &amp; <a class="symbol-link" href="host--src-trace-store-types-rs.html#item-struct-DegradedRequestInput-15">DegradedRequestInput</a> &lt; &#x27;_ &gt; , error : &amp; <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> ,) -&gt; Result &lt; () , <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-append-trace-degraded-269">append_trace_degraded</a>(
+        &amp;<span class="rs-self">self</span>,
+        input: &amp;<a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-DegradedRequestInput-15">DegradedRequestInput</a>&lt;&#x27;_&gt;,
+        error: &amp;<a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+        <span class="rs-kw">let</span> args_summary =
+            <span class="rs-type">BoundedJson</span>::capture(input.args.clone(), <span class="rs-type">DetailBudget</span>::<span class="rs-type">RequestArgsSummary</span>);
+        <span class="rs-kw">let</span> redacted_args = trace::budget::redact_for_audit(input.args.clone());
+        <span class="rs-comment">// Token-free args digest only — never the forwarded auth-bearing frame.</span>
+        <span class="rs-kw">let</span> args_bytes = serde_json::to_vec(&amp;redacted_args).unwrap_or_default();
+        <span class="rs-kw">let</span> payload = <a class="symbol-link rs-type" href="host--src-trace-store-payload-rs.html#item-struct-TraceDegradedPayload-17">TraceDegradedPayload</a> {
+            trace_id: input.trace_id.to_string(),
+            request_id: input.request_id.to_string(),
+            sandbox_id: input.sandbox_id.to_owned(),
+            op: input.op.to_owned(),
+            family: input.family.to_owned(),
+            caller_id: input.caller_id.map(<span class="rs-type">ToOwned</span>::to_owned),
+            args_summary: args_summary.encoded_value(),
+            args_digest: sha256_hex(&amp;args_bytes),
+            sent_at_ms: <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-now-ms-334">now_ms</a>(),
+            host_boot_id: <span class="rs-self">self</span>.host_boot_id.to_string(),
+            error_kind: &quot;trace_degraded&quot;.to_owned(),
+            message: error.to_string(),
+        };
+        <span class="rs-kw">let</span> payload_bytes = <a class="symbol-link rs-fn" href="host--src-trace-store-payload-rs.html#item-fn-encode-audit-payload-93">encode_audit_payload</a>(&amp;payload);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> conn = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>();
+        <span class="rs-kw">let</span> tx = <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-write-transaction-330">write_transaction</a>(&amp;<span class="rs-kw">mut</span> conn)?;
+        <a class="symbol-link rs-fn" href="host--src-trace-store-audit-rs.html#item-fn-append-audit-entry-tx-122">append_audit_entry_tx</a>(
+            &amp;tx,
+            <a class="symbol-link rs-type" href="host--src-trace-store-audit-rs.html#item-struct-AuditAppend-16">AuditAppend</a> {
+                sandbox_id: input.sandbox_id,
+                trace_id: input.trace_id.as_str(),
+                request_id: <span class="rs-type">Some</span>(input.request_id.as_str()),
+                entry_kind: &quot;trace_degraded&quot;,
+                schema_name: <span class="rs-type">AUDIT_SCHEMA</span>,
+                schema_version: 1,
+                received_at_ms: <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-now-ms-334">now_ms</a>(),
+                payload: &amp;payload_bytes,
+            },
+        )?;
+        <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-project-trace-degraded-tx-45">project_trace_degraded_tx</a>(&amp;tx, &amp;payload)?;
+        tx.commit()?;
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr><tr id="method-lock-314"><td>method</td><td>lock</td><td><code>fn <a class="symbol-link" href="host--src-host-registry-rs.html#method-lock-121">lock</a> (&amp; self) -&gt; std :: sync :: MutexGuard &lt; &#x27;_ , Connection &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>(&amp;<span class="rs-self">self</span>) -&gt; std::sync::<span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">Connection</span>&gt; {
+        <span class="rs-self">self</span>.conn.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+    }
+</code></pre>
+</details></td></tr><tr id="method-open-85"><td>associated-fn</td><td>open</td><td><code>pub fn <a class="symbol-link" href="host--src-host-mod-rs.html#method-open-125">open</a> (state_dir : impl AsRef &lt; Path &gt;) -&gt; Result &lt; Self , <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-open-125">open</a>(state_dir: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+        <span class="rs-kw">let</span> state_dir = state_dir.as_ref();
+        std::fs::create_dir_all(state_dir).map_err(|source| <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>::<span class="rs-type">Open</span> {
+            path: state_dir.to_path_buf(),
+            source: rusqlite::<span class="rs-type">Error</span>::<span class="rs-type">ToSqlConversionFailure</span>(<span class="rs-type">Box</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(source)),
+        })?;
+        #[cfg(unix)]
+        {
+            <span class="rs-kw">use</span> std::os::unix::fs::<span class="rs-type">PermissionsExt</span>;
+            <span class="rs-kw">let</span> _ = std::fs::set_permissions(state_dir, std::fs::<span class="rs-type">Permissions</span>::from_mode(0o700));
+        }
+
+        <span class="rs-kw">let</span> db_path = state_dir.join(&quot;sandbox-traces.sqlite&quot;);
+        <span class="rs-kw">let</span> conn = <span class="rs-type">Connection</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-open-125">open</a>(&amp;db_path).map_err(|source| <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>::<span class="rs-type">Open</span> {
+            path: db_path.clone(),
+            source,
+        })?;
+        schema::<a class="symbol-link rs-fn" href="host--src-trace-store-schema-rs.html#item-fn-initialize-9">initialize</a>(&amp;conn)?;
+        #[cfg(unix)]
+        {
+            <span class="rs-kw">use</span> std::os::unix::fs::<span class="rs-type">PermissionsExt</span>;
+            <span class="rs-kw">let</span> _ = std::fs::set_permissions(&amp;db_path, std::fs::<span class="rs-type">Permissions</span>::from_mode(0o600));
+        }
+
+        <span class="rs-kw">let</span> store = <span class="rs-self">Self</span> {
+            #[cfg(any(test, feature = &quot;e2e-support&quot;))]
+            db_path,
+            conn: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(conn),
+            host_boot_id: <span class="rs-type">BootId</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(),
+            fail_next_request_start: <span class="rs-type">AtomicBool</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(<span class="rs-kw">false</span>),
+            fail_next_response_persisted: <span class="rs-type">AtomicBool</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(<span class="rs-kw">false</span>),
+            fail_next_trace_batch_ingest: <span class="rs-type">AtomicBool</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(<span class="rs-kw">false</span>),
+            fail_next_trace_event: <span class="rs-type">AtomicBool</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(<span class="rs-kw">false</span>),
+        };
+        store.<a class="symbol-link rs-fn" href="host--src-trace-store-events-rs.html#method-record-host-boot-164">record_host_boot</a>()?;
+        store.<a class="symbol-link rs-fn" href="host--src-trace-store-response-rs.html#method-reconcile-startup-orphans-111">reconcile_startup_orphans</a>()?;
+        store.<a class="symbol-link rs-fn" href="host--src-trace-store-sidecar-rs.html#method-recover-pending-sidecars-54">recover_pending_sidecars</a>()?;
+        <span class="rs-type">Ok</span>(store)
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/host/src/trace_store/mod.rs:73</p>
+</article><article id="item-enum-TraceStoreError-45" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum TraceStoreError pub pub enum TraceStoreError crates/host/src/trace_store/mod.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>TraceStoreError</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a></code>
+  <div class="tags"><span>derive: Debug</span><span>derive: thiserror::Error</span><span>error</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Open</td><td><code>path: PathBuf, source: rusqlite :: Error</code></td></tr><tr><td>NewerSchema</td><td><code>found: u32, supported: u32</code></td></tr><tr><td>Sqlite</td><td><code>0: rusqlite :: Error</code></td></tr><tr><td>Decode</td><td><code>0: trace :: DecodeTraceError</code></td></tr><tr><td>ProstDecode</td><td><code>0: prost :: DecodeError</code></td></tr><tr><td>InjectedRequestStartFailure</td><td><code></code></td></tr><tr><td>InjectedResponsePersistedFailure</td><td><code></code></td></tr><tr><td>InjectedTraceBatchIngestFailure</td><td><code></code></td></tr><tr><td>InjectedTraceEventFailure</td><td><code></code></td></tr><tr><td>TraceExportReplayMismatch</td><td><code>export_id: String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-allows-read-only-degraded-320"><td>method</td><td>allows_read_only_degraded</td><td><code>const fn <a class="symbol-link" href="host--src-trace-store-mod-rs.html#method-allows-read-only-degraded-320">allows_read_only_degraded</a> (&amp; self) -&gt; bool</code><p class="docstring">Read-only ops proceed with a `trace_degraded` marker when the<br>request-start append fails because the store itself is unavailable: the<br>test injection or a real sqlite error (disk-full, lock contention, I/O).<br>Schema/decode errors are not request-start append failures and never<br>reach this path; mutating ops always fail closed regardless.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Read-only ops proceed with a `trace_degraded` marker when the</span>
+    <span class="rs-comment">/// request-start append fails because the store itself is unavailable: the</span>
+    <span class="rs-comment">/// test injection or a real sqlite error (disk-full, lock contention, I/O).</span>
+    <span class="rs-comment">/// Schema/decode errors are not request-start append failures and never</span>
+    <span class="rs-comment">/// reach this path; mutating ops always fail closed regardless.</span>
+    <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-allows-read-only-degraded-320">allows_read_only_degraded</a>(&amp;<span class="rs-self">self</span>) -&gt; bool {
+        matches!(<span class="rs-self">self</span>, <span class="rs-self">Self</span>::<span class="rs-type">InjectedRequestStartFailure</span> | <span class="rs-self">Self</span>::<span class="rs-type">Sqlite</span>(_))
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/host/src/trace_store/mod.rs:45</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-write-transaction-330" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_transaction pub(super) pub(super) fn write_transaction (conn : &amp; mut Connection) -&gt; Result &lt; Transaction &lt; '_ &gt; , rusqlite :: Error &gt; crates/host/src/trace_store/mod.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>write_transaction</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-fn-write-transaction-330">write_transaction</a> (conn : &amp; mut Connection) -&gt; Result &lt; Transaction &lt; &#x27;_ &gt; , rusqlite :: Error &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-write-transaction-330">write_transaction</a>(conn: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Connection</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Transaction</span>&lt;&#x27;_&gt;, rusqlite::<span class="rs-type">Error</span>&gt; {
+    conn.transaction_with_behavior(<span class="rs-type">TransactionBehavior</span>::<span class="rs-type">Immediate</span>)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/mod.rs:330</p>
+</article><article id="item-fn-now-ms-334" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn now_ms pub(super) pub(super) fn now_ms () -&gt; u64 crates/host/src/trace_store/mod.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>now_ms</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-fn-now-ms-334">now_ms</a> () -&gt; u64</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-now-ms-334">now_ms</a>() -&gt; u64 {
+    <span class="rs-kw">let</span> millis = <span class="rs-type">SystemTime</span>::now()
+        .duration_since(<span class="rs-type">UNIX_EPOCH</span>)
+        .unwrap_or_default()
+        .as_millis();
+    u64::try_from(millis).unwrap_or(u64::<span class="rs-type">MAX</span>)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/mod.rs:334</p>
+</article><article id="item-fn-u64-to-i64-342" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn u64_to_i64 pub(super) pub(super) fn u64_to_i64 (value : u64) -&gt; i64 crates/host/src/trace_store/mod.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>u64_to_i64</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a> (value : u64) -&gt; i64</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a>(value: u64) -&gt; i64 {
+    i64::try_from(value).unwrap_or(i64::<span class="rs-type">MAX</span>)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/mod.rs:342</p>
+</article><article id="item-fn-usize-to-u64-346" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn usize_to_u64 pub(super) pub(super) fn usize_to_u64 (value : usize) -&gt; u64 crates/host/src/trace_store/mod.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>usize_to_u64</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-fn-usize-to-u64-346">usize_to_u64</a> (value : usize) -&gt; u64</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-usize-to-u64-346">usize_to_u64</a>(value: usize) -&gt; u64 {
+    u64::try_from(value).unwrap_or(u64::<span class="rs-type">MAX</span>)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/mod.rs:346</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/host/src/trace_store/mod.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
+<span class="rs-kw">use</span> std::sync::atomic::{<span class="rs-type">AtomicBool</span>, <span class="rs-type">Ordering</span>};
+<span class="rs-kw">use</span> std::sync::{<span class="rs-type">Mutex</span>, <span class="rs-type">PoisonError</span>};
+<span class="rs-kw">use</span> std::time::{<span class="rs-type">SystemTime</span>, <span class="rs-type">UNIX_EPOCH</span>};
+
+<span class="rs-kw">use</span> prost::<span class="rs-type">Message</span>;
+<span class="rs-kw">use</span> rusqlite::{<span class="rs-type">Connection</span>, <span class="rs-type">Transaction</span>, <span class="rs-type">TransactionBehavior</span>};
+<span class="rs-kw">use</span> trace::budget::{<span class="rs-type">BoundedJson</span>, <span class="rs-type">DetailBudget</span>};
+<span class="rs-kw">use</span> trace::codec::proto;
+<span class="rs-kw">use</span> trace::{sha256_hex, <span class="rs-type">BootId</span>};
+
+<span class="rs-kw">mod</span> audit;
+<span class="rs-kw">mod</span> events;
+<span class="rs-kw">mod</span> ingest;
+<span class="rs-kw">mod</span> payload;
+<span class="rs-kw">mod</span> projection;
+<span class="rs-kw">mod</span> query;
+<span class="rs-kw">mod</span> read;
+<span class="rs-kw">mod</span> response;
+<span class="rs-kw">mod</span> schema;
+<span class="rs-kw">mod</span> sidecar;
+<span class="rs-kw">mod</span> types;
+
+<span class="rs-kw">use</span> audit::{append_audit_entry_tx, <a class="symbol-link rs-type" href="host--src-trace-store-audit-rs.html#item-struct-AuditAppend-16">AuditAppend</a>, <span class="rs-type">AUDIT_SCHEMA</span>, <span class="rs-type">REQUEST_START_SCHEMA</span>};
+<span class="rs-kw">use</span> payload::{encode_audit_payload, <a class="symbol-link rs-type" href="host--src-trace-store-payload-rs.html#item-struct-TraceDegradedPayload-17">TraceDegradedPayload</a>};
+<span class="rs-kw">use</span> projection::{project_request_start_tx, project_trace_degraded_tx, <a class="symbol-link rs-type" href="host--src-trace-store-projection-rs.html#item-struct-ProjectRequestStart-7">ProjectRequestStart</a>};
+
+#[cfg(any(test, feature = &quot;e2e-support&quot;))]
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> query::<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-SqlitePosture-11">SqlitePosture</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> query::{
+    <a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceAuditEntryRow-83">TraceAuditEntryRow</a>, <a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceEventRow-18">TraceEventRow</a>, <a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceLinkRow-75">TraceLinkRow</a>, <a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceRequestRow-26">TraceRequestRow</a>, <a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceResourceRow-65">TraceResourceRow</a>,
+    <a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceSpanRow-51">TraceSpanRow</a>,
+};
+<span class="rs-kw">use</span> types::<a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-DegradedRequestInput-15">DegradedRequestInput</a>;
+#[cfg(feature = &quot;e2e-support&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> types::<a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-TraceVerifyFailure-102">TraceVerifyFailure</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> types::{
+    <a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-ForwardTraceDecision-86">ForwardTraceDecision</a>, <a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-HeartbeatInput-78">HeartbeatInput</a>, <a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-PendingSidecarInput-70">PendingSidecarInput</a>, <a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-RequestStartInput-4">RequestStartInput</a>,
+    <a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-ResponseMissingInput-53">ResponseMissingInput</a>, <a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-ResponsePersistedInput-44">ResponsePersistedInput</a>, <a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-TraceEventInput-25">TraceEventInput</a>, <a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-TraceIngestFailedInput-62">TraceIngestFailedInput</a>,
+    <a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-TraceVerifyReport-93">TraceVerifyReport</a>,
+};
+
+<span class="rs-kw">const</span> <span class="rs-type">HOST_SANDBOX_ID</span>: &amp;str = &quot;_host&quot;;
+
+#[derive(<span class="rs-type">Debug</span>, thiserror::<span class="rs-type">Error</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> {
+    #[error(&quot;open trace store at {path}: {source}&quot;)]
+    <span class="rs-type">Open</span> {
+        path: <span class="rs-type">PathBuf</span>,
+        #[source]
+        source: rusqlite::<span class="rs-type">Error</span>,
+    },
+    #[error(&quot;trace store schema version {found} is newer than supported {supported}&quot;)]
+    <span class="rs-type">NewerSchema</span> { found: u32, supported: u32 },
+    #[error(&quot;trace store sqlite error: {0}&quot;)]
+    <span class="rs-type">Sqlite</span>(#[from] rusqlite::<span class="rs-type">Error</span>),
+    #[error(&quot;trace protobuf decode error: {0}&quot;)]
+    <span class="rs-type">Decode</span>(#[from] trace::<span class="rs-type">DecodeTraceError</span>),
+    #[error(&quot;trace protobuf decode error: {0}&quot;)]
+    <span class="rs-type">ProstDecode</span>(#[from] prost::<span class="rs-type">DecodeError</span>),
+    #[error(&quot;trace store request-start append intentionally failed <span class="rs-kw">for</span> test&quot;)]
+    <span class="rs-type">InjectedRequestStartFailure</span>,
+    #[error(&quot;trace store response-persisted append intentionally failed <span class="rs-kw">for</span> test&quot;)]
+    <span class="rs-type">InjectedResponsePersistedFailure</span>,
+    #[error(&quot;trace batch ingest intentionally failed <span class="rs-kw">for</span> test&quot;)]
+    <span class="rs-type">InjectedTraceBatchIngestFailure</span>,
+    #[error(&quot;trace event append intentionally failed <span class="rs-kw">for</span> test&quot;)]
+    <span class="rs-type">InjectedTraceEventFailure</span>,
+    #[error(&quot;trace export {export_id} replay digest mismatch&quot;)]
+    <span class="rs-type">TraceExportReplayMismatch</span> { export_id: <span class="rs-type">String</span> },
+}
+
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-struct-TraceStore-73">TraceStore</a> {
+    #[cfg(any(test, feature = &quot;e2e-support&quot;))]
+    db_path: <span class="rs-type">PathBuf</span>,
+    conn: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">Connection</span>&gt;,
+    host_boot_id: <span class="rs-type">BootId</span>,
+    fail_next_request_start: <span class="rs-type">AtomicBool</span>,
+    fail_next_response_persisted: <span class="rs-type">AtomicBool</span>,
+    fail_next_trace_batch_ingest: <span class="rs-type">AtomicBool</span>,
+    fail_next_trace_event: <span class="rs-type">AtomicBool</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-struct-TraceStore-73">TraceStore</a> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-open-125">open</a>(state_dir: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+        <span class="rs-kw">let</span> state_dir = state_dir.as_ref();
+        std::fs::create_dir_all(state_dir).map_err(|source| <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>::<span class="rs-type">Open</span> {
+            path: state_dir.to_path_buf(),
+            source: rusqlite::<span class="rs-type">Error</span>::<span class="rs-type">ToSqlConversionFailure</span>(<span class="rs-type">Box</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(source)),
+        })?;
+        #[cfg(unix)]
+        {
+            <span class="rs-kw">use</span> std::os::unix::fs::<span class="rs-type">PermissionsExt</span>;
+            <span class="rs-kw">let</span> _ = std::fs::set_permissions(state_dir, std::fs::<span class="rs-type">Permissions</span>::from_mode(0o700));
+        }
+
+        <span class="rs-kw">let</span> db_path = state_dir.join(&quot;sandbox-traces.sqlite&quot;);
+        <span class="rs-kw">let</span> conn = <span class="rs-type">Connection</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-open-125">open</a>(&amp;db_path).map_err(|source| <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>::<span class="rs-type">Open</span> {
+            path: db_path.clone(),
+            source,
+        })?;
+        schema::<a class="symbol-link rs-fn" href="host--src-trace-store-schema-rs.html#item-fn-initialize-9">initialize</a>(&amp;conn)?;
+        #[cfg(unix)]
+        {
+            <span class="rs-kw">use</span> std::os::unix::fs::<span class="rs-type">PermissionsExt</span>;
+            <span class="rs-kw">let</span> _ = std::fs::set_permissions(&amp;db_path, std::fs::<span class="rs-type">Permissions</span>::from_mode(0o600));
+        }
+
+        <span class="rs-kw">let</span> store = <span class="rs-self">Self</span> {
+            #[cfg(any(test, feature = &quot;e2e-support&quot;))]
+            db_path,
+            conn: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(conn),
+            host_boot_id: <span class="rs-type">BootId</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(),
+            fail_next_request_start: <span class="rs-type">AtomicBool</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(<span class="rs-kw">false</span>),
+            fail_next_response_persisted: <span class="rs-type">AtomicBool</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(<span class="rs-kw">false</span>),
+            fail_next_trace_batch_ingest: <span class="rs-type">AtomicBool</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(<span class="rs-kw">false</span>),
+            fail_next_trace_event: <span class="rs-type">AtomicBool</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(<span class="rs-kw">false</span>),
+        };
+        store.<a class="symbol-link rs-fn" href="host--src-trace-store-events-rs.html#method-record-host-boot-164">record_host_boot</a>()?;
+        store.<a class="symbol-link rs-fn" href="host--src-trace-store-response-rs.html#method-reconcile-startup-orphans-111">reconcile_startup_orphans</a>()?;
+        store.<a class="symbol-link rs-fn" href="host--src-trace-store-sidecar-rs.html#method-recover-pending-sidecars-54">recover_pending_sidecars</a>()?;
+        <span class="rs-type">Ok</span>(store)
+    }
+
+    #[cfg(any(test, feature = &quot;e2e-support&quot;))]
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-db-path-125">db_path</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">Path</span> {
+        &amp;<span class="rs-self">self</span>.db_path
+    }
+
+    #[cfg(test)]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-fail-next-request-start-for-tests-131">fail_next_request_start_for_tests</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-self">self</span>.fail_next_request_start.store(<span class="rs-kw">true</span>, <span class="rs-type">Ordering</span>::<span class="rs-type">SeqCst</span>);
+    }
+
+    #[cfg(test)]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-fail-next-response-persisted-for-tests-136">fail_next_response_persisted_for_tests</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-self">self</span>.fail_next_response_persisted
+            .store(<span class="rs-kw">true</span>, <span class="rs-type">Ordering</span>::<span class="rs-type">SeqCst</span>);
+    }
+
+    #[cfg(test)]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-fail-next-trace-batch-ingest-for-tests-142">fail_next_trace_batch_ingest_for_tests</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-self">self</span>.fail_next_trace_batch_ingest
+            .store(<span class="rs-kw">true</span>, <span class="rs-type">Ordering</span>::<span class="rs-type">SeqCst</span>);
+    }
+
+    #[cfg(test)]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-fail-next-trace-event-for-tests-148">fail_next_trace_event_for_tests</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-self">self</span>.fail_next_trace_event.store(<span class="rs-kw">true</span>, <span class="rs-type">Ordering</span>::<span class="rs-type">SeqCst</span>);
+    }
+
+    #[cfg(test)]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-pending-sidecar-count-for-tests-153">pending_sidecar_count_for_tests</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;usize, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+        <span class="rs-kw">let</span> count: i64 =
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>()
+                .query_row(&quot;<span class="rs-type">SELECT</span> <span class="rs-type">COUNT</span>(*) <span class="rs-type">FROM</span> pending_trace_sidecars&quot;, [], |row| {
+                    row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0)
+                })?;
+        <span class="rs-type">Ok</span>(usize::try_from(count).unwrap_or(usize::<span class="rs-type">MAX</span>))
+    }
+
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-prepare-forward-163">prepare_forward</a>(
+        &amp;<span class="rs-self">self</span>,
+        input: <a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-RequestStartInput-4">RequestStartInput</a>&lt;&#x27;_&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-ForwardTraceDecision-86">ForwardTraceDecision</a>, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+        <span class="rs-kw">let</span> degraded_input = <a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-DegradedRequestInput-15">DegradedRequestInput</a> {
+            sandbox_id: input.sandbox_id,
+            trace_id: input.trace_id.clone(),
+            request_id: input.request_id.clone(),
+            op: input.op,
+            family: input.family,
+            caller_id: input.caller_id,
+            args: input.args.clone(),
+        };
+        <span class="rs-kw">let</span> trace_id = input.trace_id.clone();
+        <span class="rs-kw">let</span> request_id = input.request_id.clone();
+        <span class="rs-kw">let</span> mutates_state = input.mutates_state;
+        <span class="rs-kw">match</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-append-request-start-201">append_request_start</a>(input) {
+            <span class="rs-type">Ok</span>(()) =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-ForwardTraceDecision-86">ForwardTraceDecision</a> {
+                trace_id,
+                request_id,
+                degraded: <span class="rs-kw">false</span>,
+            }),
+            <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> !mutates_state &amp;&amp; err.<a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-allows-read-only-degraded-320">allows_read_only_degraded</a>() =&gt; {
+                <span class="rs-comment">// Best-effort marker: a read-only op proceeds degraded even when the</span>
+                <span class="rs-comment">// store is too unavailable to record the marker. An untraceable read</span>
+                <span class="rs-comment">// is acceptable; an untraceable mutation is not, and fails closed in</span>
+                <span class="rs-comment">// the catch-all arm below.</span>
+                <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-append-trace-degraded-269">append_trace_degraded</a>(&amp;degraded_input, &amp;err);
+                <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-ForwardTraceDecision-86">ForwardTraceDecision</a> {
+                    trace_id,
+                    request_id,
+                    degraded: <span class="rs-kw">true</span>,
+                })
+            }
+            <span class="rs-type">Err</span>(err) =&gt; <span class="rs-type">Err</span>(err),
+        }
+    }
+
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-append-request-start-201">append_request_start</a>(
+        &amp;<span class="rs-self">self</span>,
+        input: <a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-RequestStartInput-4">RequestStartInput</a>&lt;&#x27;_&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.fail_next_request_start.swap(<span class="rs-kw">false</span>, <span class="rs-type">Ordering</span>::<span class="rs-type">SeqCst</span>) {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>::<span class="rs-type">InjectedRequestStartFailure</span>);
+        }
+
+        <span class="rs-kw">let</span> args_summary =
+            <span class="rs-type">BoundedJson</span>::capture(input.args.clone(), <span class="rs-type">DetailBudget</span>::<span class="rs-type">RequestArgsSummary</span>);
+        <span class="rs-kw">let</span> redacted_args = trace::budget::redact_for_audit(input.args.clone());
+        <span class="rs-comment">// Digest/length describe the request args only. They are never computed</span>
+        <span class="rs-comment">// over the forwarded TCP frame, which carries `_eos_daemon_auth_token`;</span>
+        <span class="rs-comment">// the security rule forbids recording, hashing, or length-recording the</span>
+        <span class="rs-comment">// auth token (SPEC: Transport connection lifecycle -&gt; Security rules).</span>
+        <span class="rs-kw">let</span> args_bytes = serde_json::to_vec(&amp;redacted_args).unwrap_or_default();
+        <span class="rs-kw">let</span> payload = proto::<span class="rs-type">RequestStart</span> {
+            trace_id: input.trace_id.to_string(),
+            request_id: input.request_id.to_string(),
+            sandbox_id: input.sandbox_id.to_owned(),
+            op: input.op.to_owned(),
+            mutates_state: input.mutates_state,
+            args_summary_json: args_summary.encoded_value(),
+            args_summary_truncated: args_summary.truncated,
+            args_summary_sha256: args_summary.sha256.clone().unwrap_or_default(),
+            args_summary_original_len: <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-usize-to-u64-346">usize_to_u64</a>(args_summary.original_len),
+            started_at_unix_ms: <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-now-ms-334">now_ms</a>(),
+            caller_id: input.caller_id.unwrap_or_default().to_owned(),
+            host_boot_id: <span class="rs-self">self</span>.host_boot_id.to_string(),
+            args_len: <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-usize-to-u64-346">usize_to_u64</a>(args_bytes.len()),
+            args_digest: sha256_hex(&amp;args_bytes),
+        }
+        .encode_to_vec();
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> conn = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>();
+        <span class="rs-kw">let</span> tx = <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-write-transaction-330">write_transaction</a>(&amp;<span class="rs-kw">mut</span> conn)?;
+        <a class="symbol-link rs-fn" href="host--src-trace-store-audit-rs.html#item-fn-append-audit-entry-tx-122">append_audit_entry_tx</a>(
+            &amp;tx,
+            <a class="symbol-link rs-type" href="host--src-trace-store-audit-rs.html#item-struct-AuditAppend-16">AuditAppend</a> {
+                sandbox_id: input.sandbox_id,
+                trace_id: input.trace_id.as_str(),
+                request_id: <span class="rs-type">Some</span>(input.request_id.as_str()),
+                entry_kind: &quot;request_start&quot;,
+                schema_name: <span class="rs-type">REQUEST_START_SCHEMA</span>,
+                schema_version: 1,
+                received_at_ms: <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-now-ms-334">now_ms</a>(),
+                payload: &amp;payload,
+            },
+        )?;
+        <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-project-request-start-tx-20">project_request_start_tx</a>(
+            &amp;tx,
+            <a class="symbol-link rs-type" href="host--src-trace-store-projection-rs.html#item-struct-ProjectRequestStart-7">ProjectRequestStart</a> {
+                sandbox_id: input.sandbox_id,
+                trace_id: input.trace_id.as_str(),
+                request_id: input.request_id.as_str(),
+                op: input.op,
+                family: input.family,
+                caller_id: input.caller_id,
+                args_summary: &amp;args_summary.encoded_value(),
+                args_digest: &amp;sha256_hex(&amp;args_bytes),
+                sent_at_ms: <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-now-ms-334">now_ms</a>(),
+                host_boot_id: <span class="rs-self">self</span>.host_boot_id.as_str(),
+            },
+        )?;
+        tx.commit()?;
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-append-trace-degraded-269">append_trace_degraded</a>(
+        &amp;<span class="rs-self">self</span>,
+        input: &amp;<a class="symbol-link rs-type" href="host--src-trace-store-types-rs.html#item-struct-DegradedRequestInput-15">DegradedRequestInput</a>&lt;&#x27;_&gt;,
+        error: &amp;<a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+        <span class="rs-kw">let</span> args_summary =
+            <span class="rs-type">BoundedJson</span>::capture(input.args.clone(), <span class="rs-type">DetailBudget</span>::<span class="rs-type">RequestArgsSummary</span>);
+        <span class="rs-kw">let</span> redacted_args = trace::budget::redact_for_audit(input.args.clone());
+        <span class="rs-comment">// Token-free args digest only — never the forwarded auth-bearing frame.</span>
+        <span class="rs-kw">let</span> args_bytes = serde_json::to_vec(&amp;redacted_args).unwrap_or_default();
+        <span class="rs-kw">let</span> payload = <a class="symbol-link rs-type" href="host--src-trace-store-payload-rs.html#item-struct-TraceDegradedPayload-17">TraceDegradedPayload</a> {
+            trace_id: input.trace_id.to_string(),
+            request_id: input.request_id.to_string(),
+            sandbox_id: input.sandbox_id.to_owned(),
+            op: input.op.to_owned(),
+            family: input.family.to_owned(),
+            caller_id: input.caller_id.map(<span class="rs-type">ToOwned</span>::to_owned),
+            args_summary: args_summary.encoded_value(),
+            args_digest: sha256_hex(&amp;args_bytes),
+            sent_at_ms: <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-now-ms-334">now_ms</a>(),
+            host_boot_id: <span class="rs-self">self</span>.host_boot_id.to_string(),
+            error_kind: &quot;trace_degraded&quot;.to_owned(),
+            message: error.to_string(),
+        };
+        <span class="rs-kw">let</span> payload_bytes = <a class="symbol-link rs-fn" href="host--src-trace-store-payload-rs.html#item-fn-encode-audit-payload-93">encode_audit_payload</a>(&amp;payload);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> conn = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>();
+        <span class="rs-kw">let</span> tx = <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-write-transaction-330">write_transaction</a>(&amp;<span class="rs-kw">mut</span> conn)?;
+        <a class="symbol-link rs-fn" href="host--src-trace-store-audit-rs.html#item-fn-append-audit-entry-tx-122">append_audit_entry_tx</a>(
+            &amp;tx,
+            <a class="symbol-link rs-type" href="host--src-trace-store-audit-rs.html#item-struct-AuditAppend-16">AuditAppend</a> {
+                sandbox_id: input.sandbox_id,
+                trace_id: input.trace_id.as_str(),
+                request_id: <span class="rs-type">Some</span>(input.request_id.as_str()),
+                entry_kind: &quot;trace_degraded&quot;,
+                schema_name: <span class="rs-type">AUDIT_SCHEMA</span>,
+                schema_version: 1,
+                received_at_ms: <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-now-ms-334">now_ms</a>(),
+                payload: &amp;payload_bytes,
+            },
+        )?;
+        <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-project-trace-degraded-tx-45">project_trace_degraded_tx</a>(&amp;tx, &amp;payload)?;
+        tx.commit()?;
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>(&amp;<span class="rs-self">self</span>) -&gt; std::sync::<span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">Connection</span>&gt; {
+        <span class="rs-self">self</span>.conn.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> {
+    <span class="rs-comment">/// Read-only ops proceed with a `trace_degraded` marker when the</span>
+    <span class="rs-comment">/// request-start append fails because the store itself is unavailable: the</span>
+    <span class="rs-comment">/// test injection or a real sqlite error (disk-full, lock contention, I/O).</span>
+    <span class="rs-comment">/// Schema/decode errors are not request-start append failures and never</span>
+    <span class="rs-comment">/// reach this path; mutating ops always fail closed regardless.</span>
+    <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#method-allows-read-only-degraded-320">allows_read_only_degraded</a>(&amp;<span class="rs-self">self</span>) -&gt; bool {
+        matches!(<span class="rs-self">self</span>, <span class="rs-self">Self</span>::<span class="rs-type">InjectedRequestStartFailure</span> | <span class="rs-self">Self</span>::<span class="rs-type">Sqlite</span>(_))
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-write-transaction-330">write_transaction</a>(conn: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Connection</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Transaction</span>&lt;&#x27;_&gt;, rusqlite::<span class="rs-type">Error</span>&gt; {
+    conn.transaction_with_behavior(<span class="rs-type">TransactionBehavior</span>::<span class="rs-type">Immediate</span>)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-now-ms-334">now_ms</a>() -&gt; u64 {
+    <span class="rs-kw">let</span> millis = <span class="rs-type">SystemTime</span>::now()
+        .duration_since(<span class="rs-type">UNIX_EPOCH</span>)
+        .unwrap_or_default()
+        .as_millis();
+    u64::try_from(millis).unwrap_or(u64::<span class="rs-type">MAX</span>)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a>(value: u64) -&gt; i64 {
+    i64::try_from(value).unwrap_or(i64::<span class="rs-type">MAX</span>)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-usize-to-u64-346">usize_to_u64</a>(value: usize) -&gt; u64 {
+    u64::try_from(value).unwrap_or(u64::<span class="rs-type">MAX</span>)
+}
+
+#[cfg(test)]
+#[path = &quot;../../tests/unit/trace_store.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

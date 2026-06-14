@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "name": "daemon",
+  "displayName": "daemon",
+  "cargoTestName": "daemon",
+  "folder": "daemon",
+  "path": "tests/daemon/mod.rs",
+  "page": "daemon/index.html",
+  "source": {
+    "markdown": "readme.md"
+  },
+  "overview": {
+    "summary": "`daemon` owns the live daemon control-plane contract: in-sandbox identity, response meta trace refs, built-in op registration, invocation registry accounting, heartbeat touch semantics, cancellation responses, TTL reaping, and dynamic plugin background registry participation. It exercises daemon ops including `sandbox.runtime.ready`, `sandbox.call.count`, `sandbox.call.heartbeat`, `sandbox.call.cancel`, `sandbox.command.exec`, `sandbox.plugin.ensure`, `sandbox.plugin.status`, dynamic `plugin.daemonplug.query`, and every non-mutating entry in `BUILTIN_DAEMON_OPS`, with state-toggling ops covered by dedicated module tests. Module config: `crates/e2e-test/tests/daemon/config/default.test.yml`, which shortens `daemon.inflight` TTL/reaper intervals for bounded live checks.",
+    "moduleConfig": "crates/e2e-test/tests/daemon/config/default.test.yml",
+    "ops": [
+      "sandbox.runtime.ready",
+      "sandbox.call.count",
+      "sandbox.call.heartbeat",
+      "sandbox.call.cancel",
+      "sandbox.command.exec",
+      "sandbox.plugin.ensure",
+      "sandbox.plugin.status",
+      "plugin.daemonplug.query"
+    ],
+    "tags": [
+      "daemon"
+    ]
+  },
+  "checklist": [
+    {
+      "id": "daemon-ready-identity",
+      "title": "Ready Identity",
+      "description": "Runtime readiness exposes daemon PID, uptime, successful probes, and envelope status/meta on success and error responses.",
+      "tags": [
+        "daemon"
+      ]
+    },
+    {
+      "id": "daemon-op-registry",
+      "title": "Op Registry",
+      "description": "Built-in daemon op names are wire-routed and unregistered names reject with `unknown_op`.",
+      "tags": [
+        "daemon"
+      ]
+    },
+    {
+      "id": "daemon-inflight",
+      "title": "Inflight",
+      "description": "Concurrent background invocations are visible through inflight accounting and joined without outliving the node lease.",
+      "tags": [
+        "daemon"
+      ]
+    },
+    {
+      "id": "daemon-heartbeat",
+      "title": "Heartbeat",
+      "description": "Heartbeat `touched` counts distinguish live invocation ids from bogus ids without mutating idle state.",
+      "tags": [
+        "daemon"
+      ]
+    },
+    {
+      "id": "daemon-cancel-control",
+      "title": "Cancel Control",
+      "description": "Cancel responses are coherent for unknown and live inflight invocation ids, including already-done and cancelled semantics.",
+      "tags": [
+        "daemon"
+      ]
+    },
+    {
+      "id": "daemon-ttl-reaper",
+      "title": "Ttl Reaper",
+      "description": "Short TTL/reaper daemon config removes stale inflight state and proves cleanup through registry counts.",
+      "tags": [
+        "daemon"
+      ]
+    },
+    {
+      "id": "daemon-plugin-control",
+      "title": "Plugin Control",
+      "description": "Dynamic plugin operations marked `background: true` participate in inflight, heartbeat, and cancel request control. Plugin process-group cancellation is not asserted: `eos-sandbox/crates/daemon/src/transport/server.rs` registers every background request, while plugin process-group teardown lives in `eos-sandbox/crates/operation/src/plugin/process.rs` (`terminate_process_group`).",
+      "tags": [
+        "daemon"
+      ]
+    },
+    {
+      "id": "daemon-plugin-background-boundary",
+      "title": "Plugin Background Boundary",
+      "description": "Dynamic plugin background requests use daemon inflight, heartbeat, and cancel control while plugin publish, setup failure, and worker replacement semantics stay plugin-owned.",
+      "tags": [
+        "daemon"
+      ]
+    }
+  ],
+  "test": [
+    {
+      "id": "daemon-identity-registry-wire-contract",
+      "name": "daemon-identity-registry-wire-contract",
+      "description": "Groups `runtime_ready_exposes_daemon_identity`, `every_response_carries_trace_meta`, and `every_builtin_op_is_wire_routed` to prove daemon identity, response meta trace refs, registered op routing, and `unknown_op` rejection over the live wire.",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites daemon --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "checklist": [
+        "daemon-ready-identity",
+        "daemon-op-registry"
+      ]
+    },
+    {
+      "id": "daemon-inflight-heartbeat-cancel-control",
+      "name": "daemon-inflight-heartbeat-cancel-control",
+      "description": "Groups `inflight_count_observes_concurrent_background_invocations`, `heartbeat_touched_counts_only_bogus_as_zero`, `heartbeat_touched_distinguishes_live_from_bogus`, `cancel_unknown_invocation_returns_done_response`, and `live_cancel_of_inflight_sets_cancelled` so the registry count, heartbeat touch, unknown cancel, live cancel, and join-cleanup behavior are validated together.",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites daemon --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "checklist": [
+        "daemon-inflight",
+        "daemon-heartbeat",
+        "daemon-cancel-control"
+      ]
+    },
+    {
+      "id": "daemon-stale-inflight-reaper-contract",
+      "name": "daemon-stale-inflight-reaper-contract",
+      "description": "Uses `inflight_ttl_reaper_cleanup`: a long background exec is removed by the short module-local TTL/reaper config before natural command completion, then heartbeat and cancel observe deregistered state.",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites daemon --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "checklist": [
+        "daemon-ttl-reaper",
+        "daemon-inflight",
+        "daemon-cancel-control",
+        "daemon-heartbeat"
+      ]
+    },
+    {
+      "id": "daemon-plugin-background-control-contract",
+      "name": "daemon-plugin-background-control-contract",
+      "description": "Uses `background_plugin_operation_control`: a slow dynamic plugin request marked `background: true` is counted, heartbeat-visible, and found by cancel. Process-group kill semantics are not claimed because plugin PPC dispatch does not currently register a process group.",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites daemon --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "checklist": [
+        "daemon-plugin-control",
+        "daemon-inflight",
+        "daemon-heartbeat",
+        "daemon-cancel-control"
+      ]
+    }
+  ]
+}

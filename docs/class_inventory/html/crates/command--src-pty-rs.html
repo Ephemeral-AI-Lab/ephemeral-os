@@ -1,0 +1,1072 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>command · src/pty.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>command File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>6</b><span>modules</span></div>
+  <div><b>58</b><span>items</span></div>
+  <div><b>78</b><span>fields</span></div>
+  <div><b>49</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="command.html"><span>contract.rs</span><small>6/1</small></a></li><li><a class="file-link" href="command--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="command--src-process-rs.html"><span>process.rs</span><small>8/6</small></a></li><li><a class="file-link active" href="command--src-pty-rs.html"><span>pty.rs</span><small>6/9</small></a></li><li><a class="file-link" href="command--src-transcript-rs.html"><span>transcript.rs</span><small>2/6</small></a></li><li><a class="file-link" href="command--src-yield-wait-loop-rs.html"><span>yield_wait_loop.rs</span><small>2/1</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="pty crates/command/src/pty.rs PtyProcess PtyProcessExitStatus impl PtyProcessExitStatus PtyProcessExit KillReason CommandCompletionStatus impl CommandCompletionStatus CommandRunnerResult impl CommandRunnerResult impl PtyProcess spawn_current_exe_ns_runner spawn_command_output_reader write_run_request lock open_pty_pair terminate_process_group set_nonblocking poll_timeout_ms stdin_backpressure">
+  <div class="module-head">
+    <div>
+      <h2>src/pty.rs</h2>
+      <p class="path">module <code>pty</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>6 types</span>
+      <span>4 impls</span>
+      <span>9 fns</span>
+      <span>17 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-KillReason-77" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum KillReason pub pub enum KillReason crates/command/src/pty.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>KillReason</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="command--src-pty-rs.html#item-enum-KillReason-77">KillReason</a></code>
+  <p class="docstring">Why the substrate killed a command process group. The owning run<br>maps this to the final status — `Cancelled` → "cancelled"/130, `TimedOut` →<br>"timed_out"/124 — and either reason DISCARDS the overlay (a killed command<br>never OCC-merges).</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Cancelled</td><td><code></code></td></tr><tr><td>TimedOut</td><td><code></code></td></tr></tbody></table>
+
+  <p class="source">crates/command/src/pty.rs:77</p>
+</article><article id="item-struct-PtyProcess-28" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PtyProcess pub(crate) pub(crate) struct PtyProcess crates/command/src/pty.rs pgid Option &lt; i32 &gt; writer Mutex &lt; File &gt; reader_done Mutex &lt; Option &lt; mpsc :: Receiver &lt; () &gt; &gt; &gt; child Mutex &lt; Option &lt; Child &gt; &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>PtyProcess</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="command--src-pty-rs.html#item-struct-PtyProcess-28">PtyProcess</a></code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>pgid</td><td><code>Option &lt; i32 &gt;</code></td></tr><tr><td>private</td><td>writer</td><td><code>Mutex &lt; File &gt;</code></td></tr><tr><td>private</td><td>reader_done</td><td><code>Mutex &lt; Option &lt; mpsc :: Receiver &lt; () &gt; &gt; &gt;</code></td></tr><tr><td>private</td><td>child</td><td><code>Mutex &lt; Option &lt; Child &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-write-stdin-198"><td>method</td><td>write_stdin</td><td><code>pub(crate) fn <a class="symbol-link" href="command--src-pty-rs.html#method-write-stdin-198">write_stdin</a> (&amp; self , bytes : &amp; [u8]) -&gt; io :: Result &lt; () &gt;</code><p class="docstring">Push `bytes` to the command's stdin without blocking unbounded. The master<br>is non-blocking; when the consumer stops draining, `write` returns<br>`WouldBlock` and we wait for writability only up to `STDIN_WRITE_DEADLINE`<br>before returning a structured backpressure error. Cancel/terminate is a<br>separate (`killpg`) path, so the command stays controllable throughout.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Push `bytes` to the command's stdin without blocking unbounded. The master</span>
+    <span class="rs-comment">/// is non-blocking; when the consumer stops draining, `write` returns</span>
+    <span class="rs-comment">/// `WouldBlock` and we wait for writability only up to `STDIN_WRITE_DEADLINE`</span>
+    <span class="rs-comment">/// before returning a structured backpressure error. Cancel/terminate is a</span>
+    <span class="rs-comment">/// separate (`killpg`) path, so the command stays controllable throughout.</span>
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-write-stdin-198">write_stdin</a>(&amp;<span class="rs-self">self</span>, bytes: &amp;[u8]) -&gt; io::<span class="rs-type">Result</span>&lt;()&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> writer = <a class="symbol-link rs-fn" href="command--src-process-rs.html#item-fn-lock-374">lock</a>(&amp;<span class="rs-self">self</span>.writer);
+        <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + <span class="rs-type">STDIN_WRITE_DEADLINE</span>;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> offset = 0;
+        <span class="rs-kw">while</span> offset &lt; bytes.len() {
+            <span class="rs-kw">match</span> writer.write(&amp;bytes[offset..]) {
+                <span class="rs-type">Ok</span>(0) =&gt; {
+                    <span class="rs-kw">return</span> <span class="rs-type">Err</span>(io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(
+                        io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">WriteZero</span>,
+                        &quot;command stdin closed&quot;,
+                    ));
+                }
+                <span class="rs-type">Ok</span>(written) =&gt; offset += written,
+                <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.kind() == io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">Interrupted</span> =&gt; {}
+                <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.kind() == io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">WouldBlock</span> =&gt; {
+                    <span class="rs-kw">let</span> timeout_ms = <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-poll-timeout-ms-415">poll_timeout_ms</a>(deadline);
+                    <span class="rs-kw">if</span> timeout_ms == 0 {
+                        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-stdin-backpressure-422">stdin_backpressure</a>());
+                    }
+                    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> fds = [<span class="rs-type">PollFd</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(&amp;*writer, <span class="rs-type">PollFlags</span>::<span class="rs-type">OUT</span>)];
+                    <span class="rs-kw">match</span> poll(&amp;<span class="rs-kw">mut</span> fds, timeout_ms) {
+                        <span class="rs-type">Ok</span>(0) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-stdin-backpressure-422">stdin_backpressure</a>()),
+                        <span class="rs-type">Ok</span>(_) =&gt; {}
+                        <span class="rs-type">Err</span>(rustix::io::<span class="rs-type">Errno</span>::<span class="rs-type">INTR</span>) =&gt; {}
+                        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="command.html#method-from-28">from</a>(err)),
+                    }
+                }
+                <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err),
+            }
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr><tr id="method-terminate-236"><td>method</td><td>terminate</td><td><code>pub(crate) fn <a class="symbol-link" href="command--src-pty-rs.html#method-terminate-236">terminate</a> (&amp; self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-terminate-236">terminate</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(pgid) = <span class="rs-self">self</span>.pgid {
+            <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-terminate-process-group-399">terminate_process_group</a>(pgid);
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-take-exit-242"><td>method</td><td>take_exit</td><td><code>pub(crate) fn <a class="symbol-link" href="command--src-process-rs.html#method-take-exit-253">take_exit</a> (&amp; self) -&gt; <a class="symbol-link" href="command--src-pty-rs.html#item-enum-PtyProcessExit-71">PtyProcessExit</a></code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-process-rs.html#method-take-exit-253">take_exit</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="command--src-pty-rs.html#item-enum-PtyProcessExit-71">PtyProcessExit</a> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child = <a class="symbol-link rs-fn" href="command--src-process-rs.html#item-fn-lock-374">lock</a>(&amp;<span class="rs-self">self</span>.child);
+        <span class="rs-kw">match</span> child.as_mut() {
+            <span class="rs-type">Some</span>(handle) =&gt; <span class="rs-kw">match</span> handle.try_wait() {
+                <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(status)) =&gt; {
+                    <span class="rs-kw">let</span> _ = child.take();
+                    <a class="symbol-link rs-type" href="command--src-pty-rs.html#item-enum-PtyProcessExit-71">PtyProcessExit</a>::<span class="rs-type">Exited</span>(<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-PtyProcessExitStatus-35">PtyProcessExitStatus</a>::<a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-from-status-50">from_status</a>(status))
+                }
+                <span class="rs-type">Ok</span>(<span class="rs-type">None</span>) =&gt; <a class="symbol-link rs-type" href="command--src-pty-rs.html#item-enum-PtyProcessExit-71">PtyProcessExit</a>::<span class="rs-type">Running</span>,
+                <span class="rs-type">Err</span>(_) =&gt; {
+                    <span class="rs-kw">let</span> _ = child.take();
+                    <a class="symbol-link rs-type" href="command--src-pty-rs.html#item-enum-PtyProcessExit-71">PtyProcessExit</a>::<span class="rs-type">Exited</span>(<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-PtyProcessExitStatus-35">PtyProcessExitStatus</a>::<a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-unwaitable-42">unwaitable</a>())
+                }
+            },
+            <span class="rs-type">None</span> =&gt; <a class="symbol-link rs-type" href="command--src-pty-rs.html#item-enum-PtyProcessExit-71">PtyProcessExit</a>::<span class="rs-type">Exited</span>(<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-PtyProcessExitStatus-35">PtyProcessExitStatus</a>::<a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-unwaitable-42">unwaitable</a>()),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-wait-for-reader-done-261"><td>method</td><td>wait_for_reader_done</td><td><code>pub(crate) fn <a class="symbol-link" href="command--src-pty-rs.html#method-wait-for-reader-done-261">wait_for_reader_done</a> (&amp; self , timeout : Duration)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-wait-for-reader-done-261">wait_for_reader_done</a>(&amp;<span class="rs-self">self</span>, timeout: <span class="rs-type">Duration</span>) {
+        <span class="rs-kw">let</span> reader_done = <a class="symbol-link rs-fn" href="command--src-process-rs.html#item-fn-lock-374">lock</a>(&amp;<span class="rs-self">self</span>.reader_done).take();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(reader_done) = reader_done {
+            <span class="rs-kw">let</span> _ = reader_done.recv_timeout(timeout);
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-inactive-187"><td>associated-fn</td><td>inactive</td><td><code>pub(crate) fn <a class="symbol-link" href="command--src-process-rs.html#method-inactive-124">inactive</a> (writer : File) -&gt; Self</code><p class="docstring">Process-free scaffold backing [`crate::process::CommandProcess::new`].</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Process-free scaffold backing [`crate::process::CommandProcess::new`].</span>
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-process-rs.html#method-inactive-124">inactive</a>(writer: <span class="rs-type">File</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            pgid: <span class="rs-type">None</span>,
+            writer: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(writer),
+            reader_done: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(<span class="rs-type">None</span>),
+            child: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(<span class="rs-type">None</span>),
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/command/src/pty.rs:28</p>
+</article><article id="item-struct-PtyProcessExitStatus-35" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PtyProcessExitStatus pub(crate) pub(crate) struct PtyProcessExitStatus crates/command/src/pty.rs exit_code Option &lt; i64 &gt; signal Option &lt; i32 &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>PtyProcessExitStatus</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="command--src-pty-rs.html#item-struct-PtyProcessExitStatus-35">PtyProcessExitStatus</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>exit_code</td><td><code>Option &lt; i64 &gt;</code></td></tr><tr><td>private</td><td>signal</td><td><code>Option &lt; i32 &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-from-status-50"><td>constructor</td><td>from_status</td><td><code>pub fn <a class="symbol-link" href="command--src-pty-rs.html#method-from-status-50">from_status</a> (status : ExitStatus) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-from-status-50">from_status</a>(status: <span class="rs-type">ExitStatus</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">let</span> signal = status.<a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-signal-65">signal</a>();
+        <span class="rs-kw">let</span> exit_code = status
+            .code()
+            .map(i64::from)
+            .or_else(|| signal.map(|signal| -i64::<a class="symbol-link rs-fn" href="command.html#method-from-28">from</a>(signal)));
+        <span class="rs-self">Self</span> { exit_code, signal }
+    }
+</code></pre>
+</details></td></tr><tr id="method-exit-code-60"><td>method</td><td>exit_code</td><td><code>pub const fn <a class="symbol-link" href="command--src-pty-rs.html#method-exit-code-60">exit_code</a> (self) -&gt; Option &lt; i64 &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-exit-code-60">exit_code</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;i64&gt; {
+        <span class="rs-self">self</span>.exit_code
+    }
+</code></pre>
+</details></td></tr><tr id="method-signal-65"><td>method</td><td>signal</td><td><code>pub const fn <a class="symbol-link" href="command--src-pty-rs.html#method-signal-65">signal</a> (self) -&gt; Option &lt; i32 &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-signal-65">signal</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;i32&gt; {
+        <span class="rs-self">self</span>.signal
+    }
+</code></pre>
+</details></td></tr><tr id="method-unwaitable-42"><td>associated-fn</td><td>unwaitable</td><td><code>pub fn <a class="symbol-link" href="command--src-pty-rs.html#method-unwaitable-42">unwaitable</a> () -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-unwaitable-42">unwaitable</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            exit_code: <span class="rs-type">None</span>,
+            signal: <span class="rs-type">None</span>,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/command/src/pty.rs:35</p>
+</article><article id="item-struct-CommandCompletionStatus-89" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommandCompletionStatus pub(crate) pub(crate) struct CommandCompletionStatus crates/command/src/pty.rs status String exit_code i64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommandCompletionStatus</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="command--src-pty-rs.html#item-struct-CommandCompletionStatus-89">CommandCompletionStatus</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>status</td><td><code>String</code></td></tr><tr><td>private</td><td>exit_code</td><td><code>i64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-from-process-and-runner-96"><td>constructor</td><td>from_process_and_runner</td><td><code>pub fn <a class="symbol-link" href="command--src-pty-rs.html#method-from-process-and-runner-96">from_process_and_runner</a> (process_exit : <a class="symbol-link" href="command--src-pty-rs.html#item-struct-PtyProcessExitStatus-35">PtyProcessExitStatus</a> , runner : Option &lt; &amp; <a class="symbol-link" href="command--src-pty-rs.html#item-struct-CommandRunnerResult-135">CommandRunnerResult</a> &gt; , kill : Option &lt; <a class="symbol-link" href="command--src-pty-rs.html#item-enum-KillReason-77">KillReason</a> &gt; ,) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-from-process-and-runner-96">from_process_and_runner</a>(
+        process_exit: <a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-PtyProcessExitStatus-35">PtyProcessExitStatus</a>,
+        runner: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-CommandRunnerResult-135">CommandRunnerResult</a>&gt;,
+        kill: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-enum-KillReason-77">KillReason</a>&gt;,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> exit_code = runner
+            .map(<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-CommandRunnerResult-135">CommandRunnerResult</a>::exit_code)
+            .or_else(|| process_exit.<a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-exit-code-60">exit_code</a>())
+            .unwrap_or(1);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> status = runner
+            .and_then(<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-CommandRunnerResult-135">CommandRunnerResult</a>::status)
+            .unwrap_or(&quot;error&quot;)
+            .to_owned();
+        <span class="rs-kw">match</span> kill {
+            <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-enum-KillReason-77">KillReason</a>::<span class="rs-type">Cancelled</span>) =&gt; {
+                status = &quot;cancelled&quot;.to_owned();
+                exit_code = 130;
+            }
+            <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-enum-KillReason-77">KillReason</a>::<span class="rs-type">TimedOut</span>) =&gt; {
+                status = &quot;timed_out&quot;.to_owned();
+                exit_code = 124;
+            }
+            <span class="rs-type">None</span> =&gt; {}
+        }
+        <span class="rs-self">Self</span> { status, exit_code }
+    }
+</code></pre>
+</details></td></tr><tr id="method-status-124"><td>method</td><td>status</td><td><code>pub fn <a class="symbol-link" href="command--src-pty-rs.html#method-status-124">status</a> (&amp; self) -&gt; &amp; str</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-status-124">status</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.status
+    }
+</code></pre>
+</details></td></tr><tr id="method-exit-code-129"><td>method</td><td>exit_code</td><td><code>pub const fn <a class="symbol-link" href="command--src-pty-rs.html#method-exit-code-60">exit_code</a> (&amp; self) -&gt; i64</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-exit-code-60">exit_code</a>(&amp;<span class="rs-self">self</span>) -&gt; i64 {
+        <span class="rs-self">self</span>.exit_code
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/command/src/pty.rs:89</p>
+</article><article id="item-struct-CommandRunnerResult-135" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommandRunnerResult pub(crate) pub(crate) struct CommandRunnerResult crates/command/src/pty.rs exit_code i64 status Option &lt; String &gt; value Value ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommandRunnerResult</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="command--src-pty-rs.html#item-struct-CommandRunnerResult-135">CommandRunnerResult</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>exit_code</td><td><code>i64</code></td></tr><tr><td>private</td><td>status</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>private</td><td>value</td><td><code>Value</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-from-value-150"><td>constructor</td><td>from_value</td><td><code>pub fn <a class="symbol-link" href="command--src-pty-rs.html#method-from-value-150">from_value</a> (value : Value) -&gt; Option &lt; Self &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-from-value-150">from_value</a>(value: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> exit_code = value.get(&quot;exit_code&quot;).and_then(|value| {
+            value
+                .as_i64()
+                .or_else(|| value.as_u64().and_then(|value| i64::try_from(value).ok()))
+        })?;
+        <span class="rs-kw">let</span> status = value
+            .get(&quot;payload&quot;)
+            .and_then(<span class="rs-type">Value</span>::as_object)
+            .and_then(|payload| payload.get(&quot;status&quot;))
+            .and_then(<span class="rs-type">Value</span>::as_str)
+            .map(str::to_owned);
+        <span class="rs-type">Some</span>(<span class="rs-self">Self</span> {
+            exit_code,
+            status,
+            value,
+        })
+    }
+</code></pre>
+</details></td></tr><tr id="method-exit-code-170"><td>method</td><td>exit_code</td><td><code>pub const fn <a class="symbol-link" href="command--src-pty-rs.html#method-exit-code-60">exit_code</a> (&amp; self) -&gt; i64</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-exit-code-60">exit_code</a>(&amp;<span class="rs-self">self</span>) -&gt; i64 {
+        <span class="rs-self">self</span>.exit_code
+    }
+</code></pre>
+</details></td></tr><tr id="method-status-175"><td>method</td><td>status</td><td><code>pub fn <a class="symbol-link" href="command--src-pty-rs.html#method-status-124">status</a> (&amp; self) -&gt; Option &lt; &amp; str &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-status-124">status</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
+        <span class="rs-self">self</span>.status.as_deref()
+    }
+</code></pre>
+</details></td></tr><tr id="method-value-180"><td>method</td><td>value</td><td><code>pub const fn <a class="symbol-link" href="command--src-pty-rs.html#method-value-180">value</a> (&amp; self) -&gt; &amp; Value</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-value-180">value</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">Value</span> {
+        &amp;<span class="rs-self">self</span>.value
+    }
+</code></pre>
+</details></td></tr><tr id="method-read-from-path-143"><td>associated-fn</td><td>read_from_path</td><td><code>pub fn <a class="symbol-link" href="command--src-pty-rs.html#method-read-from-path-143">read_from_path</a> (path : &amp; Path) -&gt; Option &lt; Self &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-read-from-path-143">read_from_path</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> bytes = std::fs::read(path).ok()?;
+        <span class="rs-kw">let</span> value = serde_json::from_slice::&lt;<span class="rs-type">Value</span>&gt;(&amp;bytes).ok()?;
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-from-value-150">from_value</a>(value)
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/command/src/pty.rs:135</p>
+</article><article id="item-enum-PtyProcessExit-71" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum PtyProcessExit pub(crate) pub(crate) enum PtyProcessExit crates/command/src/pty.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>PtyProcessExit</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) enum <a class="symbol-link" href="command--src-pty-rs.html#item-enum-PtyProcessExit-71">PtyProcessExit</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Running</td><td><code></code></td></tr><tr><td>Exited</td><td><code>0: <a class="symbol-link" href="command--src-pty-rs.html#item-struct-PtyProcessExitStatus-35">PtyProcessExitStatus</a></code></td></tr></tbody></table>
+
+  <p class="source">crates/command/src/pty.rs:71</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-spawn-current-exe-ns-runner-269" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn spawn_current_exe_ns_runner pub(crate) pub(crate) fn spawn_current_exe_ns_runner (request_path : &amp; Path , run_request : &amp; Value , output_path : &amp; Path , transcript_path : PathBuf , transcript_timestamp_timezone : &amp; str ,) -&gt; Result &lt; PtyProcess , CommandError &gt; crates/command/src/pty.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>spawn_current_exe_ns_runner</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="command--src-pty-rs.html#item-fn-spawn-current-exe-ns-runner-269">spawn_current_exe_ns_runner</a> (request_path : &amp; Path , run_request : &amp; Value , output_path : &amp; Path , transcript_path : PathBuf , transcript_timestamp_timezone : &amp; str ,) -&gt; Result &lt; <a class="symbol-link" href="command--src-pty-rs.html#item-struct-PtyProcess-28">PtyProcess</a> , <a class="symbol-link" href="command.html#item-enum-CommandError-7">CommandError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-spawn-current-exe-ns-runner-269">spawn_current_exe_ns_runner</a>(
+    request_path: &amp;<span class="rs-type">Path</span>,
+    run_request: &amp;<span class="rs-type">Value</span>,
+    output_path: &amp;<span class="rs-type">Path</span>,
+    transcript_path: <span class="rs-type">PathBuf</span>,
+    transcript_timestamp_timezone: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-PtyProcess-28">PtyProcess</a>, <a class="symbol-link rs-type" href="command.html#item-enum-CommandError-7">CommandError</a>&gt; {
+    <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-write-run-request-363">write_run_request</a>(request_path, run_request)
+        .map_err(|error| <a class="symbol-link rs-type" href="command.html#item-enum-CommandError-7">CommandError</a>::<a class="symbol-link rs-fn" href="command.html#method-artifact-write-34">artifact_write</a>(&quot;runner_request&quot;, request_path, error))?;
+    <span class="rs-kw">let</span> (master, slave) = <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-open-pty-pair-377">open_pty_pair</a>()?;
+    <span class="rs-comment">// Non-blocking master OFD (shared by the writer dup and the reader): writes</span>
+    <span class="rs-comment">// can't wedge on a non-draining consumer, and the reader polls instead.</span>
+    <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-set-nonblocking-406">set_nonblocking</a>(&amp;master)?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child_command = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(std::env::current_exe()?);
+    child_command
+        .arg(&quot;ns-runner&quot;)
+        .arg(&quot;--request&quot;)
+        .arg(request_path)
+        .arg(&quot;--output&quot;)
+        .arg(output_path)
+        .stdin(<span class="rs-type">Stdio</span>::<a class="symbol-link rs-fn" href="command.html#method-from-28">from</a>(slave.try_clone()?))
+        .stdout(<span class="rs-type">Stdio</span>::<a class="symbol-link rs-fn" href="command.html#method-from-28">from</a>(slave.try_clone()?))
+        .stderr(<span class="rs-type">Stdio</span>::<a class="symbol-link rs-fn" href="command.html#method-from-28">from</a>(slave))
+        .process_group(0);
+    <span class="rs-kw">let</span> child = child_command.<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-spawn-149">spawn</a>()?;
+    <span class="rs-kw">let</span> pgid = i32::try_from(child.<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-id-183">id</a>()).map_err(|_| {
+        io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(
+            io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidData</span>,
+            format!(&quot;child pid does not fit i32: {}&quot;, child.<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-id-183">id</a>()),
+        )
+    })?;
+    <span class="rs-kw">let</span> writer = master.try_clone()?;
+    <span class="rs-kw">let</span> transcript_prefixer = <a class="symbol-link rs-type" href="command--src-transcript-rs.html#item-struct-TranscriptTimestampPrefixer-43">TranscriptTimestampPrefixer</a>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(transcript_timestamp_timezone)
+        .map_err(|error| {
+            io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(
+                io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidInput</span>,
+                format!(&quot;invalid transcript timestamp timezone: {error}&quot;),
+            )
+        })?;
+    <span class="rs-kw">let</span> reader_done = <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-spawn-command-output-reader-318">spawn_command_output_reader</a>(master, transcript_path, transcript_prefixer);
+
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-PtyProcess-28">PtyProcess</a> {
+        pgid: <span class="rs-type">Some</span>(pgid),
+        writer: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(writer),
+        reader_done: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(<span class="rs-type">Some</span>(reader_done)),
+        child: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(<span class="rs-type">Some</span>(child)),
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/command/src/pty.rs:269</p>
+</article><article id="item-fn-spawn-command-output-reader-318" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn spawn_command_output_reader private fn spawn_command_output_reader (mut master : File , transcript_path : PathBuf , mut transcript_prefixer : TranscriptTimestampPrefixer ,) -&gt; mpsc :: Receiver &lt; () &gt; crates/command/src/pty.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>spawn_command_output_reader</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="command--src-pty-rs.html#item-fn-spawn-command-output-reader-318">spawn_command_output_reader</a> (mut master : File , transcript_path : PathBuf , mut transcript_prefixer : <a class="symbol-link" href="command--src-transcript-rs.html#item-struct-TranscriptTimestampPrefixer-43">TranscriptTimestampPrefixer</a> ,) -&gt; mpsc :: Receiver &lt; () &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-spawn-command-output-reader-318">spawn_command_output_reader</a>(
+    <span class="rs-kw">mut</span> master: <span class="rs-type">File</span>,
+    transcript_path: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">mut</span> transcript_prefixer: <a class="symbol-link rs-type" href="command--src-transcript-rs.html#item-struct-TranscriptTimestampPrefixer-43">TranscriptTimestampPrefixer</a>,
+) -&gt; mpsc::<span class="rs-type">Receiver</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> (done_tx, done_rx) = mpsc::channel();
+    thread::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-spawn-149">spawn</a>(<span class="rs-kw">move</span> || {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> transcript = <span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>()
+            .create(<span class="rs-kw">true</span>)
+            .append(<span class="rs-kw">true</span>)
+            .open(transcript_path)
+            .ok();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> buf = [0_u8; 8192];
+        loop {
+            <span class="rs-comment">// The master is non-blocking; block here until readable or hangup with</span>
+            <span class="rs-comment">// no busy-loop and no added latency (infinite poll wakes on the first</span>
+            <span class="rs-comment">// byte or on slave close), then drain what is available.</span>
+            {
+                <span class="rs-kw">let</span> <span class="rs-kw">mut</span> fds = [<span class="rs-type">PollFd</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(&amp;master, <span class="rs-type">PollFlags</span>::<span class="rs-type">IN</span>)];
+                <span class="rs-kw">match</span> poll(&amp;<span class="rs-kw">mut</span> fds, -1) {
+                    <span class="rs-type">Ok</span>(_) =&gt; {}
+                    <span class="rs-type">Err</span>(rustix::io::<span class="rs-type">Errno</span>::<span class="rs-type">INTR</span>) =&gt; <span class="rs-kw">continue</span>,
+                    <span class="rs-type">Err</span>(_) =&gt; <span class="rs-kw">break</span>,
+                }
+            }
+            <span class="rs-kw">match</span> master.read(&amp;<span class="rs-kw">mut</span> buf) {
+                <span class="rs-type">Ok</span>(0) =&gt; <span class="rs-kw">break</span>,
+                <span class="rs-type">Ok</span>(n) =&gt; {
+                    <span class="rs-kw">let</span> transcript_bytes = transcript_prefixer.<a class="symbol-link rs-fn" href="command--src-transcript-rs.html#method-prefix-56">prefix</a>(&amp;buf[..n]);
+                    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(file) = transcript.as_mut() {
+                        <span class="rs-kw">if</span> file.write_all(&amp;transcript_bytes).is_err() {
+                            transcript = <span class="rs-type">None</span>;
+                        }
+                    }
+                }
+                <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.kind() == io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">WouldBlock</span> =&gt; {}
+                <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.kind() == io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">Interrupted</span> =&gt; {}
+                <span class="rs-type">Err</span>(_) =&gt; <span class="rs-kw">break</span>,
+            }
+        }
+        <span class="rs-kw">let</span> _ = done_tx.send(());
+    });
+    done_rx
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/command/src/pty.rs:318</p>
+</article><article id="item-fn-write-run-request-363" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_run_request private fn write_run_request (path : &amp; Path , request : &amp; Value) -&gt; io :: Result &lt; () &gt; crates/command/src/pty.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>write_run_request</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="command--src-pty-rs.html#item-fn-write-run-request-363">write_run_request</a> (path : &amp; Path , request : &amp; Value) -&gt; io :: Result &lt; () &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-write-run-request-363">write_run_request</a>(path: &amp;<span class="rs-type">Path</span>, request: &amp;<span class="rs-type">Value</span>) -&gt; io::<span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> bytes = serde_json::to_vec(request).map_err(|error| {
+        io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(
+            io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidData</span>,
+            format!(&quot;serialize command runner request: {error}&quot;),
+        )
+    })?;
+    std::fs::write(path, bytes)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/command/src/pty.rs:363</p>
+</article><article id="item-fn-lock-373" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lock private fn lock &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; '_ , T &gt; crates/command/src/pty.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lock</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="command--src-process-rs.html#item-fn-lock-374">lock</a> &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; &#x27;_ , T &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> lock&lt;<span class="rs-type">T</span>&gt;(mutex: &amp;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">T</span>&gt;) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">T</span>&gt; {
+    mutex.<a class="symbol-link rs-fn" href="command--src-process-rs.html#item-fn-lock-374">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/command/src/pty.rs:373</p>
+</article><article id="item-fn-open-pty-pair-377" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn open_pty_pair private fn open_pty_pair () -&gt; io :: Result &lt; (File , File) &gt; crates/command/src/pty.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>open_pty_pair</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="command--src-pty-rs.html#item-fn-open-pty-pair-377">open_pty_pair</a> () -&gt; io :: Result &lt; (File , File) &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-open-pty-pair-377">open_pty_pair</a>() -&gt; io::<span class="rs-type">Result</span>&lt;(<span class="rs-type">File</span>, <span class="rs-type">File</span>)&gt; {
+    <span class="rs-kw">let</span> flags = <span class="rs-type">OpenptFlags</span>::<span class="rs-type">RDWR</span> | <span class="rs-type">OpenptFlags</span>::<span class="rs-type">NOCTTY</span>;
+    #[cfg(target_os = &quot;linux&quot;)]
+    <span class="rs-kw">let</span> flags = flags | <span class="rs-type">OpenptFlags</span>::<span class="rs-type">CLOEXEC</span>;
+    <span class="rs-kw">let</span> master = openpt(flags).map_err(io::<span class="rs-type">Error</span>::from)?;
+    grantpt(&amp;master).map_err(io::<span class="rs-type">Error</span>::from)?;
+    unlockpt(&amp;master).map_err(io::<span class="rs-type">Error</span>::from)?;
+
+    #[cfg(target_os = &quot;linux&quot;)]
+    <span class="rs-kw">let</span> slave = <span class="rs-type">File</span>::<a class="symbol-link rs-fn" href="command.html#method-from-28">from</a>(ioctl_tiocgptpeer(&amp;master, flags).map_err(io::<span class="rs-type">Error</span>::from)?);
+    #[cfg(not(target_os = &quot;linux&quot;))]
+    <span class="rs-kw">let</span> slave = {
+        <span class="rs-kw">let</span> slave_name = ptsname(&amp;master, <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>()).map_err(io::<span class="rs-type">Error</span>::from)?;
+        <span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>()
+            .read(<span class="rs-kw">true</span>)
+            .write(<span class="rs-kw">true</span>)
+            .open(slave_name.to_string_lossy().as_ref())?
+    };
+
+    <span class="rs-type">Ok</span>((<span class="rs-type">File</span>::<a class="symbol-link rs-fn" href="command.html#method-from-28">from</a>(master), slave))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/command/src/pty.rs:377</p>
+</article><article id="item-fn-terminate-process-group-399" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn terminate_process_group private fn terminate_process_group (pgid : i32) crates/command/src/pty.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>terminate_process_group</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="command--src-pty-rs.html#item-fn-terminate-process-group-399">terminate_process_group</a> (pgid : i32)</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-terminate-process-group-399">terminate_process_group</a>(pgid: i32) {
+    <span class="rs-kw">if</span> killpg(<span class="rs-type">Pid</span>::from_raw(pgid), <span class="rs-type">Signal</span>::<span class="rs-type">SIGTERM</span>).is_ok() {
+        thread::sleep(<span class="rs-type">Duration</span>::from_millis(50));
+        <span class="rs-kw">let</span> _ = killpg(<span class="rs-type">Pid</span>::from_raw(pgid), <span class="rs-type">Signal</span>::<span class="rs-type">SIGKILL</span>);
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/command/src/pty.rs:399</p>
+</article><article id="item-fn-set-nonblocking-406" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn set_nonblocking private fn set_nonblocking (file : &amp; File) -&gt; io :: Result &lt; () &gt; crates/command/src/pty.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>set_nonblocking</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="command--src-pty-rs.html#item-fn-set-nonblocking-406">set_nonblocking</a> (file : &amp; File) -&gt; io :: Result &lt; () &gt;</code>
+  <p class="docstring">Mark `file`'s open file description non-blocking so `read`/`write` return<br>`WouldBlock` instead of stalling. Applied to the PTY master before it is<br>shared between the writer dup and the reader thread.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Mark `file`'s open file description non-blocking so `read`/`write` return</span>
+<span class="rs-comment">/// `WouldBlock` instead of stalling. Applied to the PTY master before it is</span>
+<span class="rs-comment">/// shared between the writer dup and the reader thread.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-set-nonblocking-406">set_nonblocking</a>(file: &amp;<span class="rs-type">File</span>) -&gt; io::<span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> flags = fcntl_getfl(file)?;
+    fcntl_setfl(file, flags | <span class="rs-type">OFlags</span>::<span class="rs-type">NONBLOCK</span>)?;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/command/src/pty.rs:406</p>
+</article><article id="item-fn-poll-timeout-ms-415" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn poll_timeout_ms private fn poll_timeout_ms (deadline : Instant) -&gt; i32 crates/command/src/pty.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>poll_timeout_ms</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="command--src-pty-rs.html#item-fn-poll-timeout-ms-415">poll_timeout_ms</a> (deadline : Instant) -&gt; i32</code>
+  <p class="docstring">Milliseconds left until `deadline`, clamped to a non-negative `i32` for<br>`poll`. Returns 0 once the deadline has passed.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Milliseconds left until `deadline`, clamped to a non-negative `i32` for</span>
+<span class="rs-comment">/// `poll`. Returns 0 once the deadline has passed.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-poll-timeout-ms-415">poll_timeout_ms</a>(deadline: <span class="rs-type">Instant</span>) -&gt; i32 {
+    <span class="rs-kw">let</span> remaining = deadline.saturating_duration_since(<span class="rs-type">Instant</span>::now());
+    i32::try_from(remaining.as_millis()).unwrap_or(i32::<span class="rs-type">MAX</span>)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/command/src/pty.rs:415</p>
+</article><article id="item-fn-stdin-backpressure-422" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn stdin_backpressure private fn stdin_backpressure () -&gt; io :: Error crates/command/src/pty.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>stdin_backpressure</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="command--src-pty-rs.html#item-fn-stdin-backpressure-422">stdin_backpressure</a> () -&gt; io :: Error</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-stdin-backpressure-422">stdin_backpressure</a>() -&gt; io::<span class="rs-type">Error</span> {
+    io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(
+        io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">WouldBlock</span>,
+        &quot;stdin_backpressure: command is not draining its stdin&quot;,
+    )
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/command/src/pty.rs:422</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/command/src/pty.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::fs::{<span class="rs-type">File</span>, <span class="rs-type">OpenOptions</span>};
+<span class="rs-kw">use</span> std::io::{<span class="rs-self">self</span>, <span class="rs-type">Read</span>, <span class="rs-type">Write</span>};
+<span class="rs-kw">use</span> std::os::unix::process::{<span class="rs-type">CommandExt</span>, <span class="rs-type">ExitStatusExt</span>};
+<span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
+<span class="rs-kw">use</span> std::process::{<span class="rs-type">Child</span>, <span class="rs-type">Command</span>, <span class="rs-type">ExitStatus</span>, <span class="rs-type">Stdio</span>};
+<span class="rs-kw">use</span> std::sync::{mpsc, <span class="rs-type">Mutex</span>, <span class="rs-type">MutexGuard</span>, <span class="rs-type">PoisonError</span>};
+<span class="rs-kw">use</span> std::thread;
+<span class="rs-kw">use</span> std::time::{<span class="rs-type">Duration</span>, <span class="rs-type">Instant</span>};
+
+<span class="rs-kw">use</span> nix::sys::signal::{killpg, <span class="rs-type">Signal</span>};
+<span class="rs-kw">use</span> nix::unistd::<span class="rs-type">Pid</span>;
+<span class="rs-kw">use</span> rustix::event::{poll, <span class="rs-type">PollFd</span>, <span class="rs-type">PollFlags</span>};
+<span class="rs-kw">use</span> rustix::fs::{fcntl_getfl, fcntl_setfl, <span class="rs-type">OFlags</span>};
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> rustix::pty::ioctl_tiocgptpeer;
+#[cfg(not(target_os = &quot;linux&quot;))]
+<span class="rs-kw">use</span> rustix::pty::ptsname;
+<span class="rs-kw">use</span> rustix::pty::{grantpt, openpt, unlockpt, <span class="rs-type">OpenptFlags</span>};
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{transcript::<a class="symbol-link rs-type" href="command--src-transcript-rs.html#item-struct-TranscriptTimestampPrefixer-43">TranscriptTimestampPrefixer</a>, <a class="symbol-link rs-type" href="command.html#item-enum-CommandError-7">CommandError</a>};
+
+<span class="rs-comment">/// Cap on how long a single `write_stdin` pushes bytes into the PTY before</span>
+<span class="rs-comment">/// returning a structured backpressure error. The master is non-blocking, so a</span>
+<span class="rs-comment">/// consumer that never drains its stdin cannot wedge the writer past this bound.</span>
+<span class="rs-kw">const</span> <span class="rs-type">STDIN_WRITE_DEADLINE</span>: <span class="rs-type">Duration</span> = <span class="rs-type">Duration</span>::from_secs(2);
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-PtyProcess-28">PtyProcess</a> {
+    pgid: <span class="rs-type">Option</span>&lt;i32&gt;,
+    writer: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">File</span>&gt;,
+    reader_done: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">Option</span>&lt;mpsc::<span class="rs-type">Receiver</span>&lt;()&gt;&gt;&gt;,
+    child: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Child</span>&gt;&gt;,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-PtyProcessExitStatus-35">PtyProcessExitStatus</a> {
+    exit_code: <span class="rs-type">Option</span>&lt;i64&gt;,
+    signal: <span class="rs-type">Option</span>&lt;i32&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-PtyProcessExitStatus-35">PtyProcessExitStatus</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-unwaitable-42">unwaitable</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            exit_code: <span class="rs-type">None</span>,
+            signal: <span class="rs-type">None</span>,
+        }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-from-status-50">from_status</a>(status: <span class="rs-type">ExitStatus</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">let</span> signal = status.<a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-signal-65">signal</a>();
+        <span class="rs-kw">let</span> exit_code = status
+            .code()
+            .map(i64::from)
+            .or_else(|| signal.map(|signal| -i64::<a class="symbol-link rs-fn" href="command.html#method-from-28">from</a>(signal)));
+        <span class="rs-self">Self</span> { exit_code, signal }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-exit-code-60">exit_code</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;i64&gt; {
+        <span class="rs-self">self</span>.exit_code
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-signal-65">signal</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;i32&gt; {
+        <span class="rs-self">self</span>.signal
+    }
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="command--src-pty-rs.html#item-enum-PtyProcessExit-71">PtyProcessExit</a> {
+    <span class="rs-type">Running</span>,
+    <span class="rs-type">Exited</span>(<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-PtyProcessExitStatus-35">PtyProcessExitStatus</a>),
+}
+
+<span class="rs-comment">/// Why the substrate killed a command process group. The owning run</span>
+<span class="rs-comment">/// maps this to the final status — `Cancelled` → "cancelled"/130, `TimedOut` →</span>
+<span class="rs-comment">/// "timed_out"/124 — and either reason DISCARDS the overlay (a killed command</span>
+<span class="rs-comment">/// never OCC-merges).</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="command--src-pty-rs.html#item-enum-KillReason-77">KillReason</a> {
+    <span class="rs-comment">/// A caller asked to cancel (Ctrl-C/Ctrl-D, the cancel op, or run teardown).</span>
+    <span class="rs-type">Cancelled</span>,
+    <span class="rs-comment">/// The command exceeded its deadline and was terminated by the deadline backstop.</span>
+    <span class="rs-type">TimedOut</span>,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-CommandCompletionStatus-89">CommandCompletionStatus</a> {
+    status: <span class="rs-type">String</span>,
+    exit_code: i64,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-CommandCompletionStatus-89">CommandCompletionStatus</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-from-process-and-runner-96">from_process_and_runner</a>(
+        process_exit: <a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-PtyProcessExitStatus-35">PtyProcessExitStatus</a>,
+        runner: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-CommandRunnerResult-135">CommandRunnerResult</a>&gt;,
+        kill: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-enum-KillReason-77">KillReason</a>&gt;,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> exit_code = runner
+            .map(<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-CommandRunnerResult-135">CommandRunnerResult</a>::exit_code)
+            .or_else(|| process_exit.<a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-exit-code-60">exit_code</a>())
+            .unwrap_or(1);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> status = runner
+            .and_then(<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-CommandRunnerResult-135">CommandRunnerResult</a>::status)
+            .unwrap_or(&quot;error&quot;)
+            .to_owned();
+        <span class="rs-kw">match</span> kill {
+            <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-enum-KillReason-77">KillReason</a>::<span class="rs-type">Cancelled</span>) =&gt; {
+                status = &quot;cancelled&quot;.to_owned();
+                exit_code = 130;
+            }
+            <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-enum-KillReason-77">KillReason</a>::<span class="rs-type">TimedOut</span>) =&gt; {
+                status = &quot;timed_out&quot;.to_owned();
+                exit_code = 124;
+            }
+            <span class="rs-type">None</span> =&gt; {}
+        }
+        <span class="rs-self">Self</span> { status, exit_code }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-status-124">status</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.status
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-exit-code-60">exit_code</a>(&amp;<span class="rs-self">self</span>) -&gt; i64 {
+        <span class="rs-self">self</span>.exit_code
+    }
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-CommandRunnerResult-135">CommandRunnerResult</a> {
+    exit_code: i64,
+    status: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    value: <span class="rs-type">Value</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-CommandRunnerResult-135">CommandRunnerResult</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-read-from-path-143">read_from_path</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> bytes = std::fs::read(path).ok()?;
+        <span class="rs-kw">let</span> value = serde_json::from_slice::&lt;<span class="rs-type">Value</span>&gt;(&amp;bytes).ok()?;
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-from-value-150">from_value</a>(value)
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-from-value-150">from_value</a>(value: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> exit_code = value.get(&quot;exit_code&quot;).and_then(|value| {
+            value
+                .as_i64()
+                .or_else(|| value.as_u64().and_then(|value| i64::try_from(value).ok()))
+        })?;
+        <span class="rs-kw">let</span> status = value
+            .get(&quot;payload&quot;)
+            .and_then(<span class="rs-type">Value</span>::as_object)
+            .and_then(|payload| payload.get(&quot;status&quot;))
+            .and_then(<span class="rs-type">Value</span>::as_str)
+            .map(str::to_owned);
+        <span class="rs-type">Some</span>(<span class="rs-self">Self</span> {
+            exit_code,
+            status,
+            value,
+        })
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-exit-code-60">exit_code</a>(&amp;<span class="rs-self">self</span>) -&gt; i64 {
+        <span class="rs-self">self</span>.exit_code
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-status-124">status</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
+        <span class="rs-self">self</span>.status.as_deref()
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-value-180">value</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">Value</span> {
+        &amp;<span class="rs-self">self</span>.value
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-PtyProcess-28">PtyProcess</a> {
+    <span class="rs-comment">/// Process-free scaffold backing [`crate::process::CommandProcess::new`].</span>
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-process-rs.html#method-inactive-124">inactive</a>(writer: <span class="rs-type">File</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            pgid: <span class="rs-type">None</span>,
+            writer: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(writer),
+            reader_done: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(<span class="rs-type">None</span>),
+            child: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(<span class="rs-type">None</span>),
+        }
+    }
+
+    <span class="rs-comment">/// Push `bytes` to the command's stdin without blocking unbounded. The master</span>
+    <span class="rs-comment">/// is non-blocking; when the consumer stops draining, `write` returns</span>
+    <span class="rs-comment">/// `WouldBlock` and we wait for writability only up to `STDIN_WRITE_DEADLINE`</span>
+    <span class="rs-comment">/// before returning a structured backpressure error. Cancel/terminate is a</span>
+    <span class="rs-comment">/// separate (`killpg`) path, so the command stays controllable throughout.</span>
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-write-stdin-198">write_stdin</a>(&amp;<span class="rs-self">self</span>, bytes: &amp;[u8]) -&gt; io::<span class="rs-type">Result</span>&lt;()&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> writer = <a class="symbol-link rs-fn" href="command--src-process-rs.html#item-fn-lock-374">lock</a>(&amp;<span class="rs-self">self</span>.writer);
+        <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + <span class="rs-type">STDIN_WRITE_DEADLINE</span>;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> offset = 0;
+        <span class="rs-kw">while</span> offset &lt; bytes.len() {
+            <span class="rs-kw">match</span> writer.write(&amp;bytes[offset..]) {
+                <span class="rs-type">Ok</span>(0) =&gt; {
+                    <span class="rs-kw">return</span> <span class="rs-type">Err</span>(io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(
+                        io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">WriteZero</span>,
+                        &quot;command stdin closed&quot;,
+                    ));
+                }
+                <span class="rs-type">Ok</span>(written) =&gt; offset += written,
+                <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.kind() == io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">Interrupted</span> =&gt; {}
+                <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.kind() == io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">WouldBlock</span> =&gt; {
+                    <span class="rs-kw">let</span> timeout_ms = <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-poll-timeout-ms-415">poll_timeout_ms</a>(deadline);
+                    <span class="rs-kw">if</span> timeout_ms == 0 {
+                        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-stdin-backpressure-422">stdin_backpressure</a>());
+                    }
+                    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> fds = [<span class="rs-type">PollFd</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(&amp;*writer, <span class="rs-type">PollFlags</span>::<span class="rs-type">OUT</span>)];
+                    <span class="rs-kw">match</span> poll(&amp;<span class="rs-kw">mut</span> fds, timeout_ms) {
+                        <span class="rs-type">Ok</span>(0) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-stdin-backpressure-422">stdin_backpressure</a>()),
+                        <span class="rs-type">Ok</span>(_) =&gt; {}
+                        <span class="rs-type">Err</span>(rustix::io::<span class="rs-type">Errno</span>::<span class="rs-type">INTR</span>) =&gt; {}
+                        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="command.html#method-from-28">from</a>(err)),
+                    }
+                }
+                <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err),
+            }
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-terminate-236">terminate</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(pgid) = <span class="rs-self">self</span>.pgid {
+            <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-terminate-process-group-399">terminate_process_group</a>(pgid);
+        }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-process-rs.html#method-take-exit-253">take_exit</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="command--src-pty-rs.html#item-enum-PtyProcessExit-71">PtyProcessExit</a> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child = <a class="symbol-link rs-fn" href="command--src-process-rs.html#item-fn-lock-374">lock</a>(&amp;<span class="rs-self">self</span>.child);
+        <span class="rs-kw">match</span> child.as_mut() {
+            <span class="rs-type">Some</span>(handle) =&gt; <span class="rs-kw">match</span> handle.try_wait() {
+                <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(status)) =&gt; {
+                    <span class="rs-kw">let</span> _ = child.take();
+                    <a class="symbol-link rs-type" href="command--src-pty-rs.html#item-enum-PtyProcessExit-71">PtyProcessExit</a>::<span class="rs-type">Exited</span>(<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-PtyProcessExitStatus-35">PtyProcessExitStatus</a>::<a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-from-status-50">from_status</a>(status))
+                }
+                <span class="rs-type">Ok</span>(<span class="rs-type">None</span>) =&gt; <a class="symbol-link rs-type" href="command--src-pty-rs.html#item-enum-PtyProcessExit-71">PtyProcessExit</a>::<span class="rs-type">Running</span>,
+                <span class="rs-type">Err</span>(_) =&gt; {
+                    <span class="rs-kw">let</span> _ = child.take();
+                    <a class="symbol-link rs-type" href="command--src-pty-rs.html#item-enum-PtyProcessExit-71">PtyProcessExit</a>::<span class="rs-type">Exited</span>(<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-PtyProcessExitStatus-35">PtyProcessExitStatus</a>::<a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-unwaitable-42">unwaitable</a>())
+                }
+            },
+            <span class="rs-type">None</span> =&gt; <a class="symbol-link rs-type" href="command--src-pty-rs.html#item-enum-PtyProcessExit-71">PtyProcessExit</a>::<span class="rs-type">Exited</span>(<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-PtyProcessExitStatus-35">PtyProcessExitStatus</a>::<a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-unwaitable-42">unwaitable</a>()),
+        }
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#method-wait-for-reader-done-261">wait_for_reader_done</a>(&amp;<span class="rs-self">self</span>, timeout: <span class="rs-type">Duration</span>) {
+        <span class="rs-kw">let</span> reader_done = <a class="symbol-link rs-fn" href="command--src-process-rs.html#item-fn-lock-374">lock</a>(&amp;<span class="rs-self">self</span>.reader_done).take();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(reader_done) = reader_done {
+            <span class="rs-kw">let</span> _ = reader_done.recv_timeout(timeout);
+        }
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-spawn-current-exe-ns-runner-269">spawn_current_exe_ns_runner</a>(
+    request_path: &amp;<span class="rs-type">Path</span>,
+    run_request: &amp;<span class="rs-type">Value</span>,
+    output_path: &amp;<span class="rs-type">Path</span>,
+    transcript_path: <span class="rs-type">PathBuf</span>,
+    transcript_timestamp_timezone: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-PtyProcess-28">PtyProcess</a>, <a class="symbol-link rs-type" href="command.html#item-enum-CommandError-7">CommandError</a>&gt; {
+    <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-write-run-request-363">write_run_request</a>(request_path, run_request)
+        .map_err(|error| <a class="symbol-link rs-type" href="command.html#item-enum-CommandError-7">CommandError</a>::<a class="symbol-link rs-fn" href="command.html#method-artifact-write-34">artifact_write</a>(&quot;runner_request&quot;, request_path, error))?;
+    <span class="rs-kw">let</span> (master, slave) = <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-open-pty-pair-377">open_pty_pair</a>()?;
+    <span class="rs-comment">// Non-blocking master OFD (shared by the writer dup and the reader): writes</span>
+    <span class="rs-comment">// can't wedge on a non-draining consumer, and the reader polls instead.</span>
+    <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-set-nonblocking-406">set_nonblocking</a>(&amp;master)?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child_command = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(std::env::current_exe()?);
+    child_command
+        .arg(&quot;ns-runner&quot;)
+        .arg(&quot;--request&quot;)
+        .arg(request_path)
+        .arg(&quot;--output&quot;)
+        .arg(output_path)
+        .stdin(<span class="rs-type">Stdio</span>::<a class="symbol-link rs-fn" href="command.html#method-from-28">from</a>(slave.try_clone()?))
+        .stdout(<span class="rs-type">Stdio</span>::<a class="symbol-link rs-fn" href="command.html#method-from-28">from</a>(slave.try_clone()?))
+        .stderr(<span class="rs-type">Stdio</span>::<a class="symbol-link rs-fn" href="command.html#method-from-28">from</a>(slave))
+        .process_group(0);
+    <span class="rs-kw">let</span> child = child_command.<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-spawn-149">spawn</a>()?;
+    <span class="rs-kw">let</span> pgid = i32::try_from(child.<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-id-183">id</a>()).map_err(|_| {
+        io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(
+            io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidData</span>,
+            format!(&quot;child pid does not fit i32: {}&quot;, child.<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-id-183">id</a>()),
+        )
+    })?;
+    <span class="rs-kw">let</span> writer = master.try_clone()?;
+    <span class="rs-kw">let</span> transcript_prefixer = <a class="symbol-link rs-type" href="command--src-transcript-rs.html#item-struct-TranscriptTimestampPrefixer-43">TranscriptTimestampPrefixer</a>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(transcript_timestamp_timezone)
+        .map_err(|error| {
+            io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(
+                io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidInput</span>,
+                format!(&quot;invalid transcript timestamp timezone: {error}&quot;),
+            )
+        })?;
+    <span class="rs-kw">let</span> reader_done = <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-spawn-command-output-reader-318">spawn_command_output_reader</a>(master, transcript_path, transcript_prefixer);
+
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="command--src-pty-rs.html#item-struct-PtyProcess-28">PtyProcess</a> {
+        pgid: <span class="rs-type">Some</span>(pgid),
+        writer: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(writer),
+        reader_done: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(<span class="rs-type">Some</span>(reader_done)),
+        child: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(<span class="rs-type">Some</span>(child)),
+    })
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-spawn-command-output-reader-318">spawn_command_output_reader</a>(
+    <span class="rs-kw">mut</span> master: <span class="rs-type">File</span>,
+    transcript_path: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">mut</span> transcript_prefixer: <a class="symbol-link rs-type" href="command--src-transcript-rs.html#item-struct-TranscriptTimestampPrefixer-43">TranscriptTimestampPrefixer</a>,
+) -&gt; mpsc::<span class="rs-type">Receiver</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> (done_tx, done_rx) = mpsc::channel();
+    thread::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-spawn-149">spawn</a>(<span class="rs-kw">move</span> || {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> transcript = <span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>()
+            .create(<span class="rs-kw">true</span>)
+            .append(<span class="rs-kw">true</span>)
+            .open(transcript_path)
+            .ok();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> buf = [0_u8; 8192];
+        loop {
+            <span class="rs-comment">// The master is non-blocking; block here until readable or hangup with</span>
+            <span class="rs-comment">// no busy-loop and no added latency (infinite poll wakes on the first</span>
+            <span class="rs-comment">// byte or on slave close), then drain what is available.</span>
+            {
+                <span class="rs-kw">let</span> <span class="rs-kw">mut</span> fds = [<span class="rs-type">PollFd</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(&amp;master, <span class="rs-type">PollFlags</span>::<span class="rs-type">IN</span>)];
+                <span class="rs-kw">match</span> poll(&amp;<span class="rs-kw">mut</span> fds, -1) {
+                    <span class="rs-type">Ok</span>(_) =&gt; {}
+                    <span class="rs-type">Err</span>(rustix::io::<span class="rs-type">Errno</span>::<span class="rs-type">INTR</span>) =&gt; <span class="rs-kw">continue</span>,
+                    <span class="rs-type">Err</span>(_) =&gt; <span class="rs-kw">break</span>,
+                }
+            }
+            <span class="rs-kw">match</span> master.read(&amp;<span class="rs-kw">mut</span> buf) {
+                <span class="rs-type">Ok</span>(0) =&gt; <span class="rs-kw">break</span>,
+                <span class="rs-type">Ok</span>(n) =&gt; {
+                    <span class="rs-kw">let</span> transcript_bytes = transcript_prefixer.<a class="symbol-link rs-fn" href="command--src-transcript-rs.html#method-prefix-56">prefix</a>(&amp;buf[..n]);
+                    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(file) = transcript.as_mut() {
+                        <span class="rs-kw">if</span> file.write_all(&amp;transcript_bytes).is_err() {
+                            transcript = <span class="rs-type">None</span>;
+                        }
+                    }
+                }
+                <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.kind() == io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">WouldBlock</span> =&gt; {}
+                <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.kind() == io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">Interrupted</span> =&gt; {}
+                <span class="rs-type">Err</span>(_) =&gt; <span class="rs-kw">break</span>,
+            }
+        }
+        <span class="rs-kw">let</span> _ = done_tx.send(());
+    });
+    done_rx
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-write-run-request-363">write_run_request</a>(path: &amp;<span class="rs-type">Path</span>, request: &amp;<span class="rs-type">Value</span>) -&gt; io::<span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> bytes = serde_json::to_vec(request).map_err(|error| {
+        io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(
+            io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidData</span>,
+            format!(&quot;serialize command runner request: {error}&quot;),
+        )
+    })?;
+    std::fs::write(path, bytes)
+}
+
+<span class="rs-kw">fn</span> lock&lt;<span class="rs-type">T</span>&gt;(mutex: &amp;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">T</span>&gt;) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">T</span>&gt; {
+    mutex.<a class="symbol-link rs-fn" href="command--src-process-rs.html#item-fn-lock-374">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-open-pty-pair-377">open_pty_pair</a>() -&gt; io::<span class="rs-type">Result</span>&lt;(<span class="rs-type">File</span>, <span class="rs-type">File</span>)&gt; {
+    <span class="rs-kw">let</span> flags = <span class="rs-type">OpenptFlags</span>::<span class="rs-type">RDWR</span> | <span class="rs-type">OpenptFlags</span>::<span class="rs-type">NOCTTY</span>;
+    #[cfg(target_os = &quot;linux&quot;)]
+    <span class="rs-kw">let</span> flags = flags | <span class="rs-type">OpenptFlags</span>::<span class="rs-type">CLOEXEC</span>;
+    <span class="rs-kw">let</span> master = openpt(flags).map_err(io::<span class="rs-type">Error</span>::from)?;
+    grantpt(&amp;master).map_err(io::<span class="rs-type">Error</span>::from)?;
+    unlockpt(&amp;master).map_err(io::<span class="rs-type">Error</span>::from)?;
+
+    #[cfg(target_os = &quot;linux&quot;)]
+    <span class="rs-kw">let</span> slave = <span class="rs-type">File</span>::<a class="symbol-link rs-fn" href="command.html#method-from-28">from</a>(ioctl_tiocgptpeer(&amp;master, flags).map_err(io::<span class="rs-type">Error</span>::from)?);
+    #[cfg(not(target_os = &quot;linux&quot;))]
+    <span class="rs-kw">let</span> slave = {
+        <span class="rs-kw">let</span> slave_name = ptsname(&amp;master, <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>()).map_err(io::<span class="rs-type">Error</span>::from)?;
+        <span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>()
+            .read(<span class="rs-kw">true</span>)
+            .write(<span class="rs-kw">true</span>)
+            .open(slave_name.to_string_lossy().as_ref())?
+    };
+
+    <span class="rs-type">Ok</span>((<span class="rs-type">File</span>::<a class="symbol-link rs-fn" href="command.html#method-from-28">from</a>(master), slave))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-terminate-process-group-399">terminate_process_group</a>(pgid: i32) {
+    <span class="rs-kw">if</span> killpg(<span class="rs-type">Pid</span>::from_raw(pgid), <span class="rs-type">Signal</span>::<span class="rs-type">SIGTERM</span>).is_ok() {
+        thread::sleep(<span class="rs-type">Duration</span>::from_millis(50));
+        <span class="rs-kw">let</span> _ = killpg(<span class="rs-type">Pid</span>::from_raw(pgid), <span class="rs-type">Signal</span>::<span class="rs-type">SIGKILL</span>);
+    }
+}
+
+<span class="rs-comment">/// Mark `file`'s open file description non-blocking so `read`/`write` return</span>
+<span class="rs-comment">/// `WouldBlock` instead of stalling. Applied to the PTY master before it is</span>
+<span class="rs-comment">/// shared between the writer dup and the reader thread.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-set-nonblocking-406">set_nonblocking</a>(file: &amp;<span class="rs-type">File</span>) -&gt; io::<span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> flags = fcntl_getfl(file)?;
+    fcntl_setfl(file, flags | <span class="rs-type">OFlags</span>::<span class="rs-type">NONBLOCK</span>)?;
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-comment">/// Milliseconds left until `deadline`, clamped to a non-negative `i32` for</span>
+<span class="rs-comment">/// `poll`. Returns 0 once the deadline has passed.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-poll-timeout-ms-415">poll_timeout_ms</a>(deadline: <span class="rs-type">Instant</span>) -&gt; i32 {
+    <span class="rs-kw">let</span> remaining = deadline.saturating_duration_since(<span class="rs-type">Instant</span>::now());
+    i32::try_from(remaining.as_millis()).unwrap_or(i32::<span class="rs-type">MAX</span>)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command--src-pty-rs.html#item-fn-stdin-backpressure-422">stdin_backpressure</a>() -&gt; io::<span class="rs-type">Error</span> {
+    io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>(
+        io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">WouldBlock</span>,
+        &quot;stdin_backpressure: command is not draining its stdin&quot;,
+    )
+}
+
+#[cfg(test)]
+#[path = &quot;../tests/unit/pty.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

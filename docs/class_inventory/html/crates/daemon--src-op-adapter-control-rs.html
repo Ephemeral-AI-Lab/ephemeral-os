@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>daemon · src/op_adapter/control.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>38</b><span>modules</span></div>
+  <div><b>277</b><span>items</span></div>
+  <div><b>142</b><span>fields</span></div>
+  <div><b>74</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">dispatch</span><ul class="file-tree"><li><a class="file-link" href="daemon.html"><span>builtin.rs</span><small>0/5</small></a></li><li><a class="file-link" href="daemon--src-dispatch-dispatcher-rs.html"><span>dispatcher.rs</span><small>0/5</small></a></li><li><a class="file-link" href="daemon--src-dispatch-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="daemon--src-lib-rs.html"><span>lib.rs</span><small>0/1</small></a></li><li><span class="folder">op_adapter</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-op-adapter-checkpoint-rs.html"><span>checkpoint.rs</span><small>0/13</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-command-rs.html"><span>command.rs</span><small>2/17</small></a></li><li><a class="file-link active" href="daemon--src-op-adapter-control-rs.html"><span>control.rs</span><small>0/11</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-files-rs.html"><span>files.rs</span><small>4/19</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-isolation-rs.html"><span>isolation.rs</span><small>0/23</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-mod-rs.html"><span>mod.rs</span><small>0/12</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-plugin-rs.html"><span>plugin.rs</span><small>1/17</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-workspace-run-rs.html"><span>workspace_run.rs</span><small>0/2</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-runtime-context-rs.html"><span>context.rs</span><small>1/0</small></a></li><li><a class="file-link" href="daemon--src-runtime-error-rs.html"><span>error.rs</span><small>1/1</small></a></li><li><a class="file-link" href="daemon--src-runtime-invocation-registry-rs.html"><span>invocation_registry.rs</span><small>4/2</small></a></li><li><a class="file-link" href="daemon--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="daemon--src-runtime-response-rs.html"><span>response.rs</span><small>2/11</small></a></li><li><a class="file-link" href="daemon--src-runtime-services-rs.html"><span>services.rs</span><small>1/3</small></a></li><li><a class="file-link" href="daemon--src-runtime-workspace-rs.html"><span>workspace.rs</span><small>10/5</small></a></li></ul></li><li><span class="folder">trace</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-trace-envelope-meta-rs.html"><span>envelope_meta.rs</span><small>0/6</small></a></li><li><a class="file-link" href="daemon--src-trace-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="daemon--src-trace-plugin-trace-rs.html"><span>plugin_trace.rs</span><small>0/21</small></a></li><li><span class="folder">sidecar</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-trace-sidecar-budget-rs.html"><span>budget.rs</span><small>0/1</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-build-rs.html"><span>build.rs</span><small>0/2</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-events-rs.html"><span>events.rs</span><small>0/7</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-resources-rs.html"><span>resources.rs</span><small>0/4</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-tests-rs.html"><span>tests.rs</span><small>0/5</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-transport-failure-rs.html"><span>transport_failure.rs</span><small>0/2</small></a></li></ul></li><li><a class="file-link" href="daemon--src-trace-sidecar-rs.html"><span>sidecar.rs</span><small>0/0</small></a></li><li><a class="file-link" href="daemon--src-trace-spool-rs.html"><span>spool.rs</span><small>3/9</small></a></li></ul></li><li><span class="folder">transport</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-transport-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">server</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-transport-server-connection-rs.html"><span>connection.rs</span><small>0/3</small></a></li><li><a class="file-link" href="daemon--src-transport-server-dispatch-rs.html"><span>dispatch.rs</span><small>0/6</small></a></li><li><a class="file-link" href="daemon--src-transport-server-lifecycle-rs.html"><span>lifecycle.rs</span><small>0/2</small></a></li><li><a class="file-link" href="daemon--src-transport-server-trace-context-rs.html"><span>trace_context.rs</span><small>1/3</small></a></li></ul></li><li><a class="file-link" href="daemon--src-transport-server-rs.html"><span>server.rs</span><small>2/0</small></a></li></ul></li><li><span class="folder">wire</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-wire-message-rs.html"><span>message.rs</span><small>5/3</small></a></li><li><a class="file-link" href="daemon--src-wire-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="op_adapter::control crates/daemon/src/op_adapter/control.rs op_runtime_ready op_cancel op_heartbeat op_inflight_count op_trace_export op_trace_export_ack trace_export_output run_probe probe_control_plane trace_export_encodes_loss_only_batches error_type">
+  <div class="module-head">
+    <div>
+      <h2>src/op_adapter/control.rs</h2>
+      <p class="path">module <code>op_adapter::control</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>11 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-op-runtime-ready-21" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_runtime_ready pub(crate) pub(crate) fn op_runtime_ready (input : RuntimeReadyInput , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/daemon/src/op_adapter/control.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>op_runtime_ready</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="daemon--src-op-adapter-control-rs.html#item-fn-op-runtime-ready-21">op_runtime_ready</a> (input : RuntimeReadyInput , _context : <a class="symbol-link" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a> &gt;</code>
+  <p class="docstring">`sandbox.runtime.ready` — binary readiness plus the three plane probes<br>(`control_plane` / `data_plane` / `mutation_gate`). Requires `layer_stack_root`.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// `sandbox.runtime.ready` — binary readiness plus the three plane probes</span>
+<span class="rs-comment">/// (`control_plane` / `data_plane` / `mutation_gate`). Requires `layer_stack_root`.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-op-runtime-ready-21">op_runtime_ready</a>(
+    input: <span class="rs-type">RuntimeReadyInput</span>,
+    _context: <a class="symbol-link rs-type" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> root = input.layer_stack_root.to_string_lossy().into_owned();
+    <span class="rs-kw">let</span> probes = vec![
+        <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-run-probe-146">run_probe</a>(&quot;control_plane&quot;, || <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-probe-control-plane-160">probe_control_plane</a>(&amp;root)),
+        <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-run-probe-146">run_probe</a>(&quot;data_plane&quot;, || {
+            <span class="rs-type">Ok</span>(json!({
+                &quot;handlers_services_ready&quot;: <span class="rs-kw">true</span>,
+                &quot;shell_services_ready&quot;: <span class="rs-kw">true</span>,
+                &quot;workspace_mount_mode&quot;: &quot;private_namespace&quot;,
+            }))
+        }),
+        <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-run-probe-146">run_probe</a>(&quot;mutation_gate&quot;, || {
+            <span class="rs-type">Ok</span>(json!({
+                &quot;backend_ready&quot;: <span class="rs-kw">true</span>,
+                &quot;backend_fields&quot;: [&quot;layer_stack&quot;, &quot;occ_service&quot;, &quot;occ_client&quot;, &quot;gitignore&quot;, &quot;layer_stack_manager&quot;],
+                &quot;occ_client_class&quot;: &quot;<span class="rs-type">OccClient</span>&quot;,
+            }))
+        }),
+    ];
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(<span class="rs-type">RuntimeReadyOutput</span> {
+        success: <span class="rs-kw">true</span>,
+        ready: probes
+            .iter()
+            .all(|probe| probe.get(&quot;status&quot;) == <span class="rs-type">Some</span>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">String</span>(&quot;ok&quot;.to_owned()))),
+        probes,
+        daemon_pid: std::process::id(),
+        uptime_s: <span class="rs-kw">crate</span>::dispatcher::<a class="symbol-link rs-fn" href="daemon--src-dispatch-dispatcher-rs.html#item-fn-daemon-uptime-s-85">daemon_uptime_s</a>(),
+    }))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/control.rs:21</p>
+</article><article id="item-fn-op-cancel-56" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_cancel pub(crate) pub(crate) fn op_cancel (input : CancelInvocationInput , context : DispatchContext &lt; '_ &gt;) -&gt; Value crates/daemon/src/op_adapter/control.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>op_cancel</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="daemon--src-op-adapter-control-rs.html#item-fn-op-cancel-56">op_cancel</a> (input : CancelInvocationInput , context : <a class="symbol-link" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; Value</code>
+  <p class="docstring">`sandbox.call.cancel` — cancel one in-flight invocation id.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// `sandbox.call.cancel` — cancel one in-flight invocation id.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-op-cancel-56">op_cancel</a>(input: <span class="rs-type">CancelInvocationInput</span>, context: <a class="symbol-link rs-type" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> invocation_id = input.invocation_id.to_string();
+    <span class="rs-kw">let</span> (cancelled, already_done, cleanup_done) =
+        context
+            .<a class="symbol-link rs-fn" href="daemon--src-runtime-context-rs.html#method-invocation-registry-106">invocation_registry</a>()
+            .map_or((<span class="rs-kw">false</span>, <span class="rs-kw">true</span>, <span class="rs-kw">true</span>), |registry| {
+                <span class="rs-kw">match</span> registry.<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-cancel-invocation-172">cancel_invocation</a>(&amp;invocation_id) {
+                    <a class="symbol-link rs-type" href="daemon--src-runtime-invocation-registry-rs.html#item-enum-InvocationCancelResult-34">InvocationCancelResult</a>::<span class="rs-type">Cancelled</span> =&gt; (
+                        <span class="rs-kw">true</span>,
+                        <span class="rs-kw">false</span>,
+                        registry.<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-wait-for-cleanup-182">wait_for_cleanup</a>(&amp;invocation_id, <span class="rs-type">Duration</span>::from_secs(5)),
+                    ),
+                    <a class="symbol-link rs-type" href="daemon--src-runtime-invocation-registry-rs.html#item-enum-InvocationCancelResult-34">InvocationCancelResult</a>::<span class="rs-type">AlreadyDone</span> =&gt; (<span class="rs-kw">false</span>, <span class="rs-kw">true</span>, <span class="rs-kw">true</span>),
+                    <a class="symbol-link rs-type" href="daemon--src-runtime-invocation-registry-rs.html#item-enum-InvocationCancelResult-34">InvocationCancelResult</a>::<span class="rs-type">RunningUncancellable</span> =&gt; (<span class="rs-kw">false</span>, <span class="rs-kw">false</span>, <span class="rs-kw">false</span>),
+                }
+            });
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(<span class="rs-type">CancelInvocationOutput</span> {
+        success: <span class="rs-kw">true</span>,
+        invocation_id,
+        cancelled,
+        already_done,
+        cleanup_done,
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/control.rs:56</p>
+</article><article id="item-fn-op-heartbeat-82" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_heartbeat pub(crate) pub(crate) fn op_heartbeat (input : HeartbeatInput , context : DispatchContext &lt; '_ &gt;) -&gt; Value crates/daemon/src/op_adapter/control.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>op_heartbeat</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="daemon--src-op-adapter-control-rs.html#item-fn-op-heartbeat-82">op_heartbeat</a> (input : HeartbeatInput , context : <a class="symbol-link" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; Value</code>
+  <p class="docstring">`sandbox.call.heartbeat` — touch `last_seen` for the given invocation ids.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// `sandbox.call.heartbeat` — touch `last_seen` for the given invocation ids.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-op-heartbeat-82">op_heartbeat</a>(input: <span class="rs-type">HeartbeatInput</span>, context: <a class="symbol-link rs-type" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> invocation_ids: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = input
+        .invocation_ids
+        .iter()
+        .map(<span class="rs-type">ToString</span>::to_string)
+        .collect();
+    <span class="rs-kw">let</span> touched = context
+        .<a class="symbol-link rs-fn" href="daemon--src-runtime-context-rs.html#method-invocation-registry-106">invocation_registry</a>()
+        .map_or(0, |registry| registry.<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-heartbeat-194">heartbeat</a>(&amp;invocation_ids));
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(<span class="rs-type">HeartbeatOutput</span> {
+        success: <span class="rs-kw">true</span>,
+        touched,
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/control.rs:82</p>
+</article><article id="item-fn-op-inflight-count-98" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_inflight_count pub(crate) pub(crate) fn op_inflight_count (input : CallerCountInput , context : DispatchContext &lt; '_ &gt;) -&gt; Value crates/daemon/src/op_adapter/control.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>op_inflight_count</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="daemon--src-op-adapter-control-rs.html#item-fn-op-inflight-count-98">op_inflight_count</a> (input : CallerCountInput , context : <a class="symbol-link" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; Value</code>
+  <p class="docstring">`sandbox.call.count` — count background daemon invocations for one agent.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// `sandbox.call.count` — count background daemon invocations for one agent.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-op-inflight-count-98">op_inflight_count</a>(input: <span class="rs-type">CallerCountInput</span>, context: <a class="symbol-link rs-type" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> caller_id = input.caller.to_string();
+    <span class="rs-kw">let</span> count = context
+        .<a class="symbol-link rs-fn" href="daemon--src-runtime-context-rs.html#method-invocation-registry-106">invocation_registry</a>()
+        .map_or(0, |registry| registry.<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-209">count_by_caller</a>(&amp;caller_id));
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(<span class="rs-type">InflightCountOutput</span> {
+        success: <span class="rs-kw">true</span>,
+        caller_id,
+        count,
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/control.rs:98</p>
+</article><article id="item-fn-op-trace-export-111" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_trace_export pub(crate) pub(crate) fn op_trace_export (input : TraceExportInput) -&gt; Value crates/daemon/src/op_adapter/control.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>op_trace_export</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="daemon--src-op-adapter-control-rs.html#item-fn-op-trace-export-111">op_trace_export</a> (input : TraceExportInput) -&gt; Value</code>
+  <p class="docstring">`sandbox.trace.export` — lease daemon background trace roots for host ingest.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// `sandbox.trace.export` — lease daemon background trace roots for host ingest.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-op-trace-export-111">op_trace_export</a>(input: <span class="rs-type">TraceExportInput</span>) -&gt; <span class="rs-type">Value</span> {
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(<a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-trace-export-output-130">trace_export_output</a>(<span class="rs-kw">crate</span>::trace::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-lease-background-records-93">lease_background_records</a>(
+        input.max_records,
+    )))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/control.rs:111</p>
+</article><article id="item-fn-op-trace-export-ack-118" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_trace_export_ack pub(crate) pub(crate) fn op_trace_export_ack (input : TraceExportAckInput) -&gt; Value crates/daemon/src/op_adapter/control.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>op_trace_export_ack</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="daemon--src-op-adapter-control-rs.html#item-fn-op-trace-export-ack-118">op_trace_export_ack</a> (input : TraceExportAckInput) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-op-trace-export-ack-118">op_trace_export_ack</a>(input: <span class="rs-type">TraceExportAckInput</span>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> export_id = input.export_id;
+    <span class="rs-kw">let</span> acked = trace::<span class="rs-type">ExportId</span>::parse(export_id.clone()).is_ok_and(|export_id| {
+        <span class="rs-kw">crate</span>::trace::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-ack-background-export-100">ack_background_export</a>(&amp;export_id, &amp;input.batch_sha256, input.record_count)
+    });
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(<span class="rs-type">TraceExportAckOutput</span> {
+        success: <span class="rs-kw">true</span>,
+        export_id,
+        acked,
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/control.rs:118</p>
+</article><article id="item-fn-trace-export-output-130" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn trace_export_output private fn trace_export_output (batch : trace :: TraceExportBatch) -&gt; TraceExportOutput crates/daemon/src/op_adapter/control.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>trace_export_output</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-control-rs.html#item-fn-trace-export-output-130">trace_export_output</a> (batch : trace :: TraceExportBatch) -&gt; TraceExportOutput</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-trace-export-output-130">trace_export_output</a>(batch: trace::<span class="rs-type">TraceExportBatch</span>) -&gt; <span class="rs-type">TraceExportOutput</span> {
+    <span class="rs-kw">let</span> trace_batch_base64 = batch
+        .trace_batch_bytes
+        .as_ref()
+        .map(|bytes| base64::engine::general_purpose::<span class="rs-type">STANDARD</span>.<a class="symbol-link rs-fn" href="daemon--src-wire-message-rs.html#item-fn-encode-74">encode</a>(bytes));
+    <span class="rs-type">TraceExportOutput</span> {
+        success: <span class="rs-kw">true</span>,
+        record_count: batch.record_count,
+        spool_pending_after: batch.spool_pending_after,
+        dropped_traces: batch.dropped_traces,
+        export_id: batch.export_id.map(|export_id| export_id.to_string()),
+        batch_sha256: batch.batch_sha256,
+        trace_batch_base64,
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/control.rs:130</p>
+</article><article id="item-fn-run-probe-146" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_probe private fn run_probe &lt; F &gt; (name : &amp; str , probe : F) -&gt; Value where F : FnOnce () -&gt; Result &lt; Value , DaemonError &gt; , crates/daemon/src/op_adapter/control.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>run_probe</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-control-rs.html#item-fn-run-probe-146">run_probe</a> &lt; F &gt; (name : &amp; str , probe : F) -&gt; Value where F : FnOnce () -&gt; Result &lt; Value , <a class="symbol-link" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a> &gt; ,</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> run_probe&lt;<span class="rs-type">F</span>&gt;(name: &amp;str, probe: <span class="rs-type">F</span>) -&gt; <span class="rs-type">Value</span>
+<span class="rs-kw">where</span>
+    <span class="rs-type">F</span>: <span class="rs-type">FnOnce</span>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>&gt;,
+{
+    <span class="rs-kw">let</span> (status, details) = <span class="rs-kw">match</span> probe() {
+        <span class="rs-type">Ok</span>(details) =&gt; (&quot;ok&quot;, details),
+        <span class="rs-type">Err</span>(err) =&gt; (
+            &quot;down&quot;,
+            json!({&quot;error_type&quot;: <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-error-type-211">error_type</a>(&amp;err), &quot;error&quot;: err.to_string()}),
+        ),
+    };
+    json!({&quot;name&quot;: name, &quot;status&quot;: status, &quot;details&quot;: details})
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/control.rs:146</p>
+</article><article id="item-fn-probe-control-plane-160" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn probe_control_plane private fn probe_control_plane (root : &amp; str) -&gt; Result &lt; Value , DaemonError &gt; crates/daemon/src/op_adapter/control.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>probe_control_plane</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-control-rs.html#item-fn-probe-control-plane-160">probe_control_plane</a> (root : &amp; str) -&gt; Result &lt; Value , <a class="symbol-link" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-probe-control-plane-160">probe_control_plane</a>(root: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> binding = require_workspace_binding(root)?;
+    <span class="rs-kw">let</span> stack = <span class="rs-type">LayerStack</span>::open(<span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-error-rs.html#method-from-84">from</a>(root))?;
+    <span class="rs-kw">let</span> manifest = stack.read_active_manifest()?;
+    <span class="rs-type">Ok</span>(json!({
+        &quot;workspace_root&quot;: binding.workspace_root,
+        &quot;manifest_version&quot;: manifest.version,
+        &quot;manifest_depth&quot;: manifest.depth(),
+        &quot;base_root_hash&quot;: binding.base_root_hash,
+    }))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/control.rs:160</p>
+</article><article id="item-fn-trace-export-encodes-loss-only-batches-179" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn trace_export_encodes_loss_only_batches private fn trace_export_encodes_loss_only_batches () crates/daemon/src/op_adapter/control.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>trace_export_encodes_loss_only_batches</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-control-rs.html#item-fn-trace-export-encodes-loss-only-batches-179">trace_export_encodes_loss_only_batches</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-trace-export-encodes-loss-only-batches-179">trace_export_encodes_loss_only_batches</a>() {
+        <span class="rs-kw">let</span> encoded_batch = trace::encode_trace_batch(&amp;trace::<span class="rs-type">TraceBatch</span> {
+            records: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(),
+            dropped_traces: 7,
+            daemon_boot_id: <span class="rs-type">Some</span>(&quot;boot-loss-only&quot;.to_owned()),
+        });
+        <span class="rs-kw">let</span> output = <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-trace-export-output-130">trace_export_output</a>(trace::<span class="rs-type">TraceExportBatch</span> {
+            export_id: <span class="rs-type">Some</span>(trace::<span class="rs-type">ExportId</span>::parse(&quot;export-loss-only&quot;).expect(&quot;export id&quot;)),
+            record_count: 0,
+            spool_pending_after: 0,
+            dropped_traces: 7,
+            batch_sha256: <span class="rs-type">Some</span>(trace::sha256_hex(&amp;encoded_batch)),
+            trace_batch_bytes: <span class="rs-type">Some</span>(encoded_batch),
+        });
+        <span class="rs-kw">let</span> encoded = output
+            .trace_batch_base64
+            .as_deref()
+            .expect(&quot;loss-only export must include batch bytes&quot;);
+        <span class="rs-kw">let</span> batch = decode_trace_batch(
+            &amp;base64::engine::general_purpose::<span class="rs-type">STANDARD</span>
+                .<a class="symbol-link rs-fn" href="daemon--src-wire-message-rs.html#item-fn-decode-88">decode</a>(encoded)
+                .expect(&quot;base64&quot;),
+        )
+        .expect(&quot;trace batch decodes&quot;);
+
+        assert!(batch.records.is_empty());
+        assert_eq!(batch.dropped_traces, 7);
+        assert!(batch.daemon_boot_id.is_some());
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/control.rs:179</p>
+</article><article id="item-fn-error-type-211" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_type private const fn error_type (err : &amp; DaemonError) -&gt; &amp; 'static str crates/daemon/src/op_adapter/control.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>error_type</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">const fn <a class="symbol-link" href="daemon--src-op-adapter-control-rs.html#item-fn-error-type-211">error_type</a> (err : &amp; <a class="symbol-link" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>) -&gt; &amp; &#x27;static str</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-error-type-211">error_type</a>(err: &amp;<a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">match</span> err {
+        <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<span class="rs-type">LayerStack</span>(layerstack::<span class="rs-type">LayerStackError</span>::<span class="rs-type">WorkspaceBinding</span>(_)) =&gt; {
+            &quot;<span class="rs-type">WorkspaceBindingError</span>&quot;
+        }
+        <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<span class="rs-type">LayerStack</span>(layerstack::<span class="rs-type">LayerStackError</span>::<span class="rs-type">Manifest</span>(_)) =&gt; {
+            &quot;<span class="rs-type">ManifestConflictError</span>&quot;
+        }
+        <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<span class="rs-type">Io</span>(_) =&gt; &quot;<span class="rs-type">OSError</span>&quot;,
+        <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<span class="rs-type">InvalidRequest</span>(_) =&gt; &quot;<span class="rs-type">ValueError</span>&quot;,
+        _ =&gt; &quot;<span class="rs-type">RuntimeError</span>&quot;,
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/control.rs:211</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/daemon/src/op_adapter/control.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Runtime, heartbeat, cancel, and in-flight daemon ops.</span>
+
+<span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Duration</span>;
+
+<span class="rs-kw">use</span> base64::<span class="rs-type">Engine</span> <span class="rs-kw">as</span> _;
+<span class="rs-kw">use</span> layerstack::{require_workspace_binding, <span class="rs-type">LayerStack</span>};
+<span class="rs-kw">use</span> operation::control::contract::{
+    <span class="rs-type">CallerCountInput</span>, <span class="rs-type">CancelInvocationInput</span>, <span class="rs-type">CancelInvocationOutput</span>, <span class="rs-type">HeartbeatInput</span>,
+    <span class="rs-type">HeartbeatOutput</span>, <span class="rs-type">InflightCountOutput</span>, <span class="rs-type">RuntimeReadyInput</span>, <span class="rs-type">RuntimeReadyOutput</span>,
+    <span class="rs-type">TraceExportAckInput</span>, <span class="rs-type">TraceExportAckOutput</span>, <span class="rs-type">TraceExportInput</span>, <span class="rs-type">TraceExportOutput</span>,
+};
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runtime::invocation_registry::<a class="symbol-link rs-type" href="daemon--src-runtime-invocation-registry-rs.html#item-enum-InvocationCancelResult-34">InvocationCancelResult</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::to_wire_value;
+
+<span class="rs-comment">/// `sandbox.runtime.ready` — binary readiness plus the three plane probes</span>
+<span class="rs-comment">/// (`control_plane` / `data_plane` / `mutation_gate`). Requires `layer_stack_root`.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-op-runtime-ready-21">op_runtime_ready</a>(
+    input: <span class="rs-type">RuntimeReadyInput</span>,
+    _context: <a class="symbol-link rs-type" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> root = input.layer_stack_root.to_string_lossy().into_owned();
+    <span class="rs-kw">let</span> probes = vec![
+        <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-run-probe-146">run_probe</a>(&quot;control_plane&quot;, || <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-probe-control-plane-160">probe_control_plane</a>(&amp;root)),
+        <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-run-probe-146">run_probe</a>(&quot;data_plane&quot;, || {
+            <span class="rs-type">Ok</span>(json!({
+                &quot;handlers_services_ready&quot;: <span class="rs-kw">true</span>,
+                &quot;shell_services_ready&quot;: <span class="rs-kw">true</span>,
+                &quot;workspace_mount_mode&quot;: &quot;private_namespace&quot;,
+            }))
+        }),
+        <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-run-probe-146">run_probe</a>(&quot;mutation_gate&quot;, || {
+            <span class="rs-type">Ok</span>(json!({
+                &quot;backend_ready&quot;: <span class="rs-kw">true</span>,
+                &quot;backend_fields&quot;: [&quot;layer_stack&quot;, &quot;occ_service&quot;, &quot;occ_client&quot;, &quot;gitignore&quot;, &quot;layer_stack_manager&quot;],
+                &quot;occ_client_class&quot;: &quot;<span class="rs-type">OccClient</span>&quot;,
+            }))
+        }),
+    ];
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(<span class="rs-type">RuntimeReadyOutput</span> {
+        success: <span class="rs-kw">true</span>,
+        ready: probes
+            .iter()
+            .all(|probe| probe.get(&quot;status&quot;) == <span class="rs-type">Some</span>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">String</span>(&quot;ok&quot;.to_owned()))),
+        probes,
+        daemon_pid: std::process::id(),
+        uptime_s: <span class="rs-kw">crate</span>::dispatcher::<a class="symbol-link rs-fn" href="daemon--src-dispatch-dispatcher-rs.html#item-fn-daemon-uptime-s-85">daemon_uptime_s</a>(),
+    }))
+}
+
+<span class="rs-comment">/// `sandbox.call.cancel` — cancel one in-flight invocation id.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-op-cancel-56">op_cancel</a>(input: <span class="rs-type">CancelInvocationInput</span>, context: <a class="symbol-link rs-type" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> invocation_id = input.invocation_id.to_string();
+    <span class="rs-kw">let</span> (cancelled, already_done, cleanup_done) =
+        context
+            .<a class="symbol-link rs-fn" href="daemon--src-runtime-context-rs.html#method-invocation-registry-106">invocation_registry</a>()
+            .map_or((<span class="rs-kw">false</span>, <span class="rs-kw">true</span>, <span class="rs-kw">true</span>), |registry| {
+                <span class="rs-kw">match</span> registry.<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-cancel-invocation-172">cancel_invocation</a>(&amp;invocation_id) {
+                    <a class="symbol-link rs-type" href="daemon--src-runtime-invocation-registry-rs.html#item-enum-InvocationCancelResult-34">InvocationCancelResult</a>::<span class="rs-type">Cancelled</span> =&gt; (
+                        <span class="rs-kw">true</span>,
+                        <span class="rs-kw">false</span>,
+                        registry.<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-wait-for-cleanup-182">wait_for_cleanup</a>(&amp;invocation_id, <span class="rs-type">Duration</span>::from_secs(5)),
+                    ),
+                    <a class="symbol-link rs-type" href="daemon--src-runtime-invocation-registry-rs.html#item-enum-InvocationCancelResult-34">InvocationCancelResult</a>::<span class="rs-type">AlreadyDone</span> =&gt; (<span class="rs-kw">false</span>, <span class="rs-kw">true</span>, <span class="rs-kw">true</span>),
+                    <a class="symbol-link rs-type" href="daemon--src-runtime-invocation-registry-rs.html#item-enum-InvocationCancelResult-34">InvocationCancelResult</a>::<span class="rs-type">RunningUncancellable</span> =&gt; (<span class="rs-kw">false</span>, <span class="rs-kw">false</span>, <span class="rs-kw">false</span>),
+                }
+            });
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(<span class="rs-type">CancelInvocationOutput</span> {
+        success: <span class="rs-kw">true</span>,
+        invocation_id,
+        cancelled,
+        already_done,
+        cleanup_done,
+    })
+}
+
+<span class="rs-comment">/// `sandbox.call.heartbeat` — touch `last_seen` for the given invocation ids.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-op-heartbeat-82">op_heartbeat</a>(input: <span class="rs-type">HeartbeatInput</span>, context: <a class="symbol-link rs-type" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> invocation_ids: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = input
+        .invocation_ids
+        .iter()
+        .map(<span class="rs-type">ToString</span>::to_string)
+        .collect();
+    <span class="rs-kw">let</span> touched = context
+        .<a class="symbol-link rs-fn" href="daemon--src-runtime-context-rs.html#method-invocation-registry-106">invocation_registry</a>()
+        .map_or(0, |registry| registry.<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-heartbeat-194">heartbeat</a>(&amp;invocation_ids));
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(<span class="rs-type">HeartbeatOutput</span> {
+        success: <span class="rs-kw">true</span>,
+        touched,
+    })
+}
+
+<span class="rs-comment">/// `sandbox.call.count` — count background daemon invocations for one agent.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-op-inflight-count-98">op_inflight_count</a>(input: <span class="rs-type">CallerCountInput</span>, context: <a class="symbol-link rs-type" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> caller_id = input.caller.to_string();
+    <span class="rs-kw">let</span> count = context
+        .<a class="symbol-link rs-fn" href="daemon--src-runtime-context-rs.html#method-invocation-registry-106">invocation_registry</a>()
+        .map_or(0, |registry| registry.<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-209">count_by_caller</a>(&amp;caller_id));
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(<span class="rs-type">InflightCountOutput</span> {
+        success: <span class="rs-kw">true</span>,
+        caller_id,
+        count,
+    })
+}
+
+<span class="rs-comment">/// `sandbox.trace.export` — lease daemon background trace roots for host ingest.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-op-trace-export-111">op_trace_export</a>(input: <span class="rs-type">TraceExportInput</span>) -&gt; <span class="rs-type">Value</span> {
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(<a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-trace-export-output-130">trace_export_output</a>(<span class="rs-kw">crate</span>::trace::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-lease-background-records-93">lease_background_records</a>(
+        input.max_records,
+    )))
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-op-trace-export-ack-118">op_trace_export_ack</a>(input: <span class="rs-type">TraceExportAckInput</span>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> export_id = input.export_id;
+    <span class="rs-kw">let</span> acked = trace::<span class="rs-type">ExportId</span>::parse(export_id.clone()).is_ok_and(|export_id| {
+        <span class="rs-kw">crate</span>::trace::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-ack-background-export-100">ack_background_export</a>(&amp;export_id, &amp;input.batch_sha256, input.record_count)
+    });
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(<span class="rs-type">TraceExportAckOutput</span> {
+        success: <span class="rs-kw">true</span>,
+        export_id,
+        acked,
+    })
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-trace-export-output-130">trace_export_output</a>(batch: trace::<span class="rs-type">TraceExportBatch</span>) -&gt; <span class="rs-type">TraceExportOutput</span> {
+    <span class="rs-kw">let</span> trace_batch_base64 = batch
+        .trace_batch_bytes
+        .as_ref()
+        .map(|bytes| base64::engine::general_purpose::<span class="rs-type">STANDARD</span>.<a class="symbol-link rs-fn" href="daemon--src-wire-message-rs.html#item-fn-encode-74">encode</a>(bytes));
+    <span class="rs-type">TraceExportOutput</span> {
+        success: <span class="rs-kw">true</span>,
+        record_count: batch.record_count,
+        spool_pending_after: batch.spool_pending_after,
+        dropped_traces: batch.dropped_traces,
+        export_id: batch.export_id.map(|export_id| export_id.to_string()),
+        batch_sha256: batch.batch_sha256,
+        trace_batch_base64,
+    }
+}
+
+<span class="rs-kw">fn</span> run_probe&lt;<span class="rs-type">F</span>&gt;(name: &amp;str, probe: <span class="rs-type">F</span>) -&gt; <span class="rs-type">Value</span>
+<span class="rs-kw">where</span>
+    <span class="rs-type">F</span>: <span class="rs-type">FnOnce</span>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>&gt;,
+{
+    <span class="rs-kw">let</span> (status, details) = <span class="rs-kw">match</span> probe() {
+        <span class="rs-type">Ok</span>(details) =&gt; (&quot;ok&quot;, details),
+        <span class="rs-type">Err</span>(err) =&gt; (
+            &quot;down&quot;,
+            json!({&quot;error_type&quot;: <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-error-type-211">error_type</a>(&amp;err), &quot;error&quot;: err.to_string()}),
+        ),
+    };
+    json!({&quot;name&quot;: name, &quot;status&quot;: status, &quot;details&quot;: details})
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-probe-control-plane-160">probe_control_plane</a>(root: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> binding = require_workspace_binding(root)?;
+    <span class="rs-kw">let</span> stack = <span class="rs-type">LayerStack</span>::open(<span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-error-rs.html#method-from-84">from</a>(root))?;
+    <span class="rs-kw">let</span> manifest = stack.read_active_manifest()?;
+    <span class="rs-type">Ok</span>(json!({
+        &quot;workspace_root&quot;: binding.workspace_root,
+        &quot;manifest_version&quot;: manifest.version,
+        &quot;manifest_depth&quot;: manifest.depth(),
+        &quot;base_root_hash&quot;: binding.base_root_hash,
+    }))
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> base64::<span class="rs-type">Engine</span> <span class="rs-kw">as</span> _;
+    <span class="rs-kw">use</span> trace::decode_trace_batch;
+
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-trace-export-encodes-loss-only-batches-179">trace_export_encodes_loss_only_batches</a>() {
+        <span class="rs-kw">let</span> encoded_batch = trace::encode_trace_batch(&amp;trace::<span class="rs-type">TraceBatch</span> {
+            records: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(),
+            dropped_traces: 7,
+            daemon_boot_id: <span class="rs-type">Some</span>(&quot;boot-loss-only&quot;.to_owned()),
+        });
+        <span class="rs-kw">let</span> output = <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-trace-export-output-130">trace_export_output</a>(trace::<span class="rs-type">TraceExportBatch</span> {
+            export_id: <span class="rs-type">Some</span>(trace::<span class="rs-type">ExportId</span>::parse(&quot;export-loss-only&quot;).expect(&quot;export id&quot;)),
+            record_count: 0,
+            spool_pending_after: 0,
+            dropped_traces: 7,
+            batch_sha256: <span class="rs-type">Some</span>(trace::sha256_hex(&amp;encoded_batch)),
+            trace_batch_bytes: <span class="rs-type">Some</span>(encoded_batch),
+        });
+        <span class="rs-kw">let</span> encoded = output
+            .trace_batch_base64
+            .as_deref()
+            .expect(&quot;loss-only export must include batch bytes&quot;);
+        <span class="rs-kw">let</span> batch = decode_trace_batch(
+            &amp;base64::engine::general_purpose::<span class="rs-type">STANDARD</span>
+                .<a class="symbol-link rs-fn" href="daemon--src-wire-message-rs.html#item-fn-decode-88">decode</a>(encoded)
+                .expect(&quot;base64&quot;),
+        )
+        .expect(&quot;trace batch decodes&quot;);
+
+        assert!(batch.records.is_empty());
+        assert_eq!(batch.dropped_traces, 7);
+        assert!(batch.daemon_boot_id.is_some());
+    }
+}
+
+<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-error-type-211">error_type</a>(err: &amp;<a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">match</span> err {
+        <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<span class="rs-type">LayerStack</span>(layerstack::<span class="rs-type">LayerStackError</span>::<span class="rs-type">WorkspaceBinding</span>(_)) =&gt; {
+            &quot;<span class="rs-type">WorkspaceBindingError</span>&quot;
+        }
+        <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<span class="rs-type">LayerStack</span>(layerstack::<span class="rs-type">LayerStackError</span>::<span class="rs-type">Manifest</span>(_)) =&gt; {
+            &quot;<span class="rs-type">ManifestConflictError</span>&quot;
+        }
+        <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<span class="rs-type">Io</span>(_) =&gt; &quot;<span class="rs-type">OSError</span>&quot;,
+        <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<span class="rs-type">InvalidRequest</span>(_) =&gt; &quot;<span class="rs-type">ValueError</span>&quot;,
+        _ =&gt; &quot;<span class="rs-type">RuntimeError</span>&quot;,
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

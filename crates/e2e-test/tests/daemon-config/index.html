@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>daemon-config - eos-e2e-test</title>
+<link rel="stylesheet" href="../assets/e2e-readme.css">
+</head>
+<body data-page="module" data-module-json="readme.json">
+<div id="app"></div>
+<script type="application/json" id="readme-module-data">
+{
+  "schemaVersion": 1,
+  "name": "daemon-config",
+  "displayName": "daemon-config",
+  "cargoTestName": "daemon-config",
+  "folder": "daemon-config",
+  "path": "tests/daemon-config/mod.rs",
+  "page": "daemon-config/index.html",
+  "source": {
+    "markdown": "readme.md"
+  },
+  "overview": {
+    "summary": "`daemon-config` owns the live E2E contract for non-default daemon config paths. It proves that `eosd` starts and restarts from `crates/e2e-test/tests/daemon-config/config/non-default-remote-config.test.yml`, including the copied remote config path used by the in-container daemon process. Module config: `crates/e2e-test/tests/daemon-config/config/non-default-remote-config.test.yml`. It exercises `sandbox.runtime.ready`.",
+    "moduleConfig": "crates/e2e-test/tests/daemon-config/config/non-default-remote-config.test.yml",
+    "ops": [
+      "sandbox.runtime.ready"
+    ],
+    "tags": [
+      "daemon-config",
+      "daemon",
+      "config"
+    ]
+  },
+  "checklist": [
+    {
+      "id": "daemon-config-remote-config-path",
+      "title": "Remote Config Path",
+      "description": "The live pool copies a non-default daemon config path into the sandbox and the daemon reads that path on initial startup and after restart.",
+      "tags": [
+        "daemon-config"
+      ]
+    }
+  ],
+  "test": [
+    {
+      "id": "daemon-config-remote-config-path",
+      "name": "daemon-config-remote-config-path",
+      "description": "Runs `daemon_starts_and_restarts_from_non_default_remote_config_path`, checking that the configured remote YAML exists, readiness succeeds, and readiness still succeeds after `lease.restart_daemon()`.",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites daemon-config --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "checklist": [
+        "daemon-config-remote-config-path"
+      ]
+    }
+  ]
+}
+</script>
+<script src="../assets/e2e-readme.js"></script>
+</body>
+</html>

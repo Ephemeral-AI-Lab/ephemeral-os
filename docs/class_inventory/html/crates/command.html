@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>command · src/contract.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>command File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>6</b><span>modules</span></div>
+  <div><b>58</b><span>items</span></div>
+  <div><b>78</b><span>fields</span></div>
+  <div><b>49</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="command.html"><span>contract.rs</span><small>6/1</small></a></li><li><a class="file-link" href="command--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="command--src-process-rs.html"><span>process.rs</span><small>8/6</small></a></li><li><a class="file-link" href="command--src-pty-rs.html"><span>pty.rs</span><small>6/9</small></a></li><li><a class="file-link" href="command--src-transcript-rs.html"><span>transcript.rs</span><small>2/6</small></a></li><li><a class="file-link" href="command--src-yield-wait-loop-rs.html"><span>yield_wait_loop.rs</span><small>2/1</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="contract crates/command/src/contract.rs CommandError impl From &lt; std :: io :: Error &gt; for CommandError impl CommandError StartCommand WriteStdin ReadCommandProgress CancelCommand CollectCompleted tail_lines">
+  <div class="module-head">
+    <div>
+      <h2>src/contract.rs</h2>
+      <p class="path">module <code>contract</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>6 types</span>
+      <span>2 impls</span>
+      <span>1 fns</span>
+      <span>2 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-StartCommand-48" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct StartCommand pub pub struct StartCommand crates/command/src/contract.rs invocation_id String caller_id String cmd String trace_id Option &lt; String &gt; request_id Option &lt; String &gt; timeout_seconds Option &lt; f64 &gt; yield_time_ms u64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>StartCommand</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="command.html#item-struct-StartCommand-48">StartCommand</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>invocation_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>caller_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>cmd</td><td><code>String</code></td></tr><tr><td>pub</td><td>trace_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>request_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>timeout_seconds</td><td><code>Option &lt; f64 &gt;</code></td></tr><tr><td>pub</td><td>yield_time_ms</td><td><code>u64</code></td></tr></tbody></table>
+
+  <p class="source">crates/command/src/contract.rs:48</p>
+</article><article id="item-struct-WriteStdin-59" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct WriteStdin pub pub struct WriteStdin crates/command/src/contract.rs command_id String chars String yield_time_ms u64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>WriteStdin</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="command.html#item-struct-WriteStdin-59">WriteStdin</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>command_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>chars</td><td><code>String</code></td></tr><tr><td>pub</td><td>yield_time_ms</td><td><code>u64</code></td></tr></tbody></table>
+
+  <p class="source">crates/command/src/contract.rs:59</p>
+</article><article id="item-struct-ReadCommandProgress-66" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ReadCommandProgress pub pub struct ReadCommandProgress crates/command/src/contract.rs command_id String last_n_lines usize ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ReadCommandProgress</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="command.html#item-struct-ReadCommandProgress-66">ReadCommandProgress</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>command_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>last_n_lines</td><td><code>usize</code></td></tr></tbody></table>
+
+  <p class="source">crates/command/src/contract.rs:66</p>
+</article><article id="item-struct-CancelCommand-72" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CancelCommand pub pub struct CancelCommand crates/command/src/contract.rs command_id String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CancelCommand</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="command.html#item-struct-CancelCommand-72">CancelCommand</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>command_id</td><td><code>String</code></td></tr></tbody></table>
+
+  <p class="source">crates/command/src/contract.rs:72</p>
+</article><article id="item-struct-CollectCompleted-77" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CollectCompleted pub pub struct CollectCompleted crates/command/src/contract.rs command_ids Option &lt; Vec &lt; String &gt; &gt; caller_id Option &lt; String &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CollectCompleted</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="command.html#item-struct-CollectCompleted-77">CollectCompleted</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Default</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>command_ids</td><td><code>Option &lt; Vec &lt; String &gt; &gt;</code></td></tr><tr><td>pub</td><td>caller_id</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/command/src/contract.rs:77</p>
+</article><article id="item-enum-CommandError-7" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum CommandError pub pub enum CommandError crates/command/src/contract.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>CommandError</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="command.html#item-enum-CommandError-7">CommandError</a></code>
+  <div class="tags"><span>derive: Debug</span><span>derive: Error</span><span>error</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Workspace</td><td><code>0: String</code></td></tr><tr><td>NotFound</td><td><code>0: String</code></td></tr><tr><td>InvalidRequest</td><td><code>0: String</code></td></tr><tr><td>Io</td><td><code>0: String</code></td></tr><tr><td>ArtifactWrite</td><td><code>artifact: &amp; &#x27;static str, path: PathBuf, error: String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-artifact-write-34"><td>associated-fn</td><td>artifact_write</td><td><code>pub fn <a class="symbol-link" href="command.html#method-artifact-write-34">artifact_write</a> (artifact : &amp; &#x27;static str , path : impl AsRef &lt; Path &gt; , error : impl std :: fmt :: Display ,) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command.html#method-artifact-write-34">artifact_write</a>(
+        artifact: &amp;&#x27;<span class="rs-kw">static</span> str,
+        path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;,
+        error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<span class="rs-type">ArtifactWrite</span> {
+            artifact,
+            path: path.as_ref().to_path_buf(),
+            error: error.to_string(),
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl From &lt; std :: io :: Error &gt; for <a class="symbol-link" href="command.html#item-enum-CommandError-7">CommandError</a></code></summary><table><tbody><tr id="method-from-28"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="command.html#method-from-28">from</a> (error : std :: io :: Error) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command.html#method-from-28">from</a>(error: std::io::<span class="rs-type">Error</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<span class="rs-type">Io</span>(error.to_string())
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/command/src/contract.rs:7</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-tail-lines-83" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tail_lines pub pub fn tail_lines (text : &amp; str , last_n_lines : usize) -&gt; String crates/command/src/contract.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>tail_lines</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="command.html#item-fn-tail-lines-83">tail_lines</a> (text : &amp; str , last_n_lines : usize) -&gt; String</code>
+  <p class="docstring">Last `last_n_lines` lines of `text`, also used by the transcript reader<br>for progress tails.</p>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Last `last_n_lines` lines of `text`, also used by the transcript reader</span>
+<span class="rs-comment">/// for progress tails.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command.html#item-fn-tail-lines-83">tail_lines</a>(text: &amp;str, last_n_lines: usize) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">if</span> text.is_empty() || last_n_lines == 0 {
+        <span class="rs-kw">return</span> <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>();
+    }
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line_starts = vec![0_usize];
+    <span class="rs-kw">for</span> (idx, byte) <span class="rs-kw">in</span> text.bytes().enumerate() {
+        <span class="rs-kw">if</span> byte == b&#x27;\n&#x27; &amp;&amp; idx + 1 &lt; text.len() {
+            line_starts.push(idx + 1);
+        }
+    }
+    <span class="rs-kw">let</span> start_idx = line_starts
+        .len()
+        .saturating_sub(last_n_lines)
+        .min(line_starts.len().saturating_sub(1));
+    text[line_starts[start_idx]..].to_owned()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/command/src/contract.rs:83</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/command/src/contract.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Command substrate request DTOs and error type.</span>
+
+<span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
+
+<span class="rs-kw">use</span> thiserror::<span class="rs-type">Error</span>;
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Error</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="command.html#item-enum-CommandError-7">CommandError</a> {
+    <span class="rs-comment">/// A workspace-tier failure surfaced through the command lifecycle; the</span>
+    <span class="rs-comment">/// substrate carries only the rendered message.</span>
+    #[error(&quot;{0}&quot;)]
+    <span class="rs-type">Workspace</span>(<span class="rs-type">String</span>),
+    #[error(&quot;command not found: {0}&quot;)]
+    <span class="rs-type">NotFound</span>(<span class="rs-type">String</span>),
+    #[error(&quot;invalid command request: {0}&quot;)]
+    <span class="rs-type">InvalidRequest</span>(<span class="rs-type">String</span>),
+    #[error(&quot;command io error: {0}&quot;)]
+    <span class="rs-type">Io</span>(<span class="rs-type">String</span>),
+    #[error(&quot;command artifact write failed <span class="rs-kw">for</span> {artifact} at {}: {error}&quot;, path.display())]
+    <span class="rs-type">ArtifactWrite</span> {
+        artifact: &amp;&#x27;<span class="rs-kw">static</span> str,
+        path: <span class="rs-type">PathBuf</span>,
+        error: <span class="rs-type">String</span>,
+    },
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">From</span>&lt;std::io::<span class="rs-type">Error</span>&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="command.html#item-enum-CommandError-7">CommandError</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command.html#method-from-28">from</a>(error: std::io::<span class="rs-type">Error</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<span class="rs-type">Io</span>(error.to_string())
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="command.html#item-enum-CommandError-7">CommandError</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command.html#method-artifact-write-34">artifact_write</a>(
+        artifact: &amp;&#x27;<span class="rs-kw">static</span> str,
+        path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;,
+        error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<span class="rs-type">ArtifactWrite</span> {
+            artifact,
+            path: path.as_ref().to_path_buf(),
+            error: error.to_string(),
+        }
+    }
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="command.html#item-struct-StartCommand-48">StartCommand</a> {
+    <span class="rs-kw">pub</span> invocation_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> caller_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> cmd: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> trace_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span> request_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span> timeout_seconds: <span class="rs-type">Option</span>&lt;f64&gt;,
+    <span class="rs-kw">pub</span> yield_time_ms: u64,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="command.html#item-struct-WriteStdin-59">WriteStdin</a> {
+    <span class="rs-kw">pub</span> command_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> chars: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> yield_time_ms: u64,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="command.html#item-struct-ReadCommandProgress-66">ReadCommandProgress</a> {
+    <span class="rs-kw">pub</span> command_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> last_n_lines: usize,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="command.html#item-struct-CancelCommand-72">CancelCommand</a> {
+    <span class="rs-kw">pub</span> command_id: <span class="rs-type">String</span>,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Default</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="command.html#item-struct-CollectCompleted-77">CollectCompleted</a> {
+    <span class="rs-kw">pub</span> command_ids: <span class="rs-type">Option</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;&gt;,
+    <span class="rs-kw">pub</span> caller_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+}
+
+<span class="rs-comment">/// Last `last_n_lines` lines of `text`, also used by the transcript reader</span>
+<span class="rs-comment">/// for progress tails.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="command.html#item-fn-tail-lines-83">tail_lines</a>(text: &amp;str, last_n_lines: usize) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">if</span> text.is_empty() || last_n_lines == 0 {
+        <span class="rs-kw">return</span> <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="command--src-process-rs.html#method-new-106">new</a>();
+    }
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line_starts = vec![0_usize];
+    <span class="rs-kw">for</span> (idx, byte) <span class="rs-kw">in</span> text.bytes().enumerate() {
+        <span class="rs-kw">if</span> byte == b&#x27;\n&#x27; &amp;&amp; idx + 1 &lt; text.len() {
+            line_starts.push(idx + 1);
+        }
+    }
+    <span class="rs-kw">let</span> start_idx = line_starts
+        .len()
+        .saturating_sub(last_n_lines)
+        .min(line_starts.len().saturating_sub(1));
+    text[line_starts[start_idx]..].to_owned()
+}
+
+#[cfg(test)]
+#[path = &quot;../tests/unit/contract.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

@@ -1,75 +1,85 @@
-# EphemeralOS
+# EphemeralOS Sandbox
 
-EphemeralOS is a Rust agent harness — the runtime, persisted state, model-facing
-tools, and sandbox substrate that turn an LLM into a working agent. It is
-organized as two Cargo workspaces: an **agent control plane** (`agent-core/`)
-and a **sandbox substrate** (`sandbox/`).
-
-Rust is the only implementation; the workspaces target Rust 2021 with
-`rust-version = "1.85"`.
-
-## Layout
+One host-side API process fronting a fleet of Docker sandboxes, each running
+one in-container daemon. External callers reach exactly one socket; the
+per-sandbox daemons are unreachable from outside the host. The full target
+architecture is `docs/SPEC.md`.
 
 ```
-agent-core/crates/                    # Agent control plane
-  eos-runtime                         # Request bootstrap and root-agent entry
-  eos-engine                          # Query loop, streaming executor, tool dispatch, background supervisor
-  eos-workflow                        # Delegated workflow lifecycle, attempts, context packets, plan DAG
-  eos-tools                           # Model-facing tools (sandbox, skills, subagent, submissions)
-  eos-state / eos-db                  # Persisted request/task/workflow state DTOs and SQL stores
-  eos-sandbox-gateway / eos-sandbox-host  # Host-side sandbox entry point, protocol, and lifecycle
-  eos-agent-def / eos-skills / eos-plugin-catalog  # Agent profiles, skills, and the plugin catalog
-  eos-llm-client                      # Provider client and streaming
-  eos-config / eos-types              # Configuration and shared id/timestamp/json/error primitives
-  eos-audit / eos-obs-collector       # Write-only audit side channel and reader-side normalization
-  eos-testkit                         # Shared test doubles (dev-only)
-
-sandbox/crates/                       # Sandbox substrate
-  eosd                                # Daemon binary
-  eos-daemon                          # Daemon RPC, dispatch, command/plugin/isolated routing
-  eos-protocol                        # Shared wire protocol
-  eos-layerstack / eos-occ            # LayerStack and optimistic concurrency control
-  eos-overlay / eos-runner            # Overlay execution and namespace runner
-  eos-command-session / eos-ns-holder # Command sessions and namespace holder
-  eos-workspace-api                   # Workspace API surface
-  eos-ephemeral-workspace / eos-isolated-workspace  # Shared and isolated workspace lifecycle
-  eos-plugin                          # Plugin PPC
-  eos-config                          # Sandbox config
-  eos-e2e-test                        # Protocol-level end-to-end suite over a live eosd
-
-.eos-agents/                          # Shipped agent profiles and their coupled skills
-docs/architecture/                    # Maintained architecture and codebase-memory bundle
+caller
+   │  UDS, newline-delimited JSON, one request per connection
+   ▼
+gateway (bin, host) receive → gate → route → return. No fleet logic.
+   │ in-process calls
+   ▼
+host   (lib, host)   owns and reaches sandboxes: host engine,
+   │                             protocol, runtime.
+   │  loopback TCP (docker-published port) + auth token; `docker exec` fallback
+   ▼
+eosd / daemon  (bin+lib, in-container)   executes in-box ops: files (layer
+                                 stack + OCC), commands (PTY), isolated
+                                 workspaces, plugins (PPC), audit, checkpoint.
 ```
 
-## Build
+| Component | Kind | Job | Must never |
+|---|---|---|---|
+| `gateway` | bin | decode requests, enforce visibility, route by catalog, return response | contain fleet logic or per-op branches |
+| `host` | lib | host engine, duplicated protocol client, Docker runtime | depend on a workspace-internal crate |
+| `eosd` / `daemon` | bin+lib | dispatch and execute the in-box op catalog | know about Docker, sandbox_ids, or the fleet |
+| `crates/operation/ops.json` | data | reviewed static op catalog | drift from `eosd dump-ops` |
+| `contract/` | data | protocol fixtures and prose | contain code |
+| `layerstack` | lib (in-box) | the two frozen content hashes + manifest/layer types, storage, leases, checkpoint squashing | be depended on by host-side crates |
 
-The two workspaces build independently:
+**Isolation law:** no compiled code is shared across the host/box boundary.
+The shared artifacts are `crates/operation/ops.json` plus `contract/`
+(fixtures + prose); both sides prove conformance against them, and
+`cargo run -p xtask -- check-contract` is the drift gate.
 
-```bash
-(cd agent-core && cargo build)
-(cd sandbox && cargo build)
+## The pieces
+
+- `crates/operation/ops.json` — the op catalog: canonical `sandbox.*`
+  names, visibility, routing metadata, and protocol version.
+- `contract/` — `PROTOCOL.md` (framing/auth/errors/canonicalization) and the
+  immutable golden fixtures.
+- `crates/` — the workspace. Host side: `gateway`,
+  `host`. Box
+  side: `eosd` (binary), `daemon` (server + `wire/` protocol),
+  `layerstack`, `overlay`, `namespace`, `command`,
+  `operation`, `workspace`, and `plugin`.
+- `docs/API.md` — the public op reference, generated from
+  `crates/operation/ops.json` (`cargo run -p xtask -- gen-docs`).
+- `docs/contract/` — the frozen historical wire/CAS/audit contracts.
+- `config/prd.yml` — the single daemon config baseline (see `config/README.md`).
+- `dist/` — packaged static `eosd` binaries uploaded into sandbox containers.
+
+## Common tasks
+
+```sh
+# the contract drift gate (CI-required)
+cargo run -p xtask -- check-contract
+
+# regenerate the catalog artifact and its rendered doc after editing
+# protocol::catalog
+cargo run -p eosd -- dump-ops > crates/operation/ops.json
+cargo run -p xtask -- gen-docs
+
+# package the in-container daemon binary (dist/eosd-linux-amd64)
+cargo run -p xtask -- package
+
+# live end-to-end suite against real Docker sandboxes
+cargo run -p e2e-test --bin e2e-runner -- \
+    --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4
+
+# serve the sandbox gateway (one client socket + one operator socket beside it)
+cargo run -p gateway -- serve --listen /tmp/eos-sandbox.sock \
+    --image <docker-image> --platform linux/amd64
+printf '%s\n' '{"op":"sandbox.checkpoint.layer_metrics","sandbox_id":"<sb-id>","invocation_id":"probe-1","args":{"layer_stack_root":"/eos/layer-stack"}}' \
+    | socat - UNIX-CONNECT:/tmp/eos-sandbox.sock.operator
 ```
 
-## Test
+## Version pins
 
-Run scoped tests from the owning workspace:
-
-```bash
-cd agent-core && cargo test -p eos-engine     # a single crate
-cd sandbox    && cargo test -p eos-daemon
-```
-
-## Architecture
-
-`docs/architecture/index.html` is the maintained codebase-memory and
-architecture bundle. It links the module pages for the workflow, agent loops,
-tools, and sandbox subsystems, each documenting ownership, invariants, and
-refresh triggers.
-
-## Contributing
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md).
-
-## License
-
-MIT.
+`CONTRACT.md` pins the wire protocol version and the on-disk manifest schema
+version, and documents the bump procedure. The golden fixtures under
+`contract/fixtures/` are immutable ground truth — never regenerate them to
+match code.

@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>host · src/trace_store/schema.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>host File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>23</b><span>modules</span></div>
+  <div><b>215</b><span>items</span></div>
+  <div><b>363</b><span>fields</span></div>
+  <div><b>115</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">host</span><ul class="file-tree"><li><a class="file-link" href="host.html"><span>drain.rs</span><small>3/10</small></a></li><li><span class="folder">forward</span><ul class="file-tree"><li><a class="file-link" href="host--src-host-forward-audit-rs.html"><span>audit.rs</span><small>0/3</small></a></li><li><a class="file-link" href="host--src-host-forward-recovery-rs.html"><span>recovery.rs</span><small>0/6</small></a></li><li><a class="file-link" href="host--src-host-forward-response-meta-rs.html"><span>response_meta.rs</span><small>0/3</small></a></li><li><a class="file-link" href="host--src-host-forward-trace-ingest-rs.html"><span>trace_ingest.rs</span><small>1/2</small></a></li></ul></li><li><a class="file-link" href="host--src-host-forward-rs.html"><span>forward.rs</span><small>3/12</small></a></li><li><a class="file-link" href="host--src-host-mod-rs.html"><span>mod.rs</span><small>6/6</small></a></li><li><a class="file-link" href="host--src-host-registry-rs.html"><span>registry.rs</span><small>6/2</small></a></li></ul></li><li><a class="file-link" href="host--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-protocol-rs.html"><span>protocol.rs</span><small>6/17</small></a></li><li><a class="file-link" href="host--src-runtime-rs.html"><span>runtime.rs</span><small>6/27</small></a></li><li><span class="folder">trace_store</span><ul class="file-tree"><li><a class="file-link" href="host--src-trace-store-audit-rs.html"><span>audit.rs</span><small>2/4</small></a></li><li><a class="file-link" href="host--src-trace-store-events-rs.html"><span>events.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-ingest-rs.html"><span>ingest.rs</span><small>0/3</small></a></li><li><a class="file-link" href="host--src-trace-store-mod-rs.html"><span>mod.rs</span><small>2/4</small></a></li><li><a class="file-link" href="host--src-trace-store-payload-rs.html"><span>payload.rs</span><small>6/2</small></a></li><li><a class="file-link" href="host--src-trace-store-projection-rs.html"><span>projection.rs</span><small>1/8</small></a></li><li><a class="file-link" href="host--src-trace-store-query-rs.html"><span>query.rs</span><small>9/15</small></a></li><li><a class="file-link" href="host--src-trace-store-read-rs.html"><span>read.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-response-rs.html"><span>response.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="host--src-trace-store-schema-rs.html"><span>schema.rs</span><small>0/2</small></a></li><li><a class="file-link" href="host--src-trace-store-sidecar-rs.html"><span>sidecar.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-types-rs.html"><span>types.rs</span><small>12/1</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="trace_store::schema crates/host/src/trace_store/schema.rs initialize apply_pragmas">
+  <div class="module-head">
+    <div>
+      <h2>src/trace_store/schema.rs</h2>
+      <p class="path">module <code>trace_store::schema</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>2 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-initialize-9" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn initialize pub(super) pub(super) fn initialize (conn : &amp; Connection) -&gt; Result &lt; () , TraceStoreError &gt; crates/host/src/trace_store/schema.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>initialize</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-schema-rs.html#item-fn-initialize-9">initialize</a> (conn : &amp; Connection) -&gt; Result &lt; () , <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-schema-rs.html#item-fn-initialize-9">initialize</a>(conn: &amp;<span class="rs-type">Connection</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <a class="symbol-link rs-fn" href="host--src-trace-store-schema-rs.html#item-fn-apply-pragmas-23">apply_pragmas</a>(conn)?;
+    <span class="rs-kw">let</span> version: u32 = conn.pragma_query_value(<span class="rs-type">None</span>, &quot;user_version&quot;, |row| row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0))?;
+    <span class="rs-kw">if</span> version &gt; <span class="rs-type">STORE_SCHEMA_VERSION</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>::<span class="rs-type">NewerSchema</span> {
+            found: version,
+            supported: <span class="rs-type">STORE_SCHEMA_VERSION</span>,
+        });
+    }
+    conn.execute_batch(<span class="rs-type">DDL</span>)?;
+    conn.pragma_update(<span class="rs-type">None</span>, &quot;user_version&quot;, <span class="rs-type">STORE_SCHEMA_VERSION</span>)?;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/schema.rs:9</p>
+</article><article id="item-fn-apply-pragmas-23" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn apply_pragmas private fn apply_pragmas (conn : &amp; Connection) -&gt; Result &lt; () , rusqlite :: Error &gt; crates/host/src/trace_store/schema.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>apply_pragmas</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="host--src-trace-store-schema-rs.html#item-fn-apply-pragmas-23">apply_pragmas</a> (conn : &amp; Connection) -&gt; Result &lt; () , rusqlite :: Error &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-schema-rs.html#item-fn-apply-pragmas-23">apply_pragmas</a>(conn: &amp;<span class="rs-type">Connection</span>) -&gt; <span class="rs-type">Result</span>&lt;(), rusqlite::<span class="rs-type">Error</span>&gt; {
+    conn.busy_timeout(<span class="rs-type">Duration</span>::from_secs(30))?;
+    conn.pragma_update(<span class="rs-type">None</span>, &quot;journal_mode&quot;, &quot;<span class="rs-type">WAL</span>&quot;)?;
+    conn.pragma_update(<span class="rs-type">None</span>, &quot;synchronous&quot;, &quot;<span class="rs-type">FULL</span>&quot;)?;
+    conn.pragma_update(<span class="rs-type">None</span>, &quot;foreign_keys&quot;, &quot;<span class="rs-type">ON</span>&quot;)?;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/schema.rs:23</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/host/src/trace_store/schema.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::time::<span class="rs-type">Duration</span>;
+
+<span class="rs-kw">use</span> rusqlite::<span class="rs-type">Connection</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">STORE_SCHEMA_VERSION</span>: u32 = 3;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-schema-rs.html#item-fn-initialize-9">initialize</a>(conn: &amp;<span class="rs-type">Connection</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <a class="symbol-link rs-fn" href="host--src-trace-store-schema-rs.html#item-fn-apply-pragmas-23">apply_pragmas</a>(conn)?;
+    <span class="rs-kw">let</span> version: u32 = conn.pragma_query_value(<span class="rs-type">None</span>, &quot;user_version&quot;, |row| row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0))?;
+    <span class="rs-kw">if</span> version &gt; <span class="rs-type">STORE_SCHEMA_VERSION</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>::<span class="rs-type">NewerSchema</span> {
+            found: version,
+            supported: <span class="rs-type">STORE_SCHEMA_VERSION</span>,
+        });
+    }
+    conn.execute_batch(<span class="rs-type">DDL</span>)?;
+    conn.pragma_update(<span class="rs-type">None</span>, &quot;user_version&quot;, <span class="rs-type">STORE_SCHEMA_VERSION</span>)?;
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-schema-rs.html#item-fn-apply-pragmas-23">apply_pragmas</a>(conn: &amp;<span class="rs-type">Connection</span>) -&gt; <span class="rs-type">Result</span>&lt;(), rusqlite::<span class="rs-type">Error</span>&gt; {
+    conn.busy_timeout(<span class="rs-type">Duration</span>::from_secs(30))?;
+    conn.pragma_update(<span class="rs-type">None</span>, &quot;journal_mode&quot;, &quot;<span class="rs-type">WAL</span>&quot;)?;
+    conn.pragma_update(<span class="rs-type">None</span>, &quot;synchronous&quot;, &quot;<span class="rs-type">FULL</span>&quot;)?;
+    conn.pragma_update(<span class="rs-type">None</span>, &quot;foreign_keys&quot;, &quot;<span class="rs-type">ON</span>&quot;)?;
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">const</span> <span class="rs-type">DDL</span>: &amp;str = r#&quot;
+<span class="rs-type">CREATE</span> <span class="rs-type">TABLE</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> audit_entries (
+  audit_seq             <span class="rs-type">INTEGER</span> <span class="rs-type">PRIMARY</span> <span class="rs-type">KEY</span> <span class="rs-type">AUTOINCREMENT</span>,
+  sandbox_id            <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  trace_id              <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  request_id            <span class="rs-type">TEXT</span>,
+  entry_kind            <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  schema_name           <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  schema_version        <span class="rs-type">INTEGER</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  received_at_ms        <span class="rs-type">INTEGER</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  payload               <span class="rs-type">BLOB</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  payload_sha256        <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  prev_global_sha256    <span class="rs-type">TEXT</span>,
+  prev_sandbox_sha256   <span class="rs-type">TEXT</span>,
+  entry_sha256          <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span> <span class="rs-type">UNIQUE</span>
+);
+<span class="rs-type">CREATE</span> <span class="rs-type">TABLE</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> <a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-trace-requests-326">trace_requests</a> (
+  request_id       <span class="rs-type">TEXT</span> <span class="rs-type">PRIMARY</span> <span class="rs-type">KEY</span>,
+  trace_id         <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  sandbox_id       <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  op               <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  family           <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  caller_id        <span class="rs-type">TEXT</span>,
+  args_summary     <span class="rs-type">TEXT</span>,
+  args_digest      <span class="rs-type">TEXT</span>,
+  workspace_route  <span class="rs-type">TEXT</span> <span class="rs-type">CHECK</span> (workspace_route <span class="rs-type">IN</span>
+    (&#x27;ephemeral_workspace&#x27;,&#x27;isolated_workspace&#x27;,&#x27;fast_path&#x27;,&#x27;none&#x27;) <span class="rs-type">OR</span> workspace_route <span class="rs-type">IS</span> <span class="rs-type">NULL</span>),
+  status           <span class="rs-type">TEXT</span>,
+  error_kind       <span class="rs-type">TEXT</span>,
+  sent_at_ms       <span class="rs-type">INTEGER</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  received_at_ms   <span class="rs-type">INTEGER</span>,
+  host_rtt_ms      <span class="rs-type">INTEGER</span>,
+  duration_us      <span class="rs-type">INTEGER</span>,
+  daemon_boot_id   <span class="rs-type">TEXT</span>,
+  host_boot_id     <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  modules_touched  <span class="rs-type">TEXT</span>,
+  response_digest  <span class="rs-type">TEXT</span>,
+  response_len     <span class="rs-type">INTEGER</span>,
+  response_summary <span class="rs-type">TEXT</span>
+);
+<span class="rs-type">CREATE</span> <span class="rs-type">TABLE</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> trace_spans (
+  trace_id        <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  request_id      <span class="rs-type">TEXT</span>,
+  span_id         <span class="rs-type">INTEGER</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  parent_span_id  <span class="rs-type">INTEGER</span>,
+  kind            <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  subsystem       <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  status          <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span> <span class="rs-type">DEFAULT</span> &#x27;ok&#x27;,
+  started_us      <span class="rs-type">INTEGER</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  duration_us     <span class="rs-type">INTEGER</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  fields_json     <span class="rs-type">TEXT</span>,
+  <span class="rs-type">PRIMARY</span> <span class="rs-type">KEY</span> (trace_id, span_id)
+);
+<span class="rs-type">CREATE</span> <span class="rs-type">TABLE</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> trace_events (
+  trace_id    <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  seq         <span class="rs-type">INTEGER</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  request_id  <span class="rs-type">TEXT</span>,
+  span_id     <span class="rs-type">INTEGER</span>,
+  module      <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  event       <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  level       <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span> <span class="rs-type">DEFAULT</span> &#x27;info&#x27;,
+  ts_us       <span class="rs-type">INTEGER</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  details_json <span class="rs-type">TEXT</span>,
+  <span class="rs-type">PRIMARY</span> <span class="rs-type">KEY</span> (trace_id, seq)
+);
+<span class="rs-type">CREATE</span> <span class="rs-type">TABLE</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> trace_resources (
+  trace_id <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>, request_id <span class="rs-type">TEXT</span>, span_id <span class="rs-type">INTEGER</span>,
+  ts_us <span class="rs-type">INTEGER</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>, kind <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>, values_json <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>
+);
+<span class="rs-type">CREATE</span> <span class="rs-type">TABLE</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> trace_links (
+  trace_id  <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  link_kind <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  link_id   <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  request_id <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span> <span class="rs-type">DEFAULT</span> &#x27;&#x27;,
+  <span class="rs-type">PRIMARY</span> <span class="rs-type">KEY</span> (trace_id, link_kind, link_id, request_id)
+);
+<span class="rs-type">CREATE</span> <span class="rs-type">TABLE</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> sandbox_heartbeats (
+  sandbox_id        <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  ts_ms             <span class="rs-type">INTEGER</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  daemon_boot_id    <span class="rs-type">TEXT</span>,
+  reachable         <span class="rs-type">INTEGER</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  uptime_s          <span class="rs-type">REAL</span>,
+  manifest_version  <span class="rs-type">INTEGER</span>, manifest_depth <span class="rs-type">INTEGER</span>,
+  active_leases     <span class="rs-type">INTEGER</span>, storage_bytes <span class="rs-type">INTEGER</span>, layer_dirs <span class="rs-type">INTEGER</span>, staging_dirs <span class="rs-type">INTEGER</span>,
+  open_isolated     <span class="rs-type">INTEGER</span>, overlay_mounts <span class="rs-type">INTEGER</span>,
+  active_commands   <span class="rs-type">INTEGER</span>, running_commands <span class="rs-type">INTEGER</span>, completed_unclaimed_commands <span class="rs-type">INTEGER</span>,
+  plugin_services_ok <span class="rs-type">INTEGER</span>, plugin_services_failed <span class="rs-type">INTEGER</span>,
+  cpu_usage_usec    <span class="rs-type">INTEGER</span>, cpu_throttled_usec <span class="rs-type">INTEGER</span>, cpu_nr_throttled <span class="rs-type">INTEGER</span>,
+  memory_current_bytes <span class="rs-type">INTEGER</span>, memory_peak_bytes <span class="rs-type">INTEGER</span>,
+  memory_oom_events <span class="rs-type">INTEGER</span>, memory_oom_kill_events <span class="rs-type">INTEGER</span>,
+  io_rbytes         <span class="rs-type">INTEGER</span>, io_wbytes <span class="rs-type">INTEGER</span>, process_rss_bytes <span class="rs-type">INTEGER</span>,
+  inflight_requests <span class="rs-type">INTEGER</span>, spool_pending <span class="rs-type">INTEGER</span>, spool_dropped_total <span class="rs-type">INTEGER</span>,
+  details_json      <span class="rs-type">TEXT</span>,
+  <span class="rs-type">PRIMARY</span> <span class="rs-type">KEY</span> (sandbox_id, ts_ms)
+);
+<span class="rs-type">CREATE</span> <span class="rs-type">TABLE</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> pending_trace_sidecars (
+  id              <span class="rs-type">INTEGER</span> <span class="rs-type">PRIMARY</span> <span class="rs-type">KEY</span> <span class="rs-type">AUTOINCREMENT</span>,
+  sandbox_id      <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  trace_id        <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  request_id      <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  batch           <span class="rs-type">BLOB</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  first_error     <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  last_error      <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  retry_count     <span class="rs-type">INTEGER</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span> <span class="rs-type">DEFAULT</span> 0,
+  created_at_ms   <span class="rs-type">INTEGER</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  updated_at_ms   <span class="rs-type">INTEGER</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>
+);
+<span class="rs-type">CREATE</span> <span class="rs-type">TABLE</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> trace_spool_drop_cursors (
+  sandbox_id            <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  daemon_boot_id        <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  dropped_traces_total  <span class="rs-type">INTEGER</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  updated_at_ms         <span class="rs-type">INTEGER</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  <span class="rs-type">PRIMARY</span> <span class="rs-type">KEY</span> (sandbox_id, daemon_boot_id)
+);
+<span class="rs-type">CREATE</span> <span class="rs-type">TABLE</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> trace_export_batches (
+  export_id       <span class="rs-type">TEXT</span> <span class="rs-type">PRIMARY</span> <span class="rs-type">KEY</span>,
+  sandbox_id      <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  daemon_boot_id  <span class="rs-type">TEXT</span>,
+  batch_sha256    <span class="rs-type">TEXT</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  record_count    <span class="rs-type">INTEGER</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  ingested_at_ms  <span class="rs-type">INTEGER</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>,
+  acked_at_ms     <span class="rs-type">INTEGER</span>,
+  retry_count     <span class="rs-type">INTEGER</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span> <span class="rs-type">DEFAULT</span> 0,
+  last_ack_error  <span class="rs-type">TEXT</span>
+);
+<span class="rs-type">CREATE</span> <span class="rs-type">INDEX</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> idx_hb_time         <span class="rs-type">ON</span> sandbox_heartbeats(ts_ms);
+<span class="rs-type">CREATE</span> <span class="rs-type">INDEX</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> idx_audit_trace     <span class="rs-type">ON</span> audit_entries(trace_id, audit_seq);
+<span class="rs-type">CREATE</span> <span class="rs-type">INDEX</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> idx_audit_sandbox   <span class="rs-type">ON</span> audit_entries(sandbox_id, audit_seq);
+<span class="rs-type">CREATE</span> <span class="rs-type">INDEX</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> idx_audit_request   <span class="rs-type">ON</span> audit_entries(request_id);
+<span class="rs-type">CREATE</span> <span class="rs-type">INDEX</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> idx_requests_trace  <span class="rs-type">ON</span> <a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-trace-requests-326">trace_requests</a>(trace_id);
+<span class="rs-type">CREATE</span> <span class="rs-type">INDEX</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> idx_requests_sent   <span class="rs-type">ON</span> <a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-trace-requests-326">trace_requests</a>(sent_at_ms);
+<span class="rs-type">CREATE</span> <span class="rs-type">INDEX</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> idx_requests_status <span class="rs-type">ON</span> <a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-trace-requests-326">trace_requests</a>(status);
+<span class="rs-type">CREATE</span> <span class="rs-type">INDEX</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> idx_spans_kind      <span class="rs-type">ON</span> trace_spans(kind);
+<span class="rs-type">CREATE</span> <span class="rs-type">INDEX</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> idx_spans_request   <span class="rs-type">ON</span> trace_spans(request_id);
+<span class="rs-type">CREATE</span> <span class="rs-type">INDEX</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> idx_events_request  <span class="rs-type">ON</span> trace_events(request_id);
+<span class="rs-type">CREATE</span> <span class="rs-type">INDEX</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> idx_resources_trace <span class="rs-type">ON</span> trace_resources(trace_id, ts_us);
+<span class="rs-type">CREATE</span> <span class="rs-type">INDEX</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> idx_resources_request_span_kind <span class="rs-type">ON</span> trace_resources(request_id, span_id, kind);
+<span class="rs-type">CREATE</span> <span class="rs-type">INDEX</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> idx_links_id       <span class="rs-type">ON</span> trace_links(link_kind, link_id);
+<span class="rs-type">CREATE</span> <span class="rs-type">INDEX</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> idx_events_span    <span class="rs-type">ON</span> trace_events(trace_id, span_id);
+<span class="rs-type">CREATE</span> <span class="rs-type">INDEX</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> idx_events_event   <span class="rs-type">ON</span> trace_events(event);
+<span class="rs-type">CREATE</span> <span class="rs-type">INDEX</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> idx_pending_sidecar_request <span class="rs-type">ON</span> pending_trace_sidecars(request_id);
+<span class="rs-type">CREATE</span> <span class="rs-type">INDEX</span> <span class="rs-type">IF</span> <span class="rs-type">NOT</span> <span class="rs-type">EXISTS</span> idx_trace_export_batches_sandbox <span class="rs-type">ON</span> trace_export_batches(sandbox_id, ingested_at_ms);
+&quot;#;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

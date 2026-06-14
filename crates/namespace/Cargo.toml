@@ -1,0 +1,24 @@
+[package]
+name = "namespace"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+config.workspace = true
+overlay.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+libc.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+nix = { workspace = true, features = ["signal"] }
+rustix.workspace = true
+
+[dev-dependencies]
+nix.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>host · src/trace_store/projection.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>host File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>23</b><span>modules</span></div>
+  <div><b>215</b><span>items</span></div>
+  <div><b>363</b><span>fields</span></div>
+  <div><b>115</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">host</span><ul class="file-tree"><li><a class="file-link" href="host.html"><span>drain.rs</span><small>3/10</small></a></li><li><span class="folder">forward</span><ul class="file-tree"><li><a class="file-link" href="host--src-host-forward-audit-rs.html"><span>audit.rs</span><small>0/3</small></a></li><li><a class="file-link" href="host--src-host-forward-recovery-rs.html"><span>recovery.rs</span><small>0/6</small></a></li><li><a class="file-link" href="host--src-host-forward-response-meta-rs.html"><span>response_meta.rs</span><small>0/3</small></a></li><li><a class="file-link" href="host--src-host-forward-trace-ingest-rs.html"><span>trace_ingest.rs</span><small>1/2</small></a></li></ul></li><li><a class="file-link" href="host--src-host-forward-rs.html"><span>forward.rs</span><small>3/12</small></a></li><li><a class="file-link" href="host--src-host-mod-rs.html"><span>mod.rs</span><small>6/6</small></a></li><li><a class="file-link" href="host--src-host-registry-rs.html"><span>registry.rs</span><small>6/2</small></a></li></ul></li><li><a class="file-link" href="host--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-protocol-rs.html"><span>protocol.rs</span><small>6/17</small></a></li><li><a class="file-link" href="host--src-runtime-rs.html"><span>runtime.rs</span><small>6/27</small></a></li><li><span class="folder">trace_store</span><ul class="file-tree"><li><a class="file-link" href="host--src-trace-store-audit-rs.html"><span>audit.rs</span><small>2/4</small></a></li><li><a class="file-link" href="host--src-trace-store-events-rs.html"><span>events.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-ingest-rs.html"><span>ingest.rs</span><small>0/3</small></a></li><li><a class="file-link" href="host--src-trace-store-mod-rs.html"><span>mod.rs</span><small>2/4</small></a></li><li><a class="file-link" href="host--src-trace-store-payload-rs.html"><span>payload.rs</span><small>6/2</small></a></li><li><a class="file-link active" href="host--src-trace-store-projection-rs.html"><span>projection.rs</span><small>1/8</small></a></li><li><a class="file-link" href="host--src-trace-store-query-rs.html"><span>query.rs</span><small>9/15</small></a></li><li><a class="file-link" href="host--src-trace-store-read-rs.html"><span>read.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-response-rs.html"><span>response.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-schema-rs.html"><span>schema.rs</span><small>0/2</small></a></li><li><a class="file-link" href="host--src-trace-store-sidecar-rs.html"><span>sidecar.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-types-rs.html"><span>types.rs</span><small>12/1</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="trace_store::projection crates/host/src/trace_store/projection.rs ProjectRequestStart project_request_start_tx project_trace_degraded_tx project_trace_batch_tx project_request_rollup_tx project_host_trace_event_tx project_response_persisted_tx next_trace_seq serde_label">
+  <div class="module-head">
+    <div>
+      <h2>src/trace_store/projection.rs</h2>
+      <p class="path">module <code>trace_store::projection</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>0 impls</span>
+      <span>8 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-ProjectRequestStart-7" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ProjectRequestStart pub(super) pub(super) struct ProjectRequestStart&lt; 'a &gt; crates/host/src/trace_store/projection.rs sandbox_id &amp; 'a str trace_id &amp; 'a str request_id &amp; 'a str op &amp; 'a str family &amp; 'a str caller_id Option &lt; &amp; 'a str &gt; args_summary &amp; 'a str args_digest &amp; 'a str sent_at_ms u64 host_boot_id &amp; 'a str ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ProjectRequestStart</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) struct <a class="symbol-link" href="host--src-trace-store-projection-rs.html#item-struct-ProjectRequestStart-7">ProjectRequestStart</a>&lt; &#x27;a &gt;</code>
+  <div class="tags"><span>dto</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(super)</td><td>sandbox_id</td><td><code>&amp; &#x27;a str</code></td></tr><tr><td>pub(super)</td><td>trace_id</td><td><code>&amp; &#x27;a str</code></td></tr><tr><td>pub(super)</td><td>request_id</td><td><code>&amp; &#x27;a str</code></td></tr><tr><td>pub(super)</td><td>op</td><td><code>&amp; &#x27;a str</code></td></tr><tr><td>pub(super)</td><td>family</td><td><code>&amp; &#x27;a str</code></td></tr><tr><td>pub(super)</td><td>caller_id</td><td><code>Option &lt; &amp; &#x27;a str &gt;</code></td></tr><tr><td>pub(super)</td><td>args_summary</td><td><code>&amp; &#x27;a str</code></td></tr><tr><td>pub(super)</td><td>args_digest</td><td><code>&amp; &#x27;a str</code></td></tr><tr><td>pub(super)</td><td>sent_at_ms</td><td><code>u64</code></td></tr><tr><td>pub(super)</td><td>host_boot_id</td><td><code>&amp; &#x27;a str</code></td></tr></tbody></table>
+
+  <p class="source">crates/host/src/trace_store/projection.rs:7</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-project-request-start-tx-20" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn project_request_start_tx pub(super) pub(super) fn project_request_start_tx (tx : &amp; Transaction &lt; '_ &gt; , row : ProjectRequestStart &lt; '_ &gt; ,) -&gt; Result &lt; () , rusqlite :: Error &gt; crates/host/src/trace_store/projection.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>project_request_start_tx</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-projection-rs.html#item-fn-project-request-start-tx-20">project_request_start_tx</a> (tx : &amp; Transaction &lt; &#x27;_ &gt; , row : <a class="symbol-link" href="host--src-trace-store-projection-rs.html#item-struct-ProjectRequestStart-7">ProjectRequestStart</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; () , rusqlite :: Error &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-project-request-start-tx-20">project_request_start_tx</a>(
+    tx: &amp;<span class="rs-type">Transaction</span>&lt;&#x27;_&gt;,
+    row: <a class="symbol-link rs-type" href="host--src-trace-store-projection-rs.html#item-struct-ProjectRequestStart-7">ProjectRequestStart</a>&lt;&#x27;_&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;(), rusqlite::<span class="rs-type">Error</span>&gt; {
+    tx.execute(
+        &quot;<span class="rs-type">INSERT</span> <span class="rs-type">OR</span> <span class="rs-type">REPLACE</span> <span class="rs-type">INTO</span> trace_requests
+         (request_id, trace_id, sandbox_id, op, family, caller_id, args_summary,
+          args_digest, sent_at_ms, host_boot_id)
+         <span class="rs-type">VALUES</span> (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)&quot;,
+        params![
+            row.request_id,
+            row.trace_id,
+            row.sandbox_id,
+            row.op,
+            row.family,
+            row.caller_id,
+            row.args_summary,
+            row.args_digest,
+            row.sent_at_ms,
+            row.host_boot_id,
+        ],
+    )?;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/projection.rs:20</p>
+</article><article id="item-fn-project-trace-degraded-tx-45" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn project_trace_degraded_tx pub(super) pub(super) fn project_trace_degraded_tx (tx : &amp; Transaction &lt; '_ &gt; , payload : &amp; TraceDegradedPayload ,) -&gt; Result &lt; () , rusqlite :: Error &gt; crates/host/src/trace_store/projection.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>project_trace_degraded_tx</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-projection-rs.html#item-fn-project-trace-degraded-tx-45">project_trace_degraded_tx</a> (tx : &amp; Transaction &lt; &#x27;_ &gt; , payload : &amp; <a class="symbol-link" href="host--src-trace-store-payload-rs.html#item-struct-TraceDegradedPayload-17">TraceDegradedPayload</a> ,) -&gt; Result &lt; () , rusqlite :: Error &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-project-trace-degraded-tx-45">project_trace_degraded_tx</a>(
+    tx: &amp;<span class="rs-type">Transaction</span>&lt;&#x27;_&gt;,
+    payload: &amp;<a class="symbol-link rs-type" href="host--src-trace-store-payload-rs.html#item-struct-TraceDegradedPayload-17">TraceDegradedPayload</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;(), rusqlite::<span class="rs-type">Error</span>&gt; {
+    <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-project-request-start-tx-20">project_request_start_tx</a>(
+        tx,
+        <a class="symbol-link rs-type" href="host--src-trace-store-projection-rs.html#item-struct-ProjectRequestStart-7">ProjectRequestStart</a> {
+            sandbox_id: &amp;payload.sandbox_id,
+            trace_id: &amp;payload.trace_id,
+            request_id: &amp;payload.request_id,
+            op: &amp;payload.op,
+            family: &amp;payload.family,
+            caller_id: payload.caller_id.as_deref(),
+            args_summary: &amp;payload.args_summary,
+            args_digest: &amp;payload.args_digest,
+            sent_at_ms: payload.sent_at_ms,
+            host_boot_id: &amp;payload.host_boot_id,
+        },
+    )?;
+    tx.execute(
+        &quot;<span class="rs-type">UPDATE</span> trace_requests
+         <span class="rs-type">SET</span> status=&#x27;trace_degraded&#x27;, error_kind=?2, response_summary=?3
+         <span class="rs-type">WHERE</span> request_id=?1&quot;,
+        params![payload.request_id, payload.error_kind, payload.message],
+    )?;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/projection.rs:45</p>
+</article><article id="item-fn-project-trace-batch-tx-73" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn project_trace_batch_tx pub(super) pub(super) fn project_trace_batch_tx (tx : &amp; Transaction &lt; '_ &gt; , batch : &amp; trace :: TraceBatch ,) -&gt; Result &lt; () , rusqlite :: Error &gt; crates/host/src/trace_store/projection.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>project_trace_batch_tx</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-projection-rs.html#item-fn-project-trace-batch-tx-73">project_trace_batch_tx</a> (tx : &amp; Transaction &lt; &#x27;_ &gt; , batch : &amp; trace :: TraceBatch ,) -&gt; Result &lt; () , rusqlite :: Error &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-project-trace-batch-tx-73">project_trace_batch_tx</a>(
+    tx: &amp;<span class="rs-type">Transaction</span>&lt;&#x27;_&gt;,
+    batch: &amp;trace::<span class="rs-type">TraceBatch</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;(), rusqlite::<span class="rs-type">Error</span>&gt; {
+    <span class="rs-kw">let</span> daemon_boot_id = batch
+        .daemon_boot_id
+        .as_deref()
+        .filter(|boot_id| !boot_id.is_empty());
+    <span class="rs-kw">for</span> record <span class="rs-kw">in</span> &amp;batch.records {
+        <span class="rs-kw">let</span> trace_id = record.trace_id.to_string();
+        <span class="rs-kw">let</span> request_id = record.request_id.as_ref().map(<span class="rs-type">ToString</span>::to_string);
+        <span class="rs-kw">for</span> span <span class="rs-kw">in</span> &amp;record.spans {
+            tx.execute(
+                &quot;<span class="rs-type">INSERT</span> <span class="rs-type">OR</span> <span class="rs-type">REPLACE</span> <span class="rs-type">INTO</span> trace_spans
+                 (trace_id, request_id, span_id, parent_span_id, kind, subsystem, status,
+                  started_us, duration_us, fields_json)
+                 <span class="rs-type">VALUES</span> (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)&quot;,
+                params![
+                    trace_id,
+                    request_id,
+                    <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a>(span.span_id.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>()),
+                    span.parent_span_id.map(|id| <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a>(id.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>())),
+                    <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-serde-label-274">serde_label</a>(span.kind),
+                    <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-serde-label-274">serde_label</a>(span.subsystem),
+                    span.status.map_or_else(|| &quot;ok&quot;.to_owned(), serde_label),
+                    <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a>(span.started_at_unix_ms.saturating_mul(1000)),
+                    <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a>(span.duration_us),
+                    span.fields.encoded_value(),
+                ],
+            )?;
+        }
+        <span class="rs-kw">for</span> event <span class="rs-kw">in</span> &amp;record.events {
+            <span class="rs-kw">let</span> seq = <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-next-trace-seq-266">next_trace_seq</a>(tx, &amp;trace_id)?;
+            tx.execute(
+                &quot;<span class="rs-type">INSERT</span> <span class="rs-type">INTO</span> trace_events
+                 (trace_id, seq, request_id, span_id, module, event, level, ts_us, details_json)
+                 <span class="rs-type">VALUES</span> (?1, ?2, ?3, ?4, ?5, ?6, &#x27;info&#x27;, ?7, ?8)&quot;,
+                params![
+                    trace_id,
+                    seq,
+                    request_id,
+                    <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a>(event.span_id.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>()),
+                    event.module,
+                    event.name,
+                    <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a>(event.at_unix_ms.saturating_mul(1000)),
+                    event.details.encoded_value(),
+                ],
+            )?;
+        }
+        <span class="rs-kw">for</span> resource <span class="rs-kw">in</span> &amp;record.resources {
+            <span class="rs-kw">let</span> values = json!({
+                &quot;phase&quot;: resource.meta.phase,
+                &quot;source&quot;: resource.meta.source,
+                &quot;source_available&quot;: resource.meta.source_available,
+                &quot;read_error&quot;: resource.meta.read_error,
+                &quot;parse_error&quot;: resource.meta.parse_error,
+                &quot;sampler_duration_us&quot;: resource.meta.sampler_duration_us,
+                &quot;inflight_requests&quot;: resource.meta.inflight_requests,
+                &quot;payload&quot;: resource.payload.value,
+            });
+            tx.execute(
+                &quot;<span class="rs-type">INSERT</span> <span class="rs-type">INTO</span> trace_resources
+                 (trace_id, request_id, span_id, ts_us, kind, values_json)
+                 <span class="rs-type">VALUES</span> (?1, ?2, ?3, ?4, ?5, ?6)&quot;,
+                params![
+                    trace_id,
+                    request_id,
+                    resource.span_id.map(|span_id| <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a>(span_id.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>())),
+                    <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a>(record.finished_at_unix_ms.saturating_mul(1000)),
+                    resource.meta.stats_kind.as_str(),
+                    values.to_string(),
+                ],
+            )?;
+        }
+        <span class="rs-kw">for</span> link <span class="rs-kw">in</span> &amp;record.links {
+            <span class="rs-kw">let</span> link_request_id = request_id.as_deref().unwrap_or_default();
+            tx.execute(
+                &quot;<span class="rs-type">INSERT</span> <span class="rs-type">OR</span> <span class="rs-type">IGNORE</span> <span class="rs-type">INTO</span> trace_links
+                 (trace_id, link_kind, link_id, request_id)
+                 <span class="rs-type">VALUES</span> (?1, ?2, ?3, ?4)&quot;,
+                params![
+                    trace_id,
+                    <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-serde-label-274">serde_label</a>(link.kind),
+                    link.value,
+                    link_request_id
+                ],
+            )?;
+        }
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(request_id) = &amp;request_id {
+            <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-project-request-rollup-tx-168">project_request_rollup_tx</a>(tx, request_id, record, daemon_boot_id)?;
+        }
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/projection.rs:73</p>
+</article><article id="item-fn-project-host-trace-event-tx-220" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn project_host_trace_event_tx pub(super) pub(super) fn project_host_trace_event_tx (tx : &amp; Transaction &lt; '_ &gt; , payload : &amp; HostTraceEventPayload ,) -&gt; Result &lt; () , rusqlite :: Error &gt; crates/host/src/trace_store/projection.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>project_host_trace_event_tx</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-projection-rs.html#item-fn-project-host-trace-event-tx-220">project_host_trace_event_tx</a> (tx : &amp; Transaction &lt; &#x27;_ &gt; , payload : &amp; <a class="symbol-link" href="host--src-trace-store-payload-rs.html#item-struct-HostTraceEventPayload-6">HostTraceEventPayload</a> ,) -&gt; Result &lt; () , rusqlite :: Error &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-project-host-trace-event-tx-220">project_host_trace_event_tx</a>(
+    tx: &amp;<span class="rs-type">Transaction</span>&lt;&#x27;_&gt;,
+    payload: &amp;<a class="symbol-link rs-type" href="host--src-trace-store-payload-rs.html#item-struct-HostTraceEventPayload-6">HostTraceEventPayload</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;(), rusqlite::<span class="rs-type">Error</span>&gt; {
+    <span class="rs-kw">let</span> seq = <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-next-trace-seq-266">next_trace_seq</a>(tx, &amp;payload.trace_id)?;
+    tx.execute(
+        &quot;<span class="rs-type">INSERT</span> <span class="rs-type">INTO</span> trace_events
+         (trace_id, seq, request_id, span_id, module, event, level, ts_us, details_json)
+         <span class="rs-type">VALUES</span> (?1, ?2, ?3, ?4, ?5, ?6, &#x27;info&#x27;, ?7, ?8)&quot;,
+        params![
+            payload.trace_id,
+            seq,
+            payload.request_id,
+            payload.span_id,
+            payload.module,
+            payload.event,
+            <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a>(payload.ts_us),
+            payload.details_json,
+        ],
+    )?;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/projection.rs:220</p>
+</article><article id="item-fn-project-response-persisted-tx-243" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn project_response_persisted_tx pub(super) pub(super) fn project_response_persisted_tx (tx : &amp; Transaction &lt; '_ &gt; , payload : &amp; ResponsePersistedPayload ,) -&gt; Result &lt; () , rusqlite :: Error &gt; crates/host/src/trace_store/projection.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>project_response_persisted_tx</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-projection-rs.html#item-fn-project-response-persisted-tx-243">project_response_persisted_tx</a> (tx : &amp; Transaction &lt; &#x27;_ &gt; , payload : &amp; <a class="symbol-link" href="host--src-trace-store-payload-rs.html#item-struct-ResponsePersistedPayload-33">ResponsePersistedPayload</a> ,) -&gt; Result &lt; () , rusqlite :: Error &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-project-response-persisted-tx-243">project_response_persisted_tx</a>(
+    tx: &amp;<span class="rs-type">Transaction</span>&lt;&#x27;_&gt;,
+    payload: &amp;<a class="symbol-link rs-type" href="host--src-trace-store-payload-rs.html#item-struct-ResponsePersistedPayload-33">ResponsePersistedPayload</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;(), rusqlite::<span class="rs-type">Error</span>&gt; {
+    tx.execute(
+        &quot;<span class="rs-type">UPDATE</span> trace_requests
+         <span class="rs-type">SET</span> status=?2, error_kind=?3, received_at_ms=?4, host_rtt_ms=?5,
+             response_digest=?6, response_len=?7, response_summary=?8
+         <span class="rs-type">WHERE</span> request_id=?1&quot;,
+        params![
+            payload.request_id,
+            payload.status,
+            payload.error_kind,
+            payload.received_at_ms,
+            payload.host_rtt_ms,
+            payload.response_digest,
+            payload.response_len,
+            payload.response_summary,
+        ],
+    )?;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/projection.rs:243</p>
+</article><article id="item-fn-project-request-rollup-tx-168" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn project_request_rollup_tx private fn project_request_rollup_tx (tx : &amp; Transaction &lt; '_ &gt; , request_id : &amp; str , record : &amp; trace :: TraceRecord , daemon_boot_id : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; () , rusqlite :: Error &gt; crates/host/src/trace_store/projection.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>project_request_rollup_tx</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="host--src-trace-store-projection-rs.html#item-fn-project-request-rollup-tx-168">project_request_rollup_tx</a> (tx : &amp; Transaction &lt; &#x27;_ &gt; , request_id : &amp; str , record : &amp; trace :: TraceRecord , daemon_boot_id : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; () , rusqlite :: Error &gt;</code>
+  <p class="docstring">Denormalized `trace_requests` rollups derived from the daemon batch: root<br>span duration, recorded workspace route, daemon boot id, and the ordered<br>distinct span subsystems.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Denormalized `trace_requests` rollups derived from the daemon batch: root</span>
+<span class="rs-comment">/// span duration, recorded workspace route, daemon boot id, and the ordered</span>
+<span class="rs-comment">/// distinct span subsystems.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-project-request-rollup-tx-168">project_request_rollup_tx</a>(
+    tx: &amp;<span class="rs-type">Transaction</span>&lt;&#x27;_&gt;,
+    request_id: &amp;str,
+    record: &amp;trace::<span class="rs-type">TraceRecord</span>,
+    daemon_boot_id: <span class="rs-type">Option</span>&lt;&amp;str&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;(), rusqlite::<span class="rs-type">Error</span>&gt; {
+    <span class="rs-kw">let</span> duration_us = record
+        .spans
+        .iter()
+        .find(|span| span.span_id == record.root_span_id)
+        .map(|span| <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a>(span.duration_us));
+    <span class="rs-kw">let</span> workspace_route = record
+        .events
+        .iter()
+        .filter(|event| event.module == &quot;workspace.route&quot; &amp;&amp; event.name == &quot;route_selected&quot;)
+        .find_map(|event| event.details.value.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(&quot;kind&quot;).and_then(<span class="rs-type">Value</span>::as_str))
+        .filter(|kind| {
+            matches!(
+                *kind,
+                &quot;ephemeral_workspace&quot; | &quot;isolated_workspace&quot; | &quot;fast_path&quot; | &quot;none&quot;
+            )
+        });
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> modules: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>();
+    <span class="rs-kw">for</span> span <span class="rs-kw">in</span> &amp;record.spans {
+        <span class="rs-kw">let</span> subsystem = <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-serde-label-274">serde_label</a>(span.subsystem);
+        <span class="rs-kw">if</span> !modules.contains(&amp;subsystem) {
+            modules.push(subsystem);
+        }
+    }
+    <span class="rs-kw">let</span> modules_touched =
+        (!modules.is_empty()).then(|| serde_json::to_string(&amp;modules).unwrap_or_default());
+    tx.execute(
+        &quot;<span class="rs-type">UPDATE</span> trace_requests
+         <span class="rs-type">SET</span> workspace_route=<span class="rs-type">COALESCE</span>(?2, workspace_route),
+             duration_us=<span class="rs-type">COALESCE</span>(?3, duration_us),
+             daemon_boot_id=<span class="rs-type">COALESCE</span>(?4, daemon_boot_id),
+             modules_touched=<span class="rs-type">COALESCE</span>(?5, modules_touched)
+         <span class="rs-type">WHERE</span> request_id=?1&quot;,
+        params![
+            request_id,
+            workspace_route,
+            duration_us,
+            daemon_boot_id,
+            modules_touched
+        ],
+    )?;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/projection.rs:168</p>
+</article><article id="item-fn-next-trace-seq-266" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn next_trace_seq private fn next_trace_seq (tx : &amp; Transaction &lt; '_ &gt; , trace_id : &amp; str) -&gt; Result &lt; i64 , rusqlite :: Error &gt; crates/host/src/trace_store/projection.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>next_trace_seq</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="host--src-trace-store-projection-rs.html#item-fn-next-trace-seq-266">next_trace_seq</a> (tx : &amp; Transaction &lt; &#x27;_ &gt; , trace_id : &amp; str) -&gt; Result &lt; i64 , rusqlite :: Error &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-next-trace-seq-266">next_trace_seq</a>(tx: &amp;<span class="rs-type">Transaction</span>&lt;&#x27;_&gt;, trace_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;i64, rusqlite::<span class="rs-type">Error</span>&gt; {
+    tx.query_row(
+        &quot;<span class="rs-type">SELECT</span> <span class="rs-type">COALESCE</span>(<span class="rs-type">MAX</span>(seq), 0) + 1 <span class="rs-type">FROM</span> trace_events <span class="rs-type">WHERE</span> trace_id=?1&quot;,
+        params![trace_id],
+        |row| row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0),
+    )
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/projection.rs:266</p>
+</article><article id="item-fn-serde-label-274" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn serde_label private fn serde_label &lt; T : serde :: Serialize &gt; (value : T) -&gt; String crates/host/src/trace_store/projection.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>serde_label</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="host--src-trace-store-projection-rs.html#item-fn-serde-label-274">serde_label</a> &lt; T : serde :: Serialize &gt; (value : T) -&gt; String</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> serde_label&lt;<span class="rs-type">T</span>: serde::<span class="rs-type">Serialize</span>&gt;(value: <span class="rs-type">T</span>) -&gt; <span class="rs-type">String</span> {
+    serde_json::to_value(value)
+        .ok()
+        .and_then(|value| value.as_str().map(<span class="rs-type">ToOwned</span>::to_owned))
+        .unwrap_or_else(|| &quot;unknown&quot;.to_owned())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/projection.rs:274</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/host/src/trace_store/projection.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> rusqlite::{params, <span class="rs-type">Transaction</span>};
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::payload::{<a class="symbol-link rs-type" href="host--src-trace-store-payload-rs.html#item-struct-HostTraceEventPayload-6">HostTraceEventPayload</a>, <a class="symbol-link rs-type" href="host--src-trace-store-payload-rs.html#item-struct-ResponsePersistedPayload-33">ResponsePersistedPayload</a>, <a class="symbol-link rs-type" href="host--src-trace-store-payload-rs.html#item-struct-TraceDegradedPayload-17">TraceDegradedPayload</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::u64_to_i64;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-trace-store-projection-rs.html#item-struct-ProjectRequestStart-7">ProjectRequestStart</a>&lt;&#x27;a&gt; {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) sandbox_id: &amp;&#x27;a str,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) trace_id: &amp;&#x27;a str,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) request_id: &amp;&#x27;a str,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) op: &amp;&#x27;a str,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) family: &amp;&#x27;a str,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) caller_id: <span class="rs-type">Option</span>&lt;&amp;&#x27;a str&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) args_summary: &amp;&#x27;a str,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) args_digest: &amp;&#x27;a str,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) sent_at_ms: u64,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) host_boot_id: &amp;&#x27;a str,
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-project-request-start-tx-20">project_request_start_tx</a>(
+    tx: &amp;<span class="rs-type">Transaction</span>&lt;&#x27;_&gt;,
+    row: <a class="symbol-link rs-type" href="host--src-trace-store-projection-rs.html#item-struct-ProjectRequestStart-7">ProjectRequestStart</a>&lt;&#x27;_&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;(), rusqlite::<span class="rs-type">Error</span>&gt; {
+    tx.execute(
+        &quot;<span class="rs-type">INSERT</span> <span class="rs-type">OR</span> <span class="rs-type">REPLACE</span> <span class="rs-type">INTO</span> trace_requests
+         (request_id, trace_id, sandbox_id, op, family, caller_id, args_summary,
+          args_digest, sent_at_ms, host_boot_id)
+         <span class="rs-type">VALUES</span> (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)&quot;,
+        params![
+            row.request_id,
+            row.trace_id,
+            row.sandbox_id,
+            row.op,
+            row.family,
+            row.caller_id,
+            row.args_summary,
+            row.args_digest,
+            row.sent_at_ms,
+            row.host_boot_id,
+        ],
+    )?;
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-project-trace-degraded-tx-45">project_trace_degraded_tx</a>(
+    tx: &amp;<span class="rs-type">Transaction</span>&lt;&#x27;_&gt;,
+    payload: &amp;<a class="symbol-link rs-type" href="host--src-trace-store-payload-rs.html#item-struct-TraceDegradedPayload-17">TraceDegradedPayload</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;(), rusqlite::<span class="rs-type">Error</span>&gt; {
+    <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-project-request-start-tx-20">project_request_start_tx</a>(
+        tx,
+        <a class="symbol-link rs-type" href="host--src-trace-store-projection-rs.html#item-struct-ProjectRequestStart-7">ProjectRequestStart</a> {
+            sandbox_id: &amp;payload.sandbox_id,
+            trace_id: &amp;payload.trace_id,
+            request_id: &amp;payload.request_id,
+            op: &amp;payload.op,
+            family: &amp;payload.family,
+            caller_id: payload.caller_id.as_deref(),
+            args_summary: &amp;payload.args_summary,
+            args_digest: &amp;payload.args_digest,
+            sent_at_ms: payload.sent_at_ms,
+            host_boot_id: &amp;payload.host_boot_id,
+        },
+    )?;
+    tx.execute(
+        &quot;<span class="rs-type">UPDATE</span> trace_requests
+         <span class="rs-type">SET</span> status=&#x27;trace_degraded&#x27;, error_kind=?2, response_summary=?3
+         <span class="rs-type">WHERE</span> request_id=?1&quot;,
+        params![payload.request_id, payload.error_kind, payload.message],
+    )?;
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-project-trace-batch-tx-73">project_trace_batch_tx</a>(
+    tx: &amp;<span class="rs-type">Transaction</span>&lt;&#x27;_&gt;,
+    batch: &amp;trace::<span class="rs-type">TraceBatch</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;(), rusqlite::<span class="rs-type">Error</span>&gt; {
+    <span class="rs-kw">let</span> daemon_boot_id = batch
+        .daemon_boot_id
+        .as_deref()
+        .filter(|boot_id| !boot_id.is_empty());
+    <span class="rs-kw">for</span> record <span class="rs-kw">in</span> &amp;batch.records {
+        <span class="rs-kw">let</span> trace_id = record.trace_id.to_string();
+        <span class="rs-kw">let</span> request_id = record.request_id.as_ref().map(<span class="rs-type">ToString</span>::to_string);
+        <span class="rs-kw">for</span> span <span class="rs-kw">in</span> &amp;record.spans {
+            tx.execute(
+                &quot;<span class="rs-type">INSERT</span> <span class="rs-type">OR</span> <span class="rs-type">REPLACE</span> <span class="rs-type">INTO</span> trace_spans
+                 (trace_id, request_id, span_id, parent_span_id, kind, subsystem, status,
+                  started_us, duration_us, fields_json)
+                 <span class="rs-type">VALUES</span> (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)&quot;,
+                params![
+                    trace_id,
+                    request_id,
+                    <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a>(span.span_id.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>()),
+                    span.parent_span_id.map(|id| <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a>(id.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>())),
+                    <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-serde-label-274">serde_label</a>(span.kind),
+                    <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-serde-label-274">serde_label</a>(span.subsystem),
+                    span.status.map_or_else(|| &quot;ok&quot;.to_owned(), serde_label),
+                    <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a>(span.started_at_unix_ms.saturating_mul(1000)),
+                    <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a>(span.duration_us),
+                    span.fields.encoded_value(),
+                ],
+            )?;
+        }
+        <span class="rs-kw">for</span> event <span class="rs-kw">in</span> &amp;record.events {
+            <span class="rs-kw">let</span> seq = <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-next-trace-seq-266">next_trace_seq</a>(tx, &amp;trace_id)?;
+            tx.execute(
+                &quot;<span class="rs-type">INSERT</span> <span class="rs-type">INTO</span> trace_events
+                 (trace_id, seq, request_id, span_id, module, event, level, ts_us, details_json)
+                 <span class="rs-type">VALUES</span> (?1, ?2, ?3, ?4, ?5, ?6, &#x27;info&#x27;, ?7, ?8)&quot;,
+                params![
+                    trace_id,
+                    seq,
+                    request_id,
+                    <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a>(event.span_id.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>()),
+                    event.module,
+                    event.name,
+                    <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a>(event.at_unix_ms.saturating_mul(1000)),
+                    event.details.encoded_value(),
+                ],
+            )?;
+        }
+        <span class="rs-kw">for</span> resource <span class="rs-kw">in</span> &amp;record.resources {
+            <span class="rs-kw">let</span> values = json!({
+                &quot;phase&quot;: resource.meta.phase,
+                &quot;source&quot;: resource.meta.source,
+                &quot;source_available&quot;: resource.meta.source_available,
+                &quot;read_error&quot;: resource.meta.read_error,
+                &quot;parse_error&quot;: resource.meta.parse_error,
+                &quot;sampler_duration_us&quot;: resource.meta.sampler_duration_us,
+                &quot;inflight_requests&quot;: resource.meta.inflight_requests,
+                &quot;payload&quot;: resource.payload.value,
+            });
+            tx.execute(
+                &quot;<span class="rs-type">INSERT</span> <span class="rs-type">INTO</span> trace_resources
+                 (trace_id, request_id, span_id, ts_us, kind, values_json)
+                 <span class="rs-type">VALUES</span> (?1, ?2, ?3, ?4, ?5, ?6)&quot;,
+                params![
+                    trace_id,
+                    request_id,
+                    resource.span_id.map(|span_id| <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a>(span_id.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>())),
+                    <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a>(record.finished_at_unix_ms.saturating_mul(1000)),
+                    resource.meta.stats_kind.as_str(),
+                    values.to_string(),
+                ],
+            )?;
+        }
+        <span class="rs-kw">for</span> link <span class="rs-kw">in</span> &amp;record.links {
+            <span class="rs-kw">let</span> link_request_id = request_id.as_deref().unwrap_or_default();
+            tx.execute(
+                &quot;<span class="rs-type">INSERT</span> <span class="rs-type">OR</span> <span class="rs-type">IGNORE</span> <span class="rs-type">INTO</span> trace_links
+                 (trace_id, link_kind, link_id, request_id)
+                 <span class="rs-type">VALUES</span> (?1, ?2, ?3, ?4)&quot;,
+                params![
+                    trace_id,
+                    <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-serde-label-274">serde_label</a>(link.kind),
+                    link.value,
+                    link_request_id
+                ],
+            )?;
+        }
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(request_id) = &amp;request_id {
+            <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-project-request-rollup-tx-168">project_request_rollup_tx</a>(tx, request_id, record, daemon_boot_id)?;
+        }
+    }
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-comment">/// Denormalized `trace_requests` rollups derived from the daemon batch: root</span>
+<span class="rs-comment">/// span duration, recorded workspace route, daemon boot id, and the ordered</span>
+<span class="rs-comment">/// distinct span subsystems.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-project-request-rollup-tx-168">project_request_rollup_tx</a>(
+    tx: &amp;<span class="rs-type">Transaction</span>&lt;&#x27;_&gt;,
+    request_id: &amp;str,
+    record: &amp;trace::<span class="rs-type">TraceRecord</span>,
+    daemon_boot_id: <span class="rs-type">Option</span>&lt;&amp;str&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;(), rusqlite::<span class="rs-type">Error</span>&gt; {
+    <span class="rs-kw">let</span> duration_us = record
+        .spans
+        .iter()
+        .find(|span| span.span_id == record.root_span_id)
+        .map(|span| <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a>(span.duration_us));
+    <span class="rs-kw">let</span> workspace_route = record
+        .events
+        .iter()
+        .filter(|event| event.module == &quot;workspace.route&quot; &amp;&amp; event.name == &quot;route_selected&quot;)
+        .find_map(|event| event.details.value.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(&quot;kind&quot;).and_then(<span class="rs-type">Value</span>::as_str))
+        .filter(|kind| {
+            matches!(
+                *kind,
+                &quot;ephemeral_workspace&quot; | &quot;isolated_workspace&quot; | &quot;fast_path&quot; | &quot;none&quot;
+            )
+        });
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> modules: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>();
+    <span class="rs-kw">for</span> span <span class="rs-kw">in</span> &amp;record.spans {
+        <span class="rs-kw">let</span> subsystem = <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-serde-label-274">serde_label</a>(span.subsystem);
+        <span class="rs-kw">if</span> !modules.contains(&amp;subsystem) {
+            modules.push(subsystem);
+        }
+    }
+    <span class="rs-kw">let</span> modules_touched =
+        (!modules.is_empty()).then(|| serde_json::to_string(&amp;modules).unwrap_or_default());
+    tx.execute(
+        &quot;<span class="rs-type">UPDATE</span> trace_requests
+         <span class="rs-type">SET</span> workspace_route=<span class="rs-type">COALESCE</span>(?2, workspace_route),
+             duration_us=<span class="rs-type">COALESCE</span>(?3, duration_us),
+             daemon_boot_id=<span class="rs-type">COALESCE</span>(?4, daemon_boot_id),
+             modules_touched=<span class="rs-type">COALESCE</span>(?5, modules_touched)
+         <span class="rs-type">WHERE</span> request_id=?1&quot;,
+        params![
+            request_id,
+            workspace_route,
+            duration_us,
+            daemon_boot_id,
+            modules_touched
+        ],
+    )?;
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-project-host-trace-event-tx-220">project_host_trace_event_tx</a>(
+    tx: &amp;<span class="rs-type">Transaction</span>&lt;&#x27;_&gt;,
+    payload: &amp;<a class="symbol-link rs-type" href="host--src-trace-store-payload-rs.html#item-struct-HostTraceEventPayload-6">HostTraceEventPayload</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;(), rusqlite::<span class="rs-type">Error</span>&gt; {
+    <span class="rs-kw">let</span> seq = <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-next-trace-seq-266">next_trace_seq</a>(tx, &amp;payload.trace_id)?;
+    tx.execute(
+        &quot;<span class="rs-type">INSERT</span> <span class="rs-type">INTO</span> trace_events
+         (trace_id, seq, request_id, span_id, module, event, level, ts_us, details_json)
+         <span class="rs-type">VALUES</span> (?1, ?2, ?3, ?4, ?5, ?6, &#x27;info&#x27;, ?7, ?8)&quot;,
+        params![
+            payload.trace_id,
+            seq,
+            payload.request_id,
+            payload.span_id,
+            payload.module,
+            payload.event,
+            <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-u64-to-i64-342">u64_to_i64</a>(payload.ts_us),
+            payload.details_json,
+        ],
+    )?;
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-project-response-persisted-tx-243">project_response_persisted_tx</a>(
+    tx: &amp;<span class="rs-type">Transaction</span>&lt;&#x27;_&gt;,
+    payload: &amp;<a class="symbol-link rs-type" href="host--src-trace-store-payload-rs.html#item-struct-ResponsePersistedPayload-33">ResponsePersistedPayload</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;(), rusqlite::<span class="rs-type">Error</span>&gt; {
+    tx.execute(
+        &quot;<span class="rs-type">UPDATE</span> trace_requests
+         <span class="rs-type">SET</span> status=?2, error_kind=?3, received_at_ms=?4, host_rtt_ms=?5,
+             response_digest=?6, response_len=?7, response_summary=?8
+         <span class="rs-type">WHERE</span> request_id=?1&quot;,
+        params![
+            payload.request_id,
+            payload.status,
+            payload.error_kind,
+            payload.received_at_ms,
+            payload.host_rtt_ms,
+            payload.response_digest,
+            payload.response_len,
+            payload.response_summary,
+        ],
+    )?;
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-projection-rs.html#item-fn-next-trace-seq-266">next_trace_seq</a>(tx: &amp;<span class="rs-type">Transaction</span>&lt;&#x27;_&gt;, trace_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;i64, rusqlite::<span class="rs-type">Error</span>&gt; {
+    tx.query_row(
+        &quot;<span class="rs-type">SELECT</span> <span class="rs-type">COALESCE</span>(<span class="rs-type">MAX</span>(seq), 0) + 1 <span class="rs-type">FROM</span> trace_events <span class="rs-type">WHERE</span> trace_id=?1&quot;,
+        params![trace_id],
+        |row| row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0),
+    )
+}
+
+<span class="rs-kw">fn</span> serde_label&lt;<span class="rs-type">T</span>: serde::<span class="rs-type">Serialize</span>&gt;(value: <span class="rs-type">T</span>) -&gt; <span class="rs-type">String</span> {
+    serde_json::to_value(value)
+        .ok()
+        .and_then(|value| value.as_str().map(<span class="rs-type">ToOwned</span>::to_owned))
+        .unwrap_or_else(|| &quot;unknown&quot;.to_owned())
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

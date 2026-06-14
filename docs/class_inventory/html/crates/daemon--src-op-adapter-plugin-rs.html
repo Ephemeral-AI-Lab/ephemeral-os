@@ -1,0 +1,1141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>daemon · src/op_adapter/plugin.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>38</b><span>modules</span></div>
+  <div><b>277</b><span>items</span></div>
+  <div><b>142</b><span>fields</span></div>
+  <div><b>74</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">dispatch</span><ul class="file-tree"><li><a class="file-link" href="daemon.html"><span>builtin.rs</span><small>0/5</small></a></li><li><a class="file-link" href="daemon--src-dispatch-dispatcher-rs.html"><span>dispatcher.rs</span><small>0/5</small></a></li><li><a class="file-link" href="daemon--src-dispatch-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="daemon--src-lib-rs.html"><span>lib.rs</span><small>0/1</small></a></li><li><span class="folder">op_adapter</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-op-adapter-checkpoint-rs.html"><span>checkpoint.rs</span><small>0/13</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-command-rs.html"><span>command.rs</span><small>2/17</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-control-rs.html"><span>control.rs</span><small>0/11</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-files-rs.html"><span>files.rs</span><small>4/19</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-isolation-rs.html"><span>isolation.rs</span><small>0/23</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-mod-rs.html"><span>mod.rs</span><small>0/12</small></a></li><li><a class="file-link active" href="daemon--src-op-adapter-plugin-rs.html"><span>plugin.rs</span><small>1/17</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-workspace-run-rs.html"><span>workspace_run.rs</span><small>0/2</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-runtime-context-rs.html"><span>context.rs</span><small>1/0</small></a></li><li><a class="file-link" href="daemon--src-runtime-error-rs.html"><span>error.rs</span><small>1/1</small></a></li><li><a class="file-link" href="daemon--src-runtime-invocation-registry-rs.html"><span>invocation_registry.rs</span><small>4/2</small></a></li><li><a class="file-link" href="daemon--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="daemon--src-runtime-response-rs.html"><span>response.rs</span><small>2/11</small></a></li><li><a class="file-link" href="daemon--src-runtime-services-rs.html"><span>services.rs</span><small>1/3</small></a></li><li><a class="file-link" href="daemon--src-runtime-workspace-rs.html"><span>workspace.rs</span><small>10/5</small></a></li></ul></li><li><span class="folder">trace</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-trace-envelope-meta-rs.html"><span>envelope_meta.rs</span><small>0/6</small></a></li><li><a class="file-link" href="daemon--src-trace-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="daemon--src-trace-plugin-trace-rs.html"><span>plugin_trace.rs</span><small>0/21</small></a></li><li><span class="folder">sidecar</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-trace-sidecar-budget-rs.html"><span>budget.rs</span><small>0/1</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-build-rs.html"><span>build.rs</span><small>0/2</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-events-rs.html"><span>events.rs</span><small>0/7</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-resources-rs.html"><span>resources.rs</span><small>0/4</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-tests-rs.html"><span>tests.rs</span><small>0/5</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-transport-failure-rs.html"><span>transport_failure.rs</span><small>0/2</small></a></li></ul></li><li><a class="file-link" href="daemon--src-trace-sidecar-rs.html"><span>sidecar.rs</span><small>0/0</small></a></li><li><a class="file-link" href="daemon--src-trace-spool-rs.html"><span>spool.rs</span><small>3/9</small></a></li></ul></li><li><span class="folder">transport</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-transport-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">server</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-transport-server-connection-rs.html"><span>connection.rs</span><small>0/3</small></a></li><li><a class="file-link" href="daemon--src-transport-server-dispatch-rs.html"><span>dispatch.rs</span><small>0/6</small></a></li><li><a class="file-link" href="daemon--src-transport-server-lifecycle-rs.html"><span>lifecycle.rs</span><small>0/2</small></a></li><li><a class="file-link" href="daemon--src-transport-server-trace-context-rs.html"><span>trace_context.rs</span><small>1/3</small></a></li></ul></li><li><a class="file-link" href="daemon--src-transport-server-rs.html"><span>server.rs</span><small>2/0</small></a></li></ul></li><li><span class="folder">wire</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-wire-message-rs.html"><span>message.rs</span><small>5/3</small></a></li><li><a class="file-link" href="daemon--src-wire-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="op_adapter::plugin crates/daemon/src/op_adapter/plugin.rs op_ensure op_status dispatch_registered_op is_dynamic_plugin_op ensure_ready_output status_response loaded_plugin_value service_health_value route_values route_to_json process_values process_spec_to_json package_report_value plugin_overlay_response PluginOverlayWireResponse strip_plugin_overlay_internal_fields apply_plugin_overlay_status plugin_overlay_response_with_trace">
+  <div class="module-head">
+    <div>
+      <h2>src/op_adapter/plugin.rs</h2>
+      <p class="path">module <code>op_adapter::plugin</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>0 impls</span>
+      <span>17 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-PluginOverlayWireResponse-347" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PluginOverlayWireResponse private struct PluginOverlayWireResponse crates/daemon/src/op_adapter/plugin.rs response Value timings Map &lt; String , Value &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>PluginOverlayWireResponse</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct <a class="symbol-link" href="daemon--src-op-adapter-plugin-rs.html#item-struct-PluginOverlayWireResponse-347">PluginOverlayWireResponse</a></code>
+  <div class="tags"><span>dto</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>response</td><td><code>Value</code></td></tr><tr><td>private</td><td>timings</td><td><code>Map &lt; String , Value &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/daemon/src/op_adapter/plugin.rs:347</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-op-ensure-33" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_ensure pub(crate) pub(crate) fn op_ensure (input : PluginEnsureInput , context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/daemon/src/op_adapter/plugin.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>op_ensure</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="daemon--src-op-adapter-plugin-rs.html#item-fn-op-ensure-33">op_ensure</a> (input : PluginEnsureInput , context : <a class="symbol-link" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-op-ensure-33">op_ensure</a>(
+    input: <span class="rs-type">PluginEnsureInput</span>,
+    context: <a class="symbol-link rs-type" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> services = context.<a class="symbol-link rs-fn" href="daemon--src-runtime-context-rs.html#method-require-services-97">require_services</a>()?;
+    services.<a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#method-ensure-plugin-caller-allowed-92">ensure_plugin_caller_allowed</a>(&amp;input.caller)?;
+    context.<a class="symbol-link rs-fn" href="daemon--src-runtime-context-rs.html#method-record-trace-event-124">record_trace_event</a>(
+        &quot;plugin&quot;,
+        &quot;ensure_started&quot;,
+        json!({
+            &quot;plugin&quot;: input.plugin.as_deref(),
+            &quot;digest&quot;: input.digest.as_deref(),
+        }),
+    );
+    <span class="rs-kw">let</span> ensure_result = services.plugin.ensure(&amp;input);
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = &amp;ensure_result {
+        plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-ensure-error-trace-events-470">record_plugin_ensure_error_trace_events</a>(&amp;context, err);
+    }
+    <span class="rs-kw">let</span> output = <span class="rs-kw">match</span> ensure_result.map_err(<a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::from)? {
+        <span class="rs-type">EnsureOutcome</span>::<span class="rs-type">NeedsUpload</span> { manifest, report } =&gt; {
+            <span class="rs-type">PluginEnsureOutput</span>::<span class="rs-type">NeedsUpload</span>(needs_upload_output(&amp;manifest, &amp;report))
+        }
+        <span class="rs-type">EnsureOutcome</span>::<span class="rs-type">Ready</span>(ready) =&gt; {
+            plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-ensure-trace-events-423">record_plugin_ensure_trace_events</a>(&amp;context, &amp;ready);
+            <span class="rs-type">PluginEnsureOutput</span>::<span class="rs-type">Ready</span>(<span class="rs-type">Box</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(<a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-ensure-ready-output-139">ensure_ready_output</a>(&amp;ready)))
+        }
+    };
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(output))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/plugin.rs:33</p>
+</article><article id="item-fn-op-status-63" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_status pub(crate) pub(crate) fn op_status (input : PluginStatusInput , context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/daemon/src/op_adapter/plugin.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>op_status</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="daemon--src-op-adapter-isolation-rs.html#item-fn-op-status-101">op_status</a> (input : PluginStatusInput , context : <a class="symbol-link" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-isolation-rs.html#item-fn-op-status-101">op_status</a>(
+    input: <span class="rs-type">PluginStatusInput</span>,
+    context: <a class="symbol-link rs-type" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> services = context.<a class="symbol-link rs-fn" href="daemon--src-runtime-context-rs.html#method-require-services-97">require_services</a>()?;
+    services.<a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#method-ensure-plugin-caller-allowed-92">ensure_plugin_caller_allowed</a>(&amp;input.caller)?;
+    <span class="rs-kw">let</span> probe_timeout = input.probe_timeout_ms.map(std::time::<span class="rs-type">Duration</span>::from_millis);
+    <span class="rs-kw">let</span> outcome = services
+        .plugin
+        .<a class="symbol-link rs-fn" href="daemon--src-runtime-workspace-rs.html#method-status-270">status</a>(input.probe_services, probe_timeout)
+        .map_err(<a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::from)?;
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-status-trace-events-495">record_plugin_status_trace_events</a>(&amp;context, &amp;outcome);
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="daemon--src-op-adapter-isolation-rs.html#item-fn-status-response-155">status_response</a>(&amp;outcome))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/plugin.rs:63</p>
+</article><article id="item-fn-dispatch-registered-op-78" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dispatch_registered_op pub(crate) pub(crate) fn dispatch_registered_op (op : &amp; str , invocation_id : &amp; str , args : &amp; Value , context : DispatchContext &lt; '_ &gt; ,) -&gt; Option &lt; Result &lt; Value , DaemonError &gt; &gt; crates/daemon/src/op_adapter/plugin.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>dispatch_registered_op</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="daemon--src-op-adapter-plugin-rs.html#item-fn-dispatch-registered-op-78">dispatch_registered_op</a> (op : &amp; str , invocation_id : &amp; str , args : &amp; Value , context : <a class="symbol-link" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Option &lt; Result &lt; Value , <a class="symbol-link" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a> &gt; &gt;</code>
+  <p class="docstring">Dispatch a dynamically registered `plugin.*` op after a built-in table miss,<br>or `None` when the op is not plugin-shaped / not registered.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Dispatch a dynamically registered `plugin.*` op after a built-in table miss,</span>
+<span class="rs-comment">/// or `None` when the op is not plugin-shaped / not registered.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-dispatch-registered-op-78">dispatch_registered_op</a>(
+    op: &amp;str,
+    invocation_id: &amp;str,
+    args: &amp;<span class="rs-type">Value</span>,
+    context: <a class="symbol-link rs-type" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>&gt;&gt; {
+    <span class="rs-kw">if</span> !<a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-is-dynamic-plugin-op-135">is_dynamic_plugin_op</a>(op) {
+        <span class="rs-kw">return</span> <span class="rs-type">None</span>;
+    }
+    <span class="rs-kw">let</span> services = <span class="rs-kw">match</span> context.<a class="symbol-link rs-fn" href="daemon--src-runtime-context-rs.html#method-require-services-97">require_services</a>() {
+        <span class="rs-type">Ok</span>(services) =&gt; services,
+        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Some</span>(<span class="rs-type">Err</span>(err)),
+    };
+    <span class="rs-comment">// Single caller-family gate for the whole registered-op dispatch chain; the</span>
+    <span class="rs-comment">// routing below it trusts the already-validated args.</span>
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = services.<a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#method-ensure-plugin-family-allowed-87">ensure_plugin_family_allowed</a>(args) {
+        <span class="rs-kw">return</span> <span class="rs-type">Some</span>(<span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<a class="symbol-link rs-fn" href="daemon--src-runtime-error-rs.html#method-from-84">from</a>(err)));
+    }
+    <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> before_resource_timings = <span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>();
+    <a class="symbol-link rs-fn" href="daemon--src-runtime-response-rs.html#item-fn-insert-cgroup-process-resource-timings-163">insert_cgroup_process_resource_timings</a>(&amp;<span class="rs-kw">mut</span> before_resource_timings);
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-push-stale-ppc-background-root-354">push_stale_ppc_background_root</a>(services.plugin.drain_ppc_trace_events());
+    <span class="rs-kw">let</span> outcome = services
+        .plugin
+        .<a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-dispatch-registered-op-78">dispatch_registered_op</a>(op, invocation_id, args)?;
+    <span class="rs-kw">let</span> result = outcome
+        .map_err(<a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::from)
+        .and_then(|outcome| <span class="rs-kw">match</span> outcome {
+            <span class="rs-type">PluginDispatchOutcome</span>::<span class="rs-type">Response</span>(response) =&gt; <span class="rs-type">Ok</span>(response),
+            <span class="rs-type">PluginDispatchOutcome</span>::<span class="rs-type">OneshotOverlay</span>(overlay) =&gt; {
+                context.<a class="symbol-link rs-fn" href="daemon--src-runtime-context-rs.html#method-record-trace-event-124">record_trace_event</a>(
+                    &quot;workspace.route&quot;,
+                    &quot;route_selected&quot;,
+                    json!({
+                        &quot;kind&quot;: &quot;ephemeral_workspace&quot;,
+                        &quot;reason&quot;: &quot;plugin_oneshot_overlay&quot;,
+                    }),
+                );
+                <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-plugin-overlay-response-with-trace-386">plugin_overlay_response_with_trace</a>(
+                    &amp;context,
+                    op,
+                    invocation_id,
+                    &amp;overlay,
+                    &amp;before_resource_timings,
+                    total_start,
+                )
+            }
+        });
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-ppc-trace-events-348">record_ppc_trace_events</a>(
+        &amp;context,
+        services.plugin.drain_ppc_trace_events_for(invocation_id),
+    );
+    <span class="rs-type">Some</span>(result)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/plugin.rs:78</p>
+</article><article id="item-fn-is-dynamic-plugin-op-135" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_dynamic_plugin_op private fn is_dynamic_plugin_op (op : &amp; str) -&gt; bool crates/daemon/src/op_adapter/plugin.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>is_dynamic_plugin_op</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-plugin-rs.html#item-fn-is-dynamic-plugin-op-135">is_dynamic_plugin_op</a> (op : &amp; str) -&gt; bool</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-is-dynamic-plugin-op-135">is_dynamic_plugin_op</a>(op: &amp;str) -&gt; bool {
+    op.starts_with(<span class="rs-type">DYNAMIC_PLUGIN_POLICY</span>.prefix)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/plugin.rs:135</p>
+</article><article id="item-fn-ensure-ready-output-139" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ensure_ready_output private fn ensure_ready_output (ready : &amp; EnsureReady) -&gt; PluginEnsureReadyOutput crates/daemon/src/op_adapter/plugin.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ensure_ready_output</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-plugin-rs.html#item-fn-ensure-ready-output-139">ensure_ready_output</a> (ready : &amp; EnsureReady) -&gt; PluginEnsureReadyOutput</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-ensure-ready-output-139">ensure_ready_output</a>(ready: &amp;<span class="rs-type">EnsureReady</span>) -&gt; <span class="rs-type">PluginEnsureReadyOutput</span> {
+    <span class="rs-type">PluginEnsureReadyOutput</span> {
+        success: <span class="rs-kw">true</span>,
+        plugin: ready.plugin_id.clone(),
+        digest: ready.digest.clone(),
+        registered_ops: ready.registered_ops.clone(),
+        runtime_loaded: ready.runtime_loaded,
+        runtime_warmed: <span class="rs-kw">false</span>,
+        service_processes_started: ready.started_count &gt; 0,
+        started_service_process_count: ready.started_count,
+        already_loaded: ready.already_loaded,
+        operation_routes: <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-route-values-224">route_values</a>(&amp;ready.operation_routes),
+        services: <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(&amp;ready.services),
+        service_processes: <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-process-values-247">process_values</a>(&amp;ready.service_processes),
+        running_service_processes: <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(&amp;ready.running_service_processes),
+        connected_ppc_routes: ready.connected_ppc_routes.clone(),
+        connected_ppc_services: ready.connected_ppc_services.clone(),
+        package: <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-package-report-value-267">package_report_value</a>(&amp;ready.package),
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/plugin.rs:139</p>
+</article><article id="item-fn-status-response-160" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn status_response private fn status_response (outcome : &amp; StatusOutcome) -&gt; Value crates/daemon/src/op_adapter/plugin.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>status_response</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-isolation-rs.html#item-fn-status-response-155">status_response</a> (outcome : &amp; StatusOutcome) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-isolation-rs.html#item-fn-status-response-155">status_response</a>(outcome: &amp;<span class="rs-type">StatusOutcome</span>) -&gt; <span class="rs-type">Value</span> {
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(<span class="rs-type">PluginStatusOutput</span> {
+        success: <span class="rs-kw">true</span>,
+        loaded_plugins: outcome
+            .loaded_plugins
+            .iter()
+            .map(loaded_plugin_value)
+            .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;(),
+        running_service_processes: <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(&amp;outcome.running_service_processes),
+        connected_ppc_routes: outcome.connected_ppc_routes.clone(),
+        connected_ppc_services: outcome.connected_ppc_services.clone(),
+        setup_failures: <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(&amp;outcome.setup_failures),
+        service_health: outcome
+            .service_health
+            .iter()
+            .map(service_health_value)
+            .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;(),
+        pending: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(),
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/plugin.rs:160</p>
+</article><article id="item-fn-loaded-plugin-value-181" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn loaded_plugin_value private fn loaded_plugin_value (loaded : &amp; LoadedPluginStatus) -&gt; LoadedPluginStatusOutput crates/daemon/src/op_adapter/plugin.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>loaded_plugin_value</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-plugin-rs.html#item-fn-loaded-plugin-value-181">loaded_plugin_value</a> (loaded : &amp; LoadedPluginStatus) -&gt; LoadedPluginStatusOutput</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-loaded-plugin-value-181">loaded_plugin_value</a>(loaded: &amp;<span class="rs-type">LoadedPluginStatus</span>) -&gt; <span class="rs-type">LoadedPluginStatusOutput</span> {
+    <span class="rs-type">LoadedPluginStatusOutput</span> {
+        name: loaded.name.clone(),
+        digest: loaded.digest.clone(),
+        ops: loaded.ops.clone(),
+        operation_routes: <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-route-values-224">route_values</a>(&amp;loaded.operation_routes),
+        services: <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(&amp;loaded.services),
+        service_processes: <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-process-values-247">process_values</a>(&amp;loaded.service_processes),
+        runtime_loaded: loaded.runtime_loaded,
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/plugin.rs:181</p>
+</article><article id="item-fn-service-health-value-193" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn service_health_value private fn service_health_value (health : &amp; ServiceHealthReport) -&gt; Value crates/daemon/src/op_adapter/plugin.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>service_health_value</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-plugin-rs.html#item-fn-service-health-value-193">service_health_value</a> (health : &amp; ServiceHealthReport) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-service-health-value-193">service_health_value</a>(health: &amp;<span class="rs-type">ServiceHealthReport</span>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">if</span> health.success {
+        json!({
+            &quot;success&quot;: <span class="rs-kw">true</span>,
+            &quot;plugin&quot;: health.plugin,
+            &quot;service_id&quot;: health.service_id,
+            &quot;service_instance_id&quot;: health.service_instance_id,
+            &quot;manifest_key&quot;: health.manifest_key,
+            &quot;state&quot;: health.state,
+            &quot;restart_count&quot;: health.restart_count,
+            &quot;refresh_count&quot;: health.refresh_count,
+            &quot;last_error&quot;: health.last_error,
+            &quot;accepted&quot;: health.accepted,
+        })
+    } <span class="rs-kw">else</span> {
+        json!({
+            &quot;success&quot;: <span class="rs-kw">false</span>,
+            &quot;plugin&quot;: health.plugin,
+            &quot;service_id&quot;: health.service_id,
+            &quot;service_instance_id&quot;: health.service_instance_id,
+            &quot;manifest_key&quot;: health.manifest_key,
+            &quot;state&quot;: health.state,
+            &quot;restart_count&quot;: health.restart_count,
+            &quot;refresh_count&quot;: health.refresh_count,
+            &quot;last_error&quot;: health.last_error,
+            &quot;error&quot;: health.error,
+            &quot;teardown_error&quot;: health.teardown_error,
+        })
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/plugin.rs:193</p>
+</article><article id="item-fn-route-values-224" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn route_values private fn route_values (routes : &amp; [PluginOperationRoute]) -&gt; Vec &lt; Value &gt; crates/daemon/src/op_adapter/plugin.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>route_values</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-plugin-rs.html#item-fn-route-values-224">route_values</a> (routes : &amp; [PluginOperationRoute]) -&gt; Vec &lt; Value &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-route-values-224">route_values</a>(routes: &amp;[<span class="rs-type">PluginOperationRoute</span>]) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; {
+    routes.iter().map(route_to_json).collect()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/plugin.rs:224</p>
+</article><article id="item-fn-route-to-json-228" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn route_to_json private fn route_to_json (route : &amp; PluginOperationRoute) -&gt; Value crates/daemon/src/op_adapter/plugin.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>route_to_json</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-plugin-rs.html#item-fn-route-to-json-228">route_to_json</a> (route : &amp; PluginOperationRoute) -&gt; Value</code>
+  <p class="docstring">Wire-shape one resolved route. Hand-rolled (not a serde derive) so the key<br>set and order stay byte-stable independent of the runtime crate's fields.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Wire-shape one resolved route. Hand-rolled (not a serde derive) so the key</span>
+<span class="rs-comment">/// set and order stay byte-stable independent of the runtime crate's fields.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-route-to-json-228">route_to_json</a>(route: &amp;<span class="rs-type">PluginOperationRoute</span>) -&gt; <span class="rs-type">Value</span> {
+    json!({
+        &quot;plugin&quot;: route.plugin_id,
+        &quot;op_name&quot;: route.op_name,
+        &quot;public_op&quot;: route.public_op,
+        &quot;layer_stack_root&quot;: route.layer_stack_root,
+        &quot;intent&quot;: route.intent,
+        &quot;auto_workspace_overlay&quot;: route.auto_workspace_overlay,
+        &quot;service_id&quot;: route.service_id,
+        &quot;service_instance_id&quot;: route.service_instance_id,
+        &quot;service_mode&quot;: route.service_mode,
+        &quot;service_command&quot;: route.service_command,
+        &quot;timeout_ms&quot;: route.timeout_ms,
+        &quot;dispatch_mode&quot;: route.dispatch_mode(),
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/plugin.rs:228</p>
+</article><article id="item-fn-process-values-247" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn process_values private fn process_values (processes : &amp; [PluginProcessSpec]) -&gt; Vec &lt; Value &gt; crates/daemon/src/op_adapter/plugin.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>process_values</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-plugin-rs.html#item-fn-process-values-247">process_values</a> (processes : &amp; [PluginProcessSpec]) -&gt; Vec &lt; Value &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-process-values-247">process_values</a>(processes: &amp;[<span class="rs-type">PluginProcessSpec</span>]) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; {
+    processes.iter().map(process_spec_to_json).collect()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/plugin.rs:247</p>
+</article><article id="item-fn-process-spec-to-json-251" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn process_spec_to_json private fn process_spec_to_json (spec : &amp; PluginProcessSpec) -&gt; Value crates/daemon/src/op_adapter/plugin.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>process_spec_to_json</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-plugin-rs.html#item-fn-process-spec-to-json-251">process_spec_to_json</a> (spec : &amp; PluginProcessSpec) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-process-spec-to-json-251">process_spec_to_json</a>(spec: &amp;<span class="rs-type">PluginProcessSpec</span>) -&gt; <span class="rs-type">Value</span> {
+    json!({
+        &quot;service_id&quot;: spec.key.service_id,
+        &quot;service_instance_id&quot;: spec.key.service_instance_id(),
+        &quot;command&quot;: spec.command,
+        &quot;package_root&quot;: spec.package_root,
+        &quot;dependency_root&quot;: spec.dependency_root,
+        &quot;working_dir&quot;: spec.working_dir,
+        &quot;socket_path&quot;: spec.socket_path,
+        &quot;stderr_path&quot;: spec.stderr_path,
+        &quot;env&quot;: spec.environment(),
+        &quot;ppc_protocol_version&quot;: spec.ppc_protocol_version,
+        &quot;process_started&quot;: <span class="rs-kw">false</span>,
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/plugin.rs:251</p>
+</article><article id="item-fn-package-report-value-267" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn package_report_value private fn package_report_value (report : &amp; PackageEnsureReport) -&gt; Value crates/daemon/src/op_adapter/plugin.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>package_report_value</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-plugin-rs.html#item-fn-package-report-value-267">package_report_value</a> (report : &amp; PackageEnsureReport) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-package-report-value-267">package_report_value</a>(report: &amp;<span class="rs-type">PackageEnsureReport</span>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">if</span> !report.active {
+        <span class="rs-kw">return</span> <span class="rs-type">Value</span>::<span class="rs-type">Null</span>;
+    }
+    json!({
+        &quot;needs_upload&quot;: report.needs_upload,
+        &quot;package_root&quot;: report.package_root.as_ref().map(|path| path.to_string_lossy().into_owned()),
+        &quot;dependency_root&quot;: report.dependency_root.as_ref().map(|path| path.to_string_lossy().into_owned()),
+        &quot;package_published&quot;: report.package_published,
+        &quot;setup_ran&quot;: report.setup_ran,
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/plugin.rs:267</p>
+</article><article id="item-fn-plugin-overlay-response-280" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn plugin_overlay_response private fn plugin_overlay_response (overlay : &amp; PluginOverlayOutcome , total_start : Instant ,) -&gt; Result &lt; PluginOverlayWireResponse , DaemonError &gt; crates/daemon/src/op_adapter/plugin.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>plugin_overlay_response</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-plugin-rs.html#item-fn-plugin-overlay-response-280">plugin_overlay_response</a> (overlay : &amp; PluginOverlayOutcome , total_start : Instant ,) -&gt; Result &lt; <a class="symbol-link" href="daemon--src-op-adapter-plugin-rs.html#item-struct-PluginOverlayWireResponse-347">PluginOverlayWireResponse</a> , <a class="symbol-link" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a> &gt;</code>
+  <p class="docstring">Shape the oneshot overlay wire response: the guarded changeset shape plus<br>runner shell fields, plugin worker result, and the daemon's latest-state<br>resource telemetry sample.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Shape the oneshot overlay wire response: the guarded changeset shape plus</span>
+<span class="rs-comment">/// runner shell fields, plugin worker result, and the daemon's latest-state</span>
+<span class="rs-comment">/// resource telemetry sample.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-plugin-overlay-response-280">plugin_overlay_response</a>(
+    overlay: &amp;<span class="rs-type">PluginOverlayOutcome</span>,
+    total_start: <span class="rs-type">Instant</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="daemon--src-op-adapter-plugin-rs.html#item-struct-PluginOverlayWireResponse-347">PluginOverlayWireResponse</a>, <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> manifest = <span class="rs-type">LayerStack</span>::open(overlay.layer_stack_root.clone())?.read_active_manifest()?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="daemon--src-runtime-response-rs.html#item-fn-resource-timings-140">resource_timings</a>(&amp;manifest, overlay.changeset.published_file_count());
+    <a class="symbol-link rs-fn" href="daemon--src-runtime-response-rs.html#item-fn-copy-runner-timings-76">copy_runner_timings</a>(&amp;<span class="rs-kw">mut</span> timings, &amp;overlay.runner);
+    <a class="symbol-link rs-fn" href="daemon--src-runtime-response-rs.html#item-fn-insert-tree-resource-timings-173">insert_tree_resource_timings</a>(
+        &amp;<span class="rs-kw">mut</span> timings,
+        &quot;resource.command_exec.upperdir&quot;,
+        &amp;<a class="symbol-link rs-type" href="daemon--src-runtime-response-rs.html#item-struct-TreeResourceStats-24">TreeResourceStats</a>::<a class="symbol-link rs-fn" href="daemon--src-runtime-response-rs.html#method-from-ephemeral-37">from_ephemeral</a>(&amp;overlay.upperdir_stats),
+    );
+    timings.insert(
+        &quot;layer_stack.acquire_snapshot.total_s&quot;.to_owned(),
+        json!(overlay.lease_acquire_s),
+    );
+    timings.insert(
+        &quot;command_exec.capture_upperdir_s&quot;.to_owned(),
+        json!(overlay.capture_s),
+    );
+    timings.insert(&quot;command_exec.occ_apply_s&quot;.to_owned(), json!(overlay.occ_s));
+    timings.insert(
+        &quot;command_exec.total_s&quot;.to_owned(),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <a class="symbol-link rs-fn" href="daemon--src-runtime-response-rs.html#item-fn-plugin-overlay-changeset-response-95">plugin_overlay_changeset_response</a>(&amp;overlay.changeset, timings, total_start);
+    <a class="symbol-link rs-fn" href="daemon--src-runtime-response-rs.html#item-fn-attach-runner-shell-fields-53">attach_runner_shell_fields</a>(&amp;<span class="rs-kw">mut</span> response, &amp;overlay.runner);
+    response[&quot;changed_path_kinds&quot;] = <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(
+        overlay
+            .path_kinds
+            .iter()
+            .map(|(path, kind)| (path.clone(), json!(kind)))
+            .collect(),
+    );
+    <span class="rs-kw">let</span> worker_success = overlay
+        .plugin_result
+        .as_ref()
+        .and_then(|result| result.get(&quot;success&quot;))
+        .and_then(<span class="rs-type">Value</span>::as_bool);
+    response[&quot;plugin_result&quot;] = overlay.plugin_result.clone().unwrap_or_else(|| json!({}));
+    response[&quot;plugin_overlay&quot;] = json!({
+        &quot;changed_paths&quot;: overlay
+            .path_kinds
+            .iter()
+            .map(|(path, _kind)| path.clone())
+            .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;(),
+        &quot;published_manifest_version&quot;: overlay.changeset.published_manifest_version,
+        &quot;worker_exit_code&quot;: overlay.runner.exit_code,
+    });
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-apply-plugin-overlay-status-358">apply_plugin_overlay_status</a>(
+        &amp;<span class="rs-kw">mut</span> response,
+        overlay.runner.exit_code,
+        overlay.changeset.success(),
+        worker_success,
+    );
+    <span class="rs-kw">let</span> timings = response
+        .get(&quot;timings&quot;)
+        .and_then(<span class="rs-type">Value</span>::as_object)
+        .cloned()
+        .unwrap_or_default();
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-strip-plugin-overlay-internal-fields-352">strip_plugin_overlay_internal_fields</a>(&amp;<span class="rs-kw">mut</span> response);
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="daemon--src-op-adapter-plugin-rs.html#item-struct-PluginOverlayWireResponse-347">PluginOverlayWireResponse</a> { response, timings })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/plugin.rs:280</p>
+</article><article id="item-fn-strip-plugin-overlay-internal-fields-352" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn strip_plugin_overlay_internal_fields private fn strip_plugin_overlay_internal_fields (response : &amp; mut Value) crates/daemon/src/op_adapter/plugin.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>strip_plugin_overlay_internal_fields</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-plugin-rs.html#item-fn-strip-plugin-overlay-internal-fields-352">strip_plugin_overlay_internal_fields</a> (response : &amp; mut Value)</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-strip-plugin-overlay-internal-fields-352">strip_plugin_overlay_internal_fields</a>(response: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Value</span>) {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(object) = response.as_object_mut() {
+        object.remove(&quot;timings&quot;);
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/plugin.rs:352</p>
+</article><article id="item-fn-apply-plugin-overlay-status-358" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn apply_plugin_overlay_status private fn apply_plugin_overlay_status (response : &amp; mut Value , worker_exit_code : i32 , changeset_success : bool , worker_success : Option &lt; bool &gt; ,) crates/daemon/src/op_adapter/plugin.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>apply_plugin_overlay_status</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-plugin-rs.html#item-fn-apply-plugin-overlay-status-358">apply_plugin_overlay_status</a> (response : &amp; mut Value , worker_exit_code : i32 , changeset_success : bool , worker_success : Option &lt; bool &gt; ,)</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-apply-plugin-overlay-status-358">apply_plugin_overlay_status</a>(
+    response: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Value</span>,
+    worker_exit_code: i32,
+    changeset_success: bool,
+    worker_success: <span class="rs-type">Option</span>&lt;bool&gt;,
+) {
+    <span class="rs-kw">if</span> worker_exit_code != 0 {
+        response[&quot;success&quot;] = json!(<span class="rs-kw">false</span>);
+        response[&quot;status&quot;] = json!(&quot;failed&quot;);
+        response[&quot;error&quot;] = json!({
+            &quot;kind&quot;: &quot;plugin_overlay_worker_failed&quot;,
+            &quot;message&quot;: &quot;plugin overlay worker exited with a non-zero status&quot;,
+        });
+    } <span class="rs-kw">else</span> <span class="rs-kw">if</span> changeset_success &amp;&amp; response[&quot;conflict&quot;].is_null() {
+        <span class="rs-kw">if</span> worker_success == <span class="rs-type">Some</span>(<span class="rs-kw">false</span>) {
+            response[&quot;success&quot;] = json!(<span class="rs-kw">false</span>);
+            response[&quot;status&quot;] = json!(&quot;failed&quot;);
+            response[&quot;error&quot;] = json!({
+                &quot;kind&quot;: &quot;plugin_overlay_worker_failed&quot;,
+                &quot;message&quot;: &quot;plugin overlay worker reported failure&quot;,
+            });
+        } <span class="rs-kw">else</span> {
+            response[&quot;success&quot;] = json!(<span class="rs-kw">true</span>);
+            response[&quot;status&quot;] = json!(&quot;committed&quot;);
+        }
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/plugin.rs:358</p>
+</article><article id="item-fn-plugin-overlay-response-with-trace-386" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn plugin_overlay_response_with_trace private fn plugin_overlay_response_with_trace (context : &amp; DispatchContext &lt; '_ &gt; , op : &amp; str , invocation_id : &amp; str , overlay : &amp; PluginOverlayOutcome , before_resource_timings : &amp; Map &lt; String , Value &gt; , total_start : Instant ,) -&gt; Result &lt; Value , DaemonError &gt; crates/daemon/src/op_adapter/plugin.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>plugin_overlay_response_with_trace</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-op-adapter-plugin-rs.html#item-fn-plugin-overlay-response-with-trace-386">plugin_overlay_response_with_trace</a> (context : &amp; <a class="symbol-link" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a> &lt; &#x27;_ &gt; , op : &amp; str , invocation_id : &amp; str , overlay : &amp; PluginOverlayOutcome , before_resource_timings : &amp; Map &lt; String , Value &gt; , total_start : Instant ,) -&gt; Result &lt; Value , <a class="symbol-link" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-plugin-overlay-response-with-trace-386">plugin_overlay_response_with_trace</a>(
+    context: &amp;<a class="symbol-link rs-type" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a>&lt;&#x27;_&gt;,
+    op: &amp;str,
+    invocation_id: &amp;str,
+    overlay: &amp;<span class="rs-type">PluginOverlayOutcome</span>,
+    before_resource_timings: &amp;<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;,
+    total_start: <span class="rs-type">Instant</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>&gt; {
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-resource-stats-70">record_plugin_overlay_resource_stats</a>(context, &quot;before&quot;, before_resource_timings);
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-host-resource-stats-130">record_plugin_overlay_host_resource_stats</a>(
+        context,
+        &quot;before&quot;,
+        before_resource_timings,
+    );
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-started-15">record_plugin_overlay_started</a>(context, op, invocation_id, overlay);
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-workspace-prepared-32">record_plugin_overlay_workspace_prepared</a>(context, op, invocation_id, overlay);
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-mount-started-51">record_plugin_overlay_mount_started</a>(context, op, invocation_id, overlay);
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-mount-finished-164">record_plugin_overlay_mount_finished</a>(context, op, invocation_id, overlay);
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-unmount-finished-217">record_plugin_overlay_unmount_finished</a>(context, op, invocation_id, overlay);
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-capture-started-267">record_plugin_overlay_capture_started</a>(context, op, invocation_id, overlay);
+    <span class="rs-kw">let</span> result = <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-plugin-overlay-response-280">plugin_overlay_response</a>(overlay, total_start);
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(wire) = &amp;result {
+        plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-resource-stats-70">record_plugin_overlay_resource_stats</a>(context, &quot;after&quot;, &amp;wire.timings);
+        plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-host-resource-stats-130">record_plugin_overlay_host_resource_stats</a>(context, &quot;after&quot;, &amp;wire.timings);
+    }
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-capture-finished-285">record_plugin_overlay_capture_finished</a>(context, op, invocation_id, overlay);
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-occ-changeset-trace-events-318">record_occ_changeset_trace_events</a>(context, &amp;overlay.changeset);
+    <span class="rs-kw">match</span> &amp;result {
+        <span class="rs-type">Ok</span>(wire) =&gt; plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-finished-386">record_plugin_overlay_finished</a>(
+            context,
+            op,
+            invocation_id,
+            overlay,
+            &amp;wire.response,
+            <span class="rs-type">None</span>,
+        ),
+        <span class="rs-type">Err</span>(err) =&gt; plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-finished-386">record_plugin_overlay_finished</a>(
+            context,
+            op,
+            invocation_id,
+            overlay,
+            &amp;json!({ &quot;success&quot;: <span class="rs-kw">false</span>, &quot;status&quot;: &quot;error&quot; }),
+            <span class="rs-type">Some</span>(err),
+        ),
+    }
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-lease-release-failed-327">record_plugin_overlay_lease_release_failed</a>(context, op, invocation_id, overlay);
+    result.map(|wire| wire.response)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/op_adapter/plugin.rs:386</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/daemon/src/op_adapter/plugin.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Plugin op adapters: wire arg parsing, response shaping over the typed</span>
+<span class="rs-comment">//! `operation::plugin` outcomes, and the</span>
+<span class="rs-comment">//! resource-telemetry splice for oneshot overlay runs.</span>
+
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Instant</span>;
+
+<span class="rs-kw">use</span> layerstack::<span class="rs-type">LayerStack</span>;
+<span class="rs-kw">use</span> operation::plugin::contract::{
+    <span class="rs-type">LoadedPluginStatusOutput</span>, <span class="rs-type">PluginEnsureInput</span>, <span class="rs-type">PluginEnsureOutput</span>, <span class="rs-type">PluginEnsureReadyOutput</span>,
+    <span class="rs-type">PluginStatusInput</span>, <span class="rs-type">PluginStatusOutput</span>,
+};
+<span class="rs-kw">use</span> operation::plugin::needs_upload_output;
+<span class="rs-kw">use</span> operation::plugin::route::{<span class="rs-type">PluginOperationRoute</span>, <span class="rs-type">PluginProcessSpec</span>};
+<span class="rs-kw">use</span> operation::plugin::<span class="rs-type">PackageEnsureReport</span>;
+<span class="rs-kw">use</span> protocol::catalog::<span class="rs-type">DYNAMIC_PLUGIN_POLICY</span>;
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Map</span>, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::response::{
+    attach_runner_shell_fields, copy_runner_timings, insert_cgroup_process_resource_timings,
+    insert_tree_resource_timings, plugin_overlay_changeset_response, resource_timings,
+    <a class="symbol-link rs-type" href="daemon--src-runtime-response-rs.html#item-struct-TreeResourceStats-24">TreeResourceStats</a>,
+};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a>;
+<span class="rs-kw">use</span> operation::plugin::{
+    <span class="rs-type">EnsureOutcome</span>, <span class="rs-type">EnsureReady</span>, <span class="rs-type">LoadedPluginStatus</span>, <span class="rs-type">PluginDispatchOutcome</span>, <span class="rs-type">PluginOverlayOutcome</span>,
+    <span class="rs-type">ServiceHealthReport</span>, <span class="rs-type">StatusOutcome</span>,
+};
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::to_wire_value;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::trace::plugin_trace;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-op-ensure-33">op_ensure</a>(
+    input: <span class="rs-type">PluginEnsureInput</span>,
+    context: <a class="symbol-link rs-type" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> services = context.<a class="symbol-link rs-fn" href="daemon--src-runtime-context-rs.html#method-require-services-97">require_services</a>()?;
+    services.<a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#method-ensure-plugin-caller-allowed-92">ensure_plugin_caller_allowed</a>(&amp;input.caller)?;
+    context.<a class="symbol-link rs-fn" href="daemon--src-runtime-context-rs.html#method-record-trace-event-124">record_trace_event</a>(
+        &quot;plugin&quot;,
+        &quot;ensure_started&quot;,
+        json!({
+            &quot;plugin&quot;: input.plugin.as_deref(),
+            &quot;digest&quot;: input.digest.as_deref(),
+        }),
+    );
+    <span class="rs-kw">let</span> ensure_result = services.plugin.ensure(&amp;input);
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = &amp;ensure_result {
+        plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-ensure-error-trace-events-470">record_plugin_ensure_error_trace_events</a>(&amp;context, err);
+    }
+    <span class="rs-kw">let</span> output = <span class="rs-kw">match</span> ensure_result.map_err(<a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::from)? {
+        <span class="rs-type">EnsureOutcome</span>::<span class="rs-type">NeedsUpload</span> { manifest, report } =&gt; {
+            <span class="rs-type">PluginEnsureOutput</span>::<span class="rs-type">NeedsUpload</span>(needs_upload_output(&amp;manifest, &amp;report))
+        }
+        <span class="rs-type">EnsureOutcome</span>::<span class="rs-type">Ready</span>(ready) =&gt; {
+            plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-ensure-trace-events-423">record_plugin_ensure_trace_events</a>(&amp;context, &amp;ready);
+            <span class="rs-type">PluginEnsureOutput</span>::<span class="rs-type">Ready</span>(<span class="rs-type">Box</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(<a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-ensure-ready-output-139">ensure_ready_output</a>(&amp;ready)))
+        }
+    };
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(output))
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-isolation-rs.html#item-fn-op-status-101">op_status</a>(
+    input: <span class="rs-type">PluginStatusInput</span>,
+    context: <a class="symbol-link rs-type" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> services = context.<a class="symbol-link rs-fn" href="daemon--src-runtime-context-rs.html#method-require-services-97">require_services</a>()?;
+    services.<a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#method-ensure-plugin-caller-allowed-92">ensure_plugin_caller_allowed</a>(&amp;input.caller)?;
+    <span class="rs-kw">let</span> probe_timeout = input.probe_timeout_ms.map(std::time::<span class="rs-type">Duration</span>::from_millis);
+    <span class="rs-kw">let</span> outcome = services
+        .plugin
+        .<a class="symbol-link rs-fn" href="daemon--src-runtime-workspace-rs.html#method-status-270">status</a>(input.probe_services, probe_timeout)
+        .map_err(<a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::from)?;
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-status-trace-events-495">record_plugin_status_trace_events</a>(&amp;context, &amp;outcome);
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="daemon--src-op-adapter-isolation-rs.html#item-fn-status-response-155">status_response</a>(&amp;outcome))
+}
+
+<span class="rs-comment">/// Dispatch a dynamically registered `plugin.*` op after a built-in table miss,</span>
+<span class="rs-comment">/// or `None` when the op is not plugin-shaped / not registered.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-dispatch-registered-op-78">dispatch_registered_op</a>(
+    op: &amp;str,
+    invocation_id: &amp;str,
+    args: &amp;<span class="rs-type">Value</span>,
+    context: <a class="symbol-link rs-type" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>&gt;&gt; {
+    <span class="rs-kw">if</span> !<a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-is-dynamic-plugin-op-135">is_dynamic_plugin_op</a>(op) {
+        <span class="rs-kw">return</span> <span class="rs-type">None</span>;
+    }
+    <span class="rs-kw">let</span> services = <span class="rs-kw">match</span> context.<a class="symbol-link rs-fn" href="daemon--src-runtime-context-rs.html#method-require-services-97">require_services</a>() {
+        <span class="rs-type">Ok</span>(services) =&gt; services,
+        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Some</span>(<span class="rs-type">Err</span>(err)),
+    };
+    <span class="rs-comment">// Single caller-family gate for the whole registered-op dispatch chain; the</span>
+    <span class="rs-comment">// routing below it trusts the already-validated args.</span>
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = services.<a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#method-ensure-plugin-family-allowed-87">ensure_plugin_family_allowed</a>(args) {
+        <span class="rs-kw">return</span> <span class="rs-type">Some</span>(<span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<a class="symbol-link rs-fn" href="daemon--src-runtime-error-rs.html#method-from-84">from</a>(err)));
+    }
+    <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> before_resource_timings = <span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>();
+    <a class="symbol-link rs-fn" href="daemon--src-runtime-response-rs.html#item-fn-insert-cgroup-process-resource-timings-163">insert_cgroup_process_resource_timings</a>(&amp;<span class="rs-kw">mut</span> before_resource_timings);
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-push-stale-ppc-background-root-354">push_stale_ppc_background_root</a>(services.plugin.drain_ppc_trace_events());
+    <span class="rs-kw">let</span> outcome = services
+        .plugin
+        .<a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-dispatch-registered-op-78">dispatch_registered_op</a>(op, invocation_id, args)?;
+    <span class="rs-kw">let</span> result = outcome
+        .map_err(<a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::from)
+        .and_then(|outcome| <span class="rs-kw">match</span> outcome {
+            <span class="rs-type">PluginDispatchOutcome</span>::<span class="rs-type">Response</span>(response) =&gt; <span class="rs-type">Ok</span>(response),
+            <span class="rs-type">PluginDispatchOutcome</span>::<span class="rs-type">OneshotOverlay</span>(overlay) =&gt; {
+                context.<a class="symbol-link rs-fn" href="daemon--src-runtime-context-rs.html#method-record-trace-event-124">record_trace_event</a>(
+                    &quot;workspace.route&quot;,
+                    &quot;route_selected&quot;,
+                    json!({
+                        &quot;kind&quot;: &quot;ephemeral_workspace&quot;,
+                        &quot;reason&quot;: &quot;plugin_oneshot_overlay&quot;,
+                    }),
+                );
+                <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-plugin-overlay-response-with-trace-386">plugin_overlay_response_with_trace</a>(
+                    &amp;context,
+                    op,
+                    invocation_id,
+                    &amp;overlay,
+                    &amp;before_resource_timings,
+                    total_start,
+                )
+            }
+        });
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-ppc-trace-events-348">record_ppc_trace_events</a>(
+        &amp;context,
+        services.plugin.drain_ppc_trace_events_for(invocation_id),
+    );
+    <span class="rs-type">Some</span>(result)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-is-dynamic-plugin-op-135">is_dynamic_plugin_op</a>(op: &amp;str) -&gt; bool {
+    op.starts_with(<span class="rs-type">DYNAMIC_PLUGIN_POLICY</span>.prefix)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-ensure-ready-output-139">ensure_ready_output</a>(ready: &amp;<span class="rs-type">EnsureReady</span>) -&gt; <span class="rs-type">PluginEnsureReadyOutput</span> {
+    <span class="rs-type">PluginEnsureReadyOutput</span> {
+        success: <span class="rs-kw">true</span>,
+        plugin: ready.plugin_id.clone(),
+        digest: ready.digest.clone(),
+        registered_ops: ready.registered_ops.clone(),
+        runtime_loaded: ready.runtime_loaded,
+        runtime_warmed: <span class="rs-kw">false</span>,
+        service_processes_started: ready.started_count &gt; 0,
+        started_service_process_count: ready.started_count,
+        already_loaded: ready.already_loaded,
+        operation_routes: <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-route-values-224">route_values</a>(&amp;ready.operation_routes),
+        services: <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(&amp;ready.services),
+        service_processes: <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-process-values-247">process_values</a>(&amp;ready.service_processes),
+        running_service_processes: <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(&amp;ready.running_service_processes),
+        connected_ppc_routes: ready.connected_ppc_routes.clone(),
+        connected_ppc_services: ready.connected_ppc_services.clone(),
+        package: <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-package-report-value-267">package_report_value</a>(&amp;ready.package),
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-isolation-rs.html#item-fn-status-response-155">status_response</a>(outcome: &amp;<span class="rs-type">StatusOutcome</span>) -&gt; <span class="rs-type">Value</span> {
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(<span class="rs-type">PluginStatusOutput</span> {
+        success: <span class="rs-kw">true</span>,
+        loaded_plugins: outcome
+            .loaded_plugins
+            .iter()
+            .map(loaded_plugin_value)
+            .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;(),
+        running_service_processes: <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(&amp;outcome.running_service_processes),
+        connected_ppc_routes: outcome.connected_ppc_routes.clone(),
+        connected_ppc_services: outcome.connected_ppc_services.clone(),
+        setup_failures: <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(&amp;outcome.setup_failures),
+        service_health: outcome
+            .service_health
+            .iter()
+            .map(service_health_value)
+            .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;(),
+        pending: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(),
+    })
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-loaded-plugin-value-181">loaded_plugin_value</a>(loaded: &amp;<span class="rs-type">LoadedPluginStatus</span>) -&gt; <span class="rs-type">LoadedPluginStatusOutput</span> {
+    <span class="rs-type">LoadedPluginStatusOutput</span> {
+        name: loaded.name.clone(),
+        digest: loaded.digest.clone(),
+        ops: loaded.ops.clone(),
+        operation_routes: <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-route-values-224">route_values</a>(&amp;loaded.operation_routes),
+        services: <a class="symbol-link rs-fn" href="daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-22">to_wire_value</a>(&amp;loaded.services),
+        service_processes: <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-process-values-247">process_values</a>(&amp;loaded.service_processes),
+        runtime_loaded: loaded.runtime_loaded,
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-service-health-value-193">service_health_value</a>(health: &amp;<span class="rs-type">ServiceHealthReport</span>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">if</span> health.success {
+        json!({
+            &quot;success&quot;: <span class="rs-kw">true</span>,
+            &quot;plugin&quot;: health.plugin,
+            &quot;service_id&quot;: health.service_id,
+            &quot;service_instance_id&quot;: health.service_instance_id,
+            &quot;manifest_key&quot;: health.manifest_key,
+            &quot;state&quot;: health.state,
+            &quot;restart_count&quot;: health.restart_count,
+            &quot;refresh_count&quot;: health.refresh_count,
+            &quot;last_error&quot;: health.last_error,
+            &quot;accepted&quot;: health.accepted,
+        })
+    } <span class="rs-kw">else</span> {
+        json!({
+            &quot;success&quot;: <span class="rs-kw">false</span>,
+            &quot;plugin&quot;: health.plugin,
+            &quot;service_id&quot;: health.service_id,
+            &quot;service_instance_id&quot;: health.service_instance_id,
+            &quot;manifest_key&quot;: health.manifest_key,
+            &quot;state&quot;: health.state,
+            &quot;restart_count&quot;: health.restart_count,
+            &quot;refresh_count&quot;: health.refresh_count,
+            &quot;last_error&quot;: health.last_error,
+            &quot;error&quot;: health.error,
+            &quot;teardown_error&quot;: health.teardown_error,
+        })
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-route-values-224">route_values</a>(routes: &amp;[<span class="rs-type">PluginOperationRoute</span>]) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; {
+    routes.iter().map(route_to_json).collect()
+}
+
+<span class="rs-comment">/// Wire-shape one resolved route. Hand-rolled (not a serde derive) so the key</span>
+<span class="rs-comment">/// set and order stay byte-stable independent of the runtime crate's fields.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-route-to-json-228">route_to_json</a>(route: &amp;<span class="rs-type">PluginOperationRoute</span>) -&gt; <span class="rs-type">Value</span> {
+    json!({
+        &quot;plugin&quot;: route.plugin_id,
+        &quot;op_name&quot;: route.op_name,
+        &quot;public_op&quot;: route.public_op,
+        &quot;layer_stack_root&quot;: route.layer_stack_root,
+        &quot;intent&quot;: route.intent,
+        &quot;auto_workspace_overlay&quot;: route.auto_workspace_overlay,
+        &quot;service_id&quot;: route.service_id,
+        &quot;service_instance_id&quot;: route.service_instance_id,
+        &quot;service_mode&quot;: route.service_mode,
+        &quot;service_command&quot;: route.service_command,
+        &quot;timeout_ms&quot;: route.timeout_ms,
+        &quot;dispatch_mode&quot;: route.dispatch_mode(),
+    })
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-process-values-247">process_values</a>(processes: &amp;[<span class="rs-type">PluginProcessSpec</span>]) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; {
+    processes.iter().map(process_spec_to_json).collect()
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-process-spec-to-json-251">process_spec_to_json</a>(spec: &amp;<span class="rs-type">PluginProcessSpec</span>) -&gt; <span class="rs-type">Value</span> {
+    json!({
+        &quot;service_id&quot;: spec.key.service_id,
+        &quot;service_instance_id&quot;: spec.key.service_instance_id(),
+        &quot;command&quot;: spec.command,
+        &quot;package_root&quot;: spec.package_root,
+        &quot;dependency_root&quot;: spec.dependency_root,
+        &quot;working_dir&quot;: spec.working_dir,
+        &quot;socket_path&quot;: spec.socket_path,
+        &quot;stderr_path&quot;: spec.stderr_path,
+        &quot;env&quot;: spec.environment(),
+        &quot;ppc_protocol_version&quot;: spec.ppc_protocol_version,
+        &quot;process_started&quot;: <span class="rs-kw">false</span>,
+    })
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-package-report-value-267">package_report_value</a>(report: &amp;<span class="rs-type">PackageEnsureReport</span>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">if</span> !report.active {
+        <span class="rs-kw">return</span> <span class="rs-type">Value</span>::<span class="rs-type">Null</span>;
+    }
+    json!({
+        &quot;needs_upload&quot;: report.needs_upload,
+        &quot;package_root&quot;: report.package_root.as_ref().map(|path| path.to_string_lossy().into_owned()),
+        &quot;dependency_root&quot;: report.dependency_root.as_ref().map(|path| path.to_string_lossy().into_owned()),
+        &quot;package_published&quot;: report.package_published,
+        &quot;setup_ran&quot;: report.setup_ran,
+    })
+}
+
+<span class="rs-comment">/// Shape the oneshot overlay wire response: the guarded changeset shape plus</span>
+<span class="rs-comment">/// runner shell fields, plugin worker result, and the daemon's latest-state</span>
+<span class="rs-comment">/// resource telemetry sample.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-plugin-overlay-response-280">plugin_overlay_response</a>(
+    overlay: &amp;<span class="rs-type">PluginOverlayOutcome</span>,
+    total_start: <span class="rs-type">Instant</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="daemon--src-op-adapter-plugin-rs.html#item-struct-PluginOverlayWireResponse-347">PluginOverlayWireResponse</a>, <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> manifest = <span class="rs-type">LayerStack</span>::open(overlay.layer_stack_root.clone())?.read_active_manifest()?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="daemon--src-runtime-response-rs.html#item-fn-resource-timings-140">resource_timings</a>(&amp;manifest, overlay.changeset.published_file_count());
+    <a class="symbol-link rs-fn" href="daemon--src-runtime-response-rs.html#item-fn-copy-runner-timings-76">copy_runner_timings</a>(&amp;<span class="rs-kw">mut</span> timings, &amp;overlay.runner);
+    <a class="symbol-link rs-fn" href="daemon--src-runtime-response-rs.html#item-fn-insert-tree-resource-timings-173">insert_tree_resource_timings</a>(
+        &amp;<span class="rs-kw">mut</span> timings,
+        &quot;resource.command_exec.upperdir&quot;,
+        &amp;<a class="symbol-link rs-type" href="daemon--src-runtime-response-rs.html#item-struct-TreeResourceStats-24">TreeResourceStats</a>::<a class="symbol-link rs-fn" href="daemon--src-runtime-response-rs.html#method-from-ephemeral-37">from_ephemeral</a>(&amp;overlay.upperdir_stats),
+    );
+    timings.insert(
+        &quot;layer_stack.acquire_snapshot.total_s&quot;.to_owned(),
+        json!(overlay.lease_acquire_s),
+    );
+    timings.insert(
+        &quot;command_exec.capture_upperdir_s&quot;.to_owned(),
+        json!(overlay.capture_s),
+    );
+    timings.insert(&quot;command_exec.occ_apply_s&quot;.to_owned(), json!(overlay.occ_s));
+    timings.insert(
+        &quot;command_exec.total_s&quot;.to_owned(),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <a class="symbol-link rs-fn" href="daemon--src-runtime-response-rs.html#item-fn-plugin-overlay-changeset-response-95">plugin_overlay_changeset_response</a>(&amp;overlay.changeset, timings, total_start);
+    <a class="symbol-link rs-fn" href="daemon--src-runtime-response-rs.html#item-fn-attach-runner-shell-fields-53">attach_runner_shell_fields</a>(&amp;<span class="rs-kw">mut</span> response, &amp;overlay.runner);
+    response[&quot;changed_path_kinds&quot;] = <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(
+        overlay
+            .path_kinds
+            .iter()
+            .map(|(path, kind)| (path.clone(), json!(kind)))
+            .collect(),
+    );
+    <span class="rs-kw">let</span> worker_success = overlay
+        .plugin_result
+        .as_ref()
+        .and_then(|result| result.get(&quot;success&quot;))
+        .and_then(<span class="rs-type">Value</span>::as_bool);
+    response[&quot;plugin_result&quot;] = overlay.plugin_result.clone().unwrap_or_else(|| json!({}));
+    response[&quot;plugin_overlay&quot;] = json!({
+        &quot;changed_paths&quot;: overlay
+            .path_kinds
+            .iter()
+            .map(|(path, _kind)| path.clone())
+            .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;(),
+        &quot;published_manifest_version&quot;: overlay.changeset.published_manifest_version,
+        &quot;worker_exit_code&quot;: overlay.runner.exit_code,
+    });
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-apply-plugin-overlay-status-358">apply_plugin_overlay_status</a>(
+        &amp;<span class="rs-kw">mut</span> response,
+        overlay.runner.exit_code,
+        overlay.changeset.success(),
+        worker_success,
+    );
+    <span class="rs-kw">let</span> timings = response
+        .get(&quot;timings&quot;)
+        .and_then(<span class="rs-type">Value</span>::as_object)
+        .cloned()
+        .unwrap_or_default();
+    <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-strip-plugin-overlay-internal-fields-352">strip_plugin_overlay_internal_fields</a>(&amp;<span class="rs-kw">mut</span> response);
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="daemon--src-op-adapter-plugin-rs.html#item-struct-PluginOverlayWireResponse-347">PluginOverlayWireResponse</a> { response, timings })
+}
+
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="daemon--src-op-adapter-plugin-rs.html#item-struct-PluginOverlayWireResponse-347">PluginOverlayWireResponse</a> {
+    response: <span class="rs-type">Value</span>,
+    timings: <span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;,
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-strip-plugin-overlay-internal-fields-352">strip_plugin_overlay_internal_fields</a>(response: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Value</span>) {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(object) = response.as_object_mut() {
+        object.remove(&quot;timings&quot;);
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-apply-plugin-overlay-status-358">apply_plugin_overlay_status</a>(
+    response: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Value</span>,
+    worker_exit_code: i32,
+    changeset_success: bool,
+    worker_success: <span class="rs-type">Option</span>&lt;bool&gt;,
+) {
+    <span class="rs-kw">if</span> worker_exit_code != 0 {
+        response[&quot;success&quot;] = json!(<span class="rs-kw">false</span>);
+        response[&quot;status&quot;] = json!(&quot;failed&quot;);
+        response[&quot;error&quot;] = json!({
+            &quot;kind&quot;: &quot;plugin_overlay_worker_failed&quot;,
+            &quot;message&quot;: &quot;plugin overlay worker exited with a non-zero status&quot;,
+        });
+    } <span class="rs-kw">else</span> <span class="rs-kw">if</span> changeset_success &amp;&amp; response[&quot;conflict&quot;].is_null() {
+        <span class="rs-kw">if</span> worker_success == <span class="rs-type">Some</span>(<span class="rs-kw">false</span>) {
+            response[&quot;success&quot;] = json!(<span class="rs-kw">false</span>);
+            response[&quot;status&quot;] = json!(&quot;failed&quot;);
+            response[&quot;error&quot;] = json!({
+                &quot;kind&quot;: &quot;plugin_overlay_worker_failed&quot;,
+                &quot;message&quot;: &quot;plugin overlay worker reported failure&quot;,
+            });
+        } <span class="rs-kw">else</span> {
+            response[&quot;success&quot;] = json!(<span class="rs-kw">true</span>);
+            response[&quot;status&quot;] = json!(&quot;committed&quot;);
+        }
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-plugin-overlay-response-with-trace-386">plugin_overlay_response_with_trace</a>(
+    context: &amp;<a class="symbol-link rs-type" href="daemon--src-runtime-context-rs.html#item-struct-DispatchContext-9">DispatchContext</a>&lt;&#x27;_&gt;,
+    op: &amp;str,
+    invocation_id: &amp;str,
+    overlay: &amp;<span class="rs-type">PluginOverlayOutcome</span>,
+    before_resource_timings: &amp;<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;,
+    total_start: <span class="rs-type">Instant</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>&gt; {
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-resource-stats-70">record_plugin_overlay_resource_stats</a>(context, &quot;before&quot;, before_resource_timings);
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-host-resource-stats-130">record_plugin_overlay_host_resource_stats</a>(
+        context,
+        &quot;before&quot;,
+        before_resource_timings,
+    );
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-started-15">record_plugin_overlay_started</a>(context, op, invocation_id, overlay);
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-workspace-prepared-32">record_plugin_overlay_workspace_prepared</a>(context, op, invocation_id, overlay);
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-mount-started-51">record_plugin_overlay_mount_started</a>(context, op, invocation_id, overlay);
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-mount-finished-164">record_plugin_overlay_mount_finished</a>(context, op, invocation_id, overlay);
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-unmount-finished-217">record_plugin_overlay_unmount_finished</a>(context, op, invocation_id, overlay);
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-capture-started-267">record_plugin_overlay_capture_started</a>(context, op, invocation_id, overlay);
+    <span class="rs-kw">let</span> result = <a class="symbol-link rs-fn" href="daemon--src-op-adapter-plugin-rs.html#item-fn-plugin-overlay-response-280">plugin_overlay_response</a>(overlay, total_start);
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(wire) = &amp;result {
+        plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-resource-stats-70">record_plugin_overlay_resource_stats</a>(context, &quot;after&quot;, &amp;wire.timings);
+        plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-host-resource-stats-130">record_plugin_overlay_host_resource_stats</a>(context, &quot;after&quot;, &amp;wire.timings);
+    }
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-capture-finished-285">record_plugin_overlay_capture_finished</a>(context, op, invocation_id, overlay);
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-occ-changeset-trace-events-318">record_occ_changeset_trace_events</a>(context, &amp;overlay.changeset);
+    <span class="rs-kw">match</span> &amp;result {
+        <span class="rs-type">Ok</span>(wire) =&gt; plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-finished-386">record_plugin_overlay_finished</a>(
+            context,
+            op,
+            invocation_id,
+            overlay,
+            &amp;wire.response,
+            <span class="rs-type">None</span>,
+        ),
+        <span class="rs-type">Err</span>(err) =&gt; plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-finished-386">record_plugin_overlay_finished</a>(
+            context,
+            op,
+            invocation_id,
+            overlay,
+            &amp;json!({ &quot;success&quot;: <span class="rs-kw">false</span>, &quot;status&quot;: &quot;error&quot; }),
+            <span class="rs-type">Some</span>(err),
+        ),
+    }
+    plugin_trace::<a class="symbol-link rs-fn" href="daemon--src-trace-plugin-trace-rs.html#item-fn-record-plugin-overlay-lease-release-failed-327">record_plugin_overlay_lease_release_failed</a>(context, op, invocation_id, overlay);
+    result.map(|wire| wire.response)
+}
+
+#[cfg(test)]
+#[path = &quot;../../tests/unit/plugin/<span class="rs-kw">mod</span>.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

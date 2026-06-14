@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>daemon · src/trace/sidecar/build.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>38</b><span>modules</span></div>
+  <div><b>277</b><span>items</span></div>
+  <div><b>142</b><span>fields</span></div>
+  <div><b>74</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">dispatch</span><ul class="file-tree"><li><a class="file-link" href="daemon.html"><span>builtin.rs</span><small>0/5</small></a></li><li><a class="file-link" href="daemon--src-dispatch-dispatcher-rs.html"><span>dispatcher.rs</span><small>0/5</small></a></li><li><a class="file-link" href="daemon--src-dispatch-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="daemon--src-lib-rs.html"><span>lib.rs</span><small>0/1</small></a></li><li><span class="folder">op_adapter</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-op-adapter-checkpoint-rs.html"><span>checkpoint.rs</span><small>0/13</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-command-rs.html"><span>command.rs</span><small>2/17</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-control-rs.html"><span>control.rs</span><small>0/11</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-files-rs.html"><span>files.rs</span><small>4/19</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-isolation-rs.html"><span>isolation.rs</span><small>0/23</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-mod-rs.html"><span>mod.rs</span><small>0/12</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-plugin-rs.html"><span>plugin.rs</span><small>1/17</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-workspace-run-rs.html"><span>workspace_run.rs</span><small>0/2</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-runtime-context-rs.html"><span>context.rs</span><small>1/0</small></a></li><li><a class="file-link" href="daemon--src-runtime-error-rs.html"><span>error.rs</span><small>1/1</small></a></li><li><a class="file-link" href="daemon--src-runtime-invocation-registry-rs.html"><span>invocation_registry.rs</span><small>4/2</small></a></li><li><a class="file-link" href="daemon--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="daemon--src-runtime-response-rs.html"><span>response.rs</span><small>2/11</small></a></li><li><a class="file-link" href="daemon--src-runtime-services-rs.html"><span>services.rs</span><small>1/3</small></a></li><li><a class="file-link" href="daemon--src-runtime-workspace-rs.html"><span>workspace.rs</span><small>10/5</small></a></li></ul></li><li><span class="folder">trace</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-trace-envelope-meta-rs.html"><span>envelope_meta.rs</span><small>0/6</small></a></li><li><a class="file-link" href="daemon--src-trace-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="daemon--src-trace-plugin-trace-rs.html"><span>plugin_trace.rs</span><small>0/21</small></a></li><li><span class="folder">sidecar</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-trace-sidecar-budget-rs.html"><span>budget.rs</span><small>0/1</small></a></li><li><a class="file-link active" href="daemon--src-trace-sidecar-build-rs.html"><span>build.rs</span><small>0/2</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-events-rs.html"><span>events.rs</span><small>0/7</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-resources-rs.html"><span>resources.rs</span><small>0/4</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-tests-rs.html"><span>tests.rs</span><small>0/5</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-transport-failure-rs.html"><span>transport_failure.rs</span><small>0/2</small></a></li></ul></li><li><a class="file-link" href="daemon--src-trace-sidecar-rs.html"><span>sidecar.rs</span><small>0/0</small></a></li><li><a class="file-link" href="daemon--src-trace-spool-rs.html"><span>spool.rs</span><small>3/9</small></a></li></ul></li><li><span class="folder">transport</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-transport-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">server</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-transport-server-connection-rs.html"><span>connection.rs</span><small>0/3</small></a></li><li><a class="file-link" href="daemon--src-transport-server-dispatch-rs.html"><span>dispatch.rs</span><small>0/6</small></a></li><li><a class="file-link" href="daemon--src-transport-server-lifecycle-rs.html"><span>lifecycle.rs</span><small>0/2</small></a></li><li><a class="file-link" href="daemon--src-transport-server-trace-context-rs.html"><span>trace_context.rs</span><small>1/3</small></a></li></ul></li><li><a class="file-link" href="daemon--src-transport-server-rs.html"><span>server.rs</span><small>2/0</small></a></li></ul></li><li><span class="folder">wire</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-wire-message-rs.html"><span>message.rs</span><small>5/3</small></a></li><li><a class="file-link" href="daemon--src-wire-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="trace::sidecar::build crates/daemon/src/trace/sidecar/build.rs attach_request_sidecar attach_request_sidecar_with_events">
+  <div class="module-head">
+    <div>
+      <h2>src/trace/sidecar/build.rs</h2>
+      <p class="path">module <code>trace::sidecar::build</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>2 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-attach-request-sidecar-19" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attach_request_sidecar pub(crate) pub(crate) fn attach_request_sidecar (response : Value , trace : Option &lt; &amp; RequestTraceContext &gt; , op : &amp; str , facts : &amp; RequestTraceFacts ,) -&gt; Value crates/daemon/src/trace/sidecar/build.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>attach_request_sidecar</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="daemon--src-trace-sidecar-build-rs.html#item-fn-attach-request-sidecar-19">attach_request_sidecar</a> (response : Value , trace : Option &lt; &amp; <a class="symbol-link" href="daemon--src-wire-message-rs.html#item-struct-RequestTraceContext-40">RequestTraceContext</a> &gt; , op : &amp; str , facts : &amp; <a class="symbol-link" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceFacts-19">RequestTraceFacts</a> ,) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-build-rs.html#item-fn-attach-request-sidecar-19">attach_request_sidecar</a>(
+    response: <span class="rs-type">Value</span>,
+    trace: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="daemon--src-wire-message-rs.html#item-struct-RequestTraceContext-40">RequestTraceContext</a>&gt;,
+    op: &amp;str,
+    facts: &amp;<a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceFacts-19">RequestTraceFacts</a>,
+) -&gt; <span class="rs-type">Value</span> {
+    <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-build-rs.html#item-fn-attach-request-sidecar-with-events-28">attach_request_sidecar_with_events</a>(response, trace, op, facts, &amp;[])
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/trace/sidecar/build.rs:19</p>
+</article><article id="item-fn-attach-request-sidecar-with-events-28" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attach_request_sidecar_with_events pub(crate) pub(crate) fn attach_request_sidecar_with_events (mut response : Value , trace : Option &lt; &amp; RequestTraceContext &gt; , op : &amp; str , facts : &amp; RequestTraceFacts , request_events : &amp; [RequestTraceEvent] ,) -&gt; Value crates/daemon/src/trace/sidecar/build.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>attach_request_sidecar_with_events</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="daemon--src-trace-sidecar-build-rs.html#item-fn-attach-request-sidecar-with-events-28">attach_request_sidecar_with_events</a> (mut response : Value , trace : Option &lt; &amp; <a class="symbol-link" href="daemon--src-wire-message-rs.html#item-struct-RequestTraceContext-40">RequestTraceContext</a> &gt; , op : &amp; str , facts : &amp; <a class="symbol-link" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceFacts-19">RequestTraceFacts</a> , request_events : &amp; [<a class="symbol-link" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>] ,) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-build-rs.html#item-fn-attach-request-sidecar-with-events-28">attach_request_sidecar_with_events</a>(
+    <span class="rs-kw">mut</span> response: <span class="rs-type">Value</span>,
+    trace: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="daemon--src-wire-message-rs.html#item-struct-RequestTraceContext-40">RequestTraceContext</a>&gt;,
+    op: &amp;str,
+    facts: &amp;<a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceFacts-19">RequestTraceFacts</a>,
+    request_events: &amp;[<a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>],
+) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> response_bytes = serde_json::to_vec(&amp;response).map_or(0, |bytes| bytes.len());
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(object) = response.as_object_mut() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> response;
+    };
+    <span class="rs-kw">let</span> trace_id = trace
+        .and_then(|trace| <span class="rs-type">TraceId</span>::parse(trace.trace_id.clone()).ok())
+        .unwrap_or_default();
+    <span class="rs-kw">let</span> request_id = trace
+        .and_then(|trace| <span class="rs-type">RequestId</span>::parse(trace.request_id.clone()).ok())
+        .unwrap_or_default();
+    <span class="rs-kw">let</span> capture_budget_version = trace.map_or(1, |trace| trace.capture_budget_version);
+    <span class="rs-kw">let</span> now = <a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-now-ms-160">now_ms</a>();
+    <span class="rs-kw">let</span> started_at = facts.accepted_at_unix_ms.min(now);
+    <span class="rs-kw">let</span> duration_us = now.saturating_sub(started_at).saturating_mul(1000);
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> root = <span class="rs-type">SpanRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+        <span class="rs-type">SpanUid</span>::<span class="rs-type">ROOT</span>,
+        <span class="rs-type">None</span>,
+        &quot;op_request&quot;,
+        <span class="rs-type">SpanKind</span>::<span class="rs-type">OpRequest</span>,
+        json!({
+            &quot;op&quot;: op,
+            &quot;capture_budget_version&quot;: capture_budget_version,
+            &quot;connection_id&quot;: facts.connection_id,
+            &quot;listener_kind&quot;: facts.listener_kind,
+            &quot;peer_addr&quot;: facts.peer_addr,
+            &quot;local_addr&quot;: facts.local_addr,
+            &quot;request_bytes&quot;: facts.request_bytes,
+        }),
+    );
+    root.started_at_unix_ms = started_at;
+    root.finished_at_unix_ms = now;
+    root.duration_us = duration_us;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> transport = <span class="rs-type">SpanRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+        <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(2),
+        <span class="rs-type">Some</span>(<span class="rs-type">SpanUid</span>::<span class="rs-type">ROOT</span>),
+        &quot;daemon.transport&quot;,
+        <span class="rs-type">SpanKind</span>::<span class="rs-type">DaemonTransport</span>,
+        json!({
+            &quot;connection_id&quot;: facts.connection_id,
+            &quot;listener_kind&quot;: facts.listener_kind,
+            &quot;peer_addr&quot;: facts.peer_addr,
+            &quot;local_addr&quot;: facts.local_addr,
+        }),
+    );
+    transport.started_at_unix_ms = started_at;
+    transport.finished_at_unix_ms = now;
+    transport.duration_us = duration_us;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> dispatch = <span class="rs-type">SpanRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+        <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(3),
+        <span class="rs-type">Some</span>(<span class="rs-type">SpanUid</span>::<span class="rs-type">ROOT</span>),
+        &quot;dispatch&quot;,
+        <span class="rs-type">SpanKind</span>::<span class="rs-type">Dispatch</span>,
+        json!({&quot;op&quot;: op}),
+    );
+    dispatch.started_at_unix_ms = now;
+    dispatch.finished_at_unix_ms = now;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> operation = <span class="rs-type">SpanRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+        <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(4),
+        <span class="rs-type">Some</span>(<span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(3)),
+        <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-events-rs.html#item-fn-op-span-name-107">op_span_name</a>(op),
+        <span class="rs-type">SpanKind</span>::<span class="rs-type">Operation</span>,
+        json!({&quot;op&quot;: op, &quot;family&quot;: <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-events-rs.html#item-fn-op-family-99">op_family</a>(op), &quot;verb&quot;: <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-events-rs.html#item-fn-op-verb-103">op_verb</a>(op)}),
+    );
+    operation.started_at_unix_ms = now;
+    operation.finished_at_unix_ms = now;
+    <span class="rs-kw">let</span> child_spans = <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-events-rs.html#item-fn-child-spans-from-request-events-10">child_spans_from_request_events</a>(request_events, now);
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> events = vec![
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(2),
+            &quot;accepted&quot;,
+            &quot;daemon.transport&quot;,
+            json!({
+                &quot;connection_id&quot;: facts.connection_id,
+                &quot;listener_kind&quot;: facts.listener_kind,
+                &quot;peer_addr&quot;: facts.peer_addr,
+                &quot;local_addr&quot;: facts.local_addr,
+                &quot;daemon_boot_id&quot;: <a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-daemon-boot-id-15">daemon_boot_id</a>().to_string(),
+            }),
+        ),
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(2),
+            &quot;read_started&quot;,
+            &quot;daemon.transport&quot;,
+            json!({
+                &quot;connection_id&quot;: facts.connection_id,
+                &quot;is_tcp&quot;: facts.is_tcp,
+            }),
+        ),
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(2),
+            &quot;read_finished&quot;,
+            &quot;daemon.transport&quot;,
+            json!({
+                &quot;connection_id&quot;: facts.connection_id,
+                &quot;is_tcp&quot;: facts.is_tcp,
+                &quot;request_bytes&quot;: facts.request_bytes,
+                &quot;read_duration_us&quot;: facts.read_duration_us,
+            }),
+        ),
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(2),
+            &quot;auth_checked&quot;,
+            &quot;daemon.transport&quot;,
+            json!({
+                &quot;connection_id&quot;: facts.connection_id,
+                &quot;auth_required&quot;: facts.auth_required,
+                &quot;auth_ok&quot;: facts.auth_ok,
+            }),
+        ),
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(2),
+            &quot;decoded&quot;,
+            &quot;daemon.transport&quot;,
+            json!({
+                &quot;connection_id&quot;: facts.connection_id,
+                &quot;protocol_version&quot;: facts.protocol_version,
+            }),
+        ),
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(3),
+            &quot;dispatch_started&quot;,
+            &quot;daemon.dispatch&quot;,
+            json!({&quot;op&quot;: op}),
+        ),
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(3),
+            &quot;op_resolved&quot;,
+            &quot;daemon.dispatch&quot;,
+            json!({&quot;op&quot;: op, &quot;family&quot;: <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-events-rs.html#item-fn-op-family-99">op_family</a>(op), &quot;verb&quot;: <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-events-rs.html#item-fn-op-verb-103">op_verb</a>(op)}),
+        ),
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(3),
+            &quot;parse_finished&quot;,
+            &quot;daemon.dispatch&quot;,
+            json!({
+                &quot;op&quot;: op,
+                &quot;success&quot;: <span class="rs-kw">true</span>,
+                &quot;protocol_version&quot;: facts.protocol_version,
+            }),
+        ),
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(3),
+            &quot;plugin_fallback_checked&quot;,
+            &quot;daemon.dispatch&quot;,
+            json!({
+                &quot;op&quot;: op,
+                &quot;plugin_shaped&quot;: op.starts_with(<span class="rs-type">DYNAMIC_PLUGIN_POLICY</span>.prefix),
+            }),
+        ),
+    ];
+    <span class="rs-kw">if</span> !request_events
+        .iter()
+        .any(|event| event.module == &quot;workspace.route&quot; &amp;&amp; event.name == &quot;route_selected&quot;)
+    {
+        events.<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#method-push-63">push</a>(<span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(4),
+            &quot;route_selected&quot;,
+            &quot;workspace.route&quot;,
+            json!({&quot;kind&quot;: &quot;none&quot;, &quot;reason&quot;: &quot;no_route_recorded&quot;}),
+        ));
+    }
+    events.extend(request_events.iter().map(|event| {
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-events-rs.html#item-fn-request-event-span-id-72">request_event_span_id</a>(event),
+            event.name.clone(),
+            event.module.clone(),
+            event.details.clone(),
+        )
+    }));
+    events.extend([
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(3),
+            &quot;dispatch_finished&quot;,
+            &quot;daemon.dispatch&quot;,
+            json!({&quot;op&quot;: op}),
+        ),
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(2),
+            &quot;response_write_started&quot;,
+            &quot;daemon.transport&quot;,
+            json!({&quot;connection_id&quot;: facts.connection_id, &quot;response_bytes&quot;: response_bytes}),
+        ),
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(2),
+            &quot;response_write_finished&quot;,
+            &quot;daemon.transport&quot;,
+            json!({&quot;connection_id&quot;: facts.connection_id, &quot;response_bytes&quot;: response_bytes}),
+        ),
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(2),
+            &quot;shutdown_finished&quot;,
+            &quot;daemon.transport&quot;,
+            json!({&quot;connection_id&quot;: facts.connection_id}),
+        ),
+    ]);
+    <span class="rs-kw">for</span> event <span class="rs-kw">in</span> &amp;<span class="rs-kw">mut</span> events {
+        event.at_unix_ms = now;
+    }
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> record = <span class="rs-type">TraceRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(trace_id, <span class="rs-type">SpanUid</span>::<span class="rs-type">ROOT</span>);
+    record.request_id = <span class="rs-type">Some</span>(request_id);
+    record.started_at_unix_ms = started_at;
+    record.finished_at_unix_ms = now;
+    record.spans = vec![root, transport, dispatch, operation];
+    record.spans.extend(child_spans);
+    record.resources = request_events
+        .iter()
+        .filter_map(resource_stats_from_event)
+        .collect();
+    record.events = events;
+    <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-budget-rs.html#item-fn-enforce-sidecar-record-budget-3">enforce_sidecar_record_budget</a>(&amp;<span class="rs-kw">mut</span> record);
+    <a class="symbol-link rs-fn" href="daemon--src-trace-envelope-meta-rs.html#item-fn-stamp-pending-envelope-meta-7">stamp_pending_envelope_meta</a>(object, &amp;record, op, duration_us);
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> batch = <span class="rs-type">TraceBatch</span>::single(record);
+    batch.daemon_boot_id = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-daemon-boot-id-15">daemon_boot_id</a>().to_string());
+    <span class="rs-kw">let</span> encoded = encode_trace_batch(&amp;batch);
+    object.insert(
+        <span class="rs-type">TRACE_SIDECAR_FIELD</span>.to_owned(),
+        json!({
+            &quot;schema&quot;: <span class="rs-type">TRACE_SIDECAR_SCHEMA</span>,
+            &quot;encoding&quot;: <span class="rs-type">TRACE_SIDECAR_ENCODING</span>,
+            &quot;spool_pending&quot;: <span class="rs-kw">false</span>,
+            &quot;data&quot;: base64::engine::general_purpose::<span class="rs-type">STANDARD</span>.<a class="symbol-link rs-fn" href="daemon--src-wire-message-rs.html#item-fn-encode-74">encode</a>(encoded),
+        }),
+    );
+    response
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/trace/sidecar/build.rs:28</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/daemon/src/trace/sidecar/build.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> base64::<span class="rs-type">Engine</span> <span class="rs-kw">as</span> _;
+<span class="rs-kw">use</span> protocol::catalog::<span class="rs-type">DYNAMIC_PLUGIN_POLICY</span>;
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+<span class="rs-kw">use</span> trace::{
+    encode_trace_batch, <span class="rs-type">EventRecord</span>, <span class="rs-type">RequestId</span>, <span class="rs-type">SpanKind</span>, <span class="rs-type">SpanRecord</span>, <span class="rs-type">SpanUid</span>, <span class="rs-type">TraceBatch</span>, <span class="rs-type">TraceId</span>,
+    <span class="rs-type">TraceRecord</span>, <span class="rs-type">TRACE_SIDECAR_ENCODING</span>, <span class="rs-type">TRACE_SIDECAR_FIELD</span>, <span class="rs-type">TRACE_SIDECAR_SCHEMA</span>,
+};
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::budget::enforce_sidecar_record_budget;
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::events::{
+    child_spans_from_request_events, op_family, op_span_name, op_verb, request_event_span_id,
+};
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::resources::resource_stats_from_event;
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::{
+    daemon_boot_id, now_ms, stamp_pending_envelope_meta, <a class="symbol-link rs-type" href="daemon--src-wire-message-rs.html#item-struct-RequestTraceContext-40">RequestTraceContext</a>, <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>,
+    <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceFacts-19">RequestTraceFacts</a>,
+};
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-build-rs.html#item-fn-attach-request-sidecar-19">attach_request_sidecar</a>(
+    response: <span class="rs-type">Value</span>,
+    trace: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="daemon--src-wire-message-rs.html#item-struct-RequestTraceContext-40">RequestTraceContext</a>&gt;,
+    op: &amp;str,
+    facts: &amp;<a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceFacts-19">RequestTraceFacts</a>,
+) -&gt; <span class="rs-type">Value</span> {
+    <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-build-rs.html#item-fn-attach-request-sidecar-with-events-28">attach_request_sidecar_with_events</a>(response, trace, op, facts, &amp;[])
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-build-rs.html#item-fn-attach-request-sidecar-with-events-28">attach_request_sidecar_with_events</a>(
+    <span class="rs-kw">mut</span> response: <span class="rs-type">Value</span>,
+    trace: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="daemon--src-wire-message-rs.html#item-struct-RequestTraceContext-40">RequestTraceContext</a>&gt;,
+    op: &amp;str,
+    facts: &amp;<a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceFacts-19">RequestTraceFacts</a>,
+    request_events: &amp;[<a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>],
+) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> response_bytes = serde_json::to_vec(&amp;response).map_or(0, |bytes| bytes.len());
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(object) = response.as_object_mut() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> response;
+    };
+    <span class="rs-kw">let</span> trace_id = trace
+        .and_then(|trace| <span class="rs-type">TraceId</span>::parse(trace.trace_id.clone()).ok())
+        .unwrap_or_default();
+    <span class="rs-kw">let</span> request_id = trace
+        .and_then(|trace| <span class="rs-type">RequestId</span>::parse(trace.request_id.clone()).ok())
+        .unwrap_or_default();
+    <span class="rs-kw">let</span> capture_budget_version = trace.map_or(1, |trace| trace.capture_budget_version);
+    <span class="rs-kw">let</span> now = <a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-now-ms-160">now_ms</a>();
+    <span class="rs-kw">let</span> started_at = facts.accepted_at_unix_ms.min(now);
+    <span class="rs-kw">let</span> duration_us = now.saturating_sub(started_at).saturating_mul(1000);
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> root = <span class="rs-type">SpanRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+        <span class="rs-type">SpanUid</span>::<span class="rs-type">ROOT</span>,
+        <span class="rs-type">None</span>,
+        &quot;op_request&quot;,
+        <span class="rs-type">SpanKind</span>::<span class="rs-type">OpRequest</span>,
+        json!({
+            &quot;op&quot;: op,
+            &quot;capture_budget_version&quot;: capture_budget_version,
+            &quot;connection_id&quot;: facts.connection_id,
+            &quot;listener_kind&quot;: facts.listener_kind,
+            &quot;peer_addr&quot;: facts.peer_addr,
+            &quot;local_addr&quot;: facts.local_addr,
+            &quot;request_bytes&quot;: facts.request_bytes,
+        }),
+    );
+    root.started_at_unix_ms = started_at;
+    root.finished_at_unix_ms = now;
+    root.duration_us = duration_us;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> transport = <span class="rs-type">SpanRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+        <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(2),
+        <span class="rs-type">Some</span>(<span class="rs-type">SpanUid</span>::<span class="rs-type">ROOT</span>),
+        &quot;daemon.transport&quot;,
+        <span class="rs-type">SpanKind</span>::<span class="rs-type">DaemonTransport</span>,
+        json!({
+            &quot;connection_id&quot;: facts.connection_id,
+            &quot;listener_kind&quot;: facts.listener_kind,
+            &quot;peer_addr&quot;: facts.peer_addr,
+            &quot;local_addr&quot;: facts.local_addr,
+        }),
+    );
+    transport.started_at_unix_ms = started_at;
+    transport.finished_at_unix_ms = now;
+    transport.duration_us = duration_us;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> dispatch = <span class="rs-type">SpanRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+        <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(3),
+        <span class="rs-type">Some</span>(<span class="rs-type">SpanUid</span>::<span class="rs-type">ROOT</span>),
+        &quot;dispatch&quot;,
+        <span class="rs-type">SpanKind</span>::<span class="rs-type">Dispatch</span>,
+        json!({&quot;op&quot;: op}),
+    );
+    dispatch.started_at_unix_ms = now;
+    dispatch.finished_at_unix_ms = now;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> operation = <span class="rs-type">SpanRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+        <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(4),
+        <span class="rs-type">Some</span>(<span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(3)),
+        <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-events-rs.html#item-fn-op-span-name-107">op_span_name</a>(op),
+        <span class="rs-type">SpanKind</span>::<span class="rs-type">Operation</span>,
+        json!({&quot;op&quot;: op, &quot;family&quot;: <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-events-rs.html#item-fn-op-family-99">op_family</a>(op), &quot;verb&quot;: <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-events-rs.html#item-fn-op-verb-103">op_verb</a>(op)}),
+    );
+    operation.started_at_unix_ms = now;
+    operation.finished_at_unix_ms = now;
+    <span class="rs-kw">let</span> child_spans = <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-events-rs.html#item-fn-child-spans-from-request-events-10">child_spans_from_request_events</a>(request_events, now);
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> events = vec![
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(2),
+            &quot;accepted&quot;,
+            &quot;daemon.transport&quot;,
+            json!({
+                &quot;connection_id&quot;: facts.connection_id,
+                &quot;listener_kind&quot;: facts.listener_kind,
+                &quot;peer_addr&quot;: facts.peer_addr,
+                &quot;local_addr&quot;: facts.local_addr,
+                &quot;daemon_boot_id&quot;: <a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-daemon-boot-id-15">daemon_boot_id</a>().to_string(),
+            }),
+        ),
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(2),
+            &quot;read_started&quot;,
+            &quot;daemon.transport&quot;,
+            json!({
+                &quot;connection_id&quot;: facts.connection_id,
+                &quot;is_tcp&quot;: facts.is_tcp,
+            }),
+        ),
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(2),
+            &quot;read_finished&quot;,
+            &quot;daemon.transport&quot;,
+            json!({
+                &quot;connection_id&quot;: facts.connection_id,
+                &quot;is_tcp&quot;: facts.is_tcp,
+                &quot;request_bytes&quot;: facts.request_bytes,
+                &quot;read_duration_us&quot;: facts.read_duration_us,
+            }),
+        ),
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(2),
+            &quot;auth_checked&quot;,
+            &quot;daemon.transport&quot;,
+            json!({
+                &quot;connection_id&quot;: facts.connection_id,
+                &quot;auth_required&quot;: facts.auth_required,
+                &quot;auth_ok&quot;: facts.auth_ok,
+            }),
+        ),
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(2),
+            &quot;decoded&quot;,
+            &quot;daemon.transport&quot;,
+            json!({
+                &quot;connection_id&quot;: facts.connection_id,
+                &quot;protocol_version&quot;: facts.protocol_version,
+            }),
+        ),
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(3),
+            &quot;dispatch_started&quot;,
+            &quot;daemon.dispatch&quot;,
+            json!({&quot;op&quot;: op}),
+        ),
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(3),
+            &quot;op_resolved&quot;,
+            &quot;daemon.dispatch&quot;,
+            json!({&quot;op&quot;: op, &quot;family&quot;: <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-events-rs.html#item-fn-op-family-99">op_family</a>(op), &quot;verb&quot;: <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-events-rs.html#item-fn-op-verb-103">op_verb</a>(op)}),
+        ),
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(3),
+            &quot;parse_finished&quot;,
+            &quot;daemon.dispatch&quot;,
+            json!({
+                &quot;op&quot;: op,
+                &quot;success&quot;: <span class="rs-kw">true</span>,
+                &quot;protocol_version&quot;: facts.protocol_version,
+            }),
+        ),
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(3),
+            &quot;plugin_fallback_checked&quot;,
+            &quot;daemon.dispatch&quot;,
+            json!({
+                &quot;op&quot;: op,
+                &quot;plugin_shaped&quot;: op.starts_with(<span class="rs-type">DYNAMIC_PLUGIN_POLICY</span>.prefix),
+            }),
+        ),
+    ];
+    <span class="rs-kw">if</span> !request_events
+        .iter()
+        .any(|event| event.module == &quot;workspace.route&quot; &amp;&amp; event.name == &quot;route_selected&quot;)
+    {
+        events.<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#method-push-63">push</a>(<span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(4),
+            &quot;route_selected&quot;,
+            &quot;workspace.route&quot;,
+            json!({&quot;kind&quot;: &quot;none&quot;, &quot;reason&quot;: &quot;no_route_recorded&quot;}),
+        ));
+    }
+    events.extend(request_events.iter().map(|event| {
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-events-rs.html#item-fn-request-event-span-id-72">request_event_span_id</a>(event),
+            event.name.clone(),
+            event.module.clone(),
+            event.details.clone(),
+        )
+    }));
+    events.extend([
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(3),
+            &quot;dispatch_finished&quot;,
+            &quot;daemon.dispatch&quot;,
+            json!({&quot;op&quot;: op}),
+        ),
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(2),
+            &quot;response_write_started&quot;,
+            &quot;daemon.transport&quot;,
+            json!({&quot;connection_id&quot;: facts.connection_id, &quot;response_bytes&quot;: response_bytes}),
+        ),
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(2),
+            &quot;response_write_finished&quot;,
+            &quot;daemon.transport&quot;,
+            json!({&quot;connection_id&quot;: facts.connection_id, &quot;response_bytes&quot;: response_bytes}),
+        ),
+        <span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+            <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(2),
+            &quot;shutdown_finished&quot;,
+            &quot;daemon.transport&quot;,
+            json!({&quot;connection_id&quot;: facts.connection_id}),
+        ),
+    ]);
+    <span class="rs-kw">for</span> event <span class="rs-kw">in</span> &amp;<span class="rs-kw">mut</span> events {
+        event.at_unix_ms = now;
+    }
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> record = <span class="rs-type">TraceRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(trace_id, <span class="rs-type">SpanUid</span>::<span class="rs-type">ROOT</span>);
+    record.request_id = <span class="rs-type">Some</span>(request_id);
+    record.started_at_unix_ms = started_at;
+    record.finished_at_unix_ms = now;
+    record.spans = vec![root, transport, dispatch, operation];
+    record.spans.extend(child_spans);
+    record.resources = request_events
+        .iter()
+        .filter_map(resource_stats_from_event)
+        .collect();
+    record.events = events;
+    <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-budget-rs.html#item-fn-enforce-sidecar-record-budget-3">enforce_sidecar_record_budget</a>(&amp;<span class="rs-kw">mut</span> record);
+    <a class="symbol-link rs-fn" href="daemon--src-trace-envelope-meta-rs.html#item-fn-stamp-pending-envelope-meta-7">stamp_pending_envelope_meta</a>(object, &amp;record, op, duration_us);
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> batch = <span class="rs-type">TraceBatch</span>::single(record);
+    batch.daemon_boot_id = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-daemon-boot-id-15">daemon_boot_id</a>().to_string());
+    <span class="rs-kw">let</span> encoded = encode_trace_batch(&amp;batch);
+    object.insert(
+        <span class="rs-type">TRACE_SIDECAR_FIELD</span>.to_owned(),
+        json!({
+            &quot;schema&quot;: <span class="rs-type">TRACE_SIDECAR_SCHEMA</span>,
+            &quot;encoding&quot;: <span class="rs-type">TRACE_SIDECAR_ENCODING</span>,
+            &quot;spool_pending&quot;: <span class="rs-kw">false</span>,
+            &quot;data&quot;: base64::engine::general_purpose::<span class="rs-type">STANDARD</span>.<a class="symbol-link rs-fn" href="daemon--src-wire-message-rs.html#item-fn-encode-74">encode</a>(encoded),
+        }),
+    );
+    response
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

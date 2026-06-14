@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>operation · src/plugin/dispatch.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>operation File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>46</b><span>modules</span></div>
+  <div><b>483</b><span>items</span></div>
+  <div><b>645</b><span>fields</span></div>
+  <div><b>226</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">checkpoint</span><ul class="file-tree"><li><a class="file-link" href="operation.html"><span>commit.rs</span><small>2/23</small></a></li><li><a class="file-link" href="operation--src-checkpoint-contract-rs.html"><span>contract.rs</span><small>11/1</small></a></li><li><a class="file-link" href="operation--src-checkpoint-mod-rs.html"><span>mod.rs</span><small>4/0</small></a></li></ul></li><li><span class="folder">command</span><ul class="file-tree"><li><a class="file-link" href="operation--src-command-contract-rs.html"><span>contract.rs</span><small>11/5</small></a></li><li><a class="file-link" href="operation--src-command-finalize-rs.html"><span>finalize.rs</span><small>1/19</small></a></li><li><a class="file-link" href="operation--src-command-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="operation--src-command-outcome-rs.html"><span>outcome.rs</span><small>1/0</small></a></li><li><a class="file-link" href="operation--src-command-prepare-rs.html"><span>prepare.rs</span><small>3/6</small></a></li><li><a class="file-link" href="operation--src-command-registry-rs.html"><span>registry.rs</span><small>7/1</small></a></li><li><span class="folder">service</span><ul class="file-tree"><li><a class="file-link" href="operation--src-command-service-exec-rs.html"><span>exec.rs</span><small>0/0</small></a></li><li><a class="file-link" href="operation--src-command-service-io-rs.html"><span>io.rs</span><small>0/0</small></a></li><li><a class="file-link" href="operation--src-command-service-lifecycle-rs.html"><span>lifecycle.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="operation--src-command-service-rs.html"><span>service.rs</span><small>8/5</small></a></li><li><a class="file-link" href="operation--src-command-trace-rs.html"><span>trace.rs</span><small>3/13</small></a></li></ul></li><li><span class="folder">control</span><ul class="file-tree"><li><a class="file-link" href="operation--src-control-contract-rs.html"><span>contract.rs</span><small>12/0</small></a></li><li><a class="file-link" href="operation--src-control-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">core</span><ul class="file-tree"><li><a class="file-link" href="operation--src-core-audit-rs.html"><span>audit.rs</span><small>1/0</small></a></li><li><a class="file-link" href="operation--src-core-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="operation--src-core-id-rs.html"><span>id.rs</span><small>3/0</small></a></li><li><a class="file-link" href="operation--src-core-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="operation--src-core-request-rs.html"><span>request.rs</span><small>4/13</small></a></li><li><a class="file-link" href="operation--src-core-workspace-outcome-rs.html"><span>workspace_outcome.rs</span><small>6/1</small></a></li></ul></li><li><span class="folder">file</span><ul class="file-tree"><li><a class="file-link" href="operation--src-file-contract-rs.html"><span>contract.rs</span><small>3/1</small></a></li><li><a class="file-link" href="operation--src-file-direct-rs.html"><span>direct.rs</span><small>1/4</small></a></li><li><a class="file-link" href="operation--src-file-isolated-rs.html"><span>isolated.rs</span><small>1/9</small></a></li><li><a class="file-link" href="operation--src-file-mod-rs.html"><span>mod.rs</span><small>11/8</small></a></li><li><a class="file-link" href="operation--src-file-tests-rs.html"><span>tests.rs</span><small>1/10</small></a></li></ul></li><li><span class="folder">isolation</span><ul class="file-tree"><li><a class="file-link" href="operation--src-isolation-contract-rs.html"><span>contract.rs</span><small>8/0</small></a></li><li><a class="file-link" href="operation--src-isolation-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="operation--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">plugin</span><ul class="file-tree"><li><a class="file-link" href="operation--src-plugin-callbacks-rs.html"><span>callbacks.rs</span><small>3/6</small></a></li><li><a class="file-link" href="operation--src-plugin-contract-rs.html"><span>contract.rs</span><small>9/7</small></a></li><li><a class="file-link active" href="operation--src-plugin-dispatch-rs.html"><span>dispatch.rs</span><small>1/1</small></a></li><li><a class="file-link" href="operation--src-plugin-ensure-rs.html"><span>ensure.rs</span><small>1/12</small></a></li><li><a class="file-link" href="operation--src-plugin-mod-rs.html"><span>mod.rs</span><small>6/1</small></a></li><li><a class="file-link" href="operation--src-plugin-overlay-rs.html"><span>overlay.rs</span><small>2/6</small></a></li><li><a class="file-link" href="operation--src-plugin-package-rs.html"><span>package.rs</span><small>4/24</small></a></li><li><a class="file-link" href="operation--src-plugin-process-rs.html"><span>process.rs</span><small>3/9</small></a></li><li><a class="file-link" href="operation--src-plugin-refresh-rs.html"><span>refresh.rs</span><small>3/3</small></a></li><li><a class="file-link" href="operation--src-plugin-route-rs.html"><span>route.rs</span><small>2/3</small></a></li><li><a class="file-link" href="operation--src-plugin-service-rs.html"><span>service.rs</span><small>2/19</small></a></li><li><a class="file-link" href="operation--src-plugin-state-rs.html"><span>state.rs</span><small>3/5</small></a></li><li><a class="file-link" href="operation--src-plugin-transport-rs.html"><span>transport.rs</span><small>5/10</small></a></li><li><a class="file-link" href="operation--src-plugin-transport-trace-rs.html"><span>transport_trace.rs</span><small>3/0</small></a></li></ul></li><li><span class="folder">workspace_run</span><ul class="file-tree"><li><a class="file-link" href="operation--src-workspace-run-contract-rs.html"><span>contract.rs</span><small>4/0</small></a></li><li><a class="file-link" href="operation--src-workspace-run-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="plugin::dispatch crates/operation/src/plugin/dispatch.rs PluginDispatchOutcome impl PluginRuntime dispatch_deferred_route">
+  <div class="module-head">
+    <div>
+      <h2>src/plugin/dispatch.rs</h2>
+      <p class="path">module <code>plugin::dispatch</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>1 impls</span>
+      <span>1 fns</span>
+      <span>7 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-PluginDispatchOutcome-19" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum PluginDispatchOutcome pub pub enum PluginDispatchOutcome crates/operation/src/plugin/dispatch.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>PluginDispatchOutcome</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="operation--src-plugin-dispatch-rs.html#item-enum-PluginDispatchOutcome-19">PluginDispatchOutcome</a></code>
+  <p class="docstring">Result of dispatching one registered plugin op. Connected routes carry the<br>plugin's reply payload through unchanged; oneshot overlay runs come back<br>typed so the adapter can shape the wire response and splice telemetry.</p>
+  <div class="tags"></div>
+  <h4>Variants</h4><table><tbody><tr><td>Response</td><td><code>0: Value</code></td></tr><tr><td>OneshotOverlay</td><td><code>0: Box &lt; <a class="symbol-link" href="operation--src-plugin-overlay-rs.html#item-struct-PluginOverlayOutcome-114">PluginOverlayOutcome</a> &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/operation/src/plugin/dispatch.rs:19</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-dispatch-deferred-route-184" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dispatch_deferred_route private fn dispatch_deferred_route (route : &amp; PluginOperationRoute) -&gt; Value crates/operation/src/plugin/dispatch.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>dispatch_deferred_route</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="operation--src-plugin-dispatch-rs.html#item-fn-dispatch-deferred-route-184">dispatch_deferred_route</a> (route : &amp; <a class="symbol-link" href="operation--src-plugin-route-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a>) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#item-fn-dispatch-deferred-route-184">dispatch_deferred_route</a>(route: &amp;<a class="symbol-link rs-type" href="operation--src-plugin-route-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a>) -&gt; <span class="rs-type">Value</span> {
+    json!({
+        &quot;success&quot;: <span class="rs-kw">false</span>,
+        &quot;status&quot;: &quot;deferred&quot;,
+        &quot;op&quot;: route.public_op,
+        &quot;plugin&quot;: route.plugin_id,
+        &quot;op_name&quot;: route.op_name,
+        &quot;intent&quot;: route.intent,
+        &quot;auto_workspace_overlay&quot;: route.auto_workspace_overlay,
+        &quot;service_id&quot;: route.service_id,
+        &quot;dispatch_mode&quot;: route.<a class="symbol-link rs-fn" href="operation--src-plugin-route-rs.html#method-dispatch-mode-47">dispatch_mode</a>(),
+        &quot;error&quot;: {
+            &quot;kind&quot;: &quot;plugin_dispatch_deferred&quot;,
+            &quot;message&quot;: &quot;plugin service is not connected <span class="rs-kw">for</span> this route&quot;,
+            &quot;details&quot;: {
+                &quot;op&quot;: route.public_op,
+                &quot;dispatch_mode&quot;: route.<a class="symbol-link rs-fn" href="operation--src-plugin-route-rs.html#method-dispatch-mode-47">dispatch_mode</a>(),
+            },
+        },
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/operation/src/plugin/dispatch.rs:184</p>
+</article><div class="group-label">Other Implementations</div><article id="item-impl-impl-PluginRuntime-27" class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl PluginRuntime private impl PluginRuntime crates/operation/src/plugin/dispatch.rs  dispatch_registered_op pub fn dispatch_registered_op (&amp; self , op : &amp; str , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Option &lt; Result &lt; PluginDispatchOutcome , PluginRuntimeError &gt; &gt; route_for_op pub(super) fn route_for_op (&amp; self , op : &amp; str ,) -&gt; Result &lt; Option &lt; PluginOperationRoute &gt; , PluginRuntimeError &gt; dispatch_registered_route fn dispatch_registered_route (&amp; self , route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Result &lt; PluginDispatchOutcome , PluginRuntimeError &gt; dispatch_connected_read_only_route pub(super) fn dispatch_connected_read_only_route (&amp; self , route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Result &lt; Option &lt; Value &gt; , PluginRuntimeError &gt; dispatch_connected_self_managed_route pub(super) fn dispatch_connected_self_managed_route (&amp; self , route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Result &lt; Option &lt; Value &gt; , PluginRuntimeError &gt; round_trip_connected_route fn round_trip_connected_route (&amp; self , route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value , layer_stack_root : Option &lt; PathBuf &gt; ,) -&gt; Result &lt; Option &lt; Value &gt; , PluginRuntimeError &gt; response_payload_from_reply pub(super) fn response_payload_from_reply (&amp; self , reply : &amp; PpcMessage ,) -&gt; Result &lt; Option &lt; Value &gt; , PluginRuntimeError &gt;">
+  <div class="item-head">
+    <span class="kind">impl</span>
+    <h3>impl PluginRuntime</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">impl <a class="symbol-link" href="operation--src-plugin-state-rs.html#item-struct-PluginRuntime-38">PluginRuntime</a></code>
+  <div class="tags"><span>impl</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-dispatch-registered-op-28"><td>method</td><td>dispatch_registered_op</td><td><code>pub fn <a class="symbol-link" href="operation--src-plugin-dispatch-rs.html#method-dispatch-registered-op-28">dispatch_registered_op</a> (&amp; self , op : &amp; str , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Option &lt; Result &lt; <a class="symbol-link" href="operation--src-plugin-dispatch-rs.html#item-enum-PluginDispatchOutcome-19">PluginDispatchOutcome</a> , <a class="symbol-link" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a> &gt; &gt;</code><p class="docstring">Dispatch a dynamically registered `plugin.*` op, or `None` when no<br>loaded plugin claims it.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Dispatch a dynamically registered `plugin.*` op, or `None` when no</span>
+    <span class="rs-comment">/// loaded plugin claims it.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-dispatch-registered-op-28">dispatch_registered_op</a>(
+        &amp;<span class="rs-self">self</span>,
+        op: &amp;str,
+        invocation_id: &amp;str,
+        args: &amp;<span class="rs-type">Value</span>,
+    ) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="operation--src-plugin-dispatch-rs.html#item-enum-PluginDispatchOutcome-19">PluginDispatchOutcome</a>, <a class="symbol-link rs-type" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a>&gt;&gt; {
+        <span class="rs-kw">let</span> route = <span class="rs-kw">match</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-route-for-op-44">route_for_op</a>(op) {
+            <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(route)) =&gt; route,
+            <span class="rs-type">Ok</span>(<span class="rs-type">None</span>) =&gt; <span class="rs-kw">return</span> <span class="rs-type">None</span>,
+            <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Some</span>(<span class="rs-type">Err</span>(err)),
+        };
+        <span class="rs-type">Some</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-dispatch-registered-route-55">dispatch_registered_route</a>(&amp;route, invocation_id, args))
+    }
+</code></pre>
+</details></td></tr><tr id="method-route-for-op-44"><td>method</td><td>route_for_op</td><td><code>pub(super) fn <a class="symbol-link" href="operation--src-plugin-dispatch-rs.html#method-route-for-op-44">route_for_op</a> (&amp; self , op : &amp; str ,) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="operation--src-plugin-route-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a> &gt; , <a class="symbol-link" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-route-for-op-44">route_for_op</a>(
+        &amp;<span class="rs-self">self</span>,
+        op: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="operation--src-plugin-route-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a>&gt;, <a class="symbol-link rs-type" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="operation--src-plugin-state-rs.html#method-lock-state-69">lock_state</a>()?;
+        <span class="rs-type">Ok</span>(state
+            .loaded
+            .values()
+            .find_map(|loaded| loaded.operation_routes.<a class="symbol-link rs-fn" href="operation--src-command-registry-rs.html#method-get-115">get</a>(op).cloned()))
+    }
+</code></pre>
+</details></td></tr><tr id="method-dispatch-registered-route-55"><td>method</td><td>dispatch_registered_route</td><td><code>fn <a class="symbol-link" href="operation--src-plugin-dispatch-rs.html#method-dispatch-registered-route-55">dispatch_registered_route</a> (&amp; self , route : &amp; <a class="symbol-link" href="operation--src-plugin-route-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a> , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Result &lt; <a class="symbol-link" href="operation--src-plugin-dispatch-rs.html#item-enum-PluginDispatchOutcome-19">PluginDispatchOutcome</a> , <a class="symbol-link" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-dispatch-registered-route-55">dispatch_registered_route</a>(
+        &amp;<span class="rs-self">self</span>,
+        route: &amp;<a class="symbol-link rs-type" href="operation--src-plugin-route-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a>,
+        invocation_id: &amp;str,
+        args: &amp;<span class="rs-type">Value</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="operation--src-plugin-dispatch-rs.html#item-enum-PluginDispatchOutcome-19">PluginDispatchOutcome</a>, <a class="symbol-link rs-type" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">if</span> route.intent == <span class="rs-type">PluginOperationIntent</span>::<span class="rs-type">ReadOnly</span> &amp;&amp; route.service_id.is_some() {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(response) =
+                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-dispatch-connected-read-only-route-90">dispatch_connected_read_only_route</a>(route, invocation_id, args)?
+            {
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="operation--src-plugin-dispatch-rs.html#item-enum-PluginDispatchOutcome-19">PluginDispatchOutcome</a>::<span class="rs-type">Response</span>(response));
+            }
+        }
+        <span class="rs-kw">if</span> route.intent == <span class="rs-type">PluginOperationIntent</span>::<span class="rs-type">WriteAllowed</span> &amp;&amp; route.auto_workspace_overlay {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(outcome) =
+                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="operation--src-plugin-overlay-rs.html#method-dispatch-oneshot-overlay-route-42">dispatch_oneshot_overlay_route</a>(route, invocation_id, args)?
+            {
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="operation--src-plugin-dispatch-rs.html#item-enum-PluginDispatchOutcome-19">PluginDispatchOutcome</a>::<span class="rs-type">OneshotOverlay</span>(<span class="rs-type">Box</span>::<a class="symbol-link rs-fn" href="operation--src-checkpoint-mod-rs.html#method-new-41">new</a>(outcome)));
+            }
+        }
+        <span class="rs-kw">if</span> route.intent == <span class="rs-type">PluginOperationIntent</span>::<span class="rs-type">WriteAllowed</span>
+            &amp;&amp; !route.auto_workspace_overlay
+            &amp;&amp; route.service_id.is_some()
+        {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(response) =
+                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-dispatch-connected-self-managed-route-99">dispatch_connected_self_managed_route</a>(route, invocation_id, args)?
+            {
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="operation--src-plugin-dispatch-rs.html#item-enum-PluginDispatchOutcome-19">PluginDispatchOutcome</a>::<span class="rs-type">Response</span>(response));
+            }
+        }
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="operation--src-plugin-dispatch-rs.html#item-enum-PluginDispatchOutcome-19">PluginDispatchOutcome</a>::<span class="rs-type">Response</span>(<a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#item-fn-dispatch-deferred-route-184">dispatch_deferred_route</a>(
+            route,
+        )))
+    }
+</code></pre>
+</details></td></tr><tr id="method-dispatch-connected-read-only-route-90"><td>method</td><td>dispatch_connected_read_only_route</td><td><code>pub(super) fn <a class="symbol-link" href="operation--src-plugin-dispatch-rs.html#method-dispatch-connected-read-only-route-90">dispatch_connected_read_only_route</a> (&amp; self , route : &amp; <a class="symbol-link" href="operation--src-plugin-route-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a> , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Result &lt; Option &lt; Value &gt; , <a class="symbol-link" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-dispatch-connected-read-only-route-90">dispatch_connected_read_only_route</a>(
+        &amp;<span class="rs-self">self</span>,
+        route: &amp;<a class="symbol-link rs-type" href="operation--src-plugin-route-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a>,
+        invocation_id: &amp;str,
+        args: &amp;<span class="rs-type">Value</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a>&gt; {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-round-trip-connected-route-116">round_trip_connected_route</a>(route, invocation_id, args, <span class="rs-type">None</span>)
+    }
+</code></pre>
+</details></td></tr><tr id="method-dispatch-connected-self-managed-route-99"><td>method</td><td>dispatch_connected_self_managed_route</td><td><code>pub(super) fn <a class="symbol-link" href="operation--src-plugin-dispatch-rs.html#method-dispatch-connected-self-managed-route-99">dispatch_connected_self_managed_route</a> (&amp; self , route : &amp; <a class="symbol-link" href="operation--src-plugin-route-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a> , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Result &lt; Option &lt; Value &gt; , <a class="symbol-link" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-dispatch-connected-self-managed-route-99">dispatch_connected_self_managed_route</a>(
+        &amp;<span class="rs-self">self</span>,
+        route: &amp;<a class="symbol-link rs-type" href="operation--src-plugin-route-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a>,
+        invocation_id: &amp;str,
+        args: &amp;<span class="rs-type">Value</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(layer_stack_root) = route.layer_stack_root.clone() <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+        };
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-round-trip-connected-route-116">round_trip_connected_route</a>(
+            route,
+            invocation_id,
+            args,
+            <span class="rs-type">Some</span>(<span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="operation--src-command-outcome-rs.html#method-from-11">from</a>(layer_stack_root)),
+        )
+    }
+</code></pre>
+</details></td></tr><tr id="method-round-trip-connected-route-116"><td>method</td><td>round_trip_connected_route</td><td><code>fn <a class="symbol-link" href="operation--src-plugin-dispatch-rs.html#method-round-trip-connected-route-116">round_trip_connected_route</a> (&amp; self , route : &amp; <a class="symbol-link" href="operation--src-plugin-route-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a> , invocation_id : &amp; str , args : &amp; Value , layer_stack_root : Option &lt; PathBuf &gt; ,) -&gt; Result &lt; Option &lt; Value &gt; , <a class="symbol-link" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-round-trip-connected-route-116">round_trip_connected_route</a>(
+        &amp;<span class="rs-self">self</span>,
+        route: &amp;<a class="symbol-link rs-type" href="operation--src-plugin-route-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a>,
+        invocation_id: &amp;str,
+        args: &amp;<span class="rs-type">Value</span>,
+        layer_stack_root: <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(service_instance_id) = route.service_instance_id.clone() <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+        };
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(client) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="operation--src-plugin-refresh-rs.html#method-ensure-connected-service-current-138">ensure_connected_service_current</a>(route, invocation_id)? <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+        };
+        <span class="rs-kw">let</span> timeout = <span class="rs-type">Duration</span>::from_millis(route.timeout_ms.unwrap_or(<span class="rs-self">self</span>.config.ppc_timeout_ms));
+        <span class="rs-kw">let</span> request = <span class="rs-type">PpcMessage</span> {
+            message_id: invocation_id.to_owned(),
+            parent_message_id: <span class="rs-type">None</span>,
+            direction: <span class="rs-type">PpcDirection</span>::<span class="rs-type">Request</span>,
+            op: route.public_op.clone(),
+            body: serde_json::to_string(args).map_err(|err| <span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(err.to_string()))?,
+        };
+        <span class="rs-kw">let</span> reply = <span class="rs-kw">match</span> layer_stack_root {
+            <span class="rs-type">Some</span>(expected_root) =&gt; {
+                <span class="rs-kw">let</span> commit_options = <span class="rs-self">self</span>.commit_options;
+                client.<a class="symbol-link rs-fn" href="operation--src-plugin-transport-rs.html#method-round-trip-with-callbacks-94">round_trip_with_callbacks</a>(&amp;request, timeout, <span class="rs-kw">move</span> |callback| {
+                    occ_callbacks::<a class="symbol-link rs-fn" href="operation--src-plugin-callbacks-rs.html#item-fn-handle-callback-for-root-20">handle_callback_for_root</a>(
+                        &amp;expected_root,
+                        commit_options,
+                        callback,
+                    )
+                    .map_err(|err| <span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="operation--src-plugin-mod-rs.html#item-enum-PpcError-54">PpcError</a>::<span class="rs-type">Callback</span>(err.to_string()))
+                })
+            }
+            <span class="rs-type">None</span> =&gt; client.<a class="symbol-link rs-fn" href="operation--src-plugin-transport-rs.html#method-round-trip-85">round_trip</a>(&amp;request, timeout),
+        };
+        <span class="rs-kw">let</span> reply = <span class="rs-kw">match</span> reply {
+            <span class="rs-type">Ok</span>(reply) =&gt; reply,
+            <span class="rs-type">Err</span>(err) =&gt; {
+                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="operation--src-plugin-refresh-rs.html#method-teardown-failed-connected-service-428">teardown_failed_connected_service</a>(&amp;service_instance_id, &amp;err.to_string())?;
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err.into());
+            }
+        };
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-response-payload-from-reply-161">response_payload_from_reply</a>(&amp;reply)
+    }
+</code></pre>
+</details></td></tr><tr id="method-response-payload-from-reply-161"><td>method</td><td>response_payload_from_reply</td><td><code>pub(super) fn <a class="symbol-link" href="operation--src-plugin-dispatch-rs.html#method-response-payload-from-reply-161">response_payload_from_reply</a> (&amp; self , reply : &amp; PpcMessage ,) -&gt; Result &lt; Option &lt; Value &gt; , <a class="symbol-link" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-response-payload-from-reply-161">response_payload_from_reply</a>(
+        &amp;<span class="rs-self">self</span>,
+        reply: &amp;<span class="rs-type">PpcMessage</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> max_response_bytes = <span class="rs-self">self</span>.config.max_response_bytes;
+        <span class="rs-kw">if</span> reply.body.len() &gt; max_response_bytes {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a>::<span class="rs-type">Plugin</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(format!(
+                &quot;plugin response exceeds {max_response_bytes} byte limit&quot;
+            ))));
+        }
+        <span class="rs-kw">let</span> payload: <span class="rs-type">Value</span> =
+            serde_json::from_str(&amp;reply.body).map_err(|err| <span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(err.to_string()))?;
+        <span class="rs-kw">if</span> payload.is_object() {
+            <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(payload))
+        } <span class="rs-kw">else</span> {
+            <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(json!({
+                &quot;success&quot;: <span class="rs-kw">true</span>,
+                &quot;result&quot;: payload,
+            })))
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/operation/src/plugin/dispatch.rs:27</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/operation/src/plugin/dispatch.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Registered plugin op routing.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The caller-family gate (caller-field validation + isolated-workspace</span>
+<span class="rs-comment">//! refusal) runs through `RuntimeServices` before any of this; routing here</span>
+<span class="rs-comment">//! trusts already-validated args.</span>
+
+<span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Duration</span>;
+
+<span class="rs-kw">use</span> plugin::{<span class="rs-type">PluginError</span>, <span class="rs-type">PluginOperationIntent</span>, <span class="rs-type">PpcDirection</span>, <span class="rs-type">PpcMessage</span>};
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::callbacks <span class="rs-kw">as</span> occ_callbacks;
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::overlay::<a class="symbol-link rs-type" href="operation--src-plugin-overlay-rs.html#item-struct-PluginOverlayOutcome-114">PluginOverlayOutcome</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::route::<a class="symbol-link rs-type" href="operation--src-plugin-route-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::state::<a class="symbol-link rs-type" href="operation--src-plugin-state-rs.html#item-struct-PluginRuntime-38">PluginRuntime</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a>;
+
+<span class="rs-comment">/// Result of dispatching one registered plugin op. Connected routes carry the</span>
+<span class="rs-comment">/// plugin's reply payload through unchanged; oneshot overlay runs come back</span>
+<span class="rs-comment">/// typed so the adapter can shape the wire response and splice telemetry.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="operation--src-plugin-dispatch-rs.html#item-enum-PluginDispatchOutcome-19">PluginDispatchOutcome</a> {
+    <span class="rs-type">Response</span>(<span class="rs-type">Value</span>),
+    <span class="rs-type">OneshotOverlay</span>(<span class="rs-type">Box</span>&lt;<a class="symbol-link rs-type" href="operation--src-plugin-overlay-rs.html#item-struct-PluginOverlayOutcome-114">PluginOverlayOutcome</a>&gt;),
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="operation--src-plugin-state-rs.html#item-struct-PluginRuntime-38">PluginRuntime</a> {
+    <span class="rs-comment">/// Dispatch a dynamically registered `plugin.*` op, or `None` when no</span>
+    <span class="rs-comment">/// loaded plugin claims it.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-dispatch-registered-op-28">dispatch_registered_op</a>(
+        &amp;<span class="rs-self">self</span>,
+        op: &amp;str,
+        invocation_id: &amp;str,
+        args: &amp;<span class="rs-type">Value</span>,
+    ) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="operation--src-plugin-dispatch-rs.html#item-enum-PluginDispatchOutcome-19">PluginDispatchOutcome</a>, <a class="symbol-link rs-type" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a>&gt;&gt; {
+        <span class="rs-kw">let</span> route = <span class="rs-kw">match</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-route-for-op-44">route_for_op</a>(op) {
+            <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(route)) =&gt; route,
+            <span class="rs-type">Ok</span>(<span class="rs-type">None</span>) =&gt; <span class="rs-kw">return</span> <span class="rs-type">None</span>,
+            <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Some</span>(<span class="rs-type">Err</span>(err)),
+        };
+        <span class="rs-type">Some</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-dispatch-registered-route-55">dispatch_registered_route</a>(&amp;route, invocation_id, args))
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-route-for-op-44">route_for_op</a>(
+        &amp;<span class="rs-self">self</span>,
+        op: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="operation--src-plugin-route-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a>&gt;, <a class="symbol-link rs-type" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="operation--src-plugin-state-rs.html#method-lock-state-69">lock_state</a>()?;
+        <span class="rs-type">Ok</span>(state
+            .loaded
+            .values()
+            .find_map(|loaded| loaded.operation_routes.<a class="symbol-link rs-fn" href="operation--src-command-registry-rs.html#method-get-115">get</a>(op).cloned()))
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-dispatch-registered-route-55">dispatch_registered_route</a>(
+        &amp;<span class="rs-self">self</span>,
+        route: &amp;<a class="symbol-link rs-type" href="operation--src-plugin-route-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a>,
+        invocation_id: &amp;str,
+        args: &amp;<span class="rs-type">Value</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="operation--src-plugin-dispatch-rs.html#item-enum-PluginDispatchOutcome-19">PluginDispatchOutcome</a>, <a class="symbol-link rs-type" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">if</span> route.intent == <span class="rs-type">PluginOperationIntent</span>::<span class="rs-type">ReadOnly</span> &amp;&amp; route.service_id.is_some() {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(response) =
+                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-dispatch-connected-read-only-route-90">dispatch_connected_read_only_route</a>(route, invocation_id, args)?
+            {
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="operation--src-plugin-dispatch-rs.html#item-enum-PluginDispatchOutcome-19">PluginDispatchOutcome</a>::<span class="rs-type">Response</span>(response));
+            }
+        }
+        <span class="rs-kw">if</span> route.intent == <span class="rs-type">PluginOperationIntent</span>::<span class="rs-type">WriteAllowed</span> &amp;&amp; route.auto_workspace_overlay {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(outcome) =
+                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="operation--src-plugin-overlay-rs.html#method-dispatch-oneshot-overlay-route-42">dispatch_oneshot_overlay_route</a>(route, invocation_id, args)?
+            {
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="operation--src-plugin-dispatch-rs.html#item-enum-PluginDispatchOutcome-19">PluginDispatchOutcome</a>::<span class="rs-type">OneshotOverlay</span>(<span class="rs-type">Box</span>::<a class="symbol-link rs-fn" href="operation--src-checkpoint-mod-rs.html#method-new-41">new</a>(outcome)));
+            }
+        }
+        <span class="rs-kw">if</span> route.intent == <span class="rs-type">PluginOperationIntent</span>::<span class="rs-type">WriteAllowed</span>
+            &amp;&amp; !route.auto_workspace_overlay
+            &amp;&amp; route.service_id.is_some()
+        {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(response) =
+                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-dispatch-connected-self-managed-route-99">dispatch_connected_self_managed_route</a>(route, invocation_id, args)?
+            {
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="operation--src-plugin-dispatch-rs.html#item-enum-PluginDispatchOutcome-19">PluginDispatchOutcome</a>::<span class="rs-type">Response</span>(response));
+            }
+        }
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="operation--src-plugin-dispatch-rs.html#item-enum-PluginDispatchOutcome-19">PluginDispatchOutcome</a>::<span class="rs-type">Response</span>(<a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#item-fn-dispatch-deferred-route-184">dispatch_deferred_route</a>(
+            route,
+        )))
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-dispatch-connected-read-only-route-90">dispatch_connected_read_only_route</a>(
+        &amp;<span class="rs-self">self</span>,
+        route: &amp;<a class="symbol-link rs-type" href="operation--src-plugin-route-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a>,
+        invocation_id: &amp;str,
+        args: &amp;<span class="rs-type">Value</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a>&gt; {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-round-trip-connected-route-116">round_trip_connected_route</a>(route, invocation_id, args, <span class="rs-type">None</span>)
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-dispatch-connected-self-managed-route-99">dispatch_connected_self_managed_route</a>(
+        &amp;<span class="rs-self">self</span>,
+        route: &amp;<a class="symbol-link rs-type" href="operation--src-plugin-route-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a>,
+        invocation_id: &amp;str,
+        args: &amp;<span class="rs-type">Value</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(layer_stack_root) = route.layer_stack_root.clone() <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+        };
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-round-trip-connected-route-116">round_trip_connected_route</a>(
+            route,
+            invocation_id,
+            args,
+            <span class="rs-type">Some</span>(<span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="operation--src-command-outcome-rs.html#method-from-11">from</a>(layer_stack_root)),
+        )
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-round-trip-connected-route-116">round_trip_connected_route</a>(
+        &amp;<span class="rs-self">self</span>,
+        route: &amp;<a class="symbol-link rs-type" href="operation--src-plugin-route-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a>,
+        invocation_id: &amp;str,
+        args: &amp;<span class="rs-type">Value</span>,
+        layer_stack_root: <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(service_instance_id) = route.service_instance_id.clone() <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+        };
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(client) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="operation--src-plugin-refresh-rs.html#method-ensure-connected-service-current-138">ensure_connected_service_current</a>(route, invocation_id)? <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+        };
+        <span class="rs-kw">let</span> timeout = <span class="rs-type">Duration</span>::from_millis(route.timeout_ms.unwrap_or(<span class="rs-self">self</span>.config.ppc_timeout_ms));
+        <span class="rs-kw">let</span> request = <span class="rs-type">PpcMessage</span> {
+            message_id: invocation_id.to_owned(),
+            parent_message_id: <span class="rs-type">None</span>,
+            direction: <span class="rs-type">PpcDirection</span>::<span class="rs-type">Request</span>,
+            op: route.public_op.clone(),
+            body: serde_json::to_string(args).map_err(|err| <span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(err.to_string()))?,
+        };
+        <span class="rs-kw">let</span> reply = <span class="rs-kw">match</span> layer_stack_root {
+            <span class="rs-type">Some</span>(expected_root) =&gt; {
+                <span class="rs-kw">let</span> commit_options = <span class="rs-self">self</span>.commit_options;
+                client.<a class="symbol-link rs-fn" href="operation--src-plugin-transport-rs.html#method-round-trip-with-callbacks-94">round_trip_with_callbacks</a>(&amp;request, timeout, <span class="rs-kw">move</span> |callback| {
+                    occ_callbacks::<a class="symbol-link rs-fn" href="operation--src-plugin-callbacks-rs.html#item-fn-handle-callback-for-root-20">handle_callback_for_root</a>(
+                        &amp;expected_root,
+                        commit_options,
+                        callback,
+                    )
+                    .map_err(|err| <span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="operation--src-plugin-mod-rs.html#item-enum-PpcError-54">PpcError</a>::<span class="rs-type">Callback</span>(err.to_string()))
+                })
+            }
+            <span class="rs-type">None</span> =&gt; client.<a class="symbol-link rs-fn" href="operation--src-plugin-transport-rs.html#method-round-trip-85">round_trip</a>(&amp;request, timeout),
+        };
+        <span class="rs-kw">let</span> reply = <span class="rs-kw">match</span> reply {
+            <span class="rs-type">Ok</span>(reply) =&gt; reply,
+            <span class="rs-type">Err</span>(err) =&gt; {
+                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="operation--src-plugin-refresh-rs.html#method-teardown-failed-connected-service-428">teardown_failed_connected_service</a>(&amp;service_instance_id, &amp;err.to_string())?;
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err.into());
+            }
+        };
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-response-payload-from-reply-161">response_payload_from_reply</a>(&amp;reply)
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#method-response-payload-from-reply-161">response_payload_from_reply</a>(
+        &amp;<span class="rs-self">self</span>,
+        reply: &amp;<span class="rs-type">PpcMessage</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> max_response_bytes = <span class="rs-self">self</span>.config.max_response_bytes;
+        <span class="rs-kw">if</span> reply.body.len() &gt; max_response_bytes {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="operation--src-plugin-mod-rs.html#item-enum-PluginRuntimeError-91">PluginRuntimeError</a>::<span class="rs-type">Plugin</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(format!(
+                &quot;plugin response exceeds {max_response_bytes} byte limit&quot;
+            ))));
+        }
+        <span class="rs-kw">let</span> payload: <span class="rs-type">Value</span> =
+            serde_json::from_str(&amp;reply.body).map_err(|err| <span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(err.to_string()))?;
+        <span class="rs-kw">if</span> payload.is_object() {
+            <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(payload))
+        } <span class="rs-kw">else</span> {
+            <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(json!({
+                &quot;success&quot;: <span class="rs-kw">true</span>,
+                &quot;result&quot;: payload,
+            })))
+        }
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="operation--src-plugin-dispatch-rs.html#item-fn-dispatch-deferred-route-184">dispatch_deferred_route</a>(route: &amp;<a class="symbol-link rs-type" href="operation--src-plugin-route-rs.html#item-struct-PluginOperationRoute-27">PluginOperationRoute</a>) -&gt; <span class="rs-type">Value</span> {
+    json!({
+        &quot;success&quot;: <span class="rs-kw">false</span>,
+        &quot;status&quot;: &quot;deferred&quot;,
+        &quot;op&quot;: route.public_op,
+        &quot;plugin&quot;: route.plugin_id,
+        &quot;op_name&quot;: route.op_name,
+        &quot;intent&quot;: route.intent,
+        &quot;auto_workspace_overlay&quot;: route.auto_workspace_overlay,
+        &quot;service_id&quot;: route.service_id,
+        &quot;dispatch_mode&quot;: route.<a class="symbol-link rs-fn" href="operation--src-plugin-route-rs.html#method-dispatch-mode-47">dispatch_mode</a>(),
+        &quot;error&quot;: {
+            &quot;kind&quot;: &quot;plugin_dispatch_deferred&quot;,
+            &quot;message&quot;: &quot;plugin service is not connected <span class="rs-kw">for</span> this route&quot;,
+            &quot;details&quot;: {
+                &quot;op&quot;: route.public_op,
+                &quot;dispatch_mode&quot;: route.<a class="symbol-link rs-fn" href="operation--src-plugin-route-rs.html#method-dispatch-mode-47">dispatch_mode</a>(),
+            },
+        },
+    })
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

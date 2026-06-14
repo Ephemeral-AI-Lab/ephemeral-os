@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>layerstack · src/model.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>layerstack File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>18</b><span>modules</span></div>
+  <div><b>235</b><span>items</span></div>
+  <div><b>153</b><span>fields</span></div>
+  <div><b>91</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">commit</span><ul class="file-tree"><li><a class="file-link" href="layerstack.html"><span>mod.rs</span><small>9/12</small></a></li><li><span class="folder">worker</span><ul class="file-tree"><li><a class="file-link" href="layerstack--src-commit-worker-auto-squash-rs.html"><span>auto_squash.rs</span><small>1/3</small></a></li><li><a class="file-link" href="layerstack--src-commit-worker-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="layerstack--src-commit-worker-queue-rs.html"><span>queue.rs</span><small>6/6</small></a></li><li><a class="file-link" href="layerstack--src-commit-worker-transaction-rs.html"><span>transaction.rs</span><small>2/14</small></a></li></ul></li></ul></li><li><a class="file-link" href="layerstack--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="layerstack--src-fs-rs.html"><span>fs.rs</span><small>1/23</small></a></li><li><a class="file-link" href="layerstack--src-lib-rs.html"><span>lib.rs</span><small>0/1</small></a></li><li><a class="file-link" href="layerstack--src-lock-rs.html"><span>lock.rs</span><small>6/3</small></a></li><li><a class="file-link active" href="layerstack--src-model-rs.html"><span>model.rs</span><small>5/9</small></a></li><li><a class="file-link" href="layerstack--src-service-rs.html"><span>service.rs</span><small>3/17</small></a></li><li><a class="file-link" href="layerstack--src-squash-rs.html"><span>squash.rs</span><small>6/3</small></a></li><li><span class="folder">stack</span><ul class="file-tree"><li><a class="file-link" href="layerstack--src-stack-leases-rs.html"><span>leases.rs</span><small>2/6</small></a></li><li><a class="file-link" href="layerstack--src-stack-mod-rs.html"><span>mod.rs</span><small>7/15</small></a></li><li><a class="file-link" href="layerstack--src-stack-projection-rs.html"><span>projection.rs</span><small>2/6</small></a></li><li><a class="file-link" href="layerstack--src-stack-view-rs.html"><span>view.rs</span><small>1/1</small></a></li><li><a class="file-link" href="layerstack--src-stack-whiteout-rs.html"><span>whiteout.rs</span><small>0/7</small></a></li></ul></li><li><a class="file-link" href="layerstack--src-workspace-rs.html"><span>workspace.rs</span><small>3/19</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="model crates/layerstack/src/model.rs CasError LayerPath impl LayerPath impl fmt :: Display for LayerPath LayerRef Manifest impl Manifest push_json_ascii_escaped push_u_escape manifest_layers_json manifest_root_hash LayerChange impl LayerChange aggregate_layer_changes update_digest layer_digest hex_lower hex_char">
+  <div class="module-head">
+    <div>
+      <h2>src/model.rs</h2>
+      <p class="path">module <code>model</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>5 types</span>
+      <span>4 impls</span>
+      <span>9 fns</span>
+      <span>7 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-LayerPath-21" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct LayerPath pub pub struct LayerPath crates/layerstack/src/model.rs 0 String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>LayerPath</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: Ord</span><span>derive: PartialEq</span><span>derive: PartialOrd</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-as-str-50"><td>method</td><td>as_str</td><td><code>pub fn <a class="symbol-link" href="layerstack--src-model-rs.html#method-as-str-50">as_str</a> (&amp; self) -&gt; &amp; str</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#method-as-str-50">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.0
+    }
+</code></pre>
+</details></td></tr><tr id="method-parse-25"><td>associated-fn</td><td>parse</td><td><code>pub fn <a class="symbol-link" href="layerstack--src-model-rs.html#method-parse-25">parse</a> (path : &amp; str) -&gt; Result &lt; Self , <a class="symbol-link" href="layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#method-parse-25">parse</a>(path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a>&gt; {
+        <span class="rs-kw">let</span> raw = path.replace(&#x27;\\&#x27;, &quot;/&quot;);
+        <span class="rs-kw">let</span> raw = raw.trim();
+        <span class="rs-kw">if</span> raw.contains(&#x27;\0&#x27;) {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a>::<span class="rs-type">InvalidPath</span>(path.to_owned()));
+        }
+        <span class="rs-kw">if</span> raw.starts_with(&#x27;/&#x27;) {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a>::<span class="rs-type">InvalidPath</span>(path.to_owned()));
+        }
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> parts: <span class="rs-type">Vec</span>&lt;&amp;str&gt; = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="layerstack.html#method-new-128">new</a>();
+        <span class="rs-kw">for</span> part <span class="rs-kw">in</span> raw.split(&#x27;/&#x27;) {
+            <span class="rs-kw">if</span> part.is_empty() || part == &quot;.&quot; {
+                <span class="rs-kw">continue</span>;
+            }
+            <span class="rs-kw">if</span> part == &quot;..&quot; {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a>::<span class="rs-type">InvalidPath</span>(path.to_owned()));
+            }
+            parts.push(part);
+        }
+        <span class="rs-kw">if</span> parts.is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a>::<span class="rs-type">InvalidPath</span>(path.to_owned()));
+        }
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span>(parts.join(&quot;/&quot;)))
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Display for <a class="symbol-link" href="layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a></code></summary><table><tbody><tr id="method-fmt-57"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="layerstack--src-model-rs.html#method-fmt-57">fmt</a> (&amp; self , f : &amp; mut fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; fmt :: Result</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#method-fmt-57">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.write_str(&amp;<span class="rs-self">self</span>.0)
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/layerstack/src/model.rs:21</p>
+</article><article id="item-struct-LayerRef-62" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct LayerRef pub pub struct LayerRef crates/layerstack/src/model.rs layer_id String path String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>LayerRef</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="layerstack--src-model-rs.html#item-struct-LayerRef-62">LayerRef</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Ord</span><span>derive: PartialEq</span><span>derive: PartialOrd</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>layer_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>path</td><td><code>String</code></td></tr></tbody></table>
+
+  <p class="source">crates/layerstack/src/model.rs:62</p>
+</article><article id="item-struct-Manifest-68" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct Manifest pub pub struct Manifest crates/layerstack/src/model.rs version i64 layers Vec &lt; LayerRef &gt; schema_version i64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>Manifest</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>version</td><td><code>i64</code></td></tr><tr><td>pub</td><td>layers</td><td><code>Vec &lt; <a class="symbol-link" href="layerstack--src-model-rs.html#item-struct-LayerRef-62">LayerRef</a> &gt;</code></td></tr><tr><td>pub</td><td>schema_version</td><td><code>i64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-76"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="layerstack.html#method-new-128">new</a> (version : i64 , layers : Vec &lt; <a class="symbol-link" href="layerstack--src-model-rs.html#item-struct-LayerRef-62">LayerRef</a> &gt; , schema_version : i64) -&gt; Result &lt; Self , <a class="symbol-link" href="layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack.html#method-new-128">new</a>(version: i64, layers: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-struct-LayerRef-62">LayerRef</a>&gt;, schema_version: i64) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a>&gt; {
+        <span class="rs-kw">if</span> schema_version != <span class="rs-type">MANIFEST_SCHEMA_VERSION</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a>::<span class="rs-type">UnsupportedSchemaVersion</span>(schema_version));
+        }
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
+            version,
+            layers,
+            schema_version,
+        })
+    }
+</code></pre>
+</details></td></tr><tr id="method-depth-87"><td>method</td><td>depth</td><td><code>pub fn <a class="symbol-link" href="layerstack--src-model-rs.html#method-depth-87">depth</a> (&amp; self) -&gt; usize</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#method-depth-87">depth</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
+        <span class="rs-self">self</span>.layers.len()
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/layerstack/src/model.rs:68</p>
+</article><article id="item-enum-CasError-12" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum CasError pub pub enum CasError crates/layerstack/src/model.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>CasError</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: Error</span><span>derive: PartialEq</span><span>error</span><span>non_exhaustive</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>InvalidPath</td><td><code>0: String</code></td></tr><tr><td>UnsupportedSchemaVersion</td><td><code>0: i64</code></td></tr></tbody></table>
+
+  <p class="source">crates/layerstack/src/model.rs:12</p>
+</article><article id="item-enum-LayerChange-155" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum LayerChange pub pub enum LayerChange crates/layerstack/src/model.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>LayerChange</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Write</td><td><code>path: <a class="symbol-link" href="layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a>, content: Vec &lt; u8 &gt;</code></td></tr><tr><td>Delete</td><td><code>path: <a class="symbol-link" href="layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a></code></td></tr><tr><td>Symlink</td><td><code>path: <a class="symbol-link" href="layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a>, source_path: String</code></td></tr><tr><td>OpaqueDir</td><td><code>path: <a class="symbol-link" href="layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-kind-174"><td>method</td><td>kind</td><td><code>pub const fn <a class="symbol-link" href="layerstack--src-model-rs.html#method-kind-174">kind</a> (&amp; self) -&gt; &amp; &#x27;static str</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#method-kind-174">kind</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Write</span> { .. } =&gt; &quot;write&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Delete</span> { .. } =&gt; &quot;delete&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Symlink</span> { .. } =&gt; &quot;symlink&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">OpaqueDir</span> { .. } =&gt; &quot;opaque_dir&quot;,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-path-184"><td>method</td><td>path</td><td><code>pub const fn <a class="symbol-link" href="layerstack--src-model-rs.html#method-path-184">path</a> (&amp; self) -&gt; &amp; <a class="symbol-link" href="layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a></code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#method-path-184">path</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a> {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Write</span> { path, .. }
+            | <span class="rs-self">Self</span>::<span class="rs-type">Delete</span> { path }
+            | <span class="rs-self">Self</span>::<span class="rs-type">Symlink</span> { path, .. }
+            | <span class="rs-self">Self</span>::<span class="rs-type">OpaqueDir</span> { path } =&gt; path,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/layerstack/src/model.rs:155</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-manifest-root-hash-147" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn manifest_root_hash pub pub fn manifest_root_hash (manifest : &amp; Manifest) -&gt; String crates/layerstack/src/model.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>manifest_root_hash</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="layerstack--src-model-rs.html#item-fn-manifest-root-hash-147">manifest_root_hash</a> (manifest : &amp; <a class="symbol-link" href="layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>) -&gt; String</code>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-manifest-root-hash-147">manifest_root_hash</a>(manifest: &amp;<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> encoded = <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-manifest-layers-json-131">manifest_layers_json</a>(&amp;manifest.layers);
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="layerstack.html#method-new-128">new</a>();
+    hasher.update(encoded.as_bytes());
+    <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-hex-lower-226">hex_lower</a>(hasher.finalize())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/layerstack/src/model.rs:147</p>
+</article><article id="item-fn-aggregate-layer-changes-195" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn aggregate_layer_changes pub pub fn aggregate_layer_changes (changes : &amp; [LayerChange]) -&gt; Vec &lt; LayerChange &gt; crates/layerstack/src/model.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>aggregate_layer_changes</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="layerstack--src-model-rs.html#item-fn-aggregate-layer-changes-195">aggregate_layer_changes</a> (changes : &amp; [<a class="symbol-link" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>]) -&gt; Vec &lt; <a class="symbol-link" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a> &gt;</code>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-aggregate-layer-changes-195">aggregate_layer_changes</a>(changes: &amp;[<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>]) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> by_path: <span class="rs-type">BTreeMap</span>&lt;<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a>, <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>&gt; = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="layerstack.html#method-new-128">new</a>();
+    <span class="rs-kw">for</span> change <span class="rs-kw">in</span> changes.iter().cloned() {
+        by_path.insert(change.<a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#method-path-184">path</a>().clone(), change);
+    }
+    by_path.into_values().collect()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/layerstack/src/model.rs:195</p>
+</article><article id="item-fn-layer-digest-217" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn layer_digest pub pub fn layer_digest (changes : &amp; [LayerChange]) -&gt; String crates/layerstack/src/model.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>layer_digest</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="layerstack--src-model-rs.html#item-fn-layer-digest-217">layer_digest</a> (changes : &amp; [<a class="symbol-link" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>]) -&gt; String</code>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-layer-digest-217">layer_digest</a>(changes: &amp;[<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>]) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="layerstack.html#method-new-128">new</a>();
+    <span class="rs-kw">for</span> change <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-aggregate-layer-changes-195">aggregate_layer_changes</a>(changes) {
+        <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-update-digest-204">update_digest</a>(&amp;<span class="rs-kw">mut</span> hasher, &amp;change);
+    }
+    <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-hex-lower-226">hex_lower</a>(hasher.finalize())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/layerstack/src/model.rs:217</p>
+</article><article id="item-fn-hex-lower-226" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn hex_lower pub(crate) pub(crate) fn hex_lower (bytes : impl AsRef &lt; [u8] &gt;) -&gt; String crates/layerstack/src/model.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>hex_lower</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="layerstack--src-model-rs.html#item-fn-hex-lower-226">hex_lower</a> (bytes : impl AsRef &lt; [u8] &gt;) -&gt; String</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-hex-lower-226">hex_lower</a>(bytes: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;[u8]&gt;) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> bytes = bytes.as_ref();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> s = <span class="rs-type">String</span>::with_capacity(bytes.len() * 2);
+    <span class="rs-kw">for</span> &amp;b <span class="rs-kw">in</span> bytes {
+        s.push(char::from(<span class="rs-type">LOWER_HEX</span>[usize::from(b &gt;&gt; 4)]));
+        s.push(char::from(<span class="rs-type">LOWER_HEX</span>[usize::from(b &amp; 0x0f)]));
+    }
+    s
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/layerstack/src/model.rs:226</p>
+</article><article id="item-fn-push-json-ascii-escaped-93" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn push_json_ascii_escaped private fn push_json_ascii_escaped (out : &amp; mut String , s : &amp; str) crates/layerstack/src/model.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>push_json_ascii_escaped</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="layerstack--src-model-rs.html#item-fn-push-json-ascii-escaped-93">push_json_ascii_escaped</a> (out : &amp; mut String , s : &amp; str)</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-push-json-ascii-escaped-93">push_json_ascii_escaped</a>(out: &amp;<span class="rs-kw">mut</span> <span class="rs-type">String</span>, s: &amp;str) {
+    <span class="rs-kw">for</span> ch <span class="rs-kw">in</span> s.chars() {
+        <span class="rs-kw">match</span> ch {
+            &#x27;&quot;&#x27; =&gt; out.push_str(&quot;\\\&quot;&quot;),
+            &#x27;\\&#x27; =&gt; out.push_str(&quot;\\\\&quot;),
+            &#x27;\u{0008}&#x27; =&gt; out.push_str(&quot;\\b&quot;),
+            &#x27;\u{0009}&#x27; =&gt; out.push_str(&quot;\\t&quot;),
+            &#x27;\u{000<span class="rs-type">A</span>}&#x27; =&gt; out.push_str(&quot;\\n&quot;),
+            &#x27;\u{000<span class="rs-type">C</span>}&#x27; =&gt; out.push_str(&quot;\\f&quot;),
+            &#x27;\u{000<span class="rs-type">D</span>}&#x27; =&gt; out.push_str(&quot;\\r&quot;),
+            c <span class="rs-kw">if</span> (0x20..=0x7E).contains(&amp;u32::from(c)) =&gt; out.push(c),
+            c <span class="rs-kw">if</span> u32::from(c) &lt; 0x20 =&gt; {
+                <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-push-u-escape-123">push_u_escape</a>(out, u32::from(c));
+            }
+            c =&gt; {
+                <span class="rs-kw">let</span> cp = u32::from(c);
+                <span class="rs-kw">if</span> cp &lt;= 0xFFFF {
+                    <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-push-u-escape-123">push_u_escape</a>(out, cp);
+                } <span class="rs-kw">else</span> {
+                    <span class="rs-kw">let</span> v = cp - 0x10000;
+                    <span class="rs-kw">let</span> hi = 0xD800 + (v &gt;&gt; 10);
+                    <span class="rs-kw">let</span> lo = 0xDC00 + (v &amp; 0x3FF);
+                    <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-push-u-escape-123">push_u_escape</a>(out, hi);
+                    <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-push-u-escape-123">push_u_escape</a>(out, lo);
+                }
+            }
+        }
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/layerstack/src/model.rs:93</p>
+</article><article id="item-fn-push-u-escape-123" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn push_u_escape private fn push_u_escape (out : &amp; mut String , value : u32) crates/layerstack/src/model.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>push_u_escape</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="layerstack--src-model-rs.html#item-fn-push-u-escape-123">push_u_escape</a> (out : &amp; mut String , value : u32)</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-push-u-escape-123">push_u_escape</a>(out: &amp;<span class="rs-kw">mut</span> <span class="rs-type">String</span>, value: u32) {
+    out.push_str(&quot;\\u&quot;);
+    out.push(<a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-hex-char-236">hex_char</a>((value &gt;&gt; 12) &amp; 0x0f));
+    out.push(<a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-hex-char-236">hex_char</a>((value &gt;&gt; 8) &amp; 0x0f));
+    out.push(<a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-hex-char-236">hex_char</a>((value &gt;&gt; 4) &amp; 0x0f));
+    out.push(<a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-hex-char-236">hex_char</a>(value &amp; 0x0f));
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/layerstack/src/model.rs:123</p>
+</article><article id="item-fn-manifest-layers-json-131" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn manifest_layers_json private fn manifest_layers_json (layers : &amp; [LayerRef]) -&gt; String crates/layerstack/src/model.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>manifest_layers_json</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="layerstack--src-model-rs.html#item-fn-manifest-layers-json-131">manifest_layers_json</a> (layers : &amp; [<a class="symbol-link" href="layerstack--src-model-rs.html#item-struct-LayerRef-62">LayerRef</a>]) -&gt; String</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-manifest-layers-json-131">manifest_layers_json</a>(layers: &amp;[<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-struct-LayerRef-62">LayerRef</a>]) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> out = <span class="rs-type">String</span>::from(&quot;{\&quot;layers\&quot;:[&quot;);
+    <span class="rs-kw">for</span> (i, layer) <span class="rs-kw">in</span> layers.iter().enumerate() {
+        <span class="rs-kw">if</span> i &gt; 0 {
+            out.push(&#x27;,&#x27;);
+        }
+        out.push_str(&quot;{\&quot;layer_id\&quot;:\&quot;&quot;);
+        <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-push-json-ascii-escaped-93">push_json_ascii_escaped</a>(&amp;<span class="rs-kw">mut</span> out, &amp;layer.layer_id);
+        out.push_str(&quot;\&quot;,\&quot;path\&quot;:\&quot;&quot;);
+        <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-push-json-ascii-escaped-93">push_json_ascii_escaped</a>(&amp;<span class="rs-kw">mut</span> out, &amp;layer.path);
+        out.push_str(&quot;\&quot;}&quot;);
+    }
+    out.push_str(&quot;]}&quot;);
+    out
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/layerstack/src/model.rs:131</p>
+</article><article id="item-fn-update-digest-204" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn update_digest private fn update_digest (hasher : &amp; mut Sha256 , change : &amp; LayerChange) crates/layerstack/src/model.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>update_digest</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="layerstack--src-model-rs.html#item-fn-update-digest-204">update_digest</a> (hasher : &amp; mut Sha256 , change : &amp; <a class="symbol-link" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>)</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-update-digest-204">update_digest</a>(hasher: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Sha256</span>, change: &amp;<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>) {
+    hasher.update(change.<a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#method-kind-174">kind</a>().as_bytes());
+    hasher.update(b&quot;\0&quot;);
+    hasher.update(change.<a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#method-path-184">path</a>().<a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#method-as-str-50">as_str</a>().as_bytes());
+    hasher.update(b&quot;\0&quot;);
+    <span class="rs-kw">match</span> change {
+        <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>::<span class="rs-type">Write</span> { content, .. } =&gt; hasher.update(content),
+        <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>::<span class="rs-type">Symlink</span> { source_path, .. } =&gt; hasher.update(source_path.as_bytes()),
+        <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>::<span class="rs-type">Delete</span> { .. } | <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>::<span class="rs-type">OpaqueDir</span> { .. } =&gt; {}
+    }
+    hasher.update(b&quot;\0&quot;);
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/layerstack/src/model.rs:204</p>
+</article><article id="item-fn-hex-char-236" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn hex_char private fn hex_char (nibble : u32) -&gt; char crates/layerstack/src/model.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>hex_char</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="layerstack--src-model-rs.html#item-fn-hex-char-236">hex_char</a> (nibble : u32) -&gt; char</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-hex-char-236">hex_char</a>(nibble: u32) -&gt; char {
+    <span class="rs-kw">let</span> index = usize::from((nibble &amp; 0x0f) <span class="rs-kw">as</span> u8);
+    char::from(<span class="rs-type">LOWER_HEX</span>[index])
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/layerstack/src/model.rs:236</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/layerstack/src/model.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::collections::<span class="rs-type">BTreeMap</span>;
+<span class="rs-kw">use</span> std::fmt;
+
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+<span class="rs-kw">use</span> sha2::{<span class="rs-type">Digest</span>, <span class="rs-type">Sha256</span>};
+<span class="rs-kw">use</span> thiserror::<span class="rs-type">Error</span>;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>: i64 = 1;
+
+<span class="rs-kw">const</span> <span class="rs-type">LOWER_HEX</span>: &amp;[u8; 16] = b&quot;0123456789abcdef&quot;;
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Error</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a> {
+    #[error(&quot;invalid layer path: {0}&quot;)]
+    <span class="rs-type">InvalidPath</span>(<span class="rs-type">String</span>),
+    #[error(&quot;unsupported manifest schema_version: {0}&quot;)]
+    <span class="rs-type">UnsupportedSchemaVersion</span>(i64),
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">PartialOrd</span>, <span class="rs-type">Ord</span>, <span class="rs-type">Hash</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a>(<span class="rs-type">String</span>);
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#method-parse-25">parse</a>(path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a>&gt; {
+        <span class="rs-kw">let</span> raw = path.replace(&#x27;\\&#x27;, &quot;/&quot;);
+        <span class="rs-kw">let</span> raw = raw.trim();
+        <span class="rs-kw">if</span> raw.contains(&#x27;\0&#x27;) {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a>::<span class="rs-type">InvalidPath</span>(path.to_owned()));
+        }
+        <span class="rs-kw">if</span> raw.starts_with(&#x27;/&#x27;) {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a>::<span class="rs-type">InvalidPath</span>(path.to_owned()));
+        }
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> parts: <span class="rs-type">Vec</span>&lt;&amp;str&gt; = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="layerstack.html#method-new-128">new</a>();
+        <span class="rs-kw">for</span> part <span class="rs-kw">in</span> raw.split(&#x27;/&#x27;) {
+            <span class="rs-kw">if</span> part.is_empty() || part == &quot;.&quot; {
+                <span class="rs-kw">continue</span>;
+            }
+            <span class="rs-kw">if</span> part == &quot;..&quot; {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a>::<span class="rs-type">InvalidPath</span>(path.to_owned()));
+            }
+            parts.push(part);
+        }
+        <span class="rs-kw">if</span> parts.is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a>::<span class="rs-type">InvalidPath</span>(path.to_owned()));
+        }
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span>(parts.join(&quot;/&quot;)))
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#method-as-str-50">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.0
+    }
+}
+
+<span class="rs-kw">impl</span> fmt::<span class="rs-type">Display</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#method-fmt-57">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.write_str(&amp;<span class="rs-self">self</span>.0)
+    }
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">PartialOrd</span>, <span class="rs-type">Ord</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-struct-LayerRef-62">LayerRef</a> {
+    <span class="rs-kw">pub</span> layer_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> path: <span class="rs-type">String</span>,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a> {
+    <span class="rs-kw">pub</span> version: i64,
+    <span class="rs-kw">pub</span> layers: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-struct-LayerRef-62">LayerRef</a>&gt;,
+    <span class="rs-kw">pub</span> schema_version: i64,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack.html#method-new-128">new</a>(version: i64, layers: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-struct-LayerRef-62">LayerRef</a>&gt;, schema_version: i64) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a>&gt; {
+        <span class="rs-kw">if</span> schema_version != <span class="rs-type">MANIFEST_SCHEMA_VERSION</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a>::<span class="rs-type">UnsupportedSchemaVersion</span>(schema_version));
+        }
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
+            version,
+            layers,
+            schema_version,
+        })
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#method-depth-87">depth</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
+        <span class="rs-self">self</span>.layers.len()
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-push-json-ascii-escaped-93">push_json_ascii_escaped</a>(out: &amp;<span class="rs-kw">mut</span> <span class="rs-type">String</span>, s: &amp;str) {
+    <span class="rs-kw">for</span> ch <span class="rs-kw">in</span> s.chars() {
+        <span class="rs-kw">match</span> ch {
+            &#x27;&quot;&#x27; =&gt; out.push_str(&quot;\\\&quot;&quot;),
+            &#x27;\\&#x27; =&gt; out.push_str(&quot;\\\\&quot;),
+            &#x27;\u{0008}&#x27; =&gt; out.push_str(&quot;\\b&quot;),
+            &#x27;\u{0009}&#x27; =&gt; out.push_str(&quot;\\t&quot;),
+            &#x27;\u{000<span class="rs-type">A</span>}&#x27; =&gt; out.push_str(&quot;\\n&quot;),
+            &#x27;\u{000<span class="rs-type">C</span>}&#x27; =&gt; out.push_str(&quot;\\f&quot;),
+            &#x27;\u{000<span class="rs-type">D</span>}&#x27; =&gt; out.push_str(&quot;\\r&quot;),
+            c <span class="rs-kw">if</span> (0x20..=0x7E).contains(&amp;u32::from(c)) =&gt; out.push(c),
+            c <span class="rs-kw">if</span> u32::from(c) &lt; 0x20 =&gt; {
+                <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-push-u-escape-123">push_u_escape</a>(out, u32::from(c));
+            }
+            c =&gt; {
+                <span class="rs-kw">let</span> cp = u32::from(c);
+                <span class="rs-kw">if</span> cp &lt;= 0xFFFF {
+                    <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-push-u-escape-123">push_u_escape</a>(out, cp);
+                } <span class="rs-kw">else</span> {
+                    <span class="rs-kw">let</span> v = cp - 0x10000;
+                    <span class="rs-kw">let</span> hi = 0xD800 + (v &gt;&gt; 10);
+                    <span class="rs-kw">let</span> lo = 0xDC00 + (v &amp; 0x3FF);
+                    <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-push-u-escape-123">push_u_escape</a>(out, hi);
+                    <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-push-u-escape-123">push_u_escape</a>(out, lo);
+                }
+            }
+        }
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-push-u-escape-123">push_u_escape</a>(out: &amp;<span class="rs-kw">mut</span> <span class="rs-type">String</span>, value: u32) {
+    out.push_str(&quot;\\u&quot;);
+    out.push(<a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-hex-char-236">hex_char</a>((value &gt;&gt; 12) &amp; 0x0f));
+    out.push(<a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-hex-char-236">hex_char</a>((value &gt;&gt; 8) &amp; 0x0f));
+    out.push(<a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-hex-char-236">hex_char</a>((value &gt;&gt; 4) &amp; 0x0f));
+    out.push(<a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-hex-char-236">hex_char</a>(value &amp; 0x0f));
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-manifest-layers-json-131">manifest_layers_json</a>(layers: &amp;[<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-struct-LayerRef-62">LayerRef</a>]) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> out = <span class="rs-type">String</span>::from(&quot;{\&quot;layers\&quot;:[&quot;);
+    <span class="rs-kw">for</span> (i, layer) <span class="rs-kw">in</span> layers.iter().enumerate() {
+        <span class="rs-kw">if</span> i &gt; 0 {
+            out.push(&#x27;,&#x27;);
+        }
+        out.push_str(&quot;{\&quot;layer_id\&quot;:\&quot;&quot;);
+        <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-push-json-ascii-escaped-93">push_json_ascii_escaped</a>(&amp;<span class="rs-kw">mut</span> out, &amp;layer.layer_id);
+        out.push_str(&quot;\&quot;,\&quot;path\&quot;:\&quot;&quot;);
+        <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-push-json-ascii-escaped-93">push_json_ascii_escaped</a>(&amp;<span class="rs-kw">mut</span> out, &amp;layer.path);
+        out.push_str(&quot;\&quot;}&quot;);
+    }
+    out.push_str(&quot;]}&quot;);
+    out
+}
+
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-manifest-root-hash-147">manifest_root_hash</a>(manifest: &amp;<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> encoded = <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-manifest-layers-json-131">manifest_layers_json</a>(&amp;manifest.layers);
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="layerstack.html#method-new-128">new</a>();
+    hasher.update(encoded.as_bytes());
+    <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-hex-lower-226">hex_lower</a>(hasher.finalize())
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a> {
+    <span class="rs-type">Write</span> {
+        path: <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a>,
+        content: <span class="rs-type">Vec</span>&lt;u8&gt;,
+    },
+    <span class="rs-type">Delete</span> {
+        path: <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a>,
+    },
+    <span class="rs-type">Symlink</span> {
+        path: <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a>,
+        source_path: <span class="rs-type">String</span>,
+    },
+    <span class="rs-type">OpaqueDir</span> {
+        path: <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a>,
+    },
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#method-kind-174">kind</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Write</span> { .. } =&gt; &quot;write&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Delete</span> { .. } =&gt; &quot;delete&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Symlink</span> { .. } =&gt; &quot;symlink&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">OpaqueDir</span> { .. } =&gt; &quot;opaque_dir&quot;,
+        }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#method-path-184">path</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a> {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Write</span> { path, .. }
+            | <span class="rs-self">Self</span>::<span class="rs-type">Delete</span> { path }
+            | <span class="rs-self">Self</span>::<span class="rs-type">Symlink</span> { path, .. }
+            | <span class="rs-self">Self</span>::<span class="rs-type">OpaqueDir</span> { path } =&gt; path,
+        }
+    }
+}
+
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-aggregate-layer-changes-195">aggregate_layer_changes</a>(changes: &amp;[<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>]) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> by_path: <span class="rs-type">BTreeMap</span>&lt;<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a>, <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>&gt; = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="layerstack.html#method-new-128">new</a>();
+    <span class="rs-kw">for</span> change <span class="rs-kw">in</span> changes.iter().cloned() {
+        by_path.insert(change.<a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#method-path-184">path</a>().clone(), change);
+    }
+    by_path.into_values().collect()
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-update-digest-204">update_digest</a>(hasher: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Sha256</span>, change: &amp;<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>) {
+    hasher.update(change.<a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#method-kind-174">kind</a>().as_bytes());
+    hasher.update(b&quot;\0&quot;);
+    hasher.update(change.<a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#method-path-184">path</a>().<a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#method-as-str-50">as_str</a>().as_bytes());
+    hasher.update(b&quot;\0&quot;);
+    <span class="rs-kw">match</span> change {
+        <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>::<span class="rs-type">Write</span> { content, .. } =&gt; hasher.update(content),
+        <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>::<span class="rs-type">Symlink</span> { source_path, .. } =&gt; hasher.update(source_path.as_bytes()),
+        <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>::<span class="rs-type">Delete</span> { .. } | <a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>::<span class="rs-type">OpaqueDir</span> { .. } =&gt; {}
+    }
+    hasher.update(b&quot;\0&quot;);
+}
+
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-layer-digest-217">layer_digest</a>(changes: &amp;[<a class="symbol-link rs-type" href="layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>]) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="layerstack.html#method-new-128">new</a>();
+    <span class="rs-kw">for</span> change <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-aggregate-layer-changes-195">aggregate_layer_changes</a>(changes) {
+        <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-update-digest-204">update_digest</a>(&amp;<span class="rs-kw">mut</span> hasher, &amp;change);
+    }
+    <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-hex-lower-226">hex_lower</a>(hasher.finalize())
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-hex-lower-226">hex_lower</a>(bytes: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;[u8]&gt;) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> bytes = bytes.as_ref();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> s = <span class="rs-type">String</span>::with_capacity(bytes.len() * 2);
+    <span class="rs-kw">for</span> &amp;b <span class="rs-kw">in</span> bytes {
+        s.push(char::from(<span class="rs-type">LOWER_HEX</span>[usize::from(b &gt;&gt; 4)]));
+        s.push(char::from(<span class="rs-type">LOWER_HEX</span>[usize::from(b &amp; 0x0f)]));
+    }
+    s
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="layerstack--src-model-rs.html#item-fn-hex-char-236">hex_char</a>(nibble: u32) -&gt; char {
+    <span class="rs-kw">let</span> index = usize::from((nibble &amp; 0x0f) <span class="rs-kw">as</span> u8);
+    char::from(<span class="rs-type">LOWER_HEX</span>[index])
+}
+
+#[cfg(test)]
+#[path = &quot;../tests/unit/model.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

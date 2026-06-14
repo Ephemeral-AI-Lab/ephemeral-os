@@ -1,0 +1,23 @@
+[package]
+name = "eosd"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "eosd"
+path = "src/main.rs"
+
+[dependencies]
+config.workspace = true
+daemon.workspace = true
+namespace.workspace = true
+overlay.workspace = true
+protocol.workspace = true
+anyhow.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+
+[lints]
+workspace = true

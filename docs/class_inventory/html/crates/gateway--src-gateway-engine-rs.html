@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>gateway · src/gateway/engine.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>gateway File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>8</b><span>modules</span></div>
+  <div><b>50</b><span>items</span></div>
+  <div><b>17</b><span>fields</span></div>
+  <div><b>27</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">gateway</span><ul class="file-tree"><li><a class="file-link" href="gateway--src-gateway-catalog-rs.html"><span>catalog.rs</span><small>4/0</small></a></li><li><a class="file-link active" href="gateway--src-gateway-engine-rs.html"><span>engine.rs</span><small>1/1</small></a></li><li><a class="file-link" href="gateway--src-gateway-router-rs.html"><span>router.rs</span><small>1/6</small></a></li><li><a class="file-link" href="gateway--src-gateway-transport-rs.html"><span>transport.rs</span><small>0/7</small></a></li><li><a class="file-link" href="gateway--src-gateway-wire-rs.html"><span>wire.rs</span><small>2/13</small></a></li></ul></li><li><a class="file-link" href="gateway.html"><span>gateway.rs</span><small>0/0</small></a></li><li><a class="file-link" href="gateway--src-main-rs.html"><span>main.rs</span><small>0/1</small></a></li><li><a class="file-link" href="gateway--src-serve-rs.html"><span>serve.rs</span><small>1/7</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="gateway::engine crates/gateway/src/gateway/engine.rs Engine impl Engine for SandboxHost status_value">
+  <div class="module-head">
+    <div>
+      <h2>src/gateway/engine.rs</h2>
+      <p class="path">module <code>gateway::engine</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>1 impls</span>
+      <span>1 fns</span>
+      <span>18 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-trait-Engine-6" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait Engine pub(crate) pub(crate) trait Engine crates/gateway/src/gateway/engine.rs  acquire fn acquire (&amp; self , trace : &amp; ForwardTraceContext , args : &amp; Value) -&gt; Result &lt; String &gt; release fn release (&amp; self , sandbox_id : &amp; str , trace : &amp; ForwardTraceContext , args : &amp; Value) -&gt; Result &lt; bool &gt; status fn status (&amp; self , sandbox_id : &amp; str) -&gt; Option &lt; Value &gt; list fn list (&amp; self) -&gt; Vec &lt; Value &gt; forward fn forward (&amp; self , request : HostForwardRequest &lt; '_ &gt;) -&gt; Option &lt; Result &lt; Value , ForwardError &gt; &gt; trace_requests fn trace_requests (&amp; self , _trace : &amp; ForwardTraceContext , _args : &amp; Value) -&gt; Result &lt; Value &gt; trace_show fn trace_show (&amp; self , _trace : &amp; ForwardTraceContext , _args : &amp; Value) -&gt; Result &lt; Value &gt; trace_verify fn trace_verify (&amp; self , _trace : &amp; ForwardTraceContext , _args : &amp; Value) -&gt; Result &lt; Value &gt; record_trace_event fn record_trace_event (&amp; self , _sandbox_id : &amp; str , _trace : &amp; ForwardTraceContext , _module : &amp; str , _event : &amp; str , _details : Value ,)">
+  <div class="item-head">
+    <span class="kind">trait</span>
+    <h3>Engine</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) trait <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#item-trait-Engine-6">Engine</a></code>
+  <div class="tags"></div>
+  <h4>Methods</h4><table><tbody><tr id="method-acquire-7"><td>required</td><td>acquire</td><td><code>fn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#method-acquire-7">acquire</a> (&amp; self , trace : &amp; ForwardTraceContext , args : &amp; Value) -&gt; Result &lt; String &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-acquire-7">acquire</a>(&amp;<span class="rs-self">self</span>, trace: &amp;<span class="rs-type">ForwardTraceContext</span>, args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-release-8"><td>required</td><td>release</td><td><code>fn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#method-release-8">release</a> (&amp; self , sandbox_id : &amp; str , trace : &amp; ForwardTraceContext , args : &amp; Value) -&gt; Result &lt; bool &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-release-8">release</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str, trace: &amp;<span class="rs-type">ForwardTraceContext</span>, args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;bool&gt;;
+</code></pre>
+</details></td></tr><tr id="method-status-9"><td>required</td><td>status</td><td><code>fn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#method-status-9">status</a> (&amp; self , sandbox_id : &amp; str) -&gt; Option &lt; Value &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-status-9">status</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-list-10"><td>required</td><td>list</td><td><code>fn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#method-list-10">list</a> (&amp; self) -&gt; Vec &lt; Value &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-list-10">list</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-forward-11"><td>required</td><td>forward</td><td><code>fn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#method-forward-11">forward</a> (&amp; self , request : HostForwardRequest &lt; &#x27;_ &gt;) -&gt; Option &lt; Result &lt; Value , ForwardError &gt; &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-forward-11">forward</a>(&amp;<span class="rs-self">self</span>, request: <span class="rs-type">HostForwardRequest</span>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <span class="rs-type">ForwardError</span>&gt;&gt;;
+</code></pre>
+</details></td></tr><tr id="method-trace-requests-13"><td>provided</td><td>trace_requests</td><td><code>fn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#method-trace-requests-13">trace_requests</a> (&amp; self , _trace : &amp; ForwardTraceContext , _args : &amp; Value) -&gt; Result &lt; Value &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-requests-13">trace_requests</a>(&amp;<span class="rs-self">self</span>, _trace: &amp;<span class="rs-type">ForwardTraceContext</span>, _args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>&gt; {
+        anyhow::bail!(&quot;trace request listing is not available on this engine&quot;)
+    }
+</code></pre>
+</details></td></tr><tr id="method-trace-show-17"><td>provided</td><td>trace_show</td><td><code>fn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#method-trace-show-17">trace_show</a> (&amp; self , _trace : &amp; ForwardTraceContext , _args : &amp; Value) -&gt; Result &lt; Value &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-show-17">trace_show</a>(&amp;<span class="rs-self">self</span>, _trace: &amp;<span class="rs-type">ForwardTraceContext</span>, _args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>&gt; {
+        anyhow::bail!(&quot;trace show is not available on this engine&quot;)
+    }
+</code></pre>
+</details></td></tr><tr id="method-trace-verify-21"><td>provided</td><td>trace_verify</td><td><code>fn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#method-trace-verify-21">trace_verify</a> (&amp; self , _trace : &amp; ForwardTraceContext , _args : &amp; Value) -&gt; Result &lt; Value &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-verify-21">trace_verify</a>(&amp;<span class="rs-self">self</span>, _trace: &amp;<span class="rs-type">ForwardTraceContext</span>, _args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>&gt; {
+        anyhow::bail!(&quot;trace verify is not available on this engine&quot;)
+    }
+</code></pre>
+</details></td></tr><tr id="method-record-trace-event-25"><td>provided</td><td>record_trace_event</td><td><code>fn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#method-record-trace-event-25">record_trace_event</a> (&amp; self , _sandbox_id : &amp; str , _trace : &amp; ForwardTraceContext , _module : &amp; str , _event : &amp; str , _details : Value ,)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-record-trace-event-25">record_trace_event</a>(
+        &amp;<span class="rs-self">self</span>,
+        _sandbox_id: &amp;str,
+        _trace: &amp;<span class="rs-type">ForwardTraceContext</span>,
+        _module: &amp;str,
+        _event: &amp;str,
+        _details: <span class="rs-type">Value</span>,
+    ) {
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/gateway/src/gateway/engine.rs:6</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-status-value-84" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn status_value private fn status_value (status : &amp; SandboxStatus , embed_daemon : bool) -&gt; Value crates/gateway/src/gateway/engine.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>status_value</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#item-fn-status-value-84">status_value</a> (status : &amp; SandboxStatus , embed_daemon : bool) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#item-fn-status-value-84">status_value</a>(status: &amp;<span class="rs-type">SandboxStatus</span>, embed_daemon: bool) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> value = json!({
+        &quot;sandbox_id&quot;: status.sandbox_id,
+        &quot;container&quot;: status.container,
+        &quot;endpoint&quot;: status.endpoint.map(|addr| addr.to_string()),
+        &quot;created_by&quot;: status.created_by,
+    });
+    <span class="rs-kw">if</span> embed_daemon {
+        value[&quot;daemon&quot;] = status.daemon.clone();
+    }
+    value
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/gateway/src/gateway/engine.rs:84</p>
+</article><div class="group-label">Other Implementations</div><article id="item-impl-impl-Engine-for-SandboxHost-36" class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl Engine for SandboxHost private impl Engine for SandboxHost crates/gateway/src/gateway/engine.rs  acquire fn acquire (&amp; self , trace : &amp; ForwardTraceContext , args : &amp; Value) -&gt; Result &lt; String &gt; release fn release (&amp; self , sandbox_id : &amp; str , trace : &amp; ForwardTraceContext , args : &amp; Value) -&gt; Result &lt; bool &gt; status fn status (&amp; self , sandbox_id : &amp; str) -&gt; Option &lt; Value &gt; list fn list (&amp; self) -&gt; Vec &lt; Value &gt; forward fn forward (&amp; self , request : HostForwardRequest &lt; '_ &gt;) -&gt; Option &lt; Result &lt; Value , ForwardError &gt; &gt; trace_requests fn trace_requests (&amp; self , trace : &amp; ForwardTraceContext , args : &amp; Value) -&gt; Result &lt; Value &gt; trace_show fn trace_show (&amp; self , trace : &amp; ForwardTraceContext , args : &amp; Value) -&gt; Result &lt; Value &gt; trace_verify fn trace_verify (&amp; self , trace : &amp; ForwardTraceContext , args : &amp; Value) -&gt; Result &lt; Value &gt; record_trace_event fn record_trace_event (&amp; self , sandbox_id : &amp; str , trace : &amp; ForwardTraceContext , module : &amp; str , event : &amp; str , details : Value ,)">
+  <div class="item-head">
+    <span class="kind">impl</span>
+    <h3>impl Engine for SandboxHost</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">impl <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#item-trait-Engine-6">Engine</a> for SandboxHost</code>
+  <div class="tags"><span>impl</span><span>trait-impl</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-acquire-37"><td>method</td><td>acquire</td><td><code>fn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#method-acquire-7">acquire</a> (&amp; self , trace : &amp; ForwardTraceContext , args : &amp; Value) -&gt; Result &lt; String &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-acquire-7">acquire</a>(&amp;<span class="rs-self">self</span>, trace: &amp;<span class="rs-type">ForwardTraceContext</span>, args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
+        <span class="rs-type">SandboxHost</span>::acquire_with_trace(<span class="rs-self">self</span>, trace, args)
+    }
+</code></pre>
+</details></td></tr><tr id="method-release-41"><td>method</td><td>release</td><td><code>fn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#method-release-8">release</a> (&amp; self , sandbox_id : &amp; str , trace : &amp; ForwardTraceContext , args : &amp; Value) -&gt; Result &lt; bool &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-release-8">release</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str, trace: &amp;<span class="rs-type">ForwardTraceContext</span>, args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;bool&gt; {
+        <span class="rs-type">SandboxHost</span>::release_with_trace(<span class="rs-self">self</span>, sandbox_id, trace, args)
+    }
+</code></pre>
+</details></td></tr><tr id="method-status-45"><td>method</td><td>status</td><td><code>fn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#method-status-9">status</a> (&amp; self , sandbox_id : &amp; str) -&gt; Option &lt; Value &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-status-9">status</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt; {
+        <span class="rs-type">SandboxHost</span>::<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-status-9">status</a>(<span class="rs-self">self</span>, sandbox_id).map(|status| <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#item-fn-status-value-84">status_value</a>(&amp;status, <span class="rs-kw">true</span>))
+    }
+</code></pre>
+</details></td></tr><tr id="method-list-49"><td>method</td><td>list</td><td><code>fn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#method-list-10">list</a> (&amp; self) -&gt; Vec &lt; Value &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-list-10">list</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; {
+        <span class="rs-type">SandboxHost</span>::<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-list-10">list</a>(<span class="rs-self">self</span>)
+            .iter()
+            .map(|status| <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#item-fn-status-value-84">status_value</a>(status, <span class="rs-kw">false</span>))
+            .collect()
+    }
+</code></pre>
+</details></td></tr><tr id="method-forward-56"><td>method</td><td>forward</td><td><code>fn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#method-forward-11">forward</a> (&amp; self , request : HostForwardRequest &lt; &#x27;_ &gt;) -&gt; Option &lt; Result &lt; Value , ForwardError &gt; &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-forward-11">forward</a>(&amp;<span class="rs-self">self</span>, request: <span class="rs-type">HostForwardRequest</span>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <span class="rs-type">ForwardError</span>&gt;&gt; {
+        <span class="rs-type">SandboxHost</span>::forward_with_trace(<span class="rs-self">self</span>, request)
+    }
+</code></pre>
+</details></td></tr><tr id="method-trace-requests-60"><td>method</td><td>trace_requests</td><td><code>fn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#method-trace-requests-13">trace_requests</a> (&amp; self , trace : &amp; ForwardTraceContext , args : &amp; Value) -&gt; Result &lt; Value &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-requests-13">trace_requests</a>(&amp;<span class="rs-self">self</span>, trace: &amp;<span class="rs-type">ForwardTraceContext</span>, args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>&gt; {
+        <span class="rs-type">SandboxHost</span>::<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-requests-13">trace_requests</a>(<span class="rs-self">self</span>, trace, args)
+    }
+</code></pre>
+</details></td></tr><tr id="method-trace-show-64"><td>method</td><td>trace_show</td><td><code>fn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#method-trace-show-17">trace_show</a> (&amp; self , trace : &amp; ForwardTraceContext , args : &amp; Value) -&gt; Result &lt; Value &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-show-17">trace_show</a>(&amp;<span class="rs-self">self</span>, trace: &amp;<span class="rs-type">ForwardTraceContext</span>, args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>&gt; {
+        <span class="rs-type">SandboxHost</span>::<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-show-17">trace_show</a>(<span class="rs-self">self</span>, trace, args)
+    }
+</code></pre>
+</details></td></tr><tr id="method-trace-verify-68"><td>method</td><td>trace_verify</td><td><code>fn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#method-trace-verify-21">trace_verify</a> (&amp; self , trace : &amp; ForwardTraceContext , args : &amp; Value) -&gt; Result &lt; Value &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-verify-21">trace_verify</a>(&amp;<span class="rs-self">self</span>, trace: &amp;<span class="rs-type">ForwardTraceContext</span>, args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>&gt; {
+        <span class="rs-type">SandboxHost</span>::<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-verify-21">trace_verify</a>(<span class="rs-self">self</span>, trace, args)
+    }
+</code></pre>
+</details></td></tr><tr id="method-record-trace-event-72"><td>method</td><td>record_trace_event</td><td><code>fn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#method-record-trace-event-25">record_trace_event</a> (&amp; self , sandbox_id : &amp; str , trace : &amp; ForwardTraceContext , module : &amp; str , event : &amp; str , details : Value ,)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-record-trace-event-25">record_trace_event</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;str,
+        trace: &amp;<span class="rs-type">ForwardTraceContext</span>,
+        module: &amp;str,
+        event: &amp;str,
+        details: <span class="rs-type">Value</span>,
+    ) {
+        <span class="rs-type">SandboxHost</span>::<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-record-trace-event-25">record_trace_event</a>(<span class="rs-self">self</span>, sandbox_id, trace, module, event, details);
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/gateway/src/gateway/engine.rs:36</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/gateway/src/gateway/engine.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> anyhow::<span class="rs-type">Result</span>;
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> host::{<span class="rs-type">ForwardError</span>, <span class="rs-type">ForwardTraceContext</span>, <span class="rs-type">HostForwardRequest</span>, <span class="rs-type">SandboxHost</span>, <span class="rs-type">SandboxStatus</span>};
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="gateway--src-gateway-engine-rs.html#item-trait-Engine-6">Engine</a>: <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-acquire-7">acquire</a>(&amp;<span class="rs-self">self</span>, trace: &amp;<span class="rs-type">ForwardTraceContext</span>, args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt;;
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-release-8">release</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str, trace: &amp;<span class="rs-type">ForwardTraceContext</span>, args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;bool&gt;;
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-status-9">status</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;;
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-list-10">list</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt;;
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-forward-11">forward</a>(&amp;<span class="rs-self">self</span>, request: <span class="rs-type">HostForwardRequest</span>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <span class="rs-type">ForwardError</span>&gt;&gt;;
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-requests-13">trace_requests</a>(&amp;<span class="rs-self">self</span>, _trace: &amp;<span class="rs-type">ForwardTraceContext</span>, _args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>&gt; {
+        anyhow::bail!(&quot;trace request listing is not available on this engine&quot;)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-show-17">trace_show</a>(&amp;<span class="rs-self">self</span>, _trace: &amp;<span class="rs-type">ForwardTraceContext</span>, _args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>&gt; {
+        anyhow::bail!(&quot;trace show is not available on this engine&quot;)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-verify-21">trace_verify</a>(&amp;<span class="rs-self">self</span>, _trace: &amp;<span class="rs-type">ForwardTraceContext</span>, _args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>&gt; {
+        anyhow::bail!(&quot;trace verify is not available on this engine&quot;)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-record-trace-event-25">record_trace_event</a>(
+        &amp;<span class="rs-self">self</span>,
+        _sandbox_id: &amp;str,
+        _trace: &amp;<span class="rs-type">ForwardTraceContext</span>,
+        _module: &amp;str,
+        _event: &amp;str,
+        _details: <span class="rs-type">Value</span>,
+    ) {
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="gateway--src-gateway-engine-rs.html#item-trait-Engine-6">Engine</a> <span class="rs-kw">for</span> <span class="rs-type">SandboxHost</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-acquire-7">acquire</a>(&amp;<span class="rs-self">self</span>, trace: &amp;<span class="rs-type">ForwardTraceContext</span>, args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
+        <span class="rs-type">SandboxHost</span>::acquire_with_trace(<span class="rs-self">self</span>, trace, args)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-release-8">release</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str, trace: &amp;<span class="rs-type">ForwardTraceContext</span>, args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;bool&gt; {
+        <span class="rs-type">SandboxHost</span>::release_with_trace(<span class="rs-self">self</span>, sandbox_id, trace, args)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-status-9">status</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt; {
+        <span class="rs-type">SandboxHost</span>::<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-status-9">status</a>(<span class="rs-self">self</span>, sandbox_id).map(|status| <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#item-fn-status-value-84">status_value</a>(&amp;status, <span class="rs-kw">true</span>))
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-list-10">list</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; {
+        <span class="rs-type">SandboxHost</span>::<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-list-10">list</a>(<span class="rs-self">self</span>)
+            .iter()
+            .map(|status| <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#item-fn-status-value-84">status_value</a>(status, <span class="rs-kw">false</span>))
+            .collect()
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-forward-11">forward</a>(&amp;<span class="rs-self">self</span>, request: <span class="rs-type">HostForwardRequest</span>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <span class="rs-type">ForwardError</span>&gt;&gt; {
+        <span class="rs-type">SandboxHost</span>::forward_with_trace(<span class="rs-self">self</span>, request)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-requests-13">trace_requests</a>(&amp;<span class="rs-self">self</span>, trace: &amp;<span class="rs-type">ForwardTraceContext</span>, args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>&gt; {
+        <span class="rs-type">SandboxHost</span>::<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-requests-13">trace_requests</a>(<span class="rs-self">self</span>, trace, args)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-show-17">trace_show</a>(&amp;<span class="rs-self">self</span>, trace: &amp;<span class="rs-type">ForwardTraceContext</span>, args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>&gt; {
+        <span class="rs-type">SandboxHost</span>::<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-show-17">trace_show</a>(<span class="rs-self">self</span>, trace, args)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-verify-21">trace_verify</a>(&amp;<span class="rs-self">self</span>, trace: &amp;<span class="rs-type">ForwardTraceContext</span>, args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>&gt; {
+        <span class="rs-type">SandboxHost</span>::<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-verify-21">trace_verify</a>(<span class="rs-self">self</span>, trace, args)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-record-trace-event-25">record_trace_event</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;str,
+        trace: &amp;<span class="rs-type">ForwardTraceContext</span>,
+        module: &amp;str,
+        event: &amp;str,
+        details: <span class="rs-type">Value</span>,
+    ) {
+        <span class="rs-type">SandboxHost</span>::<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-record-trace-event-25">record_trace_event</a>(<span class="rs-self">self</span>, sandbox_id, trace, module, event, details);
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#item-fn-status-value-84">status_value</a>(status: &amp;<span class="rs-type">SandboxStatus</span>, embed_daemon: bool) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> value = json!({
+        &quot;sandbox_id&quot;: status.sandbox_id,
+        &quot;container&quot;: status.container,
+        &quot;endpoint&quot;: status.endpoint.map(|addr| addr.to_string()),
+        &quot;created_by&quot;: status.created_by,
+    });
+    <span class="rs-kw">if</span> embed_daemon {
+        value[&quot;daemon&quot;] = status.daemon.clone();
+    }
+    value
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

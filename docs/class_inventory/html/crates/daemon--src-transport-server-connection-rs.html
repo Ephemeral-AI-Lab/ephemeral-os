@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>daemon · src/transport/server/connection.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>38</b><span>modules</span></div>
+  <div><b>277</b><span>items</span></div>
+  <div><b>142</b><span>fields</span></div>
+  <div><b>74</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">dispatch</span><ul class="file-tree"><li><a class="file-link" href="daemon.html"><span>builtin.rs</span><small>0/5</small></a></li><li><a class="file-link" href="daemon--src-dispatch-dispatcher-rs.html"><span>dispatcher.rs</span><small>0/5</small></a></li><li><a class="file-link" href="daemon--src-dispatch-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="daemon--src-lib-rs.html"><span>lib.rs</span><small>0/1</small></a></li><li><span class="folder">op_adapter</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-op-adapter-checkpoint-rs.html"><span>checkpoint.rs</span><small>0/13</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-command-rs.html"><span>command.rs</span><small>2/17</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-control-rs.html"><span>control.rs</span><small>0/11</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-files-rs.html"><span>files.rs</span><small>4/19</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-isolation-rs.html"><span>isolation.rs</span><small>0/23</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-mod-rs.html"><span>mod.rs</span><small>0/12</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-plugin-rs.html"><span>plugin.rs</span><small>1/17</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-workspace-run-rs.html"><span>workspace_run.rs</span><small>0/2</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-runtime-context-rs.html"><span>context.rs</span><small>1/0</small></a></li><li><a class="file-link" href="daemon--src-runtime-error-rs.html"><span>error.rs</span><small>1/1</small></a></li><li><a class="file-link" href="daemon--src-runtime-invocation-registry-rs.html"><span>invocation_registry.rs</span><small>4/2</small></a></li><li><a class="file-link" href="daemon--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="daemon--src-runtime-response-rs.html"><span>response.rs</span><small>2/11</small></a></li><li><a class="file-link" href="daemon--src-runtime-services-rs.html"><span>services.rs</span><small>1/3</small></a></li><li><a class="file-link" href="daemon--src-runtime-workspace-rs.html"><span>workspace.rs</span><small>10/5</small></a></li></ul></li><li><span class="folder">trace</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-trace-envelope-meta-rs.html"><span>envelope_meta.rs</span><small>0/6</small></a></li><li><a class="file-link" href="daemon--src-trace-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="daemon--src-trace-plugin-trace-rs.html"><span>plugin_trace.rs</span><small>0/21</small></a></li><li><span class="folder">sidecar</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-trace-sidecar-budget-rs.html"><span>budget.rs</span><small>0/1</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-build-rs.html"><span>build.rs</span><small>0/2</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-events-rs.html"><span>events.rs</span><small>0/7</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-resources-rs.html"><span>resources.rs</span><small>0/4</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-tests-rs.html"><span>tests.rs</span><small>0/5</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-transport-failure-rs.html"><span>transport_failure.rs</span><small>0/2</small></a></li></ul></li><li><a class="file-link" href="daemon--src-trace-sidecar-rs.html"><span>sidecar.rs</span><small>0/0</small></a></li><li><a class="file-link" href="daemon--src-trace-spool-rs.html"><span>spool.rs</span><small>3/9</small></a></li></ul></li><li><span class="folder">transport</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-transport-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">server</span><ul class="file-tree"><li><a class="file-link active" href="daemon--src-transport-server-connection-rs.html"><span>connection.rs</span><small>0/3</small></a></li><li><a class="file-link" href="daemon--src-transport-server-dispatch-rs.html"><span>dispatch.rs</span><small>0/6</small></a></li><li><a class="file-link" href="daemon--src-transport-server-lifecycle-rs.html"><span>lifecycle.rs</span><small>0/2</small></a></li><li><a class="file-link" href="daemon--src-transport-server-trace-context-rs.html"><span>trace_context.rs</span><small>1/3</small></a></li></ul></li><li><a class="file-link" href="daemon--src-transport-server-rs.html"><span>server.rs</span><small>2/0</small></a></li></ul></li><li><span class="folder">wire</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-wire-message-rs.html"><span>message.rs</span><small>5/3</small></a></li><li><a class="file-link" href="daemon--src-wire-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="transport::server::connection crates/daemon/src/transport/server/connection.rs impl DaemonServer read_request_line read_request_line_rejects_oversized_payloads read_request_line_times_out_waiting_for_line">
+  <div class="module-head">
+    <div>
+      <h2>src/transport/server/connection.rs</h2>
+      <p class="path">module <code>transport::server::connection</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>1 impls</span>
+      <span>3 fns</span>
+      <span>1 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-read-request-line-102" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_request_line private async fn read_request_line &lt; R &gt; (reader : &amp; mut R) -&gt; Result &lt; Vec &lt; u8 &gt; , DaemonError &gt; where R : AsyncRead + Unpin , crates/daemon/src/transport/server/connection.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>read_request_line</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn <a class="symbol-link" href="daemon--src-transport-server-connection-rs.html#item-fn-read-request-line-102">read_request_line</a> &lt; R &gt; (reader : &amp; mut R) -&gt; Result &lt; Vec &lt; u8 &gt; , <a class="symbol-link" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a> &gt; where R : AsyncRead + Unpin ,</code>
+  <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">async</span> <span class="rs-kw">fn</span> read_request_line&lt;<span class="rs-type">R</span>&gt;(reader: &amp;<span class="rs-kw">mut</span> <span class="rs-type">R</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>&gt;
+<span class="rs-kw">where</span>
+    <span class="rs-type">R</span>: <span class="rs-type">AsyncRead</span> + <span class="rs-type">Unpin</span>,
+{
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> buf = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>();
+    <span class="rs-kw">let</span> read = <span class="rs-kw">async</span> {
+        <span class="rs-kw">let</span> limit = u64::try_from(<span class="rs-type">MAX_REQUEST_BYTES</span>)
+            .unwrap_or(u64::<span class="rs-type">MAX</span>)
+            .saturating_add(1);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> limited = <span class="rs-type">BufReader</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(reader.take(limit));
+        limited.read_until(b&#x27;\n&#x27;, &amp;<span class="rs-kw">mut</span> buf).<span class="rs-kw">await</span>?;
+        <span class="rs-kw">if</span> buf.len() &gt; <span class="rs-type">MAX_REQUEST_BYTES</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<span class="rs-type">RequestTooLarge</span> {
+                limit: <span class="rs-type">MAX_REQUEST_BYTES</span>,
+            });
+        }
+        <span class="rs-type">Ok</span>::&lt;(), <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>&gt;(())
+    };
+    timeout(<span class="rs-type">Duration</span>::from_secs_f64(<span class="rs-type">REQUEST_READ_TIMEOUT_S</span>), read)
+        .<span class="rs-kw">await</span>
+        .map_err(|_| {
+            <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<span class="rs-type">Io</span>(std::io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+                std::io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">TimedOut</span>,
+                &quot;daemon request read timed out&quot;,
+            ))
+        })??;
+    <span class="rs-type">Ok</span>(buf)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/transport/server/connection.rs:102</p>
+</article><article id="item-fn-read-request-line-rejects-oversized-payloads-137" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_request_line_rejects_oversized_payloads private async fn read_request_line_rejects_oversized_payloads () crates/daemon/src/transport/server/connection.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>read_request_line_rejects_oversized_payloads</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn <a class="symbol-link" href="daemon--src-transport-server-connection-rs.html#item-fn-read-request-line-rejects-oversized-payloads-137">read_request_line_rejects_oversized_payloads</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-transport-server-connection-rs.html#item-fn-read-request-line-rejects-oversized-payloads-137">read_request_line_rejects_oversized_payloads</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> reader = tokio::io::repeat(b&#x27;x&#x27;).take(
+            u64::try_from(<span class="rs-type">MAX_REQUEST_BYTES</span>)
+                .expect(&quot;max request bytes fits u64&quot;)
+                .saturating_add(1),
+        );
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-fn" href="daemon--src-transport-server-connection-rs.html#item-fn-read-request-line-102">read_request_line</a>(&amp;<span class="rs-kw">mut</span> reader)
+            .<span class="rs-kw">await</span>
+            .expect_err(&quot;oversized request rejected&quot;);
+        assert!(matches!(err, <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<span class="rs-type">RequestTooLarge</span> { .. }));
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/transport/server/connection.rs:137</p>
+</article><article id="item-fn-read-request-line-times-out-waiting-for-line-150" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_request_line_times_out_waiting_for_line private async fn read_request_line_times_out_waiting_for_line () crates/daemon/src/transport/server/connection.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>read_request_line_times_out_waiting_for_line</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn <a class="symbol-link" href="daemon--src-transport-server-connection-rs.html#item-fn-read-request-line-times-out-waiting-for-line-150">read_request_line_times_out_waiting_for_line</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-transport-server-connection-rs.html#item-fn-read-request-line-times-out-waiting-for-line-150">read_request_line_times_out_waiting_for_line</a>() {
+        <span class="rs-kw">let</span> (_writer, <span class="rs-kw">mut</span> reader) = tokio::io::duplex(64);
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-fn" href="daemon--src-transport-server-connection-rs.html#item-fn-read-request-line-102">read_request_line</a>(&amp;<span class="rs-kw">mut</span> reader)
+            .<span class="rs-kw">await</span>
+            .expect_err(&quot;hanging request times out&quot;);
+        assert!(
+            matches!(err, <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<span class="rs-type">Io</span>(<span class="rs-kw">ref</span> source) <span class="rs-kw">if</span> source.kind() == std::io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">TimedOut</span>),
+            &quot;{err:?}&quot;
+        );
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/transport/server/connection.rs:150</p>
+</article><div class="group-label">Other Implementations</div><article id="item-impl-impl-DaemonServer-12" class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl DaemonServer private impl DaemonServer crates/daemon/src/transport/server/connection.rs  handle_connection pub(super) async fn handle_connection &lt; S &gt; (&amp; self , stream : S , is_tcp : bool , peer_addr : Option &lt; SocketAddr &gt; , local_addr : Option &lt; SocketAddr &gt; ,) -&gt; Result &lt; () , DaemonError &gt; where S : AsyncRead + AsyncWrite + Unpin ,">
+  <div class="item-head">
+    <span class="kind">impl</span>
+    <h3>impl DaemonServer</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">impl <a class="symbol-link" href="daemon--src-transport-server-rs.html#item-struct-DaemonServer-44">DaemonServer</a></code>
+  <div class="tags"><span>impl</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-handle-connection-13"><td>method</td><td>handle_connection</td><td><code>pub(super) async fn <a class="symbol-link" href="daemon--src-transport-server-connection-rs.html#method-handle-connection-13">handle_connection</a> &lt; S &gt; (&amp; self , stream : S , is_tcp : bool , peer_addr : Option &lt; SocketAddr &gt; , local_addr : Option &lt; SocketAddr &gt; ,) -&gt; Result &lt; () , <a class="symbol-link" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a> &gt; where S : AsyncRead + AsyncWrite + Unpin ,</code><p class="docstring">Handle one accepted connection: read one capped, timed request line, pop<br>the TCP-only auth token, decode the request, dispatch, write one framed<br>response. Per-connection; never holds a lock across the await points.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Handle one accepted connection: read one capped, timed request line, pop</span>
+    <span class="rs-comment">/// the TCP-only auth token, decode the request, dispatch, write one framed</span>
+    <span class="rs-comment">/// response. Per-connection; never holds a lock across the await points.</span>
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> handle_connection&lt;<span class="rs-type">S</span>&gt;(
+        &amp;<span class="rs-self">self</span>,
+        stream: <span class="rs-type">S</span>,
+        is_tcp: bool,
+        peer_addr: <span class="rs-type">Option</span>&lt;<span class="rs-type">SocketAddr</span>&gt;,
+        local_addr: <span class="rs-type">Option</span>&lt;<span class="rs-type">SocketAddr</span>&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>&gt;
+    <span class="rs-kw">where</span>
+        <span class="rs-type">S</span>: <span class="rs-type">AsyncRead</span> + <span class="rs-type">AsyncWrite</span> + <span class="rs-type">Unpin</span>,
+    {
+        <span class="rs-kw">let</span> (<span class="rs-kw">mut</span> reader, <span class="rs-kw">mut</span> writer) = tokio::io::split(stream);
+        <span class="rs-kw">let</span> connection_id = <span class="rs-kw">crate</span>::trace::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-next-connection-id-79">next_connection_id</a>();
+        <span class="rs-kw">let</span> accepted_at_unix_ms = <a class="symbol-link rs-fn" href="daemon--src-transport-server-trace-context-rs.html#item-fn-unix-ms-43">unix_ms</a>();
+        <span class="rs-kw">let</span> read_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> bytes = <a class="symbol-link rs-fn" href="daemon--src-transport-server-connection-rs.html#item-fn-read-request-line-102">read_request_line</a>(&amp;<span class="rs-kw">mut</span> reader).<span class="rs-kw">await</span>;
+        <span class="rs-kw">let</span> read_duration_us = <a class="symbol-link rs-fn" href="daemon--src-transport-server-trace-context-rs.html#item-fn-elapsed-us-39">elapsed_us</a>(read_start);
+        <span class="rs-kw">let</span> transport_context = <a class="symbol-link rs-type" href="daemon--src-transport-server-trace-context-rs.html#item-struct-TransportTraceContext-4">TransportTraceContext</a> {
+            connection_id,
+            is_tcp,
+            read_duration_us,
+            accepted_at_unix_ms,
+            peer_addr,
+            local_addr,
+        };
+        <span class="rs-kw">let</span> response = <span class="rs-kw">match</span> bytes {
+            <span class="rs-type">Ok</span>(bytes) =&gt; <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="daemon--src-transport-server-dispatch-rs.html#method-dispatch-bytes-11">dispatch_bytes</a>(bytes, transport_context).<span class="rs-kw">await</span>,
+            <span class="rs-type">Err</span>(err @ <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<span class="rs-type">RequestTooLarge</span> { .. }) =&gt; {
+                <span class="rs-kw">let</span> facts = <a class="symbol-link rs-fn" href="daemon--src-transport-server-trace-context-rs.html#item-fn-trace-facts-13">trace_facts</a>(
+                    &amp;transport_context,
+                    <span class="rs-type">MAX_REQUEST_BYTES</span>.saturating_add(1),
+                    <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="daemon--src-transport-server-dispatch-rs.html#method-tcp-auth-required-182">tcp_auth_required</a>(transport_context.is_tcp),
+                    <span class="rs-kw">false</span>,
+                    <span class="rs-type">None</span>,
+                );
+                <span class="rs-kw">crate</span>::trace::<a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-build-rs.html#item-fn-attach-request-sidecar-19">attach_request_sidecar</a>(
+                    <span class="rs-kw">crate</span>::dispatcher::<a class="symbol-link rs-fn" href="daemon--src-dispatch-dispatcher-rs.html#item-fn-error-response-80">error_response</a>(
+                        err.<a class="symbol-link rs-fn" href="daemon--src-runtime-error-rs.html#method-wire-kind-49">wire_kind</a>(),
+                        format!(&quot;daemon request exceeds {<span class="rs-type">MAX_REQUEST_BYTES</span>} byte limit&quot;),
+                        serde_json::json!({&quot;limit&quot;: <span class="rs-type">MAX_REQUEST_BYTES</span>}),
+                    ),
+                    <span class="rs-type">None</span>,
+                    &quot;daemon.transport.read&quot;,
+                    &amp;facts,
+                )
+            }
+            <span class="rs-type">Err</span>(err) =&gt; {
+                <span class="rs-kw">let</span> facts = <a class="symbol-link rs-fn" href="daemon--src-transport-server-trace-context-rs.html#item-fn-trace-facts-13">trace_facts</a>(
+                    &amp;transport_context,
+                    0,
+                    <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="daemon--src-transport-server-dispatch-rs.html#method-tcp-auth-required-182">tcp_auth_required</a>(transport_context.is_tcp),
+                    <span class="rs-kw">false</span>,
+                    <span class="rs-type">None</span>,
+                );
+                <span class="rs-kw">crate</span>::trace::<a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-build-rs.html#item-fn-attach-request-sidecar-19">attach_request_sidecar</a>(
+                    <span class="rs-kw">crate</span>::dispatcher::<a class="symbol-link rs-fn" href="daemon--src-dispatch-dispatcher-rs.html#item-fn-error-response-80">error_response</a>(
+                        err.<a class="symbol-link rs-fn" href="daemon--src-runtime-error-rs.html#method-wire-kind-49">wire_kind</a>(),
+                        err.to_string(),
+                        serde_json::json!({}),
+                    ),
+                    <span class="rs-type">None</span>,
+                    &quot;daemon.transport.read&quot;,
+                    &amp;facts,
+                )
+            }
+        };
+        <span class="rs-kw">let</span> framed = <a class="symbol-link rs-fn" href="daemon--src-wire-message-rs.html#item-fn-encode-74">encode</a>(&amp;<a class="symbol-link rs-type" href="daemon--src-wire-message-rs.html#item-enum-WireMessage-63">WireMessage</a>::<span class="rs-type">Response</span>(response.clone()))?;
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = writer.write_all(&amp;framed).<span class="rs-kw">await</span> {
+            <span class="rs-kw">crate</span>::trace::<a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-transport-failure-rs.html#item-fn-push-transport-failure-from-sidecar-10">push_transport_failure_from_sidecar</a>(
+                &amp;response,
+                &quot;response_write_failed&quot;,
+                &amp;err,
+            );
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<span class="rs-type">Io</span>(err));
+        }
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = writer.shutdown().<span class="rs-kw">await</span> {
+            <span class="rs-kw">crate</span>::trace::<a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-transport-failure-rs.html#item-fn-push-transport-failure-from-sidecar-10">push_transport_failure_from_sidecar</a>(
+                &amp;response,
+                &quot;response_shutdown_failed&quot;,
+                &amp;err,
+            );
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<span class="rs-type">Io</span>(err));
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/daemon/src/transport/server/connection.rs:12</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/daemon/src/transport/server/connection.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::net::<span class="rs-type">SocketAddr</span>;
+<span class="rs-kw">use</span> std::time::{<span class="rs-type">Duration</span>, <span class="rs-type">Instant</span>};
+
+<span class="rs-kw">use</span> tokio::io::{<span class="rs-type">AsyncBufReadExt</span>, <span class="rs-type">AsyncRead</span>, <span class="rs-type">AsyncReadExt</span>, <span class="rs-type">AsyncWrite</span>, <span class="rs-type">AsyncWriteExt</span>, <span class="rs-type">BufReader</span>};
+<span class="rs-kw">use</span> tokio::time::timeout;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::trace_context::{elapsed_us, trace_facts, unix_ms, <a class="symbol-link rs-type" href="daemon--src-transport-server-trace-context-rs.html#item-struct-TransportTraceContext-4">TransportTraceContext</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::{<a class="symbol-link rs-type" href="daemon--src-transport-server-rs.html#item-struct-DaemonServer-44">DaemonServer</a>, <span class="rs-type">MAX_REQUEST_BYTES</span>, <span class="rs-type">REQUEST_READ_TIMEOUT_S</span>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::wire::{encode, <a class="symbol-link rs-type" href="daemon--src-wire-message-rs.html#item-enum-WireMessage-63">WireMessage</a>};
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="daemon--src-transport-server-rs.html#item-struct-DaemonServer-44">DaemonServer</a> {
+    <span class="rs-comment">/// Handle one accepted connection: read one capped, timed request line, pop</span>
+    <span class="rs-comment">/// the TCP-only auth token, decode the request, dispatch, write one framed</span>
+    <span class="rs-comment">/// response. Per-connection; never holds a lock across the await points.</span>
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> handle_connection&lt;<span class="rs-type">S</span>&gt;(
+        &amp;<span class="rs-self">self</span>,
+        stream: <span class="rs-type">S</span>,
+        is_tcp: bool,
+        peer_addr: <span class="rs-type">Option</span>&lt;<span class="rs-type">SocketAddr</span>&gt;,
+        local_addr: <span class="rs-type">Option</span>&lt;<span class="rs-type">SocketAddr</span>&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>&gt;
+    <span class="rs-kw">where</span>
+        <span class="rs-type">S</span>: <span class="rs-type">AsyncRead</span> + <span class="rs-type">AsyncWrite</span> + <span class="rs-type">Unpin</span>,
+    {
+        <span class="rs-kw">let</span> (<span class="rs-kw">mut</span> reader, <span class="rs-kw">mut</span> writer) = tokio::io::split(stream);
+        <span class="rs-kw">let</span> connection_id = <span class="rs-kw">crate</span>::trace::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-next-connection-id-79">next_connection_id</a>();
+        <span class="rs-kw">let</span> accepted_at_unix_ms = <a class="symbol-link rs-fn" href="daemon--src-transport-server-trace-context-rs.html#item-fn-unix-ms-43">unix_ms</a>();
+        <span class="rs-kw">let</span> read_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> bytes = <a class="symbol-link rs-fn" href="daemon--src-transport-server-connection-rs.html#item-fn-read-request-line-102">read_request_line</a>(&amp;<span class="rs-kw">mut</span> reader).<span class="rs-kw">await</span>;
+        <span class="rs-kw">let</span> read_duration_us = <a class="symbol-link rs-fn" href="daemon--src-transport-server-trace-context-rs.html#item-fn-elapsed-us-39">elapsed_us</a>(read_start);
+        <span class="rs-kw">let</span> transport_context = <a class="symbol-link rs-type" href="daemon--src-transport-server-trace-context-rs.html#item-struct-TransportTraceContext-4">TransportTraceContext</a> {
+            connection_id,
+            is_tcp,
+            read_duration_us,
+            accepted_at_unix_ms,
+            peer_addr,
+            local_addr,
+        };
+        <span class="rs-kw">let</span> response = <span class="rs-kw">match</span> bytes {
+            <span class="rs-type">Ok</span>(bytes) =&gt; <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="daemon--src-transport-server-dispatch-rs.html#method-dispatch-bytes-11">dispatch_bytes</a>(bytes, transport_context).<span class="rs-kw">await</span>,
+            <span class="rs-type">Err</span>(err @ <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<span class="rs-type">RequestTooLarge</span> { .. }) =&gt; {
+                <span class="rs-kw">let</span> facts = <a class="symbol-link rs-fn" href="daemon--src-transport-server-trace-context-rs.html#item-fn-trace-facts-13">trace_facts</a>(
+                    &amp;transport_context,
+                    <span class="rs-type">MAX_REQUEST_BYTES</span>.saturating_add(1),
+                    <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="daemon--src-transport-server-dispatch-rs.html#method-tcp-auth-required-182">tcp_auth_required</a>(transport_context.is_tcp),
+                    <span class="rs-kw">false</span>,
+                    <span class="rs-type">None</span>,
+                );
+                <span class="rs-kw">crate</span>::trace::<a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-build-rs.html#item-fn-attach-request-sidecar-19">attach_request_sidecar</a>(
+                    <span class="rs-kw">crate</span>::dispatcher::<a class="symbol-link rs-fn" href="daemon--src-dispatch-dispatcher-rs.html#item-fn-error-response-80">error_response</a>(
+                        err.<a class="symbol-link rs-fn" href="daemon--src-runtime-error-rs.html#method-wire-kind-49">wire_kind</a>(),
+                        format!(&quot;daemon request exceeds {<span class="rs-type">MAX_REQUEST_BYTES</span>} byte limit&quot;),
+                        serde_json::json!({&quot;limit&quot;: <span class="rs-type">MAX_REQUEST_BYTES</span>}),
+                    ),
+                    <span class="rs-type">None</span>,
+                    &quot;daemon.transport.read&quot;,
+                    &amp;facts,
+                )
+            }
+            <span class="rs-type">Err</span>(err) =&gt; {
+                <span class="rs-kw">let</span> facts = <a class="symbol-link rs-fn" href="daemon--src-transport-server-trace-context-rs.html#item-fn-trace-facts-13">trace_facts</a>(
+                    &amp;transport_context,
+                    0,
+                    <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="daemon--src-transport-server-dispatch-rs.html#method-tcp-auth-required-182">tcp_auth_required</a>(transport_context.is_tcp),
+                    <span class="rs-kw">false</span>,
+                    <span class="rs-type">None</span>,
+                );
+                <span class="rs-kw">crate</span>::trace::<a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-build-rs.html#item-fn-attach-request-sidecar-19">attach_request_sidecar</a>(
+                    <span class="rs-kw">crate</span>::dispatcher::<a class="symbol-link rs-fn" href="daemon--src-dispatch-dispatcher-rs.html#item-fn-error-response-80">error_response</a>(
+                        err.<a class="symbol-link rs-fn" href="daemon--src-runtime-error-rs.html#method-wire-kind-49">wire_kind</a>(),
+                        err.to_string(),
+                        serde_json::json!({}),
+                    ),
+                    <span class="rs-type">None</span>,
+                    &quot;daemon.transport.read&quot;,
+                    &amp;facts,
+                )
+            }
+        };
+        <span class="rs-kw">let</span> framed = <a class="symbol-link rs-fn" href="daemon--src-wire-message-rs.html#item-fn-encode-74">encode</a>(&amp;<a class="symbol-link rs-type" href="daemon--src-wire-message-rs.html#item-enum-WireMessage-63">WireMessage</a>::<span class="rs-type">Response</span>(response.clone()))?;
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = writer.write_all(&amp;framed).<span class="rs-kw">await</span> {
+            <span class="rs-kw">crate</span>::trace::<a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-transport-failure-rs.html#item-fn-push-transport-failure-from-sidecar-10">push_transport_failure_from_sidecar</a>(
+                &amp;response,
+                &quot;response_write_failed&quot;,
+                &amp;err,
+            );
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<span class="rs-type">Io</span>(err));
+        }
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = writer.shutdown().<span class="rs-kw">await</span> {
+            <span class="rs-kw">crate</span>::trace::<a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-transport-failure-rs.html#item-fn-push-transport-failure-from-sidecar-10">push_transport_failure_from_sidecar</a>(
+                &amp;response,
+                &quot;response_shutdown_failed&quot;,
+                &amp;err,
+            );
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<span class="rs-type">Io</span>(err));
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+}
+
+<span class="rs-kw">async</span> <span class="rs-kw">fn</span> read_request_line&lt;<span class="rs-type">R</span>&gt;(reader: &amp;<span class="rs-kw">mut</span> <span class="rs-type">R</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>&gt;
+<span class="rs-kw">where</span>
+    <span class="rs-type">R</span>: <span class="rs-type">AsyncRead</span> + <span class="rs-type">Unpin</span>,
+{
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> buf = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>();
+    <span class="rs-kw">let</span> read = <span class="rs-kw">async</span> {
+        <span class="rs-kw">let</span> limit = u64::try_from(<span class="rs-type">MAX_REQUEST_BYTES</span>)
+            .unwrap_or(u64::<span class="rs-type">MAX</span>)
+            .saturating_add(1);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> limited = <span class="rs-type">BufReader</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(reader.take(limit));
+        limited.read_until(b&#x27;\n&#x27;, &amp;<span class="rs-kw">mut</span> buf).<span class="rs-kw">await</span>?;
+        <span class="rs-kw">if</span> buf.len() &gt; <span class="rs-type">MAX_REQUEST_BYTES</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<span class="rs-type">RequestTooLarge</span> {
+                limit: <span class="rs-type">MAX_REQUEST_BYTES</span>,
+            });
+        }
+        <span class="rs-type">Ok</span>::&lt;(), <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>&gt;(())
+    };
+    timeout(<span class="rs-type">Duration</span>::from_secs_f64(<span class="rs-type">REQUEST_READ_TIMEOUT_S</span>), read)
+        .<span class="rs-kw">await</span>
+        .map_err(|_| {
+            <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<span class="rs-type">Io</span>(std::io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+                std::io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">TimedOut</span>,
+                &quot;daemon request read timed out&quot;,
+            ))
+        })??;
+    <span class="rs-type">Ok</span>(buf)
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> tokio::io::<span class="rs-type">AsyncReadExt</span> <span class="rs-kw">as</span> _;
+
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-transport-server-connection-rs.html#item-fn-read-request-line-rejects-oversized-payloads-137">read_request_line_rejects_oversized_payloads</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> reader = tokio::io::repeat(b&#x27;x&#x27;).take(
+            u64::try_from(<span class="rs-type">MAX_REQUEST_BYTES</span>)
+                .expect(&quot;max request bytes fits u64&quot;)
+                .saturating_add(1),
+        );
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-fn" href="daemon--src-transport-server-connection-rs.html#item-fn-read-request-line-102">read_request_line</a>(&amp;<span class="rs-kw">mut</span> reader)
+            .<span class="rs-kw">await</span>
+            .expect_err(&quot;oversized request rejected&quot;);
+        assert!(matches!(err, <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<span class="rs-type">RequestTooLarge</span> { .. }));
+    }
+
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-transport-server-connection-rs.html#item-fn-read-request-line-times-out-waiting-for-line-150">read_request_line_times_out_waiting_for_line</a>() {
+        <span class="rs-kw">let</span> (_writer, <span class="rs-kw">mut</span> reader) = tokio::io::duplex(64);
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-fn" href="daemon--src-transport-server-connection-rs.html#item-fn-read-request-line-102">read_request_line</a>(&amp;<span class="rs-kw">mut</span> reader)
+            .<span class="rs-kw">await</span>
+            .expect_err(&quot;hanging request times out&quot;);
+        assert!(
+            matches!(err, <a class="symbol-link rs-type" href="daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a>::<span class="rs-type">Io</span>(<span class="rs-kw">ref</span> source) <span class="rs-kw">if</span> source.kind() == std::io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">TimedOut</span>),
+            &quot;{err:?}&quot;
+        );
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

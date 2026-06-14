@@ -1,8 +1,0 @@
-{
-  "team": {
-    "maxAgents": 10,
-    "defaultAgentType": "executor",
-    "monitorIntervalMs": 30000,
-    "shutdownTimeoutMs": 15000
-  }
-}

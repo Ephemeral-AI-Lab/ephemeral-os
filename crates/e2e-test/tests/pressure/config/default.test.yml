@@ -1,0 +1,15 @@
+isolated_workspace:
+  enabled: true
+  total_cap: 12
+  upperdir_bytes: 67108864
+  memavail_fraction: 0.9
+
+e2e_test:
+  pool:
+    sandboxes: 4
+  workload:
+    concurrency_levels: [12]
+    write_iterations: 24
+    sample_count: 5
+    perf_artifact_dir: target/e2e-perf
+    timeout_s: 90

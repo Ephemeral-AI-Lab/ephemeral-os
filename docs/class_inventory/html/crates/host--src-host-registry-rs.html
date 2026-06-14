@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>host · src/host/registry.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>host File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>23</b><span>modules</span></div>
+  <div><b>215</b><span>items</span></div>
+  <div><b>363</b><span>fields</span></div>
+  <div><b>115</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">host</span><ul class="file-tree"><li><a class="file-link" href="host.html"><span>drain.rs</span><small>3/10</small></a></li><li><span class="folder">forward</span><ul class="file-tree"><li><a class="file-link" href="host--src-host-forward-audit-rs.html"><span>audit.rs</span><small>0/3</small></a></li><li><a class="file-link" href="host--src-host-forward-recovery-rs.html"><span>recovery.rs</span><small>0/6</small></a></li><li><a class="file-link" href="host--src-host-forward-response-meta-rs.html"><span>response_meta.rs</span><small>0/3</small></a></li><li><a class="file-link" href="host--src-host-forward-trace-ingest-rs.html"><span>trace_ingest.rs</span><small>1/2</small></a></li></ul></li><li><a class="file-link" href="host--src-host-forward-rs.html"><span>forward.rs</span><small>3/12</small></a></li><li><a class="file-link" href="host--src-host-mod-rs.html"><span>mod.rs</span><small>6/6</small></a></li><li><a class="file-link active" href="host--src-host-registry-rs.html"><span>registry.rs</span><small>6/2</small></a></li></ul></li><li><a class="file-link" href="host--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-protocol-rs.html"><span>protocol.rs</span><small>6/17</small></a></li><li><a class="file-link" href="host--src-runtime-rs.html"><span>runtime.rs</span><small>6/27</small></a></li><li><span class="folder">trace_store</span><ul class="file-tree"><li><a class="file-link" href="host--src-trace-store-audit-rs.html"><span>audit.rs</span><small>2/4</small></a></li><li><a class="file-link" href="host--src-trace-store-events-rs.html"><span>events.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-ingest-rs.html"><span>ingest.rs</span><small>0/3</small></a></li><li><a class="file-link" href="host--src-trace-store-mod-rs.html"><span>mod.rs</span><small>2/4</small></a></li><li><a class="file-link" href="host--src-trace-store-payload-rs.html"><span>payload.rs</span><small>6/2</small></a></li><li><a class="file-link" href="host--src-trace-store-projection-rs.html"><span>projection.rs</span><small>1/8</small></a></li><li><a class="file-link" href="host--src-trace-store-query-rs.html"><span>query.rs</span><small>9/15</small></a></li><li><a class="file-link" href="host--src-trace-store-read-rs.html"><span>read.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-response-rs.html"><span>response.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-schema-rs.html"><span>schema.rs</span><small>0/2</small></a></li><li><a class="file-link" href="host--src-trace-store-sidecar-rs.html"><span>sidecar.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-types-rs.html"><span>types.rs</span><small>12/1</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="host::registry crates/host/src/host/registry.rs SandboxRecord impl SandboxRecord SandboxLifecycle LifecycleState impl SandboxLifecycle SandboxForwardGuard impl Drop for SandboxForwardGuard &lt; '_ &gt; SandboxRespawnGuard impl Drop for SandboxRespawnGuard &lt; '_ &gt; SandboxRegistry impl SandboxRegistry cached_or_resolve_endpoint resolve_endpoint">
+  <div class="module-head">
+    <div>
+      <h2>src/host/registry.rs</h2>
+      <p class="path">module <code>host::registry</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>6 types</span>
+      <span>5 impls</span>
+      <span>2 fns</span>
+      <span>23 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-SandboxRecord-16" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SandboxRecord pub(crate) pub(crate) struct SandboxRecord crates/host/src/host/registry.rs sandbox_id String container String token String tcp_port u16 created_by String endpoint Mutex &lt; Option &lt; SocketAddr &gt; &gt; lifecycle SandboxLifecycle ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>SandboxRecord</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a></code>
+  <div class="tags"><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>sandbox_id</td><td><code>String</code></td></tr><tr><td>pub(crate)</td><td>container</td><td><code>String</code></td></tr><tr><td>pub(crate)</td><td>token</td><td><code>String</code></td></tr><tr><td>pub(crate)</td><td>tcp_port</td><td><code>u16</code></td></tr><tr><td>pub(crate)</td><td>created_by</td><td><code>String</code></td></tr><tr><td>private</td><td>endpoint</td><td><code>Mutex &lt; Option &lt; SocketAddr &gt; &gt;</code></td></tr><tr><td>private</td><td>lifecycle</td><td><code><a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-SandboxLifecycle-67">SandboxLifecycle</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-28"><td>constructor</td><td>new</td><td><code>pub(crate) fn <a class="symbol-link" href="host--src-host-mod-rs.html#method-new-80">new</a> (sandbox_id : String , container : String , token : String , tcp_port : u16 , created_by : String , endpoint : Option &lt; SocketAddr &gt; ,) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(
+        sandbox_id: <span class="rs-type">String</span>,
+        container: <span class="rs-type">String</span>,
+        token: <span class="rs-type">String</span>,
+        tcp_port: u16,
+        created_by: <span class="rs-type">String</span>,
+        endpoint: <span class="rs-type">Option</span>&lt;<span class="rs-type">SocketAddr</span>&gt;,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            sandbox_id,
+            container,
+            token,
+            tcp_port,
+            created_by,
+            endpoint: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(endpoint),
+            lifecycle: <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxLifecycle-67">SandboxLifecycle</a>::default(),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-cached-endpoint-46"><td>method</td><td>cached_endpoint</td><td><code>pub(crate) fn <a class="symbol-link" href="host--src-host-registry-rs.html#method-cached-endpoint-46">cached_endpoint</a> (&amp; self) -&gt; Option &lt; SocketAddr &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-cached-endpoint-46">cached_endpoint</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">SocketAddr</span>&gt; {
+        *<span class="rs-self">self</span>.endpoint.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+    }
+</code></pre>
+</details></td></tr><tr id="method-cache-endpoint-50"><td>method</td><td>cache_endpoint</td><td><code>pub(crate) fn <a class="symbol-link" href="host--src-host-registry-rs.html#method-cache-endpoint-50">cache_endpoint</a> (&amp; self , addr : SocketAddr)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-cache-endpoint-50">cache_endpoint</a>(&amp;<span class="rs-self">self</span>, addr: <span class="rs-type">SocketAddr</span>) {
+        *<span class="rs-self">self</span>.endpoint.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner) = <span class="rs-type">Some</span>(addr);
+    }
+</code></pre>
+</details></td></tr><tr id="method-invalidate-endpoint-54"><td>method</td><td>invalidate_endpoint</td><td><code>pub(crate) fn <a class="symbol-link" href="host--src-host-registry-rs.html#method-invalidate-endpoint-54">invalidate_endpoint</a> (&amp; self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-invalidate-endpoint-54">invalidate_endpoint</a>(&amp;<span class="rs-self">self</span>) {
+        *<span class="rs-self">self</span>.endpoint.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner) = <span class="rs-type">None</span>;
+    }
+</code></pre>
+</details></td></tr><tr id="method-begin-forward-58"><td>method</td><td>begin_forward</td><td><code>pub(crate) fn <a class="symbol-link" href="host--src-host-registry-rs.html#method-begin-forward-58">begin_forward</a> (&amp; self) -&gt; <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-SandboxForwardGuard-126">SandboxForwardGuard</a> &lt; &#x27;_ &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-begin-forward-58">begin_forward</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxForwardGuard-126">SandboxForwardGuard</a>&lt;&#x27;_&gt; {
+        <span class="rs-self">self</span>.lifecycle.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-begin-forward-58">begin_forward</a>()
+    }
+</code></pre>
+</details></td></tr><tr id="method-begin-respawn-62"><td>method</td><td>begin_respawn</td><td><code>pub(crate) fn <a class="symbol-link" href="host--src-host-registry-rs.html#method-begin-respawn-62">begin_respawn</a> (&amp; self) -&gt; <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-SandboxRespawnGuard-136">SandboxRespawnGuard</a> &lt; &#x27;_ &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-begin-respawn-62">begin_respawn</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRespawnGuard-136">SandboxRespawnGuard</a>&lt;&#x27;_&gt; {
+        <span class="rs-self">self</span>.lifecycle.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-begin-respawn-62">begin_respawn</a>()
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/host/src/host/registry.rs:16</p>
+</article><article id="item-struct-SandboxForwardGuard-126" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SandboxForwardGuard pub(crate) pub(crate) struct SandboxForwardGuard&lt; 'a &gt; crates/host/src/host/registry.rs lifecycle &amp; 'a SandboxLifecycle ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>SandboxForwardGuard</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-SandboxForwardGuard-126">SandboxForwardGuard</a>&lt; &#x27;a &gt;</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>lifecycle</td><td><code>&amp; &#x27;a <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-SandboxLifecycle-67">SandboxLifecycle</a></code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-SandboxForwardGuard-126">SandboxForwardGuard</a> &lt; &#x27;_ &gt;</code></summary><table><tbody><tr id="method-drop-131"><td>method</td><td>drop</td><td><code>fn <a class="symbol-link" href="host--src-host-registry-rs.html#method-drop-131">drop</a> (&amp; mut self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-drop-131">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-self">self</span>.lifecycle.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-end-forward-107">end_forward</a>();
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/host/src/host/registry.rs:126</p>
+</article><article id="item-struct-SandboxRespawnGuard-136" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SandboxRespawnGuard pub(crate) pub(crate) struct SandboxRespawnGuard&lt; 'a &gt; crates/host/src/host/registry.rs lifecycle &amp; 'a SandboxLifecycle ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>SandboxRespawnGuard</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-SandboxRespawnGuard-136">SandboxRespawnGuard</a>&lt; &#x27;a &gt;</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>lifecycle</td><td><code>&amp; &#x27;a <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-SandboxLifecycle-67">SandboxLifecycle</a></code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-SandboxRespawnGuard-136">SandboxRespawnGuard</a> &lt; &#x27;_ &gt;</code></summary><table><tbody><tr id="method-drop-141"><td>method</td><td>drop</td><td><code>fn <a class="symbol-link" href="host--src-host-registry-rs.html#method-drop-131">drop</a> (&amp; mut self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-drop-131">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-self">self</span>.lifecycle.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-end-respawn-115">end_respawn</a>();
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/host/src/host/registry.rs:136</p>
+</article><article id="item-struct-SandboxRegistry-146" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SandboxRegistry pub(crate) pub(crate) struct SandboxRegistry crates/host/src/host/registry.rs state_dir PathBuf records Mutex &lt; HashMap &lt; String , Arc &lt; SandboxRecord &gt; &gt; &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>SandboxRegistry</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-SandboxRegistry-146">SandboxRegistry</a></code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>state_dir</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>records</td><td><code>Mutex &lt; HashMap &lt; String , Arc &lt; <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a> &gt; &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-rebuild-from-docker-168"><td>method</td><td>rebuild_from_docker</td><td><code>pub(crate) fn <a class="symbol-link" href="host--src-host-registry-rs.html#method-rebuild-from-docker-168">rebuild_from_docker</a> (&amp; self) -&gt; usize</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-rebuild-from-docker-168">rebuild_from_docker</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
+        <span class="rs-kw">let</span> ids = <a class="symbol-link rs-fn" href="host--src-runtime-rs.html#item-fn-running-container-ids-476">running_container_ids</a>(&amp;[<span class="rs-type">SANDBOX_ID_LABEL</span>]);
+        <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(label_maps) = <a class="symbol-link rs-fn" href="host--src-runtime-rs.html#item-fn-container-labels-502">container_labels</a>(&amp;ids) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> 0;
+        };
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> adopted = 0;
+        <span class="rs-kw">for</span> labels <span class="rs-kw">in</span> label_maps {
+            <span class="rs-kw">let</span> label = |key: &amp;str| labels.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(key).and_then(<span class="rs-type">Value</span>::as_str);
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sandbox_id) = label(<span class="rs-type">SANDBOX_ID_LABEL</span>) <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(token) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-load-token-244">load_token</a>(sandbox_id) <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(tcp_port) = label(<span class="rs-type">TCP_PORT_LABEL</span>).and_then(|port| port.parse::&lt;u16&gt;().ok())
+            <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            <span class="rs-kw">let</span> created_by = label(<span class="rs-type">CREATED_BY_LABEL</span>).unwrap_or(&quot;unknown&quot;).to_owned();
+            <span class="rs-kw">let</span> record = <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(
+                sandbox_id.to_owned(),
+                sandbox_id.to_owned(),
+                token,
+                tcp_port,
+                created_by,
+                <span class="rs-type">None</span>,
+            );
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>().<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-insert-201">insert</a>(sandbox_id.to_owned(), <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(record));
+            adopted += 1;
+        }
+        adopted
+    }
+</code></pre>
+</details></td></tr><tr id="method-insert-201"><td>method</td><td>insert</td><td><code>pub(crate) fn <a class="symbol-link" href="host--src-host-registry-rs.html#method-insert-201">insert</a> (&amp; self , record : <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a>) -&gt; Result &lt; () &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-insert-201">insert</a>(&amp;<span class="rs-self">self</span>, record: <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-persist-token-232">persist_token</a>(&amp;record.sandbox_id, &amp;record.token)?;
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>()
+            .<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-insert-201">insert</a>(record.sandbox_id.clone(), <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(record));
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr><tr id="method-get-207"><td>method</td><td>get</td><td><code>pub(crate) fn <a class="symbol-link" href="host--src-host-registry-rs.html#method-get-207">get</a> (&amp; self , sandbox_id : &amp; str) -&gt; Option &lt; Arc &lt; <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a> &gt; &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a>&gt;&gt; {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>().<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(sandbox_id).cloned()
+    }
+</code></pre>
+</details></td></tr><tr id="method-remove-211"><td>method</td><td>remove</td><td><code>pub(crate) fn <a class="symbol-link" href="host--src-host-registry-rs.html#method-remove-211">remove</a> (&amp; self , sandbox_id : &amp; str) -&gt; Option &lt; Arc &lt; <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a> &gt; &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-remove-211">remove</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a>&gt;&gt; {
+        <span class="rs-kw">let</span> removed = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>().<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-remove-211">remove</a>(sandbox_id);
+        <span class="rs-kw">if</span> removed.is_some() {
+            <span class="rs-kw">let</span> _ = fs::remove_file(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-token-path-228">token_path</a>(sandbox_id));
+        }
+        removed
+    }
+</code></pre>
+</details></td></tr><tr id="method-list-218"><td>method</td><td>list</td><td><code>pub(crate) fn <a class="symbol-link" href="host--src-host-mod-rs.html#method-list-312">list</a> (&amp; self) -&gt; Vec &lt; Arc &lt; <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a> &gt; &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-list-312">list</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a>&gt;&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> records: <span class="rs-type">Vec</span>&lt;_&gt; = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>().values().cloned().collect();
+        records.sort_by(|a, b| a.sandbox_id.cmp(&amp;b.sandbox_id));
+        records
+    }
+</code></pre>
+</details></td></tr><tr id="method-lock-224"><td>method</td><td>lock</td><td><code>fn <a class="symbol-link" href="host--src-host-registry-rs.html#method-lock-121">lock</a> (&amp; self) -&gt; std :: sync :: MutexGuard &lt; &#x27;_ , HashMap &lt; String , Arc &lt; <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a> &gt; &gt; &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>(&amp;<span class="rs-self">self</span>) -&gt; std::sync::<span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a>&gt;&gt;&gt; {
+        <span class="rs-self">self</span>.records.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+    }
+</code></pre>
+</details></td></tr><tr id="method-token-path-228"><td>method</td><td>token_path</td><td><code>fn <a class="symbol-link" href="host--src-host-registry-rs.html#method-token-path-228">token_path</a> (&amp; self , sandbox_id : &amp; str) -&gt; PathBuf</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-token-path-228">token_path</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
+        <span class="rs-self">self</span>.state_dir.join(format!(&quot;{sandbox_id}.token&quot;))
+    }
+</code></pre>
+</details></td></tr><tr id="method-persist-token-232"><td>method</td><td>persist_token</td><td><code>fn <a class="symbol-link" href="host--src-host-registry-rs.html#method-persist-token-232">persist_token</a> (&amp; self , sandbox_id : &amp; str , token : &amp; str) -&gt; Result &lt; () &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-persist-token-232">persist_token</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str, token: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+        <span class="rs-kw">let</span> path = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-token-path-228">token_path</a>(sandbox_id);
+        fs::<a class="symbol-link rs-fn" href="host--src-runtime-rs.html#method-write-606">write</a>(&amp;path, token).with_context(|| format!(&quot;write token {}&quot;, path.display()))?;
+        #[cfg(unix)]
+        {
+            <span class="rs-kw">use</span> std::os::unix::fs::<span class="rs-type">PermissionsExt</span>;
+            fs::set_permissions(&amp;path, fs::<span class="rs-type">Permissions</span>::from_mode(0o600))
+                .with_context(|| format!(&quot;chmod 600 {}&quot;, path.display()))?;
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr><tr id="method-load-token-244"><td>method</td><td>load_token</td><td><code>pub(crate) fn <a class="symbol-link" href="host--src-host-registry-rs.html#method-load-token-244">load_token</a> (&amp; self , sandbox_id : &amp; str) -&gt; Result &lt; String &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-load-token-244">load_token</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
+        <span class="rs-kw">let</span> path = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-token-path-228">token_path</a>(sandbox_id);
+        <span class="rs-kw">let</span> token =
+            fs::read_to_string(&amp;path).with_context(|| format!(&quot;read token {}&quot;, path.display()))?;
+        <span class="rs-type">Ok</span>(token.trim().to_owned())
+    }
+</code></pre>
+</details></td></tr><tr id="method-open-152"><td>associated-fn</td><td>open</td><td><code>pub(crate) fn <a class="symbol-link" href="host--src-host-mod-rs.html#method-open-125">open</a> (state_dir : PathBuf) -&gt; Result &lt; Self &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-open-125">open</a>(state_dir: <span class="rs-type">PathBuf</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+        fs::create_dir_all(&amp;state_dir)
+            .with_context(|| format!(&quot;create host state dir {}&quot;, state_dir.display()))?;
+        #[cfg(unix)]
+        {
+            <span class="rs-kw">use</span> std::os::unix::fs::<span class="rs-type">PermissionsExt</span>;
+            <span class="rs-kw">let</span> perms = fs::<span class="rs-type">Permissions</span>::from_mode(0o700);
+            fs::set_permissions(&amp;state_dir, perms)
+                .with_context(|| format!(&quot;chmod 700 {}&quot;, state_dir.display()))?;
+        }
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
+            state_dir,
+            records: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>()),
+        })
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/host/src/host/registry.rs:146</p>
+</article><article id="item-struct-SandboxLifecycle-67" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SandboxLifecycle private struct SandboxLifecycle crates/host/src/host/registry.rs state Mutex &lt; LifecycleState &gt; changed Condvar ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>SandboxLifecycle</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-SandboxLifecycle-67">SandboxLifecycle</a></code>
+  <div class="tags"><span>derive: Debug</span><span>derive: Default</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>state</td><td><code>Mutex &lt; <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-LifecycleState-73">LifecycleState</a> &gt;</code></td></tr><tr><td>private</td><td>changed</td><td><code>Condvar</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-begin-forward-81"><td>method</td><td>begin_forward</td><td><code>fn <a class="symbol-link" href="host--src-host-registry-rs.html#method-begin-forward-58">begin_forward</a> (&amp; self) -&gt; <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-SandboxForwardGuard-126">SandboxForwardGuard</a> &lt; &#x27;_ &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-begin-forward-58">begin_forward</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxForwardGuard-126">SandboxForwardGuard</a>&lt;&#x27;_&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>();
+        <span class="rs-kw">while</span> state.respawning || state.waiting_respawns &gt; 0 {
+            state = <span class="rs-self">self</span>
+                .changed
+                .wait(state)
+                .unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner);
+        }
+        state.active_forwards += 1;
+        <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxForwardGuard-126">SandboxForwardGuard</a> { lifecycle: <span class="rs-self">self</span> }
+    }
+</code></pre>
+</details></td></tr><tr id="method-begin-respawn-93"><td>method</td><td>begin_respawn</td><td><code>fn <a class="symbol-link" href="host--src-host-registry-rs.html#method-begin-respawn-62">begin_respawn</a> (&amp; self) -&gt; <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-SandboxRespawnGuard-136">SandboxRespawnGuard</a> &lt; &#x27;_ &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-begin-respawn-62">begin_respawn</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRespawnGuard-136">SandboxRespawnGuard</a>&lt;&#x27;_&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>();
+        state.waiting_respawns += 1;
+        <span class="rs-kw">while</span> state.respawning || state.active_forwards &gt; 0 {
+            state = <span class="rs-self">self</span>
+                .changed
+                .wait(state)
+                .unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner);
+        }
+        state.waiting_respawns -= 1;
+        state.respawning = <span class="rs-kw">true</span>;
+        <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRespawnGuard-136">SandboxRespawnGuard</a> { lifecycle: <span class="rs-self">self</span> }
+    }
+</code></pre>
+</details></td></tr><tr id="method-end-forward-107"><td>method</td><td>end_forward</td><td><code>fn <a class="symbol-link" href="host--src-host-registry-rs.html#method-end-forward-107">end_forward</a> (&amp; self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-end-forward-107">end_forward</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>();
+        state.active_forwards = state.active_forwards.saturating_sub(1);
+        <span class="rs-kw">if</span> state.active_forwards == 0 {
+            <span class="rs-self">self</span>.changed.notify_all();
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-end-respawn-115"><td>method</td><td>end_respawn</td><td><code>fn <a class="symbol-link" href="host--src-host-registry-rs.html#method-end-respawn-115">end_respawn</a> (&amp; self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-end-respawn-115">end_respawn</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>();
+        state.respawning = <span class="rs-kw">false</span>;
+        <span class="rs-self">self</span>.changed.notify_all();
+    }
+</code></pre>
+</details></td></tr><tr id="method-lock-121"><td>method</td><td>lock</td><td><code>fn <a class="symbol-link" href="host--src-host-registry-rs.html#method-lock-121">lock</a> (&amp; self) -&gt; MutexGuard &lt; &#x27;_ , <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-LifecycleState-73">LifecycleState</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-LifecycleState-73">LifecycleState</a>&gt; {
+        <span class="rs-self">self</span>.state.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/host/src/host/registry.rs:67</p>
+</article><article id="item-struct-LifecycleState-73" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct LifecycleState private struct LifecycleState crates/host/src/host/registry.rs active_forwards usize waiting_respawns usize respawning bool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>LifecycleState</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-LifecycleState-73">LifecycleState</a></code>
+  <div class="tags"><span>derive: Debug</span><span>derive: Default</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>active_forwards</td><td><code>usize</code></td></tr><tr><td>private</td><td>waiting_respawns</td><td><code>usize</code></td></tr><tr><td>private</td><td>respawning</td><td><code>bool</code></td></tr></tbody></table>
+
+  <p class="source">crates/host/src/host/registry.rs:73</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-cached-or-resolve-endpoint-252" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cached_or_resolve_endpoint pub(crate) pub(crate) fn cached_or_resolve_endpoint (record : &amp; SandboxRecord) -&gt; Result &lt; SocketAddr &gt; crates/host/src/host/registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>cached_or_resolve_endpoint</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="host--src-host-registry-rs.html#item-fn-cached-or-resolve-endpoint-252">cached_or_resolve_endpoint</a> (record : &amp; <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a>) -&gt; Result &lt; SocketAddr &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#item-fn-cached-or-resolve-endpoint-252">cached_or_resolve_endpoint</a>(record: &amp;<a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">SocketAddr</span>&gt; {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(addr) = record.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-cached-endpoint-46">cached_endpoint</a>() {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(addr);
+    }
+    <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#item-fn-resolve-endpoint-259">resolve_endpoint</a>(record)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/host/registry.rs:252</p>
+</article><article id="item-fn-resolve-endpoint-259" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn resolve_endpoint pub(crate) pub(crate) fn resolve_endpoint (record : &amp; SandboxRecord) -&gt; Result &lt; SocketAddr &gt; crates/host/src/host/registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>resolve_endpoint</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="host--src-host-registry-rs.html#item-fn-resolve-endpoint-259">resolve_endpoint</a> (record : &amp; <a class="symbol-link" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a>) -&gt; Result &lt; SocketAddr &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#item-fn-resolve-endpoint-259">resolve_endpoint</a>(record: &amp;<a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">SocketAddr</span>&gt; {
+    record.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-invalidate-endpoint-54">invalidate_endpoint</a>();
+    <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="host--src-runtime-rs.html#item-fn-resolve-published-addr-636">resolve_published_addr</a>(&amp;record.container, record.tcp_port)? {
+        <span class="rs-type">Some</span>(addr) =&gt; {
+            record.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-cache-endpoint-50">cache_endpoint</a>(addr);
+            <span class="rs-type">Ok</span>(addr)
+        }
+        <span class="rs-type">None</span> =&gt; bail!(
+            &quot;no published port {} <span class="rs-kw">for</span> container {}&quot;,
+            record.tcp_port,
+            record.container
+        ),
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/host/registry.rs:259</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/host/src/host/registry.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::collections::<span class="rs-type">HashMap</span>;
+<span class="rs-kw">use</span> std::fs;
+<span class="rs-kw">use</span> std::net::<span class="rs-type">SocketAddr</span>;
+<span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+<span class="rs-kw">use</span> std::sync::{<span class="rs-type">Arc</span>, <span class="rs-type">Condvar</span>, <span class="rs-type">Mutex</span>, <span class="rs-type">MutexGuard</span>, <span class="rs-type">PoisonError</span>};
+
+<span class="rs-kw">use</span> anyhow::{bail, <span class="rs-type">Context</span>, <span class="rs-type">Result</span>};
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runtime::{container_labels, resolve_published_addr, running_container_ids};
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">const</span> <span class="rs-type">SANDBOX_ID_LABEL</span>: &amp;str = &quot;eos.sandbox_id&quot;;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">const</span> <span class="rs-type">TCP_PORT_LABEL</span>: &amp;str = &quot;eos.tcp_port&quot;;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">const</span> <span class="rs-type">CREATED_BY_LABEL</span>: &amp;str = &quot;eos.created_by&quot;;
+
+#[derive(<span class="rs-type">Debug</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) sandbox_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) container: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) token: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) tcp_port: u16,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) created_by: <span class="rs-type">String</span>,
+    endpoint: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">SocketAddr</span>&gt;&gt;,
+    lifecycle: <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxLifecycle-67">SandboxLifecycle</a>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(
+        sandbox_id: <span class="rs-type">String</span>,
+        container: <span class="rs-type">String</span>,
+        token: <span class="rs-type">String</span>,
+        tcp_port: u16,
+        created_by: <span class="rs-type">String</span>,
+        endpoint: <span class="rs-type">Option</span>&lt;<span class="rs-type">SocketAddr</span>&gt;,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            sandbox_id,
+            container,
+            token,
+            tcp_port,
+            created_by,
+            endpoint: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(endpoint),
+            lifecycle: <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxLifecycle-67">SandboxLifecycle</a>::default(),
+        }
+    }
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-cached-endpoint-46">cached_endpoint</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">SocketAddr</span>&gt; {
+        *<span class="rs-self">self</span>.endpoint.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-cache-endpoint-50">cache_endpoint</a>(&amp;<span class="rs-self">self</span>, addr: <span class="rs-type">SocketAddr</span>) {
+        *<span class="rs-self">self</span>.endpoint.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner) = <span class="rs-type">Some</span>(addr);
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-invalidate-endpoint-54">invalidate_endpoint</a>(&amp;<span class="rs-self">self</span>) {
+        *<span class="rs-self">self</span>.endpoint.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner) = <span class="rs-type">None</span>;
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-begin-forward-58">begin_forward</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxForwardGuard-126">SandboxForwardGuard</a>&lt;&#x27;_&gt; {
+        <span class="rs-self">self</span>.lifecycle.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-begin-forward-58">begin_forward</a>()
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-begin-respawn-62">begin_respawn</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRespawnGuard-136">SandboxRespawnGuard</a>&lt;&#x27;_&gt; {
+        <span class="rs-self">self</span>.lifecycle.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-begin-respawn-62">begin_respawn</a>()
+    }
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxLifecycle-67">SandboxLifecycle</a> {
+    state: <span class="rs-type">Mutex</span>&lt;<a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-LifecycleState-73">LifecycleState</a>&gt;,
+    changed: <span class="rs-type">Condvar</span>,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-LifecycleState-73">LifecycleState</a> {
+    active_forwards: usize,
+    waiting_respawns: usize,
+    respawning: bool,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxLifecycle-67">SandboxLifecycle</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-begin-forward-58">begin_forward</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxForwardGuard-126">SandboxForwardGuard</a>&lt;&#x27;_&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>();
+        <span class="rs-kw">while</span> state.respawning || state.waiting_respawns &gt; 0 {
+            state = <span class="rs-self">self</span>
+                .changed
+                .wait(state)
+                .unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner);
+        }
+        state.active_forwards += 1;
+        <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxForwardGuard-126">SandboxForwardGuard</a> { lifecycle: <span class="rs-self">self</span> }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-begin-respawn-62">begin_respawn</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRespawnGuard-136">SandboxRespawnGuard</a>&lt;&#x27;_&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>();
+        state.waiting_respawns += 1;
+        <span class="rs-kw">while</span> state.respawning || state.active_forwards &gt; 0 {
+            state = <span class="rs-self">self</span>
+                .changed
+                .wait(state)
+                .unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner);
+        }
+        state.waiting_respawns -= 1;
+        state.respawning = <span class="rs-kw">true</span>;
+        <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRespawnGuard-136">SandboxRespawnGuard</a> { lifecycle: <span class="rs-self">self</span> }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-end-forward-107">end_forward</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>();
+        state.active_forwards = state.active_forwards.saturating_sub(1);
+        <span class="rs-kw">if</span> state.active_forwards == 0 {
+            <span class="rs-self">self</span>.changed.notify_all();
+        }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-end-respawn-115">end_respawn</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>();
+        state.respawning = <span class="rs-kw">false</span>;
+        <span class="rs-self">self</span>.changed.notify_all();
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-LifecycleState-73">LifecycleState</a>&gt; {
+        <span class="rs-self">self</span>.state.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxForwardGuard-126">SandboxForwardGuard</a>&lt;&#x27;a&gt; {
+    lifecycle: &amp;&#x27;a <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxLifecycle-67">SandboxLifecycle</a>,
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">Drop</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxForwardGuard-126">SandboxForwardGuard</a>&lt;&#x27;_&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-drop-131">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-self">self</span>.lifecycle.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-end-forward-107">end_forward</a>();
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRespawnGuard-136">SandboxRespawnGuard</a>&lt;&#x27;a&gt; {
+    lifecycle: &amp;&#x27;a <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxLifecycle-67">SandboxLifecycle</a>,
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">Drop</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRespawnGuard-136">SandboxRespawnGuard</a>&lt;&#x27;_&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-drop-131">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-self">self</span>.lifecycle.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-end-respawn-115">end_respawn</a>();
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRegistry-146">SandboxRegistry</a> {
+    state_dir: <span class="rs-type">PathBuf</span>,
+    records: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a>&gt;&gt;&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRegistry-146">SandboxRegistry</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-open-125">open</a>(state_dir: <span class="rs-type">PathBuf</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+        fs::create_dir_all(&amp;state_dir)
+            .with_context(|| format!(&quot;create host state dir {}&quot;, state_dir.display()))?;
+        #[cfg(unix)]
+        {
+            <span class="rs-kw">use</span> std::os::unix::fs::<span class="rs-type">PermissionsExt</span>;
+            <span class="rs-kw">let</span> perms = fs::<span class="rs-type">Permissions</span>::from_mode(0o700);
+            fs::set_permissions(&amp;state_dir, perms)
+                .with_context(|| format!(&quot;chmod 700 {}&quot;, state_dir.display()))?;
+        }
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
+            state_dir,
+            records: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>()),
+        })
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-rebuild-from-docker-168">rebuild_from_docker</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
+        <span class="rs-kw">let</span> ids = <a class="symbol-link rs-fn" href="host--src-runtime-rs.html#item-fn-running-container-ids-476">running_container_ids</a>(&amp;[<span class="rs-type">SANDBOX_ID_LABEL</span>]);
+        <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(label_maps) = <a class="symbol-link rs-fn" href="host--src-runtime-rs.html#item-fn-container-labels-502">container_labels</a>(&amp;ids) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> 0;
+        };
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> adopted = 0;
+        <span class="rs-kw">for</span> labels <span class="rs-kw">in</span> label_maps {
+            <span class="rs-kw">let</span> label = |key: &amp;str| labels.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(key).and_then(<span class="rs-type">Value</span>::as_str);
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sandbox_id) = label(<span class="rs-type">SANDBOX_ID_LABEL</span>) <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(token) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-load-token-244">load_token</a>(sandbox_id) <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(tcp_port) = label(<span class="rs-type">TCP_PORT_LABEL</span>).and_then(|port| port.parse::&lt;u16&gt;().ok())
+            <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            <span class="rs-kw">let</span> created_by = label(<span class="rs-type">CREATED_BY_LABEL</span>).unwrap_or(&quot;unknown&quot;).to_owned();
+            <span class="rs-kw">let</span> record = <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(
+                sandbox_id.to_owned(),
+                sandbox_id.to_owned(),
+                token,
+                tcp_port,
+                created_by,
+                <span class="rs-type">None</span>,
+            );
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>().<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-insert-201">insert</a>(sandbox_id.to_owned(), <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(record));
+            adopted += 1;
+        }
+        adopted
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-insert-201">insert</a>(&amp;<span class="rs-self">self</span>, record: <a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-persist-token-232">persist_token</a>(&amp;record.sandbox_id, &amp;record.token)?;
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>()
+            .<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-insert-201">insert</a>(record.sandbox_id.clone(), <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(record));
+        <span class="rs-type">Ok</span>(())
+    }
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a>&gt;&gt; {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>().<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(sandbox_id).cloned()
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-remove-211">remove</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a>&gt;&gt; {
+        <span class="rs-kw">let</span> removed = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>().<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-remove-211">remove</a>(sandbox_id);
+        <span class="rs-kw">if</span> removed.is_some() {
+            <span class="rs-kw">let</span> _ = fs::remove_file(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-token-path-228">token_path</a>(sandbox_id));
+        }
+        removed
+    }
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-list-312">list</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a>&gt;&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> records: <span class="rs-type">Vec</span>&lt;_&gt; = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>().values().cloned().collect();
+        records.sort_by(|a, b| a.sandbox_id.cmp(&amp;b.sandbox_id));
+        records
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>(&amp;<span class="rs-self">self</span>) -&gt; std::sync::<span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a>&gt;&gt;&gt; {
+        <span class="rs-self">self</span>.records.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-lock-121">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-token-path-228">token_path</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
+        <span class="rs-self">self</span>.state_dir.join(format!(&quot;{sandbox_id}.token&quot;))
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-persist-token-232">persist_token</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str, token: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+        <span class="rs-kw">let</span> path = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-token-path-228">token_path</a>(sandbox_id);
+        fs::<a class="symbol-link rs-fn" href="host--src-runtime-rs.html#method-write-606">write</a>(&amp;path, token).with_context(|| format!(&quot;write token {}&quot;, path.display()))?;
+        #[cfg(unix)]
+        {
+            <span class="rs-kw">use</span> std::os::unix::fs::<span class="rs-type">PermissionsExt</span>;
+            fs::set_permissions(&amp;path, fs::<span class="rs-type">Permissions</span>::from_mode(0o600))
+                .with_context(|| format!(&quot;chmod 600 {}&quot;, path.display()))?;
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-load-token-244">load_token</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
+        <span class="rs-kw">let</span> path = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-token-path-228">token_path</a>(sandbox_id);
+        <span class="rs-kw">let</span> token =
+            fs::read_to_string(&amp;path).with_context(|| format!(&quot;read token {}&quot;, path.display()))?;
+        <span class="rs-type">Ok</span>(token.trim().to_owned())
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#item-fn-cached-or-resolve-endpoint-252">cached_or_resolve_endpoint</a>(record: &amp;<a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">SocketAddr</span>&gt; {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(addr) = record.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-cached-endpoint-46">cached_endpoint</a>() {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(addr);
+    }
+    <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#item-fn-resolve-endpoint-259">resolve_endpoint</a>(record)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#item-fn-resolve-endpoint-259">resolve_endpoint</a>(record: &amp;<a class="symbol-link rs-type" href="host--src-host-registry-rs.html#item-struct-SandboxRecord-16">SandboxRecord</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">SocketAddr</span>&gt; {
+    record.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-invalidate-endpoint-54">invalidate_endpoint</a>();
+    <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="host--src-runtime-rs.html#item-fn-resolve-published-addr-636">resolve_published_addr</a>(&amp;record.container, record.tcp_port)? {
+        <span class="rs-type">Some</span>(addr) =&gt; {
+            record.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-cache-endpoint-50">cache_endpoint</a>(addr);
+            <span class="rs-type">Ok</span>(addr)
+        }
+        <span class="rs-type">None</span> =&gt; bail!(
+            &quot;no published port {} <span class="rs-kw">for</span> container {}&quot;,
+            record.tcp_port,
+            record.container
+        ),
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

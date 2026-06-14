@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>trace · src/num.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>trace File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>9</b><span>modules</span></div>
+  <div><b>77</b><span>items</span></div>
+  <div><b>70</b><span>fields</span></div>
+  <div><b>27</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="trace.html"><span>budget.rs</span><small>2/4</small></a></li><li><a class="file-link" href="trace--src-codec-rs.html"><span>codec.rs</span><small>2/28</small></a></li><li><a class="file-link" href="trace--src-ids-rs.html"><span>ids.rs</span><small>2/0</small></a></li><li><a class="file-link" href="trace--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="trace--src-num-rs.html"><span>num.rs</span><small>0/1</small></a></li><li><a class="file-link" href="trace--src-record-rs.html"><span>record.rs</span><small>10/0</small></a></li><li><a class="file-link" href="trace--src-resource-stats-rs.html"><span>resource_stats.rs</span><small>3/0</small></a></li><li><a class="file-link" href="trace--src-sidecar-rs.html"><span>sidecar.rs</span><small>0/0</small></a></li><li><a class="file-link" href="trace--src-spool-rs.html"><span>spool.rs</span><small>4/2</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="num crates/trace/src/num.rs usize_to_f64_saturating">
+  <div class="module-head">
+    <div>
+      <h2>src/num.rs</h2>
+      <p class="path">module <code>num</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>1 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-usize-to-f64-saturating-3" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn usize_to_f64_saturating pub pub fn usize_to_f64_saturating (value : usize) -&gt; f64 crates/trace/src/num.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>usize_to_f64_saturating</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="trace--src-num-rs.html#item-fn-usize-to-f64-saturating-3">usize_to_f64_saturating</a> (value : usize) -&gt; f64</code>
+  <p class="docstring">Convert a `usize` count to `f64`, saturating at `u32::MAX`.<br>Trace/resource numbers are emitted as JSON `f64`; clamping at `u32::MAX`<br>keeps the conversion lossless for realistic counts and deterministic for<br>pathological ones.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Convert a `usize` count to `f64`, saturating at `u32::MAX`.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Trace/resource numbers are emitted as JSON `f64`; clamping at `u32::MAX`</span>
+<span class="rs-comment">/// keeps the conversion lossless for realistic counts and deterministic for</span>
+<span class="rs-comment">/// pathological ones.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="trace--src-num-rs.html#item-fn-usize-to-f64-saturating-3">usize_to_f64_saturating</a>(value: usize) -&gt; f64 {
+    u32::try_from(value).map_or_else(|_| f64::from(u32::<span class="rs-type">MAX</span>), f64::from)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/trace/src/num.rs:3</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/trace/src/num.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Numeric conversions shared across trace producers.</span>
+
+<span class="rs-comment">/// Convert a `usize` count to `f64`, saturating at `u32::MAX`.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Trace/resource numbers are emitted as JSON `f64`; clamping at `u32::MAX`</span>
+<span class="rs-comment">/// keeps the conversion lossless for realistic counts and deterministic for</span>
+<span class="rs-comment">/// pathological ones.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="trace--src-num-rs.html#item-fn-usize-to-f64-saturating-3">usize_to_f64_saturating</a>(value: usize) -&gt; f64 {
+    u32::try_from(value).map_or_else(|_| f64::from(u32::<span class="rs-type">MAX</span>), f64::from)
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+version: 1
+
+daemon:
+  server:
+    socket_path: /eos/runtime/daemon/runtime.sock
+    pid_path: /eos/runtime/daemon/runtime.pid
+    max_worker_threads: 4
+
+  inflight:
+    ttl_s: 300
+    reaper_interval_s: 30
+
+  commands:
+    scratch_root: /eos/scratch/commands
+    default_yield_time_ms: 1000
+    default_timeout_s: 600
+    quiet_ms: 50
+    cancel_wait_ms: 500
+    output_drain_grace_ms: 500
+    max_command_s: 21600
+    transcript_timestamp_timezone: UTC
+
+  idle_workspace_eviction:
+    interval_ms: 500
+
+  plugin:
+    ppc_root: /eos/plugin/ppc
+    ppc_timeout_ms: 5000
+    service_probe_timeout_ms: 5000
+    max_response_bytes: 8388608
+
+  layer_stack:
+    auto_squash_max_depth: 100
+
+  files:
+    # Per-file read/write caps. Keep below the 16 MiB transport frame so file
+    # content fits one request/response message.
+    max_read_bytes: 8388608
+    max_write_bytes: 8388608
+
+isolated_workspace:
+  enabled: false
+  scratch_root: /eos/scratch/isolated
+  ttl_s: 1800
+  total_cap: 5
+  upperdir_bytes: 1073741824
+  memavail_fraction: 0.5
+  setup_timeout_s: 30
+  exit_grace_s: 0.25
+  rfc1918_egress: allow
+  fallback_dns: 1.1.1.1
+  workspace_root: /testbed
+  sample_interval_s: 0.5
+
+runner:
+  child_wait_poll_ms: 5
+  mount_mask:
+    hidden_paths:
+      - /eos
+      - /proc
+      - /sys/fs/cgroup
+  env:
+    inherit_keys: [PATH, HOME, USER, LANG, LC_ALL, TERM, TZ]
+    restricted_keys:
+      - LD_PRELOAD
+      - LD_LIBRARY_PATH
+      - LD_AUDIT
+      - DYLD_INSERT_LIBRARIES
+      - DYLD_LIBRARY_PATH
+      - PATH
+      - PYTHONPATH
+      - BASH_ENV
+      - ENV
+    default_path: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    testbed_path_prefix:
+      - /opt/miniconda3/envs/testbed/bin
+      - /opt/miniconda3/bin
+
+e2e_test:
+  docker:
+    image: sweevo-dask__dask-10042:latest
+    platform: linux/amd64
+    privileged: true
+    eosd_path: dist/eosd-linux-amd64
+    remote_daemon_dir: /eos/runtime/daemon
+    remote_eosd_path: /eos/runtime/daemon/eosd
+    root_dir: /eos/state/e2e
+    cap_add: [SYS_ADMIN, NET_ADMIN]
+    security_opt:
+      - seccomp=unconfined
+      - apparmor=unconfined
+    tmpfs:
+      - /eos/state:rw,exec,size=2g,mode=1777
+      - /eos/scratch:rw,exec,size=2g,mode=1777
+    tcp_port: 37657
+    non_kept_container_ttl_s: 1800
+
+  pool:
+    mode: pool
+    sandboxes: 2
+    recycle_after: 50
+    keep_container: true
+
+  timeouts:
+    ready_s: 60
+    request_s: 30
+
+  workload:
+    concurrency_levels: [1, 3, 6, 12]
+    write_iterations: 8
+    sample_count: 1
+    perf_artifact_dir: target/e2e-perf
+    timeout_s: 30

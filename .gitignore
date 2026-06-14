@@ -1,87 +1,36 @@
-__pycache__/
-*.py[cod]
-*$py.class
-*.egg-info/
-dist/
-build/
-.eggs/
-*.egg
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.uv-cache/
-.venv/
-venv/
-env/
-.env
-*.so
-.coverage
-.coverage.*
-htmlcov/
+# OS metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor/local state
 .idea/
 .vscode/
 *.swp
 *.swo
-*~
-.python-version
+
+# Local environment and secrets
+.env
+.env.*
+
+# Logs and runtime leftovers
 *.log
-*.tmp
-*.temp
 *.pid
-*.seed
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+*.sock
+*.profraw
+*.tmp
 
-node_modules/
-
-# React TUI frontend
-frontend/terminal/node_modules/
-frontend/node_modules/
-frontend/.next/
-frontend/dist/
-frontend/.nuxt/
-frontend/.turbo/
-frontend/.parcel-cache/
-frontend/.vite/
-frontend/.rollup.cache/
-frontend/coverage/
-frontend/out/
-
-# User data (never commit API keys or session data)
-.ephemeralos/
-react_tui_smoke.txt
-.pytest_cache/
-.pytest_cache
-.hypothesis/
-.ruff_cache/
-coverage/
-*.lcov
-coverage.*
-.mypy_cache/
-.tox/
-.cache/
-htmlcov/
-
-# Build artefacts
+# Rust build output
 target/
+**/target/
 
-# OS
-.DS_Store
-Thumbs.db
-uv.lock
-
-# Keep these local workspace files visible
-.claude/
-.agents/
+# Generated reports, caches, and local tool state
+/crates/e2e-test/test-reports/
+test-results/
+coverage/
+.cache/
 .omc/
-graphify-out/
+**/.omc/
 
-# SWE-EVO live e2e test framework audit trees
-.sweevo_runs/
-
-# Generated benchmark and sandbox evidence artifacts
-bench/*.json
-bench/*.jsonl
-bench/*.md
+# Release/build artifacts
+/dist/

@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pressure - eos-e2e-test</title>
+<link rel="stylesheet" href="../assets/e2e-readme.css">
+</head>
+<body data-page="module" data-module-json="readme.json">
+<div id="app"></div>
+<script type="application/json" id="readme-module-data">
+{
+  "schemaVersion": 1,
+  "name": "pressure",
+  "displayName": "pressure",
+  "cargoTestName": "pressure",
+  "folder": "pressure",
+  "path": "tests/pressure/mod.rs",
+  "page": "pressure/index.html",
+  "source": {
+    "markdown": "readme.md"
+  },
+  "overview": {
+    "summary": "`pressure` owns cross-subsystem stress coverage for live `eosd`: concurrent direct file ops, reads, ephemeral exec, LayerStack auto-squash, OCC disjoint publish, command cancellation, plugin refresh, isolated handle pressure, post-cancel daemon readiness, and JSON resource reports. It exercises daemon ops including `sandbox.file.write`, `sandbox.file.read`, `sandbox.command.exec`, `sandbox.command.cancel`, `sandbox.command.count`, `sandbox.checkpoint.layer_metrics`, `sandbox.runtime.ready`, `sandbox.plugin.ensure`, `sandbox.plugin.status`, `plugin.generic.query`, and `sandbox.isolation.*`. Module config: `crates/e2e-test/tests/pressure/config/default.test.yml`. This is one unified E2E contract. Configured pressure concurrency is fixed at level `12`; the runner no longer exposes fast/full/heavy pressure lanes.",
+    "moduleConfig": "crates/e2e-test/tests/pressure/config/default.test.yml",
+    "ops": [
+      "sandbox.file.write",
+      "sandbox.file.read",
+      "sandbox.command.exec",
+      "sandbox.command.cancel",
+      "sandbox.command.count",
+      "sandbox.checkpoint.layer_metrics",
+      "sandbox.runtime.ready",
+      "sandbox.plugin.ensure",
+      "sandbox.plugin.status",
+      "plugin.generic.query",
+      "sandbox.isolation.*"
+    ],
+    "tags": [
+      "pressure"
+    ]
+  },
+  "checklist": [
+    {
+      "id": "pressure-ladder-file",
+      "title": "Ladder File",
+      "description": "Direct file write/read pressure passes at concurrency `12`, publishes coherent content, and does not leak active leases.",
+      "tags": [
+        "pressure"
+      ]
+    },
+    {
+      "id": "pressure-ladder-exec",
+      "title": "Ladder Exec",
+      "description": "Ephemeral exec pressure passes at concurrency `12`, publishes changed workspace files, and releases overlay leases.",
+      "tags": [
+        "pressure"
+      ]
+    },
+    {
+      "id": "pressure-ladder-command",
+      "title": "Ladder Command",
+      "description": "Command sessions start, cancel, and drain at concurrency `12` with session count and active leases returning to zero.",
+      "tags": [
+        "pressure"
+      ]
+    },
+    {
+      "id": "pressure-ladder-occ",
+      "title": "Ladder Occ",
+      "description": "OCC disjoint writes and same-path conflict pressure return coherent payloads at concurrency `12`.",
+      "tags": [
+        "pressure"
+      ]
+    },
+    {
+      "id": "pressure-ladder-plugin",
+      "title": "Ladder Plugin",
+      "description": "Plugin refresh/dispatch pressure remains coherent at configured levels and keeps refresh/process counts bounded.",
+      "tags": [
+        "pressure"
+      ]
+    },
+    {
+      "id": "pressure-isolated-cap",
+      "title": "Isolated Cap",
+      "description": "Isolated handle pressure either runs under a high-cap config or asserts configured cap rejection above the default limit.",
+      "tags": [
+        "pressure"
+      ]
+    },
+    {
+      "id": "pressure-squash-bound",
+      "title": "Squash Bound",
+      "description": "Repeated overwrite pressure keeps manifest depth under the operational auto-squash target while preserving latest content.",
+      "tags": [
+        "pressure"
+      ]
+    },
+    {
+      "id": "pressure-recovery-cleanup",
+      "title": "Recovery Cleanup",
+      "description": "Midflight cancel and cancel bursts leave daemon readiness intact and drain commands, active leases, and marker work.",
+      "tags": [
+        "pressure"
+      ]
+    },
+    {
+      "id": "pressure-resource-report",
+      "title": "Resource Report",
+      "description": "E2E runs emit JSON summaries from response meta, trace_resources, and leak counters before strict regression thresholds are introduced.",
+      "tags": [
+        "pressure"
+      ]
+    },
+    {
+      "id": "pressure-bundled-sandbox-capstone",
+      "title": "Bundled Sandbox Capstone",
+      "description": "A protocol-only mini-bundle combines scaffold, disjoint writes, same-path conflict, squash, background command, isolated private write, commit projection, and plugin dispatch without agent-loop assertions.",
+      "tags": [
+        "pressure"
+      ]
+    },
+    {
+      "id": "pressure-sandbox-only-boundary",
+      "title": "Sandbox Only Boundary",
+      "description": "Pressure capstone coverage remains limited to sandbox protocol and trace/resource behavior, leaving TaskCenter state, advisor gates, and notification-loop assertions to agent-core tests.",
+      "tags": [
+        "pressure"
+      ]
+    },
+    {
+      "id": "pressure-overlay-disk-o1",
+      "title": "Overlay Disk O1",
+      "description": "Concurrent overlay execs over a shared lowerdir base keep each per-op upperdir delta-sized and do not multiply LayerStack storage, proving O(1) overlay disk with respect to the number of parallel readers/writers.",
+      "tags": [
+        "pressure"
+      ]
+    },
+    {
+      "id": "pressure-resource-memory",
+      "title": "Resource Memory",
+      "description": "Resource samples carry cgroup memory.current/peak and process RSS gauges, and a large-base overlay op keeps daemon memory within a bounded ceiling (a loose regression gauge inflated by page cache, not a tight O(1) bound).",
+      "tags": [
+        "pressure"
+      ]
+    },
+    {
+      "id": "pressure-multi-caller",
+      "title": "Multi Caller",
+      "description": "N distinct agents (distinct `caller_id`s) concurrently write disjoint and same-path files on one shared LayerStack; every disjoint write commits and is readable across callers, same-path races resolve to one whole winner, and per-caller leases drain to zero.",
+      "tags": [
+        "pressure"
+      ]
+    },
+    {
+      "id": "pressure-concurrent-squash",
+      "title": "Concurrent Squash",
+      "description": "A driver thread crosses the auto-squash depth target while a concurrent pool writes disjoint paths, so auto-squash runs during live publishes; manifest depth stays bounded, no superseded layer dirs are stranded, no data is lost, and no leases leak.",
+      "tags": [
+        "pressure"
+      ]
+    },
+    {
+      "id": "pressure-cross-mode-public-isolated",
+      "title": "Cross Mode Public Isolated",
+      "description": "Public and isolated callers race same-path writes at concurrency `12`; isolated callers keep private content while open, public content survives after isolated exit, and all leases drain.",
+      "tags": [
+        "pressure"
+      ]
+    },
+    {
+      "id": "pressure-soak",
+      "title": "Soak",
+      "description": "A mixed file/exec/command-cancel round over a fixed working set, repeated many times, keeps the leak counters (active leases and commands) at zero every round, auto-squash bounds manifest depth and reclaims storage as a sawtooth so storage does not creep with round count, and the daemon stays ready throughout.",
+      "tags": [
+        "pressure"
+      ]
+    }
+  ],
+  "test": [
+    {
+      "id": "pressure-mixed-file-exec-ladder",
+      "name": "pressure-mixed-file-exec-ladder",
+      "description": "Groups `n_concurrent_mixed_ops`, `overlay_exec_publishes_file_back_to_layerstack`, `file_ops_at_12`, and `ephemeral_exec_at_12` to prove concurrent direct file and ephemeral exec pressure returns structured payloads, publishes readable content, and drains active leases.",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "checklist": [
+        "pressure-ladder-file",
+        "pressure-ladder-exec",
+        "pressure-recovery-cleanup"
+      ]
+    },
+    {
+      "id": "pressure-layerstack-occ-contention",
+      "name": "pressure-layerstack-occ-contention",
+      "description": "Groups `write_storm_squash_under_load`, `layerstack_auto_squash_keeps_depth_bounded`, `occ_merges_concurrent_disjoint_protocol_writes`, and `occ_at_12` to prove repeated overwrites preserve latest content, auto-squash bounds manifest depth, and concurrent OCC writes remain coherent.",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "checklist": [
+        "pressure-ladder-file",
+        "pressure-ladder-occ",
+        "pressure-squash-bound"
+      ]
+    },
+    {
+      "id": "pressure-command-cancel-drain",
+      "name": "pressure-command-cancel-drain",
+      "description": "Groups `daemon_recovers_after_midflight_cancel`, `cancel_burst_returns_commands_and_leases_to_zero`, `cancel_storm`, and `commands_at_12` so command pressure proves daemon readiness, structured cancel status, zero command count, and zero active leases after bursts.",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "checklist": [
+        "pressure-ladder-command",
+        "pressure-recovery-cleanup",
+        "pressure-resource-report"
+      ]
+    },
+    {
+      "id": "pressure-plugin-isolated-cap-matrix",
+      "name": "pressure-plugin-isolated-cap-matrix",
+      "description": "Groups `plugin_refresh_at_12` and `isolated_handle_cap_ladder` to prove plugin refresh/dispatch stays coherent under configured concurrency and isolated handle pressure either succeeds within cap or rejects above cap with a stable payload.",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "checklist": [
+        "pressure-ladder-plugin",
+        "pressure-isolated-cap",
+        "pressure-recovery-cleanup"
+      ]
+    },
+    {
+      "id": "pressure-bundled-sandbox-capstone",
+      "name": "pressure-bundled-sandbox-capstone",
+      "description": "Uses `protocol_only_bundled_sandbox_capstone`: one live protocol flow combines scaffold write, ephemeral exec publish, same-path OCC contention, squash pressure, isolated private write/discard, lease cleanup, commit-to-workspace, and generic plugin dispatch without asserting agent-loop state.",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "checklist": [
+        "pressure-bundled-sandbox-capstone",
+        "pressure-sandbox-only-boundary",
+        "pressure-ladder-plugin",
+        "pressure-isolated-cap",
+        "pressure-ladder-occ",
+        "pressure-squash-bound"
+      ]
+    },
+    {
+      "id": "pressure-resource-report-and-leak-oracles",
+      "name": "pressure-resource-report-and-leak-oracles",
+      "description": "`resource_report_smoke` emits one JSON artifact covering response meta steps, trace resource samples, cgroup memory.current gauges, runtime readiness, plugin status, isolated-open state, and leak counters after file, exec, command, and OCC-backed write samples.",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "checklist": [
+        "pressure-resource-report",
+        "pressure-resource-memory",
+        "pressure-ladder-file",
+        "pressure-ladder-exec",
+        "pressure-ladder-command",
+        "pressure-ladder-occ",
+        "pressure-ladder-plugin",
+        "pressure-isolated-cap",
+        "pressure-squash-bound",
+        "pressure-recovery-cleanup"
+      ]
+    },
+    {
+      "id": "pressure-overlay-disk-and-memory-o1",
+      "name": "pressure-overlay-disk-and-memory-o1",
+      "description": "Groups `concurrent_overlay_execs_share_lowerdir_storage_is_o1` and `large_base_overlay_keeps_memory_bounded`: N concurrent overlay execs over a shared lowerdir base keep each upperdir delta-sized and grow `storage_bytes` by less than one base, and a 20MB-base overlay op keeps cgroup memory.current within a generous ceiling.",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "checklist": [
+        "pressure-overlay-disk-o1",
+        "pressure-resource-memory"
+      ]
+    },
+    {
+      "id": "pressure-distinct-caller-concurrency",
+      "name": "pressure-distinct-caller-concurrency",
+      "description": "Groups `distinct_callers_disjoint_writes_at_12` and `distinct_callers_same_path_conflict_resolves_to_one_winner`: the documented N-agent shape (distinct `caller_id`s on one shared stack) commits disjoint writes coherently at concurrency `12` with peers reading each other's published content, resolves same-path races to one whole winner, and drains per-caller leases to zero.",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "checklist": [
+        "pressure-multi-caller",
+        "pressure-ladder-file",
+        "pressure-ladder-occ",
+        "pressure-recovery-cleanup"
+      ]
+    },
+    {
+      "id": "pressure-concurrent-squash-race",
+      "name": "pressure-concurrent-squash-race",
+      "description": "Uses `concurrent_writes_during_squash_keep_manifest_bounded_and_coherent`: a driver overwrites one path past the depth target while a concurrent pool writes disjoint paths, so auto-squash runs during live concurrent publishes; manifest depth stays at or below the target, no orphan layer dirs accumulate, all driver and fanout data survives, and leases drain.",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "checklist": [
+        "pressure-concurrent-squash",
+        "pressure-squash-bound",
+        "pressure-ladder-file",
+        "pressure-recovery-cleanup"
+      ]
+    },
+    {
+      "id": "pressure-cross-mode-public-isolated-ladder",
+      "name": "pressure-cross-mode-public-isolated-ladder",
+      "description": "Uses `public_and_isolated_same_path_at_12`: the configured concurrency level opens isolated callers, races private isolated writes against public same-path writes, verifies private content while handles are open, exits every isolated caller, and proves public content is the surviving shared-workspace state with leases at zero.",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "checklist": [
+        "pressure-cross-mode-public-isolated",
+        "pressure-isolated-cap",
+        "pressure-ladder-file",
+        "pressure-recovery-cleanup"
+      ]
+    },
+    {
+      "id": "pressure-mixed-workload-soak",
+      "name": "pressure-mixed-workload-soak",
+      "description": "Uses `mixed_workload_soak_keeps_counters_and_storage_bounded`: a mixed fanout-write / overlay-exec / command-cancel round over a fixed working set runs many times; active leases and commands return to zero every round, auto-squash keeps manifest depth bounded and reclaims storage (sawtooth, no per-round creep), and the daemon stays ready after the soak.",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "checklist": [
+        "pressure-soak",
+        "pressure-squash-bound",
+        "pressure-recovery-cleanup"
+      ]
+    }
+  ]
+}
+</script>
+<script src="../assets/e2e-readme.js"></script>
+</body>
+</html>

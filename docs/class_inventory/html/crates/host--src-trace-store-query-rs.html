@@ -1,0 +1,1114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>host · src/trace_store/query.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>host File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>23</b><span>modules</span></div>
+  <div><b>215</b><span>items</span></div>
+  <div><b>363</b><span>fields</span></div>
+  <div><b>115</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">host</span><ul class="file-tree"><li><a class="file-link" href="host.html"><span>drain.rs</span><small>3/10</small></a></li><li><span class="folder">forward</span><ul class="file-tree"><li><a class="file-link" href="host--src-host-forward-audit-rs.html"><span>audit.rs</span><small>0/3</small></a></li><li><a class="file-link" href="host--src-host-forward-recovery-rs.html"><span>recovery.rs</span><small>0/6</small></a></li><li><a class="file-link" href="host--src-host-forward-response-meta-rs.html"><span>response_meta.rs</span><small>0/3</small></a></li><li><a class="file-link" href="host--src-host-forward-trace-ingest-rs.html"><span>trace_ingest.rs</span><small>1/2</small></a></li></ul></li><li><a class="file-link" href="host--src-host-forward-rs.html"><span>forward.rs</span><small>3/12</small></a></li><li><a class="file-link" href="host--src-host-mod-rs.html"><span>mod.rs</span><small>6/6</small></a></li><li><a class="file-link" href="host--src-host-registry-rs.html"><span>registry.rs</span><small>6/2</small></a></li></ul></li><li><a class="file-link" href="host--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-protocol-rs.html"><span>protocol.rs</span><small>6/17</small></a></li><li><a class="file-link" href="host--src-runtime-rs.html"><span>runtime.rs</span><small>6/27</small></a></li><li><span class="folder">trace_store</span><ul class="file-tree"><li><a class="file-link" href="host--src-trace-store-audit-rs.html"><span>audit.rs</span><small>2/4</small></a></li><li><a class="file-link" href="host--src-trace-store-events-rs.html"><span>events.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-ingest-rs.html"><span>ingest.rs</span><small>0/3</small></a></li><li><a class="file-link" href="host--src-trace-store-mod-rs.html"><span>mod.rs</span><small>2/4</small></a></li><li><a class="file-link" href="host--src-trace-store-payload-rs.html"><span>payload.rs</span><small>6/2</small></a></li><li><a class="file-link" href="host--src-trace-store-projection-rs.html"><span>projection.rs</span><small>1/8</small></a></li><li><a class="file-link active" href="host--src-trace-store-query-rs.html"><span>query.rs</span><small>9/15</small></a></li><li><a class="file-link" href="host--src-trace-store-read-rs.html"><span>read.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-response-rs.html"><span>response.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-schema-rs.html"><span>schema.rs</span><small>0/2</small></a></li><li><a class="file-link" href="host--src-trace-store-sidecar-rs.html"><span>sidecar.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-types-rs.html"><span>types.rs</span><small>12/1</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="trace_store::query crates/host/src/trace_store/query.rs SqlitePosture TraceEventRow TraceRequestRow TraceSpanRow TraceResourceRow TraceLinkRow TraceAuditEntryRow AuditVerificationRow ProjectionGap events_for_trace request_by_id recent_requests requests_for_trace spans_for_trace resources_for_trace links_for_trace audit_entries_for_trace audit_rows_for_verification projection_gaps trace_ids_for_link query_plan_for resource_span_ids_for_request sqlite_posture trace_request_row">
+  <div class="module-head">
+    <div>
+      <h2>src/trace_store/query.rs</h2>
+      <p class="path">module <code>trace_store::query</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>9 types</span>
+      <span>0 impls</span>
+      <span>15 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-SqlitePosture-11" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct SqlitePosture pub pub struct SqlitePosture crates/host/src/trace_store/query.rs journal_mode String synchronous i64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>SqlitePosture</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-struct-SqlitePosture-11">SqlitePosture</a></code>
+  <div class="tags"><span>cfg: any</span><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>journal_mode</td><td><code>String</code></td></tr><tr><td>pub</td><td>synchronous</td><td><code>i64</code></td></tr></tbody></table>
+
+  <p class="source">crates/host/src/trace_store/query.rs:11</p>
+</article><article id="item-struct-TraceEventRow-18" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct TraceEventRow pub pub struct TraceEventRow crates/host/src/trace_store/query.rs seq i64 module String event String details_json String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>TraceEventRow</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-struct-TraceEventRow-18">TraceEventRow</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: serde::Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>seq</td><td><code>i64</code></td></tr><tr><td>pub</td><td>module</td><td><code>String</code></td></tr><tr><td>pub</td><td>event</td><td><code>String</code></td></tr><tr><td>pub</td><td>details_json</td><td><code>String</code></td></tr></tbody></table>
+
+  <p class="source">crates/host/src/trace_store/query.rs:18</p>
+</article><article id="item-struct-TraceRequestRow-26" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct TraceRequestRow pub pub struct TraceRequestRow crates/host/src/trace_store/query.rs request_id String trace_id String sandbox_id String op String family String caller_id Option &lt; String &gt; args_summary Option &lt; String &gt; args_digest Option &lt; String &gt; workspace_route Option &lt; String &gt; status Option &lt; String &gt; error_kind Option &lt; String &gt; sent_at_ms i64 received_at_ms Option &lt; i64 &gt; host_rtt_ms Option &lt; i64 &gt; duration_us Option &lt; i64 &gt; daemon_boot_id Option &lt; String &gt; host_boot_id String modules_touched Option &lt; String &gt; response_digest Option &lt; String &gt; response_len Option &lt; i64 &gt; response_summary Option &lt; String &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>TraceRequestRow</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-struct-TraceRequestRow-26">TraceRequestRow</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: serde::Serialize</span><span>dto</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>request_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>trace_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>sandbox_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>op</td><td><code>String</code></td></tr><tr><td>pub</td><td>family</td><td><code>String</code></td></tr><tr><td>pub</td><td>caller_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>args_summary</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>args_digest</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>workspace_route</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>status</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>error_kind</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>sent_at_ms</td><td><code>i64</code></td></tr><tr><td>pub</td><td>received_at_ms</td><td><code>Option &lt; i64 &gt;</code></td></tr><tr><td>pub</td><td>host_rtt_ms</td><td><code>Option &lt; i64 &gt;</code></td></tr><tr><td>pub</td><td>duration_us</td><td><code>Option &lt; i64 &gt;</code></td></tr><tr><td>pub</td><td>daemon_boot_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>host_boot_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>modules_touched</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>response_digest</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>response_len</td><td><code>Option &lt; i64 &gt;</code></td></tr><tr><td>pub</td><td>response_summary</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/host/src/trace_store/query.rs:26</p>
+</article><article id="item-struct-TraceSpanRow-51" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct TraceSpanRow pub pub struct TraceSpanRow crates/host/src/trace_store/query.rs trace_id String request_id Option &lt; String &gt; span_id i64 parent_span_id Option &lt; i64 &gt; kind String subsystem String status String started_us i64 duration_us i64 fields_json Option &lt; String &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>TraceSpanRow</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-struct-TraceSpanRow-51">TraceSpanRow</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: serde::Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>trace_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>request_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>span_id</td><td><code>i64</code></td></tr><tr><td>pub</td><td>parent_span_id</td><td><code>Option &lt; i64 &gt;</code></td></tr><tr><td>pub</td><td>kind</td><td><code>String</code></td></tr><tr><td>pub</td><td>subsystem</td><td><code>String</code></td></tr><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>started_us</td><td><code>i64</code></td></tr><tr><td>pub</td><td>duration_us</td><td><code>i64</code></td></tr><tr><td>pub</td><td>fields_json</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/host/src/trace_store/query.rs:51</p>
+</article><article id="item-struct-TraceResourceRow-65" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct TraceResourceRow pub pub struct TraceResourceRow crates/host/src/trace_store/query.rs trace_id String request_id Option &lt; String &gt; span_id Option &lt; i64 &gt; ts_us i64 kind String values_json String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>TraceResourceRow</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-struct-TraceResourceRow-65">TraceResourceRow</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: serde::Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>trace_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>request_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>span_id</td><td><code>Option &lt; i64 &gt;</code></td></tr><tr><td>pub</td><td>ts_us</td><td><code>i64</code></td></tr><tr><td>pub</td><td>kind</td><td><code>String</code></td></tr><tr><td>pub</td><td>values_json</td><td><code>String</code></td></tr></tbody></table>
+
+  <p class="source">crates/host/src/trace_store/query.rs:65</p>
+</article><article id="item-struct-TraceLinkRow-75" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct TraceLinkRow pub pub struct TraceLinkRow crates/host/src/trace_store/query.rs trace_id String link_kind String link_id String request_id String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>TraceLinkRow</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-struct-TraceLinkRow-75">TraceLinkRow</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: serde::Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>trace_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>link_kind</td><td><code>String</code></td></tr><tr><td>pub</td><td>link_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>request_id</td><td><code>String</code></td></tr></tbody></table>
+
+  <p class="source">crates/host/src/trace_store/query.rs:75</p>
+</article><article id="item-struct-TraceAuditEntryRow-83" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct TraceAuditEntryRow pub pub struct TraceAuditEntryRow crates/host/src/trace_store/query.rs audit_seq i64 sandbox_id String trace_id String request_id Option &lt; String &gt; entry_kind String schema_name String schema_version i64 received_at_ms i64 payload_sha256 String prev_global_sha256 Option &lt; String &gt; prev_sandbox_sha256 Option &lt; String &gt; entry_sha256 String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>TraceAuditEntryRow</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-struct-TraceAuditEntryRow-83">TraceAuditEntryRow</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: serde::Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>audit_seq</td><td><code>i64</code></td></tr><tr><td>pub</td><td>sandbox_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>trace_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>request_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>entry_kind</td><td><code>String</code></td></tr><tr><td>pub</td><td>schema_name</td><td><code>String</code></td></tr><tr><td>pub</td><td>schema_version</td><td><code>i64</code></td></tr><tr><td>pub</td><td>received_at_ms</td><td><code>i64</code></td></tr><tr><td>pub</td><td>payload_sha256</td><td><code>String</code></td></tr><tr><td>pub</td><td>prev_global_sha256</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>prev_sandbox_sha256</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>entry_sha256</td><td><code>String</code></td></tr></tbody></table>
+
+  <p class="source">crates/host/src/trace_store/query.rs:83</p>
+</article><article id="item-struct-AuditVerificationRow-99" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AuditVerificationRow pub(super) pub(super) struct AuditVerificationRow crates/host/src/trace_store/query.rs audit_seq i64 sandbox_id String trace_id String request_id Option &lt; String &gt; entry_kind String schema_name String schema_version i64 received_at_ms i64 payload Vec &lt; u8 &gt; payload_sha256 String prev_global_sha256 Option &lt; String &gt; prev_sandbox_sha256 Option &lt; String &gt; entry_sha256 String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>AuditVerificationRow</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) struct <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-struct-AuditVerificationRow-99">AuditVerificationRow</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>audit_seq</td><td><code>i64</code></td></tr><tr><td>pub</td><td>sandbox_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>trace_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>request_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>entry_kind</td><td><code>String</code></td></tr><tr><td>pub</td><td>schema_name</td><td><code>String</code></td></tr><tr><td>pub</td><td>schema_version</td><td><code>i64</code></td></tr><tr><td>pub</td><td>received_at_ms</td><td><code>i64</code></td></tr><tr><td>pub</td><td>payload</td><td><code>Vec &lt; u8 &gt;</code></td></tr><tr><td>pub</td><td>payload_sha256</td><td><code>String</code></td></tr><tr><td>pub</td><td>prev_global_sha256</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>prev_sandbox_sha256</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>entry_sha256</td><td><code>String</code></td></tr></tbody></table>
+
+  <p class="source">crates/host/src/trace_store/query.rs:99</p>
+</article><article id="item-struct-ProjectionGap-116" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ProjectionGap pub(super) pub(super) struct ProjectionGap crates/host/src/trace_store/query.rs audit_seq i64 request_id String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ProjectionGap</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) struct <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-struct-ProjectionGap-116">ProjectionGap</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>audit_seq</td><td><code>i64</code></td></tr><tr><td>pub</td><td>request_id</td><td><code>String</code></td></tr></tbody></table>
+
+  <p class="source">crates/host/src/trace_store/query.rs:116</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-events-for-trace-128" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn events_for_trace pub(super) pub(super) fn events_for_trace (conn : &amp; Connection , trace_id : &amp; str ,) -&gt; Result &lt; Vec &lt; TraceEventRow &gt; , TraceStoreError &gt; crates/host/src/trace_store/query.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>events_for_trace</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-fn-events-for-trace-128">events_for_trace</a> (conn : &amp; Connection , trace_id : &amp; str ,) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-struct-TraceEventRow-18">TraceEventRow</a> &gt; , <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-events-for-trace-128">events_for_trace</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+    trace_id: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceEventRow-18">TraceEventRow</a>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(
+        &quot;<span class="rs-type">SELECT</span> seq, module, event, details_json <span class="rs-type">FROM</span> trace_events
+         <span class="rs-type">WHERE</span> trace_id=?1 <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> seq&quot;,
+    )?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map(params![trace_id], |row| {
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceEventRow-18">TraceEventRow</a> {
+                seq: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0)?,
+                module: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(1)?,
+                event: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(2)?,
+                details_json: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(3)?,
+            })
+        })?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/query.rs:128</p>
+</article><article id="item-fn-request-by-id-149" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn request_by_id pub(super) pub(super) fn request_by_id (conn : &amp; Connection , request_id : &amp; str ,) -&gt; Result &lt; Option &lt; TraceRequestRow &gt; , TraceStoreError &gt; crates/host/src/trace_store/query.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>request_by_id</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-fn-request-by-id-149">request_by_id</a> (conn : &amp; Connection , request_id : &amp; str ,) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-struct-TraceRequestRow-26">TraceRequestRow</a> &gt; , <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> &gt;</code>
+  <div class="tags"><span>cfg: any</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(any(test, feature = &quot;e2e-support&quot;))]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-request-by-id-149">request_by_id</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+    request_id: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceRequestRow-26">TraceRequestRow</a>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> sql = format!(&quot;<span class="rs-type">SELECT</span> {<span class="rs-type">TRACE_REQUEST_COLUMNS</span>} <span class="rs-type">FROM</span> trace_requests <span class="rs-type">WHERE</span> request_id=?1&quot;);
+    conn.query_row(&amp;sql, params![request_id], trace_request_row)
+        .optional()
+        .map_err(<a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>::from)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/query.rs:149</p>
+</article><article id="item-fn-recent-requests-160" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn recent_requests pub(super) pub(super) fn recent_requests (conn : &amp; Connection , sandbox_id : Option &lt; &amp; str &gt; , limit : usize ,) -&gt; Result &lt; Vec &lt; TraceRequestRow &gt; , TraceStoreError &gt; crates/host/src/trace_store/query.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>recent_requests</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-fn-recent-requests-160">recent_requests</a> (conn : &amp; Connection , sandbox_id : Option &lt; &amp; str &gt; , limit : usize ,) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-struct-TraceRequestRow-26">TraceRequestRow</a> &gt; , <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-recent-requests-160">recent_requests</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+    sandbox_id: <span class="rs-type">Option</span>&lt;&amp;str&gt;,
+    limit: usize,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceRequestRow-26">TraceRequestRow</a>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> limit = i64::try_from(limit).unwrap_or(i64::<span class="rs-type">MAX</span>);
+    <span class="rs-kw">let</span> sql = format!(
+        &quot;<span class="rs-type">SELECT</span> {<span class="rs-type">TRACE_REQUEST_COLUMNS</span>}
+         <span class="rs-type">FROM</span> trace_requests
+         <span class="rs-type">WHERE</span> (?1 <span class="rs-type">IS</span> <span class="rs-type">NULL</span> <span class="rs-type">OR</span> sandbox_id=?1)
+         <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> sent_at_ms <span class="rs-type">DESC</span>, request_id <span class="rs-type">DESC</span>
+         <span class="rs-type">LIMIT</span> ?2&quot;
+    );
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(&amp;sql)?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map(params![sandbox_id, limit], trace_request_row)?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/query.rs:160</p>
+</article><article id="item-fn-requests-for-trace-180" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn requests_for_trace pub(super) pub(super) fn requests_for_trace (conn : &amp; Connection , trace_id : &amp; str ,) -&gt; Result &lt; Vec &lt; TraceRequestRow &gt; , TraceStoreError &gt; crates/host/src/trace_store/query.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>requests_for_trace</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-fn-requests-for-trace-180">requests_for_trace</a> (conn : &amp; Connection , trace_id : &amp; str ,) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-struct-TraceRequestRow-26">TraceRequestRow</a> &gt; , <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-requests-for-trace-180">requests_for_trace</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+    trace_id: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceRequestRow-26">TraceRequestRow</a>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> sql = format!(
+        &quot;<span class="rs-type">SELECT</span> {<span class="rs-type">TRACE_REQUEST_COLUMNS</span>}
+         <span class="rs-type">FROM</span> trace_requests
+         <span class="rs-type">WHERE</span> trace_id=?1
+         <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> sent_at_ms, request_id&quot;
+    );
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(&amp;sql)?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map(params![trace_id], trace_request_row)?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/query.rs:180</p>
+</article><article id="item-fn-spans-for-trace-197" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn spans_for_trace pub(super) pub(super) fn spans_for_trace (conn : &amp; Connection , trace_id : &amp; str ,) -&gt; Result &lt; Vec &lt; TraceSpanRow &gt; , TraceStoreError &gt; crates/host/src/trace_store/query.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>spans_for_trace</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-fn-spans-for-trace-197">spans_for_trace</a> (conn : &amp; Connection , trace_id : &amp; str ,) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-struct-TraceSpanRow-51">TraceSpanRow</a> &gt; , <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-spans-for-trace-197">spans_for_trace</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+    trace_id: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceSpanRow-51">TraceSpanRow</a>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(
+        &quot;<span class="rs-type">SELECT</span> trace_id, request_id, span_id, parent_span_id, kind, subsystem, status,
+                started_us, duration_us, fields_json
+         <span class="rs-type">FROM</span> trace_spans
+         <span class="rs-type">WHERE</span> trace_id=?1
+         <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> started_us, span_id&quot;,
+    )?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map(params![trace_id], |row| {
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceSpanRow-51">TraceSpanRow</a> {
+                trace_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0)?,
+                request_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(1)?,
+                span_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(2)?,
+                parent_span_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(3)?,
+                kind: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(4)?,
+                subsystem: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(5)?,
+                status: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(6)?,
+                started_us: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(7)?,
+                duration_us: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(8)?,
+                fields_json: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(9)?,
+            })
+        })?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/query.rs:197</p>
+</article><article id="item-fn-resources-for-trace-227" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn resources_for_trace pub(super) pub(super) fn resources_for_trace (conn : &amp; Connection , trace_id : &amp; str ,) -&gt; Result &lt; Vec &lt; TraceResourceRow &gt; , TraceStoreError &gt; crates/host/src/trace_store/query.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>resources_for_trace</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-fn-resources-for-trace-227">resources_for_trace</a> (conn : &amp; Connection , trace_id : &amp; str ,) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-struct-TraceResourceRow-65">TraceResourceRow</a> &gt; , <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-resources-for-trace-227">resources_for_trace</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+    trace_id: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceResourceRow-65">TraceResourceRow</a>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(
+        &quot;<span class="rs-type">SELECT</span> trace_id, request_id, span_id, ts_us, kind, values_json
+         <span class="rs-type">FROM</span> trace_resources
+         <span class="rs-type">WHERE</span> trace_id=?1
+         <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> ts_us, kind, span_id&quot;,
+    )?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map(params![trace_id], |row| {
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceResourceRow-65">TraceResourceRow</a> {
+                trace_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0)?,
+                request_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(1)?,
+                span_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(2)?,
+                ts_us: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(3)?,
+                kind: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(4)?,
+                values_json: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(5)?,
+            })
+        })?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/query.rs:227</p>
+</article><article id="item-fn-links-for-trace-252" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn links_for_trace pub(super) pub(super) fn links_for_trace (conn : &amp; Connection , trace_id : &amp; str ,) -&gt; Result &lt; Vec &lt; TraceLinkRow &gt; , TraceStoreError &gt; crates/host/src/trace_store/query.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>links_for_trace</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-fn-links-for-trace-252">links_for_trace</a> (conn : &amp; Connection , trace_id : &amp; str ,) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-struct-TraceLinkRow-75">TraceLinkRow</a> &gt; , <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-links-for-trace-252">links_for_trace</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+    trace_id: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceLinkRow-75">TraceLinkRow</a>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(
+        &quot;<span class="rs-type">SELECT</span> trace_id, link_kind, link_id, request_id
+         <span class="rs-type">FROM</span> trace_links
+         <span class="rs-type">WHERE</span> trace_id=?1
+         <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> link_kind, link_id, request_id&quot;,
+    )?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map(params![trace_id], |row| {
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceLinkRow-75">TraceLinkRow</a> {
+                trace_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0)?,
+                link_kind: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(1)?,
+                link_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(2)?,
+                request_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(3)?,
+            })
+        })?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/query.rs:252</p>
+</article><article id="item-fn-audit-entries-for-trace-275" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn audit_entries_for_trace pub(super) pub(super) fn audit_entries_for_trace (conn : &amp; Connection , trace_id : &amp; str ,) -&gt; Result &lt; Vec &lt; TraceAuditEntryRow &gt; , TraceStoreError &gt; crates/host/src/trace_store/query.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>audit_entries_for_trace</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-fn-audit-entries-for-trace-275">audit_entries_for_trace</a> (conn : &amp; Connection , trace_id : &amp; str ,) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-struct-TraceAuditEntryRow-83">TraceAuditEntryRow</a> &gt; , <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-audit-entries-for-trace-275">audit_entries_for_trace</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+    trace_id: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceAuditEntryRow-83">TraceAuditEntryRow</a>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(
+        &quot;<span class="rs-type">SELECT</span> audit_seq, sandbox_id, trace_id, request_id, entry_kind, schema_name,
+                schema_version, received_at_ms, payload_sha256, prev_global_sha256,
+                prev_sandbox_sha256, entry_sha256
+         <span class="rs-type">FROM</span> audit_entries
+         <span class="rs-type">WHERE</span> trace_id=?1
+         <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> audit_seq&quot;,
+    )?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map(params![trace_id], |row| {
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceAuditEntryRow-83">TraceAuditEntryRow</a> {
+                audit_seq: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0)?,
+                sandbox_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(1)?,
+                trace_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(2)?,
+                request_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(3)?,
+                entry_kind: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(4)?,
+                schema_name: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(5)?,
+                schema_version: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(6)?,
+                received_at_ms: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(7)?,
+                payload_sha256: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(8)?,
+                prev_global_sha256: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(9)?,
+                prev_sandbox_sha256: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(10)?,
+                entry_sha256: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(11)?,
+            })
+        })?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/query.rs:275</p>
+</article><article id="item-fn-audit-rows-for-verification-308" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn audit_rows_for_verification pub(super) pub(super) fn audit_rows_for_verification (conn : &amp; Connection ,) -&gt; Result &lt; Vec &lt; AuditVerificationRow &gt; , TraceStoreError &gt; crates/host/src/trace_store/query.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>audit_rows_for_verification</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-fn-audit-rows-for-verification-308">audit_rows_for_verification</a> (conn : &amp; Connection ,) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-struct-AuditVerificationRow-99">AuditVerificationRow</a> &gt; , <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-audit-rows-for-verification-308">audit_rows_for_verification</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-AuditVerificationRow-99">AuditVerificationRow</a>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(
+        &quot;<span class="rs-type">SELECT</span> audit_seq, sandbox_id, trace_id, request_id, entry_kind, schema_name,
+                schema_version, received_at_ms, payload, payload_sha256,
+                prev_global_sha256, prev_sandbox_sha256, entry_sha256
+         <span class="rs-type">FROM</span> audit_entries
+         <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> audit_seq&quot;,
+    )?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map([], |row| {
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-AuditVerificationRow-99">AuditVerificationRow</a> {
+                audit_seq: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0)?,
+                sandbox_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(1)?,
+                trace_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(2)?,
+                request_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(3)?,
+                entry_kind: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(4)?,
+                schema_name: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(5)?,
+                schema_version: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(6)?,
+                received_at_ms: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(7)?,
+                payload: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(8)?,
+                payload_sha256: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(9)?,
+                prev_global_sha256: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(10)?,
+                prev_sandbox_sha256: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(11)?,
+                entry_sha256: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(12)?,
+            })
+        })?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/query.rs:308</p>
+</article><article id="item-fn-projection-gaps-340" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn projection_gaps pub(super) pub(super) fn projection_gaps (conn : &amp; Connection , trace_id : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; Vec &lt; ProjectionGap &gt; , TraceStoreError &gt; crates/host/src/trace_store/query.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>projection_gaps</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-fn-projection-gaps-340">projection_gaps</a> (conn : &amp; Connection , trace_id : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-struct-ProjectionGap-116">ProjectionGap</a> &gt; , <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-projection-gaps-340">projection_gaps</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+    trace_id: <span class="rs-type">Option</span>&lt;&amp;str&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-ProjectionGap-116">ProjectionGap</a>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(
+        &quot;<span class="rs-type">SELECT</span> a.audit_seq, a.request_id
+         <span class="rs-type">FROM</span> audit_entries a
+         <span class="rs-type">LEFT</span> <span class="rs-type">JOIN</span> trace_requests r <span class="rs-type">ON</span> r.request_id=a.request_id
+         <span class="rs-type">WHERE</span> a.request_id <span class="rs-type">IS</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>
+           <span class="rs-type">AND</span> a.entry_kind <span class="rs-type">IN</span> (&#x27;request_start&#x27;, &#x27;trace_degraded&#x27;, &#x27;response_persisted&#x27;)
+           <span class="rs-type">AND</span> r.request_id <span class="rs-type">IS</span> <span class="rs-type">NULL</span>
+           <span class="rs-type">AND</span> (?1 <span class="rs-type">IS</span> <span class="rs-type">NULL</span> <span class="rs-type">OR</span> a.trace_id=?1)
+         <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> a.audit_seq&quot;,
+    )?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map(params![trace_id], |row| {
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-ProjectionGap-116">ProjectionGap</a> {
+                audit_seq: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0)?,
+                request_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(1)?,
+            })
+        })?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/query.rs:340</p>
+</article><article id="item-fn-trace-ids-for-link-365" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn trace_ids_for_link pub(super) pub(super) fn trace_ids_for_link (conn : &amp; Connection , link_kind : &amp; str , link_id : &amp; str ,) -&gt; Result &lt; Vec &lt; String &gt; , TraceStoreError &gt; crates/host/src/trace_store/query.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>trace_ids_for_link</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-fn-trace-ids-for-link-365">trace_ids_for_link</a> (conn : &amp; Connection , link_kind : &amp; str , link_id : &amp; str ,) -&gt; Result &lt; Vec &lt; String &gt; , <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> &gt;</code>
+  <div class="tags"><span>cfg: any</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(any(test, feature = &quot;e2e-support&quot;))]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-trace-ids-for-link-365">trace_ids_for_link</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+    link_kind: &amp;str,
+    link_id: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(
+        &quot;<span class="rs-type">SELECT</span> trace_id <span class="rs-type">FROM</span> trace_links <span class="rs-type">WHERE</span> link_kind=?1 <span class="rs-type">AND</span> link_id=?2 <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> trace_id&quot;,
+    )?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map(params![link_kind, link_id], |row| row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0))?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/query.rs:365</p>
+</article><article id="item-fn-query-plan-for-380" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn query_plan_for pub(super) pub(super) fn query_plan_for (conn : &amp; Connection , sql : &amp; str) -&gt; Result &lt; Vec &lt; String &gt; , TraceStoreError &gt; crates/host/src/trace_store/query.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>query_plan_for</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-fn-query-plan-for-380">query_plan_for</a> (conn : &amp; Connection , sql : &amp; str) -&gt; Result &lt; Vec &lt; String &gt; , <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> &gt;</code>
+  <div class="tags"><span>cfg: any</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(any(test, feature = &quot;e2e-support&quot;))]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-query-plan-for-380">query_plan_for</a>(conn: &amp;<span class="rs-type">Connection</span>, sql: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(&amp;format!(&quot;<span class="rs-type">EXPLAIN</span> <span class="rs-type">QUERY</span> <span class="rs-type">PLAN</span> {sql}&quot;))?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map([], |row| row.get::&lt;_, <span class="rs-type">String</span>&gt;(3))?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/query.rs:380</p>
+</article><article id="item-fn-resource-span-ids-for-request-389" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn resource_span_ids_for_request pub(super) pub(super) fn resource_span_ids_for_request (conn : &amp; Connection , request_id : &amp; str ,) -&gt; Result &lt; Vec &lt; Option &lt; i64 &gt; &gt; , TraceStoreError &gt; crates/host/src/trace_store/query.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>resource_span_ids_for_request</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-fn-resource-span-ids-for-request-389">resource_span_ids_for_request</a> (conn : &amp; Connection , request_id : &amp; str ,) -&gt; Result &lt; Vec &lt; Option &lt; i64 &gt; &gt; , <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> &gt;</code>
+  <div class="tags"><span>cfg: test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(test)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-resource-span-ids-for-request-389">resource_span_ids_for_request</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+    request_id: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Option</span>&lt;i64&gt;&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(
+        &quot;<span class="rs-type">SELECT</span> span_id <span class="rs-type">FROM</span> trace_resources <span class="rs-type">WHERE</span> request_id=?1 <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> kind, span_id, ts_us&quot;,
+    )?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map(params![request_id], |row| row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0))?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/query.rs:389</p>
+</article><article id="item-fn-sqlite-posture-403" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn sqlite_posture pub(super) pub(super) fn sqlite_posture (conn : &amp; Connection) -&gt; Result &lt; SqlitePosture , TraceStoreError &gt; crates/host/src/trace_store/query.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>sqlite_posture</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-fn-sqlite-posture-403">sqlite_posture</a> (conn : &amp; Connection) -&gt; Result &lt; <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-struct-SqlitePosture-11">SqlitePosture</a> , <a class="symbol-link" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a> &gt;</code>
+  <div class="tags"><span>cfg: any</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(any(test, feature = &quot;e2e-support&quot;))]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-sqlite-posture-403">sqlite_posture</a>(conn: &amp;<span class="rs-type">Connection</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-SqlitePosture-11">SqlitePosture</a>, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> journal_mode: <span class="rs-type">String</span> = conn.pragma_query_value(<span class="rs-type">None</span>, &quot;journal_mode&quot;, |row| row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0))?;
+    <span class="rs-kw">let</span> synchronous: i64 = conn.pragma_query_value(<span class="rs-type">None</span>, &quot;synchronous&quot;, |row| row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0))?;
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-SqlitePosture-11">SqlitePosture</a> {
+        journal_mode,
+        synchronous,
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/query.rs:403</p>
+</article><article id="item-fn-trace-request-row-413" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn trace_request_row private fn trace_request_row (row : &amp; rusqlite :: Row &lt; '_ &gt;) -&gt; Result &lt; TraceRequestRow , rusqlite :: Error &gt; crates/host/src/trace_store/query.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>trace_request_row</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-fn-trace-request-row-413">trace_request_row</a> (row : &amp; rusqlite :: Row &lt; &#x27;_ &gt;) -&gt; Result &lt; <a class="symbol-link" href="host--src-trace-store-query-rs.html#item-struct-TraceRequestRow-26">TraceRequestRow</a> , rusqlite :: Error &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-trace-request-row-413">trace_request_row</a>(row: &amp;rusqlite::<span class="rs-type">Row</span>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceRequestRow-26">TraceRequestRow</a>, rusqlite::<span class="rs-type">Error</span>&gt; {
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceRequestRow-26">TraceRequestRow</a> {
+        request_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0)?,
+        trace_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(1)?,
+        sandbox_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(2)?,
+        op: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(3)?,
+        family: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(4)?,
+        caller_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(5)?,
+        args_summary: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(6)?,
+        args_digest: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(7)?,
+        workspace_route: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(8)?,
+        status: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(9)?,
+        error_kind: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(10)?,
+        sent_at_ms: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(11)?,
+        received_at_ms: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(12)?,
+        host_rtt_ms: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(13)?,
+        duration_us: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(14)?,
+        daemon_boot_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(15)?,
+        host_boot_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(16)?,
+        modules_touched: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(17)?,
+        response_digest: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(18)?,
+        response_len: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(19)?,
+        response_summary: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(20)?,
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/query.rs:413</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/host/src/trace_store/query.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Read-side projection/query over the trace store sqlite schema. These free</span>
+<span class="rs-comment">//! functions operate on a borrowed `Connection` and are delegated to by the</span>
+<span class="rs-comment">//! public read methods on `TraceStore` so callers keep a single type.</span>
+
+#[cfg(any(test, feature = &quot;e2e-support&quot;))]
+<span class="rs-kw">use</span> rusqlite::<span class="rs-type">OptionalExtension</span>;
+<span class="rs-kw">use</span> rusqlite::{params, <span class="rs-type">Connection</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>;
+
+#[cfg(any(test, feature = &quot;e2e-support&quot;))]
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-SqlitePosture-11">SqlitePosture</a> {
+    <span class="rs-kw">pub</span> journal_mode: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> synchronous: i64,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, serde::<span class="rs-type">Serialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceEventRow-18">TraceEventRow</a> {
+    <span class="rs-kw">pub</span> seq: i64,
+    <span class="rs-kw">pub</span> module: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> event: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> details_json: <span class="rs-type">String</span>,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, serde::<span class="rs-type">Serialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceRequestRow-26">TraceRequestRow</a> {
+    <span class="rs-kw">pub</span> request_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> trace_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> sandbox_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> op: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> family: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> caller_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span> args_summary: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span> args_digest: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span> workspace_route: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span> status: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span> error_kind: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span> sent_at_ms: i64,
+    <span class="rs-kw">pub</span> received_at_ms: <span class="rs-type">Option</span>&lt;i64&gt;,
+    <span class="rs-kw">pub</span> host_rtt_ms: <span class="rs-type">Option</span>&lt;i64&gt;,
+    <span class="rs-kw">pub</span> duration_us: <span class="rs-type">Option</span>&lt;i64&gt;,
+    <span class="rs-kw">pub</span> daemon_boot_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span> host_boot_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> modules_touched: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span> response_digest: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span> response_len: <span class="rs-type">Option</span>&lt;i64&gt;,
+    <span class="rs-kw">pub</span> response_summary: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, serde::<span class="rs-type">Serialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceSpanRow-51">TraceSpanRow</a> {
+    <span class="rs-kw">pub</span> trace_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> request_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span> span_id: i64,
+    <span class="rs-kw">pub</span> parent_span_id: <span class="rs-type">Option</span>&lt;i64&gt;,
+    <span class="rs-kw">pub</span> kind: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> subsystem: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> status: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> started_us: i64,
+    <span class="rs-kw">pub</span> duration_us: i64,
+    <span class="rs-kw">pub</span> fields_json: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, serde::<span class="rs-type">Serialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceResourceRow-65">TraceResourceRow</a> {
+    <span class="rs-kw">pub</span> trace_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> request_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span> span_id: <span class="rs-type">Option</span>&lt;i64&gt;,
+    <span class="rs-kw">pub</span> ts_us: i64,
+    <span class="rs-kw">pub</span> kind: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> values_json: <span class="rs-type">String</span>,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, serde::<span class="rs-type">Serialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceLinkRow-75">TraceLinkRow</a> {
+    <span class="rs-kw">pub</span> trace_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> link_kind: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> link_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> request_id: <span class="rs-type">String</span>,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, serde::<span class="rs-type">Serialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceAuditEntryRow-83">TraceAuditEntryRow</a> {
+    <span class="rs-kw">pub</span> audit_seq: i64,
+    <span class="rs-kw">pub</span> sandbox_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> trace_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> request_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span> entry_kind: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> schema_name: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> schema_version: i64,
+    <span class="rs-kw">pub</span> received_at_ms: i64,
+    <span class="rs-kw">pub</span> payload_sha256: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> prev_global_sha256: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span> prev_sandbox_sha256: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span> entry_sha256: <span class="rs-type">String</span>,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-AuditVerificationRow-99">AuditVerificationRow</a> {
+    <span class="rs-kw">pub</span> audit_seq: i64,
+    <span class="rs-kw">pub</span> sandbox_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> trace_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> request_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span> entry_kind: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> schema_name: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> schema_version: i64,
+    <span class="rs-kw">pub</span> received_at_ms: i64,
+    <span class="rs-kw">pub</span> payload: <span class="rs-type">Vec</span>&lt;u8&gt;,
+    <span class="rs-kw">pub</span> payload_sha256: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> prev_global_sha256: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span> prev_sandbox_sha256: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span> entry_sha256: <span class="rs-type">String</span>,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-ProjectionGap-116">ProjectionGap</a> {
+    <span class="rs-kw">pub</span> audit_seq: i64,
+    <span class="rs-kw">pub</span> request_id: <span class="rs-type">String</span>,
+}
+
+<span class="rs-kw">const</span> <span class="rs-type">TRACE_REQUEST_COLUMNS</span>: &amp;str = &quot;\
+request_id, trace_id, sandbox_id, op, family, caller_id, args_summary,
+args_digest, workspace_route, status, error_kind, sent_at_ms, received_at_ms,
+host_rtt_ms, duration_us, daemon_boot_id, host_boot_id, modules_touched,
+response_digest, response_len, response_summary&quot;;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-events-for-trace-128">events_for_trace</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+    trace_id: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceEventRow-18">TraceEventRow</a>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(
+        &quot;<span class="rs-type">SELECT</span> seq, module, event, details_json <span class="rs-type">FROM</span> trace_events
+         <span class="rs-type">WHERE</span> trace_id=?1 <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> seq&quot;,
+    )?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map(params![trace_id], |row| {
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceEventRow-18">TraceEventRow</a> {
+                seq: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0)?,
+                module: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(1)?,
+                event: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(2)?,
+                details_json: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(3)?,
+            })
+        })?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+
+#[cfg(any(test, feature = &quot;e2e-support&quot;))]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-request-by-id-149">request_by_id</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+    request_id: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceRequestRow-26">TraceRequestRow</a>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> sql = format!(&quot;<span class="rs-type">SELECT</span> {<span class="rs-type">TRACE_REQUEST_COLUMNS</span>} <span class="rs-type">FROM</span> trace_requests <span class="rs-type">WHERE</span> request_id=?1&quot;);
+    conn.query_row(&amp;sql, params![request_id], trace_request_row)
+        .optional()
+        .map_err(<a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>::from)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-recent-requests-160">recent_requests</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+    sandbox_id: <span class="rs-type">Option</span>&lt;&amp;str&gt;,
+    limit: usize,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceRequestRow-26">TraceRequestRow</a>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> limit = i64::try_from(limit).unwrap_or(i64::<span class="rs-type">MAX</span>);
+    <span class="rs-kw">let</span> sql = format!(
+        &quot;<span class="rs-type">SELECT</span> {<span class="rs-type">TRACE_REQUEST_COLUMNS</span>}
+         <span class="rs-type">FROM</span> trace_requests
+         <span class="rs-type">WHERE</span> (?1 <span class="rs-type">IS</span> <span class="rs-type">NULL</span> <span class="rs-type">OR</span> sandbox_id=?1)
+         <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> sent_at_ms <span class="rs-type">DESC</span>, request_id <span class="rs-type">DESC</span>
+         <span class="rs-type">LIMIT</span> ?2&quot;
+    );
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(&amp;sql)?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map(params![sandbox_id, limit], trace_request_row)?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-requests-for-trace-180">requests_for_trace</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+    trace_id: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceRequestRow-26">TraceRequestRow</a>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> sql = format!(
+        &quot;<span class="rs-type">SELECT</span> {<span class="rs-type">TRACE_REQUEST_COLUMNS</span>}
+         <span class="rs-type">FROM</span> trace_requests
+         <span class="rs-type">WHERE</span> trace_id=?1
+         <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> sent_at_ms, request_id&quot;
+    );
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(&amp;sql)?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map(params![trace_id], trace_request_row)?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-spans-for-trace-197">spans_for_trace</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+    trace_id: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceSpanRow-51">TraceSpanRow</a>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(
+        &quot;<span class="rs-type">SELECT</span> trace_id, request_id, span_id, parent_span_id, kind, subsystem, status,
+                started_us, duration_us, fields_json
+         <span class="rs-type">FROM</span> trace_spans
+         <span class="rs-type">WHERE</span> trace_id=?1
+         <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> started_us, span_id&quot;,
+    )?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map(params![trace_id], |row| {
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceSpanRow-51">TraceSpanRow</a> {
+                trace_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0)?,
+                request_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(1)?,
+                span_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(2)?,
+                parent_span_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(3)?,
+                kind: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(4)?,
+                subsystem: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(5)?,
+                status: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(6)?,
+                started_us: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(7)?,
+                duration_us: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(8)?,
+                fields_json: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(9)?,
+            })
+        })?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-resources-for-trace-227">resources_for_trace</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+    trace_id: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceResourceRow-65">TraceResourceRow</a>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(
+        &quot;<span class="rs-type">SELECT</span> trace_id, request_id, span_id, ts_us, kind, values_json
+         <span class="rs-type">FROM</span> trace_resources
+         <span class="rs-type">WHERE</span> trace_id=?1
+         <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> ts_us, kind, span_id&quot;,
+    )?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map(params![trace_id], |row| {
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceResourceRow-65">TraceResourceRow</a> {
+                trace_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0)?,
+                request_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(1)?,
+                span_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(2)?,
+                ts_us: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(3)?,
+                kind: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(4)?,
+                values_json: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(5)?,
+            })
+        })?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-links-for-trace-252">links_for_trace</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+    trace_id: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceLinkRow-75">TraceLinkRow</a>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(
+        &quot;<span class="rs-type">SELECT</span> trace_id, link_kind, link_id, request_id
+         <span class="rs-type">FROM</span> trace_links
+         <span class="rs-type">WHERE</span> trace_id=?1
+         <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> link_kind, link_id, request_id&quot;,
+    )?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map(params![trace_id], |row| {
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceLinkRow-75">TraceLinkRow</a> {
+                trace_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0)?,
+                link_kind: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(1)?,
+                link_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(2)?,
+                request_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(3)?,
+            })
+        })?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-audit-entries-for-trace-275">audit_entries_for_trace</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+    trace_id: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceAuditEntryRow-83">TraceAuditEntryRow</a>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(
+        &quot;<span class="rs-type">SELECT</span> audit_seq, sandbox_id, trace_id, request_id, entry_kind, schema_name,
+                schema_version, received_at_ms, payload_sha256, prev_global_sha256,
+                prev_sandbox_sha256, entry_sha256
+         <span class="rs-type">FROM</span> audit_entries
+         <span class="rs-type">WHERE</span> trace_id=?1
+         <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> audit_seq&quot;,
+    )?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map(params![trace_id], |row| {
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceAuditEntryRow-83">TraceAuditEntryRow</a> {
+                audit_seq: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0)?,
+                sandbox_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(1)?,
+                trace_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(2)?,
+                request_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(3)?,
+                entry_kind: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(4)?,
+                schema_name: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(5)?,
+                schema_version: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(6)?,
+                received_at_ms: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(7)?,
+                payload_sha256: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(8)?,
+                prev_global_sha256: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(9)?,
+                prev_sandbox_sha256: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(10)?,
+                entry_sha256: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(11)?,
+            })
+        })?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-audit-rows-for-verification-308">audit_rows_for_verification</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-AuditVerificationRow-99">AuditVerificationRow</a>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(
+        &quot;<span class="rs-type">SELECT</span> audit_seq, sandbox_id, trace_id, request_id, entry_kind, schema_name,
+                schema_version, received_at_ms, payload, payload_sha256,
+                prev_global_sha256, prev_sandbox_sha256, entry_sha256
+         <span class="rs-type">FROM</span> audit_entries
+         <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> audit_seq&quot;,
+    )?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map([], |row| {
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-AuditVerificationRow-99">AuditVerificationRow</a> {
+                audit_seq: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0)?,
+                sandbox_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(1)?,
+                trace_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(2)?,
+                request_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(3)?,
+                entry_kind: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(4)?,
+                schema_name: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(5)?,
+                schema_version: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(6)?,
+                received_at_ms: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(7)?,
+                payload: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(8)?,
+                payload_sha256: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(9)?,
+                prev_global_sha256: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(10)?,
+                prev_sandbox_sha256: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(11)?,
+                entry_sha256: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(12)?,
+            })
+        })?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-projection-gaps-340">projection_gaps</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+    trace_id: <span class="rs-type">Option</span>&lt;&amp;str&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-ProjectionGap-116">ProjectionGap</a>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(
+        &quot;<span class="rs-type">SELECT</span> a.audit_seq, a.request_id
+         <span class="rs-type">FROM</span> audit_entries a
+         <span class="rs-type">LEFT</span> <span class="rs-type">JOIN</span> trace_requests r <span class="rs-type">ON</span> r.request_id=a.request_id
+         <span class="rs-type">WHERE</span> a.request_id <span class="rs-type">IS</span> <span class="rs-type">NOT</span> <span class="rs-type">NULL</span>
+           <span class="rs-type">AND</span> a.entry_kind <span class="rs-type">IN</span> (&#x27;request_start&#x27;, &#x27;trace_degraded&#x27;, &#x27;response_persisted&#x27;)
+           <span class="rs-type">AND</span> r.request_id <span class="rs-type">IS</span> <span class="rs-type">NULL</span>
+           <span class="rs-type">AND</span> (?1 <span class="rs-type">IS</span> <span class="rs-type">NULL</span> <span class="rs-type">OR</span> a.trace_id=?1)
+         <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> a.audit_seq&quot;,
+    )?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map(params![trace_id], |row| {
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-ProjectionGap-116">ProjectionGap</a> {
+                audit_seq: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0)?,
+                request_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(1)?,
+            })
+        })?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+
+#[cfg(any(test, feature = &quot;e2e-support&quot;))]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-trace-ids-for-link-365">trace_ids_for_link</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+    link_kind: &amp;str,
+    link_id: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(
+        &quot;<span class="rs-type">SELECT</span> trace_id <span class="rs-type">FROM</span> trace_links <span class="rs-type">WHERE</span> link_kind=?1 <span class="rs-type">AND</span> link_id=?2 <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> trace_id&quot;,
+    )?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map(params![link_kind, link_id], |row| row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0))?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+
+#[cfg(any(test, feature = &quot;e2e-support&quot;))]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-query-plan-for-380">query_plan_for</a>(conn: &amp;<span class="rs-type">Connection</span>, sql: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(&amp;format!(&quot;<span class="rs-type">EXPLAIN</span> <span class="rs-type">QUERY</span> <span class="rs-type">PLAN</span> {sql}&quot;))?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map([], |row| row.get::&lt;_, <span class="rs-type">String</span>&gt;(3))?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+
+#[cfg(test)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-resource-span-ids-for-request-389">resource_span_ids_for_request</a>(
+    conn: &amp;<span class="rs-type">Connection</span>,
+    request_id: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Option</span>&lt;i64&gt;&gt;, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stmt = conn.prepare(
+        &quot;<span class="rs-type">SELECT</span> span_id <span class="rs-type">FROM</span> trace_resources <span class="rs-type">WHERE</span> request_id=?1 <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> kind, span_id, ts_us&quot;,
+    )?;
+    <span class="rs-kw">let</span> rows = stmt
+        .query_map(params![request_id], |row| row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0))?
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+    <span class="rs-type">Ok</span>(rows)
+}
+
+#[cfg(any(test, feature = &quot;e2e-support&quot;))]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-sqlite-posture-403">sqlite_posture</a>(conn: &amp;<span class="rs-type">Connection</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-SqlitePosture-11">SqlitePosture</a>, <a class="symbol-link rs-type" href="host--src-trace-store-mod-rs.html#item-enum-TraceStoreError-45">TraceStoreError</a>&gt; {
+    <span class="rs-kw">let</span> journal_mode: <span class="rs-type">String</span> = conn.pragma_query_value(<span class="rs-type">None</span>, &quot;journal_mode&quot;, |row| row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0))?;
+    <span class="rs-kw">let</span> synchronous: i64 = conn.pragma_query_value(<span class="rs-type">None</span>, &quot;synchronous&quot;, |row| row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0))?;
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-SqlitePosture-11">SqlitePosture</a> {
+        journal_mode,
+        synchronous,
+    })
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-query-rs.html#item-fn-trace-request-row-413">trace_request_row</a>(row: &amp;rusqlite::<span class="rs-type">Row</span>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceRequestRow-26">TraceRequestRow</a>, rusqlite::<span class="rs-type">Error</span>&gt; {
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="host--src-trace-store-query-rs.html#item-struct-TraceRequestRow-26">TraceRequestRow</a> {
+        request_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(0)?,
+        trace_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(1)?,
+        sandbox_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(2)?,
+        op: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(3)?,
+        family: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(4)?,
+        caller_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(5)?,
+        args_summary: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(6)?,
+        args_digest: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(7)?,
+        workspace_route: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(8)?,
+        status: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(9)?,
+        error_kind: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(10)?,
+        sent_at_ms: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(11)?,
+        received_at_ms: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(12)?,
+        host_rtt_ms: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(13)?,
+        duration_us: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(14)?,
+        daemon_boot_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(15)?,
+        host_boot_id: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(16)?,
+        modules_touched: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(17)?,
+        response_digest: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(18)?,
+        response_len: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(19)?,
+        response_summary: row.<a class="symbol-link rs-fn" href="host--src-host-registry-rs.html#method-get-207">get</a>(20)?,
+    })
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

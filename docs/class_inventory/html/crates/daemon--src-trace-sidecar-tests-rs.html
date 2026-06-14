@@ -1,0 +1,1098 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>daemon · src/trace/sidecar/tests.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>38</b><span>modules</span></div>
+  <div><b>277</b><span>items</span></div>
+  <div><b>142</b><span>fields</span></div>
+  <div><b>74</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">dispatch</span><ul class="file-tree"><li><a class="file-link" href="daemon.html"><span>builtin.rs</span><small>0/5</small></a></li><li><a class="file-link" href="daemon--src-dispatch-dispatcher-rs.html"><span>dispatcher.rs</span><small>0/5</small></a></li><li><a class="file-link" href="daemon--src-dispatch-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="daemon--src-lib-rs.html"><span>lib.rs</span><small>0/1</small></a></li><li><span class="folder">op_adapter</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-op-adapter-checkpoint-rs.html"><span>checkpoint.rs</span><small>0/13</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-command-rs.html"><span>command.rs</span><small>2/17</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-control-rs.html"><span>control.rs</span><small>0/11</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-files-rs.html"><span>files.rs</span><small>4/19</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-isolation-rs.html"><span>isolation.rs</span><small>0/23</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-mod-rs.html"><span>mod.rs</span><small>0/12</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-plugin-rs.html"><span>plugin.rs</span><small>1/17</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-workspace-run-rs.html"><span>workspace_run.rs</span><small>0/2</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-runtime-context-rs.html"><span>context.rs</span><small>1/0</small></a></li><li><a class="file-link" href="daemon--src-runtime-error-rs.html"><span>error.rs</span><small>1/1</small></a></li><li><a class="file-link" href="daemon--src-runtime-invocation-registry-rs.html"><span>invocation_registry.rs</span><small>4/2</small></a></li><li><a class="file-link" href="daemon--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="daemon--src-runtime-response-rs.html"><span>response.rs</span><small>2/11</small></a></li><li><a class="file-link" href="daemon--src-runtime-services-rs.html"><span>services.rs</span><small>1/3</small></a></li><li><a class="file-link" href="daemon--src-runtime-workspace-rs.html"><span>workspace.rs</span><small>10/5</small></a></li></ul></li><li><span class="folder">trace</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-trace-envelope-meta-rs.html"><span>envelope_meta.rs</span><small>0/6</small></a></li><li><a class="file-link" href="daemon--src-trace-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="daemon--src-trace-plugin-trace-rs.html"><span>plugin_trace.rs</span><small>0/21</small></a></li><li><span class="folder">sidecar</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-trace-sidecar-budget-rs.html"><span>budget.rs</span><small>0/1</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-build-rs.html"><span>build.rs</span><small>0/2</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-events-rs.html"><span>events.rs</span><small>0/7</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-resources-rs.html"><span>resources.rs</span><small>0/4</small></a></li><li><a class="file-link active" href="daemon--src-trace-sidecar-tests-rs.html"><span>tests.rs</span><small>0/5</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-transport-failure-rs.html"><span>transport_failure.rs</span><small>0/2</small></a></li></ul></li><li><a class="file-link" href="daemon--src-trace-sidecar-rs.html"><span>sidecar.rs</span><small>0/0</small></a></li><li><a class="file-link" href="daemon--src-trace-spool-rs.html"><span>spool.rs</span><small>3/9</small></a></li></ul></li><li><span class="folder">transport</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-transport-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">server</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-transport-server-connection-rs.html"><span>connection.rs</span><small>0/3</small></a></li><li><a class="file-link" href="daemon--src-transport-server-dispatch-rs.html"><span>dispatch.rs</span><small>0/6</small></a></li><li><a class="file-link" href="daemon--src-transport-server-lifecycle-rs.html"><span>lifecycle.rs</span><small>0/2</small></a></li><li><a class="file-link" href="daemon--src-transport-server-trace-context-rs.html"><span>trace_context.rs</span><small>1/3</small></a></li></ul></li><li><a class="file-link" href="daemon--src-transport-server-rs.html"><span>server.rs</span><small>2/0</small></a></li></ul></li><li><span class="folder">wire</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-wire-message-rs.html"><span>message.rs</span><small>5/3</small></a></li><li><a class="file-link" href="daemon--src-wire-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="trace::sidecar::tests crates/daemon/src/trace/sidecar/tests.rs trace_export_drains_background_spool_as_protobuf_batch request_sidecar_drops_children_when_over_budget request_sidecar_merges_subsystem_events request_sidecar_stamps_envelope_meta_from_trace_record request_sidecar_promotes_resource_stats_events">
+  <div class="module-head">
+    <div>
+      <h2>src/trace/sidecar/tests.rs</h2>
+      <p class="path">module <code>trace::sidecar::tests</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>5 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-trace-export-drains-background-spool-as-protobuf-batch-15" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn trace_export_drains_background_spool_as_protobuf_batch private fn trace_export_drains_background_spool_as_protobuf_batch () crates/daemon/src/trace/sidecar/tests.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>trace_export_drains_background_spool_as_protobuf_batch</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-trace-sidecar-tests-rs.html#item-fn-trace-export-drains-background-spool-as-protobuf-batch-15">trace_export_drains_background_spool_as_protobuf_batch</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[test]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-tests-rs.html#item-fn-trace-export-drains-background-spool-as-protobuf-batch-15">trace_export_drains_background_spool_as_protobuf_batch</a>() {
+    <span class="rs-kw">let</span> trace_id = <span class="rs-type">TraceId</span>::parse(&quot;trace-export-test&quot;).expect(&quot;trace id&quot;);
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> record = <span class="rs-type">TraceRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(trace_id.clone(), <span class="rs-type">SpanUid</span>::<span class="rs-type">ROOT</span>);
+    record.events.<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#method-push-63">push</a>(<span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+        <span class="rs-type">SpanUid</span>::<span class="rs-type">ROOT</span>,
+        &quot;background_finished&quot;,
+        &quot;daemon.background&quot;,
+        json!({&quot;kind&quot;: &quot;unit&quot;}),
+    ));
+    <a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-push-background-record-86">push_background_record</a>(record);
+
+    <span class="rs-kw">let</span> response =
+        <span class="rs-kw">crate</span>::op_adapter::control::<a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-op-trace-export-111">op_trace_export</a>(<span class="rs-type">TraceExportInput</span> { max_records: 16 });
+    assert_eq!(response[&quot;success&quot;], <span class="rs-kw">true</span>);
+    assert_eq!(response[&quot;record_count&quot;], 1);
+    assert_eq!(response[&quot;spool_pending_after&quot;], 1);
+    <span class="rs-kw">let</span> export_id = response[&quot;export_id&quot;]
+        .as_str()
+        .expect(&quot;export id&quot;)
+        .to_owned();
+    <span class="rs-kw">let</span> batch_sha256 = response[&quot;batch_sha256&quot;]
+        .as_str()
+        .expect(&quot;batch sha&quot;)
+        .to_owned();
+    <span class="rs-kw">let</span> encoded = response[&quot;trace_batch_base64&quot;]
+        .as_str()
+        .expect(&quot;trace batch&quot;);
+    <span class="rs-kw">let</span> batch = decode_trace_batch(
+        &amp;base64::engine::general_purpose::<span class="rs-type">STANDARD</span>
+            .<a class="symbol-link rs-fn" href="daemon--src-wire-message-rs.html#item-fn-decode-88">decode</a>(encoded)
+            .expect(&quot;base64&quot;),
+    )
+    .expect(&quot;trace batch decodes&quot;);
+    assert_eq!(batch.records.len(), 1);
+    assert_eq!(batch.records[0].trace_id, trace_id);
+
+    <span class="rs-kw">let</span> replay = <span class="rs-kw">crate</span>::op_adapter::control::<a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-op-trace-export-111">op_trace_export</a>(<span class="rs-type">TraceExportInput</span> { max_records: 16 });
+    assert_eq!(replay[&quot;export_id&quot;], export_id);
+    assert_eq!(replay[&quot;batch_sha256&quot;], batch_sha256);
+
+    <span class="rs-kw">let</span> ack = <span class="rs-kw">crate</span>::op_adapter::control::<a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-op-trace-export-ack-118">op_trace_export_ack</a>(<span class="rs-type">TraceExportAckInput</span> {
+        export_id,
+        batch_sha256,
+        record_count: 1,
+    });
+    assert_eq!(ack[&quot;acked&quot;], <span class="rs-kw">true</span>);
+
+    <span class="rs-kw">let</span> trace = <a class="symbol-link rs-type" href="daemon--src-wire-message-rs.html#item-struct-RequestTraceContext-40">RequestTraceContext</a> {
+        trace_id: &quot;trace-write-failed&quot;.to_owned(),
+        request_id: &quot;request-write-failed&quot;.to_owned(),
+        parent_span_id: <span class="rs-type">None</span>,
+        link_hints: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(),
+        capture_budget_version: 1,
+    };
+    <span class="rs-kw">let</span> facts = <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceFacts-19">RequestTraceFacts</a> {
+        connection_id: &quot;daemon-conn-write-failed&quot;.to_owned(),
+        accepted_at_unix_ms: <a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-now-ms-160">now_ms</a>(),
+        listener_kind: &quot;tcp&quot;,
+        peer_addr: <span class="rs-type">Some</span>(&quot;127.0.0.1:51000&quot;.to_owned()),
+        local_addr: <span class="rs-type">Some</span>(&quot;127.0.0.1:50000&quot;.to_owned()),
+        is_tcp: <span class="rs-kw">true</span>,
+        request_bytes: 16,
+        read_duration_us: 10,
+        auth_required: <span class="rs-kw">true</span>,
+        auth_ok: <span class="rs-kw">true</span>,
+        protocol_version: <span class="rs-type">Some</span>(1),
+    };
+    <span class="rs-kw">let</span> response = <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-build-rs.html#item-fn-attach-request-sidecar-19">attach_request_sidecar</a>(
+        json!({&quot;success&quot;: <span class="rs-kw">true</span>}),
+        <span class="rs-type">Some</span>(&amp;trace),
+        &quot;sandbox.runtime.ready&quot;,
+        &amp;facts,
+    );
+    <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-transport-failure-rs.html#item-fn-push-transport-failure-from-sidecar-10">push_transport_failure_from_sidecar</a>(
+        &amp;response,
+        &quot;response_write_failed&quot;,
+        &amp;std::io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(std::io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">BrokenPipe</span>, &quot;peer closed&quot;),
+    );
+    <span class="rs-kw">let</span> response =
+        <span class="rs-kw">crate</span>::op_adapter::control::<a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-op-trace-export-111">op_trace_export</a>(<span class="rs-type">TraceExportInput</span> { max_records: 16 });
+    assert_eq!(response[&quot;record_count&quot;], 1);
+    <span class="rs-kw">let</span> encoded = response[&quot;trace_batch_base64&quot;]
+        .as_str()
+        .expect(&quot;trace batch&quot;);
+    <span class="rs-kw">let</span> batch = decode_trace_batch(
+        &amp;base64::engine::general_purpose::<span class="rs-type">STANDARD</span>
+            .<a class="symbol-link rs-fn" href="daemon--src-wire-message-rs.html#item-fn-decode-88">decode</a>(encoded)
+            .expect(&quot;base64&quot;),
+    )
+    .expect(&quot;trace batch decodes&quot;);
+    <span class="rs-kw">let</span> record = batch.records.first().expect(&quot;failure record&quot;);
+    assert_eq!(record.trace_id.as_str(), &quot;trace-write-failed&quot;);
+    assert_eq!(
+        record
+            .events
+            .first()
+            .map(|event| (event.module.as_str(), event.name.as_str())),
+        <span class="rs-type">Some</span>((&quot;daemon.transport&quot;, &quot;response_write_failed&quot;))
+    );
+    <span class="rs-kw">let</span> ack = <span class="rs-kw">crate</span>::op_adapter::control::<a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-op-trace-export-ack-118">op_trace_export_ack</a>(<span class="rs-type">TraceExportAckInput</span> {
+        export_id: response[&quot;export_id&quot;]
+            .as_str()
+            .expect(&quot;export id&quot;)
+            .to_owned(),
+        batch_sha256: response[&quot;batch_sha256&quot;]
+            .as_str()
+            .expect(&quot;batch sha&quot;)
+            .to_owned(),
+        record_count: 1,
+    });
+    assert_eq!(ack[&quot;acked&quot;], <span class="rs-kw">true</span>);
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/trace/sidecar/tests.rs:15</p>
+</article><article id="item-fn-request-sidecar-drops-children-when-over-budget-129" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn request_sidecar_drops_children_when_over_budget private fn request_sidecar_drops_children_when_over_budget () crates/daemon/src/trace/sidecar/tests.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>request_sidecar_drops_children_when_over_budget</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-trace-sidecar-tests-rs.html#item-fn-request-sidecar-drops-children-when-over-budget-129">request_sidecar_drops_children_when_over_budget</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[test]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-tests-rs.html#item-fn-request-sidecar-drops-children-when-over-budget-129">request_sidecar_drops_children_when_over_budget</a>() {
+    <span class="rs-kw">let</span> trace = <a class="symbol-link rs-type" href="daemon--src-wire-message-rs.html#item-struct-RequestTraceContext-40">RequestTraceContext</a> {
+        trace_id: &quot;trace-budget&quot;.to_owned(),
+        request_id: &quot;request-budget&quot;.to_owned(),
+        parent_span_id: <span class="rs-type">None</span>,
+        link_hints: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(),
+        capture_budget_version: 1,
+    };
+    <span class="rs-kw">let</span> facts = <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceFacts-19">RequestTraceFacts</a> {
+        connection_id: &quot;daemon-conn-budget&quot;.to_owned(),
+        accepted_at_unix_ms: <a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-now-ms-160">now_ms</a>(),
+        listener_kind: &quot;unix&quot;,
+        peer_addr: <span class="rs-type">None</span>,
+        local_addr: <span class="rs-type">None</span>,
+        is_tcp: <span class="rs-kw">false</span>,
+        request_bytes: 64,
+        read_duration_us: 5,
+        auth_required: <span class="rs-kw">false</span>,
+        auth_ok: <span class="rs-kw">true</span>,
+        protocol_version: <span class="rs-type">Some</span>(1),
+    };
+    <span class="rs-kw">let</span> oversize: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>&gt; = (0..200)
+        .map(|index| {
+            <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#method-operation-43">operation</a>(
+                &quot;command&quot;,
+                &quot;stdin_written&quot;,
+                json!({&quot;index&quot;: index, &quot;padding&quot;: &quot;x&quot;.repeat(500)}),
+            )
+        })
+        .collect();
+    <span class="rs-kw">let</span> response = <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-build-rs.html#item-fn-attach-request-sidecar-with-events-28">attach_request_sidecar_with_events</a>(
+        json!({&quot;success&quot;: <span class="rs-kw">true</span>}),
+        <span class="rs-type">Some</span>(&amp;trace),
+        &quot;sandbox.command.exec&quot;,
+        &amp;facts,
+        &amp;oversize,
+    );
+    <span class="rs-kw">let</span> batch = decode_trace_batch(&amp;<a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-transport-failure-rs.html#item-fn-trace-sidecar-bytes-54">trace_sidecar_bytes</a>(&amp;response).expect(&quot;trace sidecar bytes&quot;))
+        .expect(&quot;trace batch decodes&quot;);
+    <span class="rs-kw">let</span> record = batch.records.first().expect(&quot;request trace record&quot;);
+    assert!(record.truncated, &quot;oversize record is marked truncated&quot;);
+    assert!(
+        record.dropped_children &gt; 0,
+        &quot;dropped children are counted, not silent&quot;
+    );
+    assert!(
+        trace::codec::encoded_trace_record_len(record) &lt;= <span class="rs-type">DetailBudget</span>::<span class="rs-type">SidecarRecord</span>.bytes(),
+        &quot;record fits the 64 <span class="rs-type">KiB</span> sidecar budget after enforcement&quot;
+    );
+    assert!(
+        record
+            .events
+            .iter()
+            .any(|event| event.module == &quot;daemon.transport&quot;),
+        &quot;transport frame events are never dropped&quot;
+    );
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/trace/sidecar/tests.rs:129</p>
+</article><article id="item-fn-request-sidecar-merges-subsystem-events-188" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn request_sidecar_merges_subsystem_events private fn request_sidecar_merges_subsystem_events () crates/daemon/src/trace/sidecar/tests.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>request_sidecar_merges_subsystem_events</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-trace-sidecar-tests-rs.html#item-fn-request-sidecar-merges-subsystem-events-188">request_sidecar_merges_subsystem_events</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[test]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-tests-rs.html#item-fn-request-sidecar-merges-subsystem-events-188">request_sidecar_merges_subsystem_events</a>() {
+    <span class="rs-kw">let</span> trace = <a class="symbol-link rs-type" href="daemon--src-wire-message-rs.html#item-struct-RequestTraceContext-40">RequestTraceContext</a> {
+        trace_id: &quot;trace-checkpoint-events&quot;.to_owned(),
+        request_id: &quot;request-checkpoint-events&quot;.to_owned(),
+        parent_span_id: <span class="rs-type">None</span>,
+        link_hints: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(),
+        capture_budget_version: 1,
+    };
+    <span class="rs-kw">let</span> facts = <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceFacts-19">RequestTraceFacts</a> {
+        connection_id: &quot;daemon-conn-checkpoint-events&quot;.to_owned(),
+        accepted_at_unix_ms: <a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-now-ms-160">now_ms</a>(),
+        listener_kind: &quot;unix&quot;,
+        peer_addr: <span class="rs-type">None</span>,
+        local_addr: <span class="rs-type">None</span>,
+        is_tcp: <span class="rs-kw">false</span>,
+        request_bytes: 128,
+        read_duration_us: 12,
+        auth_required: <span class="rs-kw">false</span>,
+        auth_ok: <span class="rs-kw">true</span>,
+        protocol_version: <span class="rs-type">Some</span>(1),
+    };
+    <span class="rs-kw">let</span> response = <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-build-rs.html#item-fn-attach-request-sidecar-with-events-28">attach_request_sidecar_with_events</a>(
+        json!({&quot;success&quot;: <span class="rs-kw">true</span>}),
+        <span class="rs-type">Some</span>(&amp;trace),
+        &quot;sandbox.checkpoint.commit_to_git&quot;,
+        &amp;facts,
+        &amp;[
+            <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#method-operation-43">operation</a>(
+                &quot;checkpoint&quot;,
+                &quot;git_command_finished&quot;,
+                json!({&quot;argv_summary&quot;: &quot;git add -<span class="rs-type">A</span> -- &lt;paths&gt;&quot;, &quot;exit_code&quot;: 0, &quot;stderr_tail&quot;: &quot;&quot;}),
+            ),
+            <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#method-operation-43">operation</a>(
+                &quot;workspace.route&quot;,
+                &quot;route_selected&quot;,
+                json!({&quot;kind&quot;: &quot;fast_path&quot;, &quot;reason&quot;: &quot;unit&quot;}),
+            ),
+        ],
+    );
+    <span class="rs-kw">let</span> batch = decode_trace_batch(&amp;<a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-transport-failure-rs.html#item-fn-trace-sidecar-bytes-54">trace_sidecar_bytes</a>(&amp;response).expect(&quot;trace sidecar bytes&quot;))
+        .expect(&quot;trace batch decodes&quot;);
+    <span class="rs-kw">let</span> record = batch.records.first().expect(&quot;request trace record&quot;);
+
+    assert!(
+        record
+            .events
+            .iter()
+            .any(|event| event.module == &quot;checkpoint&quot;
+                &amp;&amp; event.name == &quot;git_command_finished&quot;
+                &amp;&amp; event.details.value[&quot;argv_summary&quot;] == &quot;git add -<span class="rs-type">A</span> -- &lt;paths&gt;&quot;
+                &amp;&amp; event.span_id == <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(4)),
+        &quot;checkpoint event merged into operation span&quot;
+    );
+    <span class="rs-kw">let</span> route_events: <span class="rs-type">Vec</span>&lt;_&gt; = record
+        .events
+        .iter()
+        .filter(|event| event.module == &quot;workspace.route&quot; &amp;&amp; event.name == &quot;route_selected&quot;)
+        .collect();
+    assert_eq!(route_events.len(), 1, &quot;real route suppresses fallback&quot;);
+    assert_eq!(route_events[0].details.value[&quot;kind&quot;], &quot;fast_path&quot;);
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/trace/sidecar/tests.rs:188</p>
+</article><article id="item-fn-request-sidecar-stamps-envelope-meta-from-trace-record-251" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn request_sidecar_stamps_envelope_meta_from_trace_record private fn request_sidecar_stamps_envelope_meta_from_trace_record () crates/daemon/src/trace/sidecar/tests.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>request_sidecar_stamps_envelope_meta_from_trace_record</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-trace-sidecar-tests-rs.html#item-fn-request-sidecar-stamps-envelope-meta-from-trace-record-251">request_sidecar_stamps_envelope_meta_from_trace_record</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[test]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-tests-rs.html#item-fn-request-sidecar-stamps-envelope-meta-from-trace-record-251">request_sidecar_stamps_envelope_meta_from_trace_record</a>() {
+    <span class="rs-kw">let</span> trace = <a class="symbol-link rs-type" href="daemon--src-wire-message-rs.html#item-struct-RequestTraceContext-40">RequestTraceContext</a> {
+        trace_id: &quot;trace-envelope-meta&quot;.to_owned(),
+        request_id: &quot;request-envelope-meta&quot;.to_owned(),
+        parent_span_id: <span class="rs-type">None</span>,
+        link_hints: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(),
+        capture_budget_version: 1,
+    };
+    <span class="rs-kw">let</span> facts = <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceFacts-19">RequestTraceFacts</a> {
+        connection_id: &quot;daemon-conn-envelope-meta&quot;.to_owned(),
+        accepted_at_unix_ms: <a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-now-ms-160">now_ms</a>(),
+        listener_kind: &quot;tcp&quot;,
+        peer_addr: <span class="rs-type">Some</span>(&quot;127.0.0.1:51000&quot;.to_owned()),
+        local_addr: <span class="rs-type">Some</span>(&quot;127.0.0.1:50000&quot;.to_owned()),
+        is_tcp: <span class="rs-kw">true</span>,
+        request_bytes: 128,
+        read_duration_us: 9,
+        auth_required: <span class="rs-kw">true</span>,
+        auth_ok: <span class="rs-kw">true</span>,
+        protocol_version: <span class="rs-type">Some</span>(1),
+    };
+    <span class="rs-kw">let</span> response = <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-build-rs.html#item-fn-attach-request-sidecar-with-events-28">attach_request_sidecar_with_events</a>(
+        json!({&quot;status&quot;: &quot;ok&quot;, &quot;result&quot;: {&quot;published&quot;: <span class="rs-kw">true</span>}, &quot;meta&quot;: {}}),
+        <span class="rs-type">Some</span>(&amp;trace),
+        &quot;sandbox.file.write&quot;,
+        &amp;facts,
+        &amp;[<a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#method-operation-43">operation</a>(
+            &quot;workspace.route&quot;,
+            &quot;route_selected&quot;,
+            json!({&quot;kind&quot;: &quot;fast_path&quot;, &quot;reason&quot;: &quot;unit&quot;}),
+        )],
+    );
+
+    assert_eq!(response[&quot;status&quot;], &quot;ok&quot;);
+    assert_eq!(response[&quot;meta&quot;][&quot;op&quot;], &quot;sandbox.file.write&quot;);
+    assert_eq!(response[&quot;meta&quot;][&quot;request_id&quot;], &quot;request-envelope-meta&quot;);
+    assert_eq!(response[&quot;meta&quot;][&quot;trace&quot;][&quot;trace_id&quot;], &quot;trace-envelope-meta&quot;);
+    assert_eq!(
+        response[&quot;meta&quot;][&quot;trace&quot;][&quot;request_id&quot;],
+        &quot;request-envelope-meta&quot;
+    );
+    assert_eq!(response[&quot;meta&quot;][&quot;trace&quot;][&quot;store&quot;], &quot;pending_host_ingest&quot;);
+    assert!(
+        response[&quot;meta&quot;][&quot;trace&quot;][&quot;event_count&quot;]
+            .as_u64()
+            .is_some_and(|count| count &gt; 0),
+        &quot;{response}&quot;
+    );
+    assert_eq!(response[&quot;meta&quot;][&quot;workspace_route&quot;][&quot;kind&quot;], &quot;fast_path&quot;);
+    assert_eq!(response[&quot;meta&quot;][&quot;workspace_route&quot;][&quot;reason&quot;], &quot;unit&quot;);
+    assert_eq!(
+        response[<span class="rs-type">TRACE_SIDECAR_FIELD</span>][&quot;schema&quot;],
+        <span class="rs-type">TRACE_SIDECAR_SCHEMA</span>
+    );
+    assert_eq!(
+        response[<span class="rs-type">TRACE_SIDECAR_FIELD</span>][&quot;encoding&quot;],
+        <span class="rs-type">TRACE_SIDECAR_ENCODING</span>
+    );
+    assert_eq!(response[<span class="rs-type">TRACE_SIDECAR_FIELD</span>][&quot;spool_pending&quot;], <span class="rs-kw">false</span>);
+    assert!(response[<span class="rs-type">TRACE_SIDECAR_FIELD</span>][&quot;data&quot;]
+        .as_str()
+        .is_some_and(|data| !data.is_empty()));
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/trace/sidecar/tests.rs:251</p>
+</article><article id="item-fn-request-sidecar-promotes-resource-stats-events-316" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn request_sidecar_promotes_resource_stats_events private fn request_sidecar_promotes_resource_stats_events () crates/daemon/src/trace/sidecar/tests.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>request_sidecar_promotes_resource_stats_events</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="daemon--src-trace-sidecar-tests-rs.html#item-fn-request-sidecar-promotes-resource-stats-events-316">request_sidecar_promotes_resource_stats_events</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[test]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-tests-rs.html#item-fn-request-sidecar-promotes-resource-stats-events-316">request_sidecar_promotes_resource_stats_events</a>() {
+    <span class="rs-kw">let</span> trace = <a class="symbol-link rs-type" href="daemon--src-wire-message-rs.html#item-struct-RequestTraceContext-40">RequestTraceContext</a> {
+        trace_id: &quot;trace-resource-events&quot;.to_owned(),
+        request_id: &quot;request-resource-events&quot;.to_owned(),
+        parent_span_id: <span class="rs-type">None</span>,
+        link_hints: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(),
+        capture_budget_version: 1,
+    };
+    <span class="rs-kw">let</span> facts = <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceFacts-19">RequestTraceFacts</a> {
+        connection_id: &quot;daemon-conn-resource-events&quot;.to_owned(),
+        accepted_at_unix_ms: <a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-now-ms-160">now_ms</a>(),
+        listener_kind: &quot;unix&quot;,
+        peer_addr: <span class="rs-type">None</span>,
+        local_addr: <span class="rs-type">None</span>,
+        is_tcp: <span class="rs-kw">false</span>,
+        request_bytes: 96,
+        read_duration_us: 8,
+        auth_required: <span class="rs-kw">false</span>,
+        auth_ok: <span class="rs-kw">true</span>,
+        protocol_version: <span class="rs-type">Some</span>(1),
+    };
+    <span class="rs-kw">let</span> response = <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-build-rs.html#item-fn-attach-request-sidecar-with-events-28">attach_request_sidecar_with_events</a>(
+        json!({&quot;success&quot;: <span class="rs-kw">true</span>}),
+        <span class="rs-type">Some</span>(&amp;trace),
+        &quot;sandbox.command.exec&quot;,
+        &amp;facts,
+        &amp;[
+            <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#method-operation-43">operation</a>(
+                &quot;command&quot;,
+                &quot;spawned&quot;,
+                json!({
+                    &quot;command_id&quot;: &quot;cmd-span&quot;,
+                    &quot;success&quot;: <span class="rs-kw">true</span>,
+                    &quot;duration_ms&quot;: 3,
+                }),
+            ),
+            <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#method-operation-43">operation</a>(
+                &quot;command&quot;,
+                &quot;wait_finished&quot;,
+                json!({
+                    &quot;command_id&quot;: &quot;cmd-span&quot;,
+                    &quot;status&quot;: &quot;ok&quot;,
+                    &quot;completed&quot;: <span class="rs-kw">true</span>,
+                    &quot;yield_time_ms&quot;: 100,
+                    &quot;duration_ms&quot;: 7,
+                }),
+            ),
+            <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#method-operation-43">operation</a>(
+                &quot;resource&quot;,
+                &quot;resource_stats&quot;,
+                json!({
+                    &quot;meta&quot;: {
+                        &quot;stats_kind&quot;: &quot;cgroup_process&quot;,
+                        &quot;phase&quot;: &quot;after&quot;,
+                        &quot;source&quot;: &quot;command.process.wait&quot;,
+                        &quot;source_available&quot;: <span class="rs-kw">true</span>,
+                        &quot;sampler_duration_us&quot;: 17,
+                        &quot;inflight_requests&quot;: 2,
+                    },
+                    &quot;cgroup&quot;: {
+                        &quot;source_available&quot;: <span class="rs-kw">true</span>,
+                        &quot;cpu&quot;: {&quot;usage_usec&quot;: 42},
+                    },
+                    &quot;process&quot;: {
+                        &quot;source_available&quot;: <span class="rs-kw">true</span>,
+                        &quot;gauges&quot;: {&quot;rss_bytes&quot;: 4096},
+                    },
+                }),
+            ),
+            <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#method-operation-43">operation</a>(
+                &quot;resource&quot;,
+                &quot;resource_stats&quot;,
+                json!({
+                    &quot;meta&quot;: {
+                        &quot;stats_kind&quot;: &quot;tree&quot;,
+                        &quot;phase&quot;: &quot;after&quot;,
+                        &quot;source&quot;: &quot;resource.command_exec.upperdir&quot;,
+                        &quot;source_available&quot;: <span class="rs-kw">true</span>,
+                        &quot;sampler_duration_us&quot;: 0,
+                        &quot;inflight_requests&quot;: 2,
+                    },
+                    &quot;tree&quot;: {
+                        &quot;bytes&quot;: 4096,
+                        &quot;file_count&quot;: 1,
+                        &quot;truncated&quot;: 1,
+                    },
+                }),
+            ),
+            <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#method-operation-43">operation</a>(
+                &quot;resource&quot;,
+                &quot;resource_stats&quot;,
+                json!({
+                    &quot;meta&quot;: {
+                        &quot;stats_kind&quot;: &quot;host&quot;,
+                        &quot;phase&quot;: &quot;after&quot;,
+                        &quot;source&quot;: &quot;daemon.process&quot;,
+                        &quot;source_available&quot;: <span class="rs-kw">true</span>,
+                        &quot;sampler_duration_us&quot;: 0,
+                        &quot;inflight_requests&quot;: 2,
+                    },
+                    &quot;host&quot;: {
+                        &quot;process&quot;: {
+                            &quot;rss_bytes&quot;: 4096,
+                            &quot;max_rss_bytes&quot;: 8192,
+                        },
+                    },
+                }),
+            ),
+        ],
+    );
+
+    <span class="rs-kw">let</span> batch = decode_trace_batch(&amp;<a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-transport-failure-rs.html#item-fn-trace-sidecar-bytes-54">trace_sidecar_bytes</a>(&amp;response).expect(&quot;trace sidecar bytes&quot;))
+        .expect(&quot;trace batch decodes&quot;);
+    <span class="rs-kw">let</span> record = batch.records.first().expect(&quot;request trace record&quot;);
+    <span class="rs-kw">let</span> spawn_span = record
+        .spans
+        .iter()
+        .find(|span| span.kind == <span class="rs-type">SpanKind</span>::<span class="rs-type">CommandProcessSpawn</span>)
+        .expect(&quot;command process spawn span&quot;);
+    assert_eq!(spawn_span.span_id, <span class="rs-type">COMMAND_PROCESS_SPAWN_SPAN_ID</span>);
+    assert_eq!(spawn_span.duration_us, 3_000);
+    <span class="rs-kw">let</span> wait_span = record
+        .spans
+        .iter()
+        .find(|span| span.kind == <span class="rs-type">SpanKind</span>::<span class="rs-type">CommandProcessWait</span>)
+        .expect(&quot;command process wait span&quot;);
+    assert_eq!(wait_span.span_id, <span class="rs-type">COMMAND_PROCESS_WAIT_SPAN_ID</span>);
+    assert_eq!(wait_span.duration_us, 7_000);
+    assert_eq!(record.resources.len(), 3);
+    <span class="rs-kw">let</span> resource = record
+        .resources
+        .iter()
+        .find(|resource| resource.meta.stats_kind == <span class="rs-type">ResourceStatsKind</span>::<span class="rs-type">CgroupProcess</span>)
+        .expect(&quot;cgroup resource stats&quot;);
+    assert_eq!(resource.span_id, <span class="rs-type">Some</span>(<span class="rs-type">COMMAND_PROCESS_WAIT_SPAN_ID</span>));
+    assert_eq!(resource.meta.stats_kind, <span class="rs-type">ResourceStatsKind</span>::<span class="rs-type">CgroupProcess</span>);
+    assert_eq!(resource.meta.phase.as_deref(), <span class="rs-type">Some</span>(&quot;after&quot;));
+    assert_eq!(resource.meta.source, &quot;command.process.wait&quot;);
+    assert!(resource.meta.source_available);
+    assert_eq!(resource.meta.sampler_duration_us, 17);
+    assert_eq!(resource.meta.inflight_requests, 2);
+    assert_eq!(resource.payload.value[&quot;cgroup&quot;][&quot;cpu&quot;][&quot;usage_usec&quot;], 42);
+    assert_eq!(
+        resource.payload.value[&quot;process&quot;][&quot;gauges&quot;][&quot;rss_bytes&quot;],
+        4096
+    );
+    assert!(resource.payload.value.get(&quot;meta&quot;).is_none());
+    <span class="rs-kw">let</span> tree = record
+        .resources
+        .iter()
+        .find(|resource| resource.meta.stats_kind == <span class="rs-type">ResourceStatsKind</span>::<span class="rs-type">Tree</span>)
+        .expect(&quot;tree resource stats&quot;);
+    assert_eq!(tree.span_id, <span class="rs-type">Some</span>(<span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(4)));
+    assert_eq!(tree.meta.source, &quot;resource.command_exec.upperdir&quot;);
+    assert_eq!(tree.payload.value[&quot;tree&quot;][&quot;bytes&quot;], 4096);
+    assert_eq!(tree.payload.value[&quot;tree&quot;][&quot;truncated&quot;], 1);
+    <span class="rs-kw">let</span> host = record
+        .resources
+        .iter()
+        .find(|resource| resource.meta.stats_kind == <span class="rs-type">ResourceStatsKind</span>::<span class="rs-type">Host</span>)
+        .expect(&quot;host resource stats&quot;);
+    assert_eq!(host.meta.source, &quot;daemon.process&quot;);
+    assert_eq!(host.payload.value[&quot;host&quot;][&quot;process&quot;][&quot;rss_bytes&quot;], 4096);
+    assert_eq!(host.payload.value[&quot;host&quot;][&quot;process&quot;][&quot;max_rss_bytes&quot;], 8192);
+    assert!(
+        record.events.iter().any(|event| event.module == &quot;resource&quot;
+            &amp;&amp; event.name == &quot;resource_stats&quot;
+            &amp;&amp; event.span_id == <span class="rs-type">COMMAND_PROCESS_WAIT_SPAN_ID</span>),
+        &quot;resource_stats event remains queryable <span class="rs-kw">as</span> an event&quot;
+    );
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/trace/sidecar/tests.rs:316</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/daemon/src/trace/sidecar/tests.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> base64::<span class="rs-type">Engine</span> <span class="rs-kw">as</span> _;
+<span class="rs-kw">use</span> operation::control::contract::{<span class="rs-type">TraceExportAckInput</span>, <span class="rs-type">TraceExportInput</span>};
+<span class="rs-kw">use</span> serde_json::json;
+<span class="rs-kw">use</span> trace::{
+    decode_trace_batch, <span class="rs-type">DetailBudget</span>, <span class="rs-type">EventRecord</span>, <span class="rs-type">ResourceStatsKind</span>, <span class="rs-type">SpanKind</span>, <span class="rs-type">SpanUid</span>, <span class="rs-type">TraceId</span>,
+    <span class="rs-type">TraceRecord</span>, <span class="rs-type">TRACE_SIDECAR_ENCODING</span>, <span class="rs-type">TRACE_SIDECAR_FIELD</span>, <span class="rs-type">TRACE_SIDECAR_SCHEMA</span>,
+};
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::build::{attach_request_sidecar, attach_request_sidecar_with_events};
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::events::{<span class="rs-type">COMMAND_PROCESS_SPAWN_SPAN_ID</span>, <span class="rs-type">COMMAND_PROCESS_WAIT_SPAN_ID</span>};
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::transport_failure::{push_transport_failure_from_sidecar, trace_sidecar_bytes};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::trace::{now_ms, push_background_record, <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>, <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceFacts-19">RequestTraceFacts</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::wire::<a class="symbol-link rs-type" href="daemon--src-wire-message-rs.html#item-struct-RequestTraceContext-40">RequestTraceContext</a>;
+
+#[test]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-tests-rs.html#item-fn-trace-export-drains-background-spool-as-protobuf-batch-15">trace_export_drains_background_spool_as_protobuf_batch</a>() {
+    <span class="rs-kw">let</span> trace_id = <span class="rs-type">TraceId</span>::parse(&quot;trace-export-test&quot;).expect(&quot;trace id&quot;);
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> record = <span class="rs-type">TraceRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(trace_id.clone(), <span class="rs-type">SpanUid</span>::<span class="rs-type">ROOT</span>);
+    record.events.<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#method-push-63">push</a>(<span class="rs-type">EventRecord</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+        <span class="rs-type">SpanUid</span>::<span class="rs-type">ROOT</span>,
+        &quot;background_finished&quot;,
+        &quot;daemon.background&quot;,
+        json!({&quot;kind&quot;: &quot;unit&quot;}),
+    ));
+    <a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-push-background-record-86">push_background_record</a>(record);
+
+    <span class="rs-kw">let</span> response =
+        <span class="rs-kw">crate</span>::op_adapter::control::<a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-op-trace-export-111">op_trace_export</a>(<span class="rs-type">TraceExportInput</span> { max_records: 16 });
+    assert_eq!(response[&quot;success&quot;], <span class="rs-kw">true</span>);
+    assert_eq!(response[&quot;record_count&quot;], 1);
+    assert_eq!(response[&quot;spool_pending_after&quot;], 1);
+    <span class="rs-kw">let</span> export_id = response[&quot;export_id&quot;]
+        .as_str()
+        .expect(&quot;export id&quot;)
+        .to_owned();
+    <span class="rs-kw">let</span> batch_sha256 = response[&quot;batch_sha256&quot;]
+        .as_str()
+        .expect(&quot;batch sha&quot;)
+        .to_owned();
+    <span class="rs-kw">let</span> encoded = response[&quot;trace_batch_base64&quot;]
+        .as_str()
+        .expect(&quot;trace batch&quot;);
+    <span class="rs-kw">let</span> batch = decode_trace_batch(
+        &amp;base64::engine::general_purpose::<span class="rs-type">STANDARD</span>
+            .<a class="symbol-link rs-fn" href="daemon--src-wire-message-rs.html#item-fn-decode-88">decode</a>(encoded)
+            .expect(&quot;base64&quot;),
+    )
+    .expect(&quot;trace batch decodes&quot;);
+    assert_eq!(batch.records.len(), 1);
+    assert_eq!(batch.records[0].trace_id, trace_id);
+
+    <span class="rs-kw">let</span> replay = <span class="rs-kw">crate</span>::op_adapter::control::<a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-op-trace-export-111">op_trace_export</a>(<span class="rs-type">TraceExportInput</span> { max_records: 16 });
+    assert_eq!(replay[&quot;export_id&quot;], export_id);
+    assert_eq!(replay[&quot;batch_sha256&quot;], batch_sha256);
+
+    <span class="rs-kw">let</span> ack = <span class="rs-kw">crate</span>::op_adapter::control::<a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-op-trace-export-ack-118">op_trace_export_ack</a>(<span class="rs-type">TraceExportAckInput</span> {
+        export_id,
+        batch_sha256,
+        record_count: 1,
+    });
+    assert_eq!(ack[&quot;acked&quot;], <span class="rs-kw">true</span>);
+
+    <span class="rs-kw">let</span> trace = <a class="symbol-link rs-type" href="daemon--src-wire-message-rs.html#item-struct-RequestTraceContext-40">RequestTraceContext</a> {
+        trace_id: &quot;trace-write-failed&quot;.to_owned(),
+        request_id: &quot;request-write-failed&quot;.to_owned(),
+        parent_span_id: <span class="rs-type">None</span>,
+        link_hints: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(),
+        capture_budget_version: 1,
+    };
+    <span class="rs-kw">let</span> facts = <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceFacts-19">RequestTraceFacts</a> {
+        connection_id: &quot;daemon-conn-write-failed&quot;.to_owned(),
+        accepted_at_unix_ms: <a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-now-ms-160">now_ms</a>(),
+        listener_kind: &quot;tcp&quot;,
+        peer_addr: <span class="rs-type">Some</span>(&quot;127.0.0.1:51000&quot;.to_owned()),
+        local_addr: <span class="rs-type">Some</span>(&quot;127.0.0.1:50000&quot;.to_owned()),
+        is_tcp: <span class="rs-kw">true</span>,
+        request_bytes: 16,
+        read_duration_us: 10,
+        auth_required: <span class="rs-kw">true</span>,
+        auth_ok: <span class="rs-kw">true</span>,
+        protocol_version: <span class="rs-type">Some</span>(1),
+    };
+    <span class="rs-kw">let</span> response = <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-build-rs.html#item-fn-attach-request-sidecar-19">attach_request_sidecar</a>(
+        json!({&quot;success&quot;: <span class="rs-kw">true</span>}),
+        <span class="rs-type">Some</span>(&amp;trace),
+        &quot;sandbox.runtime.ready&quot;,
+        &amp;facts,
+    );
+    <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-transport-failure-rs.html#item-fn-push-transport-failure-from-sidecar-10">push_transport_failure_from_sidecar</a>(
+        &amp;response,
+        &quot;response_write_failed&quot;,
+        &amp;std::io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(std::io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">BrokenPipe</span>, &quot;peer closed&quot;),
+    );
+    <span class="rs-kw">let</span> response =
+        <span class="rs-kw">crate</span>::op_adapter::control::<a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-op-trace-export-111">op_trace_export</a>(<span class="rs-type">TraceExportInput</span> { max_records: 16 });
+    assert_eq!(response[&quot;record_count&quot;], 1);
+    <span class="rs-kw">let</span> encoded = response[&quot;trace_batch_base64&quot;]
+        .as_str()
+        .expect(&quot;trace batch&quot;);
+    <span class="rs-kw">let</span> batch = decode_trace_batch(
+        &amp;base64::engine::general_purpose::<span class="rs-type">STANDARD</span>
+            .<a class="symbol-link rs-fn" href="daemon--src-wire-message-rs.html#item-fn-decode-88">decode</a>(encoded)
+            .expect(&quot;base64&quot;),
+    )
+    .expect(&quot;trace batch decodes&quot;);
+    <span class="rs-kw">let</span> record = batch.records.first().expect(&quot;failure record&quot;);
+    assert_eq!(record.trace_id.as_str(), &quot;trace-write-failed&quot;);
+    assert_eq!(
+        record
+            .events
+            .first()
+            .map(|event| (event.module.as_str(), event.name.as_str())),
+        <span class="rs-type">Some</span>((&quot;daemon.transport&quot;, &quot;response_write_failed&quot;))
+    );
+    <span class="rs-kw">let</span> ack = <span class="rs-kw">crate</span>::op_adapter::control::<a class="symbol-link rs-fn" href="daemon--src-op-adapter-control-rs.html#item-fn-op-trace-export-ack-118">op_trace_export_ack</a>(<span class="rs-type">TraceExportAckInput</span> {
+        export_id: response[&quot;export_id&quot;]
+            .as_str()
+            .expect(&quot;export id&quot;)
+            .to_owned(),
+        batch_sha256: response[&quot;batch_sha256&quot;]
+            .as_str()
+            .expect(&quot;batch sha&quot;)
+            .to_owned(),
+        record_count: 1,
+    });
+    assert_eq!(ack[&quot;acked&quot;], <span class="rs-kw">true</span>);
+}
+
+#[test]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-tests-rs.html#item-fn-request-sidecar-drops-children-when-over-budget-129">request_sidecar_drops_children_when_over_budget</a>() {
+    <span class="rs-kw">let</span> trace = <a class="symbol-link rs-type" href="daemon--src-wire-message-rs.html#item-struct-RequestTraceContext-40">RequestTraceContext</a> {
+        trace_id: &quot;trace-budget&quot;.to_owned(),
+        request_id: &quot;request-budget&quot;.to_owned(),
+        parent_span_id: <span class="rs-type">None</span>,
+        link_hints: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(),
+        capture_budget_version: 1,
+    };
+    <span class="rs-kw">let</span> facts = <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceFacts-19">RequestTraceFacts</a> {
+        connection_id: &quot;daemon-conn-budget&quot;.to_owned(),
+        accepted_at_unix_ms: <a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-now-ms-160">now_ms</a>(),
+        listener_kind: &quot;unix&quot;,
+        peer_addr: <span class="rs-type">None</span>,
+        local_addr: <span class="rs-type">None</span>,
+        is_tcp: <span class="rs-kw">false</span>,
+        request_bytes: 64,
+        read_duration_us: 5,
+        auth_required: <span class="rs-kw">false</span>,
+        auth_ok: <span class="rs-kw">true</span>,
+        protocol_version: <span class="rs-type">Some</span>(1),
+    };
+    <span class="rs-kw">let</span> oversize: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>&gt; = (0..200)
+        .map(|index| {
+            <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#method-operation-43">operation</a>(
+                &quot;command&quot;,
+                &quot;stdin_written&quot;,
+                json!({&quot;index&quot;: index, &quot;padding&quot;: &quot;x&quot;.repeat(500)}),
+            )
+        })
+        .collect();
+    <span class="rs-kw">let</span> response = <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-build-rs.html#item-fn-attach-request-sidecar-with-events-28">attach_request_sidecar_with_events</a>(
+        json!({&quot;success&quot;: <span class="rs-kw">true</span>}),
+        <span class="rs-type">Some</span>(&amp;trace),
+        &quot;sandbox.command.exec&quot;,
+        &amp;facts,
+        &amp;oversize,
+    );
+    <span class="rs-kw">let</span> batch = decode_trace_batch(&amp;<a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-transport-failure-rs.html#item-fn-trace-sidecar-bytes-54">trace_sidecar_bytes</a>(&amp;response).expect(&quot;trace sidecar bytes&quot;))
+        .expect(&quot;trace batch decodes&quot;);
+    <span class="rs-kw">let</span> record = batch.records.first().expect(&quot;request trace record&quot;);
+    assert!(record.truncated, &quot;oversize record is marked truncated&quot;);
+    assert!(
+        record.dropped_children &gt; 0,
+        &quot;dropped children are counted, not silent&quot;
+    );
+    assert!(
+        trace::codec::encoded_trace_record_len(record) &lt;= <span class="rs-type">DetailBudget</span>::<span class="rs-type">SidecarRecord</span>.bytes(),
+        &quot;record fits the 64 <span class="rs-type">KiB</span> sidecar budget after enforcement&quot;
+    );
+    assert!(
+        record
+            .events
+            .iter()
+            .any(|event| event.module == &quot;daemon.transport&quot;),
+        &quot;transport frame events are never dropped&quot;
+    );
+}
+
+#[test]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-tests-rs.html#item-fn-request-sidecar-merges-subsystem-events-188">request_sidecar_merges_subsystem_events</a>() {
+    <span class="rs-kw">let</span> trace = <a class="symbol-link rs-type" href="daemon--src-wire-message-rs.html#item-struct-RequestTraceContext-40">RequestTraceContext</a> {
+        trace_id: &quot;trace-checkpoint-events&quot;.to_owned(),
+        request_id: &quot;request-checkpoint-events&quot;.to_owned(),
+        parent_span_id: <span class="rs-type">None</span>,
+        link_hints: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(),
+        capture_budget_version: 1,
+    };
+    <span class="rs-kw">let</span> facts = <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceFacts-19">RequestTraceFacts</a> {
+        connection_id: &quot;daemon-conn-checkpoint-events&quot;.to_owned(),
+        accepted_at_unix_ms: <a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-now-ms-160">now_ms</a>(),
+        listener_kind: &quot;unix&quot;,
+        peer_addr: <span class="rs-type">None</span>,
+        local_addr: <span class="rs-type">None</span>,
+        is_tcp: <span class="rs-kw">false</span>,
+        request_bytes: 128,
+        read_duration_us: 12,
+        auth_required: <span class="rs-kw">false</span>,
+        auth_ok: <span class="rs-kw">true</span>,
+        protocol_version: <span class="rs-type">Some</span>(1),
+    };
+    <span class="rs-kw">let</span> response = <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-build-rs.html#item-fn-attach-request-sidecar-with-events-28">attach_request_sidecar_with_events</a>(
+        json!({&quot;success&quot;: <span class="rs-kw">true</span>}),
+        <span class="rs-type">Some</span>(&amp;trace),
+        &quot;sandbox.checkpoint.commit_to_git&quot;,
+        &amp;facts,
+        &amp;[
+            <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#method-operation-43">operation</a>(
+                &quot;checkpoint&quot;,
+                &quot;git_command_finished&quot;,
+                json!({&quot;argv_summary&quot;: &quot;git add -<span class="rs-type">A</span> -- &lt;paths&gt;&quot;, &quot;exit_code&quot;: 0, &quot;stderr_tail&quot;: &quot;&quot;}),
+            ),
+            <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#method-operation-43">operation</a>(
+                &quot;workspace.route&quot;,
+                &quot;route_selected&quot;,
+                json!({&quot;kind&quot;: &quot;fast_path&quot;, &quot;reason&quot;: &quot;unit&quot;}),
+            ),
+        ],
+    );
+    <span class="rs-kw">let</span> batch = decode_trace_batch(&amp;<a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-transport-failure-rs.html#item-fn-trace-sidecar-bytes-54">trace_sidecar_bytes</a>(&amp;response).expect(&quot;trace sidecar bytes&quot;))
+        .expect(&quot;trace batch decodes&quot;);
+    <span class="rs-kw">let</span> record = batch.records.first().expect(&quot;request trace record&quot;);
+
+    assert!(
+        record
+            .events
+            .iter()
+            .any(|event| event.module == &quot;checkpoint&quot;
+                &amp;&amp; event.name == &quot;git_command_finished&quot;
+                &amp;&amp; event.details.value[&quot;argv_summary&quot;] == &quot;git add -<span class="rs-type">A</span> -- &lt;paths&gt;&quot;
+                &amp;&amp; event.span_id == <span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(4)),
+        &quot;checkpoint event merged into operation span&quot;
+    );
+    <span class="rs-kw">let</span> route_events: <span class="rs-type">Vec</span>&lt;_&gt; = record
+        .events
+        .iter()
+        .filter(|event| event.module == &quot;workspace.route&quot; &amp;&amp; event.name == &quot;route_selected&quot;)
+        .collect();
+    assert_eq!(route_events.len(), 1, &quot;real route suppresses fallback&quot;);
+    assert_eq!(route_events[0].details.value[&quot;kind&quot;], &quot;fast_path&quot;);
+}
+
+#[test]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-tests-rs.html#item-fn-request-sidecar-stamps-envelope-meta-from-trace-record-251">request_sidecar_stamps_envelope_meta_from_trace_record</a>() {
+    <span class="rs-kw">let</span> trace = <a class="symbol-link rs-type" href="daemon--src-wire-message-rs.html#item-struct-RequestTraceContext-40">RequestTraceContext</a> {
+        trace_id: &quot;trace-envelope-meta&quot;.to_owned(),
+        request_id: &quot;request-envelope-meta&quot;.to_owned(),
+        parent_span_id: <span class="rs-type">None</span>,
+        link_hints: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(),
+        capture_budget_version: 1,
+    };
+    <span class="rs-kw">let</span> facts = <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceFacts-19">RequestTraceFacts</a> {
+        connection_id: &quot;daemon-conn-envelope-meta&quot;.to_owned(),
+        accepted_at_unix_ms: <a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-now-ms-160">now_ms</a>(),
+        listener_kind: &quot;tcp&quot;,
+        peer_addr: <span class="rs-type">Some</span>(&quot;127.0.0.1:51000&quot;.to_owned()),
+        local_addr: <span class="rs-type">Some</span>(&quot;127.0.0.1:50000&quot;.to_owned()),
+        is_tcp: <span class="rs-kw">true</span>,
+        request_bytes: 128,
+        read_duration_us: 9,
+        auth_required: <span class="rs-kw">true</span>,
+        auth_ok: <span class="rs-kw">true</span>,
+        protocol_version: <span class="rs-type">Some</span>(1),
+    };
+    <span class="rs-kw">let</span> response = <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-build-rs.html#item-fn-attach-request-sidecar-with-events-28">attach_request_sidecar_with_events</a>(
+        json!({&quot;status&quot;: &quot;ok&quot;, &quot;result&quot;: {&quot;published&quot;: <span class="rs-kw">true</span>}, &quot;meta&quot;: {}}),
+        <span class="rs-type">Some</span>(&amp;trace),
+        &quot;sandbox.file.write&quot;,
+        &amp;facts,
+        &amp;[<a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#method-operation-43">operation</a>(
+            &quot;workspace.route&quot;,
+            &quot;route_selected&quot;,
+            json!({&quot;kind&quot;: &quot;fast_path&quot;, &quot;reason&quot;: &quot;unit&quot;}),
+        )],
+    );
+
+    assert_eq!(response[&quot;status&quot;], &quot;ok&quot;);
+    assert_eq!(response[&quot;meta&quot;][&quot;op&quot;], &quot;sandbox.file.write&quot;);
+    assert_eq!(response[&quot;meta&quot;][&quot;request_id&quot;], &quot;request-envelope-meta&quot;);
+    assert_eq!(response[&quot;meta&quot;][&quot;trace&quot;][&quot;trace_id&quot;], &quot;trace-envelope-meta&quot;);
+    assert_eq!(
+        response[&quot;meta&quot;][&quot;trace&quot;][&quot;request_id&quot;],
+        &quot;request-envelope-meta&quot;
+    );
+    assert_eq!(response[&quot;meta&quot;][&quot;trace&quot;][&quot;store&quot;], &quot;pending_host_ingest&quot;);
+    assert!(
+        response[&quot;meta&quot;][&quot;trace&quot;][&quot;event_count&quot;]
+            .as_u64()
+            .is_some_and(|count| count &gt; 0),
+        &quot;{response}&quot;
+    );
+    assert_eq!(response[&quot;meta&quot;][&quot;workspace_route&quot;][&quot;kind&quot;], &quot;fast_path&quot;);
+    assert_eq!(response[&quot;meta&quot;][&quot;workspace_route&quot;][&quot;reason&quot;], &quot;unit&quot;);
+    assert_eq!(
+        response[<span class="rs-type">TRACE_SIDECAR_FIELD</span>][&quot;schema&quot;],
+        <span class="rs-type">TRACE_SIDECAR_SCHEMA</span>
+    );
+    assert_eq!(
+        response[<span class="rs-type">TRACE_SIDECAR_FIELD</span>][&quot;encoding&quot;],
+        <span class="rs-type">TRACE_SIDECAR_ENCODING</span>
+    );
+    assert_eq!(response[<span class="rs-type">TRACE_SIDECAR_FIELD</span>][&quot;spool_pending&quot;], <span class="rs-kw">false</span>);
+    assert!(response[<span class="rs-type">TRACE_SIDECAR_FIELD</span>][&quot;data&quot;]
+        .as_str()
+        .is_some_and(|data| !data.is_empty()));
+}
+
+#[test]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-tests-rs.html#item-fn-request-sidecar-promotes-resource-stats-events-316">request_sidecar_promotes_resource_stats_events</a>() {
+    <span class="rs-kw">let</span> trace = <a class="symbol-link rs-type" href="daemon--src-wire-message-rs.html#item-struct-RequestTraceContext-40">RequestTraceContext</a> {
+        trace_id: &quot;trace-resource-events&quot;.to_owned(),
+        request_id: &quot;request-resource-events&quot;.to_owned(),
+        parent_span_id: <span class="rs-type">None</span>,
+        link_hints: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(),
+        capture_budget_version: 1,
+    };
+    <span class="rs-kw">let</span> facts = <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceFacts-19">RequestTraceFacts</a> {
+        connection_id: &quot;daemon-conn-resource-events&quot;.to_owned(),
+        accepted_at_unix_ms: <a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-now-ms-160">now_ms</a>(),
+        listener_kind: &quot;unix&quot;,
+        peer_addr: <span class="rs-type">None</span>,
+        local_addr: <span class="rs-type">None</span>,
+        is_tcp: <span class="rs-kw">false</span>,
+        request_bytes: 96,
+        read_duration_us: 8,
+        auth_required: <span class="rs-kw">false</span>,
+        auth_ok: <span class="rs-kw">true</span>,
+        protocol_version: <span class="rs-type">Some</span>(1),
+    };
+    <span class="rs-kw">let</span> response = <a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-build-rs.html#item-fn-attach-request-sidecar-with-events-28">attach_request_sidecar_with_events</a>(
+        json!({&quot;success&quot;: <span class="rs-kw">true</span>}),
+        <span class="rs-type">Some</span>(&amp;trace),
+        &quot;sandbox.command.exec&quot;,
+        &amp;facts,
+        &amp;[
+            <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#method-operation-43">operation</a>(
+                &quot;command&quot;,
+                &quot;spawned&quot;,
+                json!({
+                    &quot;command_id&quot;: &quot;cmd-span&quot;,
+                    &quot;success&quot;: <span class="rs-kw">true</span>,
+                    &quot;duration_ms&quot;: 3,
+                }),
+            ),
+            <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#method-operation-43">operation</a>(
+                &quot;command&quot;,
+                &quot;wait_finished&quot;,
+                json!({
+                    &quot;command_id&quot;: &quot;cmd-span&quot;,
+                    &quot;status&quot;: &quot;ok&quot;,
+                    &quot;completed&quot;: <span class="rs-kw">true</span>,
+                    &quot;yield_time_ms&quot;: 100,
+                    &quot;duration_ms&quot;: 7,
+                }),
+            ),
+            <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#method-operation-43">operation</a>(
+                &quot;resource&quot;,
+                &quot;resource_stats&quot;,
+                json!({
+                    &quot;meta&quot;: {
+                        &quot;stats_kind&quot;: &quot;cgroup_process&quot;,
+                        &quot;phase&quot;: &quot;after&quot;,
+                        &quot;source&quot;: &quot;command.process.wait&quot;,
+                        &quot;source_available&quot;: <span class="rs-kw">true</span>,
+                        &quot;sampler_duration_us&quot;: 17,
+                        &quot;inflight_requests&quot;: 2,
+                    },
+                    &quot;cgroup&quot;: {
+                        &quot;source_available&quot;: <span class="rs-kw">true</span>,
+                        &quot;cpu&quot;: {&quot;usage_usec&quot;: 42},
+                    },
+                    &quot;process&quot;: {
+                        &quot;source_available&quot;: <span class="rs-kw">true</span>,
+                        &quot;gauges&quot;: {&quot;rss_bytes&quot;: 4096},
+                    },
+                }),
+            ),
+            <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#method-operation-43">operation</a>(
+                &quot;resource&quot;,
+                &quot;resource_stats&quot;,
+                json!({
+                    &quot;meta&quot;: {
+                        &quot;stats_kind&quot;: &quot;tree&quot;,
+                        &quot;phase&quot;: &quot;after&quot;,
+                        &quot;source&quot;: &quot;resource.command_exec.upperdir&quot;,
+                        &quot;source_available&quot;: <span class="rs-kw">true</span>,
+                        &quot;sampler_duration_us&quot;: 0,
+                        &quot;inflight_requests&quot;: 2,
+                    },
+                    &quot;tree&quot;: {
+                        &quot;bytes&quot;: 4096,
+                        &quot;file_count&quot;: 1,
+                        &quot;truncated&quot;: 1,
+                    },
+                }),
+            ),
+            <a class="symbol-link rs-type" href="daemon--src-trace-spool-rs.html#item-struct-RequestTraceEvent-34">RequestTraceEvent</a>::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#method-operation-43">operation</a>(
+                &quot;resource&quot;,
+                &quot;resource_stats&quot;,
+                json!({
+                    &quot;meta&quot;: {
+                        &quot;stats_kind&quot;: &quot;host&quot;,
+                        &quot;phase&quot;: &quot;after&quot;,
+                        &quot;source&quot;: &quot;daemon.process&quot;,
+                        &quot;source_available&quot;: <span class="rs-kw">true</span>,
+                        &quot;sampler_duration_us&quot;: 0,
+                        &quot;inflight_requests&quot;: 2,
+                    },
+                    &quot;host&quot;: {
+                        &quot;process&quot;: {
+                            &quot;rss_bytes&quot;: 4096,
+                            &quot;max_rss_bytes&quot;: 8192,
+                        },
+                    },
+                }),
+            ),
+        ],
+    );
+
+    <span class="rs-kw">let</span> batch = decode_trace_batch(&amp;<a class="symbol-link rs-fn" href="daemon--src-trace-sidecar-transport-failure-rs.html#item-fn-trace-sidecar-bytes-54">trace_sidecar_bytes</a>(&amp;response).expect(&quot;trace sidecar bytes&quot;))
+        .expect(&quot;trace batch decodes&quot;);
+    <span class="rs-kw">let</span> record = batch.records.first().expect(&quot;request trace record&quot;);
+    <span class="rs-kw">let</span> spawn_span = record
+        .spans
+        .iter()
+        .find(|span| span.kind == <span class="rs-type">SpanKind</span>::<span class="rs-type">CommandProcessSpawn</span>)
+        .expect(&quot;command process spawn span&quot;);
+    assert_eq!(spawn_span.span_id, <span class="rs-type">COMMAND_PROCESS_SPAWN_SPAN_ID</span>);
+    assert_eq!(spawn_span.duration_us, 3_000);
+    <span class="rs-kw">let</span> wait_span = record
+        .spans
+        .iter()
+        .find(|span| span.kind == <span class="rs-type">SpanKind</span>::<span class="rs-type">CommandProcessWait</span>)
+        .expect(&quot;command process wait span&quot;);
+    assert_eq!(wait_span.span_id, <span class="rs-type">COMMAND_PROCESS_WAIT_SPAN_ID</span>);
+    assert_eq!(wait_span.duration_us, 7_000);
+    assert_eq!(record.resources.len(), 3);
+    <span class="rs-kw">let</span> resource = record
+        .resources
+        .iter()
+        .find(|resource| resource.meta.stats_kind == <span class="rs-type">ResourceStatsKind</span>::<span class="rs-type">CgroupProcess</span>)
+        .expect(&quot;cgroup resource stats&quot;);
+    assert_eq!(resource.span_id, <span class="rs-type">Some</span>(<span class="rs-type">COMMAND_PROCESS_WAIT_SPAN_ID</span>));
+    assert_eq!(resource.meta.stats_kind, <span class="rs-type">ResourceStatsKind</span>::<span class="rs-type">CgroupProcess</span>);
+    assert_eq!(resource.meta.phase.as_deref(), <span class="rs-type">Some</span>(&quot;after&quot;));
+    assert_eq!(resource.meta.source, &quot;command.process.wait&quot;);
+    assert!(resource.meta.source_available);
+    assert_eq!(resource.meta.sampler_duration_us, 17);
+    assert_eq!(resource.meta.inflight_requests, 2);
+    assert_eq!(resource.payload.value[&quot;cgroup&quot;][&quot;cpu&quot;][&quot;usage_usec&quot;], 42);
+    assert_eq!(
+        resource.payload.value[&quot;process&quot;][&quot;gauges&quot;][&quot;rss_bytes&quot;],
+        4096
+    );
+    assert!(resource.payload.value.get(&quot;meta&quot;).is_none());
+    <span class="rs-kw">let</span> tree = record
+        .resources
+        .iter()
+        .find(|resource| resource.meta.stats_kind == <span class="rs-type">ResourceStatsKind</span>::<span class="rs-type">Tree</span>)
+        .expect(&quot;tree resource stats&quot;);
+    assert_eq!(tree.span_id, <span class="rs-type">Some</span>(<span class="rs-type">SpanUid</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(4)));
+    assert_eq!(tree.meta.source, &quot;resource.command_exec.upperdir&quot;);
+    assert_eq!(tree.payload.value[&quot;tree&quot;][&quot;bytes&quot;], 4096);
+    assert_eq!(tree.payload.value[&quot;tree&quot;][&quot;truncated&quot;], 1);
+    <span class="rs-kw">let</span> host = record
+        .resources
+        .iter()
+        .find(|resource| resource.meta.stats_kind == <span class="rs-type">ResourceStatsKind</span>::<span class="rs-type">Host</span>)
+        .expect(&quot;host resource stats&quot;);
+    assert_eq!(host.meta.source, &quot;daemon.process&quot;);
+    assert_eq!(host.payload.value[&quot;host&quot;][&quot;process&quot;][&quot;rss_bytes&quot;], 4096);
+    assert_eq!(host.payload.value[&quot;host&quot;][&quot;process&quot;][&quot;max_rss_bytes&quot;], 8192);
+    assert!(
+        record.events.iter().any(|event| event.module == &quot;resource&quot;
+            &amp;&amp; event.name == &quot;resource_stats&quot;
+            &amp;&amp; event.span_id == <span class="rs-type">COMMAND_PROCESS_WAIT_SPAN_ID</span>),
+        &quot;resource_stats event remains queryable <span class="rs-kw">as</span> an event&quot;
+    );
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

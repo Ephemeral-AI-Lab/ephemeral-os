@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>daemon · src/runtime/services.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>38</b><span>modules</span></div>
+  <div><b>277</b><span>items</span></div>
+  <div><b>142</b><span>fields</span></div>
+  <div><b>74</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">dispatch</span><ul class="file-tree"><li><a class="file-link" href="daemon.html"><span>builtin.rs</span><small>0/5</small></a></li><li><a class="file-link" href="daemon--src-dispatch-dispatcher-rs.html"><span>dispatcher.rs</span><small>0/5</small></a></li><li><a class="file-link" href="daemon--src-dispatch-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="daemon--src-lib-rs.html"><span>lib.rs</span><small>0/1</small></a></li><li><span class="folder">op_adapter</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-op-adapter-checkpoint-rs.html"><span>checkpoint.rs</span><small>0/13</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-command-rs.html"><span>command.rs</span><small>2/17</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-control-rs.html"><span>control.rs</span><small>0/11</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-files-rs.html"><span>files.rs</span><small>4/19</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-isolation-rs.html"><span>isolation.rs</span><small>0/23</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-mod-rs.html"><span>mod.rs</span><small>0/12</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-plugin-rs.html"><span>plugin.rs</span><small>1/17</small></a></li><li><a class="file-link" href="daemon--src-op-adapter-workspace-run-rs.html"><span>workspace_run.rs</span><small>0/2</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-runtime-context-rs.html"><span>context.rs</span><small>1/0</small></a></li><li><a class="file-link" href="daemon--src-runtime-error-rs.html"><span>error.rs</span><small>1/1</small></a></li><li><a class="file-link" href="daemon--src-runtime-invocation-registry-rs.html"><span>invocation_registry.rs</span><small>4/2</small></a></li><li><a class="file-link" href="daemon--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="daemon--src-runtime-response-rs.html"><span>response.rs</span><small>2/11</small></a></li><li><a class="file-link active" href="daemon--src-runtime-services-rs.html"><span>services.rs</span><small>1/3</small></a></li><li><a class="file-link" href="daemon--src-runtime-workspace-rs.html"><span>workspace.rs</span><small>10/5</small></a></li></ul></li><li><span class="folder">trace</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-trace-envelope-meta-rs.html"><span>envelope_meta.rs</span><small>0/6</small></a></li><li><a class="file-link" href="daemon--src-trace-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="daemon--src-trace-plugin-trace-rs.html"><span>plugin_trace.rs</span><small>0/21</small></a></li><li><span class="folder">sidecar</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-trace-sidecar-budget-rs.html"><span>budget.rs</span><small>0/1</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-build-rs.html"><span>build.rs</span><small>0/2</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-events-rs.html"><span>events.rs</span><small>0/7</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-resources-rs.html"><span>resources.rs</span><small>0/4</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-tests-rs.html"><span>tests.rs</span><small>0/5</small></a></li><li><a class="file-link" href="daemon--src-trace-sidecar-transport-failure-rs.html"><span>transport_failure.rs</span><small>0/2</small></a></li></ul></li><li><a class="file-link" href="daemon--src-trace-sidecar-rs.html"><span>sidecar.rs</span><small>0/0</small></a></li><li><a class="file-link" href="daemon--src-trace-spool-rs.html"><span>spool.rs</span><small>3/9</small></a></li></ul></li><li><span class="folder">transport</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-transport-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">server</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-transport-server-connection-rs.html"><span>connection.rs</span><small>0/3</small></a></li><li><a class="file-link" href="daemon--src-transport-server-dispatch-rs.html"><span>dispatch.rs</span><small>0/6</small></a></li><li><a class="file-link" href="daemon--src-transport-server-lifecycle-rs.html"><span>lifecycle.rs</span><small>0/2</small></a></li><li><a class="file-link" href="daemon--src-transport-server-trace-context-rs.html"><span>trace_context.rs</span><small>1/3</small></a></li></ul></li><li><a class="file-link" href="daemon--src-transport-server-rs.html"><span>server.rs</span><small>2/0</small></a></li></ul></li><li><span class="folder">wire</span><ul class="file-tree"><li><a class="file-link" href="daemon--src-wire-message-rs.html"><span>message.rs</span><small>5/3</small></a></li><li><a class="file-link" href="daemon--src-wire-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="runtime::services crates/daemon/src/runtime/services.rs evict_idle_workspaces_once advance_active_commands_once recover_orphaned_commands RuntimeServices impl RuntimeServices">
+  <div class="module-head">
+    <div>
+      <h2>src/runtime/services.rs</h2>
+      <p class="path">module <code>runtime::services</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>1 impls</span>
+      <span>3 fns</span>
+      <span>4 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-RuntimeServices-45" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct RuntimeServices pub pub struct RuntimeServices crates/daemon/src/runtime/services.rs command Arc &lt; CommandOps &gt; commit_options CommitOptions plugin PluginRuntime workspace WorkspaceRuntime ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>RuntimeServices</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="daemon--src-runtime-services-rs.html#item-struct-RuntimeServices-45">RuntimeServices</a></code>
+  <p class="docstring">Runtime service instances shared by daemon dispatch handlers.</p>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>command</td><td><code>Arc &lt; CommandOps &gt;</code></td></tr><tr><td>pub</td><td>commit_options</td><td><code>CommitOptions</code></td></tr><tr><td>pub</td><td>plugin</td><td><code>PluginRuntime</code></td></tr><tr><td>pub</td><td>workspace</td><td><code><a class="symbol-link" href="daemon--src-runtime-workspace-rs.html#item-struct-WorkspaceRuntime-191">WorkspaceRuntime</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-54"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a> (plugin : PluginRuntimeConfig , isolated_workspace : IsolatedWorkspaceConfig , command : CommandConfig , launcher : Arc &lt; dyn workspace :: NsRunnerLauncher &gt; ,) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+        plugin: <span class="rs-type">PluginRuntimeConfig</span>,
+        isolated_workspace: <span class="rs-type">IsolatedWorkspaceConfig</span>,
+        command: <span class="rs-type">CommandConfig</span>,
+        launcher: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> workspace::<span class="rs-type">NsRunnerLauncher</span>&gt;,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#method-with-commit-options-70">with_commit_options</a>(
+            plugin,
+            isolated_workspace,
+            command,
+            launcher,
+            <span class="rs-type">CommitOptions</span>::default(),
+        )
+    }
+</code></pre>
+</details></td></tr><tr id="method-with-commit-options-70"><td>constructor</td><td>with_commit_options</td><td><code>pub fn <a class="symbol-link" href="daemon--src-runtime-services-rs.html#method-with-commit-options-70">with_commit_options</a> (plugin : PluginRuntimeConfig , isolated_workspace : IsolatedWorkspaceConfig , command : CommandConfig , launcher : Arc &lt; dyn workspace :: NsRunnerLauncher &gt; , commit_options : CommitOptions ,) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#method-with-commit-options-70">with_commit_options</a>(
+        plugin: <span class="rs-type">PluginRuntimeConfig</span>,
+        isolated_workspace: <span class="rs-type">IsolatedWorkspaceConfig</span>,
+        command: <span class="rs-type">CommandConfig</span>,
+        launcher: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> workspace::<span class="rs-type">NsRunnerLauncher</span>&gt;,
+        commit_options: <span class="rs-type">CommitOptions</span>,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">let</span> command = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(<span class="rs-type">CommandOps</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#method-with-commit-options-70">with_commit_options</a>(command, commit_options));
+        <span class="rs-self">Self</span> {
+            command: <span class="rs-type">Arc</span>::clone(&amp;command),
+            commit_options,
+            plugin: <span class="rs-type">PluginRuntime</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#method-with-commit-options-70">with_commit_options</a>(plugin, launcher, commit_options),
+            workspace: <a class="symbol-link rs-type" href="daemon--src-runtime-workspace-rs.html#item-struct-WorkspaceRuntime-191">WorkspaceRuntime</a>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(isolated_workspace, command),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-ensure-plugin-family-allowed-87"><td>method</td><td>ensure_plugin_family_allowed</td><td><code>pub fn <a class="symbol-link" href="daemon--src-runtime-services-rs.html#method-ensure-plugin-family-allowed-87">ensure_plugin_family_allowed</a> (&amp; self , args : &amp; Value) -&gt; Result &lt; () , PluginRuntimeError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#method-ensure-plugin-family-allowed-87">ensure_plugin_family_allowed</a>(&amp;<span class="rs-self">self</span>, args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">PluginRuntimeError</span>&gt; {
+        operation::plugin::ensure::validate_plugin_caller_fields(args)?;
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#method-ensure-plugin-caller-allowed-92">ensure_plugin_caller_allowed</a>(&amp;<span class="rs-type">CallerId</span>::from_wire(args))
+    }
+</code></pre>
+</details></td></tr><tr id="method-ensure-plugin-caller-allowed-92"><td>method</td><td>ensure_plugin_caller_allowed</td><td><code>pub fn <a class="symbol-link" href="daemon--src-runtime-services-rs.html#method-ensure-plugin-caller-allowed-92">ensure_plugin_caller_allowed</a> (&amp; self , caller : &amp; CallerId ,) -&gt; Result &lt; () , PluginRuntimeError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#method-ensure-plugin-caller-allowed-92">ensure_plugin_caller_allowed</a>(
+        &amp;<span class="rs-self">self</span>,
+        caller: &amp;<span class="rs-type">CallerId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">PluginRuntimeError</span>&gt; {
+        <span class="rs-kw">if</span> !caller.as_str().is_empty() &amp;&amp; <span class="rs-self">self</span>.workspace.<a class="symbol-link rs-fn" href="daemon--src-runtime-workspace-rs.html#method-caller-has-active-handle-297">caller_has_active_handle</a>(caller.as_str()) {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">PluginRuntimeError</span>::<span class="rs-type">Plugin</span>(
+                <span class="rs-type">PluginError</span>::<span class="rs-type">ForbiddenInIsolatedWorkspace</span>,
+            ));
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/daemon/src/runtime/services.rs:45</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-evict-idle-workspaces-once-22" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn evict_idle_workspaces_once pub(crate) pub(crate) fn evict_idle_workspaces_once (workspace : &amp; WorkspaceRuntime) -&gt; usize crates/daemon/src/runtime/services.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>evict_idle_workspaces_once</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="daemon--src-runtime-services-rs.html#item-fn-evict-idle-workspaces-once-22">evict_idle_workspaces_once</a> (workspace : &amp; <a class="symbol-link" href="daemon--src-runtime-workspace-rs.html#item-struct-WorkspaceRuntime-191">WorkspaceRuntime</a>) -&gt; usize</code>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#item-fn-evict-idle-workspaces-once-22">evict_idle_workspaces_once</a>(workspace: &amp;<a class="symbol-link rs-type" href="daemon--src-runtime-workspace-rs.html#item-struct-WorkspaceRuntime-191">WorkspaceRuntime</a>) -&gt; usize {
+        <span class="rs-kw">let</span> report = workspace.<a class="symbol-link rs-fn" href="daemon--src-runtime-workspace-rs.html#method-evict-idle-workspaces-report-361">evict_idle_workspaces_report</a>();
+        <span class="rs-kw">let</span> count = report.evicted.len();
+        <span class="rs-kw">if</span> count &gt; 0 {
+            <span class="rs-kw">crate</span>::trace::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-push-background-record-86">push_background_record</a>(<span class="rs-kw">crate</span>::trace::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-idle-workspace-evict-record-111">idle_workspace_evict_record</a>(
+                &amp;report,
+            ));
+        }
+        count
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/runtime/services.rs:22</p>
+</article><article id="item-fn-advance-active-commands-once-34" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn advance_active_commands_once pub(crate) pub(crate) fn advance_active_commands_once (command : &amp; CommandOps) crates/daemon/src/runtime/services.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>advance_active_commands_once</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="daemon--src-runtime-services-rs.html#item-fn-advance-active-commands-once-34">advance_active_commands_once</a> (command : &amp; CommandOps)</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#item-fn-advance-active-commands-once-34">advance_active_commands_once</a>(command: &amp;<span class="rs-type">CommandOps</span>) {
+        <span class="rs-kw">for</span> record <span class="rs-kw">in</span> command.<a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#item-fn-advance-active-commands-once-34">advance_active_commands_once</a>(std::time::<span class="rs-type">Instant</span>::now()) {
+            <span class="rs-kw">crate</span>::trace::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-push-background-record-86">push_background_record</a>(record);
+        }
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/runtime/services.rs:34</p>
+</article><article id="item-fn-recover-orphaned-commands-40" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn recover_orphaned_commands pub(crate) pub(crate) fn recover_orphaned_commands (command : &amp; CommandOps) crates/daemon/src/runtime/services.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>recover_orphaned_commands</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="daemon--src-runtime-services-rs.html#item-fn-recover-orphaned-commands-40">recover_orphaned_commands</a> (command : &amp; CommandOps)</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#item-fn-recover-orphaned-commands-40">recover_orphaned_commands</a>(command: &amp;<span class="rs-type">CommandOps</span>) {
+        command.<a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#item-fn-recover-orphaned-commands-40">recover_orphaned_commands</a>();
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/daemon/src/runtime/services.rs:40</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/daemon/src/runtime/services.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Daemon-owned runtime services shared by dispatch handlers.</span>
+
+<span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+
+<span class="rs-kw">use</span> command::<span class="rs-type">CommandConfig</span>;
+<span class="rs-kw">use</span> config::configs::daemon::<span class="rs-type">PluginRuntimeConfig</span>;
+<span class="rs-kw">use</span> config::configs::isolated_workspace::<span class="rs-type">IsolatedWorkspaceConfig</span>;
+<span class="rs-kw">use</span> layerstack::<span class="rs-type">CommitOptions</span>;
+<span class="rs-kw">use</span> operation::command::<span class="rs-type">CommandOps</span>;
+<span class="rs-kw">use</span> operation::plugin::{<span class="rs-type">PluginRuntime</span>, <span class="rs-type">PluginRuntimeError</span>};
+<span class="rs-kw">use</span> operation::<span class="rs-type">CallerId</span>;
+<span class="rs-kw">use</span> plugin::<span class="rs-type">PluginError</span>;
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="daemon--src-runtime-workspace-rs.html#item-struct-WorkspaceRuntime-191">WorkspaceRuntime</a>;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">mod</span> background_tasks {
+    <span class="rs-kw">use</span> operation::command::<span class="rs-type">CommandOps</span>;
+
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="daemon--src-runtime-workspace-rs.html#item-struct-WorkspaceRuntime-191">WorkspaceRuntime</a>;
+
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#item-fn-evict-idle-workspaces-once-22">evict_idle_workspaces_once</a>(workspace: &amp;<a class="symbol-link rs-type" href="daemon--src-runtime-workspace-rs.html#item-struct-WorkspaceRuntime-191">WorkspaceRuntime</a>) -&gt; usize {
+        <span class="rs-kw">let</span> report = workspace.<a class="symbol-link rs-fn" href="daemon--src-runtime-workspace-rs.html#method-evict-idle-workspaces-report-361">evict_idle_workspaces_report</a>();
+        <span class="rs-kw">let</span> count = report.evicted.len();
+        <span class="rs-kw">if</span> count &gt; 0 {
+            <span class="rs-kw">crate</span>::trace::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-push-background-record-86">push_background_record</a>(<span class="rs-kw">crate</span>::trace::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-idle-workspace-evict-record-111">idle_workspace_evict_record</a>(
+                &amp;report,
+            ));
+        }
+        count
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#item-fn-advance-active-commands-once-34">advance_active_commands_once</a>(command: &amp;<span class="rs-type">CommandOps</span>) {
+        <span class="rs-kw">for</span> record <span class="rs-kw">in</span> command.<a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#item-fn-advance-active-commands-once-34">advance_active_commands_once</a>(std::time::<span class="rs-type">Instant</span>::now()) {
+            <span class="rs-kw">crate</span>::trace::<a class="symbol-link rs-fn" href="daemon--src-trace-spool-rs.html#item-fn-push-background-record-86">push_background_record</a>(record);
+        }
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#item-fn-recover-orphaned-commands-40">recover_orphaned_commands</a>(command: &amp;<span class="rs-type">CommandOps</span>) {
+        command.<a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#item-fn-recover-orphaned-commands-40">recover_orphaned_commands</a>();
+    }
+}
+
+<span class="rs-comment">/// Runtime service instances shared by daemon dispatch handlers.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="daemon--src-runtime-services-rs.html#item-struct-RuntimeServices-45">RuntimeServices</a> {
+    <span class="rs-kw">pub</span> command: <span class="rs-type">Arc</span>&lt;<span class="rs-type">CommandOps</span>&gt;,
+    <span class="rs-kw">pub</span> commit_options: <span class="rs-type">CommitOptions</span>,
+    <span class="rs-kw">pub</span> plugin: <span class="rs-type">PluginRuntime</span>,
+    <span class="rs-kw">pub</span> workspace: <a class="symbol-link rs-type" href="daemon--src-runtime-workspace-rs.html#item-struct-WorkspaceRuntime-191">WorkspaceRuntime</a>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="daemon--src-runtime-services-rs.html#item-struct-RuntimeServices-45">RuntimeServices</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(
+        plugin: <span class="rs-type">PluginRuntimeConfig</span>,
+        isolated_workspace: <span class="rs-type">IsolatedWorkspaceConfig</span>,
+        command: <span class="rs-type">CommandConfig</span>,
+        launcher: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> workspace::<span class="rs-type">NsRunnerLauncher</span>&gt;,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#method-with-commit-options-70">with_commit_options</a>(
+            plugin,
+            isolated_workspace,
+            command,
+            launcher,
+            <span class="rs-type">CommitOptions</span>::default(),
+        )
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#method-with-commit-options-70">with_commit_options</a>(
+        plugin: <span class="rs-type">PluginRuntimeConfig</span>,
+        isolated_workspace: <span class="rs-type">IsolatedWorkspaceConfig</span>,
+        command: <span class="rs-type">CommandConfig</span>,
+        launcher: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> workspace::<span class="rs-type">NsRunnerLauncher</span>&gt;,
+        commit_options: <span class="rs-type">CommitOptions</span>,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">let</span> command = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(<span class="rs-type">CommandOps</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#method-with-commit-options-70">with_commit_options</a>(command, commit_options));
+        <span class="rs-self">Self</span> {
+            command: <span class="rs-type">Arc</span>::clone(&amp;command),
+            commit_options,
+            plugin: <span class="rs-type">PluginRuntime</span>::<a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#method-with-commit-options-70">with_commit_options</a>(plugin, launcher, commit_options),
+            workspace: <a class="symbol-link rs-type" href="daemon--src-runtime-workspace-rs.html#item-struct-WorkspaceRuntime-191">WorkspaceRuntime</a>::<a class="symbol-link rs-fn" href="daemon--src-runtime-invocation-registry-rs.html#method-new-82">new</a>(isolated_workspace, command),
+        }
+    }
+
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#method-ensure-plugin-family-allowed-87">ensure_plugin_family_allowed</a>(&amp;<span class="rs-self">self</span>, args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">PluginRuntimeError</span>&gt; {
+        operation::plugin::ensure::validate_plugin_caller_fields(args)?;
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#method-ensure-plugin-caller-allowed-92">ensure_plugin_caller_allowed</a>(&amp;<span class="rs-type">CallerId</span>::from_wire(args))
+    }
+
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="daemon--src-runtime-services-rs.html#method-ensure-plugin-caller-allowed-92">ensure_plugin_caller_allowed</a>(
+        &amp;<span class="rs-self">self</span>,
+        caller: &amp;<span class="rs-type">CallerId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">PluginRuntimeError</span>&gt; {
+        <span class="rs-kw">if</span> !caller.as_str().is_empty() &amp;&amp; <span class="rs-self">self</span>.workspace.<a class="symbol-link rs-fn" href="daemon--src-runtime-workspace-rs.html#method-caller-has-active-handle-297">caller_has_active_handle</a>(caller.as_str()) {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">PluginRuntimeError</span>::<span class="rs-type">Plugin</span>(
+                <span class="rs-type">PluginError</span>::<span class="rs-type">ForbiddenInIsolatedWorkspace</span>,
+            ));
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

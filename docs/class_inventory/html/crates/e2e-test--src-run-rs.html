@@ -1,0 +1,922 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>e2e-test · src/run.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>e2e-test File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>7</b><span>modules</span></div>
+  <div><b>81</b><span>items</span></div>
+  <div><b>55</b><span>fields</span></div>
+  <div><b>31</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">bin</span><ul class="file-tree"><li><a class="file-link" href="e2e-test.html"><span>e2e-reap.rs</span><small>0/1</small></a></li><li><a class="file-link" href="e2e-test--src-bin-e2e-runner-rs.html"><span>e2e-runner.rs</span><small>5/27</small></a></li></ul></li><li><a class="file-link" href="e2e-test--src-cas-rs.html"><span>cas.rs</span><small>0/1</small></a></li><li><a class="file-link" href="e2e-test--src-container-rs.html"><span>container.rs</span><small>0/9</small></a></li><li><a class="file-link" href="e2e-test--src-lib-rs.html"><span>lib.rs</span><small>1/7</small></a></li><li><a class="file-link" href="e2e-test--src-pool-rs.html"><span>pool.rs</span><small>5/5</small></a></li><li><a class="file-link active" href="e2e-test--src-run-rs.html"><span>run.rs</span><small>1/13</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="run crates/e2e-test/src/run.rs RunContext impl RunContext trace_sidecar_bytes append_jsonl write_json_line report_root child_dir resolve_manifest_path dump_mode dump_mode_label run_id suite_name sanitize_id non_empty_env_path now_ms">
+  <div class="module-head">
+    <div>
+      <h2>src/run.rs</h2>
+      <p class="path">module <code>run</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>1 impls</span>
+      <span>13 fns</span>
+      <span>7 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-RunContext-21" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct RunContext pub pub struct RunContext crates/e2e-test/src/run.rs run_id String suite String root_dir PathBuf trace_file PathBuf event_file PathBuf audit TraceStore write_lock Mutex &lt; () &gt; dump_mode ArtifactDumpMode daemon_log_dir PathBuf perf_dir PathBuf ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>RunContext</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="e2e-test--src-run-rs.html#item-struct-RunContext-21">RunContext</a></code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>run_id</td><td><code>String</code></td></tr><tr><td>private</td><td>suite</td><td><code>String</code></td></tr><tr><td>private</td><td>root_dir</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>trace_file</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>event_file</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>audit</td><td><code>TraceStore</code></td></tr><tr><td>private</td><td>write_lock</td><td><code>Mutex &lt; () &gt;</code></td></tr><tr><td>private</td><td>dump_mode</td><td><code>ArtifactDumpMode</code></td></tr><tr><td>private</td><td>daemon_log_dir</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>perf_dir</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-35"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="e2e-test--src-pool-rs.html#method-new-42">new</a> (config_path : &amp; Path , artifacts : &amp; ArtifactConfig) -&gt; Result &lt; Self &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-pool-rs.html#method-new-42">new</a>(config_path: &amp;<span class="rs-type">Path</span>, artifacts: &amp;<span class="rs-type">ArtifactConfig</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> run_id = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#method-run-id-74">run_id</a>();
+        <span class="rs-kw">let</span> suite = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-suite-name-310">suite_name</a>(config_path);
+        <span class="rs-kw">let</span> root_dir = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-report-root-249">report_root</a>(&amp;run_id, artifacts);
+        <span class="rs-kw">let</span> trace_dir = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-child-dir-265">child_dir</a>(&amp;root_dir, artifacts.trace_dir.as_ref(), &quot;traces&quot;);
+        <span class="rs-kw">let</span> event_dir = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-child-dir-265">child_dir</a>(&amp;root_dir, artifacts.event_dir.as_ref(), &quot;events&quot;);
+        <span class="rs-kw">let</span> audit_dir = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-child-dir-265">child_dir</a>(&amp;root_dir, artifacts.audit_dir.as_ref(), &quot;audit&quot;);
+        <span class="rs-kw">let</span> suite_dir = root_dir.join(&quot;suites&quot;).join(&amp;suite);
+        <span class="rs-kw">let</span> daemon_log_dir = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-child-dir-265">child_dir</a>(&amp;suite_dir, artifacts.daemon_log_dir.as_ref(), &quot;containers&quot;);
+        <span class="rs-kw">let</span> perf_dir = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-child-dir-265">child_dir</a>(&amp;root_dir, artifacts.perf_dir.as_ref(), &quot;perf&quot;);
+        <span class="rs-kw">for</span> dir <span class="rs-kw">in</span> [
+            &amp;root_dir,
+            &amp;trace_dir,
+            &amp;event_dir,
+            &amp;audit_dir,
+            &amp;suite_dir,
+            &amp;daemon_log_dir,
+            &amp;perf_dir,
+        ] {
+            fs::create_dir_all(dir)
+                .with_context(|| format!(&quot;create e2e report directory {}&quot;, dir.display()))?;
+        }
+        <span class="rs-kw">let</span> context = <span class="rs-self">Self</span> {
+            trace_file: trace_dir.join(format!(&quot;{suite}.jsonl&quot;)),
+            event_file: event_dir.join(format!(&quot;{suite}.jsonl&quot;)),
+            audit: <span class="rs-type">TraceStore</span>::<a class="symbol-link rs-fn" href="e2e-test--src-pool-rs.html#method-open-221">open</a>(&amp;audit_dir)
+                .with_context(|| format!(&quot;open e2e trace audit store {}&quot;, audit_dir.display()))?,
+            write_lock: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="e2e-test--src-pool-rs.html#method-new-42">new</a>(()),
+            dump_mode: <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-dump-mode-286">dump_mode</a>(artifacts.dump_mode),
+            daemon_log_dir: daemon_log_dir.clone(),
+            perf_dir,
+            run_id,
+            suite,
+            root_dir,
+        };
+        context.<a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#method-write-suite-summary-182">write_suite_summary</a>(config_path, &amp;daemon_log_dir)?;
+        <span class="rs-type">Ok</span>(context)
+    }
+</code></pre>
+</details></td></tr><tr id="method-run-id-74"><td>method</td><td>run_id</td><td><code>pub fn <a class="symbol-link" href="e2e-test--src-run-rs.html#method-run-id-74">run_id</a> (&amp; self) -&gt; &amp; str</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#method-run-id-74">run_id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.run_id
+    }
+</code></pre>
+</details></td></tr><tr id="method-perf-dir-79"><td>method</td><td>perf_dir</td><td><code>pub fn <a class="symbol-link" href="e2e-test--src-run-rs.html#method-perf-dir-79">perf_dir</a> (&amp; self) -&gt; &amp; Path</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#method-perf-dir-79">perf_dir</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">Path</span> {
+        &amp;<span class="rs-self">self</span>.perf_dir
+    }
+</code></pre>
+</details></td></tr><tr id="method-record-response-84"><td>method</td><td>record_response</td><td><code>pub fn <a class="symbol-link" href="e2e-test--src-run-rs.html#method-record-response-84">record_response</a> (&amp; self , op : &amp; str , request_id : &amp; str , caller_id : &amp; str , container_name : &amp; str , response : &amp; Value ,) -&gt; Result &lt; () &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#method-record-response-84">record_response</a>(
+        &amp;<span class="rs-self">self</span>,
+        op: &amp;str,
+        request_id: &amp;str,
+        caller_id: &amp;str,
+        container_name: &amp;str,
+        response: &amp;<span class="rs-type">Value</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+        <span class="rs-kw">if</span> !<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#method-should-capture-174">should_capture</a>(response) {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+        }
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sidecar) = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-trace-sidecar-bytes-207">trace_sidecar_bytes</a>(response)? <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+        };
+        <span class="rs-kw">let</span> batch = decode_trace_batch(&amp;sidecar).context(&quot;decode response trace sidecar&quot;)?;
+        <span class="rs-self">self</span>.audit
+            .ingest_trace_batch(container_name, &amp;sidecar)
+            .with_context(|| format!(&quot;ingest trace sidecar <span class="rs-kw">for</span> {op} into audit store&quot;))?;
+
+        <span class="rs-kw">let</span> _guard = <span class="rs-self">self</span>
+            .write_lock
+            .<a class="symbol-link rs-fn" href="e2e-test--src-pool-rs.html#method-lock-83">lock</a>()
+            .unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> trace_file = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-append-jsonl-235">append_jsonl</a>(&amp;<span class="rs-self">self</span>.trace_file)?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> event_file = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-append-jsonl-235">append_jsonl</a>(&amp;<span class="rs-self">self</span>.event_file)?;
+        <span class="rs-kw">for</span> record <span class="rs-kw">in</span> &amp;batch.records {
+            <span class="rs-kw">let</span> trace_id = record.trace_id.to_string();
+            <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-write-json-line-243">write_json_line</a>(
+                &amp;<span class="rs-kw">mut</span> trace_file,
+                &amp;json!({
+                    &quot;schema&quot;: &quot;eos.e2e.trace_record.v1&quot;,
+                    &quot;run_id&quot;: <span class="rs-self">self</span>.run_id,
+                    &quot;suite&quot;: <span class="rs-self">self</span>.suite,
+                    &quot;container&quot;: container_name,
+                    &quot;op&quot;: op,
+                    &quot;request_id&quot;: request_id,
+                    &quot;caller_id&quot;: caller_id,
+                    &quot;trace&quot;: record,
+                }),
+            )?;
+            <span class="rs-kw">for</span> event <span class="rs-kw">in</span> &amp;record.events {
+                <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-write-json-line-243">write_json_line</a>(
+                    &amp;<span class="rs-kw">mut</span> event_file,
+                    &amp;json!({
+                        &quot;schema&quot;: &quot;eos.e2e.trace_event.v1&quot;,
+                        &quot;run_id&quot;: <span class="rs-self">self</span>.run_id,
+                        &quot;suite&quot;: <span class="rs-self">self</span>.suite,
+                        &quot;container&quot;: container_name,
+                        &quot;op&quot;: op,
+                        &quot;request_id&quot;: request_id,
+                        &quot;caller_id&quot;: caller_id,
+                        &quot;trace_id&quot;: trace_id,
+                        &quot;event&quot;: event,
+                    }),
+                )?;
+            }
+        }
+        <span class="rs-kw">if</span> batch.records.is_empty() || batch.dropped_traces &gt; 0 {
+            <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-write-json-line-243">write_json_line</a>(
+                &amp;<span class="rs-kw">mut</span> trace_file,
+                &amp;json!({
+                    &quot;schema&quot;: &quot;eos.e2e.trace_batch_summary.v1&quot;,
+                    &quot;run_id&quot;: <span class="rs-self">self</span>.run_id,
+                    &quot;suite&quot;: <span class="rs-self">self</span>.suite,
+                    &quot;container&quot;: container_name,
+                    &quot;op&quot;: op,
+                    &quot;request_id&quot;: request_id,
+                    &quot;caller_id&quot;: caller_id,
+                    &quot;record_count&quot;: batch.records.len(),
+                    &quot;dropped_traces&quot;: batch.dropped_traces,
+                    &quot;daemon_boot_id&quot;: batch.daemon_boot_id,
+                }),
+            )?;
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr><tr id="method-record-daemon-log-161"><td>method</td><td>record_daemon_log</td><td><code>pub fn <a class="symbol-link" href="e2e-test--src-run-rs.html#method-record-daemon-log-161">record_daemon_log</a> (&amp; self , container : &amp; DaemonContainer) -&gt; Result &lt; () &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#method-record-daemon-log-161">record_daemon_log</a>(&amp;<span class="rs-self">self</span>, container: &amp;<span class="rs-type">DaemonContainer</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+        <span class="rs-kw">if</span> matches!(<span class="rs-self">self</span>.dump_mode, <span class="rs-type">ArtifactDumpMode</span>::<span class="rs-type">Off</span>) {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+        }
+        <span class="rs-kw">let</span> dest = <span class="rs-self">self</span>
+            .daemon_log_dir
+            .join(container.name())
+            .join(&quot;runtime.log&quot;);
+        container
+            .copy_daemon_log_to(&amp;dest)
+            .with_context(|| format!(&quot;copy daemon log <span class="rs-kw">for</span> {}&quot;, container.name()))
+    }
+</code></pre>
+</details></td></tr><tr id="method-should-capture-174"><td>method</td><td>should_capture</td><td><code>fn <a class="symbol-link" href="e2e-test--src-run-rs.html#method-should-capture-174">should_capture</a> (&amp; self , response : &amp; Value) -&gt; bool</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#method-should-capture-174">should_capture</a>(&amp;<span class="rs-self">self</span>, response: &amp;<span class="rs-type">Value</span>) -&gt; bool {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span>.dump_mode {
+            <span class="rs-type">ArtifactDumpMode</span>::<span class="rs-type">Off</span> =&gt; <span class="rs-kw">false</span>,
+            <span class="rs-type">ArtifactDumpMode</span>::<span class="rs-type">Failure</span> =&gt; !response_is_accepted(response),
+            <span class="rs-type">ArtifactDumpMode</span>::<span class="rs-type">Always</span> =&gt; <span class="rs-kw">true</span>,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-write-suite-summary-182"><td>method</td><td>write_suite_summary</td><td><code>fn <a class="symbol-link" href="e2e-test--src-run-rs.html#method-write-suite-summary-182">write_suite_summary</a> (&amp; self , config_path : &amp; Path , daemon_log_dir : &amp; Path) -&gt; Result &lt; () &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#method-write-suite-summary-182">write_suite_summary</a>(&amp;<span class="rs-self">self</span>, config_path: &amp;<span class="rs-type">Path</span>, daemon_log_dir: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+        <span class="rs-kw">let</span> suite_dir = <span class="rs-self">self</span>.root_dir.join(&quot;suites&quot;).join(&amp;<span class="rs-self">self</span>.suite);
+        <span class="rs-kw">let</span> summary_path = suite_dir.join(&quot;summary.json&quot;);
+        <span class="rs-kw">let</span> summary = json!({
+            &quot;schema&quot;: &quot;eos.e2e.suite_report.v1&quot;,
+            &quot;run_id&quot;: <span class="rs-self">self</span>.run_id,
+            &quot;suite&quot;: <span class="rs-self">self</span>.suite,
+            &quot;config_path&quot;: config_path.display().to_string(),
+            &quot;started_at_unix_ms&quot;: <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-now-ms-341">now_ms</a>(),
+            &quot;command&quot;: std::env::args().collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;(),
+            &quot;dump_mode&quot;: <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-dump-mode-label-295">dump_mode_label</a>(<span class="rs-self">self</span>.dump_mode),
+            &quot;artifacts&quot;: {
+                &quot;root_dir&quot;: <span class="rs-self">self</span>.root_dir.display().to_string(),
+                &quot;trace_file&quot;: <span class="rs-self">self</span>.trace_file.display().to_string(),
+                &quot;event_file&quot;: <span class="rs-self">self</span>.event_file.display().to_string(),
+                &quot;audit_db&quot;: <span class="rs-self">self</span>.audit.db_path().display().to_string(),
+                &quot;perf_dir&quot;: <span class="rs-self">self</span>.perf_dir.display().to_string(),
+                &quot;daemon_log_dir&quot;: daemon_log_dir.display().to_string(),
+            },
+        });
+        fs::write(&amp;summary_path, serde_json::to_vec_pretty(&amp;summary)?)
+            .with_context(|| format!(&quot;write e2e suite summary {}&quot;, summary_path.display()))
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/e2e-test/src/run.rs:21</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-trace-sidecar-bytes-207" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn trace_sidecar_bytes private fn trace_sidecar_bytes (response : &amp; Value) -&gt; Result &lt; Option &lt; Vec &lt; u8 &gt; &gt; &gt; crates/e2e-test/src/run.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>trace_sidecar_bytes</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="e2e-test--src-run-rs.html#item-fn-trace-sidecar-bytes-207">trace_sidecar_bytes</a> (response : &amp; Value) -&gt; Result &lt; Option &lt; Vec &lt; u8 &gt; &gt; &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-trace-sidecar-bytes-207">trace_sidecar_bytes</a>(response: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;&gt; {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(object) = response.as_object() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+    };
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sidecar) = object.get(<span class="rs-type">DAEMON_TRACE_SIDECAR_FIELD</span>) <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+    };
+    <span class="rs-kw">let</span> <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(sidecar) = sidecar <span class="rs-kw">else</span> {
+        bail!(&quot;trace sidecar is not an object&quot;);
+    };
+    <span class="rs-kw">if</span> sidecar.get(&quot;schema&quot;).and_then(<span class="rs-type">Value</span>::as_str) != <span class="rs-type">Some</span>(<span class="rs-type">DAEMON_TRACE_SIDECAR_SCHEMA</span>) {
+        bail!(&quot;trace sidecar has invalid schema&quot;);
+    }
+    <span class="rs-kw">if</span> sidecar.get(&quot;encoding&quot;).and_then(<span class="rs-type">Value</span>::as_str) != <span class="rs-type">Some</span>(<span class="rs-type">DAEMON_TRACE_SIDECAR_ENCODING</span>) {
+        bail!(&quot;trace sidecar has invalid encoding&quot;);
+    }
+    <span class="rs-kw">if</span> !sidecar.get(&quot;spool_pending&quot;).is_some_and(<span class="rs-type">Value</span>::is_boolean) {
+        bail!(&quot;trace sidecar is missing spool_pending&quot;);
+    }
+    <span class="rs-kw">let</span> data = sidecar
+        .get(&quot;data&quot;)
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .context(&quot;trace sidecar is missing data&quot;)?;
+    decode_trace_sidecar_base64(data)
+        .context(&quot;trace sidecar has invalid base64&quot;)
+        .map(<span class="rs-type">Some</span>)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/e2e-test/src/run.rs:207</p>
+</article><article id="item-fn-append-jsonl-235" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn append_jsonl private fn append_jsonl (path : &amp; Path) -&gt; Result &lt; std :: fs :: File &gt; crates/e2e-test/src/run.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>append_jsonl</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="e2e-test--src-run-rs.html#item-fn-append-jsonl-235">append_jsonl</a> (path : &amp; Path) -&gt; Result &lt; std :: fs :: File &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-append-jsonl-235">append_jsonl</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;std::fs::<span class="rs-type">File</span>&gt; {
+    <span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="e2e-test--src-pool-rs.html#method-new-42">new</a>()
+        .create(<span class="rs-kw">true</span>)
+        .append(<span class="rs-kw">true</span>)
+        .<a class="symbol-link rs-fn" href="e2e-test--src-pool-rs.html#method-open-221">open</a>(path)
+        .with_context(|| format!(&quot;open e2e <span class="rs-type">JSONL</span> artifact {}&quot;, path.display()))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/e2e-test/src/run.rs:235</p>
+</article><article id="item-fn-write-json-line-243" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_json_line private fn write_json_line (file : &amp; mut std :: fs :: File , value : &amp; Value) -&gt; Result &lt; () &gt; crates/e2e-test/src/run.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>write_json_line</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="e2e-test--src-run-rs.html#item-fn-write-json-line-243">write_json_line</a> (file : &amp; mut std :: fs :: File , value : &amp; Value) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-write-json-line-243">write_json_line</a>(file: &amp;<span class="rs-kw">mut</span> std::fs::<span class="rs-type">File</span>, value: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    serde_json::to_writer(&amp;<span class="rs-kw">mut</span> *file, value)?;
+    writeln!(file)?;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/e2e-test/src/run.rs:243</p>
+</article><article id="item-fn-report-root-249" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn report_root private fn report_root (run_id : &amp; str , artifacts : &amp; ArtifactConfig) -&gt; PathBuf crates/e2e-test/src/run.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>report_root</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="e2e-test--src-run-rs.html#item-fn-report-root-249">report_root</a> (run_id : &amp; str , artifacts : &amp; ArtifactConfig) -&gt; PathBuf</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-report-root-249">report_root</a>(run_id: &amp;str, artifacts: &amp;<span class="rs-type">ArtifactConfig</span>) -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(root) = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-non-empty-env-path-335">non_empty_env_path</a>(&quot;<span class="rs-type">EOS_E2E_REPORT_ROOT</span>&quot;) {
+        <span class="rs-kw">return</span> root;
+    }
+    artifacts
+        .root_dir
+        .as_ref()
+        .map(resolve_manifest_path)
+        .unwrap_or_else(|| {
+            <span class="rs-type">PathBuf</span>::from(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;))
+                .join(&quot;test-reports&quot;)
+                .join(&quot;runs&quot;)
+                .join(run_id)
+        })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/e2e-test/src/run.rs:249</p>
+</article><article id="item-fn-child-dir-265" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn child_dir private fn child_dir (root : &amp; Path , override_dir : Option &lt; &amp; PathBuf &gt; , default_name : &amp; str) -&gt; PathBuf crates/e2e-test/src/run.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>child_dir</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="e2e-test--src-run-rs.html#item-fn-child-dir-265">child_dir</a> (root : &amp; Path , override_dir : Option &lt; &amp; PathBuf &gt; , default_name : &amp; str) -&gt; PathBuf</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-child-dir-265">child_dir</a>(root: &amp;<span class="rs-type">Path</span>, override_dir: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">PathBuf</span>&gt;, default_name: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
+    override_dir.map_or_else(
+        || root.join(default_name),
+        |dir| {
+            <span class="rs-kw">if</span> dir.is_absolute() {
+                dir.clone()
+            } <span class="rs-kw">else</span> {
+                root.join(dir)
+            }
+        },
+    )
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/e2e-test/src/run.rs:265</p>
+</article><article id="item-fn-resolve-manifest-path-278" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn resolve_manifest_path private fn resolve_manifest_path (path : &amp; PathBuf) -&gt; PathBuf crates/e2e-test/src/run.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>resolve_manifest_path</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="e2e-test--src-run-rs.html#item-fn-resolve-manifest-path-278">resolve_manifest_path</a> (path : &amp; PathBuf) -&gt; PathBuf</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-resolve-manifest-path-278">resolve_manifest_path</a>(path: &amp;<span class="rs-type">PathBuf</span>) -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-kw">if</span> path.is_absolute() {
+        path.clone()
+    } <span class="rs-kw">else</span> {
+        <span class="rs-type">PathBuf</span>::from(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;)).join(path)
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/e2e-test/src/run.rs:278</p>
+</article><article id="item-fn-dump-mode-286" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dump_mode private fn dump_mode (configured : ArtifactDumpMode) -&gt; ArtifactDumpMode crates/e2e-test/src/run.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>dump_mode</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="e2e-test--src-run-rs.html#item-fn-dump-mode-286">dump_mode</a> (configured : ArtifactDumpMode) -&gt; ArtifactDumpMode</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-dump-mode-286">dump_mode</a>(configured: <span class="rs-type">ArtifactDumpMode</span>) -&gt; <span class="rs-type">ArtifactDumpMode</span> {
+    <span class="rs-kw">match</span> std::env::var(&quot;<span class="rs-type">EOS_E2E_ARTIFACTS</span>&quot;) {
+        <span class="rs-type">Ok</span>(value) <span class="rs-kw">if</span> value.eq_ignore_ascii_case(&quot;off&quot;) =&gt; <span class="rs-type">ArtifactDumpMode</span>::<span class="rs-type">Off</span>,
+        <span class="rs-type">Ok</span>(value) <span class="rs-kw">if</span> value.eq_ignore_ascii_case(&quot;failure&quot;) =&gt; <span class="rs-type">ArtifactDumpMode</span>::<span class="rs-type">Failure</span>,
+        <span class="rs-type">Ok</span>(value) <span class="rs-kw">if</span> value.eq_ignore_ascii_case(&quot;always&quot;) =&gt; <span class="rs-type">ArtifactDumpMode</span>::<span class="rs-type">Always</span>,
+        _ =&gt; configured,
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/e2e-test/src/run.rs:286</p>
+</article><article id="item-fn-dump-mode-label-295" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dump_mode_label private fn dump_mode_label (mode : ArtifactDumpMode) -&gt; &amp; 'static str crates/e2e-test/src/run.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>dump_mode_label</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="e2e-test--src-run-rs.html#item-fn-dump-mode-label-295">dump_mode_label</a> (mode : ArtifactDumpMode) -&gt; &amp; &#x27;static str</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-dump-mode-label-295">dump_mode_label</a>(mode: <span class="rs-type">ArtifactDumpMode</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">match</span> mode {
+        <span class="rs-type">ArtifactDumpMode</span>::<span class="rs-type">Off</span> =&gt; &quot;off&quot;,
+        <span class="rs-type">ArtifactDumpMode</span>::<span class="rs-type">Failure</span> =&gt; &quot;failure&quot;,
+        <span class="rs-type">ArtifactDumpMode</span>::<span class="rs-type">Always</span> =&gt; &quot;always&quot;,
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/e2e-test/src/run.rs:295</p>
+</article><article id="item-fn-run-id-303" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_id private fn run_id () -&gt; String crates/e2e-test/src/run.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>run_id</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="e2e-test--src-run-rs.html#method-run-id-74">run_id</a> () -&gt; String</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#method-run-id-74">run_id</a>() -&gt; <span class="rs-type">String</span> {
+    std::env::var(&quot;<span class="rs-type">EOS_E2E_RUN_ID</span>&quot;)
+        .ok()
+        .and_then(|raw| <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-sanitize-id-320">sanitize_id</a>(&amp;raw))
+        .unwrap_or_else(|| format!(&quot;run-{}&quot;, <a class="symbol-link rs-fn" href="e2e-test--src-lib-rs.html#item-fn-unique-suffix-39">unique_suffix</a>()))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/e2e-test/src/run.rs:303</p>
+</article><article id="item-fn-suite-name-310" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn suite_name private fn suite_name (config_path : &amp; Path) -&gt; String crates/e2e-test/src/run.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>suite_name</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="e2e-test--src-run-rs.html#item-fn-suite-name-310">suite_name</a> (config_path : &amp; Path) -&gt; String</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-suite-name-310">suite_name</a>(config_path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">String</span> {
+    config_path
+        .parent()
+        .and_then(<span class="rs-type">Path</span>::parent)
+        .and_then(<span class="rs-type">Path</span>::file_name)
+        .and_then(|name| name.to_str())
+        .and_then(sanitize_id)
+        .unwrap_or_else(|| &quot;unknown-suite&quot;.to_owned())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/e2e-test/src/run.rs:310</p>
+</article><article id="item-fn-sanitize-id-320" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn sanitize_id private fn sanitize_id (raw : &amp; str) -&gt; Option &lt; String &gt; crates/e2e-test/src/run.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>sanitize_id</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="e2e-test--src-run-rs.html#item-fn-sanitize-id-320">sanitize_id</a> (raw : &amp; str) -&gt; Option &lt; String &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-sanitize-id-320">sanitize_id</a>(raw: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+    <span class="rs-kw">let</span> value = raw
+        .chars()
+        .map(|ch| {
+            <span class="rs-kw">if</span> ch.is_ascii_alphanumeric() || ch == &#x27;-&#x27; || ch == &#x27;_&#x27; {
+                ch
+            } <span class="rs-kw">else</span> {
+                &#x27;-&#x27;
+            }
+        })
+        .collect::&lt;<span class="rs-type">String</span>&gt;();
+    <span class="rs-kw">let</span> value = value.trim_matches(&#x27;-&#x27;).to_owned();
+    (!value.is_empty()).then_some(value)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/e2e-test/src/run.rs:320</p>
+</article><article id="item-fn-non-empty-env-path-335" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn non_empty_env_path private fn non_empty_env_path (name : &amp; str) -&gt; Option &lt; PathBuf &gt; crates/e2e-test/src/run.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>non_empty_env_path</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="e2e-test--src-run-rs.html#item-fn-non-empty-env-path-335">non_empty_env_path</a> (name : &amp; str) -&gt; Option &lt; PathBuf &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-non-empty-env-path-335">non_empty_env_path</a>(name: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt; {
+    std::env::var_os(name)
+        .filter(|value| !value.is_empty())
+        .map(<span class="rs-type">PathBuf</span>::from)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/e2e-test/src/run.rs:335</p>
+</article><article id="item-fn-now-ms-341" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn now_ms private fn now_ms () -&gt; u64 crates/e2e-test/src/run.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>now_ms</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="e2e-test--src-run-rs.html#item-fn-now-ms-341">now_ms</a> () -&gt; u64</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-now-ms-341">now_ms</a>() -&gt; u64 {
+    <span class="rs-type">SystemTime</span>::now()
+        .duration_since(<span class="rs-type">UNIX_EPOCH</span>)
+        .map_or(0, |duration| duration.as_millis() <span class="rs-kw">as</span> u64)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/e2e-test/src/run.rs:341</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/e2e-test/src/run.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Per-process E2E run identity and host-side report artifacts.</span>
+
+<span class="rs-kw">use</span> std::fs::{<span class="rs-self">self</span>, <span class="rs-type">OpenOptions</span>};
+<span class="rs-kw">use</span> std::io::<span class="rs-type">Write</span>;
+<span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
+<span class="rs-kw">use</span> std::sync::{<span class="rs-type">Mutex</span>, <span class="rs-type">PoisonError</span>};
+<span class="rs-kw">use</span> std::time::{<span class="rs-type">SystemTime</span>, <span class="rs-type">UNIX_EPOCH</span>};
+
+<span class="rs-kw">use</span> anyhow::{bail, <span class="rs-type">Context</span>, <span class="rs-type">Result</span>};
+<span class="rs-kw">use</span> host::e2e_support::<span class="rs-type">DaemonContainer</span>;
+<span class="rs-kw">use</span> host::e2e_support::{
+    decode_trace_sidecar_base64, response_is_accepted, <span class="rs-type">TraceStore</span>, <span class="rs-type">DAEMON_TRACE_SIDECAR_ENCODING</span>,
+    <span class="rs-type">DAEMON_TRACE_SIDECAR_FIELD</span>, <span class="rs-type">DAEMON_TRACE_SIDECAR_SCHEMA</span>,
+};
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+<span class="rs-kw">use</span> trace::decode_trace_batch;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::config::{<span class="rs-type">ArtifactConfig</span>, <span class="rs-type">ArtifactDumpMode</span>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::unique_suffix;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="e2e-test--src-run-rs.html#item-struct-RunContext-21">RunContext</a> {
+    run_id: <span class="rs-type">String</span>,
+    suite: <span class="rs-type">String</span>,
+    root_dir: <span class="rs-type">PathBuf</span>,
+    trace_file: <span class="rs-type">PathBuf</span>,
+    event_file: <span class="rs-type">PathBuf</span>,
+    audit: <span class="rs-type">TraceStore</span>,
+    write_lock: <span class="rs-type">Mutex</span>&lt;()&gt;,
+    dump_mode: <span class="rs-type">ArtifactDumpMode</span>,
+    daemon_log_dir: <span class="rs-type">PathBuf</span>,
+    perf_dir: <span class="rs-type">PathBuf</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="e2e-test--src-run-rs.html#item-struct-RunContext-21">RunContext</a> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-pool-rs.html#method-new-42">new</a>(config_path: &amp;<span class="rs-type">Path</span>, artifacts: &amp;<span class="rs-type">ArtifactConfig</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> run_id = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#method-run-id-74">run_id</a>();
+        <span class="rs-kw">let</span> suite = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-suite-name-310">suite_name</a>(config_path);
+        <span class="rs-kw">let</span> root_dir = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-report-root-249">report_root</a>(&amp;run_id, artifacts);
+        <span class="rs-kw">let</span> trace_dir = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-child-dir-265">child_dir</a>(&amp;root_dir, artifacts.trace_dir.as_ref(), &quot;traces&quot;);
+        <span class="rs-kw">let</span> event_dir = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-child-dir-265">child_dir</a>(&amp;root_dir, artifacts.event_dir.as_ref(), &quot;events&quot;);
+        <span class="rs-kw">let</span> audit_dir = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-child-dir-265">child_dir</a>(&amp;root_dir, artifacts.audit_dir.as_ref(), &quot;audit&quot;);
+        <span class="rs-kw">let</span> suite_dir = root_dir.join(&quot;suites&quot;).join(&amp;suite);
+        <span class="rs-kw">let</span> daemon_log_dir = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-child-dir-265">child_dir</a>(&amp;suite_dir, artifacts.daemon_log_dir.as_ref(), &quot;containers&quot;);
+        <span class="rs-kw">let</span> perf_dir = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-child-dir-265">child_dir</a>(&amp;root_dir, artifacts.perf_dir.as_ref(), &quot;perf&quot;);
+        <span class="rs-kw">for</span> dir <span class="rs-kw">in</span> [
+            &amp;root_dir,
+            &amp;trace_dir,
+            &amp;event_dir,
+            &amp;audit_dir,
+            &amp;suite_dir,
+            &amp;daemon_log_dir,
+            &amp;perf_dir,
+        ] {
+            fs::create_dir_all(dir)
+                .with_context(|| format!(&quot;create e2e report directory {}&quot;, dir.display()))?;
+        }
+        <span class="rs-kw">let</span> context = <span class="rs-self">Self</span> {
+            trace_file: trace_dir.join(format!(&quot;{suite}.jsonl&quot;)),
+            event_file: event_dir.join(format!(&quot;{suite}.jsonl&quot;)),
+            audit: <span class="rs-type">TraceStore</span>::<a class="symbol-link rs-fn" href="e2e-test--src-pool-rs.html#method-open-221">open</a>(&amp;audit_dir)
+                .with_context(|| format!(&quot;open e2e trace audit store {}&quot;, audit_dir.display()))?,
+            write_lock: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="e2e-test--src-pool-rs.html#method-new-42">new</a>(()),
+            dump_mode: <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-dump-mode-286">dump_mode</a>(artifacts.dump_mode),
+            daemon_log_dir: daemon_log_dir.clone(),
+            perf_dir,
+            run_id,
+            suite,
+            root_dir,
+        };
+        context.<a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#method-write-suite-summary-182">write_suite_summary</a>(config_path, &amp;daemon_log_dir)?;
+        <span class="rs-type">Ok</span>(context)
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#method-run-id-74">run_id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.run_id
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#method-perf-dir-79">perf_dir</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">Path</span> {
+        &amp;<span class="rs-self">self</span>.perf_dir
+    }
+
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#method-record-response-84">record_response</a>(
+        &amp;<span class="rs-self">self</span>,
+        op: &amp;str,
+        request_id: &amp;str,
+        caller_id: &amp;str,
+        container_name: &amp;str,
+        response: &amp;<span class="rs-type">Value</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+        <span class="rs-kw">if</span> !<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#method-should-capture-174">should_capture</a>(response) {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+        }
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sidecar) = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-trace-sidecar-bytes-207">trace_sidecar_bytes</a>(response)? <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+        };
+        <span class="rs-kw">let</span> batch = decode_trace_batch(&amp;sidecar).context(&quot;decode response trace sidecar&quot;)?;
+        <span class="rs-self">self</span>.audit
+            .ingest_trace_batch(container_name, &amp;sidecar)
+            .with_context(|| format!(&quot;ingest trace sidecar <span class="rs-kw">for</span> {op} into audit store&quot;))?;
+
+        <span class="rs-kw">let</span> _guard = <span class="rs-self">self</span>
+            .write_lock
+            .<a class="symbol-link rs-fn" href="e2e-test--src-pool-rs.html#method-lock-83">lock</a>()
+            .unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> trace_file = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-append-jsonl-235">append_jsonl</a>(&amp;<span class="rs-self">self</span>.trace_file)?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> event_file = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-append-jsonl-235">append_jsonl</a>(&amp;<span class="rs-self">self</span>.event_file)?;
+        <span class="rs-kw">for</span> record <span class="rs-kw">in</span> &amp;batch.records {
+            <span class="rs-kw">let</span> trace_id = record.trace_id.to_string();
+            <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-write-json-line-243">write_json_line</a>(
+                &amp;<span class="rs-kw">mut</span> trace_file,
+                &amp;json!({
+                    &quot;schema&quot;: &quot;eos.e2e.trace_record.v1&quot;,
+                    &quot;run_id&quot;: <span class="rs-self">self</span>.run_id,
+                    &quot;suite&quot;: <span class="rs-self">self</span>.suite,
+                    &quot;container&quot;: container_name,
+                    &quot;op&quot;: op,
+                    &quot;request_id&quot;: request_id,
+                    &quot;caller_id&quot;: caller_id,
+                    &quot;trace&quot;: record,
+                }),
+            )?;
+            <span class="rs-kw">for</span> event <span class="rs-kw">in</span> &amp;record.events {
+                <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-write-json-line-243">write_json_line</a>(
+                    &amp;<span class="rs-kw">mut</span> event_file,
+                    &amp;json!({
+                        &quot;schema&quot;: &quot;eos.e2e.trace_event.v1&quot;,
+                        &quot;run_id&quot;: <span class="rs-self">self</span>.run_id,
+                        &quot;suite&quot;: <span class="rs-self">self</span>.suite,
+                        &quot;container&quot;: container_name,
+                        &quot;op&quot;: op,
+                        &quot;request_id&quot;: request_id,
+                        &quot;caller_id&quot;: caller_id,
+                        &quot;trace_id&quot;: trace_id,
+                        &quot;event&quot;: event,
+                    }),
+                )?;
+            }
+        }
+        <span class="rs-kw">if</span> batch.records.is_empty() || batch.dropped_traces &gt; 0 {
+            <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-write-json-line-243">write_json_line</a>(
+                &amp;<span class="rs-kw">mut</span> trace_file,
+                &amp;json!({
+                    &quot;schema&quot;: &quot;eos.e2e.trace_batch_summary.v1&quot;,
+                    &quot;run_id&quot;: <span class="rs-self">self</span>.run_id,
+                    &quot;suite&quot;: <span class="rs-self">self</span>.suite,
+                    &quot;container&quot;: container_name,
+                    &quot;op&quot;: op,
+                    &quot;request_id&quot;: request_id,
+                    &quot;caller_id&quot;: caller_id,
+                    &quot;record_count&quot;: batch.records.len(),
+                    &quot;dropped_traces&quot;: batch.dropped_traces,
+                    &quot;daemon_boot_id&quot;: batch.daemon_boot_id,
+                }),
+            )?;
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#method-record-daemon-log-161">record_daemon_log</a>(&amp;<span class="rs-self">self</span>, container: &amp;<span class="rs-type">DaemonContainer</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+        <span class="rs-kw">if</span> matches!(<span class="rs-self">self</span>.dump_mode, <span class="rs-type">ArtifactDumpMode</span>::<span class="rs-type">Off</span>) {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+        }
+        <span class="rs-kw">let</span> dest = <span class="rs-self">self</span>
+            .daemon_log_dir
+            .join(container.name())
+            .join(&quot;runtime.log&quot;);
+        container
+            .copy_daemon_log_to(&amp;dest)
+            .with_context(|| format!(&quot;copy daemon log <span class="rs-kw">for</span> {}&quot;, container.name()))
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#method-should-capture-174">should_capture</a>(&amp;<span class="rs-self">self</span>, response: &amp;<span class="rs-type">Value</span>) -&gt; bool {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span>.dump_mode {
+            <span class="rs-type">ArtifactDumpMode</span>::<span class="rs-type">Off</span> =&gt; <span class="rs-kw">false</span>,
+            <span class="rs-type">ArtifactDumpMode</span>::<span class="rs-type">Failure</span> =&gt; !response_is_accepted(response),
+            <span class="rs-type">ArtifactDumpMode</span>::<span class="rs-type">Always</span> =&gt; <span class="rs-kw">true</span>,
+        }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#method-write-suite-summary-182">write_suite_summary</a>(&amp;<span class="rs-self">self</span>, config_path: &amp;<span class="rs-type">Path</span>, daemon_log_dir: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+        <span class="rs-kw">let</span> suite_dir = <span class="rs-self">self</span>.root_dir.join(&quot;suites&quot;).join(&amp;<span class="rs-self">self</span>.suite);
+        <span class="rs-kw">let</span> summary_path = suite_dir.join(&quot;summary.json&quot;);
+        <span class="rs-kw">let</span> summary = json!({
+            &quot;schema&quot;: &quot;eos.e2e.suite_report.v1&quot;,
+            &quot;run_id&quot;: <span class="rs-self">self</span>.run_id,
+            &quot;suite&quot;: <span class="rs-self">self</span>.suite,
+            &quot;config_path&quot;: config_path.display().to_string(),
+            &quot;started_at_unix_ms&quot;: <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-now-ms-341">now_ms</a>(),
+            &quot;command&quot;: std::env::args().collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;(),
+            &quot;dump_mode&quot;: <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-dump-mode-label-295">dump_mode_label</a>(<span class="rs-self">self</span>.dump_mode),
+            &quot;artifacts&quot;: {
+                &quot;root_dir&quot;: <span class="rs-self">self</span>.root_dir.display().to_string(),
+                &quot;trace_file&quot;: <span class="rs-self">self</span>.trace_file.display().to_string(),
+                &quot;event_file&quot;: <span class="rs-self">self</span>.event_file.display().to_string(),
+                &quot;audit_db&quot;: <span class="rs-self">self</span>.audit.db_path().display().to_string(),
+                &quot;perf_dir&quot;: <span class="rs-self">self</span>.perf_dir.display().to_string(),
+                &quot;daemon_log_dir&quot;: daemon_log_dir.display().to_string(),
+            },
+        });
+        fs::write(&amp;summary_path, serde_json::to_vec_pretty(&amp;summary)?)
+            .with_context(|| format!(&quot;write e2e suite summary {}&quot;, summary_path.display()))
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-trace-sidecar-bytes-207">trace_sidecar_bytes</a>(response: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;&gt; {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(object) = response.as_object() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+    };
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sidecar) = object.get(<span class="rs-type">DAEMON_TRACE_SIDECAR_FIELD</span>) <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+    };
+    <span class="rs-kw">let</span> <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(sidecar) = sidecar <span class="rs-kw">else</span> {
+        bail!(&quot;trace sidecar is not an object&quot;);
+    };
+    <span class="rs-kw">if</span> sidecar.get(&quot;schema&quot;).and_then(<span class="rs-type">Value</span>::as_str) != <span class="rs-type">Some</span>(<span class="rs-type">DAEMON_TRACE_SIDECAR_SCHEMA</span>) {
+        bail!(&quot;trace sidecar has invalid schema&quot;);
+    }
+    <span class="rs-kw">if</span> sidecar.get(&quot;encoding&quot;).and_then(<span class="rs-type">Value</span>::as_str) != <span class="rs-type">Some</span>(<span class="rs-type">DAEMON_TRACE_SIDECAR_ENCODING</span>) {
+        bail!(&quot;trace sidecar has invalid encoding&quot;);
+    }
+    <span class="rs-kw">if</span> !sidecar.get(&quot;spool_pending&quot;).is_some_and(<span class="rs-type">Value</span>::is_boolean) {
+        bail!(&quot;trace sidecar is missing spool_pending&quot;);
+    }
+    <span class="rs-kw">let</span> data = sidecar
+        .get(&quot;data&quot;)
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .context(&quot;trace sidecar is missing data&quot;)?;
+    decode_trace_sidecar_base64(data)
+        .context(&quot;trace sidecar has invalid base64&quot;)
+        .map(<span class="rs-type">Some</span>)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-append-jsonl-235">append_jsonl</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;std::fs::<span class="rs-type">File</span>&gt; {
+    <span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="e2e-test--src-pool-rs.html#method-new-42">new</a>()
+        .create(<span class="rs-kw">true</span>)
+        .append(<span class="rs-kw">true</span>)
+        .<a class="symbol-link rs-fn" href="e2e-test--src-pool-rs.html#method-open-221">open</a>(path)
+        .with_context(|| format!(&quot;open e2e <span class="rs-type">JSONL</span> artifact {}&quot;, path.display()))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-write-json-line-243">write_json_line</a>(file: &amp;<span class="rs-kw">mut</span> std::fs::<span class="rs-type">File</span>, value: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    serde_json::to_writer(&amp;<span class="rs-kw">mut</span> *file, value)?;
+    writeln!(file)?;
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-report-root-249">report_root</a>(run_id: &amp;str, artifacts: &amp;<span class="rs-type">ArtifactConfig</span>) -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(root) = <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-non-empty-env-path-335">non_empty_env_path</a>(&quot;<span class="rs-type">EOS_E2E_REPORT_ROOT</span>&quot;) {
+        <span class="rs-kw">return</span> root;
+    }
+    artifacts
+        .root_dir
+        .as_ref()
+        .map(resolve_manifest_path)
+        .unwrap_or_else(|| {
+            <span class="rs-type">PathBuf</span>::from(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;))
+                .join(&quot;test-reports&quot;)
+                .join(&quot;runs&quot;)
+                .join(run_id)
+        })
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-child-dir-265">child_dir</a>(root: &amp;<span class="rs-type">Path</span>, override_dir: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">PathBuf</span>&gt;, default_name: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
+    override_dir.map_or_else(
+        || root.join(default_name),
+        |dir| {
+            <span class="rs-kw">if</span> dir.is_absolute() {
+                dir.clone()
+            } <span class="rs-kw">else</span> {
+                root.join(dir)
+            }
+        },
+    )
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-resolve-manifest-path-278">resolve_manifest_path</a>(path: &amp;<span class="rs-type">PathBuf</span>) -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-kw">if</span> path.is_absolute() {
+        path.clone()
+    } <span class="rs-kw">else</span> {
+        <span class="rs-type">PathBuf</span>::from(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;)).join(path)
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-dump-mode-286">dump_mode</a>(configured: <span class="rs-type">ArtifactDumpMode</span>) -&gt; <span class="rs-type">ArtifactDumpMode</span> {
+    <span class="rs-kw">match</span> std::env::var(&quot;<span class="rs-type">EOS_E2E_ARTIFACTS</span>&quot;) {
+        <span class="rs-type">Ok</span>(value) <span class="rs-kw">if</span> value.eq_ignore_ascii_case(&quot;off&quot;) =&gt; <span class="rs-type">ArtifactDumpMode</span>::<span class="rs-type">Off</span>,
+        <span class="rs-type">Ok</span>(value) <span class="rs-kw">if</span> value.eq_ignore_ascii_case(&quot;failure&quot;) =&gt; <span class="rs-type">ArtifactDumpMode</span>::<span class="rs-type">Failure</span>,
+        <span class="rs-type">Ok</span>(value) <span class="rs-kw">if</span> value.eq_ignore_ascii_case(&quot;always&quot;) =&gt; <span class="rs-type">ArtifactDumpMode</span>::<span class="rs-type">Always</span>,
+        _ =&gt; configured,
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-dump-mode-label-295">dump_mode_label</a>(mode: <span class="rs-type">ArtifactDumpMode</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">match</span> mode {
+        <span class="rs-type">ArtifactDumpMode</span>::<span class="rs-type">Off</span> =&gt; &quot;off&quot;,
+        <span class="rs-type">ArtifactDumpMode</span>::<span class="rs-type">Failure</span> =&gt; &quot;failure&quot;,
+        <span class="rs-type">ArtifactDumpMode</span>::<span class="rs-type">Always</span> =&gt; &quot;always&quot;,
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#method-run-id-74">run_id</a>() -&gt; <span class="rs-type">String</span> {
+    std::env::var(&quot;<span class="rs-type">EOS_E2E_RUN_ID</span>&quot;)
+        .ok()
+        .and_then(|raw| <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-sanitize-id-320">sanitize_id</a>(&amp;raw))
+        .unwrap_or_else(|| format!(&quot;run-{}&quot;, <a class="symbol-link rs-fn" href="e2e-test--src-lib-rs.html#item-fn-unique-suffix-39">unique_suffix</a>()))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-suite-name-310">suite_name</a>(config_path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">String</span> {
+    config_path
+        .parent()
+        .and_then(<span class="rs-type">Path</span>::parent)
+        .and_then(<span class="rs-type">Path</span>::file_name)
+        .and_then(|name| name.to_str())
+        .and_then(sanitize_id)
+        .unwrap_or_else(|| &quot;unknown-suite&quot;.to_owned())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-sanitize-id-320">sanitize_id</a>(raw: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+    <span class="rs-kw">let</span> value = raw
+        .chars()
+        .map(|ch| {
+            <span class="rs-kw">if</span> ch.is_ascii_alphanumeric() || ch == &#x27;-&#x27; || ch == &#x27;_&#x27; {
+                ch
+            } <span class="rs-kw">else</span> {
+                &#x27;-&#x27;
+            }
+        })
+        .collect::&lt;<span class="rs-type">String</span>&gt;();
+    <span class="rs-kw">let</span> value = value.trim_matches(&#x27;-&#x27;).to_owned();
+    (!value.is_empty()).then_some(value)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-non-empty-env-path-335">non_empty_env_path</a>(name: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt; {
+    std::env::var_os(name)
+        .filter(|value| !value.is_empty())
+        .map(<span class="rs-type">PathBuf</span>::from)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="e2e-test--src-run-rs.html#item-fn-now-ms-341">now_ms</a>() -&gt; u64 {
+    <span class="rs-type">SystemTime</span>::now()
+        .duration_since(<span class="rs-type">UNIX_EPOCH</span>)
+        .map_or(0, |duration| duration.as_millis() <span class="rs-kw">as</span> u64)
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

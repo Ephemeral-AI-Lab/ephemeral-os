@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>host · src/trace_store/payload.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>host File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>23</b><span>modules</span></div>
+  <div><b>215</b><span>items</span></div>
+  <div><b>363</b><span>fields</span></div>
+  <div><b>115</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">host</span><ul class="file-tree"><li><a class="file-link" href="host.html"><span>drain.rs</span><small>3/10</small></a></li><li><span class="folder">forward</span><ul class="file-tree"><li><a class="file-link" href="host--src-host-forward-audit-rs.html"><span>audit.rs</span><small>0/3</small></a></li><li><a class="file-link" href="host--src-host-forward-recovery-rs.html"><span>recovery.rs</span><small>0/6</small></a></li><li><a class="file-link" href="host--src-host-forward-response-meta-rs.html"><span>response_meta.rs</span><small>0/3</small></a></li><li><a class="file-link" href="host--src-host-forward-trace-ingest-rs.html"><span>trace_ingest.rs</span><small>1/2</small></a></li></ul></li><li><a class="file-link" href="host--src-host-forward-rs.html"><span>forward.rs</span><small>3/12</small></a></li><li><a class="file-link" href="host--src-host-mod-rs.html"><span>mod.rs</span><small>6/6</small></a></li><li><a class="file-link" href="host--src-host-registry-rs.html"><span>registry.rs</span><small>6/2</small></a></li></ul></li><li><a class="file-link" href="host--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-protocol-rs.html"><span>protocol.rs</span><small>6/17</small></a></li><li><a class="file-link" href="host--src-runtime-rs.html"><span>runtime.rs</span><small>6/27</small></a></li><li><span class="folder">trace_store</span><ul class="file-tree"><li><a class="file-link" href="host--src-trace-store-audit-rs.html"><span>audit.rs</span><small>2/4</small></a></li><li><a class="file-link" href="host--src-trace-store-events-rs.html"><span>events.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-ingest-rs.html"><span>ingest.rs</span><small>0/3</small></a></li><li><a class="file-link" href="host--src-trace-store-mod-rs.html"><span>mod.rs</span><small>2/4</small></a></li><li><a class="file-link active" href="host--src-trace-store-payload-rs.html"><span>payload.rs</span><small>6/2</small></a></li><li><a class="file-link" href="host--src-trace-store-projection-rs.html"><span>projection.rs</span><small>1/8</small></a></li><li><a class="file-link" href="host--src-trace-store-query-rs.html"><span>query.rs</span><small>9/15</small></a></li><li><a class="file-link" href="host--src-trace-store-read-rs.html"><span>read.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-response-rs.html"><span>response.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-schema-rs.html"><span>schema.rs</span><small>0/2</small></a></li><li><a class="file-link" href="host--src-trace-store-sidecar-rs.html"><span>sidecar.rs</span><small>0/0</small></a></li><li><a class="file-link" href="host--src-trace-store-types-rs.html"><span>types.rs</span><small>12/1</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="trace_store::payload crates/host/src/trace_store/payload.rs HostTraceEventPayload TraceDegradedPayload ResponsePersistedPayload ResponseMissingPayload HeartbeatPayload TraceEventLossPayload response_persisted_to_proto encode_audit_payload">
+  <div class="module-head">
+    <div>
+      <h2>src/trace_store/payload.rs</h2>
+      <p class="path">module <code>trace_store::payload</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>6 types</span>
+      <span>0 impls</span>
+      <span>2 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-HostTraceEventPayload-6" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct HostTraceEventPayload pub(super) pub(super) struct HostTraceEventPayload crates/host/src/trace_store/payload.rs trace_id String request_id Option &lt; String &gt; span_id Option &lt; i64 &gt; module String event String details_json String ts_us u64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>HostTraceEventPayload</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) struct <a class="symbol-link" href="host--src-trace-store-payload-rs.html#item-struct-HostTraceEventPayload-6">HostTraceEventPayload</a></code>
+  <div class="tags"><span>derive: Debug</span><span>derive: serde::Deserialize</span><span>derive: serde::Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(super)</td><td>trace_id</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>request_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub(super)</td><td>span_id</td><td><code>Option &lt; i64 &gt;</code></td></tr><tr><td>pub(super)</td><td>module</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>event</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>details_json</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>ts_us</td><td><code>u64</code></td></tr></tbody></table>
+
+  <p class="source">crates/host/src/trace_store/payload.rs:6</p>
+</article><article id="item-struct-TraceDegradedPayload-17" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct TraceDegradedPayload pub(super) pub(super) struct TraceDegradedPayload crates/host/src/trace_store/payload.rs trace_id String request_id String sandbox_id String op String family String caller_id Option &lt; String &gt; args_summary String args_digest String sent_at_ms u64 host_boot_id String error_kind String message String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>TraceDegradedPayload</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) struct <a class="symbol-link" href="host--src-trace-store-payload-rs.html#item-struct-TraceDegradedPayload-17">TraceDegradedPayload</a></code>
+  <div class="tags"><span>derive: Debug</span><span>derive: serde::Deserialize</span><span>derive: serde::Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(super)</td><td>trace_id</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>request_id</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>sandbox_id</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>op</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>family</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>caller_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub(super)</td><td>args_summary</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>args_digest</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>sent_at_ms</td><td><code>u64</code></td></tr><tr><td>pub(super)</td><td>host_boot_id</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>error_kind</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>message</td><td><code>String</code></td></tr></tbody></table>
+
+  <p class="source">crates/host/src/trace_store/payload.rs:17</p>
+</article><article id="item-struct-ResponsePersistedPayload-33" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ResponsePersistedPayload pub(super) pub(super) struct ResponsePersistedPayload crates/host/src/trace_store/payload.rs trace_id String request_id String status String error_kind Option &lt; String &gt; received_at_ms u64 host_rtt_ms u64 response_digest String response_len u64 response_summary String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ResponsePersistedPayload</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) struct <a class="symbol-link" href="host--src-trace-store-payload-rs.html#item-struct-ResponsePersistedPayload-33">ResponsePersistedPayload</a></code>
+  <div class="tags"><span>derive: Debug</span><span>derive: serde::Deserialize</span><span>derive: serde::Serialize</span><span>dto</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(super)</td><td>trace_id</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>request_id</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>status</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>error_kind</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub(super)</td><td>received_at_ms</td><td><code>u64</code></td></tr><tr><td>pub(super)</td><td>host_rtt_ms</td><td><code>u64</code></td></tr><tr><td>pub(super)</td><td>response_digest</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>response_len</td><td><code>u64</code></td></tr><tr><td>pub(super)</td><td>response_summary</td><td><code>String</code></td></tr></tbody></table>
+
+  <p class="source">crates/host/src/trace_store/payload.rs:33</p>
+</article><article id="item-struct-ResponseMissingPayload-46" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ResponseMissingPayload pub(super) pub(super) struct ResponseMissingPayload crates/host/src/trace_store/payload.rs trace_id String request_id String status String error_kind String message String received_at_ms u64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ResponseMissingPayload</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) struct <a class="symbol-link" href="host--src-trace-store-payload-rs.html#item-struct-ResponseMissingPayload-46">ResponseMissingPayload</a></code>
+  <div class="tags"><span>derive: Debug</span><span>derive: serde::Deserialize</span><span>derive: serde::Serialize</span><span>dto</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(super)</td><td>trace_id</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>request_id</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>status</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>error_kind</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>message</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>received_at_ms</td><td><code>u64</code></td></tr></tbody></table>
+
+  <p class="source">crates/host/src/trace_store/payload.rs:46</p>
+</article><article id="item-struct-HeartbeatPayload-56" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct HeartbeatPayload pub(super) pub(super) struct HeartbeatPayload crates/host/src/trace_store/payload.rs sandbox_id String daemon_boot_id Option &lt; String &gt; reachable bool spool_pending Option &lt; u64 &gt; spool_dropped_total Option &lt; u64 &gt; received_at_ms u64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>HeartbeatPayload</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) struct <a class="symbol-link" href="host--src-trace-store-payload-rs.html#item-struct-HeartbeatPayload-56">HeartbeatPayload</a></code>
+  <div class="tags"><span>derive: Debug</span><span>derive: serde::Deserialize</span><span>derive: serde::Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(super)</td><td>sandbox_id</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>daemon_boot_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub(super)</td><td>reachable</td><td><code>bool</code></td></tr><tr><td>pub(super)</td><td>spool_pending</td><td><code>Option &lt; u64 &gt;</code></td></tr><tr><td>pub(super)</td><td>spool_dropped_total</td><td><code>Option &lt; u64 &gt;</code></td></tr><tr><td>pub(super)</td><td>received_at_ms</td><td><code>u64</code></td></tr></tbody></table>
+
+  <p class="source">crates/host/src/trace_store/payload.rs:56</p>
+</article><article id="item-struct-TraceEventLossPayload-66" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct TraceEventLossPayload pub(super) pub(super) struct TraceEventLossPayload crates/host/src/trace_store/payload.rs reason String trace_id String request_id Option &lt; String &gt; module String event String message String received_at_ms u64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>TraceEventLossPayload</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) struct <a class="symbol-link" href="host--src-trace-store-payload-rs.html#item-struct-TraceEventLossPayload-66">TraceEventLossPayload</a></code>
+  <div class="tags"><span>derive: Debug</span><span>derive: serde::Deserialize</span><span>derive: serde::Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(super)</td><td>reason</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>trace_id</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>request_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub(super)</td><td>module</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>event</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>message</td><td><code>String</code></td></tr><tr><td>pub(super)</td><td>received_at_ms</td><td><code>u64</code></td></tr></tbody></table>
+
+  <p class="source">crates/host/src/trace_store/payload.rs:66</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-response-persisted-to-proto-77" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn response_persisted_to_proto pub(super) pub(super) fn response_persisted_to_proto (payload : &amp; ResponsePersistedPayload ,) -&gt; proto :: ResponsePersisted crates/host/src/trace_store/payload.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>response_persisted_to_proto</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-payload-rs.html#item-fn-response-persisted-to-proto-77">response_persisted_to_proto</a> (payload : &amp; <a class="symbol-link" href="host--src-trace-store-payload-rs.html#item-struct-ResponsePersistedPayload-33">ResponsePersistedPayload</a> ,) -&gt; proto :: ResponsePersisted</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-payload-rs.html#item-fn-response-persisted-to-proto-77">response_persisted_to_proto</a>(
+    payload: &amp;<a class="symbol-link rs-type" href="host--src-trace-store-payload-rs.html#item-struct-ResponsePersistedPayload-33">ResponsePersistedPayload</a>,
+) -&gt; proto::<span class="rs-type">ResponsePersisted</span> {
+    proto::<span class="rs-type">ResponsePersisted</span> {
+        trace_id: payload.trace_id.clone(),
+        request_id: payload.request_id.clone(),
+        status: payload.status.clone(),
+        error_kind: payload.error_kind.clone().unwrap_or_default(),
+        received_at_unix_ms: payload.received_at_ms,
+        host_rtt_ms: payload.host_rtt_ms,
+        response_digest: payload.response_digest.clone(),
+        response_len: payload.response_len,
+        response_summary_json: payload.response_summary.clone(),
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/payload.rs:77</p>
+</article><article id="item-fn-encode-audit-payload-93" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_audit_payload pub(super) pub(super) fn encode_audit_payload &lt; T : serde :: Serialize &gt; (payload : &amp; T) -&gt; Vec &lt; u8 &gt; crates/host/src/trace_store/payload.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>encode_audit_payload</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="host--src-trace-store-payload-rs.html#item-fn-encode-audit-payload-93">encode_audit_payload</a> &lt; T : serde :: Serialize &gt; (payload : &amp; T) -&gt; Vec &lt; u8 &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> encode_audit_payload&lt;<span class="rs-type">T</span>: serde::<span class="rs-type">Serialize</span>&gt;(payload: &amp;<span class="rs-type">T</span>) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
+    proto::<span class="rs-type">AuditEntry</span> {
+        entry_id: uuid::<span class="rs-type">Uuid</span>::new_v4().simple().to_string(),
+        trace_id: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(),
+        seq: 0,
+        payload: serde_json::to_vec(payload).expect(&quot;audit payload serializes&quot;),
+        previous_hash: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(),
+        entry_hash: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(),
+        schema_version: &quot;1&quot;.to_owned(),
+        written_at_unix_ms: <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-now-ms-334">now_ms</a>(),
+    }
+    .encode_to_vec()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/host/src/trace_store/payload.rs:93</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/host/src/trace_store/payload.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> prost::<span class="rs-type">Message</span>;
+<span class="rs-kw">use</span> trace::codec::proto;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::now_ms;
+
+#[derive(<span class="rs-type">Debug</span>, serde::<span class="rs-type">Serialize</span>, serde::<span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-trace-store-payload-rs.html#item-struct-HostTraceEventPayload-6">HostTraceEventPayload</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) trace_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) request_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) span_id: <span class="rs-type">Option</span>&lt;i64&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) module: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) event: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) details_json: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) ts_us: u64,
+}
+
+#[derive(<span class="rs-type">Debug</span>, serde::<span class="rs-type">Serialize</span>, serde::<span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-trace-store-payload-rs.html#item-struct-TraceDegradedPayload-17">TraceDegradedPayload</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) trace_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) request_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) sandbox_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) op: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) family: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) caller_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) args_summary: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) args_digest: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) sent_at_ms: u64,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) host_boot_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) error_kind: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) message: <span class="rs-type">String</span>,
+}
+
+#[derive(<span class="rs-type">Debug</span>, serde::<span class="rs-type">Serialize</span>, serde::<span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-trace-store-payload-rs.html#item-struct-ResponsePersistedPayload-33">ResponsePersistedPayload</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) trace_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) request_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) status: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) error_kind: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) received_at_ms: u64,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) host_rtt_ms: u64,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) response_digest: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) response_len: u64,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) response_summary: <span class="rs-type">String</span>,
+}
+
+#[derive(<span class="rs-type">Debug</span>, serde::<span class="rs-type">Serialize</span>, serde::<span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-trace-store-payload-rs.html#item-struct-ResponseMissingPayload-46">ResponseMissingPayload</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) trace_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) request_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) status: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) error_kind: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) message: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) received_at_ms: u64,
+}
+
+#[derive(<span class="rs-type">Debug</span>, serde::<span class="rs-type">Serialize</span>, serde::<span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-trace-store-payload-rs.html#item-struct-HeartbeatPayload-56">HeartbeatPayload</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) sandbox_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) daemon_boot_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) reachable: bool,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) spool_pending: <span class="rs-type">Option</span>&lt;u64&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) spool_dropped_total: <span class="rs-type">Option</span>&lt;u64&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) received_at_ms: u64,
+}
+
+#[derive(<span class="rs-type">Debug</span>, serde::<span class="rs-type">Serialize</span>, serde::<span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="host--src-trace-store-payload-rs.html#item-struct-TraceEventLossPayload-66">TraceEventLossPayload</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) reason: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) trace_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) request_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) module: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) event: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) message: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) received_at_ms: u64,
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="host--src-trace-store-payload-rs.html#item-fn-response-persisted-to-proto-77">response_persisted_to_proto</a>(
+    payload: &amp;<a class="symbol-link rs-type" href="host--src-trace-store-payload-rs.html#item-struct-ResponsePersistedPayload-33">ResponsePersistedPayload</a>,
+) -&gt; proto::<span class="rs-type">ResponsePersisted</span> {
+    proto::<span class="rs-type">ResponsePersisted</span> {
+        trace_id: payload.trace_id.clone(),
+        request_id: payload.request_id.clone(),
+        status: payload.status.clone(),
+        error_kind: payload.error_kind.clone().unwrap_or_default(),
+        received_at_unix_ms: payload.received_at_ms,
+        host_rtt_ms: payload.host_rtt_ms,
+        response_digest: payload.response_digest.clone(),
+        response_len: payload.response_len,
+        response_summary_json: payload.response_summary.clone(),
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> encode_audit_payload&lt;<span class="rs-type">T</span>: serde::<span class="rs-type">Serialize</span>&gt;(payload: &amp;<span class="rs-type">T</span>) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
+    proto::<span class="rs-type">AuditEntry</span> {
+        entry_id: uuid::<span class="rs-type">Uuid</span>::new_v4().simple().to_string(),
+        trace_id: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(),
+        seq: 0,
+        payload: serde_json::to_vec(payload).expect(&quot;audit payload serializes&quot;),
+        previous_hash: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(),
+        entry_hash: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="host--src-host-mod-rs.html#method-new-80">new</a>(),
+        schema_version: &quot;1&quot;.to_owned(),
+        written_at_unix_ms: <a class="symbol-link rs-fn" href="host--src-trace-store-mod-rs.html#item-fn-now-ms-334">now_ms</a>(),
+    }
+    .encode_to_vec()
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

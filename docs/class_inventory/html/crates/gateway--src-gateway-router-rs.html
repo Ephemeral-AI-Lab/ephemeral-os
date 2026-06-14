@@ -1,0 +1,695 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>gateway · src/gateway/router.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>gateway File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>8</b><span>modules</span></div>
+  <div><b>50</b><span>items</span></div>
+  <div><b>17</b><span>fields</span></div>
+  <div><b>27</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">gateway</span><ul class="file-tree"><li><a class="file-link" href="gateway--src-gateway-catalog-rs.html"><span>catalog.rs</span><small>4/0</small></a></li><li><a class="file-link" href="gateway--src-gateway-engine-rs.html"><span>engine.rs</span><small>1/1</small></a></li><li><a class="file-link active" href="gateway--src-gateway-router-rs.html"><span>router.rs</span><small>1/6</small></a></li><li><a class="file-link" href="gateway--src-gateway-transport-rs.html"><span>transport.rs</span><small>0/7</small></a></li><li><a class="file-link" href="gateway--src-gateway-wire-rs.html"><span>wire.rs</span><small>2/13</small></a></li></ul></li><li><a class="file-link" href="gateway.html"><span>gateway.rs</span><small>0/0</small></a></li><li><a class="file-link" href="gateway--src-main-rs.html"><span>main.rs</span><small>0/1</small></a></li><li><a class="file-link" href="gateway--src-serve-rs.html"><span>serve.rs</span><small>1/7</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="gateway::router crates/gateway/src/gateway/router.rs Surface impl Surface handle record_route_event forward host_call trace_response unknown_sandbox">
+  <div class="module-head">
+    <div>
+      <h2>src/gateway/router.rs</h2>
+      <p class="path">module <code>gateway::router</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>1 impls</span>
+      <span>6 fns</span>
+      <span>2 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-Surface-12" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum Surface pub(crate) pub(crate) enum Surface crates/gateway/src/gateway/router.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>Surface</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) enum <a class="symbol-link" href="gateway--src-gateway-router-rs.html#item-enum-Surface-12">Surface</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Client</td><td><code></code></td></tr><tr><td>Operator</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-allows-19"><td>method</td><td>allows</td><td><code>const fn <a class="symbol-link" href="gateway--src-gateway-router-rs.html#method-allows-19">allows</a> (self , visibility : <a class="symbol-link" href="gateway--src-gateway-catalog-rs.html#item-enum-Visibility-7">Visibility</a>) -&gt; bool</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#method-allows-19">allows</a>(<span class="rs-self">self</span>, visibility: <a class="symbol-link rs-type" href="gateway--src-gateway-catalog-rs.html#item-enum-Visibility-7">Visibility</a>) -&gt; bool {
+        <span class="rs-kw">match</span> visibility {
+            <a class="symbol-link rs-type" href="gateway--src-gateway-catalog-rs.html#item-enum-Visibility-7">Visibility</a>::<span class="rs-type">Public</span> =&gt; <span class="rs-kw">true</span>,
+            <a class="symbol-link rs-type" href="gateway--src-gateway-catalog-rs.html#item-enum-Visibility-7">Visibility</a>::<span class="rs-type">Operator</span> =&gt; matches!(<span class="rs-self">self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Operator</span>),
+            <a class="symbol-link rs-type" href="gateway--src-gateway-catalog-rs.html#item-enum-Visibility-7">Visibility</a>::<span class="rs-type">Internal</span> | <a class="symbol-link rs-type" href="gateway--src-gateway-catalog-rs.html#item-enum-Visibility-7">Visibility</a>::<span class="rs-type">Test</span> =&gt; <span class="rs-kw">false</span>,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-label-27"><td>method</td><td>label</td><td><code>pub(crate) const fn <a class="symbol-link" href="gateway--src-gateway-catalog-rs.html#method-label-75">label</a> (self) -&gt; &amp; &#x27;static str</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-catalog-rs.html#method-label-75">label</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Client</span> =&gt; &quot;client&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Operator</span> =&gt; &quot;operator&quot;,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/gateway/src/gateway/router.rs:12</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-handle-35" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn handle pub(crate) pub(crate) fn handle (catalog : &amp; Catalog , engine : &amp; dyn Engine , surface : Surface , request : &amp; ClientRequest ,) -&gt; Value crates/gateway/src/gateway/router.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>handle</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="gateway--src-gateway-router-rs.html#item-fn-handle-35">handle</a> (catalog : &amp; <a class="symbol-link" href="gateway--src-gateway-catalog-rs.html#item-struct-Catalog-30">Catalog</a> , engine : &amp; dyn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#item-trait-Engine-6">Engine</a> , surface : <a class="symbol-link" href="gateway--src-gateway-router-rs.html#item-enum-Surface-12">Surface</a> , request : &amp; <a class="symbol-link" href="gateway--src-gateway-wire-rs.html#item-struct-ClientRequest-12">ClientRequest</a> ,) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-handle-35">handle</a>(
+    catalog: &amp;<a class="symbol-link rs-type" href="gateway--src-gateway-catalog-rs.html#item-struct-Catalog-30">Catalog</a>,
+    engine: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="gateway--src-gateway-engine-rs.html#item-trait-Engine-6">Engine</a>,
+    surface: <a class="symbol-link rs-type" href="gateway--src-gateway-router-rs.html#item-enum-Surface-12">Surface</a>,
+    request: &amp;<a class="symbol-link rs-type" href="gateway--src-gateway-wire-rs.html#item-struct-ClientRequest-12">ClientRequest</a>,
+) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(entry) = catalog.<a class="symbol-link rs-fn" href="gateway--src-gateway-catalog-rs.html#method-lookup-64">lookup</a>(&amp;request.op) <span class="rs-kw">else</span> {
+        <span class="rs-kw">if</span> request.op.starts_with(<span class="rs-type">DYNAMIC_PLUGIN_POLICY</span>.prefix) {
+            <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-forward-11">forward</a>(
+                engine,
+                request,
+                <span class="rs-type">DYNAMIC_PLUGIN_POLICY</span>.mutates_state,
+                <span class="rs-type">DYNAMIC_PLUGIN_POLICY</span>.family.as_str(),
+                &quot;plugin_fallback&quot;,
+                <span class="rs-type">DYNAMIC_PLUGIN_POLICY</span>.visibility.as_str(),
+            );
+        }
+        <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-record-route-event-115">record_route_event</a>(
+            engine,
+            request,
+            &quot;route_rejected&quot;,
+            json!({
+                &quot;op&quot;: request.op,
+                &quot;route&quot;: &quot;rejected&quot;,
+                &quot;surface&quot;: surface.<a class="symbol-link rs-fn" href="gateway--src-gateway-catalog-rs.html#method-label-75">label</a>(),
+                &quot;error_kind&quot;: <span class="rs-type">ProtocolErrorKind</span>::<span class="rs-type">UnknownOp</span>.as_str(),
+            }),
+        );
+        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-error-response-for-133">error_response_for</a>(
+            request,
+            <span class="rs-type">ProtocolErrorKind</span>::<span class="rs-type">UnknownOp</span>.as_str(),
+            &amp;format!(&quot;unknown op: {}&quot;, request.op),
+        );
+    };
+    <span class="rs-kw">if</span> !surface.<a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#method-allows-19">allows</a>(entry.visibility) {
+        <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-record-route-event-115">record_route_event</a>(
+            engine,
+            request,
+            &quot;route_rejected&quot;,
+            json!({
+                &quot;op&quot;: entry.name,
+                &quot;route&quot;: &quot;rejected&quot;,
+                &quot;surface&quot;: surface.<a class="symbol-link rs-fn" href="gateway--src-gateway-catalog-rs.html#method-label-75">label</a>(),
+                &quot;visibility&quot;: entry.visibility.<a class="symbol-link rs-fn" href="gateway--src-gateway-catalog-rs.html#method-label-75">label</a>(),
+                &quot;error_kind&quot;: <span class="rs-type">ProtocolErrorKind</span>::<span class="rs-type">Forbidden</span>.as_str(),
+            }),
+        );
+        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-error-response-for-133">error_response_for</a>(
+            request,
+            <span class="rs-type">ProtocolErrorKind</span>::<span class="rs-type">Forbidden</span>.as_str(),
+            &amp;format!(&quot;op {} is not served on this socket&quot;, entry.name),
+        );
+    }
+    <span class="rs-kw">match</span> entry.route {
+        <span class="rs-kw">super</span>::catalog::<a class="symbol-link rs-type" href="gateway--src-gateway-catalog-rs.html#item-enum-Route-15">Route</a>::<span class="rs-type">Daemon</span> =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-forward-11">forward</a>(
+            engine,
+            request,
+            entry.mutates_state,
+            entry.family,
+            &quot;daemon&quot;,
+            entry.visibility.<a class="symbol-link rs-fn" href="gateway--src-gateway-catalog-rs.html#method-label-75">label</a>(),
+        ),
+        <span class="rs-kw">super</span>::catalog::<a class="symbol-link rs-type" href="gateway--src-gateway-catalog-rs.html#item-enum-Route-15">Route</a>::<span class="rs-type">Host</span>(verb) =&gt; {
+            <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-record-route-event-115">record_route_event</a>(
+                engine,
+                request,
+                &quot;route_selected&quot;,
+                json!({
+                    &quot;op&quot;: entry.name,
+                    &quot;route&quot;: &quot;host&quot;,
+                    &quot;visibility&quot;: entry.visibility.<a class="symbol-link rs-fn" href="gateway--src-gateway-catalog-rs.html#method-label-75">label</a>(),
+                    &quot;family&quot;: entry.family,
+                    &quot;mutates_state&quot;: entry.mutates_state,
+                }),
+            );
+            <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-host-call-206">host_call</a>(engine, verb, request)
+        }
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/gateway/src/gateway/router.rs:35</p>
+</article><article id="item-fn-record-route-event-115" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn record_route_event private fn record_route_event (engine : &amp; dyn Engine , request : &amp; ClientRequest , event : &amp; str , details : Value) crates/gateway/src/gateway/router.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>record_route_event</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="gateway--src-gateway-router-rs.html#item-fn-record-route-event-115">record_route_event</a> (engine : &amp; dyn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#item-trait-Engine-6">Engine</a> , request : &amp; <a class="symbol-link" href="gateway--src-gateway-wire-rs.html#item-struct-ClientRequest-12">ClientRequest</a> , event : &amp; str , details : Value)</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-record-route-event-115">record_route_event</a>(engine: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="gateway--src-gateway-engine-rs.html#item-trait-Engine-6">Engine</a>, request: &amp;<a class="symbol-link rs-type" href="gateway--src-gateway-wire-rs.html#item-struct-ClientRequest-12">ClientRequest</a>, event: &amp;str, details: <span class="rs-type">Value</span>) {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sandbox_id) = request.sandbox_id.as_deref() {
+        engine.<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-record-trace-event-25">record_trace_event</a>(sandbox_id, &amp;request.trace, &quot;gateway.route&quot;, event, details);
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/gateway/src/gateway/router.rs:115</p>
+</article><article id="item-fn-forward-121" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn forward private fn forward (engine : &amp; dyn Engine , request : &amp; ClientRequest , mutates_state : bool , family : &amp; str , route : &amp; str , visibility : &amp; str ,) -&gt; Value crates/gateway/src/gateway/router.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>forward</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#method-forward-11">forward</a> (engine : &amp; dyn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#item-trait-Engine-6">Engine</a> , request : &amp; <a class="symbol-link" href="gateway--src-gateway-wire-rs.html#item-struct-ClientRequest-12">ClientRequest</a> , mutates_state : bool , family : &amp; str , route : &amp; str , visibility : &amp; str ,) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-forward-11">forward</a>(
+    engine: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="gateway--src-gateway-engine-rs.html#item-trait-Engine-6">Engine</a>,
+    request: &amp;<a class="symbol-link rs-type" href="gateway--src-gateway-wire-rs.html#item-struct-ClientRequest-12">ClientRequest</a>,
+    mutates_state: bool,
+    family: &amp;str,
+    route: &amp;str,
+    visibility: &amp;str,
+) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sandbox_id) = request.sandbox_id.as_deref() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-error-response-for-133">error_response_for</a>(
+            request,
+            <span class="rs-type">ProtocolErrorKind</span>::<span class="rs-type">InvalidRequest</span>.as_str(),
+            &quot;sandbox_id is required <span class="rs-kw">for</span> this op&quot;,
+        );
+    };
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> trace = request.trace.clone();
+    trace.push_gateway_event(
+        &quot;gateway.route&quot;,
+        &quot;route_selected&quot;,
+        json!({
+            &quot;op&quot;: request.op,
+            &quot;sandbox_id&quot;: sandbox_id,
+            &quot;route&quot;: route,
+            &quot;visibility&quot;: visibility,
+            &quot;family&quot;: family,
+            &quot;mutates_state&quot;: mutates_state,
+        }),
+    );
+    trace.push_gateway_event(
+        &quot;gateway.route&quot;,
+        &quot;engine_forward_started&quot;,
+        json!({
+            &quot;op&quot;: request.op,
+            &quot;sandbox_id&quot;: sandbox_id,
+            &quot;family&quot;: family,
+            &quot;mutates_state&quot;: mutates_state,
+        }),
+    );
+    <span class="rs-kw">let</span> trace_for_result = trace.clone();
+    <span class="rs-kw">let</span> started = <span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">match</span> engine.<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-forward-11">forward</a>(host::<span class="rs-type">HostForwardRequest</span> {
+        sandbox_id,
+        mutates_state,
+        family,
+        op: &amp;request.op,
+        invocation_id: &amp;request.invocation_id,
+        args: &amp;request.args,
+        trace,
+    }) {
+        <span class="rs-type">Some</span>(<span class="rs-type">Ok</span>(<span class="rs-kw">mut</span> response)) =&gt; {
+            engine.<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-record-trace-event-25">record_trace_event</a>(
+                sandbox_id,
+                &amp;trace_for_result,
+                &quot;gateway.route&quot;,
+                &quot;engine_forward_finished&quot;,
+                json!({
+                    &quot;op&quot;: request.op,
+                    &quot;sandbox_id&quot;: sandbox_id,
+                    &quot;family&quot;: family,
+                    &quot;mutates_state&quot;: mutates_state,
+                    &quot;duration_us&quot;: <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-elapsed-us-181">elapsed_us</a>(started),
+                }),
+            );
+            host::strip_trace_sidecar(&amp;<span class="rs-kw">mut</span> response);
+            response
+        }
+        <span class="rs-type">Some</span>(<span class="rs-type">Err</span>(err)) =&gt; {
+            <span class="rs-kw">let</span> (kind, message) = <span class="rs-kw">match</span> err {
+                host::<span class="rs-type">ForwardError</span>::<span class="rs-type">TraceUnavailable</span>(e) =&gt; (&quot;trace_unavailable&quot;, e.to_string()),
+                host::<span class="rs-type">ForwardError</span>::<span class="rs-type">UncertainOutcome</span>(m) =&gt; (&quot;uncertain_outcome&quot;, m),
+                host::<span class="rs-type">ForwardError</span>::<span class="rs-type">SandboxUnavailable</span>(m) =&gt; (&quot;sandbox_unavailable&quot;, m),
+            };
+            engine.<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-record-trace-event-25">record_trace_event</a>(
+                sandbox_id,
+                &amp;trace_for_result,
+                &quot;gateway.route&quot;,
+                &quot;engine_forward_failed&quot;,
+                json!({&quot;op&quot;: request.op, &quot;sandbox_id&quot;: sandbox_id, &quot;error_kind&quot;: kind, &quot;duration_us&quot;: <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-elapsed-us-181">elapsed_us</a>(started)}),
+            );
+            <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-error-response-for-133">error_response_for</a>(request, kind, &amp;message)
+        }
+        <span class="rs-type">None</span> =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-unknown-sandbox-268">unknown_sandbox</a>(request, sandbox_id),
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/gateway/src/gateway/router.rs:121</p>
+</article><article id="item-fn-host-call-206" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn host_call private fn host_call (engine : &amp; dyn Engine , verb : HostVerb , request : &amp; ClientRequest) -&gt; Value crates/gateway/src/gateway/router.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>host_call</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="gateway--src-gateway-router-rs.html#item-fn-host-call-206">host_call</a> (engine : &amp; dyn <a class="symbol-link" href="gateway--src-gateway-engine-rs.html#item-trait-Engine-6">Engine</a> , verb : HostVerb , request : &amp; <a class="symbol-link" href="gateway--src-gateway-wire-rs.html#item-struct-ClientRequest-12">ClientRequest</a>) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-host-call-206">host_call</a>(engine: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="gateway--src-gateway-engine-rs.html#item-trait-Engine-6">Engine</a>, verb: <span class="rs-type">HostVerb</span>, request: &amp;<a class="symbol-link rs-type" href="gateway--src-gateway-wire-rs.html#item-struct-ClientRequest-12">ClientRequest</a>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">match</span> verb {
+        <span class="rs-type">HostVerb</span>::<span class="rs-type">Acquire</span> =&gt; <span class="rs-kw">match</span> engine.<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-acquire-7">acquire</a>(&amp;request.trace, &amp;request.args) {
+            <span class="rs-type">Ok</span>(sandbox_id) =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-ok-response-127">ok_response</a>(request, json!({&quot;sandbox_id&quot;: sandbox_id})),
+            <span class="rs-type">Err</span>(err) =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-error-response-for-133">error_response_for</a>(
+                request,
+                &quot;trace_unavailable&quot;,
+                &amp;format!(&quot;acquire failed: {err:#}&quot;),
+            ),
+        },
+        <span class="rs-type">HostVerb</span>::<span class="rs-type">List</span> =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-ok-response-127">ok_response</a>(request, json!({&quot;sandboxes&quot;: engine.<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-list-10">list</a>()})),
+        <span class="rs-type">HostVerb</span>::<span class="rs-type">Release</span> =&gt; {
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sandbox_id) = request.sandbox_id.as_deref() <span class="rs-kw">else</span> {
+                <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-error-response-for-133">error_response_for</a>(
+                    request,
+                    <span class="rs-type">ProtocolErrorKind</span>::<span class="rs-type">InvalidRequest</span>.as_str(),
+                    &quot;sandbox_id is required <span class="rs-kw">for</span> this op&quot;,
+                );
+            };
+            <span class="rs-kw">match</span> engine.<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-release-8">release</a>(sandbox_id, &amp;request.trace, &amp;request.args) {
+                <span class="rs-type">Ok</span>(<span class="rs-kw">true</span>) =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-ok-response-127">ok_response</a>(request, json!({&quot;sandbox_id&quot;: sandbox_id})),
+                <span class="rs-type">Ok</span>(<span class="rs-kw">false</span>) =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-unknown-sandbox-268">unknown_sandbox</a>(request, sandbox_id),
+                <span class="rs-type">Err</span>(err) =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-error-response-for-133">error_response_for</a>(
+                    request,
+                    &quot;trace_unavailable&quot;,
+                    &amp;format!(&quot;release failed: {err:#}&quot;),
+                ),
+            }
+        }
+        <span class="rs-type">HostVerb</span>::<span class="rs-type">Status</span> =&gt; {
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sandbox_id) = request.sandbox_id.as_deref() <span class="rs-kw">else</span> {
+                <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-error-response-for-133">error_response_for</a>(
+                    request,
+                    <span class="rs-type">ProtocolErrorKind</span>::<span class="rs-type">InvalidRequest</span>.as_str(),
+                    &quot;sandbox_id is required <span class="rs-kw">for</span> this op&quot;,
+                );
+            };
+            <span class="rs-kw">match</span> engine.<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-status-9">status</a>(sandbox_id) {
+                <span class="rs-type">Some</span>(status) =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-ok-response-127">ok_response</a>(request, status),
+                <span class="rs-type">None</span> =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-unknown-sandbox-268">unknown_sandbox</a>(request, sandbox_id),
+            }
+        }
+        <span class="rs-type">HostVerb</span>::<span class="rs-type">TraceRequests</span> =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-trace-response-261">trace_response</a>(
+            request,
+            engine.<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-requests-13">trace_requests</a>(&amp;request.trace, &amp;request.args),
+        ),
+        <span class="rs-type">HostVerb</span>::<span class="rs-type">TraceShow</span> =&gt; {
+            <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-trace-response-261">trace_response</a>(request, engine.<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-show-17">trace_show</a>(&amp;request.trace, &amp;request.args))
+        }
+        <span class="rs-type">HostVerb</span>::<span class="rs-type">TraceVerify</span> =&gt; {
+            <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-trace-response-261">trace_response</a>(request, engine.<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-verify-21">trace_verify</a>(&amp;request.trace, &amp;request.args))
+        }
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/gateway/src/gateway/router.rs:206</p>
+</article><article id="item-fn-trace-response-261" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn trace_response private fn trace_response (request : &amp; ClientRequest , result : anyhow :: Result &lt; Value &gt;) -&gt; Value crates/gateway/src/gateway/router.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>trace_response</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="gateway--src-gateway-router-rs.html#item-fn-trace-response-261">trace_response</a> (request : &amp; <a class="symbol-link" href="gateway--src-gateway-wire-rs.html#item-struct-ClientRequest-12">ClientRequest</a> , result : anyhow :: Result &lt; Value &gt;) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-trace-response-261">trace_response</a>(request: &amp;<a class="symbol-link rs-type" href="gateway--src-gateway-wire-rs.html#item-struct-ClientRequest-12">ClientRequest</a>, result: anyhow::<span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>&gt;) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">match</span> result {
+        <span class="rs-type">Ok</span>(value) =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-ok-response-127">ok_response</a>(request, value),
+        <span class="rs-type">Err</span>(err) =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-error-response-for-133">error_response_for</a>(request, &quot;trace_unavailable&quot;, &amp;err.to_string()),
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/gateway/src/gateway/router.rs:261</p>
+</article><article id="item-fn-unknown-sandbox-268" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn unknown_sandbox private fn unknown_sandbox (request : &amp; ClientRequest , sandbox_id : &amp; str) -&gt; Value crates/gateway/src/gateway/router.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>unknown_sandbox</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="gateway--src-gateway-router-rs.html#item-fn-unknown-sandbox-268">unknown_sandbox</a> (request : &amp; <a class="symbol-link" href="gateway--src-gateway-wire-rs.html#item-struct-ClientRequest-12">ClientRequest</a> , sandbox_id : &amp; str) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-unknown-sandbox-268">unknown_sandbox</a>(request: &amp;<a class="symbol-link rs-type" href="gateway--src-gateway-wire-rs.html#item-struct-ClientRequest-12">ClientRequest</a>, sandbox_id: &amp;str) -&gt; <span class="rs-type">Value</span> {
+    <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-error-response-for-133">error_response_for</a>(
+        request,
+        &quot;unknown_sandbox&quot;,
+        &amp;format!(&quot;unknown sandbox: {sandbox_id}&quot;),
+    )
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/gateway/src/gateway/router.rs:268</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/gateway/src/gateway/router.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::time::<span class="rs-type">Instant</span>;
+
+<span class="rs-kw">use</span> protocol::catalog::{<span class="rs-type">HostVerb</span>, <span class="rs-type">DYNAMIC_PLUGIN_POLICY</span>};
+<span class="rs-kw">use</span> protocol::<span class="rs-type">ProtocolErrorKind</span>;
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::catalog::{<a class="symbol-link rs-type" href="gateway--src-gateway-catalog-rs.html#item-struct-Catalog-30">Catalog</a>, <a class="symbol-link rs-type" href="gateway--src-gateway-catalog-rs.html#item-enum-Visibility-7">Visibility</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::engine::<a class="symbol-link rs-type" href="gateway--src-gateway-engine-rs.html#item-trait-Engine-6">Engine</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::wire::{error_response_for, ok_response, <a class="symbol-link rs-type" href="gateway--src-gateway-wire-rs.html#item-struct-ClientRequest-12">ClientRequest</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::gateway::wire::elapsed_us;
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="gateway--src-gateway-router-rs.html#item-enum-Surface-12">Surface</a> {
+    <span class="rs-type">Client</span>,
+    <span class="rs-type">Operator</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="gateway--src-gateway-router-rs.html#item-enum-Surface-12">Surface</a> {
+    <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#method-allows-19">allows</a>(<span class="rs-self">self</span>, visibility: <a class="symbol-link rs-type" href="gateway--src-gateway-catalog-rs.html#item-enum-Visibility-7">Visibility</a>) -&gt; bool {
+        <span class="rs-kw">match</span> visibility {
+            <a class="symbol-link rs-type" href="gateway--src-gateway-catalog-rs.html#item-enum-Visibility-7">Visibility</a>::<span class="rs-type">Public</span> =&gt; <span class="rs-kw">true</span>,
+            <a class="symbol-link rs-type" href="gateway--src-gateway-catalog-rs.html#item-enum-Visibility-7">Visibility</a>::<span class="rs-type">Operator</span> =&gt; matches!(<span class="rs-self">self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Operator</span>),
+            <a class="symbol-link rs-type" href="gateway--src-gateway-catalog-rs.html#item-enum-Visibility-7">Visibility</a>::<span class="rs-type">Internal</span> | <a class="symbol-link rs-type" href="gateway--src-gateway-catalog-rs.html#item-enum-Visibility-7">Visibility</a>::<span class="rs-type">Test</span> =&gt; <span class="rs-kw">false</span>,
+        }
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-catalog-rs.html#method-label-75">label</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Client</span> =&gt; &quot;client&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Operator</span> =&gt; &quot;operator&quot;,
+        }
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-handle-35">handle</a>(
+    catalog: &amp;<a class="symbol-link rs-type" href="gateway--src-gateway-catalog-rs.html#item-struct-Catalog-30">Catalog</a>,
+    engine: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="gateway--src-gateway-engine-rs.html#item-trait-Engine-6">Engine</a>,
+    surface: <a class="symbol-link rs-type" href="gateway--src-gateway-router-rs.html#item-enum-Surface-12">Surface</a>,
+    request: &amp;<a class="symbol-link rs-type" href="gateway--src-gateway-wire-rs.html#item-struct-ClientRequest-12">ClientRequest</a>,
+) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(entry) = catalog.<a class="symbol-link rs-fn" href="gateway--src-gateway-catalog-rs.html#method-lookup-64">lookup</a>(&amp;request.op) <span class="rs-kw">else</span> {
+        <span class="rs-kw">if</span> request.op.starts_with(<span class="rs-type">DYNAMIC_PLUGIN_POLICY</span>.prefix) {
+            <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-forward-11">forward</a>(
+                engine,
+                request,
+                <span class="rs-type">DYNAMIC_PLUGIN_POLICY</span>.mutates_state,
+                <span class="rs-type">DYNAMIC_PLUGIN_POLICY</span>.family.as_str(),
+                &quot;plugin_fallback&quot;,
+                <span class="rs-type">DYNAMIC_PLUGIN_POLICY</span>.visibility.as_str(),
+            );
+        }
+        <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-record-route-event-115">record_route_event</a>(
+            engine,
+            request,
+            &quot;route_rejected&quot;,
+            json!({
+                &quot;op&quot;: request.op,
+                &quot;route&quot;: &quot;rejected&quot;,
+                &quot;surface&quot;: surface.<a class="symbol-link rs-fn" href="gateway--src-gateway-catalog-rs.html#method-label-75">label</a>(),
+                &quot;error_kind&quot;: <span class="rs-type">ProtocolErrorKind</span>::<span class="rs-type">UnknownOp</span>.as_str(),
+            }),
+        );
+        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-error-response-for-133">error_response_for</a>(
+            request,
+            <span class="rs-type">ProtocolErrorKind</span>::<span class="rs-type">UnknownOp</span>.as_str(),
+            &amp;format!(&quot;unknown op: {}&quot;, request.op),
+        );
+    };
+    <span class="rs-kw">if</span> !surface.<a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#method-allows-19">allows</a>(entry.visibility) {
+        <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-record-route-event-115">record_route_event</a>(
+            engine,
+            request,
+            &quot;route_rejected&quot;,
+            json!({
+                &quot;op&quot;: entry.name,
+                &quot;route&quot;: &quot;rejected&quot;,
+                &quot;surface&quot;: surface.<a class="symbol-link rs-fn" href="gateway--src-gateway-catalog-rs.html#method-label-75">label</a>(),
+                &quot;visibility&quot;: entry.visibility.<a class="symbol-link rs-fn" href="gateway--src-gateway-catalog-rs.html#method-label-75">label</a>(),
+                &quot;error_kind&quot;: <span class="rs-type">ProtocolErrorKind</span>::<span class="rs-type">Forbidden</span>.as_str(),
+            }),
+        );
+        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-error-response-for-133">error_response_for</a>(
+            request,
+            <span class="rs-type">ProtocolErrorKind</span>::<span class="rs-type">Forbidden</span>.as_str(),
+            &amp;format!(&quot;op {} is not served on this socket&quot;, entry.name),
+        );
+    }
+    <span class="rs-kw">match</span> entry.route {
+        <span class="rs-kw">super</span>::catalog::<a class="symbol-link rs-type" href="gateway--src-gateway-catalog-rs.html#item-enum-Route-15">Route</a>::<span class="rs-type">Daemon</span> =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-forward-11">forward</a>(
+            engine,
+            request,
+            entry.mutates_state,
+            entry.family,
+            &quot;daemon&quot;,
+            entry.visibility.<a class="symbol-link rs-fn" href="gateway--src-gateway-catalog-rs.html#method-label-75">label</a>(),
+        ),
+        <span class="rs-kw">super</span>::catalog::<a class="symbol-link rs-type" href="gateway--src-gateway-catalog-rs.html#item-enum-Route-15">Route</a>::<span class="rs-type">Host</span>(verb) =&gt; {
+            <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-record-route-event-115">record_route_event</a>(
+                engine,
+                request,
+                &quot;route_selected&quot;,
+                json!({
+                    &quot;op&quot;: entry.name,
+                    &quot;route&quot;: &quot;host&quot;,
+                    &quot;visibility&quot;: entry.visibility.<a class="symbol-link rs-fn" href="gateway--src-gateway-catalog-rs.html#method-label-75">label</a>(),
+                    &quot;family&quot;: entry.family,
+                    &quot;mutates_state&quot;: entry.mutates_state,
+                }),
+            );
+            <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-host-call-206">host_call</a>(engine, verb, request)
+        }
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-record-route-event-115">record_route_event</a>(engine: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="gateway--src-gateway-engine-rs.html#item-trait-Engine-6">Engine</a>, request: &amp;<a class="symbol-link rs-type" href="gateway--src-gateway-wire-rs.html#item-struct-ClientRequest-12">ClientRequest</a>, event: &amp;str, details: <span class="rs-type">Value</span>) {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sandbox_id) = request.sandbox_id.as_deref() {
+        engine.<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-record-trace-event-25">record_trace_event</a>(sandbox_id, &amp;request.trace, &quot;gateway.route&quot;, event, details);
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-forward-11">forward</a>(
+    engine: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="gateway--src-gateway-engine-rs.html#item-trait-Engine-6">Engine</a>,
+    request: &amp;<a class="symbol-link rs-type" href="gateway--src-gateway-wire-rs.html#item-struct-ClientRequest-12">ClientRequest</a>,
+    mutates_state: bool,
+    family: &amp;str,
+    route: &amp;str,
+    visibility: &amp;str,
+) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sandbox_id) = request.sandbox_id.as_deref() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-error-response-for-133">error_response_for</a>(
+            request,
+            <span class="rs-type">ProtocolErrorKind</span>::<span class="rs-type">InvalidRequest</span>.as_str(),
+            &quot;sandbox_id is required <span class="rs-kw">for</span> this op&quot;,
+        );
+    };
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> trace = request.trace.clone();
+    trace.push_gateway_event(
+        &quot;gateway.route&quot;,
+        &quot;route_selected&quot;,
+        json!({
+            &quot;op&quot;: request.op,
+            &quot;sandbox_id&quot;: sandbox_id,
+            &quot;route&quot;: route,
+            &quot;visibility&quot;: visibility,
+            &quot;family&quot;: family,
+            &quot;mutates_state&quot;: mutates_state,
+        }),
+    );
+    trace.push_gateway_event(
+        &quot;gateway.route&quot;,
+        &quot;engine_forward_started&quot;,
+        json!({
+            &quot;op&quot;: request.op,
+            &quot;sandbox_id&quot;: sandbox_id,
+            &quot;family&quot;: family,
+            &quot;mutates_state&quot;: mutates_state,
+        }),
+    );
+    <span class="rs-kw">let</span> trace_for_result = trace.clone();
+    <span class="rs-kw">let</span> started = <span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">match</span> engine.<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-forward-11">forward</a>(host::<span class="rs-type">HostForwardRequest</span> {
+        sandbox_id,
+        mutates_state,
+        family,
+        op: &amp;request.op,
+        invocation_id: &amp;request.invocation_id,
+        args: &amp;request.args,
+        trace,
+    }) {
+        <span class="rs-type">Some</span>(<span class="rs-type">Ok</span>(<span class="rs-kw">mut</span> response)) =&gt; {
+            engine.<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-record-trace-event-25">record_trace_event</a>(
+                sandbox_id,
+                &amp;trace_for_result,
+                &quot;gateway.route&quot;,
+                &quot;engine_forward_finished&quot;,
+                json!({
+                    &quot;op&quot;: request.op,
+                    &quot;sandbox_id&quot;: sandbox_id,
+                    &quot;family&quot;: family,
+                    &quot;mutates_state&quot;: mutates_state,
+                    &quot;duration_us&quot;: <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-elapsed-us-181">elapsed_us</a>(started),
+                }),
+            );
+            host::strip_trace_sidecar(&amp;<span class="rs-kw">mut</span> response);
+            response
+        }
+        <span class="rs-type">Some</span>(<span class="rs-type">Err</span>(err)) =&gt; {
+            <span class="rs-kw">let</span> (kind, message) = <span class="rs-kw">match</span> err {
+                host::<span class="rs-type">ForwardError</span>::<span class="rs-type">TraceUnavailable</span>(e) =&gt; (&quot;trace_unavailable&quot;, e.to_string()),
+                host::<span class="rs-type">ForwardError</span>::<span class="rs-type">UncertainOutcome</span>(m) =&gt; (&quot;uncertain_outcome&quot;, m),
+                host::<span class="rs-type">ForwardError</span>::<span class="rs-type">SandboxUnavailable</span>(m) =&gt; (&quot;sandbox_unavailable&quot;, m),
+            };
+            engine.<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-record-trace-event-25">record_trace_event</a>(
+                sandbox_id,
+                &amp;trace_for_result,
+                &quot;gateway.route&quot;,
+                &quot;engine_forward_failed&quot;,
+                json!({&quot;op&quot;: request.op, &quot;sandbox_id&quot;: sandbox_id, &quot;error_kind&quot;: kind, &quot;duration_us&quot;: <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-elapsed-us-181">elapsed_us</a>(started)}),
+            );
+            <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-error-response-for-133">error_response_for</a>(request, kind, &amp;message)
+        }
+        <span class="rs-type">None</span> =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-unknown-sandbox-268">unknown_sandbox</a>(request, sandbox_id),
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-host-call-206">host_call</a>(engine: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="gateway--src-gateway-engine-rs.html#item-trait-Engine-6">Engine</a>, verb: <span class="rs-type">HostVerb</span>, request: &amp;<a class="symbol-link rs-type" href="gateway--src-gateway-wire-rs.html#item-struct-ClientRequest-12">ClientRequest</a>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">match</span> verb {
+        <span class="rs-type">HostVerb</span>::<span class="rs-type">Acquire</span> =&gt; <span class="rs-kw">match</span> engine.<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-acquire-7">acquire</a>(&amp;request.trace, &amp;request.args) {
+            <span class="rs-type">Ok</span>(sandbox_id) =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-ok-response-127">ok_response</a>(request, json!({&quot;sandbox_id&quot;: sandbox_id})),
+            <span class="rs-type">Err</span>(err) =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-error-response-for-133">error_response_for</a>(
+                request,
+                &quot;trace_unavailable&quot;,
+                &amp;format!(&quot;acquire failed: {err:#}&quot;),
+            ),
+        },
+        <span class="rs-type">HostVerb</span>::<span class="rs-type">List</span> =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-ok-response-127">ok_response</a>(request, json!({&quot;sandboxes&quot;: engine.<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-list-10">list</a>()})),
+        <span class="rs-type">HostVerb</span>::<span class="rs-type">Release</span> =&gt; {
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sandbox_id) = request.sandbox_id.as_deref() <span class="rs-kw">else</span> {
+                <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-error-response-for-133">error_response_for</a>(
+                    request,
+                    <span class="rs-type">ProtocolErrorKind</span>::<span class="rs-type">InvalidRequest</span>.as_str(),
+                    &quot;sandbox_id is required <span class="rs-kw">for</span> this op&quot;,
+                );
+            };
+            <span class="rs-kw">match</span> engine.<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-release-8">release</a>(sandbox_id, &amp;request.trace, &amp;request.args) {
+                <span class="rs-type">Ok</span>(<span class="rs-kw">true</span>) =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-ok-response-127">ok_response</a>(request, json!({&quot;sandbox_id&quot;: sandbox_id})),
+                <span class="rs-type">Ok</span>(<span class="rs-kw">false</span>) =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-unknown-sandbox-268">unknown_sandbox</a>(request, sandbox_id),
+                <span class="rs-type">Err</span>(err) =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-error-response-for-133">error_response_for</a>(
+                    request,
+                    &quot;trace_unavailable&quot;,
+                    &amp;format!(&quot;release failed: {err:#}&quot;),
+                ),
+            }
+        }
+        <span class="rs-type">HostVerb</span>::<span class="rs-type">Status</span> =&gt; {
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sandbox_id) = request.sandbox_id.as_deref() <span class="rs-kw">else</span> {
+                <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-error-response-for-133">error_response_for</a>(
+                    request,
+                    <span class="rs-type">ProtocolErrorKind</span>::<span class="rs-type">InvalidRequest</span>.as_str(),
+                    &quot;sandbox_id is required <span class="rs-kw">for</span> this op&quot;,
+                );
+            };
+            <span class="rs-kw">match</span> engine.<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-status-9">status</a>(sandbox_id) {
+                <span class="rs-type">Some</span>(status) =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-ok-response-127">ok_response</a>(request, status),
+                <span class="rs-type">None</span> =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-unknown-sandbox-268">unknown_sandbox</a>(request, sandbox_id),
+            }
+        }
+        <span class="rs-type">HostVerb</span>::<span class="rs-type">TraceRequests</span> =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-trace-response-261">trace_response</a>(
+            request,
+            engine.<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-requests-13">trace_requests</a>(&amp;request.trace, &amp;request.args),
+        ),
+        <span class="rs-type">HostVerb</span>::<span class="rs-type">TraceShow</span> =&gt; {
+            <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-trace-response-261">trace_response</a>(request, engine.<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-show-17">trace_show</a>(&amp;request.trace, &amp;request.args))
+        }
+        <span class="rs-type">HostVerb</span>::<span class="rs-type">TraceVerify</span> =&gt; {
+            <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-trace-response-261">trace_response</a>(request, engine.<a class="symbol-link rs-fn" href="gateway--src-gateway-engine-rs.html#method-trace-verify-21">trace_verify</a>(&amp;request.trace, &amp;request.args))
+        }
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-trace-response-261">trace_response</a>(request: &amp;<a class="symbol-link rs-type" href="gateway--src-gateway-wire-rs.html#item-struct-ClientRequest-12">ClientRequest</a>, result: anyhow::<span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>&gt;) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">match</span> result {
+        <span class="rs-type">Ok</span>(value) =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-ok-response-127">ok_response</a>(request, value),
+        <span class="rs-type">Err</span>(err) =&gt; <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-error-response-for-133">error_response_for</a>(request, &quot;trace_unavailable&quot;, &amp;err.to_string()),
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="gateway--src-gateway-router-rs.html#item-fn-unknown-sandbox-268">unknown_sandbox</a>(request: &amp;<a class="symbol-link rs-type" href="gateway--src-gateway-wire-rs.html#item-struct-ClientRequest-12">ClientRequest</a>, sandbox_id: &amp;str) -&gt; <span class="rs-type">Value</span> {
+    <a class="symbol-link rs-fn" href="gateway--src-gateway-wire-rs.html#item-fn-error-response-for-133">error_response_for</a>(
+        request,
+        &quot;unknown_sandbox&quot;,
+        &amp;format!(&quot;unknown sandbox: {sandbox_id}&quot;),
+    )
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

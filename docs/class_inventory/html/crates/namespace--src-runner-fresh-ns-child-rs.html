@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>namespace · src/runner/fresh_ns/child.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>namespace File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>10</b><span>modules</span></div>
+  <div><b>123</b><span>items</span></div>
+  <div><b>71</b><span>fields</span></div>
+  <div><b>14</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">holder</span><ul class="file-tree"><li><a class="file-link" href="namespace.html"><span>mod.rs</span><small>2/3</small></a></li><li><a class="file-link" href="namespace--src-holder-namespace-rs.html"><span>namespace.rs</span><small>2/14</small></a></li><li><a class="file-link" href="namespace--src-holder-network-rs.html"><span>network.rs</span><small>6/22</small></a></li></ul></li><li><a class="file-link" href="namespace--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">protocol</span><ul class="file-tree"><li><a class="file-link" href="namespace--src-protocol-mod-rs.html"><span>mod.rs</span><small>9/0</small></a></li></ul></li><li><span class="folder">runner</span><ul class="file-tree"><li><span class="folder">fresh_ns</span><ul class="file-tree"><li><a class="file-link active" href="namespace--src-runner-fresh-ns-child-rs.html"><span>child.rs</span><small>0/8</small></a></li><li><a class="file-link" href="namespace--src-runner-fresh-ns-command-rs.html"><span>command.rs</span><small>0/10</small></a></li></ul></li><li><a class="file-link" href="namespace--src-runner-fresh-ns-rs.html"><span>fresh_ns.rs</span><small>1/13</small></a></li><li><a class="file-link" href="namespace--src-runner-mod-rs.html"><span>mod.rs</span><small>1/3</small></a></li><li><a class="file-link" href="namespace--src-runner-setns-rs.html"><span>setns.rs</span><small>0/18</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="runner::fresh_ns::child crates/namespace/src/runner/fresh_ns/child.rs wait_for_child wait_for_command_execution_scope timeout_deadline exit_code process_group_has_other_live_members process_group_has_other_live_members_by_path proc_stat_process_group_at parse_proc_stat">
+  <div class="module-head">
+    <div>
+      <h2>src/runner/fresh_ns/child.rs</h2>
+      <p class="path">module <code>runner::fresh_ns::child</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>8 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-wait-for-child-13" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn wait_for_child pub(super) pub(super) fn wait_for_child (child : &amp; mut std :: process :: Child , timeout_seconds : Option &lt; f64 &gt; ,) -&gt; Result &lt; i32 , RunnerError &gt; crates/namespace/src/runner/fresh_ns/child.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>wait_for_child</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-wait-for-child-13">wait_for_child</a> (child : &amp; mut std :: process :: Child , timeout_seconds : Option &lt; f64 &gt; ,) -&gt; Result &lt; i32 , <a class="symbol-link" href="namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-wait-for-child-13">wait_for_child</a>(
+    child: &amp;<span class="rs-kw">mut</span> std::process::<span class="rs-type">Child</span>,
+    timeout_seconds: <span class="rs-type">Option</span>&lt;f64&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;i32, <a class="symbol-link rs-type" href="namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>&gt; {
+    <span class="rs-kw">let</span> deadline = <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-timeout-deadline-63">timeout_deadline</a>(timeout_seconds);
+    loop {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(status) = child.try_wait().map_err(<a class="symbol-link rs-type" href="namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>::<span class="rs-type">Child</span>)? {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-exit-code-69">exit_code</a>(status));
+        }
+        <span class="rs-kw">if</span> deadline.is_some_and(|deadline| <span class="rs-type">Instant</span>::now() &gt;= deadline) {
+            <span class="rs-kw">let</span> pid = <span class="rs-type">Pid</span>::from_child(child);
+            <span class="rs-kw">let</span> _ = kill_process_group(pid, <span class="rs-type">Signal</span>::<span class="rs-type">Kill</span>);
+            <span class="rs-kw">let</span> _ = child.wait();
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>::<span class="rs-type">TimedOut</span>);
+        }
+        thread::sleep(<span class="rs-type">CHILD_WAIT_POLL</span>);
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/namespace/src/runner/fresh_ns/child.rs:13</p>
+</article><article id="item-fn-wait-for-command-execution-scope-32" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn wait_for_command_execution_scope pub(super) pub(super) fn wait_for_command_execution_scope (child : &amp; mut std :: process :: Child , timeout_seconds : Option &lt; f64 &gt; , proc_dir : Option &lt; BorrowedFd &gt; ,) -&gt; Result &lt; i32 , RunnerError &gt; crates/namespace/src/runner/fresh_ns/child.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>wait_for_command_execution_scope</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-wait-for-command-execution-scope-32">wait_for_command_execution_scope</a> (child : &amp; mut std :: process :: Child , timeout_seconds : Option &lt; f64 &gt; , proc_dir : Option &lt; BorrowedFd &gt; ,) -&gt; Result &lt; i32 , <a class="symbol-link" href="namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-wait-for-command-execution-scope-32">wait_for_command_execution_scope</a>(
+    child: &amp;<span class="rs-kw">mut</span> std::process::<span class="rs-type">Child</span>,
+    timeout_seconds: <span class="rs-type">Option</span>&lt;f64&gt;,
+    proc_dir: <span class="rs-type">Option</span>&lt;<span class="rs-type">BorrowedFd</span>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;i32, <a class="symbol-link rs-type" href="namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>&gt; {
+    <span class="rs-kw">let</span> deadline = <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-timeout-deadline-63">timeout_deadline</a>(timeout_seconds);
+    <span class="rs-kw">let</span> pgid = getpgrp().as_raw_nonzero().get();
+    <span class="rs-kw">let</span> self_pid = i32::try_from(std::process::id()).unwrap_or(i32::<span class="rs-type">MAX</span>);
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> root_exit_code = <span class="rs-type">None</span>;
+    loop {
+        <span class="rs-kw">if</span> root_exit_code.is_none() {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(status) = child.try_wait().map_err(<a class="symbol-link rs-type" href="namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>::<span class="rs-type">Child</span>)? {
+                root_exit_code = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-exit-code-69">exit_code</a>(status));
+            }
+        }
+        <span class="rs-kw">if</span> root_exit_code.is_some()
+            &amp;&amp; !<a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-process-group-has-other-live-members-78">process_group_has_other_live_members</a>(pgid, self_pid, proc_dir)
+        {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(root_exit_code.unwrap_or(0));
+        }
+        <span class="rs-kw">if</span> deadline.is_some_and(|deadline| <span class="rs-type">Instant</span>::now() &gt;= deadline) {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(pid) = <span class="rs-type">Pid</span>::from_raw(pgid) {
+                <span class="rs-kw">let</span> _ = kill_process_group(pid, <span class="rs-type">Signal</span>::<span class="rs-type">Kill</span>);
+            }
+            <span class="rs-kw">let</span> _ = child.wait();
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>::<span class="rs-type">TimedOut</span>);
+        }
+        thread::sleep(<span class="rs-type">CHILD_WAIT_POLL</span>);
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/namespace/src/runner/fresh_ns/child.rs:32</p>
+</article><article id="item-fn-timeout-deadline-63" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn timeout_deadline private fn timeout_deadline (timeout_seconds : Option &lt; f64 &gt;) -&gt; Option &lt; Instant &gt; crates/namespace/src/runner/fresh_ns/child.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>timeout_deadline</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-timeout-deadline-63">timeout_deadline</a> (timeout_seconds : Option &lt; f64 &gt;) -&gt; Option &lt; Instant &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-timeout-deadline-63">timeout_deadline</a>(timeout_seconds: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Instant</span>&gt; {
+    timeout_seconds
+        .filter(|seconds| seconds.is_finite() &amp;&amp; *seconds &gt;= 0.0)
+        .map(|seconds| <span class="rs-type">Instant</span>::now() + <span class="rs-type">Duration</span>::from_secs_f64(seconds))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/namespace/src/runner/fresh_ns/child.rs:63</p>
+</article><article id="item-fn-exit-code-69" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn exit_code private fn exit_code (status : std :: process :: ExitStatus) -&gt; i32 crates/namespace/src/runner/fresh_ns/child.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>exit_code</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-exit-code-69">exit_code</a> (status : std :: process :: ExitStatus) -&gt; i32</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-exit-code-69">exit_code</a>(status: std::process::<span class="rs-type">ExitStatus</span>) -&gt; i32 {
+    <span class="rs-kw">use</span> std::os::unix::process::<span class="rs-type">ExitStatusExt</span>;
+
+    status
+        .code()
+        .or_else(|| status.signal().map(|sig| -sig))
+        .unwrap_or(128)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/namespace/src/runner/fresh_ns/child.rs:69</p>
+</article><article id="item-fn-process-group-has-other-live-members-78" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn process_group_has_other_live_members private fn process_group_has_other_live_members (pgid : i32 , self_pid : i32 , proc_dir : Option &lt; BorrowedFd &gt; ,) -&gt; bool crates/namespace/src/runner/fresh_ns/child.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>process_group_has_other_live_members</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-process-group-has-other-live-members-78">process_group_has_other_live_members</a> (pgid : i32 , self_pid : i32 , proc_dir : Option &lt; BorrowedFd &gt; ,) -&gt; bool</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-process-group-has-other-live-members-78">process_group_has_other_live_members</a>(
+    pgid: i32,
+    self_pid: i32,
+    proc_dir: <span class="rs-type">Option</span>&lt;<span class="rs-type">BorrowedFd</span>&gt;,
+) -&gt; bool {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(proc_dir) = proc_dir <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-process-group-has-other-live-members-by-path-111">process_group_has_other_live_members_by_path</a>(pgid, self_pid);
+    };
+    <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(dir) = rustix::fs::<span class="rs-type">Dir</span>::read_from(proc_dir) <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
+    };
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> dir {
+        <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(entry) = entry <span class="rs-kw">else</span> { <span class="rs-kw">continue</span> };
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(pid) = entry
+            .file_name()
+            .to_str()
+            .ok()
+            .and_then(|name| name.parse::&lt;i32&gt;().ok())
+        <span class="rs-kw">else</span> {
+            <span class="rs-kw">continue</span>;
+        };
+        <span class="rs-kw">if</span> pid == self_pid {
+            <span class="rs-kw">continue</span>;
+        }
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-proc-stat-process-group-at-133">proc_stat_process_group_at</a>(proc_dir, pid)
+            .is_some_and(|(entry_pgid, state)| entry_pgid == pgid &amp;&amp; state != &#x27;<span class="rs-type">Z</span>&#x27;)
+        {
+            <span class="rs-kw">return</span> <span class="rs-kw">true</span>;
+        }
+    }
+    <span class="rs-kw">false</span>
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/namespace/src/runner/fresh_ns/child.rs:78</p>
+</article><article id="item-fn-process-group-has-other-live-members-by-path-111" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn process_group_has_other_live_members_by_path private fn process_group_has_other_live_members_by_path (pgid : i32 , self_pid : i32) -&gt; bool crates/namespace/src/runner/fresh_ns/child.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>process_group_has_other_live_members_by_path</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-process-group-has-other-live-members-by-path-111">process_group_has_other_live_members_by_path</a> (pgid : i32 , self_pid : i32) -&gt; bool</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-process-group-has-other-live-members-by-path-111">process_group_has_other_live_members_by_path</a>(pgid: i32, self_pid: i32) -&gt; bool {
+    <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(entries) = fs::read_dir(&quot;/proc&quot;) <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
+    };
+    entries.filter_map(<span class="rs-type">Result</span>::ok).any(|entry| {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(pid) = entry
+            .file_name()
+            .to_str()
+            .and_then(|name| name.parse::&lt;i32&gt;().ok())
+        <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
+        };
+        <span class="rs-kw">if</span> pid == self_pid {
+            <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
+        }
+        fs::read_to_string(format!(&quot;/proc/{pid}/stat&quot;))
+            .ok()
+            .and_then(|stat| <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-parse-proc-stat-146">parse_proc_stat</a>(&amp;stat))
+            .is_some_and(|(entry_pgid, state)| entry_pgid == pgid &amp;&amp; state != &#x27;<span class="rs-type">Z</span>&#x27;)
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/namespace/src/runner/fresh_ns/child.rs:111</p>
+</article><article id="item-fn-proc-stat-process-group-at-133" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn proc_stat_process_group_at private fn proc_stat_process_group_at (proc_dir : BorrowedFd , pid : i32) -&gt; Option &lt; (i32 , char) &gt; crates/namespace/src/runner/fresh_ns/child.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>proc_stat_process_group_at</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-proc-stat-process-group-at-133">proc_stat_process_group_at</a> (proc_dir : BorrowedFd , pid : i32) -&gt; Option &lt; (i32 , char) &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-proc-stat-process-group-at-133">proc_stat_process_group_at</a>(proc_dir: <span class="rs-type">BorrowedFd</span>, pid: i32) -&gt; <span class="rs-type">Option</span>&lt;(i32, char)&gt; {
+    <span class="rs-kw">let</span> fd = rustix::fs::openat(
+        proc_dir,
+        format!(&quot;{pid}/stat&quot;),
+        rustix::fs::<span class="rs-type">OFlags</span>::<span class="rs-type">RDONLY</span> | rustix::fs::<span class="rs-type">OFlags</span>::<span class="rs-type">CLOEXEC</span>,
+        rustix::fs::<span class="rs-type">Mode</span>::empty(),
+    )
+    .ok()?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stat = <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="namespace.html#method-new-58">new</a>();
+    fs::<span class="rs-type">File</span>::<a class="symbol-link rs-fn" href="namespace--src-protocol-mod-rs.html#method-from-49">from</a>(fd).read_to_string(&amp;<span class="rs-kw">mut</span> stat).ok()?;
+    <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-parse-proc-stat-146">parse_proc_stat</a>(&amp;stat)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/namespace/src/runner/fresh_ns/child.rs:133</p>
+</article><article id="item-fn-parse-proc-stat-146" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_proc_stat private fn parse_proc_stat (stat : &amp; str) -&gt; Option &lt; (i32 , char) &gt; crates/namespace/src/runner/fresh_ns/child.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_proc_stat</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-parse-proc-stat-146">parse_proc_stat</a> (stat : &amp; str) -&gt; Option &lt; (i32 , char) &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-parse-proc-stat-146">parse_proc_stat</a>(stat: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;(i32, char)&gt; {
+    <span class="rs-kw">let</span> close = stat.rfind(&quot;) &quot;)?;
+    <span class="rs-kw">let</span> fields: <span class="rs-type">Vec</span>&lt;&amp;str&gt; = stat[close + 2..].split_whitespace().collect();
+    <span class="rs-kw">let</span> state = fields.first()?.chars().next()?;
+    <span class="rs-kw">let</span> pgrp = fields.get(2)?.parse::&lt;i32&gt;().ok()?;
+    <span class="rs-type">Some</span>((pgrp, state))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/namespace/src/runner/fresh_ns/child.rs:146</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/namespace/src/runner/fresh_ns/child.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::fs;
+<span class="rs-kw">use</span> std::io::<span class="rs-type">Read</span>;
+<span class="rs-kw">use</span> std::os::fd::<span class="rs-type">BorrowedFd</span>;
+<span class="rs-kw">use</span> std::thread;
+<span class="rs-kw">use</span> std::time::{<span class="rs-type">Duration</span>, <span class="rs-type">Instant</span>};
+
+<span class="rs-kw">use</span> rustix::process::{getpgrp, kill_process_group, <span class="rs-type">Pid</span>, <span class="rs-type">Signal</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runner::<a class="symbol-link rs-type" href="namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>;
+
+<span class="rs-kw">const</span> <span class="rs-type">CHILD_WAIT_POLL</span>: <span class="rs-type">Duration</span> = <span class="rs-type">Duration</span>::from_millis(5);
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-wait-for-child-13">wait_for_child</a>(
+    child: &amp;<span class="rs-kw">mut</span> std::process::<span class="rs-type">Child</span>,
+    timeout_seconds: <span class="rs-type">Option</span>&lt;f64&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;i32, <a class="symbol-link rs-type" href="namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>&gt; {
+    <span class="rs-kw">let</span> deadline = <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-timeout-deadline-63">timeout_deadline</a>(timeout_seconds);
+    loop {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(status) = child.try_wait().map_err(<a class="symbol-link rs-type" href="namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>::<span class="rs-type">Child</span>)? {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-exit-code-69">exit_code</a>(status));
+        }
+        <span class="rs-kw">if</span> deadline.is_some_and(|deadline| <span class="rs-type">Instant</span>::now() &gt;= deadline) {
+            <span class="rs-kw">let</span> pid = <span class="rs-type">Pid</span>::from_child(child);
+            <span class="rs-kw">let</span> _ = kill_process_group(pid, <span class="rs-type">Signal</span>::<span class="rs-type">Kill</span>);
+            <span class="rs-kw">let</span> _ = child.wait();
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>::<span class="rs-type">TimedOut</span>);
+        }
+        thread::sleep(<span class="rs-type">CHILD_WAIT_POLL</span>);
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-wait-for-command-execution-scope-32">wait_for_command_execution_scope</a>(
+    child: &amp;<span class="rs-kw">mut</span> std::process::<span class="rs-type">Child</span>,
+    timeout_seconds: <span class="rs-type">Option</span>&lt;f64&gt;,
+    proc_dir: <span class="rs-type">Option</span>&lt;<span class="rs-type">BorrowedFd</span>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;i32, <a class="symbol-link rs-type" href="namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>&gt; {
+    <span class="rs-kw">let</span> deadline = <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-timeout-deadline-63">timeout_deadline</a>(timeout_seconds);
+    <span class="rs-kw">let</span> pgid = getpgrp().as_raw_nonzero().get();
+    <span class="rs-kw">let</span> self_pid = i32::try_from(std::process::id()).unwrap_or(i32::<span class="rs-type">MAX</span>);
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> root_exit_code = <span class="rs-type">None</span>;
+    loop {
+        <span class="rs-kw">if</span> root_exit_code.is_none() {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(status) = child.try_wait().map_err(<a class="symbol-link rs-type" href="namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>::<span class="rs-type">Child</span>)? {
+                root_exit_code = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-exit-code-69">exit_code</a>(status));
+            }
+        }
+        <span class="rs-kw">if</span> root_exit_code.is_some()
+            &amp;&amp; !<a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-process-group-has-other-live-members-78">process_group_has_other_live_members</a>(pgid, self_pid, proc_dir)
+        {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(root_exit_code.unwrap_or(0));
+        }
+        <span class="rs-kw">if</span> deadline.is_some_and(|deadline| <span class="rs-type">Instant</span>::now() &gt;= deadline) {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(pid) = <span class="rs-type">Pid</span>::from_raw(pgid) {
+                <span class="rs-kw">let</span> _ = kill_process_group(pid, <span class="rs-type">Signal</span>::<span class="rs-type">Kill</span>);
+            }
+            <span class="rs-kw">let</span> _ = child.wait();
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>::<span class="rs-type">TimedOut</span>);
+        }
+        thread::sleep(<span class="rs-type">CHILD_WAIT_POLL</span>);
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-timeout-deadline-63">timeout_deadline</a>(timeout_seconds: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Instant</span>&gt; {
+    timeout_seconds
+        .filter(|seconds| seconds.is_finite() &amp;&amp; *seconds &gt;= 0.0)
+        .map(|seconds| <span class="rs-type">Instant</span>::now() + <span class="rs-type">Duration</span>::from_secs_f64(seconds))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-exit-code-69">exit_code</a>(status: std::process::<span class="rs-type">ExitStatus</span>) -&gt; i32 {
+    <span class="rs-kw">use</span> std::os::unix::process::<span class="rs-type">ExitStatusExt</span>;
+
+    status
+        .code()
+        .or_else(|| status.signal().map(|sig| -sig))
+        .unwrap_or(128)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-process-group-has-other-live-members-78">process_group_has_other_live_members</a>(
+    pgid: i32,
+    self_pid: i32,
+    proc_dir: <span class="rs-type">Option</span>&lt;<span class="rs-type">BorrowedFd</span>&gt;,
+) -&gt; bool {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(proc_dir) = proc_dir <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-process-group-has-other-live-members-by-path-111">process_group_has_other_live_members_by_path</a>(pgid, self_pid);
+    };
+    <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(dir) = rustix::fs::<span class="rs-type">Dir</span>::read_from(proc_dir) <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
+    };
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> dir {
+        <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(entry) = entry <span class="rs-kw">else</span> { <span class="rs-kw">continue</span> };
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(pid) = entry
+            .file_name()
+            .to_str()
+            .ok()
+            .and_then(|name| name.parse::&lt;i32&gt;().ok())
+        <span class="rs-kw">else</span> {
+            <span class="rs-kw">continue</span>;
+        };
+        <span class="rs-kw">if</span> pid == self_pid {
+            <span class="rs-kw">continue</span>;
+        }
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-proc-stat-process-group-at-133">proc_stat_process_group_at</a>(proc_dir, pid)
+            .is_some_and(|(entry_pgid, state)| entry_pgid == pgid &amp;&amp; state != &#x27;<span class="rs-type">Z</span>&#x27;)
+        {
+            <span class="rs-kw">return</span> <span class="rs-kw">true</span>;
+        }
+    }
+    <span class="rs-kw">false</span>
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-process-group-has-other-live-members-by-path-111">process_group_has_other_live_members_by_path</a>(pgid: i32, self_pid: i32) -&gt; bool {
+    <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(entries) = fs::read_dir(&quot;/proc&quot;) <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
+    };
+    entries.filter_map(<span class="rs-type">Result</span>::ok).any(|entry| {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(pid) = entry
+            .file_name()
+            .to_str()
+            .and_then(|name| name.parse::&lt;i32&gt;().ok())
+        <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
+        };
+        <span class="rs-kw">if</span> pid == self_pid {
+            <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
+        }
+        fs::read_to_string(format!(&quot;/proc/{pid}/stat&quot;))
+            .ok()
+            .and_then(|stat| <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-parse-proc-stat-146">parse_proc_stat</a>(&amp;stat))
+            .is_some_and(|(entry_pgid, state)| entry_pgid == pgid &amp;&amp; state != &#x27;<span class="rs-type">Z</span>&#x27;)
+    })
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-proc-stat-process-group-at-133">proc_stat_process_group_at</a>(proc_dir: <span class="rs-type">BorrowedFd</span>, pid: i32) -&gt; <span class="rs-type">Option</span>&lt;(i32, char)&gt; {
+    <span class="rs-kw">let</span> fd = rustix::fs::openat(
+        proc_dir,
+        format!(&quot;{pid}/stat&quot;),
+        rustix::fs::<span class="rs-type">OFlags</span>::<span class="rs-type">RDONLY</span> | rustix::fs::<span class="rs-type">OFlags</span>::<span class="rs-type">CLOEXEC</span>,
+        rustix::fs::<span class="rs-type">Mode</span>::empty(),
+    )
+    .ok()?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stat = <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="namespace.html#method-new-58">new</a>();
+    fs::<span class="rs-type">File</span>::<a class="symbol-link rs-fn" href="namespace--src-protocol-mod-rs.html#method-from-49">from</a>(fd).read_to_string(&amp;<span class="rs-kw">mut</span> stat).ok()?;
+    <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-parse-proc-stat-146">parse_proc_stat</a>(&amp;stat)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="namespace--src-runner-fresh-ns-child-rs.html#item-fn-parse-proc-stat-146">parse_proc_stat</a>(stat: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;(i32, char)&gt; {
+    <span class="rs-kw">let</span> close = stat.rfind(&quot;) &quot;)?;
+    <span class="rs-kw">let</span> fields: <span class="rs-type">Vec</span>&lt;&amp;str&gt; = stat[close + 2..].split_whitespace().collect();
+    <span class="rs-kw">let</span> state = fields.first()?.chars().next()?;
+    <span class="rs-kw">let</span> pgrp = fields.get(2)?.parse::&lt;i32&gt;().ok()?;
+    <span class="rs-type">Some</span>((pgrp, state))
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>
