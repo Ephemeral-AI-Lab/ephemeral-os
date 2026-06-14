@@ -13,13 +13,14 @@
 //! `cargo check --target x86_64-unknown-linux-gnu`.
 #![forbid(unsafe_code)]
 
+mod config;
 mod contract;
 pub mod process;
 mod pty;
 mod transcript;
 pub mod yield_wait_loop;
 
-pub use config::configs::command::CommandConfig;
+pub use config::CommandConfig;
 pub use contract::{
     tail_lines, CancelCommand, CollectCompleted, CommandError, ReadCommandProgress, StartCommand,
     WriteStdin,

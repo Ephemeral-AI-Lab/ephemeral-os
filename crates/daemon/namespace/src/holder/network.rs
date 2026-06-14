@@ -1,6 +1,7 @@
 #[cfg(target_os = "linux")]
 use std::ffi::CString;
 use std::fs;
+use std::io;
 use std::net::Ipv4Addr;
 use std::path::Path;
 
@@ -55,9 +56,8 @@ pub(crate) fn disable_ipv6_ra() {
 
 #[cfg(target_os = "linux")]
 pub(crate) fn bring_loopback_up() {
-    let index = link_index("lo");
-    if index != 0 {
-        set_link_up(index);
+    if let Ok(index) = link_index("lo") {
+        let _ = set_link_up(index);
     }
 }
 
@@ -65,39 +65,57 @@ pub(crate) fn bring_loopback_up() {
 pub(crate) const fn bring_loopback_up() {}
 
 #[cfg(target_os = "linux")]
-pub(crate) fn configure_namespace_veth(config: &NetworkConfig) {
-    let index = link_index(&config.iface);
-    if index == 0 {
-        return;
-    }
-    set_link_up(index);
-    add_ipv4_address(index, config.ns_ip, config.prefix_len);
-    add_ipv4_default_route(index, config.gateway);
+pub(crate) fn configure_namespace_veth(config: &NetworkConfig) -> io::Result<()> {
+    let index = link_index(&config.iface)?;
+    set_link_up(index)?;
+    add_ipv4_address(index, config.ns_ip, config.prefix_len)?;
+    add_ipv4_default_route(index, config.gateway)
 }
 
 #[cfg(not(target_os = "linux"))]
-pub(crate) const fn configure_namespace_veth(_config: &NetworkConfig) {}
-
-#[cfg(target_os = "linux")]
-fn link_index(name: &str) -> libc::c_uint {
-    let Ok(name) = CString::new(name) else {
-        return 0;
-    };
-    // SAFETY: `name` is a valid NUL-terminated C string and `if_nametoindex`
-    // does not retain the pointer after returning.
-    unsafe { libc::if_nametoindex(name.as_ptr()) }
+pub(crate) fn configure_namespace_veth(_config: &NetworkConfig) -> io::Result<()> {
+    Ok(())
 }
 
 #[cfg(target_os = "linux")]
-fn set_link_up(index: libc::c_uint) {
+fn link_index(name: &str) -> io::Result<libc::c_uint> {
+    let name = CString::new(name)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "interface name has NUL byte"))?;
+    // SAFETY: `name` is a valid NUL-terminated C string and `if_nametoindex`
+    // does not retain the pointer after returning.
+    let index = unsafe { libc::if_nametoindex(name.as_ptr()) };
+    if index == 0 {
+        let os_error = io::Error::last_os_error();
+        let error = if os_error.raw_os_error().is_some() {
+            os_error
+        } else {
+            io::Error::new(io::ErrorKind::NotFound, "interface not found")
+        };
+        Err(error)
+    } else {
+        Ok(index)
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn set_link_up(index: libc::c_uint) -> io::Result<()> {
     let Some(ifi_family) = libc_c_int_to_u8(libc::AF_UNSPEC) else {
-        return;
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "invalid AF_UNSPEC value",
+        ));
     };
     let Ok(ifi_index) = i32::try_from(index) else {
-        return;
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "interface index does not fit i32",
+        ));
     };
     let Some(iff_up) = libc_c_int_to_u32(libc::IFF_UP) else {
-        return;
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "invalid IFF_UP value",
+        ));
     };
     let msg = IfInfoMsg {
         ifi_family,
@@ -108,15 +126,21 @@ fn set_link_up(index: libc::c_uint) {
         ifi_change: iff_up,
     };
     let Some(flags) = libc_c_int_to_u16(libc::NLM_F_REQUEST) else {
-        return;
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "invalid netlink request flag",
+        ));
     };
-    let _ = send_netlink_message(libc::RTM_NEWLINK, flags, &msg);
+    send_netlink_message(libc::RTM_NEWLINK, flags, &msg)
 }
 
 #[cfg(target_os = "linux")]
-fn add_ipv4_address(index: libc::c_uint, ip: Ipv4Addr, prefix_len: u8) {
+fn add_ipv4_address(index: libc::c_uint, ip: Ipv4Addr, prefix_len: u8) -> io::Result<()> {
     let Some(ifa_family) = libc_c_int_to_u8(libc::AF_INET) else {
-        return;
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "invalid AF_INET value",
+        ));
     };
     let msg = IfAddrMsg {
         ifa_family,
@@ -132,15 +156,21 @@ fn add_ipv4_address(index: libc::c_uint, ip: Ipv4Addr, prefix_len: u8) {
     let Some(flags) =
         libc_c_int_to_u16(libc::NLM_F_REQUEST | libc::NLM_F_CREATE | libc::NLM_F_EXCL)
     else {
-        return;
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "invalid address netlink flags",
+        ));
     };
-    let _ = send_netlink_message_with_attrs(libc::RTM_NEWADDR, flags, &msg, &attrs);
+    send_netlink_message_with_attrs(libc::RTM_NEWADDR, flags, &msg, &attrs)
 }
 
 #[cfg(target_os = "linux")]
-fn add_ipv4_default_route(index: libc::c_uint, gateway: Ipv4Addr) {
+fn add_ipv4_default_route(index: libc::c_uint, gateway: Ipv4Addr) -> io::Result<()> {
     let Some(rtm_family) = libc_c_int_to_u8(libc::AF_INET) else {
-        return;
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "invalid AF_INET value",
+        ));
     };
     let route = RouteMsg {
         rtm_family,
@@ -160,9 +190,12 @@ fn add_ipv4_default_route(index: libc::c_uint, gateway: Ipv4Addr) {
     let Some(flags) =
         libc_c_int_to_u16(libc::NLM_F_REQUEST | libc::NLM_F_CREATE | libc::NLM_F_EXCL)
     else {
-        return;
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "invalid route netlink flags",
+        ));
     };
-    let _ = send_netlink_message_with_attrs(libc::RTM_NEWROUTE, flags, &route, &attrs);
+    send_netlink_message_with_attrs(libc::RTM_NEWROUTE, flags, &route, &attrs)
 }
 
 #[cfg(target_os = "linux")]
@@ -191,11 +224,7 @@ pub(crate) fn flush_ipv6_default_route() {
 pub(crate) const fn flush_ipv6_default_route() {}
 
 #[cfg(target_os = "linux")]
-fn send_netlink_message<T>(
-    message_type: u16,
-    flags: u16,
-    payload: &T,
-) -> Result<(), std::io::Error> {
+fn send_netlink_message<T>(message_type: u16, flags: u16, payload: &T) -> io::Result<()> {
     send_netlink_message_with_attrs(message_type, flags, payload, &[])
 }
 
@@ -205,23 +234,21 @@ fn send_netlink_message_with_attrs<T>(
     flags: u16,
     payload: &T,
     attrs: &[NetlinkAttr],
-) -> Result<(), std::io::Error> {
+) -> io::Result<()> {
     let length = std::mem::size_of::<libc::nlmsghdr>() + std::mem::size_of::<T>();
     let attrs_len: usize = attrs
         .iter()
         .map(|attr| align4(RTATTR_HEADER_LEN + attr.value.len()))
         .sum();
-    let nlmsg_len = u32::try_from(length + attrs_len).map_err(|_| {
-        std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "netlink message too large",
-        )
-    })?;
+    let nlmsg_len = u32::try_from(length + attrs_len)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "netlink message too large"))?;
     let mut message = Vec::with_capacity(length + attrs_len);
+    let ack_flag = libc_c_int_to_u16(libc::NLM_F_ACK)
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "invalid netlink ACK flag"))?;
     let header = libc::nlmsghdr {
         nlmsg_len,
         nlmsg_type: message_type,
-        nlmsg_flags: flags,
+        nlmsg_flags: flags | ack_flag,
         nlmsg_seq: 1,
         nlmsg_pid: 0,
     };
@@ -231,10 +258,7 @@ fn send_netlink_message_with_attrs<T>(
         append_attr(&mut message, attr);
     }
     let nl_family = libc_c_int_to_sock_family(libc::AF_NETLINK).ok_or_else(|| {
-        std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "invalid netlink socket family",
-        )
+        io::Error::new(io::ErrorKind::InvalidInput, "invalid netlink socket family")
     })?;
     let addr = NetlinkSocketAddress {
         nl_family,
@@ -252,8 +276,23 @@ fn send_netlink_message_with_attrs<T>(
         )
     };
     if fd < 0 {
-        return Err(std::io::Error::last_os_error());
+        return Err(io::Error::last_os_error());
     }
+    let send_result = send_netlink_bytes(fd, &message, &addr).and_then(|()| read_netlink_ack(fd));
+    // SAFETY: `fd` is owned by this function after a successful `socket` call.
+    let close_result = unsafe { libc::close(fd) };
+    if close_result < 0 && send_result.is_ok() {
+        return Err(io::Error::last_os_error());
+    }
+    send_result
+}
+
+#[cfg(target_os = "linux")]
+fn send_netlink_bytes(
+    fd: libc::c_int,
+    message: &[u8],
+    addr: &NetlinkSocketAddress,
+) -> io::Result<()> {
     // SAFETY: `message` and `addr` are valid for the duration of this call; the
     // kernel copies the bytes before returning. The fd is a netlink socket just
     // opened by this function.
@@ -265,21 +304,63 @@ fn send_netlink_message_with_attrs<T>(
             0,
             std::ptr::from_ref(&addr).cast(),
             libc_socklen(std::mem::size_of::<NetlinkSocketAddress>()).ok_or_else(|| {
-                std::io::Error::new(
-                    std::io::ErrorKind::InvalidInput,
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
                     "netlink socket address too large",
                 )
             })?,
         )
     };
-    let result = if rc < 0 {
-        Err(std::io::Error::last_os_error())
+    if rc < 0 {
+        Err(io::Error::last_os_error())
     } else {
         Ok(())
-    };
-    // SAFETY: `fd` is owned by this function after a successful `socket` call.
-    let _ = unsafe { libc::close(fd) };
-    result
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn read_netlink_ack(fd: libc::c_int) -> io::Result<()> {
+    let mut buf = [0_u8; 8192];
+    loop {
+        // SAFETY: `buf` is valid writable storage for `buf.len()` bytes, and fd
+        // is an open netlink socket owned by the caller for the duration of recv.
+        let read = unsafe { libc::recv(fd, buf.as_mut_ptr().cast(), buf.len(), 0) };
+        if read < 0 {
+            let err = io::Error::last_os_error();
+            if err.kind() == io::ErrorKind::Interrupted {
+                continue;
+            }
+            return Err(err);
+        }
+        let read = usize::try_from(read)
+            .map_err(|_| io::Error::other("negative netlink recv byte count"))?;
+        if read < NLMSG_HEADER_LEN {
+            return Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "short netlink ACK",
+            ));
+        }
+        let message_type = u16::from_ne_bytes([buf[4], buf[5]]);
+        if i32::from(message_type) != libc::NLMSG_ERROR {
+            continue;
+        }
+        if read < NLMSG_HEADER_LEN + NETLINK_ERROR_CODE_LEN {
+            return Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "short netlink error ACK",
+            ));
+        }
+        let error = i32::from_ne_bytes([
+            buf[NLMSG_HEADER_LEN],
+            buf[NLMSG_HEADER_LEN + 1],
+            buf[NLMSG_HEADER_LEN + 2],
+            buf[NLMSG_HEADER_LEN + 3],
+        ]);
+        if error == 0 {
+            return Ok(());
+        }
+        return Err(io::Error::from_raw_os_error(error.saturating_abs()));
+    }
 }
 
 #[cfg(target_os = "linux")]
@@ -339,6 +420,10 @@ const fn align4(length: usize) -> usize {
 
 #[cfg(target_os = "linux")]
 const RTATTR_HEADER_LEN: usize = 4;
+#[cfg(target_os = "linux")]
+const NLMSG_HEADER_LEN: usize = 16;
+#[cfg(target_os = "linux")]
+const NETLINK_ERROR_CODE_LEN: usize = 4;
 #[cfg(target_os = "linux")]
 const IFA_ADDRESS: u16 = 1;
 #[cfg(target_os = "linux")]

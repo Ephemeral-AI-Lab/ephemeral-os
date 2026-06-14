@@ -132,7 +132,7 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
   *isolated keeps writes private and NEVER publishes* — is encoded inside
   **`workspace::isolated_workspace`**, which must not own publish paths.
   static plugin support is intentionally narrow now: first-party provider
-  request/response contracts live in `operation::plugin::contract`, while
+  request/response contracts live in the `plugin-contract` crate, while
   provider runtime code lives in the daemon-side `plugin` crate. There is no
   dynamic plugin crate or PPC/package pipeline. Verified edges (get these
   EXACTLY right):
@@ -152,13 +152,13 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
     shared operation outcome contracts.
   - `operation::file` → file operation semantics over direct and isolated
     backends.
-  - `operation::plugin` → static first-party provider operation contracts.
+  - `plugin-contract` → static first-party provider operation contracts.
   - `plugin` → daemon-side static provider runtime implementation, currently
     `pyright_lsp`.
   - `operation::checkpoint` → checkpoint commit pipeline.
   - `daemon` → transport, dispatch, wire-message codec, op adapters, service
     composition, daemon-owned plugin/checkpoint process glue.
-  - `eosd` → binary subcommand dispatch over daemon/namespace/overlay support.
+  - `eosd` → binary subcommand dispatch over daemon and namespace support.
   - `xtask` is a workspace package for packaging and is not part of the runtime architecture graph.
 - **Port traits invert the upward edges** (so the graph stays leaf→root). Lower crates define only
   the narrow ports they actually consume (for example `RouteProvider` and

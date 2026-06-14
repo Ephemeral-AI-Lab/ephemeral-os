@@ -1,17 +1,10 @@
 //! Shared daemon response shaping and resource timing helpers.
-#![allow(dead_code)]
 
 use std::collections::BTreeMap;
 use std::time::Instant;
 
-use layerstack::ChangesetResult;
 use layerstack::Manifest;
-use namespace::protocol::RunResult;
-use operation::{
-    ChangedPathKind, ChangedPathKinds, MutationCore, MutationSource, MutationStatus,
-    WorkspaceConflict, WorkspaceKind,
-};
-use serde::Serialize;
+use serde_json::{json, Value};
 use trace::usize_to_f64_saturating;
 
 pub(crate) fn u64_to_f64_saturating(value: u64) -> f64 {
@@ -20,8 +13,8 @@ pub(crate) fn u64_to_f64_saturating(value: u64) -> f64 {
     let low = u32::try_from(value & u64::from(u32::MAX)).unwrap_or(u32::MAX);
     f64::from(high).mul_add(U32_FACTOR, f64::from(low))
 }
-use serde_json::{json, Value};
 
+#[cfg(test)]
 #[derive(Clone, Debug, Default)]
 pub(crate) struct TreeResourceStats {
     exists: f64,
@@ -34,6 +27,7 @@ pub(crate) struct TreeResourceStats {
     first_error_path: Option<String>,
 }
 
+#[cfg(test)]
 impl TreeResourceStats {
     pub(crate) fn from_ephemeral(stats: &workspace::TreeResourceStats) -> Self {
         let file_entries = stats.files.saturating_add(stats.symlinks);
@@ -49,93 +43,6 @@ impl TreeResourceStats {
             first_error_path: stats.first_error_path.clone(),
         }
     }
-}
-
-pub(crate) fn attach_runner_shell_fields(response: &mut Value, runner: &RunResult) {
-    response["exit_code"] = runner
-        .payload
-        .get("exit_code")
-        .cloned()
-        .unwrap_or_else(|| json!(runner.exit_code));
-    response["stdout"] = runner
-        .payload
-        .get("stdout")
-        .cloned()
-        .unwrap_or_else(|| json!(""));
-    response["stderr"] = runner
-        .payload
-        .get("stderr")
-        .cloned()
-        .unwrap_or_else(|| json!(""));
-    response["warnings"] = runner
-        .payload
-        .get("warnings")
-        .cloned()
-        .unwrap_or_else(|| json!([]));
-}
-
-pub(crate) fn copy_runner_timings(
-    timings: &mut serde_json::Map<String, Value>,
-    runner: &RunResult,
-) {
-    if let Some(runner_timings) = runner.payload.get("timings").and_then(Value::as_object) {
-        for (key, value) in runner_timings {
-            timings.entry(key.clone()).or_insert_with(|| value.clone());
-        }
-    }
-}
-
-#[derive(Serialize)]
-struct PluginOverlayMutationResponse {
-    #[serde(flatten)]
-    core: MutationCore,
-    workspace: WorkspaceKind,
-    status: MutationStatus,
-}
-
-/// Daemon-owned plugin-overlay response synthesis over [`MutationCore`].
-/// The mutation source is the typed [`MutationSource::PluginOverlay`] variant,
-/// set before serialization — no post-hoc string splice and no `error: null`
-/// placeholder. Failure detail is materialized by `apply_plugin_overlay_status`.
-pub(crate) fn plugin_overlay_changeset_response(
-    result: &ChangesetResult,
-    mut timings: serde_json::Map<String, Value>,
-    total_start: Instant,
-) -> Value {
-    for (key, value) in &result.timings {
-        timings.insert(key.clone(), json!(value));
-    }
-    timings.insert(
-        "sandbox.plugin.overlay.total_s".to_owned(),
-        json!(total_start.elapsed().as_secs_f64()),
-    );
-    let changed_paths = result.published_paths();
-    let mut changed_path_kinds = ChangedPathKinds::new();
-    for path in &changed_paths {
-        changed_path_kinds.insert(path.to_owned(), ChangedPathKind::Write);
-    }
-    let conflict = result.first_conflict();
-    serde_json::to_value(PluginOverlayMutationResponse {
-        core: MutationCore {
-            success: result.success(),
-            changed_paths,
-            changed_path_kinds,
-            mutation_source: Some(MutationSource::PluginOverlay),
-            conflict: conflict.as_ref().map(|file| {
-                let reason = file.status.wire_str();
-                WorkspaceConflict::path(reason, file.path.as_str(), file.conflict_message(reason))
-            }),
-            conflict_reason: conflict
-                .as_ref()
-                .map(|file| file.conflict_message(file.status.wire_str()).to_owned()),
-            timings: timings.into_iter().collect(),
-        },
-        workspace: WorkspaceKind::Ephemeral,
-        status: conflict
-            .as_ref()
-            .map_or(MutationStatus::Committed, |file| file.status.into()),
-    })
-    .expect("changeset mutation response serializes")
 }
 
 pub(crate) fn resource_timings(
@@ -171,6 +78,7 @@ pub(crate) fn insert_cgroup_process_resource_timings(timings: &mut serde_json::M
     );
 }
 
+#[cfg(test)]
 pub(crate) fn insert_tree_resource_timings(
     timings: &mut serde_json::Map<String, Value>,
     prefix: &str,

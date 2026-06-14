@@ -15,8 +15,8 @@ impl DaemonServer {
     /// Bind the `AF_UNIX` (and optional TCP) listeners, write the pid file, install
     /// the SIGTERM/SIGINT handlers, and serve until the shutdown token fires.
     ///
-    /// On shutdown: cancel the serve tasks, remove the pid file, and unlink the
-    /// socket.
+    /// On shutdown: cancel active workspace runs, cancel the serve tasks, remove
+    /// the pid file, and unlink the socket.
     ///
     /// # Errors
     ///
@@ -201,9 +201,29 @@ impl DaemonServer {
         if let Some(task) = tcp_server {
             task.abort();
         }
+        cleanup_active_runs_on_shutdown(&server).await;
         let _ = tokio::fs::remove_file(&server.config.pid_path).await;
         let _ = tokio::fs::remove_file(&server.config.socket_path).await;
         Ok(())
+    }
+}
+
+async fn cleanup_active_runs_on_shutdown(server: &Arc<DaemonServer>) {
+    let services = Arc::clone(&server.services);
+    match tokio::task::spawn_blocking(move || services.workspace.cancel_all_runs(None)).await {
+        Ok((cancelled_commands, isolated_exited)) => emit_boot_event(
+            "workspace_runs_cancelled",
+            serde_json::json!({
+                "cancelled_commands": cancelled_commands,
+                "isolated_exited": isolated_exited,
+            }),
+        ),
+        Err(error) => emit_boot_event(
+            "workspace_run_cleanup_failed",
+            serde_json::json!({
+                "error": error.to_string(),
+            }),
+        ),
     }
 }
 

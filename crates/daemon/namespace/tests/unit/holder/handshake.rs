@@ -77,3 +77,27 @@ fn finish_ready_writes_ready_token() -> TestResult {
     assert_eq!(&buf[..read], READY);
     Ok(())
 }
+
+#[cfg(target_os = "linux")]
+#[test]
+fn finish_ready_does_not_signal_ready_when_required_veth_is_missing() -> TestResult {
+    let (_readiness_read, readiness_write) = nix::unistd::pipe()?;
+    let (control_read, control_write) = nix::unistd::pipe()?;
+    nix::unistd::write(
+        &control_write,
+        b"net-ready eos-missing-for-test 10.244.0.2 24 10.244.0.1\n",
+    )?;
+    let mut handshake = Handshake::new(
+        readiness_write.as_raw_fd(),
+        control_read.as_raw_fd(),
+        HeldNamespaces::for_test()?,
+    );
+    handshake.await_net_ready()?;
+
+    let error = handshake
+        .finish_ready()
+        .expect_err("missing veth should fail before ready");
+
+    assert!(matches!(error, NsHolderError::NetworkSetup { .. }));
+    Ok(())
+}

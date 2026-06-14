@@ -13,7 +13,6 @@ path = "src/main.rs"
 config.workspace = true
 daemon.workspace = true
 namespace.workspace = true
-overlay.workspace = true
 protocol.workspace = true
 anyhow.workspace = true
 serde_json.workspace = true

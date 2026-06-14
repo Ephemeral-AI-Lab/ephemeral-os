@@ -46,13 +46,18 @@ impl IsolatedManager {
         );
         record_phase_ms(&mut phases_ms, "install_veth", phase_start);
         phase_start = Instant::now();
-        self.runtime
-            .mount_overlay(handle, &handle.layer_paths.clone())?;
+        self.runtime.mount_overlay(
+            handle,
+            &handle.layer_paths.clone(),
+            self.caps.setup_timeout_s,
+        )?;
         record_phase_ms(&mut phases_ms, "mount_overlay", phase_start);
         phase_start = Instant::now();
-        handle.dns_configuration = self
-            .runtime
-            .configure_dns(handle, &self.caps.fallback_dns)?;
+        handle.dns_configuration = self.runtime.configure_dns(
+            handle,
+            &self.caps.fallback_dns,
+            self.caps.setup_timeout_s,
+        )?;
         record_phase_ms(&mut phases_ms, "configure_dns", phase_start);
         self.runtime
             .signal_net_ready(handle, self.caps.setup_timeout_s)?;

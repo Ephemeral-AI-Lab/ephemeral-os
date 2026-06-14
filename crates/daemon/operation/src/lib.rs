@@ -7,7 +7,6 @@ pub mod command;
 pub mod control;
 pub mod file;
 pub mod isolation;
-pub mod plugin;
 pub mod workspace_run;
 
 pub use core::{

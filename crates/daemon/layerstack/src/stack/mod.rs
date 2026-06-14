@@ -3,40 +3,40 @@ use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use serde::{Deserialize, Serialize};
-
-use crate::model::{
-    aggregate_layer_changes, layer_digest, manifest_root_hash, LayerChange, LayerRef, Manifest,
-};
+use crate::model::{layer_digest, manifest_root_hash, LayerChange, LayerRef, Manifest};
 
 use crate::error::LayerStackError;
 use crate::fs::{
-    allocate_layer_dirs, clear_storage_root_preserving_lock_and_names, copy_path, fsync_dir,
-    fsync_tree_files, join_layer_path, layer_digest_path, next_unique, read_manifest,
-    record_elapsed, remove_path, replace_workspace_contents, resolve_layer_path,
-    validate_layer_ref, write_atomic, write_layer_digest, write_manifest,
+    allocate_layer_dirs, fsync_dir, fsync_tree_files, layer_digest_path, next_unique,
+    read_manifest, record_elapsed, remove_path, replace_workspace_contents, resolve_layer_path,
+    write_layer_digest, write_manifest,
 };
-use crate::lock::{StorageWriterLockLease, STORAGE_WRITER_LOCK_FILE};
+use crate::lock::StorageWriterLockLease;
 use crate::squash::{
     manifest_prefix_before_plan, LayerCheckpointSquasher, SquashPlanDecision, SquashPlanEntry,
 };
 use crate::workspace::build_workspace_base_from_snapshot;
 use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, STAGING_DIR};
 
+mod layer_write;
+mod lease_cleanup;
 mod leases;
+mod metrics;
 mod projection;
 mod view;
 mod whiteout;
+mod workspace_commit;
 
+use layer_write::write_layer_changes;
+use lease_cleanup::release_lease_locked;
 pub(crate) use leases::reset_shared_registries_for_tests;
 use leases::{
-    lock_shared_registry, lock_shared_registry_recover, shared_registry_for_root, LeaseRegistry,
+    lock_shared_registry, lock_shared_registry_recover, shared_registry_for_root,
     SharedLeaseRegistry,
 };
+use metrics::{count_dirs, storage_bytes};
 pub use view::MergedView;
-use whiteout::{write_kernel_whiteout, OPAQUE_MARKER};
-
-const COMMIT_WORKSPACE_JOURNAL_FILE: &str = "commit_to_workspace.json";
+use workspace_commit::*;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Lease {
@@ -481,291 +481,6 @@ impl LayerStack {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(rename_all = "snake_case")]
-enum CommitWorkspacePhase {
-    Staged,
-    ReplacingWorkspace { workspace_root: String },
-    WorkspaceReplaced,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct CommitWorkspaceJournal {
-    phase: CommitWorkspacePhase,
-    staged_storage_root: String,
-}
-
-fn commit_workspace_journal_path(storage_root: &Path) -> PathBuf {
-    storage_root.join(COMMIT_WORKSPACE_JOURNAL_FILE)
-}
-
-fn write_commit_workspace_journal(
-    storage_root: &Path,
-    phase: CommitWorkspacePhase,
-    staged_storage: &Path,
-) -> Result<(), LayerStackError> {
-    let journal = CommitWorkspaceJournal {
-        phase,
-        staged_storage_root: staged_storage.to_string_lossy().into_owned(),
-    };
-    let encoded = serde_json::to_vec_pretty(&journal)
-        .map_err(|err| LayerStackError::Storage(err.to_string()))?;
-    write_atomic(commit_workspace_journal_path(storage_root), &encoded)
-}
-
-fn recover_commit_to_workspace(storage_root: &Path) -> Result<(), LayerStackError> {
-    let journal_path = commit_workspace_journal_path(storage_root);
-    if !journal_path.exists() {
-        return Ok(());
-    }
-    let journal = read_commit_workspace_journal(&journal_path)?;
-    let staged_storage = validate_staged_storage_path(storage_root, &journal.staged_storage_root)?;
-    match journal.phase {
-        CommitWorkspacePhase::Staged => {
-            remove_path(&staged_storage)?;
-            remove_path(&journal_path)?;
-            fsync_dir(storage_root)?;
-            Ok(())
-        }
-        CommitWorkspacePhase::ReplacingWorkspace { workspace_root } => {
-            let workspace_root = validate_workspace_root_path(&workspace_root)?;
-            recover_workspace_replacement(storage_root, &staged_storage, &workspace_root)?;
-            install_staged_workspace_commit(storage_root, &staged_storage)
-        }
-        CommitWorkspacePhase::WorkspaceReplaced => {
-            install_staged_workspace_commit(storage_root, &staged_storage)
-        }
-    }
-}
-
-fn read_commit_workspace_journal(path: &Path) -> Result<CommitWorkspaceJournal, LayerStackError> {
-    serde_json::from_str(&std::fs::read_to_string(path)?)
-        .map_err(|err| LayerStackError::Storage(format!("read commit journal: {err}")))
-}
-
-fn recover_workspace_replacement(
-    storage_root: &Path,
-    staged_storage: &Path,
-    workspace_root: &Path,
-) -> Result<(), LayerStackError> {
-    let active = read_manifest(staged_storage.join(ACTIVE_MANIFEST_FILE))?;
-    let projection = allocate_commit_projection_dir(storage_root, "projected-recovery")?;
-    let result = (|| {
-        MergedView::new(staged_storage.to_path_buf()).project(&projection, &active)?;
-        replace_workspace_contents(workspace_root, &projection)?;
-        fsync_dir(workspace_root)?;
-        Ok(())
-    })();
-    let _ = remove_path(&projection);
-    result
-}
-
-fn allocate_commit_projection_dir(
-    storage_root: &Path,
-    prefix: &str,
-) -> Result<PathBuf, LayerStackError> {
-    let parent = storage_root.join("runtime").join("commit");
-    std::fs::create_dir_all(&parent)?;
-    for _ in 0..100 {
-        let candidate = parent.join(format!("{prefix}-{}-{}", std::process::id(), next_unique()));
-        match std::fs::create_dir(&candidate) {
-            Ok(()) => return Ok(candidate),
-            Err(err) if err.kind() == ErrorKind::AlreadyExists => continue,
-            Err(err) => return Err(err.into()),
-        }
-    }
-    Err(LayerStackError::Storage(format!(
-        "could not allocate commit projection directory for prefix {prefix}"
-    )))
-}
-
-fn validate_workspace_root_path(workspace_root: &str) -> Result<PathBuf, LayerStackError> {
-    let path = PathBuf::from(workspace_root);
-    if path.as_os_str().is_empty() {
-        return Err(LayerStackError::Storage(
-            "commit workspace path is empty".to_owned(),
-        ));
-    }
-    if !path.is_absolute() {
-        return Err(LayerStackError::Storage(format!(
-            "commit workspace path must be absolute: {}",
-            path.display()
-        )));
-    }
-    Ok(path)
-}
-
-fn install_staged_workspace_commit(
-    storage_root: &Path,
-    staged_storage: &Path,
-) -> Result<(), LayerStackError> {
-    clear_storage_root_preserving_lock_and_names(storage_root, &[COMMIT_WORKSPACE_JOURNAL_FILE])?;
-    for child in std::fs::read_dir(staged_storage)? {
-        let child = child?;
-        if child.file_name() == std::ffi::OsStr::new(STORAGE_WRITER_LOCK_FILE) {
-            continue;
-        }
-        copy_path(&child.path(), &storage_root.join(child.file_name()))?;
-    }
-    fsync_tree_files(storage_root)?;
-    fsync_dir(storage_root)?;
-    remove_path(staged_storage)?;
-    remove_path(&storage_root.join(COMMIT_WORKSPACE_JOURNAL_FILE))?;
-    fsync_dir(storage_root)?;
-    Ok(())
-}
-
-fn validate_staged_storage_path(
-    storage_root: &Path,
-    staged_storage_root: &str,
-) -> Result<PathBuf, LayerStackError> {
-    let path = PathBuf::from(staged_storage_root);
-    let expected_parent = storage_root.parent().ok_or_else(|| {
-        LayerStackError::Storage(format!(
-            "storage root has no parent: {}",
-            storage_root.display()
-        ))
-    })?;
-    let file_name = path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .ok_or_else(|| {
-            LayerStackError::Storage(format!(
-                "staged commit storage path has no file name: {}",
-                path.display()
-            ))
-        })?;
-    if path.parent() != Some(expected_parent)
-        || !file_name.starts_with(&staged_storage_name_prefix(storage_root))
-    {
-        return Err(LayerStackError::Storage(format!(
-            "invalid staged commit storage path: {}",
-            path.display()
-        )));
-    }
-    Ok(path)
-}
-
-fn staged_storage_name_prefix(storage_root: &Path) -> String {
-    let name = storage_root
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("layerstack");
-    format!(".{name}.commit-storage-")
-}
-
-fn release_lease_locked(
-    storage_root: &Path,
-    leases: &mut LeaseRegistry,
-    lease_id: &str,
-) -> Result<bool, LayerStackError> {
-    let Some(lease) = leases.release(lease_id) else {
-        return Ok(false);
-    };
-    let active = read_manifest(storage_root.join(ACTIVE_MANIFEST_FILE))?;
-    let removable = unreferenced_layers(&lease.manifest.layers, &active, leases);
-    remove_layers(storage_root, &removable)?;
-    Ok(true)
-}
-
-fn unreferenced_layers(
-    candidates: &[LayerRef],
-    active: &Manifest,
-    leases: &LeaseRegistry,
-) -> Vec<LayerRef> {
-    let retained_layers = leases.leased_layers();
-    candidates
-        .iter()
-        .filter(|layer| !active.layers.contains(layer) && !retained_layers.contains(layer))
-        .cloned()
-        .collect()
-}
-
-fn remove_layers(storage_root: &Path, layers: &[LayerRef]) -> Result<(), LayerStackError> {
-    for layer in layers {
-        validate_layer_ref(layer)?;
-        remove_path(&storage_root.join(&layer.path))?;
-        match std::fs::remove_file(layer_digest_path(storage_root, &layer.layer_id)) {
-            Ok(()) => {}
-            Err(err) if err.kind() == ErrorKind::NotFound => {}
-            Err(err) => return Err(err.into()),
-        }
-    }
-    Ok(())
-}
-
-fn count_dirs(path: &Path) -> Result<usize, LayerStackError> {
-    if !path.exists() {
-        return Ok(0);
-    }
-    let mut count = 0;
-    for entry in std::fs::read_dir(path)? {
-        if entry?.file_type()?.is_dir() {
-            count += 1;
-        }
-    }
-    Ok(count)
-}
-
-fn storage_bytes(path: &Path) -> Result<u64, LayerStackError> {
-    if !path.exists() {
-        return Ok(0);
-    }
-    let mut total = 0;
-    let mut stack = vec![path.to_path_buf()];
-    while let Some(dir) = stack.pop() {
-        for entry in std::fs::read_dir(dir)? {
-            let entry = entry?;
-            let meta = entry.metadata()?;
-            if meta.is_dir() {
-                stack.push(entry.path());
-            } else if meta.is_file() {
-                total += meta.len();
-            }
-        }
-    }
-    Ok(total)
-}
-
-fn write_layer_changes(layer_dir: &Path, changes: &[LayerChange]) -> Result<(), LayerStackError> {
-    for change in aggregate_layer_changes(changes) {
-        match change {
-            LayerChange::Write { path, content } => {
-                let target = join_layer_path(layer_dir, path.as_str());
-                if let Some(parent) = target.parent() {
-                    std::fs::create_dir_all(parent)?;
-                }
-                remove_path(&target)?;
-                std::fs::write(target, content)?;
-            }
-            LayerChange::Delete { path } => {
-                let target = join_layer_path(layer_dir, path.as_str());
-                if let Some(parent) = target.parent() {
-                    std::fs::create_dir_all(parent)?;
-                }
-                remove_path(&target)?;
-                write_kernel_whiteout(&target)?;
-            }
-            LayerChange::Symlink { path, source_path } => {
-                let target = join_layer_path(layer_dir, path.as_str());
-                if let Some(parent) = target.parent() {
-                    std::fs::create_dir_all(parent)?;
-                }
-                remove_path(&target)?;
-                std::os::unix::fs::symlink(source_path, target)?;
-            }
-            LayerChange::OpaqueDir { path } => {
-                let marker = join_layer_path(layer_dir, path.as_str()).join(OPAQUE_MARKER);
-                if let Some(parent) = marker.parent() {
-                    std::fs::create_dir_all(parent)?;
-                }
-                std::fs::write(marker, b"")?;
-            }
-        }
-    }
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
@@ -774,6 +489,7 @@ mod tests {
     use std::time::Duration;
 
     use super::*;
+    use crate::fs::clear_storage_root_preserving_lock_and_names;
     use crate::workspace::{build_workspace_base, read_workspace_binding};
 
     type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;

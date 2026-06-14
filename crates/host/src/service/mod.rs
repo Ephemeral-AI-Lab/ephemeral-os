@@ -126,6 +126,13 @@ pub struct HostForwardRequest<'a> {
     pub trace: ForwardTraceContext,
 }
 
+struct ManagedSandboxStart {
+    sandbox_id: String,
+    image: String,
+    platform: Option<String>,
+    response_op: &'static str,
+}
+
 pub struct SandboxHost {
     config: HostConfig,
     config_yaml: String,
@@ -173,10 +180,12 @@ impl SandboxHost {
             contract,
             trace,
             args,
-            sandbox_id,
-            image,
-            platform,
-            HOST_SANDBOX_ACQUIRE,
+            ManagedSandboxStart {
+                sandbox_id,
+                image,
+                platform,
+                response_op: HOST_SANDBOX_ACQUIRE,
+            },
         )
     }
 
@@ -185,11 +194,14 @@ impl SandboxHost {
         contract: &OpContract,
         trace: &ForwardTraceContext,
         args: &Value,
-        sandbox_id: String,
-        image: String,
-        platform: Option<String>,
-        response_op: &str,
+        start: ManagedSandboxStart,
     ) -> Result<String> {
+        let ManagedSandboxStart {
+            sandbox_id,
+            image,
+            platform,
+            response_op,
+        } = start;
         validate_container_name(&sandbox_id)?;
         let op_started = Instant::now();
         self.trace_store.prepare_forward(RequestStartInput {
@@ -468,10 +480,12 @@ impl SandboxHost {
                 contract,
                 trace,
                 args,
-                sandbox_id,
-                image.to_owned(),
-                platform.clone(),
-                HOST_CONTAINER_START,
+                ManagedSandboxStart {
+                    sandbox_id,
+                    image: image.to_owned(),
+                    platform: platform.clone(),
+                    response_op: HOST_CONTAINER_START,
+                },
             )?;
             Ok(json!({
                 "sandbox_id": sandbox_id,

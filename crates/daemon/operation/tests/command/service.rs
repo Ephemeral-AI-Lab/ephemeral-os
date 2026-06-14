@@ -446,6 +446,32 @@ fn recover_orphaned_command_with_malformed_process_metadata_records_recovery_rea
     let _ = std::fs::remove_dir_all(scratch_root);
 }
 
+#[test]
+fn recover_orphaned_commands_preserves_foreign_scratch_directories() {
+    let (ops, scratch_root, command_dir) = command_ops_with_orphan_dir("cmd_valid_orphan");
+    write_orphan_metadata(&command_dir, "cmd_valid_orphan");
+    let foreign = scratch_root.join("foreign");
+    let malformed = scratch_root.join("malformed-command");
+    std::fs::create_dir_all(&foreign).expect("create foreign dir");
+    std::fs::create_dir_all(&malformed).expect("create malformed dir");
+    std::fs::write(malformed.join("metadata.json"), b"{not-json")
+        .expect("write malformed metadata");
+
+    ops.recover_orphaned_commands();
+
+    assert!(
+        !command_dir.exists(),
+        "valid command orphan should be reaped"
+    );
+    assert!(foreign.exists(), "foreign scratch dir should survive");
+    assert!(
+        malformed.exists(),
+        "dir without valid command metadata should survive"
+    );
+
+    let _ = std::fs::remove_dir_all(scratch_root);
+}
+
 fn command_ops_with_inactive_isolated_run(id: &str, caller_id: &str) -> CommandOps {
     let ops = CommandOps::new(command::CommandConfig::default());
     let root = std::env::temp_dir().join(format!(

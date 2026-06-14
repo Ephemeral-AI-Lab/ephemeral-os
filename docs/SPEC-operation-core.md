@@ -53,7 +53,7 @@ Gateway, host, and fixtures are blast radius, never redesigned here.
 | D7 | Typed IDs | `CallerId`, `InvocationId` in `core/id.rs` now; `CommandSessionId` lands with the command relocation. Substrate crates keep `String` fields; conversion at their boundary (possible because of F14's dependency direction). |
 | D8 | Mutation block | Full `MutationCore` composition via `#[serde(flatten)]`; `WorkspaceMutationOutcome` and `CommandMetadata` both compose it. Daemon `GuardedResponse` is deleted — core serialization becomes the wire. |
 | D9 | Errors | One boundary type `OpError { kind, message, details }`. `FileOpsError`/`WorkspaceApiError` become documented re-exports of it; the adapter `error_json` channel folds into it. Family-internal typed errors (`CheckpointError`, `PluginRuntimeError`, `IsolatedError`) stay heterogeneous. |
-| D10 | Plugin inputs | Static provider inputs live in `plugin/contract.rs`; legacy provisioning DTOs and dynamic plugin payloads are removed from compiled code and are no longer part of the public catalog/API. |
+| D10 | Plugin inputs | Static provider inputs live in the `plugin-contract` crate; legacy provisioning DTOs and dynamic plugin payloads are removed from compiled code and are no longer part of the public catalog/API. |
 | D11 | Command contract | Relocates to `command/contract.rs` (§11); `CommandResponse.metadata: Value` → `Option<CommandMetadata>`; `status: String` → `CommandStatus` enum (typing becomes possible only because the DTO moves above the substrate). |
 | D12 | v1 §9 rule 2 ("adapter-inline parsing is the design") | **Overturned.** Control/isolation/workspace_run/checkpoint get typed input/output DTOs in operation; behavior stays daemon-side. operation owns the contract for every daemon-served op; the daemon implements against it. |
 
@@ -408,7 +408,7 @@ Output field sets are today's wire keys, verbatim (canonical-equal bar, §13.1).
 | `sandbox.file.read` | `ReadFileInput { path, layer_stack_root? }` | `ReadFileOutput { workspace, success, content, exists, encoding, timings }` | |
 | `sandbox.file.write` | `WriteFileInput { path, content, overwrite, layer_stack_root? }` | `WorkspaceMutationOutcome` | |
 | `sandbox.file.edit` | `EditFileInput { path, edits, layer_stack_root? }` | `WorkspaceMutationOutcome` | |
-| **plugin/contract.rs** | | | operation::plugin |
+| **plugin-contract crate** | | | shared static plugin provider contracts |
 | `sandbox.plugin.list` | `PluginListInput` | `PluginListOutput { providers }` | |
 | `sandbox.plugin.health` | `PluginHealthInput` | `PluginHealthOutput { providers }` | |
 | `sandbox.plugin.pyright_lsp.query_symbols` | `PyrightLspQuerySymbolsInput { file_path, query?, workspace? }` | `PyrightLspQuerySymbolsOutput { provider, manifest_key, freshness, stale, symbols }` | |
@@ -562,6 +562,6 @@ next.
 | 3 | Rename `core/ops.rs` → `core/catalog.rs`; add `OpFamily::contracts()`; mechanical import rename (§4 table) | `cargo check --workspace`; `cargo xtask check-contract` (rendering code unchanged) |
 | 4 | `core/schema.rs`; **files** family end-to-end: `file/contract.rs` (wire-pure inputs, markers), `FileLimits` param, generic daemon wrapper, `MutationCore` flatten restructure, files stop using `GuardedResponse` | contract fixtures + files e2e + flatten round-trip test (§13.2) |
 | 5 | Command relocation (§11): move DTOs + tests, re-cut `persist_final`, type `CommandMetadata`/`CommandStatus`, update `settle.rs` and daemon/e2e imports | `cargo xtask check-contract` (all three suites) + `CommandMetadata` → `to_wire_value` round-trip against `contract/fixtures/envelopes/` |
-| 6 | Static plugin typed inputs (`plugin/contract.rs`, provider list/health and Pyright LSP DTOs); legacy ensure/upload DTOs are internal-only; plugin-overlay synthesis reads `MutationCore`; delete `GuardedResponse` | plugin tests + fixtures |
+| 6 | Static plugin typed inputs (`plugin-contract`, provider list/health and Pyright LSP DTOs); legacy ensure/upload DTOs are internal-only; plugin-overlay synthesis reads `MutationCore`; delete `GuardedResponse` | plugin tests + fixtures |
 | 7 | Control/isolation/workspace_run/checkpoint contracts + markers; fold `error_json` refusals into `OpError` (§13.3); delete `eos-sandbox/` module; completeness test (28/28 schema rows vs catalog) | full e2e + fixtures; grep gate: no `error_json` / `require_arg` producers remain |
 | 8 *(opt)* | schemars: `input_schema`/`output_schema` per op emitted into `ops.json` → gateway / TypeScript `@eos/contracts` codegen | extended `xtask check-contract` drift gate |

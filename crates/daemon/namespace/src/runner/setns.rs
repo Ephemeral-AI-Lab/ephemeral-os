@@ -72,6 +72,53 @@ pub fn setns_overlay_mount(
     Err(RunnerError::Unsupported)
 }
 
+/// Remount an overlay inside the runner's current mount namespace.
+#[cfg(target_os = "linux")]
+pub fn remount_overlay(request: &RunRequest) -> Result<(), RunnerError> {
+    let upperdir = request.upperdir.as_ref().ok_or_else(|| {
+        RunnerError::InvalidRequest("remount overlay requires upperdir".to_owned())
+    })?;
+    let workdir = request.workdir.as_ref().ok_or_else(|| {
+        RunnerError::InvalidRequest("remount overlay requires workdir".to_owned())
+    })?;
+    if request.layer_paths.is_empty() {
+        return Err(RunnerError::InvalidRequest(
+            "remount overlay requires layer_paths".to_owned(),
+        ));
+    }
+    let handle = OverlayHandle {
+        upperdir: upperdir.clone(),
+        workdir: workdir.clone(),
+        layer_paths: request.layer_paths.clone(),
+    };
+    overlay::unmount_overlay(&request.workspace_root.0)?;
+    let mount = match overlay::mount_overlay(&request.workspace_root.0, &handle) {
+        Ok(mount) => mount,
+        Err(err) if is_fsopen_unimplemented(&err) => {
+            overlay::mount_overlay_legacy(&request.workspace_root.0, &handle)?
+        }
+        Err(err) => return Err(err.into()),
+    };
+    // The runner is a one-shot process; the refreshed overlay must outlive it.
+    std::mem::forget(mount);
+    Ok(())
+}
+
+#[cfg(not(target_os = "linux"))]
+pub const fn remount_overlay(_request: &RunRequest) -> Result<(), RunnerError> {
+    Err(RunnerError::Unsupported)
+}
+
+#[cfg(target_os = "linux")]
+fn is_fsopen_unimplemented(err: &overlay::OverlayError) -> bool {
+    const ENOSYS: i32 = 38;
+    matches!(
+        err,
+        overlay::OverlayError::MountSyscall { context, source }
+            if *context == "fsopen overlay" && source.raw_os_error() == Some(ENOSYS)
+    )
+}
+
 /// Configure `/etc/resolv.conf` inside an existing workspace mount namespace.
 #[cfg(target_os = "linux")]
 pub fn configure_dns(request: &RunRequest) -> Result<serde_json::Value, RunnerError> {

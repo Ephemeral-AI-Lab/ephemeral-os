@@ -36,6 +36,12 @@ pub enum NsHolderError {
         #[source]
         source: std::io::Error,
     },
+    #[error("namespace network setup failed during {step}")]
+    NetworkSetup {
+        step: &'static str,
+        #[source]
+        source: std::io::Error,
+    },
     #[error("test holder crash injected")]
     TestCrash,
 }
@@ -91,7 +97,10 @@ impl Handshake {
     fn finish_ready(&self) -> Result<(), NsHolderError> {
         bring_loopback_up();
         if let Some(config) = &self.network_config {
-            configure_namespace_veth(config);
+            configure_namespace_veth(config).map_err(|source| NsHolderError::NetworkSetup {
+                step: "veth",
+                source,
+            })?;
         }
         disable_ipv6_ra();
         flush_ipv6_default_route();

@@ -296,17 +296,17 @@ declare_builtin_ops! {
     EditFile, SANDBOX_FILE_EDIT, "sandbox.file.edit",
         Daemon, Files, Public, true, None, "operation.file.EditFileInput", "operation.file.EditFileResponse", "Edit one file through the OCC gate.";
     PluginList, SANDBOX_PLUGIN_LIST, "sandbox.plugin.list",
-        Daemon, Plugins, Public, false, None, "operation.plugin.PluginListInput", "operation.plugin.PluginListOutput", "List configured first-party plugin providers without probing them.";
+        Daemon, Plugins, Public, false, None, "plugin_contract.PluginListInput", "plugin_contract.PluginListOutput", "List configured first-party plugin providers without probing them.";
     PluginHealth, SANDBOX_PLUGIN_HEALTH, "sandbox.plugin.health",
-        Daemon, Plugins, Public, false, None, "operation.plugin.PluginHealthInput", "operation.plugin.PluginHealthOutput", "Actively probe enabled first-party plugin providers.";
+        Daemon, Plugins, Public, false, None, "plugin_contract.PluginHealthInput", "plugin_contract.PluginHealthOutput", "Actively probe enabled first-party plugin providers.";
     PyrightLspQuerySymbols, SANDBOX_PLUGIN_PYRIGHT_LSP_QUERY_SYMBOLS, "sandbox.plugin.pyright_lsp.query_symbols",
-        Daemon, Plugins, Public, false, None, "operation.plugin.PyrightLspQuerySymbolsInput", "operation.plugin.PyrightLspQuerySymbolsOutput", "Return Pyright document symbols for a Python file.";
+        Daemon, Plugins, Public, false, None, "plugin_contract.PyrightLspQuerySymbolsInput", "plugin_contract.PyrightLspQuerySymbolsOutput", "Return Pyright document symbols for a Python file.";
     PyrightLspDefinition, SANDBOX_PLUGIN_PYRIGHT_LSP_DEFINITION, "sandbox.plugin.pyright_lsp.definition",
-        Daemon, Plugins, Public, false, None, "operation.plugin.PyrightLspDefinitionInput", "operation.plugin.PyrightLspLocationsOutput", "Resolve a Pyright definition location.";
+        Daemon, Plugins, Public, false, None, "plugin_contract.PyrightLspDefinitionInput", "plugin_contract.PyrightLspLocationsOutput", "Resolve a Pyright definition location.";
     PyrightLspReferences, SANDBOX_PLUGIN_PYRIGHT_LSP_REFERENCES, "sandbox.plugin.pyright_lsp.references",
-        Daemon, Plugins, Public, false, None, "operation.plugin.PyrightLspReferencesInput", "operation.plugin.PyrightLspLocationsOutput", "Resolve Pyright reference locations.";
+        Daemon, Plugins, Public, false, None, "plugin_contract.PyrightLspReferencesInput", "plugin_contract.PyrightLspLocationsOutput", "Resolve Pyright reference locations.";
     PyrightLspDiagnostics, SANDBOX_PLUGIN_PYRIGHT_LSP_DIAGNOSTICS, "sandbox.plugin.pyright_lsp.diagnostics",
-        Daemon, Plugins, Public, false, None, "operation.plugin.PyrightLspDiagnosticsInput", "operation.plugin.PyrightLspDiagnosticsOutput", "Return current Pyright diagnostics for a Python file.";
+        Daemon, Plugins, Public, false, None, "plugin_contract.PyrightLspDiagnosticsInput", "plugin_contract.PyrightLspDiagnosticsOutput", "Return current Pyright diagnostics for a Python file.";
     IsolatedWorkspaceEnter, SANDBOX_ISOLATION_ENTER, "sandbox.isolation.enter",
         Daemon, IsolatedWorkspace, Public, true, None, "operation.isolation.IsolationEnterInput", "operation.isolation.IsolationEnterOutput", "Enter isolated workspace mode for a caller.";
     IsolatedWorkspaceExit, SANDBOX_ISOLATION_EXIT, "sandbox.isolation.exit",

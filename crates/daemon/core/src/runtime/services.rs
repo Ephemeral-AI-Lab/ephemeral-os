@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use command::CommandConfig;
+use config::configs::command::CommandConfig as ConfigCommandConfig;
 use config::configs::daemon::PluginRuntimeConfig;
 use config::configs::isolated_workspace::IsolatedWorkspaceConfig;
 use layerstack::CommitOptions;
@@ -37,6 +38,20 @@ pub(crate) mod background_tasks {
 
     pub(crate) fn recover_orphaned_commands(command: &CommandOps) {
         command.recover_orphaned_commands();
+    }
+}
+
+#[must_use]
+pub(crate) fn command_config_from_schema(config: &ConfigCommandConfig) -> CommandConfig {
+    CommandConfig {
+        scratch_root: config.scratch_root.clone(),
+        default_yield_time_ms: config.default_yield_time_ms,
+        default_timeout_s: config.default_timeout_s,
+        quiet_ms: config.quiet_ms,
+        cancel_wait_ms: config.cancel_wait_ms,
+        output_drain_grace_ms: config.output_drain_grace_ms,
+        max_command_s: config.max_command_s,
+        transcript_timestamp_timezone: config.transcript_timestamp_timezone.clone(),
     }
 }
 

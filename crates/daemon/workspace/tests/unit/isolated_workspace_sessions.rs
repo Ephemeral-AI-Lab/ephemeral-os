@@ -153,7 +153,10 @@ fn enter_persistence_failure_rolls_back_holder_and_state() -> Result<(), Box<dyn
     assert!(error.to_string().contains("manager_write"));
     assert!(sessions.list_open_callers().is_empty());
     assert!(sessions.get_handle("caller-persist-fail").is_none());
-    assert_eq!(*killed_holders.lock().unwrap(), vec![4242]);
+    assert_eq!(
+        *killed_holders.lock().expect("stub holder kill log lock"),
+        vec![4242]
+    );
     let owned_root = scratch_root.join("eos-isolated");
     assert!(
         !owned_root.exists() || std::fs::read_dir(&owned_root)?.next().is_none(),
@@ -235,7 +238,10 @@ fn recovery_kills_persisted_holder_pid() -> Result<(), Box<dyn std::error::Error
     let report = sessions.reap_persisted_orphans()?;
 
     assert_eq!(report.orphan_lease_ids, vec!["lease-orphan"]);
-    assert_eq!(*killed_holders.lock().unwrap(), vec![5150]);
+    assert_eq!(
+        *killed_holders.lock().expect("stub holder kill log lock"),
+        vec![5150]
+    );
 
     let _ = std::fs::remove_dir_all(scratch_root);
     Ok(())

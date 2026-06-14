@@ -32,6 +32,14 @@ fn config_validation_rejects_invalid_daemon_values() {
     assert_invalid(cfg, "daemon.commands.default_timeout_s");
 
     let mut cfg = prd_config();
+    cfg.commands.scratch_root = std::path::PathBuf::from("/");
+    assert_invalid(cfg, "daemon.commands.scratch_root");
+
+    let mut cfg = prd_config();
+    cfg.commands.scratch_root = cfg.plugin.pyright_lsp.workspace_root.clone();
+    assert_invalid(cfg, "daemon.commands.scratch_root");
+
+    let mut cfg = prd_config();
     cfg.layer_stack.auto_squash_max_depth = 0;
     assert_invalid(cfg, "daemon.layer_stack.auto_squash_max_depth");
 

@@ -1,9 +1,6 @@
 //! Isolated-workspace op adapters behind `sandbox.isolation.*`: wire arg
 //! parsing and response/error shaping over [`crate::WorkspaceRuntime`].
 
-#[cfg(test)]
-use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
-
 use operation::isolation::contract::{
     IsolationEnterInput, IsolationEnterOutput, IsolationExitInput, IsolationExitOutput,
     IsolationStatusInput, IsolationStatusOutput, ListOpenOutput, TestResetOutput,
@@ -426,17 +423,6 @@ fn record_lease_release_failed(
             "error": error,
         }),
     );
-}
-
-/// Serialize tests that toggle the process-wide
-/// `EOS_ISOLATED_WORKSPACE_TEST_HARNESS` environment variable.
-#[cfg(test)]
-#[allow(dead_code)]
-pub(crate) fn lock_isolated_test_state() -> MutexGuard<'static, ()> {
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(()))
-        .lock()
-        .unwrap_or_else(PoisonError::into_inner)
 }
 
 /// Map an [`IsolatedError`] onto the structured error payload, carrying the

@@ -338,8 +338,8 @@
       "visibility": "public",
       "family": "Plugins",
       "mutates_state": false,
-      "args_schema": "operation.plugin.PluginListInput",
-      "response_schema": "operation.plugin.PluginListOutput",
+      "args_schema": "plugin_contract.PluginListInput",
+      "response_schema": "plugin_contract.PluginListOutput",
       "summary": "List configured first-party plugin providers without probing them."
     },
     {
@@ -349,8 +349,8 @@
       "visibility": "public",
       "family": "Plugins",
       "mutates_state": false,
-      "args_schema": "operation.plugin.PluginHealthInput",
-      "response_schema": "operation.plugin.PluginHealthOutput",
+      "args_schema": "plugin_contract.PluginHealthInput",
+      "response_schema": "plugin_contract.PluginHealthOutput",
       "summary": "Actively probe enabled first-party plugin providers."
     },
     {
@@ -360,8 +360,8 @@
       "visibility": "public",
       "family": "Plugins",
       "mutates_state": false,
-      "args_schema": "operation.plugin.PyrightLspQuerySymbolsInput",
-      "response_schema": "operation.plugin.PyrightLspQuerySymbolsOutput",
+      "args_schema": "plugin_contract.PyrightLspQuerySymbolsInput",
+      "response_schema": "plugin_contract.PyrightLspQuerySymbolsOutput",
       "summary": "Return Pyright document symbols for a Python file."
     },
     {
@@ -371,8 +371,8 @@
       "visibility": "public",
       "family": "Plugins",
       "mutates_state": false,
-      "args_schema": "operation.plugin.PyrightLspDefinitionInput",
-      "response_schema": "operation.plugin.PyrightLspLocationsOutput",
+      "args_schema": "plugin_contract.PyrightLspDefinitionInput",
+      "response_schema": "plugin_contract.PyrightLspLocationsOutput",
       "summary": "Resolve a Pyright definition location."
     },
     {
@@ -382,8 +382,8 @@
       "visibility": "public",
       "family": "Plugins",
       "mutates_state": false,
-      "args_schema": "operation.plugin.PyrightLspReferencesInput",
-      "response_schema": "operation.plugin.PyrightLspLocationsOutput",
+      "args_schema": "plugin_contract.PyrightLspReferencesInput",
+      "response_schema": "plugin_contract.PyrightLspLocationsOutput",
       "summary": "Resolve Pyright reference locations."
     },
     {
@@ -393,8 +393,8 @@
       "visibility": "public",
       "family": "Plugins",
       "mutates_state": false,
-      "args_schema": "operation.plugin.PyrightLspDiagnosticsInput",
-      "response_schema": "operation.plugin.PyrightLspDiagnosticsOutput",
+      "args_schema": "plugin_contract.PyrightLspDiagnosticsInput",
+      "response_schema": "plugin_contract.PyrightLspDiagnosticsOutput",
       "summary": "Return current Pyright diagnostics for a Python file."
     },
     {

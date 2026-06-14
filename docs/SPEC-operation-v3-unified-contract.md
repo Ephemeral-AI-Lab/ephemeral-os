@@ -348,7 +348,7 @@ impl WriteFileInput {
 ```
 
 ```rust
-// plugin/contract.rs — D10: static first-party provider DTOs.
+// plugin-contract crate — D10: static first-party provider DTOs.
 pub struct PyrightLspDefinitionInput {
     pub file_path: String,
     pub position: LspPositionInput,
@@ -467,7 +467,7 @@ Output ownership map:
 | `ReadFileOutput`, `CommitOutput`, checkpoint outputs | family `contract.rs` | adapter `json!` shapers (`read_response`, `commit_response`) |
 | `CommandResponse` + `CommandMetadata` (§7.3) | `command/contract.rs` | the F6 key-fishing round-trip |
 | control/isolation/workspace_run outputs | family `contract.rs` (D12) | adapter-inline `json!` shapes |
-| `PluginEnsureOutput` (enum `NeedsUpload` \| `Ready`), `PluginStatusOutput` | `plugin/contract.rs` | adapter shaping |
+| `PluginEnsureOutput` (enum `NeedsUpload` \| `Ready`), `PluginStatusOutput` | `plugin-contract` | adapter shaping |
 | plugin-overlay response synthesis | **stays daemon-owned** — reads/builds `MutationCore` instead of fishing keys; `"plugin_overlay"` spelling stays a daemon literal; post-splices (runner shell fields, `plugin_result`, status rewrite) unchanged in order | hand re-keying |
 
 **Order-sensitive carve-out (verified wire contract):**
@@ -706,7 +706,7 @@ and `Output` structs live in the named `contract.rs`.
 | `sandbox.file.read` | `ReadFileInput { path, caller, layer_stack_root? }` | `ReadFileOutput { workspace: WorkspaceKind, success, content, exists, encoding, timings }` | |
 | `sandbox.file.write` | `WriteFileInput { path, content, overwrite, caller, layer_stack_root? }` | `WorkspaceMutationOutcome` | |
 | `sandbox.file.edit` | `EditFileInput { edits, path, caller, layer_stack_root? }` | `WorkspaceMutationOutcome` | |
-| **plugin/contract.rs** | | | operation::plugin |
+| **plugin-contract crate** | | | shared static plugin provider contracts |
 | `sandbox.plugin.list` | `PluginListInput` | `PluginListOutput { providers }` | |
 | `sandbox.plugin.health` | `PluginHealthInput` | `PluginHealthOutput { providers }` | |
 | `sandbox.plugin.pyright_lsp.query_symbols` | `PyrightLspQuerySymbolsInput` | `PyrightLspQuerySymbolsOutput { provider, manifest_key, freshness, stale, symbols }` | |

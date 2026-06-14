@@ -23,12 +23,12 @@ The complete public vocabulary served on the `gateway` client socket.
 | `sandbox.file.read` | daemon | Files | no | `operation.file.ReadFileInput` | `operation.file.ReadFileResponse` | Read one file from the layer stack or isolated workspace. |
 | `sandbox.file.write` | daemon | Files | yes | `operation.file.WriteFileInput` | `operation.file.WriteFileResponse` | Write one file through the OCC gate. |
 | `sandbox.file.edit` | daemon | Files | yes | `operation.file.EditFileInput` | `operation.file.EditFileResponse` | Edit one file through the OCC gate. |
-| `sandbox.plugin.list` | daemon | Plugins | no | `operation.plugin.PluginListInput` | `operation.plugin.PluginListOutput` | List configured first-party plugin providers without probing them. |
-| `sandbox.plugin.health` | daemon | Plugins | no | `operation.plugin.PluginHealthInput` | `operation.plugin.PluginHealthOutput` | Actively probe enabled first-party plugin providers. |
-| `sandbox.plugin.pyright_lsp.query_symbols` | daemon | Plugins | no | `operation.plugin.PyrightLspQuerySymbolsInput` | `operation.plugin.PyrightLspQuerySymbolsOutput` | Return Pyright document symbols for a Python file. |
-| `sandbox.plugin.pyright_lsp.definition` | daemon | Plugins | no | `operation.plugin.PyrightLspDefinitionInput` | `operation.plugin.PyrightLspLocationsOutput` | Resolve a Pyright definition location. |
-| `sandbox.plugin.pyright_lsp.references` | daemon | Plugins | no | `operation.plugin.PyrightLspReferencesInput` | `operation.plugin.PyrightLspLocationsOutput` | Resolve Pyright reference locations. |
-| `sandbox.plugin.pyright_lsp.diagnostics` | daemon | Plugins | no | `operation.plugin.PyrightLspDiagnosticsInput` | `operation.plugin.PyrightLspDiagnosticsOutput` | Return current Pyright diagnostics for a Python file. |
+| `sandbox.plugin.list` | daemon | Plugins | no | `plugin_contract.PluginListInput` | `plugin_contract.PluginListOutput` | List configured first-party plugin providers without probing them. |
+| `sandbox.plugin.health` | daemon | Plugins | no | `plugin_contract.PluginHealthInput` | `plugin_contract.PluginHealthOutput` | Actively probe enabled first-party plugin providers. |
+| `sandbox.plugin.pyright_lsp.query_symbols` | daemon | Plugins | no | `plugin_contract.PyrightLspQuerySymbolsInput` | `plugin_contract.PyrightLspQuerySymbolsOutput` | Return Pyright document symbols for a Python file. |
+| `sandbox.plugin.pyright_lsp.definition` | daemon | Plugins | no | `plugin_contract.PyrightLspDefinitionInput` | `plugin_contract.PyrightLspLocationsOutput` | Resolve a Pyright definition location. |
+| `sandbox.plugin.pyright_lsp.references` | daemon | Plugins | no | `plugin_contract.PyrightLspReferencesInput` | `plugin_contract.PyrightLspLocationsOutput` | Resolve Pyright reference locations. |
+| `sandbox.plugin.pyright_lsp.diagnostics` | daemon | Plugins | no | `plugin_contract.PyrightLspDiagnosticsInput` | `plugin_contract.PyrightLspDiagnosticsOutput` | Return current Pyright diagnostics for a Python file. |
 | `sandbox.isolation.enter` | daemon | IsolatedWorkspace | yes | `operation.isolation.IsolationEnterInput` | `operation.isolation.IsolationEnterOutput` | Enter isolated workspace mode for a caller. |
 | `sandbox.isolation.exit` | daemon | IsolatedWorkspace | yes | `operation.isolation.IsolationExitInput` | `operation.isolation.IsolationExitOutput` | Exit isolated workspace mode for a caller. |
 | `sandbox.isolation.status` | daemon | IsolatedWorkspace | no | `operation.isolation.IsolationStatusInput` | `operation.isolation.IsolationStatusOutput` | Inspect isolated workspace status. |

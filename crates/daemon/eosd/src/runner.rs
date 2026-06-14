@@ -25,7 +25,8 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let mut output_target = OutputTarget::open(config.output_path.as_ref())?;
     let result = match config.mode {
         RunnerCliMode::RemountOverlay => {
-            remount_overlay_from_request(&request).context("ns-runner remount overlay failed")?;
+            namespace::runner::setns::remount_overlay(&request)
+                .context("ns-runner remount overlay failed")?;
             ok_result()
         }
         RunnerCliMode::MountOverlay => {
@@ -167,80 +168,6 @@ fn open_fd_for_read(fd: RawFd) -> std::io::Result<File> {
     File::open(format!("/proc/self/fd/{fd}")).or_else(|_| File::open(format!("/dev/fd/{fd}")))
 }
 
-fn remount_overlay_from_request(request: &namespace::protocol::RunRequest) -> Result<()> {
-    let upperdir = request
-        .upperdir
-        .clone()
-        .ok_or_else(|| anyhow!("remount overlay requires upperdir"))?;
-    let workdir = request
-        .workdir
-        .clone()
-        .ok_or_else(|| anyhow!("remount overlay requires workdir"))?;
-    if request.layer_paths.is_empty() {
-        return Err(anyhow!("remount overlay requires layer_paths"));
-    }
-    let handle = overlay::OverlayHandle {
-        upperdir,
-        workdir,
-        layer_paths: request.layer_paths.clone(),
-    };
-    overlay::unmount_overlay(&request.workspace_root.0)
-        .context("failed to unmount old workspace overlay")?;
-    let mount = match overlay::mount_overlay(&request.workspace_root.0, &handle) {
-        Ok(mount) => mount,
-        Err(err) if is_fsopen_unimplemented(&err) => {
-            overlay::mount_overlay_legacy(&request.workspace_root.0, &handle)
-                .context("failed to mount refreshed workspace overlay with legacy mount")?
-        }
-        Err(err) => return Err(err).context("failed to mount refreshed workspace overlay"),
-    };
-    std::mem::forget(mount);
-    Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use std::os::unix::net::UnixStream;
-
-    use super::*;
-
-    #[test]
-    fn wait_for_start_ack_returns_after_parent_byte() -> Result<()> {
-        let (read_end, mut write_end) = UnixStream::pair().context("create ack pair")?;
-        write_end.write_all(b"1").context("write ack")?;
-
-        wait_for_start_ack_reader(read_end)?;
-
-        Ok(())
-    }
-
-    #[test]
-    fn wait_for_start_ack_errors_on_eof_before_ack() -> Result<()> {
-        let (read_end, write_end) = UnixStream::pair().context("create ack pair")?;
-        drop(write_end);
-
-        let error = wait_for_start_ack_reader(read_end)
-            .expect_err("closed ack fd should fail before runner start");
-
-        assert!(
-            error
-                .to_string()
-                .contains("start ack closed before command start"),
-            "{error}"
-        );
-        Ok(())
-    }
-}
-
-fn is_fsopen_unimplemented(err: &overlay::OverlayError) -> bool {
-    const ENOSYS: i32 = 38;
-    matches!(
-        err,
-        overlay::OverlayError::MountSyscall { context, source }
-            if *context == "fsopen overlay" && source.raw_os_error() == Some(ENOSYS)
-    )
-}
-
 fn read_payload(path: Option<&PathBuf>) -> Result<String> {
     let mut payload = String::new();
     if let Some(path) = path {
@@ -295,4 +222,38 @@ fn write_payload(target: &mut OutputTarget, payload: &[u8]) -> Result<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::os::unix::net::UnixStream;
+
+    use super::*;
+
+    #[test]
+    fn wait_for_start_ack_returns_after_parent_byte() -> Result<()> {
+        let (read_end, mut write_end) = UnixStream::pair().context("create ack pair")?;
+        write_end.write_all(b"1").context("write ack")?;
+
+        wait_for_start_ack_reader(read_end)?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn wait_for_start_ack_errors_on_eof_before_ack() -> Result<()> {
+        let (read_end, write_end) = UnixStream::pair().context("create ack pair")?;
+        drop(write_end);
+
+        let error = wait_for_start_ack_reader(read_end)
+            .expect_err("closed ack fd should fail before runner start");
+
+        assert!(
+            error
+                .to_string()
+                .contains("start ack closed before command start"),
+            "{error}"
+        );
+        Ok(())
+    }
 }

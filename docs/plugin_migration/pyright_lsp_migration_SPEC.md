@@ -325,12 +325,8 @@ Validation rules:
 Create a static plugin registry:
 
 ```rust
-enum BuiltinPluginProvider {
-    PyrightLsp,
-}
-
 struct PluginRegistry {
-    enabled: BTreeSet<BuiltinPluginProvider>,
+    enabled: BTreeSet<&'static str>,
     pyright_lsp: Option<PyrightLspRuntime>,
 }
 ```

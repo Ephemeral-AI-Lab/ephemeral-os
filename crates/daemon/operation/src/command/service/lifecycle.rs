@@ -188,40 +188,33 @@ impl CommandOps {
             if !path.is_dir() {
                 continue;
             }
-            if let Ok(bytes) = std::fs::read(path.join("metadata.json")) {
-                if let Ok(meta) = serde_json::from_slice::<Value>(&bytes) {
-                    let id = meta
-                        .get("command_id")
-                        .and_then(Value::as_str)
-                        .unwrap_or_default();
-                    if !id.is_empty() {
-                        let recovered_process = classify_recovered_command(&path);
-                        terminate_recovered_process_group(recovered_process.process_group_id());
-                        let caller_id = meta
-                            .get("caller_id")
-                            .and_then(Value::as_str)
-                            .unwrap_or_default();
-                        let command = meta
-                            .get("command")
-                            .and_then(Value::as_str)
-                            .unwrap_or_default();
-                        let result = CommandResponse {
-                            status: CommandStatus::Error,
-                            exit_code: Some(1),
-                            stdout: String::new(),
-                            stderr: recovered_process.stderr().to_owned(),
-                            command_id: Some(crate::CommandId::new(id.to_owned())),
-                            finalized: None,
-                        };
-                        self.push_completed(CommandCompletion {
-                            command_id: id.to_owned(),
-                            caller_id: caller_id.to_owned(),
-                            command: command.to_owned(),
-                            result,
-                        });
-                    }
-                }
-            }
+            let Some((id, meta)) = read_recoverable_command_metadata(&path) else {
+                continue;
+            };
+            let recovered_process = classify_recovered_command(&path);
+            terminate_recovered_process_group(recovered_process.process_group_id());
+            let caller_id = meta
+                .get("caller_id")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            let command = meta
+                .get("command")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            let result = CommandResponse {
+                status: CommandStatus::Error,
+                exit_code: Some(1),
+                stdout: String::new(),
+                stderr: recovered_process.stderr().to_owned(),
+                command_id: Some(crate::CommandId::new(id.clone())),
+                finalized: None,
+            };
+            self.push_completed(CommandCompletion {
+                command_id: id,
+                caller_id: caller_id.to_owned(),
+                command: command.to_owned(),
+                result,
+            });
             let _ = std::fs::remove_dir_all(&path);
         }
     }
@@ -398,6 +391,13 @@ fn classify_recovered_command(command_dir: &std::path::Path) -> RecoveredCommand
             error: error.to_string(),
         },
     }
+}
+
+fn read_recoverable_command_metadata(command_dir: &std::path::Path) -> Option<(String, Value)> {
+    let bytes = std::fs::read(command_dir.join("metadata.json")).ok()?;
+    let meta = serde_json::from_slice::<Value>(&bytes).ok()?;
+    let id = meta.get("command_id")?.as_str()?.trim().to_owned();
+    (!id.is_empty()).then_some((id, meta))
 }
 
 fn terminate_recovered_process_group(process_group_id: Option<i32>) {

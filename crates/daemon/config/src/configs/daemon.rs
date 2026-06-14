@@ -4,7 +4,7 @@
 //! it into daemon-owned subsystems during server startup.
 
 use std::collections::BTreeSet;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
@@ -141,6 +141,10 @@ impl DaemonConfig {
             "daemon.inflight.reaper_interval_s",
         )?;
         require_absolute(&self.commands.scratch_root, "daemon.commands.scratch_root")?;
+        reject_dangerous_command_scratch_root(
+            &self.commands.scratch_root,
+            &self.plugin.pyright_lsp.workspace_root,
+        )?;
         require_u64_at_least(
             self.commands.default_yield_time_ms,
             1,
@@ -253,6 +257,41 @@ fn validate_enabled_plugins(enabled: &[String]) -> Result<(), ConfigFieldError> 
         }
     }
     Ok(())
+}
+
+fn reject_dangerous_command_scratch_root(
+    scratch_root: &Path,
+    plugin_workspace_root: &Path,
+) -> Result<(), ConfigFieldError> {
+    if is_filesystem_root(scratch_root) {
+        return Err(ConfigFieldError::new(
+            "daemon.commands.scratch_root",
+            "must not be the filesystem root",
+        ));
+    }
+    if paths_match_or_resolve_equal(scratch_root, plugin_workspace_root) {
+        return Err(ConfigFieldError::new(
+            "daemon.commands.scratch_root",
+            "must not resolve to daemon.plugin.pyright_lsp.workspace_root",
+        ));
+    }
+    Ok(())
+}
+
+fn is_filesystem_root(path: &Path) -> bool {
+    path.parent().is_none()
+        || path
+            .canonicalize()
+            .ok()
+            .is_some_and(|canonical| canonical.parent().is_none())
+}
+
+fn paths_match_or_resolve_equal(left: &Path, right: &Path) -> bool {
+    left == right
+        || match (left.canonicalize(), right.canonicalize()) {
+            (Ok(left), Ok(right)) => left == right,
+            _ => false,
+        }
 }
 
 #[cfg(test)]

@@ -171,7 +171,7 @@ impl CommandRegistry {
         }
     }
 
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub(crate) fn insert(&self, run: Arc<ActiveCommand>) {
         self.active_count.fetch_add(1, Ordering::AcqRel);
         self.insert_reserved(run);

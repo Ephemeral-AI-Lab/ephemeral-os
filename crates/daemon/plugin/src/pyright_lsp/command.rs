@@ -1,8 +1,17 @@
 use std::fs;
+use std::io::Read;
+#[cfg(unix)]
+use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, ExitStatus, Output, Stdio};
+use std::thread;
+use std::time::{Duration, Instant};
 
 use config::configs::daemon::PyrightLspConfig;
+#[cfg(unix)]
+use nix::sys::signal::{kill, Signal};
+#[cfg(unix)]
+use nix::unistd::Pid;
 
 use crate::PluginRuntimeError;
 
@@ -63,7 +72,8 @@ fn provision_python_pyright_command(
                 root.display()
             ))
         })?;
-        let output = Command::new(&python)
+        let mut command = Command::new(&python);
+        command
             .args([
                 "-m",
                 "pip",
@@ -75,14 +85,16 @@ fn provision_python_pyright_command(
             .arg(&root)
             .arg(format!("pyright=={PYRIGHT_PYPI_VERSION}"))
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .output()
-            .map_err(|err| {
-                PluginRuntimeError::PyrightLsp(format!(
-                    "install pyright_lsp Python assets with {}: {err}",
-                    python.display()
-                ))
-            })?;
+            .stderr(Stdio::piped());
+        #[cfg(unix)]
+        command.process_group(0);
+        let mut child = command.spawn().map_err(|err| {
+            PluginRuntimeError::PyrightLsp(format!(
+                "spawn pyright_lsp Python asset install with {}: {err}",
+                python.display()
+            ))
+        })?;
+        let output = wait_for_pip_install(&mut child, config.refresh_timeout_ms)?;
         if !output.status.success() {
             return Err(PluginRuntimeError::PyrightLsp(format!(
                 "install pyright_lsp Python assets failed: {}",
@@ -99,6 +111,66 @@ fn provision_python_pyright_command(
             shell_quote(&python)
         ),
     ]))
+}
+
+fn wait_for_pip_install(child: &mut Child, timeout_ms: u64) -> Result<Output, PluginRuntimeError> {
+    let status = wait_for_child_status(child, timeout_ms)?;
+    let stdout = read_child_pipe(child.stdout.take())?;
+    let stderr = read_child_pipe(child.stderr.take())?;
+    Ok(Output {
+        status,
+        stdout,
+        stderr,
+    })
+}
+
+fn wait_for_child_status(
+    child: &mut Child,
+    timeout_ms: u64,
+) -> Result<ExitStatus, PluginRuntimeError> {
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms.max(1));
+    loop {
+        if let Some(status) = child.try_wait().map_err(|err| {
+            PluginRuntimeError::PyrightLsp(format!(
+                "wait for pyright_lsp Python asset install: {err}"
+            ))
+        })? {
+            return Ok(status);
+        }
+        if Instant::now() >= deadline {
+            terminate_child_tree(child);
+            let _ = child.wait();
+            return Err(PluginRuntimeError::PyrightLsp(format!(
+                "install pyright_lsp Python assets timed out after {timeout_ms}ms"
+            )));
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+}
+
+fn terminate_child_tree(child: &mut Child) {
+    #[cfg(unix)]
+    {
+        if let Ok(pid) = i32::try_from(child.id()) {
+            let _ = kill(Pid::from_raw(-pid), Signal::SIGKILL);
+            let _ = kill(Pid::from_raw(pid), Signal::SIGKILL);
+            return;
+        }
+    }
+    let _ = child.kill();
+}
+
+fn read_child_pipe<R: Read>(pipe: Option<R>) -> Result<Vec<u8>, PluginRuntimeError> {
+    let Some(mut pipe) = pipe else {
+        return Ok(Vec::new());
+    };
+    let mut bytes = Vec::new();
+    pipe.read_to_end(&mut bytes).map_err(|err| {
+        PluginRuntimeError::PyrightLsp(format!(
+            "read pyright_lsp Python asset install output: {err}"
+        ))
+    })?;
+    Ok(bytes)
 }
 
 fn pyright_python_root(config: &PyrightLspConfig) -> Result<PathBuf, PluginRuntimeError> {
@@ -158,4 +230,33 @@ fn find_executable(name: &str) -> Option<PathBuf> {
             .map(|dir| dir.join(name))
             .find(|candidate| candidate.exists())
     })
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wait_for_child_status_times_out_and_reaps_process_group(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut command = Command::new("sh");
+        command
+            .arg("-c")
+            .arg("sleep 60")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .process_group(0);
+        let mut child = command.spawn()?;
+
+        let error =
+            wait_for_child_status(&mut child, 1).expect_err("sleeping child should time out");
+
+        assert!(error.to_string().contains("timed out"));
+        assert!(
+            child.try_wait()?.is_some(),
+            "timed out child should be reaped"
+        );
+        Ok(())
+    }
 }

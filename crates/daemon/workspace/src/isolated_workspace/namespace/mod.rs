@@ -2,14 +2,16 @@ use std::collections::HashMap;
 #[cfg(target_os = "linux")]
 use std::fs::{File, OpenOptions};
 #[cfg(target_os = "linux")]
-use std::io::Write;
+use std::io::{Read, Write};
 #[cfg(target_os = "linux")]
 use std::os::fd::{AsRawFd, IntoRawFd, RawFd};
+#[cfg(target_os = "linux")]
+use std::os::unix::process::CommandExt;
 #[cfg(all(target_os = "linux", unix))]
 use std::os::unix::process::ExitStatusExt;
 use std::path::PathBuf;
 #[cfg(target_os = "linux")]
-use std::process::{Child, Command, Output, Stdio};
+use std::process::{Child, ExitStatus, Output, Stdio};
 #[cfg(test)]
 use std::sync::Arc;
 #[cfg(target_os = "linux")]
@@ -196,13 +198,14 @@ impl NamespaceRuntime {
         &self,
         handle: &WorkspaceHandle,
         layer_paths: &[PathBuf],
+        setup_timeout_s: f64,
     ) -> Result<(), IsolatedError> {
         if self.stub || handle.holder_pid <= 0 {
             return Ok(());
         }
         #[cfg(not(target_os = "linux"))]
         {
-            let _ = (handle, layer_paths);
+            let _ = (handle, layer_paths, setup_timeout_s);
         }
         #[cfg(target_os = "linux")]
         {
@@ -213,7 +216,7 @@ impl NamespaceRuntime {
                 json!({}),
                 layer_paths.to_vec(),
             );
-            run_ns_runner_mount_overlay_child(&request)?;
+            run_ns_runner_mount_overlay_child(&request, setup_timeout_s)?;
         }
         Ok(())
     }
@@ -222,13 +225,14 @@ impl NamespaceRuntime {
         &self,
         handle: &WorkspaceHandle,
         fallback_dns: &str,
+        setup_timeout_s: f64,
     ) -> Result<DnsConfiguration, IsolatedError> {
         if self.stub || handle.holder_pid <= 0 {
             return Ok(DnsConfiguration::default());
         }
         #[cfg(not(target_os = "linux"))]
         {
-            let _ = (handle, fallback_dns);
+            let _ = (handle, fallback_dns, setup_timeout_s);
             Ok(DnsConfiguration::default())
         }
         #[cfg(target_os = "linux")]
@@ -240,7 +244,7 @@ impl NamespaceRuntime {
                 json!({"fallback_dns": fallback_dns}),
                 Vec::new(),
             );
-            run_ns_runner_configure_dns_child(&request)
+            run_ns_runner_configure_dns_child(&request, setup_timeout_s)
         }
     }
 
@@ -479,8 +483,11 @@ fn ns_fds_from_map(map: &HashMap<String, i32>) -> Option<NsFds> {
 }
 
 #[cfg(target_os = "linux")]
-fn run_ns_runner_mount_overlay_child(request: &RunRequest) -> Result<(), IsolatedError> {
-    let output = run_ns_runner_child(request, "--mount-overlay", Stdio::null())?;
+fn run_ns_runner_mount_overlay_child(
+    request: &RunRequest,
+    setup_timeout_s: f64,
+) -> Result<(), IsolatedError> {
+    let output = run_ns_runner_child(request, "--mount-overlay", Stdio::null(), setup_timeout_s)?;
     if output.status.success() {
         return Ok(());
     }
@@ -496,8 +503,9 @@ fn run_ns_runner_mount_overlay_child(request: &RunRequest) -> Result<(), Isolate
 #[cfg(target_os = "linux")]
 fn run_ns_runner_configure_dns_child(
     request: &RunRequest,
+    setup_timeout_s: f64,
 ) -> Result<DnsConfiguration, IsolatedError> {
-    let output = run_ns_runner_child(request, "--configure-dns", Stdio::piped())?;
+    let output = run_ns_runner_child(request, "--configure-dns", Stdio::piped(), setup_timeout_s)?;
     if !output.status.success() {
         return Err(IsolatedError::SetupFailed {
             step: format!(
@@ -531,6 +539,7 @@ fn run_ns_runner_child(
     request: &RunRequest,
     mode_arg: &str,
     stdout: Stdio,
+    setup_timeout_s: f64,
 ) -> Result<Output, IsolatedError> {
     let payload = serde_json::to_vec(request).map_err(setup_error)?;
     let mut child = Command::new(std::env::current_exe().map_err(setup_error)?)
@@ -539,6 +548,7 @@ fn run_ns_runner_child(
         .stdin(Stdio::piped())
         .stdout(stdout)
         .stderr(Stdio::piped())
+        .process_group(0)
         .spawn()
         .map_err(setup_error)?;
     child
@@ -549,5 +559,93 @@ fn run_ns_runner_child(
         })?
         .write_all(&payload)
         .map_err(setup_error)?;
-    child.wait_with_output().map_err(setup_error)
+    drop(child.stdin.take());
+    let status = wait_for_ns_runner_child(&mut child, mode_arg, setup_timeout_s)?;
+    let stdout = read_child_pipe(child.stdout.take())?;
+    let stderr = read_child_pipe(child.stderr.take())?;
+    Ok(Output {
+        status,
+        stdout,
+        stderr,
+    })
+}
+
+#[cfg(target_os = "linux")]
+fn wait_for_ns_runner_child(
+    child: &mut Child,
+    mode_arg: &str,
+    setup_timeout_s: f64,
+) -> Result<ExitStatus, IsolatedError> {
+    let deadline = Instant::now() + Duration::from_secs_f64(setup_timeout_s.max(0.0));
+    loop {
+        if let Some(status) = child.try_wait().map_err(setup_error)? {
+            return Ok(status);
+        }
+        if Instant::now() >= deadline {
+            terminate_ns_runner_child(child, Signal::SIGTERM);
+            let grace_deadline = Instant::now() + Duration::from_millis(100);
+            while Instant::now() < grace_deadline {
+                if let Some(status) = child.try_wait().map_err(setup_error)? {
+                    let _ = status;
+                    return Err(IsolatedError::SetupFailed {
+                        step: format!("ns-runner {mode_arg} timed out"),
+                    });
+                }
+                thread::sleep(Duration::from_millis(10));
+            }
+            terminate_ns_runner_child(child, Signal::SIGKILL);
+            let _ = child.wait();
+            return Err(IsolatedError::SetupFailed {
+                step: format!("ns-runner {mode_arg} timed out"),
+            });
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn terminate_ns_runner_child(child: &mut Child, signal: Signal) {
+    let Ok(pid) = i32::try_from(child.id()) else {
+        let _ = child.kill();
+        return;
+    };
+    let _ = kill(Pid::from_raw(-pid), signal);
+    let _ = kill(Pid::from_raw(pid), signal);
+}
+
+#[cfg(target_os = "linux")]
+fn read_child_pipe<R: Read>(pipe: Option<R>) -> Result<Vec<u8>, IsolatedError> {
+    let Some(mut pipe) = pipe else {
+        return Ok(Vec::new());
+    };
+    let mut bytes = Vec::new();
+    pipe.read_to_end(&mut bytes).map_err(setup_error)?;
+    Ok(bytes)
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ns_runner_wait_times_out_and_reaps_child_group() -> Result<(), Box<dyn std::error::Error>> {
+        let mut child = Command::new("sh")
+            .arg("-c")
+            .arg("sleep 60")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .process_group(0)
+            .spawn()?;
+
+        let error = wait_for_ns_runner_child(&mut child, "--test-timeout", 0.01)
+            .expect_err("sleeping child should time out");
+
+        assert!(error.to_string().contains("timed out"));
+        assert!(
+            child.try_wait()?.is_some(),
+            "timed out child should be reaped"
+        );
+        Ok(())
+    }
 }

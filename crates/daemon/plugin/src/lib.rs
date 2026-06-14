@@ -9,7 +9,6 @@
 mod pyright_lsp;
 mod state;
 
-pub use self::pyright_lsp::BuiltinPluginProvider;
 pub use self::state::PluginRuntime;
 
 /// Failures surfaced by static plugin providers. The daemon folds each variant
