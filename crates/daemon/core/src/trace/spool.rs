@@ -61,18 +61,15 @@ pub(crate) struct RequestTraceEventSink {
 
 impl RequestTraceEventSink {
     pub(crate) fn push(&self, event: RequestTraceEvent) {
-        self.events
-            .lock()
-            .expect("request trace event mutex poisoned")
-            .push(event);
+        if let Ok(mut events) = self.events.lock() {
+            events.push(event);
+        }
     }
 
     pub(crate) fn drain(&self) -> Vec<RequestTraceEvent> {
         self.events
             .lock()
-            .expect("request trace event mutex poisoned")
-            .drain(..)
-            .collect()
+            .map_or_else(|_| Vec::new(), |mut events| events.drain(..).collect())
     }
 }
 
@@ -84,16 +81,16 @@ pub(crate) fn next_connection_id() -> String {
 }
 
 pub(crate) fn push_background_record(record: TraceRecord) {
-    let _ = background_spool()
-        .lock()
-        .expect("trace spool mutex poisoned")
-        .push(record);
+    let Ok(mut spool) = background_spool().lock() else {
+        return;
+    };
+    let _ = spool.push(record);
 }
 
 pub(crate) fn lease_background_records(max_records: usize) -> TraceExportBatch {
-    let mut spool = background_spool()
-        .lock()
-        .expect("trace spool mutex poisoned");
+    let Ok(mut spool) = background_spool().lock() else {
+        return empty_trace_export_batch();
+    };
     spool.lease_batch(max_records, Some(daemon_boot_id().to_string()))
 }
 
@@ -104,8 +101,18 @@ pub(crate) fn ack_background_export(
 ) -> bool {
     background_spool()
         .lock()
-        .expect("trace spool mutex poisoned")
-        .ack_batch(export_id, batch_sha256, record_count)
+        .is_ok_and(|mut spool| spool.ack_batch(export_id, batch_sha256, record_count))
+}
+
+fn empty_trace_export_batch() -> TraceExportBatch {
+    TraceExportBatch {
+        export_id: None,
+        record_count: 0,
+        spool_pending_after: 0,
+        dropped_traces: 0,
+        batch_sha256: None,
+        trace_batch_bytes: None,
+    }
 }
 
 pub(crate) fn idle_workspace_evict_record(
@@ -170,6 +177,27 @@ mod tests {
     use trace::{SpanKind, TraceKind};
 
     use super::*;
+
+    #[test]
+    fn request_trace_event_sink_degrades_when_lock_is_poisoned() {
+        let sink = RequestTraceEventSink::default();
+        let poisoned = sink.clone();
+        let _ = std::panic::catch_unwind(move || {
+            let _guard = poisoned.events.lock().expect("trace sink lock");
+            panic!("poison trace sink");
+        });
+
+        sink.push(RequestTraceEvent::operation(
+            "trace.test",
+            "after_poison",
+            serde_json::json!({}),
+        ));
+
+        assert!(
+            sink.drain().is_empty(),
+            "poisoned trace sink should drop events instead of panicking"
+        );
+    }
 
     #[test]
     fn idle_workspace_evict_record_carries_evicted_workspace_facts() {

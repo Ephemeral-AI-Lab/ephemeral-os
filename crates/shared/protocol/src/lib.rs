@@ -15,5 +15,5 @@ pub use envelope::{
     OperationEnvelope, OperationStatus, OperationWarning, ResourceSummary, ResponseMeta,
     StepSummary, TraceRef, WorkspaceRouteRef, ENVELOPE_VERSION,
 };
-pub use error::ProtocolErrorKind;
+pub use error::{HostGatewayErrorKind, ProtocolErrorKind};
 pub use fault::{FaultDetails, OperationFault, SourceError};

@@ -1,6 +1,8 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use protocol::ProtocolErrorKind;
+use tokio::io::{AsyncWrite, AsyncWriteExt};
 use tokio::net::{TcpListener, UnixListener};
 use tokio::sync::Semaphore;
 
@@ -50,10 +52,16 @@ impl DaemonServer {
                         () = shutdown.cancelled() => break,
                         () = tokio::time::sleep(Duration::from_millis(eviction_interval_ms)) => {
                             let services = Arc::clone(&services);
-                            let _ = tokio::task::spawn_blocking(move || {
+                            if let Err(error) = tokio::task::spawn_blocking(move || {
                                 background_tasks::evict_idle_workspaces_once(&services.workspace)
                             })
-                            .await;
+                            .await
+                            {
+                                emit_boot_event(
+                                    "idle_workspace_eviction_failed",
+                                    serde_json::json!({"error": error.to_string()}),
+                                );
+                            }
                         }
                     }
                 }
@@ -69,10 +77,16 @@ impl DaemonServer {
                         () = shutdown.cancelled() => break,
                         () = tokio::time::sleep(Duration::from_millis(50)) => {
                             let command = Arc::clone(&services.command);
-                            let _ = tokio::task::spawn_blocking(
+                            if let Err(error) = tokio::task::spawn_blocking(
                                 move || background_tasks::advance_active_commands_once(&command),
                             )
-                            .await;
+                            .await
+                            {
+                                emit_boot_event(
+                                    "command_advancement_failed",
+                                    serde_json::json!({"error": error.to_string()}),
+                                );
+                            }
                         }
                     }
                 }
@@ -117,6 +131,7 @@ impl DaemonServer {
                         accepted = unix_listener.accept() => {
                             let (stream, _) = accepted?;
                             let Ok(permit) = Arc::clone(&connection_permits).try_acquire_owned() else {
+                                tokio::spawn(reject_overloaded_connection(stream, "unix"));
                                 continue;
                             };
                             let server = Arc::clone(&server);
@@ -151,6 +166,7 @@ impl DaemonServer {
                             accepted = listener.accept() => {
                                 let (stream, peer_addr) = accepted?;
                                 let Ok(permit) = Arc::clone(&connection_permits).try_acquire_owned() else {
+                                    tokio::spawn(reject_overloaded_connection(stream, "tcp"));
                                     continue;
                                 };
                                 let local_addr = stream.local_addr().ok();
@@ -206,6 +222,29 @@ impl DaemonServer {
         let _ = tokio::fs::remove_file(&server.config.socket_path).await;
         Ok(())
     }
+}
+
+async fn reject_overloaded_connection<S>(mut stream: S, listener_kind: &'static str)
+where
+    S: AsyncWrite + Unpin,
+{
+    emit_boot_event(
+        "connection_rejected",
+        serde_json::json!({
+            "listener_kind": listener_kind,
+            "error_kind": ProtocolErrorKind::ServerBusy.as_str(),
+            "max_concurrent_connections": MAX_CONCURRENT_CONNECTIONS,
+        }),
+    );
+    let response = crate::dispatcher::error_response(
+        crate::wire::ErrorKind::ServerBusy,
+        "daemon is at connection capacity",
+        serde_json::json!({"max_concurrent_connections": MAX_CONCURRENT_CONNECTIONS}),
+    );
+    if let Ok(framed) = crate::wire::encode(&crate::wire::WireMessage::Response(response)) {
+        let _ = stream.write_all(&framed).await;
+    }
+    let _ = stream.shutdown().await;
 }
 
 async fn cleanup_active_runs_on_shutdown(server: &Arc<DaemonServer>) {

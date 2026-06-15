@@ -2,6 +2,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use protocol::HostGatewayErrorKind;
 use serde_json::{json, Value};
 
 mod audit;
@@ -323,9 +324,9 @@ fn client_error_kind(error: &ClientError) -> &'static str {
 
 fn forward_error_kind(error: &ForwardError) -> &'static str {
     match error {
-        ForwardError::TraceUnavailable(_) => "trace_unavailable",
-        ForwardError::SandboxUnavailable(_) => "sandbox_unavailable",
-        ForwardError::UncertainOutcome(_) => "uncertain_outcome",
+        ForwardError::TraceUnavailable(_) => HostGatewayErrorKind::TraceUnavailable.as_str(),
+        ForwardError::SandboxUnavailable(_) => HostGatewayErrorKind::SandboxUnavailable.as_str(),
+        ForwardError::UncertainOutcome(_) => HostGatewayErrorKind::UncertainOutcome.as_str(),
     }
 }
 

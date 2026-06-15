@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 use protocol::catalog::HostVerb;
-use protocol::ProtocolErrorKind;
+use protocol::{HostGatewayErrorKind, ProtocolErrorKind};
 use serde_json::{json, Value};
 
 use crate::catalog::{Catalog, Route, Visibility};
@@ -175,9 +175,16 @@ fn forward(
         }
         Some(Err(err)) => {
             let (kind, message) = match err {
-                host::ForwardError::TraceUnavailable(e) => ("trace_unavailable", e.to_string()),
-                host::ForwardError::UncertainOutcome(m) => ("uncertain_outcome", m),
-                host::ForwardError::SandboxUnavailable(m) => ("sandbox_unavailable", m),
+                host::ForwardError::TraceUnavailable(e) => (
+                    HostGatewayErrorKind::TraceUnavailable.as_str(),
+                    e.to_string(),
+                ),
+                host::ForwardError::UncertainOutcome(m) => {
+                    (HostGatewayErrorKind::UncertainOutcome.as_str(), m)
+                }
+                host::ForwardError::SandboxUnavailable(m) => {
+                    (HostGatewayErrorKind::SandboxUnavailable.as_str(), m)
+                }
             };
             engine.record_trace_event(
                 sandbox_id,
@@ -198,7 +205,7 @@ fn host_call(engine: &dyn Engine, verb: HostVerb, request: &ClientRequest) -> Va
             Ok(sandbox_id) => ok_response(request, json!({"sandbox_id": sandbox_id})),
             Err(err) => error_response_for(
                 request,
-                "trace_unavailable",
+                HostGatewayErrorKind::TraceUnavailable.as_str(),
                 &format!("acquire failed: {err:#}"),
             ),
         },
@@ -216,7 +223,7 @@ fn host_call(engine: &dyn Engine, verb: HostVerb, request: &ClientRequest) -> Va
                 Ok(false) => unknown_sandbox(request, sandbox_id),
                 Err(err) => error_response_for(
                     request,
-                    "trace_unavailable",
+                    HostGatewayErrorKind::TraceUnavailable.as_str(),
                     &format!("release failed: {err:#}"),
                 ),
             }
@@ -289,7 +296,7 @@ fn host_error_kind(err: &anyhow::Error) -> &'static str {
     if message.ends_with(" is required") || message.ends_with(" must be a non-empty string") {
         ProtocolErrorKind::InvalidRequest.as_str()
     } else {
-        "host_operation_failed"
+        HostGatewayErrorKind::HostOperationFailed.as_str()
     }
 }
 
@@ -305,13 +312,13 @@ fn trace_error_kind(err: &anyhow::Error) -> &'static str {
     if message.ends_with(" is required") || message.ends_with(" must be a non-empty string") {
         return ProtocolErrorKind::InvalidRequest.as_str();
     }
-    "trace_unavailable"
+    HostGatewayErrorKind::TraceUnavailable.as_str()
 }
 
 fn unknown_sandbox(request: &ClientRequest, sandbox_id: &str) -> Value {
     error_response_for(
         request,
-        "unknown_sandbox",
+        HostGatewayErrorKind::UnknownSandbox.as_str(),
         &format!("unknown sandbox: {sandbox_id}"),
     )
 }

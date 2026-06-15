@@ -1,5 +1,6 @@
 use std::time::Instant;
 
+use protocol::HostGatewayErrorKind;
 use serde_json::{json, Value};
 
 use crate::container::DaemonContainer;
@@ -56,14 +57,18 @@ pub(super) fn run_recovery(attempt: &ForwardAttempt<'_>) -> Result<Value, Forwar
                 record_missing(
                     attempt,
                     "uncertain",
-                    client_error_kind(&err),
+                    HostGatewayErrorKind::UncertainOutcome.as_str(),
                     &format!("delivery-ambiguous daemon transport failure: {err}"),
                 );
                 record_event(
                     attempt,
                     "host.protocol",
                     "uncertain_outcome",
-                    json!({"error_kind": client_error_kind(&err), "message": err.to_string()}),
+                    json!({
+                        "error_kind": HostGatewayErrorKind::UncertainOutcome.as_str(),
+                        "transport_error_kind": client_error_kind(&err),
+                        "message": err.to_string()
+                    }),
                 );
                 return Err(ForwardError::UncertainOutcome(format!(
                     "{}: {err}",
@@ -109,14 +114,19 @@ fn fallback_chain(
     }
     respawn_and_gate_traced(attempt).map_err(|err| {
         let message = format!("{failure}; respawn failed: {err:#}");
-        record_missing(attempt, "error", "sandbox_unavailable", &message);
+        record_missing(
+            attempt,
+            "error",
+            HostGatewayErrorKind::SandboxUnavailable.as_str(),
+            &message,
+        );
         ForwardError::SandboxUnavailable(message)
     })?;
     if attempt.mutates_state {
         record_missing(
             attempt,
             "uncertain",
-            "uncertain_outcome",
+            HostGatewayErrorKind::UncertainOutcome.as_str(),
             "daemon respawned after a delivery-ambiguous failure",
         );
         return Err(ForwardError::UncertainOutcome(format!(

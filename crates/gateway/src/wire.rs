@@ -138,6 +138,16 @@ pub(crate) fn error_response(kind: &str, message: &str) -> Value {
     error_response_with_meta(kind, message, bare_meta())
 }
 
+pub(crate) fn server_busy_response(max_concurrent_connections: usize) -> Value {
+    let mut response = error_response(
+        ProtocolErrorKind::ServerBusy.as_str(),
+        "gateway is at connection capacity",
+    );
+    response["error"]["details"] =
+        json!({"max_concurrent_connections": max_concurrent_connections});
+    response
+}
+
 fn error_response_with_meta(kind: &str, message: &str, meta: Value) -> Value {
     let mut response = envelope_base("error", meta);
     response["error"] = json!({

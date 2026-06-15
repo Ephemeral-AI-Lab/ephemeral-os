@@ -1,4 +1,5 @@
 use prost::Message;
+use protocol::HostGatewayErrorKind;
 use rusqlite::params;
 use trace::budget::{BoundedJson, DetailBudget};
 use trace::sha256_hex;
@@ -134,7 +135,7 @@ impl TraceStore {
                 sandbox_id,
                 trace_id,
                 request_id,
-                "uncertain_outcome",
+                HostGatewayErrorKind::UncertainOutcome.as_str(),
                 "host restarted with in-flight request from prior boot",
             )?;
             tx.execute(

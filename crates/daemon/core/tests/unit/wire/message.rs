@@ -15,6 +15,10 @@ fn error_kind_snake_case_wire() -> TestResult {
         serde_json::to_value(ErrorKind::UnknownOp)?,
         Value::String("unknown_op".to_owned())
     );
+    assert_eq!(
+        serde_json::to_value(ErrorKind::ServerBusy)?,
+        Value::String("server_busy".to_owned())
+    );
     Ok(())
 }
 

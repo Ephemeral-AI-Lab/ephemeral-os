@@ -13,7 +13,7 @@ use crate::engine::Engine;
 use crate::router::{handle, Surface};
 use crate::wire::{
     bare_trace_context, elapsed_us, error_response, parse_request, read_request_line,
-    response_line, REQUEST_READ_TIMEOUT,
+    response_line, server_busy_response, REQUEST_READ_TIMEOUT,
 };
 
 static GATEWAY_CONNECTION_SEQ: AtomicU64 = AtomicU64::new(1);
@@ -162,6 +162,7 @@ fn accept_loop(
             continue;
         };
         let Some(permit) = connection_limiter.try_acquire() else {
+            write_overload_response(stream);
             continue;
         };
         let catalog = Arc::clone(&catalog);
@@ -172,6 +173,14 @@ fn accept_loop(
             handle_connection(stream, surface, &socket_path, &catalog, &*engine);
         });
     }
+}
+
+fn write_overload_response(mut stream: UnixStream) {
+    let line = response_line(&server_busy_response(MAX_CONCURRENT_CONNECTIONS));
+    if stream.write_all(&line).is_ok() {
+        let _ = stream.flush();
+    }
+    let _ = stream.shutdown(std::net::Shutdown::Write);
 }
 
 pub(crate) fn handle_connection(
@@ -286,7 +295,7 @@ pub(crate) fn handle_connection(
 
 #[cfg(test)]
 mod tests {
-    use super::{ConnectionLimiter, MAX_CONCURRENT_CONNECTIONS};
+    use super::{server_busy_response, ConnectionLimiter, MAX_CONCURRENT_CONNECTIONS};
     use std::sync::Arc;
 
     #[test]
@@ -309,6 +318,18 @@ mod tests {
         assert!(
             limiter.try_acquire().is_some(),
             "dropping a permit should reopen capacity"
+        );
+    }
+
+    #[test]
+    fn server_busy_response_uses_structured_error_kind() {
+        let response = server_busy_response(MAX_CONCURRENT_CONNECTIONS);
+
+        assert_eq!(response["status"], "error");
+        assert_eq!(response["error"]["kind"], "server_busy");
+        assert_eq!(
+            response["error"]["details"]["max_concurrent_connections"],
+            MAX_CONCURRENT_CONNECTIONS
         );
     }
 }

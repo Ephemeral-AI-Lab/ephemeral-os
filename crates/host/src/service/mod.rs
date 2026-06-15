@@ -10,6 +10,7 @@ use ::protocol::catalog::{
     HOST_IMAGE_PULL, HOST_SANDBOX_ACQUIRE, HOST_SANDBOX_RELEASE, HOST_TRACE_REQUESTS,
     HOST_TRACE_SHOW, HOST_TRACE_VERIFY,
 };
+use ::protocol::HostGatewayErrorKind;
 use anyhow::{anyhow, bail, Context, Result};
 use serde_json::{json, Value};
 
@@ -263,7 +264,7 @@ impl SandboxHost {
                 let response = host_error_response(
                     response_op,
                     trace,
-                    "sandbox_unavailable",
+                    HostGatewayErrorKind::SandboxUnavailable.as_str(),
                     &format!("container start failed: {err:#}"),
                 );
                 let _ =
@@ -316,7 +317,7 @@ impl SandboxHost {
             let response = host_error_response(
                 HOST_SANDBOX_RELEASE,
                 trace,
-                "unknown_sandbox",
+                HostGatewayErrorKind::UnknownSandbox.as_str(),
                 &format!("unknown sandbox: {sandbox_id}"),
             );
             self.record_host_response_or_missing(sandbox_id, trace, &response, op_started)?;
@@ -355,7 +356,7 @@ impl SandboxHost {
                 let response = host_error_response(
                     HOST_SANDBOX_RELEASE,
                     trace,
-                    "sandbox_unavailable",
+                    HostGatewayErrorKind::SandboxUnavailable.as_str(),
                     &message,
                 );
                 self.record_host_response_or_missing(sandbox_id, trace, &response, op_started)?;
