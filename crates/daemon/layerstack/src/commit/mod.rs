@@ -20,7 +20,10 @@ mod worker;
 use worker::{CommitQueue, CommitTransaction, PreparedChangeset};
 
 pub const GIT_METADATA_UNSUPPORTED_DROP_REASON: &str = "git_metadata_unsupported";
+pub const DAEMON_CONTROL_PATH_DROP_REASON: &str = "daemon_control_path";
+pub const COMMAND_SCRATCH_PATH_DROP_REASON: &str = "command_scratch_path";
 pub const UNSUPPORTED_SPECIAL_FILE_DROP_REASON: &str = "unsupported_special_file";
+pub const INVALID_LAYER_PATH_DROP_REASON: &str = "invalid_layer_path";
 pub const OPAQUE_DIR_PROTECTED_DESCENDANT_DROP_REASON: &str = "opaque_dir_protected_descendant";
 pub const OPAQUE_DIR_MIXED_ROUTES_DROP_REASON: &str = "opaque_dir_mixed_routes";
 pub const OPAQUE_DIR_EXPANSION_LIMIT_DROP_REASON: &str = "opaque_dir_expansion_limit";
@@ -36,7 +39,10 @@ const USER_OVERLAY_WHITEOUT_XATTR: &str = "user.overlay.whiteout";
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum RouteDropReason {
     GitMetadataUnsupported,
+    DaemonControlPath,
+    CommandScratchPath,
     UnsupportedSpecialFile,
+    InvalidLayerPath,
     OpaqueDirProtectedDescendant,
     OpaqueDirMixedRoutes,
     OpaqueDirExpansionLimit,
@@ -46,7 +52,10 @@ impl RouteDropReason {
     const fn as_str(self) -> &'static str {
         match self {
             Self::GitMetadataUnsupported => GIT_METADATA_UNSUPPORTED_DROP_REASON,
+            Self::DaemonControlPath => DAEMON_CONTROL_PATH_DROP_REASON,
+            Self::CommandScratchPath => COMMAND_SCRATCH_PATH_DROP_REASON,
             Self::UnsupportedSpecialFile => UNSUPPORTED_SPECIAL_FILE_DROP_REASON,
+            Self::InvalidLayerPath => INVALID_LAYER_PATH_DROP_REASON,
             Self::OpaqueDirProtectedDescendant => OPAQUE_DIR_PROTECTED_DESCENDANT_DROP_REASON,
             Self::OpaqueDirMixedRoutes => OPAQUE_DIR_MIXED_ROUTES_DROP_REASON,
             Self::OpaqueDirExpansionLimit => OPAQUE_DIR_EXPANSION_LIMIT_DROP_REASON,
@@ -57,7 +66,10 @@ impl RouteDropReason {
 impl From<ProtectedPathDropReason> for RouteDropReason {
     fn from(reason: ProtectedPathDropReason) -> Self {
         match reason {
+            ProtectedPathDropReason::DaemonControlPath => Self::DaemonControlPath,
+            ProtectedPathDropReason::CommandScratchPath => Self::CommandScratchPath,
             ProtectedPathDropReason::UnsupportedSpecialFile => Self::UnsupportedSpecialFile,
+            ProtectedPathDropReason::InvalidLayerPath => Self::InvalidLayerPath,
         }
     }
 }
@@ -728,6 +740,9 @@ fn route_for_path_from_source(
     if is_git_metadata_path(path) {
         return Ok(Route::Drop);
     }
+    if protected_path_drop_reason(path).is_some() {
+        return Ok(Route::Drop);
+    }
     if path_is_ignored(source, path.as_str())? {
         Ok(Route::Direct)
     } else {
@@ -736,12 +751,55 @@ fn route_for_path_from_source(
 }
 
 fn drop_reason_code(route: Route, path: &LayerPath) -> Option<RouteDropReason> {
-    (route == Route::Drop && is_git_metadata_path(path))
-        .then_some(RouteDropReason::GitMetadataUnsupported)
+    if route != Route::Drop {
+        return None;
+    }
+    if is_git_metadata_path(path) {
+        return Some(RouteDropReason::GitMetadataUnsupported);
+    }
+    protected_path_drop_reason(path)
 }
 
 fn is_git_metadata_path(path: &LayerPath) -> bool {
     path.as_str().split('/').any(|part| part == ".git")
+}
+
+fn protected_path_drop_reason(path: &LayerPath) -> Option<RouteDropReason> {
+    let path = path.as_str();
+    let mut parts = path.split('/');
+    let first = parts.next()?;
+    if matches!(
+        first,
+        "manifest.json" | "workspace.json" | "layers" | "staging"
+    ) || path.split('/').any(|part| part == ".layer-metadata")
+    {
+        return Some(RouteDropReason::DaemonControlPath);
+    }
+    if is_command_scratch_path(path) {
+        return Some(RouteDropReason::CommandScratchPath);
+    }
+    None
+}
+
+fn is_command_scratch_path(path: &str) -> bool {
+    let parts = path.split('/').collect::<Vec<_>>();
+    parts.iter().any(|part| {
+        matches!(
+            *part,
+            ".eos-command" | ".eos-commands" | ".eos-scratch" | ".eos-spool" | ".eos-transcripts"
+        )
+    }) || matches!(
+        parts.as_slice(),
+        ["command-runner-request.json"]
+            | ["command-runner-result.json"]
+            | ["runner-request.json"]
+            | ["runner-result.json"]
+            | ["metadata.json"]
+            | ["final.json"]
+            | ["transcript.log"]
+            | ["spool", ..]
+            | ["commands", ..]
+    )
 }
 
 fn stack_base_hash(stack: &LayerStack, path: &LayerPath) -> Result<Option<String>, CommitError> {

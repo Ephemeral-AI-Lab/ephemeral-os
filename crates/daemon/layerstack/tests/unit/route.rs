@@ -7,9 +7,10 @@ use crate::{ProtectedPathDrop, ProtectedPathDropReason};
 use super::{
     capture_route_stats_for_manifest_with_protected_drops, publish_decision_for_opaque_dir,
     publish_decisions_for_manifest_with_protected_drops, route_for_path, ManifestIgnoreSource,
-    Route, GIT_METADATA_UNSUPPORTED_DROP_REASON, OPAQUE_DIR_EXPANSION_LIMIT_DROP_REASON,
-    OPAQUE_DIR_MIXED_ROUTES_DROP_REASON, OPAQUE_DIR_PROTECTED_DESCENDANT_DROP_REASON,
-    UNSUPPORTED_SPECIAL_FILE_DROP_REASON,
+    Route, COMMAND_SCRATCH_PATH_DROP_REASON, DAEMON_CONTROL_PATH_DROP_REASON,
+    GIT_METADATA_UNSUPPORTED_DROP_REASON, INVALID_LAYER_PATH_DROP_REASON,
+    OPAQUE_DIR_EXPANSION_LIMIT_DROP_REASON, OPAQUE_DIR_MIXED_ROUTES_DROP_REASON,
+    OPAQUE_DIR_PROTECTED_DESCENDANT_DROP_REASON, UNSUPPORTED_SPECIAL_FILE_DROP_REASON,
 };
 
 fn is_ignored(fixture: &Fixture, path: &str) -> TestResult<bool> {
@@ -40,6 +41,35 @@ fn routes_tracked_ignored_and_git_paths_distinctly() -> TestResult {
     assert_eq!(route_of(&fixture, "pkg/cache.pyc")?, Route::Direct);
     assert_eq!(route_of(&fixture, ".git/config")?, Route::Drop);
     assert_eq!(route_of(&fixture, "pkg/.git/config")?, Route::Drop);
+    Ok(())
+}
+
+#[test]
+fn protected_paths_drop_before_source_or_ignore_routing() -> TestResult {
+    let fixture = Fixture::new_with_gitignore("route_protected_paths", "*\n")?;
+
+    for path in [
+        "manifest.json",
+        "workspace.json",
+        "layers/B000001-base/README.md",
+        "staging/B000002.staging/file.txt",
+        ".layer-metadata/B000001-base.digest",
+        "tree/.layer-metadata/state.json",
+        "command-runner-request.json",
+        "command-runner-result.json",
+        "runner-request.json",
+        "runner-result.json",
+        "metadata.json",
+        "final.json",
+        "transcript.log",
+        "spool/payload.bin",
+        "commands/cmd_1/transcript.log",
+        ".eos-command/cmd_1/final.json",
+    ] {
+        assert_eq!(route_of(&fixture, path)?, Route::Drop, "route for {path}");
+    }
+
+    assert_eq!(route_of(&fixture, "ordinary.txt")?, Route::Direct);
     Ok(())
 }
 
@@ -79,6 +109,54 @@ fn git_metadata_drop_decisions_use_stable_reason_code() -> TestResult {
     );
     assert_eq!(decisions[2].route, Route::Gated);
     assert_eq!(decisions[2].drop_reason, None);
+    Ok(())
+}
+
+#[test]
+fn protected_path_drop_decisions_use_stable_reason_codes() -> TestResult {
+    let fixture = Fixture::new_with_gitignore("protected_drop_reasons", "*\n")?;
+    let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
+    let decisions = publish_decisions_for_manifest_with_protected_drops(
+        &fixture.root,
+        &manifest,
+        &[
+            LayerChange::Write {
+                path: lp("manifest.json")?,
+                content: b"manifest".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp(".layer-metadata/digest")?,
+                content: b"digest".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp("transcript.log")?,
+                content: b"transcript".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp("ordinary.txt")?,
+                content: b"ignored".to_vec(),
+            },
+        ],
+        &[],
+    )?;
+
+    assert_eq!(decisions[0].route, Route::Drop);
+    assert_eq!(
+        decisions[0].drop_reason.map(|reason| reason.as_str()),
+        Some(DAEMON_CONTROL_PATH_DROP_REASON)
+    );
+    assert_eq!(decisions[1].route, Route::Drop);
+    assert_eq!(
+        decisions[1].drop_reason.map(|reason| reason.as_str()),
+        Some(DAEMON_CONTROL_PATH_DROP_REASON)
+    );
+    assert_eq!(decisions[2].route, Route::Drop);
+    assert_eq!(
+        decisions[2].drop_reason.map(|reason| reason.as_str()),
+        Some(COMMAND_SCRATCH_PATH_DROP_REASON)
+    );
+    assert_eq!(decisions[3].route, Route::Direct);
+    assert_eq!(decisions[3].drop_reason, None);
     Ok(())
 }
 
@@ -172,20 +250,59 @@ fn capture_route_stats_counts_protected_drop_reasons() -> TestResult {
             path: lp("target/out.txt")?,
             content: b"ignored".to_vec(),
         }],
-        &[ProtectedPathDrop {
-            path: lp("run.sock")?,
-            reason: ProtectedPathDropReason::UnsupportedSpecialFile,
-        }],
+        &[
+            ProtectedPathDrop {
+                path: lp("run.sock")?,
+                reason: ProtectedPathDropReason::UnsupportedSpecialFile,
+            },
+            ProtectedPathDrop {
+                path: lp(".invalid-layer-path/626164")?,
+                reason: ProtectedPathDropReason::InvalidLayerPath,
+            },
+        ],
     )?;
 
     assert_eq!(stats.gated_path_count, 0);
     assert_eq!(stats.direct_path_count, 1);
-    assert_eq!(stats.drop_path_count, 1);
+    assert_eq!(stats.drop_path_count, 2);
     assert_eq!(stats.direct_bytes, 7);
     assert_eq!(
         stats.drop_reason_count(UNSUPPORTED_SPECIAL_FILE_DROP_REASON),
         1
     );
+    assert_eq!(stats.drop_reason_count(INVALID_LAYER_PATH_DROP_REASON), 1);
+    Ok(())
+}
+
+#[test]
+fn capture_route_stats_counts_route_protected_drop_reasons() -> TestResult {
+    let fixture = Fixture::new_with_gitignore("route_stats_route_protected", "*\n")?;
+    let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
+    let stats = capture_route_stats_for_manifest_with_protected_drops(
+        &fixture.root,
+        &manifest,
+        &[
+            LayerChange::Write {
+                path: lp("manifest.json")?,
+                content: b"manifest".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp("transcript.log")?,
+                content: b"transcript".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp("ordinary.txt")?,
+                content: b"ignored".to_vec(),
+            },
+        ],
+        &[],
+    )?;
+
+    assert_eq!(stats.gated_path_count, 0);
+    assert_eq!(stats.direct_path_count, 1);
+    assert_eq!(stats.drop_path_count, 2);
+    assert_eq!(stats.drop_reason_count(DAEMON_CONTROL_PATH_DROP_REASON), 1);
+    assert_eq!(stats.drop_reason_count(COMMAND_SCRATCH_PATH_DROP_REASON), 1);
     Ok(())
 }
 
@@ -283,10 +400,16 @@ fn publish_capture_surfaces_protected_drop_reason_counts() -> TestResult {
             path: lp("target/out.txt")?,
             content: b"ignored".to_vec(),
         }],
-        &[ProtectedPathDrop {
-            path: lp("run.sock")?,
-            reason: ProtectedPathDropReason::UnsupportedSpecialFile,
-        }],
+        &[
+            ProtectedPathDrop {
+                path: lp("run.sock")?,
+                reason: ProtectedPathDropReason::UnsupportedSpecialFile,
+            },
+            ProtectedPathDrop {
+                path: lp(".invalid-layer-path/626164")?,
+                reason: ProtectedPathDropReason::InvalidLayerPath,
+            },
+        ],
         CommitOptions::default(),
     )?;
     service::release_lease(&fixture.root, &snapshot.lease_id)?;
@@ -301,17 +424,90 @@ fn publish_capture_surfaces_protected_drop_reason_counts() -> TestResult {
         protected_result.message,
         UNSUPPORTED_SPECIAL_FILE_DROP_REASON
     );
+    let invalid_result = result
+        .files
+        .iter()
+        .find(|file| file.path == lp(".invalid-layer-path/626164").expect("valid placeholder"))
+        .expect("invalid path file result");
+    assert_eq!(invalid_result.status, CommitStatus::Dropped);
+    assert_eq!(invalid_result.message, INVALID_LAYER_PATH_DROP_REASON);
     let handoff = result
         .events
         .iter()
         .find(|event| event.module == "occ" && event.name == "worker_handoff")
         .expect("worker handoff event");
-    assert_eq!(handoff.details["drop_path_count"], 1);
+    assert_eq!(handoff.details["drop_path_count"], 2);
     assert_eq!(
         handoff.details["drop_reason_counts"][UNSUPPORTED_SPECIAL_FILE_DROP_REASON],
         1
     );
+    assert_eq!(
+        handoff.details["drop_reason_counts"][INVALID_LAYER_PATH_DROP_REASON],
+        1
+    );
     assert_eq!(fixture.read_text("target/out.txt")?, "ignored");
+    Ok(())
+}
+
+#[test]
+fn publish_capture_surfaces_route_protected_drop_reason_counts() -> TestResult {
+    let fixture = Fixture::new_with_gitignore("publish_route_protected_drop_reason", "*\n")?;
+    let snapshot = service::acquire_snapshot(&fixture.root, "route-protected-drop-reason-test")?;
+
+    let result = service::publish_capture(
+        &fixture.root,
+        snapshot.manifest_version,
+        &snapshot.layer_paths,
+        &[
+            LayerChange::Write {
+                path: lp("manifest.json")?,
+                content: b"manifest".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp("transcript.log")?,
+                content: b"transcript".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp("ordinary.txt")?,
+                content: b"ignored".to_vec(),
+            },
+        ],
+    )?;
+    service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+    assert_eq!(
+        result
+            .files
+            .iter()
+            .find(|file| file.path == lp("manifest.json").expect("valid daemon path"))
+            .expect("daemon control result")
+            .message,
+        DAEMON_CONTROL_PATH_DROP_REASON
+    );
+    assert_eq!(
+        result
+            .files
+            .iter()
+            .find(|file| file.path == lp("transcript.log").expect("valid scratch path"))
+            .expect("command scratch result")
+            .message,
+        COMMAND_SCRATCH_PATH_DROP_REASON
+    );
+    let handoff = result
+        .events
+        .iter()
+        .find(|event| event.module == "occ" && event.name == "worker_handoff")
+        .expect("worker handoff event");
+    assert_eq!(handoff.details["drop_path_count"], 2);
+    assert_eq!(
+        handoff.details["drop_reason_counts"][DAEMON_CONTROL_PATH_DROP_REASON],
+        1
+    );
+    assert_eq!(
+        handoff.details["drop_reason_counts"][COMMAND_SCRATCH_PATH_DROP_REASON],
+        1
+    );
+    assert_eq!(fixture.read_text("ordinary.txt")?, "ignored");
     Ok(())
 }
 
@@ -460,6 +656,45 @@ fn opaque_dir_with_git_descendant_rejects_as_protected() -> TestResult {
     );
     let (_bytes, exists) =
         LayerStack::open(fixture.root.clone())?.read_bytes("tree/.git/config")?;
+    assert!(exists, "protected descendant must remain visible");
+    Ok(())
+}
+
+#[test]
+fn opaque_dir_with_non_git_protected_descendant_rejects_as_protected() -> TestResult {
+    let fixture = Fixture::new("opaque_non_git_protected_descendant")?;
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+    stack.publish_layer(&[LayerChange::Write {
+        path: lp("tree/.layer-metadata/state.json")?,
+        content: b"daemon-state".to_vec(),
+    }])?;
+    let snapshot = service::acquire_snapshot(&fixture.root, "opaque-non-git-protected")?;
+
+    let result = service::publish_capture(
+        &fixture.root,
+        snapshot.manifest_version,
+        &snapshot.layer_paths,
+        &[LayerChange::OpaqueDir { path: lp("tree")? }],
+    )?;
+    service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+    assert_eq!(result.published_manifest_version, None);
+    assert_eq!(result.files[0].status, CommitStatus::Failed);
+    assert_eq!(
+        result.files[0].message,
+        OPAQUE_DIR_PROTECTED_DESCENDANT_DROP_REASON
+    );
+    let handoff = result
+        .events
+        .iter()
+        .find(|event| event.module == "occ" && event.name == "worker_handoff")
+        .expect("worker handoff event");
+    assert_eq!(
+        handoff.details["drop_reason_counts"][OPAQUE_DIR_PROTECTED_DESCENDANT_DROP_REASON],
+        1
+    );
+    let (_bytes, exists) =
+        LayerStack::open(fixture.root.clone())?.read_bytes("tree/.layer-metadata/state.json")?;
     assert!(exists, "protected descendant must remain visible");
     Ok(())
 }

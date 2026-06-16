@@ -464,15 +464,108 @@ Final live E2E report root:
 crates/e2e-test/test-reports/runs/e2e-run-1781615978727
 ```
 
+## Milestone 2D Closeout
+
+This iteration closed the remaining Milestone 2 route-ownership gaps that were
+left after 2C: daemon/control paths, command scratch paths, invalid captured
+layer paths, and non-Git protected descendants under opaque directory
+expansion.
+
+### Scope Completed
+
+- Route classification now drops daemon/LayerStack control paths with
+  `daemon_control_path`.
+- Route classification now drops command scratch, transcript, final response,
+  and spool-like paths with `command_scratch_path`.
+- Capture now converts invalid captured layer paths that cannot become a normal
+  `LayerPath` into protected drop facts with `invalid_layer_path` when feasible,
+  instead of failing command finalization.
+- Opaque directory expansion now treats non-Git protected descendants as
+  protected and rejects the marker with `opaque_dir_protected_descendant`.
+- The new reasons flow through existing LayerStack route stats, OCC worker
+  handoff `drop_reason_counts`, command `publish_lanes.routing`, and the
+  `command.publish_lanes_decided` trace event because they share the existing
+  protected-drop route decision pipeline.
+- Live `workspace-runtime-command` coverage now includes a successful command
+  that writes command scratch-like output plus ordinary ignored output; the
+  scratch path is dropped with `command_scratch_path` while the ignored output
+  still publishes.
+
+### Milestone 2D Checklist
+
+| Item | Status | Notes |
+| --- | --- | --- |
+| Add daemon/control protected reason | Complete | `manifest.json`, `workspace.json`, LayerStack storage dirs, and `.layer-metadata` route to `Drop` with `daemon_control_path`. |
+| Add command scratch protected reason | Complete | Command artifact names and reserved scratch/spool prefixes route to `Drop` with `command_scratch_path`. |
+| Convert invalid captured layer paths | Complete | Invalid representability during capture emits an `invalid_layer_path` protected drop fact. Non-layer-path payload failures, such as oversized file reads, still remain capture errors. |
+| Feed non-Git protected descendants into opaque validation | Complete | Snapshot-visible `.layer-metadata` descendants under an opaque marker reject with `opaque_dir_protected_descendant`. |
+| Surface every new reason in metadata and trace | Complete | Existing route stats and protected-drop-aware publish paths now count the new reasons into response and trace metadata. |
+| Add focused unit and operation coverage | Complete | LayerStack capture/route/publish tests and operation finalization tests cover the new reasons. |
+| Add live E2E coverage | Complete | `workspace-runtime-command` includes `command_scratch_path_is_dropped_with_publish_lane_reason`. |
+
+### Files Updated
+
+- `crates/daemon/layerstack/src/capture.rs`
+  - Added protected drop reason variants for daemon control, command scratch,
+    and invalid layer paths.
+  - Converts invalid layer path capture cases into protected drop facts using a
+    stable representable placeholder path.
+- `crates/daemon/layerstack/src/commit/mod.rs`
+  - Added stable reason constants and route classification for daemon/control
+    and command scratch paths.
+  - Routes protected descendants to `Drop` before ordinary ignore/source
+    routing, which lets opaque expansion reject them as protected descendants.
+- `crates/daemon/layerstack/tests/unit/capture.rs`
+  - Added invalid layer path capture coverage.
+- `crates/daemon/layerstack/tests/unit/route.rs`
+  - Added route, route-stat, OCC handoff, invalid-drop, daemon-control,
+    command-scratch, and non-Git opaque protected descendant coverage.
+- `crates/daemon/operation/src/command/finalize.rs`
+  - Added response metadata coverage for `daemon_control_path`,
+    `command_scratch_path`, and `invalid_layer_path`.
+- `crates/e2e-test/tests/workspace-runtime-command/command_error_and_backpressure.rs`
+  - Added live E2E coverage for `command_scratch_path` drop metadata and trace
+    metadata while preserving ignored output publish.
+
+### Verification
+
+Commands run:
+
+```sh
+cargo fmt
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p layerstack route_tests
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p layerstack
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p operation command::
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p operation --all-targets
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p e2e-test --no-run
+cargo run -p xtask -- package
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-command --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4
+git diff --check
+```
+
+Results:
+
+- `cargo fmt` passed.
+- `layerstack route_tests` passed 28/28.
+- Full `layerstack` package tests passed.
+- `operation command::` passed 39 focused command tests.
+- Full `operation --all-targets` passed.
+- `e2e-test --no-run` passed.
+- `xtask package` passed and rebuilt `dist/eosd-linux-amd64`.
+- Final live `workspace-runtime-command` suite passed 63/63 with
+  `max_parallel=5`, `container_weight_cap=10`, and `heavy-test-threads=4`.
+- `git diff --check` passed.
+
+Final live E2E report root:
+
+```text
+crates/e2e-test/test-reports/runs/e2e-run-1781617260016
+```
+
 ## Remaining Work
 
 The following spec areas are intentionally left for later iterations:
 
-- Full protected path classification beyond Git metadata and unsupported special
-  files: `daemon_control_path`, `command_scratch_path`, `invalid_layer_path`,
-  and non-Git opaque protected descendants.
-- Invalid or non-representable layer paths still error during capture instead of
-  becoming `invalid_layer_path` drop facts.
 - Command Git OCC remains future work; until then, command-produced `.git`
   metadata is dropped with `git_metadata_unsupported`.
 - Bounded spool capture with file-backed digests.
@@ -492,11 +585,11 @@ The following spec areas are intentionally left for later iterations:
 - The 2A Git metadata handling is route/drop reporting, not command Git OCC.
   Dropped `.git` paths are visible in metadata; they are not semantically merged
   or published.
-- Unsupported special files now emit stable drop facts when their paths can be
-  represented as `LayerPath`; invalid path handling and the remaining protected
-  path families are still future work.
-- Opaque directory markers now expand against snapshot descendants, but broader
-  non-Git protected path classification still needs to feed
+- Invalid captured layer paths now become protected drop facts when the capture
+  path itself is the invalid part; unrelated payload failures such as oversized
+  file reads and non-UTF-8 symlink targets remain capture errors.
+- Opaque directory markers now expand against snapshot descendants and reject
+  Git plus non-Git protected descendants with
   `opaque_dir_protected_descendant`.
 - Live E2E validation depends on the packaged daemon under `dist/`; run
   `cargo run -p xtask -- package` before live E2E when daemon code changes.

@@ -74,7 +74,10 @@ pub struct CaptureStats {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProtectedPathDropReason {
+    DaemonControlPath,
+    CommandScratchPath,
     UnsupportedSpecialFile,
+    InvalidLayerPath,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -178,8 +181,10 @@ fn walk_upperdir(
     }
     for entry in dirs {
         if has_overlay_opaque_xattr(&entry) {
-            let opaque_path = relative_to_string(&relative_path(root, &entry)?)?;
-            push_opaque_dir(opaque_path, emitted_opaque_dirs, changes)?;
+            let rel = relative_path(root, &entry)?;
+            if let Some(opaque_path) = layer_path_from_relative_or_drop(&rel, protected_drops) {
+                push_opaque_dir(opaque_path, emitted_opaque_dirs, changes);
+            }
         }
         walk_upperdir(
             root,
@@ -207,30 +212,38 @@ fn capture_file_entry(
         .and_then(|name| name.to_str())
         .unwrap_or_default();
     if name == OPAQUE_MARKER {
-        let opaque_path = rel
-            .parent()
-            .map(relative_to_string)
-            .transpose()?
-            .unwrap_or_default();
-        push_opaque_dir(opaque_path, emitted_opaque_dirs, changes)?;
+        let Some(parent) = rel.parent().filter(|parent| !parent.as_os_str().is_empty()) else {
+            push_invalid_layer_path_drop(&rel, protected_drops);
+            return Ok(());
+        };
+        if let Some(opaque_path) = layer_path_from_relative_or_drop(parent, protected_drops) {
+            push_opaque_dir(opaque_path, emitted_opaque_dirs, changes);
+        }
         return Ok(());
     }
     if is_whiteout_marker(name) {
         let target = whiteout_target(&rel);
-        changes.push(delete_change(&relative_to_string(&target)?)?);
+        if let Some(path) = layer_path_from_relative_or_drop(&target, protected_drops) {
+            changes.push(LayerChange::Delete { path });
+        }
         return Ok(());
     }
     if is_overlay_whiteout(entry, meta)? {
-        changes.push(delete_change(&relative_to_string(&rel)?)?);
+        if let Some(path) = layer_path_from_relative_or_drop(&rel, protected_drops) {
+            changes.push(LayerChange::Delete { path });
+        }
         return Ok(());
     }
+    let Some(path) = layer_path_from_relative_or_drop(&rel, protected_drops) else {
+        return Ok(());
+    };
     if meta.file_type().is_symlink() {
-        changes.push(symlink_change(&relative_to_string(&rel)?, entry)?);
+        changes.push(symlink_change(path, entry)?);
     } else if meta.is_file() {
-        changes.push(write_change(&relative_to_string(&rel)?, entry, meta)?);
+        changes.push(write_change(path, entry, meta)?);
     } else {
         protected_drops.push(ProtectedPathDrop {
-            path: layer_path(&relative_to_string(&rel)?)?,
+            path,
             reason: ProtectedPathDropReason::UnsupportedSpecialFile,
         });
     }
@@ -248,36 +261,27 @@ fn record_file_stats(stats: &mut CaptureStats, meta: &std::fs::Metadata) {
 }
 
 fn push_opaque_dir(
-    path: String,
+    path: LayerPath,
     emitted_opaque_dirs: &mut HashSet<String>,
     changes: &mut Vec<LayerChange>,
-) -> Result<()> {
-    if emitted_opaque_dirs.insert(path.clone()) {
-        changes.push(LayerChange::OpaqueDir {
-            path: layer_path(&path)?,
-        });
+) {
+    if emitted_opaque_dirs.insert(path.as_str().to_owned()) {
+        changes.push(LayerChange::OpaqueDir { path });
     }
-    Ok(())
 }
 
-fn delete_change(path: &str) -> Result<LayerChange> {
-    Ok(LayerChange::Delete {
-        path: layer_path(path)?,
-    })
-}
-
-fn write_change(path: &str, entry: &Path, meta: &std::fs::Metadata) -> Result<LayerChange> {
+fn write_change(path: LayerPath, entry: &Path, meta: &std::fs::Metadata) -> Result<LayerChange> {
     write_change_limited(path, entry, meta, MAX_CAPTURE_FILE_BYTES)
 }
 
 fn write_change_limited(
-    path: &str,
+    path: impl IntoLayerPath,
     entry: &Path,
     meta: &std::fs::Metadata,
     max_bytes: usize,
 ) -> Result<LayerChange> {
     Ok(LayerChange::Write {
-        path: layer_path(path)?,
+        path: path.into_layer_path()?,
         content: read_regular_file(entry, meta, max_bytes)?,
     })
 }
@@ -371,9 +375,9 @@ fn capture_file_too_large(entry: &Path, size: u64, max_bytes: usize) -> CaptureE
     )
 }
 
-fn symlink_change(path: &str, entry: &Path) -> Result<LayerChange> {
+fn symlink_change(path: LayerPath, entry: &Path) -> Result<LayerChange> {
     Ok(LayerChange::Symlink {
-        path: layer_path(path)?,
+        path,
         source_path: path_string(
             &std::fs::read_link(entry).map_err(|err| CaptureError::capture(entry, err))?,
         )?,
@@ -384,11 +388,67 @@ fn layer_path(path: &str) -> Result<LayerPath> {
     LayerPath::parse(path).map_err(CaptureError::Path)
 }
 
+trait IntoLayerPath {
+    fn into_layer_path(self) -> Result<LayerPath>;
+}
+
+impl IntoLayerPath for LayerPath {
+    fn into_layer_path(self) -> Result<LayerPath> {
+        Ok(self)
+    }
+}
+
+impl IntoLayerPath for &str {
+    fn into_layer_path(self) -> Result<LayerPath> {
+        layer_path(self)
+    }
+}
+
 fn relative_path(root: &Path, entry: &Path) -> Result<PathBuf> {
     entry
         .strip_prefix(root)
         .map(Path::to_path_buf)
         .map_err(|err| CaptureError::InvalidPathChange(err.to_string()))
+}
+
+fn layer_path_from_relative_or_drop(
+    path: &Path,
+    protected_drops: &mut Vec<ProtectedPathDrop>,
+) -> Option<LayerPath> {
+    match relative_to_string(path).and_then(|path| layer_path(&path)) {
+        Ok(path) => Some(path),
+        Err(_) => {
+            push_invalid_layer_path_drop(path, protected_drops);
+            None
+        }
+    }
+}
+
+fn push_invalid_layer_path_drop(path: &Path, protected_drops: &mut Vec<ProtectedPathDrop>) {
+    protected_drops.push(ProtectedPathDrop {
+        path: invalid_layer_path_placeholder(path),
+        reason: ProtectedPathDropReason::InvalidLayerPath,
+    });
+}
+
+fn invalid_layer_path_placeholder(path: &Path) -> LayerPath {
+    let encoded = hex_bytes(path.as_os_str().as_encoded_bytes());
+    LayerPath::parse(&format!(".invalid-layer-path/{encoded}"))
+        .expect("invalid layer path placeholder is normalized")
+}
+
+fn hex_bytes(bytes: &[u8]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut out = String::with_capacity(bytes.len().saturating_mul(2).max(1));
+    if bytes.is_empty() {
+        out.push_str("empty");
+        return out;
+    }
+    for &byte in bytes {
+        out.push(char::from(HEX[usize::from(byte >> 4)]));
+        out.push(char::from(HEX[usize::from(byte & 0x0f)]));
+    }
+    out
 }
 
 fn relative_to_string(path: &Path) -> Result<String> {

@@ -67,6 +67,61 @@ fn captures_unsupported_special_files_as_protected_drops() -> TestResult {
     Ok(())
 }
 
+#[cfg(target_os = "linux")]
+#[test]
+fn captures_non_utf8_layer_paths_as_invalid_layer_path_drops() -> TestResult {
+    use std::ffi::OsString;
+    use std::os::unix::ffi::OsStringExt;
+
+    let fixture = Fixture::new("capture_non_utf8_layer_path")?;
+    let bad_name = OsString::from_vec(vec![b'b', 0xff, b'd']);
+    std::fs::write(fixture.base.join(bad_name), b"invalid")?;
+    std::fs::write(fixture.base.join("file.txt"), b"regular")?;
+
+    let captured = capture_upperdir_with_stats(&fixture.base)?;
+
+    assert_eq!(
+        captured.changes,
+        vec![LayerChange::Write {
+            path: LayerPath::parse("file.txt")?,
+            content: b"regular".to_vec(),
+        }]
+    );
+    assert_eq!(captured.protected_drops.len(), 1);
+    assert_eq!(
+        captured.protected_drops[0].reason,
+        ProtectedPathDropReason::InvalidLayerPath
+    );
+    assert!(
+        captured.protected_drops[0]
+            .path
+            .as_str()
+            .starts_with(".invalid-layer-path/"),
+        "invalid layer path drops use a stable representable placeholder: {:?}",
+        captured.protected_drops[0]
+    );
+    Ok(())
+}
+
+#[cfg(unix)]
+#[test]
+fn captures_invalid_whiteout_target_as_invalid_layer_path_drop() -> TestResult {
+    let fixture = Fixture::new("capture_invalid_whiteout_target")?;
+    std::fs::write(fixture.base.join(".wh..."), b"")?;
+
+    let captured = capture_upperdir_with_stats(&fixture.base)?;
+
+    assert!(captured.changes.is_empty());
+    assert_eq!(
+        captured.protected_drops,
+        vec![ProtectedPathDrop {
+            path: LayerPath::parse(".invalid-layer-path/2e2e")?,
+            reason: ProtectedPathDropReason::InvalidLayerPath,
+        }]
+    );
+    Ok(())
+}
+
 #[test]
 fn regular_file_capture_rejects_symlink_replacement_after_classification() -> TestResult {
     let fixture = Fixture::new("capture_symlink_swap")?;
@@ -143,8 +198,8 @@ fn capture_rejects_non_utf8_symlink_target() -> TestResult {
     let bad_target = PathBuf::from(OsString::from_vec(vec![b't', 0xff, b'g']));
     std::os::unix::fs::symlink(bad_target, fixture.base.join("link"))?;
 
-    let error =
-        capture_upperdir(&fixture.base).expect_err("non-UTF-8 symlink targets are rejected");
+    let error = capture_upperdir_with_stats(&fixture.base)
+        .expect_err("non-UTF-8 symlink targets are rejected");
 
     assert!(matches!(error, CaptureError::InvalidPathChange(_)));
     assert!(error.to_string().contains("not valid UTF-8"), "{error}");

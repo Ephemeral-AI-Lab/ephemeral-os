@@ -329,6 +329,97 @@ fn unsupported_special_file_is_dropped_with_publish_lane_reason() -> Result<()> 
 }
 
 #[test]
+fn command_scratch_path_is_dropped_with_publish_lane_reason() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let dir = format!(
+        "publish-lanes-command-scratch-drop/{}",
+        e2e_test::unique_suffix().replace('-', "_")
+    );
+    let scratch_path = format!("{dir}/.eos-command/cmd/final.json");
+    let ignored_path = format!("{dir}/cache/ignored.txt");
+
+    lease.call_ok(
+        catalog::SANDBOX_FILE_WRITE,
+        json!({
+            "path": format!("{dir}/.gitignore"),
+            "content": "cache/\n",
+            "overwrite": false,
+        }),
+    )?;
+
+    let wire = lease.call(
+        catalog::SANDBOX_COMMAND_EXEC,
+        json!({
+            "cmd": format!(
+                "mkdir -p {dir}/.eos-command/cmd {dir}/cache && printf '{{}}' > {scratch_path} && printf ignored > {ignored_path}"
+            ),
+            "yield_time_ms": 8000,
+            "timeout_seconds": 10,
+        }),
+    )?;
+    let result = unwrap_operation_result(wire.clone())?;
+    ensure!(
+        as_str(&result, "status")? == "ok",
+        "successful command should finalize in foreground: {result}"
+    );
+
+    let lanes = &result["publish_lanes"];
+    ensure!(
+        lanes["source"]["publish_status"] == "empty",
+        "command scratch output must not be treated as source: {result}"
+    );
+    ensure!(
+        lanes["ignored"]["publish_status"] == "published_lww",
+        "ordinary ignored output should still publish when scratch output is dropped: {result}"
+    );
+    ensure!(
+        lanes["ignored"]["path_count"] == 1,
+        "only cache output should be counted as ignored: {result}"
+    );
+    ensure!(
+        lanes["routing"]["dropped_path_count"] == 1
+            && lanes["routing"]["drop_reason_counts"]["command_scratch_path"] == 1,
+        "command scratch drop reason must be surfaced: {result}"
+    );
+
+    let record = trace_record(&wire)?;
+    ensure!(
+        has_trace_event(
+            &record,
+            "command",
+            "command.publish_lanes_decided",
+            |details| {
+                details["routing"]["dropped_path_count"] == 1
+                    && details["routing"]["drop_reason_counts"]["command_scratch_path"] == 1
+                    && details["ignored"]["publish_status"] == "published_lww"
+            }
+        ),
+        "command finalize trace must include command scratch drop reason: {record:?}"
+    );
+
+    let read_scratch = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": scratch_path}))?;
+    ensure!(
+        !as_bool(&read_scratch, "exists")?,
+        "command scratch output must not publish through ordinary command output: {read_scratch}"
+    );
+    let read_ignored = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": ignored_path}))?;
+    ensure!(
+        as_bool(&read_ignored, "exists")?,
+        "ignored output should remain publishable when command scratch output is dropped: {read_ignored}"
+    );
+    ensure!(
+        as_str(&read_ignored, "content")? == "ignored",
+        "ignored output content should publish unchanged: {read_ignored}"
+    );
+    wait_for_command_count(&lease, 0)?;
+    wait_for_active_leases(&lease, 0)?;
+    Ok(())
+}
+
+#[test]
 fn stderr_and_stdin_output_keep_long_lived_session_running() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());

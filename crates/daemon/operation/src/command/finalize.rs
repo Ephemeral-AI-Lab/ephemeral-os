@@ -914,6 +914,156 @@ mod tests {
     }
 
     #[test]
+    fn successful_ephemeral_command_reports_daemon_control_path_drop() -> TestResult {
+        let fixture = EphemeralFinalizeFixture::new("daemon-control-drop")?;
+        let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
+        let workspace =
+            EphemeralWorkspace::create(&fixture.scratch, "command", "daemon-control-drop")?;
+        write_upperdir_file(&workspace, "manifest.json", b"{\"version\":999}")?;
+
+        let response = finalize_ephemeral_command(
+            &fixture.root,
+            &snapshot,
+            &workspace,
+            CommitOptions::default(),
+            FinalizeCommandRequest {
+                runner_result: None,
+                command_elapsed_s: 0.25,
+                status: CommandStatus::Ok,
+                exit_code: Some(0),
+                stdout: "stdout".to_owned(),
+                stderr: String::new(),
+                command_id: Some("cmd_daemon_control_drop".to_owned()),
+            },
+        )?;
+        service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+        let wire = response.to_wire_value();
+        assert_eq!(wire["status"], "ok");
+        assert_eq!(wire["success"], true);
+        assert_eq!(wire["changed_paths"], serde_json::json!([]));
+        assert_eq!(wire["publish_lanes"]["source"]["publish_status"], "empty");
+        assert_eq!(wire["publish_lanes"]["ignored"]["publish_status"], "empty");
+        assert_eq!(
+            wire["publish_lanes"]["routing"]["dropped_path_count"],
+            serde_json::json!(1)
+        );
+        assert_eq!(
+            wire["publish_lanes"]["routing"]["drop_reason_counts"],
+            serde_json::json!({"daemon_control_path": 1})
+        );
+        assert_eq!(
+            LayerStack::open(fixture.root.clone())?
+                .read_active_manifest()?
+                .version,
+            snapshot.manifest_version,
+            "daemon-control-only dropped command must not advance the manifest"
+        );
+        let (_bytes, exists) =
+            LayerStack::open(fixture.root.clone())?.read_bytes("manifest.json")?;
+        assert!(
+            !exists,
+            "daemon control path must not publish through command finalize"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn successful_ephemeral_command_reports_command_scratch_path_drop() -> TestResult {
+        let fixture = EphemeralFinalizeFixture::new("command-scratch-drop")?;
+        let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
+        let workspace =
+            EphemeralWorkspace::create(&fixture.scratch, "command", "command-scratch-drop")?;
+        write_upperdir_file(&workspace, "transcript.log", b"private transcript")?;
+
+        let response = finalize_ephemeral_command(
+            &fixture.root,
+            &snapshot,
+            &workspace,
+            CommitOptions::default(),
+            FinalizeCommandRequest {
+                runner_result: None,
+                command_elapsed_s: 0.25,
+                status: CommandStatus::Ok,
+                exit_code: Some(0),
+                stdout: "stdout".to_owned(),
+                stderr: String::new(),
+                command_id: Some("cmd_command_scratch_drop".to_owned()),
+            },
+        )?;
+        service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+        let wire = response.to_wire_value();
+        assert_eq!(wire["status"], "ok");
+        assert_eq!(wire["success"], true);
+        assert_eq!(wire["changed_paths"], serde_json::json!([]));
+        assert_eq!(wire["publish_lanes"]["source"]["publish_status"], "empty");
+        assert_eq!(wire["publish_lanes"]["ignored"]["publish_status"], "empty");
+        assert_eq!(
+            wire["publish_lanes"]["routing"]["dropped_path_count"],
+            serde_json::json!(1)
+        );
+        assert_eq!(
+            wire["publish_lanes"]["routing"]["drop_reason_counts"],
+            serde_json::json!({"command_scratch_path": 1})
+        );
+        let (_bytes, exists) =
+            LayerStack::open(fixture.root.clone())?.read_bytes("transcript.log")?;
+        assert!(
+            !exists,
+            "command scratch path must not publish through command finalize"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn successful_ephemeral_command_reports_invalid_layer_path_drop() -> TestResult {
+        let fixture = EphemeralFinalizeFixture::new("invalid-layer-path-drop")?;
+        let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
+        let workspace =
+            EphemeralWorkspace::create(&fixture.scratch, "command", "invalid-layer-path-drop")?;
+        write_upperdir_file(&workspace, ".wh...", b"")?;
+
+        let response = finalize_ephemeral_command(
+            &fixture.root,
+            &snapshot,
+            &workspace,
+            CommitOptions::default(),
+            FinalizeCommandRequest {
+                runner_result: None,
+                command_elapsed_s: 0.25,
+                status: CommandStatus::Ok,
+                exit_code: Some(0),
+                stdout: "stdout".to_owned(),
+                stderr: String::new(),
+                command_id: Some("cmd_invalid_layer_path_drop".to_owned()),
+            },
+        )?;
+        service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+        let wire = response.to_wire_value();
+        assert_eq!(wire["status"], "ok");
+        assert_eq!(wire["success"], true);
+        assert_eq!(wire["changed_paths"], serde_json::json!([]));
+        assert_eq!(
+            wire["publish_lanes"]["routing"]["dropped_path_count"],
+            serde_json::json!(1)
+        );
+        assert_eq!(
+            wire["publish_lanes"]["routing"]["drop_reason_counts"],
+            serde_json::json!({"invalid_layer_path": 1})
+        );
+        assert_eq!(
+            LayerStack::open(fixture.root.clone())?
+                .read_active_manifest()?
+                .version,
+            snapshot.manifest_version,
+            "invalid-layer-path-only dropped command must not advance the manifest"
+        );
+        Ok(())
+    }
+
+    #[test]
     fn successful_ephemeral_command_reports_opaque_mixed_route_drop() -> TestResult {
         let fixture = EphemeralFinalizeFixture::new("opaque-mixed-route-drop")?;
         LayerStack::open(fixture.root.clone())?.publish_layer(&[
