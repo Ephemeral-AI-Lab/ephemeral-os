@@ -10,4 +10,5 @@ mod command_error_and_backpressure;
 mod command_external_process_death;
 mod command_isolated_workspace;
 mod command_lifecycle;
+mod command_local_os_sandbox;
 mod command_protocol_smoke;

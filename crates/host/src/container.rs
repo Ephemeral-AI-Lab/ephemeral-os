@@ -15,6 +15,7 @@ use crate::daemon_wire::{response_is_accepted, ProtocolClient, HEARTBEAT_OP};
 
 const DAEMON_AUTH_TOKEN_ENV: &str = "EOS_DAEMON_AUTH_TOKEN";
 const DAEMON_FORWARD_AUTH_TOKEN_ENV: &str = "EOS_DAEMON_FORWARD_AUTH_TOKEN";
+const DAEMON_CONFIG_YAML_ENV: &str = "EOS_DAEMON_CONFIG_YAML";
 
 #[cfg(test)]
 static DOCKER_COMMAND_OVERRIDE: OnceLock<Mutex<Option<PathBuf>>> = OnceLock::new();
@@ -401,6 +402,8 @@ fn daemon_spawn_args(
         format!("{DAEMON_AUTH_TOKEN_ENV}={token}"),
         "-e".to_owned(),
         format!("{DAEMON_FORWARD_AUTH_TOKEN_ENV}={forward_token}"),
+        "-e".to_owned(),
+        format!("{DAEMON_CONFIG_YAML_ENV}={remote_config_path}"),
         "-d".to_owned(),
         remote_eosd_path.to_owned(),
         "daemon".to_owned(),

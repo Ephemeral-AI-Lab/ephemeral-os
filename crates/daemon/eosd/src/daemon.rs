@@ -16,6 +16,7 @@ use config::ConfigPath;
 
 const DAEMON_AUTH_TOKEN_ENV: &str = "EOS_DAEMON_AUTH_TOKEN";
 const DAEMON_FORWARD_AUTH_TOKEN_ENV: &str = "EOS_DAEMON_FORWARD_AUTH_TOKEN";
+const DAEMON_CONFIG_YAML_ENV: &str = "EOS_DAEMON_CONFIG_YAML";
 
 /// Start, spawn, or call the async RPC server.
 ///
@@ -37,6 +38,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     if config.spawn {
         return spawn_daemon(&config);
     }
+    set_runner_config_env(&config.config_yaml_path);
     emit_boot_event(
         "config_loaded",
         serde_json::json!({
@@ -291,6 +293,7 @@ fn spawn_daemon(config: &DaemonCliConfig) -> Result<()> {
     let executable = std::env::current_exe().context("failed to resolve eosd executable")?;
     let mut command = Command::new(executable);
     command.args(config.foreground_args());
+    command.env(DAEMON_CONFIG_YAML_ENV, &config.config_yaml_path);
     if let Some(token) = &config.auth_token {
         command.env(DAEMON_AUTH_TOKEN_ENV, token);
     }
@@ -316,6 +319,10 @@ fn spawn_daemon(config: &DaemonCliConfig) -> Result<()> {
     }
     command.spawn().context("failed to spawn eosd daemon")?;
     Ok(())
+}
+
+fn set_runner_config_env(config_yaml_path: &Path) {
+    std::env::set_var(DAEMON_CONFIG_YAML_ENV, config_yaml_path);
 }
 
 fn emit_boot_event(event: &str, details: serde_json::Value) {

@@ -10,11 +10,15 @@
     "markdown": "readme.md"
   },
   "overview": {
-    "summary": "`workspace-runtime-command` owns explicit live E2E coverage for the command daemon contract across protocol smoke, core lifecycle, transcript-log recycling, ephemeral workspace process-group behavior, externally killed process groups, invisible background subprocesses, and isolated workspace command cleanup. It exercises `sandbox.command.exec`, `sandbox.command.write_stdin`, `sandbox.command.collect_completed`, `sandbox.command.cancel`, `sandbox.command.count`, `sandbox.call.cancel`, and `sandbox.checkpoint.layer_metrics`. Module config lives at `crates/e2e-test/tests/workspace-runtime-command/config/default.test.yml`.",
+    "summary": "`workspace-runtime-command` owns explicit live E2E coverage for the command daemon contract across protocol smoke, core lifecycle, transcript-log recycling, local-OS-style sandbox operation parity, ephemeral workspace process-group behavior, externally killed process groups, invisible background subprocesses, and isolated workspace command cleanup. It exercises `sandbox.file.write`, `sandbox.file.edit`, `sandbox.file.read`, `sandbox.command.exec`, `sandbox.command.write_stdin`, `sandbox.command.poll`, `sandbox.command.collect_completed`, `sandbox.command.cancel`, `sandbox.command.count`, `sandbox.call.cancel`, and `sandbox.checkpoint.layer_metrics`. Module config lives at `crates/e2e-test/tests/workspace-runtime-command/config/default.test.yml`.",
     "moduleConfig": null,
     "ops": [
+      "sandbox.file.write",
+      "sandbox.file.edit",
+      "sandbox.file.read",
       "sandbox.command.exec",
       "sandbox.command.write_stdin",
+      "sandbox.command.poll",
       "sandbox.command.collect_completed",
       "sandbox.command.cancel",
       "sandbox.command.count",
@@ -105,6 +109,14 @@
       "id": "workspace-runtime-command-prompt-read-cancel",
       "title": "Prompt Read Cancel",
       "description": "Prompt-style stdin input, read_progress tail reads, collect-completed reads, and cancellation behave coherently without replaying consumed output.",
+      "tags": [
+        "workspace-runtime-command"
+      ]
+    },
+    {
+      "id": "workspace-runtime-command-local-os-sandbox-parity",
+      "title": "Local Os Sandbox Parity",
+      "description": "Local-OS-style write/edit/read, foreground/background command execution, stdin handoff, HTTP server observation, cancellation, and Ctrl-C/Ctrl-D teardown are covered through sandbox daemon ops.",
       "tags": [
         "workspace-runtime-command"
       ]
@@ -261,6 +273,20 @@
         "workspace-runtime-command-transcript-progress",
         "workspace-runtime-command-transcript-recycling",
         "workspace-runtime-command-lifecycle"
+      ]
+    },
+    {
+      "id": "workspace-runtime-command-local-os-sandbox-parity",
+      "name": "workspace-runtime-command-local-os-sandbox-parity",
+      "description": "Groups `local_os_sandbox_file_ops_write_edit_and_rejection`, `local_os_sandbox_command_foreground_background_and_stdin_handoff`, `local_os_sandbox_command_cancel_and_control_bytes`, and `local_os_sandbox_http_server_is_observed_and_cancelled`: the local-OS live coverage matrix is mirrored at the sandbox operation layer with sandbox-relative file paths, required edit arrays, direct file-op rejection, foreground command completion, background polling, command-id stdin handoff, HTTP observation, explicit cancellation, and Ctrl-C/Ctrl-D teardown.",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-command --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "checklist": [
+        "workspace-runtime-command-local-os-sandbox-parity",
+        "workspace-runtime-command-lifecycle",
+        "workspace-runtime-command-prompt-read-cancel",
+        "workspace-runtime-command-transcript-progress",
+        "workspace-runtime-command-transcript-recycling",
+        "workspace-runtime-command-teardown-control-cancel"
       ]
     },
     {

@@ -91,6 +91,8 @@ fn daemon_spawn_args_pass_remote_config_path_to_eosd() {
             "EOS_DAEMON_AUTH_TOKEN=token-1",
             "-e",
             "EOS_DAEMON_FORWARD_AUTH_TOKEN=forward-token-1",
+            "-e",
+            "EOS_DAEMON_CONFIG_YAML=/eos/custom/prd.yml",
             "-d",
             "/eos/runtime/eosd",
             "daemon",

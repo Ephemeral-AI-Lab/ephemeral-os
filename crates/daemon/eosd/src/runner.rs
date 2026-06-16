@@ -8,6 +8,8 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Context, Result};
 
+const DAEMON_CONFIG_YAML_ENV: &str = "EOS_DAEMON_CONFIG_YAML";
+
 /// Execute one tool call inside a namespace (fresh-ns or setns), reading the
 /// resolved `RunRequest` payload and emitting the `RunResult` JSON.
 ///
@@ -55,8 +57,14 @@ fn ok_result() -> namespace::protocol::RunResult {
 }
 
 fn load_runner_config() -> Result<namespace::runner::config::RunnerConfig> {
-    let config = config::load_prd()
-        .context("load eos-sandbox/config/prd.yml")?
+    let doc = match std::env::var_os(DAEMON_CONFIG_YAML_ENV) {
+        Some(path) => {
+            let path = PathBuf::from(path);
+            config::load_path(&path).with_context(|| format!("load {}", path.display()))?
+        }
+        None => config::load_prd().context("load eos-sandbox/config/prd.yml")?,
+    };
+    let config = doc
         .section::<namespace::runner::config::RunnerConfig>("runner")
         .context("deserialize runner config section")?;
     config.validate().context("validate runner config")?;

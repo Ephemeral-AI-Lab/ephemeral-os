@@ -499,13 +499,13 @@ orchestrator's experience.
 # public client-socket ops
 sandbox-gateway host images profiles
 SID=$(sandbox-gateway host sandboxes acquire | jq -r .sandbox_id)
+sandbox-gateway host sandboxes setup --sandbox-id "$SID" --workspace-root /testbed
+sandbox-gateway daemon --sandbox-id "$SID" files write probe.txt --content ok
 
 # operator-socket ops
 sandbox-gateway host images list
 sandbox-gateway host containers list
 
 # escape hatch for an arbitrary catalog op
-sandbox-gateway daemon --sandbox-id "$SID" op sandbox.checkpoint.layer_metrics \
-  '{"layer_stack_root":"/eos/layer-stack"}' \
-  --operator
+sandbox-gateway daemon --sandbox-id "$SID" checkpoint metrics
 ```

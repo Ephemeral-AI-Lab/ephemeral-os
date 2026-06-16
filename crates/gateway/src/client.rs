@@ -9,6 +9,8 @@ use serde_json::{json, Value};
 use crate::serve;
 use crate::transport;
 
+const DEFAULT_LAYER_STACK_ROOT: &str = "/eos/layer-stack";
+
 pub(crate) fn run_host(argv: impl Iterator<Item = String>) -> Result<()> {
     let mut args = argv.collect::<Vec<_>>();
     let options = ClientOptions::parse(&mut args)?;
@@ -30,7 +32,7 @@ pub(crate) fn run_legacy(command: &str, argv: impl Iterator<Item = String>) -> R
         "op" => request_from_op(args, options.sandbox_id.clone(), false)?,
         "images" => request_from_host_images(args)?,
         "containers" => request_from_host_containers(args, &options)?,
-        "sandboxes" => request_from_host_sandboxes(args)?,
+        "sandboxes" => request_from_host_sandboxes(args, &options)?,
         "image-profiles" | "profiles" => request_from_host_profiles(args)?,
         other => bail!("unknown client command {other:?}"),
     };
@@ -54,6 +56,7 @@ usage:
   sandbox-gateway host containers remove CONTAINER
   sandbox-gateway host containers remove --sandbox-id SANDBOX_ID
   sandbox-gateway host sandboxes acquire [--image-profile NAME]
+  sandbox-gateway host sandboxes setup --sandbox-id SANDBOX_ID --workspace-root PATH
   sandbox-gateway host sandboxes list
   sandbox-gateway host sandboxes status SANDBOX_ID
   sandbox-gateway host sandboxes release SANDBOX_ID
@@ -63,30 +66,30 @@ usage:
   sandbox-gateway host op OP [ARGS_JSON] [--sandbox-id SANDBOX_ID] [--operator]
 
   sandbox-gateway daemon --sandbox-id SANDBOX_ID ping
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID files read PATH [--layer-stack-root PATH]
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID files write PATH --content TEXT [--layer-stack-root PATH]
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID files edit PATH --old TEXT --new TEXT [--replace-all] [--layer-stack-root PATH]
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID commands exec [--layer-stack-root PATH] -- COMMAND
+  sandbox-gateway daemon --sandbox-id SANDBOX_ID files read PATH
+  sandbox-gateway daemon --sandbox-id SANDBOX_ID files write PATH --content TEXT
+  sandbox-gateway daemon --sandbox-id SANDBOX_ID files edit PATH --old TEXT --new TEXT [--replace-all]
+  sandbox-gateway daemon --sandbox-id SANDBOX_ID commands exec -- COMMAND
   sandbox-gateway daemon --sandbox-id SANDBOX_ID commands stdin COMMAND_ID TEXT
   sandbox-gateway daemon --sandbox-id SANDBOX_ID commands poll COMMAND_ID [--last-n-lines N]
   sandbox-gateway daemon --sandbox-id SANDBOX_ID commands cancel COMMAND_ID
   sandbox-gateway daemon --sandbox-id SANDBOX_ID commands collect [COMMAND_ID...]
   sandbox-gateway daemon --sandbox-id SANDBOX_ID commands count [--caller-id ID]
   sandbox-gateway daemon --sandbox-id SANDBOX_ID plugins list
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID plugins health [--layer-stack-root PATH]
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID pyright symbols FILE [--query TEXT] [--workspace] --layer-stack-root PATH
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID pyright definition FILE --line N --column N --layer-stack-root PATH
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID pyright references FILE --line N --column N --layer-stack-root PATH
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID pyright diagnostics FILE --layer-stack-root PATH
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID isolation enter --caller-id ID --layer-stack-root PATH
+  sandbox-gateway daemon --sandbox-id SANDBOX_ID plugins health
+  sandbox-gateway daemon --sandbox-id SANDBOX_ID pyright symbols FILE [--query TEXT] [--workspace]
+  sandbox-gateway daemon --sandbox-id SANDBOX_ID pyright definition FILE --line N --column N
+  sandbox-gateway daemon --sandbox-id SANDBOX_ID pyright references FILE --line N --column N
+  sandbox-gateway daemon --sandbox-id SANDBOX_ID pyright diagnostics FILE
+  sandbox-gateway daemon --sandbox-id SANDBOX_ID isolation enter --caller-id ID
   sandbox-gateway daemon --sandbox-id SANDBOX_ID isolation status --caller-id ID
   sandbox-gateway daemon --sandbox-id SANDBOX_ID isolation exit --caller-id ID [--grace-s SECONDS]
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint metrics --layer-stack-root PATH
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint binding --layer-stack-root PATH
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint ensure-base --layer-stack-root PATH --workspace-root PATH
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint build-base --layer-stack-root PATH --workspace-root PATH [--reset]
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint commit-workspace --layer-stack-root PATH --workspace-root PATH
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint commit-git --layer-stack-root PATH --workspace-root PATH --message TEXT [PATH...]
+  sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint metrics
+  sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint binding
+  sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint ensure-base --workspace-root PATH
+  sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint build-base --workspace-root PATH [--reset]
+  sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint commit-workspace --workspace-root PATH
+  sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint commit-git --workspace-root PATH --message TEXT [PATH...]
   sandbox-gateway daemon --sandbox-id SANDBOX_ID run end --caller-id ID [--grace-s SECONDS]
   sandbox-gateway daemon --sandbox-id SANDBOX_ID run cancel-all [--grace-s SECONDS]
   sandbox-gateway daemon --sandbox-id SANDBOX_ID op OP [ARGS_JSON] [--operator]
@@ -94,6 +97,8 @@ usage:
 common client flags:
   --socket PATH      gateway client socket; overrides EOS_GATEWAY_SOCKET/default
   --operator         connect to <socket>.operator
+  --layer-stack-root PATH
+                    daemon shortcut override; default /eos/layer-stack
   --envelope         print the full response envelope instead of result only"
     );
 }
@@ -157,7 +162,7 @@ fn request_from_host(mut args: Vec<String>, options: &ClientOptions) -> Result<G
     match group.as_str() {
         "images" => request_from_host_images(args),
         "containers" => request_from_host_containers(args, options),
-        "sandboxes" => request_from_host_sandboxes(args),
+        "sandboxes" => request_from_host_sandboxes(args, options),
         "traces" => request_from_host_traces(args, options),
         "op" => request_from_op(args, options.sandbox_id.clone(), false),
         other => bail!(
@@ -294,9 +299,14 @@ fn request_from_container_target(
     Ok(host_request(op, json!({ "container": container }), true))
 }
 
-fn request_from_host_sandboxes(mut args: Vec<String>) -> Result<GatewayRequest> {
+fn request_from_host_sandboxes(
+    mut args: Vec<String>,
+    options: &ClientOptions,
+) -> Result<GatewayRequest> {
     let Some(subcommand) = shift(&mut args) else {
-        bail!("missing host sandboxes subcommand; expected acquire | list | status | release")
+        bail!(
+            "missing host sandboxes subcommand; expected acquire | setup | list | status | release"
+        )
     };
     match subcommand.as_str() {
         "acquire" => {
@@ -305,6 +315,25 @@ fn request_from_host_sandboxes(mut args: Vec<String>) -> Result<GatewayRequest> 
             let mut body = json!({});
             insert_optional(&mut body, "image_profile", image_profile);
             Ok(host_request("host.sandbox.acquire", body, false))
+        }
+        "setup" => {
+            let sandbox_id = require_sandbox_id(options)?;
+            let layer_stack_root = layer_stack_root_or_default(&mut args)?;
+            let workspace_root = take_required_flag_any(
+                &mut args,
+                &["--workspace-root", "--workspace_root"],
+                "--workspace-root",
+            )?;
+            expect_no_args(&args)?;
+            Ok(daemon_request(
+                "sandbox.checkpoint.ensure_base",
+                json!({
+                    "layer_stack_root": layer_stack_root,
+                    "workspace_root": workspace_root,
+                }),
+                sandbox_id,
+                true,
+            ))
         }
         "list" => {
             expect_no_args(&args)?;
@@ -335,7 +364,7 @@ fn request_from_host_sandboxes(mut args: Vec<String>) -> Result<GatewayRequest> 
             ))
         }
         other => bail!(
-            "unknown host sandboxes subcommand {other:?}; expected acquire | list | status | release"
+            "unknown host sandboxes subcommand {other:?}; expected acquire | setup | list | status | release"
         ),
     }
 }
@@ -388,19 +417,18 @@ fn request_from_daemon_files(mut args: Vec<String>, sandbox_id: String) -> Resul
     match subcommand.as_str() {
         "read" => {
             let caller_id = take_optional_flag(&mut args, "--caller-id")?;
-            let layer_stack_root = take_optional_flag(&mut args, "--layer-stack-root")?;
+            let layer_stack_root = layer_stack_root_or_default(&mut args)?;
             let Some(path) = shift(&mut args) else {
                 bail!("daemon files read requires PATH")
             };
             expect_no_args(&args)?;
-            let mut body = json!({ "path": path });
+            let mut body = json!({ "path": path, "layer_stack_root": layer_stack_root });
             insert_optional(&mut body, "caller_id", caller_id);
-            insert_optional(&mut body, "layer_stack_root", layer_stack_root);
             Ok(daemon_request("sandbox.file.read", body, sandbox_id, false))
         }
         "write" => {
             let caller_id = take_optional_flag(&mut args, "--caller-id")?;
-            let layer_stack_root = take_optional_flag(&mut args, "--layer-stack-root")?;
+            let layer_stack_root = layer_stack_root_or_default(&mut args)?;
             let content = take_optional_flag(&mut args, "--content")?;
             let overwrite = take_optional_bool(&mut args, "--overwrite")?;
             let Some(path) = shift(&mut args) else {
@@ -408,9 +436,9 @@ fn request_from_daemon_files(mut args: Vec<String>, sandbox_id: String) -> Resul
             };
             expect_no_args(&args)?;
             let content = content.context("daemon files write requires --content TEXT")?;
-            let mut body = json!({ "path": path, "content": content });
+            let mut body =
+                json!({ "path": path, "content": content, "layer_stack_root": layer_stack_root });
             insert_optional(&mut body, "caller_id", caller_id);
-            insert_optional(&mut body, "layer_stack_root", layer_stack_root);
             if let Some(overwrite) = overwrite {
                 body["overwrite"] = json!(overwrite);
             }
@@ -423,7 +451,7 @@ fn request_from_daemon_files(mut args: Vec<String>, sandbox_id: String) -> Resul
         }
         "edit" => {
             let caller_id = take_optional_flag(&mut args, "--caller-id")?;
-            let layer_stack_root = take_optional_flag(&mut args, "--layer-stack-root")?;
+            let layer_stack_root = layer_stack_root_or_default(&mut args)?;
             let edits_json = take_optional_flag(&mut args, "--edits-json")?;
             let old_text = take_optional_flag(&mut args, "--old")?;
             let new_text = take_optional_flag(&mut args, "--new")?;
@@ -443,9 +471,9 @@ fn request_from_daemon_files(mut args: Vec<String>, sandbox_id: String) -> Resul
             if !edits.is_array() {
                 bail!("--edits-json must be a JSON array");
             }
-            let mut body = json!({ "path": path, "edits": edits });
+            let mut body =
+                json!({ "path": path, "edits": edits, "layer_stack_root": layer_stack_root });
             insert_optional(&mut body, "caller_id", caller_id);
-            insert_optional(&mut body, "layer_stack_root", layer_stack_root);
             Ok(daemon_request("sandbox.file.edit", body, sandbox_id, false))
         }
         other => bail!("unknown daemon files subcommand {other:?}; expected read | write | edit"),
@@ -464,13 +492,12 @@ fn request_from_daemon_commands(
     match subcommand.as_str() {
         "exec" => {
             let caller_id = take_optional_flag(&mut args, "--caller-id")?;
-            let layer_stack_root = take_optional_flag(&mut args, "--layer-stack-root")?;
+            let layer_stack_root = layer_stack_root_or_default(&mut args)?;
             let timeout = take_optional_u64(&mut args, "--timeout")?;
             let yield_time_ms = take_optional_u64(&mut args, "--yield-time-ms")?;
             let cmd = command_string(args)?;
-            let mut body = json!({ "cmd": cmd });
+            let mut body = json!({ "cmd": cmd, "layer_stack_root": layer_stack_root });
             insert_optional(&mut body, "caller_id", caller_id);
-            insert_optional(&mut body, "layer_stack_root", layer_stack_root);
             if let Some(timeout) = timeout {
                 body["timeout"] = json!(timeout);
             }
@@ -579,11 +606,10 @@ fn request_from_daemon_plugins(
         }
         "health" => {
             let caller_id = take_optional_flag(&mut args, "--caller-id")?;
-            let layer_stack_root = take_optional_flag(&mut args, "--layer-stack-root")?;
+            let layer_stack_root = layer_stack_root_or_default(&mut args)?;
             expect_no_args(&args)?;
-            let mut body = json!({});
+            let mut body = json!({ "layer_stack_root": layer_stack_root });
             insert_optional(&mut body, "caller_id", caller_id);
-            insert_optional(&mut body, "layer_stack_root", layer_stack_root);
             Ok(daemon_request(
                 "sandbox.plugin.health",
                 body,
@@ -686,8 +712,7 @@ struct PyrightCommon {
 impl PyrightCommon {
     fn parse(args: &mut Vec<String>) -> Result<Self> {
         let caller_id = take_optional_flag(args, "--caller-id")?;
-        let layer_stack_root = take_optional_flag(args, "--layer-stack-root")?
-            .context("daemon pyright requires --layer-stack-root PATH")?;
+        let layer_stack_root = layer_stack_root_or_default(args)?;
         Ok(Self {
             caller_id,
             layer_stack_root,
@@ -714,7 +739,7 @@ fn request_from_daemon_isolation(
     match subcommand.as_str() {
         "enter" => {
             let caller_id = take_required_flag(&mut args, "--caller-id")?;
-            let layer_stack_root = take_required_flag(&mut args, "--layer-stack-root")?;
+            let layer_stack_root = layer_stack_root_or_default(&mut args)?;
             expect_no_args(&args)?;
             Ok(daemon_request(
                 "sandbox.isolation.enter",
@@ -774,7 +799,7 @@ fn request_from_daemon_checkpoint(
     };
     match subcommand.as_str() {
         "metrics" => {
-            let layer_stack_root = take_required_flag(&mut args, "--layer-stack-root")?;
+            let layer_stack_root = layer_stack_root_or_default(&mut args)?;
             expect_no_args(&args)?;
             Ok(daemon_request(
                 "sandbox.checkpoint.layer_metrics",
@@ -784,7 +809,7 @@ fn request_from_daemon_checkpoint(
             ))
         }
         "binding" => {
-            let layer_stack_root = take_required_flag(&mut args, "--layer-stack-root")?;
+            let layer_stack_root = layer_stack_root_or_default(&mut args)?;
             expect_no_args(&args)?;
             Ok(daemon_request(
                 "sandbox.checkpoint.binding",
@@ -819,8 +844,8 @@ fn request_from_daemon_checkpoint(
             true,
         ),
         "commit-git" => {
-            let layer_stack_root = take_required_flag(&mut args, "--layer-stack-root")?;
-            let workspace_root = take_required_flag(&mut args, "--workspace-root")?;
+            let layer_stack_root = layer_stack_root_or_default(&mut args)?;
+            let workspace_root = workspace_root_required(&mut args)?;
             let message = take_required_flag(&mut args, "--message")?;
             let paths = args;
             let mut body = json!({
@@ -850,8 +875,8 @@ fn checkpoint_workspace_request(
     sandbox_id: String,
     operator: bool,
 ) -> Result<GatewayRequest> {
-    let layer_stack_root = take_required_flag(&mut args, "--layer-stack-root")?;
-    let workspace_root = take_required_flag(&mut args, "--workspace-root")?;
+    let layer_stack_root = layer_stack_root_or_default(&mut args)?;
+    let workspace_root = workspace_root_required(&mut args)?;
     expect_no_args(&args)?;
     Ok(daemon_request(
         op,
@@ -1085,8 +1110,40 @@ fn take_optional_flag(args: &mut Vec<String>, flag: &str) -> Result<Option<Strin
     Ok(Some(take_flag_value(args, index, flag)?))
 }
 
+fn take_optional_flag_any(args: &mut Vec<String>, flags: &[&str]) -> Result<Option<String>> {
+    for flag in flags {
+        if let Some(index) = args.iter().position(|arg| arg == flag) {
+            return Ok(Some(take_flag_value(args, index, flag)?));
+        }
+    }
+    Ok(None)
+}
+
 fn take_required_flag(args: &mut Vec<String>, flag: &str) -> Result<String> {
     take_optional_flag(args, flag)?.with_context(|| format!("{flag} is required"))
+}
+
+fn take_required_flag_any(
+    args: &mut Vec<String>,
+    flags: &[&str],
+    canonical: &str,
+) -> Result<String> {
+    take_optional_flag_any(args, flags)?.with_context(|| format!("{canonical} is required"))
+}
+
+fn layer_stack_root_or_default(args: &mut Vec<String>) -> Result<String> {
+    Ok(
+        take_optional_flag_any(args, &["--layer-stack-root", "--layer_stack_root"])?
+            .unwrap_or_else(|| DEFAULT_LAYER_STACK_ROOT.to_owned()),
+    )
+}
+
+fn workspace_root_required(args: &mut Vec<String>) -> Result<String> {
+    take_required_flag_any(
+        args,
+        &["--workspace-root", "--workspace_root"],
+        "--workspace-root",
+    )
 }
 
 fn take_optional_u64(args: &mut Vec<String>, flag: &str) -> Result<Option<u64>> {
@@ -1184,13 +1241,31 @@ mod tests {
     }
 
     #[test]
-    fn daemon_command_exec_uses_sandbox_id() -> Result<()> {
+    fn host_sandbox_setup_uses_default_layer_stack_and_workspace_alias() -> Result<()> {
+        let request = request_from_host(
+            vec![
+                "sandboxes".to_owned(),
+                "setup".to_owned(),
+                "--workspace_root".to_owned(),
+                "/testbed".to_owned(),
+            ],
+            &daemon_options(),
+        )?;
+
+        assert_eq!(request.op, "sandbox.checkpoint.ensure_base");
+        assert_eq!(request.sandbox_id.as_deref(), Some("sb-1"));
+        assert_eq!(request.args["layer_stack_root"], json!("/eos/layer-stack"));
+        assert_eq!(request.args["workspace_root"], json!("/testbed"));
+        assert!(request.operator);
+        Ok(())
+    }
+
+    #[test]
+    fn daemon_command_exec_defaults_layer_stack_root() -> Result<()> {
         let request = request_from_daemon(
             vec![
                 "commands".to_owned(),
                 "exec".to_owned(),
-                "--layer-stack-root".to_owned(),
-                "/eos/layer-stack".to_owned(),
                 "--".to_owned(),
                 "pwd".to_owned(),
             ],
@@ -1211,8 +1286,6 @@ mod tests {
             vec![
                 "pyright".to_owned(),
                 "definition".to_owned(),
-                "--layer-stack-root".to_owned(),
-                "/eos/layer-stack".to_owned(),
                 "--line".to_owned(),
                 "3".to_owned(),
                 "--column".to_owned(),
@@ -1223,6 +1296,7 @@ mod tests {
         )?;
 
         assert_eq!(request.op, "sandbox.plugin.pyright_lsp.definition");
+        assert_eq!(request.args["layer_stack_root"], json!("/eos/layer-stack"));
         assert_eq!(request.args["position"]["line"], json!(3));
         assert_eq!(request.args["position"]["character"], json!(7));
         Ok(())

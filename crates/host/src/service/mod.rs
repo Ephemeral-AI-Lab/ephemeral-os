@@ -39,6 +39,7 @@ use trace_drain::TraceExportDrainer;
 
 const TRACE_SHOW_DEFAULT_SECTION_LIMIT: usize = 1_000;
 const TRACE_SHOW_MAX_SECTION_LIMIT: usize = 5_000;
+const SANDBOX_SCRATCH_TMPFS: &str = "/eos/scratch:rw,exec,size=2g,mode=1777";
 
 #[derive(Debug, Clone)]
 pub struct HostConfig {
@@ -225,7 +226,7 @@ impl SandboxHost {
             privileged: self.config.docker_privileged,
             cap_add: Vec::new(),
             security_opt: Vec::new(),
-            tmpfs: Vec::new(),
+            tmpfs: vec![SANDBOX_SCRATCH_TMPFS.to_owned()],
             labels: vec![
                 (SANDBOX_ID_LABEL.to_owned(), sandbox_id.clone()),
                 (TCP_PORT_LABEL.to_owned(), self.config.tcp_port.to_string()),

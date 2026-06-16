@@ -97,7 +97,11 @@ sandbox-gateway host containers start <docker-image>
 
 # acquire a sandbox, then operate inside its daemon
 SID=$(sandbox-gateway host sandboxes acquire | jq -r .sandbox_id)
+sandbox-gateway host sandboxes setup --sandbox-id "$SID" --workspace-root /testbed
 sandbox-gateway daemon --sandbox-id "$SID" ping
+sandbox-gateway daemon --sandbox-id "$SID" files write daemon-speed.txt --content hello
+sandbox-gateway daemon --sandbox-id "$SID" files edit daemon-speed.txt --old hello --new hi
+sandbox-gateway daemon --sandbox-id "$SID" commands exec -- pwd
 sandbox-gateway host sandboxes release "$SID"
 ```
 
