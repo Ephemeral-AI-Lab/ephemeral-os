@@ -66,8 +66,6 @@ impl RouteDropReason {
 impl From<ProtectedPathDropReason> for RouteDropReason {
     fn from(reason: ProtectedPathDropReason) -> Self {
         match reason {
-            ProtectedPathDropReason::DaemonControlPath => Self::DaemonControlPath,
-            ProtectedPathDropReason::CommandScratchPath => Self::CommandScratchPath,
             ProtectedPathDropReason::UnsupportedSpecialFile => Self::UnsupportedSpecialFile,
             ProtectedPathDropReason::InvalidLayerPath => Self::InvalidLayerPath,
         }
@@ -771,7 +769,8 @@ fn protected_path_drop_reason(path: &LayerPath) -> Option<RouteDropReason> {
     if matches!(
         first,
         "manifest.json" | "workspace.json" | "layers" | "staging"
-    ) || path.split('/').any(|part| part == ".layer-metadata")
+    ) || first == ".layer-metadata"
+        || parts.any(|part| part == ".layer-metadata")
     {
         return Some(RouteDropReason::DaemonControlPath);
     }
@@ -782,24 +781,38 @@ fn protected_path_drop_reason(path: &LayerPath) -> Option<RouteDropReason> {
 }
 
 fn is_command_scratch_path(path: &str) -> bool {
-    let parts = path.split('/').collect::<Vec<_>>();
-    parts.iter().any(|part| {
+    if matches!(
+        path,
+        "command-runner-request.json"
+            | "command-runner-result.json"
+            | "runner-request.json"
+            | "runner-result.json"
+            | "metadata.json"
+            | "final.json"
+            | "transcript.log"
+    ) {
+        return true;
+    }
+
+    let mut parts = path.split('/');
+    let Some(first) = parts.next() else {
+        return false;
+    };
+    matches!(
+        first,
+        "spool"
+            | "commands"
+            | ".eos-command"
+            | ".eos-commands"
+            | ".eos-scratch"
+            | ".eos-spool"
+            | ".eos-transcripts"
+    ) || parts.any(|part| {
         matches!(
-            *part,
+            part,
             ".eos-command" | ".eos-commands" | ".eos-scratch" | ".eos-spool" | ".eos-transcripts"
         )
-    }) || matches!(
-        parts.as_slice(),
-        ["command-runner-request.json"]
-            | ["command-runner-result.json"]
-            | ["runner-request.json"]
-            | ["runner-result.json"]
-            | ["metadata.json"]
-            | ["final.json"]
-            | ["transcript.log"]
-            | ["spool", ..]
-            | ["commands", ..]
-    )
+    })
 }
 
 fn stack_base_hash(stack: &LayerStack, path: &LayerPath) -> Result<Option<String>, CommitError> {

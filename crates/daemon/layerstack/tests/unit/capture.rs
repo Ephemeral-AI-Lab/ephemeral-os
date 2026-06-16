@@ -159,7 +159,7 @@ fn regular_file_capture_rejects_oversized_files_before_write_change() -> TestRes
     std::fs::write(&entry, b"abcdef")?;
     let meta = std::fs::symlink_metadata(&entry)?;
 
-    let error = write_change_limited("large.txt", &entry, &meta, 2)
+    let error = write_change_limited(LayerPath::parse("large.txt")?, &entry, &meta, 2)
         .expect_err("oversized file capture must be rejected");
 
     assert!(matches!(error, CaptureError::Capture { .. }));

@@ -74,8 +74,6 @@ pub struct CaptureStats {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProtectedPathDropReason {
-    DaemonControlPath,
-    CommandScratchPath,
     UnsupportedSpecialFile,
     InvalidLayerPath,
 }
@@ -275,13 +273,13 @@ fn write_change(path: LayerPath, entry: &Path, meta: &std::fs::Metadata) -> Resu
 }
 
 fn write_change_limited(
-    path: impl IntoLayerPath,
+    path: LayerPath,
     entry: &Path,
     meta: &std::fs::Metadata,
     max_bytes: usize,
 ) -> Result<LayerChange> {
     Ok(LayerChange::Write {
-        path: path.into_layer_path()?,
+        path,
         content: read_regular_file(entry, meta, max_bytes)?,
     })
 }
@@ -386,22 +384,6 @@ fn symlink_change(path: LayerPath, entry: &Path) -> Result<LayerChange> {
 
 fn layer_path(path: &str) -> Result<LayerPath> {
     LayerPath::parse(path).map_err(CaptureError::Path)
-}
-
-trait IntoLayerPath {
-    fn into_layer_path(self) -> Result<LayerPath>;
-}
-
-impl IntoLayerPath for LayerPath {
-    fn into_layer_path(self) -> Result<LayerPath> {
-        Ok(self)
-    }
-}
-
-impl IntoLayerPath for &str {
-    fn into_layer_path(self) -> Result<LayerPath> {
-        layer_path(self)
-    }
 }
 
 fn relative_path(root: &Path, entry: &Path) -> Result<PathBuf> {
