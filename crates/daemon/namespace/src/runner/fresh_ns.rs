@@ -371,15 +371,18 @@ fn execute_shell(
     let mut child = command.spawn().map_err(RunnerError::Child)?;
     timings.insert_elapsed("workspace.shell_spawn_s", spawn_start);
     let wait_start = Instant::now();
-    let (exit_code, timed_out) = match wait_for_command_execution_scope(
+    let (exit_code, timed_out, scope_timing) = match wait_for_command_execution_scope(
         &mut child,
         request.timeout_seconds,
         proc_dir.as_ref().map(std::os::fd::AsFd::as_fd),
     ) {
-        Ok(exit_code) => (exit_code, false),
-        Err(RunnerError::TimedOut) => (124, true),
+        Ok((exit_code, timing)) => (exit_code, false, Some(timing)),
+        Err(RunnerError::TimedOut) => (124, true, None),
         Err(err) => return Err(err),
     };
+    if let Some(scope_timing) = scope_timing {
+        record_command_scope_wait_timing(&mut timings, &scope_timing);
+    }
     timings.insert_elapsed("workspace.shell_wait_s", wait_start);
     Ok(RunResult {
         exit_code,
@@ -400,6 +403,36 @@ fn execute_shell(
             "warnings": [],
         }),
     })
+}
+
+#[cfg(target_os = "linux")]
+fn record_command_scope_wait_timing(
+    timings: &mut RunnerPhaseTimings,
+    scope_timing: &CommandExecutionScopeTiming,
+) {
+    if let Some(value) = scope_timing.root_exit_s {
+        timings.insert_s("workspace.shell_wait_root_exit_s", value);
+    }
+    if let Some(value) = scope_timing.post_root_drain_s {
+        timings.insert_s("workspace.shell_wait_post_root_drain_s", value);
+    }
+    timings.insert_s(
+        "workspace.shell_wait_child_try_wait_s",
+        scope_timing.child_try_wait_s,
+    );
+    timings.insert_s("workspace.shell_wait_proc_scan_s", scope_timing.proc_scan_s);
+    timings.insert_s(
+        "workspace.shell_wait_proc_scan_count",
+        scope_timing.proc_scan_count as f64,
+    );
+    timings.insert_s(
+        "workspace.shell_wait_poll_count",
+        scope_timing.poll_count as f64,
+    );
+    timings.insert_s(
+        "workspace.shell_wait_poll_sleep_s",
+        scope_timing.poll_sleep_s,
+    );
 }
 
 #[cfg(target_os = "linux")]

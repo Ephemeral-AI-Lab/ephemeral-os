@@ -278,6 +278,7 @@ impl CommandOps {
                 "duration_ms": elapsed_ms(wait_started),
                 "wait_loop_duration_ms": timing.elapsed_ms,
                 "wait_yield_reason": timing.reason.as_str(),
+                "configured_quiet_ms": self.config.quiet_ms,
                 "first_output_ms": timing.first_output_ms,
                 "last_output_ms": timing.last_output_ms,
                 "quiet_ms": timing.quiet_ms,
