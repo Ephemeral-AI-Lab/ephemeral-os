@@ -72,9 +72,21 @@ pub struct CaptureStats {
     pub first_error_path: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProtectedPathDropReason {
+    UnsupportedSpecialFile,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProtectedPathDrop {
+    pub path: LayerPath,
+    pub reason: ProtectedPathDropReason,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct CapturedUpperdir {
     pub changes: Vec<LayerChange>,
+    pub protected_drops: Vec<ProtectedPathDrop>,
     pub stats: CaptureStats,
 }
 
@@ -104,6 +116,7 @@ pub fn capture_upperdir_with_stats(upperdir: &Path) -> Result<CapturedUpperdir> 
     std::fs::create_dir_all(upperdir).map_err(|err| CaptureError::capture(upperdir, err))?;
     let mut emitted_opaque_dirs = HashSet::new();
     let mut changes = Vec::new();
+    let mut protected_drops = Vec::new();
     let mut stats = CaptureStats {
         dirs: 1,
         ..CaptureStats::default()
@@ -113,9 +126,14 @@ pub fn capture_upperdir_with_stats(upperdir: &Path) -> Result<CapturedUpperdir> 
         upperdir,
         &mut emitted_opaque_dirs,
         &mut changes,
+        &mut protected_drops,
         &mut stats,
     )?;
-    Ok(CapturedUpperdir { changes, stats })
+    Ok(CapturedUpperdir {
+        changes,
+        protected_drops,
+        stats,
+    })
 }
 
 fn walk_upperdir(
@@ -123,6 +141,7 @@ fn walk_upperdir(
     dir: &Path,
     emitted_opaque_dirs: &mut HashSet<String>,
     changes: &mut Vec<LayerChange>,
+    protected_drops: &mut Vec<ProtectedPathDrop>,
     stats: &mut CaptureStats,
 ) -> Result<()> {
     let mut entries = std::fs::read_dir(dir)
@@ -148,14 +167,28 @@ fn walk_upperdir(
     }
 
     for (entry, meta) in files {
-        capture_file_entry(root, &entry, &meta, emitted_opaque_dirs, changes)?;
+        capture_file_entry(
+            root,
+            &entry,
+            &meta,
+            emitted_opaque_dirs,
+            changes,
+            protected_drops,
+        )?;
     }
     for entry in dirs {
         if has_overlay_opaque_xattr(&entry) {
             let opaque_path = relative_to_string(&relative_path(root, &entry)?)?;
             push_opaque_dir(opaque_path, emitted_opaque_dirs, changes)?;
         }
-        walk_upperdir(root, &entry, emitted_opaque_dirs, changes, stats)?;
+        walk_upperdir(
+            root,
+            &entry,
+            emitted_opaque_dirs,
+            changes,
+            protected_drops,
+            stats,
+        )?;
     }
     Ok(())
 }
@@ -166,6 +199,7 @@ fn capture_file_entry(
     meta: &std::fs::Metadata,
     emitted_opaque_dirs: &mut HashSet<String>,
     changes: &mut Vec<LayerChange>,
+    protected_drops: &mut Vec<ProtectedPathDrop>,
 ) -> Result<()> {
     let rel = relative_path(root, entry)?;
     let name = entry
@@ -194,6 +228,11 @@ fn capture_file_entry(
         changes.push(symlink_change(&relative_to_string(&rel)?, entry)?);
     } else if meta.is_file() {
         changes.push(write_change(&relative_to_string(&rel)?, entry, meta)?);
+    } else {
+        protected_drops.push(ProtectedPathDrop {
+            path: layer_path(&relative_to_string(&rel)?)?,
+            reason: ProtectedPathDropReason::UnsupportedSpecialFile,
+        });
     }
     Ok(())
 }

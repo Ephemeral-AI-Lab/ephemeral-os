@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
@@ -181,64 +182,41 @@ pub(crate) struct PublishLanesMetadata {
 
 impl PublishLanesMetadata {
     pub(crate) fn new(
-        source_path_count: usize,
-        source_publish_status: impl Into<String>,
-        source_drop_reason: Option<impl Into<String>>,
-        ignored_path_count: usize,
-        ignored_bytes: u64,
-        ignored_spooled_bytes: u64,
-        ignored_publish_status: impl Into<String>,
-        ignored_publish_mode: Option<impl Into<String>>,
-        ignored_drop_reason: Option<impl Into<String>>,
+        source: SourcePublishLaneMetadata,
+        ignored: IgnoredPublishLaneMetadata,
         route_manifest_version: i64,
     ) -> Self {
         Self {
-            source: SourcePublishLaneMetadata {
-                path_count: source_path_count,
-                publish_status: source_publish_status.into(),
-                drop_reason: source_drop_reason.map(Into::into),
-            },
-            ignored: IgnoredPublishLaneMetadata {
-                path_count: ignored_path_count,
-                bytes: ignored_bytes,
-                spooled_bytes: ignored_spooled_bytes,
-                publish_status: ignored_publish_status.into(),
-                publish_mode: ignored_publish_mode.map(Into::into),
-                drop_reason: ignored_drop_reason.map(Into::into),
-            },
+            source,
+            ignored,
             routing: PublishLaneRoutingMetadata {
                 ignore_route_source: "command_snapshot".to_owned(),
                 route_manifest_version,
+                dropped_path_count: 0,
+                drop_reason_counts: BTreeMap::new(),
             },
         }
     }
 
     pub(crate) fn empty(route_manifest_version: i64) -> Self {
         Self::new(
-            0,
-            "empty",
-            None::<String>,
-            0,
-            0,
-            0,
-            "empty",
-            None::<String>,
-            None::<String>,
+            SourcePublishLaneMetadata::new(0, "empty", None::<String>),
+            IgnoredPublishLaneMetadata::new(0, 0, 0, "empty", None::<String>, None::<String>),
             route_manifest_version,
         )
     }
 
     pub(crate) fn dropped_command_failed(route_manifest_version: i64) -> Self {
         Self::new(
-            0,
-            "dropped_command_failed",
-            None::<String>,
-            0,
-            0,
-            0,
-            "dropped_command_failed",
-            None::<String>,
-            None::<String>,
+            SourcePublishLaneMetadata::new(0, "dropped_command_failed", None::<String>),
+            IgnoredPublishLaneMetadata::new(
+                0,
+                0,
+                0,
+                "dropped_command_failed",
+                None::<String>,
+                None::<String>,
+            ),
             route_manifest_version,
         )
     }
@@ -250,15 +228,19 @@ impl PublishLanesMetadata {
         route_manifest_version: i64,
     ) -> Self {
         Self::new(
-            source_path_count,
-            "dropped_command_failed",
-            None::<String>,
-            ignored_path_count,
-            ignored_bytes,
-            0,
-            "dropped_command_failed",
-            None::<String>,
-            None::<String>,
+            SourcePublishLaneMetadata::new(
+                source_path_count,
+                "dropped_command_failed",
+                None::<String>,
+            ),
+            IgnoredPublishLaneMetadata::new(
+                ignored_path_count,
+                ignored_bytes,
+                0,
+                "dropped_command_failed",
+                None::<String>,
+                None::<String>,
+            ),
             route_manifest_version,
         )
     }
@@ -280,6 +262,20 @@ pub(crate) struct SourcePublishLaneMetadata {
     pub drop_reason: Option<String>,
 }
 
+impl SourcePublishLaneMetadata {
+    pub(crate) fn new(
+        path_count: usize,
+        publish_status: impl Into<String>,
+        drop_reason: Option<impl Into<String>>,
+    ) -> Self {
+        Self {
+            path_count,
+            publish_status: publish_status.into(),
+            drop_reason: drop_reason.map(Into::into),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub(crate) struct IgnoredPublishLaneMetadata {
     pub path_count: usize,
@@ -290,10 +286,32 @@ pub(crate) struct IgnoredPublishLaneMetadata {
     pub drop_reason: Option<String>,
 }
 
+impl IgnoredPublishLaneMetadata {
+    pub(crate) fn new(
+        path_count: usize,
+        bytes: u64,
+        spooled_bytes: u64,
+        publish_status: impl Into<String>,
+        publish_mode: Option<impl Into<String>>,
+        drop_reason: Option<impl Into<String>>,
+    ) -> Self {
+        Self {
+            path_count,
+            bytes,
+            spooled_bytes,
+            publish_status: publish_status.into(),
+            publish_mode: publish_mode.map(Into::into),
+            drop_reason: drop_reason.map(Into::into),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub(crate) struct PublishLaneRoutingMetadata {
     pub ignore_route_source: String,
     pub route_manifest_version: i64,
+    pub dropped_path_count: usize,
+    pub drop_reason_counts: BTreeMap<String, usize>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -477,15 +495,8 @@ mod tests {
             json!({"caller_id": "caller", "published": false}),
         );
         PublishLanesMetadata::new(
-            1,
-            "committed",
-            None::<String>,
-            0,
-            0,
-            0,
-            "empty",
-            None::<String>,
-            None::<String>,
+            SourcePublishLaneMetadata::new(1, "committed", None::<String>),
+            IgnoredPublishLaneMetadata::new(0, 0, 0, "empty", None::<String>, None::<String>),
             1,
         )
         .insert_into(&mut extras);
@@ -544,6 +555,8 @@ mod tests {
                 "routing": {
                     "ignore_route_source": "command_snapshot",
                     "route_manifest_version": 1,
+                    "dropped_path_count": 0,
+                    "drop_reason_counts": {},
                 },
             })
         );
@@ -586,6 +599,8 @@ mod tests {
                             "routing": {
                                 "ignore_route_source": "command_snapshot",
                                 "route_manifest_version": 0,
+                                "dropped_path_count": 0,
+                                "drop_reason_counts": {},
                             },
                         }),
                     );
@@ -658,6 +673,8 @@ mod tests {
                             "routing": {
                                 "ignore_route_source": "command_snapshot",
                                 "route_manifest_version": 0,
+                                "dropped_path_count": 0,
+                                "drop_reason_counts": {},
                             },
                         }),
                     );

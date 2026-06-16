@@ -21,6 +21,7 @@ pub use model::{
 
 pub use capture::{
     capture_upperdir, capture_upperdir_with_stats, CaptureError, CaptureStats, CapturedUpperdir,
+    ProtectedPathDrop, ProtectedPathDropReason,
 };
 pub use commit::{
     hash_current, CaptureRouteStats, ChangesetResult, CommitError, CommitOptions, CommitStatus,

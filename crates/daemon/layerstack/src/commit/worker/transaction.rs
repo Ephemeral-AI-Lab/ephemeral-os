@@ -266,23 +266,22 @@ fn validate_prepared(
         .map(|group| match group.route {
             Route::Drop => FileResult {
                 path: group.path.clone(),
-                status: CommitStatus::Dropped,
-                message: group
-                    .message
-                    .clone()
-                    .unwrap_or_else(|| "change dropped".to_owned()),
+                status: if group.reject_publish {
+                    CommitStatus::Failed
+                } else {
+                    CommitStatus::Dropped
+                },
+                message: group.drop_reason.map_or_else(
+                    || "change dropped".to_owned(),
+                    |reason| reason.as_str().to_owned(),
+                ),
                 observed_version: None,
-                observed_state: None,
+                observed_state: group.reject_publish.then(|| "route_rejected".to_owned()),
             },
             Route::Direct => accepted_file(&group.path),
-            Route::Gated => validate_gated_group(
-                root,
-                view,
-                manifest,
-                &group.path,
-                group.base_hash.as_deref(),
-                &mut parent_absent_cache,
-            ),
+            Route::Gated => {
+                validate_gated_group(root, view, manifest, group, &mut parent_absent_cache)
+            }
         })
         .collect()
 }
@@ -298,6 +297,50 @@ fn accepted_file(path: &LayerPath) -> FileResult {
 }
 
 fn validate_gated_group(
+    root: &Path,
+    view: &MergedView,
+    manifest: &Manifest,
+    group: &super::super::PublishDecision,
+    parent_absent_cache: &mut HashMap<String, bool>,
+) -> FileResult {
+    if let Some(validation_base_hashes) = &group.validation_base_hashes {
+        for (path, base_hash) in validation_base_hashes {
+            let result = validate_gated_path(
+                root,
+                view,
+                manifest,
+                path,
+                base_hash.as_deref(),
+                parent_absent_cache,
+            );
+            if !result.status.is_non_conflicting() {
+                return FileResult {
+                    path: group.path.clone(),
+                    status: result.status,
+                    message: format!(
+                        "opaque directory descendant {}: {}",
+                        path.as_str(),
+                        result.conflict_message(result.status.wire_str())
+                    ),
+                    observed_version: result.observed_version,
+                    observed_state: result.observed_state,
+                };
+            }
+        }
+        return accepted_file(&group.path);
+    }
+
+    validate_gated_path(
+        root,
+        view,
+        manifest,
+        &group.path,
+        group.base_hash.as_deref(),
+        parent_absent_cache,
+    )
+}
+
+fn validate_gated_path(
     root: &Path,
     view: &MergedView,
     manifest: &Manifest,

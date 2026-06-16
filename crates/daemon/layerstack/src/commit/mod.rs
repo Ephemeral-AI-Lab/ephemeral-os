@@ -1,4 +1,7 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
+use std::io;
+#[cfg(unix)]
+use std::os::unix::fs::{FileTypeExt, MetadataExt};
 use std::path::{Path, PathBuf};
 
 use ignore::gitignore::GitignoreBuilder;
@@ -7,12 +10,57 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
+use crate::capture::{ProtectedPathDrop, ProtectedPathDropReason};
+use crate::fs::resolve_layer_path;
 use crate::model::{hex_lower, CasError, LayerChange, LayerPath};
 use crate::{LayerStack, LayerStackError, Manifest, MergedView};
 
 mod worker;
 
 use worker::{CommitQueue, CommitTransaction, PreparedChangeset};
+
+pub const GIT_METADATA_UNSUPPORTED_DROP_REASON: &str = "git_metadata_unsupported";
+pub const UNSUPPORTED_SPECIAL_FILE_DROP_REASON: &str = "unsupported_special_file";
+pub const OPAQUE_DIR_PROTECTED_DESCENDANT_DROP_REASON: &str = "opaque_dir_protected_descendant";
+pub const OPAQUE_DIR_MIXED_ROUTES_DROP_REASON: &str = "opaque_dir_mixed_routes";
+pub const OPAQUE_DIR_EXPANSION_LIMIT_DROP_REASON: &str = "opaque_dir_expansion_limit";
+
+const OPAQUE_DIR_EXPANSION_LIMIT: usize = 4096;
+const LOGICAL_WHITEOUT_PREFIX: &str = ".wh.";
+const OPAQUE_MARKER: &str = ".wh..wh..opq";
+#[cfg(target_os = "linux")]
+const TRUSTED_OVERLAY_WHITEOUT_XATTR: &str = "trusted.overlay.whiteout";
+#[cfg(target_os = "linux")]
+const USER_OVERLAY_WHITEOUT_XATTR: &str = "user.overlay.whiteout";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum RouteDropReason {
+    GitMetadataUnsupported,
+    UnsupportedSpecialFile,
+    OpaqueDirProtectedDescendant,
+    OpaqueDirMixedRoutes,
+    OpaqueDirExpansionLimit,
+}
+
+impl RouteDropReason {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::GitMetadataUnsupported => GIT_METADATA_UNSUPPORTED_DROP_REASON,
+            Self::UnsupportedSpecialFile => UNSUPPORTED_SPECIAL_FILE_DROP_REASON,
+            Self::OpaqueDirProtectedDescendant => OPAQUE_DIR_PROTECTED_DESCENDANT_DROP_REASON,
+            Self::OpaqueDirMixedRoutes => OPAQUE_DIR_MIXED_ROUTES_DROP_REASON,
+            Self::OpaqueDirExpansionLimit => OPAQUE_DIR_EXPANSION_LIMIT_DROP_REASON,
+        }
+    }
+}
+
+impl From<ProtectedPathDropReason> for RouteDropReason {
+    fn from(reason: ProtectedPathDropReason) -> Self {
+        match reason {
+            ProtectedPathDropReason::UnsupportedSpecialFile => Self::UnsupportedSpecialFile,
+        }
+    }
+}
 
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
@@ -94,7 +142,9 @@ pub(crate) struct PublishDecision {
     pub(crate) path: LayerPath,
     pub(crate) route: Route,
     pub(crate) base_hash: Option<String>,
-    pub(crate) message: Option<String>,
+    pub(crate) drop_reason: Option<RouteDropReason>,
+    pub(crate) reject_publish: bool,
+    pub(crate) validation_base_hashes: Option<Vec<(LayerPath, Option<String>)>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -148,12 +198,31 @@ pub struct CommitOptions {
     pub auto_squash_max_depth: usize,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CaptureRouteStats {
     pub gated_path_count: usize,
     pub direct_path_count: usize,
     pub drop_path_count: usize,
     pub direct_bytes: u64,
+    pub drop_reason_counts: BTreeMap<String, usize>,
+}
+
+impl CaptureRouteStats {
+    #[must_use]
+    pub fn drop_reason_count(&self, reason: &str) -> usize {
+        self.drop_reason_counts.get(reason).copied().unwrap_or(0)
+    }
+
+    fn record_drop_reason(&mut self, reason: &str) {
+        *self
+            .drop_reason_counts
+            .entry(reason.to_owned())
+            .or_default() += 1;
+    }
+
+    fn record_route_drop_reason(&mut self, reason: RouteDropReason) {
+        self.record_drop_reason(reason.as_str());
+    }
 }
 
 impl Default for CommitOptions {
@@ -300,25 +369,45 @@ impl CommitWriter {
         base_hashes: &[(LayerPath, Option<String>)],
     ) -> Result<ChangesetResult, CommitError> {
         let stack = self.open_stack()?;
+        let manifest = stack
+            .read_active_manifest()
+            .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
+        let view = MergedView::new(self.root.clone());
+        let source = ManifestIgnoreSource {
+            view: &view,
+            manifest: &manifest,
+        };
         let mut path_groups = Vec::with_capacity(changes.len());
         for change in changes {
             let path = change.path().clone();
-            let route = route_for_path(&stack, &path)
-                .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
-            let base_hash = if route == Route::Gated {
-                match base_hashes.iter().find(|(candidate, _)| candidate == &path) {
-                    Some((_, hash)) => hash.clone(),
-                    None => stack_base_hash(&stack, &path)?,
-                }
+            let decision = if matches!(change, LayerChange::OpaqueDir { .. }) {
+                publish_decision_for_opaque_dir(
+                    &self.root,
+                    &source,
+                    &view,
+                    &manifest,
+                    &path,
+                    OPAQUE_DIR_EXPANSION_LIMIT,
+                )?
             } else {
-                None
+                let route = route_for_path(&stack, &path)
+                    .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
+                let base_hash = if route == Route::Gated {
+                    match base_hashes.iter().find(|(candidate, _)| candidate == &path) {
+                        Some((_, hash)) => hash.clone(),
+                        None => stack_base_hash(&stack, &path)?,
+                    }
+                } else {
+                    None
+                };
+                publish_decision(
+                    path,
+                    route,
+                    base_hash,
+                    drop_reason_code(route, change.path()),
+                )
             };
-            path_groups.push(PublishDecision {
-                path,
-                route,
-                base_hash,
-                message: drop_message(route),
-            });
+            path_groups.push(decision);
         }
         self.apply_changeset_with_decisions(changes, snapshot_version, atomic, path_groups)
     }
@@ -330,11 +419,30 @@ impl CommitWriter {
         atomic: bool,
         path_groups: Vec<PublishDecision>,
     ) -> Result<ChangesetResult, CommitError> {
-        if changes.len() != path_groups.len() {
+        if changes.len() > path_groups.len() {
             return Err(CommitError::RoutePreparation(format!(
-                "changeset decision count mismatch: {} changes, {} decisions",
+                "changeset has more payload changes than route decisions: {} changes, {} decisions",
                 changes.len(),
                 path_groups.len()
+            )));
+        }
+        for (change, group) in changes.iter().zip(path_groups.iter()) {
+            if change.path() != &group.path {
+                return Err(CommitError::RoutePreparation(format!(
+                    "changeset decision path mismatch: change {}, decision {}",
+                    change.path().as_str(),
+                    group.path.as_str()
+                )));
+            }
+        }
+        if let Some(group) = path_groups
+            .iter()
+            .skip(changes.len())
+            .find(|group| group.route != Route::Drop)
+        {
+            return Err(CommitError::RoutePreparation(format!(
+                "payload-less route decision must be dropped: {}",
+                group.path.as_str()
             )));
         }
         let publishable = changes
@@ -391,6 +499,7 @@ fn worker_handoff_event(
             "gated_path_count": route_count(path_groups, Route::Gated),
             "direct_path_count": route_count(path_groups, Route::Direct),
             "drop_path_count": route_count(path_groups, Route::Drop),
+            "drop_reason_counts": route_drop_reason_counts(path_groups),
         }),
     )
 }
@@ -402,59 +511,210 @@ fn route_count(path_groups: &[PublishDecision], route: Route) -> usize {
         .count()
 }
 
-pub fn capture_route_stats_for_manifest(
+fn route_drop_reason_counts(path_groups: &[PublishDecision]) -> BTreeMap<String, usize> {
+    let mut counts = BTreeMap::new();
+    for group in path_groups
+        .iter()
+        .filter(|group| group.route == Route::Drop)
+    {
+        if let Some(reason) = group.drop_reason {
+            *counts.entry(reason.as_str().to_owned()).or_default() += 1;
+        }
+    }
+    counts
+}
+
+pub fn capture_route_stats_for_manifest_with_protected_drops(
     root: &Path,
     manifest: &Manifest,
     changes: &[LayerChange],
+    protected_drops: &[ProtectedPathDrop],
 ) -> Result<CaptureRouteStats, CommitError> {
-    let decisions = publish_decisions_for_manifest(root, manifest, changes)?;
+    let decisions = publish_decisions_for_manifest_with_protected_drops(
+        root,
+        manifest,
+        changes,
+        protected_drops,
+    )?;
     let mut stats = CaptureRouteStats::default();
-    for (change, decision) in changes.iter().zip(decisions.iter()) {
+    for (index, decision) in decisions.iter().enumerate() {
         match decision.route {
             Route::Gated => stats.gated_path_count += 1,
             Route::Direct => {
                 stats.direct_path_count += 1;
-                if let LayerChange::Write { content, .. } = change {
+                if let Some(LayerChange::Write { content, .. }) = changes.get(index) {
                     stats.direct_bytes = stats
                         .direct_bytes
                         .saturating_add(u64::try_from(content.len()).unwrap_or(u64::MAX));
                 }
             }
-            Route::Drop => stats.drop_path_count += 1,
+            Route::Drop => {
+                stats.drop_path_count += 1;
+                if let Some(reason) = decision.drop_reason {
+                    stats.record_route_drop_reason(reason);
+                }
+            }
         }
     }
     Ok(stats)
 }
 
-pub(crate) fn publish_decisions_for_manifest(
+pub(crate) fn publish_decisions_for_manifest_with_protected_drops(
     root: &Path,
     manifest: &Manifest,
     changes: &[LayerChange],
+    protected_drops: &[ProtectedPathDrop],
 ) -> Result<Vec<PublishDecision>, CommitError> {
     let view = MergedView::new(root.to_path_buf());
     let source = ManifestIgnoreSource {
         view: &view,
         manifest,
     };
-    changes
+    let mut decisions = changes
         .iter()
         .map(|change| {
-            let path = change.path().clone();
-            let route = route_for_path_from_source(&source, &path)
-                .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
-            let base_hash = if route == Route::Gated {
-                snapshot_base_hash(&view, manifest, change)?
+            if let LayerChange::OpaqueDir { path } = change {
+                publish_decision_for_opaque_dir(
+                    root,
+                    &source,
+                    &view,
+                    manifest,
+                    path,
+                    OPAQUE_DIR_EXPANSION_LIMIT,
+                )
             } else {
-                None
-            };
-            Ok(PublishDecision {
-                path,
-                route,
-                base_hash,
-                message: drop_message(route),
-            })
+                let path = change.path().clone();
+                let route = route_for_path_from_source(&source, &path)
+                    .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
+                let base_hash = if route == Route::Gated {
+                    snapshot_base_hash(&view, manifest, change)?
+                } else {
+                    None
+                };
+                Ok(publish_decision(
+                    path,
+                    route,
+                    base_hash,
+                    drop_reason_code(route, change.path()),
+                ))
+            }
         })
-        .collect()
+        .collect::<std::result::Result<Vec<_>, CommitError>>()?;
+    decisions.extend(
+        protected_drops
+            .iter()
+            .map(publish_decision_for_protected_drop),
+    );
+    Ok(decisions)
+}
+
+fn publish_decision_for_protected_drop(drop: &ProtectedPathDrop) -> PublishDecision {
+    PublishDecision {
+        path: drop.path.clone(),
+        route: Route::Drop,
+        base_hash: None,
+        drop_reason: Some(RouteDropReason::from(drop.reason)),
+        reject_publish: false,
+        validation_base_hashes: None,
+    }
+}
+
+fn publish_decision(
+    path: LayerPath,
+    route: Route,
+    base_hash: Option<String>,
+    drop_reason: Option<RouteDropReason>,
+) -> PublishDecision {
+    PublishDecision {
+        path,
+        route,
+        base_hash,
+        drop_reason,
+        reject_publish: false,
+        validation_base_hashes: None,
+    }
+}
+
+fn rejected_drop_decision(path: LayerPath, drop_reason: RouteDropReason) -> PublishDecision {
+    PublishDecision {
+        path,
+        route: Route::Drop,
+        base_hash: None,
+        drop_reason: Some(drop_reason),
+        reject_publish: true,
+        validation_base_hashes: None,
+    }
+}
+
+fn publish_decision_for_opaque_dir(
+    root: &Path,
+    source: &impl IgnoreSource,
+    view: &MergedView,
+    manifest: &Manifest,
+    path: &LayerPath,
+    expansion_limit: usize,
+) -> Result<PublishDecision, CommitError> {
+    let hidden = match visible_paths_hidden_by_opaque_dir(root, manifest, path, expansion_limit)? {
+        OpaqueDirExpansion::Complete(paths) => paths,
+        OpaqueDirExpansion::LimitExceeded => {
+            return Ok(rejected_drop_decision(
+                path.clone(),
+                RouteDropReason::OpaqueDirExpansionLimit,
+            ));
+        }
+    };
+
+    if hidden.is_empty() {
+        let route = route_for_path_from_source(source, path)
+            .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
+        let mut decision =
+            publish_decision(path.clone(), route, None, drop_reason_code(route, path));
+        if route == Route::Gated {
+            decision.validation_base_hashes = Some(Vec::new());
+        }
+        return Ok(decision);
+    }
+
+    let mut gated_paths = Vec::new();
+    let mut direct_paths = Vec::new();
+    for hidden_path in &hidden {
+        match route_for_path_from_source(source, hidden_path)
+            .map_err(|err| CommitError::RoutePreparation(err.to_string()))?
+        {
+            Route::Drop => {
+                return Ok(rejected_drop_decision(
+                    path.clone(),
+                    RouteDropReason::OpaqueDirProtectedDescendant,
+                ));
+            }
+            Route::Gated => gated_paths.push(hidden_path.clone()),
+            Route::Direct => direct_paths.push(hidden_path.clone()),
+        }
+    }
+
+    if !gated_paths.is_empty() && !direct_paths.is_empty() {
+        return Ok(rejected_drop_decision(
+            path.clone(),
+            RouteDropReason::OpaqueDirMixedRoutes,
+        ));
+    }
+
+    if !direct_paths.is_empty() {
+        return Ok(publish_decision(path.clone(), Route::Direct, None, None));
+    }
+
+    let validation_base_hashes = gated_paths
+        .iter()
+        .map(|hidden_path| {
+            Ok((
+                hidden_path.clone(),
+                snapshot_base_hash_for_path(view, manifest, hidden_path)?,
+            ))
+        })
+        .collect::<Result<Vec<_>, CommitError>>()?;
+    let mut decision = publish_decision(path.clone(), Route::Gated, None, None);
+    decision.validation_base_hashes = Some(validation_base_hashes);
+    Ok(decision)
 }
 
 fn route_for_path(stack: &LayerStack, path: &LayerPath) -> Result<Route, LayerStackError> {
@@ -465,7 +725,7 @@ fn route_for_path_from_source(
     source: &impl IgnoreSource,
     path: &LayerPath,
 ) -> Result<Route, LayerStackError> {
-    if path.as_str() == ".git" || path.as_str().starts_with(".git/") {
+    if is_git_metadata_path(path) {
         return Ok(Route::Drop);
     }
     if path_is_ignored(source, path.as_str())? {
@@ -475,8 +735,13 @@ fn route_for_path_from_source(
     }
 }
 
-fn drop_message(route: Route) -> Option<String> {
-    (route == Route::Drop).then(|| ".git paths are not mutable through OCC".to_owned())
+fn drop_reason_code(route: Route, path: &LayerPath) -> Option<RouteDropReason> {
+    (route == Route::Drop && is_git_metadata_path(path))
+        .then_some(RouteDropReason::GitMetadataUnsupported)
+}
+
+fn is_git_metadata_path(path: &LayerPath) -> bool {
+    path.as_str().split('/').any(|part| part == ".git")
 }
 
 fn stack_base_hash(stack: &LayerStack, path: &LayerPath) -> Result<Option<String>, CommitError> {
@@ -494,8 +759,16 @@ fn snapshot_base_hash(
     if matches!(change, LayerChange::OpaqueDir { .. }) {
         return Ok(None);
     }
+    snapshot_base_hash_for_path(view, manifest, change.path())
+}
+
+fn snapshot_base_hash_for_path(
+    view: &MergedView,
+    manifest: &Manifest,
+    path: &LayerPath,
+) -> Result<Option<String>, CommitError> {
     let (bytes, exists) = view
-        .read_bytes(change.path().as_str(), manifest)
+        .read_bytes(path.as_str(), manifest)
         .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
     Ok(hash_current(bytes.as_deref(), exists))
 }
@@ -605,6 +878,232 @@ fn join_rel(prefix: &str, child: &str) -> String {
     } else {
         format!("{prefix}/{child}")
     }
+}
+
+enum OpaqueDirExpansion {
+    Complete(Vec<LayerPath>),
+    LimitExceeded,
+}
+
+fn visible_paths_hidden_by_opaque_dir(
+    root: &Path,
+    manifest: &Manifest,
+    opaque_path: &LayerPath,
+    expansion_limit: usize,
+) -> Result<OpaqueDirExpansion, CommitError> {
+    let mut visible = BTreeSet::new();
+    let mut blockers = Vec::<String>::new();
+    for layer in &manifest.layers {
+        let layer_dir = resolve_layer_path(root, &layer.path);
+        if !layer_dir.is_dir() {
+            return Err(CommitError::RoutePreparation(format!(
+                "manifest references missing layer {}: {}",
+                layer.layer_id, layer.path
+            )));
+        }
+        let mut layer_blockers = Vec::new();
+        collect_opaque_hidden_paths_from_layer(
+            &layer_dir,
+            opaque_path.as_str(),
+            &blockers,
+            &mut visible,
+            &mut layer_blockers,
+            expansion_limit,
+        )?;
+        if visible.len() > expansion_limit {
+            return Ok(OpaqueDirExpansion::LimitExceeded);
+        }
+        blockers.extend(layer_blockers);
+    }
+    Ok(OpaqueDirExpansion::Complete(visible.into_iter().collect()))
+}
+
+fn collect_opaque_hidden_paths_from_layer(
+    layer_dir: &Path,
+    opaque_path: &str,
+    older_blockers: &[String],
+    visible: &mut BTreeSet<LayerPath>,
+    layer_blockers: &mut Vec<String>,
+    expansion_limit: usize,
+) -> Result<(), CommitError> {
+    if path_is_blocked(opaque_path, older_blockers) {
+        return Ok(());
+    }
+    collect_logical_whiteout_for_exact_path(layer_dir, opaque_path, layer_blockers);
+
+    let target = resolve_layer_path(layer_dir, opaque_path);
+    let Ok(meta) = std::fs::symlink_metadata(&target) else {
+        return Ok(());
+    };
+    if is_kernel_whiteout_meta(&target, &meta) {
+        layer_blockers.push(opaque_path.to_owned());
+        return Ok(());
+    }
+    if meta.file_type().is_symlink() || meta.is_file() {
+        insert_visible_hidden_path(visible, opaque_path, expansion_limit)?;
+        layer_blockers.push(opaque_path.to_owned());
+        return Ok(());
+    }
+    if !meta.is_dir() {
+        return Ok(());
+    }
+
+    let mut stack = vec![target];
+    while let Some(dir) = stack.pop() {
+        let mut entries = read_sorted_dir(&dir)?;
+        for entry in entries.drain(..) {
+            let path = entry.path();
+            let rel = layer_relative_string(layer_dir, &path)?;
+            if !is_equal_or_descendant(&rel, opaque_path) {
+                continue;
+            }
+            let name = path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("");
+            let meta = std::fs::symlink_metadata(&path)
+                .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
+            if name == OPAQUE_MARKER {
+                if let Some(target) = parent_rel(&rel) {
+                    layer_blockers.push(target);
+                }
+                continue;
+            }
+            if let Some(target) = logical_whiteout_target(&rel, name) {
+                layer_blockers.push(target);
+                continue;
+            }
+            if is_kernel_whiteout_meta(&path, &meta) {
+                layer_blockers.push(rel);
+                continue;
+            }
+            if path_is_blocked(&rel, older_blockers) {
+                continue;
+            }
+            if meta.file_type().is_symlink() || meta.is_file() {
+                insert_visible_hidden_path(visible, &rel, expansion_limit)?;
+                layer_blockers.push(rel);
+            } else if meta.is_dir() {
+                stack.push(path);
+            }
+        }
+    }
+    Ok(())
+}
+
+fn collect_logical_whiteout_for_exact_path(
+    layer_dir: &Path,
+    path: &str,
+    layer_blockers: &mut Vec<String>,
+) {
+    let Some((parent, name)) = path.rsplit_once('/') else {
+        let whiteout = resolve_layer_path(layer_dir, &format!("{LOGICAL_WHITEOUT_PREFIX}{path}"));
+        if whiteout.exists() {
+            layer_blockers.push(path.to_owned());
+        }
+        return;
+    };
+    let whiteout = resolve_layer_path(
+        layer_dir,
+        &format!("{parent}/{LOGICAL_WHITEOUT_PREFIX}{name}"),
+    );
+    if whiteout.exists() {
+        layer_blockers.push(path.to_owned());
+    }
+}
+
+fn read_sorted_dir(dir: &Path) -> Result<Vec<std::fs::DirEntry>, CommitError> {
+    let mut entries = std::fs::read_dir(dir)
+        .map_err(|err| CommitError::RoutePreparation(err.to_string()))?
+        .collect::<io::Result<Vec<_>>>()
+        .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
+    entries.sort_by_key(std::fs::DirEntry::path);
+    Ok(entries)
+}
+
+fn insert_visible_hidden_path(
+    visible: &mut BTreeSet<LayerPath>,
+    path: &str,
+    _expansion_limit: usize,
+) -> Result<(), CommitError> {
+    visible.insert(LayerPath::parse(path)?);
+    Ok(())
+}
+
+fn layer_relative_string(layer_dir: &Path, path: &Path) -> Result<String, CommitError> {
+    let rel = path
+        .strip_prefix(layer_dir)
+        .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
+    let mut parts = Vec::new();
+    for component in rel.components() {
+        let part = component.as_os_str().to_str().ok_or_else(|| {
+            CommitError::RoutePreparation(format!(
+                "layer path component is not valid UTF-8: {:?}",
+                component.as_os_str().as_encoded_bytes()
+            ))
+        })?;
+        parts.push(part);
+    }
+    Ok(parts.join("/"))
+}
+
+fn logical_whiteout_target(rel: &str, name: &str) -> Option<String> {
+    if !name.starts_with(LOGICAL_WHITEOUT_PREFIX) || name == OPAQUE_MARKER {
+        return None;
+    }
+    let target_name = name.strip_prefix(LOGICAL_WHITEOUT_PREFIX)?;
+    Some(match rel.rsplit_once('/') {
+        Some((parent, _)) => format!("{parent}/{target_name}"),
+        None => target_name.to_owned(),
+    })
+}
+
+fn parent_rel(rel: &str) -> Option<String> {
+    rel.rsplit_once('/')
+        .map(|(parent, _)| parent.to_owned())
+        .filter(|parent| !parent.is_empty())
+}
+
+fn path_is_blocked(path: &str, blockers: &[String]) -> bool {
+    blockers
+        .iter()
+        .any(|blocker| is_equal_or_descendant(path, blocker))
+}
+
+fn is_equal_or_descendant(path: &str, ancestor: &str) -> bool {
+    path == ancestor
+        || path
+            .strip_prefix(ancestor)
+            .is_some_and(|suffix| suffix.starts_with('/'))
+}
+
+#[cfg(unix)]
+fn is_kernel_whiteout_meta(_path: &Path, meta: &std::fs::Metadata) -> bool {
+    if meta.file_type().is_char_device() && meta.rdev() == 0 {
+        return true;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        meta.is_file()
+            && meta.len() == 0
+            && (has_xattr(_path, TRUSTED_OVERLAY_WHITEOUT_XATTR)
+                || has_xattr(_path, USER_OVERLAY_WHITEOUT_XATTR))
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        false
+    }
+}
+
+#[cfg(not(unix))]
+const fn is_kernel_whiteout_meta(_path: &Path, _meta: &std::fs::Metadata) -> bool {
+    false
+}
+
+#[cfg(target_os = "linux")]
+fn has_xattr(path: &Path, name: &str) -> bool {
+    let mut value = [0_u8; 1];
+    rustix::fs::lgetxattr(path, name, &mut value).is_ok()
 }
 
 #[cfg(test)]

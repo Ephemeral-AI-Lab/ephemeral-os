@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::path::Path;
 use std::time::Instant;
 
@@ -10,7 +11,8 @@ use workspace::IsolatedWorkspaceBinding;
 use workspace::{capture_upperdir, EphemeralWorkspace, TreeResourceStats};
 
 use super::contract::{
-    u64_to_f64_saturating, CommandMetadata, CommandResponse, PublishLanesMetadata,
+    u64_to_f64_saturating, CommandMetadata, CommandResponse, IgnoredPublishLaneMetadata,
+    PublishLanesMetadata, SourcePublishLaneMetadata,
 };
 use super::outcome::{
     ChangedPathKinds, FinalizeCommandRequest, MutationSource, WorkspaceApiError, WorkspaceConflict,
@@ -56,11 +58,12 @@ pub(crate) fn finalize_ephemeral_command(
         }
         Err(error) => return Err(finalize_error(error)),
     };
-    let route_stats = service::capture_route_stats_for_snapshot(
+    let route_stats = service::capture_route_stats_for_snapshot_with_protected_drops(
         root,
         snapshot.manifest_version,
         &snapshot.layer_paths,
         &captured.changes,
+        &captured.protected_drops,
     )
     .map_err(finalize_error)?;
     let changed_path_kinds: ChangedPathKinds = changed_path_kind_pairs(&captured.changes).collect();
@@ -89,6 +92,16 @@ pub(crate) fn finalize_ephemeral_command(
     copy_runner_timings(&mut timings, request.runner_result.as_ref());
 
     if !command_success {
+        let publish_lanes = publish_lanes_with_route_drop_summary(
+            PublishLanesMetadata::dropped_command_failed_with_counts(
+                route_stats.gated_path_count,
+                route_stats.direct_path_count,
+                route_stats.direct_bytes,
+                snapshot.manifest_version,
+            ),
+            route_stats.drop_path_count,
+            route_stats.drop_reason_counts.clone(),
+        );
         insert_command_timings(
             &mut timings,
             captured_path_count,
@@ -108,24 +121,18 @@ pub(crate) fn finalize_ephemeral_command(
                 conflict: None,
                 conflict_reason: None,
                 timings,
-                extras: publish_lanes_extras(
-                    PublishLanesMetadata::dropped_command_failed_with_counts(
-                        route_stats.gated_path_count,
-                        route_stats.direct_path_count,
-                        route_stats.direct_bytes,
-                        snapshot.manifest_version,
-                    ),
-                ),
+                extras: publish_lanes_extras(publish_lanes),
             },
         ));
     }
 
     let publish_start = std::time::Instant::now();
-    let changeset = service::publish_capture_with_options(
+    let changeset = service::publish_capture_with_options_and_protected_drops(
         root,
         snapshot.manifest_version,
         &snapshot.layer_paths,
         &captured.changes,
+        &captured.protected_drops,
         commit_options,
     )
     .map_err(finalize_error)?;
@@ -308,18 +315,33 @@ fn publish_lanes_from_changeset(
     let (ignored_status, ignored_mode, ignored_drop_reason) =
         ignored_publish_outcome(changeset, &route_stats, source_status);
 
-    PublishLanesMetadata::new(
-        source_path_count,
-        source_status,
-        None::<String>,
-        route_stats.direct_path_count,
-        route_stats.direct_bytes,
-        0,
-        ignored_status,
-        ignored_mode,
-        ignored_drop_reason,
+    let publish_lanes = PublishLanesMetadata::new(
+        SourcePublishLaneMetadata::new(source_path_count, source_status, None::<String>),
+        IgnoredPublishLaneMetadata::new(
+            route_stats.direct_path_count,
+            route_stats.direct_bytes,
+            0,
+            ignored_status,
+            ignored_mode,
+            ignored_drop_reason,
+        ),
         route_manifest_version,
+    );
+    publish_lanes_with_route_drop_summary(
+        publish_lanes,
+        route_stats.drop_path_count,
+        route_stats.drop_reason_counts,
     )
+}
+
+fn publish_lanes_with_route_drop_summary(
+    mut publish_lanes: PublishLanesMetadata,
+    dropped_path_count: usize,
+    drop_reason_counts: BTreeMap<String, usize>,
+) -> PublishLanesMetadata {
+    publish_lanes.routing.dropped_path_count = dropped_path_count;
+    publish_lanes.routing.drop_reason_counts = drop_reason_counts;
+    publish_lanes
 }
 
 fn source_publish_status(changeset: &ChangesetResult, source_path_count: usize) -> &'static str {
@@ -630,7 +652,7 @@ fn finalize_error(error: impl std::fmt::Display) -> WorkspaceApiError {
 #[cfg(test)]
 mod tests {
     use crate::command::CommandStatus;
-    use layerstack::LayerStack;
+    use layerstack::{LayerChange, LayerStack};
     use serde_json::Value;
     use workspace::TreeResourceStats;
 
@@ -769,6 +791,201 @@ mod tests {
         assert_non_success_discards(CommandStatus::Cancelled, Some(130))
     }
 
+    #[test]
+    fn successful_ephemeral_command_reports_git_metadata_drop_without_publishing() -> TestResult {
+        let fixture = EphemeralFinalizeFixture::new("git-metadata-drop")?;
+        let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
+        let workspace =
+            EphemeralWorkspace::create(&fixture.scratch, "command", "git-metadata-drop")?;
+        write_upperdir_file(
+            &workspace,
+            ".git/config",
+            b"[core]\nrepositoryformatversion = 0\n",
+        )?;
+
+        let response = finalize_ephemeral_command(
+            &fixture.root,
+            &snapshot,
+            &workspace,
+            CommitOptions::default(),
+            FinalizeCommandRequest {
+                runner_result: None,
+                command_elapsed_s: 0.25,
+                status: CommandStatus::Ok,
+                exit_code: Some(0),
+                stdout: "stdout".to_owned(),
+                stderr: String::new(),
+                command_id: Some("cmd_git_metadata_drop".to_owned()),
+            },
+        )?;
+        service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+        let wire = response.to_wire_value();
+        assert_eq!(wire["status"], "ok");
+        assert_eq!(wire["success"], true);
+        assert_eq!(wire["changed_paths"], serde_json::json!([]));
+        assert_eq!(wire["publish_lanes"]["source"]["publish_status"], "empty");
+        assert_eq!(wire["publish_lanes"]["ignored"]["publish_status"], "empty");
+        assert_eq!(wire["publish_lanes"]["ignored"]["path_count"], 0);
+        assert_eq!(
+            wire["publish_lanes"]["routing"]["dropped_path_count"],
+            serde_json::json!(1)
+        );
+        assert_eq!(
+            wire["publish_lanes"]["routing"]["drop_reason_counts"],
+            serde_json::json!({"git_metadata_unsupported": 1})
+        );
+        assert_eq!(
+            wire["publish_lanes"]["routing"]["route_manifest_version"],
+            snapshot.manifest_version
+        );
+        assert_eq!(
+            LayerStack::open(fixture.root.clone())?
+                .read_active_manifest()?
+                .version,
+            snapshot.manifest_version,
+            ".git-only dropped command must not advance the manifest"
+        );
+        let (_bytes, exists) = LayerStack::open(fixture.root.clone())?.read_bytes(".git/config")?;
+        assert!(
+            !exists,
+            ".git metadata must not publish through command finalize"
+        );
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn successful_ephemeral_command_reports_unsupported_special_file_drop() -> TestResult {
+        let fixture = EphemeralFinalizeFixture::new("unsupported-special-drop")?;
+        let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
+        let workspace =
+            EphemeralWorkspace::create(&fixture.scratch, "command", "unsupported-special-drop")?;
+        let fifo_path = workspace.dirs().upperdir.join("run.fifo");
+        let status = std::process::Command::new("mkfifo")
+            .arg(&fifo_path)
+            .status()?;
+        assert!(status.success(), "mkfifo failed with status {status}");
+
+        let response = finalize_ephemeral_command(
+            &fixture.root,
+            &snapshot,
+            &workspace,
+            CommitOptions::default(),
+            FinalizeCommandRequest {
+                runner_result: None,
+                command_elapsed_s: 0.25,
+                status: CommandStatus::Ok,
+                exit_code: Some(0),
+                stdout: "stdout".to_owned(),
+                stderr: String::new(),
+                command_id: Some("cmd_unsupported_special_drop".to_owned()),
+            },
+        )?;
+        service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+        let wire = response.to_wire_value();
+        assert_eq!(wire["status"], "ok");
+        assert_eq!(wire["success"], true);
+        assert_eq!(wire["changed_paths"], serde_json::json!([]));
+        assert_eq!(wire["publish_lanes"]["source"]["publish_status"], "empty");
+        assert_eq!(wire["publish_lanes"]["ignored"]["publish_status"], "empty");
+        assert_eq!(
+            wire["publish_lanes"]["routing"]["dropped_path_count"],
+            serde_json::json!(1)
+        );
+        assert_eq!(
+            wire["publish_lanes"]["routing"]["drop_reason_counts"],
+            serde_json::json!({"unsupported_special_file": 1})
+        );
+        assert_eq!(
+            LayerStack::open(fixture.root.clone())?
+                .read_active_manifest()?
+                .version,
+            snapshot.manifest_version,
+            "special-file-only dropped command must not advance the manifest"
+        );
+        let (_bytes, exists) = LayerStack::open(fixture.root.clone())?.read_bytes("run.fifo")?;
+        assert!(
+            !exists,
+            "unsupported special file must not publish through command finalize"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn successful_ephemeral_command_reports_opaque_mixed_route_drop() -> TestResult {
+        let fixture = EphemeralFinalizeFixture::new("opaque-mixed-route-drop")?;
+        LayerStack::open(fixture.root.clone())?.publish_layer(&[
+            LayerChange::Write {
+                path: layerstack::LayerPath::parse("tree/src.txt")?,
+                content: b"source".to_vec(),
+            },
+            LayerChange::Write {
+                path: layerstack::LayerPath::parse("tree/ignored/cache.txt")?,
+                content: b"ignored".to_vec(),
+            },
+        ])?;
+        let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
+        let workspace =
+            EphemeralWorkspace::create(&fixture.scratch, "command", "opaque-mixed-route-drop")?;
+        write_upperdir_opaque_marker(&workspace, "tree")?;
+
+        let response = finalize_ephemeral_command(
+            &fixture.root,
+            &snapshot,
+            &workspace,
+            CommitOptions::default(),
+            FinalizeCommandRequest {
+                runner_result: None,
+                command_elapsed_s: 0.25,
+                status: CommandStatus::Ok,
+                exit_code: Some(0),
+                stdout: "stdout".to_owned(),
+                stderr: String::new(),
+                command_id: Some("cmd_opaque_mixed_route_drop".to_owned()),
+            },
+        )?;
+        service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+        let wire = response.to_wire_value();
+        assert_eq!(wire["status"], "ok");
+        assert_eq!(wire["success"], false);
+        assert_eq!(wire["changed_paths"], serde_json::json!([]));
+        assert_eq!(
+            wire["publish_lanes"]["routing"]["dropped_path_count"],
+            serde_json::json!(1)
+        );
+        assert_eq!(
+            wire["publish_lanes"]["routing"]["drop_reason_counts"],
+            serde_json::json!({"opaque_dir_mixed_routes": 1})
+        );
+        assert_eq!(
+            wire["publish_lanes"]["routing"]["route_manifest_version"],
+            snapshot.manifest_version
+        );
+        assert_eq!(
+            LayerStack::open(fixture.root.clone())?
+                .read_active_manifest()?
+                .version,
+            snapshot.manifest_version,
+            "mixed-route opaque marker must not advance the manifest"
+        );
+        assert_eq!(
+            LayerStack::open(fixture.root.clone())?
+                .read_text("tree/src.txt")?
+                .0,
+            "source"
+        );
+        assert_eq!(
+            LayerStack::open(fixture.root.clone())?
+                .read_text("tree/ignored/cache.txt")?
+                .0,
+            "ignored"
+        );
+        Ok(())
+    }
+
     fn assert_non_success_discards(status: CommandStatus, exit_code: Option<i64>) -> TestResult {
         let fixture = EphemeralFinalizeFixture::new(status.as_str())?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
@@ -874,6 +1091,17 @@ mod tests {
         }
         let file = std::fs::File::create(path)?;
         file.set_len(len)
+    }
+
+    fn write_upperdir_opaque_marker(
+        workspace: &EphemeralWorkspace,
+        path: &str,
+    ) -> std::io::Result<()> {
+        let marker = workspace.dirs().upperdir.join(path).join(".wh..wh..opq");
+        if let Some(parent) = marker.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(marker, b"")
     }
 
     struct EphemeralFinalizeFixture {

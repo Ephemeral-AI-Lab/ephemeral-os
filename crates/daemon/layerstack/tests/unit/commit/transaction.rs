@@ -29,7 +29,9 @@ fn publish_decision(
         path: lp(path)?,
         route,
         base_hash,
-        message: None,
+        drop_reason: None,
+        reject_publish: false,
+        validation_base_hashes: None,
     })
 }
 

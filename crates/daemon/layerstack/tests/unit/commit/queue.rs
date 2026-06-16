@@ -11,7 +11,9 @@ fn prepared(path: &str, atomic: bool) -> TestResult<PreparedChangeset> {
             path: path.clone(),
             route: Route::Gated,
             base_hash: None,
-            message: None,
+            drop_reason: None,
+            reject_publish: false,
+            validation_base_hashes: None,
         }],
         changes: vec![crate::model::LayerChange::Write {
             path,

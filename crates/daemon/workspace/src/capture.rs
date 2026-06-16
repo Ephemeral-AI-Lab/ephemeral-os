@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use layerstack::LayerChange;
+use layerstack::{LayerChange, ProtectedPathDrop};
 
 use crate::tree::TreeResourceStats;
 
@@ -8,6 +8,7 @@ use crate::tree::TreeResourceStats;
 #[derive(Debug, Clone, PartialEq)]
 pub struct CapturedChanges {
     pub changes: Vec<LayerChange>,
+    pub protected_drops: Vec<ProtectedPathDrop>,
     pub stats: TreeResourceStats,
     pub capture_s: f64,
 }
@@ -44,6 +45,7 @@ pub fn capture_upperdir(upperdir: &Path) -> Result<CapturedChanges, CaptureError
         })?;
     Ok(CapturedChanges {
         changes: captured.changes,
+        protected_drops: captured.protected_drops,
         stats: TreeResourceStats::from(captured.stats),
         capture_s: start.elapsed().as_secs_f64(),
     })

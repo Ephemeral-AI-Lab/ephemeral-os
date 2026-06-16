@@ -54,6 +54,8 @@ fn command_finalize_conflict_response_matches_fixture() {
                         "routing": {
                             "ignore_route_source": "command_snapshot",
                             "route_manifest_version": 0,
+                            "dropped_path_count": 0,
+                            "drop_reason_counts": {},
                         },
                     }),
                 );

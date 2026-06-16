@@ -119,6 +119,8 @@ fn command_finalize_trace_record_carries_origin_and_eviction_markers() {
             "routing": {
                 "ignore_route_source": "command_snapshot",
                 "route_manifest_version": 1,
+                "dropped_path_count": 0,
+                "drop_reason_counts": {},
             },
         })),
     };
@@ -172,6 +174,11 @@ fn command_finalize_trace_record_carries_origin_and_eviction_markers() {
     assert_eq!(
         lanes.details.value["ignored"]["publish_status"],
         "dropped_command_failed"
+    );
+    assert_eq!(lanes.details.value["routing"]["dropped_path_count"], 0);
+    assert_eq!(
+        lanes.details.value["routing"]["drop_reason_counts"],
+        json!({})
     );
 
     let exit_taken = record

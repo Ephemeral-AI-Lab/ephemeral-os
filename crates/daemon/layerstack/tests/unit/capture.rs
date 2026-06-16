@@ -33,6 +33,40 @@ fn captures_upperdir_files_whiteouts_symlinks_and_opaque_markers() -> TestResult
     Ok(())
 }
 
+#[cfg(unix)]
+#[test]
+fn captures_unsupported_special_files_as_protected_drops() -> TestResult {
+    let fixture = Fixture::new("capture_unsupported_special_file")?;
+    let fifo_path = fixture.base.join("run.fifo");
+    let status = std::process::Command::new("mkfifo")
+        .arg(&fifo_path)
+        .status()?;
+    assert!(status.success(), "mkfifo failed with status {status}");
+    std::fs::write(fixture.base.join("file.txt"), b"regular")?;
+
+    let captured = capture_upperdir_with_stats(&fixture.base)?;
+
+    assert!(captured.changes.contains(&LayerChange::Write {
+        path: LayerPath::parse("file.txt")?,
+        content: b"regular".to_vec(),
+    }));
+    assert!(
+        captured
+            .changes
+            .iter()
+            .all(|change| change.path().as_str() != "run.fifo"),
+        "unsupported FIFO must not become a layer payload"
+    );
+    assert_eq!(
+        captured.protected_drops,
+        vec![ProtectedPathDrop {
+            path: LayerPath::parse("run.fifo")?,
+            reason: ProtectedPathDropReason::UnsupportedSpecialFile,
+        }]
+    );
+    Ok(())
+}
+
 #[test]
 fn regular_file_capture_rejects_symlink_replacement_after_classification() -> TestResult {
     let fixture = Fixture::new("capture_symlink_swap")?;
@@ -46,17 +80,20 @@ fn regular_file_capture_rejects_symlink_replacement_after_classification() -> Te
     std::os::unix::fs::symlink(&target, &entry)?;
 
     let mut changes = Vec::new();
+    let mut protected_drops = Vec::new();
     let error = capture_file_entry(
         &fixture.base,
         &entry,
         &meta,
         &mut std::collections::HashSet::new(),
         &mut changes,
+        &mut protected_drops,
     )
     .expect_err("swapped symlink must not be captured as regular file content");
 
     assert!(matches!(error, CaptureError::Capture { .. }));
     assert!(changes.is_empty());
+    assert!(protected_drops.is_empty());
     Ok(())
 }
 

@@ -1,9 +1,16 @@
 use crate::model::LayerChange;
 
 use crate::test_fixture::{lp, Fixture, TestResult};
-use crate::{service, CommitStatus, LayerStack};
+use crate::{service, CommitOptions, CommitStatus, LayerStack};
+use crate::{ProtectedPathDrop, ProtectedPathDropReason};
 
-use super::{capture_route_stats_for_manifest, route_for_path, Route};
+use super::{
+    capture_route_stats_for_manifest_with_protected_drops, publish_decision_for_opaque_dir,
+    publish_decisions_for_manifest_with_protected_drops, route_for_path, ManifestIgnoreSource,
+    Route, GIT_METADATA_UNSUPPORTED_DROP_REASON, OPAQUE_DIR_EXPANSION_LIMIT_DROP_REASON,
+    OPAQUE_DIR_MIXED_ROUTES_DROP_REASON, OPAQUE_DIR_PROTECTED_DESCENDANT_DROP_REASON,
+    UNSUPPORTED_SPECIAL_FILE_DROP_REASON,
+};
 
 fn is_ignored(fixture: &Fixture, path: &str) -> TestResult<bool> {
     Ok(route_of(fixture, path)? == Route::Direct)
@@ -32,6 +39,46 @@ fn routes_tracked_ignored_and_git_paths_distinctly() -> TestResult {
     assert_eq!(route_of(&fixture, "target/out.txt")?, Route::Direct);
     assert_eq!(route_of(&fixture, "pkg/cache.pyc")?, Route::Direct);
     assert_eq!(route_of(&fixture, ".git/config")?, Route::Drop);
+    assert_eq!(route_of(&fixture, "pkg/.git/config")?, Route::Drop);
+    Ok(())
+}
+
+#[test]
+fn git_metadata_drop_decisions_use_stable_reason_code() -> TestResult {
+    let fixture = Fixture::new_with_gitignore("git_drop_reason", ".git/\n")?;
+    let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
+    let decisions = publish_decisions_for_manifest_with_protected_drops(
+        &fixture.root,
+        &manifest,
+        &[
+            LayerChange::Write {
+                path: lp(".git")?,
+                content: b"gitdir".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp(".git/config")?,
+                content: b"config".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp("src/main.rs")?,
+                content: b"source".to_vec(),
+            },
+        ],
+        &[],
+    )?;
+
+    assert_eq!(decisions[0].route, Route::Drop);
+    assert_eq!(
+        decisions[0].drop_reason.map(|reason| reason.as_str()),
+        Some(GIT_METADATA_UNSUPPORTED_DROP_REASON)
+    );
+    assert_eq!(decisions[1].route, Route::Drop);
+    assert_eq!(
+        decisions[1].drop_reason.map(|reason| reason.as_str()),
+        Some(GIT_METADATA_UNSUPPORTED_DROP_REASON)
+    );
+    assert_eq!(decisions[2].route, Route::Gated);
+    assert_eq!(decisions[2].drop_reason, None);
     Ok(())
 }
 
@@ -45,7 +92,7 @@ fn capture_route_stats_use_supplied_manifest_snapshot() -> TestResult {
         content: b"later/\n".to_vec(),
     }])?;
 
-    let stats = capture_route_stats_for_manifest(
+    let stats = capture_route_stats_for_manifest_with_protected_drops(
         &fixture.root,
         &route_manifest,
         &[
@@ -66,12 +113,79 @@ fn capture_route_stats_use_supplied_manifest_snapshot() -> TestResult {
                 content: b"git".to_vec(),
             },
         ],
+        &[],
     )?;
 
     assert_eq!(stats.gated_path_count, 2);
     assert_eq!(stats.direct_path_count, 1);
     assert_eq!(stats.drop_path_count, 1);
     assert_eq!(stats.direct_bytes, 7);
+    assert_eq!(
+        stats.drop_reason_count(GIT_METADATA_UNSUPPORTED_DROP_REASON),
+        1
+    );
+    Ok(())
+}
+
+#[test]
+fn capture_route_stats_counts_git_drop_reasons() -> TestResult {
+    let fixture = Fixture::new_with_gitignore("route_stats_git_drop_reasons", ".git/\n")?;
+    let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
+    let stats = capture_route_stats_for_manifest_with_protected_drops(
+        &fixture.root,
+        &manifest,
+        &[
+            LayerChange::Write {
+                path: lp(".git")?,
+                content: b"gitdir".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp("pkg/.git/hooks/pre-commit")?,
+                content: b"hook".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp("ordinary.txt")?,
+                content: b"source".to_vec(),
+            },
+        ],
+        &[],
+    )?;
+
+    assert_eq!(stats.gated_path_count, 1);
+    assert_eq!(stats.direct_path_count, 0);
+    assert_eq!(stats.drop_path_count, 2);
+    assert_eq!(
+        stats.drop_reason_count(GIT_METADATA_UNSUPPORTED_DROP_REASON),
+        2
+    );
+    Ok(())
+}
+
+#[test]
+fn capture_route_stats_counts_protected_drop_reasons() -> TestResult {
+    let fixture = Fixture::new_with_gitignore("route_stats_protected_drop_reasons", "target/\n")?;
+    let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
+    let stats = capture_route_stats_for_manifest_with_protected_drops(
+        &fixture.root,
+        &manifest,
+        &[LayerChange::Write {
+            path: lp("target/out.txt")?,
+            content: b"ignored".to_vec(),
+        }],
+        &[ProtectedPathDrop {
+            path: lp("run.sock")?,
+            reason: ProtectedPathDropReason::UnsupportedSpecialFile,
+        }],
+    )?;
+
+    assert_eq!(stats.gated_path_count, 0);
+    assert_eq!(stats.direct_path_count, 1);
+    assert_eq!(stats.drop_path_count, 1);
+    assert_eq!(stats.direct_bytes, 7);
+    assert_eq!(
+        stats.drop_reason_count(UNSUPPORTED_SPECIAL_FILE_DROP_REASON),
+        1
+    );
     Ok(())
 }
 
@@ -111,6 +225,279 @@ fn publish_capture_uses_supplied_manifest_snapshot_for_routes() -> TestResult {
         .expect("worker handoff event");
     assert_eq!(handoff.details["gated_path_count"], 1);
     assert_eq!(handoff.details["direct_path_count"], 0);
+    Ok(())
+}
+
+#[test]
+fn publish_capture_surfaces_git_drop_reason_counts() -> TestResult {
+    let fixture = Fixture::new_with_gitignore("publish_git_drop_reason", "target/\n")?;
+    let snapshot = service::acquire_snapshot(&fixture.root, "git-drop-reason-test")?;
+
+    let result = service::publish_capture(
+        &fixture.root,
+        snapshot.manifest_version,
+        &snapshot.layer_paths,
+        &[
+            LayerChange::Write {
+                path: lp(".git/config")?,
+                content: b"git".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp("target/out.txt")?,
+                content: b"ignored".to_vec(),
+            },
+        ],
+    )?;
+    service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+    let git_result = result
+        .files
+        .iter()
+        .find(|file| file.path == lp(".git/config").expect("valid git path"))
+        .expect("git file result");
+    assert_eq!(git_result.status, CommitStatus::Dropped);
+    assert_eq!(git_result.message, GIT_METADATA_UNSUPPORTED_DROP_REASON);
+    let handoff = result
+        .events
+        .iter()
+        .find(|event| event.module == "occ" && event.name == "worker_handoff")
+        .expect("worker handoff event");
+    assert_eq!(handoff.details["drop_path_count"], 1);
+    assert_eq!(
+        handoff.details["drop_reason_counts"][GIT_METADATA_UNSUPPORTED_DROP_REASON],
+        1
+    );
+    Ok(())
+}
+
+#[test]
+fn publish_capture_surfaces_protected_drop_reason_counts() -> TestResult {
+    let fixture = Fixture::new_with_gitignore("publish_protected_drop_reason", "target/\n")?;
+    let snapshot = service::acquire_snapshot(&fixture.root, "protected-drop-reason-test")?;
+
+    let result = service::publish_capture_with_options_and_protected_drops(
+        &fixture.root,
+        snapshot.manifest_version,
+        &snapshot.layer_paths,
+        &[LayerChange::Write {
+            path: lp("target/out.txt")?,
+            content: b"ignored".to_vec(),
+        }],
+        &[ProtectedPathDrop {
+            path: lp("run.sock")?,
+            reason: ProtectedPathDropReason::UnsupportedSpecialFile,
+        }],
+        CommitOptions::default(),
+    )?;
+    service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+    let protected_result = result
+        .files
+        .iter()
+        .find(|file| file.path == lp("run.sock").expect("valid protected path"))
+        .expect("protected file result");
+    assert_eq!(protected_result.status, CommitStatus::Dropped);
+    assert_eq!(
+        protected_result.message,
+        UNSUPPORTED_SPECIAL_FILE_DROP_REASON
+    );
+    let handoff = result
+        .events
+        .iter()
+        .find(|event| event.module == "occ" && event.name == "worker_handoff")
+        .expect("worker handoff event");
+    assert_eq!(handoff.details["drop_path_count"], 1);
+    assert_eq!(
+        handoff.details["drop_reason_counts"][UNSUPPORTED_SPECIAL_FILE_DROP_REASON],
+        1
+    );
+    assert_eq!(fixture.read_text("target/out.txt")?, "ignored");
+    Ok(())
+}
+
+#[test]
+fn opaque_dir_with_all_ignored_descendants_routes_direct() -> TestResult {
+    let fixture = Fixture::new_with_gitignore("opaque_all_ignored", "cache/\n")?;
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+    stack.publish_layer(&[LayerChange::Write {
+        path: lp("cache/out.txt")?,
+        content: b"old-cache".to_vec(),
+    }])?;
+    let snapshot = service::acquire_snapshot(&fixture.root, "opaque-all-ignored")?;
+
+    let result = service::publish_capture(
+        &fixture.root,
+        snapshot.manifest_version,
+        &snapshot.layer_paths,
+        &[LayerChange::OpaqueDir { path: lp("cache")? }],
+    )?;
+    service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+    assert!(result.success());
+    assert_eq!(result.files[0].status, CommitStatus::Committed);
+    let (_bytes, exists) = LayerStack::open(fixture.root.clone())?.read_bytes("cache/out.txt")?;
+    assert!(
+        !exists,
+        "ignored opaque marker should hide ignored descendants"
+    );
+    let handoff = result
+        .events
+        .iter()
+        .find(|event| event.module == "occ" && event.name == "worker_handoff")
+        .expect("worker handoff event");
+    assert_eq!(handoff.details["direct_path_count"], 1);
+    assert_eq!(handoff.details["drop_path_count"], 0);
+    Ok(())
+}
+
+#[test]
+fn opaque_dir_with_source_descendants_validates_hidden_paths() -> TestResult {
+    let fixture = Fixture::new("opaque_source_validation")?;
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+    stack.publish_layer(&[LayerChange::Write {
+        path: lp("src/old.txt")?,
+        content: b"old-source".to_vec(),
+    }])?;
+    let snapshot = service::acquire_snapshot(&fixture.root, "opaque-source-validation")?;
+    LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
+        path: lp("src/old.txt")?,
+        content: b"theirs".to_vec(),
+    }])?;
+
+    let result = service::publish_capture(
+        &fixture.root,
+        snapshot.manifest_version,
+        &snapshot.layer_paths,
+        &[LayerChange::OpaqueDir { path: lp("src")? }],
+    )?;
+    service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+    assert_eq!(result.published_manifest_version, None);
+    assert_eq!(result.files[0].status, CommitStatus::AbortedVersion);
+    assert!(
+        result.files[0].message.contains("src/old.txt"),
+        "conflict should name the hidden descendant: {:?}",
+        result.files[0]
+    );
+    assert_eq!(fixture.read_text("src/old.txt")?, "theirs");
+    Ok(())
+}
+
+#[test]
+fn opaque_dir_with_mixed_descendant_routes_rejects_publish() -> TestResult {
+    let fixture = Fixture::new_with_gitignore("opaque_mixed_routes", "cache/\n")?;
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+    stack.publish_layer(&[
+        LayerChange::Write {
+            path: lp("tree/src.txt")?,
+            content: b"source".to_vec(),
+        },
+        LayerChange::Write {
+            path: lp("tree/cache/out.txt")?,
+            content: b"ignored".to_vec(),
+        },
+    ])?;
+    let snapshot = service::acquire_snapshot(&fixture.root, "opaque-mixed-routes")?;
+
+    let result = service::publish_capture(
+        &fixture.root,
+        snapshot.manifest_version,
+        &snapshot.layer_paths,
+        &[LayerChange::OpaqueDir { path: lp("tree")? }],
+    )?;
+    service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+    assert_eq!(result.published_manifest_version, None);
+    assert_eq!(result.files[0].status, CommitStatus::Failed);
+    assert_eq!(result.files[0].message, OPAQUE_DIR_MIXED_ROUTES_DROP_REASON);
+    let handoff = result
+        .events
+        .iter()
+        .find(|event| event.module == "occ" && event.name == "worker_handoff")
+        .expect("worker handoff event");
+    assert_eq!(handoff.details["drop_path_count"], 1);
+    assert_eq!(
+        handoff.details["drop_reason_counts"][OPAQUE_DIR_MIXED_ROUTES_DROP_REASON],
+        1
+    );
+    assert_eq!(fixture.read_text("tree/src.txt")?, "source");
+    assert_eq!(fixture.read_text("tree/cache/out.txt")?, "ignored");
+    Ok(())
+}
+
+#[test]
+fn opaque_dir_with_git_descendant_rejects_as_protected() -> TestResult {
+    let fixture = Fixture::new("opaque_protected_descendant")?;
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+    stack.publish_layer(&[LayerChange::Write {
+        path: lp("tree/.git/config")?,
+        content: b"git".to_vec(),
+    }])?;
+    let snapshot = service::acquire_snapshot(&fixture.root, "opaque-protected-descendant")?;
+
+    let result = service::publish_capture(
+        &fixture.root,
+        snapshot.manifest_version,
+        &snapshot.layer_paths,
+        &[LayerChange::OpaqueDir { path: lp("tree")? }],
+    )?;
+    service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+    assert_eq!(result.published_manifest_version, None);
+    assert_eq!(result.files[0].status, CommitStatus::Failed);
+    assert_eq!(
+        result.files[0].message,
+        OPAQUE_DIR_PROTECTED_DESCENDANT_DROP_REASON
+    );
+    let handoff = result
+        .events
+        .iter()
+        .find(|event| event.module == "occ" && event.name == "worker_handoff")
+        .expect("worker handoff event");
+    assert_eq!(
+        handoff.details["drop_reason_counts"][OPAQUE_DIR_PROTECTED_DESCENDANT_DROP_REASON],
+        1
+    );
+    let (_bytes, exists) =
+        LayerStack::open(fixture.root.clone())?.read_bytes("tree/.git/config")?;
+    assert!(exists, "protected descendant must remain visible");
+    Ok(())
+}
+
+#[test]
+fn opaque_dir_expansion_limit_rejects_publish() -> TestResult {
+    let fixture = Fixture::new("opaque_expansion_limit")?;
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+    stack.publish_layer(&[
+        LayerChange::Write {
+            path: lp("big/a.txt")?,
+            content: b"a".to_vec(),
+        },
+        LayerChange::Write {
+            path: lp("big/b.txt")?,
+            content: b"b".to_vec(),
+        },
+        LayerChange::Write {
+            path: lp("big/c.txt")?,
+            content: b"c".to_vec(),
+        },
+    ])?;
+    let manifest = stack.read_active_manifest()?;
+    let view = crate::MergedView::new(fixture.root.clone());
+    let source = ManifestIgnoreSource {
+        view: &view,
+        manifest: &manifest,
+    };
+
+    let decision =
+        publish_decision_for_opaque_dir(&fixture.root, &source, &view, &manifest, &lp("big")?, 2)?;
+
+    assert_eq!(decision.route, Route::Drop);
+    assert!(decision.reject_publish);
+    assert_eq!(
+        decision.drop_reason.map(|reason| reason.as_str()),
+        Some(OPAQUE_DIR_EXPANSION_LIMIT_DROP_REASON)
+    );
     Ok(())
 }
 

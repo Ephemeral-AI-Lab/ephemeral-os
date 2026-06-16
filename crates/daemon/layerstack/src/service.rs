@@ -6,9 +6,11 @@ use std::time::Instant;
 use crate::model::{LayerChange, LayerPath, LayerRef, Manifest, MANIFEST_SCHEMA_VERSION};
 use serde_json::{json, Value};
 
+use crate::capture::ProtectedPathDrop;
 use crate::commit::{
-    capture_route_stats_for_manifest, publish_decisions_for_manifest, CaptureRouteStats,
-    ChangesetResult, CommitError, CommitOptions, CommitWriter,
+    capture_route_stats_for_manifest_with_protected_drops,
+    publish_decisions_for_manifest_with_protected_drops, CaptureRouteStats, ChangesetResult,
+    CommitError, CommitOptions, CommitWriter,
 };
 use crate::{LayerStack, LayerStackError};
 
@@ -212,24 +214,31 @@ pub fn publish_capture(
     snapshot_layer_paths: &[PathBuf],
     changes: &[LayerChange],
 ) -> Result<ChangesetResult, CommitError> {
-    publish_capture_with_options(
+    publish_capture_with_options_and_protected_drops(
         root,
         snapshot_manifest_version,
         snapshot_layer_paths,
         changes,
+        &[],
         CommitOptions::default(),
     )
 }
 
-pub fn publish_capture_with_options(
+pub fn publish_capture_with_options_and_protected_drops(
     root: &Path,
     snapshot_manifest_version: i64,
     snapshot_layer_paths: &[PathBuf],
     changes: &[LayerChange],
+    protected_drops: &[ProtectedPathDrop],
     options: CommitOptions,
 ) -> Result<ChangesetResult, CommitError> {
     let manifest = snapshot_manifest(root, snapshot_manifest_version, snapshot_layer_paths)?;
-    let decisions = publish_decisions_for_manifest(root, &manifest, changes)?;
+    let decisions = publish_decisions_for_manifest_with_protected_drops(
+        root,
+        &manifest,
+        changes,
+        protected_drops,
+    )?;
     service_for_root(root, options)?.apply_changeset_with_decisions(
         changes,
         Some(manifest_version_u64(snapshot_manifest_version)?),
@@ -238,14 +247,15 @@ pub fn publish_capture_with_options(
     )
 }
 
-pub fn capture_route_stats_for_snapshot(
+pub fn capture_route_stats_for_snapshot_with_protected_drops(
     root: &Path,
     snapshot_manifest_version: i64,
     snapshot_layer_paths: &[PathBuf],
     changes: &[LayerChange],
+    protected_drops: &[ProtectedPathDrop],
 ) -> Result<CaptureRouteStats, CommitError> {
     let manifest = snapshot_manifest(root, snapshot_manifest_version, snapshot_layer_paths)?;
-    capture_route_stats_for_manifest(root, &manifest, changes)
+    capture_route_stats_for_manifest_with_protected_drops(root, &manifest, changes, protected_drops)
 }
 
 fn snapshot_manifest(

@@ -302,8 +302,14 @@ fn cas_exhaustion_result(
         .map(|group| {
             let (status, message) = match group.route {
                 Route::Drop => (
-                    CommitStatus::Dropped,
-                    group.message.clone().unwrap_or_default(),
+                    if group.reject_publish {
+                        CommitStatus::Failed
+                    } else {
+                        CommitStatus::Dropped
+                    },
+                    group
+                        .drop_reason
+                        .map_or_else(String::new, |reason| reason.as_str().to_owned()),
                 ),
                 Route::Direct | Route::Gated => (CommitStatus::AbortedVersion, message.clone()),
             };
@@ -313,7 +319,7 @@ fn cas_exhaustion_result(
                 conflict.observed_version
             };
             let observed_state = if group.route == Route::Drop {
-                None
+                group.reject_publish.then(|| "route_rejected".to_owned())
             } else {
                 Some("manifest_conflict".to_owned())
             };

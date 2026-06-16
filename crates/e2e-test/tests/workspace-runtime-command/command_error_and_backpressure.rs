@@ -147,6 +147,188 @@ fn nonzero_exit_discards_source_and_ignored_writes_with_publish_lanes() -> Resul
 }
 
 #[test]
+fn git_metadata_write_is_dropped_with_publish_lane_reason() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let dir = format!(
+        "publish-lanes-git-drop/{}",
+        e2e_test::unique_suffix().replace('-', "_")
+    );
+    let git_path = format!("{dir}/.git/config");
+    let ignored_path = format!("{dir}/cache/ignored.txt");
+
+    lease.call_ok(
+        catalog::SANDBOX_FILE_WRITE,
+        json!({
+            "path": format!("{dir}/.gitignore"),
+            "content": "cache/\n",
+            "overwrite": false,
+        }),
+    )?;
+
+    let wire = lease.call(
+        catalog::SANDBOX_COMMAND_EXEC,
+        json!({
+            "cmd": format!(
+                "mkdir -p {dir}/.git {dir}/cache && printf '[core]\\nrepositoryformatversion = 0\\n' > {git_path} && printf ignored > {ignored_path}"
+            ),
+            "yield_time_ms": 8000,
+            "timeout_seconds": 10,
+        }),
+    )?;
+    let result = unwrap_operation_result(wire.clone())?;
+    ensure!(
+        as_str(&result, "status")? == "ok",
+        "successful command should finalize in foreground: {result}"
+    );
+
+    let lanes = &result["publish_lanes"];
+    ensure!(
+        lanes["source"]["publish_status"] == "empty",
+        "git metadata must not be treated as source: {result}"
+    );
+    ensure!(
+        lanes["ignored"]["publish_status"] == "published_lww",
+        "ordinary ignored output should still publish when git metadata is dropped: {result}"
+    );
+    ensure!(
+        lanes["ignored"]["path_count"] == 1,
+        "only cache output should be counted as ignored: {result}"
+    );
+    ensure!(
+        lanes["routing"]["dropped_path_count"] == 1
+            && lanes["routing"]["drop_reason_counts"]["git_metadata_unsupported"] == 1,
+        "git metadata drop reason must be surfaced: {result}"
+    );
+
+    let record = trace_record(&wire)?;
+    ensure!(
+        has_trace_event(
+            &record,
+            "command",
+            "command.publish_lanes_decided",
+            |details| {
+                details["routing"]["dropped_path_count"] == 1
+                    && details["routing"]["drop_reason_counts"]["git_metadata_unsupported"] == 1
+                    && details["ignored"]["publish_status"] == "published_lww"
+            }
+        ),
+        "command finalize trace must include git metadata drop reason: {record:?}"
+    );
+
+    let read_git = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": git_path}))?;
+    ensure!(
+        !as_bool(&read_git, "exists")?,
+        ".git metadata must not publish through ordinary command output: {read_git}"
+    );
+    let read_ignored = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": ignored_path}))?;
+    ensure!(
+        as_bool(&read_ignored, "exists")?,
+        "ignored output should remain publishable when git metadata is dropped: {read_ignored}"
+    );
+    ensure!(
+        as_str(&read_ignored, "content")? == "ignored",
+        "ignored output content should publish unchanged: {read_ignored}"
+    );
+    wait_for_command_count(&lease, 0)?;
+    wait_for_active_leases(&lease, 0)?;
+    Ok(())
+}
+
+#[test]
+fn unsupported_special_file_is_dropped_with_publish_lane_reason() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let dir = format!(
+        "publish-lanes-special-drop/{}",
+        e2e_test::unique_suffix().replace('-', "_")
+    );
+    let fifo_path = format!("{dir}/run.fifo");
+    let ignored_path = format!("{dir}/cache/ignored.txt");
+
+    lease.call_ok(
+        catalog::SANDBOX_FILE_WRITE,
+        json!({
+            "path": format!("{dir}/.gitignore"),
+            "content": "cache/\n",
+            "overwrite": false,
+        }),
+    )?;
+
+    let wire = lease.call(
+        catalog::SANDBOX_COMMAND_EXEC,
+        json!({
+            "cmd": format!(
+                "mkdir -p {dir}/cache && mkfifo {fifo_path} && printf ignored > {ignored_path}"
+            ),
+            "yield_time_ms": 8000,
+            "timeout_seconds": 10,
+        }),
+    )?;
+    let result = unwrap_operation_result(wire.clone())?;
+    ensure!(
+        as_str(&result, "status")? == "ok",
+        "successful command should finalize in foreground: {result}"
+    );
+
+    let lanes = &result["publish_lanes"];
+    ensure!(
+        lanes["source"]["publish_status"] == "empty",
+        "unsupported special file must not be treated as source: {result}"
+    );
+    ensure!(
+        lanes["ignored"]["publish_status"] == "published_lww",
+        "ordinary ignored output should still publish when a special file is dropped: {result}"
+    );
+    ensure!(
+        lanes["ignored"]["path_count"] == 1,
+        "only cache output should be counted as ignored: {result}"
+    );
+    ensure!(
+        lanes["routing"]["dropped_path_count"] == 1
+            && lanes["routing"]["drop_reason_counts"]["unsupported_special_file"] == 1,
+        "special file drop reason must be surfaced: {result}"
+    );
+
+    let record = trace_record(&wire)?;
+    ensure!(
+        has_trace_event(
+            &record,
+            "command",
+            "command.publish_lanes_decided",
+            |details| {
+                details["routing"]["dropped_path_count"] == 1
+                    && details["routing"]["drop_reason_counts"]["unsupported_special_file"] == 1
+                    && details["ignored"]["publish_status"] == "published_lww"
+            }
+        ),
+        "command finalize trace must include special file drop reason: {record:?}"
+    );
+
+    let read_fifo = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": fifo_path}))?;
+    ensure!(
+        !as_bool(&read_fifo, "exists")?,
+        "unsupported special file must not publish through ordinary command output: {read_fifo}"
+    );
+    let read_ignored = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": ignored_path}))?;
+    ensure!(
+        as_bool(&read_ignored, "exists")?,
+        "ignored output should remain publishable when a special file is dropped: {read_ignored}"
+    );
+    ensure!(
+        as_str(&read_ignored, "content")? == "ignored",
+        "ignored output content should publish unchanged: {read_ignored}"
+    );
+    wait_for_command_count(&lease, 0)?;
+    wait_for_active_leases(&lease, 0)?;
+    Ok(())
+}
+
+#[test]
 fn stderr_and_stdin_output_keep_long_lived_session_running() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
