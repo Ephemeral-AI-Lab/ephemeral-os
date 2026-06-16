@@ -2,9 +2,14 @@
 
 `prd.yml` is the single baseline config for the sandbox runtime and sandbox test
 harness defaults. The gateway owns production config selection and upload:
-operators choose the local source YAML with `gateway serve --config-yaml`, and
-the gateway copies that document into each sandbox at `--remote-config` before
-starting `eosd`.
+operators choose the local source YAML with
+`sandbox-gateway host serve --config-yaml`, and the gateway copies that document
+into each sandbox at `--remote-config` before starting `eosd`.
+
+The host gateway also reads `gateway.default_image_profile` from this document
+before upload. That profile is the approved default for `host.sandbox.acquire`;
+operator-only commands such as `sandbox-gateway host containers start IMAGE` can
+still choose an explicit image at command time.
 
 The daemon loads the uploaded runtime config from:
 

@@ -30,7 +30,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let config_path = daemon_config_path_arg(&args)?;
     let runtime_config = load_runtime_config(config_path.as_deref())?;
     let daemon_config = &runtime_config.daemon;
-    let config = DaemonCliConfig::parse(args, &daemon_config.server)?;
+    let config = DaemonCliConfig::parse(args, &daemon_config.server, config_path)?;
     if let Some((socket_path, payload)) = config.client {
         return run_daemon_client(&socket_path, &payload);
     }
@@ -127,8 +127,12 @@ impl DaemonCliConfig {
     fn parse(
         args: impl IntoIterator<Item = String>,
         server_defaults: &DaemonServerConfig,
+        explicit_config_path: Option<PathBuf>,
     ) -> Result<Self> {
-        let mut config_yaml_path = ConfigPath::prd()?.as_path().to_path_buf();
+        let mut config_yaml_path = match explicit_config_path {
+            Some(path) => path,
+            None => ConfigPath::prd()?.as_path().to_path_buf(),
+        };
         let mut socket_path = server_defaults.socket_path.clone();
         let mut pid_path = server_defaults.pid_path.clone();
         let mut log_path = None;
@@ -390,6 +394,7 @@ mod tests {
                 "/eos/runtime/runtime.pid".to_owned(),
             ],
             &server_defaults(),
+            Some(PathBuf::from("/eos/custom/prd.yml")),
         )?;
 
         assert_eq!(
@@ -426,6 +431,7 @@ mod tests {
                 "forward-token-1".to_owned(),
             ],
             &server_defaults(),
+            None,
         )?;
 
         assert_eq!(config.auth_token.as_deref(), Some("token-1"));

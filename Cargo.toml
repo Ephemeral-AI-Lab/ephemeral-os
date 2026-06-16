@@ -96,6 +96,13 @@ codegen-units = 1
 panic = "abort"
 strip = true
 
+[profile.package-fast]
+inherits = "release"
+opt-level = 1
+lto = false
+codegen-units = 256
+incremental = true
+
 [profile.bench]
 inherits = "release"
 debug = true

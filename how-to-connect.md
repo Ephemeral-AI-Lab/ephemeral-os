@@ -50,7 +50,7 @@ The gateway binds **two** sockets and gates every op by the socket's surface:
 
 | Socket | Path | Surface | Reaches ops with visibility |
 |---|---|---|---|
-| client | `--listen` (default `/tmp/sandbox-gateway.sock`) | `Client` | `public` only |
+| client | `--listen` (default private per-user runtime path; override with `EOS_GATEWAY_SOCKET`) | `Client` | `public` only |
 | operator | `<listen>.operator` (auto, beside it) | `Operator` | `public` + `operator` |
 
 `internal` and `test` ops are reachable from **neither** socket. So a normal
@@ -62,10 +62,12 @@ operator/observability process uses the **`.operator`** socket to also reach the
 ### Starting the gateway
 
 ```sh
-cargo run -p gateway -- serve \
-    --listen /tmp/sandbox-gateway.sock \
-    --image <docker-image> --platform linux/amd64
+sandbox-gateway host serve
 ```
+
+The default `host.sandbox.acquire` image profile comes from
+`gateway.default_image_profile` in `config/prd.yml`; `--image` and `--platform`
+are only local overrides.
 
 Both sockets are created `chmod 0600`; access control on hop ❶ is **filesystem
 permissions only** (there is no auth field on the client hop).
@@ -378,10 +380,13 @@ import net from "node:net";
 import { randomUUID } from "node:crypto";
 
 export class SandboxGatewayClient {
-  constructor(private socketPath = "/tmp/sandbox-gateway.sock") {}
+  constructor(private socketPath = process.env.EOS_GATEWAY_SOCKET ?? "") {}
 
   request(op: string, args: Record<string, unknown>,
           opts: { sandboxId?: string; invocationId?: string; signal?: AbortSignal }) {
+    if (!this.socketPath) {
+      throw new Error("EOS_GATEWAY_SOCKET is required for raw socket clients");
+    }
     return new Promise<GatewayResponse>((resolve, reject) => {
       const sock = net.createConnection({ path: this.socketPath });
       let buf = "";
@@ -487,11 +492,20 @@ orchestrator's experience.
 ## 6. Quick probe
 
 ```sh
-# one op over the client socket
-printf '%s\n' '{"op":"host.sandbox.acquire","invocation_id":"probe-1","args":{}}' \
-  | socat - UNIX-CONNECT:/tmp/sandbox-gateway.sock
+# Optional: choose a shared custom socket once instead of passing
+# --listen/--socket on every command.
+# export EOS_GATEWAY_SOCKET=/tmp/sandbox-gateway.sock
 
-# an operator-only op over the operator socket
-printf '%s\n' '{"op":"sandbox.checkpoint.layer_metrics","sandbox_id":"<sb-id>","invocation_id":"probe-2","args":{"layer_stack_root":"/eos/layer-stack"}}' \
-  | socat - UNIX-CONNECT:/tmp/sandbox-gateway.sock.operator
+# public client-socket ops
+sandbox-gateway host images profiles
+SID=$(sandbox-gateway host sandboxes acquire | jq -r .sandbox_id)
+
+# operator-socket ops
+sandbox-gateway host images list
+sandbox-gateway host containers list
+
+# escape hatch for an arbitrary catalog op
+sandbox-gateway daemon --sandbox-id "$SID" op sandbox.checkpoint.layer_metrics \
+  '{"layer_stack_root":"/eos/layer-stack"}' \
+  --operator
 ```

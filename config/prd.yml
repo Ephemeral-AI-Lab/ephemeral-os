@@ -1,5 +1,10 @@
 version: 1
 
+gateway:
+  default_image_profile:
+    image: sweevo-dask__dask-10042:latest
+    platform: linux/amd64
+
 daemon:
   server:
     socket_path: /eos/runtime/daemon/runtime.sock

@@ -69,18 +69,36 @@ cargo run -p xtask -- check-contract
 cargo run -p eosd -- dump-ops > crates/daemon/operation/ops.json
 cargo run -p xtask -- gen-docs
 
-# package the in-container daemon binary (dist/eosd-linux-amd64)
+# package the in-container daemon binary for Docker/E2E iteration
 cargo run -p xtask -- package
+
+# final fat-LTO package
+cargo run -p xtask -- package --profile release
 
 # live end-to-end suite against real Docker sandboxes
 cargo run -p e2e-test --bin e2e-runner -- \
     --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4
 
+# optional: set a shared custom socket once instead of passing --listen/--socket
+# export EOS_GATEWAY_SOCKET=/tmp/eos-sandbox.sock
+
+# install the CLI binary once
+cargo install --path crates/gateway --locked
+
 # serve the sandbox gateway (one client socket + one operator socket beside it)
-cargo run -p gateway -- serve --listen /tmp/eos-sandbox.sock \
-    --image <docker-image> --platform linux/amd64
-printf '%s\n' '{"op":"sandbox.checkpoint.layer_metrics","sandbox_id":"<sb-id>","invocation_id":"probe-1","args":{"layer_stack_root":"/eos/layer-stack"}}' \
-    | socat - UNIX-CONNECT:/tmp/eos-sandbox.sock.operator
+sandbox-gateway host serve
+
+# inspect through the gateway client mode
+sandbox-gateway host images profiles
+sandbox-gateway host images list
+sandbox-gateway host containers list
+sandbox-gateway host sandboxes list
+sandbox-gateway host containers start <docker-image>
+
+# acquire a sandbox, then operate inside its daemon
+SID=$(sandbox-gateway host sandboxes acquire | jq -r .sandbox_id)
+sandbox-gateway daemon --sandbox-id "$SID" ping
+sandbox-gateway host sandboxes release "$SID"
 ```
 
 ## Version pins

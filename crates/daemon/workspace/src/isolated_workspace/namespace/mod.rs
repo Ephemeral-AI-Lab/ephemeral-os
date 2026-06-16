@@ -9,7 +9,7 @@ use std::os::fd::{AsRawFd, IntoRawFd, RawFd};
 use std::os::unix::process::ExitStatusExt;
 use std::path::PathBuf;
 #[cfg(target_os = "linux")]
-use std::process::{Child, Stdio};
+use std::process::{Child, Command, Stdio};
 #[cfg(test)]
 use std::sync::Arc;
 #[cfg(target_os = "linux")]

@@ -7,11 +7,12 @@ license.workspace = true
 description = "Host-side sandbox gateway: receive, gate, route, return."
 
 [[bin]]
-name = "gateway"
+name = "sandbox-gateway"
 path = "src/main.rs"
 
 [dependencies]
 anyhow.workspace = true
+config.workspace = true
 host = { workspace = true }
 protocol.workspace = true
 # preserve_order keeps forwarded request args in caller order on the wire.

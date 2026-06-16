@@ -17,6 +17,8 @@ use sha2::{Digest, Sha256};
 
 const AMD64_TARGET: &str = "x86_64-unknown-linux-musl";
 const ARM64_TARGET: &str = "aarch64-unknown-linux-musl";
+const DEFAULT_PACKAGE_PROFILE: &str = "package-fast";
+const FAST_PACKAGE_PROFILE: &str = "package-fast";
 
 fn main() -> Result<()> {
     let mut args = env::args_os();
@@ -470,6 +472,7 @@ struct PackageArgs {
     out_dir: PathBuf,
     no_build: bool,
     builder: String,
+    profile: String,
     sign: bool,
     minisign_key: Option<PathBuf>,
 }
@@ -483,6 +486,10 @@ impl PackageArgs {
         let mut out_dir = PathBuf::from("dist");
         let mut no_build = false;
         let mut builder = env::var("EOS_XTASK_BUILDER").unwrap_or_else(|_| "rust-lld".to_owned());
+        let mut profile =
+            env::var("EOS_XTASK_PROFILE").unwrap_or_else(|_| DEFAULT_PACKAGE_PROFILE.to_owned());
+        let mut profile_from_arg = false;
+        let mut fast = false;
         let mut sign = false;
         let mut minisign_key: Option<PathBuf> = None;
 
@@ -496,6 +503,19 @@ impl PackageArgs {
                 "--out-dir" => out_dir = PathBuf::from(next_string(&mut iter, "--out-dir")?),
                 "--no-build" => no_build = true,
                 "--builder" => builder = next_string(&mut iter, "--builder")?,
+                "--profile" => {
+                    if fast {
+                        bail!("--fast cannot be combined with --profile");
+                    }
+                    profile = next_string(&mut iter, "--profile")?;
+                    profile_from_arg = true;
+                }
+                "--fast" => {
+                    if profile_from_arg {
+                        bail!("--fast cannot be combined with --profile");
+                    }
+                    fast = true;
+                }
                 "--sign" => sign = true,
                 "--minisign-key" => {
                     minisign_key = Some(PathBuf::from(next_string(&mut iter, "--minisign-key")?));
@@ -509,12 +529,17 @@ impl PackageArgs {
         }
 
         let target = target.unwrap_or_else(|| AMD64_TARGET.to_owned());
+        if fast {
+            profile = FAST_PACKAGE_PROFILE.to_owned();
+        }
         arch_for_target(&target)?;
+        validate_profile(&profile)?;
         Ok(Self {
             target,
             out_dir,
             no_build,
             builder,
+            profile,
             sign,
             minisign_key,
         })
@@ -528,13 +553,13 @@ fn package(args: &PackageArgs) -> Result<()> {
         .with_context(|| format!("create artifact dir {}", out_dir.display()))?;
 
     if !args.no_build {
-        run_build(&root, &args.builder, &args.target)?;
+        run_build(&root, &args.builder, &args.target, &args.profile)?;
     }
 
     let arch = arch_for_target(&args.target)?;
     let built = cargo_target_dir(&root)
         .join(&args.target)
-        .join("release")
+        .join(cargo_profile_dir(&args.profile))
         .join("eosd");
     let artifact_name = format!("eosd-linux-{arch}");
     let artifact = out_dir.join(&artifact_name);
@@ -566,8 +591,8 @@ fn package(args: &PackageArgs) -> Result<()> {
     }
 
     println!(
-        "packaged {artifact_name} target={} sha256={} protocol_version={}",
-        args.target, sha, protocol_version
+        "packaged {artifact_name} target={} profile={} sha256={} protocol_version={}",
+        args.target, args.profile, sha, protocol_version
     );
     Ok(())
 }
@@ -621,17 +646,40 @@ fn arch_for_target(target: &str) -> Result<&'static str> {
     }
 }
 
-fn run_build(root: &Path, builder: &str, target: &str) -> Result<()> {
+fn validate_profile(profile: &str) -> Result<()> {
+    if profile.is_empty() || profile.contains(['/', '\\']) {
+        bail!("invalid package profile {profile:?}");
+    }
+    Ok(())
+}
+
+fn cargo_profile_dir(profile: &str) -> &str {
+    match profile {
+        "dev" => "debug",
+        "release" => "release",
+        other => other,
+    }
+}
+
+fn run_build(root: &Path, builder: &str, target: &str, profile: &str) -> Result<()> {
     let mut command = match builder {
         "rust-lld" => {
-            let mut command = cargo_build_command(target);
+            let mut command = cargo_build_command(target, profile);
             command.env("RUSTFLAGS", rustflags_with_rust_lld());
             command
         }
-        "cargo" => cargo_build_command(target),
+        "cargo" => cargo_build_command(target, profile),
         "cross" => {
             let mut command = Command::new("cross");
-            command.args(["build", "--release", "-p", "eosd", "--target", target]);
+            command.args([
+                "build",
+                "-p",
+                "eosd",
+                "--target",
+                target,
+                "--profile",
+                profile,
+            ]);
             command
         }
         other => bail!("unsupported builder {other:?}; expected rust-lld, cargo, or cross"),
@@ -641,14 +689,22 @@ fn run_build(root: &Path, builder: &str, target: &str) -> Result<()> {
         .status()
         .with_context(|| format!("spawn {builder} build"))?;
     if !status.success() {
-        bail!("{builder} build failed for {target} with {status}");
+        bail!("{builder} build failed for {target} profile {profile} with {status}");
     }
     Ok(())
 }
 
-fn cargo_build_command(target: &str) -> Command {
+fn cargo_build_command(target: &str, profile: &str) -> Command {
     let mut command = Command::new("cargo");
-    command.args(["build", "--release", "-p", "eosd", "--target", target]);
+    command.args([
+        "build",
+        "-p",
+        "eosd",
+        "--target",
+        target,
+        "--profile",
+        profile,
+    ]);
     command
 }
 
@@ -795,8 +851,8 @@ fn print_help() {
     println!(
         "\
 xtask commands:
-  package [--target <triple>] [--out-dir <dir>] [--builder rust-lld|cargo|cross] [--no-build]
-          [--sign --minisign-key <path>]
+  package [--target <triple>] [--out-dir <dir>] [--builder rust-lld|cargo|cross]
+          [--profile <name> | --fast] [--no-build] [--sign --minisign-key <path>]
   check-contract    verify crates/daemon/operation/ops.json matches `eosd dump-ops`, alias
                     integrity holds, docs/API.md is fresh, and the
                     conformance suites pass
@@ -805,6 +861,10 @@ xtask commands:
 Targets:
   {AMD64_TARGET} -> eosd-linux-amd64
   {ARM64_TARGET} -> eosd-linux-arm64
+
+Profiles:
+  package-fast  default local Docker/E2E package, no LTO + incremental rebuilds
+  release       final perf artifact, fat LTO, slowest local rebuilds
 "
     );
 }
