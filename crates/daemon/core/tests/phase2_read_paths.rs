@@ -154,17 +154,17 @@ fn dispatches_workspace_base_control_ops_for_fresh_stack() -> TestResult {
     let (root, workspace, outside_target) = seed_workspace_base_fixture()?;
     let daemon = TestDaemon::new();
 
-    let ensure_response = dispatch_request(
+    let build_response = dispatch_request(
         &daemon,
-        "sandbox.checkpoint.ensure_base",
-        "ensure",
+        "sandbox.checkpoint.build_base",
+        "build",
         json!({
             "layer_stack_root": &root,
             "workspace_root": &workspace,
         }),
     );
-    let ensure = ok_result(&ensure_response);
-    assert_workspace_base_created(ensure, &root, &workspace);
+    let built = ok_result(&build_response);
+    assert_workspace_base_created(built, &root, &workspace);
     assert_workspace_base_symlinks(&root, &outside_target)?;
 
     let binding_response = dispatch_request(
@@ -176,7 +176,7 @@ fn dispatches_workspace_base_control_ops_for_fresh_stack() -> TestResult {
     let binding = ok_result(&binding_response);
     assert_eq!(
         binding["binding"]["base_root_hash"],
-        ensure["binding"]["base_root_hash"]
+        built["binding"]["base_root_hash"]
     );
     assert_read_content(
         &daemon,
@@ -184,9 +184,9 @@ fn dispatches_workspace_base_control_ops_for_fresh_stack() -> TestResult {
         &json!(workspace.join("README.md")),
         "# base\n",
     );
-    assert_workspace_base_idempotent(&daemon, &root, &workspace);
+    assert_duplicate_workspace_base_build_rejected(&daemon, &root, &workspace);
 
-    rebuild_workspace_base(&daemon, &root, &workspace, ensure)?;
+    rebuild_workspace_base(&daemon, &root, &workspace, built)?;
     assert_read_content(&daemon, &root, &json!("README.md"), "# reset\n");
     Ok(())
 }
@@ -1068,26 +1068,38 @@ fn assert_read_content(daemon: &TestDaemon, root: &Path, path: &Value, content: 
     assert_eq!(read["result"]["content"], Value::String(content.to_owned()));
 }
 
-fn assert_workspace_base_idempotent(daemon: &TestDaemon, root: &Path, workspace: &Path) {
-    let ensure_again = dispatch_request(
+fn assert_duplicate_workspace_base_build_rejected(
+    daemon: &TestDaemon,
+    root: &Path,
+    workspace: &Path,
+) {
+    let duplicate = dispatch_request(
         daemon,
-        "sandbox.checkpoint.ensure_base",
-        "ensure-again",
+        "sandbox.checkpoint.build_base",
+        "build-again",
         json!({
             "layer_stack_root": root,
             "workspace_root": workspace,
         }),
     );
-    let ensure_again = ok_result(&ensure_again);
-    assert_eq!(ensure_again["success"], Value::Bool(true));
-    assert_eq!(ensure_again["created"], Value::Bool(false));
+    assert_eq!(
+        duplicate["status"],
+        Value::String("error".to_owned()),
+        "{duplicate}"
+    );
+    assert!(
+        duplicate["error"]["message"]
+            .as_str()
+            .is_some_and(|message| message.contains("workspace base already exists")),
+        "{duplicate}"
+    );
 }
 
 fn rebuild_workspace_base(
     daemon: &TestDaemon,
     root: &Path,
     workspace: &Path,
-    original_ensure: &Value,
+    original_base: &Value,
 ) -> TestResult {
     std::fs::write(workspace.join("README.md"), "# reset\n")?;
     let rebuilt = dispatch_request(
@@ -1105,7 +1117,7 @@ fn rebuild_workspace_base(
     assert_eq!(rebuilt["created"], Value::Bool(true));
     assert_ne!(
         rebuilt["binding"]["base_root_hash"],
-        original_ensure["binding"]["base_root_hash"]
+        original_base["binding"]["base_root_hash"]
     );
     Ok(())
 }

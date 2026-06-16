@@ -273,7 +273,6 @@ pub enum OpRequest {
     InvocationCancel(CancelInvocationInput),
     InflightCount(CallerCountInput),
     LayerMetrics(LayerMetricsInput),
-    EnsureWorkspaceBase(EnsureBaseInput),
     BuildWorkspaceBase(BuildBaseInput),
     CommitToWorkspace(CommitToWorkspaceInput),
     CommitToGit(CommitInput),
@@ -697,7 +696,6 @@ and `Output` structs live in the named `contract.rs`.
 | `sandbox.call.count` | `CallerCountInput { caller: CallerId }` *(shared)* | `InflightCountOutput { caller_id, count }` | |
 | **checkpoint/contract.rs** | | | operation + layerstack |
 | `sandbox.checkpoint.layer_metrics` | `LayerMetricsInput { layer_stack_root }` | `LayerMetricsOutput` (wire-pinned metrics) | |
-| `sandbox.checkpoint.ensure_base` | `EnsureBaseInput { layer_stack_root, workspace_root }` | `WorkspaceBaseOutput { created, binding, timings }` *(shared)* | |
 | `sandbox.checkpoint.build_base` | `BuildBaseInput { layer_stack_root, workspace_root, reset }` | `WorkspaceBaseOutput` | |
 | `sandbox.checkpoint.commit_to_workspace` | `CommitToWorkspaceInput { layer_stack_root, workspace_root }` | `CommitToWorkspaceOutput { manifest_version, timings }` | |
 | `sandbox.checkpoint.commit_to_git` | `CommitInput { layer_stack_root, workspace_root, message, paths }` (custom `null\|str\|[str]` deserializer kept) | `CommitOutput { committed, commit_sha, manifest_version, manifest_root_hash, paths, worktree_mode, timings }` (timings stay `BTreeMap<String,f64>` — wire-mirror, upheld) | |

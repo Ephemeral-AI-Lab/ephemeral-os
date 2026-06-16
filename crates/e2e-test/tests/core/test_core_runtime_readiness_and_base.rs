@@ -30,7 +30,7 @@ fn runtime_ready_handshake() -> Result<()> {
 }
 
 #[test]
-fn ensure_base_creates_single_base_layer() -> Result<()> {
+fn acquire_setup_creates_single_base_layer() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
@@ -81,32 +81,28 @@ fn lease_checkout_resets_stale_git_workspace_state() -> Result<()> {
 }
 
 #[test]
-fn ensure_base_idempotent() -> Result<()> {
+fn acquire_setup_binds_workspace_without_extra_step() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let before_wire = lease.call(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
-    let before = envelope_result(&before_wire)?;
-    let ensure_wire = lease.call(
-        catalog::SANDBOX_CHECKPOINT_ENSURE_BASE,
-        json!({"workspace_root": lease.workspace_root()}),
-    )?;
+    let binding_wire = lease.call(catalog::SANDBOX_CHECKPOINT_BINDING, json!({}))?;
     assert_eq!(
-        ensure_wire["status"], "ok",
-        "ensure_base uses ok envelope: {ensure_wire}"
+        binding_wire["status"], "ok",
+        "binding uses ok envelope: {binding_wire}"
     );
-    let ensure = envelope_result(&ensure_wire)?;
-    assert!(
-        !as_bool(ensure, "created")?,
-        "second ensure should not rebuild an existing base: {ensure}"
-    );
-    let after_wire = lease.call(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
-    let after = envelope_result(&after_wire)?;
+    let binding = envelope_result(&binding_wire)?;
     assert_eq!(
-        as_i64(after, "manifest_depth")?,
-        as_i64(before, "manifest_depth")?,
-        "idempotent ensure must preserve depth: before={before} after={after}"
+        binding["binding"]["workspace_root"],
+        Value::String(lease.workspace_root().to_owned()),
+        "acquire setup should bind the lease workspace root: {binding}"
+    );
+    let metrics_wire = lease.call(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+    let metrics = envelope_result(&metrics_wire)?;
+    assert_eq!(
+        as_i64(metrics, "manifest_depth")?,
+        1,
+        "acquire setup should leave one base layer: {metrics}"
     );
     Ok(())
 }

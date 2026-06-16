@@ -144,7 +144,6 @@ pub enum OpRequest {
     InvocationCancel(CancelInvocationArgs),
     InflightCount(InflightCountArgs),
     LayerMetrics(LayerStackRootArgs),
-    EnsureWorkspaceBase(WorkspaceBaseArgs),
     BuildWorkspaceBase(BuildWorkspaceBaseArgs),
     CommitToWorkspace(WorkspaceBaseArgs),
     CommitToGit(CommitToGitArgs),

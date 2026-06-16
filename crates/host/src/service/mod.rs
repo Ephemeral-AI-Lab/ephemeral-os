@@ -1,6 +1,6 @@
 use std::fs;
 use std::net::SocketAddr;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -8,7 +8,7 @@ use ::protocol::catalog::{
     BuiltinOp, OpContract, HOST_CONTAINER_ADOPT, HOST_CONTAINER_LIST, HOST_CONTAINER_REMOVE,
     HOST_CONTAINER_START, HOST_CONTAINER_STOP, HOST_IMAGE_LIST, HOST_IMAGE_PROFILES_LIST,
     HOST_IMAGE_PULL, HOST_SANDBOX_ACQUIRE, HOST_SANDBOX_RELEASE, HOST_TRACE_REQUESTS,
-    HOST_TRACE_SHOW, HOST_TRACE_VERIFY,
+    HOST_TRACE_SHOW, HOST_TRACE_VERIFY, SANDBOX_CHECKPOINT_BUILD_BASE,
 };
 use ::protocol::HostGatewayErrorKind;
 use anyhow::{anyhow, bail, Context, Result};
@@ -40,6 +40,7 @@ use trace_drain::TraceExportDrainer;
 const TRACE_SHOW_DEFAULT_SECTION_LIMIT: usize = 1_000;
 const TRACE_SHOW_MAX_SECTION_LIMIT: usize = 5_000;
 const SANDBOX_SCRATCH_TMPFS: &str = "/eos/scratch:rw,exec,size=2g,mode=1777";
+const SANDBOX_OVERLAY_ROOT: &str = "/eos/scratch/overlay";
 
 #[derive(Debug, Clone)]
 pub struct HostConfig {
@@ -48,6 +49,7 @@ pub struct HostConfig {
     pub docker_privileged: bool,
     pub eosd_path: PathBuf,
     pub config_yaml_path: PathBuf,
+    pub workspace_root: PathBuf,
     pub remote_daemon_dir: PathBuf,
     pub remote_eosd_path: PathBuf,
     pub remote_config_path: PathBuf,
@@ -280,6 +282,20 @@ impl SandboxHost {
             json!({"container": sandbox_id.clone(), "endpoint": started_container.client().addr().to_string()}),
         );
         record.cache_endpoint(started_container.client().addr());
+        if let Err(err) =
+            self.setup_acquired_sandbox(&sandbox_id, started_container.client(), trace)
+        {
+            self.registry.remove(&sandbox_id);
+            let _ = docker(["rm", "-f", sandbox_id.as_str()]);
+            let response = host_error_response(
+                response_op,
+                trace,
+                HostGatewayErrorKind::SandboxUnavailable.as_str(),
+                &format!("sandbox setup failed: {err:#}"),
+            );
+            let _ = self.record_host_response_or_missing(&sandbox_id, trace, &response, op_started);
+            return Err(err);
+        }
         let response = host_ok_response(
             response_op,
             trace,
@@ -287,6 +303,76 @@ impl SandboxHost {
         );
         self.record_host_response_or_missing(&sandbox_id, trace, &response, op_started)?;
         Ok(sandbox_id)
+    }
+
+    fn setup_acquired_sandbox(
+        &self,
+        sandbox_id: &str,
+        client: &ProtocolClient,
+        trace: &ForwardTraceContext,
+    ) -> Result<()> {
+        let workspace_root = path_str(
+            &self.config.workspace_root,
+            "isolated_workspace.workspace_root",
+        )?;
+        self.record_host_lifecycle_event(
+            sandbox_id,
+            trace,
+            "sandbox_setup_started",
+            json!({
+                "workspace_root": workspace_root,
+                "layer_stack_root": DEFAULT_LAYER_STACK_ROOT,
+                "overlay_root": SANDBOX_OVERLAY_ROOT,
+            }),
+        );
+        docker([
+            "exec",
+            "-w",
+            "/",
+            sandbox_id,
+            "mkdir",
+            "-p",
+            workspace_root,
+            SANDBOX_OVERLAY_ROOT,
+        ])
+        .with_context(|| format!("mkdir sandbox workspace {workspace_root}"))?;
+        self.record_host_lifecycle_event(
+            sandbox_id,
+            trace,
+            "sandbox_setup_dirs_created",
+            json!({
+                "workspace_root": workspace_root,
+                "overlay_root": SANDBOX_OVERLAY_ROOT,
+            }),
+        );
+
+        let setup_request_id = format!("{}-setup-base", trace.request_id.as_str());
+        let response = client
+            .request(
+                SANDBOX_CHECKPOINT_BUILD_BASE,
+                &setup_request_id,
+                &json!({
+                    "layer_stack_root": DEFAULT_LAYER_STACK_ROOT,
+                    "workspace_root": workspace_root,
+                    "reset": true,
+                }),
+            )
+            .context("build sandbox workspace base")?;
+        let accepted = response_is_accepted(&response);
+        self.record_host_lifecycle_event(
+            sandbox_id,
+            trace,
+            "sandbox_setup_base_built",
+            json!({
+                "request_id": setup_request_id,
+                "accepted": accepted,
+                "response": response,
+            }),
+        );
+        if !accepted {
+            bail!("workspace base setup was rejected");
+        }
+        Ok(())
     }
 
     pub fn release(&self, sandbox_id: &str) -> bool {
@@ -946,6 +1032,11 @@ fn random_hex(bytes: usize) -> Result<String> {
         .read_exact(&mut buf)
         .context("read /dev/urandom")?;
     Ok(buf.iter().map(|byte| format!("{byte:02x}")).collect())
+}
+
+fn path_str<'a>(path: &'a Path, field: &str) -> Result<&'a str> {
+    path.to_str()
+        .with_context(|| format!("{field} must be valid UTF-8: {}", path.display()))
 }
 
 fn host_ok_response(op: &str, trace: &ForwardTraceContext, result: Value) -> Value {

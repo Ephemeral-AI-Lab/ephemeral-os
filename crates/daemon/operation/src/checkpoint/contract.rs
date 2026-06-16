@@ -19,21 +19,6 @@ impl LayerMetricsInput {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EnsureBaseInput {
-    pub layer_stack_root: PathBuf,
-    pub workspace_root: PathBuf,
-}
-
-impl EnsureBaseInput {
-    pub(crate) fn parse(args: &Value) -> Result<Self, ArgsError> {
-        Ok(Self {
-            layer_stack_root: require_path(args, "layer_stack_root")?,
-            workspace_root: require_path(args, "workspace_root")?,
-        })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BuildBaseInput {
     pub layer_stack_root: PathBuf,
     pub workspace_root: PathBuf,

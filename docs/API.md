@@ -57,7 +57,6 @@ Served only on the operator socket beside the client socket; never the client so
 | `host.container.stop` | host | Container | yes | `host.container.StopArgs` | `host.container.StopResponse` | Stop a host container by container name/id or managed sandbox_id. |
 | `host.container.remove` | host | Container | yes | `host.container.RemoveArgs` | `host.container.RemoveResponse` | Remove a host container by container name/id or managed sandbox_id. |
 | `sandbox.checkpoint.layer_metrics` | daemon | Checkpoint | no | `operation.checkpoint.LayerMetricsInput` | `operation.checkpoint.LayerMetricsOutput` | Report LayerStack and storage metrics for the sandbox. |
-| `sandbox.checkpoint.ensure_base` | daemon | Checkpoint | yes | `operation.checkpoint.EnsureBaseInput` | `operation.checkpoint.WorkspaceBaseOutput` | Ensure a workspace base binding exists. |
 | `sandbox.checkpoint.build_base` | daemon | Checkpoint | yes | `operation.checkpoint.BuildBaseInput` | `operation.checkpoint.WorkspaceBaseOutput` | Build or rebuild a workspace base binding. |
 | `sandbox.checkpoint.commit_to_workspace` | daemon | Checkpoint | yes | `operation.checkpoint.CommitToWorkspaceInput` | `operation.checkpoint.CommitToWorkspaceOutput` | Materialize LayerStack state into the bound workspace. |
 | `sandbox.checkpoint.commit_to_git` | daemon | Checkpoint | yes | `operation.checkpoint.CommitInput` | `operation.checkpoint.CommitOutput` | Commit a LayerStack snapshot into the bound workspace's durable Git repo. |

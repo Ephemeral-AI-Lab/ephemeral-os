@@ -61,7 +61,6 @@ These are daemon-served today and should keep the `sandbox.*` prefix.
 | `sandbox.command.count` | public | no | Count live commands. |
 | `sandbox.run.end` | public | yes | End one caller-owned workspace run. |
 | `sandbox.checkpoint.layer_metrics` | operator | no | Report LayerStack and storage metrics. |
-| `sandbox.checkpoint.ensure_base` | operator | yes | Ensure a workspace base binding exists. |
 | `sandbox.checkpoint.build_base` | operator | yes | Build or rebuild a workspace base binding. |
 | `sandbox.checkpoint.commit_to_workspace` | operator | yes | Materialize LayerStack state into the bound workspace. |
 | `sandbox.checkpoint.commit_to_git` | operator | yes | Commit LayerStack state into the durable workspace Git repo. |

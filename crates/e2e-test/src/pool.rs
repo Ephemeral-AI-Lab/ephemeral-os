@@ -1,7 +1,7 @@
 //! `NodePool` — up to `sandboxes` daemon containers behind a blocking semaphore,
 //! plus `NodeLease`, the ergonomic per-test handle that mints a fresh
-//! `layer_stack_root`, resets the configured workspace root, and injects the
-//! standard response members.
+//! `layer_stack_root`, resets the configured workspace root, and builds the
+//! base binding before injecting the standard response members.
 //!
 //! A lease holds its node exclusively for the test's duration; the node (and its
 //! daemon) is reused across leases until `recycle_after` checkouts bound scratch
@@ -234,8 +234,8 @@ impl<'p> NodeLease<'p> {
             return Err(Box::new((node, err)));
         }
         let iid = next_invocation_id();
-        let ensure = node.container.client().request(
-            catalog::SANDBOX_CHECKPOINT_ENSURE_BASE,
+        let setup = node.container.client().request(
+            catalog::SANDBOX_CHECKPOINT_BUILD_BASE,
             &iid,
             &json!({
                 "layer_stack_root": stack_root,
@@ -243,10 +243,10 @@ impl<'p> NodeLease<'p> {
                 "caller_id": caller_id,
             }),
         );
-        match ensure {
+        match setup {
             Ok(resp) => {
                 if let Err(err) = pool.run.record_response(
-                    catalog::SANDBOX_CHECKPOINT_ENSURE_BASE,
+                    catalog::SANDBOX_CHECKPOINT_BUILD_BASE,
                     &iid,
                     &caller_id,
                     node.container.name(),
@@ -265,7 +265,7 @@ impl<'p> NodeLease<'p> {
                 } else {
                     Err(Box::new((
                         node,
-                        anyhow::anyhow!("ensure_workspace_base failed: {resp}"),
+                        anyhow::anyhow!("build_workspace_base failed: {resp}"),
                     )))
                 }
             }

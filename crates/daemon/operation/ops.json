@@ -244,17 +244,6 @@
       "summary": "Report LayerStack and storage metrics for the sandbox."
     },
     {
-      "name": "sandbox.checkpoint.ensure_base",
-      "served_by": "daemon",
-      "host_verb": null,
-      "visibility": "operator",
-      "family": "Checkpoint",
-      "mutates_state": true,
-      "args_schema": "operation.checkpoint.EnsureBaseInput",
-      "response_schema": "operation.checkpoint.WorkspaceBaseOutput",
-      "summary": "Ensure a workspace base binding exists."
-    },
-    {
       "name": "sandbox.checkpoint.build_base",
       "served_by": "daemon",
       "host_verb": null,

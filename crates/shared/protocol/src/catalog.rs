@@ -279,8 +279,6 @@ declare_builtin_ops! {
         Daemon, Control, Internal, true, None, "operation.control.TraceExportAckInput", "operation.control.TraceExportAckOutput", "Ack a durably ingested daemon trace export lease.";
     LayerMetrics, SANDBOX_CHECKPOINT_LAYER_METRICS, "sandbox.checkpoint.layer_metrics",
         Daemon, Checkpoint, Operator, false, None, "operation.checkpoint.LayerMetricsInput", "operation.checkpoint.LayerMetricsOutput", "Report LayerStack and storage metrics for the sandbox.";
-    EnsureWorkspaceBase, SANDBOX_CHECKPOINT_ENSURE_BASE, "sandbox.checkpoint.ensure_base",
-        Daemon, Checkpoint, Operator, true, None, "operation.checkpoint.EnsureBaseInput", "operation.checkpoint.WorkspaceBaseOutput", "Ensure a workspace base binding exists.";
     BuildWorkspaceBase, SANDBOX_CHECKPOINT_BUILD_BASE, "sandbox.checkpoint.build_base",
         Daemon, Checkpoint, Operator, true, None, "operation.checkpoint.BuildBaseInput", "operation.checkpoint.WorkspaceBaseOutput", "Build or rebuild a workspace base binding.";
     CommitToWorkspace, SANDBOX_CHECKPOINT_COMMIT_TO_WORKSPACE, "sandbox.checkpoint.commit_to_workspace",

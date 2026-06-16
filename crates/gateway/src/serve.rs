@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{bail, Context, Result};
-use config::configs::gateway::GatewayConfig;
+use config::configs::{gateway::GatewayConfig, isolated_workspace::IsolatedWorkspaceConfig};
 
 use host::{HostConfig, SandboxHost};
 
@@ -94,6 +94,13 @@ impl ServeArgs {
                 .as_ref()
                 .and_then(|profile| profile.platform.clone())
         });
+        let workspace_root = load_default_workspace_root_or_fallback(&config_yaml_path)
+            .with_context(|| {
+                format!(
+                    "load isolated_workspace.workspace_root from {}",
+                    config_yaml_path.display()
+                )
+            })?;
         let state_dir = state_dir.unwrap_or_else(|| default_runtime_dir.join("state"));
         let remote_eosd_path = remote_daemon_dir.join("eosd");
         let remote_config_path =
@@ -106,6 +113,7 @@ impl ServeArgs {
                 docker_privileged,
                 eosd_path,
                 config_yaml_path,
+                workspace_root,
                 remote_daemon_dir,
                 remote_eosd_path,
                 remote_config_path,
@@ -132,6 +140,20 @@ fn load_default_image_profile(path: &std::path::Path) -> Result<DefaultImageProf
         image: config.default_image_profile.image,
         platform: config.default_image_profile.platform,
     })
+}
+
+fn load_default_workspace_root_or_fallback(path: &std::path::Path) -> Result<PathBuf> {
+    if !path.exists() {
+        return Ok(PathBuf::from("/workspace"));
+    }
+    let doc = config::load_path(path)?;
+    let config = doc
+        .section::<IsolatedWorkspaceConfig>("isolated_workspace")
+        .context("deserialize isolated_workspace config section")?;
+    config
+        .validate()
+        .context("validate isolated_workspace config")?;
+    Ok(config.workspace_root)
 }
 
 fn default_runtime_dir() -> PathBuf {

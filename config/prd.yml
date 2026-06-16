@@ -59,7 +59,7 @@ isolated_workspace:
   exit_grace_s: 0.25
   rfc1918_egress: allow
   fallback_dns: 1.1.1.1
-  workspace_root: /testbed
+  workspace_root: /workspace
   sample_interval_s: 0.5
 
 runner:

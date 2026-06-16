@@ -2,14 +2,14 @@ use std::collections::HashMap;
 #[cfg(target_os = "linux")]
 use std::fs::{File, OpenOptions};
 #[cfg(target_os = "linux")]
-use std::io::Write;
+use std::io::{Read, Write};
 #[cfg(target_os = "linux")]
 use std::os::fd::{AsRawFd, IntoRawFd, RawFd};
 #[cfg(all(target_os = "linux", unix))]
 use std::os::unix::process::ExitStatusExt;
 use std::path::PathBuf;
 #[cfg(target_os = "linux")]
-use std::process::{Child, Command, Stdio};
+use std::process::{Child, ChildStderr, Command, ExitStatus, Stdio};
 #[cfg(test)]
 use std::sync::Arc;
 #[cfg(target_os = "linux")]
@@ -132,7 +132,7 @@ impl NamespaceRuntime {
                 .arg(control_child_fd.to_string())
                 .stdin(Stdio::null())
                 .stdout(Stdio::null())
-                .stderr(Stdio::null())
+                .stderr(Stdio::piped())
                 .spawn()
                 .map_err(setup_error)?;
             drop(readiness_write);
@@ -144,21 +144,22 @@ impl NamespaceRuntime {
             if let Err(error) = set_nonblocking(readiness_fd)
                 .and_then(|()| expect_line(readiness_fd, b"ns-up", setup_timeout_s))
             {
-                let _ = child.kill();
-                let _ = child.wait();
+                let stderr = child.stderr.take();
+                let error = ns_holder_startup_error(error, &mut child, stderr);
                 let _ = close(readiness_fd);
                 let _ = close(control_fd);
                 return Err(error);
             }
             let Ok(holder_pid) = i32::try_from(child.id()) else {
-                let _ = child.kill();
-                let _ = child.wait();
+                let stderr = child.stderr.take();
+                let error = ns_holder_startup_error(
+                    setup_error(format!("ns-holder pid does not fit i32: {}", child.id())),
+                    &mut child,
+                    stderr,
+                );
                 let _ = close(readiness_fd);
                 let _ = close(control_fd);
-                return Err(setup_error(format!(
-                    "ns-holder pid does not fit i32: {}",
-                    child.id()
-                )));
+                return Err(error);
             };
             lock_holder_children()?.insert(holder_pid, child);
             Ok(holder_pid)
@@ -273,7 +274,9 @@ impl NamespaceRuntime {
                 },
             );
             write_all_fd(handle.control_fd, payload.as_bytes())?;
-            expect_line(handle.readiness_fd, b"ready", setup_timeout_s)?;
+            if let Err(error) = expect_line(handle.readiness_fd, b"ready", setup_timeout_s) {
+                return Err(ns_holder_runtime_error(error, handle.holder_pid)?);
+            }
         }
         Ok(())
     }
@@ -397,6 +400,87 @@ fn lock_holder_children() -> Result<MutexGuard<'static, HashMap<i32, Child>>, Is
     holder_children()
         .lock()
         .map_err(|_| setup_error("ns-holder child registry lock poisoned"))
+}
+
+#[cfg(target_os = "linux")]
+fn ns_holder_startup_error(
+    error: IsolatedError,
+    child: &mut Child,
+    stderr: Option<ChildStderr>,
+) -> IsolatedError {
+    let original_step = match error {
+        IsolatedError::SetupFailed { step } => step,
+        other => other.to_string(),
+    };
+    let _ = child.kill();
+    let status = child.wait().ok();
+    let stderr = read_child_stderr(stderr);
+    IsolatedError::SetupFailed {
+        step: format!(
+            "{original_step}; ns-holder {}; stderr: {}",
+            format_exit_status(status.as_ref()),
+            stderr_summary(&stderr)
+        ),
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn ns_holder_runtime_error(
+    error: IsolatedError,
+    holder_pid: i32,
+) -> Result<IsolatedError, IsolatedError> {
+    let original_step = match error {
+        IsolatedError::SetupFailed { step } => step,
+        other => other.to_string(),
+    };
+    let Some(mut child) = lock_holder_children()?.remove(&holder_pid) else {
+        return Ok(IsolatedError::SetupFailed {
+            step: format!("{original_step}; ns-holder child {holder_pid} was not tracked"),
+        });
+    };
+    let stderr = child.stderr.take();
+    Ok(ns_holder_startup_error(
+        IsolatedError::SetupFailed {
+            step: original_step,
+        },
+        &mut child,
+        stderr,
+    ))
+}
+
+#[cfg(target_os = "linux")]
+fn read_child_stderr(stderr: Option<ChildStderr>) -> String {
+    let Some(mut stderr) = stderr else {
+        return String::new();
+    };
+    let mut output = String::new();
+    let _ = stderr.read_to_string(&mut output);
+    output
+}
+
+#[cfg(target_os = "linux")]
+fn stderr_summary(stderr: &str) -> String {
+    let trimmed = stderr.trim();
+    if trimmed.is_empty() {
+        "<empty>".to_owned()
+    } else {
+        trimmed.replace('\n', " | ")
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn format_exit_status(status: Option<&ExitStatus>) -> String {
+    let Some(status) = status else {
+        return "exit status unavailable".to_owned();
+    };
+    if let Some(code) = status.code() {
+        return format!("exited with status {code}");
+    }
+    #[cfg(unix)]
+    if let Some(signal) = status.signal() {
+        return format!("terminated by signal {signal}");
+    }
+    status.to_string()
 }
 
 #[cfg(target_os = "linux")]

@@ -267,7 +267,9 @@ pub(crate) fn isolated_command_transcript_path(
     workspace_handle_id: &str,
     command_id: &str,
 ) -> String {
-    format!("/eos/scratch/isolated/{workspace_handle_id}/commands/{command_id}/transcript.log")
+    format!(
+        "/eos/scratch/isolated/eos-isolated/{workspace_handle_id}/commands/{command_id}/transcript.log"
+    )
 }
 
 pub(crate) fn command_transcript_logs(lease: &NodeLease<'_>) -> Result<Vec<String>> {

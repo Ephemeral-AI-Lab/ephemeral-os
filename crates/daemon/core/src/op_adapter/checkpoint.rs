@@ -6,14 +6,12 @@ use std::time::Instant;
 
 use layerstack::WorkspaceBinding;
 use layerstack::{
-    build_workspace_base as build_layer_stack_workspace_base,
-    ensure_workspace_base as ensure_layer_stack_workspace_base, read_workspace_binding,
+    build_workspace_base as build_layer_stack_workspace_base, read_workspace_binding,
     require_workspace_binding, LayerStack,
 };
 use operation::checkpoint::contract::{
     BindingInput, BindingOutput, BuildBaseInput, CommitInput, CommitOutput, CommitToWorkspaceInput,
-    CommitToWorkspaceOutput, EnsureBaseInput, LayerMetricsInput, LayerMetricsOutput,
-    WorkspaceBaseOutput,
+    CommitToWorkspaceOutput, LayerMetricsInput, LayerMetricsOutput, WorkspaceBaseOutput,
 };
 use operation::checkpoint::{CommitOutcome, CommitRequest};
 use serde_json::{json, Value};
@@ -79,28 +77,6 @@ pub(crate) fn build_workspace_base(
     Ok(to_wire_value(WorkspaceBaseOutput {
         success: true,
         created: true,
-        binding,
-    }))
-}
-
-pub(crate) fn ensure_workspace_base(
-    input: EnsureBaseInput,
-    context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
-    record_checkpoint_route(&context, "workspace_base_ensures_layerstack_directly");
-    let total_start = Instant::now();
-    let root = input.layer_stack_root;
-    let workspace_root = input.workspace_root;
-    let (binding, created) = ensure_layer_stack_workspace_base(&root, &workspace_root)?;
-    let binding = binding_to_value(&binding)?;
-    let timings = BTreeMap::from([(
-        "sandbox.checkpoint.workspace_base.total_s".to_owned(),
-        total_start.elapsed().as_secs_f64(),
-    )]);
-    record_workspace_base_finished(&context, "ensure", created, false, &timings);
-    Ok(to_wire_value(WorkspaceBaseOutput {
-        success: true,
-        created,
         binding,
     }))
 }

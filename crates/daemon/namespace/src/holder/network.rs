@@ -56,9 +56,7 @@ pub(crate) fn disable_ipv6_ra() {
 
 #[cfg(target_os = "linux")]
 pub(crate) fn bring_loopback_up() {
-    if let Ok(index) = link_index("lo") {
-        let _ = set_link_up(index);
-    }
+    let _ = set_link_up("lo");
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -66,10 +64,16 @@ pub(crate) const fn bring_loopback_up() {}
 
 #[cfg(target_os = "linux")]
 pub(crate) fn configure_namespace_veth(config: &NetworkConfig) -> io::Result<()> {
-    let index = link_index(&config.iface)?;
-    set_link_up(index)?;
-    add_ipv4_address(index, config.ns_ip, config.prefix_len)?;
-    add_ipv4_default_route(index, config.gateway)
+    with_step("lookup namespace veth", link_index(&config.iface))?;
+    with_step("set namespace veth up", set_link_up(&config.iface))?;
+    with_step(
+        "add namespace veth address",
+        add_ipv4_address(&config.iface, config.ns_ip, config.prefix_len),
+    )?;
+    with_step(
+        "add namespace veth default route",
+        add_ipv4_default_route(&config.iface, config.gateway),
+    )
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -98,104 +102,198 @@ fn link_index(name: &str) -> io::Result<libc::c_uint> {
 }
 
 #[cfg(target_os = "linux")]
-fn set_link_up(index: libc::c_uint) -> io::Result<()> {
-    let Some(ifi_family) = libc_c_int_to_u8(libc::AF_UNSPEC) else {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "invalid AF_UNSPEC value",
-        ));
-    };
-    let Ok(ifi_index) = i32::try_from(index) else {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "interface index does not fit i32",
-        ));
-    };
-    let Some(iff_up) = libc_c_int_to_u32(libc::IFF_UP) else {
+fn with_step<T>(step: &'static str, result: io::Result<T>) -> io::Result<T> {
+    result.map_err(|error| io::Error::new(error.kind(), format!("{step}: {error}")))
+}
+
+#[cfg(target_os = "linux")]
+fn set_link_up(name: &str) -> io::Result<()> {
+    let Some(iff_up) = libc_c_int_to_c_short(libc::IFF_UP) else {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             "invalid IFF_UP value",
         ));
     };
-    let msg = IfInfoMsg {
-        ifi_family,
-        ifi_pad: 0,
-        ifi_type: 0,
-        ifi_index,
-        ifi_flags: iff_up,
-        ifi_change: iff_up,
-    };
-    let Some(flags) = libc_c_int_to_u16(libc::NLM_F_REQUEST) else {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "invalid netlink request flag",
-        ));
-    };
-    send_netlink_message(libc::RTM_NEWLINK, flags, &msg)
+    let mut request = interface_request(name)?;
+    let socket = ioctl_socket()?;
+    let result = get_interface_flags(socket, &mut request).and_then(|()| {
+        // SAFETY: `SIOCGIFFLAGS` initialized the `ifru_flags` union field on success.
+        let flags = unsafe { request.ifr_ifru.ifru_flags };
+        // SAFETY: `SIOCSIFFLAGS` reads `ifru_flags`; assigning this union field
+        // selects that variant for the following ioctl.
+        request.ifr_ifru.ifru_flags = flags | iff_up;
+        set_interface_flags(socket, &request)
+    });
+    let close_result = close_fd(socket);
+    if result.is_ok() {
+        close_result?;
+    }
+    result
 }
 
 #[cfg(target_os = "linux")]
-fn add_ipv4_address(index: libc::c_uint, ip: Ipv4Addr, prefix_len: u8) -> io::Result<()> {
-    let Some(ifa_family) = libc_c_int_to_u8(libc::AF_INET) else {
+fn interface_request(name: &str) -> io::Result<libc::ifreq> {
+    let name = CString::new(name)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "interface name has NUL byte"))?;
+    let bytes = name.as_bytes_with_nul();
+    if bytes.len() > libc::IFNAMSIZ {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "interface name exceeds IFNAMSIZ",
+        ));
+    }
+    // SAFETY: Linux `ifreq` is a plain C request buffer, and zero initialization
+    // is the documented starting state before filling `ifr_name` and one union field.
+    let mut request = unsafe { std::mem::zeroed::<libc::ifreq>() };
+    // SAFETY: `request.ifr_name` has IFNAMSIZ elements and we checked `bytes`
+    // fits, including the NUL terminator. The kernel treats the copied bytes as
+    // a C interface name and does not retain this pointer.
+    unsafe {
+        std::ptr::copy_nonoverlapping(
+            bytes.as_ptr().cast::<libc::c_char>(),
+            request.ifr_name.as_mut_ptr(),
+            bytes.len(),
+        );
+    }
+    Ok(request)
+}
+
+#[cfg(target_os = "linux")]
+fn ioctl_socket() -> io::Result<libc::c_int> {
+    // SAFETY: `socket` is called with constant arguments and returns an owned fd
+    // on success, closed by the caller.
+    let fd = unsafe { libc::socket(libc::AF_INET, libc::SOCK_DGRAM | libc::SOCK_CLOEXEC, 0) };
+    if fd < 0 {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(fd)
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn get_interface_flags(fd: libc::c_int, request: &mut libc::ifreq) -> io::Result<()> {
+    ioctl_ifreq(fd, ioctl_request(libc::SIOCGIFFLAGS)?, request)
+}
+
+#[cfg(target_os = "linux")]
+fn set_interface_flags(fd: libc::c_int, request: &libc::ifreq) -> io::Result<()> {
+    ioctl_ifreq(fd, ioctl_request(libc::SIOCSIFFLAGS)?, request)
+}
+
+#[cfg(target_os = "linux")]
+fn ioctl_request(value: libc::c_ulong) -> io::Result<libc::Ioctl> {
+    libc::Ioctl::try_from(value)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid ioctl request value"))
+}
+
+#[cfg(target_os = "linux")]
+fn ioctl_ifreq<T>(fd: libc::c_int, request: libc::Ioctl, arg: &T) -> io::Result<()> {
+    // SAFETY: `fd` is an open ioctl socket; `arg` points to a valid `ifreq`
+    // buffer for the duration of the call, and the kernel copies from/to it
+    // according to the request number.
+    let rc = unsafe { libc::ioctl(fd, request, arg) };
+    if rc < 0 {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn close_fd(fd: libc::c_int) -> io::Result<()> {
+    // SAFETY: `fd` is owned by the caller and must be closed exactly once.
+    let rc = unsafe { libc::close(fd) };
+    if rc < 0 {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn add_ipv4_address(name: &str, ip: Ipv4Addr, prefix_len: u8) -> io::Result<()> {
+    let netmask = prefix_netmask(prefix_len)?;
+    let mut request = interface_request(name)?;
+    request.ifr_ifru.ifru_addr = ipv4_sockaddr(ip)?;
+    let socket = ioctl_socket()?;
+    let result = ioctl_ifreq(socket, ioctl_request(libc::SIOCSIFADDR)?, &request).and_then(|()| {
+        request.ifr_ifru.ifru_addr = ipv4_sockaddr(netmask)?;
+        ioctl_ifreq(socket, ioctl_request(libc::SIOCSIFNETMASK)?, &request)
+    });
+    let close_result = close_fd(socket);
+    if result.is_ok() {
+        close_result?;
+    }
+    result
+}
+
+#[cfg(target_os = "linux")]
+fn prefix_netmask(prefix_len: u8) -> io::Result<Ipv4Addr> {
+    if prefix_len > 32 {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("invalid IPv4 prefix length {prefix_len}"),
+        ));
+    }
+    let mask = if prefix_len == 0 {
+        0
+    } else {
+        u32::MAX << (32 - prefix_len)
+    };
+    Ok(Ipv4Addr::from(mask))
+}
+
+#[cfg(target_os = "linux")]
+fn ipv4_sockaddr(ip: Ipv4Addr) -> io::Result<libc::sockaddr> {
+    let Some(sin_family) = libc_c_int_to_sock_family(libc::AF_INET) else {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             "invalid AF_INET value",
         ));
     };
-    let msg = IfAddrMsg {
-        ifa_family,
-        ifa_prefixlen: prefix_len,
-        ifa_flags: 0,
-        ifa_scope: 0,
-        ifa_index: index,
+    let sockaddr_in = libc::sockaddr_in {
+        sin_family,
+        sin_port: 0,
+        sin_addr: libc::in_addr {
+            s_addr: u32::from_ne_bytes(ip.octets()),
+        },
+        sin_zero: [0; 8],
     };
-    let attrs = [
-        NetlinkAttr::new(IFA_ADDRESS, ip.octets().to_vec()),
-        NetlinkAttr::new(IFA_LOCAL, ip.octets().to_vec()),
-    ];
-    let Some(flags) =
-        libc_c_int_to_u16(libc::NLM_F_REQUEST | libc::NLM_F_CREATE | libc::NLM_F_EXCL)
-    else {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "invalid address netlink flags",
-        ));
-    };
-    send_netlink_message_with_attrs(libc::RTM_NEWADDR, flags, &msg, &attrs)
+    // SAFETY: `sockaddr_in` and `sockaddr` are both 16-byte Linux socket
+    // address buffers. All bytes in `sockaddr_in` are initialized above, and
+    // the copied value is consumed immediately by ioctl.
+    let mut sockaddr = unsafe { std::mem::zeroed::<libc::sockaddr>() };
+    // SAFETY: both pointers are valid for `size_of::<sockaddr_in>()` bytes,
+    // and `sockaddr` is large enough on Linux for an IPv4 socket address.
+    unsafe {
+        std::ptr::copy_nonoverlapping(
+            std::ptr::from_ref(&sockaddr_in).cast::<u8>(),
+            std::ptr::from_mut(&mut sockaddr).cast::<u8>(),
+            std::mem::size_of::<libc::sockaddr_in>(),
+        );
+    }
+    Ok(sockaddr)
 }
 
 #[cfg(target_os = "linux")]
-fn add_ipv4_default_route(index: libc::c_uint, gateway: Ipv4Addr) -> io::Result<()> {
-    let Some(rtm_family) = libc_c_int_to_u8(libc::AF_INET) else {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "invalid AF_INET value",
-        ));
-    };
-    let route = RouteMsg {
-        rtm_family,
-        rtm_dst_len: 0,
-        rtm_src_len: 0,
-        rtm_tos: 0,
-        rtm_table: libc::RT_TABLE_MAIN,
-        rtm_protocol: libc::RTPROT_STATIC,
-        rtm_scope: libc::RT_SCOPE_UNIVERSE,
-        rtm_type: libc::RTN_UNICAST,
-        rtm_flags: 0,
-    };
-    let attrs = [
-        NetlinkAttr::new(RTA_GATEWAY, gateway.octets().to_vec()),
-        NetlinkAttr::new(RTA_OIF, index.to_ne_bytes().to_vec()),
-    ];
-    let Some(flags) =
-        libc_c_int_to_u16(libc::NLM_F_REQUEST | libc::NLM_F_CREATE | libc::NLM_F_EXCL)
-    else {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "invalid route netlink flags",
-        ));
-    };
-    send_netlink_message_with_attrs(libc::RTM_NEWROUTE, flags, &route, &attrs)
+fn add_ipv4_default_route(name: &str, gateway: Ipv4Addr) -> io::Result<()> {
+    let device = CString::new(name)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "interface name has NUL byte"))?;
+    // SAFETY: Linux `rtentry` is a plain C request buffer; zero is the
+    // documented default for unused route fields.
+    let mut route = unsafe { std::mem::zeroed::<libc::rtentry>() };
+    route.rt_dst = ipv4_sockaddr(Ipv4Addr::UNSPECIFIED)?;
+    route.rt_gateway = ipv4_sockaddr(gateway)?;
+    route.rt_genmask = ipv4_sockaddr(Ipv4Addr::UNSPECIFIED)?;
+    route.rt_flags = libc::RTF_UP | libc::RTF_GATEWAY;
+    route.rt_dev = device.as_ptr().cast_mut();
+    let socket = ioctl_socket()?;
+    let result = ioctl_ifreq(socket, ioctl_request(libc::SIOCADDRT)?, &route);
+    let close_result = close_fd(socket);
+    if result.is_ok() {
+        close_result?;
+    }
+    result
 }
 
 #[cfg(target_os = "linux")]
@@ -225,24 +323,10 @@ pub(crate) const fn flush_ipv6_default_route() {}
 
 #[cfg(target_os = "linux")]
 fn send_netlink_message<T>(message_type: u16, flags: u16, payload: &T) -> io::Result<()> {
-    send_netlink_message_with_attrs(message_type, flags, payload, &[])
-}
-
-#[cfg(target_os = "linux")]
-fn send_netlink_message_with_attrs<T>(
-    message_type: u16,
-    flags: u16,
-    payload: &T,
-    attrs: &[NetlinkAttr],
-) -> io::Result<()> {
     let length = std::mem::size_of::<libc::nlmsghdr>() + std::mem::size_of::<T>();
-    let attrs_len: usize = attrs
-        .iter()
-        .map(|attr| align4(RTATTR_HEADER_LEN + attr.value.len()))
-        .sum();
-    let nlmsg_len = u32::try_from(length + attrs_len)
+    let nlmsg_len = u32::try_from(length)
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "netlink message too large"))?;
-    let mut message = Vec::with_capacity(length + attrs_len);
+    let mut message = Vec::with_capacity(length);
     let ack_flag = libc_c_int_to_u16(libc::NLM_F_ACK)
         .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "invalid netlink ACK flag"))?;
     let header = libc::nlmsghdr {
@@ -254,9 +338,6 @@ fn send_netlink_message_with_attrs<T>(
     };
     append_struct_bytes(&mut message, &header);
     append_struct_bytes(&mut message, payload);
-    for attr in attrs {
-        append_attr(&mut message, attr);
-    }
     let nl_family = libc_c_int_to_sock_family(libc::AF_NETLINK).ok_or_else(|| {
         io::Error::new(io::ErrorKind::InvalidInput, "invalid netlink socket family")
     })?;
@@ -379,16 +460,6 @@ fn append_struct_bytes<T>(buffer: &mut Vec<u8>, value: &T) {
 }
 
 #[cfg(target_os = "linux")]
-fn append_attr(buffer: &mut Vec<u8>, attr: &NetlinkAttr) {
-    let length = RTATTR_HEADER_LEN + attr.value.len();
-    buffer.extend_from_slice(&u16::try_from(length).unwrap_or(u16::MAX).to_ne_bytes());
-    buffer.extend_from_slice(&attr.kind.to_ne_bytes());
-    buffer.extend_from_slice(&attr.value);
-    let padded = align4(length);
-    buffer.resize(buffer.len() + padded - length, 0);
-}
-
-#[cfg(target_os = "linux")]
 fn libc_c_int_to_u8(value: libc::c_int) -> Option<u8> {
     u8::try_from(value).ok()
 }
@@ -399,8 +470,8 @@ fn libc_c_int_to_u16(value: libc::c_int) -> Option<u16> {
 }
 
 #[cfg(target_os = "linux")]
-fn libc_c_int_to_u32(value: libc::c_int) -> Option<u32> {
-    u32::try_from(value).ok()
+fn libc_c_int_to_c_short(value: libc::c_int) -> Option<libc::c_short> {
+    libc::c_short::try_from(value).ok()
 }
 
 #[cfg(target_os = "linux")]
@@ -414,66 +485,9 @@ fn libc_socklen(value: usize) -> Option<libc::socklen_t> {
 }
 
 #[cfg(target_os = "linux")]
-const fn align4(length: usize) -> usize {
-    (length + 3) & !3
-}
-
-#[cfg(target_os = "linux")]
-const RTATTR_HEADER_LEN: usize = 4;
-#[cfg(target_os = "linux")]
 const NLMSG_HEADER_LEN: usize = 16;
 #[cfg(target_os = "linux")]
 const NETLINK_ERROR_CODE_LEN: usize = 4;
-#[cfg(target_os = "linux")]
-const IFA_ADDRESS: u16 = 1;
-#[cfg(target_os = "linux")]
-const IFA_LOCAL: u16 = 2;
-#[cfg(target_os = "linux")]
-const RTA_OIF: u16 = 4;
-#[cfg(target_os = "linux")]
-const RTA_GATEWAY: u16 = 5;
-
-#[cfg(target_os = "linux")]
-struct NetlinkAttr {
-    kind: u16,
-    value: Vec<u8>,
-}
-
-#[cfg(target_os = "linux")]
-impl NetlinkAttr {
-    const fn new(kind: u16, value: Vec<u8>) -> Self {
-        Self { kind, value }
-    }
-}
-
-#[cfg(target_os = "linux")]
-#[expect(
-    clippy::struct_field_names,
-    reason = "repr(C) layout mirrors the Linux ifinfomsg field names"
-)]
-#[repr(C)]
-struct IfInfoMsg {
-    ifi_family: u8,
-    ifi_pad: u8,
-    ifi_type: u16,
-    ifi_index: i32,
-    ifi_flags: u32,
-    ifi_change: u32,
-}
-
-#[cfg(target_os = "linux")]
-#[expect(
-    clippy::struct_field_names,
-    reason = "repr(C) layout mirrors the Linux ifaddrmsg field names"
-)]
-#[repr(C)]
-struct IfAddrMsg {
-    ifa_family: u8,
-    ifa_prefixlen: u8,
-    ifa_flags: u8,
-    ifa_scope: u8,
-    ifa_index: u32,
-}
 
 #[cfg(target_os = "linux")]
 #[expect(

@@ -23,9 +23,6 @@ pub(crate) fn dispatch(request: OpRequest, context: DispatchContext<'_>) -> Valu
         OpRequest::TraceExport(input) => ok_envelope(control::op_trace_export(input)),
         OpRequest::TraceExportAck(input) => ok_envelope(control::op_trace_export_ack(input)),
         OpRequest::LayerMetrics(input) => daemon_result(checkpoint::layer_metrics(input, context)),
-        OpRequest::EnsureWorkspaceBase(input) => {
-            daemon_result(checkpoint::ensure_workspace_base(input, context))
-        }
         OpRequest::BuildWorkspaceBase(input) => {
             daemon_result(checkpoint::build_workspace_base(input, context))
         }

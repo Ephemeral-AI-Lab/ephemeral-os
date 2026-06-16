@@ -109,14 +109,13 @@
         "markdown": "readme.md"
       },
       "overview": {
-        "summary": "`core` owns the protocol-first smoke and contract surface for live `eosd`: runtime readiness, workspace binding/base setup, direct file ops, foreground exec, wire-message guards, and basic metrics visibility. It exercises daemon ops including `sandbox.runtime.ready`, `sandbox.call.heartbeat`, `sandbox.checkpoint.binding`, `sandbox.checkpoint.layer_metrics`, `sandbox.checkpoint.ensure_base`, `sandbox.checkpoint.build_base`, `sandbox.checkpoint.commit_to_workspace`, `sandbox.file.read`, `sandbox.file.write`, `sandbox.file.edit`, `sandbox.command.exec`, and raw malformed/auth wire-message paths. Module config: `crates/e2e-test/tests/core/config/default.test.yml`.",
+        "summary": "`core` owns the protocol-first smoke and contract surface for live `eosd`: runtime readiness, workspace binding/base setup, direct file ops, foreground exec, wire-message guards, and basic metrics visibility. It exercises daemon ops including `sandbox.runtime.ready`, `sandbox.call.heartbeat`, `sandbox.checkpoint.binding`, `sandbox.checkpoint.layer_metrics`, `sandbox.checkpoint.build_base`, `sandbox.checkpoint.commit_to_workspace`, `sandbox.file.read`, `sandbox.file.write`, `sandbox.file.edit`, `sandbox.command.exec`, and raw malformed/auth wire-message paths. Module config: `crates/e2e-test/tests/core/config/default.test.yml`.",
         "moduleConfig": "crates/e2e-test/tests/core/config/default.test.yml",
         "ops": [
           "sandbox.runtime.ready",
           "sandbox.call.heartbeat",
           "sandbox.checkpoint.binding",
           "sandbox.checkpoint.layer_metrics",
-          "sandbox.checkpoint.ensure_base",
           "sandbox.checkpoint.build_base",
           "sandbox.checkpoint.commit_to_workspace",
           "sandbox.file.read",
@@ -182,7 +181,7 @@
         {
           "id": "core-runtime-and-workspace-state",
           "name": "core-runtime-and-workspace-state",
-          "description": "Runs the unified runtime/base/workspace scenario: `setup_readiness_and_metrics_are_protocol_visible`, `runtime_ready_handshake`, `ensure_base_creates_single_base_layer`, `ensure_base_idempotent`, `build_base_reset_rebuilds`, `workspace_binding_roundtrip`, `heartbeat_inflight_idle_zero`, and `commit_to_workspace_survives_protocol_rebuild` together prove readiness, base metrics, idle command state, and rebuild-safe workspace commits.",
+          "description": "Runs the unified runtime/base/workspace scenario: `setup_readiness_and_metrics_are_protocol_visible`, `runtime_ready_handshake`, `acquire_setup_creates_single_base_layer`, `acquire_setup_binds_workspace_without_extra_step`, `build_base_reset_rebuilds`, `workspace_binding_roundtrip`, `heartbeat_inflight_idle_zero`, and `commit_to_workspace_survives_protocol_rebuild` together prove readiness, base metrics, idle command state, and rebuild-safe workspace commits.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites core --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
             "core-runtime-base",

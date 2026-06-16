@@ -56,7 +56,6 @@ usage:
   sandbox-gateway host containers remove CONTAINER
   sandbox-gateway host containers remove --sandbox-id SANDBOX_ID
   sandbox-gateway host sandboxes acquire [--image-profile NAME]
-  sandbox-gateway host sandboxes setup --sandbox-id SANDBOX_ID --workspace-root PATH
   sandbox-gateway host sandboxes list
   sandbox-gateway host sandboxes status SANDBOX_ID
   sandbox-gateway host sandboxes release SANDBOX_ID
@@ -86,7 +85,6 @@ usage:
   sandbox-gateway daemon --sandbox-id SANDBOX_ID isolation exit --caller-id ID [--grace-s SECONDS]
   sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint metrics
   sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint binding
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint ensure-base --workspace-root PATH
   sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint build-base --workspace-root PATH [--reset]
   sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint commit-workspace --workspace-root PATH
   sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint commit-git --workspace-root PATH --message TEXT [PATH...]
@@ -301,12 +299,10 @@ fn request_from_container_target(
 
 fn request_from_host_sandboxes(
     mut args: Vec<String>,
-    options: &ClientOptions,
+    _options: &ClientOptions,
 ) -> Result<GatewayRequest> {
     let Some(subcommand) = shift(&mut args) else {
-        bail!(
-            "missing host sandboxes subcommand; expected acquire | setup | list | status | release"
-        )
+        bail!("missing host sandboxes subcommand; expected acquire | list | status | release")
     };
     match subcommand.as_str() {
         "acquire" => {
@@ -315,25 +311,6 @@ fn request_from_host_sandboxes(
             let mut body = json!({});
             insert_optional(&mut body, "image_profile", image_profile);
             Ok(host_request("host.sandbox.acquire", body, false))
-        }
-        "setup" => {
-            let sandbox_id = require_sandbox_id(options)?;
-            let layer_stack_root = layer_stack_root_or_default(&mut args)?;
-            let workspace_root = take_required_flag_any(
-                &mut args,
-                &["--workspace-root", "--workspace_root"],
-                "--workspace-root",
-            )?;
-            expect_no_args(&args)?;
-            Ok(daemon_request(
-                "sandbox.checkpoint.ensure_base",
-                json!({
-                    "layer_stack_root": layer_stack_root,
-                    "workspace_root": workspace_root,
-                }),
-                sandbox_id,
-                true,
-            ))
         }
         "list" => {
             expect_no_args(&args)?;
@@ -364,7 +341,7 @@ fn request_from_host_sandboxes(
             ))
         }
         other => bail!(
-            "unknown host sandboxes subcommand {other:?}; expected acquire | setup | list | status | release"
+            "unknown host sandboxes subcommand {other:?}; expected acquire | list | status | release"
         ),
     }
 }
@@ -794,7 +771,7 @@ fn request_from_daemon_checkpoint(
 ) -> Result<GatewayRequest> {
     let Some(subcommand) = shift(&mut args) else {
         bail!(
-            "missing daemon checkpoint subcommand; expected metrics | binding | ensure-base | build-base | commit-workspace | commit-git"
+            "missing daemon checkpoint subcommand; expected metrics | binding | build-base | commit-workspace | commit-git"
         )
     };
     match subcommand.as_str() {
@@ -818,12 +795,6 @@ fn request_from_daemon_checkpoint(
                 true,
             ))
         }
-        "ensure-base" => checkpoint_workspace_request(
-            "sandbox.checkpoint.ensure_base",
-            args,
-            sandbox_id,
-            true,
-        ),
         "build-base" => {
             let reset = take_switch(&mut args, "--reset");
             let mut request = checkpoint_workspace_request(
@@ -864,7 +835,7 @@ fn request_from_daemon_checkpoint(
             ))
         }
         other => bail!(
-            "unknown daemon checkpoint subcommand {other:?}; expected metrics | binding | ensure-base | build-base | commit-workspace | commit-git"
+            "unknown daemon checkpoint subcommand {other:?}; expected metrics | binding | build-base | commit-workspace | commit-git"
         ),
     }
 }
@@ -1241,22 +1212,21 @@ mod tests {
     }
 
     #[test]
-    fn host_sandbox_setup_uses_default_layer_stack_and_workspace_alias() -> Result<()> {
+    fn host_sandbox_acquire_accepts_image_profile() -> Result<()> {
         let request = request_from_host(
             vec![
                 "sandboxes".to_owned(),
-                "setup".to_owned(),
-                "--workspace_root".to_owned(),
-                "/testbed".to_owned(),
+                "acquire".to_owned(),
+                "--image-profile".to_owned(),
+                "default".to_owned(),
             ],
-            &daemon_options(),
+            &options(),
         )?;
 
-        assert_eq!(request.op, "sandbox.checkpoint.ensure_base");
-        assert_eq!(request.sandbox_id.as_deref(), Some("sb-1"));
-        assert_eq!(request.args["layer_stack_root"], json!("/eos/layer-stack"));
-        assert_eq!(request.args["workspace_root"], json!("/testbed"));
-        assert!(request.operator);
+        assert_eq!(request.op, "host.sandbox.acquire");
+        assert_eq!(request.args["image_profile"], json!("default"));
+        assert!(request.sandbox_id.is_none());
+        assert!(!request.operator);
         Ok(())
     }
 

@@ -167,7 +167,7 @@ in names.
 | Visibility | Ops | Caller |
 |---|---|---|
 | `internal` | `sandbox.runtime.ready` | host recovery machine only |
-| `operator` | `host.trace.{requests, show, verify}` · `host.image.{list, pull}` · `host.container.{list, start, adopt, stop, remove}` · `sandbox.checkpoint.{layer_metrics, ensure_base, build_base, commit_to_workspace, commit_to_git, binding}` · `sandbox.run.cancel_all` · `sandbox.isolation.list_open` | `<listen>.operator` socket; never the client socket |
+| `operator` | `host.trace.{requests, show, verify}` · `host.image.{list, pull}` · `host.container.{list, start, adopt, stop, remove}` · `sandbox.checkpoint.{layer_metrics, build_base, commit_to_workspace, commit_to_git, binding}` · `sandbox.run.cancel_all` · `sandbox.isolation.list_open` | `<listen>.operator` socket; never the client socket |
 | `test` | `sandbox.isolation.test_reset` | test builds only |
 
 ### 4.4 `crates/daemon/operation/ops.json` schema

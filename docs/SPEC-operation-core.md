@@ -399,7 +399,6 @@ Output field sets are today's wire keys, verbatim (canonical-equal bar, §13.1).
 | `sandbox.call.count` | `CallerCountInput { caller_id }` *(shared)* | `InflightCountOutput { caller_id, count }` | |
 | **checkpoint/contract.rs** | | | operation + layerstack |
 | `sandbox.checkpoint.layer_metrics` | `LayerMetricsInput { layer_stack_root }` | `LayerMetricsOutput` (manifest/storage/lease metrics, wire-pinned) | |
-| `sandbox.checkpoint.ensure_base` | `EnsureBaseInput { layer_stack_root, workspace_root }` | `WorkspaceBaseOutput { created, binding, timings }` *(shared)* | |
 | `sandbox.checkpoint.build_base` | `BuildBaseInput { layer_stack_root, workspace_root, reset }` | `WorkspaceBaseOutput` | |
 | `sandbox.checkpoint.commit_to_workspace` | `CommitToWorkspaceInput { layer_stack_root, workspace_root }` | `CommitToWorkspaceOutput { manifest_version, timings }` | |
 | `sandbox.checkpoint.commit_to_git` | `CommitInput { layer_stack_root, workspace_root, message, paths }` (`paths`: custom `null\|str\|[str]` deserializer) | `CommitOutput { committed, commit_sha, manifest_version, manifest_root_hash, paths, worktree_mode, timings }` | |

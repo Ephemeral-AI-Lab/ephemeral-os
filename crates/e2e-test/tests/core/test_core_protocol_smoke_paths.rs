@@ -53,27 +53,17 @@ fn setup_readiness_and_metrics_are_protocol_visible() -> Result<()> {
     assert!(as_bool(metrics, "workspace_bound")?);
     assert_eq!(as_i64(metrics, "active_leases")?, 0);
 
-    let ensure_wire = lease.call(
-        catalog::SANDBOX_CHECKPOINT_ENSURE_BASE,
-        json!({"workspace_root": lease.workspace_root()}),
-    )?;
-    assert_eq!(
-        ensure_wire["status"], "ok",
-        "ensure_base uses ok envelope: {ensure_wire}"
-    );
-    let ensure = envelope_result(&ensure_wire)?;
-    assert!(as_bool(ensure, "success")?);
     let ensured = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert_eq!(
         as_i64(&ensured, "manifest_version")?,
         1,
-        "a fresh ensured base should report the initial manifest version: {ensured}"
+        "a freshly acquired base should report the initial manifest version: {ensured}"
     );
     assert!(
         ensured["base_root_hash"]
             .as_str()
             .is_some_and(looks_like_sha256),
-        "the ensured base binding should expose a CAS-shaped root hash: {ensured}"
+        "the acquired base binding should expose a CAS-shaped root hash: {ensured}"
     );
     Ok(())
 }

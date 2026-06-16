@@ -3,8 +3,7 @@ use std::path::PathBuf;
 use serde_json::Value;
 
 use crate::checkpoint::contract::{
-    BindingInput, BuildBaseInput, CommitInput, CommitToWorkspaceInput, EnsureBaseInput,
-    LayerMetricsInput,
+    BindingInput, BuildBaseInput, CommitInput, CommitToWorkspaceInput, LayerMetricsInput,
 };
 use crate::command::contract::{
     CancelCommandInput, CollectCompletedInput, ExecCommandInput, ReadProgressInput, WriteStdinInput,
@@ -66,7 +65,6 @@ pub enum OpRequest {
     TraceExport(TraceExportInput),
     TraceExportAck(TraceExportAckInput),
     LayerMetrics(LayerMetricsInput),
-    EnsureWorkspaceBase(EnsureBaseInput),
     BuildWorkspaceBase(BuildBaseInput),
     CommitToWorkspace(CommitToWorkspaceInput),
     CommitToGit(CommitInput),
@@ -129,9 +127,6 @@ impl OpRequest {
             BuiltinOp::TraceExport => Self::TraceExport(TraceExportInput::parse(args)),
             BuiltinOp::TraceExportAck => Self::TraceExportAck(TraceExportAckInput::parse(args)?),
             BuiltinOp::LayerMetrics => Self::LayerMetrics(LayerMetricsInput::parse(args)?),
-            BuiltinOp::EnsureWorkspaceBase => {
-                Self::EnsureWorkspaceBase(EnsureBaseInput::parse(args)?)
-            }
             BuiltinOp::BuildWorkspaceBase => Self::BuildWorkspaceBase(BuildBaseInput::parse(args)?),
             BuiltinOp::CommitToWorkspace => {
                 Self::CommitToWorkspace(CommitToWorkspaceInput::parse(args)?)
