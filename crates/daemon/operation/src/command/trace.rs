@@ -104,6 +104,7 @@ pub(super) fn command_response_trace_events(response: &CommandResponse) -> Vec<C
         .get("workspace.unmount_s")
         .cloned()
         .unwrap_or(Value::Null);
+    let runner_timings = runner_timings(&finalized.core.timings);
     let layer_count = finalized
         .core
         .timings
@@ -174,6 +175,14 @@ pub(super) fn command_response_trace_events(response: &CommandResponse) -> Vec<C
             }),
         ),
         CommandTraceEvent::new(
+            "runner_timing",
+            json!({
+                "command_id": command_id,
+                "workspace": workspace,
+                "timings": runner_timings,
+            }),
+        ),
+        CommandTraceEvent::new(
             "response_meta",
             json!({
                 "command_id": command_id,
@@ -185,6 +194,35 @@ pub(super) fn command_response_trace_events(response: &CommandResponse) -> Vec<C
             }),
         ),
     ]
+}
+
+fn runner_timings(timings: &WorkspaceTimings) -> Map<String, Value> {
+    const KEYS: &[&str] = &[
+        "workspace.namespace_enter_s",
+        "workspace.namespace_setsid_s",
+        "workspace.namespace_unshare_s",
+        "workspace.namespace_uid_gid_map_s",
+        "workspace.namespace_mount_private_s",
+        "workspace.cgroup_join_s",
+        "workspace.setns_join_s",
+        "workspace.mount_s",
+        "workspace.overlay_mount_s",
+        "workspace.shell_prepare_s",
+        "workspace.shell_spawn_s",
+        "workspace.shell_wait_s",
+        "workspace.plugin_prepare_s",
+        "workspace.plugin_spawn_s",
+        "workspace.plugin_wait_s",
+        "workspace.tool_s",
+        "workspace.unmount_s",
+    ];
+    KEYS.iter()
+        .filter_map(|key| {
+            timings
+                .get(*key)
+                .map(|value| ((*key).to_owned(), value.clone()))
+        })
+        .collect()
 }
 
 pub(super) fn command_process_wait_resource_stats_event(

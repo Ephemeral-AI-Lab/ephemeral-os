@@ -25,20 +25,6 @@ pub(crate) fn run_daemon(argv: impl Iterator<Item = String>) -> Result<()> {
     send_and_print(request, &options)
 }
 
-pub(crate) fn run_legacy(command: &str, argv: impl Iterator<Item = String>) -> Result<()> {
-    let mut args = argv.collect::<Vec<_>>();
-    let options = ClientOptions::parse(&mut args)?;
-    let request = match command {
-        "op" => request_from_op(args, options.sandbox_id.clone(), false)?,
-        "images" => request_from_host_images(args)?,
-        "containers" => request_from_host_containers(args, &options)?,
-        "sandboxes" => request_from_host_sandboxes(args, &options)?,
-        "image-profiles" | "profiles" => request_from_host_profiles(args)?,
-        other => bail!("unknown client command {other:?}"),
-    };
-    send_and_print(request, &options)
-}
-
 pub(crate) fn print_usage() {
     println!(
         "\
@@ -55,7 +41,7 @@ usage:
   sandbox-gateway host containers stop --sandbox-id SANDBOX_ID
   sandbox-gateway host containers remove CONTAINER
   sandbox-gateway host containers remove --sandbox-id SANDBOX_ID
-  sandbox-gateway host sandboxes acquire [--image-profile NAME]
+  sandbox-gateway host sandboxes acquire [--image-profile NAME] [--workspace-root PATH]
   sandbox-gateway host sandboxes list
   sandbox-gateway host sandboxes status SANDBOX_ID
   sandbox-gateway host sandboxes release SANDBOX_ID
@@ -95,8 +81,6 @@ usage:
 common client flags:
   --socket PATH      gateway client socket; overrides EOS_GATEWAY_SOCKET/default
   --operator         connect to <socket>.operator
-  --layer-stack-root PATH
-                    daemon shortcut override; default /eos/layer-stack
   --envelope         print the full response envelope instead of result only"
     );
 }
@@ -198,11 +182,6 @@ fn request_from_daemon(mut args: Vec<String>, options: &ClientOptions) -> Result
             "unknown daemon command {other:?}; expected ping | files | commands | plugins | pyright | isolation | checkpoint | run | op"
         ),
     }
-}
-
-fn request_from_host_profiles(args: Vec<String>) -> Result<GatewayRequest> {
-    expect_args(&args, &["list"])?;
-    Ok(host_request("host.image_profiles.list", json!({}), false))
 }
 
 fn request_from_host_images(mut args: Vec<String>) -> Result<GatewayRequest> {
@@ -307,9 +286,12 @@ fn request_from_host_sandboxes(
     match subcommand.as_str() {
         "acquire" => {
             let image_profile = take_optional_flag(&mut args, "--image-profile")?;
+            let workspace_root =
+                take_optional_flag_any(&mut args, &["--workspace-root", "--workspace_root"])?;
             expect_no_args(&args)?;
             let mut body = json!({});
             insert_optional(&mut body, "image_profile", image_profile);
+            insert_optional(&mut body, "workspace_root", workspace_root);
             Ok(host_request("host.sandbox.acquire", body, false))
         }
         "list" => {
@@ -1031,14 +1013,6 @@ fn require_sandbox_id(options: &ClientOptions) -> Result<String> {
         .context("daemon commands require --sandbox-id SANDBOX_ID")
 }
 
-fn expect_args(actual: &[String], expected: &[&str]) -> Result<()> {
-    if actual == expected {
-        Ok(())
-    } else {
-        bail!("expected {}", expected.join(" "))
-    }
-}
-
 fn expect_no_args(args: &[String]) -> Result<()> {
     if args.is_empty() {
         Ok(())
@@ -1212,19 +1186,22 @@ mod tests {
     }
 
     #[test]
-    fn host_sandbox_acquire_accepts_image_profile() -> Result<()> {
+    fn host_sandbox_acquire_accepts_image_profile_and_workspace_root() -> Result<()> {
         let request = request_from_host(
             vec![
                 "sandboxes".to_owned(),
                 "acquire".to_owned(),
                 "--image-profile".to_owned(),
                 "default".to_owned(),
+                "--workspace-root".to_owned(),
+                "/workspace".to_owned(),
             ],
             &options(),
         )?;
 
         assert_eq!(request.op, "host.sandbox.acquire");
         assert_eq!(request.args["image_profile"], json!("default"));
+        assert_eq!(request.args["workspace_root"], json!("/workspace"));
         assert!(request.sandbox_id.is_none());
         assert!(!request.operator);
         Ok(())

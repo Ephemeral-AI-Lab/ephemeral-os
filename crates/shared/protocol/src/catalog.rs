@@ -236,7 +236,7 @@ macro_rules! declare_builtin_ops {
 
 declare_builtin_ops! {
     HostSandboxAcquire, HOST_SANDBOX_ACQUIRE, "host.sandbox.acquire",
-        Host, Sandbox, Public, true, Some(HostVerb::Acquire), "host.sandbox.AcquireArgs", "host.sandbox.AcquireResponse", "Provision a sandbox container plus daemon and return its sandbox_id.";
+        Host, Sandbox, Public, true, Some(HostVerb::Acquire), "host.sandbox.AcquireArgs", "host.sandbox.AcquireResponse", "Provision a sandbox container plus daemon, build its workspace base, and return its sandbox_id.";
     HostSandboxRelease, HOST_SANDBOX_RELEASE, "host.sandbox.release",
         Host, Sandbox, Public, true, Some(HostVerb::Release), "host.sandbox.ReleaseArgs", "host.sandbox.ReleaseResponse", "Destroy the sandbox container and drop its registry entry.";
     HostSandboxStatus, HOST_SANDBOX_STATUS, "host.sandbox.status",

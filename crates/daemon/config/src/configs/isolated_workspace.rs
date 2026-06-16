@@ -51,7 +51,7 @@ impl Default for IsolatedWorkspaceConfig {
             exit_grace_s: 0.25,
             rfc1918_egress: Rfc1918Egress::Allow,
             fallback_dns: "1.1.1.1".to_owned(),
-            workspace_root: PathBuf::from("/workspace"),
+            workspace_root: PathBuf::from("/testbed"),
             sample_interval_s: 0.5,
         }
     }

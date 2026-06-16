@@ -4,7 +4,7 @@ pub const HANDLE_PREFIX: &str = "eos-iws-";
 
 pub const CGROUP_ROOT: &str = "/sys/fs/cgroup";
 
-const DEFAULT_EOS_WORKSPACE_ROOT: &str = "/workspace";
+const DEFAULT_EOS_WORKSPACE_ROOT: &str = "/testbed";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]

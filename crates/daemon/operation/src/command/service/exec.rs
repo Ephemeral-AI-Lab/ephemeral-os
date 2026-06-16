@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use command::process::{CommandProcess, CommandProcessSpawn, CommandProcessSpec};
-use command::yield_wait_loop::{wait_for_yield, WaitOutcome};
+use command::yield_wait_loop::{wait_for_yield_with_timing, WaitOutcome};
 use command::{CommandError, StartCommand};
 use layerstack::service;
 use serde_json::json;
@@ -263,9 +263,11 @@ impl CommandOps {
         insert_cgroup_process_resource_timings(&mut before_resource_timings);
         self.store_before_resource_sample(&id, before_resource_timings);
         let wait_started = Instant::now();
-        let response = self.wait_on_run(run, yield_time_ms, 0, false, |stdout| {
+        let wait_report = self.wait_on_run_with_timing(run, yield_time_ms, 0, false, |stdout| {
             CommandResponse::running(id.clone(), stdout)
         });
+        let response = wait_report.response;
+        let timing = wait_report.timing;
         trace_events.push(CommandTraceEvent::new(
             "wait_finished",
             json!({
@@ -274,6 +276,11 @@ impl CommandOps {
                 "completed": response.status != CommandStatus::Running,
                 "yield_time_ms": yield_time_ms,
                 "duration_ms": elapsed_ms(wait_started),
+                "wait_loop_duration_ms": timing.elapsed_ms,
+                "wait_yield_reason": timing.reason.as_str(),
+                "first_output_ms": timing.first_output_ms,
+                "last_output_ms": timing.last_output_ms,
+                "quiet_ms": timing.quiet_ms,
             }),
         ));
         if let Some(finalized) = &response.finalized {
@@ -325,11 +332,39 @@ impl CommandOps {
         consume_resource_pair: bool,
         on_running: impl FnOnce(String) -> CommandResponse,
     ) -> CommandResponse {
-        match wait_for_yield(run.process(), &self.config, wait_ms, start_offset) {
+        self.wait_on_run_with_timing(
+            run,
+            wait_ms,
+            start_offset,
+            consume_resource_pair,
+            on_running,
+        )
+        .response
+    }
+
+    fn wait_on_run_with_timing(
+        &self,
+        run: Arc<ActiveCommand>,
+        wait_ms: u64,
+        start_offset: u64,
+        consume_resource_pair: bool,
+        on_running: impl FnOnce(String) -> CommandResponse,
+    ) -> WaitOnRunReport {
+        let report = wait_for_yield_with_timing(run.process(), &self.config, wait_ms, start_offset);
+        let response = match report.outcome {
             WaitOutcome::Completed(process_exit) => {
                 self.finalize_command(run, process_exit, false, consume_resource_pair)
             }
             WaitOutcome::Running(stdout) => on_running(stdout),
+        };
+        WaitOnRunReport {
+            response,
+            timing: report.timing,
         }
     }
+}
+
+struct WaitOnRunReport {
+    response: CommandResponse,
+    timing: command::yield_wait_loop::WaitTiming,
 }

@@ -202,7 +202,14 @@ incrementally; fixtures cover the hot paths first.
    --tcp-host 0.0.0.0 --tcp-port <port> --auth-token <fresh random>`.
 4. Resolve published port via `docker port` (retry ≤ 15 s).
 5. Ready-gate: poll `sandbox.runtime.ready` until `ready: true` (bounded).
-6. Insert registry record; return `sandbox_id`.
+6. Insert the host registry record and cache the resolved endpoint.
+7. Create the requested `workspace_root` (default `/testbed`) and sandbox
+   overlay scratch directory, then build the LayerStack base binding.
+8. Return `sandbox_id`.
+
+`workspace_root` is a `host.sandbox.acquire` request arg, surfaced by
+`sandbox-gateway host sandboxes acquire --workspace-root PATH`. It is not read
+from `isolated_workspace.workspace_root`.
 
 **Destroy** (`host.sandbox.release`): `docker rm -f`, drop record. No daemon-side
 courtesy calls — container teardown *is* the cleanup.

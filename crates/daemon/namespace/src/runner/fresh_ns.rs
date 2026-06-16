@@ -45,15 +45,45 @@ use child::*;
 use command::*;
 
 #[cfg(target_os = "linux")]
+#[derive(Debug, Default)]
+pub(crate) struct RunnerPhaseTimings {
+    values: serde_json::Map<String, Value>,
+}
+
+#[cfg(target_os = "linux")]
+impl RunnerPhaseTimings {
+    pub(crate) fn insert_s(&mut self, key: &'static str, value: f64) {
+        self.values.insert(key.to_owned(), json!(value));
+    }
+
+    fn insert_elapsed(&mut self, key: &'static str, started: Instant) {
+        self.insert_s(key, started.elapsed().as_secs_f64());
+    }
+
+    fn extend(&mut self, other: Self) {
+        self.values.extend(other.values);
+    }
+
+    fn into_json(mut self, run_start: Instant) -> Value {
+        self.insert_elapsed("workspace.tool_s", run_start);
+        Value::Object(self.values)
+    }
+}
+
+#[cfg(target_os = "linux")]
 pub(crate) fn run_fresh_ns(
     request: &RunRequest,
     config: &super::config::RunnerConfig,
 ) -> Result<RunResult, RunnerError> {
-    enter_fresh_namespace()?;
+    let mut timings = RunnerPhaseTimings::default();
+    let namespace_start = Instant::now();
+    let namespace_timings = enter_fresh_namespace()?;
+    timings.extend(namespace_timings);
+    timings.insert_elapsed("workspace.namespace_enter_s", namespace_start);
     if matches!(request.tool_call.verb, RunnerVerb::PluginSetup) {
         return execute_tool(
             request,
-            0.0,
+            timings,
             Instant::now(),
             Some(&config.mount_mask.hidden_paths),
         );
@@ -74,10 +104,12 @@ pub(crate) fn run_fresh_ns(
     };
     let mount_guard = overlay::mount_overlay(&request.workspace_root.0, &handle)?;
     let mount_s = mount_start.elapsed().as_secs_f64();
+    timings.insert_s("workspace.mount_s", mount_s);
+    timings.insert_s("workspace.overlay_mount_s", mount_s);
 
     let mut result = execute_tool(
         request,
-        mount_s,
+        timings,
         Instant::now(),
         Some(&config.mount_mask.hidden_paths),
     )?;
@@ -94,10 +126,12 @@ pub(crate) fn run_fresh_ns(
 }
 
 #[cfg(target_os = "linux")]
-fn enter_fresh_namespace() -> Result<(), RunnerError> {
+fn enter_fresh_namespace() -> Result<RunnerPhaseTimings, RunnerError> {
+    let mut timings = RunnerPhaseTimings::default();
     let parent_uid = rustix::process::getuid().as_raw();
     let parent_gid = rustix::process::getgid().as_raw();
 
+    let setsid_start = Instant::now();
     if let Err(err) = setsid() {
         // Docker exec may launch the runner as a process-group leader. In that
         // case setsid(2) returns EPERM, but the spawned tool below still gets
@@ -106,33 +140,40 @@ fn enter_fresh_namespace() -> Result<(), RunnerError> {
             return Err(RunnerError::Syscall(std::io::Error::from(err)));
         }
     }
+    timings.insert_elapsed("workspace.namespace_setsid_s", setsid_start);
+    let unshare_start = Instant::now();
     unshare(UnshareFlags::NEWUSER | UnshareFlags::NEWNS).map_syscall()?;
+    timings.insert_elapsed("workspace.namespace_unshare_s", unshare_start);
+    let uid_gid_start = Instant::now();
     write_if_exists("/proc/self/setgroups", "deny\n")?;
     fs::write("/proc/self/uid_map", format!("0 {parent_uid} 1\n")).map_err(RunnerError::Syscall)?;
     fs::write("/proc/self/gid_map", format!("0 {parent_gid} 1\n")).map_err(RunnerError::Syscall)?;
     set_thread_gid(rustix::process::Gid::ROOT).map_syscall()?;
     set_thread_uid(rustix::process::Uid::ROOT).map_syscall()?;
+    timings.insert_elapsed("workspace.namespace_uid_gid_map_s", uid_gid_start);
+    let mount_private_start = Instant::now();
     mount_change(
         "/",
         MountPropagationFlags::PRIVATE | MountPropagationFlags::REC,
     )
     .map_syscall()?;
-    Ok(())
+    timings.insert_elapsed("workspace.namespace_mount_private_s", mount_private_start);
+    Ok(timings)
 }
 
 #[cfg(target_os = "linux")]
 pub(crate) fn execute_tool(
     request: &RunRequest,
-    mount_s: f64,
+    timings: RunnerPhaseTimings,
     run_start: Instant,
     hidden_paths: Option<&[PathBuf]>,
 ) -> Result<RunResult, RunnerError> {
     match &request.tool_call.verb {
-        RunnerVerb::ExecCommand => execute_shell(request, mount_s, run_start, hidden_paths),
+        RunnerVerb::ExecCommand => execute_shell(request, timings, run_start, hidden_paths),
         RunnerVerb::PluginService => {
-            execute_plugin_service(request, mount_s, run_start, hidden_paths)
+            execute_plugin_service(request, timings, run_start, hidden_paths)
         }
-        RunnerVerb::PluginSetup => execute_plugin_setup(request, mount_s, run_start, hidden_paths),
+        RunnerVerb::PluginSetup => execute_plugin_setup(request, timings, run_start, hidden_paths),
         RunnerVerb::Unknown(verb) => Ok(error_result(
             2,
             "unsupported_runner_verb",
@@ -144,10 +185,11 @@ pub(crate) fn execute_tool(
 #[cfg(target_os = "linux")]
 fn execute_plugin_setup(
     request: &RunRequest,
-    mount_s: f64,
+    mut timings: RunnerPhaseTimings,
     run_start: Instant,
     hidden_paths: Option<&[PathBuf]>,
 ) -> Result<RunResult, RunnerError> {
+    let prepare_start = Instant::now();
     let argv = plugin_setup_argv(request)?;
     let cwd = plugin_setup_cwd(request)?;
     let setup_tmp_root = setup_path_arg(request, "setup_tmp_root")?;
@@ -171,14 +213,19 @@ fn execute_plugin_setup(
         .stdout(Stdio::from(stdout))
         .stderr(Stdio::from(stderr))
         .process_group(0);
+    timings.insert_elapsed("workspace.plugin_prepare_s", prepare_start);
 
+    let spawn_start = Instant::now();
     let mut child = command.spawn().map_err(RunnerError::Child)?;
+    timings.insert_elapsed("workspace.plugin_spawn_s", spawn_start);
     let child_pid = Pid::from_child(&child);
+    let wait_start = Instant::now();
     let (exit_code, timed_out) = match wait_for_child(&mut child, request.timeout_seconds) {
         Ok(exit_code) => (exit_code, false),
         Err(RunnerError::TimedOut) => (124, true),
         Err(err) => return Err(err),
     };
+    timings.insert_elapsed("workspace.plugin_wait_s", wait_start);
     if timed_out {
         let _ = kill_process_group(child_pid, Signal::Kill);
     }
@@ -191,10 +238,7 @@ fn execute_plugin_setup(
         payload: serde_json::json!({
             "success": exit_code == 0,
             "workspace": "plugin_setup",
-            "timings": {
-                "workspace.mount_s": mount_s,
-                "workspace.tool_s": run_start.elapsed().as_secs_f64(),
-            },
+            "timings": timings.into_json(run_start),
             "status": result_status(exit_code, timed_out),
             "exit_code": exit_code,
             "timed_out": timed_out,
@@ -207,10 +251,11 @@ fn execute_plugin_setup(
 #[cfg(target_os = "linux")]
 fn execute_plugin_service(
     request: &RunRequest,
-    mount_s: f64,
+    mut timings: RunnerPhaseTimings,
     run_start: Instant,
     hidden_paths: Option<&[PathBuf]>,
 ) -> Result<RunResult, RunnerError> {
+    let prepare_start = Instant::now();
     let argv = plugin_service_argv(request)?;
     let cwd = shell_cwd(request)?;
     mask_plugin_runtime_paths(hidden_paths)?;
@@ -224,14 +269,19 @@ fn execute_plugin_service(
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .process_group(0);
+    timings.insert_elapsed("workspace.plugin_prepare_s", prepare_start);
 
+    let spawn_start = Instant::now();
     let mut child = command.spawn().map_err(RunnerError::Child)?;
+    timings.insert_elapsed("workspace.plugin_spawn_s", spawn_start);
     let child_pid = Pid::from_child(&child);
+    let wait_start = Instant::now();
     let (exit_code, timed_out) = match wait_for_child(&mut child, request.timeout_seconds) {
         Ok(exit_code) => (exit_code, false),
         Err(RunnerError::TimedOut) => (124, true),
         Err(err) => return Err(err),
     };
+    timings.insert_elapsed("workspace.plugin_wait_s", wait_start);
     if timed_out || !matches!(request.mode, crate::protocol::RunMode::SetNs) {
         let _ = kill_process_group(child_pid, Signal::Kill);
     }
@@ -240,10 +290,7 @@ fn execute_plugin_service(
         payload: serde_json::json!({
             "success": exit_code == 0,
             "workspace": "ephemeral",
-            "timings": {
-                "workspace.mount_s": mount_s,
-                "workspace.tool_s": run_start.elapsed().as_secs_f64(),
-            },
+            "timings": timings.into_json(run_start),
             "status": result_status(exit_code, timed_out),
         }),
     })
@@ -290,10 +337,11 @@ fn read_tail(path: &Path) -> Result<String, RunnerError> {
 #[cfg(target_os = "linux")]
 fn execute_shell(
     request: &RunRequest,
-    mount_s: f64,
+    mut timings: RunnerPhaseTimings,
     run_start: Instant,
     hidden_paths: Option<&[PathBuf]>,
 ) -> Result<RunResult, RunnerError> {
+    let prepare_start = Instant::now();
     let argv = shell_argv(request)?;
     let cwd = shell_cwd(request)?;
     // Open a handle to the real /proc before the mount mask hides it, so the
@@ -317,8 +365,12 @@ fn execute_shell(
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit());
+    timings.insert_elapsed("workspace.shell_prepare_s", prepare_start);
 
+    let spawn_start = Instant::now();
     let mut child = command.spawn().map_err(RunnerError::Child)?;
+    timings.insert_elapsed("workspace.shell_spawn_s", spawn_start);
+    let wait_start = Instant::now();
     let (exit_code, timed_out) = match wait_for_command_execution_scope(
         &mut child,
         request.timeout_seconds,
@@ -328,15 +380,13 @@ fn execute_shell(
         Err(RunnerError::TimedOut) => (124, true),
         Err(err) => return Err(err),
     };
+    timings.insert_elapsed("workspace.shell_wait_s", wait_start);
     Ok(RunResult {
         exit_code,
         payload: serde_json::json!({
             "success": exit_code == 0,
             "workspace": "ephemeral",
-            "timings": {
-                "workspace.mount_s": mount_s,
-                "workspace.tool_s": run_start.elapsed().as_secs_f64(),
-            },
+            "timings": timings.into_json(run_start),
             "conflict": null,
             "conflict_reason": null,
             "changed_paths": [],

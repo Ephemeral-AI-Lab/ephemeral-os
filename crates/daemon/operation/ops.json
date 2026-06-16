@@ -10,7 +10,7 @@
       "mutates_state": true,
       "args_schema": "host.sandbox.AcquireArgs",
       "response_schema": "host.sandbox.AcquireResponse",
-      "summary": "Provision a sandbox container plus daemon and return its sandbox_id."
+      "summary": "Provision a sandbox container plus daemon, build its workspace base, and return its sandbox_id."
     },
     {
       "name": "host.sandbox.release",

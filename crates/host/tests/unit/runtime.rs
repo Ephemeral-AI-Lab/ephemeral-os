@@ -19,8 +19,8 @@ fn copy_target_uses_requested_remote_name() {
 #[test]
 fn docker_exec_args_runs_from_root_after_leading_flags() {
     assert_eq!(
-        docker_exec_args("box", &["mkdir", "-p", "/workspace"]),
-        vec!["exec", "-w", "/", "box", "mkdir", "-p", "/workspace"]
+        docker_exec_args("box", &["mkdir", "-p", "/testbed"]),
+        vec!["exec", "-w", "/", "box", "mkdir", "-p", "/testbed"]
     );
     assert_eq!(
         docker_exec_args("box", &["-d", "/eos/runtime/daemon/eosd", "daemon"]),

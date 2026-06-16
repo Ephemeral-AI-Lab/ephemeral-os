@@ -65,6 +65,7 @@ pub(crate) fn finalize_ephemeral_command(
     for (key, value) in &changeset.timings {
         timings.insert(key.clone(), json!(value));
     }
+    copy_runner_timings(&mut timings, request.runner_result.as_ref());
     let occ_s = changeset
         .timings
         .get("occ.commit.total_s")
@@ -407,7 +408,12 @@ fn insert_process_resource_timings(timings: &mut WorkspaceTimings) {
 
 fn copy_runner_timings(timings: &mut WorkspaceTimings, runner_result: Option<&Value>) {
     let Some(runner_timings) = runner_result
-        .and_then(|result| result.get("timings"))
+        .and_then(|result| {
+            result
+                .get("payload")
+                .and_then(|payload| payload.get("timings"))
+                .or_else(|| result.get("timings"))
+        })
         .and_then(Value::as_object)
     else {
         return;
@@ -469,7 +475,7 @@ fn finalize_error(error: impl std::fmt::Display) -> WorkspaceApiError {
 mod tests {
     use workspace::TreeResourceStats;
 
-    use super::{insert_tree_resource_timings, parse_pressure_metrics};
+    use super::{copy_runner_timings, insert_tree_resource_timings, parse_pressure_metrics};
 
     #[test]
     fn pressure_metrics_parse_some_and_full_levels() {
@@ -511,5 +517,24 @@ mod tests {
             timings["resource.command_exec.upperdir_tree_first_error_path"],
             serde_json::json!("/tmp/missing")
         );
+    }
+
+    #[test]
+    fn copy_runner_timings_reads_runner_payload_shape() {
+        let mut timings = crate::WorkspaceTimings::new();
+        let runner_result = serde_json::json!({
+            "exit_code": 0,
+            "payload": {
+                "timings": {
+                    "workspace.mount_s": 0.012,
+                    "workspace.shell_spawn_s": 0.034
+                }
+            }
+        });
+
+        copy_runner_timings(&mut timings, Some(&runner_result));
+
+        assert_eq!(timings["workspace.mount_s"], serde_json::json!(0.012));
+        assert_eq!(timings["workspace.shell_spawn_s"], serde_json::json!(0.034));
     }
 }

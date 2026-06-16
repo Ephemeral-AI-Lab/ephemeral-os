@@ -27,9 +27,20 @@ const RESOLV_CONF: &str = "/etc/resolv.conf";
 #[cfg(target_os = "linux")]
 pub(crate) fn run_setns(request: &RunRequest) -> Result<RunResult, RunnerError> {
     let ns_fds = require_ns_fds(request)?;
+    let mut timings = super::fresh_ns::RunnerPhaseTimings::default();
+    let cgroup_start = Instant::now();
     join_cgroup(request)?;
+    timings.insert_s(
+        "workspace.cgroup_join_s",
+        cgroup_start.elapsed().as_secs_f64(),
+    );
+    let setns_start = Instant::now();
     join_namespaces(&ns_fds)?;
-    super::fresh_ns::execute_tool(request, 0.0, Instant::now(), None)
+    timings.insert_s(
+        "workspace.setns_join_s",
+        setns_start.elapsed().as_secs_f64(),
+    );
+    super::fresh_ns::execute_tool(request, timings, Instant::now(), None)
 }
 
 #[cfg(not(target_os = "linux"))]

@@ -24,7 +24,7 @@ These are host-served operations. The catalog uses `host.*`; old host-served
 
 | Current op | Surface | Mutates | Purpose |
 |---|---|---|---|
-| `host.sandbox.acquire` | public | yes | Provision a sandbox container plus daemon and return its `sandbox_id`. |
+| `host.sandbox.acquire` | public | yes | Provision a sandbox container plus daemon, build its workspace base, and return its `sandbox_id`. |
 | `host.sandbox.release` | public | yes | Destroy a managed sandbox container and drop its registry record. |
 | `host.sandbox.status` | public | no | Inspect one managed sandbox from host state, including daemon readiness. |
 | `host.sandbox.list` | public | no | Enumerate host-managed sandboxes. |
@@ -99,12 +99,14 @@ choice:
   "invocation_id": "req-1",
   "args": {
     "image_profile": "python-3.12",
+    "workspace_root": "/testbed",
     "name_hint": "debug-run"
   }
 }
 ```
 The host still owns the real Docker image mapping, container naming, daemon
-bootstrap, registry insert, recovery metadata, and returned `sandbox_id`.
+bootstrap, workspace setup, LayerStack base binding, registry metadata, and
+returned `sandbox_id`. If `workspace_root` is omitted, the host uses `/testbed`.
 
 ## Request Shape
 

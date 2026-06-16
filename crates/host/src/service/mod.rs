@@ -41,6 +41,7 @@ const TRACE_SHOW_DEFAULT_SECTION_LIMIT: usize = 1_000;
 const TRACE_SHOW_MAX_SECTION_LIMIT: usize = 5_000;
 const SANDBOX_SCRATCH_TMPFS: &str = "/eos/scratch:rw,exec,size=2g,mode=1777";
 const SANDBOX_OVERLAY_ROOT: &str = "/eos/scratch/overlay";
+const DEFAULT_WORKSPACE_ROOT: &str = "/testbed";
 
 #[derive(Debug, Clone)]
 pub struct HostConfig {
@@ -49,7 +50,6 @@ pub struct HostConfig {
     pub docker_privileged: bool,
     pub eosd_path: PathBuf,
     pub config_yaml_path: PathBuf,
-    pub workspace_root: PathBuf,
     pub remote_daemon_dir: PathBuf,
     pub remote_eosd_path: PathBuf,
     pub remote_config_path: PathBuf,
@@ -134,6 +134,7 @@ struct ManagedSandboxStart {
     sandbox_id: String,
     image: String,
     platform: Option<String>,
+    workspace_root: PathBuf,
     response_op: &'static str,
 }
 
@@ -180,6 +181,7 @@ impl SandboxHost {
         let sandbox_id = format!("sb-{}", random_hex(16)?);
         let contract = BuiltinOp::HostSandboxAcquire.contract();
         let (image, platform) = self.resolve_image_profile(args)?;
+        let workspace_root = workspace_root_from_args(args)?;
         self.start_managed_sandbox(
             contract,
             trace,
@@ -188,6 +190,7 @@ impl SandboxHost {
                 sandbox_id,
                 image,
                 platform,
+                workspace_root,
                 response_op: HOST_SANDBOX_ACQUIRE,
             },
         )
@@ -204,6 +207,7 @@ impl SandboxHost {
             sandbox_id,
             image,
             platform,
+            workspace_root,
             response_op,
         } = start;
         validate_container_name(&sandbox_id)?;
@@ -282,9 +286,12 @@ impl SandboxHost {
             json!({"container": sandbox_id.clone(), "endpoint": started_container.client().addr().to_string()}),
         );
         record.cache_endpoint(started_container.client().addr());
-        if let Err(err) =
-            self.setup_acquired_sandbox(&sandbox_id, started_container.client(), trace)
-        {
+        if let Err(err) = self.setup_managed_sandbox(
+            &sandbox_id,
+            started_container.client(),
+            trace,
+            &workspace_root,
+        ) {
             self.registry.remove(&sandbox_id);
             let _ = docker(["rm", "-f", sandbox_id.as_str()]);
             let response = host_error_response(
@@ -305,16 +312,14 @@ impl SandboxHost {
         Ok(sandbox_id)
     }
 
-    fn setup_acquired_sandbox(
+    fn setup_managed_sandbox(
         &self,
         sandbox_id: &str,
         client: &ProtocolClient,
         trace: &ForwardTraceContext,
+        workspace_root: &Path,
     ) -> Result<()> {
-        let workspace_root = path_str(
-            &self.config.workspace_root,
-            "isolated_workspace.workspace_root",
-        )?;
+        let workspace_root = path_str(workspace_root, "host.workspace_root")?;
         self.record_host_lifecycle_event(
             sandbox_id,
             trace,
@@ -559,6 +564,7 @@ impl SandboxHost {
             let platform = optional_string_arg(args, "platform")
                 .map(str::to_owned)
                 .or_else(|| self.config.platform.clone());
+            let workspace_root = workspace_root_from_args(args)?;
             let sandbox_id = match optional_string_arg(args, "name") {
                 Some(name) => name.to_owned(),
                 None => format!("sb-{}", random_hex(16)?),
@@ -572,6 +578,7 @@ impl SandboxHost {
                     sandbox_id,
                     image: image.to_owned(),
                     platform: platform.clone(),
+                    workspace_root,
                     response_op: HOST_CONTAINER_START,
                 },
             )?;
@@ -1107,6 +1114,15 @@ fn optional_string_arg<'a>(args: &'a Value, name: &str) -> Option<&'a str> {
         Some(Value::String(value)) if !value.trim().is_empty() => Some(value),
         _ => None,
     }
+}
+
+fn workspace_root_from_args(args: &Value) -> Result<PathBuf> {
+    let raw = optional_string_arg(args, "workspace_root").unwrap_or(DEFAULT_WORKSPACE_ROOT);
+    let path = PathBuf::from(raw);
+    if !path.is_absolute() {
+        bail!("workspace_root must be absolute: {raw}");
+    }
+    Ok(path)
 }
 
 fn optional_u16_arg(args: &Value, name: &str) -> Result<Option<u16>> {

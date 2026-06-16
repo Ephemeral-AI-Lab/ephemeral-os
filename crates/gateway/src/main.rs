@@ -48,11 +48,6 @@ fn main() -> Result<()> {
             }
         }
         Some("daemon") => client::run_daemon(args),
-        Some("serve") => serve::run(args),
-        Some(
-            command
-            @ ("op" | "images" | "containers" | "sandboxes" | "image-profiles" | "profiles"),
-        ) => client::run_legacy(command, args),
         Some(other) => bail!("unknown subcommand {other:?}; expected host | daemon | --version"),
         None => {
             client::print_usage();

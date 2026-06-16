@@ -50,6 +50,23 @@ fn direct_daemon_ops_match_catalog_contracts() {
 }
 
 #[test]
+fn acquire_workspace_root_defaults_to_testbed_and_allows_absolute_override() -> Result<()> {
+    assert_eq!(
+        super::workspace_root_from_args(&json!({}))?,
+        PathBuf::from("/testbed")
+    );
+    assert_eq!(
+        super::workspace_root_from_args(&json!({"workspace_root": "/workspace"}))?,
+        PathBuf::from("/workspace")
+    );
+    assert!(
+        super::workspace_root_from_args(&json!({"workspace_root": "relative"})).is_err(),
+        "host acquire workspace_root must be absolute"
+    );
+    Ok(())
+}
+
+#[test]
 fn registry_round_trips_records_and_tokens() -> Result<()> {
     let dir = std::env::temp_dir().join(format!("eos-host-registry-{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
@@ -288,7 +305,6 @@ fn forward_request_persists_transport_events_and_strips_sidecar() -> Result<()> 
         docker_privileged: true,
         eosd_path: dir.join("eosd"),
         config_yaml_path: dir.join("config.yml"),
-        workspace_root: PathBuf::from("/workspace"),
         remote_daemon_dir: PathBuf::from("/eos/runtime"),
         remote_eosd_path: PathBuf::from("/eos/eosd"),
         remote_config_path: PathBuf::from("/eos/config.yml"),
@@ -432,7 +448,6 @@ fn malformed_sidecar_is_stripped_and_recorded_as_host_event() -> Result<()> {
         docker_privileged: true,
         eosd_path: dir.join("eosd"),
         config_yaml_path: dir.join("config.yml"),
-        workspace_root: PathBuf::from("/workspace"),
         remote_daemon_dir: PathBuf::from("/eos/runtime"),
         remote_eosd_path: PathBuf::from("/eos/eosd"),
         remote_config_path: PathBuf::from("/eos/config.yml"),
@@ -511,7 +526,6 @@ fn decoded_sidecar_ingest_failures_are_spooled_and_recovered() -> Result<()> {
         docker_privileged: true,
         eosd_path: dir.join("eosd"),
         config_yaml_path: dir.join("config.yml"),
-        workspace_root: PathBuf::from("/workspace"),
         remote_daemon_dir: PathBuf::from("/eos/runtime"),
         remote_eosd_path: PathBuf::from("/eos/eosd"),
         remote_config_path: PathBuf::from("/eos/config.yml"),
@@ -881,7 +895,6 @@ fn mutating_response_persistence_failure_does_not_return_success() -> Result<()>
         docker_privileged: true,
         eosd_path: dir.join("eosd"),
         config_yaml_path: dir.join("config.yml"),
-        workspace_root: PathBuf::from("/workspace"),
         remote_daemon_dir: PathBuf::from("/eos/runtime"),
         remote_eosd_path: PathBuf::from("/eos/eosd"),
         remote_config_path: PathBuf::from("/eos/config.yml"),
@@ -950,7 +963,6 @@ fn host_lifecycle_response_persistence_failure_does_not_return_success() -> Resu
             docker_privileged: true,
             eosd_path: dir.join("eosd"),
             config_yaml_path: dir.join("config.yml"),
-            workspace_root: PathBuf::from("/workspace"),
             remote_daemon_dir: PathBuf::from("/eos/runtime"),
             remote_eosd_path: PathBuf::from("/eos/eosd"),
             remote_config_path: PathBuf::from("/eos/config.yml"),
@@ -1013,7 +1025,6 @@ fn release_keeps_registry_entry_when_container_removal_fails() -> Result<()> {
             docker_privileged: true,
             eosd_path: dir.join("eosd"),
             config_yaml_path: dir.join("config.yml"),
-            workspace_root: PathBuf::from("/workspace"),
             remote_daemon_dir: PathBuf::from("/eos/runtime"),
             remote_eosd_path: PathBuf::from("/eos/eosd"),
             remote_config_path: PathBuf::from("/eos/config.yml"),
@@ -1074,7 +1085,6 @@ fn operator_trace_queries_are_audit_events_even_without_sandbox_id() -> Result<(
             docker_privileged: true,
             eosd_path: dir.join("eosd"),
             config_yaml_path: dir.join("config.yml"),
-            workspace_root: PathBuf::from("/workspace"),
             remote_daemon_dir: PathBuf::from("/eos/runtime"),
             remote_eosd_path: PathBuf::from("/eos/eosd"),
             remote_config_path: PathBuf::from("/eos/config.yml"),
@@ -1119,7 +1129,6 @@ fn trace_show_applies_section_limit_and_reports_truncation() -> Result<()> {
             docker_privileged: true,
             eosd_path: dir.join("eosd"),
             config_yaml_path: dir.join("config.yml"),
-            workspace_root: PathBuf::from("/workspace"),
             remote_daemon_dir: PathBuf::from("/eos/runtime"),
             remote_eosd_path: PathBuf::from("/eos/eosd"),
             remote_config_path: PathBuf::from("/eos/config.yml"),
@@ -1221,7 +1230,6 @@ fn host_transport_records_retry_endpoint_refresh_write_and_connect_timeout_facts
         docker_privileged: true,
         eosd_path: dir.join("eosd"),
         config_yaml_path: dir.join("config.yml"),
-        workspace_root: PathBuf::from("/workspace"),
         remote_daemon_dir: PathBuf::from("/eos/runtime"),
         remote_eosd_path: PathBuf::from("/eos/eosd"),
         remote_config_path: PathBuf::from("/eos/config.yml"),
@@ -1305,7 +1313,6 @@ fn run_tcp_once_failure(
         docker_privileged: true,
         eosd_path: dir.join("eosd"),
         config_yaml_path: dir.join("config.yml"),
-        workspace_root: PathBuf::from("/workspace"),
         remote_daemon_dir: PathBuf::from("/eos/runtime"),
         remote_eosd_path: PathBuf::from("/eos/eosd"),
         remote_config_path: PathBuf::from("/eos/config.yml"),

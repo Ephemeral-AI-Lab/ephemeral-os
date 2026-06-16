@@ -243,6 +243,7 @@ image names.
   "invocation_id": "req-4",
   "args": {
     "image_profile": "python-3.12",
+    "workspace_root": "/testbed",
     "name_hint": "debug-run"
   }
 }

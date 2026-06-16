@@ -232,7 +232,7 @@ corrections are folded in). Effort: S/M/L/XL · Risk: low/med/high.
 6. **BR-4** (optional) codegen `sandbox-ops.generated.ts` from `ops.json`.
    **Gate per step:** `pnpm run typecheck && pnpm run lint && pnpm run test`;
    full `pnpm run check` once the tool family consumes the response contract.
-   **End-to-end smoke:** start the gateway (`cargo run -p gateway -- serve …`),
+   **End-to-end smoke:** start the gateway (`cargo run -p gateway -- host serve …`),
    run one acquire→write→exec→poll→release cycle from the agent.
 
 ### Phase 2 — Auditability (Track B; do AUD-3, AUD-1, AUD-2 first)

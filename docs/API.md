@@ -12,7 +12,7 @@ The complete public vocabulary served on the `gateway` client socket.
 
 | Op | Served by | Family | Mutates | Args DTO | Response DTO | Summary |
 |---|---|---|---|---|---|---|
-| `host.sandbox.acquire` | host | Sandbox | yes | `host.sandbox.AcquireArgs` | `host.sandbox.AcquireResponse` | Provision a sandbox container plus daemon and return its sandbox_id. |
+| `host.sandbox.acquire` | host | Sandbox | yes | `host.sandbox.AcquireArgs` | `host.sandbox.AcquireResponse` | Provision a sandbox container plus daemon, build its workspace base, and return its sandbox_id. |
 | `host.sandbox.release` | host | Sandbox | yes | `host.sandbox.ReleaseArgs` | `host.sandbox.ReleaseResponse` | Destroy the sandbox container and drop its registry entry. |
 | `host.sandbox.status` | host | Sandbox | no | `host.sandbox.StatusArgs` | `host.sandbox.StatusResponse` | Host view of one sandbox (container/endpoint/recovery state) plus embedded daemon readiness. |
 | `host.sandbox.list` | host | Sandbox | no | `host.sandbox.ListArgs` | `host.sandbox.ListResponse` | Enumerate the sandbox registry. |
