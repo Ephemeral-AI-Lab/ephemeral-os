@@ -13,7 +13,9 @@ use crate::control::contract::{
     TraceExportAckInput, TraceExportInput,
 };
 use crate::file::contract::{EditFileInput, ReadFileInput, WriteFileInput};
-use crate::isolation::contract::{IsolationEnterInput, IsolationExitInput, IsolationStatusInput};
+use crate::isolation::contract::{
+    IsolationEnterInput, IsolationExitInput, IsolationStatusInput, IsolationTestCompactRemountInput,
+};
 use crate::workspace_run::contract::{RunCancelAllInput, RunEndInput};
 use crate::CallerId;
 use plugin_contract::{
@@ -83,6 +85,7 @@ pub enum OpRequest {
     IsolatedWorkspaceStatus(IsolationStatusInput),
     IsolatedWorkspaceListOpen,
     IsolatedWorkspaceTestReset,
+    IsolatedWorkspaceTestCompactRemount(IsolationTestCompactRemountInput),
     ExecCommand(ExecCommandInput),
     WriteStdin(WriteStdinInput),
     CommandReadProgress(ReadProgressInput),
@@ -161,6 +164,11 @@ impl OpRequest {
             }
             BuiltinOp::IsolatedWorkspaceListOpen => Self::IsolatedWorkspaceListOpen,
             BuiltinOp::IsolatedWorkspaceTestReset => Self::IsolatedWorkspaceTestReset,
+            BuiltinOp::IsolatedWorkspaceTestCompactRemount => {
+                Self::IsolatedWorkspaceTestCompactRemount(IsolationTestCompactRemountInput::parse(
+                    args,
+                )?)
+            }
             BuiltinOp::ExecCommand => {
                 Self::ExecCommand(ExecCommandInput::parse(args, invocation_id)?)
             }
@@ -289,6 +297,10 @@ pub(crate) fn require_caller_id(args: &Value) -> Result<CallerId, ArgsError> {
 
 pub(crate) fn optional_u64(args: &Value, key: &str) -> Option<u64> {
     args.get(key).and_then(Value::as_u64)
+}
+
+pub(crate) fn optional_bool(args: &Value, key: &str) -> Option<bool> {
+    args.get(key).and_then(Value::as_bool)
 }
 
 pub(crate) fn optional_path(args: &Value, key: &str) -> Option<PathBuf> {

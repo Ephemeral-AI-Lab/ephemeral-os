@@ -22,6 +22,7 @@ pub use dirs::{DirAllocationError, OverlayDirs, OverlayDirsGuard};
 pub use ephemeral_workspace::{overlay_run_dirs, EphemeralWorkspace, EphemeralWorkspaceError};
 pub use isolated_workspace::{
     DnsConfiguration, ExitOutcome, IsolatedError, IsolatedManager, IsolatedSnapshot,
-    IsolatedWorkspaceBinding, IsolatedWorkspaceId, ResourceCaps, Rfc1918Egress, WorkspaceHandle,
+    IsolatedWorkspaceBinding, IsolatedWorkspaceId, RemountOverlayReport, RemountProbe,
+    RemountedWorkspace, ResourceCaps, Rfc1918Egress, WorkspaceHandle, WorkspaceRemountState,
 };
 pub use tree::TreeResourceStats;

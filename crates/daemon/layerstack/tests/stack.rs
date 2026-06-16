@@ -4,7 +4,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use layerstack::MANIFEST_SCHEMA_VERSION;
 use layerstack::{
     build_workspace_base, ensure_workspace_base, LayerChange, LayerPath, LayerRef, LayerStack,
-    LayerStackError, WorkspaceBinding, ACTIVE_MANIFEST_FILE, WORKSPACE_BINDING_FILE,
+    LayerStackError, Manifest, MergedView, WorkspaceBinding, ACTIVE_MANIFEST_FILE,
+    WORKSPACE_BINDING_FILE,
 };
 use serde_json::json;
 
@@ -92,6 +93,305 @@ fn cross_instance_lease_retains_squashed_layers_until_reopened_release() -> Test
     for layer in &old_tail {
         assert!(!fixture.root.join(&layer.path).exists());
     }
+    Ok(())
+}
+
+#[test]
+fn lease_aware_view_reclaim_compacts_same_file_gap_around_single_protected_layer() -> TestResult {
+    let fixture = Fixture::new("lease_aware_view_reclaim_l4");
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+    for index in 1..=6 {
+        publish_blob(&mut stack, "blob.bin", 1 << 20, index)?;
+    }
+    let active = stack.read_active_manifest()?;
+    let original_layers = active.layers.clone();
+    let protected_l4 = active.layers[2].clone();
+    let lease = stack.acquire_snapshot("protect-l4-only")?;
+    let protected_manifest = Manifest::new(
+        active.version,
+        vec![protected_l4.clone()],
+        MANIFEST_SCHEMA_VERSION,
+    )?;
+    assert!(stack.retarget_lease_manifest(&lease.lease_id, protected_manifest)?);
+
+    assert_eq!(payload_bytes(&fixture.root.join("layers"))?, 6 << 20);
+    let outcome = stack.reclaim_lease_aware_view_checkpoints(2)?;
+
+    let manifest = outcome.manifest.expect("view checkpoints should commit");
+    assert_eq!(outcome.planned_reclaiming_interval_count, 2);
+    assert_eq!(outcome.view_checkpoint_count, 2);
+    assert_eq!(outcome.skipped_delta_interval_count, 0);
+    assert_eq!(outcome.removed_layer_count, 5);
+    assert_eq!(outcome.active_depth_before, 6);
+    assert_eq!(outcome.active_depth_after, 3);
+    assert_eq!(manifest.layers.len(), 3);
+    assert_eq!(manifest.layers[1], protected_l4);
+    assert_eq!(
+        stack.read_bytes("blob.bin")?.0.unwrap_or_default().len(),
+        1 << 20
+    );
+    assert_eq!(payload_bytes(&fixture.root.join("layers"))?, 3 << 20);
+    assert!(fixture.root.join(&manifest.layers[1].path).exists());
+    for layer in original_layers
+        .iter()
+        .filter(|layer| **layer != manifest.layers[1])
+    {
+        assert!(
+            !fixture.root.join(&layer.path).exists(),
+            "{} should be reclaimed",
+            layer.layer_id
+        );
+    }
+
+    assert!(stack.release_lease(&lease.lease_id)?);
+    let after_release = stack
+        .squash(1)?
+        .manifest
+        .expect("final squash should collapse released l4 chain");
+    assert_eq!(after_release.layers.len(), 1);
+    assert_eq!(payload_bytes(&fixture.root.join("layers"))?, 1 << 20);
+    Ok(())
+}
+
+#[test]
+fn lease_aware_parent_prefix_compaction_keeps_live_l4_lease_but_reclaims_prefix() -> TestResult {
+    let fixture = Fixture::new("lease_aware_live_l4_parent_prefix");
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+    for index in 1..=4 {
+        publish_blob(&mut stack, "blob.bin", 1 << 20, index)?;
+    }
+    let lease = stack.acquire_snapshot("running-command-at-l4")?;
+    let original_lease_layers = lease.manifest.layers.clone();
+    assert_eq!(original_lease_layers.len(), 4);
+    for index in 5..=6 {
+        publish_blob(&mut stack, "blob.bin", 1 << 20, index)?;
+    }
+
+    assert_eq!(payload_bytes(&fixture.root.join("layers"))?, 6 << 20);
+    let normalized = stack.compact_leased_parent_for_remount(&lease.lease_id, 2)?;
+
+    let lease_manifest = normalized
+        .lease_manifest
+        .as_ref()
+        .expect("parent prefix compaction should retarget the live lease");
+    assert_eq!(normalized.compacted_parent_layer_count, 3);
+    assert_eq!(normalized.removed_layer_count, 3);
+    assert_eq!(normalized.bytes_added, 1 << 20);
+    assert_eq!(normalized.lease_depth_before, 4);
+    assert_eq!(normalized.lease_depth_after, 2);
+    assert_eq!(normalized.active_depth_before, 6);
+    assert_eq!(normalized.active_depth_after, 4);
+    assert_eq!(lease_manifest.layers[0], original_lease_layers[0]);
+    assert_ne!(lease_manifest.layers[1], original_lease_layers[1]);
+    assert_eq!(stack.active_lease_count(), 1);
+    assert_eq!(stack.leased_layers().len(), 2);
+    assert_eq!(payload_bytes(&fixture.root.join("layers"))?, 4 << 20);
+    for layer in &original_lease_layers[1..] {
+        assert!(
+            !fixture.root.join(&layer.path).exists(),
+            "{} parent prefix layer should be reclaimed after lease retarget",
+            layer.layer_id
+        );
+    }
+    let (lease_bytes, exists) =
+        MergedView::new(fixture.root.clone()).read_bytes("blob.bin", lease_manifest)?;
+    assert!(exists);
+    assert_eq!(lease_bytes.unwrap_or_default()[0], 4);
+    assert_eq!(stack.read_bytes("blob.bin")?.0.unwrap_or_default()[0], 6);
+
+    let reclaimed = stack.reclaim_lease_aware_view_checkpoints(2)?;
+
+    assert_eq!(reclaimed.view_checkpoint_count, 1);
+    assert_eq!(reclaimed.removed_layer_count, 2);
+    assert_eq!(reclaimed.active_depth_before, 4);
+    assert_eq!(reclaimed.active_depth_after, 3);
+    assert_eq!(stack.active_lease_count(), 1);
+    assert_eq!(stack.leased_layers().len(), 2);
+    assert_eq!(payload_bytes(&fixture.root.join("layers"))?, 3 << 20);
+
+    assert!(stack.release_lease(&lease.lease_id)?);
+    let final_manifest = stack
+        .squash(1)?
+        .manifest
+        .expect("final squash should collapse normalized l4 chain");
+    assert_eq!(final_manifest.layers.len(), 1);
+    assert_eq!(payload_bytes(&fixture.root.join("layers"))?, 1 << 20);
+    Ok(())
+}
+
+#[test]
+fn lease_aware_view_reclaim_skips_delete_gap_until_delta_checkpoint() -> TestResult {
+    let fixture = Fixture::new("lease_aware_view_reclaim_delete_skip");
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+    publish_blob(&mut stack, "a.txt", 1 << 20, 1)?;
+    let lease = stack.acquire_snapshot("protect-lower-file")?;
+    stack.publish_layer(&[LayerChange::Delete {
+        path: LayerPath::parse("a.txt")?,
+    }])?;
+
+    assert_eq!(stack.read_text("a.txt")?, (String::new(), false));
+    let before = stack.read_active_manifest()?;
+    let before_payload = payload_bytes(&fixture.root.join("layers"))?;
+    let outcome = stack.reclaim_lease_aware_view_checkpoints(1)?;
+
+    assert!(outcome.manifest.is_none());
+    assert_eq!(outcome.planned_reclaiming_interval_count, 1);
+    assert_eq!(outcome.view_checkpoint_count, 0);
+    assert_eq!(outcome.skipped_delta_interval_count, 1);
+    assert_eq!(outcome.removed_layer_count, 0);
+    assert_eq!(stack.read_active_manifest()?, before);
+    assert_eq!(payload_bytes(&fixture.root.join("layers"))?, before_payload);
+    assert!(fixture.root.join(&lease.manifest.layers[0].path).exists());
+    assert_eq!(stack.read_text("a.txt")?, (String::new(), false));
+    Ok(())
+}
+
+#[test]
+fn lease_aware_delta_reclaim_preserves_delete_above_protected_lower_file() -> TestResult {
+    let fixture = Fixture::new("lease_aware_delta_delete");
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+    publish_blob(&mut stack, "a.txt", 1 << 20, 1)?;
+    let lease = stack.acquire_snapshot("protect-lower-file")?;
+    stack.publish_layer(&[LayerChange::Delete {
+        path: LayerPath::parse("a.txt")?,
+    }])?;
+
+    assert_eq!(stack.read_text("a.txt")?, (String::new(), false));
+    let before_payload = payload_bytes(&fixture.root.join("layers"))?;
+    let outcome = stack.reclaim_lease_aware_checkpoints(1)?;
+
+    let manifest = outcome.manifest.expect("delta checkpoint should commit");
+    assert_eq!(outcome.view_checkpoint_count, 0);
+    assert_eq!(outcome.delta_checkpoint_count, 1);
+    assert_eq!(outcome.skipped_delta_interval_count, 0);
+    assert_eq!(outcome.removed_layer_count, 1);
+    assert_eq!(manifest.layers.len(), 2);
+    assert_eq!(payload_bytes(&fixture.root.join("layers"))?, before_payload);
+    assert_eq!(stack.read_text("a.txt")?, (String::new(), false));
+
+    assert!(stack.release_lease(&lease.lease_id)?);
+    stack.squash(1)?;
+    assert_eq!(payload_bytes(&fixture.root.join("layers"))?, 0);
+    assert_eq!(stack.read_text("a.txt")?, (String::new(), false));
+    Ok(())
+}
+
+#[test]
+fn lease_aware_delta_reclaim_preserves_opaque_dir_above_protected_lower_entries() -> TestResult {
+    let fixture = Fixture::new("lease_aware_delta_opaque");
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+    publish_blob(&mut stack, "dir/protected.txt", 1 << 20, 1)?;
+    let lease = stack.acquire_snapshot("protect-lower-dir")?;
+    publish_blob(&mut stack, "dir/old-unleased.txt", 1 << 20, 2)?;
+    stack.publish_layer(&[LayerChange::OpaqueDir {
+        path: LayerPath::parse("dir")?,
+    }])?;
+
+    assert_eq!(
+        stack.read_text("dir/protected.txt")?,
+        (String::new(), false)
+    );
+    assert_eq!(
+        stack.read_text("dir/old-unleased.txt")?,
+        (String::new(), false)
+    );
+    assert_eq!(payload_bytes(&fixture.root.join("layers"))?, 2 << 20);
+
+    let outcome = stack.reclaim_lease_aware_checkpoints(2)?;
+
+    let manifest = outcome.manifest.expect("delta checkpoint should commit");
+    assert_eq!(outcome.view_checkpoint_count, 0);
+    assert_eq!(outcome.delta_checkpoint_count, 1);
+    assert_eq!(outcome.skipped_delta_interval_count, 0);
+    assert_eq!(outcome.removed_layer_count, 2);
+    assert_eq!(manifest.layers.len(), 2);
+    assert_eq!(payload_bytes(&fixture.root.join("layers"))?, 1 << 20);
+    assert_eq!(
+        stack.read_text("dir/protected.txt")?,
+        (String::new(), false)
+    );
+    assert_eq!(
+        stack.read_text("dir/old-unleased.txt")?,
+        (String::new(), false)
+    );
+
+    assert!(stack.release_lease(&lease.lease_id)?);
+    stack.squash(1)?;
+    assert_eq!(payload_bytes(&fixture.root.join("layers"))?, 0);
+    assert_eq!(
+        stack.read_text("dir/protected.txt")?,
+        (String::new(), false)
+    );
+    Ok(())
+}
+
+#[test]
+fn lease_aware_copy_through_reports_pinned_bytes_without_reclaiming_protected_layers() -> TestResult
+{
+    let fixture = Fixture::new("lease_aware_copy_through");
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+    for index in 1..=6 {
+        publish_blob(&mut stack, "blob.bin", 1 << 20, index)?;
+    }
+    let lease = stack.acquire_snapshot("protect-full-stack")?;
+    let protected_layers = lease.manifest.layers.clone();
+
+    assert_eq!(payload_bytes(&fixture.root.join("layers"))?, 6 << 20);
+    let outcome = stack.copy_through_active_for_depth_guard(1)?;
+
+    let manifest = outcome.manifest.expect("copy-through should commit");
+    assert_eq!(outcome.checkpoint_count, 1);
+    assert_eq!(outcome.protected_layer_count, 6);
+    assert_eq!(outcome.removed_layer_count, 0);
+    assert_eq!(outcome.bytes_added, 1 << 20);
+    assert_eq!(outcome.protected_pinned_bytes, 6 << 20);
+    assert_eq!(outcome.active_depth_before, 6);
+    assert_eq!(outcome.active_depth_after, 1);
+    assert_eq!(manifest.layers.len(), 1);
+    assert_eq!(payload_bytes(&fixture.root.join("layers"))?, 7 << 20);
+    for layer in &protected_layers {
+        assert!(
+            fixture.root.join(&layer.path).exists(),
+            "{} should remain pinned",
+            layer.layer_id
+        );
+    }
+
+    assert!(stack.release_lease(&lease.lease_id)?);
+    assert_eq!(payload_bytes(&fixture.root.join("layers"))?, 1 << 20);
+    Ok(())
+}
+
+#[test]
+fn lease_aware_command_admission_acquires_bounded_snapshot_despite_legacy_lease() -> TestResult {
+    let fixture = Fixture::new("lease_aware_command_admission");
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+    for index in 1..=6 {
+        publish_blob(&mut stack, "blob.bin", 1 << 20, index)?;
+    }
+    let legacy = stack.acquire_snapshot("legacy-running-command")?;
+
+    let admitted = stack.acquire_bounded_snapshot_for_command("new-command", 1)?;
+
+    assert_eq!(admitted.copy_through.checkpoint_count, 1);
+    assert_eq!(admitted.copy_through.protected_layer_count, 6);
+    assert_eq!(admitted.copy_through.protected_pinned_bytes, 6 << 20);
+    assert_eq!(admitted.copy_through.bytes_added, 1 << 20);
+    assert_eq!(admitted.copy_through.active_depth_before, 6);
+    assert_eq!(admitted.copy_through.active_depth_after, 1);
+    assert_eq!(admitted.lease.manifest.depth(), 1);
+    assert_eq!(admitted.lease.layer_paths.len(), 1);
+    assert_eq!(stack.read_active_manifest()?.depth(), 1);
+    assert_eq!(payload_bytes(&fixture.root.join("layers"))?, 7 << 20);
+
+    assert!(stack.release_lease(&admitted.lease.lease_id)?);
+    assert_eq!(
+        payload_bytes(&fixture.root.join("layers"))?,
+        7 << 20,
+        "legacy lease still pins the original chain"
+    );
+    assert!(stack.release_lease(&legacy.lease_id)?);
+    assert_eq!(payload_bytes(&fixture.root.join("layers"))?, 1 << 20);
     Ok(())
 }
 
@@ -263,6 +563,31 @@ fn publish_text(stack: &mut LayerStack, path: &str, content: &str) -> TestResult
         content: content.as_bytes().to_vec(),
     }])?;
     Ok(())
+}
+
+fn publish_blob(stack: &mut LayerStack, path: &str, size: usize, seed: u8) -> TestResult {
+    stack.publish_layer(&[LayerChange::Write {
+        path: LayerPath::parse(path)?,
+        content: vec![seed; size],
+    }])?;
+    Ok(())
+}
+
+fn payload_bytes(path: &std::path::Path) -> std::io::Result<u64> {
+    let mut total = 0_u64;
+    if !path.exists() {
+        return Ok(0);
+    }
+    for entry in std::fs::read_dir(path)? {
+        let entry = entry?;
+        let meta = std::fs::symlink_metadata(entry.path())?;
+        if meta.is_dir() {
+            total += payload_bytes(&entry.path())?;
+        } else if meta.is_file() || meta.file_type().is_symlink() {
+            total += meta.len();
+        }
+    }
+    Ok(total)
 }
 
 fn write_bound_manifest(fixture: &Fixture, manifest: serde_json::Value) -> TestResult {

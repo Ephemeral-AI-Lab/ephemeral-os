@@ -143,6 +143,7 @@ fn regular_file_capture_rejects_symlink_replacement_after_classification() -> Te
         &mut std::collections::HashSet::new(),
         &mut changes,
         &mut protected_drops,
+        MAX_CAPTURE_FILE_BYTES,
     )
     .expect_err("swapped symlink must not be captured as regular file content");
 

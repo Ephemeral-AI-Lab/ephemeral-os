@@ -54,6 +54,8 @@ pub struct StartCommand {
     pub request_id: Option<String>,
     pub timeout_seconds: Option<f64>,
     pub yield_time_ms: u64,
+    pub cwd: Option<PathBuf>,
+    pub remountable: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

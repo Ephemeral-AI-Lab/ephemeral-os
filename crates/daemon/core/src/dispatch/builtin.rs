@@ -65,6 +65,9 @@ pub(crate) fn dispatch(request: OpRequest, context: DispatchContext<'_>) -> Valu
         OpRequest::IsolatedWorkspaceTestReset => {
             daemon_response_result(isolation::op_test_reset(context))
         }
+        OpRequest::IsolatedWorkspaceTestCompactRemount(input) => {
+            daemon_response_result(isolation::op_test_compact_remount(input, context))
+        }
         OpRequest::ExecCommand(input) => daemon_result(command::op_exec_command(input, context)),
         OpRequest::WriteStdin(input) => daemon_result(command::command_write_stdin(input, context)),
         OpRequest::CommandReadProgress(input) => {

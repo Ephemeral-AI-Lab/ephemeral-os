@@ -104,6 +104,32 @@ fn command_ops_capture_options_reflect_configured_ignored_limits() {
 }
 
 #[test]
+fn remount_inspection_reports_no_active_commands() {
+    let ops = CommandOps::new(command::CommandConfig::default());
+
+    let inspection = ops.inspect_live_remount_for_caller("caller");
+
+    assert_eq!(inspection.active_commands, 0);
+    assert!(inspection.command_ids.is_empty());
+    assert!(inspection.blocked_reason.is_none());
+}
+
+#[test]
+fn remount_inspection_blocks_when_process_group_is_unavailable() {
+    let ops = command_ops_with_inactive_isolated_run("cmd_remount_probe", "caller");
+
+    let inspection = ops.inspect_live_remount_for_caller("caller");
+
+    assert_eq!(inspection.active_commands, 1);
+    assert_eq!(inspection.command_ids, vec!["cmd_remount_probe".to_owned()]);
+    assert_eq!(inspection.blocked_reason, Some("process_group_unavailable"));
+    assert_eq!(inspection.reason_or_default(), "process_group_unavailable");
+    assert!(!inspection.inspected);
+    assert!(!inspection.quiesce_attempted);
+    assert!(inspection.process_group_ids.is_empty());
+}
+
+#[test]
 fn command_finalize_trace_record_carries_origin_and_eviction_markers() {
     let facts = CommandFinalizeTraceFacts {
         trace_origin: CommandTraceOrigin {
@@ -591,6 +617,7 @@ fn command_ops_with_inactive_isolated_run(id: &str, caller_id: &str) -> CommandO
                 ns_fds: std::collections::HashMap::new(),
                 cgroup_path: None,
             },
+            remountable: false,
         })));
     ops
 }

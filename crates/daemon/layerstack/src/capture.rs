@@ -246,6 +246,17 @@ pub fn capture_upperdir_with_stats(upperdir: &Path) -> Result<CapturedUpperdir> 
     })
 }
 
+pub(crate) fn capture_layer_dir_unbounded(layer_dir: &Path) -> Result<Vec<LayerChange>> {
+    let metadata = capture_upperdir_metadata(layer_dir)?;
+    if let Some(drop) = metadata.protected_drops.first() {
+        return Err(CaptureError::InvalidPathChange(format!(
+            "stored layer contains unsupported protected path {:?}: {:?}",
+            drop.path, drop.reason
+        )));
+    }
+    materialize_entries_in_memory(&metadata.entries, usize::MAX)
+}
+
 pub(crate) fn capture_upperdir_metadata(upperdir: &Path) -> Result<CapturedUpperdirMetadata> {
     std::fs::create_dir_all(upperdir).map_err(|err| CaptureError::capture(upperdir, err))?;
     let mut emitted_opaque_dirs = HashSet::new();
@@ -337,6 +348,7 @@ fn capture_file_entry(
     emitted_opaque_dirs: &mut HashSet<String>,
     changes: &mut Vec<LayerChange>,
     protected_drops: &mut Vec<ProtectedPathDrop>,
+    max_file_bytes: usize,
 ) -> Result<()> {
     let mut entries = Vec::new();
     capture_file_entry_metadata(
@@ -347,10 +359,7 @@ fn capture_file_entry(
         &mut entries,
         protected_drops,
     )?;
-    changes.extend(materialize_entries_in_memory(
-        &entries,
-        MAX_CAPTURE_FILE_BYTES,
-    )?);
+    changes.extend(materialize_entries_in_memory(&entries, max_file_bytes)?);
     Ok(())
 }
 

@@ -37,6 +37,9 @@ use super::trace::{
 mod exec;
 mod io;
 mod lifecycle;
+mod remount;
+
+pub use remount::{CommandRemountInspection, CommandRemountQuiesce};
 
 pub enum ExecTarget {
     Ephemeral {

@@ -26,11 +26,11 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let runner_config = load_runner_config()?;
     let mut output_target = OutputTarget::open(config.output_path.as_ref())?;
     let result = match config.mode {
-        RunnerCliMode::RemountOverlay => {
-            namespace::runner::setns::remount_overlay(&request)
-                .context("ns-runner remount overlay failed")?;
-            ok_result()
-        }
+        RunnerCliMode::RemountOverlay => namespace::protocol::RunResult {
+            exit_code: 0,
+            payload: namespace::runner::setns::remount_overlay(&request, &runner_config)
+                .context("ns-runner remount overlay failed")?,
+        },
         RunnerCliMode::MountOverlay => {
             namespace::runner::setns::setns_overlay_mount(&request, &runner_config)
                 .context("ns-runner setns overlay mount failed")?;

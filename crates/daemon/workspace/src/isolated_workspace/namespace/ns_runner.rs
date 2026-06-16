@@ -11,6 +11,7 @@ use serde_json::Value;
 
 use crate::isolated_workspace::error::IsolatedError;
 use crate::isolated_workspace::manager::DnsConfiguration;
+use crate::isolated_workspace::RemountOverlayReport;
 
 use super::setup_error;
 
@@ -25,6 +26,33 @@ pub(super) fn mount_overlay_child(
     Err(IsolatedError::SetupFailed {
         step: format!(
             "ns-runner mount overlay failed with status {}: {}",
+            output.status,
+            String::from_utf8_lossy(&output.stderr)
+        ),
+    })
+}
+
+pub(super) fn remount_overlay_child(
+    request: &RunRequest,
+    setup_timeout_s: f64,
+) -> Result<RemountOverlayReport, IsolatedError> {
+    let output = run_child(
+        request,
+        "--remount-overlay",
+        Stdio::piped(),
+        setup_timeout_s,
+    )?;
+    if output.status.success() {
+        let result = serde_json::from_slice::<RunResult>(&output.stdout).map_err(|err| {
+            IsolatedError::SetupFailed {
+                step: format!("invalid ns-runner remount overlay output: {err}"),
+            }
+        })?;
+        return Ok(RemountOverlayReport::from_payload(&result.payload));
+    }
+    Err(IsolatedError::SetupFailed {
+        step: format!(
+            "ns-runner remount overlay failed with status {}: {}",
             output.status,
             String::from_utf8_lossy(&output.stderr)
         ),

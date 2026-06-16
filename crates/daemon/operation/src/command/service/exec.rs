@@ -86,8 +86,14 @@ impl CommandOps {
         yield_time_ms: u64,
     ) -> Result<CommandExecOutcome, CommandExecError> {
         let request_id = format!("command:{}:{}", request.caller_id, request.invocation_id);
-        let snapshot = service::acquire_snapshot(&root, &request_id)
-            .map_err(|error| CommandExecError::new(CommandError::Workspace(error.to_string())))?;
+        let command_snapshot = service::acquire_bounded_snapshot_for_command(
+            &root,
+            &request_id,
+            self.commit_options.auto_squash_max_depth,
+        )
+        .map_err(|error| CommandExecError::new(CommandError::Workspace(error.to_string())))?;
+        let snapshot = command_snapshot.snapshot;
+        let normalization = command_snapshot.normalization;
         let writable_root = overlay::overlay_writable_root()
             .map_err(|error| CommandExecError::new(CommandError::Workspace(error.to_string())));
         let result = writable_root.and_then(|writable_root| {
@@ -103,6 +109,8 @@ impl CommandOps {
                     command_id,
                     invocation_id: &request.invocation_id,
                     cmd: &request.cmd,
+                    cwd: request.cwd.as_deref(),
+                    remountable: false,
                     timeout_seconds: request.timeout_seconds,
                     command_dir: scratch_root.join(command_id),
                     workspace_label: "ephemeral",
@@ -114,6 +122,21 @@ impl CommandOps {
             )
             .map_err(command_prepare_error)?;
             let mut trace_events = prepared.trace_events.clone();
+            trace_events.push(CommandTraceEvent::new(
+                "command_snapshot_normalized",
+                json!({
+                    "triggered": normalization.triggered,
+                    "max_depth": self.commit_options.auto_squash_max_depth,
+                    "active_depth_before": normalization.active_depth_before,
+                    "active_depth_after": normalization.active_depth_after,
+                    "checkpoint_count": normalization.checkpoint_count,
+                    "removed_layer_count": normalization.removed_layer_count,
+                    "bytes_added": normalization.bytes_added,
+                    "protected_layer_count": normalization.protected_layer_count,
+                    "protected_pinned_bytes": normalization.protected_pinned_bytes,
+                    "lease_layer_count": snapshot.layer_paths.len(),
+                }),
+            ));
             let process = self.spawn_process(spec, prepared, &mut trace_events)?;
             Ok((workspace, process, trace_events))
         });
@@ -157,6 +180,8 @@ impl CommandOps {
                 command_id,
                 invocation_id: &request.invocation_id,
                 cmd: &request.cmd,
+                cwd: request.cwd.as_deref(),
+                remountable: request.remountable,
                 timeout_seconds: request.timeout_seconds,
                 command_dir: binding.scratch_dir.join("commands").join(command_id),
                 workspace_label: "isolated",
@@ -177,6 +202,7 @@ impl CommandOps {
                     process,
                     trace_origin,
                     binding,
+                    remountable: request.remountable,
                 })
             },
             trace_events,

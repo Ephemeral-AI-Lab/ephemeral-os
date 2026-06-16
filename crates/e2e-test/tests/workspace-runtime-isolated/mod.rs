@@ -3,6 +3,7 @@ mod support;
 
 const E2E_CONFIG: &str = "crates/e2e-test/tests/workspace-runtime-isolated/config/default.test.yml";
 
+mod isolated_workspace_compact_remount;
 mod isolated_workspace_cross_mode_consistency;
 mod isolated_workspace_daemon_restart;
 mod isolated_workspace_lifecycle;

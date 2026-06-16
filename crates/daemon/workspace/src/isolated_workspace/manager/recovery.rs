@@ -189,6 +189,7 @@ impl IsolatedManager {
                         .dns_configuration
                         .previous_first_nameserver
                         .as_deref(),
+                    "remount_state": handle.remount_state.as_str(),
                     "created_at": handle.created_at,
                     "last_activity": handle.last_activity,
                 })

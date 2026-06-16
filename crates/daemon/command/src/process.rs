@@ -233,6 +233,11 @@ impl CommandProcess {
         &self.command
     }
 
+    #[must_use]
+    pub fn process_group_id(&self) -> Option<i32> {
+        self.runtime.process.process_group_id()
+    }
+
     #[cfg(test)]
     #[must_use]
     pub const fn started_at(&self) -> Instant {

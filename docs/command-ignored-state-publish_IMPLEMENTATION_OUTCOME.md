@@ -1082,3 +1082,28 @@ Additional scope:
   special lock files, incomplete markers, ref writes, object rewrites,
   unsupported object database paths, reflog append/rewrite, and spooled ignored
   output dropped by Git rejection.
+
+## LayerStack Remount And Leased Squash Addendum
+
+The follow-up remount experiment lives in dedicated LayerStack documents rather
+than expanding this command publish outcome file:
+
+- `docs/layerstack-squash-policy_SPEC.md`
+  - Adds byte-aware squash policy, lease-aware unleased interval compaction,
+    mounted isolated lease remount compaction, and public/ephemeral command
+    launch normalization policy.
+- `docs/layerstack-leased-squash-gap-compaction_SPEC.md`
+  - Defines how unleased gaps around leased layers can be compacted without
+    deleting protected lease inputs.
+- `docs/layerstack-command-lease-live-remount_SPEC.md`
+  - Defines the conservative two-tier command lease policy: normalize before
+    launch by default, and use live remount only behind a quiesce/verification
+    protocol.
+- `docs/layerstack-space-time-benchmark_RESULTS.md`
+  - Records the benchmark evidence comparing retained rewrites,
+    hard-protection, lease-blocked squash, and remount normalization.
+
+The implemented experiment adds LayerStack snapshot compaction, lease retarget
+support, mounted isolated workspace remount plumbing, a test-only
+`sandbox.isolation.test_compact_remount` hook, unit coverage, and live
+workspace-runtime-isolated E2E coverage for remount success and fallback cases.

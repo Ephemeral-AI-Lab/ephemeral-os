@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 
 use crate::core::request::{
-    optional_path, optional_u64, require_command_string, require_nonempty_string, ArgProblem,
-    ArgsError,
+    optional_bool, optional_path, optional_u64, require_command_string, require_nonempty_string,
+    ArgProblem, ArgsError,
 };
 use crate::{CallerId, CommandId, InvocationId, MutationCore, WorkspaceKind};
 
@@ -20,6 +20,8 @@ pub struct ExecCommandInput {
     /// Wire alias `timeout` | `timeout_seconds`, resolved here; `timeout` wins.
     pub timeout: Option<u64>,
     pub yield_time_ms: Option<u64>,
+    pub cwd: Option<PathBuf>,
+    pub remountable: bool,
     pub invocation_id: InvocationId,
 }
 
@@ -32,6 +34,8 @@ impl ExecCommandInput {
             timeout: optional_u64(args, "timeout")
                 .or_else(|| optional_u64(args, "timeout_seconds")),
             yield_time_ms: optional_u64(args, "yield_time_ms"),
+            cwd: optional_path(args, "cwd"),
+            remountable: optional_bool(args, "remountable").unwrap_or(false),
             invocation_id: InvocationId::new(invocation_id.to_owned()),
         })
     }
@@ -484,6 +488,25 @@ mod tests {
         .expect_err("over cap rejected");
         assert_eq!(err.key, "last_n_lines");
         assert!(err.message().contains("must be <="));
+    }
+
+    #[test]
+    fn exec_parse_accepts_remountable_cwd_fields() {
+        let parsed = ExecCommandInput::parse(
+            &json!({
+                "cmd": "sleep 30",
+                "caller_id": "caller",
+                "cwd": "/tmp",
+                "remountable": true,
+                "yield_time_ms": 250,
+            }),
+            "invoke-remountable",
+        )
+        .expect("parse exec");
+
+        assert_eq!(parsed.cwd.as_deref(), Some(std::path::Path::new("/tmp")));
+        assert!(parsed.remountable);
+        assert_eq!(parsed.yield_time_ms, Some(250));
     }
 
     #[test]

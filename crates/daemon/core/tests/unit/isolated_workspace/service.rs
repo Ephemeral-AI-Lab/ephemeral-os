@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 
-use workspace::{DnsConfiguration, IsolatedWorkspaceId, OverlayDirs};
+use workspace::{DnsConfiguration, IsolatedWorkspaceId, OverlayDirs, WorkspaceRemountState};
 
 use super::*;
 
@@ -31,10 +31,23 @@ fn enter_trace_events_include_holder_and_dns_configuration() {
         "caller-isolated",
         std::path::Path::new("/tmp/layer-stack"),
     );
-    record_entered(&context, &handle);
+    record_entered(
+        &context,
+        &handle,
+        &layerstack::service::SnapshotNormalization {
+            triggered: false,
+            protected_layer_count: 0,
+            checkpoint_count: 0,
+            removed_layer_count: 0,
+            bytes_added: 0,
+            protected_pinned_bytes: 0,
+            active_depth_before: 1,
+            active_depth_after: 1,
+        },
+    );
 
     let events = sink.drain();
-    assert_eq!(events.len(), 6);
+    assert_eq!(events.len(), 7);
     assert_eq!(events[0].module, "isolated_workspace");
     assert_eq!(events[0].name, "enter_started");
     assert_eq!(events[0].details["caller_id"], "caller-isolated");
@@ -49,14 +62,18 @@ fn enter_trace_events_include_holder_and_dns_configuration() {
     assert_eq!(events[3].module, "layer_stack");
     assert_eq!(events[3].name, "snapshot_acquired");
     assert_eq!(events[3].details["lease_id"], "lease-1");
-    assert_eq!(events[4].module, "isolated_workspace");
-    assert_eq!(events[4].name, "holder_started");
-    assert_eq!(events[4].details["workspace_handle_id"], "workspace-handle");
-    assert_eq!(events[4].details["holder_pid"], 42);
+    assert_eq!(events[4].module, "layer_stack");
+    assert_eq!(events[4].name, "command_snapshot_normalized");
+    assert_eq!(events[4].details["triggered"], false);
+    assert_eq!(events[4].details["lease_layer_count"], 0);
     assert_eq!(events[5].module, "isolated_workspace");
-    assert_eq!(events[5].name, "network_configured");
-    assert_eq!(events[5].details["dns_fallback_applied"], true);
-    assert_eq!(events[5].details["previous_first_nameserver"], "127.0.0.53");
+    assert_eq!(events[5].name, "holder_started");
+    assert_eq!(events[5].details["workspace_handle_id"], "workspace-handle");
+    assert_eq!(events[5].details["holder_pid"], 42);
+    assert_eq!(events[6].module, "isolated_workspace");
+    assert_eq!(events[6].name, "network_configured");
+    assert_eq!(events[6].details["dns_fallback_applied"], true);
+    assert_eq!(events[6].details["previous_first_nameserver"], "127.0.0.53");
 }
 
 #[test]
@@ -193,6 +210,7 @@ fn test_handle() -> WorkspaceHandle {
             fallback_applied: true,
             previous_first_nameserver: Some("127.0.0.53".to_owned()),
         },
+        remount_state: WorkspaceRemountState::Active,
         created_at: 1.0,
         last_activity: 2.0,
     }

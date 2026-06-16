@@ -36,6 +36,7 @@ use serde_json::json;
 
 use crate::isolated_workspace::error::IsolatedError;
 use crate::isolated_workspace::manager::{DnsConfiguration, WorkspaceHandle};
+use crate::isolated_workspace::{RemountOverlayReport, RemountProbe};
 
 pub(crate) const TEST_HARNESS_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_HARNESS";
 
@@ -218,6 +219,40 @@ impl NamespaceRuntime {
             ns_runner::mount_overlay_child(&request, setup_timeout_s)?;
         }
         Ok(())
+    }
+
+    pub(crate) fn remount_overlay(
+        &self,
+        handle: &WorkspaceHandle,
+        layer_paths: &[PathBuf],
+        probe: &RemountProbe,
+        setup_timeout_s: f64,
+    ) -> Result<RemountOverlayReport, IsolatedError> {
+        if self.stub || handle.holder_pid <= 0 {
+            return Ok(RemountOverlayReport::verified_stub(layer_paths.len()));
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            let _ = (handle, layer_paths, probe, setup_timeout_s);
+            Ok(RemountOverlayReport::default())
+        }
+        #[cfg(target_os = "linux")]
+        {
+            let request = ns_runner_request(
+                handle,
+                "remount",
+                "remount_overlay",
+                json!({
+                    "probe_path": probe
+                        .path
+                        .as_ref()
+                        .map(|path| path.to_string_lossy().into_owned()),
+                    "probe_content": probe.expected_content.as_deref(),
+                }),
+                layer_paths.to_vec(),
+            );
+            ns_runner::remount_overlay_child(&request, setup_timeout_s)
+        }
     }
 
     pub(crate) fn configure_dns(

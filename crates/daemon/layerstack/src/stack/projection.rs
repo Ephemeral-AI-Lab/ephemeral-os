@@ -65,6 +65,19 @@ pub(super) fn apply_layer(layer_dir: &Path, destination: &Path) -> Result<(), La
     Ok(())
 }
 
+pub(super) fn layer_has_boundary_markers(layer_dir: &Path) -> Result<bool, LayerStackError> {
+    Ok(collect_project_entries(layer_dir)?
+        .into_iter()
+        .any(|entry| {
+            matches!(
+                entry.kind,
+                ProjectEntryKind::Opaque
+                    | ProjectEntryKind::LogicalWhiteout
+                    | ProjectEntryKind::KernelWhiteout
+            )
+        }))
+}
+
 #[derive(Debug)]
 struct ProjectEntry {
     path: PathBuf,

@@ -72,6 +72,8 @@ fn command_trace_origin_copies_start_request_identity() {
         request_id: Some("request-command".to_owned()),
         timeout_seconds: None,
         yield_time_ms: 0,
+        cwd: None,
+        remountable: false,
     };
 
     let origin = CommandTraceOrigin::from_start(&request);

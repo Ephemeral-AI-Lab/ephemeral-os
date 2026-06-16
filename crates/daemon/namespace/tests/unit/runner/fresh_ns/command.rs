@@ -1,5 +1,6 @@
 use super::{
     normalize_lexical, plugin_service_argv, plugin_setup_argv, plugin_setup_cwd, shell_argv,
+    shell_cwd,
 };
 use crate::protocol::{RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
 use std::path::Path;
@@ -33,6 +34,36 @@ fn exec_command_rejects_raw_argv() -> TestResult {
         Err(error) => error,
     };
     assert!(error.to_string().contains("shell-format command string"));
+    Ok(())
+}
+
+#[test]
+fn exec_command_rejects_external_cwd_unless_remountable() -> TestResult {
+    let external = format!("/tmp/namespace-remountable-cwd-{}", std::process::id());
+    let rejected = request(
+        "exec_command",
+        serde_json::json!({"command": "pwd", "cwd": external}),
+    );
+    let error = shell_cwd(&rejected).expect_err("external cwd should require remountable opt-in");
+    assert!(error.to_string().contains("cwd escapes workspace"));
+    Ok(())
+}
+
+#[test]
+fn exec_command_remountable_allows_external_cwd() -> TestResult {
+    let external =
+        std::env::temp_dir().join(format!("namespace-remountable-cwd-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&external);
+    let allowed = request(
+        "exec_command",
+        serde_json::json!({
+            "command": "pwd",
+            "cwd": external,
+            "remountable": true,
+        }),
+    );
+    assert_eq!(shell_cwd(&allowed)?, external);
+    let _ = std::fs::remove_dir_all(external);
     Ok(())
 }
 

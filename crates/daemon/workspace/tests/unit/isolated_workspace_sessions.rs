@@ -2,6 +2,8 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
+use serde_json::Value;
+
 use super::lifecycle::next_handle_id;
 use super::{
     check_host_capacity_against_budget, host_capacity_budget_bytes_from_memavailable_kib,
@@ -136,6 +138,60 @@ fn evict_idle_workspaces_skips_callers_with_active_commands(
 }
 
 #[test]
+fn remount_pending_state_is_persisted_and_cleared() -> Result<(), Box<dyn std::error::Error>> {
+    let scratch_root = unique_temp_dir("isolated-remount-state");
+    let mut sessions = IsolatedManager::stubbed(enabled_caps(), scratch_root.clone());
+    sessions.enter("caller", snapshot())?;
+
+    assert_eq!(
+        persisted_remount_state(&scratch_root)?,
+        Some("active".to_owned())
+    );
+    assert_eq!(
+        sessions
+            .get_handle("caller")
+            .expect("caller handle should exist")
+            .remount_state
+            .as_str(),
+        "active"
+    );
+
+    sessions.mark_remount_pending("caller")?;
+
+    assert_eq!(
+        persisted_remount_state(&scratch_root)?,
+        Some("remount_pending".to_owned())
+    );
+    assert_eq!(
+        sessions
+            .get_handle("caller")
+            .expect("caller handle should exist")
+            .remount_state
+            .as_str(),
+        "remount_pending"
+    );
+
+    sessions.clear_remount_pending("caller")?;
+
+    assert_eq!(
+        persisted_remount_state(&scratch_root)?,
+        Some("active".to_owned())
+    );
+    assert_eq!(
+        sessions
+            .get_handle("caller")
+            .expect("caller handle should exist")
+            .remount_state
+            .as_str(),
+        "active"
+    );
+
+    sessions.exit("caller", Some(0.0))?;
+    let _ = std::fs::remove_dir_all(scratch_root);
+    Ok(())
+}
+
+#[test]
 fn enter_persistence_failure_rolls_back_holder_and_state() -> Result<(), Box<dyn std::error::Error>>
 {
     let scratch_root = unique_temp_dir("isolated-enter-persist-fail");
@@ -253,4 +309,18 @@ fn unique_temp_dir(prefix: &str) -> PathBuf {
         std::process::id(),
         next_handle_id()
     ))
+}
+
+fn persisted_remount_state(
+    scratch_root: &std::path::Path,
+) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    let raw = std::fs::read_to_string(scratch_root.join("manager.json"))?;
+    let payload: Value = serde_json::from_str(&raw)?;
+    Ok(payload
+        .get("handles")
+        .and_then(Value::as_array)
+        .and_then(|handles| handles.first())
+        .and_then(|handle| handle.get("remount_state"))
+        .and_then(Value::as_str)
+        .map(str::to_owned))
 }

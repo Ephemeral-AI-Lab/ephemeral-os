@@ -40,6 +40,23 @@ pub struct DnsConfiguration {
     pub previous_first_nameserver: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum WorkspaceRemountState {
+    #[default]
+    Active,
+    Pending,
+}
+
+impl WorkspaceRemountState {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Active => "active",
+            Self::Pending => "remount_pending",
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct WorkspaceHandle {
     pub workspace_id: IsolatedWorkspaceId,
@@ -57,6 +74,7 @@ pub struct WorkspaceHandle {
     pub veth: Option<VethAllocation>,
     pub cgroup_path: Option<PathBuf>,
     pub dns_configuration: DnsConfiguration,
+    pub remount_state: WorkspaceRemountState,
     pub created_at: f64,
     pub last_activity: f64,
 }

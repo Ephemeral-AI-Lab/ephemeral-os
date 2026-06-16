@@ -65,25 +65,34 @@ impl LeaseRegistry {
             lease_id: new_lease_id(),
             manifest,
         };
-        for layer in &lease.manifest.layers {
-            *self.refcounts.entry(layer.clone()).or_insert(0) += 1;
-        }
+        increment_layers(&mut self.refcounts, &lease.manifest.layers);
         self.leases.insert(lease.lease_id.clone(), lease.clone());
         Ok(lease)
     }
 
     pub(super) fn release(&mut self, lease_id: &str) -> Option<LayerStackLeaseRecord> {
         let lease = self.leases.remove(lease_id)?;
-        for layer in &lease.manifest.layers {
-            match self.refcounts.get_mut(layer) {
-                Some(count) if *count > 1 => *count -= 1,
-                Some(_) => {
-                    self.refcounts.remove(layer);
-                }
-                None => {}
-            }
-        }
+        self.decrement_layers(&lease.manifest.layers);
         Some(lease)
+    }
+
+    pub(super) fn retarget(
+        &mut self,
+        lease_id: &str,
+        manifest: Manifest,
+    ) -> Option<LayerStackLeaseRecord> {
+        let lease = self.leases.get_mut(lease_id)?;
+        let old = lease.clone();
+        decrement_layers(&mut self.refcounts, &old.manifest.layers);
+        increment_layers(&mut self.refcounts, &manifest.layers);
+        lease.manifest = manifest;
+        Some(old)
+    }
+
+    pub(super) fn manifest(&self, lease_id: &str) -> Option<Manifest> {
+        self.leases
+            .get(lease_id)
+            .map(|lease| lease.manifest.clone())
     }
 
     pub(super) fn leased_layers(&self) -> Vec<LayerRef> {
@@ -102,6 +111,28 @@ impl LeaseRegistry {
 
     pub(super) fn active_count(&self) -> usize {
         self.leases.len()
+    }
+
+    fn decrement_layers(&mut self, layers: &[LayerRef]) {
+        decrement_layers(&mut self.refcounts, layers);
+    }
+}
+
+fn increment_layers(refcounts: &mut BTreeMap<LayerRef, usize>, layers: &[LayerRef]) {
+    for layer in layers {
+        *refcounts.entry(layer.clone()).or_insert(0) += 1;
+    }
+}
+
+fn decrement_layers(refcounts: &mut BTreeMap<LayerRef, usize>, layers: &[LayerRef]) {
+    for layer in layers {
+        match refcounts.get_mut(layer) {
+            Some(count) if *count > 1 => *count -= 1,
+            Some(_) => {
+                refcounts.remove(layer);
+            }
+            None => {}
+        }
     }
 }
 

@@ -5,6 +5,7 @@
 use std::path::{Path, PathBuf};
 
 use config::configs::isolated_workspace::IsolatedWorkspaceConfig;
+use layerstack::{CommitOptions, LayerChange, LayerPath, LayerStack};
 use serde_json::{json, Value};
 
 use super::WorkspaceRuntime;
@@ -110,6 +111,46 @@ fn enter_rebinds_idle_state_to_new_layer_stack_root() -> TestResult {
 }
 
 #[test]
+fn enter_normalizes_snapshot_before_mounting_workspace() -> TestResult {
+    let root = test_root("enter-normalizes-snapshot");
+    let scratch = root.join("scratch");
+    let stack_root = root.join("stack");
+    seed_empty_stack(&stack_root)?;
+    for index in 0..5 {
+        LayerStack::open(stack_root.clone())?.publish_layer(&[LayerChange::Write {
+            path: LayerPath::parse("large.txt")?,
+            content: vec![u8::try_from(index)?; 1024],
+        }])?;
+    }
+    let runtime = isolated_runtime_with_max_depth(&scratch, Path::new("/testbed"), 2);
+
+    let entered = runtime.enter_with_report("caller-normalized", &stack_root)?;
+
+    assert!(
+        entered.snapshot_normalization.triggered,
+        "enter should normalize the command snapshot before mounting"
+    );
+    assert_eq!(entered.snapshot_normalization.active_depth_before, 5);
+    assert_eq!(entered.snapshot_normalization.active_depth_after, 1);
+    assert_eq!(
+        entered.handle.layer_paths.len(),
+        1,
+        "mounted lowerdir list should be bounded"
+    );
+    assert_eq!(
+        LayerStack::open(stack_root.clone())?
+            .read_active_manifest()?
+            .depth(),
+        1
+    );
+
+    runtime.exit("caller-normalized", None)?;
+    let _ = runtime.test_reset();
+    let _ = std::fs::remove_dir_all(&root);
+    Ok(())
+}
+
+#[test]
 fn test_reset_rewrites_invalid_manager_json() -> TestResult {
     let root = test_root("reset-manager");
     let scratch = root.join("scratch");
@@ -140,6 +181,18 @@ fn test_reset_rewrites_invalid_manager_json() -> TestResult {
 }
 
 fn isolated_runtime(scratch_root: &Path, workspace_root: &Path) -> WorkspaceRuntime {
+    isolated_runtime_with_max_depth(
+        scratch_root,
+        workspace_root,
+        layerstack::CommitOptions::default().auto_squash_max_depth,
+    )
+}
+
+fn isolated_runtime_with_max_depth(
+    scratch_root: &Path,
+    workspace_root: &Path,
+    auto_squash_max_depth: usize,
+) -> WorkspaceRuntime {
     // The namespace/network layer stubs itself under the isolated-workspace
     // test harness env; every test in this binary drives the stubbed setup, so
     // the variable is set once and never removed (no cross-test race).
@@ -151,8 +204,9 @@ fn isolated_runtime(scratch_root: &Path, workspace_root: &Path) -> WorkspaceRunt
             workspace_root: workspace_root.to_path_buf(),
             ..IsolatedWorkspaceConfig::default()
         },
-        std::sync::Arc::new(operation::command::CommandOps::new(
+        std::sync::Arc::new(operation::command::CommandOps::with_commit_options(
             command::CommandConfig::default(),
+            CommitOptions::new(auto_squash_max_depth),
         )),
     )
 }

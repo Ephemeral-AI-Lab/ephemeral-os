@@ -35,6 +35,8 @@ struct ExecCommandRequest {
     layer_stack_root: Option<PathBuf>,
     timeout_seconds: Option<f64>,
     yield_time_ms: u64,
+    cwd: Option<PathBuf>,
+    remountable: bool,
 }
 
 /// Errors from routing or starting a workspace-bound command.
@@ -72,6 +74,8 @@ pub(crate) fn op_exec_command(
             layer_stack_root: input.layer_stack_root,
             timeout_seconds,
             yield_time_ms,
+            cwd: input.cwd,
+            remountable: input.remountable,
         },
     ) {
         Ok(outcome) => outcome,
@@ -111,6 +115,8 @@ fn exec_command(
         layer_stack_root,
         timeout_seconds,
         yield_time_ms,
+        cwd,
+        remountable,
     } = request;
 
     let _mode_guard = workspace.map(WorkspaceRuntime::lock_mode_gate);
@@ -134,6 +140,8 @@ fn exec_command(
                     request_id,
                     timeout_seconds,
                     yield_time_ms,
+                    cwd,
+                    remountable,
                 },
                 ExecTarget::Isolated {
                     binding: Box::new(binding),
@@ -163,6 +171,8 @@ fn exec_command(
                 request_id,
                 timeout_seconds,
                 yield_time_ms,
+                cwd,
+                remountable: false,
             },
             ExecTarget::Ephemeral {
                 root,

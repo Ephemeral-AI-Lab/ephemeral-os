@@ -215,18 +215,89 @@ pub struct Snapshot {
     pub layer_paths: Vec<PathBuf>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SnapshotNormalization {
+    pub triggered: bool,
+    pub protected_layer_count: usize,
+    pub checkpoint_count: usize,
+    pub removed_layer_count: usize,
+    pub bytes_added: u64,
+    pub protected_pinned_bytes: u64,
+    pub active_depth_before: usize,
+    pub active_depth_after: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommandSnapshot {
+    pub snapshot: Snapshot,
+    pub normalization: SnapshotNormalization,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SnapshotCompaction {
+    pub manifest: Manifest,
+    pub layer_paths: Vec<PathBuf>,
+    pub before_layer_count: usize,
+    pub after_layer_count: usize,
+}
+
 pub fn acquire_snapshot(root: &Path, request_id: &str) -> Result<Snapshot, LayerStackError> {
     let lease = LayerStack::open(root.to_path_buf())?.acquire_snapshot(request_id)?;
-    Ok(Snapshot {
-        lease_id: lease.lease_id,
-        manifest_version: lease.manifest_version,
-        root_hash: lease.root_hash,
-        layer_paths: lease.layer_paths.into_iter().map(PathBuf::from).collect(),
+    Ok(snapshot_from_lease(lease))
+}
+
+pub fn acquire_bounded_snapshot_for_command(
+    root: &Path,
+    request_id: &str,
+    max_depth: usize,
+) -> Result<CommandSnapshot, LayerStackError> {
+    let mut stack = LayerStack::open(root.to_path_buf())?;
+    let bounded = stack.acquire_bounded_snapshot_for_command(request_id, max_depth)?;
+    let normalization = SnapshotNormalization {
+        triggered: bounded.copy_through.manifest.is_some(),
+        protected_layer_count: bounded.copy_through.protected_layer_count,
+        checkpoint_count: bounded.copy_through.checkpoint_count,
+        removed_layer_count: bounded.copy_through.removed_layer_count,
+        bytes_added: bounded.copy_through.bytes_added,
+        protected_pinned_bytes: bounded.copy_through.protected_pinned_bytes,
+        active_depth_before: bounded.copy_through.active_depth_before,
+        active_depth_after: bounded.copy_through.active_depth_after,
+    };
+    Ok(CommandSnapshot {
+        snapshot: snapshot_from_lease(bounded.lease),
+        normalization,
     })
 }
 
 pub fn release_lease(root: &Path, lease_id: &str) -> Result<bool, LayerStackError> {
     LayerStack::open(root.to_path_buf())?.release_lease(lease_id)
+}
+
+#[doc(hidden)]
+pub fn compact_snapshot_for_remount(
+    root: &Path,
+    snapshot_manifest_version: i64,
+    snapshot_layer_paths: &[PathBuf],
+) -> Result<SnapshotCompaction, CommitError> {
+    let manifest = snapshot_manifest_preserving_layer_ids(
+        root,
+        snapshot_manifest_version,
+        snapshot_layer_paths,
+    )?;
+    let mut stack = LayerStack::open(root.to_path_buf())?;
+    let layer = stack.build_compaction_checkpoint(&manifest)?;
+    let compact_manifest = Manifest::new(
+        manifest.version,
+        vec![layer.clone()],
+        manifest.schema_version,
+    )?;
+    let layer_path = crate::fs::resolve_layer_path(root, &layer.path);
+    Ok(SnapshotCompaction {
+        manifest: compact_manifest,
+        layer_paths: vec![layer_path],
+        before_layer_count: manifest.layers.len(),
+        after_layer_count: 1,
+    })
 }
 
 pub fn active_manifest(root: &Path) -> Result<Manifest, LayerStackError> {
@@ -581,6 +652,23 @@ fn snapshot_manifest(
     version: i64,
     layer_paths: &[PathBuf],
 ) -> Result<Manifest, CommitError> {
+    snapshot_manifest_with_layer_ids(root, version, layer_paths, false)
+}
+
+fn snapshot_manifest_preserving_layer_ids(
+    root: &Path,
+    version: i64,
+    layer_paths: &[PathBuf],
+) -> Result<Manifest, CommitError> {
+    snapshot_manifest_with_layer_ids(root, version, layer_paths, true)
+}
+
+fn snapshot_manifest_with_layer_ids(
+    root: &Path,
+    version: i64,
+    layer_paths: &[PathBuf],
+    preserve_layer_ids: bool,
+) -> Result<Manifest, CommitError> {
     let layers = layer_paths
         .iter()
         .enumerate()
@@ -596,13 +684,45 @@ fn snapshot_manifest(
                     ))));
                 }
             };
+            let relative_path = relative.to_string_lossy().into_owned();
+            let layer_id = if preserve_layer_ids {
+                layer_id_from_relative_path(relative).unwrap_or_else(|| format!("snapshot-{index}"))
+            } else {
+                format!("snapshot-{index}")
+            };
             Ok(LayerRef {
-                layer_id: format!("snapshot-{index}"),
-                path: relative.to_string_lossy().into_owned(),
+                layer_id,
+                path: relative_path,
             })
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(Manifest::new(version, layers, MANIFEST_SCHEMA_VERSION)?)
+}
+
+fn layer_id_from_relative_path(relative: &Path) -> Option<String> {
+    let mut components = relative.components();
+    let first = components.next()?.as_os_str();
+    if first != std::ffi::OsStr::new(crate::LAYERS_DIR) {
+        return None;
+    }
+    let layer_id = components
+        .next()?
+        .as_os_str()
+        .to_string_lossy()
+        .into_owned();
+    if components.next().is_some() || layer_id.is_empty() {
+        return None;
+    }
+    Some(layer_id)
+}
+
+fn snapshot_from_lease(lease: crate::Lease) -> Snapshot {
+    Snapshot {
+        lease_id: lease.lease_id,
+        manifest_version: lease.manifest_version,
+        root_hash: lease.root_hash,
+        layer_paths: lease.layer_paths.into_iter().map(PathBuf::from).collect(),
+    }
 }
 
 pub fn manifest_version_u64(version: i64) -> Result<u64, LayerStackError> {

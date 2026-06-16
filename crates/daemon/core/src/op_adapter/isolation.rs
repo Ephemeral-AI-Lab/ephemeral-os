@@ -3,13 +3,14 @@
 
 use operation::isolation::contract::{
     IsolationEnterInput, IsolationEnterOutput, IsolationExitInput, IsolationExitOutput,
-    IsolationStatusInput, IsolationStatusOutput, ListOpenOutput, TestResetOutput,
+    IsolationStatusInput, IsolationStatusOutput, IsolationTestCompactRemountInput, ListOpenOutput,
+    TestCompactRemountOutput, TestResetOutput,
 };
 use serde_json::{json, Value};
-use workspace::{IsolatedError, WorkspaceHandle};
+use workspace::{IsolatedError, RemountProbe, WorkspaceHandle};
 
 use crate::error::DaemonError;
-use crate::workspace_runtime::LeaseReleaseReport;
+use crate::workspace_runtime::{LeaseReleaseReport, WorkspaceRemountCompactionAttempt};
 use crate::DispatchContext;
 use crate::{ExitOutcome, WorkspaceEnterError, WorkspaceRecoveryReport};
 
@@ -40,7 +41,7 @@ pub(crate) fn op_enter(
                 record_recovery_finished(&context, &outcome.recovery);
             }
             let handle = outcome.handle;
-            record_entered(&context, &handle);
+            record_entered(&context, &handle, &outcome.snapshot_normalization);
             Ok(success_response(to_wire_value(IsolationEnterOutput {
                 success: true,
                 manifest_version: handle.manifest_version,
@@ -149,6 +150,242 @@ pub(crate) fn op_test_reset(context: DispatchContext<'_>) -> Result<Value, Daemo
     })))
 }
 
+pub(crate) fn op_test_compact_remount(
+    input: IsolationTestCompactRemountInput,
+    context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
+    let caller_id = input.caller.to_string();
+    let workspace = &context.require_services()?.workspace;
+    let probe = RemountProbe {
+        path: input.probe_path,
+        expected_content: input.probe_content,
+    };
+    match workspace.compact_remount_open_workspace_for_test(
+        &caller_id,
+        &input.layer_stack_root,
+        probe,
+        input.test_force_block_reason,
+    ) {
+        Ok(WorkspaceRemountCompactionAttempt::Compacted(report)) => {
+            context.record_trace_event(
+                "isolated_workspace",
+                "test_compact_remount_finished",
+                json!({
+                    "caller_id": caller_id,
+                    "remount_state_at_start": "remount_pending",
+                    "remount_state_after": "active",
+                    "before_manifest_depth": report.before_manifest_depth,
+                    "before_layer_dirs": report.before_layer_dirs,
+                    "compacted_snapshot_layers": report.compacted_snapshot_layers,
+                    "live_remount": report.live_remount,
+                    "mount_verified": report.mount_verified,
+                    "remount_staged_switch": report.remount_staged_switch,
+                    "remount_staging_verified": report.remount_staging_verified,
+                    "remount_rollback_unmounted": report.remount_rollback_unmounted,
+                    "remount_rollback_unmount_error": &report.remount_rollback_unmount_error,
+                    "remount_mount_namespace": &report.remount_mount_namespace,
+                    "remount_mountinfo_fs_type": &report.remount_mountinfo_fs_type,
+                    "remount_mountinfo_lowerdir_count": report.remount_mountinfo_lowerdir_count,
+                    "remount_mountinfo_lowerdir_expected_count": report.remount_mountinfo_lowerdir_expected_count,
+                    "remount_mountinfo_lowerdir_count_matched": report.remount_mountinfo_lowerdir_count_matched,
+                    "remount_mountinfo_lowerdir_verified": report.remount_mountinfo_lowerdir_verified,
+                    "remount_probe_read_ok": report.remount_probe_read_ok,
+                    "remount_probe_content_matched": report.remount_probe_content_matched,
+                    "remount_probe_error": &report.remount_probe_error,
+                    "remountable_commands": report.remountable_commands,
+                    "process_count": report.process_count,
+                    "quiesced_process_count": report.quiesced_process_count,
+                    "pinned_cwd_count": report.pinned_cwd_count,
+                    "pinned_root_count": report.pinned_root_count,
+                    "pinned_fd_count": report.pinned_fd_count,
+                    "pinned_mapped_file_count": report.pinned_mapped_file_count,
+                    "mountinfo_checked_count": report.mountinfo_checked_count,
+                    "process_resumed": report.process_resumed,
+                    "after_manifest_depth": report.after_manifest_depth,
+                    "after_layer_dirs": report.after_layer_dirs,
+                    "active_leases_after": report.active_leases_after,
+                }),
+            );
+            context.record_trace_event(
+                "layer_stack",
+                "lease_remount_finished",
+                json!({
+                    "caller_id": caller_id,
+                    "remount_state_at_start": "remount_pending",
+                    "remount_state_after": "active",
+                    "live_remount": report.live_remount,
+                    "mount_verified": report.mount_verified,
+                    "remount_staged_switch": report.remount_staged_switch,
+                    "remount_staging_verified": report.remount_staging_verified,
+                    "remount_rollback_unmounted": report.remount_rollback_unmounted,
+                    "remount_rollback_unmount_error": &report.remount_rollback_unmount_error,
+                    "remount_mount_namespace": &report.remount_mount_namespace,
+                    "remount_mountinfo_fs_type": &report.remount_mountinfo_fs_type,
+                    "remount_mountinfo_lowerdir_count": report.remount_mountinfo_lowerdir_count,
+                    "remount_mountinfo_lowerdir_expected_count": report.remount_mountinfo_lowerdir_expected_count,
+                    "remount_mountinfo_lowerdir_count_matched": report.remount_mountinfo_lowerdir_count_matched,
+                    "remount_mountinfo_lowerdir_verified": report.remount_mountinfo_lowerdir_verified,
+                    "remount_probe_read_ok": report.remount_probe_read_ok,
+                    "remount_probe_content_matched": report.remount_probe_content_matched,
+                    "remount_probe_error": &report.remount_probe_error,
+                    "lease_retargeted": report.lease_retargeted,
+                    "compacted_snapshot_layers": report.compacted_snapshot_layers,
+                    "remounted_layer_count": report.remounted_layer_count,
+                    "remountable_commands": report.remountable_commands,
+                    "process_count": report.process_count,
+                    "quiesced_process_count": report.quiesced_process_count,
+                    "process_resumed": report.process_resumed,
+                    "before_manifest_depth": report.before_manifest_depth,
+                    "after_manifest_depth": report.after_manifest_depth,
+                    "before_layer_dirs": report.before_layer_dirs,
+                    "after_layer_dirs": report.after_layer_dirs,
+                    "before_storage_bytes": report.before_storage_bytes,
+                    "after_storage_bytes": report.after_storage_bytes,
+                    "active_leases_after": report.active_leases_after,
+                }),
+            );
+            Ok(success_response(to_wire_value(TestCompactRemountOutput {
+                success: true,
+                before_manifest_depth: report.before_manifest_depth,
+                before_layer_dirs: report.before_layer_dirs,
+                before_storage_bytes: report.before_storage_bytes,
+                compacted_snapshot_layers: report.compacted_snapshot_layers,
+                remounted_layer_count: report.remounted_layer_count,
+                live_remount: report.live_remount,
+                mount_verified: report.mount_verified,
+                remount_staged_switch: report.remount_staged_switch,
+                remount_staging_verified: report.remount_staging_verified,
+                remount_rollback_unmounted: report.remount_rollback_unmounted,
+                remount_rollback_unmount_error: report.remount_rollback_unmount_error,
+                remount_mount_namespace: report.remount_mount_namespace,
+                remount_mountinfo_fs_type: report.remount_mountinfo_fs_type,
+                remount_mountinfo_lowerdir_count: report.remount_mountinfo_lowerdir_count,
+                remount_mountinfo_lowerdir_expected_count: report
+                    .remount_mountinfo_lowerdir_expected_count,
+                remount_mountinfo_lowerdir_count_matched: report
+                    .remount_mountinfo_lowerdir_count_matched,
+                remount_mountinfo_lowerdir_verified: report.remount_mountinfo_lowerdir_verified,
+                remount_probe_read_ok: report.remount_probe_read_ok,
+                remount_probe_content_matched: report.remount_probe_content_matched,
+                remount_probe_error: report.remount_probe_error,
+                lease_retargeted: report.lease_retargeted,
+                remountable_commands: report.remountable_commands,
+                process_count: report.process_count,
+                quiesced_process_count: report.quiesced_process_count,
+                pinned_cwd_count: report.pinned_cwd_count,
+                pinned_root_count: report.pinned_root_count,
+                pinned_fd_count: report.pinned_fd_count,
+                pinned_mapped_file_count: report.pinned_mapped_file_count,
+                mountinfo_checked_count: report.mountinfo_checked_count,
+                process_resumed: report.process_resumed,
+                squash_manifest_version: report.squash_manifest_version,
+                squash_lease_release_error: report.squash_lease_release_error,
+                after_manifest_depth: report.after_manifest_depth,
+                after_layer_dirs: report.after_layer_dirs,
+                after_storage_bytes: report.after_storage_bytes,
+                active_leases_after: report.active_leases_after,
+            })))
+        }
+        Ok(WorkspaceRemountCompactionAttempt::Blocked(report)) => {
+            context.record_trace_event(
+                "layer_stack",
+                "lease_remount_planned",
+                json!({
+                    "caller_id": caller_id,
+                    "remount_state": "remount_pending",
+                    "lease_id": &report.lease_id,
+                    "manifest_version": report.manifest_version,
+                    "lease_layer_count": report.lease_layer_count,
+                    "parent_prefix_layer_count": report.parent_prefix_layer_count,
+                    "parent_prefix_bytes": report.parent_prefix_bytes,
+                    "active_depth_before": report.before_manifest_depth,
+                    "active_storage_bytes_before": report.before_storage_bytes,
+                }),
+            );
+            context.record_trace_event(
+                "layer_stack",
+                "lease_remount_blocked",
+                json!({
+                    "caller_id": caller_id,
+                    "remount_state_at_start": "remount_pending",
+                    "remount_state_after": "active",
+                    "lease_id": &report.lease_id,
+                    "manifest_version": report.manifest_version,
+                    "reason": report.reason,
+                    "lease_age_s": report.lease_age_s,
+                    "process_count": report.process_count,
+                    "quiesced_process_count": report.quiesced_process_count,
+                    "active_commands": report.active_commands,
+                    "remountable_commands": report.remountable_commands,
+                    "command_ids": &report.command_ids,
+                    "process_group_ids": &report.process_group_ids,
+                    "pinned_cwd_count": report.pinned_cwd_count,
+                    "pinned_root_count": report.pinned_root_count,
+                    "pinned_fd_count": report.pinned_fd_count,
+                    "pinned_mapped_file_count": report.pinned_mapped_file_count,
+                    "mountinfo_checked_count": report.mountinfo_checked_count,
+                    "inspected": report.inspected,
+                    "quiesce_attempted": report.quiesce_attempted,
+                    "resumed": report.resumed,
+                    "inspection_detail": &report.inspection_detail,
+                    "lease_layer_count": report.lease_layer_count,
+                    "parent_prefix_layer_count": report.parent_prefix_layer_count,
+                    "parent_prefix_bytes": report.parent_prefix_bytes,
+                    "pinned_bytes": report.pinned_bytes,
+                    "fallback_checkpoint_count": report.fallback_checkpoint_count,
+                    "fallback_compacted_layers": report.fallback_compacted_layers,
+                    "fallback_skipped_delta_intervals": report.fallback_skipped_delta_intervals,
+                    "before_manifest_depth": report.before_manifest_depth,
+                    "after_manifest_depth": report.after_manifest_depth,
+                    "before_layer_dirs": report.before_layer_dirs,
+                    "after_layer_dirs": report.after_layer_dirs,
+                    "active_leases_after": report.active_leases_after,
+                }),
+            );
+            Ok(refused_response(
+                "lease_remount_blocked",
+                "live remount requires a quiesce protocol; falling back to hard-protection compaction",
+                json!({
+                    "lease_id": &report.lease_id,
+                    "manifest_version": report.manifest_version,
+                    "reason": report.reason,
+                    "lease_age_s": report.lease_age_s,
+                    "process_count": report.process_count,
+                    "quiesced_process_count": report.quiesced_process_count,
+                    "active_commands": report.active_commands,
+                    "remountable_commands": report.remountable_commands,
+                    "command_ids": &report.command_ids,
+                    "process_group_ids": &report.process_group_ids,
+                    "pinned_cwd_count": report.pinned_cwd_count,
+                    "pinned_root_count": report.pinned_root_count,
+                    "pinned_fd_count": report.pinned_fd_count,
+                    "pinned_mapped_file_count": report.pinned_mapped_file_count,
+                    "mountinfo_checked_count": report.mountinfo_checked_count,
+                    "inspected": report.inspected,
+                    "quiesce_attempted": report.quiesce_attempted,
+                    "resumed": report.resumed,
+                    "inspection_detail": &report.inspection_detail,
+                    "lease_layer_count": report.lease_layer_count,
+                    "parent_prefix_layer_count": report.parent_prefix_layer_count,
+                    "parent_prefix_bytes": report.parent_prefix_bytes,
+                    "pinned_bytes": report.pinned_bytes,
+                    "before_manifest_depth": report.before_manifest_depth,
+                    "before_layer_dirs": report.before_layer_dirs,
+                    "before_storage_bytes": report.before_storage_bytes,
+                    "fallback_checkpoint_count": report.fallback_checkpoint_count,
+                    "fallback_compacted_layers": report.fallback_compacted_layers,
+                    "fallback_skipped_delta_intervals": report.fallback_skipped_delta_intervals,
+                    "after_manifest_depth": report.after_manifest_depth,
+                    "after_layer_dirs": report.after_layer_dirs,
+                    "after_storage_bytes": report.after_storage_bytes,
+                    "active_leases_after": report.active_leases_after,
+                }),
+            ))
+        }
+        Err(error) => Ok(error_payload(&error)),
+    }
+}
+
 fn status_response(handle: &WorkspaceHandle) -> Value {
     to_wire_value(IsolationStatusOutput::Open {
         success: true,
@@ -198,7 +435,11 @@ fn record_enter_started(context: &DispatchContext<'_>, caller_id: &str, root: &s
     );
 }
 
-fn record_entered(context: &DispatchContext<'_>, handle: &WorkspaceHandle) {
+fn record_entered(
+    context: &DispatchContext<'_>,
+    handle: &WorkspaceHandle,
+    snapshot_normalization: &layerstack::service::SnapshotNormalization,
+) {
     context.record_trace_event(
         "layer_stack",
         "binding_loaded",
@@ -229,6 +470,23 @@ fn record_entered(context: &DispatchContext<'_>, handle: &WorkspaceHandle) {
             "manifest_version": handle.manifest_version,
             "manifest_root_hash": handle.manifest_root_hash.as_str(),
             "layer_count": handle.layer_paths.len(),
+        }),
+    );
+    context.record_trace_event(
+        "layer_stack",
+        "command_snapshot_normalized",
+        json!({
+            "caller_id": handle.caller_id.as_str(),
+            "workspace_handle_id": handle.workspace_id.0.as_str(),
+            "triggered": snapshot_normalization.triggered,
+            "active_depth_before": snapshot_normalization.active_depth_before,
+            "active_depth_after": snapshot_normalization.active_depth_after,
+            "checkpoint_count": snapshot_normalization.checkpoint_count,
+            "removed_layer_count": snapshot_normalization.removed_layer_count,
+            "bytes_added": snapshot_normalization.bytes_added,
+            "protected_layer_count": snapshot_normalization.protected_layer_count,
+            "protected_pinned_bytes": snapshot_normalization.protected_pinned_bytes,
+            "lease_layer_count": handle.layer_paths.len(),
         }),
     );
     let common = json!({

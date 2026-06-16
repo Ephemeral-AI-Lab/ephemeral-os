@@ -28,6 +28,8 @@ pub(crate) struct PrepareInputs<'a> {
     pub(crate) command_id: &'a str,
     pub(crate) invocation_id: &'a str,
     pub(crate) cmd: &'a str,
+    pub(crate) cwd: Option<&'a Path>,
+    pub(crate) remountable: bool,
     pub(crate) timeout_seconds: Option<f64>,
     pub(crate) command_dir: PathBuf,
     pub(crate) workspace_label: &'a str,
@@ -87,11 +89,19 @@ pub(crate) fn prepare_isolated(
 }
 
 fn tool_call(inputs: &PrepareInputs<'_>) -> ToolCall {
+    let cwd = inputs
+        .cwd
+        .map(|path| path.to_string_lossy().into_owned())
+        .unwrap_or_else(|| ".".to_owned());
     ToolCall {
         invocation_id: inputs.invocation_id.to_owned(),
         caller_id: inputs.caller_id.to_owned(),
         verb: RunnerVerb::ExecCommand,
-        args: json!({ "command": inputs.cmd, "cwd": "." }),
+        args: json!({
+            "command": inputs.cmd,
+            "cwd": cwd,
+            "remountable": inputs.remountable,
+        }),
         background: false,
     }
 }

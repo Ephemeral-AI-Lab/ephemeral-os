@@ -23,12 +23,17 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use config::configs::isolated_workspace::{
     IsolatedWorkspaceConfig, Rfc1918Egress as ConfigRfc1918Egress,
 };
-use layerstack::{read_workspace_binding, LayerStack};
-use operation::command::CommandOps;
+use layerstack::{
+    read_workspace_binding,
+    service::{compact_snapshot_for_remount, SnapshotNormalization},
+    LayerStack, LeaseAwareCopyThroughOutcome,
+};
+use operation::command::{CommandOps, CommandRemountInspection};
+use operation::isolation::contract::IsolationTestRemountFault;
 use serde_json::Value;
 use workspace::IsolatedWorkspaceBinding;
 use workspace::{
-    IsolatedError, IsolatedManager, IsolatedSnapshot, ResourceCaps,
+    IsolatedError, IsolatedManager, IsolatedSnapshot, RemountProbe, ResourceCaps,
     Rfc1918Egress as RuntimeRfc1918Egress, WorkspaceHandle,
 };
 
@@ -37,6 +42,37 @@ const PERSISTED_HANDLES_SCHEMA_VERSION: u64 = 1;
 fn setup_error(error: impl std::fmt::Display) -> IsolatedError {
     IsolatedError::SetupFailed {
         step: error.to_string(),
+    }
+}
+
+fn forced_remount_block_inspection(
+    mut inspection: CommandRemountInspection,
+    fault: IsolationTestRemountFault,
+) -> CommandRemountInspection {
+    inspection.blocked_reason = Some(fault.reason());
+    inspection.detail = Some(format!("test forced {}", fault.reason()));
+    match fault {
+        IsolationTestRemountFault::ProcessMembershipChanged => {
+            inspection.inspected = false;
+        }
+        IsolationTestRemountFault::MountinfoMismatch => {
+            inspection.inspected = true;
+            inspection.mountinfo_checked_count = inspection.mountinfo_checked_count.max(1);
+        }
+    }
+    inspection
+}
+
+fn snapshot_normalization(outcome: LeaseAwareCopyThroughOutcome) -> SnapshotNormalization {
+    SnapshotNormalization {
+        triggered: outcome.manifest.is_some(),
+        protected_layer_count: outcome.protected_layer_count,
+        checkpoint_count: outcome.checkpoint_count,
+        removed_layer_count: outcome.removed_layer_count,
+        bytes_added: outcome.bytes_added,
+        protected_pinned_bytes: outcome.protected_pinned_bytes,
+        active_depth_before: outcome.active_depth_before,
+        active_depth_after: outcome.active_depth_after,
     }
 }
 
@@ -54,17 +90,24 @@ pub struct LeaseReleaseReport {
 
 impl BoundState {
     /// Acquire a snapshot lease for `caller_id` and shape it for `enter`.
-    fn acquire_snapshot(&self, caller_id: &str) -> Result<IsolatedSnapshot, IsolatedError> {
-        let lease = self
+    fn acquire_snapshot(
+        &mut self,
+        caller_id: &str,
+        max_depth: usize,
+    ) -> Result<(IsolatedSnapshot, SnapshotNormalization), IsolatedError> {
+        let command_snapshot = self
             .stack
-            .acquire_snapshot(&format!("isolated-{caller_id}"))
+            .acquire_bounded_snapshot_for_command(&format!("isolated-{caller_id}"), max_depth)
             .map_err(setup_error)?;
-        Ok(IsolatedSnapshot {
+        let normalization = snapshot_normalization(command_snapshot.copy_through);
+        let lease = command_snapshot.lease;
+        let snapshot = IsolatedSnapshot {
             lease_id: lease.lease_id,
             manifest_version: lease.manifest_version,
             manifest_root_hash: lease.root_hash,
             layer_paths: lease.layer_paths.into_iter().map(PathBuf::from).collect(),
-        })
+        };
+        Ok((snapshot, normalization))
     }
 
     /// Best-effort lease release; returns whether the lease was held and retains
@@ -97,6 +140,152 @@ impl BoundState {
             lease_released: lease_release.released,
             lease_release_error: lease_release.error,
             active_leases_after,
+        })
+    }
+
+    fn compact_remount_open_workspace_for_test(
+        &mut self,
+        caller_id: &str,
+        probe: &RemountProbe,
+        inspection: Option<&CommandRemountInspection>,
+    ) -> Result<WorkspaceRemountCompactionReport, IsolatedError> {
+        let before_manifest = self.stack.read_active_manifest().map_err(setup_error)?;
+        let before_metrics = self.stack.storage_metrics().map_err(setup_error)?;
+        let handle = self
+            .manager
+            .get_handle(caller_id)
+            .ok_or(IsolatedError::NotOpen)?;
+        let compaction = compact_snapshot_for_remount(
+            &self.layer_stack_root,
+            handle.manifest_version,
+            &handle.layer_paths,
+        )
+        .map_err(setup_error)?;
+        let remounted =
+            self.manager
+                .remount_with_layers(caller_id, compaction.layer_paths.clone(), probe)?;
+        let mount_verified = remounted.handle.layer_paths == compaction.layer_paths
+            && remounted.remount.mount_verified;
+        let lease_retargeted = self
+            .stack
+            .retarget_lease_manifest(&handle.lease_id, compaction.manifest)
+            .map_err(setup_error)?;
+        let squash = self.stack.squash(1).map_err(setup_error)?;
+        let after_manifest = self.stack.read_active_manifest().map_err(setup_error)?;
+        let after_metrics = self.stack.storage_metrics().map_err(setup_error)?;
+        Ok(WorkspaceRemountCompactionReport {
+            before_manifest_depth: before_manifest.depth(),
+            before_layer_dirs: before_metrics.layer_dirs,
+            before_storage_bytes: before_metrics.storage_bytes,
+            compacted_snapshot_layers: compaction.before_layer_count,
+            remounted_layer_count: remounted.handle.layer_paths.len(),
+            live_remount: inspection.is_some(),
+            mount_verified,
+            remount_staged_switch: remounted.remount.staged_switch,
+            remount_staging_verified: remounted.remount.staging_verified,
+            remount_rollback_unmounted: remounted.remount.rollback_unmounted,
+            remount_rollback_unmount_error: remounted.remount.rollback_unmount_error,
+            remount_mount_namespace: remounted.remount.mount_namespace,
+            remount_mountinfo_fs_type: remounted.remount.mountinfo_fs_type,
+            remount_mountinfo_lowerdir_count: remounted.remount.mountinfo_lowerdir_count,
+            remount_mountinfo_lowerdir_expected_count: remounted
+                .remount
+                .mountinfo_lowerdir_expected_count,
+            remount_mountinfo_lowerdir_count_matched: remounted
+                .remount
+                .mountinfo_lowerdir_count_matched,
+            remount_mountinfo_lowerdir_verified: remounted.remount.mountinfo_lowerdir_verified,
+            remount_probe_read_ok: remounted.remount.probe_read_ok,
+            remount_probe_content_matched: remounted.remount.probe_content_matched,
+            remount_probe_error: remounted.remount.probe_error,
+            lease_retargeted,
+            remountable_commands: inspection
+                .map_or(0, |inspection| inspection.remountable_commands),
+            process_count: inspection.map_or(0, |inspection| inspection.process_count),
+            quiesced_process_count: inspection
+                .map_or(0, |inspection| inspection.quiesced_process_count),
+            pinned_cwd_count: inspection.map_or(0, |inspection| inspection.pinned_cwd_count),
+            pinned_root_count: inspection.map_or(0, |inspection| inspection.pinned_root_count),
+            pinned_fd_count: inspection.map_or(0, |inspection| inspection.pinned_fd_count),
+            pinned_mapped_file_count: inspection
+                .map_or(0, |inspection| inspection.pinned_mapped_file_count),
+            mountinfo_checked_count: inspection
+                .map_or(0, |inspection| inspection.mountinfo_checked_count),
+            process_resumed: inspection.is_none_or(|inspection| inspection.resumed),
+            squash_manifest_version: squash.manifest.map(|manifest| manifest.version),
+            squash_lease_release_error: squash.lease_release_error.map(|err| err.to_string()),
+            after_manifest_depth: after_manifest.depth(),
+            after_layer_dirs: after_metrics.layer_dirs,
+            after_storage_bytes: after_metrics.storage_bytes,
+            active_leases_after: self.stack.active_lease_count(),
+        })
+    }
+
+    fn blocked_remount_report_for_test(
+        &mut self,
+        caller_id: &str,
+        inspection: CommandRemountInspection,
+    ) -> Result<WorkspaceRemountBlockedReport, IsolatedError> {
+        let before_manifest = self.stack.read_active_manifest().map_err(setup_error)?;
+        let before_metrics = self.stack.storage_metrics().map_err(setup_error)?;
+        let handle = self
+            .manager
+            .get_handle(caller_id)
+            .ok_or(IsolatedError::NotOpen)?;
+        let lease_layer_count = handle.layer_paths.len();
+        let pinned_bytes = handle
+            .layer_paths
+            .iter()
+            .map(|path| best_effort_file_bytes(path))
+            .sum();
+        let parent_prefix_bytes = handle
+            .layer_paths
+            .iter()
+            .skip(1)
+            .map(|path| best_effort_file_bytes(path))
+            .sum();
+        let lease_age_s = (handle.last_activity - handle.created_at).max(0.0);
+        let fallback = self
+            .stack
+            .reclaim_lease_aware_checkpoints(2)
+            .map_err(setup_error)?;
+        let after_manifest = self.stack.read_active_manifest().map_err(setup_error)?;
+        let after_metrics = self.stack.storage_metrics().map_err(setup_error)?;
+        Ok(WorkspaceRemountBlockedReport {
+            lease_id: handle.lease_id,
+            manifest_version: handle.manifest_version,
+            reason: inspection.reason_or_default(),
+            active_commands: inspection.active_commands,
+            remountable_commands: inspection.remountable_commands,
+            command_ids: inspection.command_ids,
+            process_group_ids: inspection.process_group_ids,
+            process_count: inspection.process_count,
+            quiesced_process_count: inspection.quiesced_process_count,
+            pinned_cwd_count: inspection.pinned_cwd_count,
+            pinned_root_count: inspection.pinned_root_count,
+            pinned_fd_count: inspection.pinned_fd_count,
+            pinned_mapped_file_count: inspection.pinned_mapped_file_count,
+            mountinfo_checked_count: inspection.mountinfo_checked_count,
+            inspection_detail: inspection.detail,
+            inspected: inspection.inspected,
+            quiesce_attempted: inspection.quiesce_attempted,
+            resumed: inspection.resumed,
+            lease_age_s,
+            lease_layer_count,
+            parent_prefix_layer_count: lease_layer_count.saturating_sub(1),
+            parent_prefix_bytes,
+            pinned_bytes,
+            before_manifest_depth: before_manifest.depth(),
+            before_layer_dirs: before_metrics.layer_dirs,
+            before_storage_bytes: before_metrics.storage_bytes,
+            fallback_checkpoint_count: fallback.view_checkpoint_count
+                + fallback.delta_checkpoint_count,
+            fallback_compacted_layers: fallback.removed_layer_count,
+            fallback_skipped_delta_intervals: fallback.skipped_delta_interval_count,
+            after_manifest_depth: after_manifest.depth(),
+            after_layer_dirs: after_metrics.layer_dirs,
+            after_storage_bytes: after_metrics.storage_bytes,
+            active_leases_after: self.stack.active_lease_count(),
         })
     }
 }
@@ -162,6 +351,90 @@ pub(crate) struct IdleWorkspaceEviction {
 pub(crate) struct WorkspaceEnterOutcome {
     pub handle: WorkspaceHandle,
     pub recovery: WorkspaceRecoveryReport,
+    pub snapshot_normalization: SnapshotNormalization,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum WorkspaceRemountCompactionAttempt {
+    Compacted(WorkspaceRemountCompactionReport),
+    Blocked(WorkspaceRemountBlockedReport),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct WorkspaceRemountCompactionReport {
+    pub before_manifest_depth: usize,
+    pub before_layer_dirs: usize,
+    pub before_storage_bytes: u64,
+    pub compacted_snapshot_layers: usize,
+    pub remounted_layer_count: usize,
+    pub live_remount: bool,
+    pub mount_verified: bool,
+    pub remount_staged_switch: bool,
+    pub remount_staging_verified: Option<bool>,
+    pub remount_rollback_unmounted: Option<bool>,
+    pub remount_rollback_unmount_error: Option<String>,
+    pub remount_mount_namespace: Option<String>,
+    pub remount_mountinfo_fs_type: Option<String>,
+    pub remount_mountinfo_lowerdir_count: Option<usize>,
+    pub remount_mountinfo_lowerdir_expected_count: Option<usize>,
+    pub remount_mountinfo_lowerdir_count_matched: Option<bool>,
+    pub remount_mountinfo_lowerdir_verified: Option<bool>,
+    pub remount_probe_read_ok: Option<bool>,
+    pub remount_probe_content_matched: Option<bool>,
+    pub remount_probe_error: Option<String>,
+    pub lease_retargeted: bool,
+    pub remountable_commands: usize,
+    pub process_count: usize,
+    pub quiesced_process_count: usize,
+    pub pinned_cwd_count: usize,
+    pub pinned_root_count: usize,
+    pub pinned_fd_count: usize,
+    pub pinned_mapped_file_count: usize,
+    pub mountinfo_checked_count: usize,
+    pub process_resumed: bool,
+    pub squash_manifest_version: Option<i64>,
+    pub squash_lease_release_error: Option<String>,
+    pub after_manifest_depth: usize,
+    pub after_layer_dirs: usize,
+    pub after_storage_bytes: u64,
+    pub active_leases_after: usize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct WorkspaceRemountBlockedReport {
+    pub lease_id: String,
+    pub manifest_version: i64,
+    pub reason: &'static str,
+    pub active_commands: usize,
+    pub remountable_commands: usize,
+    pub command_ids: Vec<String>,
+    pub process_group_ids: Vec<i32>,
+    pub process_count: usize,
+    pub quiesced_process_count: usize,
+    pub pinned_cwd_count: usize,
+    pub pinned_root_count: usize,
+    pub pinned_fd_count: usize,
+    pub pinned_mapped_file_count: usize,
+    pub mountinfo_checked_count: usize,
+    pub inspection_detail: Option<String>,
+    pub inspected: bool,
+    pub quiesce_attempted: bool,
+    pub resumed: bool,
+    pub lease_age_s: f64,
+    pub lease_layer_count: usize,
+    pub parent_prefix_layer_count: usize,
+    pub parent_prefix_bytes: u64,
+    pub pinned_bytes: u64,
+    pub before_manifest_depth: usize,
+    pub before_layer_dirs: usize,
+    pub before_storage_bytes: u64,
+    pub fallback_checkpoint_count: usize,
+    pub fallback_compacted_layers: usize,
+    pub fallback_skipped_delta_intervals: usize,
+    pub after_manifest_depth: usize,
+    pub after_layer_dirs: usize,
+    pub after_storage_bytes: u64,
+    pub active_leases_after: usize,
 }
 
 /// Failures from opening an isolated workspace through [`WorkspaceRuntime`].
@@ -239,10 +512,17 @@ impl WorkspaceRuntime {
         let recovery = self.ensure_state(root)?;
         let mut guard = self.lock_state_cell();
         let state = guard.as_mut().ok_or(IsolatedError::FeatureDisabled)?;
-        let snapshot = state.acquire_snapshot(caller_id)?;
+        let (snapshot, snapshot_normalization) = state.acquire_snapshot(
+            caller_id,
+            self.command.commit_options().auto_squash_max_depth,
+        )?;
         let lease_id = snapshot.lease_id.clone();
         match state.manager.enter(caller_id, snapshot) {
-            Ok(handle) => Ok(WorkspaceEnterOutcome { handle, recovery }),
+            Ok(handle) => Ok(WorkspaceEnterOutcome {
+                handle,
+                recovery,
+                snapshot_normalization,
+            }),
             Err(error) => {
                 let lease_release = state.release_lease(&lease_id);
                 Err(WorkspaceEnterError::EnterFailed {
@@ -278,6 +558,66 @@ impl WorkspaceRuntime {
     /// Returns [`IsolatedError::FeatureDisabled`] when isolation is disabled.
     pub fn status(&self, caller_id: &str) -> Result<Option<WorkspaceHandle>, IsolatedError> {
         self.with_state(|state| Ok(state.manager.get_handle(caller_id)))
+    }
+
+    pub(crate) fn compact_remount_open_workspace_for_test(
+        &self,
+        caller_id: &str,
+        root: &Path,
+        probe: RemountProbe,
+        test_force_block_reason: Option<IsolationTestRemountFault>,
+    ) -> Result<WorkspaceRemountCompactionAttempt, IsolatedError> {
+        let _mode_guard = self.lock_mode_gate();
+        self.ensure_state(root)?;
+        self.with_state(|state| state.manager.mark_remount_pending(caller_id))?;
+        let result = self.compact_remount_open_workspace_marked_pending(
+            caller_id,
+            probe,
+            test_force_block_reason,
+        );
+        self.with_state(|state| state.manager.clear_remount_pending(caller_id))?;
+        result
+    }
+
+    fn compact_remount_open_workspace_marked_pending(
+        &self,
+        caller_id: &str,
+        probe: RemountProbe,
+        test_force_block_reason: Option<IsolationTestRemountFault>,
+    ) -> Result<WorkspaceRemountCompactionAttempt, IsolatedError> {
+        let mut quiesce = self.command.begin_live_remount_for_caller(caller_id);
+        if let Some(fault) = test_force_block_reason {
+            let inspection = forced_remount_block_inspection(quiesce.finish(), fault);
+            return self
+                .with_state(|state| state.blocked_remount_report_for_test(caller_id, inspection))
+                .map(WorkspaceRemountCompactionAttempt::Blocked);
+        }
+        if quiesce.inspection().active_commands > 0 {
+            if quiesce.inspection().can_live_remount() {
+                let inspection = quiesce.inspection().clone();
+                let result = self
+                    .with_state(|state| {
+                        state.compact_remount_open_workspace_for_test(
+                            caller_id,
+                            &probe,
+                            Some(&inspection),
+                        )
+                    })
+                    .map(|mut report| {
+                        report.process_resumed = quiesce.resume();
+                        WorkspaceRemountCompactionAttempt::Compacted(report)
+                    });
+                return result;
+            }
+            let inspection = quiesce.finish();
+            return self
+                .with_state(|state| state.blocked_remount_report_for_test(caller_id, inspection))
+                .map(WorkspaceRemountCompactionAttempt::Blocked);
+        }
+        self.with_state(|state| {
+            state.compact_remount_open_workspace_for_test(caller_id, &probe, None)
+        })
+        .map(WorkspaceRemountCompactionAttempt::Compacted)
     }
 
     /// Caller ids with an open isolated workspace (empty when disabled).
@@ -585,6 +925,24 @@ fn manager_json_error(scratch_root: &Path) -> Option<String> {
         return Some("manager_json_schema: handles must be an array".to_owned());
     }
     None
+}
+
+fn best_effort_file_bytes(path: &Path) -> u64 {
+    let Ok(metadata) = std::fs::symlink_metadata(path) else {
+        return 0;
+    };
+    if metadata.is_file() || metadata.file_type().is_symlink() {
+        return metadata.len();
+    }
+    if !metadata.is_dir() {
+        return 0;
+    }
+    std::fs::read_dir(path).map_or(0, |entries| {
+        entries
+            .filter_map(Result::ok)
+            .map(|entry| best_effort_file_bytes(&entry.path()))
+            .sum()
+    })
 }
 
 fn resource_caps_from_config(config: &IsolatedWorkspaceConfig) -> ResourceCaps {

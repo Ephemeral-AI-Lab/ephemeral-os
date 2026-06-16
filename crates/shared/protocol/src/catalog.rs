@@ -315,6 +315,8 @@ declare_builtin_ops! {
         Daemon, IsolatedWorkspace, Operator, false, None, "operation.core.NoArgs", "operation.isolation.ListOpenOutput", "List open isolated workspaces.";
     IsolatedWorkspaceTestReset, SANDBOX_ISOLATION_TEST_RESET, "sandbox.isolation.test_reset",
         Daemon, IsolatedWorkspace, Test, true, None, "operation.core.NoArgs", "operation.isolation.TestResetOutput", "Test-only isolated workspace reset hook.";
+    IsolatedWorkspaceTestCompactRemount, SANDBOX_ISOLATION_TEST_COMPACT_REMOUNT, "sandbox.isolation.test_compact_remount",
+        Daemon, IsolatedWorkspace, Test, true, None, "operation.isolation.IsolationTestCompactRemountInput", "operation.isolation.TestCompactRemountOutput", "Test-only compact and remount hook for an open isolated workspace.";
     ExecCommand, SANDBOX_COMMAND_EXEC, "sandbox.command.exec",
         Daemon, Command, Public, true, None, "operation.command.ExecCommandInput", "operation.command.CommandResponse", "Run a foreground command or start a background command.";
     WriteStdin, SANDBOX_COMMAND_WRITE_STDIN, "sandbox.command.write_stdin",

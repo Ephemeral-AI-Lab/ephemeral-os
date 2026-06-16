@@ -27,6 +27,7 @@ pub(crate) struct IsolatedRun {
     pub(crate) process: CommandProcess,
     pub(crate) trace_origin: CommandTraceOrigin,
     pub(crate) binding: IsolatedWorkspaceBinding,
+    pub(crate) remountable: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

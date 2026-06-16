@@ -559,12 +559,13 @@
         "markdown": "readme.md"
       },
       "overview": {
-        "summary": "This module owns the unified live E2E contract for isolated-session lifecycle, private upperdir routing, SetNs namespace teardown, network isolation, and file-tool routing while a caller is isolated. It exercises daemon ops `sandbox.isolation.enter`, `sandbox.isolation.status`, `sandbox.isolation.exit`, `sandbox.file.read`, `sandbox.file.write`, `sandbox.file.edit`, `sandbox.command.exec`, and `sandbox.command.cancel`. Module config lives at `crates/e2e-test/tests/workspace-runtime-isolated/config/default.test.yml`.",
+        "summary": "This module owns the unified live E2E contract for isolated-session lifecycle, private upperdir routing, SetNs namespace teardown, network isolation, file-tool routing, and live isolated remount compaction while a caller is isolated. It exercises daemon ops `sandbox.isolation.enter`, `sandbox.isolation.status`, `sandbox.isolation.exit`, `sandbox.isolation.test_compact_remount`, `sandbox.file.read`, `sandbox.file.write`, `sandbox.file.edit`, `sandbox.command.exec`, and `sandbox.command.cancel`. Module config lives at `crates/e2e-test/tests/workspace-runtime-isolated/config/default.test.yml`.",
         "moduleConfig": null,
         "ops": [
           "sandbox.isolation.enter",
           "sandbox.isolation.status",
           "sandbox.isolation.exit",
+          "sandbox.isolation.test_compact_remount",
           "sandbox.file.read",
           "sandbox.file.write",
           "sandbox.file.edit",
@@ -692,6 +693,14 @@
           ]
         },
         {
+          "id": "isolated_workspace-compact-remount",
+          "title": "Isolated Workspace Compact Remount",
+          "description": "An open isolated session can compact/remount onto a bounded lowerdir set while preserving public snapshot and private upperdir state, and non-open ephemeral callers report `not_open`.",
+          "tags": [
+            "workspace-runtime-isolated"
+          ]
+        },
+        {
           "id": "isolated_workspace-daemon-restart-reconciliation",
           "title": "Isolated Workspace Daemon Restart Reconciliation",
           "description": "A hard daemon restart runs startup orphan reconciliation, reaping an open isolated handle so `list_open` empties, releasing its snapshot lease with none stranded, and serving fresh isolated enters again.",
@@ -786,6 +795,16 @@
             "isolated_workspace-no-publish",
             "isolated_workspace-discard-exit",
             "isolated_workspace-tool-routing-contract"
+          ]
+        },
+        {
+          "id": "isolated_workspace_compact_remount",
+          "name": "isolated_workspace_compact_remount",
+          "description": "Groups `compact_remount_open_isolated_workspace_reclaims_old_lower_chain` and `compact_remount_reports_not_open_for_ephemeral_caller`: open isolated sessions compact/remount from a long public lowerdir chain to a bounded chain without losing private upperdir state, while ephemeral callers without an open isolated handle report `not_open`.",
+          "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-isolated --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+          "checklist": [
+            "isolated_workspace-compact-remount",
+            "isolated_workspace-cross-mode-consistency"
           ]
         },
         {

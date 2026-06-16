@@ -198,6 +198,38 @@ pub fn unmount_overlay(workspace_root: &Path) -> Result<()> {
     peel_unmounts(workspace_root, true)
 }
 
+/// Move a mounted tree from `source` to `target`.
+///
+/// This is used by staged live remounts: build the replacement overlay at a
+/// private mountpoint, then move it into the visible workspace root only after
+/// the mount exists.
+///
+/// # Errors
+///
+/// Returns [`OverlayError::MountSyscall`] when the kernel refuses the mount
+/// move.
+#[cfg(target_os = "linux")]
+pub fn move_mountpoint(source: &Path, target: &Path) -> Result<()> {
+    move_mount(
+        rustix::fs::CWD,
+        source,
+        rustix::fs::CWD,
+        target,
+        MoveMountFlags::empty(),
+    )
+    .map_mount_syscall("move_mount mountpoint")
+}
+
+/// Non-Linux unsupported path: mount moves do not exist off Linux.
+///
+/// # Errors
+///
+/// Always returns [`OverlayError::Unsupported`].
+#[cfg(not(target_os = "linux"))]
+pub const fn move_mountpoint(_source: &Path, _target: &Path) -> Result<()> {
+    Err(OverlayError::Unsupported)
+}
+
 /// Non-Linux unsupported path: overlayfs unmount syscalls do not exist off Linux.
 ///
 /// # Errors
