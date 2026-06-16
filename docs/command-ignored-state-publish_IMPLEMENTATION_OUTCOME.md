@@ -562,6 +562,118 @@ Final live E2E report root:
 crates/e2e-test/test-reports/runs/e2e-run-1781617260016
 ```
 
+## Milestone 3 Outcome And Handoff
+
+This iteration completed Milestone 3: bounded file-backed capture for ignored
+command output. It did not attempt later command Git OCC, broader lane-aware OCC
+API replacement, or compaction/squash policy work.
+
+### Scope Completed
+
+- LayerStack now supports file-backed write payload references via
+  `LayerChange::WriteFile`.
+- Layer digests stream file-backed payload bytes, preserving digest semantics
+  with in-memory writes.
+- Layer publication copies accepted file-backed payloads into the staged layer
+  and verifies source and destination sizes.
+- Upperdir capture now has a metadata-first path that records regular-file
+  path, kind, and size before deciding whether to read or spool payloads.
+- Ephemeral command finalization routes captured metadata against the command
+  snapshot before reading ignored regular-file payloads.
+- Ignored file-size, aggregate-byte, file-count, and metadata-duration limits are
+  enforced before ignored payload reads.
+- When ignored limits are exceeded, the ignored lane is dropped with
+  `dropped_due_to_limits` and a stable limit reason while eligible source output
+  can still publish.
+- Accepted ignored regular files above the in-memory threshold are copied into
+  command-owned spool files and published from those file-backed references.
+- Command finalization removes spool files after successful publish, ignored-lane
+  drop, and publish failure.
+- `publish_lanes.ignored.spooled_bytes` now reports accepted file-backed ignored
+  bytes in responses and `command.publish_lanes_decided` trace events.
+
+### Files Updated
+
+- `crates/daemon/layerstack/src/model.rs`
+  - Added `LayerChange::WriteFile` and streaming digest support.
+- `crates/daemon/layerstack/src/capture.rs`
+  - Added metadata-first upperdir entries and payload materialization helpers.
+- `crates/daemon/layerstack/src/service.rs`
+  - Added bounded command-snapshot capture options, ignored limit reason codes,
+    route stats from metadata, and spool-backed materialization.
+- `crates/daemon/layerstack/src/stack/layer_write.rs`
+  - Added staged layer writes from file-backed payloads.
+- `crates/daemon/layerstack/src/stack/mod.rs`
+  - Uses fallible streaming layer digest calculation for file-backed writes.
+- `crates/daemon/layerstack/src/commit/mod.rs`
+  - Carries ignored spooled-byte and limit-drop metadata in route stats.
+- `crates/daemon/workspace/src/capture.rs`
+  - Exposes snapshot-routed bounded capture for ephemeral command finalization.
+- `crates/daemon/operation/src/command/finalize.rs`
+  - Uses bounded capture, reports ignored limit and spooled-byte metadata, and
+    owns spool cleanup.
+- `crates/daemon/operation/src/core/workspace_outcome.rs`
+  - Treats file-backed writes as ordinary write path kinds.
+- `crates/daemon/layerstack/tests/unit/route.rs`
+  - Added file-backed write, ignored-limit, and spool-backed capture coverage.
+- `crates/e2e-test/tests/workspace-runtime-command/command_error_and_backpressure.rs`
+  - Added live runtime coverage for ignored-limit source publish and large
+    ignored spool-backed publish.
+
+### Milestone 3 Checklist
+
+| Item | Status | Notes |
+| --- | --- | --- |
+| Replace ignored-tree all-in-memory capture with metadata-first capture | Complete | The command path routes metadata before ignored regular-file payload reads. |
+| Enforce ignored file/count/byte/duration limits before ignored payload reads | Complete | Limit reasons are `ignored_file_byte_limit`, `ignored_lane_file_limit`, `ignored_lane_byte_limit`, and `ignored_capture_duration_limit`. |
+| Publish accepted large ignored payloads through command-owned spool files | Complete | Accepted ignored writes above the threshold become `LayerChange::WriteFile`. |
+| Clean up spool files after publish, drop, and publish failure | Complete | Command finalization owns a cleanup guard over the command run-dir spool. |
+| Preserve Milestone 1 and 2 behavior | Complete | Existing non-success, Git/protected, route, and opaque coverage continues to pass. |
+
+### Verification
+
+Commands run:
+
+```sh
+cargo fmt
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p layerstack route_tests -- --nocapture
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p layerstack
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p operation command:: -- --nocapture
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p operation --all-targets
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p e2e-test --no-run
+cargo run -p xtask -- package
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-command --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4
+```
+
+Results:
+
+- `cargo fmt` passed.
+- Focused LayerStack route tests passed 31/31.
+- Full `layerstack` package tests passed.
+- Focused operation command tests passed 42/42.
+- Full `operation --all-targets` passed.
+- `e2e-test --no-run` passed.
+- `xtask package` passed and rebuilt `dist/eosd-linux-amd64`.
+- Final live `workspace-runtime-command` suite passed 65/65 with the new ignored
+  limit and spool-backed publish cases.
+
+Final live E2E report root:
+
+```text
+crates/e2e-test/test-reports/runs/e2e-run-1781619166861
+```
+
+### Remaining Risks And Review Focus
+
+- Ignored capture limits are internal defaults in this milestone. Config wiring
+  and validation remain part of later config closeout work.
+- Source regular-file payloads still use the existing in-memory capture limit.
+  This milestone only changes ignored command output capture.
+- The command finalizer still uses the existing publish path for OCC conflict
+  semantics. Broader lane-aware publish API replacement remains Milestone 4.
+- Spool-backed payloads are copied into LayerStack layers rather than reflinked
+  or hardlinked. That is intentionally conservative and can be optimized later.
+
 ## Remaining Work
 
 The following spec areas are intentionally left for later iterations:

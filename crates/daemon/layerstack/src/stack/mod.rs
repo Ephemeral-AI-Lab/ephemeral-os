@@ -3,7 +3,7 @@ use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use crate::model::{layer_digest, manifest_root_hash, LayerChange, LayerRef, Manifest};
+use crate::model::{manifest_root_hash, try_layer_digest, LayerChange, LayerRef, Manifest};
 
 use crate::error::LayerStackError;
 use crate::fs::{
@@ -385,7 +385,7 @@ impl LayerStack {
             return Ok(active);
         }
 
-        let digest = layer_digest(changes);
+        let digest = try_layer_digest(changes)?;
         if self.head_layer_digest(&active)? == Some(digest.clone()) {
             return Ok(active);
         }

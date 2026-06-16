@@ -49,7 +49,7 @@ pub(crate) enum RouteDropReason {
 }
 
 impl RouteDropReason {
-    const fn as_str(self) -> &'static str {
+    pub(crate) const fn as_str(self) -> &'static str {
         match self {
             Self::GitMetadataUnsupported => GIT_METADATA_UNSUPPORTED_DROP_REASON,
             Self::DaemonControlPath => DAEMON_CONTROL_PATH_DROP_REASON,
@@ -98,6 +98,9 @@ pub enum CommitError {
 
     #[error(transparent)]
     Cas(#[from] CasError),
+
+    #[error(transparent)]
+    Capture(#[from] crate::capture::CaptureError),
 
     #[error(transparent)]
     Storage(#[from] crate::LayerStackError),
@@ -214,6 +217,8 @@ pub struct CaptureRouteStats {
     pub direct_path_count: usize,
     pub drop_path_count: usize,
     pub direct_bytes: u64,
+    pub direct_spooled_bytes: u64,
+    pub ignored_limit_drop_reason: Option<String>,
     pub drop_reason_counts: BTreeMap<String, usize>,
 }
 
@@ -223,7 +228,7 @@ impl CaptureRouteStats {
         self.drop_reason_counts.get(reason).copied().unwrap_or(0)
     }
 
-    fn record_drop_reason(&mut self, reason: &str) {
+    pub(crate) fn record_drop_reason(&mut self, reason: &str) {
         *self
             .drop_reason_counts
             .entry(reason.to_owned())
@@ -552,10 +557,13 @@ pub fn capture_route_stats_for_manifest_with_protected_drops(
             Route::Gated => stats.gated_path_count += 1,
             Route::Direct => {
                 stats.direct_path_count += 1;
-                if let Some(LayerChange::Write { content, .. }) = changes.get(index) {
+                if let Some(change) = changes.get(index) {
                     stats.direct_bytes = stats
                         .direct_bytes
-                        .saturating_add(u64::try_from(content.len()).unwrap_or(u64::MAX));
+                        .saturating_add(change.write_size().unwrap_or(0));
+                    stats.direct_spooled_bytes = stats
+                        .direct_spooled_bytes
+                        .saturating_add(change.spooled_write_size().unwrap_or(0));
                 }
             }
             Route::Drop => {

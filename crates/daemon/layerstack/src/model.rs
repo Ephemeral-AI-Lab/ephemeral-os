@@ -1,5 +1,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
+use std::io::{self, Read};
+use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -162,6 +164,11 @@ pub enum LayerChange {
         path: LayerPath,
         content: Vec<u8>,
     },
+    WriteFile {
+        path: LayerPath,
+        source_path: PathBuf,
+        size: u64,
+    },
     Delete {
         path: LayerPath,
     },
@@ -178,7 +185,7 @@ impl LayerChange {
     #[must_use]
     pub const fn kind(&self) -> &'static str {
         match self {
-            Self::Write { .. } => "write",
+            Self::Write { .. } | Self::WriteFile { .. } => "write",
             Self::Delete { .. } => "delete",
             Self::Symlink { .. } => "symlink",
             Self::OpaqueDir { .. } => "opaque_dir",
@@ -189,9 +196,30 @@ impl LayerChange {
     pub const fn path(&self) -> &LayerPath {
         match self {
             Self::Write { path, .. }
+            | Self::WriteFile { path, .. }
             | Self::Delete { path }
             | Self::Symlink { path, .. }
             | Self::OpaqueDir { path } => path,
+        }
+    }
+
+    #[must_use]
+    pub fn write_size(&self) -> Option<u64> {
+        match self {
+            Self::Write { content, .. } => Some(u64::try_from(content.len()).unwrap_or(u64::MAX)),
+            Self::WriteFile { size, .. } => Some(*size),
+            Self::Delete { .. } | Self::Symlink { .. } | Self::OpaqueDir { .. } => None,
+        }
+    }
+
+    #[must_use]
+    pub const fn spooled_write_size(&self) -> Option<u64> {
+        match self {
+            Self::WriteFile { size, .. } => Some(*size),
+            Self::Write { .. }
+            | Self::Delete { .. }
+            | Self::Symlink { .. }
+            | Self::OpaqueDir { .. } => None,
         }
     }
 }
@@ -205,26 +233,42 @@ pub fn aggregate_layer_changes(changes: &[LayerChange]) -> Vec<LayerChange> {
     by_path.into_values().collect()
 }
 
-fn update_digest(hasher: &mut Sha256, change: &LayerChange) {
+fn update_digest(hasher: &mut Sha256, change: &LayerChange) -> io::Result<()> {
     hasher.update(change.kind().as_bytes());
     hasher.update(b"\0");
     hasher.update(change.path().as_str().as_bytes());
     hasher.update(b"\0");
     match change {
         LayerChange::Write { content, .. } => hasher.update(content),
+        LayerChange::WriteFile { source_path, .. } => {
+            let mut file = std::fs::File::open(source_path)?;
+            let mut buffer = [0_u8; 64 * 1024];
+            loop {
+                let read = file.read(&mut buffer)?;
+                if read == 0 {
+                    break;
+                }
+                hasher.update(&buffer[..read]);
+            }
+        }
         LayerChange::Symlink { source_path, .. } => hasher.update(source_path.as_bytes()),
         LayerChange::Delete { .. } | LayerChange::OpaqueDir { .. } => {}
     }
     hasher.update(b"\0");
+    Ok(())
 }
 
 #[must_use]
 pub fn layer_digest(changes: &[LayerChange]) -> String {
+    try_layer_digest(changes).expect("layer digest inputs are readable")
+}
+
+pub(crate) fn try_layer_digest(changes: &[LayerChange]) -> io::Result<String> {
     let mut hasher = Sha256::new();
     for change in aggregate_layer_changes(changes) {
-        update_digest(&mut hasher, &change);
+        update_digest(&mut hasher, &change)?;
     }
-    hex_lower(hasher.finalize())
+    Ok(hex_lower(hasher.finalize()))
 }
 
 pub(crate) fn hex_lower(bytes: impl AsRef<[u8]>) -> String {

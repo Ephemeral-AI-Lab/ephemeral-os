@@ -14,7 +14,10 @@ pub mod ephemeral_workspace;
 pub mod isolated_workspace;
 pub mod tree;
 
-pub use capture::{capture_upperdir, CaptureError, CapturedChanges};
+pub use capture::{
+    capture_upperdir, capture_upperdir_for_snapshot, CaptureError, CapturedChanges,
+    RoutedCapturedChanges,
+};
 pub use dirs::{DirAllocationError, OverlayDirs, OverlayDirsGuard};
 pub use ephemeral_workspace::{overlay_run_dirs, EphemeralWorkspace, EphemeralWorkspaceError};
 pub use isolated_workspace::{

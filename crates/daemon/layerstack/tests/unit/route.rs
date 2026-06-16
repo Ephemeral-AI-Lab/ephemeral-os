@@ -1,4 +1,5 @@
 use crate::model::LayerChange;
+use std::time::Duration;
 
 use crate::test_fixture::{lp, Fixture, TestResult};
 use crate::{service, CommitOptions, CommitStatus, LayerStack};
@@ -12,6 +13,146 @@ use super::{
     OPAQUE_DIR_EXPANSION_LIMIT_DROP_REASON, OPAQUE_DIR_MIXED_ROUTES_DROP_REASON,
     OPAQUE_DIR_PROTECTED_DESCENDANT_DROP_REASON, UNSUPPORTED_SPECIAL_FILE_DROP_REASON,
 };
+
+#[test]
+fn spool_backed_write_publishes_layer_content() -> TestResult {
+    let fixture = Fixture::new("spool_backed_write")?;
+    let payload = fixture.base.join("payload.bin");
+    std::fs::write(&payload, b"spooled ignored payload")?;
+
+    LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::WriteFile {
+        path: lp("cache/payload.bin")?,
+        source_path: payload,
+        size: 23,
+    }])?;
+
+    assert_eq!(
+        fixture.read_text("cache/payload.bin")?,
+        "spooled ignored payload"
+    );
+    Ok(())
+}
+
+#[test]
+fn bounded_capture_drops_oversized_ignored_before_payload_read_and_keeps_source() -> TestResult {
+    let fixture = Fixture::new_with_gitignore("bounded_capture_drop", "ignored/\n")?;
+    let snapshot = service::acquire_snapshot(&fixture.root, "bounded-capture-drop")?;
+    let upperdir = fixture.base.join("upper-bounded-drop");
+    std::fs::create_dir_all(upperdir.join("ignored"))?;
+    std::fs::write(upperdir.join("source.txt"), b"source")?;
+    let ignored = upperdir.join("ignored/huge.bin");
+    std::fs::File::create(&ignored)?.set_len((8 * 1024 * 1024) + 1)?;
+    let spool_dir = fixture.base.join("spool-drop");
+
+    let captured = service::capture_upperdir_for_snapshot_with_options(
+        &fixture.root,
+        snapshot.manifest_version,
+        &snapshot.layer_paths,
+        &upperdir,
+        &spool_dir,
+        service::BoundedCaptureOptions {
+            ignored_limits: service::IgnoredCaptureLimits {
+                max_ignored_file_bytes: 1024,
+                ..service::IgnoredCaptureLimits::default()
+            },
+            ..service::BoundedCaptureOptions::default()
+        },
+    )?;
+
+    assert_eq!(captured.route_stats.gated_path_count, 1);
+    assert_eq!(captured.route_stats.direct_path_count, 1);
+    assert_eq!(captured.route_stats.direct_bytes, (8 * 1024 * 1024) + 1);
+    assert_eq!(
+        captured.route_stats.ignored_limit_drop_reason.as_deref(),
+        Some(service::IGNORED_FILE_BYTE_LIMIT_DROP_REASON)
+    );
+    assert!(captured
+        .changes
+        .iter()
+        .any(|change| change.path().as_str() == "source.txt"));
+    assert!(captured
+        .changes
+        .iter()
+        .all(|change| change.path().as_str() != "ignored/huge.bin"));
+    assert!(
+        !spool_dir.exists(),
+        "limit-dropped ignored payloads are not spooled"
+    );
+
+    service::publish_capture_with_options_and_protected_drops(
+        &fixture.root,
+        snapshot.manifest_version,
+        &snapshot.layer_paths,
+        &captured.changes,
+        &captured.protected_drops,
+        CommitOptions::default(),
+    )?;
+    service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+    assert_eq!(fixture.read_text("source.txt")?, "source");
+    assert!(
+        !LayerStack::open(fixture.root.clone())?
+            .read_bytes("ignored/huge.bin")?
+            .1
+    );
+    Ok(())
+}
+
+#[test]
+fn bounded_capture_spools_accepted_ignored_payloads() -> TestResult {
+    let fixture = Fixture::new_with_gitignore("bounded_capture_spool", "ignored/\n")?;
+    let snapshot = service::acquire_snapshot(&fixture.root, "bounded-capture-spool")?;
+    let upperdir = fixture.base.join("upper-bounded-spool");
+    std::fs::create_dir_all(upperdir.join("ignored"))?;
+    std::fs::write(upperdir.join("ignored/payload.bin"), b"0123456789abcdef")?;
+    let spool_dir = fixture.base.join("spool-accepted");
+
+    let captured = service::capture_upperdir_for_snapshot_with_options(
+        &fixture.root,
+        snapshot.manifest_version,
+        &snapshot.layer_paths,
+        &upperdir,
+        &spool_dir,
+        service::BoundedCaptureOptions {
+            ignored_limits: service::IgnoredCaptureLimits {
+                spool_threshold_bytes: 4,
+                max_metadata_capture_duration: Duration::from_secs(30),
+                ..service::IgnoredCaptureLimits::default()
+            },
+            ..service::BoundedCaptureOptions::default()
+        },
+    )?;
+
+    assert_eq!(captured.route_stats.direct_path_count, 1);
+    assert_eq!(captured.route_stats.direct_bytes, 16);
+    assert_eq!(captured.route_stats.direct_spooled_bytes, 16);
+    assert!(matches!(
+        captured.changes.as_slice(),
+        [LayerChange::WriteFile { size: 16, .. }]
+    ));
+    assert!(
+        spool_dir.exists(),
+        "accepted large ignored payload should be spooled"
+    );
+
+    service::publish_capture_with_options_and_protected_drops(
+        &fixture.root,
+        snapshot.manifest_version,
+        &snapshot.layer_paths,
+        &captured.changes,
+        &captured.protected_drops,
+        CommitOptions::default(),
+    )?;
+    service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+    assert_eq!(
+        fixture.read_text("ignored/payload.bin")?,
+        "0123456789abcdef"
+    );
+    std::fs::remove_dir_all(&spool_dir)?;
+    assert!(!spool_dir.exists());
+    Ok(())
+}
 
 fn is_ignored(fixture: &Fixture, path: &str) -> TestResult<bool> {
     Ok(route_of(fixture, path)? == Route::Direct)

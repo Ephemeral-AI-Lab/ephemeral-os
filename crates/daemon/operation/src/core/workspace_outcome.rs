@@ -80,7 +80,7 @@ pub enum ChangedPathKind {
 impl From<&LayerChange> for ChangedPathKind {
     fn from(change: &LayerChange) -> Self {
         match change {
-            LayerChange::Write { .. } => Self::Write,
+            LayerChange::Write { .. } | LayerChange::WriteFile { .. } => Self::Write,
             LayerChange::Delete { .. } => Self::Delete,
             LayerChange::Symlink { .. } => Self::Symlink,
             LayerChange::OpaqueDir { .. } => Self::OpaqueDir,

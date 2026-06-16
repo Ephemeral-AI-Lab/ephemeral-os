@@ -1,6 +1,7 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-use layerstack::{LayerChange, ProtectedPathDrop};
+use layerstack::service::{self, BoundedCaptureOptions, Snapshot};
+use layerstack::{CaptureRouteStats, LayerChange, ProtectedPathDrop};
 
 use crate::tree::TreeResourceStats;
 
@@ -11,6 +12,15 @@ pub struct CapturedChanges {
     pub protected_drops: Vec<ProtectedPathDrop>,
     pub stats: TreeResourceStats,
     pub capture_s: f64,
+}
+
+/// Captured ephemeral command changes with command-snapshot routing metadata.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RoutedCapturedChanges {
+    pub captured: CapturedChanges,
+    pub route_stats: CaptureRouteStats,
+    pub metadata_path_count: usize,
+    pub spool_dir: Option<PathBuf>,
 }
 
 /// Error raised while capturing an overlay upperdir.
@@ -48,5 +58,48 @@ pub fn capture_upperdir(upperdir: &Path) -> Result<CapturedChanges, CaptureError
         protected_drops: captured.protected_drops,
         stats: TreeResourceStats::from(captured.stats),
         capture_s: start.elapsed().as_secs_f64(),
+    })
+}
+
+/// Capture an ephemeral command upperdir using command-snapshot routing before
+/// ignored regular-file payloads are read.
+///
+/// # Errors
+///
+/// Returns [`CaptureError`] when metadata capture, routing, or selected payload
+/// materialization fails.
+pub fn capture_upperdir_for_snapshot(
+    root: &Path,
+    snapshot: &Snapshot,
+    upperdir: &Path,
+    spool_dir: &Path,
+    materialize_payloads: bool,
+) -> Result<RoutedCapturedChanges, CaptureError> {
+    let start = std::time::Instant::now();
+    let captured = service::capture_upperdir_for_snapshot_with_options(
+        root,
+        snapshot.manifest_version,
+        &snapshot.layer_paths,
+        upperdir,
+        spool_dir,
+        BoundedCaptureOptions {
+            materialize_payloads,
+            ..BoundedCaptureOptions::default()
+        },
+    )
+    .map_err(|error| CaptureError {
+        failing_path: None,
+        reason: error.to_string(),
+    })?;
+    Ok(RoutedCapturedChanges {
+        captured: CapturedChanges {
+            changes: captured.changes,
+            protected_drops: captured.protected_drops,
+            stats: TreeResourceStats::from(captured.stats),
+            capture_s: start.elapsed().as_secs_f64(),
+        },
+        route_stats: captured.route_stats,
+        metadata_path_count: captured.metadata_path_count,
+        spool_dir: captured.spool_dir,
     })
 }

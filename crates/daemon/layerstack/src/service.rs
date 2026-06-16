@@ -1,16 +1,19 @@
 use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use crate::model::{LayerChange, LayerPath, LayerRef, Manifest, MANIFEST_SCHEMA_VERSION};
 use serde_json::{json, Value};
 
-use crate::capture::ProtectedPathDrop;
+use crate::capture::{
+    capture_upperdir_metadata, CaptureStats, CapturedUpperdirEntry, ProtectedPathDrop,
+    MAX_CAPTURE_FILE_BYTES,
+};
 use crate::commit::{
     capture_route_stats_for_manifest_with_protected_drops,
     publish_decisions_for_manifest_with_protected_drops, CaptureRouteStats, ChangesetResult,
-    CommitError, CommitOptions, CommitWriter,
+    CommitError, CommitOptions, CommitWriter, PublishDecision, Route,
 };
 use crate::{LayerStack, LayerStackError};
 
@@ -110,6 +113,57 @@ pub(crate) fn reset_service_cache_for_tests() {
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner);
     *cache = ServiceCache::default();
+}
+
+pub const IGNORED_LANE_FILE_LIMIT_DROP_REASON: &str = "ignored_lane_file_limit";
+pub const IGNORED_LANE_BYTE_LIMIT_DROP_REASON: &str = "ignored_lane_byte_limit";
+pub const IGNORED_FILE_BYTE_LIMIT_DROP_REASON: &str = "ignored_file_byte_limit";
+pub const IGNORED_CAPTURE_DURATION_LIMIT_DROP_REASON: &str = "ignored_capture_duration_limit";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct IgnoredCaptureLimits {
+    pub max_ignored_files: usize,
+    pub max_ignored_bytes: u64,
+    pub max_ignored_file_bytes: u64,
+    pub spool_threshold_bytes: u64,
+    pub max_metadata_capture_duration: Duration,
+}
+
+impl Default for IgnoredCaptureLimits {
+    fn default() -> Self {
+        Self {
+            max_ignored_files: 4096,
+            max_ignored_bytes: 64 * 1024 * 1024,
+            max_ignored_file_bytes: 16 * 1024 * 1024,
+            spool_threshold_bytes: 1024 * 1024,
+            max_metadata_capture_duration: Duration::from_secs(30),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BoundedCaptureOptions {
+    pub materialize_payloads: bool,
+    pub ignored_limits: IgnoredCaptureLimits,
+}
+
+impl Default for BoundedCaptureOptions {
+    fn default() -> Self {
+        Self {
+            materialize_payloads: true,
+            ignored_limits: IgnoredCaptureLimits::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BoundedCapturedUpperdir {
+    pub changes: Vec<LayerChange>,
+    pub protected_drops: Vec<ProtectedPathDrop>,
+    pub stats: CaptureStats,
+    pub route_stats: CaptureRouteStats,
+    pub metadata_path_count: usize,
+    pub spool_dir: Option<PathBuf>,
 }
 
 #[cfg(test)]
@@ -247,6 +301,67 @@ pub fn publish_capture_with_options_and_protected_drops(
     )
 }
 
+pub fn capture_upperdir_for_snapshot_with_options(
+    root: &Path,
+    snapshot_manifest_version: i64,
+    snapshot_layer_paths: &[PathBuf],
+    upperdir: &Path,
+    spool_dir: &Path,
+    options: BoundedCaptureOptions,
+) -> Result<BoundedCapturedUpperdir, CommitError> {
+    let capture_start = Instant::now();
+    let manifest = snapshot_manifest(root, snapshot_manifest_version, snapshot_layer_paths)?;
+    let metadata = capture_upperdir_metadata(upperdir).map_err(CommitError::from)?;
+    let metadata_elapsed = capture_start.elapsed();
+    let placeholder_changes = metadata
+        .entries
+        .iter()
+        .map(CapturedUpperdirEntry::placeholder_change)
+        .collect::<Vec<_>>();
+    let decisions = publish_decisions_for_manifest_with_protected_drops(
+        root,
+        &manifest,
+        &placeholder_changes,
+        &metadata.protected_drops,
+    )?;
+    let mut route_stats = capture_route_stats_from_metadata(
+        &metadata.entries,
+        &decisions,
+        metadata.protected_drops.len(),
+    );
+    route_stats.ignored_limit_drop_reason = ignored_limit_drop_reason(
+        &metadata.entries,
+        &decisions,
+        &options.ignored_limits,
+        metadata_elapsed,
+    );
+
+    if options.materialize_payloads {
+        let _ = std::fs::remove_dir_all(spool_dir);
+    }
+    let capture_result = materialize_bounded_capture_changes(
+        &metadata.entries,
+        &decisions,
+        route_stats.ignored_limit_drop_reason.is_some(),
+        spool_dir,
+        &options,
+        &mut route_stats,
+    );
+    if capture_result.is_err() && options.materialize_payloads {
+        let _ = std::fs::remove_dir_all(spool_dir);
+    }
+    let changes = capture_result?;
+    let spool_dir = (route_stats.direct_spooled_bytes > 0).then(|| spool_dir.to_path_buf());
+    Ok(BoundedCapturedUpperdir {
+        changes,
+        protected_drops: metadata.protected_drops,
+        stats: metadata.stats,
+        route_stats,
+        metadata_path_count: metadata.entries.len(),
+        spool_dir,
+    })
+}
+
 pub fn capture_route_stats_for_snapshot_with_protected_drops(
     root: &Path,
     snapshot_manifest_version: i64,
@@ -256,6 +371,127 @@ pub fn capture_route_stats_for_snapshot_with_protected_drops(
 ) -> Result<CaptureRouteStats, CommitError> {
     let manifest = snapshot_manifest(root, snapshot_manifest_version, snapshot_layer_paths)?;
     capture_route_stats_for_manifest_with_protected_drops(root, &manifest, changes, protected_drops)
+}
+
+fn capture_route_stats_from_metadata(
+    entries: &[CapturedUpperdirEntry],
+    decisions: &[PublishDecision],
+    protected_drop_count: usize,
+) -> CaptureRouteStats {
+    let mut stats = CaptureRouteStats::default();
+    for (index, decision) in decisions.iter().enumerate() {
+        match decision.route {
+            Route::Gated => stats.gated_path_count += 1,
+            Route::Direct => {
+                stats.direct_path_count += 1;
+                if let Some(entry) = entries.get(index) {
+                    stats.direct_bytes = stats
+                        .direct_bytes
+                        .saturating_add(entry.regular_file_size().unwrap_or(0));
+                }
+            }
+            Route::Drop => {
+                stats.drop_path_count += 1;
+                if let Some(reason) = decision.drop_reason {
+                    stats.record_drop_reason(reason.as_str());
+                }
+            }
+        }
+    }
+    debug_assert!(decisions.len() >= entries.len().saturating_add(protected_drop_count));
+    stats
+}
+
+fn ignored_limit_drop_reason(
+    entries: &[CapturedUpperdirEntry],
+    decisions: &[PublishDecision],
+    limits: &IgnoredCaptureLimits,
+    metadata_elapsed: Duration,
+) -> Option<String> {
+    let mut ignored_file_count = 0_usize;
+    let mut ignored_bytes = 0_u64;
+    for (entry, decision) in entries.iter().zip(decisions.iter()) {
+        if decision.route != Route::Direct {
+            continue;
+        }
+        let Some(size) = entry.regular_file_size() else {
+            continue;
+        };
+        if size > limits.max_ignored_file_bytes {
+            return Some(IGNORED_FILE_BYTE_LIMIT_DROP_REASON.to_owned());
+        }
+        ignored_file_count = ignored_file_count.saturating_add(1);
+        ignored_bytes = ignored_bytes.saturating_add(size);
+    }
+    if ignored_file_count > limits.max_ignored_files {
+        return Some(IGNORED_LANE_FILE_LIMIT_DROP_REASON.to_owned());
+    }
+    if ignored_bytes > limits.max_ignored_bytes {
+        return Some(IGNORED_LANE_BYTE_LIMIT_DROP_REASON.to_owned());
+    }
+    if metadata_elapsed > limits.max_metadata_capture_duration {
+        return Some(IGNORED_CAPTURE_DURATION_LIMIT_DROP_REASON.to_owned());
+    }
+    None
+}
+
+fn materialize_bounded_capture_changes(
+    entries: &[CapturedUpperdirEntry],
+    decisions: &[PublishDecision],
+    ignored_lane_dropped: bool,
+    spool_dir: &Path,
+    options: &BoundedCaptureOptions,
+    route_stats: &mut CaptureRouteStats,
+) -> Result<Vec<LayerChange>, CommitError> {
+    if !options.materialize_payloads {
+        return Ok(Vec::new());
+    }
+    let mut changes = Vec::new();
+    for (index, entry) in entries.iter().enumerate() {
+        let Some(decision) = decisions.get(index) else {
+            return Err(CommitError::RoutePreparation(format!(
+                "missing route decision for captured path {}",
+                entry.path().as_str()
+            )));
+        };
+        match decision.route {
+            Route::Gated => changes.push(entry.materialize_in_memory(MAX_CAPTURE_FILE_BYTES)?),
+            Route::Direct if ignored_lane_dropped => {}
+            Route::Direct => {
+                changes.push(materialize_direct_entry(
+                    entry,
+                    index,
+                    spool_dir,
+                    &options.ignored_limits,
+                    route_stats,
+                )?);
+            }
+            Route::Drop => changes.push(entry.placeholder_change()),
+        }
+    }
+    Ok(changes)
+}
+
+fn materialize_direct_entry(
+    entry: &CapturedUpperdirEntry,
+    index: usize,
+    spool_dir: &Path,
+    limits: &IgnoredCaptureLimits,
+    route_stats: &mut CaptureRouteStats,
+) -> Result<LayerChange, CommitError> {
+    let max_file_bytes = usize::try_from(limits.max_ignored_file_bytes).unwrap_or(usize::MAX);
+    match entry.regular_file_size() {
+        Some(size) if size > limits.spool_threshold_bytes => {
+            let spool_path = spool_dir.join(format!("{index:016x}.payload"));
+            let change = entry.materialize_spooled(&spool_path, max_file_bytes)?;
+            route_stats.direct_spooled_bytes =
+                route_stats.direct_spooled_bytes.saturating_add(size);
+            Ok(change)
+        }
+        _ => entry
+            .materialize_in_memory(max_file_bytes)
+            .map_err(CommitError::from),
+    }
 }
 
 fn snapshot_manifest(

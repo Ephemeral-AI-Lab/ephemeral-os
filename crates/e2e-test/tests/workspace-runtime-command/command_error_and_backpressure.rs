@@ -420,6 +420,171 @@ fn command_scratch_path_is_dropped_with_publish_lane_reason() -> Result<()> {
 }
 
 #[test]
+fn oversized_ignored_output_drops_ignored_lane_but_publishes_source() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let dir = format!(
+        "publish-lanes-ignored-limit/{}",
+        e2e_test::unique_suffix().replace('-', "_")
+    );
+    let source_path = format!("{dir}/src.txt");
+    let ignored_path = format!("{dir}/ignored/huge.bin");
+    let ignored_len = (16 * 1024 * 1024) + 1;
+
+    lease.call_ok(
+        catalog::SANDBOX_FILE_WRITE,
+        json!({
+            "path": format!("{dir}/.gitignore"),
+            "content": "ignored/\n",
+            "overwrite": false,
+        }),
+    )?;
+
+    let wire = lease.call(
+        catalog::SANDBOX_COMMAND_EXEC,
+        json!({
+            "cmd": format!(
+                "mkdir -p {dir}/ignored && printf source > {source_path} && python3 - <<'PY'\nfrom pathlib import Path\np = Path('{ignored_path}')\np.parent.mkdir(parents=True, exist_ok=True)\nwith p.open('wb') as f:\n    f.truncate({ignored_len})\nPY"
+            ),
+            "yield_time_ms": 8000,
+            "timeout_seconds": 20,
+        }),
+    )?;
+    let result = unwrap_operation_result(wire.clone())?;
+    ensure!(
+        as_str(&result, "status")? == "ok",
+        "successful command should finalize in foreground: {result}"
+    );
+
+    let lanes = &result["publish_lanes"];
+    ensure!(
+        lanes["source"]["publish_status"] == "committed",
+        "source lane should publish despite ignored limit drop: {result}"
+    );
+    ensure!(
+        lanes["ignored"]["publish_status"] == "dropped_due_to_limits"
+            && lanes["ignored"]["drop_reason"] == "ignored_file_byte_limit"
+            && as_i64(&lanes["ignored"], "bytes")? == i64::from(ignored_len),
+        "ignored lane should report the stable limit drop: {result}"
+    );
+
+    let record = trace_record(&wire)?;
+    ensure!(
+        has_trace_event(
+            &record,
+            "command",
+            "command.publish_lanes_decided",
+            |details| {
+                details["source"]["publish_status"] == "committed"
+                    && details["ignored"]["publish_status"] == "dropped_due_to_limits"
+                    && details["ignored"]["drop_reason"] == "ignored_file_byte_limit"
+            }
+        ),
+        "command finalize trace must include ignored limit drop: {record:?}"
+    );
+
+    let read_source = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": source_path}))?;
+    ensure!(
+        as_bool(&read_source, "exists")? && as_str(&read_source, "content")? == "source",
+        "source output must publish when ignored lane is dropped by limits: {read_source}"
+    );
+    let read_ignored = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": ignored_path}))?;
+    ensure!(
+        !as_bool(&read_ignored, "exists")?,
+        "oversized ignored output must not publish: {read_ignored}"
+    );
+    wait_for_command_count(&lease, 0)?;
+    wait_for_active_leases(&lease, 0)?;
+    Ok(())
+}
+
+#[test]
+fn large_ignored_output_publishes_through_spool_backed_capture() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let dir = format!(
+        "publish-lanes-ignored-spool/{}",
+        e2e_test::unique_suffix().replace('-', "_")
+    );
+    let ignored_path = format!("{dir}/ignored/large.bin");
+    let ignored_len = (1024 * 1024) + 1;
+
+    lease.call_ok(
+        catalog::SANDBOX_FILE_WRITE,
+        json!({
+            "path": format!("{dir}/.gitignore"),
+            "content": "ignored/\n",
+            "overwrite": false,
+        }),
+    )?;
+
+    let wire = lease.call(
+        catalog::SANDBOX_COMMAND_EXEC,
+        json!({
+            "cmd": format!(
+                "mkdir -p {dir}/ignored && python3 - <<'PY'\nfrom pathlib import Path\np = Path('{ignored_path}')\np.write_bytes(b'x' * {ignored_len})\nPY"
+            ),
+            "yield_time_ms": 8000,
+            "timeout_seconds": 20,
+        }),
+    )?;
+    let result = unwrap_operation_result(wire.clone())?;
+    ensure!(
+        as_str(&result, "status")? == "ok",
+        "successful command should finalize in foreground: {result}"
+    );
+
+    let lanes = &result["publish_lanes"];
+    ensure!(
+        lanes["source"]["publish_status"] == "empty",
+        "large ignored-only command should not report source output: {result}"
+    );
+    ensure!(
+        lanes["ignored"]["publish_status"] == "published_lww"
+            && lanes["ignored"]["publish_mode"] == "direct_lww"
+            && as_i64(&lanes["ignored"], "bytes")? == i64::from(ignored_len)
+            && as_i64(&lanes["ignored"], "spooled_bytes")? == i64::from(ignored_len),
+        "large ignored output should publish through the spool path: {result}"
+    );
+
+    let record = trace_record(&wire)?;
+    ensure!(
+        has_trace_event(
+            &record,
+            "command",
+            "command.publish_lanes_decided",
+            |details| {
+                details["ignored"]["publish_status"] == "published_lww"
+                    && details["ignored"]["spooled_bytes"].as_i64() == Some(i64::from(ignored_len))
+            }
+        ),
+        "command finalize trace must report spooled ignored bytes: {record:?}"
+    );
+
+    let verify = unwrap_operation_result(lease.call(
+        catalog::SANDBOX_COMMAND_EXEC,
+        json!({
+            "cmd": format!(
+                "python3 - <<'PY'\nfrom pathlib import Path\nassert Path('{ignored_path}').stat().st_size == {ignored_len}\nprint('size-ok')\nPY"
+            ),
+            "yield_time_ms": 8000,
+            "timeout_seconds": 10,
+        }),
+    )?)?;
+    ensure!(
+        as_str(&verify, "status")? == "ok" && stdout(&verify).contains("size-ok"),
+        "published ignored spool payload should have the expected size: {verify}"
+    );
+    wait_for_command_count(&lease, 0)?;
+    wait_for_active_leases(&lease, 0)?;
+    Ok(())
+}
+
+#[test]
 fn stderr_and_stdin_output_keep_long_lived_session_running() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());

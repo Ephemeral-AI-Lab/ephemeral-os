@@ -20,6 +20,32 @@ pub(super) fn write_layer_changes(
                 remove_path(&target)?;
                 std::fs::write(target, content)?;
             }
+            LayerChange::WriteFile {
+                path,
+                source_path,
+                size,
+            } => {
+                let target = join_layer_path(layer_dir, path.as_str());
+                if let Some(parent) = target.parent() {
+                    std::fs::create_dir_all(parent)?;
+                }
+                remove_path(&target)?;
+                let source_meta = std::fs::metadata(&source_path)?;
+                if !source_meta.is_file() || source_meta.len() != size {
+                    return Err(LayerStackError::Storage(format!(
+                        "spool payload changed before publish: {}",
+                        source_path.display()
+                    )));
+                }
+                std::fs::copy(source_path, &target)?;
+                let target_meta = std::fs::metadata(&target)?;
+                if target_meta.len() != size {
+                    return Err(LayerStackError::Storage(format!(
+                        "spool payload copy size mismatch for {}",
+                        path.as_str()
+                    )));
+                }
+            }
             LayerChange::Delete { path } => {
                 let target = join_layer_path(layer_dir, path.as_str());
                 if let Some(parent) = target.parent() {
