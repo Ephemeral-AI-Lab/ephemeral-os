@@ -777,6 +777,94 @@ fn command_git_rejects_locks_markers_hooks_and_ref_writes() -> TestResult {
 }
 
 #[test]
+fn command_git_protected_drops_under_git_reject_with_specific_reason() -> TestResult {
+    let fixture = Fixture::new("command_git_protected_drop_rejects")?;
+    let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
+    let decisions = publish_command_decisions_for_manifest_with_protected_drops(
+        &fixture.root,
+        &manifest,
+        &[],
+        &[
+            ProtectedPathDrop {
+                path: lp(".git/index.lock")?,
+                reason: ProtectedPathDropReason::UnsupportedSpecialFile,
+            },
+            ProtectedPathDrop {
+                path: lp(".git/hooks/pre-commit")?,
+                reason: ProtectedPathDropReason::UnsupportedSpecialFile,
+            },
+            ProtectedPathDrop {
+                path: lp(".git/MERGE_RR")?,
+                reason: ProtectedPathDropReason::UnsupportedSpecialFile,
+            },
+            ProtectedPathDrop {
+                path: lp(".git/custom.fifo")?,
+                reason: ProtectedPathDropReason::UnsupportedSpecialFile,
+            },
+        ],
+    )?;
+
+    let expected = [
+        GIT_LOCK_FILE_REJECT_REASON,
+        GIT_HOOK_WRITE_REJECT_REASON,
+        GIT_INCOMPLETE_OPERATION_REJECT_REASON,
+        GIT_METADATA_UNSUPPORTED_DROP_REASON,
+    ];
+    for (decision, reason) in decisions.iter().zip(expected) {
+        assert_eq!(decision.route, Route::Drop);
+        assert!(decision.reject_publish);
+        assert_eq!(
+            decision.drop_reason.map(|reason| reason.as_str()),
+            Some(reason)
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn command_git_extended_incomplete_operation_markers_reject() -> TestResult {
+    let fixture = Fixture::new("command_git_extended_incomplete_markers")?;
+    let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
+    let mut changes = Vec::new();
+    for path in [
+        ".git/REBASE_HEAD",
+        ".git/AUTO_MERGE",
+        ".git/MERGE_AUTOSTASH",
+        ".git/MERGE_MODE",
+        ".git/MERGE_RR",
+        ".git/BISECT_HEAD",
+        ".git/BISECT_LOG",
+        ".git/BISECT_NAMES",
+        ".git/BISECT_START",
+        ".git/BISECT_TERMS",
+        ".git/sequencer/todo",
+        ".git/rebase-merge/head-name",
+        ".git/rebase-apply/patch",
+    ] {
+        changes.push(LayerChange::Write {
+            path: lp(path)?,
+            content: b"marker".to_vec(),
+        });
+    }
+
+    let decisions = publish_command_decisions_for_manifest_with_protected_drops(
+        &fixture.root,
+        &manifest,
+        &changes,
+        &[],
+    )?;
+    for decision in decisions {
+        assert_eq!(decision.route, Route::Drop);
+        assert!(decision.reject_publish);
+        assert_eq!(
+            decision.drop_reason.map(|reason| reason.as_str()),
+            Some(GIT_INCOMPLETE_OPERATION_REJECT_REASON)
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn command_git_deletions_and_opaque_root_reject() -> TestResult {
     let fixture = Fixture::new("command_git_delete_reject")?;
     let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
@@ -829,6 +917,18 @@ fn command_git_reflog_append_is_gated_and_rewrite_rejects() -> TestResult {
     }])?;
     let snapshot = service::acquire_snapshot(&fixture.root, "git-reflog-append")?;
 
+    let exact_noop_decisions = publish_command_decisions_for_manifest_with_protected_drops(
+        &fixture.root,
+        &LayerStack::open(fixture.root.clone())?.read_active_manifest()?,
+        &[LayerChange::Write {
+            path: lp(".git/logs/HEAD")?,
+            content: b"old\n".to_vec(),
+        }],
+        &[],
+    )?;
+    assert_eq!(exact_noop_decisions[0].route, Route::Gated);
+    assert!(!exact_noop_decisions[0].reject_publish);
+
     let append = service::publish_command_capture_lane_aware(
         &fixture.root,
         snapshot.manifest_version,
@@ -874,8 +974,43 @@ fn command_git_reflog_append_is_gated_and_rewrite_rejects() -> TestResult {
 }
 
 #[test]
+fn command_git_reflog_prefix_extension_of_partial_record_rejects() -> TestResult {
+    let fixture = Fixture::new("command_git_reflog_partial_prefix")?;
+    LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
+        path: lp(".git/logs/HEAD")?,
+        content: b"partial".to_vec(),
+    }])?;
+    let snapshot = service::acquire_snapshot(&fixture.root, "git-reflog-partial-prefix")?;
+
+    let result = service::publish_command_capture_lane_aware(
+        &fixture.root,
+        snapshot.manifest_version,
+        &snapshot.layer_paths,
+        &[LayerChange::Write {
+            path: lp(".git/logs/HEAD")?,
+            content: b"partial mutation\n".to_vec(),
+        }],
+        &[],
+        CommitOptions::default(),
+    )?;
+    service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+    assert!(!result.success());
+    assert_eq!(
+        file_status(&result, ".git/logs/HEAD")?,
+        CommitStatus::Failed
+    );
+    assert_eq!(
+        file_message(&result, ".git/logs/HEAD")?,
+        GIT_REFLOG_REWRITE_REJECT_REASON
+    );
+    Ok(())
+}
+
+#[test]
 fn command_git_objects_are_gated_and_rewrites_reject() -> TestResult {
     let fixture = Fixture::new("command_git_object_rules")?;
+    let new_object_path = format!(".git/objects/cc/{}", "d".repeat(38));
     LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
         path: lp(".git/objects/aa/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")?,
         content: b"object".to_vec(),
@@ -887,24 +1022,58 @@ fn command_git_objects_are_gated_and_rewrites_reject() -> TestResult {
         &LayerStack::open(fixture.root.clone())?.read_active_manifest()?,
         &[
             LayerChange::Write {
-                path: lp(".git/objects/cc/dddddddddddddddddddddddddddddddddddddddd")?,
+                path: lp(&new_object_path)?,
                 content: b"new-object".to_vec(),
             },
             LayerChange::Write {
                 path: lp(".git/objects/aa/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")?,
+                content: b"object".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp(".git/objects/aa/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")?,
                 content: b"different".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp(".git/objects/info/alternates")?,
+                content: b"alternate".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp(".git/objects/info/packs")?,
+                content: b"packs".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp(".git/objects/pack/pack-test.pack")?,
+                content: b"pack".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp(".git/objects/a/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")?,
+                content: b"short-dir".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp(".git/objects/aa/BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")?,
+                content: b"uppercase".to_vec(),
             },
         ],
         &[],
     )?;
     assert_eq!(decisions[0].route, Route::Gated);
     assert!(!decisions[0].reject_publish);
-    assert_eq!(decisions[1].route, Route::Drop);
-    assert!(decisions[1].reject_publish);
+    assert_eq!(decisions[1].route, Route::Gated);
+    assert!(!decisions[1].reject_publish);
+    assert_eq!(decisions[2].route, Route::Drop);
+    assert!(decisions[2].reject_publish);
     assert_eq!(
-        decisions[1].drop_reason.map(|reason| reason.as_str()),
+        decisions[2].drop_reason.map(|reason| reason.as_str()),
         Some(GIT_OBJECT_REWRITE_REJECT_REASON)
     );
+    for decision in decisions.iter().skip(3) {
+        assert_eq!(decision.route, Route::Drop);
+        assert!(decision.reject_publish);
+        assert_eq!(
+            decision.drop_reason.map(|reason| reason.as_str()),
+            Some(GIT_METADATA_UNSUPPORTED_DROP_REASON)
+        );
+    }
     service::release_lease(&fixture.root, &snapshot.lease_id)?;
     Ok(())
 }

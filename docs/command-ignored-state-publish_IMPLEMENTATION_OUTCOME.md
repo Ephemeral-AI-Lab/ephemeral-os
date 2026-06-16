@@ -1061,3 +1061,24 @@ The following spec areas are intentionally left for later iterations:
 - Reviewers should pay particular attention to whether the non-success gate is
   early enough in `finalize_ephemeral_command_with_capture_options` and whether
   timeout/cancel paths should preserve any additional discard-side trace facts.
+
+## Command Git OCC Remediation Addendum
+
+The follow-up remediation in
+`docs/command-git-occ-policy_REMEDIATION_SPEC.md` tightens the current floor
+rather than expanding it to later Git workflows.
+
+Additional scope:
+
+- Command-lane protected drops under `.git/**` are publish-rejecting and keep
+  specific Git reason codes where the path shape allows.
+- Accepted object writes are restricted to canonical loose-object paths.
+- Reflog appends must preserve complete record boundaries.
+- The incomplete operation marker set includes rebase, merge-autostash,
+  merge-mode, merge-rr, auto-merge, and bisect root markers.
+- Command traces now include per-path Git route rejection detail in addition to
+  `command.publish_lanes_decided`.
+- Live workspace-runtime-command coverage now includes `.git` root removal,
+  special lock files, incomplete markers, ref writes, object rewrites,
+  unsupported object database paths, reflog append/rewrite, and spooled ignored
+  output dropped by Git rejection.

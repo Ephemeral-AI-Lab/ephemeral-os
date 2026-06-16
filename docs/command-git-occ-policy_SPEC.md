@@ -256,6 +256,13 @@ All accepted `.git` paths use the gated OCC lane.
 The first sandbox-side floor after ignored-state Milestone 5 uses this closed
 set for command Git metadata failures:
 
+The current floor accepts only canonical loose object writes at
+`.git/objects/[0-9a-f]{2}/[0-9a-f]{38}`. Object database control files,
+packfiles, indexes, and malformed loose-object paths reject with
+`git_metadata_unsupported` until those paths have explicit repository-health
+rules. Reflog writes are accepted only as exact no-ops, complete new records, or
+append-only writes that start on an existing newline-terminated record boundary.
+
 | Code | Meaning |
 | --- | --- |
 | `git_metadata_unsupported` | A Git metadata write is outside the current safe accepted set. |
@@ -343,9 +350,11 @@ before it enforces.
 | 4 — alignment | Both | Shared command corpus in CI; the two drift metrics. |
 | Deferred | Sandbox | Derived-state merging (clean-index regeneration, reflog union-merge) only if measured conflict rates justify the machinery. |
 
-## Acceptance Criteria
+## Full Architecture Acceptance Criteria
 
-A conforming implementation must satisfy these externally visible rules:
+A complete implementation of the Command Git OCC architecture must satisfy
+these externally visible rules. They are end-state criteria, not a claim that
+the current sandbox floor implements every row.
 
 - command `git add . && git commit -m ...` creates a durable commit visible to a
   later command.

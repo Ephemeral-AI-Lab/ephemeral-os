@@ -15,7 +15,8 @@ use workspace::{
 
 use super::contract::{
     u64_to_f64_saturating, CommandMetadata, CommandResponse, IgnoredPublishLaneMetadata,
-    PublishLanesMetadata, SourcePublishLaneMetadata,
+    PublishLanesMetadata, SourcePublishLaneMetadata, PUBLISH_LANES_METADATA_KEY,
+    PUBLISH_REJECTION_DETAILS_METADATA_KEY,
 };
 use super::outcome::{
     ChangedPathKinds, FinalizeCommandRequest, MutationSource, WorkspaceApiError, WorkspaceConflict,
@@ -215,6 +216,8 @@ pub(crate) fn finalize_ephemeral_command_with_capture_options(
     let publish_success = changeset.success();
     let publish_lanes =
         publish_lanes_from_changeset(&changeset, route_stats, snapshot.manifest_version);
+    let publish_rejection_details =
+        publish_rejection_details_from_changeset(&changeset, &publish_lanes);
 
     for (key, value) in &changeset.timings {
         timings.insert(key.clone(), json!(value));
@@ -244,7 +247,7 @@ pub(crate) fn finalize_ephemeral_command_with_capture_options(
             conflict: first_conflict.map(conflict_from_file),
             conflict_reason: first_conflict.map(|file| conflict_message(file).to_owned()),
             timings,
-            extras: publish_lanes_extras(publish_lanes),
+            extras: publish_lanes_extras_with_rejections(publish_lanes, publish_rejection_details),
         },
     ))
 }
@@ -419,8 +422,24 @@ fn command_response(
 }
 
 fn publish_lanes_extras(publish_lanes: PublishLanesMetadata) -> Map<String, Value> {
+    publish_lanes_extras_with_rejections(publish_lanes, Vec::new())
+}
+
+fn publish_lanes_extras_with_rejections(
+    publish_lanes: PublishLanesMetadata,
+    rejection_details: Vec<Value>,
+) -> Map<String, Value> {
     let mut extras = Map::new();
-    publish_lanes.insert_into(&mut extras);
+    extras.insert(
+        PUBLISH_LANES_METADATA_KEY.to_owned(),
+        publish_lanes.to_value(),
+    );
+    if !rejection_details.is_empty() {
+        extras.insert(
+            PUBLISH_REJECTION_DETAILS_METADATA_KEY.to_owned(),
+            Value::Array(rejection_details),
+        );
+    }
     extras
 }
 
@@ -593,6 +612,31 @@ fn route_rejection_failed(changeset: &ChangesetResult, route_stats: &CaptureRout
                 .drop_reason_counts
                 .contains_key(file.message.as_str())
     })
+}
+
+fn publish_rejection_details_from_changeset(
+    changeset: &ChangesetResult,
+    publish_lanes: &PublishLanesMetadata,
+) -> Vec<Value> {
+    let publish_lanes = publish_lanes.to_value();
+    changeset
+        .files
+        .iter()
+        .filter(|file| !file.status.is_non_conflicting())
+        .map(|file| {
+            let reason = file.conflict_message(file.status.wire_str());
+            json!({
+                "path": file.path.as_str(),
+                "status": file.status.wire_str(),
+                "reason": reason,
+                "message": reason,
+                "route_validation": file.observed_state.as_deref() == Some("route_rejected"),
+                "observed_state": file.observed_state.as_deref(),
+                "observed_version": file.observed_version,
+                "publish_lanes": publish_lanes.clone(),
+            })
+        })
+        .collect()
 }
 
 fn insert_command_timings(
@@ -1370,6 +1414,28 @@ mod tests {
             wire["publish_lanes"]["routing"]["drop_reason_counts"],
             serde_json::json!({"git_lock_file": 1})
         );
+        let rejection = &wire["publish_rejection_details"][0];
+        assert_eq!(rejection["path"], ".git/index.lock");
+        assert_eq!(rejection["status"], "failed");
+        assert_eq!(rejection["reason"], "git_lock_file");
+        assert_eq!(rejection["message"], "git_lock_file");
+        assert_eq!(rejection["route_validation"], true);
+        assert_eq!(
+            rejection["publish_lanes"]["routing"]["drop_reason_counts"],
+            serde_json::json!({"git_lock_file": 1})
+        );
+        let trace_events = super::super::trace::command_response_trace_events(&response);
+        assert!(
+            trace_events.iter().any(|event| {
+                event.name == "command.publish_rejection_detail"
+                    && event.details["path"] == ".git/index.lock"
+                    && event.details["reason"] == "git_lock_file"
+                    && event.details["route_validation"] == true
+                    && event.details["publish_lanes"]["routing"]["drop_reason_counts"]
+                        == serde_json::json!({"git_lock_file": 1})
+            }),
+            "command trace events must expose Git route rejection detail: {trace_events:?}"
+        );
         assert_eq!(
             LayerStack::open(fixture.root.clone())?
                 .read_active_manifest()?
@@ -1382,6 +1448,75 @@ mod tests {
             assert!(
                 !exists,
                 "{path} must not publish after git metadata rejection"
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn git_rejection_cleans_spooled_ignored_payloads() -> TestResult {
+        let fixture = EphemeralFinalizeFixture::new("git-reject-spooled-ignored")?;
+        LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
+            path: layerstack::LayerPath::parse(".gitignore")?,
+            content: b"ignored/\n".to_vec(),
+        }])?;
+        let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
+        let workspace =
+            EphemeralWorkspace::create(&fixture.scratch, "command", "git-reject-spooled")?;
+        write_upperdir_file(&workspace, ".git/index.lock", b"lock")?;
+        let payload = vec![b'y'; (1024 * 1024) + 1];
+        write_upperdir_file(&workspace, "ignored/large.bin", &payload)?;
+
+        let response = finalize_ephemeral_command_with_default_capture_options(
+            &fixture.root,
+            &snapshot,
+            &workspace,
+            CommitOptions::default(),
+            FinalizeCommandRequest {
+                runner_result: None,
+                command_elapsed_s: 0.25,
+                status: CommandStatus::Ok,
+                exit_code: Some(0),
+                stdout: "stdout".to_owned(),
+                stderr: String::new(),
+                command_id: Some("cmd_git_reject_spooled_ignored".to_owned()),
+            },
+        )?;
+        service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+        let wire = response.to_wire_value();
+        assert_eq!(wire["status"], "ok");
+        assert_eq!(wire["success"], false);
+        assert_eq!(wire["changed_paths"], serde_json::json!([]));
+        assert_eq!(
+            wire["publish_lanes"]["routing"]["drop_reason_counts"],
+            serde_json::json!({"git_lock_file": 1})
+        );
+        assert_eq!(wire["publish_lanes"]["ignored"]["publish_status"], "failed");
+        assert_eq!(
+            wire["publish_lanes"]["ignored"]["spooled_bytes"],
+            serde_json::json!((1024 * 1024) + 1)
+        );
+        assert!(
+            !workspace
+                .dirs()
+                .run_dir
+                .join("spool")
+                .join("publish-capture")
+                .exists(),
+            "spool directory should be removed after Git route rejection"
+        );
+        assert_eq!(
+            LayerStack::open(fixture.root.clone())?
+                .read_active_manifest()?
+                .version,
+            snapshot.manifest_version
+        );
+        for path in [".git/index.lock", "ignored/large.bin"] {
+            let (_bytes, exists) = LayerStack::open(fixture.root.clone())?.read_bytes(path)?;
+            assert!(
+                !exists,
+                "{path} must not publish after Git metadata rejection"
             );
         }
         Ok(())

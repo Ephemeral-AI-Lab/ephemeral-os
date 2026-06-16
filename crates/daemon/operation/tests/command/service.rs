@@ -154,6 +154,7 @@ fn command_finalize_trace_record_carries_origin_and_eviction_markers() {
                 "drop_reason_counts": {},
             },
         })),
+        publish_rejection_details: Vec::new(),
     };
 
     let record = command_finalize_trace_record(&facts);
@@ -284,6 +285,7 @@ fn command_finalize_trace_record_carries_final_persist_failures() {
         publish_completion: false,
         evictions: Vec::new(),
         publish_lanes: None,
+        publish_rejection_details: Vec::new(),
     };
 
     let record = command_finalize_trace_record(&facts);

@@ -172,6 +172,7 @@ pub struct CommandMetadata {
 }
 
 pub(crate) const PUBLISH_LANES_METADATA_KEY: &str = "publish_lanes";
+pub(crate) const PUBLISH_REJECTION_DETAILS_METADATA_KEY: &str = "publish_rejection_details";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub(crate) struct PublishLanesMetadata {

@@ -401,9 +401,8 @@ fn command_git_metadata_probe_needs_payload(path: &LayerPath) -> bool {
         return false;
     };
     parts == ["index"]
-        || parts
-            .first()
-            .is_some_and(|part| matches!(*part, "logs" | "objects"))
+        || parts.first().is_some_and(|part| matches!(*part, "logs"))
+        || is_canonical_loose_object_path(&parts)
 }
 
 fn git_metadata_relative_parts(path: &LayerPath) -> Option<Vec<&str>> {
@@ -417,6 +416,17 @@ fn git_metadata_relative_parts(path: &LayerPath) -> Option<Vec<&str>> {
         }
     }
     found_git.then_some(parts)
+}
+
+fn is_canonical_loose_object_path(parts: &[&str]) -> bool {
+    matches!(parts, ["objects", dir, file] if is_lower_hex_len(dir, 2) && is_lower_hex_len(file, 38))
+}
+
+fn is_lower_hex_len(value: &str, len: usize) -> bool {
+    value.len() == len
+        && value
+            .bytes()
+            .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f'))
 }
 
 pub fn capture_route_stats_for_snapshot_with_protected_drops(

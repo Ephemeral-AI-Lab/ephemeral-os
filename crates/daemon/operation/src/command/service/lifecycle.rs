@@ -28,7 +28,8 @@ use crate::command::outcome::FinalizeCommandRequest;
 use crate::command::registry::ActiveCommand;
 use crate::command::trace::{
     active_command_advance_trace_record, append_resource_pair_to_record,
-    command_finalize_trace_record, unix_now_ms, CommandFinalizeTraceFacts, FinalizedCommand,
+    command_finalize_trace_record, publish_rejection_details_from_extras, unix_now_ms,
+    CommandFinalizeTraceFacts, FinalizedCommand,
 };
 use crate::WorkspaceKind;
 
@@ -334,6 +335,11 @@ impl CommandOps {
             .finalized
             .as_ref()
             .and_then(|finalized| finalized.extras.get(PUBLISH_LANES_METADATA_KEY).cloned());
+        let publish_rejection_details = response
+            .finalized
+            .as_ref()
+            .map(|finalized| publish_rejection_details_from_extras(&finalized.extras))
+            .unwrap_or_default();
         let persistence = run.process().persist_final(&response.to_wire_value());
         self.registry.remove(&command_id);
         let trace_command_id = command_id.clone();
@@ -361,6 +367,7 @@ impl CommandOps {
                 publish_completion,
                 evictions,
                 publish_lanes,
+                publish_rejection_details,
             },
             response,
         }

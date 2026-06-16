@@ -7,7 +7,10 @@ use trace::{
     TraceLink, TraceLinkKind, TraceRecord,
 };
 
-use super::contract::{CommandResponse, CommandStatus, PUBLISH_LANES_METADATA_KEY};
+use super::contract::{
+    CommandResponse, CommandStatus, PUBLISH_LANES_METADATA_KEY,
+    PUBLISH_REJECTION_DETAILS_METADATA_KEY,
+};
 use super::finalize::insert_cgroup_process_resource_timings;
 use super::outcome::WorkspaceTimings;
 use super::registry::{CommandTraceOrigin, CompletionBufferEviction};
@@ -67,6 +70,7 @@ pub(super) struct CommandFinalizeTraceFacts {
     pub(super) publish_completion: bool,
     pub(super) evictions: Vec<CompletionBufferEviction>,
     pub(super) publish_lanes: Option<Value>,
+    pub(super) publish_rejection_details: Vec<Value>,
 }
 
 /// Trace events embed at most this many changed paths; the full list lives in
@@ -201,7 +205,22 @@ pub(super) fn command_response_trace_events(response: &CommandResponse) -> Vec<C
             publish_lanes.clone(),
         ));
     }
+    events.extend(
+        publish_rejection_details_from_extras(&finalized.extras)
+            .into_iter()
+            .map(|details| CommandTraceEvent::new("command.publish_rejection_detail", details)),
+    );
     events
+}
+
+pub(super) fn publish_rejection_details_from_extras(extras: &Map<String, Value>) -> Vec<Value> {
+    extras
+        .get(PUBLISH_REJECTION_DETAILS_METADATA_KEY)
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .cloned()
+        .collect()
 }
 
 fn runner_timings(timings: &WorkspaceTimings) -> Map<String, Value> {
@@ -470,6 +489,20 @@ pub(super) fn command_finalize_trace_record(facts: &CommandFinalizeTraceFacts) -
             publish_lanes.clone(),
         ));
     }
+    events.extend(
+        facts
+            .publish_rejection_details
+            .iter()
+            .cloned()
+            .map(|details| {
+                EventRecord::new(
+                    SpanUid::ROOT,
+                    "command.publish_rejection_detail",
+                    "command",
+                    details,
+                )
+            }),
+    );
     if let Some(kill) = facts.kill {
         events.push(EventRecord::new(
             SpanUid::new(2),

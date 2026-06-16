@@ -687,7 +687,7 @@ fn publish_decisions_for_manifest_with_policy_and_protected_drops(
     decisions.extend(
         protected_drops
             .iter()
-            .map(publish_decision_for_protected_drop),
+            .map(|drop| publish_decision_for_protected_drop(drop, git_policy)),
     );
     Ok(decisions)
 }
@@ -729,7 +729,16 @@ fn publish_decision_for_change(
     ))
 }
 
-fn publish_decision_for_protected_drop(drop: &ProtectedPathDrop) -> PublishDecision {
+fn publish_decision_for_protected_drop(
+    drop: &ProtectedPathDrop,
+    git_policy: GitMetadataPolicy,
+) -> PublishDecision {
+    if git_policy == GitMetadataPolicy::CommandOccFloor && is_git_metadata_path(&drop.path) {
+        return rejected_drop_decision(
+            drop.path.clone(),
+            command_git_protected_drop_reason(&drop.path),
+        );
+    }
     PublishDecision {
         path: drop.path.clone(),
         route: Route::Drop,
@@ -924,7 +933,7 @@ fn command_git_metadata_write_decision(
         return git_reflog_write_decision(view, manifest, change);
     }
     if parts.first() == Some(&"objects") {
-        return git_object_write_decision(view, manifest, change);
+        return git_object_write_decision(view, manifest, change, parts);
     }
     if is_git_ref_path(parts) {
         return Ok(rejected_drop_decision(
@@ -971,11 +980,7 @@ fn git_reflog_write_decision(
     let path = change.path();
     let new_bytes = change_write_bytes(change)?;
     let (base_bytes, base_exists) = snapshot_bytes_for_path(view, manifest, path)?;
-    if !base_exists
-        || base_bytes
-            .as_deref()
-            .is_some_and(|base| new_bytes.starts_with(base))
-    {
+    if reflog_write_is_append_only(base_bytes.as_deref(), base_exists, &new_bytes) {
         return gated_git_metadata_decision(view, manifest, change);
     }
     Ok(rejected_drop_decision(
@@ -988,8 +993,15 @@ fn git_object_write_decision(
     view: &MergedView,
     manifest: &Manifest,
     change: &LayerChange,
+    parts: &[&str],
 ) -> Result<PublishDecision, CommitError> {
     let path = change.path();
+    if !is_canonical_loose_object_path(parts) {
+        return Ok(rejected_drop_decision(
+            path.clone(),
+            RouteDropReason::GitMetadataUnsupported,
+        ));
+    }
     let new_bytes = change_write_bytes(change)?;
     let (base_bytes, base_exists) = snapshot_bytes_for_path(view, manifest, path)?;
     if !base_exists || base_bytes.as_deref() == Some(new_bytes.as_slice()) {
@@ -999,6 +1011,39 @@ fn git_object_write_decision(
         path.clone(),
         RouteDropReason::GitObjectRewrite,
     ))
+}
+
+fn command_git_protected_drop_reason(path: &LayerPath) -> RouteDropReason {
+    let Some(parts) = git_metadata_relative_parts(path) else {
+        return RouteDropReason::GitMetadataUnsupported;
+    };
+    if is_git_lock_path(&parts) {
+        return RouteDropReason::GitLockFile;
+    }
+    if is_git_hook_path(&parts) {
+        return RouteDropReason::GitHookWrite;
+    }
+    if is_incomplete_git_operation_path(&parts) {
+        return RouteDropReason::GitIncompleteOperation;
+    }
+    RouteDropReason::GitMetadataUnsupported
+}
+
+fn reflog_write_is_append_only(
+    base_bytes: Option<&[u8]>,
+    base_exists: bool,
+    new_bytes: &[u8],
+) -> bool {
+    if !base_exists {
+        return !new_bytes.is_empty() && new_bytes.ends_with(b"\n");
+    }
+    let Some(base) = base_bytes else {
+        return false;
+    };
+    if base == new_bytes {
+        return true;
+    }
+    new_bytes.starts_with(base) && base.ends_with(b"\n") && new_bytes.ends_with(b"\n")
 }
 
 fn gated_git_metadata_decision(
@@ -1180,6 +1225,17 @@ fn is_git_operation_message_path(parts: &[&str]) -> bool {
     matches!(parts, ["COMMIT_EDITMSG"] | ["MERGE_MSG"] | ["SQUASH_MSG"])
 }
 
+fn is_canonical_loose_object_path(parts: &[&str]) -> bool {
+    matches!(parts, ["objects", dir, file] if is_lower_hex_len(dir, 2) && is_lower_hex_len(file, 38))
+}
+
+fn is_lower_hex_len(value: &str, len: usize) -> bool {
+    value.len() == len
+        && value
+            .bytes()
+            .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f'))
+}
+
 fn is_incomplete_git_operation_path(parts: &[&str]) -> bool {
     if let Some(first) = parts.first() {
         if matches!(*first, "sequencer" | "rebase-merge" | "rebase-apply") {
@@ -1191,6 +1247,11 @@ fn is_incomplete_git_operation_path(parts: &[&str]) -> bool {
         ["CHERRY_PICK_HEAD"]
             | ["REVERT_HEAD"]
             | ["MERGE_HEAD"]
+            | ["REBASE_HEAD"]
+            | ["AUTO_MERGE"]
+            | ["MERGE_AUTOSTASH"]
+            | ["MERGE_MODE"]
+            | ["MERGE_RR"]
             | ["BISECT_HEAD"]
             | ["BISECT_LOG"]
             | ["BISECT_NAMES"]

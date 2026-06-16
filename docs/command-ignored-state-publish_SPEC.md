@@ -82,17 +82,17 @@ running commands.
     payloads are materialized into memory.
 11. Non-successful commands must branch to discard before OCC validation,
     LayerStack publish, or spool-backed payload installation.
-12. `.git/**` must never enter the ordinary ignored lane. Until Git metadata OCC
-    is implemented, command-produced `.git/**` changes must be dropped with a
-    stable Git metadata reason instead of being treated as protected direct state.
+12. `.git/**` must never enter the ordinary ignored lane. Command-produced
+    `.git/**` changes are delegated to
+    `docs/command-git-occ-policy_SPEC.md`; unsupported Git metadata outside the
+    current safe accepted set rejects or drops with a stable Git metadata
+    reason.
 
 ## 6. Route Order
 
 Path routing is evaluated in this order:
 
 1. Git metadata rules from `docs/command-git-occ-policy_SPEC.md`.
-   Until those rules are implemented, `.git/**` is dropped with
-   `git_metadata_unsupported`.
 2. Protected path rules.
 3. Ordinary ignore routing using the command's route snapshot merged
    `.gitignore` view.
@@ -123,7 +123,7 @@ Protected drops must use stable reason codes. V1 uses this closed set:
 
 | Reason | Meaning |
 | --- | --- |
-| `git_metadata_unsupported` | `.git/**` was produced before command Git OCC support is available. |
+| `git_metadata_unsupported` | Generic non-command `.git` fallback, or command Git metadata outside the current safe accepted set. |
 | `daemon_control_path` | A command tried to publish daemon or LayerStack control state as workspace content. |
 | `command_scratch_path` | A command tried to publish command scratch, transcript, final-response, or spool internals. |
 | `unsupported_special_file` | Capture saw a socket, FIFO, device, or other unsupported special filesystem entry. |
@@ -437,9 +437,10 @@ semantics.
 7. Extend LayerStack publish input so accepted writes may reference either
    in-memory bytes or command-owned spool files, while preserving atomic manifest
    advancement.
-8. Make `.git/**` handling explicit: use command Git OCC when available, or drop
-   with `git_metadata_unsupported`; never route `.git/**` through ordinary
-   ignored direct publish.
+8. Make `.git/**` handling explicit: use command Git OCC for command
+   finalization; reserve `git_metadata_unsupported` for generic non-command
+   fallback and command Git metadata outside the current safe accepted set;
+   never route `.git/**` through ordinary ignored direct publish.
 9. Add the protected-path reason-code set and surface special-file drops instead
    of silently ignoring them.
 10. Expand and validate opaque directory markers before lane grouping.
@@ -496,8 +497,9 @@ Implementation scope:
 
 1. Keep ordinary ignore routing snapshot-scoped and report
    `ignore_route_source = command_snapshot`.
-2. Route `.git/**` through Git metadata handling, or drop with
-   `git_metadata_unsupported` until command Git OCC is available.
+2. Route command `.git/**` through Git metadata handling, using
+   `git_metadata_unsupported` only for unsupported metadata outside the current
+   safe accepted set.
 3. Implement the protected-path reason-code set.
 4. Expand and validate opaque directory markers before lane grouping.
 
@@ -640,8 +642,8 @@ must force the spool-backed path and prove both its publish and drop behavior.
    publishes, the manifest version does not advance, and `publish_lanes` reports
    `dropped_command_failed` for both lanes.
 5. A command writes `.git/**` and ignored paths. `.git/**` follows the Git OCC
-   spec when implemented, or drops with `git_metadata_unsupported`; it never
-   becomes ordinary direct ignored output.
+   spec; unsupported command Git metadata rejects the whole command publish, and
+   `.git/**` never becomes ordinary direct ignored output.
 6. A command writes protected daemon metadata or a special filesystem entry. The
    protected path is denied or dropped with a stable reason from the closed set.
 7. Ignored-lane file or byte limits are exceeded. Source lane can still publish
