@@ -596,8 +596,7 @@ fn source_conflict_drops_ignored_output_with_publish_lanes() -> Result<()> {
                 "command.publish_lanes_decided",
                 |details| {
                     details["source"]["publish_status"] == "conflict"
-                        && details["ignored"]["publish_status"]
-                            == "dropped_due_to_source_conflict"
+                        && details["ignored"]["publish_status"] == "dropped_due_to_source_conflict"
                         && details["ignored"]["drop_reason"] == "source_not_published"
                 }
             ),

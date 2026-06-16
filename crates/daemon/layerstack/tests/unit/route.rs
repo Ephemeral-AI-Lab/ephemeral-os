@@ -777,8 +777,14 @@ fn lane_aware_publish_source_and_ignored_success_advances_one_manifest() -> Test
         .version;
     assert!(result.success());
     assert_eq!(after, before + 1);
-    assert_eq!(result.published_manifest_version, Some(u64::try_from(after)?));
-    assert_eq!(file_status(&result, "src/main.rs")?, CommitStatus::Committed);
+    assert_eq!(
+        result.published_manifest_version,
+        Some(u64::try_from(after)?)
+    );
+    assert_eq!(
+        file_status(&result, "src/main.rs")?,
+        CommitStatus::Committed
+    );
     assert_eq!(
         file_status(&result, "ignored/cache.txt")?,
         CommitStatus::Committed
