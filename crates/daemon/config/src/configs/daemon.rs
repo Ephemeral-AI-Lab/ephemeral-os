@@ -13,8 +13,6 @@ use crate::configs::validate::{
     require_usize_at_least, require_usize_at_most, ConfigFieldError,
 };
 
-pub use super::command::CommandConfig;
-
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DaemonConfig {
@@ -25,6 +23,58 @@ pub struct DaemonConfig {
     pub plugin: PluginRuntimeConfig,
     pub layer_stack: LayerStackConfig,
     pub files: FileLimitsConfig,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CommandConfig {
+    pub scratch_root: PathBuf,
+    pub default_yield_time_ms: u64,
+    pub default_timeout_s: u64,
+    pub quiet_ms: u64,
+    pub cancel_wait_ms: u64,
+    pub output_drain_grace_ms: u64,
+    pub max_command_s: u64,
+    pub transcript_timestamp_timezone: String,
+    pub ignored_capture: IgnoredCaptureConfig,
+}
+
+impl Default for CommandConfig {
+    fn default() -> Self {
+        Self {
+            scratch_root: PathBuf::from("/eos/scratch/commands"),
+            default_yield_time_ms: 1000,
+            default_timeout_s: 600,
+            quiet_ms: 50,
+            cancel_wait_ms: 500,
+            output_drain_grace_ms: 500,
+            max_command_s: 6 * 60 * 60,
+            transcript_timestamp_timezone: "UTC".to_owned(),
+            ignored_capture: IgnoredCaptureConfig::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct IgnoredCaptureConfig {
+    pub max_files: usize,
+    pub max_bytes: u64,
+    pub max_file_bytes: u64,
+    pub spool_threshold_bytes: u64,
+    pub max_metadata_capture_duration_ms: u64,
+}
+
+impl Default for IgnoredCaptureConfig {
+    fn default() -> Self {
+        Self {
+            max_files: 4096,
+            max_bytes: 64 * 1024 * 1024,
+            max_file_bytes: 16 * 1024 * 1024,
+            spool_threshold_bytes: 1024 * 1024,
+            max_metadata_capture_duration_ms: 30_000,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -175,6 +225,7 @@ impl DaemonConfig {
             &self.commands.transcript_timestamp_timezone,
             "daemon.commands.transcript_timestamp_timezone",
         )?;
+        validate_ignored_capture_limits(&self.commands.ignored_capture)?;
         require_u64_at_least(
             self.idle_workspace_eviction.interval_ms,
             1,
@@ -226,6 +277,47 @@ impl DaemonConfig {
         )?;
         Ok(())
     }
+}
+
+fn validate_ignored_capture_limits(limits: &IgnoredCaptureConfig) -> Result<(), ConfigFieldError> {
+    require_usize_at_least(
+        limits.max_files,
+        1,
+        "daemon.commands.ignored_capture.max_files",
+    )?;
+    require_u64_at_least(
+        limits.max_bytes,
+        1,
+        "daemon.commands.ignored_capture.max_bytes",
+    )?;
+    require_u64_at_least(
+        limits.max_file_bytes,
+        1,
+        "daemon.commands.ignored_capture.max_file_bytes",
+    )?;
+    require_u64_at_least(
+        limits.spool_threshold_bytes,
+        1,
+        "daemon.commands.ignored_capture.spool_threshold_bytes",
+    )?;
+    require_u64_at_least(
+        limits.max_metadata_capture_duration_ms,
+        1,
+        "daemon.commands.ignored_capture.max_metadata_capture_duration_ms",
+    )?;
+    if limits.max_file_bytes > limits.max_bytes {
+        return Err(ConfigFieldError::new(
+            "daemon.commands.ignored_capture.max_file_bytes",
+            "must be at most daemon.commands.ignored_capture.max_bytes",
+        ));
+    }
+    if limits.spool_threshold_bytes >= limits.max_bytes {
+        return Err(ConfigFieldError::new(
+            "daemon.commands.ignored_capture.spool_threshold_bytes",
+            "must be less than daemon.commands.ignored_capture.max_bytes",
+        ));
+    }
+    Ok(())
 }
 
 impl PluginRuntimeConfig {

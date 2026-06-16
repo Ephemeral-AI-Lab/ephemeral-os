@@ -29,8 +29,8 @@ The final behavior is:
 | Gate source and ignored publish for non-success commands | Complete | The non-success branch returns before OCC conflict handling, LayerStack publish, and spool installation. |
 | Include flattened `publish_lanes` response metadata | Complete | Metadata records source and ignored lane statuses plus routing counts/bytes. |
 | Emit `command.publish_lanes_decided` trace event | Complete | Foreground response trace and durable finalize records include the same lane object. |
-| Route timeout/cancel/nonzero through shared finalizer | Complete | Lifecycle discard paths now call `finalize_ephemeral_command`. |
-| Preserve successful command behavior | Complete | Successful commands still use the existing capture/publish path, with lane metadata derived from the current route snapshot. |
+| Route timeout/cancel/nonzero through shared finalizer | Complete | Lifecycle discard paths now call the ephemeral command finalizer. |
+| Preserve successful command behavior | Complete | Successful commands still use the existing capture/publish path, with lane metadata derived from the leased command snapshot. |
 | Add unit and contract coverage | Complete | Operation, LayerStack, trace, response flattening, and fixture coverage were updated. |
 | Add live E2E coverage | Complete | Added a workspace runtime command test proving nonzero source and ignored writes are both discarded while metadata is present. |
 | Run focused and full verification | Complete | Cargo unit suites, package build, and full workspace-runtime-command live E2E suite passed. |
@@ -49,7 +49,7 @@ Primary implementation files:
   - Added lane metadata for successful command responses.
 - `crates/daemon/operation/src/command/service/lifecycle.rs`
   - Routed ephemeral timeout, cancellation, and non-success lifecycle outcomes
-    through `finalize_ephemeral_command`.
+    through the ephemeral command finalizer.
 - `crates/daemon/operation/src/command/trace.rs`
   - Added `publish_lanes` to finalize trace facts.
   - Emitted `command.publish_lanes_decided`.
@@ -80,6 +80,10 @@ follow-up:
 
 Test and fixture files updated:
 
+- `crates/daemon/layerstack/src/stack/mod.rs`
+  - Added an opt-in one-shot `.layer-metadata/fail-next-publish` publish
+    failpoint so live E2E can inject a real LayerStack publish failure after
+    command capture.
 - `crates/daemon/layerstack/tests/unit/route.rs`
 - `crates/daemon/operation/tests/command/service.rs`
 - `crates/daemon/operation/tests/contract.rs`
@@ -677,9 +681,12 @@ limit wiring, compaction, or retention policy work.
 - Source-lane changes remain gated by snapshot-manifest OCC validation.
 - Ignored-lane changes publish as direct LWW only after the source lane is
   known to be eligible: committed, accepted/no-op, or empty.
-- Source OCC conflict drops ignored output from the same command with
+- Source OCC conflict or source publish failure drops ignored output from the
+  same command with
   `ignored.publish_status=dropped_due_to_source_conflict` and
   `ignored.drop_reason=source_not_published`.
+- Route rejection failures with source output are reported as publish failures
+  rather than being mislabeled as source-conflict ignored drops.
 - Accepted source and ignored changes are submitted atomically, so mixed-lane
   success advances the manifest once and appears as one coherent publish result.
 - Ignored-only commands still use direct-LWW semantics, and later ignored
@@ -693,12 +700,13 @@ limit wiring, compaction, or retention policy work.
 
 | Item | Status | Notes |
 | --- | --- | --- |
-| Replace command finalizer publish call with lane-aware API | Complete | `finalize_ephemeral_command` calls `publish_command_capture_lane_aware`. |
+| Replace command finalizer publish call with lane-aware API | Complete | `finalize_ephemeral_command_with_capture_options` calls `publish_command_capture_lane_aware`. |
 | Keep source changes behind OCC | Complete | Source decisions still carry snapshot base hashes into the gated worker path. |
 | Publish ignored LWW only after source eligibility | Complete | The atomic worker drops direct accepted paths when gated validation fails. |
-| Drop ignored output on source conflict or source publish failure | Complete | Response metadata reports source `conflict` and ignored `dropped_due_to_source_conflict`. |
-| Preserve atomic mixed source+ignored success | Complete | LayerStack unit coverage verifies one manifest advance for mixed-lane success. |
-| Preserve spool-backed ignored payload support | Complete | Operation and live E2E coverage verify spooled ignored payloads still publish. |
+| Drop ignored output on source conflict or source publish failure | Complete | Operation and live E2E coverage verify conflict and injected publish-failure drops, including spooled ignored output. |
+| Preserve atomic mixed source+ignored success | Complete | LayerStack, operation, and live E2E coverage verify one manifest advance for mixed-lane success. |
+| Preserve ignored-only LWW overwrite semantics | Complete | Unit and live E2E coverage verify two ignored-only writers where the later accepted writer wins. |
+| Preserve spool-backed ignored payload support | Complete | Operation and live E2E coverage verify spooled ignored payloads still publish and are dropped atomically on publish failure. |
 
 ### Files Updated
 
@@ -714,14 +722,18 @@ limit wiring, compaction, or retention policy work.
     publish, and nested snapshot ignored spool capture.
 - `crates/daemon/operation/src/command/finalize.rs`
   - Switched command finalization to the lane-aware publish API.
+  - Fixed ignored-lane metadata precedence so route rejection failures are not
+    reported as source-conflict drops.
   - Added operation coverage for source conflict metadata, ignored drop
-    visibility, mixed success metadata, and nested spooled ignored output.
+    visibility, mixed success metadata, route rejection metadata, real
+    publish-failure cleanup, and nested spooled ignored output.
 - `crates/e2e-test/tests/workspace-runtime-command/command_error_and_backpressure.rs`
   - Added live coverage for source conflict plus ignored output, mixed
-    source+ignored success, ignored-only LWW behavior through existing ignored
-    publish cases, and spool-backed ignored success.
+    source+ignored success, dedicated ignored-only two-writer LWW overwrite,
+    injected source publish failure, and spool-backed ignored success.
   - Uses trace export for the background finalize record when a stdin-gated
-    source conflict finalizes outside the `write_stdin` response trace.
+    source conflict or slow spool command finalizes outside the original
+    response trace.
 
 ### Verification
 
@@ -729,11 +741,10 @@ Commands run:
 
 ```sh
 cargo fmt
-CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p layerstack route_tests
-CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p layerstack
 CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p operation command::
-CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p operation --all-targets
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p layerstack
 CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p e2e-test --no-run
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p operation --all-targets
 cargo run -p xtask -- package
 CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-command --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4
 git diff --check
@@ -742,14 +753,17 @@ git diff --check
 Results:
 
 - `cargo fmt` passed.
-- `layerstack route_tests` passed 37/37.
 - Full `layerstack` package tests passed.
-- `operation command::` passed 46/46.
+- `operation command::` passed 48/48.
 - Full `operation --all-targets` passed.
 - `e2e-test --no-run` passed.
 - `xtask package` passed and rebuilt `dist/eosd-linux-amd64` with SHA
-  `772f50978b055633cfd6c90c26cb76c3bae8097e365d42bfe07f545422d6c268`.
-- Final live `workspace-runtime-command` suite passed 68/68 with the
+  `4b3c85ae6cc6342e90ae3a6aa603db6e9c311803c455b97dbf3fb635eb1c1067`.
+- An initial full live run passed the new injected publish-failure and
+  ignored-only LWW tests but exposed a slow-spool foreground timing assumption;
+  the affected spool tests now poll to terminal and prove the exported finalize
+  trace when needed.
+- Final live `workspace-runtime-command` suite passed 70/70 with the
   feature-enabled E2E test binary, `max_parallel=5`,
   `container_weight_cap=10`, and `heavy-test-threads=4`.
 - `git diff --check` passed.
@@ -757,31 +771,145 @@ Results:
 Final live E2E report root:
 
 ```text
-crates/e2e-test/test-reports/runs/e2e-run-1781623238910
+crates/e2e-test/test-reports/runs/e2e-run-1781625053708
 ```
 
-### Milestone 4 Risks And Review Focus
+## Milestone 5 Outcome And Closeout
 
-- Command Git OCC remains future work; command-produced `.git` metadata is
-  still dropped with `git_metadata_unsupported`.
-- Ignored capture limits are still internal defaults. Config wiring and
-  validation remain later config closeout work.
-- Source regular-file payloads still use the existing in-memory capture limit.
-  The spool path remains scoped to accepted ignored command output.
-- Live E2E validation depends on the feature-enabled test binary. If a run
-  prints "skipping live e2e-test", clean stale `e2e-test` target artifacts and
-  rerun the live suite.
-- Stale `eos-e2e-*` Docker containers can trip the configured container cap
-  after interrupted live runs; remove only stale E2E containers before reruns.
+This iteration completed Milestone 5: ignored-lane config wiring, validation,
+compaction coverage, and final regression closeout.
+
+### Scope Completed
+
+- `daemon.commands.ignored_capture` is now part of the typed daemon config
+  schema and production YAML.
+- Ignored capture config validates file count, aggregate bytes, per-file bytes,
+  spool threshold, and metadata capture duration before daemon startup accepts
+  the config.
+- Daemon startup converts typed ignored capture config into LayerStack
+  `BoundedCaptureOptions` and stores those options in `CommandOps`.
+- Ephemeral command lifecycle finalization now passes configured capture limits
+  into `finalize_ephemeral_command_with_capture_options`.
+- The workspace-runtime-command test overlay uses small ignored-lane limits so
+  live E2E exercises configured limit/drop and spool behavior rather than
+  relying on production defaults.
+- Auto-squash regression coverage now verifies head-visible ignored-style cache
+  writes survive compaction with the newest values.
+- E2E README/index artifacts were regenerated for the expanded publish-lanes
+  coverage.
+- `discarded_response` now always includes `publish_lanes`, using route manifest
+  version `0` when no manifest version is available.
+- Successful-command capture and publish finalization errors now return
+  finalized responses with `publish_lanes` instead of falling back to generic
+  command errors.
+- The layerstack publish-failure marker is gated behind the
+  `EOS_LAYERSTACK_ENABLE_TEST_FAILPOINTS` opt-in and is enabled only by the E2E
+  daemon spec.
+
+### Milestone 5 Checklist
+
+| Item | Status | Notes |
+| --- | --- | --- |
+| Add ignored-lane limits to daemon config and production YAML | Complete | `config/prd.yml` declares the production `ignored_capture` block. |
+| Validate ignored file/count/byte/duration/spool limits | Complete | Config tests cover zero values, file greater than aggregate bytes, and spool threshold greater than or equal to aggregate bytes. |
+| Wire config into command ignored capture | Complete | Runtime services map daemon config into `BoundedCaptureOptions`; `CommandOps` carries those options into finalization. |
+| Preserve Milestone 4 lane semantics | Complete | Operation, LayerStack, host, and E2E compile regression checks pass; live E2E was not rerun in this post-review closeout. |
+| Add compaction/squash coverage | Complete | Auto-squash keeps latest ignored-style cache values after squashing older layers. |
+| Align docs/contracts/readmes | Complete | Workspace-runtime-command README JSON/HTML/index artifacts were regenerated. |
+| Assert response metadata and exported trace behavior for success, drop, limit, protected-path, and conflict cases | Complete | The live suite includes published response metadata and exported finalize trace cases added across Milestones 1-5. |
+| Ensure finalize paths include `publish_lanes` | Complete | Added coverage for discarded responses without a manifest version and successful-command capture finalization failures. |
+
+### Files Updated
+
+- `config/prd.yml`
+  - Added production `daemon.commands.ignored_capture` defaults.
+- `crates/e2e-test/tests/workspace-runtime-command/config/default.test.yml`
+  - Added suite-specific smaller ignored capture limits to exercise configured
+    drops and spool paths in live E2E.
+- `crates/daemon/config/src/configs/daemon.rs`
+  - Added daemon-local `CommandConfig` and `IgnoredCaptureConfig`.
+  - Added ignored capture validation.
+- `crates/daemon/config/tests/unit/configs/daemon.rs`
+  - Added invalid-config coverage for ignored capture limits.
+- `crates/daemon/core/src/runtime/services.rs`
+  - Added `capture_options_from_schema`.
+  - Added runtime-service construction with explicit command capture options.
+  - Removed the default-only `RuntimeServices::with_commit_options` wrapper;
+    the remaining non-default constructor requires explicit capture options.
+- `crates/daemon/core/src/transport/server.rs`
+  - Wires configured capture options into daemon runtime services.
+- `crates/daemon/operation/src/command/service.rs`
+  - Stores capture options in `CommandOps`.
+  - Removed the default-only `CommandOps::with_commit_options` wrapper; callers
+    now either use `CommandOps::new` defaults or the explicit capture-options
+    constructor.
+- `crates/daemon/operation/src/command/service/lifecycle.rs`
+  - Calls the configured-capture finalizer for ephemeral commands.
+  - Converts any remaining finalization error into a finalized response with
+    `publish_lanes`.
+- `crates/daemon/operation/src/command/finalize.rs`
+  - Keeps the configurable finalizer entry point and adds coverage for
+    configured ignored limit behavior, manifest-less discarded responses, and
+    successful-command capture finalization failures.
+- `crates/daemon/layerstack/src/stack/mod.rs`
+  - Gates the publish-failure marker behind explicit test failpoint opt-in.
+- `crates/e2e-test/src/container.rs`
+  - Enables the layerstack test failpoint only for E2E daemon bring-up.
+- `crates/host/src/container.rs`
+  - Adds an explicit daemon test-failpoint switch so E2E-only settings do not
+    apply to normal daemon specs.
+- `crates/daemon/workspace/src/capture.rs`
+  - Exposes snapshot capture with explicit bounded-capture options.
+- `crates/daemon/layerstack/tests/unit/commit/transaction.rs`
+  - Adds auto-squash coverage for ignored-style cache layers and verifies the
+    publish-failure marker is inert without explicit test opt-in.
+- `crates/e2e-test/tests/workspace-runtime-command/command_error_and_backpressure.rs`
+  - Adjusts ignored limit/spool payload sizes to the suite-configured limits.
+- `crates/e2e-test/tests/workspace-runtime-command/readme.md`
+  - Documents the publish-lanes coverage group.
+
+### Verification
+
+Commands run:
+
+```sh
+cargo fmt --check
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p config
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p layerstack
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p operation command::
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p operation --all-targets
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p host
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p e2e-test --no-run
+git diff --check
+```
+
+Results:
+
+- `cargo fmt --check` passed.
+- `config` package tests passed 20/20.
+- Full `layerstack` package tests passed.
+- `operation command::` passed 53 focused command tests.
+- Full `operation --all-targets` passed.
+- Full `host` package tests passed 53/53.
+- `e2e-test --no-run` passed.
+- `git diff --check` passed.
+- Live E2E and `xtask package` were not rerun in this post-review closeout.
 
 ### Remaining Risks And Review Focus
 
-- Ignored capture limits remain internal defaults. Config wiring
-  and validation remain part of later config closeout work.
+- Command Git OCC remains future work; command-produced `.git` metadata is
+  still dropped with `git_metadata_unsupported`.
 - Source regular-file payloads still use the existing in-memory capture limit.
-  The spooled path is currently scoped to ignored command output capture.
+  The spool path remains scoped to accepted ignored command output.
 - Spool-backed payloads are copied into LayerStack layers rather than reflinked
   or hardlinked. That is intentionally conservative and can be optimized later.
+- Live E2E validation depends on the packaged daemon under `dist/`; run
+  `cargo run -p xtask -- package` before live E2E when daemon code changes.
+- Stale `eos-e2e-*` Docker containers can trip the configured container cap
+  after interrupted live runs; remove only stale E2E containers before reruns.
+- The live workspace-runtime-command suite validates exported finalize traces by
+  decoding and ACKing trace batches; it does not assert audit-store ingestion of
+  those trace records.
 
 ## Remaining Work
 
@@ -789,8 +917,8 @@ The following spec areas are intentionally left for later iterations:
 
 - Command Git OCC remains future work; until then, command-produced `.git`
   metadata is dropped with `git_metadata_unsupported`.
+- Audit-store ingestion assertions for publish-lane trace records.
 - Configurable response/trace byte limits for ignored-lane metadata.
-- Compaction and retention semantics for ignored-lane artifacts.
 - Contract expansion for later milestones once those behaviors exist.
 
 ## Handoff Risks And Review Focus
@@ -810,8 +938,12 @@ The following spec areas are intentionally left for later iterations:
 - Opaque directory markers now expand against snapshot descendants and reject
   Git plus non-Git protected descendants with
   `opaque_dir_protected_descendant`.
+- Ignored capture limits are now daemon-configured and validated, with E2E
+  coverage using smaller suite limits to prove the wiring.
+- Auto-squash now has regression coverage for head-visible ignored-style cache
+  layers.
 - Live E2E validation depends on the packaged daemon under `dist/`; run
   `cargo run -p xtask -- package` before live E2E when daemon code changes.
 - Reviewers should pay particular attention to whether the non-success gate is
-  early enough in `finalize_ephemeral_command` and whether timeout/cancel paths
-  should preserve any additional legacy discard-side trace facts.
+  early enough in `finalize_ephemeral_command_with_capture_options` and whether
+  timeout/cancel paths should preserve any additional discard-side trace facts.

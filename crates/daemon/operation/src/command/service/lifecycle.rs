@@ -21,7 +21,8 @@ use crate::command::contract::{
     PUBLISH_LANES_METADATA_KEY,
 };
 use crate::command::finalize::{
-    discarded_response, finalize_ephemeral_command, finalize_isolated_command,
+    discarded_response, finalization_error_response,
+    finalize_ephemeral_command_with_capture_options, finalize_isolated_command,
 };
 use crate::command::outcome::FinalizeCommandRequest;
 use crate::command::registry::ActiveCommand;
@@ -282,33 +283,52 @@ impl CommandOps {
             stderr: String::new(),
             command_id: Some(command_id.clone()),
         };
-        let outcome = match &*run {
+        let request_for_error = request.clone();
+        let (workspace_kind, route_manifest_version, outcome) = match &*run {
             ActiveCommand::Ephemeral(ephemeral) => {
-                let outcome = finalize_ephemeral_command(
+                let outcome = finalize_ephemeral_command_with_capture_options(
                     &ephemeral.root,
                     &ephemeral.snapshot,
                     &ephemeral.workspace,
                     self.commit_options(),
+                    self.capture_options(),
                     request,
                 );
                 let _ = service::release_lease(&ephemeral.root, &ephemeral.snapshot.lease_id);
-                outcome
+                (
+                    WorkspaceKind::Ephemeral,
+                    Some(ephemeral.snapshot.manifest_version),
+                    outcome,
+                )
             }
             ActiveCommand::Isolated(isolated) => {
                 if kill.is_some() {
-                    Ok(discarded_response(
+                    (
                         WorkspaceKind::Isolated,
-                        request,
                         Some(isolated.binding.manifest_version),
-                    ))
+                        Ok(discarded_response(
+                            WorkspaceKind::Isolated,
+                            request,
+                            Some(isolated.binding.manifest_version),
+                        )),
+                    )
                 } else {
-                    finalize_isolated_command(&isolated.binding, request)
+                    (
+                        WorkspaceKind::Isolated,
+                        Some(isolated.binding.manifest_version),
+                        finalize_isolated_command(&isolated.binding, request),
+                    )
                 }
             }
         };
         let response = match outcome {
             Ok(response) => response,
-            Err(error) => CommandResponse::error(error.to_string()),
+            Err(error) => finalization_error_response(
+                workspace_kind,
+                request_for_error,
+                route_manifest_version,
+                error,
+            ),
         };
         let publish_lanes = response
             .finalized

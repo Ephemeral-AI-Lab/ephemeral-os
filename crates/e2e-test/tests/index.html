@@ -1425,6 +1425,14 @@
           ]
         },
         {
+          "id": "workspace-runtime-command-publish-lanes",
+          "title": "Publish Lanes",
+          "description": "Command ignored-state publish lanes cover command-failure drops, protected-path drops, ignored-limit drops, source-conflict drops, mixed source+ignored success, ignored-only LWW, spool-backed publish, aggregate spool publish, and publish-failure atomic drops with response and trace assertions.",
+          "tags": [
+            "workspace-runtime-command"
+          ]
+        },
+        {
           "id": "workspace-runtime-command-isolated-prompt-parity",
           "title": "Isolated Prompt Parity",
           "description": "Isolated commands accept prompt input, support read_progress snapshots and collect-completed reads, cancel cleanly, and discard private command writes on isolated exit.",
@@ -1554,6 +1562,15 @@
             "workspace-runtime-command-lifecycle",
             "workspace-runtime-command-transcript-recycling",
             "workspace-runtime-command-transcript-progress"
+          ]
+        },
+        {
+          "id": "workspace-runtime-command-publish-lanes",
+          "name": "workspace-runtime-command-publish-lanes",
+          "description": "Groups `nonzero_exit_discards_source_and_ignored_writes_with_publish_lanes`, `git_metadata_output_is_dropped_without_blocking_ordinary_ignored_output`, `special_file_output_is_dropped_without_blocking_ordinary_ignored_output`, `command_scratch_output_is_dropped_without_blocking_ordinary_ignored_output`, `oversized_ignored_output_drops_ignored_lane_but_publishes_source`, `source_conflict_drops_ignored_output_with_publish_lanes`, `source_and_ignored_success_publish_as_one_lane_result`, `ignored_only_later_writer_wins_with_direct_lww_publish`, `source_publish_failure_drops_spooled_ignored_output`, `large_ignored_output_publishes_through_spool_backed_capture`, and `multiple_ignored_outputs_publish_through_aggregate_spool_backed_capture`: command publish-lane responses and trace records report success, command-failure drop, protected-path drop, ignored-limit drop, source-conflict drop, direct-LWW ignored success, spool-backed bytes, aggregate spool bytes, and publish-failure atomicity.",
+          "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-command --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+          "checklist": [
+            "workspace-runtime-command-publish-lanes"
           ]
         },
         {

@@ -40,6 +40,36 @@ fn config_validation_rejects_invalid_daemon_values() {
     assert_invalid(cfg, "daemon.commands.scratch_root");
 
     let mut cfg = prd_config();
+    cfg.commands.ignored_capture.max_files = 0;
+    assert_invalid(cfg, "daemon.commands.ignored_capture.max_files");
+
+    let mut cfg = prd_config();
+    cfg.commands.ignored_capture.max_bytes = 0;
+    assert_invalid(cfg, "daemon.commands.ignored_capture.max_bytes");
+
+    let mut cfg = prd_config();
+    cfg.commands.ignored_capture.max_file_bytes = 0;
+    assert_invalid(cfg, "daemon.commands.ignored_capture.max_file_bytes");
+
+    let mut cfg = prd_config();
+    cfg.commands.ignored_capture.max_file_bytes = cfg.commands.ignored_capture.max_bytes + 1;
+    assert_invalid(cfg, "daemon.commands.ignored_capture.max_file_bytes");
+
+    let mut cfg = prd_config();
+    cfg.commands.ignored_capture.max_file_bytes = 1024;
+    cfg.commands.ignored_capture.spool_threshold_bytes = cfg.commands.ignored_capture.max_bytes;
+    assert_invalid(cfg, "daemon.commands.ignored_capture.spool_threshold_bytes");
+
+    let mut cfg = prd_config();
+    cfg.commands
+        .ignored_capture
+        .max_metadata_capture_duration_ms = 0;
+    assert_invalid(
+        cfg,
+        "daemon.commands.ignored_capture.max_metadata_capture_duration_ms",
+    );
+
+    let mut cfg = prd_config();
     cfg.layer_stack.auto_squash_max_depth = 0;
     assert_invalid(cfg, "daemon.layer_stack.auto_squash_max_depth");
 

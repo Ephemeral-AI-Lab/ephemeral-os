@@ -82,6 +82,7 @@ pub struct DaemonSpec {
     pub remote_eosd_path: PathBuf,
     pub remote_config_path: PathBuf,
     pub config_yaml: String,
+    pub enable_layerstack_test_failpoints: bool,
     pub extra_dirs: Vec<PathBuf>,
     pub tcp_port: u16,
     pub ready_timeout: Duration,
@@ -254,6 +255,7 @@ impl DaemonContainer {
             &daemon_dir,
             &remote_eosd_path,
             &remote_config_path,
+            daemon.enable_layerstack_test_failpoints,
             daemon.tcp_port,
         )
         .context("spawn eosd daemon")?;
@@ -300,6 +302,7 @@ impl DaemonContainer {
             &daemon_dir,
             &remote_eosd_path,
             &remote_config_path,
+            daemon.enable_layerstack_test_failpoints,
             daemon.tcp_port,
         )
         .context("respawn eosd daemon")?;
@@ -311,12 +314,14 @@ impl DaemonContainer {
         daemon_dir: &str,
         remote_eosd_path: &str,
         remote_config_path: &str,
+        enable_layerstack_test_failpoints: bool,
         tcp_port: u16,
     ) -> Result<String> {
         let args = daemon_spawn_args(
             remote_eosd_path,
             daemon_dir,
             remote_config_path,
+            enable_layerstack_test_failpoints,
             tcp_port,
             &self.token,
             &self.forward_token,
@@ -393,17 +398,24 @@ fn daemon_spawn_args(
     remote_eosd_path: &str,
     daemon_dir: &str,
     remote_config_path: &str,
+    enable_layerstack_test_failpoints: bool,
     tcp_port: u16,
     token: &str,
     forward_token: &str,
 ) -> Vec<String> {
-    vec![
+    let mut args = vec![
         "-e".to_owned(),
         format!("{DAEMON_AUTH_TOKEN_ENV}={token}"),
         "-e".to_owned(),
         format!("{DAEMON_FORWARD_AUTH_TOKEN_ENV}={forward_token}"),
         "-e".to_owned(),
         format!("{DAEMON_CONFIG_YAML_ENV}={remote_config_path}"),
+    ];
+    if enable_layerstack_test_failpoints {
+        args.push("-e".to_owned());
+        args.push("EOS_LAYERSTACK_ENABLE_TEST_FAILPOINTS=1".to_owned());
+    }
+    args.extend([
         "-d".to_owned(),
         remote_eosd_path.to_owned(),
         "daemon".to_owned(),
@@ -420,7 +432,8 @@ fn daemon_spawn_args(
         "0.0.0.0".to_owned(),
         "--tcp-port".to_owned(),
         tcp_port.to_string(),
-    ]
+    ]);
+    args
 }
 
 impl Drop for DaemonContainer {

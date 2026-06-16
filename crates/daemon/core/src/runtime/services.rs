@@ -1,11 +1,12 @@
 //! Daemon-owned runtime services shared by dispatch handlers.
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use command::CommandConfig;
-use config::configs::command::CommandConfig as ConfigCommandConfig;
-use config::configs::daemon::PluginRuntimeConfig;
+use config::configs::daemon::{CommandConfig as ConfigCommandConfig, PluginRuntimeConfig};
 use config::configs::isolated_workspace::IsolatedWorkspaceConfig;
+use layerstack::service::{BoundedCaptureOptions, IgnoredCaptureLimits};
 use layerstack::CommitOptions;
 use operation::command::CommandOps;
 use plugin::{PluginRuntime, PluginRuntimeError};
@@ -55,6 +56,23 @@ pub(crate) fn command_config_from_schema(config: &ConfigCommandConfig) -> Comman
     }
 }
 
+#[must_use]
+pub(crate) fn capture_options_from_schema(config: &ConfigCommandConfig) -> BoundedCaptureOptions {
+    let limits = config.ignored_capture;
+    BoundedCaptureOptions {
+        materialize_payloads: true,
+        ignored_limits: IgnoredCaptureLimits {
+            max_ignored_files: limits.max_files,
+            max_ignored_bytes: limits.max_bytes,
+            max_ignored_file_bytes: limits.max_file_bytes,
+            spool_threshold_bytes: limits.spool_threshold_bytes,
+            max_metadata_capture_duration: Duration::from_millis(
+                limits.max_metadata_capture_duration_ms,
+            ),
+        },
+    }
+}
+
 /// Runtime service instances shared by daemon dispatch handlers.
 pub struct RuntimeServices {
     pub command: Arc<CommandOps>,
@@ -70,22 +88,28 @@ impl RuntimeServices {
         isolated_workspace: IsolatedWorkspaceConfig,
         command: CommandConfig,
     ) -> Self {
-        Self::with_commit_options(
+        Self::with_commit_options_and_capture_options(
             plugin,
             isolated_workspace,
             command,
             CommitOptions::default(),
+            BoundedCaptureOptions::default(),
         )
     }
 
     #[must_use]
-    pub fn with_commit_options(
+    pub fn with_commit_options_and_capture_options(
         plugin: PluginRuntimeConfig,
         isolated_workspace: IsolatedWorkspaceConfig,
         command: CommandConfig,
         commit_options: CommitOptions,
+        capture_options: BoundedCaptureOptions,
     ) -> Self {
-        let command = Arc::new(CommandOps::with_commit_options(command, commit_options));
+        let command = Arc::new(CommandOps::with_commit_options_and_capture_options(
+            command,
+            commit_options,
+            capture_options,
+        ));
         Self {
             command: Arc::clone(&command),
             commit_options,

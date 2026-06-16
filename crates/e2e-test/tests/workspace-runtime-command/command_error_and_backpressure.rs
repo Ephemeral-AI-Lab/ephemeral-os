@@ -5,9 +5,9 @@ use protocol::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
-    ack_trace_export, array, as_bool, as_i64, as_str, clean_stdout, finalize_foreground_command,
-    has_trace_event, live_pool_or_skip, stdout, trace_export_records, trace_record,
-    unwrap_operation_result, wait_for_active_leases, wait_for_command_count,
+    ack_trace_export, array, as_bool, as_i64, as_str, clean_stdout, container_path_exists,
+    finalize_foreground_command, has_trace_event, live_pool_or_skip, stdout, trace_export_records,
+    trace_record, unwrap_operation_result, wait_for_active_leases, wait_for_command_count,
     wait_for_command_stdout_contains, wait_for_command_transcript_recycled,
 };
 
@@ -84,7 +84,12 @@ fn nonzero_exit_discards_source_and_ignored_writes_with_publish_lanes() -> Resul
             "timeout_seconds": 10,
         }),
     )?;
-    let result = unwrap_operation_result(wire.clone())?;
+    let running_command_id = running_command_id_from_response(&wire)?;
+    let result = finalize_foreground_command(
+        &lease,
+        wire.clone(),
+        Instant::now() + Duration::from_secs(30),
+    )?;
     ensure!(
         as_str(&result, "status")? == "error",
         "nonzero command should finalize in the foreground for publish-lane trace coverage: {result}"
@@ -113,22 +118,20 @@ fn nonzero_exit_discards_source_and_ignored_writes_with_publish_lanes() -> Resul
         "publish lanes must report snapshot-scoped routing: {result}"
     );
 
-    let record = trace_record(&wire)?;
-    ensure!(
-        has_trace_event(
-            &record,
-            "command",
-            "command.publish_lanes_decided",
-            |details| {
-                details["source"]["publish_status"] == "dropped_command_failed"
-                    && details["ignored"]["publish_status"] == "dropped_command_failed"
-                    && details["source"]["path_count"] == 1
-                    && details["ignored"]["path_count"] == 1
-                    && details["routing"]["ignore_route_source"] == "command_snapshot"
-            }
-        ),
-        "command finalize trace must include publish_lanes_decided: {record:?}"
-    );
+    assert_command_publish_lanes_trace(
+        &lease,
+        &wire,
+        running_command_id.as_deref(),
+        Instant::now() + Duration::from_secs(10),
+        |details| {
+            details["source"]["publish_status"] == "dropped_command_failed"
+                && details["ignored"]["publish_status"] == "dropped_command_failed"
+                && details["source"]["path_count"] == 1
+                && details["ignored"]["path_count"] == 1
+                && details["routing"]["ignore_route_source"] == "command_snapshot"
+        },
+        "command finalize trace must include publish_lanes_decided",
+    )?;
 
     for path in [&source_path, &ignored_path] {
         let read = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": path}))?;
@@ -179,7 +182,12 @@ fn git_metadata_write_is_dropped_with_publish_lane_reason() -> Result<()> {
             "timeout_seconds": 10,
         }),
     )?;
-    let result = unwrap_operation_result(wire.clone())?;
+    let running_command_id = running_command_id_from_response(&wire)?;
+    let result = finalize_foreground_command(
+        &lease,
+        wire.clone(),
+        Instant::now() + Duration::from_secs(30),
+    )?;
     ensure!(
         as_str(&result, "status")? == "ok",
         "successful command should finalize in foreground: {result}"
@@ -204,20 +212,18 @@ fn git_metadata_write_is_dropped_with_publish_lane_reason() -> Result<()> {
         "git metadata drop reason must be surfaced: {result}"
     );
 
-    let record = trace_record(&wire)?;
-    ensure!(
-        has_trace_event(
-            &record,
-            "command",
-            "command.publish_lanes_decided",
-            |details| {
-                details["routing"]["dropped_path_count"] == 1
-                    && details["routing"]["drop_reason_counts"]["git_metadata_unsupported"] == 1
-                    && details["ignored"]["publish_status"] == "published_lww"
-            }
-        ),
-        "command finalize trace must include git metadata drop reason: {record:?}"
-    );
+    assert_command_publish_lanes_trace(
+        &lease,
+        &wire,
+        running_command_id.as_deref(),
+        Instant::now() + Duration::from_secs(10),
+        |details| {
+            details["routing"]["dropped_path_count"] == 1
+                && details["routing"]["drop_reason_counts"]["git_metadata_unsupported"] == 1
+                && details["ignored"]["publish_status"] == "published_lww"
+        },
+        "command finalize trace must include git metadata drop reason",
+    )?;
 
     let read_git = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": git_path}))?;
     ensure!(
@@ -270,7 +276,12 @@ fn unsupported_special_file_is_dropped_with_publish_lane_reason() -> Result<()> 
             "timeout_seconds": 10,
         }),
     )?;
-    let result = unwrap_operation_result(wire.clone())?;
+    let running_command_id = running_command_id_from_response(&wire)?;
+    let result = finalize_foreground_command(
+        &lease,
+        wire.clone(),
+        Instant::now() + Duration::from_secs(30),
+    )?;
     ensure!(
         as_str(&result, "status")? == "ok",
         "successful command should finalize in foreground: {result}"
@@ -295,20 +306,18 @@ fn unsupported_special_file_is_dropped_with_publish_lane_reason() -> Result<()> 
         "special file drop reason must be surfaced: {result}"
     );
 
-    let record = trace_record(&wire)?;
-    ensure!(
-        has_trace_event(
-            &record,
-            "command",
-            "command.publish_lanes_decided",
-            |details| {
-                details["routing"]["dropped_path_count"] == 1
-                    && details["routing"]["drop_reason_counts"]["unsupported_special_file"] == 1
-                    && details["ignored"]["publish_status"] == "published_lww"
-            }
-        ),
-        "command finalize trace must include special file drop reason: {record:?}"
-    );
+    assert_command_publish_lanes_trace(
+        &lease,
+        &wire,
+        running_command_id.as_deref(),
+        Instant::now() + Duration::from_secs(10),
+        |details| {
+            details["routing"]["dropped_path_count"] == 1
+                && details["routing"]["drop_reason_counts"]["unsupported_special_file"] == 1
+                && details["ignored"]["publish_status"] == "published_lww"
+        },
+        "command finalize trace must include special file drop reason",
+    )?;
 
     let read_fifo = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": fifo_path}))?;
     ensure!(
@@ -361,7 +370,12 @@ fn command_scratch_path_is_dropped_with_publish_lane_reason() -> Result<()> {
             "timeout_seconds": 10,
         }),
     )?;
-    let result = unwrap_operation_result(wire.clone())?;
+    let running_command_id = running_command_id_from_response(&wire)?;
+    let result = finalize_foreground_command(
+        &lease,
+        wire.clone(),
+        Instant::now() + Duration::from_secs(30),
+    )?;
     ensure!(
         as_str(&result, "status")? == "ok",
         "successful command should finalize in foreground: {result}"
@@ -386,20 +400,18 @@ fn command_scratch_path_is_dropped_with_publish_lane_reason() -> Result<()> {
         "command scratch drop reason must be surfaced: {result}"
     );
 
-    let record = trace_record(&wire)?;
-    ensure!(
-        has_trace_event(
-            &record,
-            "command",
-            "command.publish_lanes_decided",
-            |details| {
-                details["routing"]["dropped_path_count"] == 1
-                    && details["routing"]["drop_reason_counts"]["command_scratch_path"] == 1
-                    && details["ignored"]["publish_status"] == "published_lww"
-            }
-        ),
-        "command finalize trace must include command scratch drop reason: {record:?}"
-    );
+    assert_command_publish_lanes_trace(
+        &lease,
+        &wire,
+        running_command_id.as_deref(),
+        Instant::now() + Duration::from_secs(10),
+        |details| {
+            details["routing"]["dropped_path_count"] == 1
+                && details["routing"]["drop_reason_counts"]["command_scratch_path"] == 1
+                && details["ignored"]["publish_status"] == "published_lww"
+        },
+        "command finalize trace must include command scratch drop reason",
+    )?;
 
     let read_scratch = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": scratch_path}))?;
     ensure!(
@@ -432,7 +444,7 @@ fn oversized_ignored_output_drops_ignored_lane_but_publishes_source() -> Result<
     );
     let source_path = format!("{dir}/src.txt");
     let ignored_path = format!("{dir}/ignored/huge.bin");
-    let ignored_len = (16 * 1024 * 1024) + 1;
+    let ignored_len = 8193;
 
     lease.call_ok(
         catalog::SANDBOX_FILE_WRITE,
@@ -453,7 +465,12 @@ fn oversized_ignored_output_drops_ignored_lane_but_publishes_source() -> Result<
             "timeout_seconds": 20,
         }),
     )?;
-    let result = unwrap_operation_result(wire.clone())?;
+    let running_command_id = running_command_id_from_response(&wire)?;
+    let result = finalize_foreground_command(
+        &lease,
+        wire.clone(),
+        Instant::now() + Duration::from_secs(30),
+    )?;
     ensure!(
         as_str(&result, "status")? == "ok",
         "successful command should finalize in foreground: {result}"
@@ -471,20 +488,18 @@ fn oversized_ignored_output_drops_ignored_lane_but_publishes_source() -> Result<
         "ignored lane should report the stable limit drop: {result}"
     );
 
-    let record = trace_record(&wire)?;
-    ensure!(
-        has_trace_event(
-            &record,
-            "command",
-            "command.publish_lanes_decided",
-            |details| {
-                details["source"]["publish_status"] == "committed"
-                    && details["ignored"]["publish_status"] == "dropped_due_to_limits"
-                    && details["ignored"]["drop_reason"] == "ignored_file_byte_limit"
-            }
-        ),
-        "command finalize trace must include ignored limit drop: {record:?}"
-    );
+    assert_command_publish_lanes_trace(
+        &lease,
+        &wire,
+        running_command_id.as_deref(),
+        Instant::now() + Duration::from_secs(10),
+        |details| {
+            details["source"]["publish_status"] == "committed"
+                && details["ignored"]["publish_status"] == "dropped_due_to_limits"
+                && details["ignored"]["drop_reason"] == "ignored_file_byte_limit"
+        },
+        "command finalize trace must include ignored limit drop",
+    )?;
 
     let read_source = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": source_path}))?;
     ensure!(
@@ -663,7 +678,12 @@ fn source_and_ignored_success_publish_as_one_lane_result() -> Result<()> {
             "timeout_seconds": 10,
         }),
     )?;
-    let result = unwrap_operation_result(wire.clone())?;
+    let running_command_id = running_command_id_from_response(&wire)?;
+    let result = finalize_foreground_command(
+        &lease,
+        wire.clone(),
+        Instant::now() + Duration::from_secs(30),
+    )?;
     ensure!(
         as_str(&result, "status")? == "ok" && as_bool(&result, "success")?,
         "source+ignored command should publish successfully: {result}"
@@ -689,20 +709,18 @@ fn source_and_ignored_success_publish_as_one_lane_result() -> Result<()> {
         "source+ignored success should report committed source and direct LWW ignored: {result}"
     );
 
-    let record = trace_record(&wire)?;
-    ensure!(
-        has_trace_event(
-            &record,
-            "command",
-            "command.publish_lanes_decided",
-            |details| {
-                details["source"]["publish_status"] == "committed"
-                    && details["ignored"]["publish_status"] == "published_lww"
-                    && details["ignored"]["publish_mode"] == "direct_lww"
-            }
-        ),
-        "command finalize trace must report mixed lane success: {record:?}"
-    );
+    assert_command_publish_lanes_trace(
+        &lease,
+        &wire,
+        running_command_id.as_deref(),
+        Instant::now() + Duration::from_secs(10),
+        |details| {
+            details["source"]["publish_status"] == "committed"
+                && details["ignored"]["publish_status"] == "published_lww"
+                && details["ignored"]["publish_mode"] == "direct_lww"
+        },
+        "command finalize trace must report mixed lane success",
+    )?;
 
     let after = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     ensure!(
@@ -725,6 +743,203 @@ fn source_and_ignored_success_publish_as_one_lane_result() -> Result<()> {
 }
 
 #[test]
+fn ignored_only_later_writer_wins_with_direct_lww_publish() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let dir = format!(
+        "publish-lanes-ignored-lww/{}",
+        e2e_test::unique_suffix().replace('-', "_")
+    );
+    let ignored_path = format!("{dir}/ignored/cache.txt");
+
+    lease.call_ok(
+        catalog::SANDBOX_FILE_WRITE,
+        json!({
+            "path": format!("{dir}/.gitignore"),
+            "content": "ignored/\n",
+            "overwrite": false,
+        }),
+    )?;
+    let before = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+    let before_version = as_i64(&before, "manifest_version")?;
+
+    let first = finalize_foreground_command(
+        &lease,
+        lease.call(
+            catalog::SANDBOX_COMMAND_EXEC,
+            json!({
+                "cmd": format!("mkdir -p {dir}/ignored && printf first > {ignored_path}"),
+                "yield_time_ms": 8000,
+                "timeout_seconds": 10,
+            }),
+        )?,
+        Instant::now() + Duration::from_secs(30),
+    )?;
+    ensure!(
+        as_str(&first, "status")? == "ok" && as_bool(&first, "success")?,
+        "first ignored-only writer should publish: {first}"
+    );
+    ensure!(
+        first["publish_lanes"]["source"]["publish_status"] == "empty"
+            && first["publish_lanes"]["ignored"]["publish_status"] == "published_lww"
+            && first["publish_lanes"]["ignored"]["publish_mode"] == "direct_lww",
+        "first ignored-only writer should report direct LWW publish: {first}"
+    );
+
+    let second_wire = lease.call(
+        catalog::SANDBOX_COMMAND_EXEC,
+        json!({
+            "cmd": format!("mkdir -p {dir}/ignored && printf second > {ignored_path}"),
+            "yield_time_ms": 8000,
+            "timeout_seconds": 10,
+        }),
+    )?;
+    let running_command_id = running_command_id_from_response(&second_wire)?;
+    let second = finalize_foreground_command(
+        &lease,
+        second_wire.clone(),
+        Instant::now() + Duration::from_secs(30),
+    )?;
+    ensure!(
+        as_str(&second, "status")? == "ok" && as_bool(&second, "success")?,
+        "second ignored-only writer should publish: {second}"
+    );
+    ensure!(
+        second["publish_lanes"]["source"]["publish_status"] == "empty"
+            && second["publish_lanes"]["ignored"]["publish_status"] == "published_lww"
+            && second["publish_lanes"]["ignored"]["publish_mode"] == "direct_lww"
+            && second["publish_lanes"]["ignored"]["path_count"] == 1,
+        "second ignored-only writer should report direct LWW publish: {second}"
+    );
+
+    assert_command_publish_lanes_trace(
+        &lease,
+        &second_wire,
+        running_command_id.as_deref(),
+        Instant::now() + Duration::from_secs(10),
+        |details| {
+            details["source"]["publish_status"] == "empty"
+                && details["ignored"]["publish_status"] == "published_lww"
+                && details["ignored"]["publish_mode"] == "direct_lww"
+        },
+        "command finalize trace must report ignored-only direct LWW publish",
+    )?;
+
+    let after = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+    ensure!(
+        as_i64(&after, "manifest_version")? == before_version + 2,
+        "two ignored-only writers should advance the manifest twice: before={before}, after={after}"
+    );
+    let read = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": ignored_path}))?;
+    ensure!(
+        as_bool(&read, "exists")? && as_str(&read, "content")? == "second",
+        "later ignored-only writer should win in the layered view: {read}"
+    );
+    wait_for_command_count(&lease, 0)?;
+    wait_for_active_leases(&lease, 0)?;
+    Ok(())
+}
+
+#[test]
+fn source_publish_failure_drops_spooled_ignored_output() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let dir = format!(
+        "publish-lanes-fail-source-spool/{}",
+        e2e_test::unique_suffix().replace('-', "_")
+    );
+    let source_path = format!("{dir}/src.txt");
+    let ignored_path = format!("{dir}/ignored/large.bin");
+    let ignored_len = 4096;
+
+    lease.call_ok(
+        catalog::SANDBOX_FILE_WRITE,
+        json!({
+            "path": format!("{dir}/.gitignore"),
+            "content": "ignored/\n",
+            "overwrite": false,
+        }),
+    )?;
+    let before = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+    let before_version = as_i64(&before, "manifest_version")?;
+    let marker_path = inject_next_layer_publish_failure(&lease)?;
+
+    let wire = lease.call(
+        catalog::SANDBOX_COMMAND_EXEC,
+        json!({
+            "cmd": format!(
+                "mkdir -p {dir}/ignored && printf source > {source_path} && python3 - <<'PY'\nfrom pathlib import Path\nPath('{ignored_path}').write_bytes(b'x' * {ignored_len})\nPY"
+            ),
+            "yield_time_ms": 8000,
+            "timeout_seconds": 20,
+        }),
+    )?;
+    let running_command_id = running_command_id_from_response(&wire)?;
+    let result = finalize_foreground_command(
+        &lease,
+        wire.clone(),
+        Instant::now() + Duration::from_secs(30),
+    )?;
+    ensure!(
+        as_str(&result, "status")? == "ok" && !as_bool(&result, "success")?,
+        "command process should succeed while publish fails atomically: {result}"
+    );
+    ensure!(
+        array(&result, "changed_paths")?.is_empty(),
+        "failed publish must not report changed paths: {result}"
+    );
+    let lanes = &result["publish_lanes"];
+    ensure!(
+        lanes["source"]["publish_status"] == "failed"
+            && lanes["ignored"]["publish_status"] == "dropped_due_to_source_conflict"
+            && lanes["ignored"]["drop_reason"] == "source_not_published"
+            && as_i64(&lanes["ignored"], "spooled_bytes")? == i64::from(ignored_len),
+        "source publish failure should drop spooled ignored output from the same command: {result}"
+    );
+
+    let trace_matches = |details: &Value| {
+        details["source"]["publish_status"] == "failed"
+            && details["ignored"]["publish_status"] == "dropped_due_to_source_conflict"
+            && details["ignored"]["drop_reason"] == "source_not_published"
+            && details["ignored"]["spooled_bytes"].as_i64() == Some(i64::from(ignored_len))
+    };
+    assert_command_publish_lanes_trace(
+        &lease,
+        &wire,
+        running_command_id.as_deref(),
+        Instant::now() + Duration::from_secs(10),
+        trace_matches,
+        "command finalize trace must report publish failure lane drops",
+    )?;
+    let after = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+    ensure!(
+        as_i64(&after, "manifest_version")? == before_version,
+        "failed publish must leave the manifest unchanged: before={before}, after={after}"
+    );
+    let read_source = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": source_path}))?;
+    ensure!(
+        !as_bool(&read_source, "exists")?,
+        "source output must not publish after injected failure: {read_source}"
+    );
+    let read_ignored = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": ignored_path}))?;
+    ensure!(
+        !as_bool(&read_ignored, "exists")?,
+        "ignored output must not publish after injected failure: {read_ignored}"
+    );
+    ensure!(
+        !container_path_exists(&lease, &marker_path)?,
+        "publish failure marker should be consumed after one failure"
+    );
+    wait_for_command_count(&lease, 0)?;
+    wait_for_active_leases(&lease, 0)?;
+    Ok(())
+}
+
+#[test]
 fn large_ignored_output_publishes_through_spool_backed_capture() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
@@ -735,7 +950,7 @@ fn large_ignored_output_publishes_through_spool_backed_capture() -> Result<()> {
         e2e_test::unique_suffix().replace('-', "_")
     );
     let ignored_path = format!("{dir}/ignored/large.bin");
-    let ignored_len = (1024 * 1024) + 1;
+    let ignored_len = 4096;
 
     lease.call_ok(
         catalog::SANDBOX_FILE_WRITE,
@@ -756,7 +971,12 @@ fn large_ignored_output_publishes_through_spool_backed_capture() -> Result<()> {
             "timeout_seconds": 20,
         }),
     )?;
-    let result = unwrap_operation_result(wire.clone())?;
+    let running_command_id = running_command_id_from_response(&wire)?;
+    let result = finalize_foreground_command(
+        &lease,
+        wire.clone(),
+        Instant::now() + Duration::from_secs(30),
+    )?;
     ensure!(
         as_str(&result, "status")? == "ok",
         "successful command should finalize in foreground: {result}"
@@ -775,30 +995,33 @@ fn large_ignored_output_publishes_through_spool_backed_capture() -> Result<()> {
         "large ignored output should publish through the spool path: {result}"
     );
 
-    let record = trace_record(&wire)?;
-    ensure!(
-        has_trace_event(
-            &record,
-            "command",
-            "command.publish_lanes_decided",
-            |details| {
-                details["ignored"]["publish_status"] == "published_lww"
-                    && details["ignored"]["spooled_bytes"].as_i64() == Some(i64::from(ignored_len))
-            }
-        ),
-        "command finalize trace must report spooled ignored bytes: {record:?}"
-    );
+    let trace_matches = |details: &Value| {
+        details["ignored"]["publish_status"] == "published_lww"
+            && details["ignored"]["spooled_bytes"].as_i64() == Some(i64::from(ignored_len))
+    };
+    assert_command_publish_lanes_trace(
+        &lease,
+        &wire,
+        running_command_id.as_deref(),
+        Instant::now() + Duration::from_secs(10),
+        trace_matches,
+        "command finalize trace must report spooled ignored bytes",
+    )?;
 
-    let verify = unwrap_operation_result(lease.call(
-        catalog::SANDBOX_COMMAND_EXEC,
-        json!({
-            "cmd": format!(
-                "python3 - <<'PY'\nfrom pathlib import Path\nassert Path('{ignored_path}').stat().st_size == {ignored_len}\nprint('size-ok')\nPY"
-            ),
-            "yield_time_ms": 8000,
-            "timeout_seconds": 10,
-        }),
-    )?)?;
+    let verify = finalize_foreground_command(
+        &lease,
+        lease.call(
+            catalog::SANDBOX_COMMAND_EXEC,
+            json!({
+                "cmd": format!(
+                    "python3 - <<'PY'\nfrom pathlib import Path\nassert Path('{ignored_path}').stat().st_size == {ignored_len}\nprint('size-ok')\nPY"
+                ),
+                "yield_time_ms": 8000,
+                "timeout_seconds": 10,
+            }),
+        )?,
+        Instant::now() + Duration::from_secs(20),
+    )?;
     ensure!(
         as_str(&verify, "status")? == "ok" && stdout(&verify).contains("size-ok"),
         "published ignored spool payload should have the expected size: {verify}"
@@ -818,7 +1041,7 @@ fn multiple_ignored_outputs_publish_through_aggregate_spool_backed_capture() -> 
         "publish-lanes-ignored-aggregate-spool/{}",
         e2e_test::unique_suffix().replace('-', "_")
     );
-    let ignored_len = 640 * 1024;
+    let ignored_len = 800;
     let ignored_total = ignored_len * 2;
 
     lease.call_ok(
@@ -840,7 +1063,12 @@ fn multiple_ignored_outputs_publish_through_aggregate_spool_backed_capture() -> 
             "timeout_seconds": 20,
         }),
     )?;
-    let result = unwrap_operation_result(wire.clone())?;
+    let running_command_id = running_command_id_from_response(&wire)?;
+    let result = finalize_foreground_command(
+        &lease,
+        wire.clone(),
+        Instant::now() + Duration::from_secs(30),
+    )?;
     ensure!(
         as_str(&result, "status")? == "ok",
         "successful aggregate-spool command should finalize in foreground: {result}"
@@ -859,31 +1087,33 @@ fn multiple_ignored_outputs_publish_through_aggregate_spool_backed_capture() -> 
         "aggregate ignored output should publish through the spool path: {result}"
     );
 
-    let record = trace_record(&wire)?;
-    ensure!(
-        has_trace_event(
-            &record,
-            "command",
-            "command.publish_lanes_decided",
-            |details| {
-                details["ignored"]["publish_status"] == "published_lww"
-                    && details["ignored"]["spooled_bytes"].as_i64()
-                        == Some(i64::from(ignored_total))
-            }
-        ),
-        "command finalize trace must report aggregate spooled ignored bytes: {record:?}"
-    );
+    let trace_matches = |details: &Value| {
+        details["ignored"]["publish_status"] == "published_lww"
+            && details["ignored"]["spooled_bytes"].as_i64() == Some(i64::from(ignored_total))
+    };
+    assert_command_publish_lanes_trace(
+        &lease,
+        &wire,
+        running_command_id.as_deref(),
+        Instant::now() + Duration::from_secs(10),
+        trace_matches,
+        "command finalize trace must report aggregate spooled ignored bytes",
+    )?;
 
-    let verify = unwrap_operation_result(lease.call(
-        catalog::SANDBOX_COMMAND_EXEC,
-        json!({
-            "cmd": format!(
-                "python3 - <<'PY'\nfrom pathlib import Path\nbase = Path('{dir}/ignored')\nassert (base / 'a.bin').stat().st_size == {ignored_len}\nassert (base / 'b.bin').stat().st_size == {ignored_len}\nprint('aggregate-size-ok')\nPY"
-            ),
-            "yield_time_ms": 8000,
-            "timeout_seconds": 10,
-        }),
-    )?)?;
+    let verify = finalize_foreground_command(
+        &lease,
+        lease.call(
+            catalog::SANDBOX_COMMAND_EXEC,
+            json!({
+                "cmd": format!(
+                    "python3 - <<'PY'\nfrom pathlib import Path\nbase = Path('{dir}/ignored')\nassert (base / 'a.bin').stat().st_size == {ignored_len}\nassert (base / 'b.bin').stat().st_size == {ignored_len}\nprint('aggregate-size-ok')\nPY"
+                ),
+                "yield_time_ms": 8000,
+                "timeout_seconds": 10,
+            }),
+        )?,
+        Instant::now() + Duration::from_secs(20),
+    )?;
     ensure!(
         as_str(&verify, "status")? == "ok" && stdout(&verify).contains("aggregate-size-ok"),
         "published aggregate spool payloads should have the expected sizes: {verify}"
@@ -1190,6 +1420,54 @@ fn wait_for_command_publish_lanes_trace(
         }
         std::thread::sleep(Duration::from_millis(100));
     }
+}
+
+fn running_command_id_from_response(response: &Value) -> Result<Option<String>> {
+    let result = unwrap_operation_result(response.clone())?;
+    if as_str(&result, "status")? == "running" {
+        Ok(Some(as_str(&result, "command_id")?.to_owned()))
+    } else {
+        Ok(None)
+    }
+}
+
+fn assert_command_publish_lanes_trace(
+    lease: &e2e_test::NodeLease<'_>,
+    initial_response: &Value,
+    running_command_id: Option<&str>,
+    deadline: Instant,
+    publish_lanes: impl Fn(&Value) -> bool,
+    failure_message: &str,
+) -> Result<()> {
+    if let Some(command_id) = running_command_id {
+        wait_for_command_publish_lanes_trace(lease, command_id, deadline, publish_lanes)?;
+        return Ok(());
+    }
+    let record = trace_record(initial_response)?;
+    ensure!(
+        has_trace_event(
+            &record,
+            "command",
+            "command.publish_lanes_decided",
+            publish_lanes
+        ),
+        "{failure_message}: {record:?}"
+    );
+    Ok(())
+}
+
+fn inject_next_layer_publish_failure(lease: &e2e_test::NodeLease<'_>) -> Result<String> {
+    let marker = format!("{}/.layer-metadata/fail-next-publish", lease.root());
+    let script = format!(
+        r#"import pathlib
+
+path = pathlib.Path({marker:?})
+path.parent.mkdir(parents=True, exist_ok=True)
+path.write_text("fail\n")
+"#
+    );
+    lease.container().exec(&["python3", "-c", &script])?;
+    Ok(marker)
 }
 
 fn stderr(value: &Value) -> &str {

@@ -61,19 +61,18 @@ pub fn capture_upperdir(upperdir: &Path) -> Result<CapturedChanges, CaptureError
     })
 }
 
-/// Capture an ephemeral command upperdir using command-snapshot routing before
-/// ignored regular-file payloads are read.
+/// Capture an ephemeral command upperdir using explicit bounded-capture options.
 ///
 /// # Errors
 ///
 /// Returns [`CaptureError`] when metadata capture, routing, or selected payload
 /// materialization fails.
-pub fn capture_upperdir_for_snapshot(
+pub fn capture_upperdir_for_snapshot_with_options(
     root: &Path,
     snapshot: &Snapshot,
     upperdir: &Path,
     spool_dir: &Path,
-    materialize_payloads: bool,
+    options: BoundedCaptureOptions,
 ) -> Result<RoutedCapturedChanges, CaptureError> {
     let start = std::time::Instant::now();
     let captured = service::capture_upperdir_for_snapshot_with_options(
@@ -82,10 +81,7 @@ pub fn capture_upperdir_for_snapshot(
         &snapshot.layer_paths,
         upperdir,
         spool_dir,
-        BoundedCaptureOptions {
-            materialize_payloads,
-            ..BoundedCaptureOptions::default()
-        },
+        options,
     )
     .map_err(|error| CaptureError {
         failing_path: None,

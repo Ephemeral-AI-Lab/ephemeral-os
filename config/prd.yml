@@ -24,7 +24,14 @@ daemon:
     output_drain_grace_ms: 500
     max_command_s: 21600
     transcript_timestamp_timezone: UTC
-
+    ignored_capture:
+      # Bounded ignored-lane command capture. Large accepted ignored payloads
+      # above the spool threshold are copied through command-owned spool files.
+      max_files: 4096
+      max_bytes: 67108864
+      max_file_bytes: 16777216
+      spool_threshold_bytes: 1048576
+      max_metadata_capture_duration_ms: 30000
   idle_workspace_eviction:
     interval_ms: 500
 

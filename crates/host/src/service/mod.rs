@@ -68,6 +68,7 @@ impl HostConfig {
             remote_eosd_path: self.remote_eosd_path.clone(),
             remote_config_path: self.remote_config_path.clone(),
             config_yaml: String::new(),
+            enable_layerstack_test_failpoints: false,
             extra_dirs: Vec::new(),
             tcp_port,
             ready_timeout: self.ready_timeout,

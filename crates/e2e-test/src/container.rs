@@ -116,6 +116,7 @@ pub(crate) fn daemon_spec(config: &Config, config_yaml: &str) -> Result<DaemonSp
         remote_eosd_path: config.remote_eosd_path.clone(),
         remote_config_path: config.remote_config_path.clone(),
         config_yaml: config_yaml.to_owned(),
+        enable_layerstack_test_failpoints: true,
         extra_dirs: vec![config.root_dir.clone()],
         tcp_port: config.tcp_port,
         ready_timeout: config.ready_timeout,

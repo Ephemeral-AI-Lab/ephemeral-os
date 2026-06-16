@@ -17,7 +17,7 @@ use config::configs::{
 use tokio_util::sync::CancellationToken;
 
 use crate::invocation_registry::InFlightRegistry;
-use crate::runtime_services::command_config_from_schema;
+use crate::runtime_services::{capture_options_from_schema, command_config_from_schema};
 use crate::RuntimeServices;
 
 const MAX_REQUEST_BYTES: usize = crate::wire::MAX_REQUEST_BYTES;
@@ -89,11 +89,12 @@ impl DaemonServer {
     ) -> Self {
         Self {
             config,
-            services: Arc::new(RuntimeServices::with_commit_options(
+            services: Arc::new(RuntimeServices::with_commit_options_and_capture_options(
                 daemon_config.plugin.clone(),
                 isolated_config.clone(),
                 command_config_from_schema(&daemon_config.commands),
                 layerstack::CommitOptions::new(daemon_config.layer_stack.auto_squash_max_depth),
+                capture_options_from_schema(&daemon_config.commands),
             )),
             file_limits: daemon_config.files,
             invocation_registry: Arc::new(InFlightRegistry::new(

@@ -31,7 +31,7 @@ This note captures the proposed cleanup after renaming the crate from
 | `CommandOps::spawn_session` | `operation::command::service` | Spawns the command lifecycle object | `spawn_process` | Returns `CommandProcess`. |
 | `CommandOps::register_and_wait(session, ...)` | `operation::command::service` | Registers process and waits for yield/completion | `register_and_wait(process, ...)` | Parameter and local names should match the aggregate. |
 | `CommandOps::finish_reaped` | `operation::command::service` | Converts a completed process exit into a final command response | `finalize_command` | This is the command/workspace finalization boundary. |
-| `settle_ephemeral()` | `operation::command::settle` | Captures and publishes ephemeral command effects | `finalize_ephemeral_command()` | Uses finalization vocabulary and states the workspace mode. |
+| `settle_ephemeral()` | `operation::command::settle` | Captures and publishes ephemeral command effects | ephemeral command finalizer | Uses finalization vocabulary and states the workspace mode. |
 | `settle_isolated()` | `operation::command::settle` | Captures isolated command effects without publishing | `finalize_isolated_command()` | Uses finalization vocabulary and states the workspace mode. |
 | `command_session_config()` | `operation::command::runtime` | Runtime command config accessor | `command_config()` | Return type is `CommandConfig`; function should match. |
 | `command_session_scratch_root()` | `operation::command::runtime` | Scratch root accessor | `command_scratch_root()` | Scratch root belongs to commands. |

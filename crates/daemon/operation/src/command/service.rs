@@ -4,6 +4,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Instant;
 
 use command::{CommandConfig, CommandError};
+use layerstack::service::BoundedCaptureOptions;
 use layerstack::CommitOptions;
 use trace::TraceRecord;
 use workspace::IsolatedWorkspaceBinding;
@@ -51,6 +52,7 @@ pub enum ExecTarget {
 pub struct CommandOps {
     config: CommandConfig,
     commit_options: CommitOptions,
+    capture_options: BoundedCaptureOptions,
     registry: Arc<CommandRegistry>,
     /// One "before" cgroup/process sample per live command, taken at spawn.
     /// Consumed exactly once: by the exec request sidecar when the command
@@ -159,14 +161,23 @@ impl std::error::Error for CommandExecError {
 impl CommandOps {
     #[must_use]
     pub fn new(config: CommandConfig) -> Self {
-        Self::with_commit_options(config, CommitOptions::default())
+        Self::with_commit_options_and_capture_options(
+            config,
+            CommitOptions::default(),
+            BoundedCaptureOptions::default(),
+        )
     }
 
     #[must_use]
-    pub fn with_commit_options(config: CommandConfig, commit_options: CommitOptions) -> Self {
+    pub fn with_commit_options_and_capture_options(
+        config: CommandConfig,
+        commit_options: CommitOptions,
+        capture_options: BoundedCaptureOptions,
+    ) -> Self {
         Self {
             config,
             commit_options,
+            capture_options,
             registry: Arc::new(CommandRegistry::new()),
             before_resource_samples: Mutex::new(HashMap::new()),
             pending_finalize_records: Mutex::new(Vec::new()),
@@ -181,6 +192,11 @@ impl CommandOps {
     #[must_use]
     pub const fn commit_options(&self) -> CommitOptions {
         self.commit_options
+    }
+
+    #[must_use]
+    pub const fn capture_options(&self) -> BoundedCaptureOptions {
+        self.capture_options
     }
 
     #[must_use]

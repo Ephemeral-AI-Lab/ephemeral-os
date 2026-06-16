@@ -16,7 +16,7 @@ use crate::squash::{
     manifest_prefix_before_plan, LayerCheckpointSquasher, SquashPlanDecision, SquashPlanEntry,
 };
 use crate::workspace::build_workspace_base_from_snapshot;
-use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, STAGING_DIR};
+use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, LAYER_METADATA_DIR, STAGING_DIR};
 
 mod layer_write;
 mod lease_cleanup;
@@ -37,6 +37,9 @@ use leases::{
 use metrics::{count_dirs, storage_bytes};
 pub use view::MergedView;
 use workspace_commit::*;
+
+const FAIL_NEXT_PUBLISH_MARKER_FILE: &str = "fail-next-publish";
+const ENABLE_TEST_FAILPOINTS_ENV: &str = "EOS_LAYERSTACK_ENABLE_TEST_FAILPOINTS";
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Lease {
@@ -390,6 +393,8 @@ impl LayerStack {
             return Ok(active);
         }
 
+        self.take_publish_failpoint_marker()?;
+
         let next_version = active.version + 1;
         let (layer_id, staging_dir, layer_dir) =
             allocate_layer_dirs(&self.storage_root, 'L', next_version)?;
@@ -449,6 +454,23 @@ impl LayerStack {
         match std::fs::read_to_string(path) {
             Ok(value) => Ok(Some(value)),
             Err(err) if err.kind() == ErrorKind::NotFound => Ok(None),
+            Err(err) => Err(err.into()),
+        }
+    }
+
+    fn take_publish_failpoint_marker(&self) -> Result<(), LayerStackError> {
+        if std::env::var(ENABLE_TEST_FAILPOINTS_ENV).ok().as_deref() != Some("1") {
+            return Ok(());
+        }
+        let marker = self
+            .storage_root
+            .join(LAYER_METADATA_DIR)
+            .join(FAIL_NEXT_PUBLISH_MARKER_FILE);
+        match std::fs::remove_file(&marker) {
+            Ok(()) => Err(LayerStackError::Storage(
+                "injected layerstack publish failure".to_owned(),
+            )),
+            Err(err) if err.kind() == ErrorKind::NotFound => Ok(()),
             Err(err) => Err(err.into()),
         }
     }

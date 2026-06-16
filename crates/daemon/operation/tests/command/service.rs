@@ -1,7 +1,9 @@
 use crate::command::registry::CompletionBufferEviction;
 use command::process::{CommandFinalResponsePersistence, CommandPersistenceOutcome, KillReason};
 use command::CollectCompleted;
+use layerstack::service::{BoundedCaptureOptions, IgnoredCaptureLimits};
 use std::path::PathBuf;
+use std::time::Duration;
 use trace::{SpanKind, SpanStatus, TraceKind, TraceLinkKind};
 
 use super::*;
@@ -70,6 +72,35 @@ fn read_progress_with_trace_reports_completed_buffer_source() {
     assert_eq!(outcome.trace.status, CommandStatus::Ok);
     assert_eq!(outcome.trace.source, "completed_buffer");
     assert_eq!(outcome.trace.stdout_bytes, "second\n".len());
+}
+
+#[test]
+fn command_ops_capture_options_reflect_configured_ignored_limits() {
+    let ops = CommandOps::with_commit_options_and_capture_options(
+        command::CommandConfig::default(),
+        layerstack::CommitOptions::default(),
+        BoundedCaptureOptions {
+            materialize_payloads: true,
+            ignored_limits: IgnoredCaptureLimits {
+                max_ignored_files: 3,
+                max_ignored_bytes: 40,
+                max_ignored_file_bytes: 20,
+                spool_threshold_bytes: 5,
+                max_metadata_capture_duration: Duration::from_millis(7),
+            },
+        },
+    );
+
+    assert_eq!(
+        ops.capture_options().ignored_limits,
+        IgnoredCaptureLimits {
+            max_ignored_files: 3,
+            max_ignored_bytes: 40,
+            max_ignored_file_bytes: 20,
+            spool_threshold_bytes: 5,
+            max_metadata_capture_duration: Duration::from_millis(7),
+        }
+    );
 }
 
 #[test]

@@ -16,6 +16,27 @@ fn transaction(fixture: &Fixture) -> CommitTransaction {
     }
 }
 
+struct EnvVarGuard {
+    key: &'static str,
+    previous: Option<std::ffi::OsString>,
+}
+
+impl EnvVarGuard {
+    fn unset(key: &'static str) -> Self {
+        let previous = std::env::var_os(key);
+        std::env::remove_var(key);
+        Self { key, previous }
+    }
+}
+
+impl Drop for EnvVarGuard {
+    fn drop(&mut self) {
+        if let Some(previous) = self.previous.take() {
+            std::env::set_var(self.key, previous);
+        }
+    }
+}
+
 fn readme_base_hash() -> TestResult<String> {
     hash_current(Some(b"# README\n"), true).ok_or_else(|| "missing readme hash".into())
 }
@@ -33,6 +54,31 @@ fn publish_decision(
         reject_publish: false,
         validation_base_hashes: None,
     })
+}
+
+#[test]
+fn publish_failpoint_marker_is_inert_without_test_opt_in() -> TestResult {
+    let _guard = EnvVarGuard::unset("EOS_LAYERSTACK_ENABLE_TEST_FAILPOINTS");
+    let fixture = Fixture::new("publish_failpoint_inert")?;
+    let marker = fixture
+        .root
+        .join(".layer-metadata")
+        .join("fail-next-publish");
+    std::fs::create_dir_all(marker.parent().expect("marker parent"))?;
+    std::fs::write(&marker, b"fail\n")?;
+
+    let manifest =
+        LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
+            path: lp("new.txt")?,
+            content: b"new\n".to_vec(),
+        }])?;
+
+    assert_eq!(manifest.version, 2);
+    assert!(
+        marker.exists(),
+        "disabled failpoint must not consume marker"
+    );
+    Ok(())
 }
 
 #[test]
@@ -191,6 +237,40 @@ fn auto_squash_finished_event_records_depth_and_manifest() -> TestResult {
     assert!(trace
         .timings
         .contains_key("layer_stack.auto_squash.total_s"));
+    Ok(())
+}
+
+#[test]
+fn auto_squash_preserves_head_visible_ignored_heavy_layers() -> TestResult {
+    let fixture = Fixture::new("auto_squash_ignored_heavy")?;
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+    for index in 0..6 {
+        stack.publish_layer(&[
+            LayerChange::Write {
+                path: lp(&format!("target/cache-{}.bin", index % 2))?,
+                content: format!("cache-{index}\n").into_bytes(),
+            },
+            LayerChange::Write {
+                path: lp("target/shared.bin")?,
+                content: format!("shared-{index}\n").into_bytes(),
+            },
+        ])?;
+    }
+    let depth_before = stack.read_active_manifest()?.layers.len();
+
+    let trace = run_auto_squash(&mut stack, 2);
+
+    let depth_after = stack.read_active_manifest()?.layers.len();
+    assert!(depth_after < depth_before);
+    assert_eq!(fixture.read_text("target/cache-0.bin")?, "cache-4\n");
+    assert_eq!(fixture.read_text("target/cache-1.bin")?, "cache-5\n");
+    assert_eq!(fixture.read_text("target/shared.bin")?, "shared-5\n");
+    let finished = trace
+        .events
+        .iter()
+        .find(|event| event.module == "layer_stack" && event.name == "auto_squash_finished")
+        .expect("auto-squash finished event");
+    assert_eq!(finished.details["success"], true);
     Ok(())
 }
 

@@ -6,7 +6,12 @@ isolated_workspace:
 daemon:
   commands:
     default_timeout_s: 1
-
+    ignored_capture:
+      max_files: 4096
+      max_bytes: 32768
+      max_file_bytes: 8192
+      spool_threshold_bytes: 1024
+      max_metadata_capture_duration_ms: 30000
 e2e_test:
   pool:
     sandboxes: 4

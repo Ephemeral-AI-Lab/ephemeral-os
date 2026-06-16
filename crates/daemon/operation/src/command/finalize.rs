@@ -2,15 +2,15 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use std::time::Instant;
 
-use layerstack::service::Snapshot;
+use layerstack::service::{BoundedCaptureOptions, Snapshot};
 use layerstack::{service, FileResult};
 use layerstack::{CaptureRouteStats, ChangesetResult, CommitOptions, CommitStatus};
 use serde_json::{json, Map, Value};
 use trace::usize_to_f64_saturating;
 use workspace::IsolatedWorkspaceBinding;
 use workspace::{
-    capture_upperdir, capture_upperdir_for_snapshot, EphemeralWorkspace, RoutedCapturedChanges,
-    TreeResourceStats,
+    capture_upperdir, capture_upperdir_for_snapshot_with_options, EphemeralWorkspace,
+    RoutedCapturedChanges, TreeResourceStats,
 };
 
 use super::contract::{
@@ -24,26 +24,28 @@ use super::outcome::{
 use crate::core::changed_path_kind_pairs;
 use crate::{CommandId, MutationCore};
 
-pub(crate) fn finalize_ephemeral_command(
+pub(crate) fn finalize_ephemeral_command_with_capture_options(
     root: &Path,
     snapshot: &Snapshot,
     workspace: &EphemeralWorkspace,
     commit_options: CommitOptions,
+    mut capture_options: BoundedCaptureOptions,
     request: FinalizeCommandRequest,
 ) -> Result<CommandResponse, WorkspaceApiError> {
     let mut timings = base_timings(root)?;
     let command_success = request.command_succeeded();
+    capture_options.materialize_payloads = command_success;
     let spool_dir = workspace
         .dirs()
         .run_dir
         .join("spool")
         .join("publish-capture");
-    let captured = match capture_upperdir_for_snapshot(
+    let captured = match capture_upperdir_for_snapshot_with_options(
         root,
         snapshot,
         &workspace.dirs().upperdir,
         &spool_dir,
-        command_success,
+        capture_options,
     ) {
         Ok(captured) => captured,
         Err(error) if !command_success => {
@@ -70,7 +72,31 @@ pub(crate) fn finalize_ephemeral_command(
                 },
             ));
         }
-        Err(error) => return Err(finalize_error(error)),
+        Err(error) => {
+            let error = error.to_string();
+            timings.insert(
+                "command_exec.capture_upperdir_error".to_owned(),
+                json!(error.clone()),
+            );
+            copy_runner_timings(&mut timings, request.runner_result.as_ref());
+            insert_command_timings(&mut timings, 0, 0.0, 0.0, request.command_elapsed_s, false);
+            return Ok(command_response(
+                WorkspaceKind::Ephemeral,
+                request,
+                CommandFinalization {
+                    success: false,
+                    changed_paths: Vec::new(),
+                    changed_path_kinds: ChangedPathKinds::default(),
+                    mutation_source: None,
+                    conflict: None,
+                    conflict_reason: Some(error),
+                    timings,
+                    extras: publish_lanes_extras(command_finalize_failed_lanes(
+                        snapshot.manifest_version,
+                    )),
+                },
+            ));
+        }
     };
     let RoutedCapturedChanges {
         captured: captured_changes,
@@ -140,15 +166,49 @@ pub(crate) fn finalize_ephemeral_command(
     }
 
     let publish_start = std::time::Instant::now();
-    let changeset = service::publish_command_capture_lane_aware(
+    let changeset = match service::publish_command_capture_lane_aware(
         root,
         snapshot.manifest_version,
         &snapshot.layer_paths,
         &captured_changes.changes,
         &captured_changes.protected_drops,
         commit_options,
-    )
-    .map_err(finalize_error)?;
+    ) {
+        Ok(changeset) => changeset,
+        Err(error) => {
+            let error = error.to_string();
+            let publish_s = publish_start.elapsed().as_secs_f64();
+            timings.insert(
+                "command_exec.publish_error".to_owned(),
+                json!(error.clone()),
+            );
+            insert_command_timings(
+                &mut timings,
+                captured_path_count,
+                captured_changes.capture_s,
+                publish_s,
+                request.command_elapsed_s,
+                false,
+            );
+            return Ok(command_response(
+                WorkspaceKind::Ephemeral,
+                request,
+                CommandFinalization {
+                    success: false,
+                    changed_paths: Vec::new(),
+                    changed_path_kinds,
+                    mutation_source: Some(MutationSource::OverlayCapture),
+                    conflict: None,
+                    conflict_reason: Some(error),
+                    timings,
+                    extras: publish_lanes_extras(publish_lanes_from_publish_error(
+                        route_stats,
+                        snapshot.manifest_version,
+                    )),
+                },
+            ));
+        }
+    };
     let publish_s = publish_start.elapsed().as_secs_f64();
 
     let first_conflict = changeset.first_conflict();
@@ -253,11 +313,9 @@ pub(crate) fn discarded_response(
     request: FinalizeCommandRequest,
     route_manifest_version: Option<i64>,
 ) -> CommandResponse {
-    let extras = route_manifest_version.map_or_else(Map::new, |route_manifest_version| {
-        publish_lanes_extras(PublishLanesMetadata::dropped_command_failed(
-            route_manifest_version,
-        ))
-    });
+    let extras = publish_lanes_extras(PublishLanesMetadata::dropped_command_failed(
+        route_manifest_version.unwrap_or(0),
+    ));
     command_response(
         workspace_kind,
         request,
@@ -270,6 +328,36 @@ pub(crate) fn discarded_response(
             conflict_reason: None,
             timings: WorkspaceTimings::default(),
             extras,
+        },
+    )
+}
+
+pub(crate) fn finalization_error_response(
+    workspace_kind: WorkspaceKind,
+    request: FinalizeCommandRequest,
+    route_manifest_version: Option<i64>,
+    error: impl std::fmt::Display,
+) -> CommandResponse {
+    let error = error.to_string();
+    let mut timings = WorkspaceTimings::default();
+    timings.insert(
+        "command_exec.finalize_error".to_owned(),
+        json!(error.clone()),
+    );
+    command_response(
+        workspace_kind,
+        request,
+        CommandFinalization {
+            success: false,
+            changed_paths: Vec::new(),
+            changed_path_kinds: ChangedPathKinds::default(),
+            mutation_source: None,
+            conflict: None,
+            conflict_reason: Some(error),
+            timings,
+            extras: publish_lanes_extras(command_finalize_failed_lanes(
+                route_manifest_version.unwrap_or(0),
+            )),
         },
     )
 }
@@ -336,6 +424,67 @@ fn publish_lanes_extras(publish_lanes: PublishLanesMetadata) -> Map<String, Valu
     extras
 }
 
+fn command_finalize_failed_lanes(route_manifest_version: i64) -> PublishLanesMetadata {
+    PublishLanesMetadata::new(
+        SourcePublishLaneMetadata::new(0, "failed", Some("command_finalize_failed")),
+        IgnoredPublishLaneMetadata::new(
+            0,
+            0,
+            0,
+            "failed",
+            None::<String>,
+            Some("command_finalize_failed"),
+        ),
+        route_manifest_version,
+    )
+}
+
+fn publish_lanes_from_publish_error(
+    route_stats: CaptureRouteStats,
+    route_manifest_version: i64,
+) -> PublishLanesMetadata {
+    let source_publish_status = if route_stats.gated_path_count == 0 {
+        "empty"
+    } else {
+        "failed"
+    };
+    let source_drop_reason = if route_stats.gated_path_count == 0 {
+        None
+    } else {
+        Some("publish_failed")
+    };
+    let ignored_publish_status = if route_stats.direct_path_count == 0 {
+        "empty"
+    } else {
+        "failed"
+    };
+    let ignored_drop_reason = if route_stats.direct_path_count == 0 {
+        None
+    } else {
+        Some("publish_failed")
+    };
+    publish_lanes_with_route_drop_summary(
+        PublishLanesMetadata::new(
+            SourcePublishLaneMetadata::new(
+                route_stats.gated_path_count,
+                source_publish_status,
+                source_drop_reason,
+            ),
+            IgnoredPublishLaneMetadata::new(
+                route_stats.direct_path_count,
+                route_stats.direct_bytes,
+                route_stats.direct_spooled_bytes,
+                ignored_publish_status,
+                None::<String>,
+                ignored_drop_reason,
+            ),
+            route_manifest_version,
+        ),
+        route_stats.drop_path_count,
+        route_stats.drop_reason_counts,
+    )
+}
+
 fn publish_lanes_from_changeset(
     changeset: &ChangesetResult,
     route_stats: CaptureRouteStats,
@@ -382,16 +531,16 @@ fn source_publish_status(changeset: &ChangesetResult, source_path_count: usize) 
     if changeset
         .files
         .iter()
-        .any(|file| file.status == CommitStatus::Failed)
+        .any(|file| file.status == CommitStatus::AbortedVersion)
     {
-        return "failed";
+        return "conflict";
     }
     if changeset
         .files
         .iter()
-        .any(|file| file.status == CommitStatus::AbortedVersion)
+        .any(|file| file.status == CommitStatus::Failed)
     {
-        return "conflict";
+        return "failed";
     }
     if changeset.published_manifest_version.is_some() {
         "committed"
@@ -408,7 +557,17 @@ fn ignored_publish_outcome(
     if route_stats.direct_path_count == 0 {
         return ("empty", None, None);
     }
-    if matches!(source_status, "conflict" | "failed") {
+    if source_status == "conflict" {
+        return (
+            "dropped_due_to_source_conflict",
+            None,
+            Some("source_not_published".to_owned()),
+        );
+    }
+    if route_rejection_failed(changeset, route_stats) {
+        return ("failed", None, Some("publish_failed".to_owned()));
+    }
+    if source_status == "failed" {
         return (
             "dropped_due_to_source_conflict",
             None,
@@ -422,6 +581,18 @@ fn ignored_publish_outcome(
         return ("published_lww", Some("direct_lww"), None);
     }
     ("failed", None, Some("publish_failed".to_owned()))
+}
+
+fn route_rejection_failed(changeset: &ChangesetResult, route_stats: &CaptureRouteStats) -> bool {
+    if route_stats.drop_reason_counts.is_empty() {
+        return false;
+    }
+    changeset.files.iter().any(|file| {
+        file.status == CommitStatus::Failed
+            && route_stats
+                .drop_reason_counts
+                .contains_key(file.message.as_str())
+    })
 }
 
 fn insert_command_timings(
@@ -694,6 +865,23 @@ mod tests {
 
     type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
+    fn finalize_ephemeral_command_with_default_capture_options(
+        root: &Path,
+        snapshot: &Snapshot,
+        workspace: &EphemeralWorkspace,
+        commit_options: CommitOptions,
+        request: FinalizeCommandRequest,
+    ) -> Result<CommandResponse, WorkspaceApiError> {
+        finalize_ephemeral_command_with_capture_options(
+            root,
+            snapshot,
+            workspace,
+            commit_options,
+            BoundedCaptureOptions::default(),
+            request,
+        )
+    }
+
     #[test]
     fn pressure_metrics_parse_some_and_full_levels() {
         let metrics = parse_pressure_metrics(
@@ -756,6 +944,71 @@ mod tests {
     }
 
     #[test]
+    fn discarded_response_without_manifest_version_still_reports_publish_lanes() {
+        let response = discarded_response(
+            WorkspaceKind::Ephemeral,
+            FinalizeCommandRequest {
+                runner_result: None,
+                command_elapsed_s: 0.25,
+                status: CommandStatus::Cancelled,
+                exit_code: Some(130),
+                stdout: String::new(),
+                stderr: String::new(),
+                command_id: Some("cmd_discarded_no_manifest".to_owned()),
+            },
+            None,
+        )
+        .to_wire_value();
+
+        assert_eq!(
+            response["publish_lanes"]["source"]["publish_status"],
+            "dropped_command_failed"
+        );
+        assert_eq!(
+            response["publish_lanes"]["ignored"]["publish_status"],
+            "dropped_command_failed"
+        );
+        assert_eq!(
+            response["publish_lanes"]["routing"]["route_manifest_version"],
+            0
+        );
+    }
+
+    #[test]
+    fn finalization_error_response_without_manifest_version_still_reports_publish_lanes() {
+        let response = finalization_error_response(
+            WorkspaceKind::Ephemeral,
+            FinalizeCommandRequest {
+                runner_result: None,
+                command_elapsed_s: 0.25,
+                status: CommandStatus::Ok,
+                exit_code: Some(0),
+                stdout: String::new(),
+                stderr: String::new(),
+                command_id: Some("cmd_finalize_error_no_manifest".to_owned()),
+            },
+            None,
+            "capture failed",
+        )
+        .to_wire_value();
+
+        assert_eq!(response["status"], "ok");
+        assert_eq!(response["success"], false);
+        assert_eq!(
+            response["publish_lanes"]["source"]["publish_status"],
+            "failed"
+        );
+        assert_eq!(
+            response["publish_lanes"]["ignored"]["publish_status"],
+            "failed"
+        );
+        assert_eq!(
+            response["publish_lanes"]["routing"]["route_manifest_version"],
+            0
+        );
+    }
+
+    #[test]
     fn nonzero_ephemeral_command_discards_upperdir_and_reports_lanes() -> TestResult {
         assert_non_success_discards(CommandStatus::Error, Some(42))
     }
@@ -768,7 +1021,7 @@ mod tests {
         let workspace = EphemeralWorkspace::create(&fixture.scratch, "command", "large-ignored")?;
         write_upperdir_sparse_file(&workspace, "ignored/huge.bin", (8 * 1024 * 1024) + 1)?;
 
-        let response = finalize_ephemeral_command(
+        let response = finalize_ephemeral_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -831,6 +1084,66 @@ mod tests {
     }
 
     #[test]
+    fn successful_ephemeral_capture_error_still_reports_publish_lanes() -> TestResult {
+        let fixture = EphemeralFinalizeFixture::new("large-source-ok")?;
+        let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
+        let workspace = EphemeralWorkspace::create(&fixture.scratch, "command", "large-source-ok")?;
+        write_upperdir_sparse_file(&workspace, "src/huge.bin", (8 * 1024 * 1024) + 1)?;
+
+        let response = finalize_ephemeral_command_with_default_capture_options(
+            &fixture.root,
+            &snapshot,
+            &workspace,
+            CommitOptions::default(),
+            FinalizeCommandRequest {
+                runner_result: None,
+                command_elapsed_s: 0.25,
+                status: CommandStatus::Ok,
+                exit_code: Some(0),
+                stdout: "stdout".to_owned(),
+                stderr: String::new(),
+                command_id: Some("cmd_oversized_success".to_owned()),
+            },
+        )?;
+        service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+        let wire = response.to_wire_value();
+        assert_eq!(wire["status"], "ok");
+        assert_eq!(wire["success"], false);
+        assert_eq!(wire["changed_paths"], serde_json::json!([]));
+        assert_eq!(wire["publish_lanes"]["source"]["publish_status"], "failed");
+        assert_eq!(wire["publish_lanes"]["ignored"]["publish_status"], "failed");
+        assert_eq!(
+            wire["publish_lanes"]["routing"]["route_manifest_version"],
+            snapshot.manifest_version
+        );
+        let timings = &response
+            .finalized
+            .as_ref()
+            .expect("finalized response")
+            .core
+            .timings;
+        assert!(
+            timings
+                .get("command_exec.capture_upperdir_error")
+                .and_then(Value::as_str)
+                .is_some(),
+            "successful command capture errors must remain visible in metadata: {timings:?}"
+        );
+        assert_eq!(
+            LayerStack::open(fixture.root.clone())?
+                .read_active_manifest()?
+                .version,
+            snapshot.manifest_version,
+            "capture failure must not advance the manifest"
+        );
+        let (_bytes, exists) =
+            LayerStack::open(fixture.root.clone())?.read_bytes("src/huge.bin")?;
+        assert!(!exists, "oversized source payload must not publish");
+        Ok(())
+    }
+
+    #[test]
     fn timed_out_ephemeral_command_discards_upperdir_and_reports_lanes() -> TestResult {
         assert_non_success_discards(CommandStatus::TimedOut, Some(124))
     }
@@ -852,7 +1165,7 @@ mod tests {
             b"[core]\nrepositoryformatversion = 0\n",
         )?;
 
-        let response = finalize_ephemeral_command(
+        let response = finalize_ephemeral_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -916,7 +1229,7 @@ mod tests {
             .status()?;
         assert!(status.success(), "mkfifo failed with status {status}");
 
-        let response = finalize_ephemeral_command(
+        let response = finalize_ephemeral_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -970,7 +1283,7 @@ mod tests {
             EphemeralWorkspace::create(&fixture.scratch, "command", "daemon-control-drop")?;
         write_upperdir_file(&workspace, "manifest.json", b"{\"version\":999}")?;
 
-        let response = finalize_ephemeral_command(
+        let response = finalize_ephemeral_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1025,7 +1338,7 @@ mod tests {
             EphemeralWorkspace::create(&fixture.scratch, "command", "command-scratch-drop")?;
         write_upperdir_file(&workspace, "transcript.log", b"private transcript")?;
 
-        let response = finalize_ephemeral_command(
+        let response = finalize_ephemeral_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1073,7 +1386,7 @@ mod tests {
             EphemeralWorkspace::create(&fixture.scratch, "command", "invalid-layer-path-drop")?;
         write_upperdir_file(&workspace, ".wh...", b"")?;
 
-        let response = finalize_ephemeral_command(
+        let response = finalize_ephemeral_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1130,7 +1443,7 @@ mod tests {
             EphemeralWorkspace::create(&fixture.scratch, "command", "opaque-mixed-route-drop")?;
         write_upperdir_opaque_marker(&workspace, "tree")?;
 
-        let response = finalize_ephemeral_command(
+        let response = finalize_ephemeral_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1194,7 +1507,7 @@ mod tests {
         write_upperdir_file(&workspace, "src/main.rs", b"source")?;
         write_upperdir_sparse_file(&workspace, "ignored/huge.bin", (16 * 1024 * 1024) + 1)?;
 
-        let response = finalize_ephemeral_command(
+        let response = finalize_ephemeral_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1258,6 +1571,75 @@ mod tests {
     }
 
     #[test]
+    fn custom_ignored_capture_limits_drive_finalize() -> TestResult {
+        let fixture = EphemeralFinalizeFixture::new("configured-ignored-limit-source-publish")?;
+        let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
+        let workspace =
+            EphemeralWorkspace::create(&fixture.scratch, "command", "configured-ignored-limit")?;
+        write_upperdir_file(&workspace, "src/main.rs", b"source")?;
+        write_upperdir_file(&workspace, "ignored/cache.txt", b"ignored")?;
+
+        let response = finalize_ephemeral_command_with_capture_options(
+            &fixture.root,
+            &snapshot,
+            &workspace,
+            CommitOptions::default(),
+            BoundedCaptureOptions {
+                ignored_limits: service::IgnoredCaptureLimits {
+                    max_ignored_file_bytes: 3,
+                    max_ignored_bytes: 16,
+                    spool_threshold_bytes: 1,
+                    ..service::IgnoredCaptureLimits::default()
+                },
+                ..BoundedCaptureOptions::default()
+            },
+            FinalizeCommandRequest {
+                runner_result: None,
+                command_elapsed_s: 0.25,
+                status: CommandStatus::Ok,
+                exit_code: Some(0),
+                stdout: "stdout".to_owned(),
+                stderr: String::new(),
+                command_id: Some("cmd_configured_ignored_limit".to_owned()),
+            },
+        )?;
+        service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+        let wire = response.to_wire_value();
+        assert_eq!(wire["status"], "ok");
+        assert_eq!(wire["success"], true);
+        assert_eq!(wire["changed_paths"], serde_json::json!(["src/main.rs"]));
+        assert_eq!(
+            wire["publish_lanes"]["source"]["publish_status"],
+            "committed"
+        );
+        assert_eq!(
+            wire["publish_lanes"]["ignored"]["publish_status"],
+            "dropped_due_to_limits"
+        );
+        assert_eq!(
+            wire["publish_lanes"]["ignored"]["drop_reason"],
+            layerstack::service::IGNORED_FILE_BYTE_LIMIT_DROP_REASON
+        );
+        assert_eq!(wire["publish_lanes"]["ignored"]["path_count"], 1);
+        assert_eq!(wire["publish_lanes"]["ignored"]["bytes"], 7);
+        assert_eq!(wire["publish_lanes"]["ignored"]["spooled_bytes"], 0);
+        assert_eq!(
+            LayerStack::open(fixture.root.clone())?
+                .read_text("src/main.rs")?
+                .0,
+            "source"
+        );
+        let (_bytes, ignored_exists) =
+            LayerStack::open(fixture.root.clone())?.read_bytes("ignored/cache.txt")?;
+        assert!(
+            !ignored_exists,
+            "configured limit-dropped ignored payload must not publish"
+        );
+        Ok(())
+    }
+
+    #[test]
     fn source_conflict_drops_ignored_output_and_reports_lanes() -> TestResult {
         let fixture = EphemeralFinalizeFixture::new("source-conflict-drops-ignored")?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
@@ -1270,7 +1652,7 @@ mod tests {
         write_upperdir_file(&workspace, "src/main.rs", b"mine")?;
         write_upperdir_file(&workspace, "ignored/cache.txt", b"ignored")?;
 
-        let response = finalize_ephemeral_command(
+        let response = finalize_ephemeral_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1330,7 +1712,7 @@ mod tests {
         write_upperdir_file(&workspace, "src/main.rs", b"source")?;
         write_upperdir_file(&workspace, "ignored/cache.txt", b"ignored")?;
 
-        let response = finalize_ephemeral_command(
+        let response = finalize_ephemeral_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1385,6 +1767,80 @@ mod tests {
     }
 
     #[test]
+    fn route_rejection_with_source_reports_ignored_publish_failed() -> TestResult {
+        let fixture = EphemeralFinalizeFixture::new("route-reject-source-ignored")?;
+        LayerStack::open(fixture.root.clone())?.publish_layer(&[
+            LayerChange::Write {
+                path: layerstack::LayerPath::parse("tree/src.txt")?,
+                content: b"source".to_vec(),
+            },
+            LayerChange::Write {
+                path: layerstack::LayerPath::parse("tree/ignored/cache.txt")?,
+                content: b"ignored".to_vec(),
+            },
+        ])?;
+        let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
+        let workspace =
+            EphemeralWorkspace::create(&fixture.scratch, "command", "route-reject-source")?;
+        write_upperdir_file(&workspace, "src/main.rs", b"source")?;
+        write_upperdir_file(&workspace, "ignored/cache.txt", b"ignored")?;
+        write_upperdir_opaque_marker(&workspace, "tree")?;
+
+        let response = finalize_ephemeral_command_with_default_capture_options(
+            &fixture.root,
+            &snapshot,
+            &workspace,
+            CommitOptions::default(),
+            FinalizeCommandRequest {
+                runner_result: None,
+                command_elapsed_s: 0.25,
+                status: CommandStatus::Ok,
+                exit_code: Some(0),
+                stdout: "stdout".to_owned(),
+                stderr: String::new(),
+                command_id: Some("cmd_route_reject_source_ignored".to_owned()),
+            },
+        )?;
+        service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+        let wire = response.to_wire_value();
+        assert_eq!(wire["status"], "ok");
+        assert_eq!(wire["success"], false);
+        assert_eq!(wire["changed_paths"], serde_json::json!([]));
+        assert_eq!(
+            wire["publish_lanes"]["routing"]["drop_reason_counts"],
+            serde_json::json!({"opaque_dir_mixed_routes": 1})
+        );
+        assert_eq!(wire["publish_lanes"]["source"]["publish_status"], "failed");
+        assert_eq!(wire["publish_lanes"]["source"]["path_count"], 1);
+        assert_eq!(wire["publish_lanes"]["ignored"]["path_count"], 1);
+        assert_eq!(wire["publish_lanes"]["ignored"]["publish_status"], "failed");
+        assert_eq!(
+            wire["publish_lanes"]["ignored"]["drop_reason"],
+            "publish_failed"
+        );
+        assert_eq!(
+            LayerStack::open(fixture.root.clone())?
+                .read_active_manifest()?
+                .version,
+            snapshot.manifest_version
+        );
+        let (_bytes, source_exists) =
+            LayerStack::open(fixture.root.clone())?.read_bytes("src/main.rs")?;
+        assert!(
+            !source_exists,
+            "source output must not publish on route rejection"
+        );
+        let (_bytes, ignored_exists) =
+            LayerStack::open(fixture.root.clone())?.read_bytes("ignored/cache.txt")?;
+        assert!(
+            !ignored_exists,
+            "ignored output must not publish on route rejection"
+        );
+        Ok(())
+    }
+
+    #[test]
     fn source_conflict_takes_precedence_over_ignored_limit_drop_status() -> TestResult {
         let fixture = EphemeralFinalizeFixture::new("ignored-limit-source-conflict")?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
@@ -1397,7 +1853,7 @@ mod tests {
         write_upperdir_file(&workspace, "src/main.rs", b"mine")?;
         write_upperdir_sparse_file(&workspace, "ignored/huge.bin", (16 * 1024 * 1024) + 1)?;
 
-        let response = finalize_ephemeral_command(
+        let response = finalize_ephemeral_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1454,7 +1910,7 @@ mod tests {
         let payload = vec![b'x'; (1024 * 1024) + 1];
         write_upperdir_file(&workspace, "ignored/large.bin", &payload)?;
 
-        let response = finalize_ephemeral_command(
+        let response = finalize_ephemeral_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1518,7 +1974,7 @@ mod tests {
         let payload = vec![b'x'; (1024 * 1024) + 1];
         write_upperdir_file(&workspace, "pkg/ignored/large.bin", &payload)?;
 
-        let response = finalize_ephemeral_command(
+        let response = finalize_ephemeral_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1561,8 +2017,8 @@ mod tests {
     }
 
     #[test]
-    fn failed_publish_cleans_spooled_ignored_payloads() -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new("ignored-spool-publish-failure")?;
+    fn route_rejection_cleans_spooled_ignored_payloads() -> TestResult {
+        let fixture = EphemeralFinalizeFixture::new("ignored-spool-route-rejection")?;
         LayerStack::open(fixture.root.clone())?.publish_layer(&[
             LayerChange::Write {
                 path: layerstack::LayerPath::parse("tree/src.txt")?,
@@ -1577,13 +2033,13 @@ mod tests {
         let workspace = EphemeralWorkspace::create(
             &fixture.scratch,
             "command",
-            "ignored-spool-publish-failure",
+            "ignored-spool-route-rejection",
         )?;
         let payload = vec![b'y'; (1024 * 1024) + 1];
         write_upperdir_file(&workspace, "ignored/large.bin", &payload)?;
         write_upperdir_opaque_marker(&workspace, "tree")?;
 
-        let response = finalize_ephemeral_command(
+        let response = finalize_ephemeral_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1595,7 +2051,7 @@ mod tests {
                 exit_code: Some(0),
                 stdout: "stdout".to_owned(),
                 stderr: String::new(),
-                command_id: Some("cmd_ignored_spool_publish_failure".to_owned()),
+                command_id: Some("cmd_ignored_spool_route_rejection".to_owned()),
             },
         )?;
         service::release_lease(&fixture.root, &snapshot.lease_id)?;
@@ -1624,6 +2080,85 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn failed_publish_cleans_spooled_ignored_payloads() -> TestResult {
+        let fixture = EphemeralFinalizeFixture::new("ignored-spool-publish-failure")?;
+        let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
+        let workspace = EphemeralWorkspace::create(
+            &fixture.scratch,
+            "command",
+            "ignored-spool-publish-failure",
+        )?;
+        let payload = vec![b'y'; (1024 * 1024) + 1];
+        write_upperdir_file(&workspace, "src/main.rs", b"source")?;
+        write_upperdir_file(&workspace, "ignored/large.bin", &payload)?;
+        let _failpoint_guard = enable_layerstack_test_failpoints();
+        inject_next_publish_failure(&fixture.root)?;
+
+        let response = finalize_ephemeral_command_with_default_capture_options(
+            &fixture.root,
+            &snapshot,
+            &workspace,
+            CommitOptions::default(),
+            FinalizeCommandRequest {
+                runner_result: None,
+                command_elapsed_s: 0.25,
+                status: CommandStatus::Ok,
+                exit_code: Some(0),
+                stdout: "stdout".to_owned(),
+                stderr: String::new(),
+                command_id: Some("cmd_ignored_spool_publish_failure".to_owned()),
+            },
+        )?;
+        service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+        let wire = response.to_wire_value();
+        assert_eq!(wire["status"], "ok");
+        assert_eq!(wire["success"], false);
+        assert_eq!(wire["changed_paths"], serde_json::json!([]));
+        assert_eq!(wire["publish_lanes"]["source"]["publish_status"], "failed");
+        assert_eq!(
+            wire["publish_lanes"]["ignored"]["publish_status"],
+            "dropped_due_to_source_conflict"
+        );
+        assert_eq!(
+            wire["publish_lanes"]["ignored"]["drop_reason"],
+            "source_not_published"
+        );
+        assert_eq!(
+            wire["publish_lanes"]["ignored"]["spooled_bytes"],
+            serde_json::json!((1024 * 1024) + 1)
+        );
+        assert_eq!(
+            LayerStack::open(fixture.root.clone())?
+                .read_active_manifest()?
+                .version,
+            snapshot.manifest_version
+        );
+        let (_bytes, source_exists) =
+            LayerStack::open(fixture.root.clone())?.read_bytes("src/main.rs")?;
+        assert!(
+            !source_exists,
+            "source output must not publish after failure"
+        );
+        let (_bytes, ignored_exists) =
+            LayerStack::open(fixture.root.clone())?.read_bytes("ignored/large.bin")?;
+        assert!(
+            !ignored_exists,
+            "ignored payload must not publish after source publish failure"
+        );
+        assert!(
+            !workspace
+                .dirs()
+                .run_dir
+                .join("spool")
+                .join("publish-capture")
+                .exists(),
+            "spool directory should be removed after publish failure"
+        );
+        Ok(())
+    }
+
     fn assert_non_success_discards(status: CommandStatus, exit_code: Option<i64>) -> TestResult {
         let fixture = EphemeralFinalizeFixture::new(status.as_str())?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
@@ -1631,7 +2166,7 @@ mod tests {
         write_upperdir_file(&workspace, "src/main.rs", b"source")?;
         write_upperdir_file(&workspace, "ignored/cache.txt", b"ignored")?;
 
-        let response = finalize_ephemeral_command(
+        let response = finalize_ephemeral_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1722,6 +2257,43 @@ mod tests {
             std::fs::create_dir_all(parent)?;
         }
         std::fs::write(marker, b"")
+    }
+
+    fn inject_next_publish_failure(root: &Path) -> std::io::Result<()> {
+        let marker = root.join(".layer-metadata").join("fail-next-publish");
+        if let Some(parent) = marker.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(marker, b"fail\n")
+    }
+
+    const LAYERSTACK_TEST_FAILPOINTS_ENV: &str = "EOS_LAYERSTACK_ENABLE_TEST_FAILPOINTS";
+
+    fn enable_layerstack_test_failpoints() -> EnvVarGuard {
+        EnvVarGuard::set(LAYERSTACK_TEST_FAILPOINTS_ENV, "1")
+    }
+
+    struct EnvVarGuard {
+        key: &'static str,
+        previous: Option<std::ffi::OsString>,
+    }
+
+    impl EnvVarGuard {
+        fn set(key: &'static str, value: &str) -> Self {
+            let previous = std::env::var_os(key);
+            std::env::set_var(key, value);
+            Self { key, previous }
+        }
+    }
+
+    impl Drop for EnvVarGuard {
+        fn drop(&mut self) {
+            if let Some(previous) = self.previous.take() {
+                std::env::set_var(self.key, previous);
+            } else {
+                std::env::remove_var(self.key);
+            }
+        }
     }
 
     struct EphemeralFinalizeFixture {
