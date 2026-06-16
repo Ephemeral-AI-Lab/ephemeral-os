@@ -228,6 +228,39 @@ fn bounded_capture_spools_multiple_accepted_ignored_payloads_by_aggregate_size()
 }
 
 #[test]
+fn bounded_capture_spools_nested_snapshot_ignored_payloads() -> TestResult {
+    let fixture = Fixture::new("bounded_capture_nested_spool")?;
+    LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
+        path: lp("pkg/.gitignore")?,
+        content: b"ignored/\n".to_vec(),
+    }])?;
+    let snapshot = service::acquire_snapshot(&fixture.root, "bounded-capture-nested-spool")?;
+    let upperdir = fixture.base.join("upper-bounded-nested-spool");
+    write_sparse_file(&upperdir.join("pkg/ignored/large.bin"), (1024 * 1024) + 1)?;
+    let spool_dir = fixture.base.join("spool-nested");
+
+    let captured = service::capture_upperdir_for_snapshot_with_options(
+        &fixture.root,
+        snapshot.manifest_version,
+        &snapshot.layer_paths,
+        &upperdir,
+        &spool_dir,
+        service::BoundedCaptureOptions::default(),
+    )?;
+    service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+    assert_eq!(captured.route_stats.direct_path_count, 1);
+    assert_eq!(captured.route_stats.direct_bytes, (1024 * 1024) + 1);
+    assert_eq!(captured.route_stats.direct_spooled_bytes, (1024 * 1024) + 1);
+    assert!(matches!(
+        captured.changes.as_slice(),
+        [LayerChange::WriteFile { size, .. }] if *size == (1024 * 1024) + 1
+    ));
+    std::fs::remove_dir_all(&spool_dir)?;
+    Ok(())
+}
+
+#[test]
 fn bounded_capture_reports_non_file_size_limit_reasons_before_payload_reads() -> TestResult {
     for case in [
         LimitCase {

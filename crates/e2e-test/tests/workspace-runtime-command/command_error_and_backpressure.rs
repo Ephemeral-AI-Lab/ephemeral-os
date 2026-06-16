@@ -1,4 +1,3 @@
-use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{bail, ensure, Result};
@@ -6,9 +5,10 @@ use protocol::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_bool, as_i64, as_str, clean_stdout, finalize_foreground_command, has_trace_event,
-    live_pool_or_skip, stdout, trace_record, unwrap_operation_result, wait_for_active_leases,
-    wait_for_command_count, wait_for_command_stdout_contains, wait_for_command_transcript_recycled,
+    ack_trace_export, array, as_bool, as_i64, as_str, clean_stdout, finalize_foreground_command,
+    has_trace_event, live_pool_or_skip, stdout, trace_export_records, trace_record,
+    unwrap_operation_result, wait_for_active_leases, wait_for_command_count,
+    wait_for_command_stdout_contains, wait_for_command_transcript_recycled,
 };
 
 #[test]
@@ -535,7 +535,7 @@ fn source_conflict_drops_ignored_output_with_publish_lanes() -> Result<()> {
         catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": format!(
-                "bash -lc 'printf SNAPSHOT_READY; sleep 2; mkdir -p {dir}/ignored; printf mine > {source_path}; printf ignored > {ignored_path}'"
+                "bash -lc 'printf SNAPSHOT_READY; read _; mkdir -p {dir}/ignored; printf mine > {source_path}; printf ignored > {ignored_path}'"
             ),
             "yield_time_ms": 500,
             "timeout_seconds": 30,
@@ -557,10 +557,13 @@ fn source_conflict_drops_ignored_output_with_publish_lanes() -> Result<()> {
                 "overwrite": true,
             }),
         )?;
-        let terminal_wire = wait_for_terminal_command_wire(
-            &lease,
-            &command_id,
-            Instant::now() + Duration::from_secs(20),
+        let terminal_wire = lease.call(
+            catalog::SANDBOX_COMMAND_WRITE_STDIN,
+            json!({
+                "command_id": &command_id,
+                "chars": "\n",
+                "yield_time_ms": 8000,
+            }),
         )?;
         let result = unwrap_operation_result(terminal_wire.clone())?;
         ensure!(
@@ -588,20 +591,16 @@ fn source_conflict_drops_ignored_output_with_publish_lanes() -> Result<()> {
             "source conflict should report one source and one ignored path: {result}"
         );
 
-        let record = trace_record(&terminal_wire)?;
-        ensure!(
-            has_trace_event(
-                &record,
-                "command",
-                "command.publish_lanes_decided",
-                |details| {
-                    details["source"]["publish_status"] == "conflict"
-                        && details["ignored"]["publish_status"] == "dropped_due_to_source_conflict"
-                        && details["ignored"]["drop_reason"] == "source_not_published"
-                }
-            ),
-            "command finalize trace must report source-conflict ignored drop: {record:?}"
-        );
+        wait_for_command_publish_lanes_trace(
+            &lease,
+            &command_id,
+            Instant::now() + Duration::from_secs(10),
+            |details| {
+                details["source"]["publish_status"] == "conflict"
+                    && details["ignored"]["publish_status"] == "dropped_due_to_source_conflict"
+                    && details["ignored"]["drop_reason"] == "source_not_published"
+            },
+        )?;
 
         let read_source =
             lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": &source_path}))?;
@@ -1159,24 +1158,37 @@ fn poll_read_progress_until_stdout_contains(
     bail!("read_progress did not surface {needle:?} before deadline; last poll: {last:?}");
 }
 
-fn wait_for_terminal_command_wire(
+fn wait_for_command_publish_lanes_trace(
     lease: &e2e_test::NodeLease<'_>,
     command_id: &str,
     deadline: Instant,
-) -> Result<Value> {
+    publish_lanes: impl Fn(&Value) -> bool,
+) -> Result<()> {
     loop {
-        let wire = lease.call(
-            catalog::SANDBOX_COMMAND_POLL,
-            json!({"command_id": command_id, "last_n_lines": 50}),
-        )?;
-        let result = unwrap_operation_result(wire.clone())?;
-        if as_str(&result, "status")? != "running" {
-            return Ok(wire);
+        let exported = lease.call_ok(catalog::SANDBOX_TRACE_EXPORT, json!({"max_records": 64}))?;
+        let records = trace_export_records(&exported)?;
+        ack_trace_export(lease, &exported)?;
+        for record in records {
+            let finalized_command = has_trace_event(&record, "command", "finalized", |details| {
+                details.get("command_id").and_then(Value::as_str) == Some(command_id)
+            });
+            if finalized_command
+                && has_trace_event(
+                    &record,
+                    "command",
+                    "command.publish_lanes_decided",
+                    |details| publish_lanes(details),
+                )
+            {
+                return Ok(());
+            }
         }
         if Instant::now() >= deadline {
-            bail!("command {command_id} did not finalize before deadline: {result}");
+            bail!(
+                "command finalize trace with publish_lanes_decided was not exported for {command_id}"
+            );
         }
-        thread::sleep(Duration::from_millis(50));
+        std::thread::sleep(Duration::from_millis(100));
     }
 }
 

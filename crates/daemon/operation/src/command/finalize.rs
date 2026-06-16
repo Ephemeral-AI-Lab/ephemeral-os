@@ -1503,6 +1503,64 @@ mod tests {
     }
 
     #[test]
+    fn successful_ephemeral_command_spools_nested_snapshot_ignored_output() -> TestResult {
+        let fixture = EphemeralFinalizeFixture::new("ignored-nested-spooled-success")?;
+        LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
+            path: layerstack::LayerPath::parse("pkg/.gitignore")?,
+            content: b"ignored/\n".to_vec(),
+        }])?;
+        let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
+        let workspace = EphemeralWorkspace::create(
+            &fixture.scratch,
+            "command",
+            "ignored-nested-spooled-success",
+        )?;
+        let payload = vec![b'x'; (1024 * 1024) + 1];
+        write_upperdir_file(&workspace, "pkg/ignored/large.bin", &payload)?;
+
+        let response = finalize_ephemeral_command(
+            &fixture.root,
+            &snapshot,
+            &workspace,
+            CommitOptions::default(),
+            FinalizeCommandRequest {
+                runner_result: None,
+                command_elapsed_s: 0.25,
+                status: CommandStatus::Ok,
+                exit_code: Some(0),
+                stdout: "stdout".to_owned(),
+                stderr: String::new(),
+                command_id: Some("cmd_ignored_nested_spooled_success".to_owned()),
+            },
+        )?;
+        service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+        let wire = response.to_wire_value();
+        assert_eq!(
+            wire["publish_lanes"]["ignored"]["spooled_bytes"],
+            serde_json::json!((1024 * 1024) + 1)
+        );
+        assert_eq!(
+            LayerStack::open(fixture.root.clone())?
+                .read_bytes("pkg/ignored/large.bin")?
+                .0
+                .expect("published ignored payload")
+                .len(),
+            (1024 * 1024) + 1
+        );
+        assert!(
+            !workspace
+                .dirs()
+                .run_dir
+                .join("spool")
+                .join("publish-capture")
+                .exists(),
+            "spool directory should be removed after successful publish"
+        );
+        Ok(())
+    }
+
+    #[test]
     fn failed_publish_cleans_spooled_ignored_payloads() -> TestResult {
         let fixture = EphemeralFinalizeFixture::new("ignored-spool-publish-failure")?;
         LayerStack::open(fixture.root.clone())?.publish_layer(&[

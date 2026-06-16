@@ -664,14 +664,122 @@ Final live E2E report root:
 crates/e2e-test/test-reports/runs/e2e-run-1781619166861
 ```
 
+## Milestone 4 Outcome And Handoff
+
+This iteration completed Milestone 4: lane-aware OCC publish semantics for
+ephemeral command finalization. It did not start command Git OCC, config/YAML
+limit wiring, compaction, or retention policy work.
+
+### Scope Completed
+
+- Successful command finalization now publishes captured output through a
+  lane-aware LayerStack API instead of the earlier all-capture publish call.
+- Source-lane changes remain gated by snapshot-manifest OCC validation.
+- Ignored-lane changes publish as direct LWW only after the source lane is
+  known to be eligible: committed, accepted/no-op, or empty.
+- Source OCC conflict drops ignored output from the same command with
+  `ignored.publish_status=dropped_due_to_source_conflict` and
+  `ignored.drop_reason=source_not_published`.
+- Accepted source and ignored changes are submitted atomically, so mixed-lane
+  success advances the manifest once and appears as one coherent publish result.
+- Ignored-only commands still use direct-LWW semantics, and later ignored
+  writers win as expected.
+- Milestone 3 spool-backed ignored payloads are preserved, including aggregate
+  spool threshold behavior and `publish_lanes.ignored.spooled_bytes`.
+- Existing protected routing drop reasons and `publish_lanes.routing` metadata
+  continue to flow through responses and `command.publish_lanes_decided`.
+
+### Milestone 4 Checklist
+
+| Item | Status | Notes |
+| --- | --- | --- |
+| Replace command finalizer publish call with lane-aware API | Complete | `finalize_ephemeral_command` calls `publish_command_capture_lane_aware`. |
+| Keep source changes behind OCC | Complete | Source decisions still carry snapshot base hashes into the gated worker path. |
+| Publish ignored LWW only after source eligibility | Complete | The atomic worker drops direct accepted paths when gated validation fails. |
+| Drop ignored output on source conflict or source publish failure | Complete | Response metadata reports source `conflict` and ignored `dropped_due_to_source_conflict`. |
+| Preserve atomic mixed source+ignored success | Complete | LayerStack unit coverage verifies one manifest advance for mixed-lane success. |
+| Preserve spool-backed ignored payload support | Complete | Operation and live E2E coverage verify spooled ignored payloads still publish. |
+
+### Files Updated
+
+- `crates/daemon/layerstack/src/service.rs`
+  - Added `publish_command_capture_lane_aware`, using the command snapshot
+    manifest and protected-drop-aware route decisions.
+- `crates/daemon/layerstack/src/commit/mod.rs`
+  - Added the command lane-aware writer entry point, preserving atomic worker
+    submission for mixed source/direct decisions.
+- `crates/daemon/layerstack/tests/unit/route.rs`
+  - Added unit coverage for source conflict dropping ignored output,
+    ignored-only LWW overwrite behavior, mixed source+ignored one-manifest
+    publish, and nested snapshot ignored spool capture.
+- `crates/daemon/operation/src/command/finalize.rs`
+  - Switched command finalization to the lane-aware publish API.
+  - Added operation coverage for source conflict metadata, ignored drop
+    visibility, mixed success metadata, and nested spooled ignored output.
+- `crates/e2e-test/tests/workspace-runtime-command/command_error_and_backpressure.rs`
+  - Added live coverage for source conflict plus ignored output, mixed
+    source+ignored success, ignored-only LWW behavior through existing ignored
+    publish cases, and spool-backed ignored success.
+  - Uses trace export for the background finalize record when a stdin-gated
+    source conflict finalizes outside the `write_stdin` response trace.
+
+### Verification
+
+Commands run:
+
+```sh
+cargo fmt
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p layerstack route_tests
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p layerstack
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p operation command::
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p operation --all-targets
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo test -p e2e-test --no-run
+cargo run -p xtask -- package
+CARGO_TARGET_DIR=/tmp/ephemeral-os-target cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-command --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4
+git diff --check
+```
+
+Results:
+
+- `cargo fmt` passed.
+- `layerstack route_tests` passed 37/37.
+- Full `layerstack` package tests passed.
+- `operation command::` passed 46/46.
+- Full `operation --all-targets` passed.
+- `e2e-test --no-run` passed.
+- `xtask package` passed and rebuilt `dist/eosd-linux-amd64` with SHA
+  `772f50978b055633cfd6c90c26cb76c3bae8097e365d42bfe07f545422d6c268`.
+- Final live `workspace-runtime-command` suite passed 68/68 with the
+  feature-enabled E2E test binary, `max_parallel=5`,
+  `container_weight_cap=10`, and `heavy-test-threads=4`.
+- `git diff --check` passed.
+
+Final live E2E report root:
+
+```text
+crates/e2e-test/test-reports/runs/e2e-run-1781623238910
+```
+
+### Milestone 4 Risks And Review Focus
+
+- Command Git OCC remains future work; command-produced `.git` metadata is
+  still dropped with `git_metadata_unsupported`.
+- Ignored capture limits are still internal defaults. Config wiring and
+  validation remain later config closeout work.
+- Source regular-file payloads still use the existing in-memory capture limit.
+  The spool path remains scoped to accepted ignored command output.
+- Live E2E validation depends on the feature-enabled test binary. If a run
+  prints "skipping live e2e-test", clean stale `e2e-test` target artifacts and
+  rerun the live suite.
+- Stale `eos-e2e-*` Docker containers can trip the configured container cap
+  after interrupted live runs; remove only stale E2E containers before reruns.
+
 ### Remaining Risks And Review Focus
 
-- Ignored capture limits are internal defaults in this milestone. Config wiring
+- Ignored capture limits remain internal defaults. Config wiring
   and validation remain part of later config closeout work.
 - Source regular-file payloads still use the existing in-memory capture limit.
-  This milestone only changes ignored command output capture.
-- The command finalizer still uses the existing publish path for OCC conflict
-  semantics. Broader lane-aware publish API replacement remains Milestone 4.
+  The spooled path is currently scoped to ignored command output capture.
 - Spool-backed payloads are copied into LayerStack layers rather than reflinked
   or hardlinked. That is intentionally conservative and can be optimized later.
 
@@ -681,8 +789,6 @@ The following spec areas are intentionally left for later iterations:
 
 - Command Git OCC remains future work; until then, command-produced `.git`
   metadata is dropped with `git_metadata_unsupported`.
-- Bounded spool capture with file-backed digests.
-- Lane-aware publish API that replaces the existing all-capture publish path.
 - Configurable response/trace byte limits for ignored-lane metadata.
 - Compaction and retention semantics for ignored-lane artifacts.
 - Contract expansion for later milestones once those behaviors exist.
@@ -692,9 +798,9 @@ The following spec areas are intentionally left for later iterations:
 - Non-success commands now capture bounded route metadata before returning, but
   they do not publish source or ignored writes. This is deliberate diagnostic
   metadata, not a mutable-layer side effect.
-- Successful commands still use the existing all-capture publish path. The new
-  `publish_lanes` object reflects route classification, but the full lane-aware
-  publish API is still future work.
+- Successful commands now use the lane-aware publish API. Source output is OCC
+  gated, ignored output is direct LWW only after source eligibility is known,
+  and mixed success is submitted atomically.
 - The 2A Git metadata handling is route/drop reporting, not command Git OCC.
   Dropped `.git` paths are visible in metadata; they are not semantically merged
   or published.
