@@ -148,6 +148,14 @@ pub struct CommitOptions {
     pub auto_squash_max_depth: usize,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct CaptureRouteStats {
+    pub gated_path_count: usize,
+    pub direct_path_count: usize,
+    pub drop_path_count: usize,
+    pub direct_bytes: u64,
+}
+
 impl Default for CommitOptions {
     fn default() -> Self {
         Self {
@@ -293,7 +301,6 @@ impl CommitWriter {
     ) -> Result<ChangesetResult, CommitError> {
         let stack = self.open_stack()?;
         let mut path_groups = Vec::with_capacity(changes.len());
-        let mut publishable = Vec::with_capacity(changes.len());
         for change in changes {
             let path = change.path().clone();
             let route = route_for_path(&stack, &path)
@@ -312,10 +319,30 @@ impl CommitWriter {
                 base_hash,
                 message: drop_message(route),
             });
-            if route != Route::Drop {
-                publishable.push(change.clone());
-            }
         }
+        self.apply_changeset_with_decisions(changes, snapshot_version, atomic, path_groups)
+    }
+
+    pub(crate) fn apply_changeset_with_decisions(
+        &self,
+        changes: &[LayerChange],
+        snapshot_version: Option<u64>,
+        atomic: bool,
+        path_groups: Vec<PublishDecision>,
+    ) -> Result<ChangesetResult, CommitError> {
+        if changes.len() != path_groups.len() {
+            return Err(CommitError::RoutePreparation(format!(
+                "changeset decision count mismatch: {} changes, {} decisions",
+                changes.len(),
+                path_groups.len()
+            )));
+        }
+        let publishable = changes
+            .iter()
+            .zip(path_groups.iter())
+            .filter(|(_, group)| group.route != Route::Drop)
+            .map(|(change, _)| change.clone())
+            .collect::<Vec<_>>();
         let handoff_event = worker_handoff_event(&path_groups, publishable.len(), atomic);
         let receiver = self.commit_queue.submit(PreparedChangeset {
             path_groups,
@@ -375,11 +402,73 @@ fn route_count(path_groups: &[PublishDecision], route: Route) -> usize {
         .count()
 }
 
+pub fn capture_route_stats_for_manifest(
+    root: &Path,
+    manifest: &Manifest,
+    changes: &[LayerChange],
+) -> Result<CaptureRouteStats, CommitError> {
+    let decisions = publish_decisions_for_manifest(root, manifest, changes)?;
+    let mut stats = CaptureRouteStats::default();
+    for (change, decision) in changes.iter().zip(decisions.iter()) {
+        match decision.route {
+            Route::Gated => stats.gated_path_count += 1,
+            Route::Direct => {
+                stats.direct_path_count += 1;
+                if let LayerChange::Write { content, .. } = change {
+                    stats.direct_bytes = stats
+                        .direct_bytes
+                        .saturating_add(u64::try_from(content.len()).unwrap_or(u64::MAX));
+                }
+            }
+            Route::Drop => stats.drop_path_count += 1,
+        }
+    }
+    Ok(stats)
+}
+
+pub(crate) fn publish_decisions_for_manifest(
+    root: &Path,
+    manifest: &Manifest,
+    changes: &[LayerChange],
+) -> Result<Vec<PublishDecision>, CommitError> {
+    let view = MergedView::new(root.to_path_buf());
+    let source = ManifestIgnoreSource {
+        view: &view,
+        manifest,
+    };
+    changes
+        .iter()
+        .map(|change| {
+            let path = change.path().clone();
+            let route = route_for_path_from_source(&source, &path)
+                .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
+            let base_hash = if route == Route::Gated {
+                snapshot_base_hash(&view, manifest, change)?
+            } else {
+                None
+            };
+            Ok(PublishDecision {
+                path,
+                route,
+                base_hash,
+                message: drop_message(route),
+            })
+        })
+        .collect()
+}
+
 fn route_for_path(stack: &LayerStack, path: &LayerPath) -> Result<Route, LayerStackError> {
+    route_for_path_from_source(stack, path)
+}
+
+fn route_for_path_from_source(
+    source: &impl IgnoreSource,
+    path: &LayerPath,
+) -> Result<Route, LayerStackError> {
     if path.as_str() == ".git" || path.as_str().starts_with(".git/") {
         return Ok(Route::Drop);
     }
-    if path_is_ignored(stack, path.as_str())? {
+    if path_is_ignored(source, path.as_str())? {
         Ok(Route::Direct)
     } else {
         Ok(Route::Gated)
@@ -397,7 +486,42 @@ fn stack_base_hash(stack: &LayerStack, path: &LayerPath) -> Result<Option<String
     Ok(hash_current(bytes.as_deref(), exists))
 }
 
-fn path_is_ignored(stack: &LayerStack, path: &str) -> Result<bool, LayerStackError> {
+fn snapshot_base_hash(
+    view: &MergedView,
+    manifest: &Manifest,
+    change: &LayerChange,
+) -> Result<Option<String>, CommitError> {
+    if matches!(change, LayerChange::OpaqueDir { .. }) {
+        return Ok(None);
+    }
+    let (bytes, exists) = view
+        .read_bytes(change.path().as_str(), manifest)
+        .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
+    Ok(hash_current(bytes.as_deref(), exists))
+}
+
+trait IgnoreSource {
+    fn read_bytes(&self, path: &str) -> Result<(Option<Vec<u8>>, bool), LayerStackError>;
+}
+
+impl IgnoreSource for LayerStack {
+    fn read_bytes(&self, path: &str) -> Result<(Option<Vec<u8>>, bool), LayerStackError> {
+        Self::read_bytes(self, path)
+    }
+}
+
+struct ManifestIgnoreSource<'a> {
+    view: &'a MergedView,
+    manifest: &'a Manifest,
+}
+
+impl IgnoreSource for ManifestIgnoreSource<'_> {
+    fn read_bytes(&self, path: &str) -> Result<(Option<Vec<u8>>, bool), LayerStackError> {
+        self.view.read_bytes(path, self.manifest)
+    }
+}
+
+fn path_is_ignored(source: &impl IgnoreSource, path: &str) -> Result<bool, LayerStackError> {
     let rel = path.trim_start_matches('/');
     if rel.is_empty() {
         return Ok(false);
@@ -406,27 +530,27 @@ fn path_is_ignored(stack: &LayerStack, path: &str) -> Result<bool, LayerStackErr
     let mut accum = String::new();
     for part in &parts[..parts.len() - 1] {
         accum = join_rel(&accum, part);
-        if dir_is_excluded(stack, &accum)? {
+        if dir_is_excluded(source, &accum)? {
             return Ok(true);
         }
     }
-    match_with_inheritance(stack, rel, false)
+    match_with_inheritance(source, rel, false)
 }
 
-fn dir_is_excluded(stack: &LayerStack, dir_rel: &str) -> Result<bool, LayerStackError> {
+fn dir_is_excluded(source: &impl IgnoreSource, dir_rel: &str) -> Result<bool, LayerStackError> {
     let mut accum = String::new();
     let mut excluded = false;
     for part in dir_rel.split('/').filter(|part| !part.is_empty()) {
         accum = join_rel(&accum, part);
         if !excluded {
-            excluded = match_with_inheritance(stack, &accum, true)?;
+            excluded = match_with_inheritance(source, &accum, true)?;
         }
     }
     Ok(excluded)
 }
 
 fn match_with_inheritance(
-    stack: &LayerStack,
+    source: &impl IgnoreSource,
     path: &str,
     as_dir: bool,
 ) -> Result<bool, LayerStackError> {
@@ -434,7 +558,7 @@ fn match_with_inheritance(
     let mut ignored = false;
     let mut accum = String::new();
     for part in &parts {
-        if let Some(matcher) = matcher_for(stack, &accum)? {
+        if let Some(matcher) = matcher_for(source, &accum)? {
             let sub = if accum.is_empty() {
                 path
             } else {
@@ -454,11 +578,11 @@ fn match_with_inheritance(
 }
 
 fn matcher_for(
-    stack: &LayerStack,
+    source: &impl IgnoreSource,
     dir_rel: &str,
 ) -> Result<Option<ignore::gitignore::Gitignore>, LayerStackError> {
     let rel = join_rel(dir_rel, ".gitignore");
-    let (bytes, exists) = stack.read_bytes(&rel)?;
+    let (bytes, exists) = source.read_bytes(&rel)?;
     if !exists {
         return Ok(None);
     }
@@ -483,6 +607,7 @@ fn join_rel(prefix: &str, child: &str) -> String {
     }
 }
 
+#[cfg(test)]
 pub fn base_hashes_for_snapshot(
     root: &Path,
     manifest: &Manifest,

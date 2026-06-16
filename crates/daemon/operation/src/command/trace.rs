@@ -7,7 +7,7 @@ use trace::{
     TraceLink, TraceLinkKind, TraceRecord,
 };
 
-use super::contract::{CommandResponse, CommandStatus};
+use super::contract::{CommandResponse, CommandStatus, PUBLISH_LANES_METADATA_KEY};
 use super::finalize::insert_cgroup_process_resource_timings;
 use super::outcome::WorkspaceTimings;
 use super::registry::{CommandTraceOrigin, CompletionBufferEviction};
@@ -66,6 +66,7 @@ pub(super) struct CommandFinalizeTraceFacts {
     pub(super) persistence: CommandPersistenceOutcome,
     pub(super) publish_completion: bool,
     pub(super) evictions: Vec<CompletionBufferEviction>,
+    pub(super) publish_lanes: Option<Value>,
 }
 
 /// Trace events embed at most this many changed paths; the full list lives in
@@ -111,7 +112,7 @@ pub(super) fn command_response_trace_events(response: &CommandResponse) -> Vec<C
         .get("resource.layer_stack.manifest_depth")
         .cloned()
         .unwrap_or(Value::Null);
-    vec![
+    let mut events = vec![
         CommandTraceEvent::new(
             "overlay_workspace_prepared",
             json!({
@@ -193,7 +194,14 @@ pub(super) fn command_response_trace_events(response: &CommandResponse) -> Vec<C
                 "changed_path_count": changed_path_count,
             }),
         ),
-    ]
+    ];
+    if let Some(publish_lanes) = finalized.extras.get(PUBLISH_LANES_METADATA_KEY) {
+        events.push(CommandTraceEvent::new(
+            "command.publish_lanes_decided",
+            publish_lanes.clone(),
+        ));
+    }
+    events
 }
 
 fn runner_timings(timings: &WorkspaceTimings) -> Map<String, Value> {
@@ -454,6 +462,14 @@ pub(super) fn command_finalize_trace_record(facts: &CommandFinalizeTraceFacts) -
             }),
         ),
     ];
+    if let Some(publish_lanes) = &facts.publish_lanes {
+        events.push(EventRecord::new(
+            SpanUid::ROOT,
+            "command.publish_lanes_decided",
+            "command",
+            publish_lanes.clone(),
+        ));
+    }
     if let Some(kill) = facts.kill {
         events.push(EventRecord::new(
             SpanUid::new(2),

@@ -23,8 +23,8 @@ pub use capture::{
     capture_upperdir, capture_upperdir_with_stats, CaptureError, CaptureStats, CapturedUpperdir,
 };
 pub use commit::{
-    hash_current, ChangesetResult, CommitError, CommitOptions, CommitStatus, FileResult,
-    OccTraceEvent,
+    hash_current, CaptureRouteStats, ChangesetResult, CommitError, CommitOptions, CommitStatus,
+    FileResult, OccTraceEvent,
 };
 pub use error::LayerStackError;
 pub use stack::{LayerStack, Lease, MergedView, SquashOutcome};

@@ -170,6 +170,132 @@ pub struct CommandMetadata {
     pub extras: Map<String, Value>,
 }
 
+pub(crate) const PUBLISH_LANES_METADATA_KEY: &str = "publish_lanes";
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub(crate) struct PublishLanesMetadata {
+    pub source: SourcePublishLaneMetadata,
+    pub ignored: IgnoredPublishLaneMetadata,
+    pub routing: PublishLaneRoutingMetadata,
+}
+
+impl PublishLanesMetadata {
+    pub(crate) fn new(
+        source_path_count: usize,
+        source_publish_status: impl Into<String>,
+        source_drop_reason: Option<impl Into<String>>,
+        ignored_path_count: usize,
+        ignored_bytes: u64,
+        ignored_spooled_bytes: u64,
+        ignored_publish_status: impl Into<String>,
+        ignored_publish_mode: Option<impl Into<String>>,
+        ignored_drop_reason: Option<impl Into<String>>,
+        route_manifest_version: i64,
+    ) -> Self {
+        Self {
+            source: SourcePublishLaneMetadata {
+                path_count: source_path_count,
+                publish_status: source_publish_status.into(),
+                drop_reason: source_drop_reason.map(Into::into),
+            },
+            ignored: IgnoredPublishLaneMetadata {
+                path_count: ignored_path_count,
+                bytes: ignored_bytes,
+                spooled_bytes: ignored_spooled_bytes,
+                publish_status: ignored_publish_status.into(),
+                publish_mode: ignored_publish_mode.map(Into::into),
+                drop_reason: ignored_drop_reason.map(Into::into),
+            },
+            routing: PublishLaneRoutingMetadata {
+                ignore_route_source: "command_snapshot".to_owned(),
+                route_manifest_version,
+            },
+        }
+    }
+
+    pub(crate) fn empty(route_manifest_version: i64) -> Self {
+        Self::new(
+            0,
+            "empty",
+            None::<String>,
+            0,
+            0,
+            0,
+            "empty",
+            None::<String>,
+            None::<String>,
+            route_manifest_version,
+        )
+    }
+
+    pub(crate) fn dropped_command_failed(route_manifest_version: i64) -> Self {
+        Self::new(
+            0,
+            "dropped_command_failed",
+            None::<String>,
+            0,
+            0,
+            0,
+            "dropped_command_failed",
+            None::<String>,
+            None::<String>,
+            route_manifest_version,
+        )
+    }
+
+    pub(crate) fn dropped_command_failed_with_counts(
+        source_path_count: usize,
+        ignored_path_count: usize,
+        ignored_bytes: u64,
+        route_manifest_version: i64,
+    ) -> Self {
+        Self::new(
+            source_path_count,
+            "dropped_command_failed",
+            None::<String>,
+            ignored_path_count,
+            ignored_bytes,
+            0,
+            "dropped_command_failed",
+            None::<String>,
+            None::<String>,
+            route_manifest_version,
+        )
+    }
+
+    pub(crate) fn insert_into(self, extras: &mut Map<String, Value>) {
+        extras.insert(PUBLISH_LANES_METADATA_KEY.to_owned(), self.to_value());
+    }
+
+    #[must_use]
+    pub(crate) fn to_value(&self) -> Value {
+        serde_json::to_value(self).expect("serialize publish lanes metadata")
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub(crate) struct SourcePublishLaneMetadata {
+    pub path_count: usize,
+    pub publish_status: String,
+    pub drop_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub(crate) struct IgnoredPublishLaneMetadata {
+    pub path_count: usize,
+    pub bytes: u64,
+    pub spooled_bytes: u64,
+    pub publish_status: String,
+    pub publish_mode: Option<String>,
+    pub drop_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub(crate) struct PublishLaneRoutingMetadata {
+    pub ignore_route_source: String,
+    pub route_manifest_version: i64,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CommandResponse {
     pub status: CommandStatus,
@@ -350,6 +476,19 @@ mod tests {
             "isolated_workspace".to_owned(),
             json!({"caller_id": "caller", "published": false}),
         );
+        PublishLanesMetadata::new(
+            1,
+            "committed",
+            None::<String>,
+            0,
+            0,
+            0,
+            "empty",
+            None::<String>,
+            None::<String>,
+            1,
+        )
+        .insert_into(&mut extras);
         extras.insert("warnings".to_owned(), json!([]));
 
         let response = CommandResponse {
@@ -386,6 +525,28 @@ mod tests {
         );
         assert_eq!(response["mutation_source"], "isolated_workspace");
         assert_eq!(response["isolated_workspace"]["caller_id"], "caller");
+        assert_eq!(
+            response[PUBLISH_LANES_METADATA_KEY],
+            json!({
+                "source": {
+                    "path_count": 1,
+                    "publish_status": "committed",
+                    "drop_reason": null,
+                },
+                "ignored": {
+                    "path_count": 0,
+                    "bytes": 0,
+                    "spooled_bytes": 0,
+                    "publish_status": "empty",
+                    "publish_mode": null,
+                    "drop_reason": null,
+                },
+                "routing": {
+                    "ignore_route_source": "command_snapshot",
+                    "route_manifest_version": 1,
+                },
+            })
+        );
         assert_eq!(response["warnings"], json!([]));
     }
 
@@ -404,7 +565,32 @@ mod tests {
                     ..MutationCore::default()
                 },
                 workspace: WorkspaceKind::Ephemeral,
-                extras: Map::new(),
+                extras: {
+                    let mut extras = Map::new();
+                    extras.insert(
+                        "publish_lanes".to_owned(),
+                        json!({
+                            "source": {
+                                "path_count": 0,
+                                "publish_status": "dropped_command_failed",
+                                "drop_reason": null,
+                            },
+                            "ignored": {
+                                "path_count": 0,
+                                "bytes": 0,
+                                "spooled_bytes": 0,
+                                "publish_status": "dropped_command_failed",
+                                "publish_mode": null,
+                                "drop_reason": null,
+                            },
+                            "routing": {
+                                "ignore_route_source": "command_snapshot",
+                                "route_manifest_version": 0,
+                            },
+                        }),
+                    );
+                    extras
+                },
             }),
         }
         .to_wire_value();
@@ -413,6 +599,14 @@ mod tests {
         assert_eq!(response["workspace"], "ephemeral");
         assert!(response.get("mutation_source").is_none());
         assert!(response.get("timings").is_none());
+        assert_eq!(
+            response["publish_lanes"]["source"]["publish_status"],
+            "dropped_command_failed"
+        );
+        assert_eq!(
+            response["publish_lanes"]["ignored"]["publish_status"],
+            "dropped_command_failed"
+        );
     }
 
     #[test]
@@ -443,7 +637,32 @@ mod tests {
                     timings,
                 },
                 workspace: WorkspaceKind::Ephemeral,
-                extras: Map::new(),
+                extras: {
+                    let mut extras = Map::new();
+                    extras.insert(
+                        "publish_lanes".to_owned(),
+                        json!({
+                            "source": {
+                                "path_count": 1,
+                                "publish_status": "conflict",
+                                "drop_reason": null,
+                            },
+                            "ignored": {
+                                "path_count": 0,
+                                "bytes": 0,
+                                "spooled_bytes": 0,
+                                "publish_status": "empty",
+                                "publish_mode": null,
+                                "drop_reason": null,
+                            },
+                            "routing": {
+                                "ignore_route_source": "command_snapshot",
+                                "route_manifest_version": 0,
+                            },
+                        }),
+                    );
+                    extras
+                },
             }),
         }
         .to_wire_value();

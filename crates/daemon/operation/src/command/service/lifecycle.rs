@@ -18,6 +18,7 @@ use trace::{
 
 use crate::command::contract::{
     CollectCompletedOutput, CommandCompletion, CommandResponse, CommandStatus,
+    PUBLISH_LANES_METADATA_KEY,
 };
 use crate::command::finalize::{
     discarded_response, finalize_ephemeral_command, finalize_isolated_command,
@@ -281,26 +282,25 @@ impl CommandOps {
             stderr: String::new(),
             command_id: Some(command_id.clone()),
         };
-        let cancelled = kill.is_some();
         let outcome = match &*run {
             ActiveCommand::Ephemeral(ephemeral) => {
-                let outcome = if cancelled {
-                    Ok(discarded_response(WorkspaceKind::Ephemeral, request))
-                } else {
-                    finalize_ephemeral_command(
-                        &ephemeral.root,
-                        &ephemeral.snapshot,
-                        &ephemeral.workspace,
-                        self.commit_options(),
-                        request,
-                    )
-                };
+                let outcome = finalize_ephemeral_command(
+                    &ephemeral.root,
+                    &ephemeral.snapshot,
+                    &ephemeral.workspace,
+                    self.commit_options(),
+                    request,
+                );
                 let _ = service::release_lease(&ephemeral.root, &ephemeral.snapshot.lease_id);
                 outcome
             }
             ActiveCommand::Isolated(isolated) => {
-                if cancelled {
-                    Ok(discarded_response(WorkspaceKind::Isolated, request))
+                if kill.is_some() {
+                    Ok(discarded_response(
+                        WorkspaceKind::Isolated,
+                        request,
+                        Some(isolated.binding.manifest_version),
+                    ))
                 } else {
                     finalize_isolated_command(&isolated.binding, request)
                 }
@@ -310,6 +310,10 @@ impl CommandOps {
             Ok(response) => response,
             Err(error) => CommandResponse::error(error.to_string()),
         };
+        let publish_lanes = response
+            .finalized
+            .as_ref()
+            .and_then(|finalized| finalized.extras.get(PUBLISH_LANES_METADATA_KEY).cloned());
         let persistence = run.process().persist_final(&response.to_wire_value());
         self.registry.remove(&command_id);
         let trace_command_id = command_id.clone();
@@ -336,6 +340,7 @@ impl CommandOps {
                 persistence,
                 publish_completion,
                 evictions,
+                publish_lanes,
             },
             response,
         }

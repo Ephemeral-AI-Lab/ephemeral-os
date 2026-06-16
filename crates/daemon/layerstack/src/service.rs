@@ -7,7 +7,8 @@ use crate::model::{LayerChange, LayerPath, LayerRef, Manifest, MANIFEST_SCHEMA_V
 use serde_json::{json, Value};
 
 use crate::commit::{
-    base_hashes_for_snapshot, ChangesetResult, CommitError, CommitOptions, CommitWriter,
+    capture_route_stats_for_manifest, publish_decisions_for_manifest, CaptureRouteStats,
+    ChangesetResult, CommitError, CommitOptions, CommitWriter,
 };
 use crate::{LayerStack, LayerStackError};
 
@@ -228,14 +229,23 @@ pub fn publish_capture_with_options(
     options: CommitOptions,
 ) -> Result<ChangesetResult, CommitError> {
     let manifest = snapshot_manifest(root, snapshot_manifest_version, snapshot_layer_paths)?;
-    let base_hashes = base_hashes_for_snapshot(root, &manifest, changes)?;
-    commit_direct_with_options(
-        root,
-        Some(manifest_version_u64(snapshot_manifest_version)?),
+    let decisions = publish_decisions_for_manifest(root, &manifest, changes)?;
+    service_for_root(root, options)?.apply_changeset_with_decisions(
         changes,
-        &base_hashes,
-        options,
+        Some(manifest_version_u64(snapshot_manifest_version)?),
+        true,
+        decisions,
     )
+}
+
+pub fn capture_route_stats_for_snapshot(
+    root: &Path,
+    snapshot_manifest_version: i64,
+    snapshot_layer_paths: &[PathBuf],
+    changes: &[LayerChange],
+) -> Result<CaptureRouteStats, CommitError> {
+    let manifest = snapshot_manifest(root, snapshot_manifest_version, snapshot_layer_paths)?;
+    capture_route_stats_for_manifest(root, &manifest, changes)
 }
 
 fn snapshot_manifest(

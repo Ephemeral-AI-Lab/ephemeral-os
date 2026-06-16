@@ -102,6 +102,25 @@ fn command_finalize_trace_record_carries_origin_and_eviction_markers() {
             seq: 7,
             max_entries: 1024,
         }],
+        publish_lanes: Some(json!({
+            "source": {
+                "path_count": 0,
+                "publish_status": "dropped_command_failed",
+                "drop_reason": null,
+            },
+            "ignored": {
+                "path_count": 0,
+                "bytes": 0,
+                "spooled_bytes": 0,
+                "publish_status": "dropped_command_failed",
+                "publish_mode": null,
+                "drop_reason": null,
+            },
+            "routing": {
+                "ignore_route_source": "command_snapshot",
+                "route_manifest_version": 1,
+            },
+        })),
     };
 
     let record = command_finalize_trace_record(&facts);
@@ -140,6 +159,20 @@ fn command_finalize_trace_record_carries_origin_and_eviction_markers() {
     assert_eq!(finalized.details.value["signal"], 15);
     assert_eq!(finalized.details.value["kill_reason"], "timed_out");
     assert_eq!(finalized.details.value["publish_completion"], true);
+
+    let lanes = record
+        .events
+        .iter()
+        .find(|event| event.module == "command" && event.name == "command.publish_lanes_decided")
+        .expect("publish lanes event");
+    assert_eq!(
+        lanes.details.value["source"]["publish_status"],
+        "dropped_command_failed"
+    );
+    assert_eq!(
+        lanes.details.value["ignored"]["publish_status"],
+        "dropped_command_failed"
+    );
 
     let exit_taken = record
         .events
@@ -212,6 +245,7 @@ fn command_finalize_trace_record_carries_final_persist_failures() {
         },
         publish_completion: false,
         evictions: Vec::new(),
+        publish_lanes: None,
     };
 
     let record = command_finalize_trace_record(&facts);

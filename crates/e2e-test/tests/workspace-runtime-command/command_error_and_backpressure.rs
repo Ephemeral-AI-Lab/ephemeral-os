@@ -5,9 +5,9 @@ use protocol::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_i64, as_str, clean_stdout, finalize_foreground_command, live_pool_or_skip, stdout,
-    unwrap_operation_result, wait_for_active_leases, wait_for_command_count,
-    wait_for_command_transcript_recycled,
+    array, as_bool, as_i64, as_str, clean_stdout, finalize_foreground_command, has_trace_event,
+    live_pool_or_skip, stdout, trace_record, unwrap_operation_result, wait_for_active_leases,
+    wait_for_command_count, wait_for_command_transcript_recycled,
 };
 
 #[test]
@@ -43,6 +43,103 @@ fn nonzero_exit_and_stderr_are_structured() -> Result<()> {
     ensure!(
         stderr(&failed).is_empty(),
         "stderr field should stay empty for merged PTY output: {failed}"
+    );
+    wait_for_command_count(&lease, 0)?;
+    wait_for_active_leases(&lease, 0)?;
+    Ok(())
+}
+
+#[test]
+fn nonzero_exit_discards_source_and_ignored_writes_with_publish_lanes() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let dir = format!(
+        "publish-lanes-failure/{}",
+        e2e_test::unique_suffix().replace('-', "_")
+    );
+    let source_path = format!("{dir}/source.txt");
+    let ignored_path = format!("{dir}/cache/ignored.txt");
+
+    lease.call_ok(
+        catalog::SANDBOX_FILE_WRITE,
+        json!({
+            "path": format!("{dir}/.gitignore"),
+            "content": "cache/\n",
+            "overwrite": false,
+        }),
+    )?;
+    let before = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+    let before_version = as_i64(&before, "manifest_version")?;
+
+    let wire = lease.call(
+        catalog::SANDBOX_COMMAND_EXEC,
+        json!({
+            "cmd": format!(
+                "mkdir -p {dir}/cache && printf source > {source_path} && printf ignored > {ignored_path} && exit 42"
+            ),
+            "yield_time_ms": 8000,
+            "timeout_seconds": 10,
+        }),
+    )?;
+    let result = unwrap_operation_result(wire.clone())?;
+    ensure!(
+        as_str(&result, "status")? == "error",
+        "nonzero command should finalize in the foreground for publish-lane trace coverage: {result}"
+    );
+    ensure!(as_i64(&result, "exit_code")? == 42, "{result}");
+    ensure!(
+        array(&result, "changed_paths")?.is_empty(),
+        "failed command must not publish changed paths: {result}"
+    );
+
+    let lanes = &result["publish_lanes"];
+    ensure!(
+        lanes["source"]["publish_status"] == "dropped_command_failed",
+        "source lane must be marked dropped on command failure: {result}"
+    );
+    ensure!(
+        lanes["ignored"]["publish_status"] == "dropped_command_failed",
+        "ignored lane must be marked dropped on command failure: {result}"
+    );
+    ensure!(
+        lanes["source"]["path_count"] == 1 && lanes["ignored"]["path_count"] == 1,
+        "failed command should report one routed source path and one ignored path: {result}"
+    );
+    ensure!(
+        lanes["routing"]["ignore_route_source"] == "command_snapshot",
+        "publish lanes must report snapshot-scoped routing: {result}"
+    );
+
+    let record = trace_record(&wire)?;
+    ensure!(
+        has_trace_event(
+            &record,
+            "command",
+            "command.publish_lanes_decided",
+            |details| {
+                details["source"]["publish_status"] == "dropped_command_failed"
+                    && details["ignored"]["publish_status"] == "dropped_command_failed"
+                    && details["source"]["path_count"] == 1
+                    && details["ignored"]["path_count"] == 1
+                    && details["routing"]["ignore_route_source"] == "command_snapshot"
+            }
+        ),
+        "command finalize trace must include publish_lanes_decided: {record:?}"
+    );
+
+    for path in [&source_path, &ignored_path] {
+        let read = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": path}))?;
+        ensure!(
+            !as_bool(&read, "exists")?,
+            "failed command write {path} must not publish: {read}"
+        );
+    }
+    let after = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+    ensure!(
+        as_i64(&after, "manifest_version")? == before_version,
+        "failed command must not advance manifest: before={before}, after={after}"
     );
     wait_for_command_count(&lease, 0)?;
     wait_for_active_leases(&lease, 0)?;

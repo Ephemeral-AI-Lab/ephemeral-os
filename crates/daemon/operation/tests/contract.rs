@@ -33,7 +33,32 @@ fn command_finalize_conflict_response_matches_fixture() {
                 timings,
             },
             workspace: WorkspaceKind::Ephemeral,
-            extras: Map::new(),
+            extras: {
+                let mut extras = Map::new();
+                extras.insert(
+                    "publish_lanes".to_owned(),
+                    json!({
+                        "source": {
+                            "path_count": 1,
+                            "publish_status": "conflict",
+                            "drop_reason": null,
+                        },
+                        "ignored": {
+                            "path_count": 0,
+                            "bytes": 0,
+                            "spooled_bytes": 0,
+                            "publish_status": "empty",
+                            "publish_mode": null,
+                            "drop_reason": null,
+                        },
+                        "routing": {
+                            "ignore_route_source": "command_snapshot",
+                            "route_manifest_version": 0,
+                        },
+                    }),
+                );
+                extras
+            },
         }),
     }
     .to_wire_value();

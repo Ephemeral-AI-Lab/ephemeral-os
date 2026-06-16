@@ -1,9 +1,9 @@
 use crate::model::LayerChange;
 
 use crate::test_fixture::{lp, Fixture, TestResult};
-use crate::LayerStack;
+use crate::{service, CommitStatus, LayerStack};
 
-use super::{route_for_path, Route};
+use super::{capture_route_stats_for_manifest, route_for_path, Route};
 
 fn is_ignored(fixture: &Fixture, path: &str) -> TestResult<bool> {
     Ok(route_of(fixture, path)? == Route::Direct)
@@ -32,6 +32,85 @@ fn routes_tracked_ignored_and_git_paths_distinctly() -> TestResult {
     assert_eq!(route_of(&fixture, "target/out.txt")?, Route::Direct);
     assert_eq!(route_of(&fixture, "pkg/cache.pyc")?, Route::Direct);
     assert_eq!(route_of(&fixture, ".git/config")?, Route::Drop);
+    Ok(())
+}
+
+#[test]
+fn capture_route_stats_use_supplied_manifest_snapshot() -> TestResult {
+    let fixture = Fixture::new_with_gitignore("route_stats_snapshot", "ignored/\n")?;
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+    let route_manifest = stack.read_active_manifest()?;
+    stack.publish_layer(&[LayerChange::Write {
+        path: lp(".gitignore")?,
+        content: b"later/\n".to_vec(),
+    }])?;
+
+    let stats = capture_route_stats_for_manifest(
+        &fixture.root,
+        &route_manifest,
+        &[
+            LayerChange::Write {
+                path: lp("src/main.rs")?,
+                content: b"source".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp("ignored/cache.txt")?,
+                content: b"ignored".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp("later/cache.txt")?,
+                content: b"later".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp(".git/config")?,
+                content: b"git".to_vec(),
+            },
+        ],
+    )?;
+
+    assert_eq!(stats.gated_path_count, 2);
+    assert_eq!(stats.direct_path_count, 1);
+    assert_eq!(stats.drop_path_count, 1);
+    assert_eq!(stats.direct_bytes, 7);
+    Ok(())
+}
+
+#[test]
+fn publish_capture_uses_supplied_manifest_snapshot_for_routes() -> TestResult {
+    let fixture = Fixture::new_with_gitignore("publish_route_snapshot", "ignored/\n")?;
+    let snapshot = service::acquire_snapshot(&fixture.root, "route-snapshot-test")?;
+    LayerStack::open(fixture.root.clone())?.publish_layer(&[
+        LayerChange::Write {
+            path: lp(".gitignore")?,
+            content: b"later/\n".to_vec(),
+        },
+        LayerChange::Write {
+            path: lp("later/cache.txt")?,
+            content: b"theirs".to_vec(),
+        },
+    ])?;
+
+    let result = service::publish_capture(
+        &fixture.root,
+        snapshot.manifest_version,
+        &snapshot.layer_paths,
+        &[LayerChange::Write {
+            path: lp("later/cache.txt")?,
+            content: b"mine".to_vec(),
+        }],
+    )?;
+    service::release_lease(&fixture.root, &snapshot.lease_id)?;
+
+    assert_eq!(result.published_manifest_version, None);
+    assert_eq!(result.files[0].status, CommitStatus::AbortedVersion);
+    assert_eq!(fixture.read_text("later/cache.txt")?, "theirs");
+    let handoff = result
+        .events
+        .iter()
+        .find(|event| event.module == "occ" && event.name == "worker_handoff")
+        .expect("worker handoff event");
+    assert_eq!(handoff.details["gated_path_count"], 1);
+    assert_eq!(handoff.details["direct_path_count"], 0);
     Ok(())
 }
 
