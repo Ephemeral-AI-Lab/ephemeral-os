@@ -1,6 +1,6 @@
 mod support;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use operation_service::command::{
@@ -10,7 +10,7 @@ use operation_service::command::{
 use workspace::{CallerId, NetworkMode, WorkspaceId};
 
 use support::{
-    assert_private_host_create_request, build_services, create_request, workspace_handle,
+    assert_private_create_request, build_services, create_request, workspace_handle,
     FakeWorkspaceService,
 };
 
@@ -108,7 +108,12 @@ fn command_exec_none_creates_private_host_workspace_and_binds_it() {
     assert_eq!(output.exit_code, None);
     let create_requests = fake.create_requests();
     assert_eq!(create_requests.len(), 1);
-    assert_private_host_create_request(&create_requests[0], "caller-1", &workspace_root);
+    assert_private_create_request(
+        &create_requests[0],
+        "caller-1",
+        &workspace_root,
+        NetworkMode::Host,
+    );
     assert!(fake.destroy_calls().is_empty());
     assert_eq!(
         env.command.registry().workspace_for(&command_id),
@@ -158,12 +163,13 @@ fn command_exec_rejects_workspace_root_mismatch_before_command_allocation() {
         )
         .expect_err("root mismatch is rejected");
 
-    assert!(matches!(
-        error,
-        CommandServiceError::WorkspaceRootMismatch { expected, actual }
-            if expected == PathBuf::from("/workspace/session")
-                && actual == PathBuf::from("/workspace/other")
-    ));
+    match error {
+        CommandServiceError::WorkspaceRootMismatch { expected, actual } => {
+            assert_eq!(expected.as_path(), Path::new("/workspace/session"));
+            assert_eq!(actual.as_path(), Path::new("/workspace/other"));
+        }
+        other => panic!("expected workspace root mismatch, got {other:?}"),
+    }
     assert_eq!(
         env.command.process_store().allocate_command_id(),
         CommandId("cmd_1".to_owned())

@@ -108,7 +108,7 @@ fn command_contract_keeps_roots_and_trace_context_separate() {
     };
     let context = CommandCallContext {
         caller_id: input.caller_id.clone(),
-        trace: OperationTraceContext::default(),
+        trace: OperationTraceContext,
     };
 
     assert_eq!(input.workspace_root, PathBuf::from("/workspace"));

@@ -5,7 +5,7 @@ use crate::command::{
     CommandLifecycleState, CommandOutputSnapshot, CommandServiceError, CommandStatus,
     CommandTraceOrigin, CommandTranscriptStore, CommandYield, ExecCommandInput, FinalizationState,
 };
-use crate::workspace_crate::WorkspaceId;
+use crate::workspace_crate::{NetworkMode, WorkspaceId};
 use crate::workspace_manager::WorkspaceSessionHandler;
 
 use super::service::CommandOperationService;
@@ -33,16 +33,14 @@ impl CommandOperationService {
         let is_session_command = workspace.is_some();
         let handler = match workspace {
             Some(handler) => handler,
-            None => self.workspace().create_private_host_workspace(
+            None => self.workspace().create_private_workspace(
                 context.caller_id.clone(),
                 input.workspace_root.clone(),
+                NetworkMode::Host,
             )?,
         };
         let workspace_id = handler.workspace_id.clone();
         let finalize_policy = finalize_policy(is_session_command, &workspace_id);
-        let _yield_time_ms = input
-            .yield_time_ms
-            .unwrap_or(self.config().default_yield_time_ms);
 
         self.registry()
             .bind(command_id.clone(), workspace_id.clone())?;

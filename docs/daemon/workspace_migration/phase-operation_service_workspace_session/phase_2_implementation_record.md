@@ -188,6 +188,7 @@ Rules:
   - `crates/daemon/operation_service/tests/command_exec.rs`
   - `crates/daemon/operation_service/tests/command_ownership.rs`
   - `crates/daemon/operation_service/tests/support/mod.rs`
+  - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_command_service_IMPLEMENTATION_PLAN.md`
   - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
 - Verification:
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p operation_service`:
@@ -198,6 +199,8 @@ Rules:
     passed, 4 matching integration tests.
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service`:
     passed, 38 tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo clippy -p operation_service --all-targets --no-deps -- -D warnings`:
+    passed.
   - `cargo fmt --check`: passed.
   - `git diff --check`: passed.
   - `rg -n "WorkspaceRuntime|CommandOps|ExecTarget|InternalHostOneShot|StartCommand|CollectCompleted|layer_stack_root|request_id|trace_id|invocation_id|remountable|trace::TraceId|trace::RequestId|RequestId|TraceId|collect_completed|count_by_caller|count_commands|advance_active_commands_once|by_workspace|by_caller|workspace_index|caller_index" crates/daemon/operation_service/src/command crates/daemon/operation_service/tests/command_exec.rs crates/daemon/operation_service/tests/command_ownership.rs`:
@@ -212,14 +215,23 @@ Rules:
   records, and returns running command yields.
 - Unresolved issues: None for the implemented Milestone 3 ownership/admission
   surface.
+- Cleanup notes: Replaced the host-specific
+  `WorkspaceManagerService::create_private_host_workspace` helper with generic
+  `create_private_workspace(caller_id, workspace_root, network)` so the
+  workspace manager does not imply a missing isolated twin. Removed the unused
+  local exec yield-time binding left over from the not-yet-implemented real
+  spawn/yield wait path. Updated the Phase 2 implementation-plan checklist for
+  completed Milestone 3 items and marked launch preparation/yield waiting as
+  deferred to Milestone 4.
 - Handoff notes: Milestone 4 should replace the process-free active record path
   with the scoped finalization-aware launch/finalization flow once the service
   has a policy-free launch adapter. The completed-record authorization path is
   ready for read/poll behavior: service methods authorize active records first,
   then retained completed records by `CompletedCommandRecord.caller_id`.
-  One-shot commands are created through
-  `WorkspaceManagerService::create_private_host_workspace`, which keeps the
-  temporary workspace-create adapter out of command-service contracts.
+  One-shot commands call `WorkspaceManagerService::create_private_workspace`
+  with `NetworkMode::Host`, which keeps the temporary workspace-create adapter
+  out of command-service contracts without adding a host-specific workspace
+  manager API.
 
 ## Milestone 4: One-Shot Finalization And Persistent-Session Semantics
 

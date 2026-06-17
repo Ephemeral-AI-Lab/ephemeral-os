@@ -155,15 +155,16 @@ pub fn create_request(caller_id: &str, workspace_root: PathBuf) -> CreateWorkspa
     }
 }
 
-pub fn assert_private_host_create_request(
+pub fn assert_private_create_request(
     request: &CreateWorkspaceRequest,
     caller_id: &str,
     workspace_root: &PathBuf,
+    network: NetworkMode,
 ) {
     assert_eq!(request.caller_id, CallerId(caller_id.to_owned()));
     assert_eq!(&request.workspace_root, workspace_root);
     assert_eq!(&request.layer_stack_root, workspace_root);
-    assert_eq!(request.network, NetworkMode::Host);
+    assert_eq!(request.network, network);
 }
 
 pub fn workspace_handle(

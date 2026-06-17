@@ -224,7 +224,7 @@ capture result shape.
 
 - [x] Milestone 1: Operation-service scaffolding and contracts.
 - [x] Milestone 2: Command service registry/process-store split.
-- [ ] Milestone 3: Exec Some/None flows and caller ownership.
+- [x] Milestone 3: Exec Some/None flows and caller ownership.
 - [ ] Milestone 4: One-shot finalization and persistent-session finalization semantics.
 - [ ] Milestone 5: Local OS row projection.
 - [ ] Milestone 6: `WorkspaceRemountService` and remount-pending state.
@@ -654,12 +654,12 @@ against `CommandCallContext`.
 
 ### Implementation Record Workflow
 
-- [ ] Before starting, read
+- [x] Before starting, read
   `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
   and carry forward unresolved notes from earlier milestones.
-- [ ] At start, create or append the Milestone 3 entry in the implementation
+- [x] At start, create or append the Milestone 3 entry in the implementation
   record.
-- [ ] Before marking this milestone complete, update that entry with files
+- [x] Before marking this milestone complete, update that entry with files
   changed, verification commands/results, design deviations, unresolved issues,
   and handoff notes for Milestone 4.
 
@@ -747,22 +747,23 @@ pub struct CommandYield {
 
 ### Implementation Steps
 
-- [ ] Implement `OperationServices::exec_command` dispatch and root mismatch
+- [x] Implement `OperationServices::exec_command` dispatch and root mismatch
   error.
-- [ ] Add command service public methods with target signatures.
-- [ ] Implement `exec_command` mode selection:
+- [x] Add command service public methods with target signatures.
+- [x] Implement `exec_command` mode selection:
    - `Some(handler)`: use handler workspace root, network mode, layer paths, and
      workspace id.
    - `None`: call `WorkspaceManagerService::create(NetworkMode::Host)` using
      `workspace_root` as the root input and temporary adapter path until the
      workspace create contract collapses duplicate roots.
-- [ ] Adapt or move launch preparation from `operation::command::prepare` without
-   importing `operation::command`.
-- [ ] Register command id in registry and active record in process store.
-- [ ] Wait for the initial yield with `command::yield_wait_loop`.
-- [ ] Add caller authorization helpers that check active records first and
+- [ ] Deferred to Milestone 4: adapt or move launch preparation from
+   `operation::command::prepare` without importing `operation::command`.
+- [x] Register command id in registry and active record in process store.
+- [ ] Deferred to Milestone 4: wait for the initial yield with
+   `command::yield_wait_loop`.
+- [x] Add caller authorization helpers that check active records first and
    completed records second.
-- [ ] Add tests using fake workspace and inactive/fake command processes where
+- [x] Add tests using fake workspace and inactive/fake command processes where
    possible.
 
 ### Explicit Exclusions
@@ -798,17 +799,17 @@ git diff --check
 
 ### Acceptance Criteria
 
-- [ ] Only `CommandOperationService::exec_command` accepts
+- [x] Only `CommandOperationService::exec_command` accepts
   `Option<WorkspaceSessionHandler>`.
-- [ ] `OperationServices::exec_command` validates caller ownership and root match
+- [x] `OperationServices::exec_command` validates caller ownership and root match
   for `workspace_id: Some`.
-- [ ] `Some(handler)` exec does not create, destroy, or implicitly publish a
+- [x] `Some(handler)` exec does not create, destroy, or implicitly publish a
   workspace.
-- [ ] `None` exec creates a private one-shot host workspace and binds its workspace
+- [x] `None` exec creates a private one-shot host workspace and binds its workspace
   id to the command id without exposing it as a reusable session id.
-- [ ] Stdin/read/poll/cancel use command id plus `CommandCallContext` and reject
+- [x] Stdin/read/poll/cancel use command id plus `CommandCallContext` and reject
   caller mismatches for active and completed records.
-- [ ] No `ExecCommandInput` request correlation identifiers or `remountable` field
+- [x] No `ExecCommandInput` request correlation identifiers or `remountable` field
   are introduced.
 
 ## Milestone 4: One-Shot Finalization And Persistent-Session Semantics

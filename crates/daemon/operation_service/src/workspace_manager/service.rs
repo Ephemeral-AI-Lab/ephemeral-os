@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use crate::workspace_crate::{
@@ -54,16 +55,17 @@ impl WorkspaceManagerService {
         Ok(handler)
     }
 
-    pub fn create_private_host_workspace(
+    pub fn create_private_workspace(
         &self,
         caller_id: CallerId,
-        workspace_root: std::path::PathBuf,
+        workspace_root: PathBuf,
+        network: NetworkMode,
     ) -> Result<WorkspaceSessionHandler, WorkspaceManagerError> {
         self.create(CreateWorkspaceRequest {
             caller_id,
             layer_stack_root: workspace_root.clone(),
             workspace_root,
-            network: NetworkMode::Host,
+            network,
         })
     }
 
