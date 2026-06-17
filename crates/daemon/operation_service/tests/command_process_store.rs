@@ -256,6 +256,81 @@ fn command_process_store_completed_records_retain_caller_during_active_completio
 }
 
 #[test]
+fn command_process_store_rejects_completed_record_with_mismatched_owner() {
+    let store = CommandProcessStore::with_max_active(1);
+    let command_id = command_id("cmd_completed");
+    let owner = caller_id("caller-owner");
+    let workspace_id = workspace_id("workspace-1");
+    let reservation = store.try_reserve().expect("reservation succeeds");
+
+    store
+        .insert_active(
+            reservation,
+            active_record(command_id.clone(), owner.clone(), workspace_id.clone()),
+        )
+        .expect("active insert succeeds");
+
+    let error = match store.complete_active(completed_record(
+            command_id.clone(),
+            caller_id("caller-other"),
+            workspace_id,
+        )) {
+        Err(error) => error,
+        Ok(_) => panic!("completed record cannot rewrite caller ownership"),
+    };
+
+    assert!(matches!(
+        error,
+        CommandServiceError::CommandCallerMismatch { command_id: id, expected, actual }
+            if id == command_id
+                && expected == owner
+                && actual == caller_id("caller-other")
+    ));
+    assert!(store.active(&command_id).is_some());
+    assert!(store.completed(&command_id).is_none());
+}
+
+#[test]
+fn command_process_store_rejects_completed_record_with_mismatched_workspace() {
+    let store = CommandProcessStore::with_max_active(1);
+    let command_id = command_id("cmd_completed");
+    let caller_id = caller_id("caller-owner");
+    let original_workspace_id = workspace_id("workspace-1");
+    let reservation = store.try_reserve().expect("reservation succeeds");
+
+    store
+        .insert_active(
+            reservation,
+            active_record(
+                command_id.clone(),
+                caller_id.clone(),
+                original_workspace_id.clone(),
+            ),
+        )
+        .expect("active insert succeeds");
+
+    let rewritten_workspace_id = workspace_id("workspace-other");
+    let error = match store.complete_active(completed_record(
+            command_id.clone(),
+            caller_id,
+            rewritten_workspace_id.clone(),
+        )) {
+        Err(error) => error,
+        Ok(_) => panic!("completed record cannot rewrite workspace ownership"),
+    };
+
+    assert!(matches!(
+        error,
+            CommandServiceError::CommandWorkspaceMismatch { command_id: id, expected, actual }
+            if id == command_id
+                && expected == original_workspace_id
+                && actual == rewritten_workspace_id
+    ));
+    assert!(store.active(&command_id).is_some());
+    assert!(store.completed(&command_id).is_none());
+}
+
+#[test]
 fn command_process_store_completion_store_rejects_duplicate_command_id() {
     let completion_store = CommandCompletionStore::new();
     let command_id = command_id("cmd_completed");

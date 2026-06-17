@@ -2,8 +2,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use operation_service::command::{
-    CommandCallContext, CommandFinalizationOptions, CommandId, CommandOperationService,
-    ExecCommandInput, OperationTraceContext,
+    CommandCallContext, CommandFinalizationOptions, CommandOperationService, ExecCommandInput,
+    OperationTraceContext,
 };
 use operation_service::workspace_manager::WorkspaceManagerService;
 use operation_service::workspace_remount::{WorkspaceRemountOptions, WorkspaceRemountService};
@@ -140,14 +140,6 @@ fn command_service_retains_one_shot_finalization_options() {
     assert!(Arc::ptr_eq(command.workspace(), &workspace));
     assert_eq!(command.config(), &config);
     assert_eq!(command.finalization_options(), &options);
-    assert!(command
-        .registry()
-        .workspace_for(&CommandId("missing".to_owned()))
-        .is_none());
-    assert_eq!(
-        command.process_store().allocate_command_id(),
-        CommandId("cmd_1".to_owned())
-    );
 }
 
 #[test]

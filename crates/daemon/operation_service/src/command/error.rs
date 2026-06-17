@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use thiserror::Error;
 
 use crate::command::CommandId;
-use crate::workspace_crate::CallerId;
+use crate::workspace_crate::{CallerId, WorkspaceId};
 
 #[derive(Debug, Error)]
 pub enum CommandServiceError {
@@ -28,6 +28,18 @@ pub enum CommandServiceError {
         actual: CallerId,
     },
 
+    #[error(
+        "command workspace mismatch for {command_id:?}: expected {expected:?}, actual {actual:?}"
+    )]
+    CommandWorkspaceMismatch {
+        command_id: CommandId,
+        expected: WorkspaceId,
+        actual: WorkspaceId,
+    },
+
+    #[error("command registry binding missing for active command: {command_id:?}")]
+    CommandBindingMissing { command_id: CommandId },
+
     #[error("command already completed: {command_id:?}")]
     CommandAlreadyCompleted { command_id: CommandId },
 
@@ -45,4 +57,13 @@ pub enum CommandServiceError {
 
     #[error("command reservation belongs to a different process store")]
     ReservationStoreMismatch,
+
+    #[error(
+        "one-shot workspace cleanup failed for {command_id:?} after command start failure: command error: {command_error}; cleanup error: {cleanup_error}"
+    )]
+    OneShotWorkspaceCleanupFailed {
+        command_id: CommandId,
+        command_error: Box<CommandServiceError>,
+        cleanup_error: crate::workspace_manager::WorkspaceManagerError,
+    },
 }

@@ -104,6 +104,23 @@ impl CommandProcessStore {
         if !active.contains_key(&command_id) {
             return Ok(None);
         }
+        let active_record = active
+            .get(&command_id)
+            .expect("active command exists after contains_key");
+        if active_record.caller_id != record.caller_id {
+            return Err(CommandServiceError::CommandCallerMismatch {
+                command_id,
+                expected: active_record.caller_id.clone(),
+                actual: record.caller_id,
+            });
+        }
+        if active_record.workspace_id != record.workspace_id {
+            return Err(CommandServiceError::CommandWorkspaceMismatch {
+                command_id,
+                expected: active_record.workspace_id.clone(),
+                actual: record.workspace_id,
+            });
+        }
 
         let mut completed = lock(&self.completed.completed);
         if completed.contains_key(&command_id) {

@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use operation_service::command::{
-    CommandFinalizePolicy, CommandId, CommandServiceError, CommandStatus, ExecCommandInput,
-    OperationTraceContext,
+    CommandCallContext, CommandId, CommandServiceError, CommandStatus, ExecCommandInput,
+    OperationTraceContext, PollCommandInput,
 };
 use workspace::{CallerId, NetworkMode, WorkspaceId};
 
@@ -64,22 +64,18 @@ fn command_exec_some_uses_resolved_session_without_workspace_create_or_destroy()
     assert_eq!(output.status, CommandStatus::Running);
     assert_eq!(fake.create_requests().len(), create_count_before_exec);
     assert!(fake.destroy_calls().is_empty());
-    assert_eq!(
-        env.command.registry().workspace_for(&command_id),
-        Some(WorkspaceId("workspace-session".to_owned()))
-    );
-    let active = env
+    let poll = env
         .command
-        .process_store()
-        .active(&command_id)
-        .expect("active command is inserted");
-    assert_eq!(active.caller_id, CallerId("caller-1".to_owned()));
-    assert_eq!(
-        active.finalize_policy,
-        CommandFinalizePolicy::Session {
-            workspace_id: WorkspaceId("workspace-session".to_owned())
-        }
-    );
+        .poll(
+            PollCommandInput {
+                command_id: command_id.clone(),
+                last_n_lines: Some(10),
+            },
+            context("caller-1"),
+        )
+        .expect("owner can poll session command");
+    assert_eq!(poll.command_id, command_id);
+    assert_eq!(poll.status, CommandStatus::Running);
 }
 
 #[test]
@@ -115,21 +111,18 @@ fn command_exec_none_creates_private_host_workspace_and_binds_it() {
         NetworkMode::Host,
     );
     assert!(fake.destroy_calls().is_empty());
-    assert_eq!(
-        env.command.registry().workspace_for(&command_id),
-        Some(WorkspaceId("workspace-one-shot".to_owned()))
-    );
-    let active = env
+    let poll = env
         .command
-        .process_store()
-        .active(&command_id)
-        .expect("active command is inserted");
-    assert_eq!(
-        active.finalize_policy,
-        CommandFinalizePolicy::OneShotPublishThenDestroy {
-            workspace_id: WorkspaceId("workspace-one-shot".to_owned())
-        }
-    );
+        .poll(
+            PollCommandInput {
+                command_id: command_id.clone(),
+                last_n_lines: Some(10),
+            },
+            context("caller-1"),
+        )
+        .expect("owner can poll one-shot command");
+    assert_eq!(poll.command_id, command_id);
+    assert_eq!(poll.status, CommandStatus::Running);
 }
 
 #[test]
@@ -170,8 +163,23 @@ fn command_exec_rejects_workspace_root_mismatch_before_command_allocation() {
         }
         other => panic!("expected workspace root mismatch, got {other:?}"),
     }
-    assert_eq!(
-        env.command.process_store().allocate_command_id(),
-        CommandId("cmd_1".to_owned())
-    );
+    let output = env
+        .services
+        .exec_command(
+            exec_input(
+                "caller-1",
+                PathBuf::from("/workspace/session"),
+                Some(WorkspaceId("workspace-session".to_owned())),
+            ),
+            OperationTraceContext,
+        )
+        .expect("subsequent valid exec succeeds");
+    assert_eq!(output.command_id, Some(CommandId("cmd_1".to_owned())));
+}
+
+fn context(caller_id: &str) -> CommandCallContext {
+    CommandCallContext {
+        caller_id: CallerId(caller_id.to_owned()),
+        trace: OperationTraceContext,
+    }
 }

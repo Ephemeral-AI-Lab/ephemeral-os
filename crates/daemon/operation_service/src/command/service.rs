@@ -2,10 +2,10 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use crate::command::{
-    CancelCommandInput, CancellationState, CommandCallContext, CommandLifecycleState,
-    CommandLinesOutput, CommandOutputLine, CommandOutputSnapshot, CommandPollOutput,
-    CommandProcessStore, CommandRegistry, CommandServiceError, CommandStatus, CommandYield,
-    CompletedCommandRecord, PollCommandInput, ReadCommandLinesInput, WriteStdinInput,
+    ActiveCommandProcess, CancelCommandInput, CancellationState, CommandCallContext,
+    CommandLifecycleState, CommandLinesOutput, CommandOutputLine, CommandOutputSnapshot,
+    CommandPollOutput, CommandProcessStore, CommandRegistry, CommandServiceError, CommandStatus,
+    CommandYield, CompletedCommandRecord, PollCommandInput, ReadCommandLinesInput, WriteStdinInput,
 };
 use crate::workspace_crate::CallerId;
 use crate::workspace_manager::WorkspaceManagerService;
@@ -45,6 +45,21 @@ impl CommandOperationService {
         }
     }
 
+    #[cfg(test)]
+    pub(crate) fn with_process_store_for_test(
+        workspace: Arc<WorkspaceManagerService>,
+        config: ::command::CommandConfig,
+        process_store: CommandProcessStore,
+    ) -> Self {
+        Self {
+            workspace,
+            config,
+            registry: Arc::new(CommandRegistry::new()),
+            process_store: Arc::new(process_store),
+            finalization_options: CommandFinalizationOptions::default(),
+        }
+    }
+
     #[must_use]
     pub fn finalization_options(&self) -> &CommandFinalizationOptions {
         &self.finalization_options
@@ -61,13 +76,51 @@ impl CommandOperationService {
     }
 
     #[must_use]
-    pub fn registry(&self) -> &Arc<CommandRegistry> {
+    pub(crate) fn registry(&self) -> &Arc<CommandRegistry> {
         &self.registry
     }
 
     #[must_use]
-    pub fn process_store(&self) -> &Arc<CommandProcessStore> {
+    pub(crate) fn process_store(&self) -> &Arc<CommandProcessStore> {
         &self.process_store
+    }
+
+    #[cfg_attr(
+        not(test),
+        expect(
+        dead_code,
+        reason = "Milestone 4 finalizer will call this internal active-to-completed transition"
+        )
+    )]
+    pub(crate) fn complete_active_command(
+        &self,
+        record: CompletedCommandRecord,
+    ) -> Result<Option<ActiveCommandProcess>, CommandServiceError> {
+        let command_id = record.command_id.clone();
+        let Some(active) = self.process_store.active(&command_id) else {
+            return Ok(None);
+        };
+        let active_workspace_id = active.workspace_id.clone();
+        drop(active);
+
+        let bound_workspace_id = self.registry.workspace_for(&command_id).ok_or_else(|| {
+            CommandServiceError::CommandBindingMissing {
+                command_id: command_id.clone(),
+            }
+        })?;
+        if bound_workspace_id != active_workspace_id {
+            return Err(CommandServiceError::CommandWorkspaceMismatch {
+                command_id,
+                expected: active_workspace_id,
+                actual: bound_workspace_id,
+            });
+        }
+
+        let removed = self.process_store.complete_active(record)?;
+        if removed.is_some() {
+            let _ = self.registry.unbind(&command_id);
+        }
+        Ok(removed)
     }
 
     pub fn write_stdin(
@@ -196,6 +249,11 @@ impl CommandOperationService {
         &self,
         command_id: &crate::command::CommandId,
     ) -> Result<crate::workspace_crate::WorkspaceId, CommandServiceError> {
+        if self.process_store.active(command_id).is_none() {
+            return Err(CommandServiceError::CommandNotFound {
+                command_id: command_id.clone(),
+            });
+        }
         self.registry.workspace_for(command_id).ok_or_else(|| {
             CommandServiceError::CommandNotFound {
                 command_id: command_id.clone(),
@@ -307,5 +365,343 @@ fn line_window(
         total_lines,
         output_truncated: next_offset < total_lines,
         output,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+    use std::sync::Arc;
+    use std::time::Instant;
+
+    use crate::command::{
+        ActiveCommandProcess, CancellationState, CommandCallContext, CommandFinalizePolicy,
+        CommandId, CommandLifecycleState, CommandOutputLine, CommandProcessStore,
+        CommandServiceError, CommandStatus, CommandTerminalResult, CommandTraceOrigin,
+        CommandTranscriptStore, CompletedCommandRecord, FinalizationState, OperationTraceContext,
+        PollCommandInput, ReadCommandLinesInput, RetainedCommandTranscript, WriteStdinInput,
+    };
+    use crate::workspace_crate::{
+        CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
+        DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
+        ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceError,
+        WorkspaceHandle, WorkspaceId, WorkspaceService,
+    };
+    use crate::workspace_manager::WorkspaceManagerService;
+
+    use super::CommandOperationService;
+
+    struct NoopWorkspaceService;
+
+    impl WorkspaceService for NoopWorkspaceService {
+        fn create_workspace(
+            &self,
+            _request: CreateWorkspaceRequest,
+        ) -> Result<WorkspaceHandle, WorkspaceError> {
+            Err(WorkspaceError::Setup {
+                step: "not configured".to_owned(),
+            })
+        }
+
+        fn capture_changes(
+            &self,
+            _handle: &WorkspaceHandle,
+            _request: CaptureChangesRequest,
+        ) -> Result<CapturedWorkspaceChanges, WorkspaceError> {
+            Err(WorkspaceError::Capture {
+                message: "not configured".to_owned(),
+            })
+        }
+
+        fn remount_workspace(
+            &self,
+            _handle: &WorkspaceHandle,
+            _request: RemountWorkspaceRequest,
+        ) -> Result<RemountWorkspaceResult, WorkspaceError> {
+            Err(WorkspaceError::Setup {
+                step: "not configured".to_owned(),
+            })
+        }
+
+        fn destroy_workspace(
+            &self,
+            _handle: WorkspaceHandle,
+            _request: DestroyWorkspaceRequest,
+        ) -> Result<DestroyWorkspaceResult, WorkspaceError> {
+            Err(WorkspaceError::Setup {
+                step: "not configured".to_owned(),
+            })
+        }
+
+        fn latest_snapshot(
+            &self,
+            _request: LatestSnapshotRequest,
+        ) -> Result<ReadonlySnapshotHandle, WorkspaceError> {
+            Err(WorkspaceError::SnapshotAcquire {
+                source: "not configured".to_owned(),
+            })
+        }
+    }
+
+    fn command_service() -> CommandOperationService {
+        let workspace = Arc::new(WorkspaceManagerService::new(Arc::new(NoopWorkspaceService)));
+        CommandOperationService::with_process_store_for_test(
+            workspace,
+            command::CommandConfig::default(),
+            CommandProcessStore::new(),
+        )
+    }
+
+    fn command_id(id: &str) -> CommandId {
+        CommandId(id.to_owned())
+    }
+
+    fn caller_id(id: &str) -> CallerId {
+        CallerId(id.to_owned())
+    }
+
+    fn workspace_id(id: &str) -> WorkspaceId {
+        WorkspaceId(id.to_owned())
+    }
+
+    fn context(caller_id: &str) -> CommandCallContext {
+        CommandCallContext {
+            caller_id: CallerId(caller_id.to_owned()),
+            trace: OperationTraceContext,
+        }
+    }
+
+    fn inactive_process(command_id: &CommandId, caller_id: &CallerId) -> command::CommandProcess {
+        command::CommandProcess::new(command::CommandProcessSpec {
+            id: command_id.0.clone(),
+            caller_id: caller_id.0.clone(),
+            command: "cat".to_owned(),
+            timeout_seconds: None,
+        })
+    }
+
+    fn active_record(
+        command_id: CommandId,
+        caller_id: CallerId,
+        workspace_id: WorkspaceId,
+    ) -> ActiveCommandProcess {
+        ActiveCommandProcess {
+            command_id: command_id.clone(),
+            caller_id: caller_id.clone(),
+            workspace_id: workspace_id.clone(),
+            process: inactive_process(&command_id, &caller_id),
+            transcript: CommandTranscriptStore {
+                transcript_path: Some(PathBuf::from("/tmp/transcript.jsonl")),
+            },
+            finalize_policy: CommandFinalizePolicy::Session { workspace_id },
+            lifecycle_state: CommandLifecycleState::Running,
+            cancellation: CancellationState::None,
+            finalization: FinalizationState::NotStarted,
+            trace_origin: CommandTraceOrigin,
+            started_at: Instant::now(),
+        }
+    }
+
+    fn completed_record(
+        command_id: CommandId,
+        caller_id: CallerId,
+        workspace_id: WorkspaceId,
+        stdout: &str,
+    ) -> CompletedCommandRecord {
+        CompletedCommandRecord {
+            command_id,
+            caller_id,
+            workspace_id,
+            result: CommandTerminalResult {
+                status: CommandStatus::Completed,
+                exit_code: Some(0),
+                stdout: stdout.to_owned(),
+            },
+            transcript: RetainedCommandTranscript {
+                transcript_path: Some(PathBuf::from("/tmp/retained-transcript.jsonl")),
+            },
+            finalization: FinalizationState::Complete,
+            completed_at: Instant::now(),
+        }
+    }
+
+    fn seed_active(
+        service: &CommandOperationService,
+        command_id: CommandId,
+        caller_id: CallerId,
+        workspace_id: WorkspaceId,
+    ) {
+        service
+            .registry()
+            .bind(command_id.clone(), workspace_id.clone())
+            .expect("registry bind succeeds");
+        let reservation = service
+            .process_store()
+            .try_reserve()
+            .expect("reservation succeeds");
+        service
+            .process_store()
+            .insert_active(
+                reservation,
+                active_record(command_id, caller_id, workspace_id),
+            )
+            .expect("active insert succeeds");
+    }
+
+    fn complete_seeded_active(
+        service: &CommandOperationService,
+        command_id: CommandId,
+        caller_id: CallerId,
+        workspace_id: WorkspaceId,
+        stdout: &str,
+    ) {
+        service
+            .complete_active_command(completed_record(
+                command_id,
+                caller_id,
+                workspace_id,
+                stdout,
+            ))
+            .expect("completion succeeds")
+            .expect("active record is removed");
+    }
+
+    #[test]
+    fn command_ownership_allows_completed_read_for_owner_only() {
+        let service = command_service();
+        let command_id = command_id("cmd_completed");
+        let owner = caller_id("caller-owner");
+        let workspace_id = workspace_id("workspace-1");
+        seed_active(
+            &service,
+            command_id.clone(),
+            owner.clone(),
+            workspace_id.clone(),
+        );
+        complete_seeded_active(
+            &service,
+            command_id.clone(),
+            owner,
+            workspace_id,
+            "first\nsecond\nthird\n",
+        );
+
+        let output = service
+            .read_lines(
+                ReadCommandLinesInput {
+                    command_id: command_id.clone(),
+                    offset: 1,
+                    limit: 1,
+                },
+                context("caller-owner"),
+            )
+            .expect("owner can read completed command output");
+
+        assert_eq!(output.total_lines, 3);
+        assert_eq!(output.next_offset, 2);
+        assert!(output.output_truncated);
+        assert_eq!(
+            output.output,
+            vec![CommandOutputLine {
+                offset: 1,
+                text: "second".to_owned()
+            }]
+        );
+
+        let error = service
+            .read_lines(
+                ReadCommandLinesInput {
+                    command_id: command_id.clone(),
+                    offset: 0,
+                    limit: 1,
+                },
+                context("caller-other"),
+            )
+            .expect_err("wrong caller cannot read completed command output");
+        assert!(matches!(
+            error,
+            CommandServiceError::CommandCallerMismatch { command_id: id, expected, actual }
+                if id == command_id
+                    && expected == caller_id("caller-owner")
+                    && actual == caller_id("caller-other")
+        ));
+    }
+
+    #[test]
+    fn command_ownership_rejects_wrong_caller_for_completed_poll_stdin_and_cancel() {
+        let service = command_service();
+        let command_id = command_id("cmd_completed");
+        let owner = caller_id("caller-owner");
+        let workspace_id = workspace_id("workspace-1");
+        seed_active(
+            &service,
+            command_id.clone(),
+            owner.clone(),
+            workspace_id.clone(),
+        );
+        complete_seeded_active(&service, command_id.clone(), owner, workspace_id, "done\n");
+
+        let poll_error = service
+            .poll(
+                PollCommandInput {
+                    command_id: command_id.clone(),
+                    last_n_lines: Some(1),
+                },
+                context("caller-other"),
+            )
+            .expect_err("wrong caller cannot poll completed command");
+        let stdin_error = service
+            .write_stdin(
+                WriteStdinInput {
+                    command_id: command_id.clone(),
+                    chars: "ignored".to_owned(),
+                    yield_time_ms: Some(0),
+                },
+                context("caller-other"),
+            )
+            .expect_err("wrong caller cannot write stdin to completed command");
+        let cancel_error = service
+            .cancel(
+                crate::command::CancelCommandInput {
+                    command_id: command_id.clone(),
+                },
+                context("caller-other"),
+            )
+            .expect_err("wrong caller cannot cancel completed command");
+
+        for error in [poll_error, stdin_error, cancel_error] {
+            assert!(matches!(
+                error,
+                CommandServiceError::CommandCallerMismatch { command_id: id, expected, actual }
+                    if id == command_id
+                        && expected == caller_id("caller-owner")
+                        && actual == caller_id("caller-other")
+            ));
+        }
+    }
+
+    #[test]
+    fn command_completion_unbinds_active_registry_entry() {
+        let service = command_service();
+        let command_id = command_id("cmd_completed");
+        let owner = caller_id("caller-owner");
+        let workspace_id = workspace_id("workspace-1");
+        seed_active(
+            &service,
+            command_id.clone(),
+            owner.clone(),
+            workspace_id.clone(),
+        );
+
+        complete_seeded_active(&service, command_id.clone(), owner, workspace_id, "done\n");
+
+        assert!(service.registry().workspace_for(&command_id).is_none());
+        let error = service
+            .active_workspace_for_command(&command_id)
+            .expect_err("completed command is not active");
+        assert!(matches!(
+            error,
+            CommandServiceError::CommandNotFound { command_id: id } if id == command_id
+        ));
     }
 }
