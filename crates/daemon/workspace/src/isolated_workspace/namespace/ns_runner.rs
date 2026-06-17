@@ -4,7 +4,7 @@ use std::process::{Child, Command, ExitStatus, Output, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use ::namespace::protocol::{RunRequest, RunResult};
+use ::linux_namespace_subprocess::protocol::{RunRequest, RunResult};
 use nix::sys::signal::{kill, Signal};
 use nix::unistd::Pid;
 use serde_json::Value;

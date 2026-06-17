@@ -22,7 +22,9 @@ use std::time::{Duration, Instant};
 #[cfg(target_os = "linux")]
 mod ns_runner;
 #[cfg(target_os = "linux")]
-use namespace::protocol::{Fd, NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
+use linux_namespace_subprocess::protocol::{
+    Fd, NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot,
+};
 #[cfg(target_os = "linux")]
 use nix::errno::Errno;
 #[cfg(target_os = "linux")]

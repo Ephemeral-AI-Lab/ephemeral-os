@@ -11,7 +11,7 @@ members = [
     "crates/daemon/core",
     "crates/daemon/plugin",
     "crates/daemon/workspace",
-    "crates/daemon/namespace",
+    "crates/daemon/linux-namespace-subprocess",
     "crates/daemon/layerstack",
     "crates/daemon/overlay",
     "crates/host",
@@ -61,7 +61,7 @@ config = { path = "crates/daemon/config" }
 layerstack = { path = "crates/daemon/layerstack" }
 operation = { path = "crates/daemon/operation" }
 overlay = { path = "crates/daemon/overlay" }
-namespace = { path = "crates/daemon/namespace" }
+linux-namespace-subprocess = { path = "crates/daemon/linux-namespace-subprocess" }
 trace = { path = "crates/shared/trace" }
 protocol = { path = "crates/shared/protocol" }
 plugin-contract = { path = "crates/daemon/plugin-contract" }

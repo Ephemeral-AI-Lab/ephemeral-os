@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
 
-use namespace::protocol::{NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
+use linux_namespace_subprocess::protocol::{
+    NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot,
+};
 use serde_json::{json, Value};
 use workspace::IsolatedWorkspaceBinding;
 use workspace::OverlayDirs;
@@ -152,7 +154,11 @@ fn ns_fds_from_map(map: &std::collections::HashMap<String, i32>) -> Option<NsFds
     if map.is_empty() {
         return None;
     }
-    let fd = |name: &str| map.get(name).copied().map(namespace::protocol::Fd);
+    let fd = |name: &str| {
+        map.get(name)
+            .copied()
+            .map(linux_namespace_subprocess::protocol::Fd)
+    };
     Some(NsFds {
         user: fd("user"),
         mnt: fd("mnt"),

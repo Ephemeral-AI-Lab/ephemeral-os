@@ -1,4 +1,6 @@
-use namespace::protocol::{RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
+use linux_namespace_subprocess::protocol::{
+    RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot,
+};
 
 use super::*;
 

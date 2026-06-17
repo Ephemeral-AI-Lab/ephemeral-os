@@ -6,8 +6,10 @@
 //! subcommand adapters, and maps their typed errors to process exit codes:
 //!
 //! - `eosd daemon`     -> the async RPC server in `daemon`.
-//! - `eosd ns-runner`  -> the single-threaded namespace runner in `namespace::runner`.
-//! - `eosd ns-holder`  -> the single-threaded namespace holder in `namespace::holder`.
+//! - `eosd ns-runner`  -> the single-threaded namespace runner in
+//!   `linux_namespace_subprocess::runner`.
+//! - `eosd ns-holder`  -> the single-threaded namespace holder in
+//!   `linux_namespace_subprocess::holder`.
 //!
 //! Three real processes, one static binary. This is the launcher chain:
 //! `daemon` owns the RPC server, `ns-runner` owns fresh/setns tool execution,
@@ -24,7 +26,8 @@
 //! silently drop the contract. The dispatcher therefore maps known codes via
 //! [`std::process::exit`]:
 //! - ns-holder: `1` (control pipe closed), `2` (unexpected token), `7` (test
-//!   crash knob) — `namespace::holder::NsHolderError::{CONTROL_CLOSED_EXIT,
+//!   crash knob) —
+//!   `linux_namespace_subprocess::holder::NsHolderError::{CONTROL_CLOSED_EXIT,
 //!   UNEXPECTED_TOKEN_EXIT, TEST_CRASH_EXIT}`.
 //! - thin-client / daemon connect path: `97` (`CONNECT_FAILED`), `98`
 //!   (`IO_FAILED`) — `daemon::wire::{CONNECT_FAILED, IO_FAILED}`.
@@ -68,8 +71,9 @@ fn main() -> Result<()> {
 /// child that creates and pins the isolated workspace's namespace stack and
 /// runs the readiness handshake, then `pause()`s until `SIGTERM`.
 ///
-/// Real thin call: `namespace::holder` already exposes `run(readiness_fd,
-/// control_fd)`, and its lib doc sanctions keeping the argv -> FD parsing here.
+/// Real thin call: `linux_namespace_subprocess::holder` already exposes
+/// `run(readiness_fd, control_fd)`, and its lib doc sanctions keeping the
+/// argv -> FD parsing here.
 /// We parse the two positional FD ints and dispatch; the holder's typed errors
 /// carry exit codes (`1` / `2` / `7`) that we map onto the process status so the
 /// daemon-side crash-recovery sees the same codes as the Rust holder.
@@ -77,18 +81,18 @@ fn run_ns_holder(mut args: std::env::Args) -> Result<()> {
     let readiness_fd = parse_fd(args.next(), "readiness_fd")?;
     let control_fd = parse_fd(args.next(), "control_fd")?;
 
-    match namespace::holder::run(readiness_fd, control_fd) {
+    match linux_namespace_subprocess::holder::run(readiness_fd, control_fd) {
         Ok(()) => Ok(()),
         Err(err) => {
             let code = match &err {
-                namespace::holder::NsHolderError::ControlPipeClosed => {
-                    namespace::holder::NsHolderError::CONTROL_CLOSED_EXIT
+                linux_namespace_subprocess::holder::NsHolderError::ControlPipeClosed => {
+                    linux_namespace_subprocess::holder::NsHolderError::CONTROL_CLOSED_EXIT
                 }
-                namespace::holder::NsHolderError::UnexpectedToken => {
-                    namespace::holder::NsHolderError::UNEXPECTED_TOKEN_EXIT
+                linux_namespace_subprocess::holder::NsHolderError::UnexpectedToken => {
+                    linux_namespace_subprocess::holder::NsHolderError::UNEXPECTED_TOKEN_EXIT
                 }
-                namespace::holder::NsHolderError::TestCrash => {
-                    namespace::holder::NsHolderError::TEST_CRASH_EXIT
+                linux_namespace_subprocess::holder::NsHolderError::TestCrash => {
+                    linux_namespace_subprocess::holder::NsHolderError::TEST_CRASH_EXIT
                 }
                 // Unshare / pipe-i/o failures have no dedicated Rust exit code;
                 // surface the message and fall through to the generic status.

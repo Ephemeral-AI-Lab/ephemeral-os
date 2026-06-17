@@ -8,7 +8,7 @@ license.workspace = true
 [dependencies]
 command.workspace = true
 layerstack.workspace = true
-namespace.workspace = true
+linux-namespace-subprocess.workspace = true
 overlay.workspace = true
 plugin-contract.workspace = true
 protocol.workspace = true

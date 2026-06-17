@@ -1,4 +1,4 @@
-//! Single-threaded namespace child bodies for `eosd ns-holder` and
+//! Single-threaded Linux namespace subprocess bodies for `eosd ns-holder` and
 //! `eosd ns-runner`.
 //!
 //! `unshare(CLONE_NEWUSER)` and `setns()` into a user namespace require a
