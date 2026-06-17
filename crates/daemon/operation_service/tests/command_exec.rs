@@ -8,11 +8,14 @@ use operation_service::command::{
     CommandCallContext, CommandFinalizationOutcome, CommandFinalizedPolicy, CommandId,
     CommandServiceError, CommandStatus, ExecCommandInput, OperationTraceContext, PollCommandInput,
 };
-use workspace::{CallerId, NetworkMode, WorkspaceId};
+use workspace::{
+    CallerId, NetworkMode, WorkspaceId, WorkspaceLaunchContext, WorkspaceLaunchNamespaceFds,
+};
 
 use support::{
     assert_private_create_request, build_services, build_services_with_launch_driver,
-    create_request, success_exit, workspace_handle, FakeLaunchDriver, FakeWorkspaceService,
+    create_request, success_exit, workspace_handle, workspace_handle_with_launch, FakeLaunchDriver,
+    FakeWorkspaceService,
 };
 
 fn exec_input(
@@ -163,6 +166,10 @@ fn command_exec_spawn_failure_destroys_created_one_shot_workspace() {
         fake.destroy_calls(),
         vec![WorkspaceId("workspace-one-shot".to_owned())]
     );
+    assert!(
+        !env.command.config().scratch_root.join("cmd_1").exists(),
+        "spawn failure should clean up unretained command artifacts"
+    );
 }
 
 #[test]
@@ -205,6 +212,196 @@ fn command_exec_spawn_failure_keeps_session_workspace_alive() {
             if command_id == CommandId("cmd_1".to_owned()) && error == "spawn failed"
     ));
     assert!(fake.destroy_calls().is_empty());
+    assert!(
+        !env.command.config().scratch_root.join("cmd_1").exists(),
+        "session spawn failure should clean up unretained command artifacts"
+    );
+}
+
+#[test]
+fn command_exec_passes_launch_material_to_runner_request_and_spawn_paths() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let workspace_root = PathBuf::from("/workspace/one-shot");
+    let launch = WorkspaceLaunchContext {
+        upperdir: PathBuf::from("/upper/custom"),
+        workdir: PathBuf::from("/work/custom"),
+        namespace_fds: Some(WorkspaceLaunchNamespaceFds {
+            user: Some(10),
+            mnt: Some(11),
+            pid: Some(12),
+            net: Some(13),
+        }),
+        cgroup_path: Some(PathBuf::from("/sys/fs/cgroup/eos")),
+    };
+    fake.push_create_result(Ok(workspace_handle_with_launch(
+        "workspace-one-shot",
+        "caller-1",
+        "lease-1",
+        workspace_root.clone(),
+        NetworkMode::Isolated,
+        Some(launch),
+    )));
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
+    let mut input = exec_input("caller-1", workspace_root.clone(), None);
+    input.cwd = Some(PathBuf::from("/workspace/one-shot/src"));
+    input.timeout_seconds = Some(2.5);
+
+    let output = env
+        .services
+        .exec_command(input, OperationTraceContext)
+        .expect("one-shot command exec succeeds");
+
+    assert_eq!(output.command_id, Some(CommandId("cmd_1".to_owned())));
+    let observations = launch_driver.spawn_observations();
+    assert_eq!(observations.len(), 1);
+    let observation = &observations[0];
+    assert_eq!(observation.spec_id, "cmd_1");
+    assert_eq!(observation.spec_caller_id, "caller-1");
+    assert_eq!(
+        observation.request_path,
+        env.command
+            .config()
+            .scratch_root
+            .join("cmd_1")
+            .join("runner-request.json")
+    );
+    assert_eq!(
+        observation.output_path,
+        env.command
+            .config()
+            .scratch_root
+            .join("cmd_1")
+            .join("runner-result.json")
+    );
+    assert_eq!(
+        observation.final_path,
+        env.command
+            .config()
+            .scratch_root
+            .join("cmd_1")
+            .join("final.json")
+    );
+    assert_eq!(
+        observation.transcript_path,
+        env.command
+            .config()
+            .scratch_root
+            .join("cmd_1")
+            .join("transcript.log")
+    );
+    assert_eq!(
+        observation.transcript_timestamp_timezone,
+        env.command.config().transcript_timestamp_timezone
+    );
+    assert_eq!(
+        observation.output_drain_grace_ms,
+        env.command.config().output_drain_grace_ms
+    );
+
+    let request = &observation.run_request;
+    assert_eq!(request["mode"], "set_ns");
+    assert_eq!(request["tool_call"]["invocation_id"], "cmd_1");
+    assert_eq!(request["tool_call"]["caller_id"], "caller-1");
+    assert_eq!(request["tool_call"]["verb"], "exec_command");
+    assert_eq!(request["tool_call"]["background"], false);
+    assert_eq!(request["tool_call"]["args"]["command"], "printf ok");
+    assert_eq!(
+        request["tool_call"]["args"]["cwd"],
+        "/workspace/one-shot/src"
+    );
+    assert_eq!(
+        request["workspace_root"].as_str(),
+        Some(workspace_root.to_string_lossy().as_ref())
+    );
+    assert_eq!(request["layer_paths"][0], "/lower/one");
+    assert_eq!(request["upperdir"], "/upper/custom");
+    assert_eq!(request["workdir"], "/work/custom");
+    assert_eq!(request["ns_fds"]["user"], 10);
+    assert_eq!(request["ns_fds"]["mnt"], 11);
+    assert_eq!(request["ns_fds"]["pid"], 12);
+    assert_eq!(request["ns_fds"]["net"], 13);
+    assert_eq!(request["cgroup_path"], "/sys/fs/cgroup/eos");
+    assert_eq!(request["timeout_seconds"], 2.5);
+}
+
+#[test]
+fn command_exec_missing_launch_material_destroys_one_shot_without_spawn() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let workspace_root = PathBuf::from("/workspace/one-shot");
+    fake.push_create_result(Ok(workspace_handle_with_launch(
+        "workspace-one-shot",
+        "caller-1",
+        "lease-1",
+        workspace_root.clone(),
+        NetworkMode::Host,
+        None,
+    )));
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
+
+    let error = env
+        .services
+        .exec_command(
+            exec_input("caller-1", workspace_root, None),
+            OperationTraceContext,
+        )
+        .expect_err("missing launch material rejects exec");
+
+    assert!(matches!(
+        error,
+        CommandServiceError::InvalidCommand { message }
+            if message.contains("lacks command launch material")
+    ));
+    assert!(launch_driver.spawn_observations().is_empty());
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![WorkspaceId("workspace-one-shot".to_owned())]
+    );
+    assert!(
+        !env.command.config().scratch_root.join("cmd_1").exists(),
+        "missing launch material should not leave command artifacts"
+    );
+}
+
+#[test]
+fn command_exec_artifact_directory_failure_destroys_one_shot_without_spawn() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let workspace_root = PathBuf::from("/workspace/one-shot");
+    fake.push_create_result(Ok(workspace_handle(
+        "workspace-one-shot",
+        "caller-1",
+        "lease-1",
+        workspace_root.clone(),
+        NetworkMode::Host,
+    )));
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
+    std::fs::write(
+        env.command.config().scratch_root.clone(),
+        b"not a directory",
+    )
+    .expect("scratch root file fixture is written");
+
+    let error = env
+        .services
+        .exec_command(
+            exec_input("caller-1", workspace_root, None),
+            OperationTraceContext,
+        )
+        .expect_err("artifact directory failure rejects exec");
+
+    assert!(matches!(
+        error,
+        CommandServiceError::CommandIo { command_id, error }
+            if command_id == CommandId("cmd_1".to_owned())
+                && error.contains("prepare command artifact directory")
+    ));
+    assert!(launch_driver.spawn_observations().is_empty());
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![WorkspaceId("workspace-one-shot".to_owned())]
+    );
 }
 
 #[test]

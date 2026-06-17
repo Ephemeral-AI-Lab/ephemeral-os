@@ -3,7 +3,7 @@ use std::fmt;
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Instant;
 
 use crate::command::{CommandFinalizedMetadata, CommandId, CommandServiceError, CommandStatus};
@@ -93,6 +93,16 @@ impl CommandProcessStore {
             command_id: command_id.clone(),
             active,
         })
+    }
+
+    #[must_use]
+    pub(crate) fn active_process(
+        &self,
+        command_id: &CommandId,
+    ) -> Option<Arc<::command::CommandProcess>> {
+        lock(&self.active)
+            .get(command_id)
+            .map(|active| Arc::clone(&active.process))
     }
 
     pub fn complete_active(
@@ -214,7 +224,7 @@ pub struct ActiveCommandProcess {
     pub command_id: CommandId,
     pub caller_id: CallerId,
     pub workspace_id: WorkspaceId,
-    pub process: ::command::CommandProcess,
+    pub process: Arc<::command::CommandProcess>,
     pub transcript: CommandTranscriptStore,
     pub finalize_policy: CommandFinalizePolicy,
     pub lifecycle_state: CommandLifecycleState,
@@ -385,7 +395,7 @@ mod tests {
             command_id: command_id.clone(),
             caller_id: caller_id.clone(),
             workspace_id: workspace_id.clone(),
-            process: inactive_process(&command_id, &caller_id),
+            process: Arc::new(inactive_process(&command_id, &caller_id)),
             transcript: CommandTranscriptStore::default(),
             finalize_policy: CommandFinalizePolicy::Session { workspace_id },
             lifecycle_state: CommandLifecycleState::Running,
@@ -472,5 +482,38 @@ mod tests {
             error,
             CommandServiceError::CommandAdmissionLimit { active: 1, max: 1 }
         ));
+    }
+
+    #[test]
+    fn active_process_clone_does_not_hold_active_store_lock() {
+        let store = CommandProcessStore::new();
+        let command_id = command_id("cmd_active");
+        let caller_id = caller_id("caller-owner");
+        let workspace_id = workspace_id("workspace-1");
+        let reservation = store.try_reserve().expect("reservation succeeds");
+
+        store
+            .insert_active(
+                reservation,
+                active_record(command_id.clone(), caller_id, workspace_id),
+            )
+            .expect("active insert succeeds");
+
+        let process = store
+            .active_process(&command_id)
+            .expect("active process is cloned");
+        let updated = store.update_active(&command_id, |active| {
+            active.lifecycle_state = CommandLifecycleState::Finalizing;
+        });
+
+        assert!(updated.is_some());
+        assert_eq!(
+            store
+                .active(&command_id)
+                .expect("active command remains present")
+                .lifecycle_state,
+            CommandLifecycleState::Finalizing
+        );
+        drop(process);
     }
 }

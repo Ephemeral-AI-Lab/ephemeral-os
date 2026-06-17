@@ -4,16 +4,17 @@ mod launch;
 pub mod process_store;
 pub mod registry;
 pub mod service;
+mod transcript;
 
 pub(crate) mod exec;
 pub(crate) mod finalize;
 
 pub use contract::{
     CancelCommandInput, CommandCallContext, CommandFinalizationOutcome, CommandFinalizedMetadata,
-    CommandFinalizedPolicy, CommandId, CommandLinesOutput, CommandOutputLine,
-    CommandOutputSnapshot, CommandPollOutput, CommandStatus, CommandWorkspaceDestroyMetadata,
-    CommandYield, ExecCommandInput, OperationTraceContext, PollCommandInput, ReadCommandLinesInput,
-    WriteStdinInput,
+    CommandFinalizedPolicy, CommandId, CommandLinesOutput, CommandOutputSnapshot,
+    CommandPollOutput, CommandStatus, CommandStream, CommandTranscriptRow,
+    CommandWorkspaceDestroyMetadata, CommandYield, ExecCommandInput, OperationTraceContext,
+    PollCommandInput, ReadCommandLinesInput, WriteStdinInput,
 };
 pub use error::CommandServiceError;
 pub use launch::{CommandLaunchDriver, RealCommandLaunchDriver};

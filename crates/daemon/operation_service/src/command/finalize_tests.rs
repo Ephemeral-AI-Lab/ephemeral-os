@@ -888,6 +888,13 @@ fn command_completion_retains_authorization_after_command_finalize() -> TestResu
     fake.push_capture_result(Ok(captured_changes(&handle, Vec::new(), None)));
     let env = build_env(fake);
     let command_id = start_one_shot(&env, &fixture, "caller-1")?;
+    let transcript_path = env
+        .command
+        .config()
+        .scratch_root
+        .join(&command_id.0)
+        .join("transcript.log");
+    std::fs::write(&transcript_path, "line one\nline two\n")?;
 
     env.command
         .finalize_command(command_id.clone(), success_exit("line one\nline two\n"))?;

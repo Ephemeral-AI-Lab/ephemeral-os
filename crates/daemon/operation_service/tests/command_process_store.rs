@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Instant;
 
 use operation_service::command::{
@@ -39,7 +40,7 @@ fn active_record(
         command_id: command_id.clone(),
         caller_id: caller_id.clone(),
         workspace_id: workspace_id.clone(),
-        process: inactive_process(&command_id, &caller_id),
+        process: Arc::new(inactive_process(&command_id, &caller_id)),
         transcript: CommandTranscriptStore {
             transcript_path: Some(PathBuf::from("/tmp/transcript.jsonl")),
         },

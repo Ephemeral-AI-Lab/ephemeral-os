@@ -70,4 +70,14 @@ pub enum CommandServiceError {
         command_error: Box<CommandServiceError>,
         cleanup_error: crate::workspace_manager::WorkspaceManagerError,
     },
+
+    #[error(
+        "command artifact cleanup failed for {command_id:?} after command start failure at {artifact_dir:?}: command error: {command_error}; cleanup error: {cleanup_error}"
+    )]
+    CommandArtifactCleanupFailed {
+        command_id: CommandId,
+        command_error: Box<CommandServiceError>,
+        artifact_dir: PathBuf,
+        cleanup_error: String,
+    },
 }

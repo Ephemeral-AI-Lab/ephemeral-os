@@ -85,7 +85,7 @@ impl fmt::Debug for WorkspaceHandle {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct WorkspaceLaunchContext {
     pub upperdir: PathBuf,
     pub workdir: PathBuf,
@@ -93,12 +93,37 @@ pub struct WorkspaceLaunchContext {
     pub cgroup_path: Option<PathBuf>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+impl fmt::Debug for WorkspaceLaunchContext {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("WorkspaceLaunchContext")
+            .field("storage", &"<hidden>")
+            .field(
+                "namespaces",
+                &self.namespace_fds.as_ref().map(|_| "<available>"),
+            )
+            .field("cgroup", &self.cgroup_path.as_ref().map(|_| "<available>"))
+            .finish()
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct WorkspaceLaunchNamespaceFds {
     pub user: Option<i32>,
     pub mnt: Option<i32>,
     pub pid: Option<i32>,
     pub net: Option<i32>,
+}
+
+impl fmt::Debug for WorkspaceLaunchNamespaceFds {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let available = |fd: Option<i32>| fd.map(|_| "<available>");
+        f.debug_struct("WorkspaceLaunchNamespaceFds")
+            .field("user", &available(self.user))
+            .field("mnt", &available(self.mnt))
+            .field("pid", &available(self.pid))
+            .field("net", &available(self.net))
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -207,15 +232,9 @@ pub struct ReadonlySnapshotHandle {
     pub snapshot: LayerStackSnapshotRef,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct DestroyWorkspaceRequest {
     pub grace_s: Option<f64>,
-}
-
-impl Default for DestroyWorkspaceRequest {
-    fn default() -> Self {
-        Self { grace_s: None }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

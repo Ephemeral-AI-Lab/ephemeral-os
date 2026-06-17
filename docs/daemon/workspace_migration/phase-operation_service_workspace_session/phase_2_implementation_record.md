@@ -504,12 +504,143 @@ Rules:
 
 ## Milestone 5: Local OS Row Projection
 
-- Status: Not started
+- Status: Complete.
 - Files changed:
+  - `crates/daemon/operation_service/src/command/contract.rs`
+  - `crates/daemon/operation_service/src/command/mod.rs`
+  - `crates/daemon/operation_service/src/command/service.rs`
+  - `crates/daemon/operation_service/src/command/transcript.rs`
+  - `crates/daemon/operation_service/src/command/exec.rs`
+  - `crates/daemon/operation_service/tests/command_transcript_rows.rs`
+  - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
 - Verification:
+  - `CARGO_TARGET_DIR=/tmp/eos-cleanup-review-target cargo test -p operation_service command_transcript_rows`:
+    passed, 7 matching integration tests plus 32 filtered unit tests after the
+    bounded transcript-window remediation.
+  - `CARGO_TARGET_DIR=/tmp/eos-cleanup-review-target cargo test -p operation_service command_ownership`:
+    passed, 2 matching unit tests and 4 matching integration tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-cleanup-review-target cargo test -p operation_service command_finalize`:
+    passed, 10 matching unit tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-cleanup-review-target cargo test -p operation_service`:
+    passed, 76 tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-cleanup-review-target cargo check -p operation_service`:
+    passed.
+  - `cargo fmt --all --check`: passed.
+  - `git diff --check`: passed.
+  - `rg -n "operation::command|StartCommand|request_id|trace_id|invocation_id|remountable|WorkspaceRuntime|CommandOps|ExecTarget|InternalHostOneShot|advance_active_commands_once|collect_completed|count_commands|count_by_caller" crates/daemon/operation_service/src/command crates/daemon/operation_service/tests`:
+    one documented false positive in
+    `crates/daemon/operation_service/tests/command_exec.rs`, where the test
+    asserts the low-level `command` crate runner payload field
+    `tool_call.invocation_id`; this is not an operation-service command
+    contract field and was pre-existing outside the Milestone 5 row projection
+    scope.
 - Deviations:
+  - Row projection is implemented in
+    `operation_service::command::transcript` rather than in the low-level
+    `command` crate, so status/authorization/window policy stays with the
+    operation-service owner.
+  - Current PTY transcript logs are merged raw output and do not retain a native
+    stderr marker. Raw PTY rows are therefore projected as
+    `CommandStream::Stdout`; the parser also accepts structured JSONL rows with
+    explicit `stdout`/`stderr` streams for any future command-service row
+    sidecar without changing the public row contract.
+  - Superseded by the post-review remediation below: direct command-service exec
+    is now crate-internal and treats a supplied session handler only as a
+    session marker before re-resolving canonical workspace state.
 - Unresolved issues:
+  - True stderr fidelity cannot be recovered from existing merged PTY transcript
+    logs. A later substrate or row-sidecar change must write structured stream
+    rows at capture time if daemon-dispatch local_os parity requires separate
+    stderr rows.
 - Handoff notes:
+  - `CommandLinesOutput` now carries command status, exit code, row offset
+    metadata, `truncated_before`, `output_truncated`, and
+    `Vec<CommandTranscriptRow>`.
+  - `CommandOperationService::read_lines` authorizes active records first, then
+    retained completed records by caller id, and reads rows from the retained
+    transcript path instead of `read_output_since(0)` or completed stdout.
+  - `poll` and `write_stdin` remain daemon-native and continue to use the
+    command process transcript source; no duplicate output store or daemon
+    dispatch migration was added.
+  - Milestone 6 should keep remount work separate from row projection and can
+    rely on completed command records retaining transcript metadata after
+    finalization.
+
+### Post-Milestone 5 Adversarial Review Remediation
+
+- Status: Complete.
+- Issues fixed:
+  - Direct command exec is no longer an external API surface:
+    `CommandOperationService::exec_command` is `pub(crate)`, while
+    `OperationServices::exec_command` remains public. The internal session path
+    now re-resolves the canonical `WorkspaceSessionHandler` from
+    `WorkspaceManagerService` and does not trust caller-provided handler launch
+    material.
+  - Initial yield no longer holds the active-process-store mutex while waiting.
+    Active records store `Arc<CommandProcess>`, and `initial_exec_yield` clones
+    the process handle before calling the launch driver's wait loop.
+  - Active-insert rollback now cancels the spawned process before unbind and
+    cleanup. Start-failure cleanup also removes the command artifact directory
+    after launch preparation failures that reach spawn/bind/insert handling.
+  - `WorkspaceLaunchContext` and `WorkspaceLaunchNamespaceFds` use custom
+    `Debug` output that masks launch paths, cgroup paths, and namespace fd
+    numbers.
+  - Launch-path coverage now includes forged/stale handler launch material,
+    missing launch material, artifact-directory setup failure, spawn-part
+    propagation, spawn-failure artifact cleanup, direct debug masking, and the
+    active-process clone/no-lock behavior.
+  - `read_lines` no longer materializes the full command transcript for every
+    row-window request. Transcript row projection now retains at most a bounded
+    suffix, aligns it to a row boundary, counts unavailable prior rows, and
+    reports `truncated_before` / `output_truncated` through the public row
+    contract.
+- Files changed:
+  - `crates/daemon/operation_service/src/command/error.rs`
+  - `crates/daemon/operation_service/src/command/exec.rs`
+  - `crates/daemon/operation_service/src/command/process_store.rs`
+  - `crates/daemon/operation_service/src/command/service.rs`
+  - `crates/daemon/operation_service/src/command/transcript.rs`
+  - `crates/daemon/operation_service/tests/command_exec.rs`
+  - `crates/daemon/operation_service/tests/command_process_store.rs`
+  - `crates/daemon/operation_service/tests/command_transcript_rows.rs`
+  - `crates/daemon/operation_service/tests/support/mod.rs`
+  - `crates/daemon/workspace/src/model.rs`
+  - `crates/daemon/workspace/tests/unit/model.rs`
+  - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
+- Verification:
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-review-fix-target cargo test -p operation_service`:
+    passed, 76 tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-review-fix-target cargo test -p workspace`:
+    passed, 23 tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-review-fix-target cargo check -p operation_service`:
+    passed.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-review-fix-target cargo check -p workspace`:
+    passed.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-review-fix-target cargo clippy -p operation_service --all-targets --no-deps -- -D warnings`:
+    passed.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-review-fix-target cargo clippy -p workspace --all-targets --no-deps -- -D warnings`:
+    passed.
+  - `CARGO_TARGET_DIR=/tmp/ephemeral-os-fix-transcript-all cargo test -p operation_service --all-targets`:
+    passed, 78 tests.
+  - `CARGO_TARGET_DIR=/tmp/ephemeral-os-fix-transcript-clippy cargo clippy -p operation_service --all-targets --no-deps -- -D warnings`:
+    passed.
+  - `cargo fmt --check`: passed.
+  - `git diff --check`: passed.
+  - Static API/debug scans confirmed only
+    `OperationServices::exec_command` is public, `CommandOperationService` exec
+    is crate-internal, and `WorkspaceLaunchContext` / namespace fds use custom
+    debug implementations instead of derived debug.
+- Deviations:
+  - The live-child rollback behavior is fixed in production by cancelling the
+    owned `CommandProcess` before rollback cleanup. The focused service tests
+    keep using fake launch drivers because the real command runner requires the
+    namespace-runner artifact protocol and is covered below the operation
+    service boundary.
+- Unresolved issues: None for this remediation slice.
+- Handoff notes:
+  - External callers should continue to use `OperationServices::exec_command`.
+    `CommandOperationService::exec_command` is an internal implementation hook
+    and must not be treated as a stable public entry point.
 
 ## Milestone 6: WorkspaceRemountService And Remount-Pending State
 

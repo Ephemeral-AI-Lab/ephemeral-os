@@ -27,6 +27,7 @@ pub struct TestServices {
     pub services: OperationServices,
 }
 
+#[derive(Default)]
 pub struct FakeWorkspaceService {
     create_results: Mutex<VecDeque<Result<WorkspaceHandle, WorkspaceError>>>,
     destroy_results: Mutex<VecDeque<Result<DestroyWorkspaceResult, WorkspaceError>>>,
@@ -40,6 +41,20 @@ use workspace::WorkspaceId;
 pub struct FakeLaunchDriver {
     outcomes: Mutex<VecDeque<WaitOutcome<CommandProcessExit>>>,
     spawn_errors: Mutex<VecDeque<CommandServiceError>>,
+    spawn_observations: Mutex<Vec<SpawnObservation>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct SpawnObservation {
+    pub spec_id: String,
+    pub spec_caller_id: String,
+    pub run_request: serde_json::Value,
+    pub request_path: PathBuf,
+    pub output_path: PathBuf,
+    pub final_path: PathBuf,
+    pub transcript_path: PathBuf,
+    pub transcript_timestamp_timezone: String,
+    pub output_drain_grace_ms: u64,
 }
 
 impl FakeLaunchDriver {
@@ -60,13 +75,20 @@ impl FakeLaunchDriver {
             .expect("test operation succeeds")
             .push_back(error);
     }
+
+    pub fn spawn_observations(&self) -> Vec<SpawnObservation> {
+        self.spawn_observations
+            .lock()
+            .expect("test operation succeeds")
+            .clone()
+    }
 }
 
 impl CommandLaunchDriver for FakeLaunchDriver {
     fn spawn(
         &self,
         spec: CommandProcessSpec,
-        _parts: CommandProcessSpawn<'_>,
+        parts: CommandProcessSpawn<'_>,
     ) -> Result<CommandProcess, CommandServiceError> {
         if let Some(error) = self
             .spawn_errors
@@ -76,6 +98,20 @@ impl CommandLaunchDriver for FakeLaunchDriver {
         {
             return Err(error);
         }
+        self.spawn_observations
+            .lock()
+            .expect("test operation succeeds")
+            .push(SpawnObservation {
+                spec_id: spec.id.clone(),
+                spec_caller_id: spec.caller_id.clone(),
+                run_request: parts.run_request.clone(),
+                request_path: parts.request_path.clone(),
+                output_path: parts.output_path.clone(),
+                final_path: parts.final_path.clone(),
+                transcript_path: parts.transcript_path.clone(),
+                transcript_timestamp_timezone: parts.transcript_timestamp_timezone.to_owned(),
+                output_drain_grace_ms: parts.output_drain_grace_ms,
+            });
         Ok(CommandProcess::inactive_for_test(spec))
     }
 
@@ -96,12 +132,7 @@ impl CommandLaunchDriver for FakeLaunchDriver {
 
 impl FakeWorkspaceService {
     pub fn new() -> Self {
-        Self {
-            create_results: Mutex::new(VecDeque::new()),
-            destroy_results: Mutex::new(VecDeque::new()),
-            create_requests: Mutex::new(Vec::new()),
-            destroy_calls: Mutex::new(Vec::new()),
-        }
+        Self::default()
     }
 
     pub fn push_create_result(&self, result: Result<WorkspaceHandle, WorkspaceError>) {
@@ -248,6 +279,24 @@ pub fn workspace_handle(
     workspace_root: PathBuf,
     network: NetworkMode,
 ) -> WorkspaceHandle {
+    workspace_handle_with_launch(
+        workspace_id,
+        caller_id,
+        lease_id,
+        workspace_root,
+        network,
+        Some(test_launch_context()),
+    )
+}
+
+pub fn workspace_handle_with_launch(
+    workspace_id: &str,
+    caller_id: &str,
+    lease_id: &str,
+    workspace_root: PathBuf,
+    network: NetworkMode,
+    launch: Option<WorkspaceLaunchContext>,
+) -> WorkspaceHandle {
     let snapshot = LayerStackSnapshotRef {
         lease_id: LeaseId(lease_id.to_owned()),
         manifest_version: 1,
@@ -265,7 +314,7 @@ pub fn workspace_handle(
             layer_count: 1,
         },
         snapshot,
-        launch: Some(test_launch_context()),
+        launch,
     }
 }
 

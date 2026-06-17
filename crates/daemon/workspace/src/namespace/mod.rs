@@ -20,7 +20,7 @@ pub(crate) enum NamespaceNetwork {
 }
 
 impl NamespaceNetwork {
-    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    #[cfg(target_os = "linux")]
     pub(crate) const fn holder_arg(self) -> &'static str {
         match self {
             Self::Host => "host",

@@ -96,6 +96,39 @@ fn public_handle_debug_does_not_expose_internal_storage_or_namespace_fields() {
 }
 
 #[test]
+fn launch_context_debug_does_not_expose_internal_paths_or_fd_numbers() {
+    let public = WorkspaceHandle::from(&workspace_mode_handle());
+    let launch = public.launch.expect("launch context is projected");
+
+    let context_debug = format!("{launch:?}");
+    let fds_debug = format!(
+        "{:?}",
+        launch
+            .namespace_fds
+            .expect("namespace fd context is projected")
+    );
+
+    assert_no_internal_fields(&context_debug);
+    assert_no_internal_fields(&fds_debug);
+    for forbidden in [
+        "/tmp/eos/upper",
+        "/tmp/eos/work",
+        "/sys/fs/cgroup/eos",
+        "mnt: Some(11)",
+        "pid: Some(12)",
+    ] {
+        assert!(
+            !context_debug.contains(forbidden),
+            "launch context debug output exposed {forbidden}: {context_debug}"
+        );
+        assert!(
+            !fds_debug.contains(forbidden),
+            "namespace fd debug output exposed {forbidden}: {fds_debug}"
+        );
+    }
+}
+
+#[test]
 fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
     let base_revision = BaseRevision {
         version: 1,

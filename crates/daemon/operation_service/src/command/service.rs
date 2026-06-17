@@ -3,10 +3,10 @@ use std::time::Instant;
 
 use crate::command::{
     CancelCommandInput, CancellationState, CommandCallContext, CommandLaunchDriver,
-    CommandLifecycleState, CommandLinesOutput, CommandOutputLine, CommandOutputSnapshot,
-    CommandPollOutput, CommandProcessStore, CommandRegistry, CommandServiceError, CommandStatus,
-    CommandYield, CompletedCommandRecord, FinalizationState, PollCommandInput,
-    ReadCommandLinesInput, RealCommandLaunchDriver, WriteStdinInput,
+    CommandLifecycleState, CommandLinesOutput, CommandOutputSnapshot, CommandPollOutput,
+    CommandProcessStore, CommandRegistry, CommandServiceError, CommandStatus, CommandYield,
+    CompletedCommandRecord, FinalizationState, PollCommandInput, ReadCommandLinesInput,
+    RealCommandLaunchDriver, WriteStdinInput,
 };
 use crate::workspace_crate::CallerId;
 use crate::workspace_manager::WorkspaceManagerService;
@@ -167,21 +167,24 @@ impl CommandOperationService {
     ) -> Result<CommandLinesOutput, CommandServiceError> {
         let command_id = input.command_id;
         if let Some(active) = self.active_for_owner_or_none(&command_id, &context.caller_id)? {
-            return Ok(line_window(
+            let transcript = active.transcript.clone();
+            drop(active);
+            return Ok(transcript.window(input.offset, input.limit).into_output(
                 command_id,
-                &active.process.read_output_since(0),
-                input.offset,
-                input.limit,
+                CommandStatus::Running,
+                None,
             ));
         }
 
         let completed = self.completed_for_owner(&command_id, &context.caller_id)?;
-        Ok(line_window(
-            command_id,
-            &completed.result.stdout,
-            input.offset,
-            input.limit,
-        ))
+        Ok(completed
+            .transcript
+            .window(input.offset, input.limit)
+            .into_output(
+                command_id,
+                completed.result.status,
+                completed.result.exit_code,
+            ))
     }
 
     pub fn poll(
@@ -363,51 +366,20 @@ impl CommandOperationService {
     }
 }
 
-fn line_window(
-    command_id: crate::command::CommandId,
-    text: &str,
-    offset: u64,
-    limit: usize,
-) -> CommandLinesOutput {
-    let lines = text.lines().collect::<Vec<_>>();
-    let total_lines = u64::try_from(lines.len()).unwrap_or(u64::MAX);
-    let start = usize::try_from(offset)
-        .unwrap_or(usize::MAX)
-        .min(lines.len());
-    let end = start.saturating_add(limit).min(lines.len());
-    let output = lines[start..end]
-        .iter()
-        .enumerate()
-        .map(|(index, line)| CommandOutputLine {
-            offset: offset.saturating_add(u64::try_from(index).unwrap_or(u64::MAX)),
-            text: (*line).to_owned(),
-        })
-        .collect::<Vec<_>>();
-    let next_offset = u64::try_from(end).unwrap_or(u64::MAX);
-
-    CommandLinesOutput {
-        command_id,
-        offset,
-        next_offset,
-        total_lines,
-        output_truncated: next_offset < total_lines,
-        output,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
+    use std::sync::atomic::{AtomicU64, Ordering};
     use std::sync::Arc;
     use std::time::Instant;
 
     use crate::command::{
         ActiveCommandProcess, CancellationState, CommandCallContext, CommandFinalizePolicy,
-        CommandFinalizedMetadata, CommandId, CommandLifecycleState, CommandOutputLine,
-        CommandProcessStore, CommandServiceError, CommandStatus, CommandTerminalResult,
-        CommandTraceOrigin, CommandTranscriptStore, CompletedCommandRecord, FinalizationState,
-        OperationTraceContext, PollCommandInput, ReadCommandLinesInput, RetainedCommandTranscript,
-        WriteStdinInput,
+        CommandFinalizedMetadata, CommandId, CommandLifecycleState, CommandProcessStore,
+        CommandServiceError, CommandStatus, CommandStream, CommandTerminalResult,
+        CommandTraceOrigin, CommandTranscriptRow, CommandTranscriptStore, CompletedCommandRecord,
+        FinalizationState, OperationTraceContext, PollCommandInput, ReadCommandLinesInput,
+        RetainedCommandTranscript, WriteStdinInput,
     };
     use crate::workspace_crate::{
         CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
@@ -517,9 +489,9 @@ mod tests {
             command_id: command_id.clone(),
             caller_id: caller_id.clone(),
             workspace_id: workspace_id.clone(),
-            process: inactive_process(&command_id, &caller_id),
+            process: Arc::new(inactive_process(&command_id, &caller_id)),
             transcript: CommandTranscriptStore {
-                transcript_path: Some(PathBuf::from("/tmp/transcript.jsonl")),
+                transcript_path: Some(write_transcript(&command_id, "active", "active output\n")),
             },
             finalize_policy: CommandFinalizePolicy::Session { workspace_id },
             lifecycle_state: CommandLifecycleState::Running,
@@ -537,7 +509,7 @@ mod tests {
         stdout: &str,
     ) -> CompletedCommandRecord {
         CompletedCommandRecord {
-            command_id,
+            command_id: command_id.clone(),
             caller_id,
             workspace_id,
             result: CommandTerminalResult {
@@ -546,12 +518,28 @@ mod tests {
                 stdout: stdout.to_owned(),
             },
             transcript: RetainedCommandTranscript {
-                transcript_path: Some(PathBuf::from("/tmp/retained-transcript.jsonl")),
+                transcript_path: Some(write_transcript(&command_id, "completed", stdout)),
             },
             finalization: FinalizationState::Complete,
             finalized: Some(CommandFinalizedMetadata::default()),
             completed_at: Instant::now(),
         }
+    }
+
+    fn write_transcript(command_id: &CommandId, suffix: &str, text: &str) -> PathBuf {
+        let path = std::env::temp_dir().join(format!(
+            "operation-service-{suffix}-{}-{}-{}.log",
+            std::process::id(),
+            unique_suffix(),
+            command_id.0
+        ));
+        std::fs::write(&path, text).expect("test transcript write succeeds");
+        path
+    }
+
+    fn unique_suffix() -> u64 {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        COUNTER.fetch_add(1, Ordering::Relaxed)
     }
 
     fn seed_active(
@@ -625,12 +613,16 @@ mod tests {
             .expect("owner can read completed command output");
 
         assert_eq!(output.total_lines, 3);
+        assert_eq!(output.status, CommandStatus::Completed);
+        assert_eq!(output.exit_code, Some(0));
+        assert_eq!(output.truncated_before, 0);
         assert_eq!(output.next_offset, 2);
         assert!(output.output_truncated);
         assert_eq!(
             output.output,
-            vec![CommandOutputLine {
+            vec![CommandTranscriptRow {
                 offset: 1,
+                stream: CommandStream::Stdout,
                 text: "second".to_owned()
             }]
         );

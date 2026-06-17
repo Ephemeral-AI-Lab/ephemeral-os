@@ -47,6 +47,17 @@ pub struct HostWorkspace {
     holder: Option<HostHolder>,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct HostNamespaceWorkspaceRequest<'a> {
+    pub kind: &'a str,
+    pub token: &'a str,
+    pub caller_id: &'a str,
+    pub workspace_root: &'a Path,
+    pub layer_paths: &'a [PathBuf],
+    pub setup_timeout_s: f64,
+    pub exit_grace_s: f64,
+}
+
 #[derive(Debug)]
 struct HostHolder {
     holder_pid: i32,
@@ -177,23 +188,17 @@ impl HostWorkspace {
     /// startup, namespace FD opening, or overlay mounting fails.
     pub fn create_with_host_namespace(
         scratch_root: &Path,
-        kind: &str,
-        token: &str,
-        caller_id: &str,
-        workspace_root: &Path,
-        layer_paths: &[PathBuf],
-        setup_timeout_s: f64,
-        exit_grace_s: f64,
+        request: HostNamespaceWorkspaceRequest<'_>,
     ) -> Result<Self, HostWorkspaceError> {
-        let dirs = allocate_overlay_dirs(scratch_root, kind, token)?;
+        let dirs = allocate_overlay_dirs(scratch_root, request.kind, request.token)?;
         Self::from_dirs_with_host_namespace(
             dirs,
-            token,
-            caller_id,
-            workspace_root,
-            layer_paths,
-            setup_timeout_s,
-            exit_grace_s,
+            request.token,
+            request.caller_id,
+            request.workspace_root,
+            request.layer_paths,
+            request.setup_timeout_s,
+            request.exit_grace_s,
         )
     }
 

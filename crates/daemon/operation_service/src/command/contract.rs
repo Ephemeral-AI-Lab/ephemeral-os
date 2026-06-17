@@ -138,15 +138,25 @@ pub struct CommandPollOutput {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandLinesOutput {
     pub command_id: CommandId,
+    pub status: CommandStatus,
+    pub exit_code: Option<i64>,
     pub offset: u64,
     pub next_offset: u64,
     pub total_lines: u64,
+    pub truncated_before: u64,
     pub output_truncated: bool,
-    pub output: Vec<CommandOutputLine>,
+    pub output: Vec<CommandTranscriptRow>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CommandStream {
+    Stdout,
+    Stderr,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CommandOutputLine {
+pub struct CommandTranscriptRow {
     pub offset: u64,
+    pub stream: CommandStream,
     pub text: String,
 }

@@ -34,6 +34,8 @@ use layerstack::{
 use operation::command::{CommandOps, CommandRemountInspection, ExecTarget, HostCommandWorkspace};
 use operation::isolation::contract::IsolationTestRemountFault;
 use serde_json::Value;
+#[cfg(test)]
+use workspace::network_mode::host::HostNamespaceWorkspaceRequest;
 use workspace::network_mode::host::{HostWorkspace, HostWorkspaceError};
 use workspace::network_mode::isolated_network::{
     ExitOutcome as IsolatedNetworkExitOutcome, IsolatedNetworkError, RemountProbe, ResourceCaps,
@@ -167,7 +169,7 @@ impl WorkspaceCommandRouteContext<'_> {
 #[derive(Debug, Clone)]
 pub(crate) enum WorkspaceFileRouteContext {
     Direct { layer_stack_root: PathBuf },
-    IsolatedNetwork { context: WorkspaceModeContext },
+    IsolatedNetwork { context: Box<WorkspaceModeContext> },
 }
 
 impl WorkspaceFileRouteContext {
@@ -863,13 +865,15 @@ impl WorkspaceRuntime {
                 runtime.create_host(caller_id, invocation_id, &resolved, |leased_base| {
                     HostWorkspace::create_with_host_namespace(
                         scratch_root,
-                        "sandbox-overlay",
-                        invocation_id,
-                        caller_id,
-                        &resolved.workspace_root,
-                        &leased_base.layer_paths,
-                        runtime.config.setup_timeout_s,
-                        runtime.config.exit_grace_s,
+                        HostNamespaceWorkspaceRequest {
+                            kind: "sandbox-overlay",
+                            token: invocation_id,
+                            caller_id,
+                            workspace_root: &resolved.workspace_root,
+                            layer_paths: &leased_base.layer_paths,
+                            setup_timeout_s: runtime.config.setup_timeout_s,
+                            exit_grace_s: runtime.config.exit_grace_s,
+                        },
                     )
                     .map_err(host_setup_error)
                 })
@@ -924,7 +928,9 @@ impl WorkspaceRuntime {
         layer_stack_root: Option<&Path>,
     ) -> Result<WorkspaceFileRouteContext, WorkspaceError> {
         if let Some(context) = self.workspace_mode_context_for(caller_id) {
-            return Ok(WorkspaceFileRouteContext::IsolatedNetwork { context });
+            return Ok(WorkspaceFileRouteContext::IsolatedNetwork {
+                context: Box::new(context),
+            });
         }
         Self::direct_file_context(layer_stack_root)
     }
@@ -957,13 +963,15 @@ impl WorkspaceRuntime {
         self.create_host(caller_id, invocation_id, &resolved, |leased_base| {
             HostWorkspace::create_with_host_namespace(
                 scratch_root,
-                "sandbox-overlay",
-                invocation_id,
-                caller_id,
-                &resolved.workspace_root,
-                &leased_base.layer_paths,
-                self.config.setup_timeout_s,
-                self.config.exit_grace_s,
+                HostNamespaceWorkspaceRequest {
+                    kind: "sandbox-overlay",
+                    token: invocation_id,
+                    caller_id,
+                    workspace_root: &resolved.workspace_root,
+                    layer_paths: &leased_base.layer_paths,
+                    setup_timeout_s: self.config.setup_timeout_s,
+                    exit_grace_s: self.config.exit_grace_s,
+                },
             )
             .map_err(host_setup_error)
         })
