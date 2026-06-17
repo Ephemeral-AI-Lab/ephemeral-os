@@ -10,8 +10,8 @@ use super::{
 };
 use crate::isolated_workspace::caps::ResourceCaps;
 use crate::isolated_workspace::error::IsolatedError;
-use crate::isolated_workspace::namespace::NamespaceRuntime;
 use crate::lifecycle::leases::next_handle_id;
+use crate::namespace::NamespaceRuntime;
 
 #[test]
 fn parses_memavailable_from_proc_meminfo() {

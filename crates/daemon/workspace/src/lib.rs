@@ -23,8 +23,8 @@ pub mod service;
 pub mod tree;
 
 pub use capture::{
-    capture_upperdir, capture_upperdir_for_snapshot_with_options, capture_upperdir_with_payloads,
-    CaptureError, CapturedChanges, RoutedCapturedChanges,
+    capture_upperdir, capture_upperdir_for_snapshot_with_options, CaptureError, CapturedChanges,
+    RoutedCapturedChanges,
 };
 pub use dirs::{DirAllocationError, OverlayDirs, OverlayDirsGuard};
 pub use error::WorkspaceError;

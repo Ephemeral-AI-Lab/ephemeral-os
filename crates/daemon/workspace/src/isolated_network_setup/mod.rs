@@ -5,6 +5,7 @@ use crate::isolated_workspace::caps::{Rfc1918Egress, HANDLE_PREFIX};
 use crate::isolated_workspace::error::IsolatedError;
 use crate::namespace::test_harness_enabled;
 
+mod dns;
 #[cfg(target_os = "linux")]
 mod netfilter;
 #[cfg(target_os = "linux")]

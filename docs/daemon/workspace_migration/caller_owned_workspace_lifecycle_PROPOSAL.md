@@ -19,13 +19,13 @@ operation:
   command/file operation flow
 
 layerstack:
-  capture encoding/drop classification + publish/OCC/apply mechanics
+  publish/OCC mechanics for normalized LayerChange sets
 ```
 
 Workspace is not a storage engine. It creates mounted workspaces, captures their
 upperdir changes, and destroys them. Operation code decides which workflow is
-being executed. LayerStack owns the normalized change format, capture-drop
-classification, and all publish/apply/OCC mechanics.
+being executed. LayerStack owns the normalized change format and the single
+publish/OCC boundary for already-computed `LayerChange` sets.
 
 Do not add `WorkspaceKind`, `BaseSelector`, or a latest-snapshot workspace mode.
 Workspace creation always selects the latest LayerStack head at acquisition
@@ -49,13 +49,68 @@ execution handle.
    captures, publishes if desired, and destroys.
 6. One-shot Host command execution is an operation workflow, not a separate
    daemon workspace kind.
-7. Workspace capture may call LayerStack capture code, but workspace does not
-   define capture-drop policy.
+7. Workspace owns the public `capture_changes(handle)` workflow for mounted
+   upperdirs.
 8. Workspace must not publish, apply changes, or own OCC policy.
-9. LayerStack owns capture encoding, drop classification, publish, apply, and
-   OCC validation.
-10. Operation code owns command/file workflows and may choose the appropriate
-    LayerStack publish/apply primitive.
+9. LayerStack exposes one publish entrypoint for snapshot-scoped `LayerChange`
+   sets.
+10. Operation code owns command/file workflows and converts targeted file
+    requests into `LayerChange` before publishing.
+
+## Drop List
+
+Drop these concepts from the workspace/storage design:
+
+```text
+WorkspaceKind
+WorkspaceMode
+BaseSelector
+read_only workspace flag
+writable workspace flag
+mutation workspace flag
+mutates_state workspace flag
+WorkspacePublishPolicy
+PublishMode
+workspace.publish_changes(...)
+workspace.apply_changeset(...)
+workspace.write_file_latest(...)
+workspace.edit_file_latest(...)
+layerstack.capture_upperdir_against_snapshot(...)
+layerstack.apply_changeset_against_snapshot(...)
+separate LayerStack publish APIs for command capture vs file write/edit
+```
+
+Also drop full snapshot handles from the publish API. Publish needs base
+identity for OCC/routing, not a workspace handle or a mounted snapshot object.
+
+Keep these concepts:
+
+```text
+NetworkMode::Host
+NetworkMode::Isolated
+workspace.create(...)
+workspace.capture_changes(...)
+workspace.destroy(...)
+get_workspace_latest_snapshot(...)
+layerstack.publish_to_layer_stack(...)
+```
+
+Readonly becomes API-shaped, not flag-shaped:
+
+```text
+get_workspace_latest_snapshot(...) -> readonly by construction
+```
+
+Mutation becomes operation-shaped, not flag-shaped:
+
+```text
+operation::file write/edit -> LayerChange -> layerstack.publish_to_layer_stack
+operation::command -> workspace capture -> LayerChange -> layerstack.publish_to_layer_stack
+```
+
+External tool metadata such as `ToolCall.intent` or `mutates_state` may still
+exist for admission, audit, tracing, or UI. It must not define workspace mode,
+workspace lifecycle, or LayerStack publish behavior.
 
 ## Public Model
 
@@ -91,25 +146,31 @@ pub struct CapturedWorkspaceChanges {
 }
 ```
 
-`CaptureReport` is produced by LayerStack capture code. It can include
+`CaptureReport` is produced by the workspace capture flow. It can include
 unsupported special files, invalid paths, dropped paths, source-conflict
 metadata, byte/file stats, and other capture diagnostics. Capture drops belong
-in this report, not in workspace policy.
+in this report, not in publish policy.
 
-LayerStack publish input should be minimal:
+LayerStack publish input should be minimal and shared by captured workspace
+changes and targeted file mutations:
 
 ```rust
-pub struct PublishCaptureRequest {
-    pub snapshot: LayerStackSnapshotRef,
+pub struct LayerStackPublishBase {
+    pub manifest_version: i64,
+    pub root_hash: String,
+}
+
+pub struct PublishLayerChangesRequest {
+    pub base: LayerStackPublishBase,
     pub changes: Vec<LayerChange>,
 }
 ```
 
 There is no `WorkspacePublishPolicy`, no `PublishMode`, and no publish policy
 enum on the workspace boundary. If command-specific Git/OCC behavior is still
-needed during migration, operation code chooses the LayerStack publish function
-that encodes that behavior. Longer term, that behavior can be folded into one
-LayerStack publish implementation.
+needed during migration, it should be encoded inside `publish_to_layer_stack`,
+not surfaced as a workspace policy, publish mode, or second LayerStack publish
+API.
 
 ## Workspace API Shape
 
@@ -136,14 +197,9 @@ fn get_workspace_latest_snapshot(
 ) -> Result<LatestSnapshotHandle, WorkspaceError>;
 ```
 
-Workspace can delegate capture encoding to LayerStack:
-
-```text
-workspace.capture_changes(handle)
-  reads handle snapshot + upperdir path
-  calls LayerStack capture code
-  returns CapturedWorkspaceChanges
-```
+Workspace capture owns the upperdir path and returns `CapturedWorkspaceChanges`.
+There should not be a separate operation-facing LayerStack API such as
+`capture_upperdir_against_snapshot(snapshot, upperdir, options)`.
 
 Workspace must not expose:
 
@@ -159,38 +215,21 @@ wrong ownership direction.
 
 ## LayerStack API Shape
 
-LayerStack should own the primitives that understand manifests, normalized
-changes, capture-drop classification, and OCC:
+LayerStack should expose one operation-facing mutation primitive. Both command
+captures and targeted file write/edit operations should converge here after
+they have produced `LayerChange` values:
 
 ```rust
-fn capture_upperdir_against_snapshot(
-    snapshot: &LayerStackSnapshotRef,
-    upperdir: &Path,
-    options: CaptureOptions,
-) -> Result<CapturedLayerChanges, LayerStackError>;
-
-fn publish_capture(
-    request: PublishCaptureRequest,
-) -> Result<PublishCaptureResult, LayerStackError>;
-
-fn apply_changeset_against_snapshot(
-    snapshot: &LayerStackSnapshotRef,
-    changes: &[LayerChange],
-) -> Result<ApplyChangesetResult, LayerStackError>;
+fn publish_to_layer_stack(
+    request: PublishLayerChangesRequest,
+) -> Result<PublishLayerChangesResult, LayerStackError>;
 ```
 
-`CapturedLayerChanges` can internally be:
-
-```rust
-pub struct CapturedLayerChanges {
-    pub changes: Vec<LayerChange>,
-    pub report: CaptureReport,
-}
-```
-
-At the publish boundary, `Vec<LayerChange>` is acceptable because capture has
-already converted upperdir filesystem facts into LayerStack's normalized change
-format. The report remains capture diagnostics; it is not publish policy.
+This avoids splitting captured workspace publish from targeted file apply. At
+the LayerStack boundary, the input is just the publish base and the normalized
+changes. Workspace capture and file operation edit/write logic are responsible
+for converting their domain inputs into `LayerChange` before calling this
+function.
 
 ## Operation Workflows
 
@@ -205,7 +244,7 @@ Command execution over a workspace should be explicit:
 a. workspace.create(...) -> WorkspaceHandle
 b. operation::command runs command over WorkspaceHandle
 c. workspace.capture_changes(handle) -> CapturedWorkspaceChanges
-d. layerstack.publish_capture(captured.snapshot, captured.changes)
+d. layerstack.publish_to_layer_stack(captured.snapshot.publish_base(), captured.changes)
 e. workspace.destroy(handle)
 ```
 
@@ -215,8 +254,8 @@ Code-shaped workflow:
 let handle = workspace.create(request)?;
 let command = operation::command::run_in_workspace(&handle, command_request)?;
 let captured = workspace.capture_changes(&handle, capture_request)?;
-let published = layerstack::publish_capture(PublishCaptureRequest {
-    snapshot: captured.snapshot,
+let published = layerstack::publish_to_layer_stack(PublishLayerChangesRequest {
+    base: captured.snapshot.publish_base(),
     changes: captured.changes,
 })?;
 let destroyed = workspace.destroy(handle)?;
@@ -239,14 +278,14 @@ operation::file::write_file
   read target file from that snapshot
   validate create/overwrite constraints
   compute LayerChange::Write
-  call layerstack.apply_changeset_against_snapshot(snapshot, changes)
+  call layerstack.publish_to_layer_stack(snapshot.publish_base(), changes)
 
 operation::file::edit_file
   acquire latest LayerStack snapshot
   read target file from that snapshot
   apply search/replace or edit semantics in memory
   compute LayerChange::Write
-  call layerstack.apply_changeset_against_snapshot(snapshot, changes)
+  call layerstack.publish_to_layer_stack(snapshot.publish_base(), changes)
 ```
 
 A helper such as `apply_targeted_file_mutation` can exist inside
@@ -282,15 +321,15 @@ Enforce the boundary with crate dependencies:
 ```text
 layerstack -> workspace forbidden
 layerstack -> operation forbidden
-workspace -> layerstack allowed for lease, mounted view setup, and capture
+workspace -> layerstack allowed for lease and mounted view setup
 operation -> workspace allowed for mounted command lifecycle
-operation -> layerstack allowed for publish/apply orchestration
+operation -> layerstack allowed for publish orchestration
 plugin -> layerstack discouraged; prefer latest snapshot handles from operation/core
 ```
 
 The important direction is ownership:
 
-- Workspace may depend on LayerStack to acquire snapshots and capture upperdirs.
+- Workspace may depend on LayerStack to acquire snapshots and mount views.
 - Operation may depend on both workspace and LayerStack to orchestrate flows.
 - LayerStack must not know about workspace handles, command sessions, plugins,
   or network modes.
@@ -307,8 +346,8 @@ After acquisition:
 - The workspace remains valid but can be stale.
 - Readonly snapshot handles are generation-scoped.
 - Writable workspace changes publish through LayerStack OCC.
-- Targeted file changes apply against the snapshot acquired by that operation.
-- Staleness is detected by LayerStack publish/apply validation, not by mutating
+- Targeted file changes publish against the snapshot acquired by that operation.
+- Staleness is detected by LayerStack publish validation, not by mutating
   an open workspace base in place.
 
 Do not remount or rebase an open writable workspace automatically when the
@@ -324,14 +363,17 @@ environment while commands or edits are in progress.
 - Document `get_workspace_latest_snapshot` as a readonly query, not a mode.
 - Remove `WorkspaceKind`, `BaseSelector`, `WorkspacePublishPolicy`, and
   `PublishMode` from the proposed model.
+- Remove workspace-level read/write/mutation booleans from the proposed model.
 
-### Phase B: LayerStack Capture And Publish Primitives
+### Phase B: LayerStack Publish Primitive
 
-- Move capture-drop classification into LayerStack capture code.
 - Introduce or formalize `CaptureReport`.
 - Make workspace capture return `CapturedWorkspaceChanges`.
-- Add or formalize `PublishCaptureRequest { snapshot, changes }`.
-- Add or formalize `apply_changeset_against_snapshot(snapshot, changes)`.
+- Add or formalize `LayerStackPublishBase`.
+- Add or formalize `PublishLayerChangesRequest { base, changes }`.
+- Add or formalize `publish_to_layer_stack(request)`.
+- Route captured workspace changes and targeted file mutations through that
+  single publish primitive.
 - Ensure route decisions and OCC validation are snapshot-scoped.
 
 ### Phase C: Workspace Lifecycle Cleanup
@@ -348,7 +390,8 @@ environment while commands or edits are in progress.
 - Let command operation explicitly create, run, capture, publish, and destroy.
 - Keep file edit/write semantics in `operation::file`.
 - Replace direct file fast paths with snapshot-scoped targeted mutation:
-  acquire latest snapshot, compute `LayerChange`, apply through LayerStack OCC.
+  acquire latest snapshot, compute `LayerChange`, publish through LayerStack
+  OCC.
 
 ### Phase E: Plugin Latest Snapshot Refresh
 
@@ -363,17 +406,15 @@ environment while commands or edits are in progress.
 - Add contract checks that prevent workspace from exposing publish/apply/file
   mutation APIs.
 - Keep operation as the only layer that composes workspace lifecycle with
-  LayerStack publish/apply.
+  LayerStack publish.
 
 ## Open Questions
 
 - Should `CapturedWorkspaceChanges.changes` remain `Vec<LayerChange>` publicly,
-  or should the public return type use `CapturedLayerChanges` and expose
-  `changes()`/`report()` accessors?
+  or should workspace expose a named wrapper around `changes` plus
+  `capture_report`?
 - Should operation call LayerStack directly, or should core inject a narrow
   storage mutation port that is implemented by LayerStack?
-- Should `publish_capture` and `apply_changeset_against_snapshot` eventually
-  converge into one LayerStack implementation with different result shaping?
 - What is the compatibility story for legacy `sandbox.file.write` and
   `sandbox.file.edit` requests that currently pass only `layer_stack_root`?
 
@@ -382,6 +423,8 @@ environment while commands or edits are in progress.
 - Do not add `WorkspaceKind`.
 - Do not add a public base selector.
 - Do not make latest snapshot a workspace mode or network mode.
+- Do not add workspace-level `read_only`, `writable`, `mutation`, or
+  `mutates_state` flags.
 - Do not add `WorkspacePublishPolicy`.
 - Do not add `PublishMode`.
 - Do not put publish/apply on workspace.

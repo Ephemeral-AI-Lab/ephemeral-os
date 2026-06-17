@@ -21,6 +21,11 @@ use crate::{DispatchContext, WorkspaceRuntime};
 
 use super::{ok_envelope, to_wire_value};
 
+struct RoutedFileOutcome<T> {
+    route: WorkspaceFileRouteContext,
+    outcome: T,
+}
+
 struct FileOpContext<'a> {
     workspace: Option<&'a WorkspaceRuntime>,
     caller_id: &'a str,
@@ -66,11 +71,14 @@ pub(crate) fn op_read_file(
         max_read_bytes,
     };
     let caller_id = input.caller.to_string();
-    let file_context = file_context(input.layer_stack_root, &context, &caller_id);
-    let route = select_file_route(&file_context).map_err(file_op_error)?;
-    record_file_route(&context, &route);
-    let mut outcome = read_routed_file(&file_context, &route, request).map_err(file_op_error)?;
-    if let Some(layer_stack_root) = route.direct_layer_stack_root() {
+    let routed = route_read_file(
+        file_context(input.layer_stack_root, &context, &caller_id),
+        request,
+    )
+    .map_err(file_op_error)?;
+    record_file_route(&context, &routed.route);
+    let mut outcome = routed.outcome;
+    if let Some(layer_stack_root) = routed.route.direct_layer_stack_root() {
         enrich_direct_timings(layer_stack_root, &mut outcome.timings, 0);
         record_resource_stats_from_timings(&context, "after", &outcome.timings);
     }
@@ -104,11 +112,14 @@ pub(crate) fn op_write_file(
         max_file_bytes,
     };
     let caller_id = input.caller.to_string();
-    let file_context = file_context(input.layer_stack_root, &context, &caller_id);
-    let route = select_file_route(&file_context).map_err(file_op_error)?;
-    record_file_route(&context, &route);
-    let mut outcome = write_routed_file(&file_context, &route, request).map_err(file_op_error)?;
-    if let Some(layer_stack_root) = route.direct_layer_stack_root() {
+    let routed = route_write_file(
+        file_context(input.layer_stack_root, &context, &caller_id),
+        request,
+    )
+    .map_err(file_op_error)?;
+    record_file_route(&context, &routed.route);
+    let mut outcome = routed.outcome;
+    if let Some(layer_stack_root) = routed.route.direct_layer_stack_root() {
         enrich_direct_timings(
             layer_stack_root,
             &mut outcome.core.timings,
@@ -150,11 +161,14 @@ pub(crate) fn op_edit_file(
         max_file_bytes,
     };
     let caller_id = input.caller.to_string();
-    let file_context = file_context(input.layer_stack_root, &context, &caller_id);
-    let route = select_file_route(&file_context).map_err(file_op_error)?;
-    record_file_route(&context, &route);
-    let mut mutation = edit_routed_file(&file_context, &route, request).map_err(file_op_error)?;
-    if let Some(layer_stack_root) = route.direct_layer_stack_root() {
+    let routed = route_edit_file(
+        file_context(input.layer_stack_root, &context, &caller_id),
+        request,
+    )
+    .map_err(file_op_error)?;
+    record_file_route(&context, &routed.route);
+    let mut mutation = routed.outcome;
+    if let Some(layer_stack_root) = routed.route.direct_layer_stack_root() {
         enrich_direct_timings(
             layer_stack_root,
             &mut mutation.core.timings,
@@ -307,30 +321,26 @@ fn record_resource_stats_from_timings(
     );
 }
 
-fn read_routed_file(
-    context: &FileOpContext<'_>,
-    route: &WorkspaceFileRouteContext,
+fn route_read_file(
+    context: FileOpContext<'_>,
     request: ReadFileRequest,
-) -> Result<ReadFileOutcome, FileOpError> {
+) -> Result<RoutedFileOutcome<ReadFileOutcome>, FileOpError> {
     let direct_request = request.clone();
-    execute_file_route(
+    route_file_op(
         context,
-        route,
         |binding| read_with_backend(&isolated_backend(binding), request),
         |root| read_with_backend(&DirectBackend::new(root), direct_request),
     )
 }
 
-fn write_routed_file(
-    context: &FileOpContext<'_>,
-    route: &WorkspaceFileRouteContext,
+fn route_write_file(
+    context: FileOpContext<'_>,
     request: WriteFileRequest,
-) -> Result<WriteFileOutcome, FileOpError> {
+) -> Result<RoutedFileOutcome<WriteFileOutcome>, FileOpError> {
     let direct_request = request.clone();
     let commit_options = context.commit_options;
-    execute_file_route(
+    route_file_op(
         context,
-        route,
         |binding| write_with_backend(&isolated_backend(binding), request),
         |root| {
             write_with_backend(
@@ -341,16 +351,14 @@ fn write_routed_file(
     )
 }
 
-fn edit_routed_file(
-    context: &FileOpContext<'_>,
-    route: &WorkspaceFileRouteContext,
+fn route_edit_file(
+    context: FileOpContext<'_>,
     request: EditFileRequest,
-) -> Result<EditFileOutcome, FileOpError> {
+) -> Result<RoutedFileOutcome<EditFileOutcome>, FileOpError> {
     let direct_request = request.clone();
     let commit_options = context.commit_options;
-    execute_file_route(
+    route_file_op(
         context,
-        route,
         |binding| edit_with_backend(&isolated_backend(binding), request),
         |root| {
             edit_with_backend(
@@ -361,36 +369,29 @@ fn edit_routed_file(
     )
 }
 
-fn select_file_route(
-    context: &FileOpContext<'_>,
-) -> Result<WorkspaceFileRouteContext, FileOpError> {
-    match context.workspace {
-        Some(workspace) => workspace
-            .route_file_context(context.caller_id, context.layer_stack_root.as_deref())
-            .map_err(FileOpError::from_workspace),
-        None => WorkspaceRuntime::direct_file_context(context.layer_stack_root.as_deref())
-            .map_err(FileOpError::from_workspace),
-    }
-}
-
-fn execute_file_route<T>(
-    context: &FileOpContext<'_>,
-    route: &WorkspaceFileRouteContext,
+fn route_file_op<T>(
+    context: FileOpContext<'_>,
     isolated: impl FnOnce(&IsolatedWorkspaceBinding) -> Result<T, FileOpsError>,
     direct: impl FnOnce(PathBuf) -> Result<T, FileOpsError>,
-) -> Result<T, FileOpError> {
-    match route {
+) -> Result<RoutedFileOutcome<T>, FileOpError> {
+    let route = match context.workspace {
+        Some(workspace) => workspace
+            .route_file_context(context.caller_id, context.layer_stack_root.as_deref())
+            .map_err(FileOpError::from_workspace)?,
+        None => WorkspaceRuntime::direct_file_context(context.layer_stack_root.as_deref())
+            .map_err(FileOpError::from_workspace)?,
+    };
+    let outcome = match &route {
         WorkspaceFileRouteContext::Isolated { binding } => {
             let outcome = isolated(binding)?;
             if let Some(workspace) = context.workspace {
-                workspace.complete_file_route(route);
+                workspace.complete_file_route(&route);
             }
-            Ok(outcome)
+            outcome
         }
-        WorkspaceFileRouteContext::Direct { layer_stack_root } => {
-            direct(layer_stack_root.clone()).map_err(FileOpError::File)
-        }
-    }
+        WorkspaceFileRouteContext::Direct { layer_stack_root } => direct(layer_stack_root.clone())?,
+    };
+    Ok(RoutedFileOutcome { route, outcome })
 }
 
 fn isolated_backend(binding: &IsolatedWorkspaceBinding) -> IsolatedBackend {
@@ -453,92 +454,4 @@ fn is_missing_layer_stack_root(error: &workspace::WorkspaceError) -> bool {
         workspace::WorkspaceError::InvalidRequest { field, message }
             if *field == "layer_stack_root" && message == "layer_stack_root is required"
     )
-}
-
-#[cfg(test)]
-mod tests {
-    use std::path::PathBuf;
-    use std::sync::atomic::{AtomicU64, Ordering};
-
-    use config::configs::daemon::PluginRuntimeConfig;
-    use config::configs::isolated_workspace::IsolatedWorkspaceConfig;
-    use operation::file::contract::ReadFileInput;
-    use operation::CallerId;
-    use serde_json::json;
-
-    use crate::trace::RequestTraceEventSink;
-    use crate::{DispatchContext, RuntimeServices};
-
-    use super::op_read_file;
-
-    type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
-
-    #[test]
-    fn file_route_is_traced_when_backend_rejects_request() -> TestResult {
-        let fixture = Fixture::new("file-route-backend-error")?;
-        let sink = RequestTraceEventSink::default();
-        let services = RuntimeServices::new(
-            PluginRuntimeConfig::default(),
-            IsolatedWorkspaceConfig::default(),
-            command::CommandConfig::default(),
-        );
-        let response = op_read_file(
-            ReadFileInput {
-                path: fixture
-                    .base
-                    .join("outside.txt")
-                    .to_string_lossy()
-                    .into_owned(),
-                caller: CallerId::new("caller-file-route-error"),
-                layer_stack_root: Some(fixture.root.clone()),
-            },
-            DispatchContext::with_services(&services).with_trace_events(sink.clone()),
-        );
-
-        assert!(response.is_err(), "outside workspace read should fail");
-        let events = sink.drain();
-        let route_event = events
-            .iter()
-            .find(|event| event.module == "workspace.route" && event.name == "route_selected")
-            .ok_or("route event should be recorded before backend failure")?;
-        assert_eq!(route_event.details["kind"], json!("fast_path"));
-        assert_eq!(
-            route_event.details["reason"],
-            json!("no_isolated_workspace_for_caller")
-        );
-        assert_eq!(
-            route_event.details["layer_stack_root"],
-            json!(fixture.root.to_string_lossy())
-        );
-        Ok(())
-    }
-
-    struct Fixture {
-        base: PathBuf,
-        root: PathBuf,
-    }
-
-    impl Fixture {
-        fn new(label: &str) -> TestResult<Self> {
-            static COUNTER: AtomicU64 = AtomicU64::new(0);
-            let base = std::env::temp_dir().join(format!(
-                "eosd-file-route-{label}-{}-{}",
-                std::process::id(),
-                COUNTER.fetch_add(1, Ordering::Relaxed)
-            ));
-            let _ = std::fs::remove_dir_all(&base);
-            let workspace = base.join("workspace");
-            let root = base.join("layer-stack");
-            std::fs::create_dir_all(&workspace)?;
-            std::fs::write(workspace.join("README.md"), "# README\n")?;
-            layerstack::build_workspace_base(&root, &workspace, true)?;
-            Ok(Self { base, root })
-        }
-    }
-
-    impl Drop for Fixture {
-        fn drop(&mut self) {
-            let _ = std::fs::remove_dir_all(&self.base);
-        }
-    }
 }

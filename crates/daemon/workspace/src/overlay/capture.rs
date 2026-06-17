@@ -47,29 +47,12 @@ impl std::error::Error for CaptureError {}
 ///
 /// Returns [`CaptureError`] when the upperdir walk fails.
 pub fn capture_upperdir(upperdir: &Path) -> Result<CapturedChanges, CaptureError> {
-    capture_upperdir_with_payloads(upperdir, true)
-}
-
-/// Capture an upperdir delta and resource stats, optionally avoiding regular
-/// file payload materialization.
-///
-/// # Errors
-///
-/// Returns [`CaptureError`] when the upperdir walk fails.
-pub fn capture_upperdir_with_payloads(
-    upperdir: &Path,
-    materialize_payloads: bool,
-) -> Result<CapturedChanges, CaptureError> {
     let start = std::time::Instant::now();
-    let captured = if materialize_payloads {
-        layerstack::capture_upperdir_with_stats(upperdir)
-    } else {
-        layerstack::capture_upperdir_metadata_with_stats(upperdir)
-    }
-    .map_err(|error| CaptureError {
-        failing_path: error.failing_path().map(|path| path.display().to_string()),
-        reason: error.to_string(),
-    })?;
+    let captured =
+        layerstack::capture_upperdir_with_stats(upperdir).map_err(|error| CaptureError {
+            failing_path: error.failing_path().map(|path| path.display().to_string()),
+            reason: error.to_string(),
+        })?;
     Ok(CapturedChanges {
         changes: captured.changes,
         protected_drops: captured.protected_drops,

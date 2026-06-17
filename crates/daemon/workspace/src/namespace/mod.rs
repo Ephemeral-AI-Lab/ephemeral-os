@@ -1,8 +1,10 @@
 mod cgroup;
 mod fds;
 mod holder;
-mod plan;
 mod setns_runner;
+
+#[cfg(target_os = "linux")]
+pub(crate) use setns_runner::{ns_runner_request, run_child};
 
 #[cfg(test)]
 use std::sync::Arc;

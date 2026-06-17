@@ -45,8 +45,6 @@ impl IsolatedManager {
     pub fn remount_with_layers(
         &mut self,
         caller_id: &str,
-        manifest_version: i64,
-        manifest_root_hash: String,
         layer_paths: Vec<PathBuf>,
         probe: &RemountProbe,
     ) -> Result<RemountedWorkspace, IsolatedError> {
@@ -88,8 +86,6 @@ impl IsolatedManager {
             .handles
             .get_mut(&workspace_id)
             .ok_or(IsolatedError::NotOpen)?;
-        updated.manifest_version = manifest_version;
-        updated.manifest_root_hash = manifest_root_hash;
         updated.layer_paths = layer_paths;
         updated.last_activity = monotonic_seconds();
         let updated = updated.clone();

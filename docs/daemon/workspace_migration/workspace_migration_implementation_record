@@ -3,14 +3,13 @@
 Date: 2026-06-17
 Repo: `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os`
 Scope: Unified workspace refactor Phase 1 public model scaffold, Phase 2
-workspace root resolution, Phase 3 host lifecycle ownership, and Phase 4
-central routing, Phase 5 explicit non-publishing capture changes, and Phase 6
-target folder structure.
+workspace root resolution, Phase 3 host lifecycle ownership, Phase 4 central
+routing, and Phase 6 target folder structure.
 
 ## Phase Status
 
 Phase 1 is done. Phase 2 is done. Phase 3 is done. Phase 4 is done. Phase 5
-is done. Phase 6 is done.
+remains deferred. Phase 6 is done.
 
 The Phase 1 scaffold adds the unified public workspace vocabulary beside the
 existing isolated-workspace exports.
@@ -45,31 +44,19 @@ command start. File adapters parse wire args, record returned route metadata,
 invoke the selected direct or isolated backend, and ask the runtime to complete
 isolated liveness touches after successful isolated file operations.
 
-The Phase 5 slice adds explicit non-publishing capture in `WorkspaceRuntime`.
-Host capture reads the runtime-owned `HostWorkspaceLifecycle` upperdir. Isolated
-capture resolves a unified public handle to the active isolated binding and
-reads that handle's upperdir. Both paths hold the existing workspace mode gate,
-reject nonzero active command counts before walking the upperdir, return changed
-paths, changed path kinds, protected drops, and optional stats, and never call
-LayerStack publish/OCC APIs. Metadata-only capture now honors
-`materialize_payloads: false` without reading regular-file payload bodies. Host
-capture remains lifecycle-scoped until public Host create/handle custody exists.
-No public wire adapter was added in this slice because the current catalog has
-no `capture_changes` op and `ops.json` regeneration is explicitly forbidden.
-
 The Phase 6 slice moves workspace crate code into the responsibility-based
 folder structure without changing behavior. Shared overlay primitives now live
 under `overlay/`; isolated workspace create/destroy/recovery/lease helpers live
 under `lifecycle/`; remount state, report/plan, and apply logic live under
-`lifecycle/remount/`; holder control, setns-runner prep, FD mapping, cgroup
-creation, and namespace plan types live under `namespace/`; Host and isolated
-mode exports route through thin `network_mode/` adapters; and veth/IP-pool,
-rtnetlink, and netfilter dedicated-network setup/cleanup internals live under
-`isolated_network_setup/`. Legacy root `capture`, `dirs`, and `tree` modules,
-plus isolated-workspace namespace/network modules, remain only as thin
-re-export shims. No Phase 7 holder/setns-only execution changes, Host
-holder-backed namespace creation, Phase 8 legacy export retirement, publish
-behavior change, capture behavior change, packaging, live E2E, or `ops.json`
+`lifecycle/remount/`; holder control, setns-runner prep, FD mapping, and cgroup
+creation live under `namespace/`; Host and isolated mode exports route through
+thin `network_mode/` adapters; and veth/IP-pool, DNS, rtnetlink, and netfilter
+dedicated-network setup/cleanup internals live under `isolated_network_setup/`.
+Legacy root `capture`, `dirs`, and `tree` modules remain thin public re-export
+shims, while unused internal isolated-workspace namespace/network shims were
+removed. No Phase 5 capture behavior, Phase 7 holder/setns-only execution
+changes, Host holder-backed namespace creation, Phase 8 legacy export
+retirement, publish behavior change, packaging, live E2E, or `ops.json`
 regeneration was implemented.
 
 ## Files Changed
