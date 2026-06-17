@@ -1,8 +1,34 @@
 # Unified Workspace Refactor Spec
 
-Status: Draft
+Status: Finalized Design
 Date: 2026-06-17
 Owner: `crates/daemon`
+
+## Final Decisions
+
+- The two caller-facing modes are `NetworkMode::Host` and
+  `NetworkMode::Isolated`.
+- Host mode is not a fresh-runner mode. It still creates a holder-backed
+  workspace namespace stack with user, mount, and PID namespaces; it only skips
+  the dedicated network namespace and isolated network setup.
+- Isolated mode uses the same holder-backed workspace namespace stack and adds
+  the dedicated network namespace plus veth, DNS, and netfilter setup.
+- `ns-holder` is the single workspace namespace creator for both modes.
+  `ns-runner` only enters prepared workspace namespaces with `setns`.
+- Caller lifecycle is explicit and caller-controlled: `create`, `run_command`,
+  `capture_changes`, and `destroy`.
+- Public DTOs use `workspace_root`; `layer_stack_root`, `upperdir`, `workdir`,
+  namespace FDs, holder PID, cgroup path, and network device details stay
+  internal.
+- No `WorkspaceSession` public object is needed. `WorkspaceHandle` is the public
+  token; daemon/runtime internals keep the richer state.
+- Keep the `eosd ns-runner` subcommand because it is still the process used to
+  execute commands after `setns`. Workspace command requests should not carry a
+  runner mode enum; entering the holder namespace with `setns` is implicit.
+- In workspace code, "mode" means `NetworkMode`. In the namespace subprocess
+  protocol, workspace command execution always uses the setns runner path. Any
+  fresh namespace execution path should be a separate legacy/non-workspace API
+  until those callers are migrated or deleted.
 
 ## 1. Goal
 
@@ -20,14 +46,21 @@ internal storage detail resolved from the workspace binding.
 The only caller-visible mode distinction is network behavior:
 
 ```rust
-pub enum NetworkAccess {
-    Standard,
+pub enum NetworkMode {
+    Host,
     Isolated,
 }
 ```
 
-`Standard` is the current non-isolated/default command workspace behavior.
-`Isolated` is the current private namespace/veth/cgroup/DNS workspace behavior.
+`Host` means no dedicated network namespace: the workspace uses the host/container
+network.
+
+`Isolated` means a dedicated network namespace with host-side veth/bridge,
+namespace-side veth configuration, DNS setup, and netfilter policy.
+
+Namespace creation is unified: `ns-holder` creates and pins the workspace
+namespace stack for both modes. `ns-runner` only enters prepared workspace
+namespaces with `setns` for workspace commands.
 
 ## 2. Non-Goals
 
@@ -44,10 +77,10 @@ pub enum NetworkAccess {
 |---|---|---|
 | `LayerStack` | manifests, layer storage, snapshot leases, publish/OCC, capture routing | process lifecycle, network namespace lifecycle |
 | `WorkspaceRuntime` | caller lifecycle, route decision, mode gate, command cancel ordering, lease custody | low-level overlay mount syscalls |
-| `workspace` crate | overlay dirs, upperdir capture primitives, standard/isolated workspace lifecycle primitives | command process registry, public operation wire shape |
+| `workspace` crate | overlay dirs, upperdir capture primitives, host/isolated workspace lifecycle primitives, host-side isolated network orchestration | command process registry, public operation wire shape |
 | `CommandOps` | process registry, PTY/process wait, stdin/progress/cancel mechanics | snapshot leases, overlay dir allocation |
 | `overlay` crate | overlayfs mount/unmount mechanics | daemon policy |
-| `namespace`/namespace subprocess | holder, setns/fresh-ns execution mechanics | caller-facing workspace semantics |
+| `linux-namespace-subprocess` | single-threaded holder namespace creation, in-namespace setup, setns command execution | host bridge/veth/netfilter ownership, caller-facing workspace semantics |
 
 ## 4. Terminology
 
@@ -111,7 +144,7 @@ pub(crate) struct OverlayDirs {
 
 Current `crates/daemon/workspace/src` is about 3.8k LOC. The refactor keeps
 roughly the same implementation size while moving public API into small files
-and keeping low-level private mechanisms split.
+and keeping low-level mechanisms split.
 
 ```text
 crates/daemon/workspace/src/                         ~4,250 LOC
@@ -126,7 +159,7 @@ crates/daemon/workspace/src/                         ~4,250 LOC
     tree.rs                                            ~120
   network_mode/                                      ~3,365
     mod.rs                                              ~45
-    standard.rs                                         ~90
+    host.rs                                             ~90
     isolated.rs                                        ~120
     isolated/                                        ~3,110
       mod.rs                                            ~40
@@ -163,6 +196,13 @@ crates/daemon/operation/src/workspace/
 
 crates/daemon/core/src/op_adapter/
   workspace.rs                                        ~260
+
+crates/daemon/linux-namespace-subprocess/src/          existing +120 LOC
+  holder/
+    namespace.rs                                      existing +80
+    network.rs                                        existing +40
+  runner/
+    setns.rs                                          existing
 ```
 
 The exact split can be adjusted during implementation, but any single new file
@@ -178,12 +218,12 @@ after overlayfs or LayerStack internals.
 pub struct CreateWorkspaceRequest {
     pub owner: CallerId,
     pub workspace_root: PathBuf,
-    pub network: NetworkAccess,
+    pub network: NetworkMode,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NetworkAccess {
-    Standard,
+pub enum NetworkMode {
+    Host,
     Isolated,
 }
 
@@ -192,7 +232,7 @@ pub struct WorkspaceHandle {
     pub id: WorkspaceId,
     pub owner: CallerId,
     pub workspace_root: PathBuf,
-    pub network: NetworkAccess,
+    pub network: NetworkMode,
     pub base_revision: BaseRevision,
 }
 
@@ -301,11 +341,17 @@ pub(crate) struct InternalWorkspaceHandle {
 }
 
 pub(crate) enum InternalNetworkMode {
-    Standard(StandardWorkspaceState),
+    Host(HostWorkspaceState),
     Isolated(IsolatedWorkspaceState),
 }
 
-pub(crate) struct StandardWorkspaceState;
+pub(crate) struct HostWorkspaceState {
+    pub ns_fds: HashMap<String, i32>,
+    pub holder_pid: i32,
+    pub readiness_fd: i32,
+    pub control_fd: i32,
+    pub cgroup_path: Option<PathBuf>,
+}
 
 pub(crate) struct IsolatedWorkspaceState {
     pub ns_fds: HashMap<String, i32>,
@@ -373,10 +419,60 @@ impl WorkspaceRuntime {
 }
 
 pub(crate) enum WorkspaceCommandContext {
-    Standard(StandardCommandContext),
+    Host(HostCommandContext),
     Isolated(IsolatedCommandContext),
 }
 ```
+
+### Namespace Plan
+
+Both `NetworkMode` values use the same workspace namespace creation path:
+
+```rust
+pub(crate) struct NamespacePlan {
+    pub user: bool,
+    pub mount: bool,
+    pub pid: bool,
+    pub network: NamespaceNetwork,
+}
+
+pub(crate) enum NamespaceNetwork {
+    Host,
+    Isolated,
+}
+```
+
+Mapping:
+
+```rust
+NetworkMode::Host => NamespacePlan {
+    user: true,
+    mount: true,
+    pid: true,
+    network: NamespaceNetwork::Host,
+}
+
+NetworkMode::Isolated => NamespacePlan {
+    user: true,
+    mount: true,
+    pid: true,
+    network: NamespaceNetwork::Isolated,
+}
+```
+
+`ns-holder` is the only workspace namespace creator. `ns-runner` uses `setns`
+to enter holder namespaces for workspace commands.
+
+### Runner Execution
+
+Do not reuse the public workspace mode names for subprocess execution. The
+workspace mode is `NetworkMode::{Host, Isolated}`. Workspace command requests
+should not include a runner mode enum. They always execute by entering the
+holder-created namespace with `setns`.
+
+During migration, the existing fresh namespace runner may remain only behind a
+separate legacy/non-workspace compatibility path. No workspace command path
+should select it.
 
 ## 9. Error Shape
 
@@ -426,25 +522,32 @@ pub enum WorkspaceError {
 
 ## 10. Mode Semantics
 
-### Standard
+### Host
 
-`NetworkAccess::Standard` maps to the current fresh namespace/default command
-workspace path:
+`NetworkMode::Host` uses the unified holder/setns workspace lifecycle without a
+dedicated network namespace:
 
 - acquire `LeasedBaseRevision`
 - allocate `OverlayDirs`
-- run commands using current fresh namespace overlay flow
+- spawn holder namespace with user, mount, and PID namespaces
+- do not create `NEWNET`
+- do not allocate veth
+- do not rewrite DNS
+- do not install isolated network rules for this workspace
+- mount overlay inside the holder namespace
+- run commands by `setns` into the holder namespace
 - capture changes from `upperdir`
 - caller/runtime chooses whether to publish
-- destroy removes scratch dirs and releases the lease
+- destroy kills holder, closes FDs, removes scratch dirs, and releases the lease
 
 ### Isolated
 
-`NetworkAccess::Isolated` maps to the current isolated workspace path:
+`NetworkMode::Isolated` uses the same holder/setns workspace lifecycle with a
+dedicated network namespace:
 
 - acquire `LeasedBaseRevision`
 - allocate `OverlayDirs`
-- spawn holder namespace
+- spawn holder namespace with user, mount, PID, and network namespaces
 - open namespace FDs
 - initialize bridge/netfilter
 - install veth
@@ -455,6 +558,12 @@ workspace path:
 - register and persist the handle
 - destroy kills holder, closes FDs, tears down veth/cgroup, removes scratch,
   persists manager state, and releases the lease
+
+### Fresh Namespace Compatibility
+
+`FreshNs` remains only as a migration compatibility path for legacy workspace
+commands and non-workspace subprocess uses. New workspace command execution must
+not use `FreshNs`; it must use holder-created namespaces plus `setns`.
 
 ## 11. Migration Plan
 
@@ -472,7 +581,7 @@ workspace path:
 - Keep compatibility parsing for legacy `layer_stack_root`.
 - New code and docs emit only `workspace_root`.
 
-### Phase 3: Move Standard Overlay Ownership Out Of `CommandOps`
+### Phase 3: Move Host Overlay Ownership Out Of `CommandOps`
 
 - Move bounded snapshot acquisition and `EphemeralWorkspace::create` from
   command start into `WorkspaceRuntime`.
@@ -482,13 +591,13 @@ workspace path:
 ### Phase 4: Centralize Routing
 
 - Move command/file route decisions from op adapters into `WorkspaceRuntime`.
-- Adapters parse wire args and record trace events, but do not choose standard
+- Adapters parse wire args and record trace events, but do not choose host
   vs isolated behavior directly.
 
 ### Phase 5: Add Explicit `capture_changes`
 
 - Implement isolated `capture_changes` over the handle `upperdir`.
-- Implement standard `capture_changes` over the per-workspace `upperdir`.
+- Implement host `capture_changes` over the per-workspace `upperdir`.
 - Reject or quiesce active commands before walking the upperdir.
 - Do not publish from this method.
 
@@ -498,7 +607,17 @@ workspace path:
 - Move current isolated internals into `network_mode/isolated/`.
 - Keep mechanism names for namespace/veth/netfilter files.
 
-### Phase 7: Retire Legacy Names
+### Phase 7: Remove Workspace Dependence On Fresh Namespace Init
+
+- Make `create(NetworkMode::Host)` launch `ns-holder` with
+  `NamespaceNetwork::Host`.
+- Make `create(NetworkMode::Isolated)` launch `ns-holder` with
+  `NamespaceNetwork::Isolated`.
+- Make workspace `run_command` always call the `setns` runner path.
+- Keep `FreshNs` only for legacy/non-workspace callers until those callers are
+  migrated or explicitly documented.
+
+### Phase 8: Retire Legacy Names
 
 - Stop exporting `EphemeralWorkspace`, `IsolatedManager`, and
   `IsolatedWorkspaceBinding` from the crate root.
@@ -510,7 +629,7 @@ Target test structure:
 
 ```text
 crates/daemon/workspace/tests/unit/
-  modes/standard_overlay.rs                 ~90 LOC
+  modes/host_overlay.rs                     ~90 LOC
   modes/isolated_sessions.rs               ~360 LOC
   primitives/overlay_dirs_capture.rs       ~120 LOC
 
@@ -532,7 +651,7 @@ crates/daemon/core/tests/
 Add coverage for:
 
 - `workspace_root` compatibility parsing from legacy `layer_stack_root`.
-- Standard command/file routes resolve storage internally.
+- Host command/file routes resolve storage internally.
 - Isolated command/file routes use open handle binding without caller storage
   root.
 - `destroy` cancels commands before isolated teardown.
@@ -561,7 +680,7 @@ Then run focused suites:
 - `core`
 - `workspace-runtime-command`
 - `workspace-runtime-isolated`
-- standard/ephemeral workspace suite
+- host/legacy ephemeral workspace suite
 - pressure cross-mode suite
 
 ## 13. Acceptance Criteria
@@ -570,7 +689,9 @@ Then run focused suites:
 - `BaseRevision` and `LeasedBaseRevision` replace public/internal snapshot
   naming.
 - Overlay internals live under `overlay/`.
-- Standard and isolated modes are parallel under `network_mode/`.
+- Host and isolated modes are parallel under `network_mode/`.
+- `ns-holder` is the only namespace creator for workspace commands.
+- `ns-runner` only enters prepared workspace namespaces with `setns`.
 - `destroy` never publishes.
 - `capture_changes` never publishes.
 - LayerStack remains the only owner of publish/OCC.
