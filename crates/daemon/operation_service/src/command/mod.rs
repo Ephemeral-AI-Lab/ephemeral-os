@@ -8,8 +8,10 @@ pub(crate) mod exec;
 pub(crate) mod remount;
 
 pub use contract::{
-    CommandCallContext, CommandId, CommandStatus, CommandYield, ExecCommandInput,
-    OperationTraceContext,
+    CancelCommandInput, CommandCallContext, CommandFinalizedMetadata, CommandId,
+    CommandLinesOutput, CommandOutputLine, CommandOutputSnapshot, CommandPollOutput, CommandStatus,
+    CommandYield, ExecCommandInput, OperationTraceContext, PollCommandInput, ReadCommandLinesInput,
+    WriteStdinInput,
 };
 pub use error::CommandServiceError;
 pub use process_store::{

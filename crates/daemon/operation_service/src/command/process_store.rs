@@ -122,6 +122,14 @@ impl CommandProcessStore {
     pub fn completed(&self, command_id: &CommandId) -> Option<CompletedCommandRecord> {
         self.completed.get(command_id)
     }
+
+    pub(crate) fn update_active<R>(
+        &self,
+        command_id: &CommandId,
+        update: impl FnOnce(&mut ActiveCommandProcess) -> R,
+    ) -> Option<R> {
+        lock(&self.active).get_mut(command_id).map(update)
+    }
 }
 
 impl Default for CommandProcessStore {

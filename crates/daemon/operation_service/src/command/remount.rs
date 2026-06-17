@@ -1,1 +1,1 @@
-// Milestone 1 placeholder. Command-side remount quiesce is added later.
+// Command-side remount quiesce is added in Milestone 6.

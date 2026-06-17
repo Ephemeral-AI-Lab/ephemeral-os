@@ -174,12 +174,52 @@ Rules:
 
 ## Milestone 3: Exec Some/None Flows And Caller Ownership
 
-- Status: In progress.
+- Status: Complete.
 - Files changed:
+  - `crates/daemon/operation_service/src/command/contract.rs`
+  - `crates/daemon/operation_service/src/command/error.rs`
+  - `crates/daemon/operation_service/src/command/exec.rs`
+  - `crates/daemon/operation_service/src/command/mod.rs`
+  - `crates/daemon/operation_service/src/command/process_store.rs`
+  - `crates/daemon/operation_service/src/command/remount.rs`
+  - `crates/daemon/operation_service/src/command/service.rs`
+  - `crates/daemon/operation_service/src/services.rs`
+  - `crates/daemon/operation_service/src/workspace_manager/service.rs`
+  - `crates/daemon/operation_service/tests/command_exec.rs`
+  - `crates/daemon/operation_service/tests/command_ownership.rs`
+  - `crates/daemon/operation_service/tests/support/mod.rs`
+  - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
 - Verification:
-- Deviations:
-- Unresolved issues:
-- Handoff notes:
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p operation_service`:
+    passed.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_exec`:
+    passed, 3 matching integration tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_ownership`:
+    passed, 4 matching integration tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service`:
+    passed, 38 tests.
+  - `cargo fmt --check`: passed.
+  - `git diff --check`: passed.
+  - `rg -n "WorkspaceRuntime|CommandOps|ExecTarget|InternalHostOneShot|StartCommand|CollectCompleted|layer_stack_root|request_id|trace_id|invocation_id|remountable|trace::TraceId|trace::RequestId|RequestId|TraceId|collect_completed|count_by_caller|count_commands|advance_active_commands_once|by_workspace|by_caller|workspace_index|caller_index" crates/daemon/operation_service/src/command crates/daemon/operation_service/tests/command_exec.rs crates/daemon/operation_service/tests/command_ownership.rs`:
+    no matches.
+- Deviations: Milestone 3 active records use `command::CommandProcess::new`
+  instead of real process spawning. The current `WorkspaceSessionHandler` only
+  exposes the resource-facing workspace handle and snapshot paths, not the
+  policy-free namespace/overlay launch material needed to spawn through the
+  low-level command crate without importing old `operation::command` routing
+  policy. This milestone still allocates command ids, reserves admission slots,
+  binds active commands in `CommandRegistry`, inserts `ActiveCommandProcess`
+  records, and returns running command yields.
+- Unresolved issues: None for the implemented Milestone 3 ownership/admission
+  surface.
+- Handoff notes: Milestone 4 should replace the process-free active record path
+  with the scoped finalization-aware launch/finalization flow once the service
+  has a policy-free launch adapter. The completed-record authorization path is
+  ready for read/poll behavior: service methods authorize active records first,
+  then retained completed records by `CompletedCommandRecord.caller_id`.
+  One-shot commands are created through
+  `WorkspaceManagerService::create_private_host_workspace`, which keeps the
+  temporary workspace-create adapter out of command-service contracts.
 
 ## Milestone 4: One-Shot Finalization And Persistent-Session Semantics
 

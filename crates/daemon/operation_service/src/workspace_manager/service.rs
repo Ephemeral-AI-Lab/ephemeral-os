@@ -2,8 +2,8 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use crate::workspace_crate::{
     CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
-    DestroyWorkspaceRequest, DestroyWorkspaceResult, RemountWorkspaceRequest, WorkspaceId,
-    WorkspaceService,
+    DestroyWorkspaceRequest, DestroyWorkspaceResult, NetworkMode, RemountWorkspaceRequest,
+    WorkspaceId, WorkspaceService,
 };
 use crate::workspace_manager::session_manager::{WorkspaceSession, WorkspaceSessionManager};
 use crate::workspace_manager::WorkspaceManagerError;
@@ -52,6 +52,19 @@ impl WorkspaceManagerService {
         }
 
         Ok(handler)
+    }
+
+    pub fn create_private_host_workspace(
+        &self,
+        caller_id: CallerId,
+        workspace_root: std::path::PathBuf,
+    ) -> Result<WorkspaceSessionHandler, WorkspaceManagerError> {
+        self.create(CreateWorkspaceRequest {
+            caller_id,
+            layer_stack_root: workspace_root.clone(),
+            workspace_root,
+            network: NetworkMode::Host,
+        })
     }
 
     pub fn resolve(
