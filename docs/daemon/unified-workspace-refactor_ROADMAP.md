@@ -1,6 +1,6 @@
 # Unified Workspace Refactor Implementation Roadmap
 
-Status: Phase 7 holder/setns-only workspace execution done
+Status: Phase 8 legacy-name retirement done
 Date: 2026-06-17
 Owner: `crates/daemon`
 Source spec: `docs/daemon/unified-workspace-refactor_SPEC.md`
@@ -17,7 +17,7 @@ Source spec: `docs/daemon/unified-workspace-refactor_SPEC.md`
 | 5. Capture changes API | Not started | workspace/runtime | Host and isolated capture are explicit and non-publishing |
 | 6. Target folder structure | Done | `crates/daemon/workspace/src` | Shared lifecycle and isolated network setup are physically separated |
 | 7. Holder/setns-only workspace execution | Done | namespace subprocess, command prep | Workspace commands cannot use `FreshNs` |
-| 8. Retire legacy names | Not started | public exports/wire compatibility | Legacy names are removed or compatibility-scoped |
+| 8. Retire legacy names | Done | public exports/wire compatibility | Legacy names are removed or compatibility-scoped |
 | 9. Final verification | Not started | full daemon surface | Focused unit, contract, clippy, and live E2E gates pass |
 
 Statuses: `Not started`, `In progress`, `Blocked`, `Done`.
@@ -26,7 +26,7 @@ Statuses: `Not started`, `In progress`, `Blocked`, `Done`.
 
 - [ ] Caller-facing APIs use `workspace_root`, not `layer_stack_root`.
 - [ ] Public workspace modes remain `NetworkMode::Host` and `NetworkMode::Isolated`.
-- [x] `network_mode/` contains only thin mode adapters.
+- [x] `network_mode/` contains mode-specific Host and isolated surfaces; shared mechanics stay in `overlay/`, `lifecycle/`, `namespace/`, and `isolated_network_setup/`.
 - [x] `isolated_network_setup/` contains only dedicated-network setup/cleanup mechanics.
 - [x] Shared holder lifecycle, recovery, cgroup, namespace entry, and remount logic do not live under `isolated_network_setup/`.
 - [ ] `LayerStack` remains the only owner of manifests, publish, OCC, snapshot leases, and capture routing.
@@ -304,18 +304,35 @@ Goal: remove old workspace vocabulary after compatibility shims are no longer ne
 
 Tasks:
 
-- [ ] Stop exporting `EphemeralWorkspace` from the workspace crate root.
-- [ ] Stop exporting `IsolatedManager` from the workspace crate root unless an internal crate still requires it.
-- [ ] Stop exporting `IsolatedWorkspaceBinding` from the workspace crate root unless wire compatibility requires it.
-- [ ] Replace legacy names in daemon runtime and operation adapters.
-- [ ] Keep compatibility aliases only where wire contract requires them.
-- [ ] Update docs and generated readme pages if workspace docs change.
+- [x] Stop exporting `EphemeralWorkspace` from the workspace crate root.
+- [x] Stop exporting `IsolatedManager` from the workspace crate root unless an internal crate still requires it.
+- [x] Stop exporting `IsolatedWorkspaceBinding` from the workspace crate root unless wire compatibility requires it.
+- [x] Replace legacy names in daemon runtime and operation adapters.
+- [x] Keep compatibility aliases only where wire contract requires them.
+- [x] Update docs and generated readme pages if workspace docs change.
 
 Exit criteria:
 
-- [ ] Public workspace vocabulary uses unified names.
-- [ ] Compatibility names are scoped, documented, and scheduled for deletion.
-- [ ] Existing wire behavior remains compatible during migration.
+- [x] Public workspace vocabulary uses unified names.
+- [x] Compatibility names are scoped, documented, and scheduled for deletion.
+- [x] Existing wire behavior remains compatible during migration.
+
+Phase 8 is closed for legacy source path and root export retirement. The
+workspace crate root now exports unified DTO/service/error vocabulary only;
+`workspace::WorkspaceHandle` is the unified public handle, and the legacy
+isolated handle lives at
+`workspace::network_mode::isolated_network::IsolatedWorkspaceHandle`. Host
+implementation types live under `workspace::network_mode::host`, isolated mode
+implementation types live under `workspace::network_mode::isolated_network`,
+and shared overlay helpers live under `workspace::overlay`. The legacy
+`capture.rs`, `dirs.rs`, `tree.rs`, `ephemeral_workspace/`, and
+`isolated_workspace/` source paths were removed. No root compatibility exports
+were retained. Wire compatibility remains only in existing operation contracts,
+including legacy `layer_stack_root` inputs and existing trace/response literal
+strings, because current callers and tests still require that wire behavior.
+No publish behavior, capture behavior, `FreshNs` compatibility, holder/setns
+execution semantics, packaging, live E2E, or `ops.json` regeneration was
+changed.
 
 ## Phase 9: Final Verification
 
@@ -488,3 +505,12 @@ Append one row per meaningful gate or phase closeout.
 | 2026-06-17 | 7 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase7-target cargo check -p eosd` | Pass | Extra non-required check because Phase 7 changed the private `eosd ns-holder` dispatcher. |
 | 2026-06-17 | 7 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase7-target cargo test -p linux-namespace-subprocess holder` | Pass | Extra non-required check because Phase 7 changed holder network-mode behavior and holder tests. |
 | 2026-06-17 | 7 | `git diff --check` | Pass | Exit 0; no whitespace errors. |
+| 2026-06-17 | 8 | Phase 8 implementation review | Done | Retired workspace root exports for `EphemeralWorkspace`, `EphemeralWorkspaceError`, `overlay_run_dirs`, legacy isolated `WorkspaceHandle`, `IsolatedManager`, `IsolatedWorkspaceBinding`, and `IsolatedWorkspaceHandle`; moved Host internals into `network_mode/host.rs`, isolated handle/manager/error/caps/binding internals into `network_mode/isolated_network.rs`, and updated daemon/runtime/operation imports to scoped mode and overlay paths. No root compatibility exports were retained; existing wire compatibility inputs and trace strings remain. |
+| 2026-06-17 | 8 | `cargo fmt` | Pass | Formatted Phase 8 Rust sources. |
+| 2026-06-17 | 8 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase8-target cargo test -p workspace` | Pass | Exit 0; 24 workspace unit tests passed; doc tests 0 passed, 0 failed. |
+| 2026-06-17 | 8 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase8-target cargo test -p daemon workspace_runtime` | Pass | Exit 0; first run caught remaining root compatibility references; after scoped import cleanup, 21 focused runtime tests passed. |
+| 2026-06-17 | 8 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase8-target cargo test -p operation command` | Pass | Exit 0; 68 operation command unit tests plus one checkpoint command test and one command contract test passed. |
+| 2026-06-17 | 8 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase8-target cargo test -p operation file` | Pass | Exit 0; 14 operation file tests passed with checkpoint and contract targets compiling/filtering cleanly. |
+| 2026-06-17 | 8 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase8-target cargo test -p daemon --test phase2_read_paths` | Pass | Exit 0; 15 read-path/dispatch tests passed. |
+| 2026-06-17 | 8 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase8-target cargo test -p daemon --test phase3_write_paths` | Pass | Exit 0; 6 write-path tests passed. |
+| 2026-06-17 | 8 | `git diff --check` | Pass | Exit 0; no whitespace errors. |

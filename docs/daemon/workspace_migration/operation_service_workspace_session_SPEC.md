@@ -198,6 +198,7 @@ pub struct OperationServices {
 pub struct WorkspaceSessionService {
     registry: WorkspaceSessionRegistry,
     store: WorkspaceSessionStore,
+    workspace: Arc<dyn WorkspacePrimitives>,
 }
 ```
 
@@ -205,12 +206,16 @@ Ownership rules:
 
 - `WorkspaceSessionService` is the only component that mutates
   `WorkspaceSessionRegistry`.
+- `WorkspaceSessionService` wires workspace lifecycle calls that must be
+  visible to daemon session tracking: create, capture, remount, and destroy.
 - `isolated_workspace_operation` asks `WorkspaceSessionService` to create,
   resolve, close, and remove isolated workspace sessions.
 - request dispatch asks `WorkspaceSessionService` to resolve a handler only
   when the request carries `workspace_session_id`.
 - `command_operation` and `file_operation` receive a
   `WorkspaceSessionHandler`; they do not own the registry.
+- `command_operation` may ask `WorkspaceSessionService` to create and destroy
+  an internal host workspace when it runs without an injected handler.
 - `workspace` does not own sessions or routing state. It only owns resource
   primitives such as create, capture, remount, readonly snapshot, and destroy.
 - `daemon/core` does not own the registry. It parses wire requests, calls
@@ -221,11 +226,110 @@ resolves to `Some(WorkspaceSessionHandler)`. A request without
 `workspace_session_id` calls the operation method with `None`.
 
 `None` is an explicit operation-mode input, not a daemon session. For
-`command_operation`, `None` means the command operation may use its normal
-one-shot `NetworkMode::Host` workspace workflow and own that temporary
-workspace lifecycle. The one-shot host workspace is not inserted into
-`WorkspaceSessionRegistry` and must not be treated as an isolated workspace
-session.
+`command_operation`, `None` means the command operation may create its normal
+one-shot `NetworkMode::Host` workspace through `WorkspaceSessionService`.
+That service call registers an internal session while the command is running
+and removes it when `WorkspaceSessionService::destroy_workspace` is called.
+The internal session is not returned to the caller as a reusable
+`workspace_session_id`.
+
+### Workspace Session Service Surface
+
+Operation code should not call raw workspace lifecycle primitives directly when
+the created workspace needs registry visibility. It should call
+`WorkspaceSessionService`, which wraps the raw workspace primitive and keeps the
+registry coherent.
+
+Operation crates should refer to this lifecycle boundary as
+`WorkspaceSessionService`. If Rust crate boundaries would otherwise create a
+cycle, place `WorkspaceSessionService` and the session model in a lower-level
+shared module/crate that `operation_service` composes. Do not rename the
+concept to a generic lifecycle port in the public design.
+
+```rust
+pub struct CreateInternalWorkspaceRequest {
+    pub caller_id: CallerId,
+    pub workspace_root: PathBuf,
+    pub network: NetworkMode,
+}
+
+impl WorkspaceSessionService {
+    pub fn create_internal_workspace(
+        &self,
+        request: CreateInternalWorkspaceRequest,
+    ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {
+        todo!("service surface")
+    }
+
+    pub fn resolve(
+        &self,
+        session_id: WorkspaceSessionId,
+        caller_id: CallerId,
+    ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {
+        todo!("service surface")
+    }
+
+    pub fn capture_changes(
+        &self,
+        handler: &WorkspaceSessionHandler,
+        request: CaptureChangesRequest,
+    ) -> Result<CapturedWorkspaceChanges, WorkspaceSessionError> {
+        todo!("service surface")
+    }
+
+    pub fn remount_workspace(
+        &self,
+        handler: &WorkspaceSessionHandler,
+        request: RemountWorkspaceRequest,
+    ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {
+        todo!("service surface")
+    }
+
+    pub fn destroy_workspace(
+        &self,
+        handler: WorkspaceSessionHandler,
+        request: DestroyWorkspaceRequest,
+    ) -> Result<DestroyWorkspaceResult, WorkspaceSessionError> {
+        todo!("service surface")
+    }
+}
+```
+
+`command_operation` stores `WorkspaceSessionService` and uses it only when it
+owns a lifecycle flow, such as the no-session host one-shot path:
+
+```rust
+pub struct CommandOperation {
+    sessions: Arc<WorkspaceSessionService>,
+}
+```
+
+`WorkspaceSessionService::create_internal_workspace` calls
+`workspace.create_workspace(...)`, then inserts a `WorkspaceSession` into
+`WorkspaceSessionRegistry` before returning the handler. The operation decides
+whether the returned `workspace_session_id` is exposed to the caller:
+
+- `enter_isolated_workspace` returns the `workspace_session_id` to the caller.
+- one-shot command execution keeps the handler internal and destroys it before
+  returning the command result.
+
+If registry insertion fails, the service must destroy or schedule cleanup for
+the raw workspace before returning the error.
+
+`WorkspaceSessionService::destroy_workspace` marks the session closing, calls
+`workspace.destroy_workspace(...)`, releases the associated lease, and removes
+the session from `WorkspaceSessionRegistry`. If destroy fails, the service must
+leave enough registry state to retry or report the leaked resource; it must not
+silently remove a live workspace.
+
+`WorkspaceSessionService::capture_changes` and
+`WorkspaceSessionService::remount_workspace` call the corresponding workspace
+primitive and update session metadata such as `last_activity`, `snapshot`,
+`layer_paths`, lease ids, and `remount_state` as needed.
+
+Raw `workspace.create_workspace(...)` remains a primitive and does not
+auto-register anything by itself. The automatic registry mutation belongs to
+the service wrapper.
 
 ## Request Flow
 
@@ -236,9 +340,7 @@ request: enter_isolated_workspace(caller_id, workspace_root)
 
 isolated_workspace_operation:
   resolve workspace_root
-  call workspace.create_workspace(NetworkMode::Isolated)
-  create WorkspaceSession
-  insert WorkspaceSession into operation_service registry
+  call WorkspaceSessionService::create_internal_workspace(NetworkMode::Isolated)
   return workspace_session_id + workspace_handle_id
 ```
 
@@ -273,7 +375,7 @@ write_file(..., workspace_session_id)
   -> no implicit destroy
 ```
 
-### Later Operation Without Persisted Session
+### Later Operation Without Workspace Session Id
 
 ```text
 request: exec_command(..., no workspace_session_id)
@@ -283,16 +385,20 @@ operation_service:
 
 command_operation:
   sees None
-  creates one-shot NetworkMode::Host workspace when needed
+  calls WorkspaceSessionService::create_internal_workspace(NetworkMode::Host)
+    when needed
   runs command
-  captures/publishes according to command policy
-  destroys the one-shot workspace it created
+  calls WorkspaceSessionService::capture_changes(...)
+  publishes according to command policy
+  calls WorkspaceSessionService::destroy_workspace(...)
 ```
 
 This is intentionally different from the session path. A provided handler means
 the operation must use an existing session workspace and must not create or
 destroy it. A missing handler means `command_operation` is free to run its
-ordinary host one-shot workflow.
+ordinary host one-shot workflow, but that workflow must use
+`WorkspaceSessionService` so the temporary workspace is tracked while it
+exists.
 
 For targeted file operations without a session:
 
@@ -344,7 +450,8 @@ Semantics:
 - `Some(handler)` is a persisted workspace session, typically created by
   `enter_isolated_workspace`.
 - `None` for `command_operation` means the command operation owns its normal
-  one-shot `NetworkMode::Host` workspace lifecycle.
+  one-shot `NetworkMode::Host` workspace lifecycle through
+  `WorkspaceSessionService`.
 - `None` for targeted file operations can mean a non-mounted workflow such as
   readonly latest snapshot plus direct layer publish.
 - explicit lifecycle operations, such as `enter_isolated_workspace` and
@@ -359,8 +466,7 @@ request: exit_isolated_workspace(workspace_session_id, grace_s)
 isolated_workspace_operation:
   resolve session
   coordinate command cancellation or active-command rejection policy
-  call workspace.destroy_workspace(handle)
-  release session from registry
+  call WorkspaceSessionService::destroy_workspace(handle)
   return destroy report
 ```
 
@@ -498,16 +604,21 @@ operation_service -> file_operation
 operation_service -> plugin_operation
 operation_service -> isolated_workspace_operation
 operation_service -> checkpoint_operation
+operation_service -> WorkspaceSessionService
 
-command_operation -> workspace
+command_operation -> WorkspaceSessionService
 command_operation -> layerstack publish port
 
-file_operation -> workspace
+file_operation -> WorkspaceSessionService
+file_operation -> workspace readonly snapshot port
 file_operation -> layerstack publish/read ports
 
-isolated_workspace_operation -> workspace
+isolated_workspace_operation -> WorkspaceSessionService
 isolated_workspace_operation -> command_operation liveness/cancel/remount port
 isolated_workspace_operation -> layerstack remount/squash port
+
+WorkspaceSessionService -> workspace
+WorkspaceSessionService -> layerstack lease/session ports
 
 workspace -> layerstack snapshot/lease/view setup
 
@@ -515,6 +626,11 @@ layerstack -> workspace forbidden
 layerstack -> operation_service forbidden
 layerstack -> operation crates forbidden
 ```
+
+If these arrows would form a Rust crate cycle, split `WorkspaceSessionService`
+and its session model into a lower-level crate/module used by
+`operation_service` and operation crates. The design name remains
+`WorkspaceSessionService`.
 
 `daemon/core` must not depend on old `operation`, `command`, `plugin`, or
 `plugin-contract` once the operation-service split is complete.
@@ -527,10 +643,12 @@ layerstack -> operation crates forbidden
    is needed.
 4. Return `workspace_session_id` from `enter_isolated_workspace`.
 5. Make operation methods accept optional or explicit `WorkspaceSessionHandler`.
-6. Move live remount orchestration to operation service and
+6. Route tracked workspace create/capture/remount/destroy through
+   `WorkspaceSessionService` instead of raw workspace primitives.
+7. Move live remount orchestration to operation service and
    isolated-workspace operation.
-7. Keep LayerStack as the source of truth for pinned layer refs.
-8. Retire `WorkspaceRuntime` from `daemon/core`.
+8. Keep LayerStack as the source of truth for pinned layer refs.
+9. Retire `WorkspaceRuntime` from `daemon/core`.
 
 ## Open Questions
 
