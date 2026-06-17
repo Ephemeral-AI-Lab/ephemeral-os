@@ -1,12 +1,12 @@
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use crate::workspace::session_manager::{WorkspaceSession, WorkspaceSessionManager};
-use crate::workspace::WorkspaceManagerError;
 use crate::workspace_crate::{
     CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, RemountWorkspaceRequest, WorkspaceId,
     WorkspaceService,
 };
+use crate::workspace_manager::session_manager::{WorkspaceSession, WorkspaceSessionManager};
+use crate::workspace_manager::WorkspaceManagerError;
 
 use super::session_manager::WorkspaceSessionHandler;
 

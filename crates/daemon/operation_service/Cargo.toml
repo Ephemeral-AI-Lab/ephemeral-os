@@ -6,7 +6,10 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+command.workspace = true
+layerstack.workspace = true
 thiserror.workspace = true
+trace.workspace = true
 workspace.workspace = true
 
 [lints]

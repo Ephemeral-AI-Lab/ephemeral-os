@@ -2,10 +2,10 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
-use crate::workspace::WorkspaceManagerError;
 use crate::workspace_crate::{
     BaseRevision, CallerId, LayerStackSnapshotRef, LeaseId, WorkspaceHandle, WorkspaceId,
 };
+use crate::workspace_manager::WorkspaceManagerError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum WorkspaceLifecycleState {
@@ -158,7 +158,7 @@ impl WorkspaceSessionManager {
         self.sessions.get_mut(workspace_id)
     }
 
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub(crate) fn find_by_caller_id(&self, caller_id: &CallerId) -> Vec<&WorkspaceSession> {
         self.sessions
             .values()
@@ -166,7 +166,7 @@ impl WorkspaceSessionManager {
             .collect()
     }
 
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub(crate) fn find_by_lease_id(&self, lease_id: &LeaseId) -> Option<&WorkspaceSession> {
         self.sessions
             .values()
@@ -211,12 +211,12 @@ mod tests {
             PathBuf::from("/layers"),
         );
 
-        manager.insert(session).unwrap();
+        manager.insert(session).expect("insert workspace session");
 
         assert_eq!(
             manager
                 .find_by_workspace_id(&WorkspaceId("workspace-1".to_owned()))
-                .unwrap()
+                .expect("workspace session exists")
                 .workspace_id,
             WorkspaceId("workspace-1".to_owned())
         );
@@ -230,13 +230,13 @@ mod tests {
                 handle("workspace-1", "caller-1", "lease-1"),
                 PathBuf::from("/layers"),
             ))
-            .unwrap();
+            .expect("insert first workspace session");
         manager
             .insert(WorkspaceSession::from_handle(
                 handle("workspace-2", "caller-1", "lease-2"),
                 PathBuf::from("/layers"),
             ))
-            .unwrap();
+            .expect("insert second workspace session");
 
         let sessions = manager.find_by_caller_id(&CallerId("caller-1".to_owned()));
 
@@ -251,12 +251,12 @@ mod tests {
                 handle("workspace-1", "caller-1", "lease-1"),
                 PathBuf::from("/layers"),
             ))
-            .unwrap();
+            .expect("insert workspace session");
 
         assert_eq!(
             manager
                 .find_by_lease_id(&LeaseId("lease-1".to_owned()))
-                .unwrap()
+                .expect("lease lookup resolves session")
                 .workspace_id,
             WorkspaceId("workspace-1".to_owned())
         );
@@ -271,7 +271,7 @@ mod tests {
                 handle("workspace-1", "caller-1", "lease-1"),
                 PathBuf::from("/layers"),
             ))
-            .unwrap();
+            .expect("insert workspace session");
 
         assert!(manager.remove(&workspace_id).is_some());
         assert!(manager.find_by_workspace_id(&workspace_id).is_none());
@@ -288,14 +288,14 @@ mod tests {
                 handle("workspace-1", "caller-1", "lease-1"),
                 PathBuf::from("/layers"),
             ))
-            .unwrap();
+            .expect("insert workspace session");
 
         let error = manager
             .insert(WorkspaceSession::from_handle(
                 handle("workspace-1", "caller-2", "lease-2"),
                 PathBuf::from("/layers"),
             ))
-            .unwrap_err();
+            .expect_err("duplicate workspace id is rejected");
 
         assert!(matches!(
             error,

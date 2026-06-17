@@ -16,7 +16,7 @@ workspace::WorkspaceService
   no request routing policy
   no command lifecycle policy
 
-operation_service::workspace::WorkspaceManagerService
+operation_service::workspace_manager::WorkspaceManagerService
   daemon-owned open workspace manager
   workspace_id lookup
   session manager
@@ -83,7 +83,7 @@ pub trait WorkspaceService {
 caller-keyed isolated state, command/file route decisions, lease custody,
 teardown, and remount pressure behavior. Phase 1 does not remove all of that
 yet, but it introduces the destination owner for this state:
-`operation_service::workspace::WorkspaceManagerService`.
+`operation_service::workspace_manager::WorkspaceManagerService`.
 
 ## Target Module Layout
 
@@ -97,7 +97,7 @@ crates/daemon/operation_service/
     services.rs
     error.rs
 
-    workspace/
+    workspace_manager/
       mod.rs
       service.rs
       session_manager.rs
@@ -175,7 +175,7 @@ workspace-run teardown policy
 
 ## Workspace Manager Contract
 
-`operation_service::workspace::WorkspaceManagerService` is daemon operation
+`operation_service::workspace_manager::WorkspaceManagerService` is daemon operation
 state. It wraps `workspace::WorkspaceService`, records open-workspace sessions,
 and exposes handlers to operation services.
 
@@ -319,7 +319,7 @@ impl WorkspaceSessionManager {
 2. Add `operation_service` to root `Cargo.toml` workspace members and
    workspace dependencies.
 3. Create `operation_service/src/lib.rs`, `services.rs`, and `error.rs`.
-4. Create `operation_service/src/workspace/` with `service.rs`,
+4. Create `operation_service/src/workspace_manager/` with `service.rs`,
    `session_manager.rs`, and `error.rs`.
 5. Define `WorkspaceManagerService`, `WorkspaceSession`,
    `WorkspaceSessionHandler`, `WorkspaceSessionManager`, and
@@ -351,10 +351,10 @@ crates/daemon/operation_service/Cargo.toml
 crates/daemon/operation_service/src/lib.rs
 crates/daemon/operation_service/src/services.rs
 crates/daemon/operation_service/src/error.rs
-crates/daemon/operation_service/src/workspace/mod.rs
-crates/daemon/operation_service/src/workspace/service.rs
-crates/daemon/operation_service/src/workspace/session_manager.rs
-crates/daemon/operation_service/src/workspace/error.rs
+crates/daemon/operation_service/src/workspace_manager/mod.rs
+crates/daemon/operation_service/src/workspace_manager/service.rs
+crates/daemon/operation_service/src/workspace_manager/session_manager.rs
+crates/daemon/operation_service/src/workspace_manager/error.rs
 crates/daemon/operation_service/tests/workspace_manager.rs
 ```
 
@@ -393,7 +393,7 @@ required.
 - `workspace::WorkspaceService` is the low-level resource service name used by
   the spec and code.
 - `WorkspaceManagerService` exists under
-  `operation_service/src/workspace/service.rs`.
+  `operation_service/src/workspace_manager/service.rs`.
 - No `workspace_session_id` public contract is introduced.
 - No separate `operation_service/src/run/` module is introduced.
 - No separate `operation_service/src/isolation/` module is introduced for
@@ -431,7 +431,7 @@ git diff --check
 - Naming collision risk: both crates have `workspace/service.rs`. This is
   acceptable because the exported type names carry the boundary:
   `workspace::WorkspaceService` versus
-  `operation_service::workspace::WorkspaceManagerService`.
+  `operation_service::workspace_manager::WorkspaceManagerService`.
 - Dependency cycle risk: if command/file operation crates need the concrete
   manager type while `operation_service` depends on them, introduce a lower
   operation-owned workspace-manager crate before wiring command/file services.

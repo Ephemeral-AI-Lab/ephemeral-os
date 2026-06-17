@@ -117,9 +117,9 @@ The current codebase shows the migration split clearly:
 - `crates/daemon/operation_service/src/services.rs:6` currently has only
   `OperationServices { workspace }`. Phase 2 adds `command` and `remount`
   beside it.
-- `crates/daemon/operation_service/src/workspace/service.rs:21` already wraps
+- `crates/daemon/operation_service/src/workspace_manager/service.rs:21` already wraps
   workspace create/resolve/capture/remount/destroy around the session manager.
-- `crates/daemon/operation_service/src/workspace/session_manager.rs:16` already
+- `crates/daemon/operation_service/src/workspace_manager/session_manager.rs:16` already
   defines `WorkspaceSessionHandler`, and lines `125-175` keep the primary map
   keyed by `WorkspaceId` with derived caller/lease lookups.
 - `crates/shared/protocol/src/catalog.rs:320` lists command exec/write/poll/
@@ -142,7 +142,7 @@ crates/daemon/operation_service/src/
   services.rs
   error.rs
 
-  workspace/
+  workspace_manager/
     mod.rs
     service.rs
     session_manager.rs
@@ -683,9 +683,15 @@ Running/backgrounded responses expose `command_id`, not the temporary
 `workspace_id`.
 
 If a foreground exec yields `running`, the temporary one-shot workspace stays
-alive until the command finalizer observes process exit and finalizes the run.
-Destroy failure must retain enough service state to retry or report the leaked
-resource; it must not silently remove the temporary session.
+alive until the command finalizer can prove the command-owned process tree is
+drained and finalizes the run. A PTY runner/direct child exit by itself is not
+enough to capture, publish, or destroy the one-shot workspace. For example, a
+command that backgrounds long-lived work with `nohup ... &` can make the shell
+or PTY runner return immediately while descendants continue mutating the
+workspace. Those descendants keep the one-shot command active until they exit,
+are cancelled, or time out. Destroy failure must retain enough service state to
+retry or report the leaked resource; it must not silently remove the temporary
+session.
 
 ## Finalization After Yield
 
@@ -701,9 +707,9 @@ on exec_command start:
   register command_id in CommandRegistry
   register ActiveCommandProcess in CommandProcessStore
   attach CommandFinalizePolicy
-  spawn/register finalizer watch for process exit
+  spawn/register finalizer watch for process exit and process-tree drain
 
-when process exits:
+when process exits and command-owned process tree is drained:
   take CommandProcessExit exactly once
   mark ActiveCommandProcess.finalization = InProgress
   run finalize_command(command_id, exit, finalize_policy)
@@ -724,6 +730,8 @@ Session { workspace_id }:
   remove command registry binding
 
 OneShotPublishThenDestroy { workspace_id }:
+  wait until no command-owned subprocess can still mutate the temporary workspace
+  do not treat PTY runner/direct child exit as sufficient by itself
   if command succeeded:
     capture workspace changes
     publish through command LayerStack/OCC/lane policy
@@ -740,6 +748,22 @@ If finalization fails, the service must not silently drop state. It should mark
 `FinalizationState::Failed`, keep enough command/workspace state to retry or
 report the failure, and let later `poll`, `read_lines`, `write_stdin`, or
 `cancel` observe the terminal/finalization error.
+
+One-shot subprocess drain rule:
+
+- The finalizer may observe the direct PTY/runner process exit first, but it must
+  keep the command active while tracked descendants remain in the command process
+  group, workspace cgroup, or other command-owned process set.
+- If the process set cannot be inspected, success finalization must be blocked or
+  failed with retained cleanup state; it must not optimistically capture/publish
+  and destroy.
+- Cancellation and timeout may terminate the tracked process group/cgroup, but
+  capture/publish/destroy still happen only after the termination path has
+  observed that the command-owned process set is gone or has recorded a retained
+  cleanup failure.
+- Persistent session commands do not destroy the workspace, but their terminal
+  status should still distinguish direct runner exit from remaining tracked
+  command subprocesses so stdin/read/poll/cancel behavior is coherent.
 
 Completed-command retention is required for ownership validation after active
 registry removal. A completed command must be removed from `CommandRegistry`, but
@@ -992,7 +1016,7 @@ LayerStack
 
 The high-level remount entry point belongs to `WorkspaceRemountService`, not to
 the low-level `workspace::WorkspaceService`, not to the daemon request
-entrypoint, and not to `operation_service::workspace` importing command-service
+entrypoint, and not to `operation_service::workspace_manager` importing command-service
 types.
 
 `WorkspaceManagerService` owns workspace session state transitions and resource
@@ -1317,11 +1341,11 @@ operation
 Rules:
 
 - `operation_service::command` must not import `operation::command`.
-- `operation_service::workspace` must not import `operation_service::command` or
+- `operation_service::workspace_manager` must not import `operation_service::command` or
   `CommandOperationService`; cross-service remount sequencing belongs in
   `WorkspaceRemountService`.
 - `operation_service::workspace_remount` may depend on
-  `operation_service::workspace` and `operation_service::command`, but it must
+  `operation_service::workspace_manager` and `operation_service::command`, but it must
   own only orchestration and must not reach into command process internals or
   workspace resource internals.
 - Move command policy code into `operation_service::command`.
@@ -1462,7 +1486,7 @@ Phase 2 does not implement:
 
 ## Implementation Guardrail Checklist
 
-- Implement `WorkspaceRemountService` ownership so `operation_service::workspace`
+- Implement `WorkspaceRemountService` ownership so `operation_service::workspace_manager`
   does not depend on command-service types and does not call
   `CommandOperationService` directly.
 - Add explicit remount-pending state, plus cleanup/resume guards that clear or

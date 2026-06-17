@@ -93,7 +93,6 @@ impl LeaseAwarePlan {
         self.reclaiming_interval_count > 0
     }
 
-    #[must_use]
     pub fn reclaiming_intervals(&self) -> impl Iterator<Item = &ReclaimingInterval> {
         self.entries.iter().filter_map(|entry| match entry {
             LeaseAwarePlanEntry::ReclaimingInterval(interval) => Some(interval),

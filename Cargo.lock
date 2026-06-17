@@ -778,7 +778,10 @@ dependencies = [
 name = "operation_service"
 version = "0.1.0"
 dependencies = [
+ "command",
+ "layerstack",
  "thiserror 2.0.18",
+ "trace",
  "workspace",
 ]
 

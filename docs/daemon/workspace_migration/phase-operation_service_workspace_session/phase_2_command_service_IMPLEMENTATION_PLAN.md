@@ -49,6 +49,39 @@ the target boundaries from the spec:
 - Do not implement daemon restart recovery or a persistent command/session store
   unless explicitly scoped after Phase 2 command-service migration.
 
+## Review, Refactor, And Cleanup Discipline
+
+Every milestone should end with a focused cleanup pass, not just a green compile.
+The cleanup pass is still bounded by that milestone's scope:
+
+- Remove unused scaffold fields, placeholder methods, stale imports, and
+  temporary test helpers when the milestone no longer needs them.
+- Remove old command/runtime compatibility only at the milestone that owns that
+  migration. Do not delete legacy daemon dispatch, `operation::command`, or
+  `WorkspaceRuntime` code before M7/M8 unless an earlier milestone explicitly
+  moves that behavior.
+- Do not keep `#[allow(dead_code)]` as a substitute for either deleting unused
+  code or adding the real target API. If a placeholder must remain for a later
+  milestone, record why in the implementation record.
+- Prefer narrow refactors that make ownership boundaries clearer. Avoid broad
+  formatting churn, module reshuffles, or behavior-preserving rewrites outside
+  the changed milestone surface.
+- After implementation, run static boundary searches for old target vocabulary
+  in the touched operation-service files and update the implementation record
+  with either a clean result or explicit false positives.
+
+Adversarial review should be split by responsibility so findings are not
+averaged away:
+
+- Registry/binding lane: `CommandRegistry`, command/workspace binding shape,
+  workspace scan behavior, and absence of secondary indexes.
+- Process/completion lane: `CommandProcessStore`, active records, reservation
+  rollback, completed-record retention, and caller ownership data.
+- Contract/boundary lane: command inputs, service method signatures, error
+  types, module exports, dependency direction, and forbidden legacy terms.
+- Test/record lane: focused tests, static checks, implementation-record
+  accuracy, unresolved issues, and handoff notes for the next milestone.
+
 ## Current-State Summary
 
 This summary is grounded in the live tree at plan creation time:
@@ -57,7 +90,7 @@ This summary is grounded in the live tree at plan creation time:
   in `crates/daemon/operation_service/src/services.rs:6`. There are no
   `command/` or `workspace_remount/` folders under `operation_service/src`.
 - `WorkspaceManagerService` exists in
-  `crates/daemon/operation_service/src/workspace/service.rs:13` and already
+  `crates/daemon/operation_service/src/workspace_manager/service.rs:13` and already
   owns `create`, `resolve`, `capture_changes`, `remount_workspace`, and
   `destroy` methods at lines 27, 57, 81, 99, and 116. The session manager has
   only `Active` and `Closing` lifecycle states at
@@ -134,7 +167,7 @@ crates/daemon/operation_service/src/
   services.rs
   error.rs
 
-  workspace/
+  workspace_manager/
     mod.rs
     service.rs
     session_manager.rs
@@ -189,8 +222,8 @@ upperdir-delta capture contract is grouped with one-shot/session finalization,
 because that finalization cannot be reviewed independently without the new
 capture result shape.
 
-- [ ] Milestone 1: Operation-service scaffolding and contracts.
-- [ ] Milestone 2: Command service registry/process-store split.
+- [x] Milestone 1: Operation-service scaffolding and contracts.
+- [x] Milestone 2: Command service registry/process-store split.
 - [ ] Milestone 3: Exec Some/None flows and caller ownership.
 - [ ] Milestone 4: One-shot finalization and persistent-session finalization semantics.
 - [ ] Milestone 5: Local OS row projection.
@@ -209,9 +242,9 @@ change daemon dispatch.
 
 ### Implementation Record Workflow
 
-- [ ] At start, create or append the Milestone 1 entry in
+- [x] At start, create or append the Milestone 1 entry in
   `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`.
-- [ ] Before marking this milestone complete, update that entry with files
+- [x] Before marking this milestone complete, update that entry with files
   changed, verification commands/results, design deviations, unresolved issues,
   and handoff notes for Milestone 2.
 
@@ -240,7 +273,7 @@ operation_service/src/
     mod.rs
     service.rs
     error.rs
-  workspace/
+  workspace_manager/
     existing files unchanged except exports if needed
   services.rs
   lib.rs
@@ -352,13 +385,13 @@ pub struct ExecCommandInput {
 
 ### Implementation Steps
 
-- [ ] Add `command` and `workspace_remount` modules with empty behavior and typed
+- [x] Add `command` and `workspace_remount` modules with empty behavior and typed
    errors.
-- [ ] Add command contract types with the target fields.
-- [ ] Add service structs and constructors.
-- [ ] Update `OperationServices` to include all three service fields.
-- [ ] Add only the dependencies needed for the new type signatures.
-- [ ] Add compile-focused tests that construct the service graph with fake
+- [x] Add command contract types with the target fields.
+- [x] Add service structs and constructors.
+- [x] Update `OperationServices` to include all three service fields.
+- [x] Add only the dependencies needed for the new type signatures.
+- [x] Add compile-focused tests that construct the service graph with fake
    workspace service dependencies.
 
 ### Explicit Exclusions
@@ -373,6 +406,7 @@ pub struct ExecCommandInput {
 
 ```text
 CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p operation_service
+CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service --test service_graph
 CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service workspace_manager
 cargo fmt --check
 git diff --check
@@ -389,18 +423,18 @@ git diff --check
 
 ### Acceptance Criteria
 
-- [ ] `operation_service/src/command` and `operation_service/src/workspace_remount`
+- [x] `operation_service/src/command` and `operation_service/src/workspace_remount`
   exist.
-- [ ] `OperationServices` has exactly `workspace`, `command`, and `remount` public
+- [x] `OperationServices` has exactly `workspace`, `command`, and `remount` public
   fields.
-- [ ] `CommandOperationService` has fields for workspace, config, registry,
+- [x] `CommandOperationService` has fields for workspace, config, registry,
   process_store, and `CommandFinalizationOptions`.
-- [ ] `WorkspaceRemountService` has fields for workspace, command, and options.
-- [ ] `ExecCommandInput` contains `workspace_root` and optional `workspace_id`, and
+- [x] `WorkspaceRemountService` has fields for workspace, command, and options.
+- [x] `ExecCommandInput` contains `workspace_root` and optional `workspace_id`, and
   does not contain `layer_stack_root`, request correlation identifiers, or
   `remountable`.
-- [ ] `operation_service::workspace` does not import command-service types.
-- [ ] No daemon behavior changes.
+- [x] `operation_service::workspace_manager` does not import command-service types.
+- [x] No daemon behavior changes.
 
 ## Milestone 2: Command Service Registry/Process-Store Split
 
@@ -412,12 +446,12 @@ reviewable through unit tests without real PTY process spawning.
 
 ### Implementation Record Workflow
 
-- [ ] Before starting, read
+- [x] Before starting, read
   `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
   and carry forward unresolved notes from earlier milestones.
-- [ ] At start, create or append the Milestone 2 entry in the implementation
+- [x] At start, create or append the Milestone 2 entry in the implementation
   record.
-- [ ] Before marking this milestone complete, update that entry with files
+- [x] Before marking this milestone complete, update that entry with files
   changed, verification commands/results, design deviations, unresolved issues,
   and handoff notes for Milestone 3.
 
@@ -427,8 +461,8 @@ reviewable through unit tests without real PTY process spawning.
 - `operation_service/src/command/process_store.rs`
 - `operation_service/src/command/service.rs`
 - `operation_service/src/command/error.rs`
-- Tests under `operation_service/tests/command_registry.rs` or
-  `operation_service/tests/command_service.rs`
+- Tests under `operation_service/tests/command_registry.rs` and
+  `operation_service/tests/command_process_store.rs`
 
 ### Expected Structure After This Milestone
 
@@ -451,6 +485,8 @@ pub struct CommandRegistry {
 
 - `command_workspace`: the only field. It binds active command ids to
   workspace ids.
+- Implementation may wrap this one map in synchronization for shared service
+  access, but the wrapped map remains the only registry state.
 - No caller index.
 - No workspace index.
 - No completed-command storage.
@@ -543,26 +579,27 @@ pub struct CompletedCommandRecord {
 | `CommandRegistry::unbind(&CommandId) -> Option<WorkspaceId>` | Purpose: remove active binding after safe finalization. Inputs: command id. Outputs/errors: removed workspace id or none. Ownership rules: caller/completion state stays in process store. Tests: unbind removes only one map entry. |
 | `CommandRegistry::commands_for_workspace(&WorkspaceId) -> Vec<CommandId>` | Purpose: remount scan by workspace id. Inputs: workspace id. Outputs/errors: list, possibly empty. Ownership rules: implemented by scanning `command_workspace`, not by adding an index. Tests: multiple command ids discovered by scan. |
 | `CommandProcessStore::allocate_command_id() -> CommandId` | Purpose: allocate service-owned command ids. Inputs: none. Outputs/errors: new id. Ownership rules: id allocation belongs here, not low-level `command::StartCommand`. Tests: stable monotonic unique ids. |
-| `CommandProcessStore::try_reserve() -> Result<CommandReservation, CommandServiceError>` | Purpose: enforce active admission. Inputs: none. Outputs/errors: admission error with active/max counts. Ownership rules: reservation does not bind registry until activated. Tests: dropped reservation releases count. |
-| `CommandProcessStore::insert_active(record) -> Result<(), CommandServiceError>` | Purpose: install active process record. Inputs: `ActiveCommandProcess`. Outputs/errors: duplicate active id. Ownership rules: process store owns the process handle. Tests: active lookup returns caller/workspace/finalize policy. |
+| `CommandProcessStore::try_reserve() -> Result<CommandReservation, CommandServiceError>` | Purpose: enforce active admission. Inputs: none. Outputs/errors: admission error with active/max counts. Ownership rules: reservation does not bind registry until consumed by `insert_active`. Tests: dropped reservation releases count. |
+| `CommandProcessStore::insert_active(reservation, record) -> Result<(), CommandServiceError>` | Purpose: install active process record after admission. Inputs: `CommandReservation`, `ActiveCommandProcess`. Outputs/errors: duplicate active id. Ownership rules: process store owns the process handle and consumes the reservation only after insert succeeds. Tests: active lookup returns caller/workspace/finalize policy and duplicate insert rolls reservation back. |
 | `CommandProcessStore::active(&CommandId) -> Option<ActiveCommandRef>` | Purpose: read active state for stdin/read/poll/cancel. Inputs: command id. Outputs/errors: active record reference/clone guard. Ownership rules: no caller filtering. Tests: not-found distinct from unauthorized. |
-| `CommandProcessStore::remove_active(&CommandId) -> Option<ActiveCommandProcess>` | Purpose: transfer active record into finalization. Inputs: command id. Outputs/errors: active record or none. Ownership rules: finalizer becomes owner. Tests: removes exactly once. |
+| `CommandProcessStore::complete_active(record) -> Result<Option<ActiveCommandProcess>, CommandServiceError>` | Purpose: atomically move an active command into completed retention. Inputs: completed record. Outputs/errors: removed active record, none when not active, or duplicate completed id. Ownership rules: active state is retained if completed insertion would fail, and admission capacity is released only after completed state is recorded. Tests: completed lookup validates caller data is retained and duplicate completion preserves active state. |
 | `CommandCompletionStore::insert(record)` | Purpose: retain terminal record. Inputs: completed record. Outputs/errors: duplicate or eviction result if bounded retention is added. Ownership rules: not part of `CommandRegistry`. Tests: completed lookup validates caller data is retained. |
 | `CommandCompletionStore::get(&CommandId) -> Option<CompletedCommandRecord>` | Purpose: let read/poll return retained terminal results. Inputs: command id. Outputs/errors: record or none. Ownership rules: caller authorization happens at service method layer. Tests: missing active can still find completed. |
 
 ### Implementation Steps
 
-- [ ] Define `CommandId` in `operation_service::command::contract` or move it to
+- [x] Define `CommandId` in `operation_service::command::contract` or move it to
    the lowest existing shared crate that avoids an `operation -> operation_service`
    dependency.
-- [ ] Implement `CommandRegistry` as exactly one field.
-- [ ] Add process-store structs and lifecycle enums.
-- [ ] Add lightweight inactive-process test builders using
+- [x] Implement `CommandRegistry` as exactly one field.
+- [x] Add process-store structs and lifecycle enums.
+- [x] Add lightweight inactive-process test builders using
   `command::CommandProcess::new`.
-- [ ] Wire `CommandOperationService` to own `Arc<CommandRegistry>` and
+- [x] Wire `CommandOperationService` to own `Arc<CommandRegistry>` and
    `Arc<CommandProcessStore>`.
-- [ ] Add unit tests proving registry shape, scan behavior, completion-store
+- [x] Add unit tests proving registry shape, scan behavior, completion-store
    ownership retention, and reservation rollback.
+- [x] Remove Milestone 1-only registry/process-store skeleton behavior.
 
 ### Explicit Exclusions
 
@@ -579,6 +616,7 @@ pub struct CompletedCommandRecord {
 CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_registry
 CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_process_store
 CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p operation_service
+CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service
 cargo fmt --check
 git diff --check
 ```
@@ -593,13 +631,13 @@ git diff --check
 
 ### Acceptance Criteria
 
-- [ ] `CommandRegistry` contains exactly one `HashMap<CommandId, WorkspaceId>`.
-- [ ] Active process state and completed records are not fields of
+- [x] `CommandRegistry` contains exactly one `HashMap<CommandId, WorkspaceId>`.
+- [x] Active process state and completed records are not fields of
   `CommandRegistry`.
-- [ ] Completed records retain `caller_id` for authorization after active binding
+- [x] Completed records retain `caller_id` for authorization after active binding
   removal.
-- [ ] Workspace command scans are implemented by iterating the one binding map.
-- [ ] No public command-service count/collect/advance APIs exist.
+- [x] Workspace command scans are implemented by iterating the one binding map.
+- [x] No public command-service count/collect/advance APIs exist.
 
 ## Milestone 3: Exec Some/None Flows And Caller Ownership
 
@@ -800,8 +838,8 @@ publish.
 - `operation_service/src/command/process_store.rs`
 - `operation_service/src/command/contract.rs`
 - `operation_service/src/command/error.rs`
-- `operation_service/src/workspace/service.rs`
-- `operation_service/src/workspace/session_manager.rs`
+- `operation_service/src/workspace_manager/service.rs`
+- `operation_service/src/workspace_manager/session_manager.rs`
 - `crates/daemon/workspace/src/model.rs`
 - `crates/daemon/workspace/src/service.rs`
 - Tests under `operation_service/tests/command_finalize.rs` and workspace model
@@ -1109,9 +1147,9 @@ Move live remount orchestration out of `WorkspaceRuntime` into
 
 ### Files And Modules Expected To Change
 
-- `operation_service/src/workspace/session_manager.rs`
-- `operation_service/src/workspace/service.rs`
-- `operation_service/src/workspace/error.rs`
+- `operation_service/src/workspace_manager/session_manager.rs`
+- `operation_service/src/workspace_manager/service.rs`
+- `operation_service/src/workspace_manager/error.rs`
 - `operation_service/src/command/remount.rs`
 - `operation_service/src/command/service.rs`
 - `operation_service/src/workspace_remount/service.rs`
@@ -1124,7 +1162,7 @@ Move live remount orchestration out of `WorkspaceRuntime` into
 
 ```text
 operation_service/src/
-  workspace/
+  workspace_manager/
     session_manager.rs # RemountState plus begin/apply/finish support
     service.rs         # workspace-only remount state/resource methods
   command/
@@ -1244,7 +1282,7 @@ pub enum RemountSwitchState {
 - No queueing of commands during remount pending.
 - No parent-prefix production compaction policy.
 - No unsafe fallback that deletes mounted lowerdirs after blocked inspection.
-- No command-service imports from `operation_service::workspace`.
+- No command-service imports from `operation_service::workspace_manager`.
 - No per-command remount opt-in.
 
 ### Tests And Verification Commands
@@ -1456,7 +1494,9 @@ CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p e2e-test w
 
 Delete or collapse old command/runtime architecture after daemon dispatch has
 moved. This is the final review gate that proves Phase 2 target boundaries are
-real rather than parallel to the old system.
+real rather than parallel to the old system. This milestone also removes
+temporary scaffold left by earlier milestones once the real target behavior has
+landed.
 
 ### Implementation Record Workflow
 
@@ -1493,7 +1533,7 @@ crates/daemon/core/src/runtime/
 
 crates/daemon/operation_service/src/
   command/
-  workspace/
+  workspace_manager/
   workspace_remount/
 ```
 
@@ -1513,7 +1553,7 @@ Removed target-incompatible contracts:
 Retained target contracts:
 
 - `operation_service::command::CommandOperationService`
-- `operation_service::workspace::WorkspaceManagerService`
+- `operation_service::workspace_manager::WorkspaceManagerService`
 - `operation_service::workspace_remount::WorkspaceRemountService`
 - `command::CommandProcess` and other policy-free substrate types
 
@@ -1531,6 +1571,10 @@ Retained target contracts:
 
 - [ ] Remove old `operation::command` implementation modules or reduce them to
    temporary re-exports that do not own policy.
+- [ ] Remove temporary operation-service scaffold that is no longer needed:
+   placeholder `NotImplemented` variants, stale `#[allow(dead_code)]` field
+   suppressions, unused constructor-only helpers, and tests that only proved
+   earlier compile scaffolding.
 - [ ] Remove old daemon command adapter imports and tests that assert old contract
    details.
 - [ ] Remove `WorkspaceRuntime` command routing and remount orchestration.
@@ -1540,6 +1584,9 @@ Retained target contracts:
 - [ ] Update protocol catalog to remove or replace collect/count entries and
    operation schema names.
 - [ ] Add static boundary checks using `rg` in the final PR checklist.
+- [ ] Run the four adversarial review lanes from the cross-milestone cleanup
+   discipline: registry/binding, process/completion, contract/boundary, and
+   tests/record.
 - [ ] Run focused package checks, then live daemon E2E if behavior changed.
 
 ### Explicit Exclusions
@@ -1571,6 +1618,7 @@ rg -n "collect_completed|count_by_caller|advance_active_commands_once" crates/da
 rg -n "WorkspaceRuntime|route_command_context|ExecTarget|HostCommandWorkspace" crates/daemon/core crates/daemon/operation_service
 rg -n "request_id|trace_id|remountable|layer_stack_root" crates/daemon/operation_service/src/command
 rg -n "operation::command" crates/daemon/operation_service crates/daemon/core/src/op_adapter/command.rs
+rg -n "allow\\(dead_code\\)|NotImplemented" crates/daemon/operation_service/src
 ```
 
 Conditional live E2E:
@@ -1606,6 +1654,10 @@ CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p e2e-test w
 - [ ] `ExecCommandInput` still has only `workspace_root` as root path and no request
   correlation or `remountable` fields.
 - [ ] Daemon command dispatch calls operation-service methods directly.
+- [ ] Earlier milestone scaffold has either been removed or documented as
+  intentionally retained target surface.
+- [ ] No stale `#[allow(dead_code)]` suppressions or placeholder
+  `NotImplemented` errors remain in operation-service command/remount code.
 - [ ] Final static boundary checks pass or have only documented false positives in
   migration notes.
 

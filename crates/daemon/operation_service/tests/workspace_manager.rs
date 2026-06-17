@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use operation_service::workspace::{WorkspaceManagerError, WorkspaceManagerService};
+use operation_service::workspace_manager::{WorkspaceManagerError, WorkspaceManagerService};
 use workspace::{
     BaseRevision, CallerId, CaptureChangesRequest, CapturedWorkspaceChanges,
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
@@ -34,31 +34,52 @@ impl FakeWorkspaceService {
     }
 
     fn push_create_result(&self, result: Result<WorkspaceHandle, WorkspaceError>) {
-        self.create_results.lock().unwrap().push_back(result);
+        self.create_results
+            .lock()
+            .expect("test operation succeeds")
+            .push_back(result);
     }
 
     fn push_capture_result(&self, result: Result<CapturedWorkspaceChanges, WorkspaceError>) {
-        self.capture_results.lock().unwrap().push_back(result);
+        self.capture_results
+            .lock()
+            .expect("test operation succeeds")
+            .push_back(result);
     }
 
     fn push_remount_result(&self, result: Result<RemountWorkspaceResult, WorkspaceError>) {
-        self.remount_results.lock().unwrap().push_back(result);
+        self.remount_results
+            .lock()
+            .expect("test operation succeeds")
+            .push_back(result);
     }
 
     fn push_destroy_result(&self, result: Result<DestroyWorkspaceResult, WorkspaceError>) {
-        self.destroy_results.lock().unwrap().push_back(result);
+        self.destroy_results
+            .lock()
+            .expect("test operation succeeds")
+            .push_back(result);
     }
 
     fn capture_calls(&self) -> Vec<WorkspaceId> {
-        self.capture_calls.lock().unwrap().clone()
+        self.capture_calls
+            .lock()
+            .expect("test operation succeeds")
+            .clone()
     }
 
     fn remount_calls(&self) -> Vec<WorkspaceId> {
-        self.remount_calls.lock().unwrap().clone()
+        self.remount_calls
+            .lock()
+            .expect("test operation succeeds")
+            .clone()
     }
 
     fn destroy_calls(&self) -> Vec<WorkspaceId> {
-        self.destroy_calls.lock().unwrap().clone()
+        self.destroy_calls
+            .lock()
+            .expect("test operation succeeds")
+            .clone()
     }
 }
 
@@ -69,7 +90,7 @@ impl WorkspaceService for FakeWorkspaceService {
     ) -> Result<WorkspaceHandle, WorkspaceError> {
         self.create_results
             .lock()
-            .unwrap()
+            .expect("test operation succeeds")
             .pop_front()
             .unwrap_or_else(|| {
                 Err(WorkspaceError::Setup {
@@ -83,10 +104,13 @@ impl WorkspaceService for FakeWorkspaceService {
         handle: &WorkspaceHandle,
         _request: CaptureChangesRequest,
     ) -> Result<CapturedWorkspaceChanges, WorkspaceError> {
-        self.capture_calls.lock().unwrap().push(handle.id.clone());
+        self.capture_calls
+            .lock()
+            .expect("test operation succeeds")
+            .push(handle.id.clone());
         self.capture_results
             .lock()
-            .unwrap()
+            .expect("test operation succeeds")
             .pop_front()
             .unwrap_or_else(|| {
                 Err(WorkspaceError::Capture {
@@ -100,10 +124,13 @@ impl WorkspaceService for FakeWorkspaceService {
         handle: &WorkspaceHandle,
         _request: RemountWorkspaceRequest,
     ) -> Result<RemountWorkspaceResult, WorkspaceError> {
-        self.remount_calls.lock().unwrap().push(handle.id.clone());
+        self.remount_calls
+            .lock()
+            .expect("test operation succeeds")
+            .push(handle.id.clone());
         self.remount_results
             .lock()
-            .unwrap()
+            .expect("test operation succeeds")
             .pop_front()
             .unwrap_or_else(|| {
                 Err(WorkspaceError::Setup {
@@ -117,10 +144,13 @@ impl WorkspaceService for FakeWorkspaceService {
         handle: WorkspaceHandle,
         _request: DestroyWorkspaceRequest,
     ) -> Result<DestroyWorkspaceResult, WorkspaceError> {
-        self.destroy_calls.lock().unwrap().push(handle.id.clone());
+        self.destroy_calls
+            .lock()
+            .expect("test operation succeeds")
+            .push(handle.id.clone());
         self.destroy_results
             .lock()
-            .unwrap()
+            .expect("test operation succeeds")
             .pop_front()
             .unwrap_or_else(|| Ok(destroy_result(&handle)))
     }
@@ -206,14 +236,16 @@ fn workspace_manager_resolve_validates_caller_ownership() {
     fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
     let manager = manager_with(&fake);
 
-    manager.create(create_request("caller-1")).unwrap();
+    manager
+        .create(create_request("caller-1"))
+        .expect("test operation succeeds");
 
     let wrong_caller = manager
         .resolve(
             WorkspaceId("workspace-1".to_owned()),
             CallerId("caller-2".to_owned()),
         )
-        .unwrap_err();
+        .expect_err("test operation fails");
     assert!(matches!(
         wrong_caller,
         WorkspaceManagerError::CallerMismatch { workspace_id, .. }
@@ -225,7 +257,7 @@ fn workspace_manager_resolve_validates_caller_ownership() {
             WorkspaceId("workspace-1".to_owned()),
             CallerId("caller-1".to_owned()),
         )
-        .unwrap();
+        .expect("test operation succeeds");
     assert_eq!(handler.workspace_id, WorkspaceId("workspace-1".to_owned()));
 }
 
@@ -236,8 +268,12 @@ fn workspace_manager_create_rolls_back_raw_workspace_when_insert_fails() {
     fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-2")));
     let manager = manager_with(&fake);
 
-    manager.create(create_request("caller-1")).unwrap();
-    let error = manager.create(create_request("caller-1")).unwrap_err();
+    manager
+        .create(create_request("caller-1"))
+        .expect("test operation succeeds");
+    let error = manager
+        .create(create_request("caller-1"))
+        .expect_err("test operation fails");
 
     assert!(matches!(
         error,
@@ -264,11 +300,13 @@ fn workspace_manager_destroy_failure_retains_session() {
         step: "destroy failed".to_owned(),
     }));
     let manager = manager_with(&fake);
-    let handler = manager.create(create_request("caller-1")).unwrap();
+    let handler = manager
+        .create(create_request("caller-1"))
+        .expect("test operation succeeds");
 
     let error = manager
         .destroy(handler, DestroyWorkspaceRequest::default())
-        .unwrap_err();
+        .expect_err("test operation fails");
 
     assert!(matches!(
         error,
@@ -287,18 +325,20 @@ fn workspace_manager_successful_destroy_removes_session() {
     let fake = Arc::new(FakeWorkspaceService::new());
     fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
     let manager = manager_with(&fake);
-    let handler = manager.create(create_request("caller-1")).unwrap();
+    let handler = manager
+        .create(create_request("caller-1"))
+        .expect("test operation succeeds");
 
     manager
         .destroy(handler, DestroyWorkspaceRequest::default())
-        .unwrap();
+        .expect("test operation succeeds");
 
     let missing = manager
         .resolve(
             WorkspaceId("workspace-1".to_owned()),
             CallerId("caller-1".to_owned()),
         )
-        .unwrap_err();
+        .expect_err("test operation fails");
     assert!(matches!(missing, WorkspaceManagerError::NotFound { .. }));
 }
 
@@ -307,11 +347,13 @@ fn workspace_manager_rejects_stale_handler_before_raw_capture() {
     let fake = Arc::new(FakeWorkspaceService::new());
     fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
     let manager = manager_with(&fake);
-    let handler = manager.create(create_request("caller-1")).unwrap();
+    let handler = manager
+        .create(create_request("caller-1"))
+        .expect("test operation succeeds");
 
     manager
         .destroy(handler.clone(), DestroyWorkspaceRequest::default())
-        .unwrap();
+        .expect("test operation succeeds");
 
     let error = manager
         .capture_changes(
@@ -321,7 +363,7 @@ fn workspace_manager_rejects_stale_handler_before_raw_capture() {
                 include_stats: false,
             },
         )
-        .unwrap_err();
+        .expect_err("test operation fails");
 
     assert!(matches!(error, WorkspaceManagerError::NotFound { .. }));
     assert!(fake.capture_calls().is_empty());
@@ -334,7 +376,9 @@ fn workspace_manager_uses_canonical_handle_for_capture() {
     fake.push_create_result(Ok(handle.clone()));
     fake.push_capture_result(Ok(capture_result(&handle, 2, "root-2")));
     let manager = manager_with(&fake);
-    let mut handler = manager.create(create_request("caller-1")).unwrap();
+    let mut handler = manager
+        .create(create_request("caller-1"))
+        .expect("test operation succeeds");
     handler.handle.id = WorkspaceId("fabricated".to_owned());
 
     manager
@@ -345,7 +389,7 @@ fn workspace_manager_uses_canonical_handle_for_capture() {
                 include_stats: false,
             },
         )
-        .unwrap();
+        .expect("test operation succeeds");
 
     assert_eq!(
         fake.capture_calls(),
@@ -360,7 +404,9 @@ fn workspace_manager_capture_updates_handler_snapshot_consistently() {
     fake.push_create_result(Ok(handle.clone()));
     fake.push_capture_result(Ok(capture_result(&handle, 2, "root-2")));
     let manager = manager_with(&fake);
-    let handler = manager.create(create_request("caller-1")).unwrap();
+    let handler = manager
+        .create(create_request("caller-1"))
+        .expect("test operation succeeds");
 
     manager
         .capture_changes(
@@ -370,14 +416,14 @@ fn workspace_manager_capture_updates_handler_snapshot_consistently() {
                 include_stats: false,
             },
         )
-        .unwrap();
+        .expect("test operation succeeds");
 
     let resolved = manager
         .resolve(
             WorkspaceId("workspace-1".to_owned()),
             CallerId("caller-1".to_owned()),
         )
-        .unwrap();
+        .expect("test operation succeeds");
     assert_eq!(resolved.snapshot.manifest_version, 2);
     assert_eq!(resolved.handle.snapshot.manifest_version, 2);
     assert_eq!(resolved.snapshot.root_hash, "root-2");
@@ -392,7 +438,9 @@ fn workspace_manager_rejects_remount_workspace_id_mismatch() {
         handle: workspace_handle("workspace-2", "caller-1", "lease-2"),
     }));
     let manager = manager_with(&fake);
-    let handler = manager.create(create_request("caller-1")).unwrap();
+    let handler = manager
+        .create(create_request("caller-1"))
+        .expect("test operation succeeds");
 
     let error = manager
         .remount_workspace(
@@ -401,7 +449,7 @@ fn workspace_manager_rejects_remount_workspace_id_mismatch() {
                 layer_paths: vec![PathBuf::from("/lower/two")],
             },
         )
-        .unwrap_err();
+        .expect_err("test operation fails");
 
     assert!(matches!(
         error,
@@ -426,14 +474,16 @@ fn workspace_manager_duplicate_destroy_does_not_call_raw_destroy_twice() {
     let fake = Arc::new(FakeWorkspaceService::new());
     fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
     let manager = manager_with(&fake);
-    let handler = manager.create(create_request("caller-1")).unwrap();
+    let handler = manager
+        .create(create_request("caller-1"))
+        .expect("test operation succeeds");
 
     manager
         .destroy(handler.clone(), DestroyWorkspaceRequest::default())
-        .unwrap();
+        .expect("test operation succeeds");
     let duplicate = manager
         .destroy(handler, DestroyWorkspaceRequest::default())
-        .unwrap_err();
+        .expect_err("test operation fails");
 
     assert!(matches!(duplicate, WorkspaceManagerError::NotFound { .. }));
     assert_eq!(
