@@ -1,12 +1,15 @@
 use std::path::PathBuf;
 
-use crate::network_mode::isolated_network::IsolatedError;
-use crate::network_mode::isolated_network::WorkspaceHandle;
+use crate::network_mode::isolated_network::IsolatedNetworkError;
+use crate::network_mode::isolated_network::WorkspaceModeHandle;
 
 use super::{setup_error, NamespaceRuntime};
 
 impl NamespaceRuntime {
-    pub(crate) fn create_cgroup(&self, handle: &WorkspaceHandle) -> Result<PathBuf, IsolatedError> {
+    pub(crate) fn create_cgroup(
+        &self,
+        handle: &WorkspaceModeHandle,
+    ) -> Result<PathBuf, IsolatedNetworkError> {
         if self.stub {
             return Ok(PathBuf::new());
         }

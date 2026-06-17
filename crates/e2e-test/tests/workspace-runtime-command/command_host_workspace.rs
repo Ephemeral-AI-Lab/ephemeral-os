@@ -374,7 +374,7 @@ fn setsid_descendant_escapes_and_leaks_in_ephemeral() -> Result<()> {
     let marker = format!("eos_e2e_escape_{}", unique_suffix().replace('-', "_"));
     // A `setsid` child gets a NEW process group, so the pgid scope-wait cannot see
     // it: the command COMPLETES immediately (unlike a same-pgid nohup/`&` child).
-    // The ephemeral path removes by pgid only (no PID-ns, no cgroup backstop), so the
+    // The host path removes by pgid only (no PID-ns, no cgroup backstop), so the
     // descendant LEAKS past command completion and lease release. This pins that
     // contract; the isolated counterpart proves the cgroup-backed mode removes it. A
     // self-healing `sleep 30` keeps CI from accumulating ghosts, and a future
@@ -400,11 +400,11 @@ fn setsid_descendant_escapes_and_leaks_in_ephemeral() -> Result<()> {
     assert!(stdout(&completed).contains("escaped-ready"), "{completed}");
     wait_for_command_count(&lease, 0)?;
     wait_for_active_leases(&lease, 0)?;
-    // The escaped descendant is still alive AFTER the lease released: ephemeral mode
+    // The escaped descendant is still alive AFTER the lease released: host mode
     // removes by pgid only and never killpg'd this escaped group.
     assert!(
         marker_count(&lease, &marker)? >= 1,
-        "ephemeral mode leaks the escaped setsid descendant past lease release"
+        "host mode leaks the escaped setsid descendant past lease release"
     );
     kill_marker(&lease, &marker, 9)?;
     wait_for_marker_count(&lease, &marker, 0)?;

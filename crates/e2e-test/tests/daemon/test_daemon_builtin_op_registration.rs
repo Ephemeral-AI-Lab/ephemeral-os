@@ -16,9 +16,9 @@ use crate::support::{envelope_error_kind, envelope_error_kind_or_status, live_po
 /// the lease (enter isolated mode) and perturb the loop. Their dispatch is
 /// proven by the dedicated tier tests instead.
 const SKIP: &[BuiltinOp] = &[
-    BuiltinOp::IsolatedWorkspaceEnter,
-    BuiltinOp::IsolatedWorkspaceExit,
-    BuiltinOp::IsolatedWorkspaceTestReset,
+    BuiltinOp::IsolatedNetworkEnter,
+    BuiltinOp::IsolatedNetworkExit,
+    BuiltinOp::IsolatedNetworkTestReset,
     // Would cancel + discard every workspace run in the shared lease.
     BuiltinOp::CancelWorkspaceRuns,
 ];

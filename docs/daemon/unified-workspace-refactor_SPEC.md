@@ -7,11 +7,11 @@ Owner: `crates/daemon`
 ## Final Decisions
 
 - The two caller-facing modes are `NetworkMode::Host` and
-  `NetworkMode::Isolated`.
+  `NetworkMode::IsolatedNetwork`.
 - Host mode is not a fresh-runner mode. It still creates a holder-backed
   workspace namespace stack with user, mount, and PID namespaces; it only skips
   the dedicated network namespace and isolated network setup.
-- Isolated mode uses the same holder-backed workspace namespace stack and adds
+- Isolated-network mode uses the same holder-backed workspace namespace stack and adds
   the dedicated network namespace plus veth, DNS, and netfilter setup.
 - `ns-holder` is the single workspace namespace creator for both modes.
   `ns-runner` only enters prepared workspace namespaces with `setns`.
@@ -32,7 +32,7 @@ Owner: `crates/daemon`
 
 ## 1. Goal
 
-Unify the current ephemeral workspace and isolated workspace concepts behind one
+Unify the workspace execution concepts behind one
 caller-facing lifecycle:
 
 1. `create`
@@ -48,15 +48,16 @@ The only caller-visible mode distinction is network behavior:
 ```rust
 pub enum NetworkMode {
     Host,
-    Isolated,
+    IsolatedNetwork,
 }
 ```
 
 `Host` means no dedicated network namespace: the workspace uses the host/container
 network.
 
-`Isolated` means a dedicated network namespace with host-side veth/bridge,
-namespace-side veth configuration, DNS setup, and netfilter policy.
+`IsolatedNetwork` means a dedicated network namespace with host-side
+veth/bridge, namespace-side veth configuration, DNS setup, and netfilter
+policy.
 
 Namespace creation is unified: `ns-holder` creates and pins the workspace
 namespace stack for both modes. `ns-runner` only enters prepared workspace
@@ -193,7 +194,7 @@ crates/daemon/workspace/src/                         ~5,000 LOC
     netfilter/wire.rs                                  ~340
 ```
 
-Public API names remain `NetworkMode::Host` and `NetworkMode::Isolated`.
+Public API names remain `NetworkMode::Host` and `NetworkMode::IsolatedNetwork`.
 `isolated_network_setup/` is only the implementation namespace for veth, DNS,
 netfilter, and dedicated-network setup with its paired cleanup helpers. Shared
 holder lifecycle, namespace entry, cgroup handling, recovery, and remount logic
@@ -244,7 +245,7 @@ pub struct CreateWorkspaceRequest {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NetworkMode {
     Host,
-    Isolated,
+    IsolatedNetwork,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -362,7 +363,7 @@ pub(crate) struct InternalWorkspaceHandle {
 
 pub(crate) enum InternalNetworkMode {
     Host(HostWorkspaceState),
-    Isolated(IsolatedWorkspaceState),
+    IsolatedNetwork(IsolatedNetworkState),
 }
 
 pub(crate) struct HostWorkspaceState {
@@ -373,7 +374,7 @@ pub(crate) struct HostWorkspaceState {
     pub cgroup_path: Option<PathBuf>,
 }
 
-pub(crate) struct IsolatedWorkspaceState {
+pub(crate) struct IsolatedNetworkState {
     pub ns_fds: HashMap<String, i32>,
     pub holder_pid: i32,
     pub readiness_fd: i32,
@@ -440,7 +441,7 @@ impl WorkspaceRuntime {
 
 pub(crate) enum WorkspaceCommandContext {
     Host(HostCommandContext),
-    Isolated(IsolatedCommandContext),
+    IsolatedNetwork(IsolatedCommandContext),
 }
 ```
 
@@ -472,7 +473,7 @@ NetworkMode::Host => NamespacePlan {
     network: NamespaceNetwork::Host,
 }
 
-NetworkMode::Isolated => NamespacePlan {
+NetworkMode::IsolatedNetwork => NamespacePlan {
     user: true,
     mount: true,
     pid: true,
@@ -486,9 +487,9 @@ to enter holder namespaces for workspace commands.
 ### Runner Execution
 
 Do not reuse the public workspace mode names for subprocess execution. The
-workspace mode is `NetworkMode::{Host, Isolated}`. Workspace command requests
-should not include a runner mode enum. They always execute by entering the
-holder-created namespace with `setns`.
+workspace mode is `NetworkMode::{Host, IsolatedNetwork}`. Workspace command
+requests should not include a runner mode enum. They always execute by entering
+the holder-created namespace with `setns`.
 
 During migration, the existing fresh namespace runner may remain only behind a
 separate legacy/non-workspace compatibility path. No workspace command path
@@ -560,9 +561,9 @@ dedicated network namespace:
 - caller/runtime chooses whether to publish
 - destroy kills holder, closes FDs, removes scratch dirs, and releases the lease
 
-### Isolated
+### Isolated Network
 
-`NetworkMode::Isolated` uses the same holder/setns workspace lifecycle with a
+`NetworkMode::IsolatedNetwork` uses the same holder/setns workspace lifecycle with a
 dedicated network namespace:
 
 - acquire `LeasedBaseRevision`
@@ -590,8 +591,8 @@ not use `FreshNs`; it must use holder-created namespaces plus `setns`.
 ### Phase 1: Add New Names Beside Old Names
 
 - Add `model.rs`, `error.rs`, and skeleton service/request/result types.
-- Keep current `EphemeralWorkspace`, `IsolatedManager`, and
-  `IsolatedWorkspaceBinding` exports.
+- Keep current `HostWorkspace`, `WorkspaceModeManager`, and
+  `WorkspaceModeBinding` exports.
 - Add conversions from current isolated handle to new `WorkspaceHandle`.
 
 ### Phase 2: Resolve `workspace_root` Internally
@@ -603,7 +604,7 @@ not use `FreshNs`; it must use holder-created namespaces plus `setns`.
 
 ### Phase 3: Move Host Overlay Ownership Out Of `CommandOps`
 
-- Move bounded snapshot acquisition and `EphemeralWorkspace::create` from
+- Move bounded snapshot acquisition and `HostWorkspace::create` from
   command start into `WorkspaceRuntime`.
 - Keep command process spawning in `CommandOps`.
 - Ensure command finalization releases `LeasedBaseRevision` exactly once.
@@ -634,7 +635,7 @@ not use `FreshNs`; it must use holder-created namespaces plus `setns`.
 
 - Make `create(NetworkMode::Host)` launch `ns-holder` with
   `NamespaceNetwork::Host`.
-- Make `create(NetworkMode::Isolated)` launch `ns-holder` with
+- Make `create(NetworkMode::IsolatedNetwork)` launch `ns-holder` with
   `NamespaceNetwork::Isolated`.
 - Make workspace `run_command` always call the `setns` runner path.
 - Keep `FreshNs` only for legacy/non-workspace callers until those callers are
@@ -642,8 +643,8 @@ not use `FreshNs`; it must use holder-created namespaces plus `setns`.
 
 ### Phase 8: Retire Legacy Names
 
-- Stop exporting `EphemeralWorkspace`, `IsolatedManager`, and
-  `IsolatedWorkspaceBinding` from the crate root.
+- Stop exporting `HostWorkspace`, `WorkspaceModeManager`, and
+  `WorkspaceModeBinding` from the crate root.
 - Keep compatibility aliases only where wire contract requires them.
 
 ## 12. Test Plan
@@ -675,12 +676,12 @@ Add coverage for:
 
 - `workspace_root` compatibility parsing from legacy `layer_stack_root`.
 - Host command/file routes resolve storage internally.
-- Isolated command/file routes use open handle binding without caller storage
+- Isolated-network command/file routes use open handle binding without caller storage
   root.
 - `destroy` cancels commands before isolated teardown.
 - `capture_changes` rejects or quiesces active commands.
 - Route metadata remains wire stable.
-- Isolated destroy releases lease even when teardown reports cleanup details.
+- Isolated-network destroy releases lease even when teardown reports cleanup details.
 
 Focused gates:
 
@@ -703,7 +704,7 @@ Then run focused suites:
 - `core`
 - `workspace-runtime-command`
 - `workspace-runtime-isolated`
-- host/legacy ephemeral workspace suite
+- `host_workspace`
 - pressure cross-mode suite
 
 ## 13. Acceptance Criteria

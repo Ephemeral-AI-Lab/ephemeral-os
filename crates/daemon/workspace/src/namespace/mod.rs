@@ -9,14 +9,14 @@ pub(crate) use setns_runner::{ns_runner_request, run_child};
 #[cfg(test)]
 use std::sync::Arc;
 
-use crate::network_mode::isolated_network::IsolatedError;
+use crate::network_mode::isolated_network::IsolatedNetworkError;
 
 pub(crate) const TEST_HARNESS_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_HARNESS";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum NamespaceNetwork {
     Host,
-    Isolated,
+    IsolatedNetwork,
 }
 
 impl NamespaceNetwork {
@@ -24,12 +24,12 @@ impl NamespaceNetwork {
     pub(crate) const fn holder_arg(self) -> &'static str {
         match self {
             Self::Host => "host",
-            Self::Isolated => "isolated",
+            Self::IsolatedNetwork => "isolated",
         }
     }
 
     pub(crate) const fn requires_net_fd(self) -> bool {
-        matches!(self, Self::Isolated)
+        matches!(self, Self::IsolatedNetwork)
     }
 }
 
@@ -51,12 +51,12 @@ impl NamespacePlan {
         }
     }
 
-    pub(crate) const fn isolated_workspace() -> Self {
+    pub(crate) const fn isolated_network() -> Self {
         Self {
             user: true,
             mount: true,
             pid: true,
-            network: NamespaceNetwork::Isolated,
+            network: NamespaceNetwork::IsolatedNetwork,
         }
     }
 
@@ -78,8 +78,8 @@ impl NamespacePlan {
     }
 }
 
-pub(crate) fn setup_error(error: impl std::fmt::Display) -> IsolatedError {
-    IsolatedError::SetupFailed {
+pub(crate) fn setup_error(error: impl std::fmt::Display) -> IsolatedNetworkError {
+    IsolatedNetworkError::SetupFailed {
         step: error.to_string(),
     }
 }

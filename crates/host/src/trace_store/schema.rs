@@ -179,7 +179,7 @@ CREATE TABLE IF NOT EXISTS trace_requests (
   args_summary     TEXT,
   args_digest      TEXT,
   workspace_route  TEXT CHECK (workspace_route IN
-    ('ephemeral_workspace','isolated_workspace','fast_path','none') OR workspace_route IS NULL),
+    ('host','isolated_network','fast_path','none') OR workspace_route IS NULL),
   status           TEXT,
   error_kind       TEXT,
   sent_at_ms       INTEGER NOT NULL,

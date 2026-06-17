@@ -16,7 +16,7 @@ use trace::TraceRecord;
 
 use crate::support::{
     as_bool, as_i64, as_str, envelope_result, has_trace_event, live_pool_or_skip,
-    reset_isolated_workspaces, trace_record, wait_for_command_count,
+    reset_isolated_networks, trace_record, wait_for_command_count,
     wait_for_command_stdout_contains,
 };
 
@@ -212,7 +212,7 @@ fn live_trace_isolated_enter_exec_status_exit_records_one_chain() -> Result<()> 
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
 
     let suffix = e2e_test::unique_suffix();
     let trace_id = format!("phase04-isolated-chain-{suffix}");
@@ -276,14 +276,14 @@ fn live_trace_isolated_enter_exec_status_exit_records_one_chain() -> Result<()> 
         assert!(
             has_trace_event(
                 &records[0],
-                "isolated_workspace",
+                "isolated_network",
                 "enter_started",
                 |details| {
                     details.get("caller_id").and_then(Value::as_str) == Some(caller_id.as_str())
                 }
             ) && has_trace_event(
                 &records[0],
-                "isolated_workspace",
+                "isolated_network",
                 "holder_started",
                 |details| {
                     details.get("workspace_handle_id").and_then(Value::as_str)
@@ -291,7 +291,7 @@ fn live_trace_isolated_enter_exec_status_exit_records_one_chain() -> Result<()> 
                 }
             ) && has_trace_event(
                 &records[0],
-                "isolated_workspace",
+                "isolated_network",
                 "network_configured",
                 |details| {
                     details.get("workspace_handle_id").and_then(Value::as_str)
@@ -315,7 +315,7 @@ fn live_trace_isolated_enter_exec_status_exit_records_one_chain() -> Result<()> 
         assert!(
             has_trace_event(
                 &status_record,
-                "isolated_workspace",
+                "isolated_network",
                 "status_read",
                 |details| {
                     details.get("open").and_then(Value::as_bool) == Some(true)
@@ -342,17 +342,17 @@ fn live_trace_isolated_enter_exec_status_exit_records_one_chain() -> Result<()> 
         assert!(
             has_trace_event(
                 &exit_record,
-                "isolated_workspace",
+                "isolated_network",
                 "exit_started",
                 |details| {
                     details.get("caller_id").and_then(Value::as_str) == Some(caller_id.as_str())
                 }
             ) && has_trace_event(
                 &exit_record,
-                "isolated_workspace",
+                "isolated_network",
                 "teardown_phase_finished",
                 |details| { details.get("phase").and_then(Value::as_str).is_some() }
-            ) && has_trace_event(&exit_record, "isolated_workspace", "exited", |details| {
+            ) && has_trace_event(&exit_record, "isolated_network", "exited", |details| {
                 details.get("workspace_handle_id").and_then(Value::as_str)
                     == Some(handle_id.as_str())
                     && details

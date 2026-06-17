@@ -21,7 +21,7 @@
     "markdown": "readme.md"
   },
   "overview": {
-    "summary": "`pressure` owns cross-subsystem stress coverage for live `eosd`: concurrent direct file ops, reads, ephemeral exec, LayerStack auto-squash, OCC disjoint publish, command cancellation, isolated handle pressure, post-cancel daemon readiness, and JSON resource reports. It exercises daemon ops including `sandbox.file.write`, `sandbox.file.read`, `sandbox.command.exec`, `sandbox.command.cancel`, `sandbox.command.count`, `sandbox.checkpoint.layer_metrics`, `sandbox.runtime.ready`, `sandbox.plugin.list`, and `sandbox.isolation.*`. Module config lives at `crates/e2e-test/tests/pressure/config/default.test.yml`. This is one unified E2E contract. Configured pressure concurrency is fixed at level `12`; the runner no longer exposes fast/full/heavy pressure lanes.",
+    "summary": "`pressure` owns cross-subsystem stress coverage for live `eosd`: concurrent direct file ops, reads, host exec, LayerStack auto-squash, OCC disjoint publish, command cancellation, isolated handle pressure, post-cancel daemon readiness, and JSON resource reports. It exercises daemon ops including `sandbox.file.write`, `sandbox.file.read`, `sandbox.command.exec`, `sandbox.command.cancel`, `sandbox.command.count`, `sandbox.checkpoint.layer_metrics`, `sandbox.runtime.ready`, `sandbox.plugin.list`, and `sandbox.isolation.*`. Module config lives at `crates/e2e-test/tests/pressure/config/default.test.yml`. This is one unified E2E contract. Configured pressure concurrency is fixed at level `12`; the runner no longer exposes fast/full/heavy pressure lanes.",
     "moduleConfig": null,
     "ops": [
       "sandbox.file.write",
@@ -50,7 +50,7 @@
     {
       "id": "pressure-ladder-exec",
       "title": "Ladder Exec",
-      "description": "Ephemeral exec pressure passes at concurrency `12`, publishes changed workspace files, and releases overlay leases.",
+      "description": "Host exec pressure passes at concurrency `12`, publishes changed workspace files, and releases overlay leases.",
       "tags": [
         "pressure"
       ]
@@ -172,7 +172,7 @@
     {
       "id": "pressure-mixed-file-exec-ladder",
       "name": "pressure-mixed-file-exec-ladder",
-      "description": "Groups `n_concurrent_mixed_ops`, `overlay_exec_publishes_file_back_to_layerstack`, `file_ops_at_12`, and `ephemeral_exec_at_12` to prove concurrent direct file and ephemeral exec pressure returns structured payloads, publishes readable content, and drains active leases.",
+      "description": "Groups `n_concurrent_mixed_ops`, `overlay_exec_publishes_file_back_to_layerstack`, `file_ops_at_12`, and `ephemeral_exec_at_12` to prove concurrent direct file and host exec pressure returns structured payloads, publishes readable content, and drains active leases.",
       "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
         "pressure-ladder-file",
@@ -215,7 +215,7 @@
     {
       "id": "pressure-bundled-sandbox-capstone",
       "name": "pressure-bundled-sandbox-capstone",
-      "description": "Uses `protocol_only_bundled_sandbox_capstone`: one live protocol flow combines scaffold write, ephemeral exec publish, same-path OCC contention, squash pressure, isolated private write/discard, lease cleanup, and commit-to-workspace without asserting agent-loop state.",
+      "description": "Uses `protocol_only_bundled_sandbox_capstone`: one live protocol flow combines scaffold write, host exec publish, same-path OCC contention, squash pressure, isolated private write/discard, lease cleanup, and commit-to-workspace without asserting agent-loop state.",
       "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
         "pressure-bundled-sandbox-capstone",

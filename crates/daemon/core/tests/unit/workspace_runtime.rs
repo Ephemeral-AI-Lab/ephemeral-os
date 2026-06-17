@@ -1,10 +1,10 @@
-//! Isolated-workspace runtime lifecycle: enter/exit custody, root rebinding,
+//! Isolated-network runtime lifecycle: enter/exit custody, root rebinding,
 //! and the test-reset sweep. The daemon's op adapters are covered by the
 //! daemon's own integration tests; these drive the runtime API directly.
 
 use std::path::{Path, PathBuf};
 
-use config::configs::isolated_workspace::IsolatedWorkspaceConfig;
+use config::configs::isolated_network::IsolatedNetworkConfig;
 use layerstack::{
     service::BoundedCaptureOptions, CommitOptions, LayerChange, LayerPath, LayerStack,
 };
@@ -212,13 +212,12 @@ fn workspace_runtime_host_create_acquires_leased_base_revision() -> TestResult {
     seed_workspace_base(&stack_root, &workspace_root)?;
     let runtime = isolated_runtime(&scratch, Path::new("/testbed"));
 
-    let host = runtime
-        .create_host_workspace_for_legacy_layer_stack_root_with_scratch_root_for_test(
-            "caller-host",
-            "invoke-host",
-            &stack_root,
-            &host_scratch,
-        )?;
+    let host = runtime.create_host_for_legacy_layer_stack_root_with_scratch_root_for_test(
+        "caller-host",
+        "invoke-host",
+        &stack_root,
+        &host_scratch,
+    )?;
 
     assert!(!host.leased_base.lease_id.is_empty());
     assert_eq!(host.leased_base.version, 1);
@@ -258,7 +257,7 @@ fn workspace_runtime_host_create_failure_releases_lease() -> TestResult {
     std::fs::write(&blocked_run_dir, "not a directory")?;
 
     let error = runtime
-        .create_host_workspace_for_legacy_layer_stack_root_with_scratch_root_for_test(
+        .create_host_for_legacy_layer_stack_root_with_scratch_root_for_test(
             "caller-host",
             invocation_id,
             &stack_root,
@@ -287,13 +286,12 @@ fn workspace_runtime_host_release_is_exact_once() -> TestResult {
     let workspace_root = root.join("workspace");
     seed_workspace_base(&stack_root, &workspace_root)?;
     let runtime = isolated_runtime(&scratch, Path::new("/testbed"));
-    let host = runtime
-        .create_host_workspace_for_legacy_layer_stack_root_with_scratch_root_for_test(
-            "caller-host",
-            "invoke-host-destroy",
-            &stack_root,
-            &host_scratch,
-        )?;
+    let host = runtime.create_host_for_legacy_layer_stack_root_with_scratch_root_for_test(
+        "caller-host",
+        "invoke-host-destroy",
+        &stack_root,
+        &host_scratch,
+    )?;
     let lease = host.lease.clone();
 
     let first = host.lease.release();
@@ -324,10 +322,10 @@ fn workspace_runtime_command_route_selects_isolated_when_caller_has_active_handl
 
     let route = runtime.route_command_context("caller-route", "invoke-route", None)?;
 
-    assert_eq!(route.trace_facts().kind, "isolated_workspace");
+    assert_eq!(route.trace_facts().kind, "isolated_network");
     assert_eq!(
         route.trace_facts().reason,
-        "caller_has_open_isolated_workspace"
+        "caller_has_open_isolated_network"
     );
     assert_eq!(route.trace_facts().layer_stack_root, None);
     assert_eq!(route.caller_id(), "caller-route");
@@ -356,11 +354,8 @@ fn workspace_runtime_command_route_selects_host_when_no_active_handle() -> TestR
         &host_scratch,
     )?;
 
-    assert_eq!(route.trace_facts().kind, "ephemeral_workspace");
-    assert_eq!(
-        route.trace_facts().reason,
-        "no_isolated_workspace_for_caller"
-    );
+    assert_eq!(route.trace_facts().kind, "host");
+    assert_eq!(route.trace_facts().reason, "no_isolated_network_for_caller");
     assert_eq!(
         route.trace_facts().layer_stack_root,
         Some(stack_root.clone())
@@ -420,13 +415,13 @@ fn workspace_runtime_file_route_selects_direct_when_no_active_handle() -> TestRe
         WorkspaceFileRouteContext::Direct { layer_stack_root } => {
             assert_eq!(layer_stack_root, &stack_root);
         }
-        WorkspaceFileRouteContext::Isolated { .. } => {
+        WorkspaceFileRouteContext::IsolatedNetwork { .. } => {
             return Err("file route should be direct without an active handle".into());
         }
     }
     let facts = route.trace_facts();
     assert_eq!(facts.kind, "fast_path");
-    assert_eq!(facts.reason, "no_isolated_workspace_for_caller");
+    assert_eq!(facts.reason, "no_isolated_network_for_caller");
     assert_eq!(facts.layer_stack_root, Some(stack_root.clone()));
     let _ = std::fs::remove_dir_all(&root);
     Ok(())
@@ -449,7 +444,7 @@ fn workspace_runtime_file_route_selects_isolated_when_caller_has_active_handle()
     let route = runtime.route_file_context("caller-file", None)?;
 
     match &route {
-        WorkspaceFileRouteContext::Isolated { binding } => {
+        WorkspaceFileRouteContext::IsolatedNetwork { binding } => {
             assert_eq!(binding.caller_id, "caller-file");
             assert_eq!(binding.layer_stack_root, stack_root.canonicalize()?);
         }
@@ -458,8 +453,8 @@ fn workspace_runtime_file_route_selects_isolated_when_caller_has_active_handle()
         }
     }
     let facts = route.trace_facts();
-    assert_eq!(facts.kind, "isolated_workspace");
-    assert_eq!(facts.reason, "caller_has_open_isolated_workspace");
+    assert_eq!(facts.kind, "isolated_network");
+    assert_eq!(facts.reason, "caller_has_open_isolated_network");
     assert_eq!(facts.layer_stack_root, None);
     std::thread::sleep(Duration::from_millis(2));
     runtime.complete_file_route(&route);
@@ -693,16 +688,16 @@ fn isolated_runtime_with_command(
     workspace_root: &Path,
     command: Arc<CommandOps>,
 ) -> WorkspaceRuntime {
-    // The namespace/network layer stubs itself under the isolated-workspace
+    // The namespace/network layer stubs itself under the isolated-network
     // test harness env; every test in this binary drives the stubbed setup, so
     // the variable is set once and never removed (no cross-test race).
     std::env::set_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS", "true");
     WorkspaceRuntime::new(
-        IsolatedWorkspaceConfig {
+        IsolatedNetworkConfig {
             enabled: true,
             scratch_root: scratch_root.to_path_buf(),
             workspace_root: workspace_root.to_path_buf(),
-            ..IsolatedWorkspaceConfig::default()
+            ..IsolatedNetworkConfig::default()
         },
         command,
     )

@@ -24,8 +24,8 @@ use serde_json::json;
 #[cfg(target_os = "linux")]
 use crate::isolated_network_setup::{BRIDGE_PREFIX_LEN, GATEWAY};
 use crate::lifecycle::remount::{RemountOverlayReport, RemountProbe};
-use crate::network_mode::isolated_network::IsolatedError;
-use crate::network_mode::isolated_network::WorkspaceHandle;
+use crate::network_mode::isolated_network::IsolatedNetworkError;
+use crate::network_mode::isolated_network::WorkspaceModeHandle;
 
 #[cfg(target_os = "linux")]
 use super::fds::{expect_line, ns_fds_from_map, write_all_fd};
@@ -38,10 +38,10 @@ use super::NamespaceRuntime;
 impl NamespaceRuntime {
     pub(crate) fn mount_overlay(
         &self,
-        handle: &WorkspaceHandle,
+        handle: &WorkspaceModeHandle,
         layer_paths: &[PathBuf],
         setup_timeout_s: f64,
-    ) -> Result<(), IsolatedError> {
+    ) -> Result<(), IsolatedNetworkError> {
         if self.stub || handle.holder_pid <= 0 {
             return Ok(());
         }
@@ -65,11 +65,11 @@ impl NamespaceRuntime {
 
     pub(crate) fn remount_overlay(
         &self,
-        handle: &WorkspaceHandle,
+        handle: &WorkspaceModeHandle,
         layer_paths: &[PathBuf],
         probe: &RemountProbe,
         setup_timeout_s: f64,
-    ) -> Result<RemountOverlayReport, IsolatedError> {
+    ) -> Result<RemountOverlayReport, IsolatedNetworkError> {
         if self.stub || handle.holder_pid <= 0 {
             return Ok(RemountOverlayReport::verified_stub(layer_paths.len()));
         }
@@ -99,9 +99,9 @@ impl NamespaceRuntime {
 
     pub(crate) fn signal_net_ready(
         &self,
-        handle: &WorkspaceHandle,
+        handle: &WorkspaceModeHandle,
         setup_timeout_s: f64,
-    ) -> Result<(), IsolatedError> {
+    ) -> Result<(), IsolatedNetworkError> {
         if self.stub || handle.holder_pid <= 0 {
             return Ok(());
         }
@@ -131,7 +131,7 @@ impl NamespaceRuntime {
 
 #[cfg(target_os = "linux")]
 pub(crate) fn ns_runner_request(
-    handle: &WorkspaceHandle,
+    handle: &WorkspaceModeHandle,
     invocation: &str,
     verb: &str,
     args: serde_json::Value,
@@ -160,12 +160,12 @@ pub(crate) fn ns_runner_request(
 pub(super) fn mount_overlay_child(
     request: &RunRequest,
     setup_timeout_s: f64,
-) -> Result<(), IsolatedError> {
+) -> Result<(), IsolatedNetworkError> {
     let output = run_child(request, "--mount-overlay", Stdio::null(), setup_timeout_s)?;
     if output.status.success() {
         return Ok(());
     }
-    Err(IsolatedError::SetupFailed {
+    Err(IsolatedNetworkError::SetupFailed {
         step: format!(
             "ns-runner mount overlay failed with status {}: {}",
             output.status,
@@ -178,7 +178,7 @@ pub(super) fn mount_overlay_child(
 pub(super) fn remount_overlay_child(
     request: &RunRequest,
     setup_timeout_s: f64,
-) -> Result<RemountOverlayReport, IsolatedError> {
+) -> Result<RemountOverlayReport, IsolatedNetworkError> {
     let output = run_child(
         request,
         "--remount-overlay",
@@ -187,13 +187,13 @@ pub(super) fn remount_overlay_child(
     )?;
     if output.status.success() {
         let result = serde_json::from_slice::<RunResult>(&output.stdout).map_err(|err| {
-            IsolatedError::SetupFailed {
+            IsolatedNetworkError::SetupFailed {
                 step: format!("invalid ns-runner remount overlay output: {err}"),
             }
         })?;
         return Ok(RemountOverlayReport::from_payload(&result.payload));
     }
-    Err(IsolatedError::SetupFailed {
+    Err(IsolatedNetworkError::SetupFailed {
         step: format!(
             "ns-runner remount overlay failed with status {}: {}",
             output.status,
@@ -208,7 +208,7 @@ pub(crate) fn run_child(
     mode_arg: &str,
     stdout: Stdio,
     setup_timeout_s: f64,
-) -> Result<Output, IsolatedError> {
+) -> Result<Output, IsolatedNetworkError> {
     let payload = serde_json::to_vec(request).map_err(setup_error)?;
     let mut child = Command::new(std::env::current_exe().map_err(setup_error)?)
         .arg("ns-runner")
@@ -222,7 +222,7 @@ pub(crate) fn run_child(
     child
         .stdin
         .as_mut()
-        .ok_or_else(|| IsolatedError::SetupFailed {
+        .ok_or_else(|| IsolatedNetworkError::SetupFailed {
             step: "ns-runner stdin unavailable".to_owned(),
         })?
         .write_all(&payload)
@@ -243,7 +243,7 @@ fn wait_for_child(
     child: &mut Child,
     mode_arg: &str,
     setup_timeout_s: f64,
-) -> Result<ExitStatus, IsolatedError> {
+) -> Result<ExitStatus, IsolatedNetworkError> {
     let deadline = Instant::now() + Duration::from_secs_f64(setup_timeout_s.max(0.0));
     loop {
         if let Some(status) = child.try_wait().map_err(setup_error)? {
@@ -255,7 +255,7 @@ fn wait_for_child(
             while Instant::now() < grace_deadline {
                 if let Some(status) = child.try_wait().map_err(setup_error)? {
                     let _ = status;
-                    return Err(IsolatedError::SetupFailed {
+                    return Err(IsolatedNetworkError::SetupFailed {
                         step: format!("ns-runner {mode_arg} timed out"),
                     });
                 }
@@ -263,7 +263,7 @@ fn wait_for_child(
             }
             terminate_child(child, Signal::SIGKILL);
             let _ = child.wait();
-            return Err(IsolatedError::SetupFailed {
+            return Err(IsolatedNetworkError::SetupFailed {
                 step: format!("ns-runner {mode_arg} timed out"),
             });
         }
@@ -282,7 +282,7 @@ fn terminate_child(child: &mut Child, signal: Signal) {
 }
 
 #[cfg(target_os = "linux")]
-fn read_pipe<R: Read>(pipe: Option<R>) -> Result<Vec<u8>, IsolatedError> {
+fn read_pipe<R: Read>(pipe: Option<R>) -> Result<Vec<u8>, IsolatedNetworkError> {
     let Some(mut pipe) = pipe else {
         return Ok(Vec::new());
     };

@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 use serde_json::json;
 
 use config::configs::daemon::PluginRuntimeConfig;
-use config::configs::isolated_workspace::IsolatedWorkspaceConfig;
+use config::configs::isolated_network::IsolatedNetworkConfig;
 
 use crate::RuntimeServices;
 
@@ -30,7 +30,7 @@ fn upperdir_tree_resource_timings_capture_bounded_payload() -> TestResult {
     insert_tree_resource_timings(
         &mut timings,
         "resource.command_exec.upperdir",
-        &TreeResourceStats::from_ephemeral(&upperdir_stats),
+        &TreeResourceStats::from_host(&upperdir_stats),
     );
 
     assert!(
@@ -52,7 +52,7 @@ fn upperdir_tree_resource_timings_capture_bounded_payload() -> TestResult {
     insert_tree_resource_timings(
         &mut timings,
         "resource.command_exec.upperdir",
-        &TreeResourceStats::from_ephemeral(&truncated_upperdir_stats),
+        &TreeResourceStats::from_host(&truncated_upperdir_stats),
     );
     assert_eq!(
         timing_f64_value(&timings, "resource.command_exec.upperdir_tree_truncated"),
@@ -408,7 +408,7 @@ fn timing_f64_value(timings: &serde_json::Map<String, Value>, key: &str) -> f64 
 fn test_services() -> RuntimeServices {
     RuntimeServices::new(
         PluginRuntimeConfig::default(),
-        IsolatedWorkspaceConfig::default(),
+        IsolatedNetworkConfig::default(),
         command::CommandConfig::default(),
     )
 }

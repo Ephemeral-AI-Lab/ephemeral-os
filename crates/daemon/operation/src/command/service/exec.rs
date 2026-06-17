@@ -6,16 +6,16 @@ use command::process::{CommandProcess, CommandProcessSpawn, CommandProcessSpec};
 use command::yield_wait_loop::{wait_for_yield_with_timing, WaitOutcome};
 use command::{CommandError, StartCommand};
 use serde_json::json;
-use workspace::network_mode::isolated_network::IsolatedWorkspaceBinding;
+use workspace::network_mode::isolated_network::WorkspaceModeBinding;
 
 use crate::command::contract::{CommandResponse, CommandStatus};
 use crate::command::finalize::insert_cgroup_process_resource_timings;
 use crate::command::outcome::WorkspaceTimings;
 use crate::command::prepare::{
-    prepare_ephemeral, prepare_isolated, PrepareInputs, PreparedCommand,
+    prepare_host, prepare_isolated_network, PrepareInputs, PreparedCommand,
 };
 use crate::command::registry::{
-    ActiveCommand, CommandReservation, CommandTraceOrigin, EphemeralRun, IsolatedRun,
+    ActiveCommand, CommandReservation, CommandTraceOrigin, HostRun, IsolatedNetworkRun,
 };
 use crate::command::trace::{
     command_process_wait_host_resource_stats_event, command_process_wait_resource_stats_event,
@@ -50,10 +50,10 @@ impl CommandOps {
             timeout_seconds: request.timeout_seconds,
         };
         match target {
-            ExecTarget::Ephemeral {
+            ExecTarget::Host {
                 workspace,
                 scratch_root,
-            } => self.start_ephemeral(
+            } => self.start_host(
                 reservation,
                 spec,
                 &request,
@@ -62,9 +62,14 @@ impl CommandOps {
                 scratch_root,
                 yield_time_ms,
             ),
-            ExecTarget::Isolated { binding } => {
-                self.start_isolated(reservation, spec, &request, &id, binding, yield_time_ms)
-            }
+            ExecTarget::IsolatedNetwork { binding } => self.start_isolated_network(
+                reservation,
+                spec,
+                &request,
+                &id,
+                binding,
+                yield_time_ms,
+            ),
         }
     }
 
@@ -72,7 +77,7 @@ impl CommandOps {
         clippy::too_many_arguments,
         reason = "start inputs are one-shot plumbing from the typed target"
     )]
-    fn start_ephemeral(
+    fn start_host(
         &self,
         reservation: CommandReservation,
         spec: CommandProcessSpec,
@@ -92,7 +97,7 @@ impl CommandOps {
             lease,
         } = *workspace;
         let result = {
-            let prepared = prepare_ephemeral(
+            let prepared = prepare_host(
                 PrepareInputs {
                     caller_id: &request.caller_id,
                     command_id,
@@ -102,7 +107,7 @@ impl CommandOps {
                     remountable: false,
                     timeout_seconds: request.timeout_seconds,
                     command_dir: scratch_root.join(command_id),
-                    workspace_label: "ephemeral",
+                    workspace_label: "host",
                 },
                 &workspace_root,
                 &snapshot.layer_paths,
@@ -143,7 +148,7 @@ impl CommandOps {
             process,
             yield_time_ms,
             move |process| {
-                ActiveCommand::Ephemeral(EphemeralRun {
+                ActiveCommand::Host(HostRun {
                     process,
                     trace_origin,
                     root,
@@ -156,16 +161,16 @@ impl CommandOps {
         ))
     }
 
-    fn start_isolated(
+    fn start_isolated_network(
         &self,
         reservation: CommandReservation,
         spec: CommandProcessSpec,
         request: &StartCommand,
         command_id: &str,
-        binding: Box<IsolatedWorkspaceBinding>,
+        binding: Box<WorkspaceModeBinding>,
         yield_time_ms: u64,
     ) -> Result<CommandExecOutcome, CommandExecError> {
-        let prepared = prepare_isolated(
+        let prepared = prepare_isolated_network(
             PrepareInputs {
                 caller_id: &request.caller_id,
                 command_id,
@@ -175,7 +180,7 @@ impl CommandOps {
                 remountable: request.remountable,
                 timeout_seconds: request.timeout_seconds,
                 command_dir: binding.scratch_dir.join("commands").join(command_id),
-                workspace_label: "isolated",
+                workspace_label: "isolated_network",
             },
             &binding,
         )
@@ -189,7 +194,7 @@ impl CommandOps {
             process,
             yield_time_ms,
             move |process| {
-                ActiveCommand::Isolated(IsolatedRun {
+                ActiveCommand::IsolatedNetwork(IsolatedNetworkRun {
                     process,
                     trace_origin,
                     binding,

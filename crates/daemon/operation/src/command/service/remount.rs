@@ -118,7 +118,7 @@ impl CommandOps {
         for run in runs {
             let command_id = run.process().id().to_owned();
             quiesce.inspection.command_ids.push(command_id.clone());
-            let ActiveCommand::Isolated(isolated) = &*run else {
+            let ActiveCommand::IsolatedNetwork(isolated) = &*run else {
                 quiesce
                     .inspection
                     .blocked_reason

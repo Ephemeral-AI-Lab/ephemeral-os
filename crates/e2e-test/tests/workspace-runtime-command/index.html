@@ -21,7 +21,7 @@
     "markdown": "readme.md"
   },
   "overview": {
-    "summary": "`workspace-runtime-command` owns explicit live E2E coverage for the command daemon contract across protocol smoke, core lifecycle, transcript-log recycling, local-OS-style sandbox operation parity, ephemeral workspace process-group behavior, externally killed process groups, invisible background subprocesses, and isolated workspace command cleanup. It exercises `sandbox.file.write`, `sandbox.file.edit`, `sandbox.file.read`, `sandbox.command.exec`, `sandbox.command.write_stdin`, `sandbox.command.poll`, `sandbox.command.collect_completed`, `sandbox.command.cancel`, `sandbox.command.count`, `sandbox.call.cancel`, and `sandbox.checkpoint.layer_metrics`. Module config lives at `crates/e2e-test/tests/workspace-runtime-command/config/default.test.yml`.",
+    "summary": "`workspace-runtime-command` owns explicit live E2E coverage for the command daemon contract across protocol smoke, core lifecycle, transcript-log recycling, local-OS-style sandbox operation parity, host workspace process-group behavior, externally killed process groups, invisible background subprocesses, and isolated-network workspace command cleanup. It exercises `sandbox.file.write`, `sandbox.file.edit`, `sandbox.file.read`, `sandbox.command.exec`, `sandbox.command.write_stdin`, `sandbox.command.poll`, `sandbox.command.collect_completed`, `sandbox.command.cancel`, `sandbox.command.count`, `sandbox.call.cancel`, and `sandbox.checkpoint.layer_metrics`. Module config lives at `crates/e2e-test/tests/workspace-runtime-command/config/default.test.yml`.",
     "moduleConfig": null,
     "ops": [
       "sandbox.file.write",
@@ -93,9 +93,9 @@
       ]
     },
     {
-      "id": "workspace-runtime-command-ephemeral-process-group",
-      "title": "Ephemeral Process Group",
-      "description": "Ephemeral workspace commands stay running until all same-pgid subprocesses exit and collect exactly one terminal result.",
+      "id": "workspace-runtime-command-host-process-group",
+      "title": "Host Process Group",
+      "description": "Host workspace commands stay running until all same-pgid subprocesses exit and collect exactly one terminal result.",
       "tags": [
         "workspace-runtime-command"
       ]
@@ -247,12 +247,12 @@
       ]
     },
     {
-      "id": "workspace-runtime-command-ephemeral-workspace-process-group",
-      "name": "workspace-runtime-command-ephemeral-workspace-process-group",
-      "description": "Groups `exec_simple`, `lingering_child_keeps_command_running`, `command_completes_only_after_all_subprocesses_exit`, `cancel_kills_whole_command`, and `cancel_removes_lingering_descendant`: ephemeral workspace commands honor process-group completion, cancellation semantics, and transcript-log recycling.",
+      "id": "workspace-runtime-command-host-workspace-process-group",
+      "name": "workspace-runtime-command-host-workspace-process-group",
+      "description": "Groups `exec_simple`, `lingering_child_keeps_command_running`, `command_completes_only_after_all_subprocesses_exit`, `cancel_kills_whole_command`, and `cancel_removes_lingering_descendant`: host workspace commands honor process-group completion, cancellation semantics, and transcript-log recycling.",
       "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-command --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
-        "workspace-runtime-command-ephemeral-process-group",
+        "workspace-runtime-command-host-process-group",
         "workspace-runtime-command-transcript-recycling",
         "workspace-runtime-command-cancel-kills-group"
       ]
@@ -348,7 +348,7 @@
     {
       "id": "workspace-runtime-command-isolated-prompt-parity",
       "name": "workspace-runtime-command-isolated-prompt-parity",
-      "description": "Uses `iws_prompt_stdin_poll_cancel_private_discard`: an isolated prompt command accepts stdin, writes private isolated workspace content, read_progress snapshots do not replay consumed output, stays uncollected until cancellation, recycles its isolated transcript, and discards its private file after isolated exit.",
+      "description": "Uses `iws_prompt_stdin_poll_cancel_private_discard`: an isolated prompt command accepts stdin, writes private isolated-network workspace content, read_progress snapshots do not replay consumed output, stays uncollected until cancellation, recycles its isolated transcript, and discards its private file after isolated exit.",
       "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-command --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
         "workspace-runtime-command-isolated-prompt-parity",

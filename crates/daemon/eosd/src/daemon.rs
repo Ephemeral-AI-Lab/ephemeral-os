@@ -10,7 +10,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use anyhow::{anyhow, Context, Result};
 use config::configs::{
     daemon::{DaemonConfig, DaemonServerConfig},
-    isolated_workspace::IsolatedWorkspaceConfig,
+    isolated_network::IsolatedNetworkConfig,
 };
 use config::ConfigPath;
 
@@ -70,7 +70,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
         let server = daemon::DaemonServer::with_daemon_config(
             server_config,
             &runtime_config.daemon,
-            &runtime_config.isolated_workspace,
+            &runtime_config.isolated_network,
         );
         server.serve().await
     })?;
@@ -79,7 +79,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
 
 struct DaemonRuntimeConfig {
     daemon: DaemonConfig,
-    isolated_workspace: IsolatedWorkspaceConfig,
+    isolated_network: IsolatedNetworkConfig,
 }
 
 fn load_runtime_config(path: Option<&Path>) -> Result<DaemonRuntimeConfig> {
@@ -92,15 +92,15 @@ fn load_runtime_config(path: Option<&Path>) -> Result<DaemonRuntimeConfig> {
         .section::<DaemonConfig>("daemon")
         .context("deserialize daemon config section")?;
     daemon.validate().context("validate daemon config")?;
-    let isolated_workspace = doc
-        .section::<IsolatedWorkspaceConfig>("isolated_workspace")
-        .context("deserialize isolated_workspace config section")?;
-    isolated_workspace
+    let isolated_network = doc
+        .section::<IsolatedNetworkConfig>("isolated_network")
+        .context("deserialize isolated_network config section")?;
+    isolated_network
         .validate()
-        .context("validate isolated_workspace config")?;
+        .context("validate isolated_network config")?;
     Ok(DaemonRuntimeConfig {
         daemon,
-        isolated_workspace,
+        isolated_network,
     })
 }
 

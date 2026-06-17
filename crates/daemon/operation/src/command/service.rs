@@ -9,9 +9,9 @@ use layerstack::service::{
 };
 use layerstack::CommitOptions;
 use trace::TraceRecord;
-use workspace::network_mode::host::EphemeralWorkspace;
+use workspace::network_mode::host::HostWorkspace;
 use workspace::network_mode::host::WorkspaceNamespaceFds;
-use workspace::network_mode::isolated_network::IsolatedWorkspaceBinding;
+use workspace::network_mode::isolated_network::WorkspaceModeBinding;
 
 #[cfg(test)]
 use command::process::{CommandProcess, CommandProcessSpec};
@@ -29,7 +29,7 @@ use super::prepare::CommandPrepareError;
 use super::prepare::PreparedCommand;
 use super::registry::CommandRegistry;
 #[cfg(test)]
-use super::registry::{ActiveCommand, CommandTraceOrigin, IsolatedRun};
+use super::registry::{ActiveCommand, CommandTraceOrigin, IsolatedNetworkRun};
 use super::trace::CommandTraceEvent;
 #[cfg(test)]
 use super::trace::{
@@ -46,12 +46,12 @@ mod remount;
 pub use remount::{CommandRemountInspection, CommandRemountQuiesce};
 
 pub enum ExecTarget {
-    Ephemeral {
+    Host {
         workspace: Box<HostCommandWorkspace>,
         scratch_root: PathBuf,
     },
-    Isolated {
-        binding: Box<IsolatedWorkspaceBinding>,
+    IsolatedNetwork {
+        binding: Box<WorkspaceModeBinding>,
     },
 }
 
@@ -61,7 +61,7 @@ pub struct HostCommandWorkspace {
     workspace_root: PathBuf,
     snapshot: Snapshot,
     normalization: SnapshotNormalization,
-    workspace: EphemeralWorkspace,
+    workspace: HostWorkspace,
     ns_fds: Option<WorkspaceNamespaceFds>,
     lease: LeaseReleaseHandle,
 }
@@ -73,7 +73,7 @@ impl HostCommandWorkspace {
         workspace_root: PathBuf,
         snapshot: Snapshot,
         normalization: SnapshotNormalization,
-        workspace: EphemeralWorkspace,
+        workspace: HostWorkspace,
         lease: LeaseReleaseHandle,
     ) -> Self {
         let ns_fds = workspace.namespace_fds();
@@ -95,7 +95,7 @@ impl HostCommandWorkspace {
         workspace_root: PathBuf,
         snapshot: Snapshot,
         normalization: SnapshotNormalization,
-        workspace: EphemeralWorkspace,
+        workspace: HostWorkspace,
         ns_fds: Option<WorkspaceNamespaceFds>,
         lease: LeaseReleaseHandle,
     ) -> Self {
@@ -115,7 +115,7 @@ impl HostCommandWorkspace {
         workspace_root: PathBuf,
         snapshot: Snapshot,
         normalization: SnapshotNormalization,
-        workspace: EphemeralWorkspace,
+        workspace: HostWorkspace,
         ns_fds: Option<WorkspaceNamespaceFds>,
         lease: LeaseReleaseHandle,
     ) -> Self {

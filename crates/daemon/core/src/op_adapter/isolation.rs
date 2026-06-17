@@ -1,4 +1,4 @@
-//! Isolated-workspace op adapters behind `sandbox.isolation.*`: wire arg
+//! Isolated-network op adapters behind `sandbox.isolation.*`: wire arg
 //! parsing and response/error shaping over [`crate::WorkspaceRuntime`].
 
 use operation::isolation::contract::{
@@ -8,7 +8,7 @@ use operation::isolation::contract::{
 };
 use serde_json::{json, Value};
 use workspace::network_mode::isolated_network::{
-    IsolatedError, IsolatedWorkspaceHandle as WorkspaceHandle, RemountProbe,
+    IsolatedNetworkError, RemountProbe, WorkspaceModeHandle,
 };
 use workspace::WorkspaceError;
 
@@ -30,7 +30,7 @@ pub(crate) fn op_enter(
         "workspace.route",
         "route_selected",
         json!({
-            "kind": "isolated_workspace",
+            "kind": "isolated_network",
             "reason": "isolation_enter_lifecycle",
         }),
     );
@@ -62,7 +62,7 @@ pub(crate) fn op_enter(
         }
         Err(WorkspaceEnterError::ActiveCommands { active_commands }) => Ok(refused_response(
             "active_background_work",
-            "cannot enter isolated workspace while commands are active",
+            "cannot enter isolated network while commands are active",
             json!({"active_commands": active_commands}),
         )),
         Err(WorkspaceEnterError::EnterFailed {
@@ -73,7 +73,7 @@ pub(crate) fn op_enter(
             Ok(error_payload(&source))
         }
         Err(WorkspaceEnterError::RootResolution(error)) => Ok(workspace_error_payload(&error)),
-        Err(WorkspaceEnterError::Isolated(error)) => Ok(error_payload(&error)),
+        Err(WorkspaceEnterError::IsolatedNetwork(error)) => Ok(error_payload(&error)),
     }
 }
 
@@ -86,7 +86,7 @@ pub(crate) fn op_exit(
         "workspace.route",
         "route_selected",
         json!({
-            "kind": "isolated_workspace",
+            "kind": "isolated_network",
             "reason": "isolation_exit_lifecycle",
         }),
     );
@@ -190,7 +190,7 @@ pub(crate) fn op_test_compact_remount(
     match compacted {
         Ok(WorkspaceRemountCompactionAttempt::Compacted(report)) => {
             context.record_trace_event(
-                "isolated_workspace",
+                "isolated_network",
                 "test_compact_remount_finished",
                 json!({
                     "caller_id": caller_id,
@@ -412,7 +412,7 @@ pub(crate) fn op_test_compact_remount(
     }
 }
 
-fn status_response(handle: &WorkspaceHandle) -> Value {
+fn status_response(handle: &WorkspaceModeHandle) -> Value {
     to_wire_value(IsolationStatusOutput::Open {
         success: true,
         open: true,
@@ -468,12 +468,12 @@ fn record_enter_started(context: &DispatchContext<'_>, caller_id: &str, root: &W
             }
         }
     }
-    context.record_trace_event("isolated_workspace", "enter_started", details);
+    context.record_trace_event("isolated_network", "enter_started", details);
 }
 
 fn record_entered(
     context: &DispatchContext<'_>,
-    handle: &WorkspaceHandle,
+    handle: &WorkspaceModeHandle,
     snapshot_normalization: &layerstack::service::SnapshotNormalization,
 ) {
     context.record_trace_event(
@@ -530,9 +530,9 @@ fn record_entered(
         "workspace_handle_id": handle.workspace_id.0.as_str(),
         "holder_pid": handle.holder_pid,
     });
-    context.record_trace_event("isolated_workspace", "holder_started", common);
+    context.record_trace_event("isolated_network", "holder_started", common);
     context.record_trace_event(
-        "isolated_workspace",
+        "isolated_network",
         "network_configured",
         json!({
             "caller_id": handle.caller_id.as_str(),
@@ -551,11 +551,11 @@ fn record_entered(
 fn record_status_read(
     context: &DispatchContext<'_>,
     caller_id: &str,
-    handle: Option<&WorkspaceHandle>,
+    handle: Option<&WorkspaceModeHandle>,
     error_kind: Option<&str>,
 ) {
     context.record_trace_event(
-        "isolated_workspace",
+        "isolated_network",
         "status_read",
         json!({
             "caller_id": caller_id,
@@ -568,7 +568,7 @@ fn record_status_read(
 
 fn record_exit_started(context: &DispatchContext<'_>, caller_id: &str) {
     context.record_trace_event(
-        "isolated_workspace",
+        "isolated_network",
         "exit_started",
         json!({
             "caller_id": caller_id,
@@ -577,12 +577,12 @@ fn record_exit_started(context: &DispatchContext<'_>, caller_id: &str) {
 }
 
 fn record_recovery_started(context: &DispatchContext<'_>) {
-    context.record_trace_event("isolated_workspace", "recovery_started", json!({}));
+    context.record_trace_event("isolated_network", "recovery_started", json!({}));
 }
 
 fn record_recovery_finished(context: &DispatchContext<'_>, recovery: &WorkspaceRecoveryReport) {
     context.record_trace_event(
-        "isolated_workspace",
+        "isolated_network",
         "recovery_finished",
         json!({
             "exited_caller_count": recovery.exited_callers.len(),
@@ -610,13 +610,13 @@ fn record_exited(context: &DispatchContext<'_>, exit: &ExitOutcome) {
     }
     for (phase, duration_ms) in sorted_phases(&exit.isolated.phases_ms) {
         context.record_trace_event(
-            "isolated_workspace",
+            "isolated_network",
             "teardown_phase_finished",
             teardown_phase_details(phase, duration_ms, &exit.isolated.inspection),
         );
     }
     context.record_trace_event(
-        "isolated_workspace",
+        "isolated_network",
         "exited",
         json!({
             "caller_id": exit.isolated.caller_id.as_str(),
@@ -719,7 +719,7 @@ fn record_lease_release_failed(
     );
 }
 
-/// Map an [`IsolatedError`] onto the structured error payload, carrying the
+/// Map an [`IsolatedNetworkError`] onto the structured error payload, carrying the
 /// variant-specific detail fields.
 fn success_response(value: Value) -> Value {
     ok_envelope(value)
@@ -729,26 +729,26 @@ fn refused_response(kind: &'static str, message: impl Into<String>, details: Val
     rejected_fault_envelope(kind, message, details)
 }
 
-fn error_payload(error: &IsolatedError) -> Value {
+fn error_payload(error: &IsolatedNetworkError) -> Value {
     let details = match error {
-        IsolatedError::AlreadyOpen {
+        IsolatedNetworkError::AlreadyOpen {
             created_at,
             last_activity,
         } => json!({
             "created_at": created_at,
             "last_activity": last_activity,
         }),
-        IsolatedError::QuotaExceeded { total_cap } => json!({
+        IsolatedNetworkError::QuotaExceeded { total_cap } => json!({
             "total_cap": total_cap,
         }),
-        IsolatedError::HostRamPressure {
+        IsolatedNetworkError::HostRamPressure {
             required_bytes,
             budget_bytes,
         } => json!({
             "required_bytes": required_bytes,
             "budget_bytes": budget_bytes,
         }),
-        IsolatedError::SetupFailed { step } => json!({
+        IsolatedNetworkError::SetupFailed { step } => json!({
             "failed_step": step,
         }),
         _ => json!({}),
@@ -774,5 +774,5 @@ fn env_true(key: &str) -> bool {
 }
 
 #[cfg(test)]
-#[path = "../../tests/unit/isolated_workspace/service.rs"]
+#[path = "../../tests/unit/isolated_network/service.rs"]
 mod tests;

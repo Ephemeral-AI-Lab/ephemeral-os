@@ -1008,7 +1008,7 @@ fn acceptance_queries(trace_id: &str) -> Vec<String> {
         ),
         "SELECT s.kind, s.subsystem, s.duration_us/1e3 ms, s.fields_json FROM trace_spans s WHERE s.request_id='request-plan' ORDER BY s.started_us".to_owned(),
         "SELECT o.request_id, o.op, o.status, o.sent_at_ms FROM trace_requests o JOIN trace_links l ON l.trace_id=o.trace_id WHERE l.link_kind='command' AND l.link_id='cmd-plan' ORDER BY o.sent_at_ms".to_owned(),
-        "SELECT * FROM trace_requests WHERE family='Plugins' AND status IN ('error','rejected') AND workspace_route='isolated_workspace' AND sent_at_ms > 0".to_owned(),
+        "SELECT * FROM trace_requests WHERE family='Plugins' AND status IN ('error','rejected') AND workspace_route='isolated_network' AND sent_at_ms > 0".to_owned(),
         format!(
             "SELECT audit_seq, entry_kind, payload_sha256, prev_global_sha256, prev_sandbox_sha256, entry_sha256 FROM audit_entries WHERE trace_id='{trace_id}' ORDER BY audit_seq"
         ),

@@ -293,8 +293,8 @@ fn suite_plan(heavy_test_threads: usize) -> Vec<Suite> {
             wave: 1,
         },
         Suite {
-            name: "ephemeral_workspace",
-            binary_prefix: "ephemeral_workspace",
+            name: "host_workspace",
+            binary_prefix: "host_workspace",
             weight: 1,
             test_threads: 1,
             wave: 1,

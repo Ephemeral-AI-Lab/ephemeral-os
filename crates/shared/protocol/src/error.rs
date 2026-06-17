@@ -29,8 +29,8 @@ pub enum ProtocolErrorKind {
     InternalError,
     /// Operation/gate policy refusal.
     Forbidden,
-    /// Refused because an isolated workspace is active for this agent.
-    ForbiddenInIsolatedWorkspace,
+    /// Refused because an isolated network is active for this agent.
+    ForbiddenInIsolatedNetwork,
     /// Refused because a lifecycle operation is in progress.
     LifecycleInProgress,
 }
@@ -48,7 +48,7 @@ impl ProtocolErrorKind {
             Self::UnknownOp => "unknown_op",
             Self::InternalError => "internal_error",
             Self::Forbidden => "forbidden",
-            Self::ForbiddenInIsolatedWorkspace => "forbidden_in_isolated_workspace",
+            Self::ForbiddenInIsolatedNetwork => "forbidden_in_isolated_network",
             Self::LifecycleInProgress => "lifecycle_in_progress",
         }
     }

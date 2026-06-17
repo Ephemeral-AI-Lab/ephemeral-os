@@ -7,8 +7,8 @@ use layerstack::{service, FileResult};
 use layerstack::{CaptureRouteStats, ChangesetResult, CommitOptions, CommitStatus};
 use serde_json::{json, Map, Value};
 use trace::usize_to_f64_saturating;
-use workspace::network_mode::host::EphemeralWorkspace;
-use workspace::network_mode::isolated_network::IsolatedWorkspaceBinding;
+use workspace::network_mode::host::HostWorkspace;
+use workspace::network_mode::isolated_network::WorkspaceModeBinding;
 use workspace::overlay::capture::{
     capture_upperdir, capture_upperdir_for_snapshot_with_options, RoutedCapturedChanges,
 };
@@ -26,10 +26,10 @@ use super::outcome::{
 use crate::core::changed_path_kind_pairs;
 use crate::{CommandId, MutationCore};
 
-pub(crate) fn finalize_ephemeral_command_with_capture_options(
+pub(crate) fn finalize_host_command_with_capture_options(
     root: &Path,
     snapshot: &Snapshot,
-    workspace: &EphemeralWorkspace,
+    workspace: &HostWorkspace,
     commit_options: CommitOptions,
     mut capture_options: BoundedCaptureOptions,
     request: FinalizeCommandRequest,
@@ -58,7 +58,7 @@ pub(crate) fn finalize_ephemeral_command_with_capture_options(
             copy_runner_timings(&mut timings, request.runner_result.as_ref());
             insert_command_timings(&mut timings, 0, 0.0, 0.0, request.command_elapsed_s, false);
             return Ok(command_response(
-                WorkspaceKind::Ephemeral,
+                WorkspaceKind::Host,
                 request,
                 CommandFinalization {
                     success: false,
@@ -83,7 +83,7 @@ pub(crate) fn finalize_ephemeral_command_with_capture_options(
             copy_runner_timings(&mut timings, request.runner_result.as_ref());
             insert_command_timings(&mut timings, 0, 0.0, 0.0, request.command_elapsed_s, false);
             return Ok(command_response(
-                WorkspaceKind::Ephemeral,
+                WorkspaceKind::Host,
                 request,
                 CommandFinalization {
                     success: false,
@@ -152,7 +152,7 @@ pub(crate) fn finalize_ephemeral_command_with_capture_options(
             false,
         );
         return Ok(command_response(
-            WorkspaceKind::Ephemeral,
+            WorkspaceKind::Host,
             request,
             CommandFinalization {
                 success: false,
@@ -193,7 +193,7 @@ pub(crate) fn finalize_ephemeral_command_with_capture_options(
                 false,
             );
             return Ok(command_response(
-                WorkspaceKind::Ephemeral,
+                WorkspaceKind::Host,
                 request,
                 CommandFinalization {
                     success: false,
@@ -238,7 +238,7 @@ pub(crate) fn finalize_ephemeral_command_with_capture_options(
     );
 
     Ok(command_response(
-        WorkspaceKind::Ephemeral,
+        WorkspaceKind::Host,
         request,
         CommandFinalization {
             success: command_success && publish_success,
@@ -253,8 +253,8 @@ pub(crate) fn finalize_ephemeral_command_with_capture_options(
     ))
 }
 
-pub(crate) fn finalize_isolated_command(
-    binding: &IsolatedWorkspaceBinding,
+pub(crate) fn finalize_isolated_network_command(
+    binding: &WorkspaceModeBinding,
     request: FinalizeCommandRequest,
 ) -> Result<CommandResponse, WorkspaceApiError> {
     let mut timings = base_timings(&binding.layer_stack_root)?;
@@ -283,7 +283,7 @@ pub(crate) fn finalize_isolated_command(
     );
     let mut extras = Map::new();
     extras.insert(
-        "isolated_workspace".to_owned(),
+        "isolated_network".to_owned(),
         json!({
             "caller_id": binding.caller_id,
             "workspace_handle_id": binding.workspace_handle_id,
@@ -295,13 +295,13 @@ pub(crate) fn finalize_isolated_command(
     extras.insert("warnings".to_owned(), json!([]));
     PublishLanesMetadata::empty(binding.manifest_version).insert_into(&mut extras);
     let mut response = command_response(
-        WorkspaceKind::Isolated,
+        WorkspaceKind::IsolatedNetwork,
         request,
         CommandFinalization {
             success: command_success,
             changed_paths,
             changed_path_kinds,
-            mutation_source: Some(MutationSource::IsolatedWorkspace),
+            mutation_source: Some(MutationSource::IsolatedNetwork),
             conflict: None,
             conflict_reason: None,
             timings,
@@ -910,14 +910,14 @@ mod tests {
 
     type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
-    fn finalize_ephemeral_command_with_default_capture_options(
+    fn finalize_host_command_with_default_capture_options(
         root: &Path,
         snapshot: &Snapshot,
-        workspace: &EphemeralWorkspace,
+        workspace: &HostWorkspace,
         commit_options: CommitOptions,
         request: FinalizeCommandRequest,
     ) -> Result<CommandResponse, WorkspaceApiError> {
-        finalize_ephemeral_command_with_capture_options(
+        finalize_host_command_with_capture_options(
             root,
             snapshot,
             workspace,
@@ -991,7 +991,7 @@ mod tests {
     #[test]
     fn discarded_response_without_manifest_version_still_reports_publish_lanes() {
         let response = discarded_response(
-            WorkspaceKind::Ephemeral,
+            WorkspaceKind::Host,
             FinalizeCommandRequest {
                 runner_result: None,
                 command_elapsed_s: 0.25,
@@ -1022,7 +1022,7 @@ mod tests {
     #[test]
     fn finalization_error_response_without_manifest_version_still_reports_publish_lanes() {
         let response = finalization_error_response(
-            WorkspaceKind::Ephemeral,
+            WorkspaceKind::Host,
             FinalizeCommandRequest {
                 runner_result: None,
                 command_elapsed_s: 0.25,
@@ -1054,19 +1054,18 @@ mod tests {
     }
 
     #[test]
-    fn nonzero_ephemeral_command_discards_upperdir_and_reports_lanes() -> TestResult {
+    fn nonzero_host_command_discards_upperdir_and_reports_lanes() -> TestResult {
         assert_non_success_discards(CommandStatus::Error, Some(42))
     }
 
     #[test]
-    fn nonzero_ephemeral_command_reports_lanes_without_reading_large_ignored_payload() -> TestResult
-    {
-        let fixture = EphemeralFinalizeFixture::new("large-ignored-error")?;
+    fn nonzero_host_command_reports_lanes_without_reading_large_ignored_payload() -> TestResult {
+        let fixture = HostFinalizeFixture::new("large-ignored-error")?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
-        let workspace = EphemeralWorkspace::create(&fixture.scratch, "command", "large-ignored")?;
+        let workspace = HostWorkspace::create(&fixture.scratch, "command", "large-ignored")?;
         write_upperdir_sparse_file(&workspace, "ignored/huge.bin", (8 * 1024 * 1024) + 1)?;
 
-        let response = finalize_ephemeral_command_with_default_capture_options(
+        let response = finalize_host_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1129,13 +1128,13 @@ mod tests {
     }
 
     #[test]
-    fn successful_ephemeral_capture_error_still_reports_publish_lanes() -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new("large-source-ok")?;
+    fn successful_host_capture_error_still_reports_publish_lanes() -> TestResult {
+        let fixture = HostFinalizeFixture::new("large-source-ok")?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
-        let workspace = EphemeralWorkspace::create(&fixture.scratch, "command", "large-source-ok")?;
+        let workspace = HostWorkspace::create(&fixture.scratch, "command", "large-source-ok")?;
         write_upperdir_sparse_file(&workspace, "src/huge.bin", (8 * 1024 * 1024) + 1)?;
 
-        let response = finalize_ephemeral_command_with_default_capture_options(
+        let response = finalize_host_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1189,29 +1188,27 @@ mod tests {
     }
 
     #[test]
-    fn timed_out_ephemeral_command_discards_upperdir_and_reports_lanes() -> TestResult {
+    fn timed_out_host_command_discards_upperdir_and_reports_lanes() -> TestResult {
         assert_non_success_discards(CommandStatus::TimedOut, Some(124))
     }
 
     #[test]
-    fn cancelled_ephemeral_command_discards_upperdir_and_reports_lanes() -> TestResult {
+    fn cancelled_host_command_discards_upperdir_and_reports_lanes() -> TestResult {
         assert_non_success_discards(CommandStatus::Cancelled, Some(130))
     }
 
     #[test]
-    fn successful_ephemeral_command_rejects_unsupported_git_metadata_without_publishing(
-    ) -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new("git-metadata-reject")?;
+    fn successful_host_command_rejects_unsupported_git_metadata_without_publishing() -> TestResult {
+        let fixture = HostFinalizeFixture::new("git-metadata-reject")?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
-        let workspace =
-            EphemeralWorkspace::create(&fixture.scratch, "command", "git-metadata-reject")?;
+        let workspace = HostWorkspace::create(&fixture.scratch, "command", "git-metadata-reject")?;
         write_upperdir_file(
             &workspace,
             ".git/config",
             b"[core]\nrepositoryformatversion = 0\n",
         )?;
 
-        let response = finalize_ephemeral_command_with_default_capture_options(
+        let response = finalize_host_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1266,8 +1263,8 @@ mod tests {
     }
 
     #[test]
-    fn successful_ephemeral_command_drops_git_index_stat_refresh() -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new("git-index-stat-refresh")?;
+    fn successful_host_command_drops_git_index_stat_refresh() -> TestResult {
+        let fixture = HostFinalizeFixture::new("git-index-stat-refresh")?;
         let base_index = git_index_with_entry("src/main.rs", 1, 10);
         LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
             path: layerstack::LayerPath::parse(".git/index")?,
@@ -1275,14 +1272,14 @@ mod tests {
         }])?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
         let workspace =
-            EphemeralWorkspace::create(&fixture.scratch, "command", "git-index-stat-refresh")?;
+            HostWorkspace::create(&fixture.scratch, "command", "git-index-stat-refresh")?;
         write_upperdir_file(
             &workspace,
             ".git/index",
             &git_index_with_entry("src/main.rs", 1, 99),
         )?;
 
-        let response = finalize_ephemeral_command_with_default_capture_options(
+        let response = finalize_host_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1322,14 +1319,14 @@ mod tests {
     }
 
     #[test]
-    fn successful_ephemeral_command_reports_large_path_only_git_reject_reason() -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new("large-git-hook-reject")?;
+    fn successful_host_command_reports_large_path_only_git_reject_reason() -> TestResult {
+        let fixture = HostFinalizeFixture::new("large-git-hook-reject")?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
         let workspace =
-            EphemeralWorkspace::create(&fixture.scratch, "command", "large-git-hook-reject")?;
+            HostWorkspace::create(&fixture.scratch, "command", "large-git-hook-reject")?;
         write_upperdir_sparse_file(&workspace, ".git/hooks/pre-commit", (8 * 1024 * 1024) + 1)?;
 
-        let response = finalize_ephemeral_command_with_default_capture_options(
+        let response = finalize_host_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1374,19 +1371,19 @@ mod tests {
 
     #[test]
     fn rejected_git_metadata_prevents_source_and_ignored_lanes() -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new("git-metadata-rejects-all")?;
+        let fixture = HostFinalizeFixture::new("git-metadata-rejects-all")?;
         LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
             path: layerstack::LayerPath::parse(".gitignore")?,
             content: b"ignored/\n".to_vec(),
         }])?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
         let workspace =
-            EphemeralWorkspace::create(&fixture.scratch, "command", "git-metadata-rejects-all")?;
+            HostWorkspace::create(&fixture.scratch, "command", "git-metadata-rejects-all")?;
         write_upperdir_file(&workspace, ".git/index.lock", b"lock")?;
         write_upperdir_file(&workspace, "src/main.rs", b"source")?;
         write_upperdir_file(&workspace, "ignored/cache.txt", b"ignored")?;
 
-        let response = finalize_ephemeral_command_with_default_capture_options(
+        let response = finalize_host_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1456,19 +1453,18 @@ mod tests {
 
     #[test]
     fn git_rejection_cleans_spooled_ignored_payloads() -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new("git-reject-spooled-ignored")?;
+        let fixture = HostFinalizeFixture::new("git-reject-spooled-ignored")?;
         LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
             path: layerstack::LayerPath::parse(".gitignore")?,
             content: b"ignored/\n".to_vec(),
         }])?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
-        let workspace =
-            EphemeralWorkspace::create(&fixture.scratch, "command", "git-reject-spooled")?;
+        let workspace = HostWorkspace::create(&fixture.scratch, "command", "git-reject-spooled")?;
         write_upperdir_file(&workspace, ".git/index.lock", b"lock")?;
         let payload = vec![b'y'; (1024 * 1024) + 1];
         write_upperdir_file(&workspace, "ignored/large.bin", &payload)?;
 
-        let response = finalize_ephemeral_command_with_default_capture_options(
+        let response = finalize_host_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1525,18 +1521,18 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn successful_ephemeral_command_reports_unsupported_special_file_drop() -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new("unsupported-special-drop")?;
+    fn successful_host_command_reports_unsupported_special_file_drop() -> TestResult {
+        let fixture = HostFinalizeFixture::new("unsupported-special-drop")?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
         let workspace =
-            EphemeralWorkspace::create(&fixture.scratch, "command", "unsupported-special-drop")?;
+            HostWorkspace::create(&fixture.scratch, "command", "unsupported-special-drop")?;
         let fifo_path = workspace.dirs().upperdir.join("run.fifo");
         let status = std::process::Command::new("mkfifo")
             .arg(&fifo_path)
             .status()?;
         assert!(status.success(), "mkfifo failed with status {status}");
 
-        let response = finalize_ephemeral_command_with_default_capture_options(
+        let response = finalize_host_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1583,14 +1579,13 @@ mod tests {
     }
 
     #[test]
-    fn successful_ephemeral_command_reports_daemon_control_path_drop() -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new("daemon-control-drop")?;
+    fn successful_host_command_reports_daemon_control_path_drop() -> TestResult {
+        let fixture = HostFinalizeFixture::new("daemon-control-drop")?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
-        let workspace =
-            EphemeralWorkspace::create(&fixture.scratch, "command", "daemon-control-drop")?;
+        let workspace = HostWorkspace::create(&fixture.scratch, "command", "daemon-control-drop")?;
         write_upperdir_file(&workspace, "manifest.json", b"{\"version\":999}")?;
 
-        let response = finalize_ephemeral_command_with_default_capture_options(
+        let response = finalize_host_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1638,14 +1633,13 @@ mod tests {
     }
 
     #[test]
-    fn successful_ephemeral_command_reports_command_scratch_path_drop() -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new("command-scratch-drop")?;
+    fn successful_host_command_reports_command_scratch_path_drop() -> TestResult {
+        let fixture = HostFinalizeFixture::new("command-scratch-drop")?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
-        let workspace =
-            EphemeralWorkspace::create(&fixture.scratch, "command", "command-scratch-drop")?;
+        let workspace = HostWorkspace::create(&fixture.scratch, "command", "command-scratch-drop")?;
         write_upperdir_file(&workspace, "transcript.log", b"private transcript")?;
 
-        let response = finalize_ephemeral_command_with_default_capture_options(
+        let response = finalize_host_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1686,14 +1680,14 @@ mod tests {
     }
 
     #[test]
-    fn successful_ephemeral_command_reports_invalid_layer_path_drop() -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new("invalid-layer-path-drop")?;
+    fn successful_host_command_reports_invalid_layer_path_drop() -> TestResult {
+        let fixture = HostFinalizeFixture::new("invalid-layer-path-drop")?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
         let workspace =
-            EphemeralWorkspace::create(&fixture.scratch, "command", "invalid-layer-path-drop")?;
+            HostWorkspace::create(&fixture.scratch, "command", "invalid-layer-path-drop")?;
         write_upperdir_file(&workspace, ".wh...", b"")?;
 
-        let response = finalize_ephemeral_command_with_default_capture_options(
+        let response = finalize_host_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1733,8 +1727,8 @@ mod tests {
     }
 
     #[test]
-    fn successful_ephemeral_command_reports_opaque_mixed_route_drop() -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new("opaque-mixed-route-drop")?;
+    fn successful_host_command_reports_opaque_mixed_route_drop() -> TestResult {
+        let fixture = HostFinalizeFixture::new("opaque-mixed-route-drop")?;
         LayerStack::open(fixture.root.clone())?.publish_layer(&[
             LayerChange::Write {
                 path: layerstack::LayerPath::parse("tree/src.txt")?,
@@ -1747,10 +1741,10 @@ mod tests {
         ])?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
         let workspace =
-            EphemeralWorkspace::create(&fixture.scratch, "command", "opaque-mixed-route-drop")?;
+            HostWorkspace::create(&fixture.scratch, "command", "opaque-mixed-route-drop")?;
         write_upperdir_opaque_marker(&workspace, "tree")?;
 
-        let response = finalize_ephemeral_command_with_default_capture_options(
+        let response = finalize_host_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1806,15 +1800,14 @@ mod tests {
     }
 
     #[test]
-    fn successful_ephemeral_command_drops_oversized_ignored_but_publishes_source() -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new("ignored-limit-source-publish")?;
+    fn successful_host_command_drops_oversized_ignored_but_publishes_source() -> TestResult {
+        let fixture = HostFinalizeFixture::new("ignored-limit-source-publish")?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
-        let workspace =
-            EphemeralWorkspace::create(&fixture.scratch, "command", "ignored-limit-source")?;
+        let workspace = HostWorkspace::create(&fixture.scratch, "command", "ignored-limit-source")?;
         write_upperdir_file(&workspace, "src/main.rs", b"source")?;
         write_upperdir_sparse_file(&workspace, "ignored/huge.bin", (16 * 1024 * 1024) + 1)?;
 
-        let response = finalize_ephemeral_command_with_default_capture_options(
+        let response = finalize_host_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1879,14 +1872,14 @@ mod tests {
 
     #[test]
     fn custom_ignored_capture_limits_drive_finalize() -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new("configured-ignored-limit-source-publish")?;
+        let fixture = HostFinalizeFixture::new("configured-ignored-limit-source-publish")?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
         let workspace =
-            EphemeralWorkspace::create(&fixture.scratch, "command", "configured-ignored-limit")?;
+            HostWorkspace::create(&fixture.scratch, "command", "configured-ignored-limit")?;
         write_upperdir_file(&workspace, "src/main.rs", b"source")?;
         write_upperdir_file(&workspace, "ignored/cache.txt", b"ignored")?;
 
-        let response = finalize_ephemeral_command_with_capture_options(
+        let response = finalize_host_command_with_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -1948,18 +1941,18 @@ mod tests {
 
     #[test]
     fn source_conflict_drops_ignored_output_and_reports_lanes() -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new("source-conflict-drops-ignored")?;
+        let fixture = HostFinalizeFixture::new("source-conflict-drops-ignored")?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
         LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
             path: layerstack::LayerPath::parse("src/main.rs")?,
             content: b"theirs".to_vec(),
         }])?;
         let workspace =
-            EphemeralWorkspace::create(&fixture.scratch, "command", "source-conflict-ignored")?;
+            HostWorkspace::create(&fixture.scratch, "command", "source-conflict-ignored")?;
         write_upperdir_file(&workspace, "src/main.rs", b"mine")?;
         write_upperdir_file(&workspace, "ignored/cache.txt", b"ignored")?;
 
-        let response = finalize_ephemeral_command_with_default_capture_options(
+        let response = finalize_host_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -2012,14 +2005,14 @@ mod tests {
 
     #[test]
     fn source_and_ignored_success_reports_combined_lane_publish() -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new("source-ignored-success")?;
+        let fixture = HostFinalizeFixture::new("source-ignored-success")?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
         let workspace =
-            EphemeralWorkspace::create(&fixture.scratch, "command", "source-ignored-success")?;
+            HostWorkspace::create(&fixture.scratch, "command", "source-ignored-success")?;
         write_upperdir_file(&workspace, "src/main.rs", b"source")?;
         write_upperdir_file(&workspace, "ignored/cache.txt", b"ignored")?;
 
-        let response = finalize_ephemeral_command_with_default_capture_options(
+        let response = finalize_host_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -2075,7 +2068,7 @@ mod tests {
 
     #[test]
     fn route_rejection_with_source_reports_ignored_publish_failed() -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new("route-reject-source-ignored")?;
+        let fixture = HostFinalizeFixture::new("route-reject-source-ignored")?;
         LayerStack::open(fixture.root.clone())?.publish_layer(&[
             LayerChange::Write {
                 path: layerstack::LayerPath::parse("tree/src.txt")?,
@@ -2087,13 +2080,12 @@ mod tests {
             },
         ])?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
-        let workspace =
-            EphemeralWorkspace::create(&fixture.scratch, "command", "route-reject-source")?;
+        let workspace = HostWorkspace::create(&fixture.scratch, "command", "route-reject-source")?;
         write_upperdir_file(&workspace, "src/main.rs", b"source")?;
         write_upperdir_file(&workspace, "ignored/cache.txt", b"ignored")?;
         write_upperdir_opaque_marker(&workspace, "tree")?;
 
-        let response = finalize_ephemeral_command_with_default_capture_options(
+        let response = finalize_host_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -2149,18 +2141,18 @@ mod tests {
 
     #[test]
     fn source_conflict_takes_precedence_over_ignored_limit_drop_status() -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new("ignored-limit-source-conflict")?;
+        let fixture = HostFinalizeFixture::new("ignored-limit-source-conflict")?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
         LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
             path: layerstack::LayerPath::parse("src/main.rs")?,
             content: b"theirs".to_vec(),
         }])?;
         let workspace =
-            EphemeralWorkspace::create(&fixture.scratch, "command", "ignored-limit-conflict")?;
+            HostWorkspace::create(&fixture.scratch, "command", "ignored-limit-conflict")?;
         write_upperdir_file(&workspace, "src/main.rs", b"mine")?;
         write_upperdir_sparse_file(&workspace, "ignored/huge.bin", (16 * 1024 * 1024) + 1)?;
 
-        let response = finalize_ephemeral_command_with_default_capture_options(
+        let response = finalize_host_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -2209,15 +2201,15 @@ mod tests {
     }
 
     #[test]
-    fn successful_ephemeral_command_reports_spooled_ignored_bytes_and_cleans_spool() -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new("ignored-spooled-success")?;
+    fn successful_host_command_reports_spooled_ignored_bytes_and_cleans_spool() -> TestResult {
+        let fixture = HostFinalizeFixture::new("ignored-spooled-success")?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
         let workspace =
-            EphemeralWorkspace::create(&fixture.scratch, "command", "ignored-spooled-success")?;
+            HostWorkspace::create(&fixture.scratch, "command", "ignored-spooled-success")?;
         let payload = vec![b'x'; (1024 * 1024) + 1];
         write_upperdir_file(&workspace, "ignored/large.bin", &payload)?;
 
-        let response = finalize_ephemeral_command_with_default_capture_options(
+        let response = finalize_host_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -2266,14 +2258,14 @@ mod tests {
     }
 
     #[test]
-    fn successful_ephemeral_command_spools_nested_snapshot_ignored_output() -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new("ignored-nested-spooled-success")?;
+    fn successful_host_command_spools_nested_snapshot_ignored_output() -> TestResult {
+        let fixture = HostFinalizeFixture::new("ignored-nested-spooled-success")?;
         LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
             path: layerstack::LayerPath::parse("pkg/.gitignore")?,
             content: b"ignored/\n".to_vec(),
         }])?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
-        let workspace = EphemeralWorkspace::create(
+        let workspace = HostWorkspace::create(
             &fixture.scratch,
             "command",
             "ignored-nested-spooled-success",
@@ -2281,7 +2273,7 @@ mod tests {
         let payload = vec![b'x'; (1024 * 1024) + 1];
         write_upperdir_file(&workspace, "pkg/ignored/large.bin", &payload)?;
 
-        let response = finalize_ephemeral_command_with_default_capture_options(
+        let response = finalize_host_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -2325,7 +2317,7 @@ mod tests {
 
     #[test]
     fn route_rejection_cleans_spooled_ignored_payloads() -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new("ignored-spool-route-rejection")?;
+        let fixture = HostFinalizeFixture::new("ignored-spool-route-rejection")?;
         LayerStack::open(fixture.root.clone())?.publish_layer(&[
             LayerChange::Write {
                 path: layerstack::LayerPath::parse("tree/src.txt")?,
@@ -2337,16 +2329,13 @@ mod tests {
             },
         ])?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
-        let workspace = EphemeralWorkspace::create(
-            &fixture.scratch,
-            "command",
-            "ignored-spool-route-rejection",
-        )?;
+        let workspace =
+            HostWorkspace::create(&fixture.scratch, "command", "ignored-spool-route-rejection")?;
         let payload = vec![b'y'; (1024 * 1024) + 1];
         write_upperdir_file(&workspace, "ignored/large.bin", &payload)?;
         write_upperdir_opaque_marker(&workspace, "tree")?;
 
-        let response = finalize_ephemeral_command_with_default_capture_options(
+        let response = finalize_host_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -2389,20 +2378,17 @@ mod tests {
 
     #[test]
     fn failed_publish_cleans_spooled_ignored_payloads() -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new("ignored-spool-publish-failure")?;
+        let fixture = HostFinalizeFixture::new("ignored-spool-publish-failure")?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
-        let workspace = EphemeralWorkspace::create(
-            &fixture.scratch,
-            "command",
-            "ignored-spool-publish-failure",
-        )?;
+        let workspace =
+            HostWorkspace::create(&fixture.scratch, "command", "ignored-spool-publish-failure")?;
         let payload = vec![b'y'; (1024 * 1024) + 1];
         write_upperdir_file(&workspace, "src/main.rs", b"source")?;
         write_upperdir_file(&workspace, "ignored/large.bin", &payload)?;
         let _failpoint_guard = enable_layerstack_test_failpoints();
         inject_next_publish_failure(&fixture.root)?;
 
-        let response = finalize_ephemeral_command_with_default_capture_options(
+        let response = finalize_host_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -2467,13 +2453,13 @@ mod tests {
     }
 
     fn assert_non_success_discards(status: CommandStatus, exit_code: Option<i64>) -> TestResult {
-        let fixture = EphemeralFinalizeFixture::new(status.as_str())?;
+        let fixture = HostFinalizeFixture::new(status.as_str())?;
         let snapshot = service::acquire_snapshot(&fixture.root, "test-command")?;
-        let workspace = EphemeralWorkspace::create(&fixture.scratch, "command", status.as_str())?;
+        let workspace = HostWorkspace::create(&fixture.scratch, "command", status.as_str())?;
         write_upperdir_file(&workspace, "src/main.rs", b"source")?;
         write_upperdir_file(&workspace, "ignored/cache.txt", b"ignored")?;
 
-        let response = finalize_ephemeral_command_with_default_capture_options(
+        let response = finalize_host_command_with_default_capture_options(
             &fixture.root,
             &snapshot,
             &workspace,
@@ -2531,7 +2517,7 @@ mod tests {
     }
 
     fn write_upperdir_file(
-        workspace: &EphemeralWorkspace,
+        workspace: &HostWorkspace,
         path: &str,
         content: &[u8],
     ) -> std::io::Result<()> {
@@ -2543,7 +2529,7 @@ mod tests {
     }
 
     fn write_upperdir_sparse_file(
-        workspace: &EphemeralWorkspace,
+        workspace: &HostWorkspace,
         path: &str,
         len: u64,
     ) -> std::io::Result<()> {
@@ -2582,10 +2568,7 @@ mod tests {
         bytes
     }
 
-    fn write_upperdir_opaque_marker(
-        workspace: &EphemeralWorkspace,
-        path: &str,
-    ) -> std::io::Result<()> {
+    fn write_upperdir_opaque_marker(workspace: &HostWorkspace, path: &str) -> std::io::Result<()> {
         let marker = workspace.dirs().upperdir.join(path).join(".wh..wh..opq");
         if let Some(parent) = marker.parent() {
             std::fs::create_dir_all(parent)?;
@@ -2630,13 +2613,13 @@ mod tests {
         }
     }
 
-    struct EphemeralFinalizeFixture {
+    struct HostFinalizeFixture {
         base: std::path::PathBuf,
         root: std::path::PathBuf,
         scratch: std::path::PathBuf,
     }
 
-    impl EphemeralFinalizeFixture {
+    impl HostFinalizeFixture {
         fn new(label: &str) -> TestResult<Self> {
             let base = std::env::temp_dir().join(format!(
                 "operation-finalize-{label}-{}-{}",
@@ -2666,7 +2649,7 @@ mod tests {
         }
     }
 
-    impl Drop for EphemeralFinalizeFixture {
+    impl Drop for HostFinalizeFixture {
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.base);
         }

@@ -7,7 +7,7 @@ LayerStack tests cover daemon-owned workspace base rebuild, active lease pinning
 ## Checklist
 
 - [ ] layerstack-base-rebuild: workspace base rebuild after commit is idempotent, materializes the merged view, and is visible through LayerStack metrics.
-- [ ] layerstack-lease-open-close: isolated workspace enter and exit acquire and release active LayerStack leases with coherent status and lease gauges.
+- [ ] layerstack-lease-open-close: isolated-network workspace enter and exit acquire and release active LayerStack leases with coherent status and lease gauges.
 - [ ] layerstack-lease-pin-under-squash: active leases keep their pinned manifest version and hash stable while public writes trigger squash pressure, then release to zero active leases.
 - [ ] layerstack-lease-lifetime: lease exit reports a nonnegative lifetime and leaves no stale open status behind.
 - [ ] layerstack-workspace-commit-collapse: commit-to-workspace collapses accumulated layers to the workspace base and preserves monotonic manifest versioning.

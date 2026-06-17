@@ -3,14 +3,16 @@ use std::net::Ipv4Addr;
 use std::path::{Path, PathBuf};
 
 use crate::isolated_network_setup::VethAllocation;
-use crate::network_mode::isolated_network::IsolatedError;
+use crate::network_mode::isolated_network::IsolatedNetworkError;
 use crate::network_mode::isolated_network::{HANDLE_PREFIX, PERSISTED_HANDLES_SCHEMA_VERSION};
 use serde_json::{json, Value};
 
-use crate::network_mode::isolated_network::{IsolatedManager, OrphanCleanupReport};
+use crate::network_mode::isolated_network::{OrphanCleanupReport, WorkspaceModeManager};
 
-impl IsolatedManager {
-    pub(crate) fn reap_persisted_orphans(&mut self) -> Result<OrphanCleanupReport, IsolatedError> {
+impl WorkspaceModeManager {
+    pub(crate) fn reap_persisted_orphans(
+        &mut self,
+    ) -> Result<OrphanCleanupReport, IsolatedNetworkError> {
         let rows = self.read_persisted_handle_rows();
         self.handles.clear();
         self.by_caller.clear();
@@ -157,9 +159,11 @@ impl IsolatedManager {
         self.scratch_root.join("manager.json")
     }
 
-    pub(crate) fn persist_handles(&self) -> Result<(), IsolatedError> {
-        std::fs::create_dir_all(&self.scratch_root).map_err(|err| IsolatedError::SetupFailed {
-            step: format!("manager_root: {err}"),
+    pub(crate) fn persist_handles(&self) -> Result<(), IsolatedNetworkError> {
+        std::fs::create_dir_all(&self.scratch_root).map_err(|err| {
+            IsolatedNetworkError::SetupFailed {
+                step: format!("manager_root: {err}"),
+            }
         })?;
         let handles: Vec<Value> = self
             .handles
@@ -201,28 +205,29 @@ impl IsolatedManager {
         });
         let path = self.persisted_handles_path();
         let tmp = path.with_extension("json.tmp");
-        let bytes =
-            serde_json::to_vec_pretty(&payload).map_err(|err| IsolatedError::SetupFailed {
+        let bytes = serde_json::to_vec_pretty(&payload).map_err(|err| {
+            IsolatedNetworkError::SetupFailed {
                 step: format!("manager_serialize: {err}"),
-            })?;
+            }
+        })?;
         let mut file = std::fs::OpenOptions::new()
             .create(true)
             .truncate(true)
             .write(true)
             .open(&tmp)
-            .map_err(|err| IsolatedError::SetupFailed {
+            .map_err(|err| IsolatedNetworkError::SetupFailed {
                 step: format!("manager_write: {err}"),
             })?;
         file.write_all(&bytes)
             .and_then(|()| file.sync_all())
-            .map_err(|err| IsolatedError::SetupFailed {
+            .map_err(|err| IsolatedNetworkError::SetupFailed {
                 step: format!("manager_write: {err}"),
             })?;
         drop(file);
-        std::fs::rename(&tmp, &path).map_err(|err| IsolatedError::SetupFailed {
+        std::fs::rename(&tmp, &path).map_err(|err| IsolatedNetworkError::SetupFailed {
             step: format!("manager_rename: {err}"),
         })?;
-        sync_directory(&self.scratch_root).map_err(|err| IsolatedError::SetupFailed {
+        sync_directory(&self.scratch_root).map_err(|err| IsolatedNetworkError::SetupFailed {
             step: format!("manager_fsync: {err}"),
         })?;
         Ok(())

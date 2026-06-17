@@ -10,23 +10,23 @@ use std::path::PathBuf;
 use command::process::CommandProcess;
 use command::{CollectCompleted, StartCommand};
 use layerstack::service::{LeaseReleaseHandle, Snapshot};
-use workspace::network_mode::host::EphemeralWorkspace;
-use workspace::network_mode::isolated_network::IsolatedWorkspaceBinding;
+use workspace::network_mode::host::HostWorkspace;
+use workspace::network_mode::isolated_network::WorkspaceModeBinding;
 
 use super::contract::{CollectCompletedOutput, CommandCompletion, CommandResponse};
-pub(crate) struct EphemeralRun {
+pub(crate) struct HostRun {
     pub(crate) process: CommandProcess,
     pub(crate) trace_origin: CommandTraceOrigin,
     pub(crate) root: PathBuf,
     pub(crate) snapshot: Snapshot,
-    pub(crate) workspace: EphemeralWorkspace,
+    pub(crate) workspace: HostWorkspace,
     pub(crate) lease: LeaseReleaseHandle,
 }
 
-pub(crate) struct IsolatedRun {
+pub(crate) struct IsolatedNetworkRun {
     pub(crate) process: CommandProcess,
     pub(crate) trace_origin: CommandTraceOrigin,
-    pub(crate) binding: IsolatedWorkspaceBinding,
+    pub(crate) binding: WorkspaceModeBinding,
     pub(crate) remountable: bool,
 }
 
@@ -46,22 +46,22 @@ impl CommandTraceOrigin {
 }
 
 pub(crate) enum ActiveCommand {
-    Ephemeral(EphemeralRun),
-    Isolated(IsolatedRun),
+    Host(HostRun),
+    IsolatedNetwork(IsolatedNetworkRun),
 }
 
 impl ActiveCommand {
     pub(crate) fn process(&self) -> &CommandProcess {
         match self {
-            Self::Ephemeral(run) => &run.process,
-            Self::Isolated(run) => &run.process,
+            Self::Host(run) => &run.process,
+            Self::IsolatedNetwork(run) => &run.process,
         }
     }
 
     pub(crate) fn trace_origin(&self) -> &CommandTraceOrigin {
         match self {
-            Self::Ephemeral(run) => &run.trace_origin,
-            Self::Isolated(run) => &run.trace_origin,
+            Self::Host(run) => &run.trace_origin,
+            Self::IsolatedNetwork(run) => &run.trace_origin,
         }
     }
 }

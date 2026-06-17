@@ -1,7 +1,7 @@
 //! Daemon error algebra and wire-kind mapping.
 
 use thiserror::Error;
-use workspace::network_mode::isolated_network::IsolatedError;
+use workspace::network_mode::isolated_network::IsolatedNetworkError;
 
 #[derive(Debug, Error)]
 #[non_exhaustive]
@@ -39,11 +39,11 @@ pub enum DaemonError {
     #[error("overlay pipeline failure: {0}")]
     OverlayPipeline(String),
 
-    #[error("plugin ops are forbidden while caller has an isolated workspace")]
-    ForbiddenInIsolatedWorkspace,
+    #[error("plugin ops are forbidden while caller has an isolated network")]
+    ForbiddenInIsolatedNetwork,
 
     #[error(transparent)]
-    Isolated(#[from] IsolatedError),
+    Isolated(#[from] IsolatedNetworkError),
 }
 
 impl DaemonError {
@@ -65,7 +65,7 @@ impl DaemonError {
             {
                 ErrorKind::LifecycleInProgress
             }
-            Self::ForbiddenInIsolatedWorkspace => ErrorKind::ForbiddenInIsolatedWorkspace,
+            Self::ForbiddenInIsolatedNetwork => ErrorKind::ForbiddenInIsolatedNetwork,
             _ => ErrorKind::InternalError,
         }
     }
@@ -83,7 +83,7 @@ impl From<plugin::PluginRuntimeError> for DaemonError {
     fn from(err: plugin::PluginRuntimeError) -> Self {
         use plugin::PluginRuntimeError;
         match err {
-            PluginRuntimeError::ForbiddenInIsolatedWorkspace => Self::ForbiddenInIsolatedWorkspace,
+            PluginRuntimeError::ForbiddenInIsolatedNetwork => Self::ForbiddenInIsolatedNetwork,
             PluginRuntimeError::StateLockPoisoned(what) => Self::StateLockPoisoned(what),
             PluginRuntimeError::InvalidRequest(message) => Self::InvalidRequest(message),
             PluginRuntimeError::Io(source) => Self::Io(source),

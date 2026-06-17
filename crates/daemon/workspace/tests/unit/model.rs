@@ -2,16 +2,17 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 
 use crate::network_mode::isolated_network::{
-    DnsConfiguration, IsolatedWorkspaceId, WorkspaceRemountState,
+    DnsConfiguration, WorkspaceModeId, WorkspaceRemountState,
 };
 use crate::overlay::dirs::OverlayDirs;
 use crate::overlay::tree::TreeResourceStats;
 
 use super::*;
 
-fn isolated_handle() -> IsolatedWorkspaceHandle {
-    IsolatedWorkspaceHandle {
-        workspace_id: IsolatedWorkspaceId("isolated-handle".to_owned()),
+fn isolated_handle() -> WorkspaceModeHandle {
+    WorkspaceModeHandle {
+        workspace_id: WorkspaceModeId("isolated-handle".to_owned()),
+        network: NetworkMode::IsolatedNetwork,
         caller_id: "caller-1".to_owned(),
         lease_id: "lease-1".to_owned(),
         manifest_version: 42,
@@ -39,10 +40,11 @@ fn isolated_handle() -> IsolatedWorkspaceHandle {
     }
 }
 
-fn isolated_binding() -> IsolatedWorkspaceBinding {
-    IsolatedWorkspaceBinding {
+fn isolated_binding() -> WorkspaceModeBinding {
+    WorkspaceModeBinding {
         caller_id: "caller-2".to_owned(),
         workspace_handle_id: "binding-handle".to_owned(),
+        network: NetworkMode::IsolatedNetwork,
         layer_stack_root: "/layer-stack".into(),
         manifest_version: 7,
         manifest_root_hash: "binding-root-hash".to_owned(),
@@ -64,7 +66,7 @@ fn assert_isolated_handle_public(public: &WorkspaceHandle) {
     assert_eq!(public.id, WorkspaceId("isolated-handle".to_owned()));
     assert_eq!(public.owner, CallerId("caller-1".to_owned()));
     assert_eq!(public.workspace_root, PathBuf::from("/workspace"));
-    assert_eq!(public.network, NetworkMode::Isolated);
+    assert_eq!(public.network, NetworkMode::IsolatedNetwork);
     assert_eq!(
         public.base_revision,
         BaseRevision {
@@ -79,7 +81,7 @@ fn assert_isolated_binding_public(public: &WorkspaceHandle) {
     assert_eq!(public.id, WorkspaceId("binding-handle".to_owned()));
     assert_eq!(public.owner, CallerId("caller-2".to_owned()));
     assert_eq!(public.workspace_root, PathBuf::from("/workspace"));
-    assert_eq!(public.network, NetworkMode::Isolated);
+    assert_eq!(public.network, NetworkMode::IsolatedNetwork);
     assert_eq!(
         public.base_revision,
         BaseRevision {

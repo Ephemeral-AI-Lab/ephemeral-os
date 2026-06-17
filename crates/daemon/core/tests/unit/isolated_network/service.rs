@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 
 use workspace::network_mode::isolated_network::{
-    DnsConfiguration, ExitOutcome as IsolatedExitOutcome, IsolatedWorkspaceId,
+    DnsConfiguration, ExitOutcome as IsolatedNetworkExitOutcome, WorkspaceModeId,
     WorkspaceRemountState,
 };
 use workspace::overlay::dirs::OverlayDirs;
@@ -14,7 +14,7 @@ use super::*;
 
 #[test]
 fn host_ram_pressure_error_keeps_capacity_details() {
-    let response = error_payload(&IsolatedError::HostRamPressure {
+    let response = error_payload(&IsolatedNetworkError::HostRamPressure {
         required_bytes: 30,
         budget_bytes: 29,
     });
@@ -52,7 +52,7 @@ fn enter_trace_events_include_holder_and_dns_configuration() {
 
     let events = sink.drain();
     assert_eq!(events.len(), 7);
-    assert_eq!(events[0].module, "isolated_workspace");
+    assert_eq!(events[0].module, "isolated_network");
     assert_eq!(events[0].name, "enter_started");
     assert_eq!(events[0].details["caller_id"], "caller-isolated");
     assert_eq!(events[0].details["workspace_root"], "/workspace");
@@ -71,11 +71,11 @@ fn enter_trace_events_include_holder_and_dns_configuration() {
     assert_eq!(events[4].name, "command_snapshot_normalized");
     assert_eq!(events[4].details["triggered"], false);
     assert_eq!(events[4].details["lease_layer_count"], 0);
-    assert_eq!(events[5].module, "isolated_workspace");
+    assert_eq!(events[5].module, "isolated_network");
     assert_eq!(events[5].name, "holder_started");
     assert_eq!(events[5].details["workspace_handle_id"], "workspace-handle");
     assert_eq!(events[5].details["holder_pid"], 42);
-    assert_eq!(events[6].module, "isolated_workspace");
+    assert_eq!(events[6].module, "isolated_network");
     assert_eq!(events[6].name, "network_configured");
     assert_eq!(events[6].details["dns_fallback_applied"], true);
     assert_eq!(events[6].details["previous_first_nameserver"], "127.0.0.53");
@@ -109,8 +109,8 @@ fn exit_trace_events_include_teardown_phases_and_mountinfo_marker() {
     phases.insert("kill_holder".to_owned(), 1.5);
     phases.insert("rmtree_scratch".to_owned(), 2.5);
     let exit = ExitOutcome {
-        isolated: IsolatedExitOutcome {
-            workspace_id: IsolatedWorkspaceId("workspace-handle".to_owned()),
+        isolated: IsolatedNetworkExitOutcome {
+            workspace_id: WorkspaceModeId("workspace-handle".to_owned()),
             caller_id: "caller-isolated".to_owned(),
             lease_id: "lease-1".to_owned(),
             evicted_upperdir_bytes: 4096,
@@ -173,7 +173,7 @@ fn recovery_trace_events_include_manager_json_and_cleanup_errors() {
 
     let events = sink.drain();
     assert_eq!(events.len(), 2);
-    assert_eq!(events[0].module, "isolated_workspace");
+    assert_eq!(events[0].module, "isolated_network");
     assert_eq!(events[0].name, "recovery_started");
     assert_eq!(events[1].name, "recovery_finished");
     assert_eq!(events[1].details["exited_caller_count"], 1);
@@ -191,9 +191,10 @@ fn recovery_trace_events_include_manager_json_and_cleanup_errors() {
     );
 }
 
-fn test_handle() -> WorkspaceHandle {
-    WorkspaceHandle {
-        workspace_id: IsolatedWorkspaceId("workspace-handle".to_owned()),
+fn test_handle() -> WorkspaceModeHandle {
+    WorkspaceModeHandle {
+        workspace_id: WorkspaceModeId("workspace-handle".to_owned()),
+        network: workspace::NetworkMode::IsolatedNetwork,
         caller_id: "caller-isolated".to_owned(),
         lease_id: "lease-1".to_owned(),
         manifest_version: 7,

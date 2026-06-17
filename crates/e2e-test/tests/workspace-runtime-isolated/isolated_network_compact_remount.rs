@@ -5,17 +5,17 @@ use sha2::{Digest, Sha256};
 
 use crate::support::{
     as_bool, as_i64, as_str, envelope_error_kind, has_trace_event, live_pool_or_skip,
-    reset_isolated_workspaces, trace_record, wait_for_active_leases, wait_for_command_count,
+    reset_isolated_networks, trace_record, wait_for_active_leases, wait_for_command_count,
     wait_for_command_stdout_contains,
 };
 
 #[test]
-fn compact_remount_open_isolated_workspace_reclaims_old_lower_chain() -> Result<()> {
+fn compact_remount_open_isolated_network_reclaims_old_lower_chain() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let path = format!("compact-remount/{}.txt", e2e_test::unique_suffix());
 
     for index in 0..10 {
@@ -140,7 +140,7 @@ fn compact_remount_blocks_while_isolated_command_is_running() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
 
     for index in 0..6 {
         lease.call_ok(
@@ -277,7 +277,7 @@ fn compact_remount_blocks_when_remountable_command_holds_workspace_fd() -> Resul
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let public_path = format!("compact-remount/fd-{}.txt", e2e_test::unique_suffix());
 
     for index in 0..6 {
@@ -386,7 +386,7 @@ fn compact_remount_blocks_when_remountable_command_maps_workspace_file() -> Resu
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let public_path = format!("compact-remount/map-{}.txt", e2e_test::unique_suffix());
 
     for index in 0..6 {
@@ -500,7 +500,7 @@ fn compact_remount_blocks_mixed_safe_and_fd_pinned_remountable_commands() -> Res
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let suffix = e2e_test::unique_suffix();
     let public_path = format!("compact-remount/mixed-public-{suffix}.txt");
 
@@ -645,7 +645,7 @@ fn compact_remount_blocks_for_forced_reason(reason: &'static str) -> Result<()> 
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let public_path = format!("compact-remount/forced-{}.txt", e2e_test::unique_suffix());
 
     for index in 0..6 {
@@ -762,7 +762,7 @@ fn compact_remount_live_remounts_explicitly_remountable_command() -> Result<()> 
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let public_path = format!("compact-remount/live-{}.txt", e2e_test::unique_suffix());
     let private_path = format!(
         "compact-remount/live-private-{}.txt",
@@ -904,7 +904,7 @@ fn compact_remount_live_remount_repeated_cycles_keep_pinned_snapshot_and_private
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let suffix = e2e_test::unique_suffix();
     let public_caller = format!("remount-repeat-public-{suffix}");
     let public_path = format!("compact-remount/repeat-public-{suffix}.bin");
@@ -1072,7 +1072,7 @@ fn compact_remount_live_remount_preserves_many_file_tree_integrity() -> Result<(
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let suffix = e2e_test::unique_suffix();
     let public_caller = format!("remount-many-public-{suffix}");
     let tree_root = format!("compact-remount/many-tree-{suffix}");
@@ -1259,7 +1259,7 @@ fn compact_remount_live_remount_preserves_concurrent_pip_style_install_tree() ->
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let suffix = e2e_test::unique_suffix();
     let public_caller = format!("remount-pip-public-{suffix}");
     let public_path = format!("compact-remount/pip-public-{suffix}.bin");
@@ -1506,7 +1506,7 @@ fn compact_remount_live_remount_coverage_goal4_hard_concurrent_real_pip_install_
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let suffix = e2e_test::unique_suffix();
     let caller = format!("remount-real-pip-{suffix}");
     let public_caller = format!("remount-real-pip-public-{suffix}");
@@ -1918,7 +1918,7 @@ fn compact_remount_live_remount_preserves_complex_command_integrity() -> Result<
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let suffix = e2e_test::unique_suffix();
     let public_a = format!("compact-remount/complex-a-{suffix}.bin");
     let public_b = format!("compact-remount/complex-b-{suffix}.bin");
@@ -2027,7 +2027,7 @@ fn compact_remount_live_remount_preserves_process_tree_and_private_state() -> Re
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let suffix = e2e_test::unique_suffix();
     let public_a = format!("compact-remount/tree-a-{suffix}.bin");
     let public_b = format!("compact-remount/tree-b-{suffix}.bin");
@@ -2168,7 +2168,7 @@ fn compact_remount_live_remount_quiesces_process_fanout_and_preserves_integrity(
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let suffix = e2e_test::unique_suffix();
     let public_caller = format!("remount-fanout-public-{suffix}");
     let public_a = format!("compact-remount/fanout-a-{suffix}.bin");
@@ -2333,7 +2333,7 @@ fn compact_remount_live_remounts_multiple_remountable_commands_consistently() ->
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let suffix = e2e_test::unique_suffix();
     let public_a = format!("compact-remount/multi-a-{suffix}.bin");
     let public_b = format!("compact-remount/multi-b-{suffix}.bin");
@@ -2486,7 +2486,7 @@ fn compact_remount_live_remount_with_older_open_lease_preserves_both_snapshots()
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let suffix = e2e_test::unique_suffix();
     let old_caller = format!("remount-old-lease-{suffix}");
     let live_caller = format!("remount-live-lease-{suffix}");
@@ -2704,7 +2704,7 @@ fn compact_remount_live_remount_with_two_historical_leases_and_two_commands_pres
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let suffix = e2e_test::unique_suffix();
     let old_one_caller = format!("remount-old-one-{suffix}");
     let old_two_caller = format!("remount-old-two-{suffix}");
@@ -3096,7 +3096,7 @@ fn compact_remount_live_remount_large_single_file_rewrite_keeps_snapshot() -> Re
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let suffix = e2e_test::unique_suffix();
     let public_caller = format!("remount-large-public-{suffix}");
     let public_path = format!("compact-remount/large-single-{suffix}.bin");
@@ -3241,7 +3241,7 @@ fn compact_remount_live_remount_after_historical_releases_reclaims_to_bounded_di
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let suffix = e2e_test::unique_suffix();
     let public_caller = format!("remount-release-public-{suffix}");
     let old_one_caller = format!("remount-release-old-one-{suffix}");
@@ -3535,7 +3535,7 @@ fn compact_remount_live_remount_three_commands_over_wide_tree_keep_integrity() -
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let suffix = e2e_test::unique_suffix();
     let public_caller = format!("remount-three-command-public-{suffix}");
     let tree_root = format!("compact-remount/three-command-tree-{suffix}");
@@ -4937,7 +4937,7 @@ fn compact_remount_reports_not_open_for_ephemeral_caller() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
 
     let response = lease.call(catalog::SANDBOX_ISOLATION_TEST_COMPACT_REMOUNT, json!({}))?;
     let error = response
@@ -4946,7 +4946,7 @@ fn compact_remount_reports_not_open_for_ephemeral_caller() -> Result<()> {
         .context("expected rejected operation error")?;
     ensure!(
         as_str(error, "kind")? == "not_open",
-        "ephemeral/public callers have no mounted lease to remount: {response}"
+        "host/public callers have no mounted lease to remount: {response}"
     );
     Ok(())
 }
@@ -4977,7 +4977,7 @@ fn compact_remount_live_remount_matrix_case(case: RemountMatrixCase) -> Result<(
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let suffix = e2e_test::unique_suffix();
     let public_caller = format!("remount-{}-public-{suffix}", case.name);
     let tree_root = format!("compact-remount/{}-{suffix}", case.name);
@@ -5190,7 +5190,7 @@ fn compact_remount_live_remount_pinned_history_matrix_case(
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let suffix = e2e_test::unique_suffix();
     let public_caller = format!("remount-{}-public-{suffix}", case.name);
     let live_caller = format!("remount-{}-live-{suffix}", case.name);

@@ -5,11 +5,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::isolated_network_setup::{IsolatedNetwork, VethAllocation};
 use crate::lifecycle::monotonic_seconds;
+use crate::model::NetworkMode;
 use crate::namespace::NamespaceRuntime;
 use crate::overlay::dirs::OverlayDirs;
 
 #[cfg(test)]
-#[path = "../../tests/unit/isolated_workspace_sessions.rs"]
+#[path = "../../tests/unit/isolated_network_sessions.rs"]
 mod tests;
 
 pub use crate::lifecycle::remount::{
@@ -66,23 +67,23 @@ impl Default for ResourceCaps {
 
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
-pub enum IsolatedError {
-    #[error("isolated workspaces are disabled")]
+pub enum IsolatedNetworkError {
+    #[error("isolated networks are disabled")]
     FeatureDisabled,
 
     #[error("invalid argument: {0}")]
     InvalidArgument(String),
 
-    #[error("agent already has an open isolated workspace")]
+    #[error("agent already has an open isolated network")]
     AlreadyOpen { created_at: f64, last_activity: f64 },
 
-    #[error("agent has no open isolated workspace")]
+    #[error("agent has no open isolated network")]
     NotOpen,
 
-    #[error("global isolated workspace cap reached")]
+    #[error("global isolated network cap reached")]
     QuotaExceeded { total_cap: u32 },
 
-    #[error("host RAM gate refuses new isolated workspace")]
+    #[error("host RAM gate refuses new isolated network")]
     HostRamPressure {
         required_bytes: u64,
         budget_bytes: u64,
@@ -95,7 +96,7 @@ pub enum IsolatedError {
     NetworkUnavailable(String),
 }
 
-impl IsolatedError {
+impl IsolatedNetworkError {
     #[must_use]
     pub const fn kind(&self) -> &'static str {
         match self {
@@ -111,10 +112,10 @@ impl IsolatedError {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct IsolatedWorkspaceId(pub String);
+pub struct WorkspaceModeId(pub String);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct IsolatedSnapshot {
+pub struct WorkspaceModeSnapshot {
     pub lease_id: String,
     pub manifest_version: i64,
     pub manifest_root_hash: String,
@@ -128,8 +129,9 @@ pub struct DnsConfiguration {
 }
 
 #[derive(Debug, Clone)]
-pub struct WorkspaceHandle {
-    pub workspace_id: IsolatedWorkspaceId,
+pub struct WorkspaceModeHandle {
+    pub workspace_id: WorkspaceModeId,
+    pub network: NetworkMode,
     pub caller_id: String,
     pub lease_id: String,
     pub manifest_version: i64,
@@ -149,12 +151,11 @@ pub struct WorkspaceHandle {
     pub last_activity: f64,
 }
 
-pub type IsolatedWorkspaceHandle = WorkspaceHandle;
-
 #[derive(Debug, Clone)]
-pub struct IsolatedWorkspaceBinding {
+pub struct WorkspaceModeBinding {
     pub caller_id: String,
     pub workspace_handle_id: String,
+    pub network: NetworkMode,
     pub layer_stack_root: PathBuf,
     pub manifest_version: i64,
     pub manifest_root_hash: String,
@@ -167,13 +168,13 @@ pub struct IsolatedWorkspaceBinding {
     pub cgroup_path: Option<PathBuf>,
 }
 
-pub struct IsolatedManager {
+pub struct WorkspaceModeManager {
     pub(crate) caps: ResourceCaps,
     pub(crate) runtime: NamespaceRuntime,
     pub(crate) network: IsolatedNetwork,
     pub(crate) scratch_root: PathBuf,
-    pub(crate) handles: HashMap<IsolatedWorkspaceId, WorkspaceHandle>,
-    pub(crate) by_caller: HashMap<String, IsolatedWorkspaceId>,
+    pub(crate) handles: HashMap<WorkspaceModeId, WorkspaceModeHandle>,
+    pub(crate) by_caller: HashMap<String, WorkspaceModeId>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -182,7 +183,7 @@ pub struct OrphanCleanupReport {
     pub cleanup_error: Option<String>,
 }
 
-impl IsolatedManager {
+impl WorkspaceModeManager {
     #[must_use]
     pub fn with_scratch_root(caps: ResourceCaps, scratch_root: PathBuf) -> Self {
         Self::with_runtime(caps, scratch_root, NamespaceRuntime::from_env())
@@ -209,7 +210,7 @@ impl IsolatedManager {
         }
     }
 
-    pub(crate) fn check_host_capacity(&self) -> Result<(), IsolatedError> {
+    pub(crate) fn check_host_capacity(&self) -> Result<(), IsolatedNetworkError> {
         check_host_capacity_against_budget(
             self.handles.len(),
             self.caps.upperdir_bytes,
@@ -217,19 +218,21 @@ impl IsolatedManager {
         )
     }
 
-    pub fn initialize_report(&mut self) -> Result<OrphanCleanupReport, IsolatedError> {
+    pub fn initialize_report(&mut self) -> Result<OrphanCleanupReport, IsolatedNetworkError> {
         if !self.caps.enabled {
-            return Err(IsolatedError::FeatureDisabled);
+            return Err(IsolatedNetworkError::FeatureDisabled);
         }
         self.network.initialize()?;
-        std::fs::create_dir_all(&self.scratch_root).map_err(|err| IsolatedError::SetupFailed {
-            step: format!("scratch_root: {err}"),
+        std::fs::create_dir_all(&self.scratch_root).map_err(|err| {
+            IsolatedNetworkError::SetupFailed {
+                step: format!("scratch_root: {err}"),
+            }
         })?;
         self.reap_persisted_orphans()
     }
 
     #[must_use]
-    pub fn get_handle(&self, caller_id: &str) -> Option<WorkspaceHandle> {
+    pub fn get_handle(&self, caller_id: &str) -> Option<WorkspaceModeHandle> {
         self.by_caller
             .get(caller_id)
             .and_then(|workspace_id| self.handles.get(workspace_id))
@@ -264,10 +267,10 @@ fn check_host_capacity_against_budget(
     open_handles: usize,
     upperdir_bytes: u64,
     budget_bytes: u64,
-) -> Result<(), IsolatedError> {
+) -> Result<(), IsolatedNetworkError> {
     let required_bytes = required_host_capacity_bytes(open_handles, upperdir_bytes);
     if required_bytes > budget_bytes {
-        return Err(IsolatedError::HostRamPressure {
+        return Err(IsolatedNetworkError::HostRamPressure {
             required_bytes,
             budget_bytes,
         });

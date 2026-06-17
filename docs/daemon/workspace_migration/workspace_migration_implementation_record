@@ -31,7 +31,7 @@ test-remount invalid root requests preserve `invalid_argument` error shaping.
 The Phase 3 slice moves Host command workspace lifecycle ownership out of
 hidden command start behavior and into `WorkspaceRuntime`. Host command routes
 now ask the runtime to resolve the legacy `layer_stack_root` compatibility
-binding, acquire the bounded base lease, create the `EphemeralWorkspace`, and
+binding, acquire the bounded base lease, create the `HostWorkspace`, and
 then hand a command context to `CommandOps`. `CommandOps` still owns process
 spawning, wait/progress/stdin/cancel mechanics, registry state, transcripts,
 capture, and finalization.
@@ -47,7 +47,7 @@ isolated liveness touches after successful isolated file operations.
 
 The Phase 6 slice moves workspace crate code into the responsibility-based
 folder structure without changing behavior. Shared overlay primitives now live
-under `overlay/`; isolated workspace create/destroy/recovery/lease helpers live
+under `overlay/`; isolated-network workspace create/destroy/recovery/lease helpers live
 under `lifecycle/`; remount state, report/plan, and apply logic live under
 `lifecycle/remount/`; holder control, setns-runner prep, FD mapping, and cgroup
 creation live under `namespace/`; Host and isolated mode exports route through
@@ -64,7 +64,7 @@ The Phase 7 slice removes workspace command dependence on fresh namespace
 initialization. Host command workspace creation now launches `ns-holder` with
 `NamespaceNetwork::Host`, opens user/mount/PID namespace FDs, mounts the
 overlay through the setns helper, and carries private holder cleanup in the
-Host workspace value. Isolated workspace creation now passes
+Host workspace value. Isolated-network workspace creation now passes
 `NamespaceNetwork::Isolated` explicitly, preserving the dedicated network
 namespace plus existing veth, DNS, and netfilter setup. Workspace command
 preparation now always serializes `RunMode::SetNs`; missing holder namespace
@@ -78,18 +78,17 @@ The Phase 8 slice retires the legacy workspace source paths and root exports.
 Host implementation types moved into `network_mode/host.rs`. Isolated
 handle/manager/error/caps/binding implementation types moved into
 `network_mode/isolated_network.rs`. The workspace crate root no longer exports
-`EphemeralWorkspace`, `EphemeralWorkspaceError`, `overlay_run_dirs`, the legacy
-isolated `WorkspaceHandle`, `IsolatedManager`, `IsolatedWorkspaceBinding`, or
-`IsolatedWorkspaceHandle`; `workspace::WorkspaceHandle` is now the unified
+`HostWorkspace`, `HostWorkspaceError`, `overlay_run_dirs`, the legacy
+isolated `WorkspaceHandle`, `WorkspaceModeManager`, `WorkspaceModeBinding`, or
+`WorkspaceModeHandle`; `workspace::WorkspaceHandle` is now the unified
 public DTO. Daemon runtime, op adapters, and operation command/file code import
 concrete implementation types through scoped mode paths and overlay helpers
-through `workspace::overlay`. The root `capture.rs`, `dirs.rs`, `tree.rs`,
-`ephemeral_workspace/`, and `isolated_workspace/` paths were removed. Wire
-compatibility remains only where current operation contracts require it,
-including legacy `layer_stack_root` inputs and existing trace/response literal
-strings. No publish behavior, capture behavior, `FreshNs` compatibility,
-holder/setns execution semantics, packaging, live E2E, or `ops.json`
-regeneration was changed.
+through `workspace::overlay`. The legacy root `capture.rs`, `dirs.rs`, and
+`tree.rs` paths were removed. Wire compatibility remains only where current
+operation contracts require it, including legacy `layer_stack_root` inputs;
+route and response literals now use `host` and `isolated_network`. No publish
+behavior, capture behavior, `FreshNs` compatibility, holder/setns execution
+semantics, packaging, live E2E, or `ops.json` regeneration was changed.
 
 ## Files Changed
 
@@ -106,7 +105,7 @@ regeneration was changed.
     the planned public capture DTO vocabulary. Runtime capture behavior remains
     deferred to Phase 5.
   - Added conversions from the legacy isolated handle and
-    `IsolatedWorkspaceBinding` into the new unified public handle.
+    `WorkspaceModeBinding` into the new unified public handle.
   - Added focused tests for borrowed and owned isolated handle conversion,
     borrowed and owned isolated binding conversion, public DTO
     construction/derive behavior, and public DTO debug output not exposing
@@ -121,10 +120,10 @@ regeneration was changed.
 - `crates/daemon/workspace/src/lib.rs`
   - Exposes unified `model`, `error`, and `service` vocabulary at the crate
     root.
-  - Phase 8 removed root exports for `EphemeralWorkspace`,
-    `EphemeralWorkspaceError`, `overlay_run_dirs`, the legacy isolated
-    `WorkspaceHandle`, `IsolatedManager`, `IsolatedWorkspaceBinding`, and
-    `IsolatedWorkspaceHandle`.
+  - Phase 8 removed root exports for `HostWorkspace`,
+    `HostWorkspaceError`, `overlay_run_dirs`, the legacy isolated
+    `WorkspaceHandle`, `WorkspaceModeManager`, `WorkspaceModeBinding`, and
+    `WorkspaceModeHandle`.
   - `workspace::WorkspaceHandle` and `workspace::UnifiedWorkspaceHandle` now
     both name the unified public DTO from `model.rs`.
   - `network_mode/` and `overlay/` are public module roots for scoped internal
@@ -140,10 +139,10 @@ regeneration was changed.
   - Own the shared upperdir capture, overlay directory allocation, and tree
     resource-stat primitives previously stored as root workspace modules.
 - `crates/daemon/workspace/src/lifecycle/{create.rs,destroy.rs,recovery.rs,leases.rs}`
-  - Own isolated workspace create/wiring, destroy/eviction teardown, persisted
+  - Own isolated-network workspace create/wiring, destroy/eviction teardown, persisted
     recovery/orphan cleanup, and handle identity/time helpers after the Phase 6
     move.
-  - Phase 7 isolated create now passes `NamespacePlan::isolated_workspace()`
+  - Phase 7 isolated create now passes `NamespacePlan::isolated_network()`
     when spawning `ns-holder` and opening namespace FDs.
 - `crates/daemon/workspace/src/lifecycle/remount/{state.rs,plan.rs,apply.rs}`
   - Own remount state, remount report/probe/result DTOs, and remount apply
@@ -156,38 +155,38 @@ regeneration was changed.
     opening follows the selected plan so Host omits the network FD.
 - `crates/daemon/workspace/src/network_mode/{host.rs,isolated_network.rs}`
   - Phase 8 moved Host workspace implementation, namespace FD DTO, and
-    `EphemeralWorkspaceError` into `host.rs`.
+    `HostWorkspaceError` into `host.rs`.
   - Phase 8 moved isolated handle, binding, manager, caps, error, DNS, snapshot,
     and remount-facing exports into `isolated_network.rs`.
 - `crates/daemon/workspace/src/isolated_network_setup/`
   - Owns dedicated-network setup/cleanup internals after the Phase 6 move,
     including veth/IP-pool manager code, `dns.rs`, `rtnl.rs`, and
     `netfilter/*`.
-- `crates/daemon/workspace/src/isolated_workspace/{namespace,network}/mod.rs`
+- Old isolated-network namespace/network compatibility shim modules
   - Removed unused internal compatibility shims after remaining callers moved to
     the new Phase 6 module paths.
-- `crates/daemon/workspace/src/isolated_workspace/manager/lifecycle.rs`
+- Old isolated-network manager lifecycle module
   - Moved into `lifecycle/create.rs`, `lifecycle/destroy.rs`, and
     `lifecycle/remount/apply.rs` in Phase 6.
-- `crates/daemon/workspace/src/isolated_workspace/manager/recovery.rs`
+- Old isolated-network manager recovery module
   - Moved into `lifecycle/recovery.rs` in Phase 6.
-- `crates/daemon/workspace/src/isolated_workspace/remount.rs`
+- Old isolated-network remount module
   - Moved into `lifecycle/remount/plan.rs` and `lifecycle/remount/state.rs` in
     Phase 6.
-- `crates/daemon/workspace/src/isolated_workspace/namespace/*`
+- Old isolated-network namespace module
   - Moved into `namespace/` in Phase 6.
-- `crates/daemon/workspace/src/isolated_workspace/network/*`
+- Old isolated-network setup module
   - Moved into `isolated_network_setup/` in Phase 6.
-- `crates/daemon/workspace/src/ephemeral_workspace/mod.rs`
+- Old host workspace module
   - Removed in Phase 8 after Host implementation moved into
     `network_mode/host.rs`.
-- `crates/daemon/workspace/src/ephemeral_workspace/workspace.rs`
+- Old host workspace implementation module
   - Removed in Phase 8 after Host implementation moved into
     `network_mode/host.rs`.
-- `crates/daemon/workspace/src/isolated_workspace/{binding.rs,caps.rs,error.rs,mod.rs}`
+- Old isolated-network binding/caps/error module
   - Removed in Phase 8 after isolated mode definitions moved into
     `network_mode/isolated_network.rs`.
-- `crates/daemon/workspace/src/isolated_workspace/manager/mod.rs`
+- Old isolated-network manager module
   - Removed in Phase 8 after isolated manager definitions moved into
     `network_mode/isolated_network.rs`.
 - `crates/daemon/operation/src/isolation/contract.rs`
@@ -208,7 +207,7 @@ regeneration was changed.
 - `crates/daemon/core/tests/unit/workspace_runtime.rs`
   - Added runtime coverage for `workspace_root` resolution, legacy root
     compatibility, ambiguous bindings, rebinding, and normalized snapshot entry.
-- `crates/daemon/core/tests/unit/isolated_workspace/service.rs`
+- `crates/daemon/core/tests/unit/isolated_network/service.rs`
   - Updated enter trace assertions for the new `workspace_root` trace detail.
 - `crates/daemon/core/src/op_adapter/command.rs`
   - Parses command wire args and delegates Host vs isolated route selection to
@@ -229,7 +228,7 @@ regeneration was changed.
   - Restored disabled-isolation precedence so `feature_disabled` wins before
     legacy root validation when isolation is off.
   - Phase 7 Host command workspace creation now calls
-    `EphemeralWorkspace::create_runtime_host_namespace_overlay` or the
+    `HostWorkspace::create_runtime_host_namespace_overlay` or the
     test-scratch equivalent, so Host routes get holder-created user/mount/PID
     namespaces before `CommandOps` starts the command.
   - Phase 8 imports Host and isolated implementation types from
@@ -242,7 +241,7 @@ regeneration was changed.
     selection; file operation crates still own read/write/edit behavior.
   - Records runtime-returned route facts and preserves legacy direct route
     timing/resource enrichment.
-  - Phase 8 imports `IsolatedWorkspaceBinding` from
+  - Phase 8 imports `WorkspaceModeBinding` from
     `workspace::network_mode::isolated_network`.
 - `crates/daemon/layerstack/src/service.rs`
   - Added exact-once `LeaseReleaseHandle` and `LeaseReleaseReport`.
@@ -261,17 +260,17 @@ regeneration was changed.
     `workspace::network_mode` paths.
 - `crates/daemon/operation/src/command/service/exec.rs`
   - Host command start now consumes a runtime-created `HostCommandWorkspace`
-    instead of acquiring the snapshot lease or creating `EphemeralWorkspace`
+    instead of acquiring the snapshot lease or creating `HostWorkspace`
     internally.
   - Phase 7 Host command start passes the holder FD payload into command
     preparation so Host workspace commands use `RunMode::SetNs`.
   - Process spawning, runner request artifact writing, and registry activation
     remain in `CommandOps`.
-  - Phase 8 imports `IsolatedWorkspaceBinding` from
+  - Phase 8 imports `WorkspaceModeBinding` from
     `workspace::network_mode::isolated_network`.
 - `crates/daemon/operation/src/command/prepare.rs`
   - Phase 7 removed workspace command selection of `RunMode::FreshNs`.
-    Host and isolated workspace command preparation now always serializes
+    Host and isolated-network workspace command preparation now always serializes
     `RunMode::SetNs`.
   - Missing holder namespace FDs now fail as
     `workspace_namespace_unavailable` command preparation errors. Host requires
@@ -282,20 +281,20 @@ regeneration was changed.
   - Command finalization and force-discard cleanup release Host leases through
     the exact-once lease handle instead of directly calling LayerStack release.
 - `crates/daemon/operation/src/command/registry.rs`
-  - Tracks the Host lease release handle beside the existing ephemeral command
+  - Tracks the Host lease release handle beside the existing host command
     process, snapshot, and workspace fields.
   - Phase 8 imports Host and isolated implementation types from scoped
     `workspace::network_mode` paths.
 - `crates/daemon/operation/src/command/mod.rs`
   - Re-exported the Host command context needed by `daemon` runtime without
     widening the command facade with lease lifecycle types.
-- `crates/daemon/workspace/src/ephemeral_workspace/workspace.rs`
-  - Added `EphemeralWorkspace::create_runtime_overlay` so runtime code can
+- `crates/daemon/workspace/src/network_mode/host.rs`
+  - Added `HostWorkspace::create_runtime_overlay` so runtime code can
     preserve the legacy host scratch placement while owning creation.
   - Phase 7 added holder-backed Host constructors that launch `ns-holder` with
     `NamespaceNetwork::Host`, open user/mount/PID FDs, mount the overlay through
     the setns helper, and keep holder/FD cleanup private to
-    `EphemeralWorkspace`.
+    `HostWorkspace`.
 - `crates/daemon/linux-namespace-subprocess/src/holder/{mod.rs,namespace.rs}`
   - Phase 7 added private holder network modes. `NamespaceNetwork::Host`
     creates user/mount/PID namespaces without `CLONE_NEWNET` and skips the
@@ -314,13 +313,13 @@ regeneration was changed.
   - Added focused exact-once, last-owner drop, pre-start rejection, and
     finalization coverage for the Host lease release handle.
 - `crates/daemon/operation/tests/command/prepare.rs`
-  - Phase 7 added regression coverage proving Host and isolated workspace
+  - Phase 7 added regression coverage proving Host and isolated-network workspace
     command requests serialize `RunMode::SetNs`, and missing holder FDs fail
     instead of falling back to `FreshNs`.
 - `crates/daemon/linux-namespace-subprocess/tests/unit/holder/handshake.rs`
   - Updated holder handshake tests for explicit Host/isolated holder modes.
 - `crates/daemon/operation/tests/command/registry.rs`
-  - Updated the ephemeral registry scaffold to carry the Host lease handle.
+  - Updated the host registry scaffold to carry the Host lease handle.
 - `docs/daemon/unified-workspace-refactor_ROADMAP.md`
   - Marked Phase 1 tasks and exit criteria complete.
   - Marked Phase 2 root resolution done.
@@ -349,9 +348,9 @@ Resolution for Phase 8:
 - `workspace::UnifiedWorkspaceHandle` remains an explicit alias for the same
   unified public handle.
 - The legacy isolated handle is available only through the scoped internal-mode
-  path `workspace::network_mode::isolated_network::IsolatedWorkspaceHandle`.
-- `workspace::IsolatedWorkspaceHandle` is no longer a root export.
-- `workspace::IsolatedManager` and `workspace::IsolatedWorkspaceBinding` are no
+  path `workspace::network_mode::isolated_network::WorkspaceModeHandle`.
+- `workspace::WorkspaceModeHandle` is no longer a root export.
+- `workspace::WorkspaceModeManager` and `workspace::WorkspaceModeBinding` are no
   longer root exports; current daemon/operation callers import them from
   `workspace::network_mode::isolated_network`.
 
@@ -360,9 +359,9 @@ No root compatibility alias remains for the legacy isolated handle.
 ## Conversion Rules Implemented
 
 Conversions from both the legacy isolated handle and
-`IsolatedWorkspaceBinding` into the unified public handle use:
+`WorkspaceModeBinding` into the unified public handle use:
 
-- `NetworkMode::Isolated`
+- `NetworkMode::IsolatedNetwork`
 - `BaseRevision.version` from `manifest_version`
 - `BaseRevision.root_hash` from `manifest_root_hash`
 - `BaseRevision.layer_count` from `layer_paths.len()`
@@ -378,7 +377,7 @@ central route authority.
 - `WorkspaceRuntime` acquires the bounded Host base revision and stores the
   internal `LeasedBaseRevision` fields: `lease_id`, `version`, `root_hash`, and
   `layer_paths`.
-- `WorkspaceRuntime` creates the Host `EphemeralWorkspace` before command start
+- `WorkspaceRuntime` creates the Host `HostWorkspace` before command start
   and releases the lease immediately if workspace creation fails after
   acquisition.
 - `CommandOps` receives a `HostCommandWorkspace` only after runtime lifecycle
@@ -417,9 +416,9 @@ Phase 4 centralizes command and file route choice in `WorkspaceRuntime`.
   isolated file operations so active-handle liveness touch behavior remains
   intact.
 - Runtime route facts preserve existing trace metadata:
-  `isolated_workspace/caller_has_open_isolated_workspace`,
-  `ephemeral_workspace/no_isolated_workspace_for_caller`, and
-  `fast_path/no_isolated_workspace_for_caller`.
+  `isolated_network/caller_has_open_isolated_network`,
+  `host/no_isolated_network_for_caller`, and
+  `fast_path/no_isolated_network_for_caller`.
 - Adapters no longer inspect active isolated handles directly to choose Host,
   direct, or isolated behavior. They still parse wire args, record route traces,
   map errors, and shape responses.
@@ -427,9 +426,10 @@ Phase 4 centralizes command and file route choice in `WorkspaceRuntime`.
   namespace FDs, holder PID, cgroup path, veth data, DNS details, or netfilter
   details. Legacy `layer_stack_root` wire inputs remain compatibility inputs
   where current contracts require them.
-- Phase 8 keeps these trace literals and legacy `layer_stack_root` wire inputs
-  only because existing operation contracts and callers require current wire
-  behavior. No root compatibility exports remain.
+- Phase 8 keeps legacy `layer_stack_root` wire inputs only because existing
+  operation contracts and callers require current wire behavior. Trace and
+  response literals now use `host` and `isolated_network`. No root
+  compatibility exports remain.
 
 ## Deferred Capture Changes
 
@@ -457,8 +457,8 @@ legacy shim paths that Phase 6 left behind.
   mechanism names. The veth/IP-pool manager remains in
   `isolated_network_setup/mod.rs` because the file is small and further
   splitting would add churn without behavior value in this phase.
-- `ephemeral_workspace/` and `isolated_workspace/` were removed in Phase 8
-  after remaining definitions moved into `network_mode/host.rs` and
+- Legacy host and isolated-network source modules were removed in Phase 8 after
+  remaining definitions moved into `network_mode/host.rs` and
   `network_mode/isolated_network.rs`.
 
 ## Holder/Setns-Only Execution
@@ -471,10 +471,10 @@ Phase 7 makes workspace command execution holder/setns-only.
 - Host holders create user, mount, and PID namespaces only. They do not create
   a dedicated network namespace, allocate veth devices, rewrite DNS, or install
   isolated network rules.
-- Isolated workspace create now passes `NamespaceNetwork::Isolated` explicitly.
+- Isolated-network workspace create now passes `NamespaceNetwork::Isolated` explicitly.
   The existing isolated create path still creates user, mount, PID, and network
   namespaces and keeps the existing isolated network setup.
-- Host and isolated workspace command prep both serialize `RunMode::SetNs`.
+- Host and isolated-network workspace command prep both serialize `RunMode::SetNs`.
   Workspace command requests do not carry a public runner-mode enum.
 - Missing holder FDs are command preparation errors. Host requires user, mount,
   and PID FDs. Isolated requires user, mount, PID, and network FDs.
@@ -510,7 +510,7 @@ Follow-up verification after adversarial review fixes used
 | `cargo test -p daemon workspace_runtime` | Pass | 12 focused runtime tests passed, including copied-binding rejection, same-stack workspace-root rebinding, cached-state ambiguity rejection, and compact-remount `workspace_root` resolution. |
 | `cargo test -p workspace` | Pass | 24 passed, 0 failed; doc tests 0 passed, 0 failed. |
 | `cargo test -p operation file` | Pass | 14 passed, 0 failed, 74 filtered out; checkpoint and contract test targets had 0 matching tests. |
-| `cargo test -p daemon --test phase2_read_paths isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled` | Pass | Dispatch lifecycle test now enters through `workspace_root`. |
+| `cargo test -p daemon --test phase2_read_paths isolated_network_lifecycle_ops_open_status_list_and_exit_when_enabled` | Pass | Dispatch lifecycle test now enters through `workspace_root`. |
 | `git diff --check` | Pass | No whitespace errors. |
 
 Phase 3 verification used
@@ -644,7 +644,7 @@ Intermediate fixed issues:
   test fixture still used the old relative `#[path]` depth. The path was
   adjusted from the new `isolated_network_setup/netfilter` location.
 - The first Phase 6 `cargo test -p workspace` run failed because lifecycle and
-  namespace impls moved out from under private `isolated_workspace` modules.
+  namespace impls moved out from under private `isolated_network` modules.
   The fix made those modules crate-visible only, corrected one moved test helper
   import, and kept external exports unchanged.
 - The first Phase 8 `cargo test -p daemon workspace_runtime` run failed because

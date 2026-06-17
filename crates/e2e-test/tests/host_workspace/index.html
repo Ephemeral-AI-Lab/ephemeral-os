@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ephemeral_workspace - eos-e2e-test</title>
+<title>host_workspace - eos-e2e-test</title>
 <link rel="stylesheet" href="../assets/e2e-readme.css">
 </head>
 <body data-page="module" data-module-json="readme.json">
@@ -11,17 +11,17 @@
 <script type="application/json" id="readme-module-data">
 {
   "schemaVersion": 1,
-  "name": "ephemeral_workspace",
-  "displayName": "ephemeral_workspace",
-  "cargoTestName": "ephemeral_workspace",
-  "folder": "ephemeral_workspace",
-  "path": "tests/ephemeral_workspace/mod.rs",
-  "page": "ephemeral_workspace/index.html",
+  "name": "host_workspace",
+  "displayName": "host_workspace",
+  "cargoTestName": "host_workspace",
+  "folder": "host_workspace",
+  "path": "tests/host_workspace/mod.rs",
+  "page": "host_workspace/index.html",
   "source": {
     "markdown": "readme.md"
   },
   "overview": {
-    "summary": "This module owns the unified live E2E contract for ephemeral workspace routing, overlay exec, LayerStack lease cleanup, OCC publish, and stale-snapshot conflict behavior. It exercises daemon ops `sandbox.command.exec`, `sandbox.file.read`, `sandbox.file.write`, and `sandbox.command.cancel`. Module config lives at `crates/e2e-test/tests/ephemeral_workspace/config/default.test.yml`.",
+    "summary": "This module owns the unified live E2E contract for host workspace routing, overlay exec, LayerStack lease cleanup, OCC publish, and stale-snapshot conflict behavior. It exercises daemon ops `sandbox.command.exec`, `sandbox.file.read`, `sandbox.file.write`, and `sandbox.command.cancel`. Module config lives at `crates/e2e-test/tests/host_workspace/config/default.test.yml`.",
     "moduleConfig": null,
     "ops": [
       "sandbox.command.exec",
@@ -30,160 +30,160 @@
       "sandbox.command.cancel"
     ],
     "tags": [
-      "ephemeral_workspace",
-      "ephemeral",
+      "host_workspace",
+      "host",
       "workspace"
     ]
   },
   "checklist": [
     {
-      "id": "ephemeral_workspace-per-call-overlay",
+      "id": "host_workspace-per-call-overlay",
       "title": "Per Call Overlay",
-      "description": "Every foreground/background exec derives an ephemeral overlay over the latest workspace manifest and only finalized in-workspace deltas become workspace state.",
+      "description": "Every foreground/background exec derives a host overlay over the latest workspace manifest and only finalized in-workspace deltas become workspace state.",
       "tags": [
-        "ephemeral_workspace"
+        "host_workspace"
       ]
     },
     {
-      "id": "ephemeral_workspace-outside-direct-fs",
+      "id": "host_workspace-outside-direct-fs",
       "title": "Outside Direct Fs",
       "description": "Writes outside the workspace are excluded from OCC `changed_paths` and remain direct container filesystem effects.",
       "tags": [
-        "ephemeral_workspace"
+        "host_workspace"
       ]
     },
     {
-      "id": "ephemeral_workspace-upperdir-delta",
+      "id": "host_workspace-upperdir-delta",
       "title": "Upperdir Delta",
       "description": "Overlay upperdir accounting stays proportional to modified bytes and does not copy large lowerdir inputs.",
       "tags": [
-        "ephemeral_workspace"
+        "host_workspace"
       ]
     },
     {
-      "id": "ephemeral_workspace-overlay-cleanup",
+      "id": "host_workspace-overlay-cleanup",
       "title": "Overlay Cleanup",
       "description": "Completed foreground exec releases LayerStack leases, removes overlay scratch, and returns active lease metrics to zero.",
       "tags": [
-        "ephemeral_workspace"
+        "host_workspace"
       ]
     },
     {
-      "id": "ephemeral_workspace-occ-publish-readback",
+      "id": "host_workspace-occ-publish-readback",
       "title": "Occ Publish Readback",
       "description": "In-workspace exec writes publish through daemon-owned OCC and are readable through `sandbox.file.read`.",
       "tags": [
-        "ephemeral_workspace"
+        "host_workspace"
       ]
     },
     {
-      "id": "ephemeral_workspace-stale-exec-conflict",
+      "id": "host_workspace-stale-exec-conflict",
       "title": "Stale Exec Conflict",
       "description": "A long-running exec from a stale snapshot cannot silently overwrite newer direct file content.",
       "tags": [
-        "ephemeral_workspace"
+        "host_workspace"
       ]
     },
     {
-      "id": "ephemeral_workspace-route-edges",
+      "id": "host_workspace-route-edges",
       "title": "Route Edges",
       "description": "Multi-path shell capture, command/publish trace events, and read-intent no-publish behavior stay observable through response meta and trace-store queries.",
       "tags": [
-        "ephemeral_workspace"
+        "host_workspace"
       ]
     },
     {
-      "id": "ephemeral_workspace-policy-denials",
+      "id": "host_workspace-policy-denials",
       "title": "Policy Denials",
       "description": "Host-prefix writes, cwd escapes, and workspace-destructive shell commands are rejected before any workspace publish when the daemon owns those protocol errors.",
       "tags": [
-        "ephemeral_workspace"
+        "host_workspace"
       ]
     },
     {
-      "id": "ephemeral_workspace-whiteout-resync",
+      "id": "host_workspace-whiteout-resync",
       "title": "Whiteout Resync",
       "description": "File deletes, replacement writes, deep-manifest pre-mount squash, and foreign-published workspace changes round-trip through overlay readback.",
       "tags": [
-        "ephemeral_workspace"
+        "host_workspace"
       ]
     },
     {
-      "id": "ephemeral_workspace-cancel-no-partial-publish",
+      "id": "host_workspace-cancel-no-partial-publish",
       "title": "Cancel No Partial Publish",
       "description": "Cancelled background execs do not publish partial workspace mutation and still release overlay leases.",
       "tags": [
-        "ephemeral_workspace"
+        "host_workspace"
       ]
     },
     {
-      "id": "ephemeral_workspace-overlay-disk-o1",
+      "id": "host_workspace-overlay-disk-o1",
       "title": "Overlay Disk O1",
       "description": "Overlay upperdir accounting stays flat as the lowerdir workspace grows, and overlay run-dir scratch stays bounded and untruncated, proving O(1) overlay disk with respect to workspace size.",
       "tags": [
-        "ephemeral_workspace"
+        "host_workspace"
       ]
     }
   ],
   "test": [
     {
-      "id": "ephemeral_workspace_overlay_publish_and_cleanup",
-      "name": "ephemeral_workspace_overlay_publish_and_cleanup",
+      "id": "host_workspace_overlay_publish_and_cleanup",
+      "name": "host_workspace_overlay_publish_and_cleanup",
       "description": "Groups `exec_simple`, `exec_write_outside_workspace_is_not_captured`, `foreground_exec_recycles_overlay_scratch`, `exec_upperdir_captures_only_the_delta`, and `exec_overlay_mount_publishes_changed_paths`: validates per-call overlay derivation, direct `/tmp` exclusion, delta-sized upperdir accounting, scratch/lease cleanup, OCC publish, and readback.",
-      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites ephemeral_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites host_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
-        "ephemeral_workspace-per-call-overlay",
-        "ephemeral_workspace-outside-direct-fs",
-        "ephemeral_workspace-upperdir-delta",
-        "ephemeral_workspace-overlay-cleanup",
-        "ephemeral_workspace-occ-publish-readback"
+        "host_workspace-per-call-overlay",
+        "host_workspace-outside-direct-fs",
+        "host_workspace-upperdir-delta",
+        "host_workspace-overlay-cleanup",
+        "host_workspace-occ-publish-readback"
       ]
     },
     {
-      "id": "ephemeral_workspace_route_edges_and_read_intent",
-      "name": "ephemeral_workspace_route_edges_and_read_intent",
+      "id": "host_workspace_route_edges_and_read_intent",
+      "name": "host_workspace_route_edges_and_read_intent",
       "description": "Uses `exec_multi_path_route_trace_facts_and_read_intent_no_publish`: a multi-path shell write reports every changed path plus command and overlay trace facts, while a read-only exec over the same paths publishes no changes.",
-      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites ephemeral_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites host_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
-        "ephemeral_workspace-route-edges",
-        "ephemeral_workspace-occ-publish-readback"
+        "host_workspace-route-edges",
+        "host_workspace-occ-publish-readback"
       ]
     },
     {
-      "id": "ephemeral_workspace_whiteout_resync",
-      "name": "ephemeral_workspace_whiteout_resync",
+      "id": "host_workspace_whiteout_resync",
+      "name": "host_workspace_whiteout_resync",
       "description": "Uses `overlay_delete_replacement_write_and_foreign_publish_are_readable`: shell file deletes and replacement writes round-trip through overlay capture, then a later foreign caller publish is readable through the same LayerStack root.",
-      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites ephemeral_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites host_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
-        "ephemeral_workspace-whiteout-resync"
+        "host_workspace-whiteout-resync"
       ]
     },
     {
-      "id": "ephemeral_workspace_cancel_no_partial_publish",
-      "name": "ephemeral_workspace_cancel_no_partial_publish",
+      "id": "host_workspace_cancel_no_partial_publish",
+      "name": "host_workspace_cancel_no_partial_publish",
       "description": "Uses `cancelled_background_exec_does_not_publish_partial_workspace_mutation`: a background command cancelled before its workspace write drains its session and leases without publishing the later file.",
-      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites ephemeral_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites host_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
-        "ephemeral_workspace-cancel-no-partial-publish"
+        "host_workspace-cancel-no-partial-publish"
       ]
     },
     {
-      "id": "ephemeral_workspace_stale_exec_conflict",
-      "name": "ephemeral_workspace_stale_exec_conflict",
+      "id": "host_workspace_stale_exec_conflict",
+      "name": "host_workspace_stale_exec_conflict",
       "description": "Adds `long_running_exec_conflicts_after_direct_write`: an exec held on an old snapshot cannot silently overwrite newer direct file content, and the newer content remains readable after stale finalization.",
-      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites ephemeral_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites host_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
-        "ephemeral_workspace-stale-exec-conflict"
+        "host_workspace-stale-exec-conflict"
       ]
     },
     {
-      "id": "ephemeral_workspace_overlay_disk_o1",
-      "name": "ephemeral_workspace_overlay_disk_o1",
+      "id": "host_workspace_overlay_disk_o1",
+      "name": "host_workspace_overlay_disk_o1",
       "description": "Groups `exec_upperdir_is_flat_across_base_sizes` and `exec_run_dir_scratch_stays_bounded`: a tiny overlay delta over a 15x-growing multi-file lowerdir base keeps upperdir `trace_resources` flat and delta-sized, while run-dir tree resources stay bounded and untruncated, proving O(1) overlay disk with respect to workspace size.",
-      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites ephemeral_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+      "command": "cargo run -p e2e-test --bin e2e-runner -- --suites host_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
-        "ephemeral_workspace-overlay-disk-o1",
-        "ephemeral_workspace-upperdir-delta"
+        "host_workspace-overlay-disk-o1",
+        "host_workspace-upperdir-delta"
       ]
     }
   ]

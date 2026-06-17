@@ -50,22 +50,22 @@ pub(crate) fn dispatch(request: OpRequest, context: DispatchContext<'_>) -> Valu
         OpRequest::PyrightLspDiagnostics(input) => {
             daemon_response_result(plugin::op_pyright_lsp_diagnostics(input, context))
         }
-        OpRequest::IsolatedWorkspaceEnter(input) => {
+        OpRequest::IsolatedNetworkEnter(input) => {
             daemon_response_result(isolation::op_enter(input, context))
         }
-        OpRequest::IsolatedWorkspaceExit(input) => {
+        OpRequest::IsolatedNetworkExit(input) => {
             daemon_response_result(isolation::op_exit(input, context))
         }
-        OpRequest::IsolatedWorkspaceStatus(input) => {
+        OpRequest::IsolatedNetworkStatus(input) => {
             daemon_response_result(isolation::op_status(input, context))
         }
-        OpRequest::IsolatedWorkspaceListOpen => {
+        OpRequest::IsolatedNetworkListOpen => {
             daemon_response_result(isolation::op_list_open(context))
         }
-        OpRequest::IsolatedWorkspaceTestReset => {
+        OpRequest::IsolatedNetworkTestReset => {
             daemon_response_result(isolation::op_test_reset(context))
         }
-        OpRequest::IsolatedWorkspaceTestCompactRemount(input) => {
+        OpRequest::IsolatedNetworkTestCompactRemount(input) => {
             daemon_response_result(isolation::op_test_compact_remount(input, context))
         }
         OpRequest::ExecCommand(input) => daemon_result(command::op_exec_command(input, context)),
@@ -92,7 +92,7 @@ pub(crate) fn dispatch(request: OpRequest, context: DispatchContext<'_>) -> Valu
 /// response.
 pub(crate) fn parse_error_response(op: BuiltinOp, error: ArgsError) -> Value {
     match op.contract().family {
-        OpFamily::IsolatedWorkspace | OpFamily::WorkspaceRun => rejected_fault_envelope(
+        OpFamily::IsolatedNetwork | OpFamily::WorkspaceRun => rejected_fault_envelope(
             "invalid_argument",
             error.message(),
             json!({"key": error.key}),

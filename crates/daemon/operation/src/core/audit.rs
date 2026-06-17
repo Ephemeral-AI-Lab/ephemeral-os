@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 pub enum MutationSource {
     DirectWrite,
     DirectEdit,
-    IsolatedWorkspace,
+    IsolatedNetwork,
     OverlayCapture,
     PluginOverlay,
 }
@@ -16,7 +16,7 @@ impl MutationSource {
         match self {
             Self::DirectWrite => "direct_write",
             Self::DirectEdit => "direct_edit",
-            Self::IsolatedWorkspace => "isolated_workspace",
+            Self::IsolatedNetwork => "isolated_network",
             Self::OverlayCapture => "overlay_capture",
             Self::PluginOverlay => "plugin_overlay",
         }

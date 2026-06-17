@@ -6,11 +6,12 @@ use serde_json::Value;
 
 use super::{
     check_host_capacity_against_budget, host_capacity_budget_bytes_from_memavailable_kib,
-    parse_memavailable_kib, required_host_capacity_bytes, IsolatedManager, IsolatedSnapshot,
+    parse_memavailable_kib, required_host_capacity_bytes, WorkspaceModeManager,
+    WorkspaceModeSnapshot,
 };
 use crate::lifecycle::leases::next_handle_id;
 use crate::namespace::NamespaceRuntime;
-use crate::network_mode::isolated_network::IsolatedError;
+use crate::network_mode::isolated_network::IsolatedNetworkError;
 use crate::network_mode::isolated_network::ResourceCaps;
 
 #[test]
@@ -39,7 +40,7 @@ fn host_capacity_rejects_when_required_exceeds_budget() -> Result<(), Box<dyn st
         Err(error) => error,
     };
     let (required_bytes, budget_bytes) = match error {
-        IsolatedError::HostRamPressure {
+        IsolatedNetworkError::HostRamPressure {
             required_bytes,
             budget_bytes,
         } => (required_bytes, budget_bytes),
@@ -60,8 +61,8 @@ fn next_handle_id_puts_counter_in_veth_name_prefix() {
     assert_ne!(&first[..6], &second[..6]);
 }
 
-fn snapshot() -> IsolatedSnapshot {
-    IsolatedSnapshot {
+fn snapshot() -> WorkspaceModeSnapshot {
+    WorkspaceModeSnapshot {
         lease_id: "lease-1".to_owned(),
         manifest_version: 7,
         manifest_root_hash: "root-hash".to_owned(),
@@ -83,7 +84,7 @@ fn enabled_caps() -> ResourceCaps {
 fn isolated_exit_discards_upperdir_and_returns_lease_for_release(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let scratch_root = unique_temp_dir("isolated-no-publish");
-    let mut sessions = IsolatedManager::stubbed(enabled_caps(), scratch_root.clone());
+    let mut sessions = WorkspaceModeManager::stubbed(enabled_caps(), scratch_root.clone());
     let caller = "caller-1";
 
     let handle = sessions.enter(caller, snapshot())?;
@@ -113,11 +114,11 @@ fn evict_idle_workspaces_skips_callers_with_active_commands(
         ttl_s: 0.000_001,
         ..enabled_caps()
     };
-    let mut sessions = IsolatedManager::stubbed(caps, scratch_root.clone());
+    let mut sessions = WorkspaceModeManager::stubbed(caps, scratch_root.clone());
     sessions.enter("busy", snapshot())?;
     sessions.enter(
         "idle",
-        IsolatedSnapshot {
+        WorkspaceModeSnapshot {
             lease_id: "lease-2".to_owned(),
             ..snapshot()
         },
@@ -140,7 +141,7 @@ fn evict_idle_workspaces_skips_callers_with_active_commands(
 #[test]
 fn remount_pending_state_is_persisted_and_cleared() -> Result<(), Box<dyn std::error::Error>> {
     let scratch_root = unique_temp_dir("isolated-remount-state");
-    let mut sessions = IsolatedManager::stubbed(enabled_caps(), scratch_root.clone());
+    let mut sessions = WorkspaceModeManager::stubbed(enabled_caps(), scratch_root.clone());
     sessions.enter("caller", snapshot())?;
 
     assert_eq!(
@@ -199,7 +200,8 @@ fn enter_persistence_failure_rolls_back_holder_and_state() -> Result<(), Box<dyn
     std::fs::create_dir(scratch_root.join("manager.json.tmp"))?;
     let killed_holders = Arc::new(Mutex::new(Vec::new()));
     let runtime = NamespaceRuntime::stubbed_with_holder(4242, Arc::clone(&killed_holders));
-    let mut sessions = IsolatedManager::with_runtime(enabled_caps(), scratch_root.clone(), runtime);
+    let mut sessions =
+        WorkspaceModeManager::with_runtime(enabled_caps(), scratch_root.clone(), runtime);
 
     let error = sessions
         .enter("caller-persist-fail", snapshot())
@@ -226,7 +228,7 @@ fn enter_persistence_failure_rolls_back_holder_and_state() -> Result<(), Box<dyn
 #[test]
 fn exit_persistence_failure_is_reported_in_inspection() -> Result<(), Box<dyn std::error::Error>> {
     let scratch_root = unique_temp_dir("isolated-exit-persist-fail");
-    let mut sessions = IsolatedManager::stubbed(enabled_caps(), scratch_root.clone());
+    let mut sessions = WorkspaceModeManager::stubbed(enabled_caps(), scratch_root.clone());
     sessions.enter("caller", snapshot())?;
     std::fs::create_dir(scratch_root.join("manager.json.tmp"))?;
 
@@ -256,7 +258,7 @@ fn recovery_reaps_only_owned_scratch_directories() -> Result<(), Box<dyn std::er
     std::fs::create_dir_all(&owned)?;
     std::fs::create_dir_all(&invalid_owned)?;
     std::fs::create_dir_all(&foreign)?;
-    let mut sessions = IsolatedManager::stubbed(enabled_caps(), scratch_root.clone());
+    let mut sessions = WorkspaceModeManager::stubbed(enabled_caps(), scratch_root.clone());
 
     let cleanup_error = sessions.reap_orphan_resources();
 
@@ -289,7 +291,8 @@ fn recovery_kills_persisted_holder_pid() -> Result<(), Box<dyn std::error::Error
     )?;
     let killed_holders = Arc::new(Mutex::new(Vec::new()));
     let runtime = NamespaceRuntime::stubbed_with_holder(0, Arc::clone(&killed_holders));
-    let mut sessions = IsolatedManager::with_runtime(enabled_caps(), scratch_root.clone(), runtime);
+    let mut sessions =
+        WorkspaceModeManager::with_runtime(enabled_caps(), scratch_root.clone(), runtime);
 
     let report = sessions.reap_persisted_orphans()?;
 

@@ -48,8 +48,8 @@ name = "daemon-config"
 path = "tests/daemon-config/mod.rs"
 
 [[test]]
-name = "ephemeral_workspace"
-path = "tests/ephemeral_workspace/mod.rs"
+name = "host_workspace"
+path = "tests/host_workspace/mod.rs"
 
 [[test]]
 name = "workspace-runtime-isolated"

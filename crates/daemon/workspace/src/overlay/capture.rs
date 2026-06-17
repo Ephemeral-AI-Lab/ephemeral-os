@@ -14,7 +14,7 @@ pub struct CapturedChanges {
     pub capture_s: f64,
 }
 
-/// Captured ephemeral command changes with command-snapshot routing metadata.
+/// Captured host command changes with command-snapshot routing metadata.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RoutedCapturedChanges {
     pub captured: CapturedChanges,
@@ -61,7 +61,7 @@ pub fn capture_upperdir(upperdir: &Path) -> Result<CapturedChanges, CaptureError
     })
 }
 
-/// Capture an ephemeral command upperdir using explicit bounded-capture options.
+/// Capture a host command upperdir using explicit bounded-capture options.
 ///
 /// # Errors
 ///

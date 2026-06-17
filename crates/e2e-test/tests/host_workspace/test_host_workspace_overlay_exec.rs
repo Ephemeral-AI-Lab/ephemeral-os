@@ -185,7 +185,7 @@ fn exec_write_outside_workspace_is_not_captured() -> Result<()> {
         "an out-of-workspace /tmp write must not appear in changed_paths: {exec}"
     );
     // Secondary: the outside write landed on the real container /tmp and a fresh
-    // ephemeral exec re-derived over / still sees it.
+    // host exec re-derived over / still sees it.
     let read_back = exec_settled(
         &lease,
         json!({"cmd": format!("cat {marker}"), "yield_time_ms": 8000, "timeout_seconds": 10}),
@@ -593,7 +593,7 @@ fn live_trace_ephemeral_exec_records_command_overlay_resource_and_response_facts
     assert!(
         has_trace_event(&start_record, "command", "prepared", |_| true)
             && has_trace_event(&start_record, "command", "spawned", |_| true),
-        "ephemeral exec trace should record command preparation and spawn: {start_record:?}"
+        "host exec trace should record command preparation and spawn: {start_record:?}"
     );
 
     let (exec_wire, exec) = finalize_foreground_command_wire(
@@ -608,14 +608,14 @@ fn live_trace_ephemeral_exec_records_command_overlay_resource_and_response_facts
     let record = trace_record(&exec_wire)?;
     assert!(
         has_trace_event(&record, "overlay", "mount_finished", |details| {
-            details["workspace"] == "ephemeral"
+            details["workspace"] == "host"
         }) && has_trace_event(&record, "overlay", "capture_finished", |details| {
-            details["workspace"] == "ephemeral"
+            details["workspace"] == "host"
                 && details["changed_paths"]
                     .as_array()
                     .is_some_and(|paths| paths.iter().any(|path| path == "trace-exec/out.txt"))
         }),
-        "ephemeral exec trace should record overlay mount and capture facts: {record:?}"
+        "host exec trace should record overlay mount and capture facts: {record:?}"
     );
     assert!(
         has_trace_event(&record, "command", "changed_paths_recorded", |details| {
@@ -623,16 +623,16 @@ fn live_trace_ephemeral_exec_records_command_overlay_resource_and_response_facts
                 .as_array()
                 .is_some_and(|paths| paths.iter().any(|path| path == "trace-exec/out.txt"))
         }),
-        "ephemeral exec trace should record changed-path facts: {record:?}"
+        "host exec trace should record changed-path facts: {record:?}"
     );
     assert!(
         has_trace_event(&record, "command", "response_meta", |details| {
             details["status"] == "ok"
                 && details["exit_code"] == 0
-                && details["workspace"] == "ephemeral"
+                && details["workspace"] == "host"
                 && details["success"] == true
         }),
-        "ephemeral exec trace should record response meta facts: {record:?}"
+        "host exec trace should record response meta facts: {record:?}"
     );
 
     let command_wait_phases = record
@@ -646,14 +646,14 @@ fn live_trace_ephemeral_exec_records_command_overlay_resource_and_response_facts
         .collect::<std::collections::BTreeSet<_>>();
     assert!(
         command_wait_phases.contains("before") && command_wait_phases.contains("after"),
-        "ephemeral exec trace should record command.process.wait resource before/after pairs: {record:?}"
+        "host exec trace should record command.process.wait resource before/after pairs: {record:?}"
     );
     assert!(
         record.resources.iter().any(
             |resource| resource.meta.stats_kind == ResourceStatsKind::Tree
                 && resource.meta.source == "resource.command_exec.upperdir"
         ),
-        "ephemeral exec trace should record capture tree resource facts: {record:?}"
+        "host exec trace should record capture tree resource facts: {record:?}"
     );
     Ok(())
 }
@@ -698,8 +698,8 @@ fn long_running_exec_conflicts_after_direct_write() -> Result<()> {
         let result = wait_for_completion(&lease, &command_id)?;
         assert_eq!(
             as_str(&result, "workspace")?,
-            "ephemeral",
-            "background exec completion should finalize through ephemeral workspace: {result}"
+            "host",
+            "background exec completion should finalize through host workspace: {result}"
         );
         assert_eq!(
             as_str(&result, "status")?,

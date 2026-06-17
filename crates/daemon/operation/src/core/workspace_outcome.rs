@@ -14,16 +14,16 @@ pub type ChangedPathKinds = BTreeMap<String, ChangedPathKind>;
 #[serde(rename_all = "snake_case")]
 pub enum WorkspaceKind {
     #[default]
-    Ephemeral,
-    Isolated,
+    Host,
+    IsolatedNetwork,
 }
 
 impl WorkspaceKind {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
-            Self::Ephemeral => "ephemeral",
-            Self::Isolated => "isolated",
+            Self::Host => "host",
+            Self::IsolatedNetwork => "isolated_network",
         }
     }
 }

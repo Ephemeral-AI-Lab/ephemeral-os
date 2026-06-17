@@ -27,8 +27,8 @@ pub enum OpFamily {
     Files,
     /// Static first-party plugin provider operations.
     Plugins,
-    /// Isolated workspace lifecycle and status operations.
-    IsolatedWorkspace,
+    /// Isolated network lifecycle and status operations.
+    IsolatedNetwork,
     /// Command lifecycle, IO, and completion operations.
     Command,
     /// Caller-keyed or whole-sandbox workspace-run cleanup operations.
@@ -48,7 +48,7 @@ impl OpFamily {
             Self::Checkpoint => "Checkpoint",
             Self::Files => "Files",
             Self::Plugins => "Plugins",
-            Self::IsolatedWorkspace => "IsolatedWorkspace",
+            Self::IsolatedNetwork => "IsolatedNetwork",
             Self::Command => "Command",
             Self::WorkspaceRun => "WorkspaceRun",
         }
@@ -288,7 +288,7 @@ declare_builtin_ops! {
     WorkspaceBinding, SANDBOX_CHECKPOINT_BINDING, "sandbox.checkpoint.binding",
         Daemon, Checkpoint, Operator, false, None, "operation.checkpoint.BindingInput", "operation.checkpoint.BindingOutput", "Inspect the workspace binding for a layer stack root.";
     ReadFile, SANDBOX_FILE_READ, "sandbox.file.read",
-        Daemon, Files, Public, false, None, "operation.file.ReadFileInput", "operation.file.ReadFileResponse", "Read one file from the layer stack or isolated workspace.";
+        Daemon, Files, Public, false, None, "operation.file.ReadFileInput", "operation.file.ReadFileResponse", "Read one file from the layer stack or isolated network.";
     WriteFile, SANDBOX_FILE_WRITE, "sandbox.file.write",
         Daemon, Files, Public, true, None, "operation.file.WriteFileInput", "operation.file.WriteFileResponse", "Write one file through the OCC gate.";
     EditFile, SANDBOX_FILE_EDIT, "sandbox.file.edit",
@@ -305,18 +305,18 @@ declare_builtin_ops! {
         Daemon, Plugins, Public, false, None, "plugin_contract.PyrightLspReferencesInput", "plugin_contract.PyrightLspLocationsOutput", "Resolve Pyright reference locations.";
     PyrightLspDiagnostics, SANDBOX_PLUGIN_PYRIGHT_LSP_DIAGNOSTICS, "sandbox.plugin.pyright_lsp.diagnostics",
         Daemon, Plugins, Public, false, None, "plugin_contract.PyrightLspDiagnosticsInput", "plugin_contract.PyrightLspDiagnosticsOutput", "Return current Pyright diagnostics for a Python file.";
-    IsolatedWorkspaceEnter, SANDBOX_ISOLATION_ENTER, "sandbox.isolation.enter",
-        Daemon, IsolatedWorkspace, Public, true, None, "operation.isolation.IsolationEnterInput", "operation.isolation.IsolationEnterOutput", "Enter isolated workspace mode for a caller.";
-    IsolatedWorkspaceExit, SANDBOX_ISOLATION_EXIT, "sandbox.isolation.exit",
-        Daemon, IsolatedWorkspace, Public, true, None, "operation.isolation.IsolationExitInput", "operation.isolation.IsolationExitOutput", "Exit isolated workspace mode for a caller.";
-    IsolatedWorkspaceStatus, SANDBOX_ISOLATION_STATUS, "sandbox.isolation.status",
-        Daemon, IsolatedWorkspace, Public, false, None, "operation.isolation.IsolationStatusInput", "operation.isolation.IsolationStatusOutput", "Inspect isolated workspace status.";
-    IsolatedWorkspaceListOpen, SANDBOX_ISOLATION_LIST_OPEN, "sandbox.isolation.list_open",
-        Daemon, IsolatedWorkspace, Operator, false, None, "operation.core.NoArgs", "operation.isolation.ListOpenOutput", "List open isolated workspaces.";
-    IsolatedWorkspaceTestReset, SANDBOX_ISOLATION_TEST_RESET, "sandbox.isolation.test_reset",
-        Daemon, IsolatedWorkspace, Test, true, None, "operation.core.NoArgs", "operation.isolation.TestResetOutput", "Test-only isolated workspace reset hook.";
-    IsolatedWorkspaceTestCompactRemount, SANDBOX_ISOLATION_TEST_COMPACT_REMOUNT, "sandbox.isolation.test_compact_remount",
-        Daemon, IsolatedWorkspace, Test, true, None, "operation.isolation.IsolationTestCompactRemountInput", "operation.isolation.TestCompactRemountOutput", "Test-only compact and remount hook for an open isolated workspace.";
+    IsolatedNetworkEnter, SANDBOX_ISOLATION_ENTER, "sandbox.isolation.enter",
+        Daemon, IsolatedNetwork, Public, true, None, "operation.isolation.IsolationEnterInput", "operation.isolation.IsolationEnterOutput", "Enter isolated network mode for a caller.";
+    IsolatedNetworkExit, SANDBOX_ISOLATION_EXIT, "sandbox.isolation.exit",
+        Daemon, IsolatedNetwork, Public, true, None, "operation.isolation.IsolationExitInput", "operation.isolation.IsolationExitOutput", "Exit isolated network mode for a caller.";
+    IsolatedNetworkStatus, SANDBOX_ISOLATION_STATUS, "sandbox.isolation.status",
+        Daemon, IsolatedNetwork, Public, false, None, "operation.isolation.IsolationStatusInput", "operation.isolation.IsolationStatusOutput", "Inspect isolated network status.";
+    IsolatedNetworkListOpen, SANDBOX_ISOLATION_LIST_OPEN, "sandbox.isolation.list_open",
+        Daemon, IsolatedNetwork, Operator, false, None, "operation.core.NoArgs", "operation.isolation.ListOpenOutput", "List open isolated networks.";
+    IsolatedNetworkTestReset, SANDBOX_ISOLATION_TEST_RESET, "sandbox.isolation.test_reset",
+        Daemon, IsolatedNetwork, Test, true, None, "operation.core.NoArgs", "operation.isolation.TestResetOutput", "Test-only isolated network reset hook.";
+    IsolatedNetworkTestCompactRemount, SANDBOX_ISOLATION_TEST_COMPACT_REMOUNT, "sandbox.isolation.test_compact_remount",
+        Daemon, IsolatedNetwork, Test, true, None, "operation.isolation.IsolationTestCompactRemountInput", "operation.isolation.TestCompactRemountOutput", "Test-only compact and remount hook for an open isolated network.";
     ExecCommand, SANDBOX_COMMAND_EXEC, "sandbox.command.exec",
         Daemon, Command, Public, true, None, "operation.command.ExecCommandInput", "operation.command.CommandResponse", "Run a foreground command or start a background command.";
     WriteStdin, SANDBOX_COMMAND_WRITE_STDIN, "sandbox.command.write_stdin",
@@ -330,7 +330,7 @@ declare_builtin_ops! {
     CommandCount, SANDBOX_COMMAND_COUNT, "sandbox.command.count",
         Daemon, Command, Public, false, None, "operation.control.CallerCountInput", "operation.command.CommandCountOutput", "Count live commands.";
     CancelWorkspaceRunsByCaller, SANDBOX_RUN_END, "sandbox.run.end",
-        Daemon, WorkspaceRun, Public, true, None, "operation.workspace_run.RunEndInput", "operation.workspace_run.RunEndOutput", "End a run: cancel every workspace run owned by one caller (caller_id == agent_run_id), discarding its commands and exiting its isolated workspace.";
+        Daemon, WorkspaceRun, Public, true, None, "operation.workspace_run.RunEndInput", "operation.workspace_run.RunEndOutput", "End a run: cancel every workspace run owned by one caller (caller_id == agent_run_id), discarding its commands and exiting its isolated network.";
     CancelWorkspaceRuns, SANDBOX_RUN_CANCEL_ALL, "sandbox.run.cancel_all",
         Daemon, WorkspaceRun, Operator, true, None, "operation.workspace_run.RunCancelAllInput", "operation.workspace_run.RunCancelAllOutput", "Cancel every workspace run in the sandbox: the whole-sandbox sweep backstop.";
 }

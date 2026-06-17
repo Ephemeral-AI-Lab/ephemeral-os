@@ -40,7 +40,7 @@
     {
       "id": "layerstack-lease-open-close",
       "title": "Lease Open Close",
-      "description": "isolated workspace enter and exit acquire and release active LayerStack leases with coherent status and lease gauges.",
+      "description": "isolated-network workspace enter and exit acquire and release active LayerStack leases with coherent status and lease gauges.",
       "tags": [
         "layerstack"
       ]

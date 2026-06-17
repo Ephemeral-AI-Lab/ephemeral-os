@@ -7,7 +7,7 @@ use serde_json::{json, Value};
 
 use crate::support::{
     array, as_bool, as_str, finalize_foreground_command, isolated_command_transcript_path,
-    live_pool_or_skip, reset_isolated_workspaces, stdout, unwrap_operation_result,
+    live_pool_or_skip, reset_isolated_networks, stdout, unwrap_operation_result,
     wait_for_active_leases, wait_for_command_count, wait_for_container_path,
     wait_for_isolated_command_transcript_recycled,
 };
@@ -18,7 +18,7 @@ fn iws_same_port_discard() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     // Log to /tmp (writable): /eos is read-only by the mount mask, so a
     // `>/eos/scratch/...` redirect makes the server fail before it binds the
     // port (the `&&` short-circuits on the mkdir). The log is throwaway.
@@ -80,7 +80,7 @@ fn iws_prompt_stdin_poll_cancel_private_discard() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let path = format!(
         "iws-command/prompt-{}.txt",
         e2e_test::unique_suffix().replace('-', "_")
@@ -143,7 +143,7 @@ time.sleep(60)'"
         let read_private = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": &path}))?;
         ensure!(
             as_str(&read_private, "workspace")? == "isolated",
-            "read while isolated should route through isolated workspace: {read_private}"
+            "read while isolated should route through isolated-network workspace: {read_private}"
         );
         ensure!(
             as_str(&read_private, "content")? == "private-payload\n",
@@ -196,8 +196,8 @@ time.sleep(60)'"
 
     let after_exit = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": &path}))?;
     ensure!(
-        as_str(&after_exit, "workspace")? == "ephemeral",
-        "read after isolated exit should route back to ephemeral workspace: {after_exit}"
+        as_str(&after_exit, "workspace")? == "host",
+        "read after isolated exit should route back to host workspace: {after_exit}"
     );
     ensure!(
         !as_bool(&after_exit, "exists")?,
@@ -236,16 +236,16 @@ fn setsid_descendant_reaped_on_isolated_exit() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let marker = format!(
         "eos_e2e_iws_escape_{}",
         e2e_test::unique_suffix().replace('-', "_")
     );
     lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
-    // The same escaped-`setsid` descendant that LEAKS in ephemeral mode is removed
-    // here: isolated workspaces run commands under a cgroup, and exit's cgroup kill
+    // The same escaped-`setsid` descendant that LEAKS in host mode is removed
+    // here: isolated-network workspaces run commands under a cgroup, and exit's cgroup kill
     // removes even a pgid-escaped descendant. This is the contained counterpart that
-    // proves the ephemeral-vs-isolated asymmetry. (Requires cgroup delegation in
+    // proves the host-vs-isolated asymmetry. (Requires cgroup delegation in
     // the live container; without it the descendant would survive and this fails,
     // which is itself the finding.)
     let body = (|| -> Result<()> {

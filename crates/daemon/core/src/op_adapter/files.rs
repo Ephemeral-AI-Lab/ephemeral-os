@@ -13,7 +13,7 @@ use operation::file::{
 };
 use serde_json::{json, Map, Value};
 use thiserror::Error;
-use workspace::network_mode::isolated_network::IsolatedWorkspaceBinding;
+use workspace::network_mode::isolated_network::WorkspaceModeBinding;
 
 use crate::error::DaemonError;
 use crate::runtime::workspace_runtime::{WorkspaceFileRouteContext, WorkspaceRouteTraceFacts};
@@ -371,7 +371,7 @@ fn route_edit_file(
 
 fn route_file_op<T>(
     context: FileOpContext<'_>,
-    isolated: impl FnOnce(&IsolatedWorkspaceBinding) -> Result<T, FileOpsError>,
+    isolated: impl FnOnce(&WorkspaceModeBinding) -> Result<T, FileOpsError>,
     direct: impl FnOnce(PathBuf) -> Result<T, FileOpsError>,
 ) -> Result<RoutedFileOutcome<T>, FileOpError> {
     let route = match context.workspace {
@@ -382,7 +382,7 @@ fn route_file_op<T>(
             .map_err(FileOpError::from_workspace)?,
     };
     let outcome = match &route {
-        WorkspaceFileRouteContext::Isolated { binding } => {
+        WorkspaceFileRouteContext::IsolatedNetwork { binding } => {
             let outcome = isolated(binding)?;
             if let Some(workspace) = context.workspace {
                 workspace.complete_file_route(&route);
@@ -394,7 +394,7 @@ fn route_file_op<T>(
     Ok(RoutedFileOutcome { route, outcome })
 }
 
-fn isolated_backend(binding: &IsolatedWorkspaceBinding) -> IsolatedBackend {
+fn isolated_backend(binding: &WorkspaceModeBinding) -> IsolatedBackend {
     IsolatedBackend {
         layer_stack_root: binding.layer_stack_root.clone(),
         workspace_root: binding.workspace_root.clone(),

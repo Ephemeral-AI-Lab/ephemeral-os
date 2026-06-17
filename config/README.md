@@ -61,7 +61,7 @@ code near their owner.
 
 Runtime schema lives in `crates/config/src/configs/<module-name>.rs`.
 Multi-word crate modules use their crate-style filename, for example
-`isolated-workspace.rs` exports the `isolated_workspace` Rust module. Runtime
+`isolated-workspace.rs` exports the `isolated_network` Rust module. Runtime
 crates may re-export those typed schemas through their public modules, but they
 do not own duplicate `src/config.rs` schema files.
 

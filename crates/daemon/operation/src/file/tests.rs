@@ -19,7 +19,7 @@ impl FakeBackend {
 
 impl FileBackend for FakeBackend {
     fn workspace_kind(&self) -> WorkspaceKind {
-        WorkspaceKind::Ephemeral
+        WorkspaceKind::Host
     }
 
     fn mutation_source(&self, kind: MutationKind) -> MutationSource {
@@ -68,7 +68,7 @@ impl FileBackend for FakeBackend {
                 mutation_source: Some(MutationSource::DirectWrite),
                 timings: BTreeMap::new(),
             },
-            workspace_kind: WorkspaceKind::Ephemeral,
+            workspace_kind: WorkspaceKind::Host,
             published: true,
             status: MutationStatus::Committed,
             ..MutationOutcome::default()

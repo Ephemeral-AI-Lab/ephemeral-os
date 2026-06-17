@@ -5,7 +5,7 @@ use linux_namespace_subprocess::protocol::{
 };
 use serde_json::{json, Value};
 use workspace::network_mode::host::WorkspaceNamespaceFds;
-use workspace::network_mode::isolated_network::IsolatedWorkspaceBinding;
+use workspace::network_mode::isolated_network::WorkspaceModeBinding;
 use workspace::overlay::dirs::OverlayDirs;
 
 use super::outcome::WorkspaceApiError;
@@ -39,7 +39,7 @@ pub(crate) struct PrepareInputs<'a> {
     pub(crate) workspace_label: &'a str,
 }
 
-pub(crate) fn prepare_ephemeral(
+pub(crate) fn prepare_host(
     inputs: PrepareInputs<'_>,
     workspace_root: &Path,
     layer_paths: &[PathBuf],
@@ -68,11 +68,12 @@ pub(crate) fn prepare_ephemeral(
     )
 }
 
-pub(crate) fn prepare_isolated(
+pub(crate) fn prepare_isolated_network(
     inputs: PrepareInputs<'_>,
-    binding: &IsolatedWorkspaceBinding,
+    binding: &WorkspaceModeBinding,
 ) -> Result<PreparedCommand, CommandPrepareError> {
-    let ns_fds = require_workspace_ns_fds(ns_fds_from_map(&binding.ns_fds), "isolated", true)?;
+    let ns_fds =
+        require_workspace_ns_fds(ns_fds_from_map(&binding.ns_fds), "isolated_network", true)?;
     let tool_call = tool_call(&inputs);
     let run_request = RunRequest {
         mode: RunMode::SetNs,

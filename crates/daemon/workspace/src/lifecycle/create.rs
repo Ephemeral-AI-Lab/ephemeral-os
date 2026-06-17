@@ -3,23 +3,24 @@ use std::time::Instant;
 
 use crate::lifecycle::leases::{monotonic_seconds, next_handle_id};
 use crate::lifecycle::remount::WorkspaceRemountState;
+use crate::model::NetworkMode;
 use crate::namespace::NamespacePlan;
-use crate::network_mode::isolated_network::IsolatedError;
+use crate::network_mode::isolated_network::IsolatedNetworkError;
 use crate::network_mode::isolated_network::{
-    IsolatedManager, IsolatedSnapshot, IsolatedWorkspaceId, WorkspaceHandle,
+    WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeManager, WorkspaceModeSnapshot,
 };
 use crate::overlay::dirs::create_overlay_dirs;
 
 use super::{close_handle_fds, record_phase_ms};
 
-impl IsolatedManager {
+impl WorkspaceModeManager {
     pub(crate) fn wire_handle(
         &mut self,
-        handle: &mut WorkspaceHandle,
-    ) -> Result<HashMap<String, f64>, IsolatedError> {
+        handle: &mut WorkspaceModeHandle,
+    ) -> Result<HashMap<String, f64>, IsolatedNetworkError> {
         let mut phases_ms = HashMap::new();
         let mut phase_start = Instant::now();
-        let namespace_plan = NamespacePlan::isolated_workspace();
+        let namespace_plan = NamespacePlan::isolated_network();
         handle.holder_pid =
             self.runtime
                 .spawn_ns_holder(handle, self.caps.setup_timeout_s, namespace_plan)?;
@@ -61,7 +62,7 @@ impl IsolatedManager {
         Ok(phases_ms)
     }
 
-    pub(crate) fn rollback_partial(&mut self, handle: &WorkspaceHandle) {
+    pub(crate) fn rollback_partial(&mut self, handle: &WorkspaceModeHandle) {
         close_handle_fds(handle);
         if let Some(veth) = handle.veth.as_ref() {
             self.network.teardown_veth(veth);
@@ -75,13 +76,13 @@ impl IsolatedManager {
     pub fn enter(
         &mut self,
         caller_id: &str,
-        snapshot: IsolatedSnapshot,
-    ) -> Result<WorkspaceHandle, IsolatedError> {
+        snapshot: WorkspaceModeSnapshot,
+    ) -> Result<WorkspaceModeHandle, IsolatedNetworkError> {
         if !self.caps.enabled {
-            return Err(IsolatedError::FeatureDisabled);
+            return Err(IsolatedNetworkError::FeatureDisabled);
         }
         if caller_id.trim().is_empty() {
-            return Err(IsolatedError::InvalidArgument(
+            return Err(IsolatedNetworkError::InvalidArgument(
                 "caller_id is required".to_owned(),
             ));
         }
@@ -91,32 +92,33 @@ impl IsolatedManager {
                 .by_caller
                 .get(caller_id)
                 .and_then(|workspace_id| self.handles.get(workspace_id))
-                .ok_or_else(|| IsolatedError::SetupFailed {
+                .ok_or_else(|| IsolatedNetworkError::SetupFailed {
                     step: "agent handle index is inconsistent".to_owned(),
                 })?;
-            return Err(IsolatedError::AlreadyOpen {
+            return Err(IsolatedNetworkError::AlreadyOpen {
                 created_at: existing.created_at,
                 last_activity: existing.last_activity,
             });
         }
         let total_cap = usize::try_from(self.caps.total_cap).unwrap_or(usize::MAX);
         if self.handles.len() >= total_cap {
-            return Err(IsolatedError::QuotaExceeded {
+            return Err(IsolatedNetworkError::QuotaExceeded {
                 total_cap: self.caps.total_cap,
             });
         }
         self.check_host_capacity()?;
 
-        let workspace_id = IsolatedWorkspaceId(next_handle_id());
+        let workspace_id = WorkspaceModeId(next_handle_id());
         let dirs = create_overlay_dirs(self.owned_scratch_root().join(&workspace_id.0)).map_err(
-            |err| IsolatedError::SetupFailed {
+            |err| IsolatedNetworkError::SetupFailed {
                 step: format!("{}: {}", err.path.display(), err.reason),
             },
         )?;
 
         let now = monotonic_seconds();
-        let mut handle = WorkspaceHandle {
+        let mut handle = WorkspaceModeHandle {
             workspace_id: workspace_id.clone(),
+            network: NetworkMode::IsolatedNetwork,
             caller_id: caller_id.to_owned(),
             lease_id: snapshot.lease_id,
             manifest_version: snapshot.manifest_version,
@@ -153,15 +155,15 @@ impl IsolatedManager {
         Ok(handle)
     }
 
-    pub(crate) fn validated_workspace_root(&self) -> Result<String, IsolatedError> {
+    pub(crate) fn validated_workspace_root(&self) -> Result<String, IsolatedNetworkError> {
         let workspace_root = self.caps.eos_workspace_root.trim();
         if workspace_root.is_empty() {
-            return Err(IsolatedError::InvalidArgument(
+            return Err(IsolatedNetworkError::InvalidArgument(
                 "eos_workspace_root is required".to_owned(),
             ));
         }
         if !std::path::Path::new(workspace_root).is_absolute() {
-            return Err(IsolatedError::InvalidArgument(format!(
+            return Err(IsolatedNetworkError::InvalidArgument(format!(
                 "eos_workspace_root must be absolute: {workspace_root}"
             )));
         }

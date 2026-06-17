@@ -28,7 +28,7 @@ operation crates:
   decide operation workflow with or without a WorkspaceSessionHandler
 
 workspace:
-  resource primitives for Host workspace, isolated workspace, and readonly snapshot
+  resource primitives for Host workspace, isolated-network workspace, and readonly snapshot
 
 layerstack:
   manifests, leases, pinned layer refcounts, publish/OCC, squash/reclaim
@@ -136,7 +136,7 @@ daemon session lookup
 
 The daemon operation layer preserves workspace sessions.
 
-When `enter_isolated_workspace` creates a workspace, the daemon records a
+When `enter_isolated_network` creates a workspace, the daemon records a
 session. Later requests carry `workspace_session_id`; the operation layer uses
 that id to resolve a handler and inject it into the operation method.
 
@@ -191,7 +191,7 @@ pub struct OperationServices {
     pub command: Arc<CommandOperation>,
     pub file: Arc<FileOperation>,
     pub plugin: Arc<PluginOperation>,
-    pub isolated_workspace: Arc<IsolatedWorkspaceOperation>,
+    pub isolated_network: Arc<IsolatedNetworkOperation>,
     pub checkpoint: Arc<CheckpointOperation>,
 }
 
@@ -208,8 +208,8 @@ Ownership rules:
   `WorkspaceSessionRegistry`.
 - `WorkspaceSessionService` wires workspace lifecycle calls that must be
   visible to daemon session tracking: create, capture, remount, and destroy.
-- `isolated_workspace_operation` asks `WorkspaceSessionService` to create,
-  resolve, close, and remove isolated workspace sessions.
+- `isolated_network_operation` asks `WorkspaceSessionService` to create,
+  resolve, close, and remove isolated-network workspace sessions.
 - request dispatch asks `WorkspaceSessionService` to resolve a handler only
   when the request carries `workspace_session_id`.
 - `command_operation` and `file_operation` receive a
@@ -309,7 +309,7 @@ pub struct CommandOperation {
 `WorkspaceSessionRegistry` before returning the handler. The operation decides
 whether the returned `workspace_session_id` is exposed to the caller:
 
-- `enter_isolated_workspace` returns the `workspace_session_id` to the caller.
+- `enter_isolated_network` returns the `workspace_session_id` to the caller.
 - one-shot command execution keeps the handler internal and destroys it before
   returning the command result.
 
@@ -336,15 +336,15 @@ the service wrapper.
 ### Enter Isolated Workspace
 
 ```text
-request: enter_isolated_workspace(caller_id, workspace_root)
+request: enter_isolated_network(caller_id, workspace_root)
 
-isolated_workspace_operation:
+isolated_network_operation:
   resolve workspace_root
   call WorkspaceSessionService::create_internal_workspace(NetworkMode::Isolated)
   return workspace_session_id + workspace_handle_id
 ```
 
-`enter_isolated_workspace` is the operation that creates an isolated workspace
+`enter_isolated_network` is the operation that creates an isolated-network workspace
 session. Normal command/file operations must not create isolated sessions
 implicitly.
 
@@ -363,7 +363,7 @@ command_operation:
   sees handler.network == NetworkMode::Isolated
   runs command in existing workspace
   does not create one-shot workspace
-  does not destroy isolated workspace
+  does not destroy isolated-network workspace
 ```
 
 The same model applies to file operations:
@@ -448,29 +448,29 @@ Semantics:
 - `Some(handler)` means the operation must use the provided workspace and must
   not create or destroy a workspace internally.
 - `Some(handler)` is a persisted workspace session, typically created by
-  `enter_isolated_workspace`.
+  `enter_isolated_network`.
 - `None` for `command_operation` means the command operation owns its normal
   one-shot `NetworkMode::Host` workspace lifecycle through
   `WorkspaceSessionService`.
 - `None` for targeted file operations can mean a non-mounted workflow such as
   readonly latest snapshot plus direct layer publish.
-- explicit lifecycle operations, such as `enter_isolated_workspace` and
-  `exit_isolated_workspace`, are the only operations that create or destroy
-  persisted isolated workspace sessions.
+- explicit lifecycle operations, such as `enter_isolated_network` and
+  `exit_isolated_network`, are the only operations that create or destroy
+  persisted isolated-network workspace sessions.
 
 ## Exit Isolated Workspace
 
 ```text
-request: exit_isolated_workspace(workspace_session_id, grace_s)
+request: exit_isolated_network(workspace_session_id, grace_s)
 
-isolated_workspace_operation:
+isolated_network_operation:
   resolve session
   coordinate command cancellation or active-command rejection policy
   call WorkspaceSessionService::destroy_workspace(handle)
   return destroy report
 ```
 
-Exit discards the isolated workspace upperdir by default. It must not publish
+Exit discards the isolated-network workspace upperdir by default. It must not publish
 implicitly.
 
 Destroy responsibility belongs to the explicit exit operation, not to ordinary
@@ -536,7 +536,7 @@ on publish/finalize/maintenance:
 
   for each blocking lease from pressure:
       if lease maps to open WorkspaceSession:
-          ask isolated_workspace_operation to attempt live remount
+          ask isolated_network_operation to attempt live remount
       else:
           keep hard protection; report orphan or stale lease pressure
 ```
@@ -602,7 +602,7 @@ daemon/core -> operation_service
 operation_service -> command_operation
 operation_service -> file_operation
 operation_service -> plugin_operation
-operation_service -> isolated_workspace_operation
+operation_service -> isolated_network_operation
 operation_service -> checkpoint_operation
 operation_service -> WorkspaceSessionService
 
@@ -613,9 +613,9 @@ file_operation -> WorkspaceSessionService
 file_operation -> workspace readonly snapshot port
 file_operation -> layerstack publish/read ports
 
-isolated_workspace_operation -> WorkspaceSessionService
-isolated_workspace_operation -> command_operation liveness/cancel/remount port
-isolated_workspace_operation -> layerstack remount/squash port
+isolated_network_operation -> WorkspaceSessionService
+isolated_network_operation -> command_operation liveness/cancel/remount port
+isolated_network_operation -> layerstack remount/squash port
 
 WorkspaceSessionService -> workspace
 WorkspaceSessionService -> layerstack lease/session ports
@@ -641,7 +641,7 @@ and its session model into a lower-level crate/module used by
 2. Move session/routing policy out of `daemon/core`.
 3. Introduce `workspace_session_id` in request contracts where session binding
    is needed.
-4. Return `workspace_session_id` from `enter_isolated_workspace`.
+4. Return `workspace_session_id` from `enter_isolated_network`.
 5. Make operation methods accept optional or explicit `WorkspaceSessionHandler`.
 6. Route tracked workspace create/capture/remount/destroy through
    `WorkspaceSessionService` instead of raw workspace primitives.
@@ -655,7 +655,7 @@ and its session model into a lower-level crate/module used by
 - Should ordinary operations reject missing `workspace_session_id` when the
   caller owns an active isolated session, or should caller-keyed compatibility
   routing remain during migration?
-- Should `exit_isolated_workspace` cancel active commands by default, or reject
+- Should `exit_isolated_network` cancel active commands by default, or reject
   while commands are active unless `force` is provided?
 - Should live remount use full snapshot compaction or leased-head plus
   compact-parent compaction as the default production representation?

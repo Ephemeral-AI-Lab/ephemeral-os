@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::net::Ipv4Addr;
 
 use crate::namespace::test_harness_enabled;
-use crate::network_mode::isolated_network::IsolatedError;
+use crate::network_mode::isolated_network::IsolatedNetworkError;
 use crate::network_mode::isolated_network::{Rfc1918Egress, HANDLE_PREFIX};
 
 mod dns;
@@ -58,25 +58,25 @@ pub(crate) struct BridgeAddressPool {
 }
 
 impl BridgeAddressPool {
-    pub fn reserve(&mut self, ip: Ipv4Addr) -> Result<(), IsolatedError> {
+    pub fn reserve(&mut self, ip: Ipv4Addr) -> Result<(), IsolatedNetworkError> {
         if !is_pool_ip(ip) {
-            return Err(IsolatedError::NetworkUnavailable(format!(
-                "isolated workspace IP {ip} is outside {BRIDGE_CIDR}"
+            return Err(IsolatedNetworkError::NetworkUnavailable(format!(
+                "isolated network IP {ip} is outside {BRIDGE_CIDR}"
             )));
         }
         self.allocated.insert(ip);
         Ok(())
     }
 
-    pub fn allocate(&mut self) -> Result<Ipv4Addr, IsolatedError> {
+    pub fn allocate(&mut self) -> Result<Ipv4Addr, IsolatedNetworkError> {
         for host in POOL_FIRST_HOST..=POOL_LAST_HOST {
             let ip = Ipv4Addr::new(10, 244, 0, host);
             if self.allocated.insert(ip) {
                 return Ok(ip);
             }
         }
-        Err(IsolatedError::NetworkUnavailable(
-            "isolated_workspace_ip_pool_exhausted".to_owned(),
+        Err(IsolatedNetworkError::NetworkUnavailable(
+            "isolated_network_ip_pool_exhausted".to_owned(),
         ))
     }
 
@@ -102,7 +102,7 @@ impl IsolatedNetwork {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<(), IsolatedError> {
+    pub fn initialize(&mut self) -> Result<(), IsolatedNetworkError> {
         if test_harness_enabled() {
             self.initialized = true;
             return Ok(());
@@ -128,7 +128,7 @@ impl IsolatedNetwork {
         &mut self,
         workspace_handle_id: &str,
         holder_pid: i32,
-    ) -> Result<VethAllocation, IsolatedError> {
+    ) -> Result<VethAllocation, IsolatedNetworkError> {
         if !self.initialized {
             self.initialize()?;
         }
@@ -140,7 +140,7 @@ impl IsolatedNetwork {
                 let host = host_name.clone();
                 let ns = ns_name.clone();
                 let holder_pid = u32::try_from(holder_pid).map_err(|_| {
-                    IsolatedError::NetworkUnavailable(format!(
+                    IsolatedNetworkError::NetworkUnavailable(format!(
                         "invalid isolated holder pid {holder_pid}"
                     ))
                 })?;
@@ -184,7 +184,7 @@ impl IsolatedNetwork {
         }
     }
 
-    pub fn reserve_persisted_ip(&mut self, ip: Ipv4Addr) -> Result<(), IsolatedError> {
+    pub fn reserve_persisted_ip(&mut self, ip: Ipv4Addr) -> Result<(), IsolatedNetworkError> {
         self.pool.reserve(ip)
     }
 }
@@ -193,8 +193,8 @@ impl IsolatedNetwork {
 pub(crate) fn network_error_at(
     step: impl Into<String>,
     error: impl std::fmt::Display,
-) -> IsolatedError {
-    IsolatedError::NetworkUnavailable(format!("{}: {error}", step.into()))
+) -> IsolatedNetworkError {
+    IsolatedNetworkError::NetworkUnavailable(format!("{}: {error}", step.into()))
 }
 
 fn is_pool_ip(ip: Ipv4Addr) -> bool {

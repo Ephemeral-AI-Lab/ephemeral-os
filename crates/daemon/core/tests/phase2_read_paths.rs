@@ -9,7 +9,7 @@ use base64::Engine as _;
 use config::configs::daemon::{
     FileLimitsConfig, PluginRuntimeConfig, MAX_FILE_BYTES, MAX_READ_BYTES,
 };
-use config::configs::isolated_workspace::IsolatedWorkspaceConfig;
+use config::configs::isolated_network::IsolatedNetworkConfig;
 use daemon::wire::{
     decode, encode, Request, WireMessage, DAEMON_AUTH_FIELD, DAEMON_FORWARD_AUTH_FIELD,
     DAEMON_PROTOCOL_FIELD, DAEMON_PROTOCOL_VERSION,
@@ -59,17 +59,17 @@ impl TestDaemon {
     fn new() -> Self {
         Self::with_services(test_services(
             PluginRuntimeConfig::default(),
-            IsolatedWorkspaceConfig::default(),
+            IsolatedNetworkConfig::default(),
         ))
     }
 
-    fn with_isolated_workspace(scratch_root: &Path) -> Self {
+    fn with_isolated_network(scratch_root: &Path) -> Self {
         Self::with_services(test_services(
             PluginRuntimeConfig::default(),
-            IsolatedWorkspaceConfig {
+            IsolatedNetworkConfig {
                 enabled: true,
                 scratch_root: scratch_root.to_path_buf(),
-                ..IsolatedWorkspaceConfig::default()
+                ..IsolatedNetworkConfig::default()
             },
         ))
     }
@@ -85,13 +85,9 @@ impl TestDaemon {
 
 fn test_services(
     plugin: PluginRuntimeConfig,
-    isolated_workspace: IsolatedWorkspaceConfig,
+    isolated_network: IsolatedNetworkConfig,
 ) -> RuntimeServices {
-    RuntimeServices::new(
-        plugin,
-        isolated_workspace,
-        command::CommandConfig::default(),
-    )
+    RuntimeServices::new(plugin, isolated_network, command::CommandConfig::default())
 }
 
 #[test]
@@ -114,7 +110,7 @@ fn dispatches_layerstack_read_file() -> TestResult {
         "{response}"
     );
     let result = &response["result"];
-    assert_eq!(result["workspace"], Value::String("ephemeral".to_owned()));
+    assert_eq!(result["workspace"], Value::String("host".to_owned()));
     assert_eq!(result["content"], Value::String("# README\n".to_owned()));
     assert_eq!(result["exists"], Value::Bool(true));
     assert!(
@@ -210,7 +206,7 @@ fn unknown_op_uses_structured_contract() {
 }
 
 #[test]
-fn isolated_workspace_ops_are_registered_and_disabled_by_default() -> TestResult {
+fn isolated_network_ops_are_registered_and_disabled_by_default() -> TestResult {
     let _guard = ISOLATED_ENV_LOCK
         .lock()
         .map_err(|_| "isolated env lock poisoned")?;
@@ -259,12 +255,12 @@ fn isolated_workspace_ops_are_registered_and_disabled_by_default() -> TestResult
 }
 
 #[test]
-fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() -> TestResult {
+fn isolated_network_lifecycle_ops_open_status_list_and_exit_when_enabled() -> TestResult {
     let _guard = ISOLATED_ENV_LOCK
         .lock()
         .map_err(|_| "isolated env lock poisoned")?;
     let env = IsolatedLifecycleEnv::new()?;
-    let daemon = TestDaemon::with_isolated_workspace(&env.scratch);
+    let daemon = TestDaemon::with_isolated_network(&env.scratch);
     assert_isolated_test_reset(&daemon, "iws-reset");
 
     let enter_response = dispatch_request(
@@ -304,7 +300,7 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() -> 
 }
 
 #[test]
-fn isolated_workspace_ops_validate_required_arguments() -> TestResult {
+fn isolated_network_ops_validate_required_arguments() -> TestResult {
     let _guard = ISOLATED_ENV_LOCK
         .lock()
         .map_err(|_| "isolated env lock poisoned")?;
@@ -759,7 +755,7 @@ async fn tcp_server_sidecar_records_file_fast_path_route() -> TestResult {
     assert_eq!(route_events[0].details.value["kind"], json!("fast_path"));
     assert_eq!(
         route_events[0].details.value["reason"],
-        json!("no_isolated_workspace_for_caller")
+        json!("no_isolated_network_for_caller")
     );
     assert!(
         record.events.iter().any(|event| event.module == "file"

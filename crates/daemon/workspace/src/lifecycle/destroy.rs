@@ -5,9 +5,9 @@ use std::time::Instant;
 use serde_json::{json, Value};
 
 use crate::namespace::HolderKillReport;
-use crate::network_mode::isolated_network::IsolatedError;
+use crate::network_mode::isolated_network::IsolatedNetworkError;
 use crate::network_mode::isolated_network::{
-    IsolatedManager, IsolatedWorkspaceId, WorkspaceHandle,
+    WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeManager,
 };
 use crate::overlay::tree::directory_file_bytes;
 
@@ -15,7 +15,7 @@ use super::{close_handle_fds, monotonic_seconds, record_phase_ms};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExitOutcome {
-    pub workspace_id: IsolatedWorkspaceId,
+    pub workspace_id: WorkspaceModeId,
     pub caller_id: String,
     pub lease_id: String,
     pub evicted_upperdir_bytes: u64,
@@ -25,10 +25,10 @@ pub struct ExitOutcome {
     pub inspection: Value,
 }
 
-impl IsolatedManager {
+impl WorkspaceModeManager {
     pub(crate) fn teardown_handle(
         &mut self,
-        handle: &WorkspaceHandle,
+        handle: &WorkspaceModeHandle,
         grace_s: f64,
     ) -> (Value, HashMap<String, f64>) {
         let mut phases_ms = HashMap::new();
@@ -95,17 +95,17 @@ impl IsolatedManager {
         &mut self,
         caller_id: &str,
         grace_s: Option<f64>,
-    ) -> Result<ExitOutcome, IsolatedError> {
+    ) -> Result<ExitOutcome, IsolatedNetworkError> {
         if caller_id.trim().is_empty() {
-            return Err(IsolatedError::InvalidArgument(
+            return Err(IsolatedNetworkError::InvalidArgument(
                 "caller_id is required".to_owned(),
             ));
         }
         let Some(workspace_id) = self.by_caller.remove(caller_id) else {
-            return Err(IsolatedError::NotOpen);
+            return Err(IsolatedNetworkError::NotOpen);
         };
         let Some(handle) = self.handles.remove(&workspace_id) else {
-            return Err(IsolatedError::NotOpen);
+            return Err(IsolatedNetworkError::NotOpen);
         };
         let timer = Instant::now();
         let upperdir_bytes = directory_file_bytes(&handle.dirs.upperdir);

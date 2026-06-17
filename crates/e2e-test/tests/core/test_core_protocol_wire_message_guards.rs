@@ -106,7 +106,7 @@ fn unauthorized_tcp_rejected() -> Result<()> {
 }
 
 #[test]
-fn forbidden_in_isolated_workspace_rejected() -> Result<()> {
+fn forbidden_in_isolated_network_rejected() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
@@ -125,7 +125,7 @@ fn forbidden_in_isolated_workspace_rejected() -> Result<()> {
     let _ = lease.call(catalog::SANDBOX_ISOLATION_EXIT, json!({}));
     assert_eq!(
         envelope_error_kind(&blocked)?,
-        "forbidden_in_isolated_workspace",
+        "forbidden_in_isolated_network",
         "plugin-family ops must be blocked while isolated mode is active: {blocked}"
     );
     Ok(())

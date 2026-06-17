@@ -4,7 +4,7 @@ use serde_json::json;
 
 use crate::support::{
     array, as_bool, as_i64, as_str, conflict_message, conflict_reason, live_pool_or_skip,
-    reset_isolated_workspaces, unwrap_operation_result,
+    reset_isolated_networks, unwrap_operation_result,
 };
 
 #[test]
@@ -13,7 +13,7 @@ fn isolated_write_does_not_publish_or_release_lease() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
     // Baseline AFTER enter so its lease is part of the gauge; the isolated write
     // must not publish or touch the public lease (it writes the private upperdir
@@ -49,7 +49,7 @@ fn isolated_read_after_exit_routes_ephemeral() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
     let path = "iso/private-only.txt";
     let result = (|| -> Result<()> {
@@ -61,13 +61,13 @@ fn isolated_read_after_exit_routes_ephemeral() -> Result<()> {
     })();
     lease.call_ok(catalog::SANDBOX_ISOLATION_EXIT, json!({}))?;
     result?;
-    // After exit the router falls back to the ephemeral workspace; the private
+    // After exit the router falls back to the host workspace; the private
     // upperdir write was never published, so it is invisible there.
     let read = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": path}))?;
     assert_eq!(
         as_str(&read, "workspace")?,
-        "ephemeral",
-        "read after isolated exit must route ephemeral: {read}"
+        "host",
+        "read after isolated exit must route host: {read}"
     );
     assert!(
         !as_bool(&read, "exists")?,
@@ -82,7 +82,7 @@ fn isolated_enter_status_reports_manifest_pin() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let enter = lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
     let version = as_i64(&enter, "manifest_version")?;
     let hash = as_str(&enter, "manifest_root_hash")?.to_owned();
@@ -108,14 +108,14 @@ fn isolated_write_response_fields() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
     let write = lease.call_ok(
         catalog::SANDBOX_FILE_WRITE,
         json!({"path": "iso-overlay/private.txt", "content": "private\n", "overwrite": true}),
     )?;
     assert_eq!(as_str(&write, "workspace")?, "isolated");
-    assert_eq!(as_str(&write, "mutation_source")?, "isolated_workspace");
+    assert_eq!(as_str(&write, "mutation_source")?, "isolated_network");
     assert_eq!(as_str(&write, "status")?, "committed");
     assert!(!as_bool(&write, "published")?);
     assert!(
@@ -134,7 +134,7 @@ fn isolated_read_file_sees_private_upperdir() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
     lease.call_ok(
         catalog::SANDBOX_FILE_WRITE,
@@ -156,7 +156,7 @@ fn isolated_edit_conflict_response_fields() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
     lease.call_ok(
         catalog::SANDBOX_FILE_WRITE,

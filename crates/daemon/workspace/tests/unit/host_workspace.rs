@@ -5,7 +5,7 @@ use std::path::PathBuf;
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 fn scratch(label: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("eos-ephemeral-ws-{label}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("eos-host-ws-{label}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     dir
 }
@@ -13,7 +13,7 @@ fn scratch(label: &str) -> PathBuf {
 #[test]
 fn create_capture_and_drop_cleans_scratch() -> TestResult {
     let scratch = scratch("lifecycle");
-    let ws = EphemeralWorkspace::create(&scratch, "command", "inv-1")?;
+    let ws = HostWorkspace::create(&scratch, "command", "inv-1")?;
     let run_dir = ws.dirs().run_dir.clone();
     std::fs::create_dir_all(ws.dirs().upperdir.join("nested"))?;
     std::fs::write(ws.dirs().upperdir.join("nested/new.txt"), b"hello")?;
@@ -33,7 +33,7 @@ fn create_capture_and_drop_cleans_scratch() -> TestResult {
 #[test]
 fn allocator_sanitizes_unsafe_segments() -> TestResult {
     let scratch = scratch("sanitize");
-    let ws = EphemeralWorkspace::create(&scratch, "a/b", "../evil")?;
+    let ws = HostWorkspace::create(&scratch, "a/b", "../evil")?;
     let dirs = ws.dirs();
     assert!(
         dirs.run_dir.starts_with(scratch.join("a_b")),

@@ -10,7 +10,7 @@ fn sample_completion(id: &str) -> CommandCompletion {
 }
 
 #[cfg(not(target_os = "linux"))]
-fn ephemeral_run(id: &str, caller: &str) -> Arc<ActiveCommand> {
+fn host_run(id: &str, caller: &str) -> Arc<ActiveCommand> {
     use std::path::PathBuf;
 
     use command::process::CommandProcessSpec;
@@ -26,8 +26,8 @@ fn ephemeral_run(id: &str, caller: &str) -> Arc<ActiveCommand> {
         "operation-command-registry-{}-{id}-{caller}",
         std::process::id()
     ));
-    let workspace = EphemeralWorkspace::create(&scratch, "test", id).expect("scaffold workspace");
-    Arc::new(ActiveCommand::Ephemeral(EphemeralRun {
+    let workspace = HostWorkspace::create(&scratch, "test", id).expect("scaffold workspace");
+    Arc::new(ActiveCommand::Host(HostRun {
         process,
         trace_origin: CommandTraceOrigin::default(),
         root: PathBuf::from("/layers"),
@@ -46,9 +46,9 @@ fn ephemeral_run(id: &str, caller: &str) -> Arc<ActiveCommand> {
 #[test]
 fn insert_get_count_remove_track_caller_runs() {
     let registry = CommandRegistry::new();
-    registry.insert(ephemeral_run("cmd_1", "caller"));
-    registry.insert(ephemeral_run("cmd_2", "caller"));
-    registry.insert(ephemeral_run("cmd_3", "other"));
+    registry.insert(host_run("cmd_1", "caller"));
+    registry.insert(host_run("cmd_2", "caller"));
+    registry.insert(host_run("cmd_3", "other"));
 
     assert_eq!(registry.count_by_caller(Some("caller")), 2);
     assert_eq!(registry.count_by_caller(Some("other")), 1);

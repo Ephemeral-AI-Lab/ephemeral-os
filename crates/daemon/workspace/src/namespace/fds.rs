@@ -23,7 +23,7 @@ use nix::fcntl::{fcntl, FcntlArg, FdFlag, OFlag};
 #[cfg(target_os = "linux")]
 use nix::unistd::read;
 
-use crate::network_mode::isolated_network::IsolatedError;
+use crate::network_mode::isolated_network::IsolatedNetworkError;
 
 #[cfg(target_os = "linux")]
 use super::setup_error;
@@ -34,7 +34,7 @@ impl NamespaceRuntime {
         &self,
         holder_pid: i32,
         plan: NamespacePlan,
-    ) -> Result<HashMap<String, i32>, IsolatedError> {
+    ) -> Result<HashMap<String, i32>, IsolatedNetworkError> {
         if self.stub {
             return open_stub_ns_fds(plan);
         }
@@ -61,7 +61,7 @@ impl NamespaceRuntime {
 }
 
 #[cfg(unix)]
-fn open_stub_ns_fds(plan: NamespacePlan) -> Result<HashMap<String, i32>, IsolatedError> {
+fn open_stub_ns_fds(plan: NamespacePlan) -> Result<HashMap<String, i32>, IsolatedNetworkError> {
     let mut opened = Vec::new();
     for name in plan.fd_names() {
         opened.push((name.to_owned(), open_stub_ns_fd()?));
@@ -70,13 +70,13 @@ fn open_stub_ns_fds(plan: NamespacePlan) -> Result<HashMap<String, i32>, Isolate
 }
 
 #[cfg(not(unix))]
-fn open_stub_ns_fds(_plan: NamespacePlan) -> Result<HashMap<String, i32>, IsolatedError> {
+fn open_stub_ns_fds(_plan: NamespacePlan) -> Result<HashMap<String, i32>, IsolatedNetworkError> {
     Ok(HashMap::new())
 }
 
 #[cfg(unix)]
-fn open_stub_ns_fd() -> Result<File, IsolatedError> {
-    let file = File::open("/dev/null").map_err(|error| IsolatedError::SetupFailed {
+fn open_stub_ns_fd() -> Result<File, IsolatedNetworkError> {
+    let file = File::open("/dev/null").map_err(|error| IsolatedNetworkError::SetupFailed {
         step: format!("open stub namespace fd: {error}"),
     })?;
     #[cfg(target_os = "linux")]
@@ -96,7 +96,7 @@ fn namespace_fd_path(holder_pid: i32, name: &str) -> String {
 }
 
 #[cfg(target_os = "linux")]
-fn open_inheritable_fd(path: impl AsRef<std::path::Path>) -> Result<File, IsolatedError> {
+fn open_inheritable_fd(path: impl AsRef<std::path::Path>) -> Result<File, IsolatedNetworkError> {
     let file = File::open(path.as_ref()).map_err(setup_error)?;
     clear_cloexec(file.as_raw_fd())?;
     Ok(file)
@@ -111,13 +111,13 @@ fn into_raw_fd_map(opened: Vec<(String, File)>) -> HashMap<String, i32> {
 }
 
 #[cfg(target_os = "linux")]
-pub(super) fn clear_cloexec(fd: RawFd) -> Result<(), IsolatedError> {
+pub(super) fn clear_cloexec(fd: RawFd) -> Result<(), IsolatedNetworkError> {
     fcntl(fd, FcntlArg::F_SETFD(FdFlag::empty())).map_err(setup_error)?;
     Ok(())
 }
 
 #[cfg(target_os = "linux")]
-pub(super) fn set_nonblocking(fd: RawFd) -> Result<(), IsolatedError> {
+pub(super) fn set_nonblocking(fd: RawFd) -> Result<(), IsolatedNetworkError> {
     let flags = fcntl(fd, FcntlArg::F_GETFL).map_err(setup_error)?;
     fcntl(
         fd,
@@ -128,12 +128,16 @@ pub(super) fn set_nonblocking(fd: RawFd) -> Result<(), IsolatedError> {
 }
 
 #[cfg(target_os = "linux")]
-pub(super) fn expect_line(fd: RawFd, prefix: &[u8], timeout_s: f64) -> Result<(), IsolatedError> {
+pub(super) fn expect_line(
+    fd: RawFd,
+    prefix: &[u8],
+    timeout_s: f64,
+) -> Result<(), IsolatedNetworkError> {
     let deadline = Instant::now() + Duration::from_secs_f64(timeout_s.max(0.0));
     let mut buf = Vec::new();
     loop {
         if Instant::now() >= deadline {
-            return Err(IsolatedError::SetupFailed {
+            return Err(IsolatedNetworkError::SetupFailed {
                 step: format!(
                     "ns_holder did not signal {}",
                     String::from_utf8_lossy(prefix)
@@ -143,7 +147,7 @@ pub(super) fn expect_line(fd: RawFd, prefix: &[u8], timeout_s: f64) -> Result<()
         let mut chunk = [0_u8; 64];
         match read(fd, &mut chunk) {
             Ok(0) => {
-                return Err(IsolatedError::SetupFailed {
+                return Err(IsolatedNetworkError::SetupFailed {
                     step: "ns_holder closed pipe before signaling".to_owned(),
                 });
             }
@@ -153,7 +157,7 @@ pub(super) fn expect_line(fd: RawFd, prefix: &[u8], timeout_s: f64) -> Result<()
                     if buf.starts_with(prefix) {
                         return Ok(());
                     }
-                    return Err(IsolatedError::SetupFailed {
+                    return Err(IsolatedNetworkError::SetupFailed {
                         step: format!("unexpected ns_holder signal: {buf:?}"),
                     });
                 }
@@ -166,7 +170,7 @@ pub(super) fn expect_line(fd: RawFd, prefix: &[u8], timeout_s: f64) -> Result<()
 }
 
 #[cfg(target_os = "linux")]
-pub(super) fn write_all_fd(fd: RawFd, bytes: &[u8]) -> Result<(), IsolatedError> {
+pub(super) fn write_all_fd(fd: RawFd, bytes: &[u8]) -> Result<(), IsolatedNetworkError> {
     let mut file = OpenOptions::new()
         .write(true)
         .open(format!("/proc/self/fd/{fd}"))

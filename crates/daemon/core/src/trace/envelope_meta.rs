@@ -99,8 +99,8 @@ fn workspace_route_ref(record: &TraceRecord) -> WorkspaceRouteRef {
 
 fn parse_workspace_route(label: &str) -> Option<WorkspaceRoute> {
     Some(match label {
-        "ephemeral_workspace" => WorkspaceRoute::EphemeralWorkspace,
-        "isolated_workspace" => WorkspaceRoute::IsolatedWorkspace,
+        "host" => WorkspaceRoute::Host,
+        "isolated_network" => WorkspaceRoute::IsolatedNetwork,
         "fast_path" => WorkspaceRoute::FastPath,
         "none" => WorkspaceRoute::None,
         _ => return None,

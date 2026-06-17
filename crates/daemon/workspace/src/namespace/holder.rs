@@ -22,8 +22,8 @@ use nix::sys::signal::{kill, Signal};
 #[cfg(target_os = "linux")]
 use nix::unistd::{pipe2, Pid};
 
-use crate::network_mode::isolated_network::IsolatedError;
-use crate::network_mode::isolated_network::WorkspaceHandle;
+use crate::network_mode::isolated_network::IsolatedNetworkError;
+use crate::network_mode::isolated_network::WorkspaceModeHandle;
 
 #[cfg(target_os = "linux")]
 use super::fds::{clear_cloexec, expect_line, set_nonblocking};
@@ -34,10 +34,10 @@ use super::{HolderKillReport, NamespacePlan, NamespaceRuntime};
 impl NamespaceRuntime {
     pub(crate) fn spawn_ns_holder(
         &self,
-        handle: &mut WorkspaceHandle,
+        handle: &mut WorkspaceModeHandle,
         setup_timeout_s: f64,
         plan: NamespacePlan,
-    ) -> Result<i32, IsolatedError> {
+    ) -> Result<i32, IsolatedNetworkError> {
         if self.stub {
             #[cfg(test)]
             {
@@ -106,7 +106,7 @@ impl NamespaceRuntime {
         &self,
         holder_pid: i32,
         grace_s: f64,
-    ) -> Result<HolderKillReport, IsolatedError> {
+    ) -> Result<HolderKillReport, IsolatedNetworkError> {
         if self.stub || holder_pid <= 0 {
             #[cfg(test)]
             if self.stub && holder_pid > 0 {
@@ -177,7 +177,8 @@ fn holder_children() -> &'static Mutex<HashMap<i32, Child>> {
 }
 
 #[cfg(target_os = "linux")]
-fn lock_holder_children() -> Result<MutexGuard<'static, HashMap<i32, Child>>, IsolatedError> {
+fn lock_holder_children() -> Result<MutexGuard<'static, HashMap<i32, Child>>, IsolatedNetworkError>
+{
     holder_children()
         .lock()
         .map_err(|_| setup_error("ns-holder child registry lock poisoned"))
@@ -185,18 +186,18 @@ fn lock_holder_children() -> Result<MutexGuard<'static, HashMap<i32, Child>>, Is
 
 #[cfg(target_os = "linux")]
 fn ns_holder_startup_error(
-    error: IsolatedError,
+    error: IsolatedNetworkError,
     child: &mut Child,
     stderr: Option<ChildStderr>,
-) -> IsolatedError {
+) -> IsolatedNetworkError {
     let original_step = match error {
-        IsolatedError::SetupFailed { step } => step,
+        IsolatedNetworkError::SetupFailed { step } => step,
         other => other.to_string(),
     };
     let _ = child.kill();
     let status = child.wait().ok();
     let stderr = read_child_stderr(stderr);
-    IsolatedError::SetupFailed {
+    IsolatedNetworkError::SetupFailed {
         step: format!(
             "{original_step}; ns-holder {}; stderr: {}",
             format_exit_status(status.as_ref()),
@@ -207,21 +208,21 @@ fn ns_holder_startup_error(
 
 #[cfg(target_os = "linux")]
 pub(super) fn ns_holder_runtime_error(
-    error: IsolatedError,
+    error: IsolatedNetworkError,
     holder_pid: i32,
-) -> Result<IsolatedError, IsolatedError> {
+) -> Result<IsolatedNetworkError, IsolatedNetworkError> {
     let original_step = match error {
-        IsolatedError::SetupFailed { step } => step,
+        IsolatedNetworkError::SetupFailed { step } => step,
         other => other.to_string(),
     };
     let Some(mut child) = lock_holder_children()?.remove(&holder_pid) else {
-        return Ok(IsolatedError::SetupFailed {
+        return Ok(IsolatedNetworkError::SetupFailed {
             step: format!("{original_step}; ns-holder child {holder_pid} was not tracked"),
         });
     };
     let stderr = child.stderr.take();
     Ok(ns_holder_startup_error(
-        IsolatedError::SetupFailed {
+        IsolatedNetworkError::SetupFailed {
             step: original_step,
         },
         &mut child,

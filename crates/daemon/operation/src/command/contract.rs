@@ -515,7 +515,7 @@ mod tests {
         changed_path_kinds.insert("src/main.rs".to_owned(), ChangedPathKind::Write);
         let mut extras = Map::new();
         extras.insert(
-            "isolated_workspace".to_owned(),
+            "isolated_network".to_owned(),
             json!({"caller_id": "caller", "published": false}),
         );
         PublishLanesMetadata::new(
@@ -537,12 +537,12 @@ mod tests {
                     success: true,
                     changed_paths: vec!["src/main.rs".to_owned()],
                     changed_path_kinds,
-                    mutation_source: Some(MutationSource::IsolatedWorkspace),
+                    mutation_source: Some(MutationSource::IsolatedNetwork),
                     conflict: None,
                     conflict_reason: None,
                     timings: crate::WorkspaceTimings::default(),
                 },
-                workspace: WorkspaceKind::Isolated,
+                workspace: WorkspaceKind::IsolatedNetwork,
                 extras,
             }),
         }
@@ -550,7 +550,7 @@ mod tests {
 
         assert_eq!(response["status"], "ok");
         assert_eq!(response["command_id"], "cmd_1");
-        assert_eq!(response["workspace"], "isolated");
+        assert_eq!(response["workspace"], "isolated_network");
         assert_eq!(response["success"], true);
         assert!(response.get("timings").is_none());
         assert_eq!(response["changed_paths"], json!(["src/main.rs"]));
@@ -558,8 +558,8 @@ mod tests {
             response["changed_path_kinds"],
             json!({"src/main.rs": "write"})
         );
-        assert_eq!(response["mutation_source"], "isolated_workspace");
-        assert_eq!(response["isolated_workspace"]["caller_id"], "caller");
+        assert_eq!(response["mutation_source"], "isolated_network");
+        assert_eq!(response["isolated_network"]["caller_id"], "caller");
         assert_eq!(
             response[PUBLISH_LANES_METADATA_KEY],
             json!({
@@ -601,7 +601,7 @@ mod tests {
                     mutation_source: None,
                     ..MutationCore::default()
                 },
-                workspace: WorkspaceKind::Ephemeral,
+                workspace: WorkspaceKind::Host,
                 extras: {
                     let mut extras = Map::new();
                     extras.insert(
@@ -635,7 +635,7 @@ mod tests {
         .to_wire_value();
 
         assert_eq!(response["status"], "cancelled");
-        assert_eq!(response["workspace"], "ephemeral");
+        assert_eq!(response["workspace"], "host");
         assert!(response.get("mutation_source").is_none());
         assert!(response.get("timings").is_none());
         assert_eq!(
@@ -675,7 +675,7 @@ mod tests {
                     conflict_reason: Some("conflict on src/main.rs".to_owned()),
                     timings,
                 },
-                workspace: WorkspaceKind::Ephemeral,
+                workspace: WorkspaceKind::Host,
                 extras: {
                     let mut extras = Map::new();
                     extras.insert(

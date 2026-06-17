@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use crate::network_mode::isolated_network::{IsolatedWorkspaceBinding, IsolatedWorkspaceHandle};
+use crate::network_mode::isolated_network::{WorkspaceModeBinding, WorkspaceModeHandle};
 use crate::overlay::tree::TreeResourceStats;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -20,7 +20,7 @@ pub struct BaseRevision {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NetworkMode {
     Host,
-    Isolated,
+    IsolatedNetwork,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -170,13 +170,13 @@ pub struct DestroyWorkspaceResult {
     pub active_leases_after: usize,
 }
 
-impl From<&IsolatedWorkspaceHandle> for WorkspaceHandle {
-    fn from(handle: &IsolatedWorkspaceHandle) -> Self {
+impl From<&WorkspaceModeHandle> for WorkspaceHandle {
+    fn from(handle: &WorkspaceModeHandle) -> Self {
         Self {
             id: WorkspaceId(handle.workspace_id.0.clone()),
             owner: CallerId(handle.caller_id.clone()),
             workspace_root: PathBuf::from(&handle.workspace_root),
-            network: NetworkMode::Isolated,
+            network: handle.network,
             base_revision: BaseRevision {
                 version: handle.manifest_version,
                 root_hash: handle.manifest_root_hash.clone(),
@@ -186,13 +186,13 @@ impl From<&IsolatedWorkspaceHandle> for WorkspaceHandle {
     }
 }
 
-impl From<IsolatedWorkspaceHandle> for WorkspaceHandle {
-    fn from(handle: IsolatedWorkspaceHandle) -> Self {
+impl From<WorkspaceModeHandle> for WorkspaceHandle {
+    fn from(handle: WorkspaceModeHandle) -> Self {
         Self {
             id: WorkspaceId(handle.workspace_id.0),
             owner: CallerId(handle.caller_id),
             workspace_root: PathBuf::from(handle.workspace_root),
-            network: NetworkMode::Isolated,
+            network: handle.network,
             base_revision: BaseRevision {
                 version: handle.manifest_version,
                 root_hash: handle.manifest_root_hash,
@@ -202,13 +202,13 @@ impl From<IsolatedWorkspaceHandle> for WorkspaceHandle {
     }
 }
 
-impl From<&IsolatedWorkspaceBinding> for WorkspaceHandle {
-    fn from(binding: &IsolatedWorkspaceBinding) -> Self {
+impl From<&WorkspaceModeBinding> for WorkspaceHandle {
+    fn from(binding: &WorkspaceModeBinding) -> Self {
         Self {
             id: WorkspaceId(binding.workspace_handle_id.clone()),
             owner: CallerId(binding.caller_id.clone()),
             workspace_root: binding.workspace_root.clone(),
-            network: NetworkMode::Isolated,
+            network: binding.network,
             base_revision: BaseRevision {
                 version: binding.manifest_version,
                 root_hash: binding.manifest_root_hash.clone(),
@@ -218,13 +218,13 @@ impl From<&IsolatedWorkspaceBinding> for WorkspaceHandle {
     }
 }
 
-impl From<IsolatedWorkspaceBinding> for WorkspaceHandle {
-    fn from(binding: IsolatedWorkspaceBinding) -> Self {
+impl From<WorkspaceModeBinding> for WorkspaceHandle {
+    fn from(binding: WorkspaceModeBinding) -> Self {
         Self {
             id: WorkspaceId(binding.workspace_handle_id),
             owner: CallerId(binding.caller_id),
             workspace_root: binding.workspace_root,
-            network: NetworkMode::Isolated,
+            network: binding.network,
             base_revision: BaseRevision {
                 version: binding.manifest_version,
                 root_hash: binding.manifest_root_hash,

@@ -1,8 +1,8 @@
 //! Isolated-workspace network isolation (spec point 3).
 //!
 //! An isolated session runs in its OWN network namespace (veth + net fd), while
-//! ephemeral execs share the container netns. So an ephemeral server and an
-//! isolated server can bind the SAME port with no conflict, whereas two ephemeral
+//! host execs share the container netns. So a host server and an
+//! isolated server can bind the SAME port with no conflict, whereas two host
 //! servers on the same port collide (EADDRINUSE).
 //!
 //! Robustness: each test picks a UNIQUE port (cross-run collisions impossible),
@@ -17,7 +17,7 @@ use anyhow::{bail, ensure, Context, Result};
 use protocol::catalog;
 use serde_json::{json, Value};
 
-use crate::support::{as_str, live_pool_or_skip, reset_isolated_workspaces, stdout};
+use crate::support::{as_str, live_pool_or_skip, reset_isolated_networks, stdout};
 
 /// A high, per-run-unique port so a server that outlives one test (e.g. its
 /// `timeout` window) never collides with the same fixed port in the next run.
@@ -33,7 +33,7 @@ fn start_server(
     caller_id: Option<&str>,
     port: u16,
 ) -> Result<Value> {
-    // Log to /tmp (writable in the ephemeral exec): /eos is read-only by the
+    // Log to /tmp (writable in the host exec): /eos is read-only by the
     // mount mask, so a `>/eos/scratch/...` redirect makes the server fail before
     // it binds the port — which would make the conflict checks pass for the
     // wrong reason. The log itself is throwaway (never read by any test).
@@ -178,18 +178,18 @@ fn cross_mode_same_port_no_conflict() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let port = unique_port();
     let caller_b = format!("iws-net-b-{}", e2e_test::unique_suffix());
 
-    // Caller A: an ephemeral server holding the port in the container netns.
+    // Caller A: a host server holding the port in the container netns.
     let server_a = start_server(&lease, None, port)?;
     let id_a = as_str(&server_a, "command_id").ok().map(ToOwned::to_owned);
 
     let body = (|| -> Result<()> {
         ensure!(
             as_str(&server_a, "status")? == "running",
-            "ephemeral server must start: {server_a}"
+            "host server must start: {server_a}"
         );
         // Caller B enters isolated mode (its own netns), then binds the SAME port.
         lease.call_ok(
@@ -234,17 +234,17 @@ fn same_mode_same_port_conflicts() -> Result<()> {
     let lease = pool.acquire()?;
     let port = unique_port();
 
-    // Two ephemeral execs share the container netns: the second bind collides.
+    // Two host execs share the container netns: the second bind collides.
     let server = start_bound_socket(&lease, lease.caller_id(), port, "EPHEMERAL")?;
     let id = as_str(&server, "command_id").ok().map(ToOwned::to_owned);
 
     let body = (|| -> Result<()> {
         ensure!(
             as_str(&server, "status")? == "running",
-            "first ephemeral server must start: {server}"
+            "first host server must start: {server}"
         );
         wait_for_output(&lease, None, &server, "BOUND-EPHEMERAL").with_context(|| {
-            format!("first ephemeral server must bind before conflict probe: {server}")
+            format!("first host server must bind before conflict probe: {server}")
         })?;
         let bind = lease.call_ok(
             catalog::SANDBOX_COMMAND_EXEC,
@@ -253,12 +253,11 @@ fn same_mode_same_port_conflicts() -> Result<()> {
                 "yield_time_ms": 2000,
                 "timeout_seconds": 30,}),
         )?;
-        wait_for_output(&lease, None, &bind, "EADDRINUSE").with_context(|| {
-            format!("a second ephemeral bind on the same port must fail: {bind}")
-        })?;
+        wait_for_output(&lease, None, &bind, "EADDRINUSE")
+            .with_context(|| format!("a second host bind on the same port must fail: {bind}"))?;
         ensure!(
             !stdout(&bind).contains("BOUND"),
-            "the second ephemeral bind must not succeed: {bind}"
+            "the second host bind must not succeed: {bind}"
         );
         Ok(())
     })();
@@ -275,7 +274,7 @@ fn isolated_loopback_service_is_not_reachable_from_peer_session() -> Result<()> 
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let port = unique_port();
     let caller_a = format!("iws-loopback-a-{}", e2e_test::unique_suffix());
     let caller_b = format!("iws-loopback-b-{}", e2e_test::unique_suffix());
@@ -360,7 +359,7 @@ fn isolated_exit_reports_dedicated_netns() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
     let exit = lease.call_ok(catalog::SANDBOX_ISOLATION_EXIT, json!({}))?;
     let inspection = exit.get("inspection").context("exit inspection")?;
@@ -395,7 +394,7 @@ fn isolated_to_isolated_same_port_matrix() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let port = unique_port();
     let caller_a = format!("iws-net-a-{}", e2e_test::unique_suffix());
     let caller_b = format!("iws-net-b-{}", e2e_test::unique_suffix());

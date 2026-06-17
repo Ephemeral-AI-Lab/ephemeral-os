@@ -69,15 +69,11 @@ fn cancel_workspace_runs_by_caller_id_discards_owner_and_spares_sibling() -> Res
     let owner = lease.caller_id().to_owned();
     let sibling = format!("{owner}-sibling");
 
-    // Two ephemeral runs for the owner caller, one for a sibling caller.
+    // Two host runs for the owner caller, one for a sibling caller.
     let a = start_sleeping(&lease, None, "cancel-owner-a")?;
     let b = start_sleeping(&lease, None, "cancel-owner-b")?;
     let _s = start_sleeping(&lease, Some(&sibling), "cancel-sibling")?;
-    assert_eq!(
-        count_for(&lease, &owner)?,
-        2,
-        "owner owns two ephemeral runs"
-    );
+    assert_eq!(count_for(&lease, &owner)?, 2, "owner owns two host runs");
     assert_eq!(count_for(&lease, &sibling)?, 1, "sibling owns one run");
 
     let cancelled = lease.call_ok(catalog::SANDBOX_RUN_END, json!({"caller_id": owner}))?;
@@ -89,7 +85,7 @@ fn cancel_workspace_runs_by_caller_id_discards_owner_and_spares_sibling() -> Res
     assert_eq!(
         cancelled["isolated_exited"],
         json!(false),
-        "an ephemeral caller has no isolated workspace to exit: {cancelled}"
+        "a host caller has no isolated-network workspace to exit: {cancelled}"
     );
 
     // The owner's runs are gone (lease caller == owner); the sibling is spared.
@@ -163,7 +159,7 @@ fn cancel_workspace_runs_by_caller_id_discards_overlay_writes() -> Result<()> {
     let v0 = as_i64(&before, "manifest_version")?;
 
     // A command that writes a workspace file, then blocks. The write lands in the
-    // ephemeral overlay's upperdir but is not yet published.
+    // host overlay's upperdir but is not yet published.
     let marker = format!("cancel-marker-{}.txt", unique_suffix().replace('-', "_"));
     let started = lease.call_ok(
         catalog::SANDBOX_COMMAND_EXEC,

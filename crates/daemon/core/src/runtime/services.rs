@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use command::CommandConfig;
 use config::configs::daemon::{CommandConfig as ConfigCommandConfig, PluginRuntimeConfig};
-use config::configs::isolated_workspace::IsolatedWorkspaceConfig;
+use config::configs::isolated_network::IsolatedNetworkConfig;
 use layerstack::service::{BoundedCaptureOptions, IgnoredCaptureLimits};
 use layerstack::CommitOptions;
 use operation::command::CommandOps;
@@ -85,12 +85,12 @@ impl RuntimeServices {
     #[must_use]
     pub fn new(
         plugin: PluginRuntimeConfig,
-        isolated_workspace: IsolatedWorkspaceConfig,
+        isolated_network: IsolatedNetworkConfig,
         command: CommandConfig,
     ) -> Self {
         Self::with_commit_options_and_capture_options(
             plugin,
-            isolated_workspace,
+            isolated_network,
             command,
             CommitOptions::default(),
             BoundedCaptureOptions::default(),
@@ -100,7 +100,7 @@ impl RuntimeServices {
     #[must_use]
     pub fn with_commit_options_and_capture_options(
         plugin: PluginRuntimeConfig,
-        isolated_workspace: IsolatedWorkspaceConfig,
+        isolated_network: IsolatedNetworkConfig,
         command: CommandConfig,
         commit_options: CommitOptions,
         capture_options: BoundedCaptureOptions,
@@ -114,7 +114,7 @@ impl RuntimeServices {
             command: Arc::clone(&command),
             commit_options,
             plugin: PluginRuntime::new(plugin),
-            workspace: WorkspaceRuntime::new(isolated_workspace, command),
+            workspace: WorkspaceRuntime::new(isolated_network, command),
         }
     }
 
@@ -126,7 +126,7 @@ impl RuntimeServices {
 
     pub fn ensure_plugin_caller_allowed(&self, caller: &str) -> Result<(), PluginRuntimeError> {
         if !caller.is_empty() && self.workspace.caller_has_active_handle(caller) {
-            return Err(PluginRuntimeError::ForbiddenInIsolatedWorkspace);
+            return Err(PluginRuntimeError::ForbiddenInIsolatedNetwork);
         }
         Ok(())
     }

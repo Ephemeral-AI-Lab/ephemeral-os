@@ -20,7 +20,7 @@
     "message": "conflict on src/main.rs"
   },
   "conflict_reason": "conflict on src/main.rs",
-  "workspace": "ephemeral",
+  "workspace": "host",
   "publish_lanes": {
     "source": {
       "path_count": 1,

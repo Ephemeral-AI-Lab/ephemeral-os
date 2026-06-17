@@ -1,4 +1,4 @@
-//! Typed schema for the isolated workspace section of `eos-sandbox/config/prd.yml`.
+//! Typed schema for the isolated network section of `eos-sandbox/config/prd.yml`.
 //!
 //! The daemon loads this through `config` and injects it into the isolated
 //! workspace lifecycle.
@@ -14,7 +14,7 @@ use crate::configs::validate::{
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct IsolatedWorkspaceConfig {
+pub struct IsolatedNetworkConfig {
     pub enabled: bool,
     pub scratch_root: PathBuf,
     pub ttl_s: f64,
@@ -36,8 +36,8 @@ pub enum Rfc1918Egress {
     Deny,
 }
 
-impl Default for IsolatedWorkspaceConfig {
-    /// Disabled-by-default fallbacks used when no `isolated_workspace` section
+impl Default for IsolatedNetworkConfig {
+    /// Disabled-by-default fallbacks used when no `isolated_network` section
     /// is injected (matches `eos-sandbox/config/prd.yml`).
     fn default() -> Self {
         Self {
@@ -57,36 +57,33 @@ impl Default for IsolatedWorkspaceConfig {
     }
 }
 
-impl IsolatedWorkspaceConfig {
+impl IsolatedNetworkConfig {
     /// Validate semantic constraints that YAML deserialization cannot express.
     ///
     /// # Errors
     /// Returns an error when a field violates isolated-workspace runtime policy.
     pub fn validate(&self) -> Result<(), ConfigFieldError> {
-        require_absolute(&self.scratch_root, "isolated_workspace.scratch_root")?;
-        require_f64_gt(self.ttl_s, 0.0, "isolated_workspace.ttl_s")?;
+        require_absolute(&self.scratch_root, "isolated_network.scratch_root")?;
+        require_f64_gt(self.ttl_s, 0.0, "isolated_network.ttl_s")?;
         if self.enabled {
-            require_u32_at_least(self.total_cap, 1, "isolated_workspace.total_cap")?;
+            require_u32_at_least(self.total_cap, 1, "isolated_network.total_cap")?;
         }
-        require_u64_at_least(self.upperdir_bytes, 1, "isolated_workspace.upperdir_bytes")?;
-        require_ratio(
-            self.memavail_fraction,
-            "isolated_workspace.memavail_fraction",
-        )?;
+        require_u64_at_least(self.upperdir_bytes, 1, "isolated_network.upperdir_bytes")?;
+        require_ratio(self.memavail_fraction, "isolated_network.memavail_fraction")?;
         require_f64_gt(
             self.setup_timeout_s,
             0.0,
-            "isolated_workspace.setup_timeout_s",
+            "isolated_network.setup_timeout_s",
         )?;
-        require_f64_at_least(self.exit_grace_s, 0.0, "isolated_workspace.exit_grace_s")?;
-        require_non_empty(&self.fallback_dns, "isolated_workspace.fallback_dns")?;
-        require_absolute(&self.workspace_root, "isolated_workspace.workspace_root")?;
+        require_f64_at_least(self.exit_grace_s, 0.0, "isolated_network.exit_grace_s")?;
+        require_non_empty(&self.fallback_dns, "isolated_network.fallback_dns")?;
+        require_absolute(&self.workspace_root, "isolated_network.workspace_root")?;
         reject_dangerous_scratch_root(&self.scratch_root, &self.workspace_root)?;
         if self.sample_interval_s.is_finite() && self.sample_interval_s >= 0.01 {
             Ok(())
         } else {
             Err(ConfigFieldError::new(
-                "isolated_workspace.sample_interval_s",
+                "isolated_network.sample_interval_s",
                 "must be at least 0.01",
             ))
         }
@@ -99,14 +96,14 @@ fn reject_dangerous_scratch_root(
 ) -> Result<(), ConfigFieldError> {
     if is_filesystem_root(scratch_root) {
         return Err(ConfigFieldError::new(
-            "isolated_workspace.scratch_root",
+            "isolated_network.scratch_root",
             "must not be the filesystem root",
         ));
     }
     if paths_match_or_resolve_equal(scratch_root, workspace_root) {
         return Err(ConfigFieldError::new(
-            "isolated_workspace.scratch_root",
-            "must not resolve to isolated_workspace.workspace_root",
+            "isolated_network.scratch_root",
+            "must not resolve to isolated_network.workspace_root",
         ));
     }
     Ok(())
@@ -129,5 +126,5 @@ fn paths_match_or_resolve_equal(left: &Path, right: &Path) -> bool {
 }
 
 #[cfg(test)]
-#[path = "../../tests/unit/configs/isolated_workspace.rs"]
+#[path = "../../tests/unit/configs/isolated_network.rs"]
 mod tests;

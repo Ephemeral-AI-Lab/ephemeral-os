@@ -2,7 +2,7 @@ use serde_json::json;
 
 use command::{CollectCompleted, ReadCommandProgress};
 use config::configs::daemon::PluginRuntimeConfig;
-use config::configs::isolated_workspace::IsolatedWorkspaceConfig;
+use config::configs::isolated_network::IsolatedNetworkConfig;
 use operation::command::contract::{
     CancelCommandInput, CommandCompletion, CommandResponse, CommandStatus, ExecCommandInput,
     ReadProgressInput, WriteStdinInput,
@@ -221,7 +221,7 @@ fn command_start_trace_events_are_recorded_in_request_sidecar_sink() {
         &[
             CommandTraceEvent::new(
                 "prepared",
-                json!({"command_id": "cmd_exec", "workspace": "ephemeral"}),
+                json!({"command_id": "cmd_exec", "workspace": "host"}),
             ),
             CommandTraceEvent::artifact_written(
                 "metadata",
@@ -332,7 +332,7 @@ fn command_cancel_returns_completed_result_when_live_command_is_gone() -> TestRe
 fn test_services() -> crate::RuntimeServices {
     crate::RuntimeServices::new(
         PluginRuntimeConfig::default(),
-        IsolatedWorkspaceConfig::default(),
+        IsolatedNetworkConfig::default(),
         command::CommandConfig::default(),
     )
 }

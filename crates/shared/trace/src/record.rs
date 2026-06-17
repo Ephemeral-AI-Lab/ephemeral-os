@@ -8,8 +8,8 @@ use crate::resource_stats::ResourceStats;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WorkspaceRoute {
-    EphemeralWorkspace,
-    IsolatedWorkspace,
+    Host,
+    IsolatedNetwork,
     FastPath,
     None,
 }
@@ -56,7 +56,7 @@ pub enum SpanKind {
     CommandProcessWait,
     CommandFinalize,
     WorkspaceRoute,
-    IsolatedWorkspace,
+    IsolatedNetwork,
     Plugin,
     File,
     Checkpoint,
@@ -81,7 +81,7 @@ impl SpanKind {
             Self::CommandProcessSpawn | Self::CommandProcessWait | Self::CommandFinalize => {
                 SpanSubsystem::Command
             }
-            Self::WorkspaceRoute | Self::IsolatedWorkspace => SpanSubsystem::Workspace,
+            Self::WorkspaceRoute | Self::IsolatedNetwork => SpanSubsystem::Workspace,
             Self::Plugin => SpanSubsystem::Plugin,
             Self::Resource | Self::Control => SpanSubsystem::Control,
         }

@@ -27,11 +27,11 @@
       "page": "daemon-config/index.html"
     },
     {
-      "name": "ephemeral_workspace",
-      "displayName": "ephemeral_workspace",
-      "cargoTestName": "ephemeral_workspace",
-      "path": "ephemeral_workspace/readme.json",
-      "page": "ephemeral_workspace/index.html"
+      "name": "host_workspace",
+      "displayName": "host_workspace",
+      "cargoTestName": "host_workspace",
+      "path": "host_workspace/readme.json",
+      "page": "host_workspace/index.html"
     },
     {
       "name": "workspace-runtime-isolated",

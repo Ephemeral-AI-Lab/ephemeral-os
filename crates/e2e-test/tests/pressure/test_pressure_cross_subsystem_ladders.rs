@@ -98,7 +98,7 @@ fn ephemeral_exec_at_12() -> Result<()> {
             assert_eq!(
                 as_str(&response, "status")?,
                 "ok",
-                "ephemeral exec should finish at level {level}: {response}"
+                "host exec should finish at level {level}: {response}"
             );
             assert_eq!(as_i64(&response, "exit_code")?, 0, "{response}");
         }
@@ -111,14 +111,14 @@ fn ephemeral_exec_at_12() -> Result<()> {
             assert_eq!(
                 as_str(&read, "content")?,
                 format!("exec-level-{level}-item-{index}\n"),
-                "ephemeral exec output should publish at level {level}: {read}"
+                "host exec output should publish at level {level}: {read}"
             );
         }
         let metrics = wait_for_active_leases(&lease, 0)?;
         assert_eq!(
             as_i64(&metrics, "active_leases")?,
             0,
-            "ephemeral exec ladder should release leases at level {level}: {metrics}"
+            "host exec ladder should release leases at level {level}: {metrics}"
         );
     }
     Ok(())

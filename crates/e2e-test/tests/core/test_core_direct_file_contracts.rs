@@ -285,7 +285,7 @@ fn fast_path_records_occ_and_read_trace_events() -> Result<()> {
         has_trace_event(&read_record, "file", "read_finished", |details| {
             details["success"] == true
                 && details["exists"] == true
-                && details["workspace"] == "ephemeral"
+                && details["workspace"] == "host"
         }),
         "fast-path read should record file read facts: {read_record:?}"
     );
@@ -310,8 +310,7 @@ fn live_trace_file_fast_path_records_route_occ_and_no_workspace_facts() -> Resul
 
     assert!(
         has_trace_event(&record, "workspace.route", "route_selected", |details| {
-            details["kind"] == "fast_path"
-                && details["reason"] == "no_isolated_workspace_for_caller"
+            details["kind"] == "fast_path" && details["reason"] == "no_isolated_network_for_caller"
         }),
         "fast-path file write should record direct no-workspace route facts: {record:?}"
     );
@@ -326,7 +325,7 @@ fn live_trace_file_fast_path_records_route_occ_and_no_workspace_facts() -> Resul
     );
     assert!(
         has_trace_event(&record, "file", "write_applied", |details| {
-            details["workspace"] == "ephemeral"
+            details["workspace"] == "host"
                 && details["published"] == true
                 && details["changed_paths"]
                     .as_array()

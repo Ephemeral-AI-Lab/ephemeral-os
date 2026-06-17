@@ -11,7 +11,7 @@ use crate::DispatchContext;
 
 use super::to_wire_value;
 
-/// Per-caller teardown; a missing isolated workspace is normal.
+/// Per-caller teardown; a missing isolated network is normal.
 pub(crate) fn op_cancel_workspace_runs_by_caller_id(
     input: RunEndInput,
     context: DispatchContext<'_>,

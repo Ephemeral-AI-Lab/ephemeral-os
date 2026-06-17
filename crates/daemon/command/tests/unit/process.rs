@@ -64,7 +64,7 @@ fn take_exit_reads_transcript_and_persist_removes_it() -> Result<(), Box<dyn std
             "stderr": "",
         },
         "command_id": "cmd_1",
-        "workspace": "ephemeral",
+        "workspace": "host",
     });
     let persistence = process.persist_final(&response);
 

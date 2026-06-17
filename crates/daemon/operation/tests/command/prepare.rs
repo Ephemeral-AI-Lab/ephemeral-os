@@ -9,7 +9,7 @@ fn workspace_command_prepares_setns_for_host_and_isolated() -> Result<(), Box<dy
 {
     let root = prepare_root("setns-only");
     let host_dirs = overlay_dirs(&root.join("host-run"));
-    let host_prepared = prepare_ephemeral(
+    let host_prepared = prepare_host(
         prepare_inputs(&root, "host-command", "host"),
         &root.join("workspace"),
         &[root.join("layer")],
@@ -23,12 +23,13 @@ fn workspace_command_prepares_setns_for_host_and_isolated() -> Result<(), Box<dy
     assert_eq!(host_request.ns_fds.expect("host ns_fds").net, None);
 
     let isolated_binding = isolated_binding(&root, all_ns_fds_map());
-    let isolated_prepared = prepare_isolated(
-        prepare_inputs(&root, "isolated-command", "isolated"),
+    let isolated_network_prepared = prepare_isolated_network(
+        prepare_inputs(&root, "isolated-command", "isolated_network"),
         &isolated_binding,
     )
-    .expect("isolated workspace command prepares");
-    let isolated_request: RunRequest = serde_json::from_value(isolated_prepared.run_request)?;
+    .expect("isolated network command prepares");
+    let isolated_request: RunRequest =
+        serde_json::from_value(isolated_network_prepared.run_request)?;
     assert_eq!(isolated_request.mode, RunMode::SetNs);
     assert_eq!(
         isolated_request.ns_fds.expect("isolated ns_fds").net,
@@ -45,7 +46,7 @@ fn workspace_command_missing_holder_fds_fails_without_freshns_fallback(
     let root = prepare_root("missing-holder-fds");
     let host_dirs = overlay_dirs(&root.join("host-run"));
 
-    let host_error = prepare_ephemeral(
+    let host_error = prepare_host(
         prepare_inputs(&root, "host-missing", "host"),
         &root.join("workspace"),
         &[root.join("layer")],
@@ -60,21 +61,21 @@ fn workspace_command_missing_holder_fds_fails_without_freshns_fallback(
         .contains("host workspace command requires setns holder fds"));
 
     let missing_fds_binding = isolated_binding(&root, std::collections::HashMap::new());
-    let isolated_error = prepare_isolated(
-        prepare_inputs(&root, "isolated-missing", "isolated"),
+    let isolated_network_error = prepare_isolated_network(
+        prepare_inputs(&root, "isolated-missing", "isolated_network"),
         &missing_fds_binding,
     )
     .expect_err("isolated command should reject missing holder fds");
-    assert!(isolated_error
+    assert!(isolated_network_error
         .error
         .to_string()
-        .contains("isolated workspace command requires setns holder fds"));
+        .contains("isolated_network workspace command requires setns holder fds"));
 
     let mut missing_net = all_ns_fds_map();
     missing_net.remove("net");
     let missing_net_binding = isolated_binding(&root, missing_net);
-    let missing_net_error = prepare_isolated(
-        prepare_inputs(&root, "isolated-missing-net", "isolated"),
+    let missing_net_error = prepare_isolated_network(
+        prepare_inputs(&root, "isolated-missing-net", "isolated_network"),
         &missing_net_binding,
     )
     .expect_err("isolated command should require net fd");
@@ -106,7 +107,7 @@ fn finish_prepare_records_prepared_and_metadata_artifact_events() {
             remountable: false,
             timeout_seconds: Some(5.0),
             command_dir: command_dir.clone(),
-            workspace_label: "isolated",
+            workspace_label: "isolated_network",
         },
         RunRequest {
             mode: RunMode::FreshNs,
@@ -136,7 +137,10 @@ fn finish_prepare_records_prepared_and_metadata_artifact_events() {
         prepared.trace_events[0].details["command_id"],
         "cmd_prepare"
     );
-    assert_eq!(prepared.trace_events[0].details["workspace"], "isolated");
+    assert_eq!(
+        prepared.trace_events[0].details["workspace"],
+        "isolated_network"
+    );
     assert_eq!(prepared.trace_events[1].name, "artifact_written");
     assert_eq!(prepared.trace_events[1].details["artifact"], "metadata");
     assert_eq!(
@@ -178,7 +182,7 @@ fn finish_prepare_reports_metadata_artifact_write_failure() {
             remountable: false,
             timeout_seconds: Some(5.0),
             command_dir: command_dir.clone(),
-            workspace_label: "isolated",
+            workspace_label: "isolated_network",
         },
         RunRequest {
             mode: RunMode::FreshNs,
@@ -274,10 +278,11 @@ fn all_ns_fds_map() -> std::collections::HashMap<String, i32> {
 fn isolated_binding(
     root: &std::path::Path,
     ns_fds: std::collections::HashMap<String, i32>,
-) -> workspace::network_mode::isolated_network::IsolatedWorkspaceBinding {
-    workspace::network_mode::isolated_network::IsolatedWorkspaceBinding {
+) -> workspace::network_mode::isolated_network::WorkspaceModeBinding {
+    workspace::network_mode::isolated_network::WorkspaceModeBinding {
         caller_id: "caller".to_owned(),
         workspace_handle_id: "workspace-handle".to_owned(),
+        network: workspace::NetworkMode::IsolatedNetwork,
         layer_stack_root: root.join("stack"),
         manifest_version: 1,
         manifest_root_hash: "root".to_owned(),

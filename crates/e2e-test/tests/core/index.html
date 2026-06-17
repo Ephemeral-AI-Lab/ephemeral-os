@@ -103,7 +103,7 @@
     {
       "id": "core-wire-message-and-error-catalog",
       "name": "core-wire-message-and-error-catalog",
-      "description": "Groups the protocol guard and deterministic error catalog: `unknown_op_rejected`, `bad_json_rejected`, `oversized_request_rejected`, `unauthorized_tcp_rejected`, `forbidden_in_isolated_workspace_rejected`, `read_nonexistent`, `read_nonexistent_reports_absent`, `edit_anchor_not_found`, `edit_count_mismatch`, `edit_error_catalog_anchor_not_found_and_count_mismatch`, `write_create_only_conflict`, `read_max_bytes_guard`, `write_max_file_bytes_guard`, and `write_above_legacy_two_mib_cap_succeeds` (config-driven `daemon.files` caps: a 3 MiB write above the legacy 2 MiB cap publishes while over-cap read/write payloads are rejected).",
+      "description": "Groups the protocol guard and deterministic error catalog: `unknown_op_rejected`, `bad_json_rejected`, `oversized_request_rejected`, `unauthorized_tcp_rejected`, `forbidden_in_isolated_network_rejected`, `read_nonexistent`, `read_nonexistent_reports_absent`, `edit_anchor_not_found`, `edit_count_mismatch`, `edit_error_catalog_anchor_not_found_and_count_mismatch`, `write_create_only_conflict`, `read_max_bytes_guard`, `write_max_file_bytes_guard`, and `write_above_legacy_two_mib_cap_succeeds` (config-driven `daemon.files` caps: a 3 MiB write above the legacy 2 MiB cap publishes while over-cap read/write payloads are rejected).",
       "command": "cargo run -p e2e-test --bin e2e-runner -- --suites core --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
         "core-wire-message-guards",

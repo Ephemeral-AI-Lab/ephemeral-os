@@ -113,7 +113,7 @@ Error envelope (both hops):
 
 Daemon error kinds: `invalid_request`, `bad_json`, `request_too_large`,
 `unauthorized`, `unknown_op`, `internal_error`, `forbidden`,
-`forbidden_in_isolated_workspace`, `lifecycle_in_progress`. `internal_error`
+`forbidden_in_isolated_network`, `lifecycle_in_progress`. `internal_error`
 details always carry a generated `error_id`. On the client hop, error
 responses built by `gateway` use the same shape with the §1 kinds.
 

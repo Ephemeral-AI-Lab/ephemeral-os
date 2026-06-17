@@ -1,4 +1,4 @@
-//! Isolated-workspace runtime: lease custody, command lifecycle, idle workspace eviction
+//! Isolated-network runtime: lease custody, command lifecycle, idle workspace eviction
 //! policy, and the caller-keyed workspace-run cancel coordinator.
 //!
 //! The daemon composes this service: it parses wire args, calls one
@@ -20,8 +20,8 @@ use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
-use config::configs::isolated_workspace::{
-    IsolatedWorkspaceConfig, Rfc1918Egress as ConfigRfc1918Egress,
+use config::configs::isolated_network::{
+    IsolatedNetworkConfig, Rfc1918Egress as ConfigRfc1918Egress,
 };
 use layerstack::{
     read_workspace_binding,
@@ -34,19 +34,19 @@ use layerstack::{
 use operation::command::{CommandOps, CommandRemountInspection, ExecTarget, HostCommandWorkspace};
 use operation::isolation::contract::IsolationTestRemountFault;
 use serde_json::Value;
-use workspace::network_mode::host::{EphemeralWorkspace, EphemeralWorkspaceError};
+use workspace::network_mode::host::{HostWorkspace, HostWorkspaceError};
 use workspace::network_mode::isolated_network::{
-    ExitOutcome as IsolatedExitOutcome, IsolatedError, IsolatedManager, IsolatedSnapshot,
-    IsolatedWorkspaceBinding, IsolatedWorkspaceHandle as WorkspaceHandle, RemountProbe,
-    ResourceCaps, Rfc1918Egress as RuntimeRfc1918Egress,
+    ExitOutcome as IsolatedNetworkExitOutcome, IsolatedNetworkError, RemountProbe, ResourceCaps,
+    Rfc1918Egress as RuntimeRfc1918Egress, WorkspaceModeBinding, WorkspaceModeHandle,
+    WorkspaceModeManager, WorkspaceModeSnapshot,
 };
 use workspace::WorkspaceError;
 
 const PERSISTED_HANDLES_SCHEMA_VERSION: u64 = 1;
 const WORKSPACE_BINDING_SEARCH_DEPTH: usize = 4;
 
-fn setup_error(error: impl std::fmt::Display) -> IsolatedError {
-    IsolatedError::SetupFailed {
+fn setup_error(error: impl std::fmt::Display) -> IsolatedNetworkError {
+    IsolatedNetworkError::SetupFailed {
         step: error.to_string(),
     }
 }
@@ -86,7 +86,7 @@ struct BoundState {
     workspace_root: PathBuf,
     layer_stack_root: PathBuf,
     stack: LayerStack,
-    manager: IsolatedManager,
+    manager: WorkspaceModeManager,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -114,8 +114,8 @@ enum WorkspaceCommandRoute {
         caller_id: String,
         workspace: HostWorkspaceLifecycle,
     },
-    Isolated {
-        binding: IsolatedWorkspaceBinding,
+    IsolatedNetwork {
+        binding: WorkspaceModeBinding,
     },
 }
 
@@ -129,7 +129,7 @@ impl WorkspaceCommandRouteContext<'_> {
     pub(crate) fn caller_id(&self) -> &str {
         match &self.route {
             WorkspaceCommandRoute::Host { caller_id, .. } => caller_id,
-            WorkspaceCommandRoute::Isolated { binding } => &binding.caller_id,
+            WorkspaceCommandRoute::IsolatedNetwork { binding } => &binding.caller_id,
         }
     }
 
@@ -137,7 +137,7 @@ impl WorkspaceCommandRouteContext<'_> {
     pub(crate) fn remountable(&self, requested: bool) -> bool {
         match &self.route {
             WorkspaceCommandRoute::Host { .. } => false,
-            WorkspaceCommandRoute::Isolated { .. } => requested,
+            WorkspaceCommandRoute::IsolatedNetwork { .. } => requested,
         }
     }
 
@@ -152,11 +152,11 @@ impl WorkspaceCommandRouteContext<'_> {
             _mode_guard,
         } = self;
         let target = match route {
-            WorkspaceCommandRoute::Host { workspace, .. } => ExecTarget::Ephemeral {
+            WorkspaceCommandRoute::Host { workspace, .. } => ExecTarget::Host {
                 workspace: Box::new(workspace.into_command_workspace()),
                 scratch_root,
             },
-            WorkspaceCommandRoute::Isolated { binding } => ExecTarget::Isolated {
+            WorkspaceCommandRoute::IsolatedNetwork { binding } => ExecTarget::IsolatedNetwork {
                 binding: Box::new(binding),
             },
         };
@@ -167,7 +167,7 @@ impl WorkspaceCommandRouteContext<'_> {
 #[derive(Debug, Clone)]
 pub(crate) enum WorkspaceFileRouteContext {
     Direct { layer_stack_root: PathBuf },
-    Isolated { binding: IsolatedWorkspaceBinding },
+    IsolatedNetwork { binding: WorkspaceModeBinding },
 }
 
 impl WorkspaceFileRouteContext {
@@ -176,12 +176,12 @@ impl WorkspaceFileRouteContext {
         match self {
             Self::Direct { layer_stack_root } => WorkspaceRouteTraceFacts {
                 kind: "fast_path",
-                reason: "no_isolated_workspace_for_caller",
+                reason: "no_isolated_network_for_caller",
                 layer_stack_root: Some(layer_stack_root.clone()),
             },
-            Self::Isolated { .. } => WorkspaceRouteTraceFacts {
-                kind: "isolated_workspace",
-                reason: "caller_has_open_isolated_workspace",
+            Self::IsolatedNetwork { .. } => WorkspaceRouteTraceFacts {
+                kind: "isolated_network",
+                reason: "caller_has_open_isolated_network",
                 layer_stack_root: None,
             },
         }
@@ -191,7 +191,7 @@ impl WorkspaceFileRouteContext {
     pub(crate) fn direct_layer_stack_root(&self) -> Option<&Path> {
         match self {
             Self::Direct { layer_stack_root } => Some(layer_stack_root),
-            Self::Isolated { .. } => None,
+            Self::IsolatedNetwork { .. } => None,
         }
     }
 }
@@ -210,7 +210,7 @@ pub(crate) struct HostWorkspaceLifecycle {
     pub workspace_root: PathBuf,
     pub leased_base: LeasedBaseRevision,
     pub snapshot_normalization: SnapshotNormalization,
-    pub workspace: EphemeralWorkspace,
+    pub workspace: HostWorkspace,
     pub lease: LeaseReleaseHandle,
 }
 
@@ -255,14 +255,14 @@ impl BoundState {
         &mut self,
         caller_id: &str,
         max_depth: usize,
-    ) -> Result<(IsolatedSnapshot, SnapshotNormalization), IsolatedError> {
+    ) -> Result<(WorkspaceModeSnapshot, SnapshotNormalization), IsolatedNetworkError> {
         let command_snapshot = self
             .stack
             .acquire_bounded_snapshot_for_command(&format!("isolated-{caller_id}"), max_depth)
             .map_err(setup_error)?;
         let normalization = snapshot_normalization(command_snapshot.copy_through);
         let lease = command_snapshot.lease;
-        let snapshot = IsolatedSnapshot {
+        let snapshot = WorkspaceModeSnapshot {
             lease_id: lease.lease_id,
             manifest_version: lease.manifest_version,
             manifest_root_hash: lease.root_hash,
@@ -292,7 +292,7 @@ impl BoundState {
         &mut self,
         caller_id: &str,
         grace_s: Option<f64>,
-    ) -> Result<ExitOutcome, IsolatedError> {
+    ) -> Result<ExitOutcome, IsolatedNetworkError> {
         let isolated = self.manager.exit(caller_id, grace_s)?;
         let lease_release = self.release_lease(&isolated.lease_id);
         let active_leases_after = self.stack.active_lease_count();
@@ -309,13 +309,13 @@ impl BoundState {
         caller_id: &str,
         probe: &RemountProbe,
         inspection: Option<&CommandRemountInspection>,
-    ) -> Result<WorkspaceRemountCompactionReport, IsolatedError> {
+    ) -> Result<WorkspaceRemountCompactionReport, IsolatedNetworkError> {
         let before_manifest = self.stack.read_active_manifest().map_err(setup_error)?;
         let before_metrics = self.stack.storage_metrics().map_err(setup_error)?;
         let handle = self
             .manager
             .get_handle(caller_id)
-            .ok_or(IsolatedError::NotOpen)?;
+            .ok_or(IsolatedNetworkError::NotOpen)?;
         let compaction = compact_snapshot_for_remount(
             &self.layer_stack_root,
             handle.manifest_version,
@@ -386,13 +386,13 @@ impl BoundState {
         &mut self,
         caller_id: &str,
         inspection: CommandRemountInspection,
-    ) -> Result<WorkspaceRemountBlockedReport, IsolatedError> {
+    ) -> Result<WorkspaceRemountBlockedReport, IsolatedNetworkError> {
         let before_manifest = self.stack.read_active_manifest().map_err(setup_error)?;
         let before_metrics = self.stack.storage_metrics().map_err(setup_error)?;
         let handle = self
             .manager
             .get_handle(caller_id)
-            .ok_or(IsolatedError::NotOpen)?;
+            .ok_or(IsolatedNetworkError::NotOpen)?;
         let lease_layer_count = handle.layer_paths.len();
         let pinned_bytes = handle
             .layer_paths
@@ -453,7 +453,7 @@ impl BoundState {
 /// inspection object.
 pub struct ExitOutcome {
     /// The namespace/cgroup/scratch teardown outcome from the isolated manager.
-    pub isolated: IsolatedExitOutcome,
+    pub isolated: IsolatedNetworkExitOutcome,
     /// Whether the workspace's snapshot lease was still held at release.
     pub lease_released: Option<bool>,
     /// Lease release failure retained for audit-side trace emission.
@@ -466,11 +466,11 @@ pub struct ExitOutcome {
 pub struct CallerCancel {
     /// Commands that were live at entry (now cancelled + discarded).
     pub cancelled_commands: usize,
-    /// Isolated-workspace teardown result: the typed exit outcome if the
-    /// caller was isolated, `Err(IsolatedError::NotOpen)` if it was ephemeral
-    /// (or had no isolated workspace), or another `IsolatedError` on teardown
+    /// Isolated-network teardown result: the typed exit outcome if the
+    /// caller was isolated, `Err(IsolatedNetworkError::NotOpen)` if it was host
+    /// (or had no isolated network), or another `IsolatedNetworkError` on teardown
     /// failure.
-    pub isolated: Result<ExitOutcome, IsolatedError>,
+    pub isolated: Result<ExitOutcome, IsolatedNetworkError>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -507,7 +507,7 @@ pub(crate) struct IdleWorkspaceEviction {
 }
 
 pub(crate) struct WorkspaceEnterOutcome {
-    pub handle: WorkspaceHandle,
+    pub handle: WorkspaceModeHandle,
     pub recovery: WorkspaceRecoveryReport,
     pub snapshot_normalization: SnapshotNormalization,
 }
@@ -597,25 +597,25 @@ pub(crate) struct WorkspaceRemountBlockedReport {
     pub active_leases_after: usize,
 }
 
-/// Failures from opening an isolated workspace through [`WorkspaceRuntime`].
+/// Failures from opening an isolated network through [`WorkspaceRuntime`].
 #[derive(Debug, thiserror::Error)]
 pub enum WorkspaceEnterError {
     /// The caller has live commands and cannot switch workspace mode.
-    #[error("cannot enter isolated workspace while commands are active")]
+    #[error("cannot enter isolated network while commands are active")]
     ActiveCommands {
         /// Live commands for this caller.
         active_commands: usize,
     },
     /// The isolated-workspace lifecycle failed.
     #[error(transparent)]
-    Isolated(#[from] IsolatedError),
+    IsolatedNetwork(#[from] IsolatedNetworkError),
     /// The isolated-workspace lifecycle failed after acquiring a lease, and the
     /// follow-up lease release may also have failed.
     #[error("{source}")]
     EnterFailed {
         /// The lifecycle error returned to the caller.
         #[source]
-        source: IsolatedError,
+        source: IsolatedNetworkError,
         /// Best-effort lease release report for trace emission.
         lease_release: LeaseReleaseReport,
     },
@@ -628,7 +628,7 @@ pub enum WorkspaceEnterError {
 /// Instance-owned isolated-workspace service state: the typed config plus the
 /// lazily bound layer-stack + manager pair.
 pub struct WorkspaceRuntime {
-    config: IsolatedWorkspaceConfig,
+    config: IsolatedNetworkConfig,
     command: Arc<CommandOps>,
     mode_gate: Mutex<()>,
     state: Mutex<Option<BoundState>>,
@@ -636,7 +636,7 @@ pub struct WorkspaceRuntime {
 
 impl WorkspaceRuntime {
     #[must_use]
-    pub fn new(config: IsolatedWorkspaceConfig, command: Arc<CommandOps>) -> Self {
+    pub fn new(config: IsolatedNetworkConfig, command: Arc<CommandOps>) -> Self {
         Self {
             config,
             command,
@@ -645,20 +645,20 @@ impl WorkspaceRuntime {
         }
     }
 
-    /// Open an isolated workspace for `caller_id` at `workspace_root`: resolve
+    /// Open an isolated network for `caller_id` at `workspace_root`: resolve
     /// the LayerStack binding, bind (or rebind) the manager, acquire a snapshot
     /// lease, and enter. The lease is released again when `enter` fails.
     ///
     /// # Errors
     ///
     /// Returns [`WorkspaceEnterError::ActiveCommands`] when the caller
-    /// has live commands, [`IsolatedError::FeatureDisabled`] when
+    /// has live commands, [`IsolatedNetworkError::FeatureDisabled`] when
     /// isolation is disabled, and the manager's enter/setup errors otherwise.
     pub fn enter(
         &self,
         caller_id: &str,
         workspace_root: &Path,
-    ) -> Result<WorkspaceHandle, WorkspaceEnterError> {
+    ) -> Result<WorkspaceModeHandle, WorkspaceEnterError> {
         self.enter_with_report(caller_id, workspace_root)
             .map(|outcome| outcome.handle)
     }
@@ -694,7 +694,9 @@ impl WorkspaceRuntime {
     ) -> Result<WorkspaceEnterOutcome, WorkspaceEnterError> {
         let recovery = self.ensure_state(resolved)?;
         let mut guard = self.lock_state_cell();
-        let state = guard.as_mut().ok_or(IsolatedError::FeatureDisabled)?;
+        let state = guard
+            .as_mut()
+            .ok_or(IsolatedNetworkError::FeatureDisabled)?;
         let (snapshot, snapshot_normalization) = state.acquire_snapshot(
             caller_id,
             self.command.commit_options().auto_squash_max_depth,
@@ -716,20 +718,20 @@ impl WorkspaceRuntime {
         }
     }
 
-    /// Tear down `caller_id`'s isolated workspace if open: namespace/network/
+    /// Tear down `caller_id`'s isolated network if open: namespace/network/
     /// cgroup, release the lease, discard the upperdir (never published). The
     /// single isolated-teardown primitive shared by the exit op and the
     /// workspace-run cancel surface.
     ///
     /// # Errors
     ///
-    /// Returns [`IsolatedError::NotOpen`] when the caller is not isolated (the
+    /// Returns [`IsolatedNetworkError::NotOpen`] when the caller is not isolated (the
     /// cancel surface treats that as a no-op), and teardown errors otherwise.
     pub fn exit(
         &self,
         caller_id: &str,
         grace_s: Option<f64>,
-    ) -> Result<ExitOutcome, IsolatedError> {
+    ) -> Result<ExitOutcome, IsolatedNetworkError> {
         let _mode_guard = self.lock_mode_gate();
         self.exit_locked(caller_id, grace_s)
     }
@@ -738,8 +740,11 @@ impl WorkspaceRuntime {
     ///
     /// # Errors
     ///
-    /// Returns [`IsolatedError::FeatureDisabled`] when isolation is disabled.
-    pub fn status(&self, caller_id: &str) -> Result<Option<WorkspaceHandle>, IsolatedError> {
+    /// Returns [`IsolatedNetworkError::FeatureDisabled`] when isolation is disabled.
+    pub fn status(
+        &self,
+        caller_id: &str,
+    ) -> Result<Option<WorkspaceModeHandle>, IsolatedNetworkError> {
         self.with_state(|state| Ok(state.manager.get_handle(caller_id)))
     }
 
@@ -800,15 +805,15 @@ impl WorkspaceRuntime {
         resolved_workspace_binding_at(&requested_root, binding)
     }
 
-    pub(crate) fn create_host_workspace_for_legacy_layer_stack_root_locked(
+    pub(crate) fn create_host_for_legacy_layer_stack_root_locked(
         &self,
         caller_id: &str,
         invocation_id: &str,
         layer_stack_root: &Path,
     ) -> Result<HostWorkspaceLifecycle, WorkspaceError> {
         let resolved = self.resolve_legacy_layer_stack_root(layer_stack_root)?;
-        self.create_host_workspace(caller_id, invocation_id, &resolved, |leased_base| {
-            EphemeralWorkspace::create_runtime_host_namespace_overlay(
+        self.create_host(caller_id, invocation_id, &resolved, |leased_base| {
+            HostWorkspace::create_runtime_host_namespace_overlay(
                 "sandbox-overlay",
                 invocation_id,
                 caller_id,
@@ -817,7 +822,7 @@ impl WorkspaceRuntime {
                 self.config.setup_timeout_s,
                 self.config.exit_grace_s,
             )
-            .map_err(host_workspace_setup_error)
+            .map_err(host_setup_error)
         })
     }
 
@@ -832,7 +837,7 @@ impl WorkspaceRuntime {
             invocation_id,
             layer_stack_root,
             |runtime, caller_id, invocation_id, layer_stack_root| {
-                runtime.create_host_workspace_for_legacy_layer_stack_root_locked(
+                runtime.create_host_for_legacy_layer_stack_root_locked(
                     caller_id,
                     invocation_id,
                     layer_stack_root,
@@ -855,8 +860,8 @@ impl WorkspaceRuntime {
             layer_stack_root,
             move |runtime, caller_id, invocation_id, layer_stack_root| {
                 let resolved = runtime.resolve_legacy_layer_stack_root(layer_stack_root)?;
-                runtime.create_host_workspace(caller_id, invocation_id, &resolved, |leased_base| {
-                    EphemeralWorkspace::create_with_host_namespace(
+                runtime.create_host(caller_id, invocation_id, &resolved, |leased_base| {
+                    HostWorkspace::create_with_host_namespace(
                         scratch_root,
                         "sandbox-overlay",
                         invocation_id,
@@ -866,7 +871,7 @@ impl WorkspaceRuntime {
                         runtime.config.setup_timeout_s,
                         runtime.config.exit_grace_s,
                     )
-                    .map_err(host_workspace_setup_error)
+                    .map_err(host_setup_error)
                 })
             },
         )
@@ -877,7 +882,7 @@ impl WorkspaceRuntime {
         caller_id: &str,
         invocation_id: &str,
         layer_stack_root: Option<PathBuf>,
-        create_host_workspace: impl FnOnce(
+        create_host: impl FnOnce(
             &Self,
             &str,
             &str,
@@ -887,10 +892,10 @@ impl WorkspaceRuntime {
         let mode_guard = self.lock_mode_gate();
         if let Some(binding) = self.command_binding_for(caller_id) {
             return Ok(WorkspaceCommandRouteContext {
-                route: WorkspaceCommandRoute::Isolated { binding },
+                route: WorkspaceCommandRoute::IsolatedNetwork { binding },
                 trace: WorkspaceRouteTraceFacts {
-                    kind: "isolated_workspace",
-                    reason: "caller_has_open_isolated_workspace",
+                    kind: "isolated_network",
+                    reason: "caller_has_open_isolated_network",
                     layer_stack_root: None,
                 },
                 _mode_guard: mode_guard,
@@ -898,15 +903,15 @@ impl WorkspaceRuntime {
         }
 
         let requested_root = layer_stack_root.ok_or_else(missing_layer_stack_root_error)?;
-        let workspace = create_host_workspace(self, caller_id, invocation_id, &requested_root)?;
+        let workspace = create_host(self, caller_id, invocation_id, &requested_root)?;
         Ok(WorkspaceCommandRouteContext {
             route: WorkspaceCommandRoute::Host {
                 caller_id: caller_id.to_owned(),
                 workspace,
             },
             trace: WorkspaceRouteTraceFacts {
-                kind: "ephemeral_workspace",
-                reason: "no_isolated_workspace_for_caller",
+                kind: "host",
+                reason: "no_isolated_network_for_caller",
                 layer_stack_root: Some(requested_root),
             },
             _mode_guard: mode_guard,
@@ -919,7 +924,7 @@ impl WorkspaceRuntime {
         layer_stack_root: Option<&Path>,
     ) -> Result<WorkspaceFileRouteContext, WorkspaceError> {
         if let Some(binding) = self.command_binding_for(caller_id) {
-            return Ok(WorkspaceFileRouteContext::Isolated { binding });
+            return Ok(WorkspaceFileRouteContext::IsolatedNetwork { binding });
         }
         Self::direct_file_context(layer_stack_root)
     }
@@ -934,13 +939,13 @@ impl WorkspaceRuntime {
     }
 
     pub(crate) fn complete_file_route(&self, route: &WorkspaceFileRouteContext) {
-        if let WorkspaceFileRouteContext::Isolated { binding } = route {
+        if let WorkspaceFileRouteContext::IsolatedNetwork { binding } = route {
             self.touch(&binding.caller_id);
         }
     }
 
     #[cfg(test)]
-    pub(crate) fn create_host_workspace_for_legacy_layer_stack_root_with_scratch_root_for_test(
+    pub(crate) fn create_host_for_legacy_layer_stack_root_with_scratch_root_for_test(
         &self,
         caller_id: &str,
         invocation_id: &str,
@@ -949,8 +954,8 @@ impl WorkspaceRuntime {
     ) -> Result<HostWorkspaceLifecycle, WorkspaceError> {
         let _mode_guard = self.lock_mode_gate();
         let resolved = self.resolve_legacy_layer_stack_root(layer_stack_root)?;
-        self.create_host_workspace(caller_id, invocation_id, &resolved, |leased_base| {
-            EphemeralWorkspace::create_with_host_namespace(
+        self.create_host(caller_id, invocation_id, &resolved, |leased_base| {
+            HostWorkspace::create_with_host_namespace(
                 scratch_root,
                 "sandbox-overlay",
                 invocation_id,
@@ -960,16 +965,16 @@ impl WorkspaceRuntime {
                 self.config.setup_timeout_s,
                 self.config.exit_grace_s,
             )
-            .map_err(host_workspace_setup_error)
+            .map_err(host_setup_error)
         })
     }
 
-    fn create_host_workspace(
+    fn create_host(
         &self,
         caller_id: &str,
         invocation_id: &str,
         resolved: &ResolvedWorkspaceRoot,
-        create_workspace: impl FnOnce(&LeasedBaseRevision) -> Result<EphemeralWorkspace, WorkspaceError>,
+        create_workspace: impl FnOnce(&LeasedBaseRevision) -> Result<HostWorkspace, WorkspaceError>,
     ) -> Result<HostWorkspaceLifecycle, WorkspaceError> {
         let (leased_base, snapshot_normalization) =
             self.acquire_host_base_revision(resolved, caller_id, invocation_id)?;
@@ -1081,11 +1086,11 @@ impl WorkspaceRuntime {
         workspace_root: &Path,
         probe: RemountProbe,
         test_force_block_reason: Option<IsolationTestRemountFault>,
-    ) -> Result<WorkspaceRemountCompactionAttempt, IsolatedError> {
+    ) -> Result<WorkspaceRemountCompactionAttempt, IsolatedNetworkError> {
         let _mode_guard = self.lock_mode_gate();
         let resolved = self
             .resolve_workspace_root(workspace_root)
-            .map_err(workspace_error_as_isolated_error)?;
+            .map_err(workspace_error_as_isolated_network_error)?;
         self.compact_remount_open_workspace_for_test_resolved_locked(
             caller_id,
             &resolved,
@@ -1100,11 +1105,11 @@ impl WorkspaceRuntime {
         layer_stack_root: &Path,
         probe: RemountProbe,
         test_force_block_reason: Option<IsolationTestRemountFault>,
-    ) -> Result<WorkspaceRemountCompactionAttempt, IsolatedError> {
+    ) -> Result<WorkspaceRemountCompactionAttempt, IsolatedNetworkError> {
         let _mode_guard = self.lock_mode_gate();
         let resolved = self
             .resolve_legacy_layer_stack_root(layer_stack_root)
-            .map_err(workspace_error_as_isolated_error)?;
+            .map_err(workspace_error_as_isolated_network_error)?;
         self.compact_remount_open_workspace_for_test_resolved_locked(
             caller_id,
             &resolved,
@@ -1119,7 +1124,7 @@ impl WorkspaceRuntime {
         resolved: &ResolvedWorkspaceRoot,
         probe: RemountProbe,
         test_force_block_reason: Option<IsolationTestRemountFault>,
-    ) -> Result<WorkspaceRemountCompactionAttempt, IsolatedError> {
+    ) -> Result<WorkspaceRemountCompactionAttempt, IsolatedNetworkError> {
         self.ensure_state(resolved)?;
         self.with_state(|state| state.manager.mark_remount_pending(caller_id))?;
         let result = self.compact_remount_open_workspace_marked_pending(
@@ -1136,7 +1141,7 @@ impl WorkspaceRuntime {
         caller_id: &str,
         probe: RemountProbe,
         test_force_block_reason: Option<IsolationTestRemountFault>,
-    ) -> Result<WorkspaceRemountCompactionAttempt, IsolatedError> {
+    ) -> Result<WorkspaceRemountCompactionAttempt, IsolatedNetworkError> {
         let mut quiesce = self.command.begin_live_remount_for_caller(caller_id);
         if let Some(fault) = test_force_block_reason {
             let inspection = forced_remount_block_inspection(quiesce.finish(), fault);
@@ -1172,7 +1177,7 @@ impl WorkspaceRuntime {
         .map(WorkspaceRemountCompactionAttempt::Compacted)
     }
 
-    /// Caller ids with an open isolated workspace (empty when disabled).
+    /// Caller ids with an open isolated network (empty when disabled).
     #[must_use]
     pub fn list_open(&self) -> Vec<String> {
         self.lock_state_cell()
@@ -1190,7 +1195,7 @@ impl WorkspaceRuntime {
         }
     }
 
-    /// Whether `caller_id` currently owns an open isolated workspace.
+    /// Whether `caller_id` currently owns an open isolated network.
     #[must_use]
     pub fn caller_has_active_handle(&self, caller_id: &str) -> bool {
         let caller_id = caller_id.trim();
@@ -1205,9 +1210,9 @@ impl WorkspaceRuntime {
     }
 
     /// The command binding for `caller_id`'s open workspace, or `None`
-    /// when the caller is not isolated (callers then route ephemerally).
+    /// when the caller is not isolated (callers then route through host mode).
     #[must_use]
-    pub fn command_binding_for(&self, caller_id: &str) -> Option<IsolatedWorkspaceBinding> {
+    pub fn command_binding_for(&self, caller_id: &str) -> Option<WorkspaceModeBinding> {
         if caller_id.is_empty() {
             return None;
         }
@@ -1224,7 +1229,7 @@ impl WorkspaceRuntime {
     }
 
     /// Cancel every workspace run owned by `caller_id`: discard its commands,
-    /// then exit its isolated workspace if open. The order matters: commands
+    /// then exit its isolated network if open. The order matters: commands
     /// are cancelled before the isolated namespace/lease teardown.
     pub fn cancel_runs_for_caller(&self, caller_id: &str, grace_s: Option<f64>) -> CallerCancel {
         let _mode_guard = self.lock_mode_gate();
@@ -1247,7 +1252,7 @@ impl WorkspaceRuntime {
         (cancelled_commands, isolated_exited)
     }
 
-    /// Exit every open isolated workspace and reap orphaned resources (the
+    /// Exit every open isolated network and reap orphaned resources (the
     /// whole-sandbox cancel cleanup). Returns the number of callers exited.
     fn exit_all_and_reap(&self, grace_s: Option<f64>) -> usize {
         let mut guard = self.lock_state_cell();
@@ -1266,11 +1271,11 @@ impl WorkspaceRuntime {
         &self,
         caller_id: &str,
         grace_s: Option<f64>,
-    ) -> Result<ExitOutcome, IsolatedError> {
+    ) -> Result<ExitOutcome, IsolatedNetworkError> {
         self.with_state(|state| state.exit_caller(caller_id, grace_s))
     }
 
-    /// Evict idle isolated workspaces past their TTL, releasing their leases.
+    /// Evict idle isolated networks past their TTL, releasing their leases.
     /// Callers that still own a live command are protected.
     pub(crate) fn evict_idle_workspaces_report(&self) -> IdleWorkspaceEvictionReport {
         let _mode_guard = self.lock_mode_gate();
@@ -1350,7 +1355,7 @@ impl WorkspaceRuntime {
     fn ensure_state(
         &self,
         root: &ResolvedWorkspaceRoot,
-    ) -> Result<WorkspaceRecoveryReport, IsolatedError> {
+    ) -> Result<WorkspaceRecoveryReport, IsolatedNetworkError> {
         let layer_stack_root = root.layer_stack_root.clone();
         let workspace_root = root.workspace_root.clone();
         let mut recovery = WorkspaceRecoveryReport::default();
@@ -1360,16 +1365,16 @@ impl WorkspaceRuntime {
                 if state.layer_stack_root != layer_stack_root
                     || state.workspace_root != workspace_root
                 {
-                    // Block rebinding to a new root only while an isolated workspace
+                    // Block rebinding to a new root only while an isolated network
                     // is open: those handles pin leases/namespaces on the old root.
                     // (Isolated commands belong to an open caller, so this
-                    // already covers them; ephemeral commands are unrelated
+                    // already covers them; host commands are unrelated
                     // to the isolated manager's binding and must not block a rebind.)
                     let open_callers = state.manager.list_open_callers();
                     if !open_callers.is_empty() {
-                        return Err(IsolatedError::SetupFailed {
+                        return Err(IsolatedNetworkError::SetupFailed {
                             step: format!(
-                                "isolated workspace manager is bound to workspace_root {} and layer_stack_root {} with active callers",
+                                "isolated network manager is bound to workspace_root {} and layer_stack_root {} with active callers",
                                 state.workspace_root.display(),
                                 state.layer_stack_root.display()
                             ),
@@ -1383,12 +1388,12 @@ impl WorkspaceRuntime {
             if guard.is_none() {
                 let mut caps = resource_caps_from_config(&self.config);
                 if !caps.enabled {
-                    return Err(IsolatedError::FeatureDisabled);
+                    return Err(IsolatedNetworkError::FeatureDisabled);
                 }
                 caps.eos_workspace_root = root.workspace_root.to_string_lossy().into_owned();
                 let mut stack = LayerStack::open(layer_stack_root.clone()).map_err(setup_error)?;
                 let mut manager =
-                    IsolatedManager::with_scratch_root(caps, self.config.scratch_root.clone());
+                    WorkspaceModeManager::with_scratch_root(caps, self.config.scratch_root.clone());
                 let cleanup = manager.initialize_report()?;
                 recovery.attempted = true;
                 recovery.merge_orphan_cleanup_error(cleanup.cleanup_error);
@@ -1412,11 +1417,11 @@ impl WorkspaceRuntime {
 
     fn with_state<T>(
         &self,
-        f: impl FnOnce(&mut BoundState) -> Result<T, IsolatedError>,
-    ) -> Result<T, IsolatedError> {
+        f: impl FnOnce(&mut BoundState) -> Result<T, IsolatedNetworkError>,
+    ) -> Result<T, IsolatedNetworkError> {
         self.lock_state_cell()
             .as_mut()
-            .ok_or(IsolatedError::FeatureDisabled)
+            .ok_or(IsolatedNetworkError::FeatureDisabled)
             .and_then(f)
     }
 
@@ -1436,8 +1441,8 @@ impl WorkspaceRuntime {
         if self.config.enabled {
             Ok(())
         } else {
-            Err(WorkspaceEnterError::Isolated(
-                IsolatedError::FeatureDisabled,
+            Err(WorkspaceEnterError::IsolatedNetwork(
+                IsolatedNetworkError::FeatureDisabled,
             ))
         }
     }
@@ -1457,11 +1462,12 @@ impl WorkspaceRuntime {
 
 fn command_binding_from(
     layer_stack_root: &Path,
-    handle: WorkspaceHandle,
-) -> IsolatedWorkspaceBinding {
-    IsolatedWorkspaceBinding {
+    handle: WorkspaceModeHandle,
+) -> WorkspaceModeBinding {
+    WorkspaceModeBinding {
         caller_id: handle.caller_id,
         workspace_handle_id: handle.workspace_id.0,
+        network: handle.network,
         layer_stack_root: layer_stack_root.to_path_buf(),
         manifest_version: handle.manifest_version,
         manifest_root_hash: handle.manifest_root_hash,
@@ -1632,7 +1638,7 @@ fn workspace_setup_error(error: layerstack::LayerStackError) -> WorkspaceError {
     }
 }
 
-fn host_workspace_setup_error(error: EphemeralWorkspaceError) -> WorkspaceError {
+fn host_setup_error(error: HostWorkspaceError) -> WorkspaceError {
     WorkspaceError::Setup {
         step: error.to_string(),
     }
@@ -1668,12 +1674,12 @@ fn missing_layer_stack_root_error() -> WorkspaceError {
     }
 }
 
-fn workspace_error_as_isolated_error(error: WorkspaceError) -> IsolatedError {
+fn workspace_error_as_isolated_network_error(error: WorkspaceError) -> IsolatedNetworkError {
     match error {
         error @ WorkspaceError::InvalidRequest { .. } => {
-            IsolatedError::InvalidArgument(error.to_string())
+            IsolatedNetworkError::InvalidArgument(error.to_string())
         }
-        error => IsolatedError::SetupFailed {
+        error => IsolatedNetworkError::SetupFailed {
             step: error.to_string(),
         },
     }
@@ -1726,7 +1732,7 @@ fn best_effort_file_bytes(path: &Path) -> u64 {
     })
 }
 
-fn resource_caps_from_config(config: &IsolatedWorkspaceConfig) -> ResourceCaps {
+fn resource_caps_from_config(config: &IsolatedNetworkConfig) -> ResourceCaps {
     ResourceCaps {
         enabled: config.enabled,
         ttl_s: config.ttl_s,

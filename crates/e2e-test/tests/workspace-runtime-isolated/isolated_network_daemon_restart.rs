@@ -3,12 +3,12 @@ use protocol::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
-    as_bool, as_i64, as_str, envelope_result, live_pool_or_skip, reset_isolated_workspaces,
+    as_bool, as_i64, as_str, envelope_result, live_pool_or_skip, reset_isolated_networks,
     wait_for_active_leases,
 };
 
 /// A daemon restart runs `reap_persisted_orphans`
-/// (`eos-sandbox/crates/workspace/src/isolated_workspace/manager/recovery.rs`): it clears
+/// (`eos-sandbox/crates/workspace/src/isolated_network/manager/recovery.rs`): it clears
 /// in-memory handles, releases each persisted snapshot lease, kills holders, and
 /// removes veth/cgroup/scratch before serving enters. No e2e exercised that
 /// path. Here an isolated handle is opened (holding a snapshot lease), the daemon
@@ -21,7 +21,7 @@ fn daemon_restart_reaps_orphaned_isolated_handle() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
 
     let caller = format!("restart-iws-{}", e2e_test::unique_suffix());
     let enter = lease.call(

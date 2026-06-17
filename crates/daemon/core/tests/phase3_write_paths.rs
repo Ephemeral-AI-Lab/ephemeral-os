@@ -34,7 +34,7 @@ fn dispatches_layerstack_write_file_and_reads_published_bytes() -> TestResult {
         "{response}"
     );
     let result = &response["result"];
-    assert_eq!(result["workspace"], Value::String("ephemeral".to_owned()));
+    assert_eq!(result["workspace"], Value::String("host".to_owned()));
     assert_eq!(result["changed_paths"], json!(["new.txt"]));
     assert_eq!(result["changed_path_kinds"], json!({"new.txt": "write"}));
     assert_eq!(

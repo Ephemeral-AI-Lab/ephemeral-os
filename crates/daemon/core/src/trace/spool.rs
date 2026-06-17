@@ -123,7 +123,7 @@ pub(crate) fn idle_workspace_evict_record(
         SpanUid::ROOT,
         None,
         "workspace.idle.evict",
-        SpanKind::IsolatedWorkspace,
+        SpanKind::IsolatedNetwork,
         json!({
             "evicted_count": report.evicted.len(),
         }),
@@ -141,7 +141,7 @@ pub(crate) fn idle_workspace_evict_record(
         let mut event = EventRecord::new(
             SpanUid::ROOT,
             "workspace_evicted",
-            "isolated_workspace",
+            "isolated_network",
             json!({
                 "caller_id": eviction.caller_id,
                 "workspace_handle_id": eviction.workspace_handle_id,
@@ -220,9 +220,9 @@ mod tests {
         let record = idle_workspace_evict_record(&report);
 
         assert_eq!(record.kind, TraceKind::IdleWorkspaceEvict);
-        assert_eq!(record.spans[0].kind, SpanKind::IsolatedWorkspace);
+        assert_eq!(record.spans[0].kind, SpanKind::IsolatedNetwork);
         let event = record.events.first().expect("eviction event");
-        assert_eq!(event.module, "isolated_workspace");
+        assert_eq!(event.module, "isolated_network");
         assert_eq!(event.name, "workspace_evicted");
         assert_eq!(event.details.value["caller_id"], "caller");
         assert_eq!(

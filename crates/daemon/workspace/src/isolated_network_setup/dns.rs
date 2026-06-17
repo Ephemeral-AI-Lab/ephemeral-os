@@ -9,16 +9,16 @@ use serde_json::{json, Value};
 use crate::namespace::NamespaceRuntime;
 #[cfg(target_os = "linux")]
 use crate::namespace::{ns_runner_request, run_child};
-use crate::network_mode::isolated_network::IsolatedError;
-use crate::network_mode::isolated_network::{DnsConfiguration, WorkspaceHandle};
+use crate::network_mode::isolated_network::IsolatedNetworkError;
+use crate::network_mode::isolated_network::{DnsConfiguration, WorkspaceModeHandle};
 
 impl NamespaceRuntime {
     pub(crate) fn configure_dns(
         &self,
-        handle: &WorkspaceHandle,
+        handle: &WorkspaceModeHandle,
         fallback_dns: &str,
         setup_timeout_s: f64,
-    ) -> Result<DnsConfiguration, IsolatedError> {
+    ) -> Result<DnsConfiguration, IsolatedNetworkError> {
         if self.stub || handle.holder_pid <= 0 {
             return Ok(DnsConfiguration::default());
         }
@@ -45,10 +45,10 @@ impl NamespaceRuntime {
 fn configure_dns_child(
     request: &RunRequest,
     setup_timeout_s: f64,
-) -> Result<DnsConfiguration, IsolatedError> {
+) -> Result<DnsConfiguration, IsolatedNetworkError> {
     let output = run_child(request, "--configure-dns", Stdio::piped(), setup_timeout_s)?;
     if !output.status.success() {
-        return Err(IsolatedError::SetupFailed {
+        return Err(IsolatedNetworkError::SetupFailed {
             step: format!(
                 "ns-runner configure dns failed with status {}: {}",
                 output.status,
@@ -57,7 +57,7 @@ fn configure_dns_child(
         });
     }
     let result = serde_json::from_slice::<RunResult>(&output.stdout).map_err(|err| {
-        IsolatedError::SetupFailed {
+        IsolatedNetworkError::SetupFailed {
             step: format!("invalid ns-runner configure dns output: {err}"),
         }
     })?;

@@ -1,4 +1,4 @@
-use crate::command::registry::{CompletionBufferEviction, EphemeralRun};
+use crate::command::registry::{CompletionBufferEviction, HostRun};
 use command::process::{
     CommandFinalResponsePersistence, CommandPersistenceOutcome, CommandProcessExit, KillReason,
 };
@@ -176,7 +176,7 @@ fn host_workspace_lease_releases_when_command_validation_rejects_before_start(
     let error = ops
         .exec_command_with_trace(
             start_command("   "),
-            ExecTarget::Ephemeral {
+            ExecTarget::Host {
                 workspace: Box::new(host_workspace),
                 scratch_root: ops.scratch_root(),
             },
@@ -212,7 +212,7 @@ fn host_workspace_lease_releases_when_command_admission_rejects_before_start(
     let error = ops
         .exec_command_with_trace(
             start_command("echo should-not-start"),
-            ExecTarget::Ephemeral {
+            ExecTarget::Host {
                 workspace: Box::new(host_workspace),
                 scratch_root: ops.scratch_root(),
             },
@@ -253,7 +253,7 @@ fn host_workspace_lease_releases_when_command_finalizes() -> Result<(), Box<dyn 
         command: "echo cancelled".to_owned(),
         timeout_seconds: None,
     });
-    let run = Arc::new(ActiveCommand::Ephemeral(EphemeralRun {
+    let run = Arc::new(ActiveCommand::Host(HostRun {
         process,
         trace_origin: CommandTraceOrigin::default(),
         root: command_root,
@@ -788,12 +788,13 @@ fn inactive_isolated_run(id: &str, caller_id: &str, root: &std::path::Path) -> A
         command: "cat".to_owned(),
         timeout_seconds: None,
     });
-    Arc::new(ActiveCommand::Isolated(IsolatedRun {
+    Arc::new(ActiveCommand::IsolatedNetwork(IsolatedNetworkRun {
         process,
         trace_origin: CommandTraceOrigin::default(),
-        binding: IsolatedWorkspaceBinding {
+        binding: WorkspaceModeBinding {
             caller_id: caller_id.to_owned(),
             workspace_handle_id: "workspace-handle".to_owned(),
+            network: workspace::NetworkMode::IsolatedNetwork,
             layer_stack_root,
             manifest_version: 1,
             manifest_root_hash: "root".to_owned(),
@@ -825,11 +826,8 @@ fn host_command_workspace_fixture(
     layerstack::build_workspace_base(&layer_stack_root, &workspace_root, true)?;
     let command_snapshot =
         layerstack::service::acquire_bounded_snapshot_for_command(&layer_stack_root, id, 64)?;
-    let workspace = workspace::network_mode::host::EphemeralWorkspace::create(
-        &host_scratch,
-        "sandbox-overlay",
-        id,
-    )?;
+    let workspace =
+        workspace::network_mode::host::HostWorkspace::create(&host_scratch, "sandbox-overlay", id)?;
     let lease = LeaseReleaseHandle::new(
         layer_stack_root.clone(),
         command_snapshot.snapshot.lease_id.clone(),

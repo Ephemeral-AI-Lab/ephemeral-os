@@ -15,10 +15,10 @@ pub use self::state::PluginRuntime;
 /// onto its own error algebra or typed rejected envelope.
 #[derive(Debug, thiserror::Error)]
 pub enum PluginRuntimeError {
-    /// The caller currently owns an isolated workspace handle and may not use
+    /// The caller currently owns an isolated network handle and may not use
     /// shared plugin provider ops.
-    #[error("plugin ops are forbidden while caller has an isolated workspace")]
-    ForbiddenInIsolatedWorkspace,
+    #[error("plugin ops are forbidden while caller has an isolated network")]
+    ForbiddenInIsolatedNetwork,
 
     /// The runtime's state mutex was poisoned.
     #[error("daemon state lock poisoned: {0}")]

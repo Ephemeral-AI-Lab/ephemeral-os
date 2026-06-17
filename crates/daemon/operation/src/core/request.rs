@@ -80,12 +80,12 @@ pub enum OpRequest {
     PyrightLspDefinition(PyrightLspDefinitionInput),
     PyrightLspReferences(PyrightLspReferencesInput),
     PyrightLspDiagnostics(PyrightLspDiagnosticsInput),
-    IsolatedWorkspaceEnter(IsolationEnterInput),
-    IsolatedWorkspaceExit(IsolationExitInput),
-    IsolatedWorkspaceStatus(IsolationStatusInput),
-    IsolatedWorkspaceListOpen,
-    IsolatedWorkspaceTestReset,
-    IsolatedWorkspaceTestCompactRemount(IsolationTestCompactRemountInput),
+    IsolatedNetworkEnter(IsolationEnterInput),
+    IsolatedNetworkExit(IsolationExitInput),
+    IsolatedNetworkStatus(IsolationStatusInput),
+    IsolatedNetworkListOpen,
+    IsolatedNetworkTestReset,
+    IsolatedNetworkTestCompactRemount(IsolationTestCompactRemountInput),
     ExecCommand(ExecCommandInput),
     WriteStdin(WriteStdinInput),
     CommandReadProgress(ReadProgressInput),
@@ -153,19 +153,19 @@ impl OpRequest {
             BuiltinOp::PyrightLspDiagnostics => {
                 Self::PyrightLspDiagnostics(PyrightLspDiagnosticsInput::parse(args)?)
             }
-            BuiltinOp::IsolatedWorkspaceEnter => {
-                Self::IsolatedWorkspaceEnter(IsolationEnterInput::parse(args)?)
+            BuiltinOp::IsolatedNetworkEnter => {
+                Self::IsolatedNetworkEnter(IsolationEnterInput::parse(args)?)
             }
-            BuiltinOp::IsolatedWorkspaceExit => {
-                Self::IsolatedWorkspaceExit(IsolationExitInput::parse(args)?)
+            BuiltinOp::IsolatedNetworkExit => {
+                Self::IsolatedNetworkExit(IsolationExitInput::parse(args)?)
             }
-            BuiltinOp::IsolatedWorkspaceStatus => {
-                Self::IsolatedWorkspaceStatus(IsolationStatusInput::parse(args)?)
+            BuiltinOp::IsolatedNetworkStatus => {
+                Self::IsolatedNetworkStatus(IsolationStatusInput::parse(args)?)
             }
-            BuiltinOp::IsolatedWorkspaceListOpen => Self::IsolatedWorkspaceListOpen,
-            BuiltinOp::IsolatedWorkspaceTestReset => Self::IsolatedWorkspaceTestReset,
-            BuiltinOp::IsolatedWorkspaceTestCompactRemount => {
-                Self::IsolatedWorkspaceTestCompactRemount(IsolationTestCompactRemountInput::parse(
+            BuiltinOp::IsolatedNetworkListOpen => Self::IsolatedNetworkListOpen,
+            BuiltinOp::IsolatedNetworkTestReset => Self::IsolatedNetworkTestReset,
+            BuiltinOp::IsolatedNetworkTestCompactRemount => {
+                Self::IsolatedNetworkTestCompactRemount(IsolationTestCompactRemountInput::parse(
                     args,
                 )?)
             }

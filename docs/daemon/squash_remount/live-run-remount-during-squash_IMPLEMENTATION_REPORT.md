@@ -98,7 +98,7 @@ Key flow:
 
 ```text
 1. Resolve the layer stack root.
-2. Mark the isolated workspace handle as remount_pending.
+2. Mark the isolated-network workspace handle as remount_pending.
 3. Begin command quiesce for the caller.
 4. If all active commands are safe:
    a. compact the mounted snapshot,
@@ -142,8 +142,8 @@ The blocked path reports:
 
 Main files:
 
-- `crates/daemon/workspace/src/isolated_workspace/manager/lifecycle.rs`
-- `crates/daemon/workspace/src/isolated_workspace/remount.rs`
+- `crates/daemon/workspace/src/isolated_network/manager/lifecycle.rs`
+- `crates/daemon/workspace/src/isolated_network/remount.rs`
 
 `IsolatedManager::remount_with_layers` validates the caller and new layer list,
 calls the runtime overlay remount, rejects the operation unless the runtime

@@ -289,7 +289,7 @@ fn execute_plugin_service(
         exit_code,
         payload: serde_json::json!({
             "success": exit_code == 0,
-            "workspace": "ephemeral",
+            "workspace": "host",
             "timings": timings.into_json(run_start),
             "status": result_status(exit_code, timed_out),
         }),
@@ -387,7 +387,7 @@ fn execute_shell(
         exit_code,
         payload: serde_json::json!({
             "success": exit_code == 0,
-            "workspace": "ephemeral",
+            "workspace": "host",
             "timings": timings.into_json(run_start),
             "conflict": null,
             "conflict_reason": null,
@@ -460,7 +460,7 @@ fn error_result(exit_code: i32, kind: &str, message: &str) -> RunResult {
         exit_code,
         payload: serde_json::json!({
             "success": false,
-            "workspace": "ephemeral",
+            "workspace": "host",
             "status": "error",
             "error": {
                 "kind": kind,

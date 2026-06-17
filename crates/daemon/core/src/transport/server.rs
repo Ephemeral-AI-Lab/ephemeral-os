@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use config::configs::{
     daemon::{DaemonConfig, FileLimitsConfig},
-    isolated_workspace::IsolatedWorkspaceConfig,
+    isolated_network::IsolatedNetworkConfig,
 };
 use tokio_util::sync::CancellationToken;
 
@@ -63,7 +63,7 @@ impl DaemonServer {
             config,
             services: Arc::new(RuntimeServices::new(
                 config::configs::daemon::PluginRuntimeConfig::default(),
-                IsolatedWorkspaceConfig::default(),
+                IsolatedNetworkConfig::default(),
                 command::CommandConfig::default(),
             )),
             file_limits: FileLimitsConfig {
@@ -85,7 +85,7 @@ impl DaemonServer {
     pub fn with_daemon_config(
         config: ServerConfig,
         daemon_config: &DaemonConfig,
-        isolated_config: &IsolatedWorkspaceConfig,
+        isolated_config: &IsolatedNetworkConfig,
     ) -> Self {
         Self {
             config,

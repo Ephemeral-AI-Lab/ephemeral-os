@@ -30,11 +30,11 @@ pub struct IsolatedBackend {
 
 impl FileBackend for IsolatedBackend {
     fn workspace_kind(&self) -> WorkspaceKind {
-        WorkspaceKind::Isolated
+        WorkspaceKind::IsolatedNetwork
     }
 
     fn mutation_source(&self, _kind: MutationKind) -> MutationSource {
-        MutationSource::IsolatedWorkspace
+        MutationSource::IsolatedNetwork
     }
 
     fn resolve_path(&self, request_path: &str) -> Result<ResolvedWorkspacePath, FileOpsError> {
@@ -87,7 +87,7 @@ impl FileBackend for IsolatedBackend {
                 mutation_source: Some(self.mutation_source(mutation.kind)),
                 timings: self.timings(1),
             },
-            workspace_kind: WorkspaceKind::Isolated,
+            workspace_kind: WorkspaceKind::IsolatedNetwork,
             published: false,
             status: MutationStatus::Committed,
             ..MutationOutcome::default()

@@ -6,7 +6,7 @@ use protocol::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
-    as_i64, as_str, live_pool_or_skip, reset_isolated_workspaces, wait_for_active_leases,
+    as_i64, as_str, live_pool_or_skip, reset_isolated_networks, wait_for_active_leases,
 };
 
 #[test]
@@ -91,7 +91,7 @@ fn squash_keeps_multiple_pinned_statuses_while_live_manifest_collapses() -> Resu
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let suffix = e2e_test::unique_suffix();
     let callers = [
         format!("layerstack-gap-lease-a-{suffix}"),

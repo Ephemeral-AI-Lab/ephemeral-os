@@ -2,14 +2,16 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use super::isolated_network::{
-    DnsConfiguration, IsolatedError, IsolatedWorkspaceId, WorkspaceHandle, WorkspaceRemountState,
+    DnsConfiguration, IsolatedNetworkError, WorkspaceModeHandle, WorkspaceModeId,
+    WorkspaceRemountState,
 };
+use crate::model::NetworkMode;
 use crate::namespace::{NamespacePlan, NamespaceRuntime};
 use crate::overlay::dirs::{allocate_overlay_dirs, OverlayDirs};
 
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
-pub enum EphemeralWorkspaceError {
+pub enum HostWorkspaceError {
     /// Fresh writable directory allocation failed.
     #[error("dir allocation failed at {}: {reason}", path.display())]
     DirAllocation { path: PathBuf, reason: String },
@@ -18,7 +20,7 @@ pub enum EphemeralWorkspaceError {
     NamespaceSetup { step: String },
 }
 
-impl From<crate::overlay::dirs::DirAllocationError> for EphemeralWorkspaceError {
+impl From<crate::overlay::dirs::DirAllocationError> for HostWorkspaceError {
     fn from(error: crate::overlay::dirs::DirAllocationError) -> Self {
         Self::DirAllocation {
             path: error.path,
@@ -27,8 +29,8 @@ impl From<crate::overlay::dirs::DirAllocationError> for EphemeralWorkspaceError 
     }
 }
 
-impl EphemeralWorkspaceError {
-    pub(crate) fn namespace_setup(error: IsolatedError) -> Self {
+impl HostWorkspaceError {
+    pub(crate) fn namespace_setup(error: IsolatedNetworkError) -> Self {
         Self::NamespaceSetup {
             step: error.to_string(),
         }
@@ -40,13 +42,13 @@ impl EphemeralWorkspaceError {
 /// Dropping the workspace removes its run directory (best-effort), so the caller
 /// can capture the upperdir on success or just drop on cancel/discard.
 #[derive(Debug)]
-pub struct EphemeralWorkspace {
+pub struct HostWorkspace {
     dirs: OverlayDirs,
-    holder: Option<EphemeralHolder>,
+    holder: Option<HostHolder>,
 }
 
 #[derive(Debug)]
-struct EphemeralHolder {
+struct HostHolder {
     holder_pid: i32,
     readiness_fd: i32,
     control_fd: i32,
@@ -106,20 +108,20 @@ impl WorkspaceNamespaceFds {
     }
 }
 
-impl EphemeralWorkspace {
+impl HostWorkspace {
     /// Allocate fresh overlay dirs under `scratch_root` for one operation.
     ///
     /// `kind` and `token` only shape the scratch directory name (sanitized).
     ///
     /// # Errors
     ///
-    /// Returns [`EphemeralWorkspaceError::DirAllocation`] when scratch
+    /// Returns [`HostWorkspaceError::DirAllocation`] when scratch
     /// directories cannot be created.
     pub fn create(
         scratch_root: &Path,
         kind: &str,
         token: &str,
-    ) -> Result<Self, EphemeralWorkspaceError> {
+    ) -> Result<Self, HostWorkspaceError> {
         let dirs = allocate_overlay_dirs(scratch_root, kind, token)?;
         Ok(Self { dirs, holder: None })
     }
@@ -131,12 +133,9 @@ impl EphemeralWorkspace {
     ///
     /// # Errors
     ///
-    /// Returns [`EphemeralWorkspaceError::DirAllocation`] when scratch
+    /// Returns [`HostWorkspaceError::DirAllocation`] when scratch
     /// directories cannot be created.
-    pub fn create_runtime_overlay(
-        kind: &str,
-        token: &str,
-    ) -> Result<Self, EphemeralWorkspaceError> {
+    pub fn create_runtime_overlay(kind: &str, token: &str) -> Result<Self, HostWorkspaceError> {
         let dirs = crate::overlay::dirs::overlay_run_dirs(kind, token)?;
         Ok(Self { dirs, holder: None })
     }
@@ -146,7 +145,7 @@ impl EphemeralWorkspace {
     ///
     /// # Errors
     ///
-    /// Returns [`EphemeralWorkspaceError`] when directory allocation, holder
+    /// Returns [`HostWorkspaceError`] when directory allocation, holder
     /// startup, namespace FD opening, or overlay mounting fails.
     pub fn create_runtime_host_namespace_overlay(
         kind: &str,
@@ -156,7 +155,7 @@ impl EphemeralWorkspace {
         layer_paths: &[PathBuf],
         setup_timeout_s: f64,
         exit_grace_s: f64,
-    ) -> Result<Self, EphemeralWorkspaceError> {
+    ) -> Result<Self, HostWorkspaceError> {
         let dirs = crate::overlay::dirs::overlay_run_dirs(kind, token)?;
         Self::from_dirs_with_host_namespace(
             dirs,
@@ -174,7 +173,7 @@ impl EphemeralWorkspace {
     ///
     /// # Errors
     ///
-    /// Returns [`EphemeralWorkspaceError`] when directory allocation, holder
+    /// Returns [`HostWorkspaceError`] when directory allocation, holder
     /// startup, namespace FD opening, or overlay mounting fails.
     pub fn create_with_host_namespace(
         scratch_root: &Path,
@@ -185,7 +184,7 @@ impl EphemeralWorkspace {
         layer_paths: &[PathBuf],
         setup_timeout_s: f64,
         exit_grace_s: f64,
-    ) -> Result<Self, EphemeralWorkspaceError> {
+    ) -> Result<Self, HostWorkspaceError> {
         let dirs = allocate_overlay_dirs(scratch_root, kind, token)?;
         Self::from_dirs_with_host_namespace(
             dirs,
@@ -218,7 +217,7 @@ impl EphemeralWorkspace {
         layer_paths: &[PathBuf],
         setup_timeout_s: f64,
         exit_grace_s: f64,
-    ) -> Result<Self, EphemeralWorkspaceError> {
+    ) -> Result<Self, HostWorkspaceError> {
         let mut workspace = Self { dirs, holder: None };
         workspace.attach_host_namespace(
             token,
@@ -239,11 +238,12 @@ impl EphemeralWorkspace {
         layer_paths: &[PathBuf],
         setup_timeout_s: f64,
         exit_grace_s: f64,
-    ) -> Result<(), EphemeralWorkspaceError> {
+    ) -> Result<(), HostWorkspaceError> {
         let runtime = NamespaceRuntime::from_env();
         let namespace_plan = NamespacePlan::host_workspace();
-        let mut handle = WorkspaceHandle {
-            workspace_id: IsolatedWorkspaceId(format!("eos-host-{token}")),
+        let mut handle = WorkspaceModeHandle {
+            workspace_id: WorkspaceModeId(format!("eos-host-{token}")),
+            network: NetworkMode::Host,
             caller_id: caller_id.to_owned(),
             lease_id: String::new(),
             manifest_version: 0,
@@ -265,13 +265,13 @@ impl EphemeralWorkspace {
         let result = (|| {
             handle.holder_pid = runtime
                 .spawn_ns_holder(&mut handle, setup_timeout_s, namespace_plan)
-                .map_err(EphemeralWorkspaceError::namespace_setup)?;
+                .map_err(HostWorkspaceError::namespace_setup)?;
             handle.ns_fds = runtime
                 .open_ns_fds(handle.holder_pid, namespace_plan)
-                .map_err(EphemeralWorkspaceError::namespace_setup)?;
+                .map_err(HostWorkspaceError::namespace_setup)?;
             runtime
                 .mount_overlay(&handle, layer_paths, setup_timeout_s)
-                .map_err(EphemeralWorkspaceError::namespace_setup)?;
+                .map_err(HostWorkspaceError::namespace_setup)?;
             Ok(())
         })();
         if let Err(error) = result {
@@ -285,7 +285,7 @@ impl EphemeralWorkspace {
             );
             return Err(error);
         }
-        self.holder = Some(EphemeralHolder {
+        self.holder = Some(HostHolder {
             holder_pid: handle.holder_pid,
             readiness_fd: handle.readiness_fd,
             control_fd: handle.control_fd,
@@ -296,7 +296,7 @@ impl EphemeralWorkspace {
     }
 }
 
-impl Drop for EphemeralWorkspace {
+impl Drop for HostWorkspace {
     fn drop(&mut self) {
         if let Some(holder) = self.holder.take() {
             cleanup_holder(
@@ -350,5 +350,5 @@ fn namespace_fds_from_map(map: &HashMap<String, i32>) -> Option<WorkspaceNamespa
 }
 
 #[cfg(test)]
-#[path = "../../tests/unit/ephemeral_workspace.rs"]
+#[path = "../../tests/unit/host_workspace.rs"]
 mod tests;

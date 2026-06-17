@@ -3,7 +3,7 @@ use netlink_sys::{Socket as NlSocket, SocketAddr as NlSocketAddr};
 use std::net::Ipv4Addr;
 
 use crate::isolated_network_setup::network_error_at;
-use crate::network_mode::isolated_network::IsolatedError;
+use crate::network_mode::isolated_network::IsolatedNetworkError;
 
 use super::exprs::NFTA_DATA_VALUE;
 
@@ -14,7 +14,7 @@ pub(super) fn send_nft_command(
     flags: u16,
     attrs: &[u8],
     ignore_exists: bool,
-) -> Result<(), IsolatedError> {
+) -> Result<(), IsolatedNetworkError> {
     let step = step.into();
     let batch_start_seq = 1;
     let operation_seq = 2;
@@ -64,7 +64,7 @@ fn recv_nft_ack(
     batch_start_seq: u32,
     batch_end_seq: u32,
     ignore_exists: bool,
-) -> Result<(), IsolatedError> {
+) -> Result<(), IsolatedNetworkError> {
     let mut buffer = vec![0_u8; 8192];
     loop {
         let received = socket
@@ -73,27 +73,27 @@ fn recv_nft_ack(
         let mut offset = 0;
         while offset + NLMSG_HEADER_LEN <= received {
             let Some(message_len) = read_u32_ne(&buffer[offset..]) else {
-                return Err(IsolatedError::NetworkUnavailable(
+                return Err(IsolatedNetworkError::NetworkUnavailable(
                     "short nftables netlink header".to_owned(),
                 ));
             };
             let message_len = usize::try_from(message_len).map_err(|_| {
-                IsolatedError::NetworkUnavailable(
+                IsolatedNetworkError::NetworkUnavailable(
                     "nftables netlink message length does not fit usize".to_owned(),
                 )
             })?;
             if message_len < NLMSG_HEADER_LEN || offset + message_len > received {
-                return Err(IsolatedError::NetworkUnavailable(
+                return Err(IsolatedNetworkError::NetworkUnavailable(
                     "invalid nftables netlink message length".to_owned(),
                 ));
             }
             let Some(message_type) = read_u16_ne(&buffer[offset + 4..]) else {
-                return Err(IsolatedError::NetworkUnavailable(
+                return Err(IsolatedNetworkError::NetworkUnavailable(
                     "short nftables netlink message type".to_owned(),
                 ));
             };
             let Some(message_seq) = read_u32_ne(&buffer[offset + 8..]) else {
-                return Err(IsolatedError::NetworkUnavailable(
+                return Err(IsolatedNetworkError::NetworkUnavailable(
                     "short nftables netlink sequence".to_owned(),
                 ));
             };
@@ -112,16 +112,16 @@ fn recv_nft_ack(
     }
 }
 
-fn parse_nft_ack_errno(payload: &[u8]) -> Result<i32, IsolatedError> {
+fn parse_nft_ack_errno(payload: &[u8]) -> Result<i32, IsolatedNetworkError> {
     let Some(errno) = read_i32_ne(payload) else {
-        return Err(IsolatedError::NetworkUnavailable(
+        return Err(IsolatedNetworkError::NetworkUnavailable(
             "short nftables netlink ack".to_owned(),
         ));
     };
     Ok(errno)
 }
 
-fn handle_nft_ack_errno(errno: i32, ignore_exists: bool) -> Result<(), IsolatedError> {
+fn handle_nft_ack_errno(errno: i32, ignore_exists: bool) -> Result<(), IsolatedNetworkError> {
     if errno == 0 || (ignore_exists && errno == -libc::EEXIST) {
         return Ok(());
     }
@@ -131,7 +131,7 @@ fn handle_nft_ack_errno(errno: i32, ignore_exists: bool) -> Result<(), IsolatedE
     } else {
         format!("unexpected errno {errno}")
     };
-    Err(IsolatedError::NetworkUnavailable(format!(
+    Err(IsolatedNetworkError::NetworkUnavailable(format!(
         "nftables netlink error: {message}"
     )))
 }
@@ -142,11 +142,11 @@ fn nft_message(
     seq: u32,
     family: u8,
     attrs: &[u8],
-) -> Result<Vec<u8>, IsolatedError> {
+) -> Result<Vec<u8>, IsolatedNetworkError> {
     nfnetlink_message(nft_msg_type(message_type)?, flags, seq, family, 0, attrs)
 }
 
-fn nft_batch_message(message_type: u16, seq: u32) -> Result<Vec<u8>, IsolatedError> {
+fn nft_batch_message(message_type: u16, seq: u32) -> Result<Vec<u8>, IsolatedNetworkError> {
     nfnetlink_message(
         message_type,
         NLM_F_REQUEST,
@@ -164,10 +164,10 @@ fn nfnetlink_message(
     family: u8,
     res_id: u16,
     attrs: &[u8],
-) -> Result<Vec<u8>, IsolatedError> {
+) -> Result<Vec<u8>, IsolatedNetworkError> {
     let total_len = NLMSG_HEADER_LEN + NFGENMSG_LEN + attrs.len();
     let total_len_wire = u32::try_from(total_len).map_err(|_| {
-        IsolatedError::NetworkUnavailable("nftables netlink message too large".to_owned())
+        IsolatedNetworkError::NetworkUnavailable("nftables netlink message too large".to_owned())
     })?;
     let mut message = Vec::with_capacity(total_len);
     message.extend_from_slice(&total_len_wire.to_ne_bytes());
@@ -214,33 +214,33 @@ fn append_attr(buffer: &mut Vec<u8>, kind: u16, value: &[u8]) {
     buffer.resize(buffer.len() + align4(length) - length, 0);
 }
 
-pub(super) fn parse_ipv4_cidr(cidr: &str) -> Result<(Ipv4Addr, u8), IsolatedError> {
+pub(super) fn parse_ipv4_cidr(cidr: &str) -> Result<(Ipv4Addr, u8), IsolatedNetworkError> {
     let Some((addr, prefix_len)) = cidr.split_once('/') else {
-        return Err(IsolatedError::NetworkUnavailable(format!(
+        return Err(IsolatedNetworkError::NetworkUnavailable(format!(
             "invalid IPv4 CIDR {cidr}"
         )));
     };
     let addr = parse_ipv4_addr(addr)?;
     let prefix_len = prefix_len.parse::<u8>().map_err(|err| {
-        IsolatedError::NetworkUnavailable(format!("invalid IPv4 CIDR prefix {cidr}: {err}"))
+        IsolatedNetworkError::NetworkUnavailable(format!("invalid IPv4 CIDR prefix {cidr}: {err}"))
     })?;
     if prefix_len > 32 {
-        return Err(IsolatedError::NetworkUnavailable(format!(
+        return Err(IsolatedNetworkError::NetworkUnavailable(format!(
             "invalid IPv4 CIDR prefix {cidr}"
         )));
     }
     Ok((addr, prefix_len))
 }
 
-pub(super) fn parse_ipv4_addr(addr: &str) -> Result<Ipv4Addr, IsolatedError> {
+pub(super) fn parse_ipv4_addr(addr: &str) -> Result<Ipv4Addr, IsolatedNetworkError> {
     addr.parse::<Ipv4Addr>().map_err(|err| {
-        IsolatedError::NetworkUnavailable(format!("invalid IPv4 address {addr}: {err}"))
+        IsolatedNetworkError::NetworkUnavailable(format!("invalid IPv4 address {addr}: {err}"))
     })
 }
 
-pub(super) fn ipv4_mask(prefix_len: u8) -> Result<[u8; 4], IsolatedError> {
+pub(super) fn ipv4_mask(prefix_len: u8) -> Result<[u8; 4], IsolatedNetworkError> {
     if prefix_len > 32 {
-        return Err(IsolatedError::NetworkUnavailable(format!(
+        return Err(IsolatedNetworkError::NetworkUnavailable(format!(
             "invalid IPv4 prefix length {prefix_len}"
         )));
     }
@@ -252,7 +252,7 @@ pub(super) fn ipv4_mask(prefix_len: u8) -> Result<[u8; 4], IsolatedError> {
     Ok(mask.to_be_bytes())
 }
 
-fn nft_msg_type(message_type: u16) -> Result<u16, IsolatedError> {
+fn nft_msg_type(message_type: u16) -> Result<u16, IsolatedNetworkError> {
     Ok(
         (libc_c_int_to_u16(libc::NFNL_SUBSYS_NFTABLES, "NFNL_SUBSYS_NFTABLES")? << 8)
             | message_type,
@@ -267,27 +267,33 @@ pub(super) const fn nft_rule_flags() -> u16 {
     NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_APPEND
 }
 
-pub(super) fn libc_c_int_to_u8(value: libc::c_int, name: &str) -> Result<u8, IsolatedError> {
+pub(super) fn libc_c_int_to_u8(value: libc::c_int, name: &str) -> Result<u8, IsolatedNetworkError> {
     u8::try_from(value).map_err(|_| {
-        IsolatedError::NetworkUnavailable(format!("invalid libc {name} value {value}"))
+        IsolatedNetworkError::NetworkUnavailable(format!("invalid libc {name} value {value}"))
     })
 }
 
-pub(super) fn libc_c_int_to_u16(value: libc::c_int, name: &str) -> Result<u16, IsolatedError> {
+pub(super) fn libc_c_int_to_u16(
+    value: libc::c_int,
+    name: &str,
+) -> Result<u16, IsolatedNetworkError> {
     u16::try_from(value).map_err(|_| {
-        IsolatedError::NetworkUnavailable(format!("invalid libc {name} value {value}"))
+        IsolatedNetworkError::NetworkUnavailable(format!("invalid libc {name} value {value}"))
     })
 }
 
-pub(super) fn libc_c_int_to_u32(value: libc::c_int, name: &str) -> Result<u32, IsolatedError> {
+pub(super) fn libc_c_int_to_u32(
+    value: libc::c_int,
+    name: &str,
+) -> Result<u32, IsolatedNetworkError> {
     u32::try_from(value).map_err(|_| {
-        IsolatedError::NetworkUnavailable(format!("invalid libc {name} value {value}"))
+        IsolatedNetworkError::NetworkUnavailable(format!("invalid libc {name} value {value}"))
     })
 }
 
-fn libc_c_int_to_isize(value: libc::c_int, name: &str) -> Result<isize, IsolatedError> {
+fn libc_c_int_to_isize(value: libc::c_int, name: &str) -> Result<isize, IsolatedNetworkError> {
     isize::try_from(value).map_err(|_| {
-        IsolatedError::NetworkUnavailable(format!("invalid libc {name} value {value}"))
+        IsolatedNetworkError::NetworkUnavailable(format!("invalid libc {name} value {value}"))
     })
 }
 
@@ -314,14 +320,14 @@ const fn align4(length: usize) -> usize {
     (length + 3) & !3
 }
 
-fn network_error(error: impl std::fmt::Display) -> IsolatedError {
-    IsolatedError::NetworkUnavailable(error.to_string())
+fn network_error(error: impl std::fmt::Display) -> IsolatedNetworkError {
+    IsolatedNetworkError::NetworkUnavailable(error.to_string())
 }
 
-fn network_error_with_context(step: &str, error: IsolatedError) -> IsolatedError {
+fn network_error_with_context(step: &str, error: IsolatedNetworkError) -> IsolatedNetworkError {
     match error {
-        IsolatedError::NetworkUnavailable(message) => {
-            IsolatedError::NetworkUnavailable(format!("{step}: {message}"))
+        IsolatedNetworkError::NetworkUnavailable(message) => {
+            IsolatedNetworkError::NetworkUnavailable(format!("{step}: {message}"))
         }
         other => other,
     }

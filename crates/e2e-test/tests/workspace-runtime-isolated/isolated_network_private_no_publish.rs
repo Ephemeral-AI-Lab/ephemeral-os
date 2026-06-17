@@ -5,8 +5,7 @@ use protocol::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_bool, as_str, finalize_foreground_command, live_pool_or_skip,
-    reset_isolated_workspaces,
+    array, as_bool, as_str, finalize_foreground_command, live_pool_or_skip, reset_isolated_networks,
 };
 
 #[test]
@@ -25,7 +24,7 @@ fn isolated_write_is_discarded_on_exit() -> Result<()> {
     )?;
     assert_eq!(
         as_str(&write, "mutation_source")?,
-        "isolated_workspace",
+        "isolated_network",
         "write inside isolated mode must be isolated-sourced: {write}"
     );
     assert_eq!(
@@ -92,7 +91,7 @@ fn isolated_exec_write_is_private_and_discarded() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let path = format!(
         "iso-exec/{}.txt",
         e2e_test::unique_suffix().replace('-', "_")
@@ -116,7 +115,7 @@ fn isolated_exec_write_is_private_and_discarded() -> Result<()> {
         ensure!(as_str(&exec, "status")? == "ok", "{exec}");
         ensure!(as_str(&exec, "workspace")? == "isolated", "{exec}");
         ensure!(
-            as_str(&exec, "mutation_source")? == "isolated_workspace",
+            as_str(&exec, "mutation_source")? == "isolated_network",
             "{exec}"
         );
         ensure!(
@@ -126,8 +125,8 @@ fn isolated_exec_write_is_private_and_discarded() -> Result<()> {
             "isolated exec should report the private changed path: {exec}"
         );
         let isolated = exec
-            .get("isolated_workspace")
-            .context("isolated command response missing isolated_workspace metadata")?;
+            .get("isolated_network")
+            .context("isolated command response missing isolated_network metadata")?;
         ensure!(
             isolated.get("published").and_then(Value::as_bool) == Some(false),
             "isolated exec must not publish to OCC: {exec}"
@@ -154,8 +153,8 @@ fn isolated_exec_write_is_private_and_discarded() -> Result<()> {
     let read_public = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": path}))?;
     assert_eq!(
         as_str(&read_public, "workspace")?,
-        "ephemeral",
-        "read after isolated exit should route ephemeral: {read_public}"
+        "host",
+        "read after isolated exit should route host: {read_public}"
     );
     assert!(
         !as_bool(&read_public, "exists")?,

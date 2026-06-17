@@ -20,8 +20,8 @@ use crate::command::contract::{
     PUBLISH_LANES_METADATA_KEY,
 };
 use crate::command::finalize::{
-    discarded_response, finalization_error_response,
-    finalize_ephemeral_command_with_capture_options, finalize_isolated_command,
+    discarded_response, finalization_error_response, finalize_host_command_with_capture_options,
+    finalize_isolated_network_command,
 };
 use crate::command::outcome::FinalizeCommandRequest;
 use crate::command::registry::ActiveCommand;
@@ -141,8 +141,8 @@ impl CommandOps {
             return;
         }
         let _ = self.take_before_resource_sample(run.process().id());
-        if let ActiveCommand::Ephemeral(ephemeral) = &**run {
-            let _ = ephemeral.lease.release();
+        if let ActiveCommand::Host(host) = &**run {
+            let _ = host.lease.release();
         }
     }
 
@@ -285,38 +285,38 @@ impl CommandOps {
         };
         let request_for_error = request.clone();
         let (workspace_kind, route_manifest_version, outcome) = match &*run {
-            ActiveCommand::Ephemeral(ephemeral) => {
-                let outcome = finalize_ephemeral_command_with_capture_options(
-                    &ephemeral.root,
-                    &ephemeral.snapshot,
-                    &ephemeral.workspace,
+            ActiveCommand::Host(host) => {
+                let outcome = finalize_host_command_with_capture_options(
+                    &host.root,
+                    &host.snapshot,
+                    &host.workspace,
                     self.commit_options(),
                     self.capture_options(),
                     request,
                 );
-                let _ = ephemeral.lease.release();
+                let _ = host.lease.release();
                 (
-                    WorkspaceKind::Ephemeral,
-                    Some(ephemeral.snapshot.manifest_version),
+                    WorkspaceKind::Host,
+                    Some(host.snapshot.manifest_version),
                     outcome,
                 )
             }
-            ActiveCommand::Isolated(isolated) => {
+            ActiveCommand::IsolatedNetwork(isolated) => {
                 if kill.is_some() {
                     (
-                        WorkspaceKind::Isolated,
+                        WorkspaceKind::IsolatedNetwork,
                         Some(isolated.binding.manifest_version),
                         Ok(discarded_response(
-                            WorkspaceKind::Isolated,
+                            WorkspaceKind::IsolatedNetwork,
                             request,
                             Some(isolated.binding.manifest_version),
                         )),
                     )
                 } else {
                     (
-                        WorkspaceKind::Isolated,
+                        WorkspaceKind::IsolatedNetwork,
                         Some(isolated.binding.manifest_version),
-                        finalize_isolated_command(&isolated.binding, request),
+                        finalize_isolated_network_command(&isolated.binding, request),
                     )
                 }
             }

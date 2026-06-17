@@ -39,11 +39,11 @@
         "page": "daemon-config/index.html"
       },
       {
-        "name": "ephemeral_workspace",
-        "displayName": "ephemeral_workspace",
-        "cargoTestName": "ephemeral_workspace",
-        "path": "ephemeral_workspace/readme.json",
-        "page": "ephemeral_workspace/index.html"
+        "name": "host_workspace",
+        "displayName": "host_workspace",
+        "cargoTestName": "host_workspace",
+        "path": "host_workspace/readme.json",
+        "page": "host_workspace/index.html"
       },
       {
         "name": "workspace-runtime-isolated",
@@ -191,7 +191,7 @@
         {
           "id": "core-wire-message-and-error-catalog",
           "name": "core-wire-message-and-error-catalog",
-          "description": "Groups the protocol guard and deterministic error catalog: `unknown_op_rejected`, `bad_json_rejected`, `oversized_request_rejected`, `unauthorized_tcp_rejected`, `forbidden_in_isolated_workspace_rejected`, `read_nonexistent`, `read_nonexistent_reports_absent`, `edit_anchor_not_found`, `edit_count_mismatch`, `edit_error_catalog_anchor_not_found_and_count_mismatch`, `write_create_only_conflict`, `read_max_bytes_guard`, `write_max_file_bytes_guard`, and `write_above_legacy_two_mib_cap_succeeds` (config-driven `daemon.files` caps: a 3 MiB write above the legacy 2 MiB cap publishes while over-cap read/write payloads are rejected).",
+          "description": "Groups the protocol guard and deterministic error catalog: `unknown_op_rejected`, `bad_json_rejected`, `oversized_request_rejected`, `unauthorized_tcp_rejected`, `forbidden_in_isolated_network_rejected`, `read_nonexistent`, `read_nonexistent_reports_absent`, `edit_anchor_not_found`, `edit_count_mismatch`, `edit_error_catalog_anchor_not_found_and_count_mismatch`, `write_create_only_conflict`, `read_max_bytes_guard`, `write_max_file_bytes_guard`, and `write_above_legacy_two_mib_cap_succeeds` (config-driven `daemon.files` caps: a 3 MiB write above the legacy 2 MiB cap publishes while over-cap read/write payloads are rejected).",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites core --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
             "core-wire-message-guards",
@@ -370,17 +370,17 @@
     },
     {
       "schemaVersion": 1,
-      "name": "ephemeral_workspace",
-      "displayName": "ephemeral_workspace",
-      "cargoTestName": "ephemeral_workspace",
-      "folder": "ephemeral_workspace",
-      "path": "tests/ephemeral_workspace/mod.rs",
-      "page": "ephemeral_workspace/index.html",
+      "name": "host_workspace",
+      "displayName": "host_workspace",
+      "cargoTestName": "host_workspace",
+      "folder": "host_workspace",
+      "path": "tests/host_workspace/mod.rs",
+      "page": "host_workspace/index.html",
       "source": {
         "markdown": "readme.md"
       },
       "overview": {
-        "summary": "This module owns the unified live E2E contract for ephemeral workspace routing, overlay exec, LayerStack lease cleanup, OCC publish, and stale-snapshot conflict behavior. It exercises daemon ops `sandbox.command.exec`, `sandbox.file.read`, `sandbox.file.write`, and `sandbox.command.cancel`. Module config lives at `crates/e2e-test/tests/ephemeral_workspace/config/default.test.yml`.",
+        "summary": "This module owns the unified live E2E contract for host workspace routing, overlay exec, LayerStack lease cleanup, OCC publish, and stale-snapshot conflict behavior. It exercises daemon ops `sandbox.command.exec`, `sandbox.file.read`, `sandbox.file.write`, and `sandbox.command.cancel`. Module config lives at `crates/e2e-test/tests/host_workspace/config/default.test.yml`.",
         "moduleConfig": null,
         "ops": [
           "sandbox.command.exec",
@@ -389,160 +389,160 @@
           "sandbox.command.cancel"
         ],
         "tags": [
-          "ephemeral_workspace",
-          "ephemeral",
+          "host_workspace",
+          "host",
           "workspace"
         ]
       },
       "checklist": [
         {
-          "id": "ephemeral_workspace-per-call-overlay",
+          "id": "host_workspace-per-call-overlay",
           "title": "Per Call Overlay",
-          "description": "Every foreground/background exec derives an ephemeral overlay over the latest workspace manifest and only finalized in-workspace deltas become workspace state.",
+          "description": "Every foreground/background exec derives a host overlay over the latest workspace manifest and only finalized in-workspace deltas become workspace state.",
           "tags": [
-            "ephemeral_workspace"
+            "host_workspace"
           ]
         },
         {
-          "id": "ephemeral_workspace-outside-direct-fs",
+          "id": "host_workspace-outside-direct-fs",
           "title": "Outside Direct Fs",
           "description": "Writes outside the workspace are excluded from OCC `changed_paths` and remain direct container filesystem effects.",
           "tags": [
-            "ephemeral_workspace"
+            "host_workspace"
           ]
         },
         {
-          "id": "ephemeral_workspace-upperdir-delta",
+          "id": "host_workspace-upperdir-delta",
           "title": "Upperdir Delta",
           "description": "Overlay upperdir accounting stays proportional to modified bytes and does not copy large lowerdir inputs.",
           "tags": [
-            "ephemeral_workspace"
+            "host_workspace"
           ]
         },
         {
-          "id": "ephemeral_workspace-overlay-cleanup",
+          "id": "host_workspace-overlay-cleanup",
           "title": "Overlay Cleanup",
           "description": "Completed foreground exec releases LayerStack leases, removes overlay scratch, and returns active lease metrics to zero.",
           "tags": [
-            "ephemeral_workspace"
+            "host_workspace"
           ]
         },
         {
-          "id": "ephemeral_workspace-occ-publish-readback",
+          "id": "host_workspace-occ-publish-readback",
           "title": "Occ Publish Readback",
           "description": "In-workspace exec writes publish through daemon-owned OCC and are readable through `sandbox.file.read`.",
           "tags": [
-            "ephemeral_workspace"
+            "host_workspace"
           ]
         },
         {
-          "id": "ephemeral_workspace-stale-exec-conflict",
+          "id": "host_workspace-stale-exec-conflict",
           "title": "Stale Exec Conflict",
           "description": "A long-running exec from a stale snapshot cannot silently overwrite newer direct file content.",
           "tags": [
-            "ephemeral_workspace"
+            "host_workspace"
           ]
         },
         {
-          "id": "ephemeral_workspace-route-edges",
+          "id": "host_workspace-route-edges",
           "title": "Route Edges",
           "description": "Multi-path shell capture, command/publish trace events, and read-intent no-publish behavior stay observable through response meta and trace-store queries.",
           "tags": [
-            "ephemeral_workspace"
+            "host_workspace"
           ]
         },
         {
-          "id": "ephemeral_workspace-policy-denials",
+          "id": "host_workspace-policy-denials",
           "title": "Policy Denials",
           "description": "Host-prefix writes, cwd escapes, and workspace-destructive shell commands are rejected before any workspace publish when the daemon owns those protocol errors.",
           "tags": [
-            "ephemeral_workspace"
+            "host_workspace"
           ]
         },
         {
-          "id": "ephemeral_workspace-whiteout-resync",
+          "id": "host_workspace-whiteout-resync",
           "title": "Whiteout Resync",
           "description": "File deletes, replacement writes, deep-manifest pre-mount squash, and foreign-published workspace changes round-trip through overlay readback.",
           "tags": [
-            "ephemeral_workspace"
+            "host_workspace"
           ]
         },
         {
-          "id": "ephemeral_workspace-cancel-no-partial-publish",
+          "id": "host_workspace-cancel-no-partial-publish",
           "title": "Cancel No Partial Publish",
           "description": "Cancelled background execs do not publish partial workspace mutation and still release overlay leases.",
           "tags": [
-            "ephemeral_workspace"
+            "host_workspace"
           ]
         },
         {
-          "id": "ephemeral_workspace-overlay-disk-o1",
+          "id": "host_workspace-overlay-disk-o1",
           "title": "Overlay Disk O1",
           "description": "Overlay upperdir accounting stays flat as the lowerdir workspace grows, and overlay run-dir scratch stays bounded and untruncated, proving O(1) overlay disk with respect to workspace size.",
           "tags": [
-            "ephemeral_workspace"
+            "host_workspace"
           ]
         }
       ],
       "test": [
         {
-          "id": "ephemeral_workspace_overlay_publish_and_cleanup",
-          "name": "ephemeral_workspace_overlay_publish_and_cleanup",
+          "id": "host_workspace_overlay_publish_and_cleanup",
+          "name": "host_workspace_overlay_publish_and_cleanup",
           "description": "Groups `exec_simple`, `exec_write_outside_workspace_is_not_captured`, `foreground_exec_recycles_overlay_scratch`, `exec_upperdir_captures_only_the_delta`, and `exec_overlay_mount_publishes_changed_paths`: validates per-call overlay derivation, direct `/tmp` exclusion, delta-sized upperdir accounting, scratch/lease cleanup, OCC publish, and readback.",
-          "command": "cargo run -p e2e-test --bin e2e-runner -- --suites ephemeral_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+          "command": "cargo run -p e2e-test --bin e2e-runner -- --suites host_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "ephemeral_workspace-per-call-overlay",
-            "ephemeral_workspace-outside-direct-fs",
-            "ephemeral_workspace-upperdir-delta",
-            "ephemeral_workspace-overlay-cleanup",
-            "ephemeral_workspace-occ-publish-readback"
+            "host_workspace-per-call-overlay",
+            "host_workspace-outside-direct-fs",
+            "host_workspace-upperdir-delta",
+            "host_workspace-overlay-cleanup",
+            "host_workspace-occ-publish-readback"
           ]
         },
         {
-          "id": "ephemeral_workspace_route_edges_and_read_intent",
-          "name": "ephemeral_workspace_route_edges_and_read_intent",
+          "id": "host_workspace_route_edges_and_read_intent",
+          "name": "host_workspace_route_edges_and_read_intent",
           "description": "Uses `exec_multi_path_route_trace_facts_and_read_intent_no_publish`: a multi-path shell write reports every changed path plus command and overlay trace facts, while a read-only exec over the same paths publishes no changes.",
-          "command": "cargo run -p e2e-test --bin e2e-runner -- --suites ephemeral_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+          "command": "cargo run -p e2e-test --bin e2e-runner -- --suites host_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "ephemeral_workspace-route-edges",
-            "ephemeral_workspace-occ-publish-readback"
+            "host_workspace-route-edges",
+            "host_workspace-occ-publish-readback"
           ]
         },
         {
-          "id": "ephemeral_workspace_whiteout_resync",
-          "name": "ephemeral_workspace_whiteout_resync",
+          "id": "host_workspace_whiteout_resync",
+          "name": "host_workspace_whiteout_resync",
           "description": "Uses `overlay_delete_replacement_write_and_foreign_publish_are_readable`: shell file deletes and replacement writes round-trip through overlay capture, then a later foreign caller publish is readable through the same LayerStack root.",
-          "command": "cargo run -p e2e-test --bin e2e-runner -- --suites ephemeral_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+          "command": "cargo run -p e2e-test --bin e2e-runner -- --suites host_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "ephemeral_workspace-whiteout-resync"
+            "host_workspace-whiteout-resync"
           ]
         },
         {
-          "id": "ephemeral_workspace_cancel_no_partial_publish",
-          "name": "ephemeral_workspace_cancel_no_partial_publish",
+          "id": "host_workspace_cancel_no_partial_publish",
+          "name": "host_workspace_cancel_no_partial_publish",
           "description": "Uses `cancelled_background_exec_does_not_publish_partial_workspace_mutation`: a background command cancelled before its workspace write drains its session and leases without publishing the later file.",
-          "command": "cargo run -p e2e-test --bin e2e-runner -- --suites ephemeral_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+          "command": "cargo run -p e2e-test --bin e2e-runner -- --suites host_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "ephemeral_workspace-cancel-no-partial-publish"
+            "host_workspace-cancel-no-partial-publish"
           ]
         },
         {
-          "id": "ephemeral_workspace_stale_exec_conflict",
-          "name": "ephemeral_workspace_stale_exec_conflict",
+          "id": "host_workspace_stale_exec_conflict",
+          "name": "host_workspace_stale_exec_conflict",
           "description": "Adds `long_running_exec_conflicts_after_direct_write`: an exec held on an old snapshot cannot silently overwrite newer direct file content, and the newer content remains readable after stale finalization.",
-          "command": "cargo run -p e2e-test --bin e2e-runner -- --suites ephemeral_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+          "command": "cargo run -p e2e-test --bin e2e-runner -- --suites host_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "ephemeral_workspace-stale-exec-conflict"
+            "host_workspace-stale-exec-conflict"
           ]
         },
         {
-          "id": "ephemeral_workspace_overlay_disk_o1",
-          "name": "ephemeral_workspace_overlay_disk_o1",
+          "id": "host_workspace_overlay_disk_o1",
+          "name": "host_workspace_overlay_disk_o1",
           "description": "Groups `exec_upperdir_is_flat_across_base_sizes` and `exec_run_dir_scratch_stays_bounded`: a tiny overlay delta over a 15x-growing multi-file lowerdir base keeps upperdir `trace_resources` flat and delta-sized, while run-dir tree resources stay bounded and untruncated, proving O(1) overlay disk with respect to workspace size.",
-          "command": "cargo run -p e2e-test --bin e2e-runner -- --suites ephemeral_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
+          "command": "cargo run -p e2e-test --bin e2e-runner -- --suites host_workspace --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "ephemeral_workspace-overlay-disk-o1",
-            "ephemeral_workspace-upperdir-delta"
+            "host_workspace-overlay-disk-o1",
+            "host_workspace-upperdir-delta"
           ]
         }
       ]
@@ -581,7 +581,7 @@
       },
       "checklist": [
         {
-          "id": "isolated_workspace-lifecycle-pin",
+          "id": "isolated_network-lifecycle-pin",
           "title": "Isolated Workspace Lifecycle Pin",
           "description": "Enter and status expose the same manifest pin, and exit unregisters the handle, releases the lease, and reports holder/cgroup teardown.",
           "tags": [
@@ -589,15 +589,15 @@
           ]
         },
         {
-          "id": "isolated_workspace-private-persistence",
+          "id": "isolated_network-private-persistence",
           "title": "Isolated Workspace Private Persistence",
-          "description": "Isolated writes and reads persist across tool calls while the handle is open and report isolated workspace/mutation fields.",
+          "description": "Isolated writes and reads persist across tool calls while the handle is open and report isolated-network workspace/mutation fields.",
           "tags": [
             "workspace-runtime-isolated"
           ]
         },
         {
-          "id": "isolated_workspace-no-publish",
+          "id": "isolated_network-no-publish",
           "title": "Isolated Workspace No Publish",
           "description": "Isolated write, edit, and exec paths do not publish through OCC or release public LayerStack leases.",
           "tags": [
@@ -605,15 +605,15 @@
           ]
         },
         {
-          "id": "isolated_workspace-discard-exit",
+          "id": "isolated_network-discard-exit",
           "title": "Isolated Workspace Discard Exit",
-          "description": "Exit evicts the private upperdir, and public or ephemeral reads cannot see isolated-only files afterward.",
+          "description": "Exit evicts the private upperdir, and public or host reads cannot see isolated-only files afterward.",
           "tags": [
             "workspace-runtime-isolated"
           ]
         },
         {
-          "id": "isolated_workspace-network-isolation",
+          "id": "isolated_network-network-isolation",
           "title": "Isolated Workspace Network Isolation",
           "description": "A dedicated isolated netns and veth allow an isolated caller to bind a port already held in the container netns.",
           "tags": [
@@ -621,7 +621,7 @@
           ]
         },
         {
-          "id": "isolated_workspace-same-netns-conflict",
+          "id": "isolated_network-same-netns-conflict",
           "title": "Isolated Workspace Same Netns Conflict",
           "description": "Reusing a port in the same namespace conflicts unless the isolated session has exited and cleaned the prior command.",
           "tags": [
@@ -629,7 +629,7 @@
           ]
         },
         {
-          "id": "isolated_workspace-exit-cleanup",
+          "id": "isolated_network-exit-cleanup",
           "title": "Isolated Workspace Exit Cleanup",
           "description": "Exit or cancel drains long-lived isolated commands and removes namespace resources so re-enter starts cleanly.",
           "tags": [
@@ -637,15 +637,15 @@
           ]
         },
         {
-          "id": "isolated_workspace-tool-routing-contract",
+          "id": "isolated_network-tool-routing-contract",
           "title": "Isolated Workspace Tool Routing Contract",
-          "description": "File tools in isolated mode return explicit workspace, mode, mutation, publish, and conflict fields, then route back to ephemeral after exit.",
+          "description": "File tools in isolated mode return explicit workspace, mode, mutation, publish, and conflict fields, then route back to host after exit.",
           "tags": [
             "workspace-runtime-isolated"
           ]
         },
         {
-          "id": "isolated_workspace-exec-private-discard",
+          "id": "isolated_network-exec-private-discard",
           "title": "Isolated Workspace Exec Private Discard",
           "description": "Exec writes inside isolated mode remain private while open, then disappear on exit without OCC publication.",
           "tags": [
@@ -653,7 +653,7 @@
           ]
         },
         {
-          "id": "isolated_workspace-lifecycle-gates",
+          "id": "isolated_network-lifecycle-gates",
           "title": "Isolated Workspace Lifecycle Gates",
           "description": "Enter rejects active sandbox-bound background work, repeated enter reports an already-open or lifecycle-in-progress state, and exit drain timeout/retry remains stable.",
           "tags": [
@@ -661,7 +661,7 @@
           ]
         },
         {
-          "id": "isolated_workspace-network-peer-block",
+          "id": "isolated_network-network-peer-block",
           "title": "Isolated Workspace Network Peer Block",
           "description": "Isolated callers can reach their own loopback service but cannot reach peer isolated sessions through namespace or bridge addresses.",
           "tags": [
@@ -669,7 +669,7 @@
           ]
         },
         {
-          "id": "isolated_workspace-audit-trail",
+          "id": "isolated_network-audit-trail",
           "title": "Isolated Workspace Audit Trail",
           "description": "Enter, exit, and isolated tool calls keep teardown trace events, discarded-byte facts, and no-publish behavior observable through response meta and trace-store rows.",
           "tags": [
@@ -677,7 +677,7 @@
           ]
         },
         {
-          "id": "isolated_workspace-ttl-eviction",
+          "id": "isolated_network-ttl-eviction",
           "title": "Isolated Workspace Ttl Eviction",
           "description": "Short test config TTL evicts idle isolated sessions and preserves coherent status/list-open behavior.",
           "tags": [
@@ -685,7 +685,7 @@
           ]
         },
         {
-          "id": "isolated_workspace-cross-mode-consistency",
+          "id": "isolated_network-cross-mode-consistency",
           "title": "Isolated Workspace Cross Mode Consistency",
           "description": "Public writes from non-isolated callers can advance OCC while an isolated caller is open, but the isolated pin/private upperdir stays stable and is discarded without overwriting public state.",
           "tags": [
@@ -693,15 +693,15 @@
           ]
         },
         {
-          "id": "isolated_workspace-compact-remount",
+          "id": "isolated_network-compact-remount",
           "title": "Isolated Workspace Compact Remount",
-          "description": "An open isolated session can compact/remount onto a bounded lowerdir set while preserving public snapshot and private upperdir state, and non-open ephemeral callers report `not_open`.",
+          "description": "An open isolated session can compact/remount onto a bounded lowerdir set while preserving public snapshot and private upperdir state, and non-open host callers report `not_open`.",
           "tags": [
             "workspace-runtime-isolated"
           ]
         },
         {
-          "id": "isolated_workspace-daemon-restart-reconciliation",
+          "id": "isolated_network-daemon-restart-reconciliation",
           "title": "Isolated Workspace Daemon Restart Reconciliation",
           "description": "A hard daemon restart runs startup orphan reconciliation, reaping an open isolated handle so `list_open` empties, releasing its snapshot lease with none stranded, and serving fresh isolated enters again.",
           "tags": [
@@ -711,111 +711,111 @@
       ],
       "test": [
         {
-          "id": "isolated_workspace_lifecycle_and_teardown",
-          "name": "isolated_workspace_lifecycle_and_teardown",
+          "id": "isolated_network_lifecycle_and_teardown",
+          "name": "isolated_network_lifecycle_and_teardown",
           "description": "Groups `enter_status_exit_pin_and_teardown`, `isolated_enter_status_reports_manifest_pin`, `isolated_exit_discards_private_upperdir`, and `isolated_exit_reports_dedicated_netns`: enter/status pins must match, exit must unregister and tear down resources, and re-enter must start cleanly.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-isolated --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "isolated_workspace-lifecycle-pin",
-            "isolated_workspace-discard-exit",
-            "isolated_workspace-exit-cleanup"
+            "isolated_network-lifecycle-pin",
+            "isolated_network-discard-exit",
+            "isolated_network-exit-cleanup"
           ]
         },
         {
-          "id": "isolated_workspace_lifecycle_gates_and_audit",
-          "name": "isolated_workspace_lifecycle_gates_and_audit",
+          "id": "isolated_network_lifecycle_gates_and_audit",
+          "name": "isolated_network_lifecycle_gates_and_audit",
           "description": "Uses `enter_rejects_active_command_and_repeated_enter_reports_already_open`: active commands block enter and repeated enter reports already-open, with teardown cleanup and no-publish facts trace-visible.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-isolated --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "isolated_workspace-lifecycle-gates",
-            "isolated_workspace-audit-trail",
-            "isolated_workspace-tool-routing-contract"
+            "isolated_network-lifecycle-gates",
+            "isolated_network-audit-trail",
+            "isolated_network-tool-routing-contract"
           ]
         },
         {
-          "id": "isolated_workspace_private_file_routing",
-          "name": "isolated_workspace_private_file_routing",
-          "description": "Groups `isolated_write_is_discarded_on_exit`, `isolated_read_after_exit_routes_ephemeral`, `isolated_write_response_fields`, and `isolated_read_file_sees_private_upperdir`: private file state is visible while open, carries isolated response fields, disappears after exit, and later reads route ephemeral.",
+          "id": "isolated_network_private_file_routing",
+          "name": "isolated_network_private_file_routing",
+          "description": "Groups `isolated_write_is_discarded_on_exit`, `isolated_read_after_exit_routes_ephemeral`, `isolated_write_response_fields`, and `isolated_read_file_sees_private_upperdir`: private file state is visible while open, carries isolated response fields, disappears after exit, and later reads route host.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-isolated --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "isolated_workspace-private-persistence",
-            "isolated_workspace-discard-exit",
-            "isolated_workspace-tool-routing-contract"
+            "isolated_network-private-persistence",
+            "isolated_network-discard-exit",
+            "isolated_network-tool-routing-contract"
           ]
         },
         {
-          "id": "isolated_workspace_no_publish_contract",
-          "name": "isolated_workspace_no_publish_contract",
+          "id": "isolated_network_no_publish_contract",
+          "name": "isolated_network_no_publish_contract",
           "description": "Groups `isolated_write_does_not_publish_or_release_lease` and `isolated_edit_conflict_response_fields`: isolated write/edit paths must avoid OCC publication and public lease release while preserving explicit conflict response fields.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-isolated --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "isolated_workspace-no-publish",
-            "isolated_workspace-tool-routing-contract"
+            "isolated_network-no-publish",
+            "isolated_network-tool-routing-contract"
           ]
         },
         {
-          "id": "isolated_workspace_network_port_matrix",
-          "name": "isolated_workspace_network_port_matrix",
+          "id": "isolated_network_network_port_matrix",
+          "name": "isolated_network_network_port_matrix",
           "description": "Groups `cross_mode_same_port_no_conflict`, `same_mode_same_port_conflicts`, `isolated_exit_reports_dedicated_netns`, and `isolated_to_isolated_same_port_matrix`: cross-namespace same-port binds must work, same-namespace binds must conflict, netns/veth teardown must be visible, and two isolated callers can bind the same port independently.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-isolated --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "isolated_workspace-network-isolation",
-            "isolated_workspace-same-netns-conflict",
-            "isolated_workspace-exit-cleanup"
+            "isolated_network-network-isolation",
+            "isolated_network-same-netns-conflict",
+            "isolated_network-exit-cleanup"
           ]
         },
         {
-          "id": "isolated_workspace_network_peer_block",
-          "name": "isolated_workspace_network_peer_block",
+          "id": "isolated_network_network_peer_block",
+          "name": "isolated_network_network_peer_block",
           "description": "Uses `isolated_loopback_service_is_not_reachable_from_peer_session`: one isolated caller can reach its own loopback service while another isolated caller on the same daemon receives a blocked/refused loopback probe.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-isolated --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "isolated_workspace-network-peer-block",
-            "isolated_workspace-network-isolation"
+            "isolated_network-network-peer-block",
+            "isolated_network-network-isolation"
           ]
         },
         {
-          "id": "isolated_workspace_exec_private_discard",
-          "name": "isolated_workspace_exec_private_discard",
+          "id": "isolated_network_exec_private_discard",
+          "name": "isolated_network_exec_private_discard",
           "description": "Adds `isolated_exec_write_is_private_and_discarded`: `sandbox.command.exec` writes inside isolated mode are readable while open, never OCC-published, and gone after exit.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-isolated --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "isolated_workspace-exec-private-discard",
-            "isolated_workspace-no-publish",
-            "isolated_workspace-discard-exit"
+            "isolated_network-exec-private-discard",
+            "isolated_network-no-publish",
+            "isolated_network-discard-exit"
           ]
         },
         {
-          "id": "isolated_workspace_cross_mode_consistency",
-          "name": "isolated_workspace_cross_mode_consistency",
+          "id": "isolated_network_cross_mode_consistency",
+          "name": "isolated_network_cross_mode_consistency",
           "description": "Groups `isolated_private_same_path_does_not_overwrite_public_publish` and `isolated_pin_hides_later_public_paths_until_exit`: same-path private isolated writes do not overwrite public publishes after exit, and an isolated manifest pin remains stable while later public paths stay hidden until the caller exits.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-isolated --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "isolated_workspace-cross-mode-consistency",
-            "isolated_workspace-no-publish",
-            "isolated_workspace-discard-exit",
-            "isolated_workspace-tool-routing-contract"
+            "isolated_network-cross-mode-consistency",
+            "isolated_network-no-publish",
+            "isolated_network-discard-exit",
+            "isolated_network-tool-routing-contract"
           ]
         },
         {
-          "id": "isolated_workspace_compact_remount",
-          "name": "isolated_workspace_compact_remount",
-          "description": "Groups `compact_remount_open_isolated_workspace_reclaims_old_lower_chain` and `compact_remount_reports_not_open_for_ephemeral_caller`: open isolated sessions compact/remount from a long public lowerdir chain to a bounded chain without losing private upperdir state, while ephemeral callers without an open isolated handle report `not_open`.",
+          "id": "isolated_network_compact_remount",
+          "name": "isolated_network_compact_remount",
+          "description": "Groups `compact_remount_open_isolated_network_reclaims_old_lower_chain` and `compact_remount_reports_not_open_for_ephemeral_caller`: open isolated sessions compact/remount from a long public lowerdir chain to a bounded chain without losing private upperdir state, while host callers without an open isolated handle report `not_open`.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-isolated --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "isolated_workspace-compact-remount",
-            "isolated_workspace-cross-mode-consistency"
+            "isolated_network-compact-remount",
+            "isolated_network-cross-mode-consistency"
           ]
         },
         {
-          "id": "isolated_workspace_daemon_restart_reconciliation",
-          "name": "isolated_workspace_daemon_restart_reconciliation",
+          "id": "isolated_network_daemon_restart_reconciliation",
+          "name": "isolated_network_daemon_restart_reconciliation",
           "description": "Uses `daemon_restart_reaps_orphaned_isolated_handle`: an open isolated handle holds a snapshot lease, the daemon is hard-restarted, and startup reconciliation reaps the now-orphaned handle (`list_open` empty), leaves no stranded snapshot lease, and serves a fresh enter/exit cleanly afterward.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-isolated --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "isolated_workspace-daemon-restart-reconciliation",
-            "isolated_workspace-exit-cleanup",
-            "isolated_workspace-lifecycle-pin"
+            "isolated_network-daemon-restart-reconciliation",
+            "isolated_network-exit-cleanup",
+            "isolated_network-lifecycle-pin"
           ]
         }
       ]
@@ -862,7 +862,7 @@
         {
           "id": "layerstack-lease-open-close",
           "title": "Lease Open Close",
-          "description": "isolated workspace enter and exit acquire and release active LayerStack leases with coherent status and lease gauges.",
+          "description": "isolated-network workspace enter and exit acquire and release active LayerStack leases with coherent status and lease gauges.",
           "tags": [
             "layerstack"
           ]
@@ -1268,7 +1268,7 @@
         "markdown": "readme.md"
       },
       "overview": {
-        "summary": "`workspace-runtime-command` owns explicit live E2E coverage for the command daemon contract across protocol smoke, core lifecycle, transcript-log recycling, local-OS-style sandbox operation parity, ephemeral workspace process-group behavior, externally killed process groups, invisible background subprocesses, and isolated workspace command cleanup. It exercises `sandbox.file.write`, `sandbox.file.edit`, `sandbox.file.read`, `sandbox.command.exec`, `sandbox.command.write_stdin`, `sandbox.command.poll`, `sandbox.command.collect_completed`, `sandbox.command.cancel`, `sandbox.command.count`, `sandbox.call.cancel`, and `sandbox.checkpoint.layer_metrics`. Module config lives at `crates/e2e-test/tests/workspace-runtime-command/config/default.test.yml`.",
+        "summary": "`workspace-runtime-command` owns explicit live E2E coverage for the command daemon contract across protocol smoke, core lifecycle, transcript-log recycling, local-OS-style sandbox operation parity, host workspace process-group behavior, externally killed process groups, invisible background subprocesses, and isolated-network workspace command cleanup. It exercises `sandbox.file.write`, `sandbox.file.edit`, `sandbox.file.read`, `sandbox.command.exec`, `sandbox.command.write_stdin`, `sandbox.command.poll`, `sandbox.command.collect_completed`, `sandbox.command.cancel`, `sandbox.command.count`, `sandbox.call.cancel`, and `sandbox.checkpoint.layer_metrics`. Module config lives at `crates/e2e-test/tests/workspace-runtime-command/config/default.test.yml`.",
         "moduleConfig": null,
         "ops": [
           "sandbox.file.write",
@@ -1340,9 +1340,9 @@
           ]
         },
         {
-          "id": "workspace-runtime-command-ephemeral-process-group",
-          "title": "Ephemeral Process Group",
-          "description": "Ephemeral workspace commands stay running until all same-pgid subprocesses exit and collect exactly one terminal result.",
+          "id": "workspace-runtime-command-host-process-group",
+          "title": "Host Process Group",
+          "description": "Host workspace commands stay running until all same-pgid subprocesses exit and collect exactly one terminal result.",
           "tags": [
             "workspace-runtime-command"
           ]
@@ -1494,12 +1494,12 @@
           ]
         },
         {
-          "id": "workspace-runtime-command-ephemeral-workspace-process-group",
-          "name": "workspace-runtime-command-ephemeral-workspace-process-group",
-          "description": "Groups `exec_simple`, `lingering_child_keeps_command_running`, `command_completes_only_after_all_subprocesses_exit`, `cancel_kills_whole_command`, and `cancel_removes_lingering_descendant`: ephemeral workspace commands honor process-group completion, cancellation semantics, and transcript-log recycling.",
+          "id": "workspace-runtime-command-host-workspace-process-group",
+          "name": "workspace-runtime-command-host-workspace-process-group",
+          "description": "Groups `exec_simple`, `lingering_child_keeps_command_running`, `command_completes_only_after_all_subprocesses_exit`, `cancel_kills_whole_command`, and `cancel_removes_lingering_descendant`: host workspace commands honor process-group completion, cancellation semantics, and transcript-log recycling.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-command --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
-            "workspace-runtime-command-ephemeral-process-group",
+            "workspace-runtime-command-host-process-group",
             "workspace-runtime-command-transcript-recycling",
             "workspace-runtime-command-cancel-kills-group"
           ]
@@ -1595,7 +1595,7 @@
         {
           "id": "workspace-runtime-command-isolated-prompt-parity",
           "name": "workspace-runtime-command-isolated-prompt-parity",
-          "description": "Uses `iws_prompt_stdin_poll_cancel_private_discard`: an isolated prompt command accepts stdin, writes private isolated workspace content, read_progress snapshots do not replay consumed output, stays uncollected until cancellation, recycles its isolated transcript, and discards its private file after isolated exit.",
+          "description": "Uses `iws_prompt_stdin_poll_cancel_private_discard`: an isolated prompt command accepts stdin, writes private isolated-network workspace content, read_progress snapshots do not replay consumed output, stays uncollected until cancellation, recycles its isolated transcript, and discards its private file after isolated exit.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-command --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
             "workspace-runtime-command-isolated-prompt-parity",
@@ -1619,7 +1619,7 @@
         "markdown": "readme.md"
       },
       "overview": {
-        "summary": "`pressure` owns cross-subsystem stress coverage for live `eosd`: concurrent direct file ops, reads, ephemeral exec, LayerStack auto-squash, OCC disjoint publish, command cancellation, isolated handle pressure, post-cancel daemon readiness, and JSON resource reports. It exercises daemon ops including `sandbox.file.write`, `sandbox.file.read`, `sandbox.command.exec`, `sandbox.command.cancel`, `sandbox.command.count`, `sandbox.checkpoint.layer_metrics`, `sandbox.runtime.ready`, `sandbox.plugin.list`, and `sandbox.isolation.*`. Module config lives at `crates/e2e-test/tests/pressure/config/default.test.yml`. This is one unified E2E contract. Configured pressure concurrency is fixed at level `12`; the runner no longer exposes fast/full/heavy pressure lanes.",
+        "summary": "`pressure` owns cross-subsystem stress coverage for live `eosd`: concurrent direct file ops, reads, host exec, LayerStack auto-squash, OCC disjoint publish, command cancellation, isolated handle pressure, post-cancel daemon readiness, and JSON resource reports. It exercises daemon ops including `sandbox.file.write`, `sandbox.file.read`, `sandbox.command.exec`, `sandbox.command.cancel`, `sandbox.command.count`, `sandbox.checkpoint.layer_metrics`, `sandbox.runtime.ready`, `sandbox.plugin.list`, and `sandbox.isolation.*`. Module config lives at `crates/e2e-test/tests/pressure/config/default.test.yml`. This is one unified E2E contract. Configured pressure concurrency is fixed at level `12`; the runner no longer exposes fast/full/heavy pressure lanes.",
         "moduleConfig": null,
         "ops": [
           "sandbox.file.write",
@@ -1648,7 +1648,7 @@
         {
           "id": "pressure-ladder-exec",
           "title": "Ladder Exec",
-          "description": "Ephemeral exec pressure passes at concurrency `12`, publishes changed workspace files, and releases overlay leases.",
+          "description": "Host exec pressure passes at concurrency `12`, publishes changed workspace files, and releases overlay leases.",
           "tags": [
             "pressure"
           ]
@@ -1770,7 +1770,7 @@
         {
           "id": "pressure-mixed-file-exec-ladder",
           "name": "pressure-mixed-file-exec-ladder",
-          "description": "Groups `n_concurrent_mixed_ops`, `overlay_exec_publishes_file_back_to_layerstack`, `file_ops_at_12`, and `ephemeral_exec_at_12` to prove concurrent direct file and ephemeral exec pressure returns structured payloads, publishes readable content, and drains active leases.",
+          "description": "Groups `n_concurrent_mixed_ops`, `overlay_exec_publishes_file_back_to_layerstack`, `file_ops_at_12`, and `ephemeral_exec_at_12` to prove concurrent direct file and host exec pressure returns structured payloads, publishes readable content, and drains active leases.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
             "pressure-ladder-file",
@@ -1813,7 +1813,7 @@
         {
           "id": "pressure-bundled-sandbox-capstone",
           "name": "pressure-bundled-sandbox-capstone",
-          "description": "Uses `protocol_only_bundled_sandbox_capstone`: one live protocol flow combines scaffold write, ephemeral exec publish, same-path OCC contention, squash pressure, isolated private write/discard, lease cleanup, and commit-to-workspace without asserting agent-loop state.",
+          "description": "Uses `protocol_only_bundled_sandbox_capstone`: one live protocol flow combines scaffold write, host exec publish, same-path OCC contention, squash pressure, isolated private write/discard, lease cleanup, and commit-to-workspace without asserting agent-loop state.",
           "command": "cargo run -p e2e-test --bin e2e-runner -- --suites pressure --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
           "checklist": [
             "pressure-bundled-sandbox-capstone",

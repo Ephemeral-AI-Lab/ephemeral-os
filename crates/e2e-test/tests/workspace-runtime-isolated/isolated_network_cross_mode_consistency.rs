@@ -4,7 +4,7 @@ use protocol::catalog;
 use serde_json::json;
 
 use crate::support::{
-    as_bool, as_i64, as_str, envelope_result, live_pool_or_skip, reset_isolated_workspaces,
+    as_bool, as_i64, as_str, envelope_result, live_pool_or_skip, reset_isolated_networks,
     wait_for_active_leases,
 };
 
@@ -14,7 +14,7 @@ fn isolated_private_same_path_does_not_overwrite_public_publish() -> Result<()> 
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let suffix = unique_suffix().replace('-', "_");
     let path = format!("cross-mode/same-path-{suffix}.txt");
     let public_caller = format!("public-cross-mode-{suffix}");
@@ -73,8 +73,8 @@ fn isolated_private_same_path_does_not_overwrite_public_publish() -> Result<()> 
 
     let public_read = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": path}))?;
     ensure!(
-        as_str(&public_read, "workspace")? == "ephemeral",
-        "read after isolated exit should route to public/ephemeral workspace: {public_read}"
+        as_str(&public_read, "workspace")? == "host",
+        "read after isolated exit should route to public/host workspace: {public_read}"
     );
     ensure!(
         as_str(&public_read, "content")? == "public\n",
@@ -90,7 +90,7 @@ fn isolated_pin_hides_later_public_paths_until_exit() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_workspaces(&lease);
+    reset_isolated_networks(&lease);
     let suffix = unique_suffix().replace('-', "_");
     let public_path = format!("cross-mode/public-after-enter-{suffix}.txt");
     let public_caller = format!("pin-public-{suffix}");

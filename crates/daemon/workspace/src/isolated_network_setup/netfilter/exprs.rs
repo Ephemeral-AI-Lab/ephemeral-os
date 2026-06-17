@@ -1,14 +1,16 @@
 use std::net::Ipv4Addr;
 
 use crate::isolated_network_setup::{BRIDGE_PREFIX_LEN, IMDS_ADDR};
-use crate::network_mode::isolated_network::IsolatedError;
+use crate::network_mode::isolated_network::IsolatedNetworkError;
 
 use super::wire::{
     append_be_u32_attr, append_cstr_attr, append_data_value_attr, append_nested_attr, ipv4_mask,
     libc_c_int_to_u16, libc_c_int_to_u32, libc_c_int_to_u8, parse_ipv4_addr, parse_ipv4_cidr,
 };
 
-pub(super) fn nft_masquerade_rule_exprs(bridge_index: u32) -> Result<Vec<Vec<u8>>, IsolatedError> {
+pub(super) fn nft_masquerade_rule_exprs(
+    bridge_index: u32,
+) -> Result<Vec<Vec<u8>>, IsolatedNetworkError> {
     let (bridge_net, bridge_prefix) = bridge_network();
     let mut expressions = nft_ipv4_network_match(
         IpHeader::Inet,
@@ -29,7 +31,7 @@ pub(super) fn nft_masquerade_rule_exprs(bridge_index: u32) -> Result<Vec<Vec<u8>
     Ok(expressions)
 }
 
-pub(super) fn nft_imds_drop_rule_exprs() -> Result<Vec<Vec<u8>>, IsolatedError> {
+pub(super) fn nft_imds_drop_rule_exprs() -> Result<Vec<Vec<u8>>, IsolatedNetworkError> {
     let imds = parse_ipv4_addr(IMDS_ADDR)?;
     let mut expressions = nft_ipv4_guard_exprs(IpHeader::Inet)?;
     expressions.push(nft_payload_ipv4_expr(IPV4_DADDR_OFFSET)?);
@@ -38,7 +40,7 @@ pub(super) fn nft_imds_drop_rule_exprs() -> Result<Vec<Vec<u8>>, IsolatedError> 
     Ok(expressions)
 }
 
-pub(super) fn nft_peer_isolation_rule_exprs() -> Result<Vec<Vec<u8>>, IsolatedError> {
+pub(super) fn nft_peer_isolation_rule_exprs() -> Result<Vec<Vec<u8>>, IsolatedNetworkError> {
     let gateway = gateway_addr();
     let (bridge_net, bridge_prefix) = bridge_network();
     let mut expressions = nft_ipv4_network_match(
@@ -71,7 +73,7 @@ pub(super) fn nft_peer_isolation_rule_exprs() -> Result<Vec<Vec<u8>>, IsolatedEr
     Ok(expressions)
 }
 
-pub(super) fn nft_bridge_peer_isolation_rule_exprs() -> Result<Vec<Vec<u8>>, IsolatedError> {
+pub(super) fn nft_bridge_peer_isolation_rule_exprs() -> Result<Vec<Vec<u8>>, IsolatedNetworkError> {
     let gateway = gateway_addr();
     let (bridge_net, bridge_prefix) = bridge_network();
     let mut expressions = nft_ipv4_network_match(
@@ -104,7 +106,9 @@ pub(super) fn nft_bridge_peer_isolation_rule_exprs() -> Result<Vec<Vec<u8>>, Iso
     Ok(expressions)
 }
 
-pub(super) fn nft_rfc1918_drop_rule_exprs(cidr: &str) -> Result<Vec<Vec<u8>>, IsolatedError> {
+pub(super) fn nft_rfc1918_drop_rule_exprs(
+    cidr: &str,
+) -> Result<Vec<Vec<u8>>, IsolatedNetworkError> {
     let (private_net, private_prefix) = parse_ipv4_cidr(cidr)?;
     let (bridge_net, bridge_prefix) = bridge_network();
     let mut expressions = nft_ipv4_network_match(
@@ -131,7 +135,7 @@ fn nft_ipv4_network_match(
     network: Ipv4Addr,
     prefix_len: u8,
     op: u32,
-) -> Result<Vec<Vec<u8>>, IsolatedError> {
+) -> Result<Vec<Vec<u8>>, IsolatedNetworkError> {
     let mut expressions = nft_ipv4_guard_exprs(header)?;
     expressions.push(nft_payload_ipv4_expr(offset)?);
     expressions.push(nft_bitwise_mask_expr(ipv4_mask(prefix_len)?));
@@ -144,14 +148,14 @@ fn nft_ipv4_addr_match(
     offset: u32,
     address: Ipv4Addr,
     op: u32,
-) -> Result<Vec<Vec<u8>>, IsolatedError> {
+) -> Result<Vec<Vec<u8>>, IsolatedNetworkError> {
     let mut expressions = nft_ipv4_guard_exprs(header)?;
     expressions.push(nft_payload_ipv4_expr(offset)?);
     expressions.push(nft_cmp_expr(op, &address.octets()));
     Ok(expressions)
 }
 
-fn nft_ipv4_guard_exprs(header: IpHeader) -> Result<Vec<Vec<u8>>, IsolatedError> {
+fn nft_ipv4_guard_exprs(header: IpHeader) -> Result<Vec<Vec<u8>>, IsolatedNetworkError> {
     match header {
         IpHeader::Bridge => {
             let eth_p_ip = libc_c_int_to_u16(libc::ETH_P_IP, "ETH_P_IP")?;
@@ -183,7 +187,7 @@ fn nft_ipv4_guard_exprs(header: IpHeader) -> Result<Vec<Vec<u8>>, IsolatedError>
     }
 }
 
-fn nft_payload_ipv4_expr(offset: u32) -> Result<Vec<u8>, IsolatedError> {
+fn nft_payload_ipv4_expr(offset: u32) -> Result<Vec<u8>, IsolatedNetworkError> {
     nft_payload_expr(
         libc_c_int_to_u32(
             libc::NFT_PAYLOAD_NETWORK_HEADER,
@@ -194,7 +198,7 @@ fn nft_payload_ipv4_expr(offset: u32) -> Result<Vec<u8>, IsolatedError> {
     )
 }
 
-fn nft_payload_expr(base: u32, offset: u32, len: u32) -> Result<Vec<u8>, IsolatedError> {
+fn nft_payload_expr(base: u32, offset: u32, len: u32) -> Result<Vec<u8>, IsolatedNetworkError> {
     let mut data = Vec::new();
     append_be_u32_attr(&mut data, NFTA_PAYLOAD_DREG, NFT_REG_1);
     append_be_u32_attr(&mut data, NFTA_PAYLOAD_BASE, base);
@@ -228,7 +232,7 @@ fn nft_cmp_expr(op: u32, value: &[u8]) -> Vec<u8> {
     nft_expr("cmp", &data)
 }
 
-fn nft_drop_expr() -> Result<Vec<u8>, IsolatedError> {
+fn nft_drop_expr() -> Result<Vec<u8>, IsolatedNetworkError> {
     let mut verdict = Vec::new();
     append_be_u32_attr(
         &mut verdict,

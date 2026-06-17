@@ -1,4 +1,4 @@
-use crate::network_mode::isolated_network::IsolatedError;
+use crate::network_mode::isolated_network::IsolatedNetworkError;
 use crate::network_mode::isolated_network::Rfc1918Egress;
 
 use super::{NFT_FILTER_TABLE, NFT_NAT_TABLE, RFC1918_NETS};
@@ -23,7 +23,7 @@ const NFT_BRIDGE_FILTER_TABLE: &str = "eos_iws_bridge_filter";
 pub(super) fn install_static_rules(
     rfc1918_egress: Rfc1918Egress,
     bridge_index: u32,
-) -> Result<(), IsolatedError> {
+) -> Result<(), IsolatedNetworkError> {
     let inet_family = libc_c_int_to_u8(libc::NFPROTO_INET, "NFPROTO_INET")?;
     add_nft_table(inet_family, NFT_NAT_TABLE)?;
     add_nft_base_chain(
@@ -76,7 +76,7 @@ pub(super) fn install_static_rules(
     Ok(())
 }
 
-fn install_bridge_peer_isolation_rule() -> Result<(), IsolatedError> {
+fn install_bridge_peer_isolation_rule() -> Result<(), IsolatedNetworkError> {
     let family = libc_c_int_to_u8(libc::NFPROTO_BRIDGE, "NFPROTO_BRIDGE")?;
     add_nft_table(family, NFT_BRIDGE_FILTER_TABLE)?;
     add_nft_base_chain(
@@ -95,7 +95,7 @@ fn install_bridge_peer_isolation_rule() -> Result<(), IsolatedError> {
     )
 }
 
-fn add_nft_table(family: u8, name: &str) -> Result<(), IsolatedError> {
+fn add_nft_table(family: u8, name: &str) -> Result<(), IsolatedNetworkError> {
     let mut attrs = Vec::new();
     append_cstr_attr(&mut attrs, NFTA_TABLE_NAME, name);
     append_be_u32_attr(&mut attrs, NFTA_TABLE_FLAGS, 0);
@@ -116,7 +116,7 @@ fn add_nft_base_chain(
     chain_type: &str,
     hook: u32,
     priority: i32,
-) -> Result<(), IsolatedError> {
+) -> Result<(), IsolatedNetworkError> {
     let mut hook_attrs = Vec::new();
     append_be_u32_attr(&mut hook_attrs, NFTA_HOOK_HOOKNUM, hook);
     append_be_i32_attr(&mut hook_attrs, NFTA_HOOK_PRIORITY, priority);
@@ -141,7 +141,7 @@ fn add_nft_rule(
     table: &str,
     chain: &str,
     expressions: Vec<Vec<u8>>,
-) -> Result<(), IsolatedError> {
+) -> Result<(), IsolatedNetworkError> {
     let mut expression_list = Vec::new();
     for expression in expressions {
         append_nested_attr(&mut expression_list, NFTA_LIST_ELEM, &expression);

@@ -296,7 +296,7 @@
       "mutates_state": false,
       "args_schema": "operation.file.ReadFileInput",
       "response_schema": "operation.file.ReadFileResponse",
-      "summary": "Read one file from the layer stack or isolated workspace."
+      "summary": "Read one file from the layer stack or isolated network."
     },
     {
       "name": "sandbox.file.write",
@@ -391,55 +391,55 @@
       "served_by": "daemon",
       "host_verb": null,
       "visibility": "public",
-      "family": "IsolatedWorkspace",
+      "family": "IsolatedNetwork",
       "mutates_state": true,
       "args_schema": "operation.isolation.IsolationEnterInput",
       "response_schema": "operation.isolation.IsolationEnterOutput",
-      "summary": "Enter isolated workspace mode for a caller."
+      "summary": "Enter isolated network mode for a caller."
     },
     {
       "name": "sandbox.isolation.exit",
       "served_by": "daemon",
       "host_verb": null,
       "visibility": "public",
-      "family": "IsolatedWorkspace",
+      "family": "IsolatedNetwork",
       "mutates_state": true,
       "args_schema": "operation.isolation.IsolationExitInput",
       "response_schema": "operation.isolation.IsolationExitOutput",
-      "summary": "Exit isolated workspace mode for a caller."
+      "summary": "Exit isolated network mode for a caller."
     },
     {
       "name": "sandbox.isolation.status",
       "served_by": "daemon",
       "host_verb": null,
       "visibility": "public",
-      "family": "IsolatedWorkspace",
+      "family": "IsolatedNetwork",
       "mutates_state": false,
       "args_schema": "operation.isolation.IsolationStatusInput",
       "response_schema": "operation.isolation.IsolationStatusOutput",
-      "summary": "Inspect isolated workspace status."
+      "summary": "Inspect isolated network status."
     },
     {
       "name": "sandbox.isolation.list_open",
       "served_by": "daemon",
       "host_verb": null,
       "visibility": "operator",
-      "family": "IsolatedWorkspace",
+      "family": "IsolatedNetwork",
       "mutates_state": false,
       "args_schema": "operation.core.NoArgs",
       "response_schema": "operation.isolation.ListOpenOutput",
-      "summary": "List open isolated workspaces."
+      "summary": "List open isolated networks."
     },
     {
       "name": "sandbox.isolation.test_reset",
       "served_by": "daemon",
       "host_verb": null,
       "visibility": "test",
-      "family": "IsolatedWorkspace",
+      "family": "IsolatedNetwork",
       "mutates_state": true,
       "args_schema": "operation.core.NoArgs",
       "response_schema": "operation.isolation.TestResetOutput",
-      "summary": "Test-only isolated workspace reset hook."
+      "summary": "Test-only isolated network reset hook."
     },
     {
       "name": "sandbox.command.exec",
@@ -516,7 +516,7 @@
       "mutates_state": true,
       "args_schema": "operation.workspace_run.RunEndInput",
       "response_schema": "operation.workspace_run.RunEndOutput",
-      "summary": "End a run: cancel every workspace run owned by one caller (caller_id == agent_run_id), discarding its commands and exiting its isolated workspace."
+      "summary": "End a run: cancel every workspace run owned by one caller (caller_id == agent_run_id), discarding its commands and exiting its isolated network."
     },
     {
       "name": "sandbox.run.cancel_all",

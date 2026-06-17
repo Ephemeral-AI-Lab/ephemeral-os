@@ -94,13 +94,13 @@ pub(crate) fn wait_for_active_leases(lease: &NodeLease<'_>, expected: i64) -> Re
     }
 }
 
-/// Exit every open isolated workspace on this lease's daemon. Used at the start
+/// Exit every open isolated-network workspace on this lease's daemon. Used at the start
 /// of tests that enter isolated sessions so residue from a prior checkout on a
 /// recycled container (e.g. a session leaked when an assertion panicked past its
 /// cleanup) does not push past the global isolated-workspace cap. Drains via the
 /// ungated `list_open` + `exit` ops (the `test_reset` hook needs a daemon env
 /// flag the harness does not set). Best-effort: errors are ignored.
-pub(crate) fn reset_isolated_workspaces(lease: &NodeLease<'_>) {
+pub(crate) fn reset_isolated_networks(lease: &NodeLease<'_>) {
     let Ok(listing) = lease.call(catalog::SANDBOX_ISOLATION_LIST_OPEN, json!({})) else {
         return;
     };

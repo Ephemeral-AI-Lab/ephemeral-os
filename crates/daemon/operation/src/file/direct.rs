@@ -36,7 +36,7 @@ impl DirectBackend {
 
 impl FileBackend for DirectBackend {
     fn workspace_kind(&self) -> WorkspaceKind {
-        WorkspaceKind::Ephemeral
+        WorkspaceKind::Host
     }
 
     fn mutation_source(&self, kind: MutationKind) -> MutationSource {
@@ -137,7 +137,7 @@ fn changeset_outcome(
             mutation_source: Some(mutation_source),
             timings,
         },
-        workspace_kind: WorkspaceKind::Ephemeral,
+        workspace_kind: WorkspaceKind::Host,
         published: result.success(),
         status: conflict.map_or(MutationStatus::Committed, |file| file.status.into()),
         trace_events: result.trace_events(),

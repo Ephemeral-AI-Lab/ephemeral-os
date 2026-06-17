@@ -7,12 +7,12 @@ pub(crate) mod remount;
 use std::collections::HashMap;
 use std::time::Instant;
 
-use crate::network_mode::isolated_network::WorkspaceHandle;
+use crate::network_mode::isolated_network::WorkspaceModeHandle;
 
 pub use destroy::ExitOutcome;
 pub(crate) use leases::monotonic_seconds;
 
-pub(crate) fn close_handle_fds(handle: &WorkspaceHandle) {
+pub(crate) fn close_handle_fds(handle: &WorkspaceModeHandle) {
     for fd in handle.ns_fds.values().copied() {
         if fd >= 0 {
             let _ = nix::unistd::close(fd);

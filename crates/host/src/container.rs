@@ -234,7 +234,7 @@ impl DaemonContainer {
             "-lc",
             "mount -o remount,rw /sys/fs/cgroup 2>/dev/null || true; test -w /sys/fs/cgroup",
         ])
-        .context("make cgroup v2 writable for isolated workspaces")?;
+        .context("make cgroup v2 writable for isolated networks")?;
         copy_file_into(&self.name, &daemon_dir, "eosd", &daemon.eosd_path).with_context(|| {
             format!(
                 "copy eosd ({}) into {daemon_dir}",

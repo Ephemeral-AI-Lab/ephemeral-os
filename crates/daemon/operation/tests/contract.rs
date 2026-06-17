@@ -32,7 +32,7 @@ fn command_finalize_conflict_response_matches_fixture() {
                 conflict_reason: Some("conflict on src/main.rs".to_owned()),
                 timings,
             },
-            workspace: WorkspaceKind::Ephemeral,
+            workspace: WorkspaceKind::Host,
             extras: {
                 let mut extras = Map::new();
                 extras.insert(
