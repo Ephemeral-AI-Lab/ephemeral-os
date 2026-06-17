@@ -794,7 +794,7 @@ fn inactive_isolated_run(id: &str, caller_id: &str, root: &std::path::Path) -> A
         context: WorkspaceModeContext {
             caller_id: caller_id.to_owned(),
             workspace_handle_id: "workspace-handle".to_owned(),
-            network: workspace::NetworkMode::IsolatedNetwork,
+            network: workspace::NetworkMode::Isolated,
             layer_stack_root,
             manifest_version: 1,
             manifest_root_hash: "root".to_owned(),

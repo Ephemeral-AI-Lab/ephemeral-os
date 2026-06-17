@@ -118,7 +118,7 @@ impl WorkspaceModeManager {
         let now = monotonic_seconds();
         let mut handle = WorkspaceModeHandle {
             workspace_id: workspace_id.clone(),
-            network: NetworkMode::IsolatedNetwork,
+            network: NetworkMode::Isolated,
             caller_id: caller_id.to_owned(),
             lease_id: snapshot.lease_id,
             manifest_version: snapshot.manifest_version,

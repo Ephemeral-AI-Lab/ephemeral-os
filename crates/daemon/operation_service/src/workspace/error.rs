@@ -16,6 +16,15 @@ pub enum WorkspaceManagerError {
     #[error("workspace session not found: {workspace_id:?}")]
     NotFound { workspace_id: WorkspaceId },
 
+    #[error("workspace session is closing: {workspace_id:?}")]
+    Closing { workspace_id: WorkspaceId },
+
+    #[error("workspace remount returned mismatched workspace id: expected {expected:?}, actual {actual:?}")]
+    RemountWorkspaceIdMismatch {
+        expected: WorkspaceId,
+        actual: WorkspaceId,
+    },
+
     #[error(
         "workspace session caller mismatch for {workspace_id:?}: expected {expected:?}, actual {actual:?}"
     )]

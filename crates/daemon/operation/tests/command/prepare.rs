@@ -282,7 +282,7 @@ fn workspace_mode_context(
     workspace::network_mode::isolated_network::WorkspaceModeContext {
         caller_id: "caller".to_owned(),
         workspace_handle_id: "workspace-handle".to_owned(),
-        network: workspace::NetworkMode::IsolatedNetwork,
+        network: workspace::NetworkMode::Isolated,
         layer_stack_root: root.join("stack"),
         manifest_version: 1,
         manifest_root_hash: "root".to_owned(),

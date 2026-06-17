@@ -152,7 +152,6 @@ pub struct WorkspaceSession {
     pub lease_id: String,
     pub snapshot: LayerStackSnapshotRef,
     pub layer_paths: Vec<PathBuf>,
-    pub remount_state: RemountState,
     pub created_at: Timestamp,
     pub last_activity: Timestamp,
 }
@@ -265,6 +264,7 @@ concept to a generic lifecycle port in the public design.
 pub struct CreateWorkspaceRequest {
     pub caller_id: CallerId,
     pub workspace_root: PathBuf,
+    pub layer_stack_root: PathBuf,
     pub network: NetworkMode,
 }
 
@@ -342,7 +342,8 @@ silently remove a live workspace.
 `WorkspaceManagerService::capture_changes` and
 `WorkspaceManagerService::remount_workspace` call the corresponding workspace
 primitive and update session metadata such as `last_activity`, `snapshot`,
-`layer_paths`, lease ids, and `remount_state` as needed.
+`layer_paths`, and lease ids as needed. Later live-remount phases should add
+explicit remount state when they define the transition policy.
 
 Raw `workspace.create_workspace(...)` remains a primitive and does not
 auto-register anything by itself. The automatic session-manager mutation
@@ -416,7 +417,7 @@ should be added only in the later phases that implement those behaviors.
 request: enter_isolated_network(caller_id, workspace_root)
 
 operation_service:
-  resolve workspace_root
+  resolve workspace_root and layer_stack_root
   call WorkspaceManagerService::create(NetworkMode::Isolated)
   return workspace_id
 ```

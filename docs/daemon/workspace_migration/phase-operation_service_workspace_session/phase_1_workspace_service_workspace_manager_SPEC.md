@@ -224,6 +224,15 @@ same naming family, `WorkspaceManagerError`, because the service owns more than
 the session map: lifecycle wrapping, recovery, teardown, pressure, and remount
 coordination.
 
+`CreateWorkspaceRequest` carries both the caller-facing `workspace_root` and
+the resolved `layer_stack_root`. `WorkspaceManagerService` must preserve the
+resolved `layer_stack_root` in `WorkspaceSession` instead of inferring it from
+`WorkspaceHandle.workspace_root`.
+
+Phase 1 does not keep a standalone operation-service remount-state field. Add
+live-remount state with the later live-remount phase that defines the actual
+transition policy.
+
 ## Session Manager
 
 `WorkspaceSessionManager` is internal to the workspace manager module. It owns
@@ -242,7 +251,6 @@ pub(crate) struct WorkspaceSession {
     pub lease_id: LeaseId,
     pub snapshot: LayerStackSnapshotRef,
     pub layer_paths: Vec<PathBuf>,
-    pub remount_state: RemountState,
     pub lifecycle_state: WorkspaceLifecycleState,
     pub created_at: Timestamp,
     pub last_activity: Timestamp,
@@ -318,9 +326,10 @@ impl WorkspaceSessionManager {
    `WorkspaceManagerError`.
 6. Update `workspace::WorkspaceService` method names to the resource-facing
    names in this spec.
-7. Add missing resource request/result types needed by the trait:
+7. Add missing or aligned resource request/result types needed by the trait:
    `RemountWorkspaceRequest`, `RemountWorkspaceResult`,
-   `LatestSnapshotRequest`, and `ReadonlySnapshotHandle`.
+   `LatestSnapshotRequest`, `ReadonlySnapshotHandle`, and the
+   `CreateWorkspaceRequest.layer_stack_root` input.
 8. Remove or relocate stale command-oriented model types from the workspace
    service surface if they are no longer used by `WorkspaceService`.
 9. Implement a minimal in-memory `WorkspaceSessionManager` with insert, remove,

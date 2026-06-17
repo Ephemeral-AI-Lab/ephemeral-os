@@ -12,7 +12,7 @@ use super::*;
 fn workspace_mode_handle() -> WorkspaceModeHandle {
     WorkspaceModeHandle {
         workspace_id: WorkspaceModeId("isolated-handle".to_owned()),
-        network: NetworkMode::IsolatedNetwork,
+        network: NetworkMode::Isolated,
         caller_id: "caller-1".to_owned(),
         lease_id: "lease-1".to_owned(),
         manifest_version: 42,
@@ -44,7 +44,7 @@ fn assert_handle_projection(public: &WorkspaceHandle) {
     assert_eq!(public.id, WorkspaceId("isolated-handle".to_owned()));
     assert_eq!(public.owner, CallerId("caller-1".to_owned()));
     assert_eq!(public.workspace_root, PathBuf::from("/workspace"));
-    assert_eq!(public.network, NetworkMode::IsolatedNetwork);
+    assert_eq!(public.network, NetworkMode::Isolated);
     assert_eq!(
         public.base_revision,
         BaseRevision {
@@ -90,8 +90,9 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
         format!(
             "{:?}",
             CreateWorkspaceRequest {
-                owner: CallerId("caller".to_owned()),
+                caller_id: CallerId("caller".to_owned()),
                 workspace_root: "/workspace".into(),
+                layer_stack_root: "/layers".into(),
                 network: NetworkMode::Host,
             }
         ),
@@ -113,30 +114,6 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
         ),
         format!(
             "{:?}",
-            RunCommandRequest {
-                invocation_id: "invocation".to_owned(),
-                cmd: "true".to_owned(),
-                cwd: Some("/workspace".into()),
-                timeout_seconds: Some(1.0),
-                yield_time_ms: 1_000,
-                remountable: false,
-            }
-        ),
-        format!(
-            "{:?}",
-            RunCommandResult {
-                status: CommandStatus::Ok,
-                command_id: Some("command".to_owned()),
-                exit_code: Some(0),
-                stdout: String::new(),
-                stderr: String::new(),
-                changed_paths: Vec::new(),
-                base_revision: base_revision.clone(),
-                published: false,
-            }
-        ),
-        format!(
-            "{:?}",
             CaptureChangesRequest {
                 materialize_payloads: false,
                 include_stats: true,
@@ -153,13 +130,7 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
                 stats: None,
             }
         ),
-        format!(
-            "{:?}",
-            DestroyWorkspaceRequest {
-                grace_s: Some(1.0),
-                cancel_commands: true,
-            }
-        ),
+        format!("{:?}", DestroyWorkspaceRequest { grace_s: Some(1.0) }),
         format!(
             "{:?}",
             RemountWorkspaceRequest {
@@ -213,7 +184,6 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
             DestroyWorkspaceResult {
                 workspace_id: WorkspaceId("workspace".to_owned()),
                 owner: CallerId("caller".to_owned()),
-                cancelled_commands: 0,
                 evicted_upperdir_bytes: 0,
                 lifetime_s: 0.0,
                 lease_released: Some(true),
@@ -230,7 +200,6 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
 
 fn assert_no_internal_fields(debug: &str) {
     for forbidden in [
-        "layer_stack_root:",
         "upperdir:",
         "workdir:",
         "scratch_dir:",
@@ -257,8 +226,9 @@ fn public_dtos_construct_clone_and_compare() {
         layer_count: 1,
     };
     let create = CreateWorkspaceRequest {
-        owner: CallerId("caller".to_owned()),
+        caller_id: CallerId("caller".to_owned()),
         workspace_root: "/workspace".into(),
+        layer_stack_root: "/layers".into(),
         network: NetworkMode::Host,
     };
     let handle = WorkspaceHandle {
@@ -273,24 +243,6 @@ fn public_dtos_construct_clone_and_compare() {
             root_hash: "root".to_owned(),
             layer_paths: vec!["/lower/one".into()],
         },
-    };
-    let run = RunCommandRequest {
-        invocation_id: "invocation".to_owned(),
-        cmd: "true".to_owned(),
-        cwd: Some("/workspace".into()),
-        timeout_seconds: Some(1.5),
-        yield_time_ms: 1_000,
-        remountable: false,
-    };
-    let run_result = RunCommandResult {
-        status: CommandStatus::Ok,
-        command_id: Some("command".to_owned()),
-        exit_code: Some(0),
-        stdout: String::new(),
-        stderr: String::new(),
-        changed_paths: vec!["src/main.rs".to_owned()],
-        base_revision: base_revision.clone(),
-        published: false,
     };
     let capture_request = CaptureChangesRequest {
         materialize_payloads: true,
@@ -310,10 +262,7 @@ fn public_dtos_construct_clone_and_compare() {
             ..TreeResourceStats::default()
         }),
     };
-    let destroy_request = DestroyWorkspaceRequest {
-        grace_s: Some(1.0),
-        cancel_commands: true,
-    };
+    let destroy_request = DestroyWorkspaceRequest { grace_s: Some(1.0) };
     let remount_request = RemountWorkspaceRequest {
         layer_paths: vec!["/lower/one".into()],
     };
@@ -332,7 +281,6 @@ fn public_dtos_construct_clone_and_compare() {
     let destroy = DestroyWorkspaceResult {
         workspace_id: WorkspaceId("workspace".to_owned()),
         owner: CallerId("caller".to_owned()),
-        cancelled_commands: 0,
         evicted_upperdir_bytes: 0,
         lifetime_s: 0.0,
         lease_released: Some(true),
@@ -342,8 +290,6 @@ fn public_dtos_construct_clone_and_compare() {
 
     assert_eq!(create.clone(), create);
     assert_eq!(handle.clone(), handle);
-    assert_eq!(run.clone(), run);
-    assert_eq!(run_result.clone(), run_result);
     assert_eq!(capture_request.clone(), capture_request);
     assert_eq!(capture.clone(), capture);
     assert_eq!(destroy_request.clone(), destroy_request);
@@ -352,5 +298,4 @@ fn public_dtos_construct_clone_and_compare() {
     assert_eq!(latest_request.clone(), latest_request);
     assert_eq!(readonly_snapshot.clone(), readonly_snapshot);
     assert_eq!(destroy.clone(), destroy);
-    assert_eq!(CommandStatus::TimedOut.as_str(), "timed_out");
 }

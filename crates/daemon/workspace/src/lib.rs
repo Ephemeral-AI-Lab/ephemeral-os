@@ -19,23 +19,9 @@ pub mod service;
 pub use error::WorkspaceError;
 pub use model::{
     BaseRevision, CallerId, CaptureChangesRequest, CaptureChangesResult, CapturedWorkspaceChanges,
-    ChangedPathKind, CommandStatus, CreateWorkspaceRequest, DestroyWorkspaceRequest,
-    DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef, LeaseId, NetworkMode,
-    ProtectedPathDrop, ProtectedPathDropReason, ReadonlySnapshotHandle, RemountWorkspaceRequest,
-    RemountWorkspaceResult, RunCommandRequest, RunCommandResult, WorkspaceHandle,
-    WorkspaceHandle as UnifiedWorkspaceHandle, WorkspaceId,
+    ChangedPathKind, CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult,
+    LatestSnapshotRequest, LayerStackSnapshotRef, LeaseId, NetworkMode, ProtectedPathDrop,
+    ProtectedPathDropReason, ReadonlySnapshotHandle, RemountWorkspaceRequest,
+    RemountWorkspaceResult, WorkspaceHandle, WorkspaceId,
 };
 pub use service::WorkspaceService;
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn root_handle_export_is_unified_public_handle() {
-        fn unified_alias(handle: crate::UnifiedWorkspaceHandle) -> crate::model::WorkspaceHandle {
-            handle
-        }
-
-        let _: fn(crate::WorkspaceHandle) -> crate::model::WorkspaceHandle = unified_alias;
-        let _: fn(crate::UnifiedWorkspaceHandle) -> crate::model::WorkspaceHandle = unified_alias;
-    }
-}

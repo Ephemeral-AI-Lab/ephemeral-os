@@ -1,14 +1,11 @@
 use std::sync::{Arc, Mutex, MutexGuard};
-use std::time::SystemTime;
 
-use crate::workspace::session_manager::{
-    WorkspaceLifecycleState, WorkspaceSession, WorkspaceSessionManager,
-};
+use crate::workspace::session_manager::{WorkspaceSession, WorkspaceSessionManager};
 use crate::workspace::WorkspaceManagerError;
 use crate::workspace_crate::{
     CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
-    DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LeaseId,
-    ReadonlySnapshotHandle, RemountWorkspaceRequest, WorkspaceId, WorkspaceService,
+    DestroyWorkspaceRequest, DestroyWorkspaceResult, RemountWorkspaceRequest, WorkspaceId,
+    WorkspaceService,
 };
 
 use super::session_manager::WorkspaceSessionHandler;
@@ -31,9 +28,10 @@ impl WorkspaceManagerService {
         &self,
         request: CreateWorkspaceRequest,
     ) -> Result<WorkspaceSessionHandler, WorkspaceManagerError> {
+        let layer_stack_root = request.layer_stack_root.clone();
         let handle = self.workspace.create_workspace(request)?;
         let workspace_id = handle.id.clone();
-        let session = WorkspaceSession::from_handle(handle.clone());
+        let session = WorkspaceSession::from_handle(handle.clone(), layer_stack_root);
         let handler = session.handler();
 
         let insert_result = self
@@ -75,30 +73,9 @@ impl WorkspaceManagerService {
                 actual: caller_id,
             });
         }
+        session.ensure_active()?;
 
         Ok(session.handler())
-    }
-
-    pub fn find_by_caller_id(
-        &self,
-        caller_id: &CallerId,
-    ) -> Result<Vec<WorkspaceSessionHandler>, WorkspaceManagerError> {
-        let sessions = self.lock_sessions()?;
-        Ok(sessions
-            .find_by_caller_id(caller_id)
-            .into_iter()
-            .map(WorkspaceSession::handler)
-            .collect())
-    }
-
-    pub fn find_by_lease_id(
-        &self,
-        lease_id: &LeaseId,
-    ) -> Result<Option<WorkspaceSessionHandler>, WorkspaceManagerError> {
-        let sessions = self.lock_sessions()?;
-        Ok(sessions
-            .find_by_lease_id(lease_id)
-            .map(WorkspaceSession::handler))
     }
 
     pub fn capture_changes(
@@ -106,21 +83,15 @@ impl WorkspaceManagerService {
         handler: &WorkspaceSessionHandler,
         request: CaptureChangesRequest,
     ) -> Result<CapturedWorkspaceChanges, WorkspaceManagerError> {
-        let result = self
-            .workspace
-            .capture_changes(&handler.handle, request)
-            .map_err(WorkspaceManagerError::from)?;
-
         let mut sessions = self.lock_sessions()?;
         let session = sessions
             .find_by_workspace_id_mut(&handler.workspace_id)
             .ok_or_else(|| WorkspaceManagerError::NotFound {
                 workspace_id: handler.workspace_id.clone(),
             })?;
-        session.handle.base_revision = result.base_revision.clone();
-        session.snapshot.manifest_version = result.base_revision.version;
-        session.snapshot.root_hash = result.base_revision.root_hash.clone();
-        session.last_activity = SystemTime::now();
+        let handle = session.active_handle()?;
+        let result = self.workspace.capture_changes(&handle, request)?;
+        session.refresh_after_capture(result.base_revision.clone());
 
         Ok(result)
     }
@@ -130,18 +101,15 @@ impl WorkspaceManagerService {
         handler: &WorkspaceSessionHandler,
         request: RemountWorkspaceRequest,
     ) -> Result<WorkspaceSessionHandler, WorkspaceManagerError> {
-        let result = self
-            .workspace
-            .remount_workspace(&handler.handle, request)
-            .map_err(WorkspaceManagerError::from)?;
-
         let mut sessions = self.lock_sessions()?;
         let session = sessions
             .find_by_workspace_id_mut(&handler.workspace_id)
             .ok_or_else(|| WorkspaceManagerError::NotFound {
                 workspace_id: handler.workspace_id.clone(),
             })?;
-        session.refresh_from_handle(result.handle);
+        let handle = session.active_handle()?;
+        let result = self.workspace.remount_workspace(&handle, request)?;
+        session.refresh_from_handle(result.handle)?;
         Ok(session.handler())
     }
 
@@ -150,41 +118,26 @@ impl WorkspaceManagerService {
         handler: WorkspaceSessionHandler,
         request: DestroyWorkspaceRequest,
     ) -> Result<DestroyWorkspaceResult, WorkspaceManagerError> {
-        {
-            let mut sessions = self.lock_sessions()?;
-            let session = sessions
-                .find_by_workspace_id_mut(&handler.workspace_id)
-                .ok_or_else(|| WorkspaceManagerError::NotFound {
-                    workspace_id: handler.workspace_id.clone(),
-                })?;
-            session.lifecycle_state = WorkspaceLifecycleState::Closing;
-            session.last_activity = SystemTime::now();
-        }
+        let mut sessions = self.lock_sessions()?;
+        let session = sessions
+            .find_by_workspace_id_mut(&handler.workspace_id)
+            .ok_or_else(|| WorkspaceManagerError::NotFound {
+                workspace_id: handler.workspace_id.clone(),
+            })?;
+        let handle = session.mark_closing()?;
 
-        match self.workspace.destroy_workspace(handler.handle, request) {
+        match self.workspace.destroy_workspace(handle, request) {
             Ok(result) => {
-                let mut sessions = self.lock_sessions()?;
                 sessions.remove(&handler.workspace_id);
                 Ok(result)
             }
             Err(error) => {
-                let mut sessions = self.lock_sessions()?;
                 if let Some(session) = sessions.find_by_workspace_id_mut(&handler.workspace_id) {
-                    session.lifecycle_state = WorkspaceLifecycleState::Active;
-                    session.last_activity = SystemTime::now();
+                    session.mark_active();
                 }
                 Err(WorkspaceManagerError::Workspace(error))
             }
         }
-    }
-
-    pub fn latest_snapshot(
-        &self,
-        request: LatestSnapshotRequest,
-    ) -> Result<ReadonlySnapshotHandle, WorkspaceManagerError> {
-        self.workspace
-            .latest_snapshot(request)
-            .map_err(WorkspaceManagerError::from)
     }
 
     fn lock_sessions(

@@ -53,7 +53,7 @@ impl From<layerstack::service::Snapshot> for LayerStackSnapshotRef {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NetworkMode {
     Host,
-    IsolatedNetwork,
+    Isolated,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -68,53 +68,10 @@ pub struct WorkspaceHandle {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CreateWorkspaceRequest {
-    pub owner: CallerId,
+    pub caller_id: CallerId,
     pub workspace_root: PathBuf,
+    pub layer_stack_root: PathBuf,
     pub network: NetworkMode,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct RunCommandRequest {
-    pub invocation_id: String,
-    pub cmd: String,
-    pub cwd: Option<PathBuf>,
-    pub timeout_seconds: Option<f64>,
-    pub yield_time_ms: u64,
-    pub remountable: bool,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CommandStatus {
-    Running,
-    Ok,
-    Cancelled,
-    Error,
-    TimedOut,
-}
-
-impl CommandStatus {
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Running => "running",
-            Self::Ok => "ok",
-            Self::Cancelled => "cancelled",
-            Self::Error => "error",
-            Self::TimedOut => "timed_out",
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct RunCommandResult {
-    pub status: CommandStatus,
-    pub command_id: Option<String>,
-    pub exit_code: Option<i64>,
-    pub stdout: String,
-    pub stderr: String,
-    pub changed_paths: Vec<String>,
-    pub base_revision: BaseRevision,
-    pub published: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -214,15 +171,11 @@ pub struct ReadonlySnapshotHandle {
 #[derive(Debug, Clone, PartialEq)]
 pub struct DestroyWorkspaceRequest {
     pub grace_s: Option<f64>,
-    pub cancel_commands: bool,
 }
 
 impl Default for DestroyWorkspaceRequest {
     fn default() -> Self {
-        Self {
-            grace_s: None,
-            cancel_commands: true,
-        }
+        Self { grace_s: None }
     }
 }
 
@@ -230,7 +183,6 @@ impl Default for DestroyWorkspaceRequest {
 pub struct DestroyWorkspaceResult {
     pub workspace_id: WorkspaceId,
     pub owner: CallerId,
-    pub cancelled_commands: usize,
     pub evicted_upperdir_bytes: u64,
     pub lifetime_s: f64,
     pub lease_released: Option<bool>,

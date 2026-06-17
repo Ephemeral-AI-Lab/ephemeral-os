@@ -4,17 +4,11 @@ use std::time::SystemTime;
 
 use crate::workspace::WorkspaceManagerError;
 use crate::workspace_crate::{
-    CallerId, LayerStackSnapshotRef, LeaseId, WorkspaceHandle, WorkspaceId,
+    BaseRevision, CallerId, LayerStackSnapshotRef, LeaseId, WorkspaceHandle, WorkspaceId,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RemountState {
-    Active,
-    Pending,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum WorkspaceLifecycleState {
+pub(crate) enum WorkspaceLifecycleState {
     Active,
     Closing,
 }
@@ -38,24 +32,22 @@ pub(crate) struct WorkspaceSession {
     pub lease_id: LeaseId,
     pub snapshot: LayerStackSnapshotRef,
     pub layer_paths: Vec<PathBuf>,
-    pub remount_state: RemountState,
     pub lifecycle_state: WorkspaceLifecycleState,
     pub created_at: SystemTime,
     pub last_activity: SystemTime,
 }
 
 impl WorkspaceSession {
-    pub(crate) fn from_handle(handle: WorkspaceHandle) -> Self {
+    pub(crate) fn from_handle(handle: WorkspaceHandle, layer_stack_root: PathBuf) -> Self {
         let now = SystemTime::now();
         Self {
             workspace_id: handle.id.clone(),
             caller_id: handle.owner.clone(),
-            layer_stack_root: handle.workspace_root.clone(),
+            layer_stack_root,
             lease_id: handle.snapshot.lease_id.clone(),
             layer_paths: handle.snapshot.layer_paths.clone(),
             snapshot: handle.snapshot.clone(),
             handle,
-            remount_state: RemountState::Active,
             lifecycle_state: WorkspaceLifecycleState::Active,
             created_at: now,
             last_activity: now,
@@ -73,14 +65,60 @@ impl WorkspaceSession {
         }
     }
 
-    pub(crate) fn refresh_from_handle(&mut self, handle: WorkspaceHandle) {
-        self.workspace_id = handle.id.clone();
+    pub(crate) fn ensure_active(&self) -> Result<(), WorkspaceManagerError> {
+        match self.lifecycle_state {
+            WorkspaceLifecycleState::Active => Ok(()),
+            WorkspaceLifecycleState::Closing => Err(WorkspaceManagerError::Closing {
+                workspace_id: self.workspace_id.clone(),
+            }),
+        }
+    }
+
+    pub(crate) fn active_handle(&self) -> Result<WorkspaceHandle, WorkspaceManagerError> {
+        self.ensure_active()?;
+        Ok(self.handle.clone())
+    }
+
+    pub(crate) fn mark_closing(&mut self) -> Result<WorkspaceHandle, WorkspaceManagerError> {
+        self.ensure_active()?;
+        self.lifecycle_state = WorkspaceLifecycleState::Closing;
+        self.last_activity = SystemTime::now();
+        Ok(self.handle.clone())
+    }
+
+    pub(crate) fn mark_active(&mut self) {
+        self.lifecycle_state = WorkspaceLifecycleState::Active;
+        self.last_activity = SystemTime::now();
+    }
+
+    pub(crate) fn refresh_after_capture(&mut self, base_revision: BaseRevision) {
+        self.handle.base_revision = base_revision;
+        self.handle.snapshot.manifest_version = self.handle.base_revision.version;
+        self.handle.snapshot.root_hash = self.handle.base_revision.root_hash.clone();
+        self.snapshot = self.handle.snapshot.clone();
+        self.lease_id = self.snapshot.lease_id.clone();
+        self.layer_paths = self.snapshot.layer_paths.clone();
+        self.last_activity = SystemTime::now();
+    }
+
+    pub(crate) fn refresh_from_handle(
+        &mut self,
+        handle: WorkspaceHandle,
+    ) -> Result<(), WorkspaceManagerError> {
+        if handle.id != self.workspace_id {
+            return Err(WorkspaceManagerError::RemountWorkspaceIdMismatch {
+                expected: self.workspace_id.clone(),
+                actual: handle.id,
+            });
+        }
+
         self.caller_id = handle.owner.clone();
         self.lease_id = handle.snapshot.lease_id.clone();
         self.layer_paths = handle.snapshot.layer_paths.clone();
         self.snapshot = handle.snapshot.clone();
         self.handle = handle;
         self.last_activity = SystemTime::now();
+        Ok(())
     }
 }
 
@@ -120,6 +158,7 @@ impl WorkspaceSessionManager {
         self.sessions.get_mut(workspace_id)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn find_by_caller_id(&self, caller_id: &CallerId) -> Vec<&WorkspaceSession> {
         self.sessions
             .values()
@@ -127,6 +166,7 @@ impl WorkspaceSessionManager {
             .collect()
     }
 
+    #[allow(dead_code)]
     pub(crate) fn find_by_lease_id(&self, lease_id: &LeaseId) -> Option<&WorkspaceSession> {
         self.sessions
             .values()
@@ -166,7 +206,10 @@ mod tests {
     #[test]
     fn workspace_session_manager_inserts_and_finds_by_workspace_id() {
         let mut manager = WorkspaceSessionManager::default();
-        let session = WorkspaceSession::from_handle(handle("workspace-1", "caller-1", "lease-1"));
+        let session = WorkspaceSession::from_handle(
+            handle("workspace-1", "caller-1", "lease-1"),
+            PathBuf::from("/layers"),
+        );
 
         manager.insert(session).unwrap();
 
@@ -183,18 +226,16 @@ mod tests {
     fn workspace_session_manager_derives_caller_lookup_from_primary_map() {
         let mut manager = WorkspaceSessionManager::default();
         manager
-            .insert(WorkspaceSession::from_handle(handle(
-                "workspace-1",
-                "caller-1",
-                "lease-1",
-            )))
+            .insert(WorkspaceSession::from_handle(
+                handle("workspace-1", "caller-1", "lease-1"),
+                PathBuf::from("/layers"),
+            ))
             .unwrap();
         manager
-            .insert(WorkspaceSession::from_handle(handle(
-                "workspace-2",
-                "caller-1",
-                "lease-2",
-            )))
+            .insert(WorkspaceSession::from_handle(
+                handle("workspace-2", "caller-1", "lease-2"),
+                PathBuf::from("/layers"),
+            ))
             .unwrap();
 
         let sessions = manager.find_by_caller_id(&CallerId("caller-1".to_owned()));
@@ -206,11 +247,10 @@ mod tests {
     fn workspace_session_manager_derives_lease_lookup_from_primary_map() {
         let mut manager = WorkspaceSessionManager::default();
         manager
-            .insert(WorkspaceSession::from_handle(handle(
-                "workspace-1",
-                "caller-1",
-                "lease-1",
-            )))
+            .insert(WorkspaceSession::from_handle(
+                handle("workspace-1", "caller-1", "lease-1"),
+                PathBuf::from("/layers"),
+            ))
             .unwrap();
 
         assert_eq!(
@@ -227,11 +267,10 @@ mod tests {
         let mut manager = WorkspaceSessionManager::default();
         let workspace_id = WorkspaceId("workspace-1".to_owned());
         manager
-            .insert(WorkspaceSession::from_handle(handle(
-                "workspace-1",
-                "caller-1",
-                "lease-1",
-            )))
+            .insert(WorkspaceSession::from_handle(
+                handle("workspace-1", "caller-1", "lease-1"),
+                PathBuf::from("/layers"),
+            ))
             .unwrap();
 
         assert!(manager.remove(&workspace_id).is_some());
@@ -245,19 +284,17 @@ mod tests {
     fn workspace_session_manager_rejects_duplicate_workspace_id() {
         let mut manager = WorkspaceSessionManager::default();
         manager
-            .insert(WorkspaceSession::from_handle(handle(
-                "workspace-1",
-                "caller-1",
-                "lease-1",
-            )))
+            .insert(WorkspaceSession::from_handle(
+                handle("workspace-1", "caller-1", "lease-1"),
+                PathBuf::from("/layers"),
+            ))
             .unwrap();
 
         let error = manager
-            .insert(WorkspaceSession::from_handle(handle(
-                "workspace-1",
-                "caller-2",
-                "lease-2",
-            )))
+            .insert(WorkspaceSession::from_handle(
+                handle("workspace-1", "caller-2", "lease-2"),
+                PathBuf::from("/layers"),
+            ))
             .unwrap_err();
 
         assert!(matches!(
