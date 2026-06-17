@@ -934,3 +934,624 @@ Final closeout results:
 5. `SIGSTOP`/`SIGCONT` quiesce is Linux-specific and coarse. A production path
    may still need a cgroup freezer or runtime-specific equivalent before
    enabling live retarget by default.
+
+## 7. Post-Closeout Stress Coverage: Larger Payloads, Multi-Lease Pins, Command Integrity
+
+Additional focused coverage was added after the initial closeout to compare
+hard-protection against live-remount normalization under heavier storage and
+command-integrity shapes.
+
+Files changed:
+
+- `crates/daemon/layerstack/examples/bench_layerstack_gap_reclaim.rs`
+  - Added 16 MiB same-file hard-protection and normalized-remount benchmark
+    rows.
+  - Added two-lease benchmark rows where an older lease pins part of a newer
+    lease's parent prefix.
+  - Added a three-lease benchmark row with 20 retained same-file layers and 12
+    pinned lower layers.
+  - Fixed the benchmark row helper so `lease_count` reports multi-lease rows
+    accurately.
+- `crates/daemon/layerstack/tests/stack.rs`
+  - Added a 4 MiB same-file parent-prefix normalization integrity test.
+  - Added a two-lease storage test proving parent-prefix normalization reclaims
+    only layers not still pinned by an older lease.
+  - Added a three-lease storage and read-integrity test proving a large
+    unleased top gap can still reclaim while historical snapshots remain
+    readable.
+- `crates/e2e-test/tests/workspace-runtime-isolated/isolated_workspace_compact_remount.rs`
+  - Added a live remountable command test that resumes after remount, hashes two
+    64 KiB public files, verifies the hash in-command, and atomically writes the
+    private hash result through the isolated upperdir.
+  - Added a two-command live remount test with two remountable commands, twelve
+    alternating 96 KiB public file writes, a child/subshell digest pipeline, and
+    private post-remount integrity outputs from both commands.
+  - Added a mixed safe-plus-fd-pinned command test proving one unsafe command
+    blocks the whole remount without partial retarget while both commands resume.
+  - Added a process-tree live remount test with 18 alternating 256 KiB public
+    rewrites and command-created private upperdir state verified after remount.
+  - Added a two-open-lease live remount test where an older isolated caller pins
+    a historical 256 KiB snapshot while a newer caller runs a remountable command
+    and live-remounts onto a compacted parent.
+  - Added a repeated-cycle live remount test where one long-running remountable
+    command is remounted three times while public writes move the active head
+    between cycles and private upperdir state accumulates across cycles.
+  - Added a many-file tree live remount test with 32 files x 3 retained
+    rewrites, manifest-driven command hashing, post-remount public head
+    movement, and isolated pinned-snapshot verification after resume.
+  - Added a process-fanout live remount test with ten background child loops,
+    24 x 192 KiB public rewrites, command-created private state, post-remount
+    public head movement, and pinned-snapshot hash verification after resume.
+  - Added a large same-file live remount test with nine 1 MiB rewrites, a
+    command-side SHA-256 check, and post-remount public head movement.
+  - Added a historical-release live remount test where three older leases pin a
+    16-layer same-file chain, then release while the newest command remains
+    running, allowing a second remount to reclaim to bounded dirs.
+  - Added a three-command wide-tree live remount test with 12 files x 4
+    rewrites, ordered/reverse/private-even hash checks, private upperdir state,
+    and post-remount public head movement.
+  - Added a three-open-lease live remount test with two historical readers, two
+    remountable commands on the newest lease, bash plus Python chunked hashing,
+    post-remount public head movement, and all three snapshots verified after
+    newest-lease retarget.
+  - Added six generated matrix live-remount cases through `RemountMatrixCase`:
+    a 12 x 512 KiB hot-file chain, an 18-file x 3 deep tree with two commands,
+    a 36-file x 2 many-tiny-file tree with three commands, a 10-file x 5
+    medium/large tree with four commands, a 48-file sparse tree with two
+    commands, and a 16-file x 4 nested tree with four commands.
+  - Added twelve more single-lease matrix cases and three pinned-history matrix
+    cases covering larger hot rewrites, wider trees, more commands, and up to
+    four historical leases plus one live lease.
+  - Added a concurrent pip-install-shaped live remount test. One remountable
+    command builds a private `site-packages`-style tree with 384 concurrent
+    module/resource pairs plus package metadata, waits in a live command
+    session during remount, then recomputes the install-tree SHA-256 after
+    resume and spot-checks installed module/resource files.
+  - Added the 16-case `coverage_goal2` batch:
+    - Easy: four single-lease matrix cases plus one pinned-history case covering
+      micro wide manifests, small hot rewrites, nested trees, two-command
+      balanced hashes, and two historical leases.
+    - Medium: four single-lease matrix cases plus one pinned-history case
+      covering 128 tiny files, 512 KiB file rewrites, 32-file/5-command
+      hashing, 16 hot rewrites, and three historical leases.
+    - Hard: four single-lease matrix cases plus two pinned-history cases
+      covering one 8 MiB file rewritten four times, 64 files x 4 rewrites with
+      eight commands, 192 sparse files, 1 MiB hot quad rewrites with six
+      commands, and four historical leases.
+  - Added the 20-case `coverage_goal3` batch:
+    - Easy: eight sets covering small hot rewrites, 64/96-file sparse fanout,
+      three-command hashing, and one older pinned reader.
+    - Medium: six sets covering a 256-file tiny tree, 48 files x 3 rewrites,
+      hot 512 KiB file pairs, 24 rewrites of one file, and three older pinned
+      readers.
+    - Hard: six sets covering the max-supported 8 MiB single-write file with
+      five rewrites, eight 1 MiB files, 320 sparse files with eight commands,
+      32 files x 5 rewrites with eight commands, and four historical readers.
+      A first attempt at 16 MiB and 12 MiB single-write rows proved the
+      operation-level `sandbox.file.write` cap is 8 MiB, so future larger-file
+      stress must use multiple files or command-side private data creation.
+  - Added the remaining 29 `coverage_goal4` rows after the real concurrent pip
+    row, completing the 30-case final batch:
+    - Easy: twelve sets covering small hot rewrites, sparse/nested trees,
+      three-command fanout on small files, and one/two historical readers.
+    - Medium: ten sets covering 64/128-file sparse trees, 16/32/48-file
+      rewrite trees, hot 128 KiB pairs, 20 same-file rewrites, 256 KiB file
+      groups, and two/three historical readers.
+    - Hard: seven additional sets plus the existing real-pip row, covering
+      1 MiB multi-file rewrites, one 4 MiB file rewritten eight times,
+      256 sparse files with eight commands, 96 files x 4 rewrites with eight
+      commands, four historical readers, and 64 files x 64 KiB with eight
+      commands.
+- `crates/e2e-test/test-reports/TEST-REPORT.md`
+  - Added Iteration 23 with the first complex-command live E2E result.
+  - Added Iterations 24 and 25 with the failed newline-format retry and the
+    passing two-command live E2E result.
+  - Added Iteration 26 with the mixed blocked-command and process-tree live E2E
+    result.
+  - Added Iterations 27 through 29 with the initial multi-lease harness failure,
+    exact live retry, and passing full focused suite.
+  - Added Iterations 30 and 31 with the exact repeated-cycle live test and
+    passing full focused suite.
+  - Added Iterations 45 through 47 with the six-case matrix non-live gate,
+    exact live proof, and passing full focused suite.
+  - Added Iterations 48 through 61 with the expanded matrix and pinned-history
+    compile/live gates, the pinned-history assertion fix, scoped stale-container
+    reap, the concurrent pip-style install tree exact live proof, and the broad
+    34-test compact-remount live proof.
+  - Added Iterations 62 through 64 with the `coverage_goal2` non-live gate,
+    focused 16-test live proof, and broad 50-test non-live inventory check.
+  - Added Iterations 65 through 72 with the `coverage_goal3` non-live gate,
+    the 16 MiB/12 MiB write-limit failures, the corrected 8 MiB exact live
+    proof, the passing 20-test live proof, and the broad 70-test non-live
+    inventory check.
+  - Added Iterations 73 through 78 with the real concurrent pip exact proof,
+    `coverage_goal4` non-live/live gates, and the broad 100-test non-live
+    inventory check.
+- `docs/layerstack-hard-protection-vs-remount_PERFORMANCE_REPORT.md`
+  - Added the concrete hard-protection compact versus verified remount
+    performance report needed before deciding whether to remove blocked-path
+    hard-protection fallback compaction.
+
+Fresh benchmark command:
+
+```bash
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo run -q -p layerstack --release --example bench_layerstack_gap_reclaim
+```
+
+Fresh benchmark rows, recomputed over the base snapshot `B`:
+
+| Case | Leases | B | Before - B | After While Leased - B | After Release - B | Depth | Duration |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `mounted_l4_prefix_large_file_view_reclaim` | 1 | 16,777,216 | 83,886,080 | 67,108,864 | 0 | 6 -> 5 | 0.011886500s |
+| `mounted_l4_prefix_normalized_large_file_reclaim` | 1 | 16,777,216 | 83,886,080 | 33,554,432 | 0 | 6 -> 3 | 0.043966166s |
+| `multi_lease_pinned_prefix_view_reclaim` | 2 | 1,048,576 | 11,534,336 | 8,388,608 | 0 | 12 -> 9 | 0.014396541s |
+| `multi_lease_pinned_prefix_normalized_reclaim` | 2 | 1,048,576 | 11,534,336 | 6,291,456 | 0 | 12 -> 3 | 0.053167334s |
+| `many_lease_deep_pinned_top_gap_reclaim` | 3 | 1,048,576 | 19,922,944 | 12,582,912 | 0 | 20 -> 13 | 0.016175792s |
+
+Interpretation:
+
+- Large same-file normalization retained 50% less mutable layer payload over
+  `B` than hard protection while the lease was still held: `B + 32 MiB`
+  versus `B + 64 MiB`, at roughly 44 ms versus 12 ms in this run.
+- Multi-lease normalization retained 25% less mutable layer payload over `B`
+  than hard protection while both leases were held: `B + 6 MiB` versus
+  `B + 8 MiB`. It
+  could not reach the ideal `B + 3 MiB` because the older lease still pinned
+  4 MiB of historical parent layers.
+- The two-lease unit test verifies that the older lease can still read version 4,
+  the normalized middle lease can still read version 8, and the active stack can
+  still read version 12 after parent-prefix reclaim and top-gap reclaim.
+- The three-lease unit test verifies historical readers at versions 4, 8, and
+  12 while reclaiming the unleased top gap from versions 13 through 20. Storage
+  remains proportional to the pinned historical set until those leases release.
+
+Fresh verification:
+
+```bash
+cargo fmt
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p layerstack lease_aware -- --nocapture
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --test workspace-runtime-isolated compact_remount_live_remount_preserves_complex_command_integrity --no-default-features -- --nocapture
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --test workspace-runtime-isolated compact_remount_live_remounts_multiple_remountable_commands_consistently --no-default-features -- --nocapture
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --test workspace-runtime-isolated compact_remount_blocks_mixed_safe_and_fd_pinned_remountable_commands --no-default-features -- --nocapture
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --test workspace-runtime-isolated compact_remount_live_remount_preserves_process_tree_and_private_state --no-default-features -- --nocapture
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo run -p xtask -- package
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo run -p e2e-test --bin e2e-runner -- --run-id live-remount-complex-integrity-1 --suites workspace-runtime-isolated --max-parallel 1 --container-weight-cap 10 --heavy-test-threads 4
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo run -p e2e-test --bin e2e-runner -- --run-id live-remount-multi-command-2 --suites workspace-runtime-isolated --max-parallel 1 --container-weight-cap 10 --heavy-test-threads 4
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo run -p e2e-test --bin e2e-runner -- --run-id live-remount-mixed-tree-1 --suites workspace-runtime-isolated --max-parallel 1 --container-weight-cap 10 --heavy-test-threads 4
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --test workspace-runtime-isolated compact_remount_live_remount --no-default-features -- --nocapture
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --features e2e --test workspace-runtime-isolated compact_remount_live_remount_preserves_concurrent_pip_style_install_tree -- --nocapture --test-threads 1
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --features e2e --test workspace-runtime-isolated compact_remount_live_remount -- --nocapture --test-threads 1
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --test workspace-runtime-isolated coverage_goal2 --no-default-features -- --nocapture
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --features e2e --test workspace-runtime-isolated coverage_goal2 -- --nocapture --test-threads 1
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --test workspace-runtime-isolated compact_remount_live_remount --no-default-features -- --nocapture
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --test workspace-runtime-isolated coverage_goal3 --no-default-features -- --nocapture
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --features e2e --test workspace-runtime-isolated compact_remount_live_remount_coverage_goal3_hard_single_8mib_five_rewrites -- --nocapture --test-threads 1
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --features e2e --test workspace-runtime-isolated coverage_goal3 -- --nocapture --test-threads 1
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --test workspace-runtime-isolated compact_remount_live_remount --no-default-features -- --nocapture
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --test workspace-runtime-isolated compact_remount_live_remount_coverage_goal4_hard_concurrent_real_pip_install_tree --no-default-features -- --nocapture
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --features e2e --test workspace-runtime-isolated compact_remount_live_remount_coverage_goal4_hard_concurrent_real_pip_install_tree -- --nocapture --test-threads 1
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --test workspace-runtime-isolated compact_remount_live_remount --no-default-features -- --nocapture
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --test workspace-runtime-isolated coverage_goal4 --no-default-features -- --nocapture
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --features e2e --test workspace-runtime-isolated coverage_goal4 -- --nocapture --test-threads 1
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --test workspace-runtime-isolated compact_remount_live_remount --no-default-features -- --nocapture
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --features e2e --test workspace-runtime-isolated compact_remount_live_remount -- --nocapture --test-threads 1
+```
+
+Fresh verification results:
+
+- `cargo fmt`: passed.
+- `layerstack lease_aware`: 15 focused tests passed, including the new large
+  file and multi-lease storage tests.
+- Non-live E2E compile/filter: 1 test passed and skipped live execution without
+  `--features e2e`.
+- `cargo run -p xtask -- package`: passed, packaged
+  `dist/eosd-linux-amd64` with sha256
+  `97e3fb1ee24b78c7094c0c8d126475d40d162c6fc040fd3c1d25173699bac571`.
+- `live-remount-complex-integrity-1`: 30/30 live `workspace-runtime-isolated`
+  tests passed. Runner duration was 45,202 ms, suite duration was 42,485 ms,
+  `max_parallel=1`, `container_weight_cap=10`, `daemon_logs_copied=1`, and
+  `removed_containers=1`.
+- The complex command live-remount trace reported `duration_us=47000`,
+  `live_remount=true`, `process_count=2`, `quiesced_process_count=2`,
+  `process_resumed=true`, `mount_verified=true`, `lease_retargeted=true`,
+  `compacted_snapshot_layers=11`, `remounted_layer_count=1`,
+  `before_layer_dirs=11`, `after_layer_dirs=2`,
+  `before_storage_bytes=657563`, `after_storage_bytes=262745`,
+  `pinned_cwd_count=0`, `pinned_fd_count=0`,
+  `pinned_mapped_file_count=0`, and exact lowerdir proof success.
+- `live-remount-multi-command-1`: 30/31 live tests passed before the new
+  two-command assertion rejected a persisted digest with a trailing newline. The
+  trace still proved the remount path succeeded with `live_remount=true`,
+  `remountable_commands=2`, `process_count=4`, `quiesced_process_count=4`,
+  `mount_verified=true`, `lease_retargeted=true`, `before_layer_dirs=13`,
+  `after_layer_dirs=2`, `before_storage_bytes=1182255`, and
+  `after_storage_bytes=393845`.
+- `live-remount-multi-command-2`: 31/31 live `workspace-runtime-isolated` tests
+  passed after writing exact digest bytes with `printf "%s"`. Runner duration
+  was 49,167 ms, suite duration was 48,143 ms, prebuild was 645 ms,
+  `max_parallel=1`, `container_weight_cap=10`, `daemon_logs_copied=1`, and
+  `removed_containers=1`.
+- The two-command live-remount trace reported `duration_us=45000`,
+  `live_remount=true`, `remountable_commands=2`, `process_count=4`,
+  `quiesced_process_count=4`, `process_resumed=true`, `mount_verified=true`,
+  `lease_retargeted=true`, `compacted_snapshot_layers=13`,
+  `remounted_layer_count=1`, `before_layer_dirs=13`, `after_layer_dirs=2`,
+  `before_storage_bytes=1182255`, `after_storage_bytes=393845`,
+  `pinned_cwd_count=0`, `pinned_fd_count=0`,
+  `pinned_mapped_file_count=0`, `mountinfo_checked_count=4`, and exact
+  lowerdir proof success.
+- `live-remount-mixed-tree-1`: 33/33 live `workspace-runtime-isolated` tests
+  passed. Runner duration was 54,713 ms, suite duration was 53,109 ms, prebuild
+  was 1,256 ms, `max_parallel=1`, `container_weight_cap=10`,
+  `daemon_logs_copied=1`, and `removed_containers=1`.
+- The mixed blocked-command trace reported `duration_us=12000`,
+  `reason=fd_pinned_workspace`, `active_commands=2`,
+  `remountable_commands=2`, `process_count=4`, `quiesced_process_count=4`,
+  `pinned_fd_count=1`, `pinned_cwd_count=0`, `mountinfo_checked_count=4`,
+  `resumed=true`, `before_layer_dirs=9`, `after_layer_dirs=9`,
+  `fallback_checkpoint_count=0`, and `fallback_compacted_layers=0`.
+- The process-tree live-remount trace reported `duration_us=58000`,
+  `live_remount=true`, `remountable_commands=1`, `process_count=3`,
+  `quiesced_process_count=3`, `process_resumed=true`, `mount_verified=true`,
+  `lease_retargeted=true`, `compacted_snapshot_layers=19`,
+  `remounted_layer_count=1`, `before_layer_dirs=19`, `after_layer_dirs=2`,
+  `before_storage_bytes=4722212`, `after_storage_bytes=1573520`,
+  `pinned_cwd_count=0`, `pinned_fd_count=0`,
+  `pinned_mapped_file_count=0`, `mountinfo_checked_count=3`, and exact
+  lowerdir proof success.
+- `live-remount-multi-lease-1`: failed after the new caller-specific stdout
+  helper looked at `stdout` while command progress returned
+  `output.stdout`. The command had printed `MULTI_LEASE_READY`, but the helper
+  timed out before cleanup, leaving two open callers and cascading later setup
+  failures.
+- `live-remount-multi-lease-2`: 34/34 live `workspace-runtime-isolated` tests
+  passed after the helper fix and cleanup-guard change. Runner duration was
+  58,928 ms, suite duration was 58,441 ms, prebuild was 128 ms,
+  `max_parallel=1`, `container_weight_cap=10`, `daemon_logs_copied=1`, and
+  `removed_containers=1`.
+- The multi-lease live-remount trace reported `duration_us=45000`,
+  `live_remount=true`, `active_leases_after=2`, `remountable_commands=1`,
+  `process_count=2`, `quiesced_process_count=2`, `process_resumed=true`,
+  `mount_verified=true`, `lease_retargeted=true`,
+  `compacted_snapshot_layers=13`, `remounted_layer_count=1`,
+  `before_manifest_depth=13`, `after_manifest_depth=3`,
+  `before_layer_dirs=13`, `after_layer_dirs=8`,
+  `before_storage_bytes=3148141`, `after_storage_bytes=1836071`, and exact
+  lowerdir proof success. The test also verified the older lease still read its
+  pinned historical snapshot after the newer lease was retargeted, and the
+  newer resumed command wrote the expected hash from the compacted snapshot.
+- `live-remount-repeat-cycles-1`: 35/35 live `workspace-runtime-isolated` tests
+  passed. Runner duration was 59,584 ms, suite duration was 59,119 ms, prebuild
+  was 117 ms, `max_parallel=1`, `container_weight_cap=10`,
+  `daemon_logs_copied=1`, and `removed_containers=1`.
+- The repeated-cycle live test ran three verified remounts in one long-running
+  command. Cycle 1 reported `duration_us=43000`, `before_layer_dirs=13`,
+  `after_layer_dirs=2`, `before_storage_bytes=1575277`,
+  `after_storage_bytes=262705`, `compacted_snapshot_layers=13`, and exact
+  lowerdir proof success. Cycles 2 and 3 ran after public head writes that the
+  isolated lease must not observe; they reported `duration_us=45000` and
+  `duration_us=41000`, `before_layer_dirs=3`, `after_layer_dirs=2`,
+  `before_storage_bytes=393932`, and `after_storage_bytes=262705`. The command
+  verified the pinned snapshot hash after every resume, and the final private
+  state file contained all three cycle hashes.
+- `hard-vs-remount-report-1`: 35/35 live `workspace-runtime-isolated` tests
+  passed as the current report calibration run. Runner duration was 59,595 ms,
+  suite duration was 59,115 ms, prebuild was 118 ms, `max_parallel=1`,
+  `container_weight_cap=10`, `daemon_logs_copied=1`, and
+  `removed_containers=1`. Live-remount traces used in the performance report
+  measured 51 ms for complex command integrity, 47 ms for process-tree/private
+  state integrity, 33/43/43 ms for repeated remount cycles, 45 ms for a newer
+  lease remounted while an older lease stayed pinned, and 44 ms for two
+  remountable commands. Blocked unsafe traces completed in 2-12 ms with
+  `fallback_compacted_layers=0`.
+- `live-remount-many-file-tree-2`: 36/36 live `workspace-runtime-isolated`
+  tests passed after scoped stale-container cleanup. Runner duration was
+  64,223 ms, suite duration was 63,735 ms, prebuild was 131 ms,
+  `max_parallel=1`, `container_weight_cap=10`, `daemon_logs_copied=1`, and
+  `removed_containers=1`. The new many-file trace reported
+  `duration_us=49000`, `live_remount=true`, `mount_verified=true`,
+  `lease_retargeted=true`, `compacted_snapshot_layers=98`,
+  `before_manifest_depth=98`, `after_manifest_depth=1`,
+  `before_layer_dirs=98`, `after_layer_dirs=2`,
+  `before_storage_bytes=1590724`, `after_storage_bytes=1053681`,
+  `remountable_commands=1`, `process_count=2`, `quiesced_process_count=2`, and
+  exact lowerdir proof success. The test verifies the resumed command hashes
+  the pinned 32-file tree, an isolated read still sees the pre-remount snapshot,
+  and a separate public caller sees the post-remount head update.
+- `live-remount-three-lease-two-command-1`: 37/37 live
+  `workspace-runtime-isolated` tests passed. Runner duration was 69,639 ms,
+  suite duration was 69,135 ms, prebuild was 127 ms, `max_parallel=1`,
+  `container_weight_cap=10`, `daemon_logs_copied=1`, and
+  `removed_containers=1`. The new three-lease/two-command trace reported
+  `duration_us=47000`, `live_remount=true`, `mount_verified=true`,
+  `lease_retargeted=true`, `compacted_snapshot_layers=25`,
+  `before_manifest_depth=25`, `after_manifest_depth=5`,
+  `before_layer_dirs=25`, `after_layer_dirs=21`,
+  `before_storage_bytes=3150002`, `after_storage_bytes=3147742`,
+  `remountable_commands=2`, `process_count=4`, `quiesced_process_count=4`, and
+  `active_leases_after=3`. The modest reclaim is expected: the two historical
+  leases intentionally pin most lower layers, so this test is primarily a
+  correctness and bounded-retarget proof under retained-history pressure.
+- `live-remount-process-fanout-1`: 38/38 live `workspace-runtime-isolated`
+  tests passed. Runner duration was 73,608 ms, suite duration was 73,113 ms,
+  prebuild was 128 ms, `max_parallel=1`, `container_weight_cap=10`,
+  `daemon_logs_copied=1`, and `removed_containers=1`. The fanout trace reported
+  `duration_us=64000`, `live_remount=true`, `mount_verified=true`,
+  `lease_retargeted=true`, `compacted_snapshot_layers=25`,
+  `before_manifest_depth=25`, `after_manifest_depth=1`,
+  `before_layer_dirs=25`, `after_layer_dirs=2`,
+  `before_storage_bytes=4722865`, `after_storage_bytes=786993`,
+  `remountable_commands=1`, `process_count=22`, `quiesced_process_count=22`,
+  and `active_leases_after=1`. This is the strongest process-count proof so
+  far: live remount stopped, inspected, verified, retargeted, and resumed a
+  command session with 22 processes while preserving private state and pinned
+  public snapshot semantics.
+- `live-remount-hard-batch-1`: 41/41 live `workspace-runtime-isolated` tests
+  passed. Runner duration was 87,677 ms, suite duration was 87,183 ms, prebuild
+  was 131 ms, `max_parallel=1`, `container_weight_cap=10`,
+  `daemon_logs_copied=1`, and `removed_containers=1`.
+- The large same-file trace reported `duration_us=53000`,
+  `live_remount=true`, `mount_verified=true`, `lease_retargeted=true`,
+  `compacted_snapshot_layers=10`, `before_manifest_depth=10`,
+  `after_manifest_depth=1`, `before_layer_dirs=10`, `after_layer_dirs=2`,
+  `before_storage_bytes=9439132`, `after_storage_bytes=2097713`,
+  `remountable_commands=1`, `process_count=2`, `quiesced_process_count=2`, and
+  `active_leases_after=1`.
+- The historical-release trace reported two verified remounts in one
+  still-running command. While four leases were active, the first remount
+  reported `duration_us=52000`, `before_layer_dirs=17`, `after_layer_dirs=18`,
+  `before_storage_bytes=2100185`, `after_storage_bytes=2230163`,
+  `active_leases_after=4`, and `process_count=2`. This temporary growth is
+  expected because old leases still pin the historical lowerdirs while the
+  newest lease gains a compact parent checkpoint. After the three older leases
+  released, the second remount reported `duration_us=44000`,
+  `before_layer_dirs=9`, `after_layer_dirs=2`,
+  `before_storage_bytes=1181102`, `after_storage_bytes=262705`, and
+  `active_leases_after=1`, proving the command can remain running while
+  released historical layers are reclaimed.
+- The three-command wide-tree trace reported `duration_us=44000`,
+  `live_remount=true`, `mount_verified=true`, `lease_retargeted=true`,
+  `compacted_snapshot_layers=50`, `before_manifest_depth=50`,
+  `after_manifest_depth=1`, `before_layer_dirs=50`, `after_layer_dirs=2`,
+  `before_storage_bytes=1188793`, `after_storage_bytes=592378`,
+  `remountable_commands=3`, `process_count=6`, `quiesced_process_count=6`, and
+  `active_leases_after=1`.
+- `live-remount-matrix-batch-1`: 47/47 live `workspace-runtime-isolated` tests
+  passed. Runner duration was 122,101 ms, suite duration was 121,656 ms,
+  prebuild was 132 ms, `max_parallel=1`, `container_weight_cap=10`,
+  `daemon_logs_copied=1`, and `removed_containers=1`.
+- The six generated matrix traces reported:
+  - deep tree, 18 files x 3 rewrites: `duration_us=46000`,
+    `before_layer_dirs=56`, `after_layer_dirs=2`,
+    `before_storage_bytes=895492`, `after_storage_bytes=593741`,
+    `remountable_commands=2`, `process_count=4`.
+  - many tiny files, 36 files x 2 rewrites: `duration_us=48000`,
+    `before_layer_dirs=74`, `after_layer_dirs=2`,
+    `before_storage_bytes=310245`, `after_storage_bytes=302402`,
+    `remountable_commands=3`, `process_count=6`.
+  - medium-large, 10 files x 5 rewrites: `duration_us=53000`,
+    `before_layer_dirs=52`, `after_layer_dirs=2`,
+    `before_storage_bytes=3286241`, `after_storage_bytes=1313246`,
+    `remountable_commands=4`, `process_count=8`.
+  - nested rewrite, 16 files x 4 rewrites: `duration_us=50000`,
+    `before_layer_dirs=66`, `after_layer_dirs=2`,
+    `before_storage_bytes=2109384`, `after_storage_bytes=1052344`,
+    `remountable_commands=4`, `process_count=8`.
+  - single hot file, 12 x 512 KiB: `duration_us=49000`,
+    `before_layer_dirs=14`, `after_layer_dirs=2`,
+    `before_storage_bytes=6294120`, `after_storage_bytes=1049328`,
+    `remountable_commands=1`, `process_count=2`.
+  - wide sparse tree, 48 files x 1 rewrite: `duration_us=46000`,
+    `before_layer_dirs=50`, `after_layer_dirs=2`,
+    `before_storage_bytes=405993`, `after_storage_bytes=796250`,
+    `remountable_commands=2`, `process_count=4`.
+- Base-subtracted interpretation for `live-remount-matrix-batch-1` is recorded
+  in `docs/layerstack-hard-protection-vs-remount_PERFORMANCE_REPORT.md`.
+  The key policy result is that rewrite-heavy rows improve strongly over `B`
+  while the wide sparse row gets worse over `B`, proving that layer depth is not
+  a sufficient remount trigger without byte/rewrite-density pressure.
+- Expanded matrix non-live retry: 33/33 matching tests passed, then the
+  pinned-history max-case exact live retry passed 1/1 in 6.13s after changing
+  pinned-history assertions to require mounted-manifest shrink instead of
+  immediate global layer-dir shrink while historical leases remain active.
+- Concurrent pip-style install tree exact live proof: 1/1 matching test passed
+  in 4.56s after reshaping the command into install-Python, Bash wait, and
+  verify-Python phases. It creates hundreds of private upperdir files before
+  remount, verifies `RECORD` coverage, requires `live_remount=true`,
+  `remountable_commands=1`, exact lowerdir proof, zero cwd/fd/mapped pins, then
+  validates the pre/post private install-tree SHA-256 after resume.
+- Broad compact-remount direct Cargo live filter: 34/34 matching tests passed
+  with 29 filtered out in 202.32s. This proves the pip-style case together with
+  the expanded single-lease matrix, pinned-history matrix, repeated-cycle,
+  multi-command, and historical-lease cases.
+- Scoped Docker cleanup during the pip-style retry removed 11 stale containers
+  by exact `eos.e2e.run_id` using
+  `/tmp/ephemeral-os-remount-target/debug/e2e-reap --run-id ...`; no active
+  local Cargo/E2E owner process was present before reaping.
+- `coverage_goal2` non-live compile/filter: 16/16 matching tests passed with
+  63 filtered out.
+- `coverage_goal2` live proof: 16/16 matching tests passed with 63 filtered out
+  in 143.09s. The batch adds 5 easy, 5 medium, and 6 hard classified sets,
+  including four pinned-history cases and single-lease rows up to 8 MiB files,
+  192 sparse files, eight command groups, and four historical leases plus one
+  live lease.
+- Broad compact-remount non-live inventory after `coverage_goal2`: 50/50
+  matching tests passed with 29 filtered out. At that stage, the direct
+  compact-remount inventory was 50 sets and the later fallback-removal decision
+  still needed broader evidence.
+- `coverage_goal3` non-live compile/filter: 20/20 matching tests passed with
+  79 filtered out.
+- Initial `coverage_goal3` live proof: 19/20 matching tests passed in 177.11s.
+  The one failed row tried a 16 MiB single-write file and then a 12 MiB
+  single-write file; both exceeded live write limits before remount ran. The
+  failure established the current API limit for one `sandbox.file.write`
+  payload: 8 MiB.
+- Corrected 8 MiB hard-row exact live retry: 1/1 matching test passed with 98
+  filtered out in 7.82s.
+- `coverage_goal3` live proof after the 8 MiB fix: 20/20 matching tests passed
+  with 79 filtered out in 184.79s.
+- Broad compact-remount non-live inventory after `coverage_goal3`: 70/70
+  matching tests passed with 29 filtered out. At that stage, the direct
+  compact-remount inventory was 70 sets and the later fallback-removal decision
+  still needed the final coverage batch.
+- Real concurrent pip install hard-row non-live compile/filter: 1/1 matching
+  test passed with 99 filtered out. This row generates two local Python
+  packages and runs two `python3 -m pip install --no-index --target ...`
+  processes concurrently, avoiding network dependency while exercising a real
+  pip install tree rather than the earlier synthetic pip-style writer.
+- Real concurrent pip install hard-row exact live proof: 1/1 matching test
+  passed with 99 filtered out in 7.10s. The test verified at least 500
+  installed files in the private upperdir, `live_remount=true`,
+  `mount_verified=true`, `lease_retargeted=true`, exact lowerdir proof, zero
+  cwd/fd/mapped pins, post-remount tree SHA-256 stability, package imports,
+  sample module/data files, and pinned public snapshot isolation after a public
+  head update.
+- Broad compact-remount non-live inventory after the real pip row: 71/71
+  matching tests passed with 29 filtered out. At that stage, the direct
+  compact-remount inventory was 71 sets and the final `coverage_goal4` batch
+  was still needed.
+- `coverage_goal4` non-live compile/filter: 30/30 matching tests passed with
+  99 filtered out. The final batch contains 12 easy, 10 medium, and 8 hard
+  rows when counting the already-added real concurrent pip row as the first
+  hard `coverage_goal4` case.
+- `coverage_goal4` live proof: 30/30 matching tests passed with 99 filtered out
+  in 262.59s. The live batch includes the real concurrent pip install row,
+  large same-file rewrites up to 4 MiB x 8, eight-command sparse/wide rows,
+  and pinned-history rows with up to four historical readers.
+- Broad compact-remount non-live inventory after `coverage_goal4`: 100/100
+  matching tests passed with 29 filtered out. The requested inventory count is
+  now met. The distribution accounting is 40 easy, 30 medium, and 30 hard:
+  the existing baseline through `coverage_goal3` classifies as 28 easy,
+  20 medium, and 22 hard, and `coverage_goal4` adds 12 easy, 10 medium, and
+  8 hard.
+- Broad compact-remount live proof after `coverage_goal4`: 100/100 matching
+  tests passed with 29 filtered out in 802.03s. This is the first full direct
+  live proof over the 100-case compact-remount inventory. At that point the
+  hard-protection fallback-removal product-code decision remained open; the
+  later closeout section records the implemented report-only replacement.
+
+Stress closeout verification:
+
+```bash
+cargo fmt --check
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo run -q -p layerstack --release --example bench_layerstack_gap_reclaim
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p layerstack
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo run -p xtask -- package
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p operation --all-targets
+jq -e '.passed == true and .max_parallel == 1 and .container_weight_cap == 10 and ([.suites[].status] | all(. == 0))' crates/e2e-test/test-reports/runs/live-remount-mixed-tree-1/summary.json
+git diff --check
+```
+
+Stress closeout results:
+
+- `cargo fmt --check`: passed.
+- `bench_layerstack_gap_reclaim`: passed and refreshed the table above.
+- `layerstack`: 102 unit tests, 1 CAS fixture test, 19 stack integration tests,
+  and doc tests passed.
+- `cargo run -p xtask -- package`: passed, packaged
+  `dist/eosd-linux-amd64` with sha256
+  `97e3fb1ee24b78c7094c0c8d126475d40d162c6fc040fd3c1d25173699bac571`.
+- `operation --all-targets`: 81 unit tests, 4 checkpoint tests, and 1 contract
+  test passed.
+- Live summary gate for `live-remount-mixed-tree-1`: passed.
+- `git diff --check`: passed.
+
+## Blocked Fallback Removal and Real Pip Regression Proof
+
+### Code Delta
+
+- `crates/daemon/core/src/runtime/workspace.rs`
+  - `BoundState::blocked_remount_report_for_test` no longer calls
+    `LayerStack::reclaim_lease_aware_checkpoints`.
+  - `WorkspaceRemountBlockedReport` now carries
+    `fallback_compaction_enabled=false` and
+    `fallback_compaction_policy="disabled_report_only"`.
+  - Blocked reports set fallback checkpoint, compacted-layer, and skipped-gap
+    counters to zero, then re-read metrics without mutating LayerStack state.
+- `crates/daemon/core/src/op_adapter/isolation.rs`
+  - `op_test_compact_remount` emits the disabled-fallback fields in both the
+    `lease_remount_blocked` trace event and refused response.
+  - The refused message is now
+    `live remount blocked; no fallback compaction attempted`.
+  - The trace event is bounded/count-based for verbose diagnostics:
+    `command_id_count`, `process_group_count`, and
+    `inspection_detail_present`; the refused response retains full
+    `command_ids`, `process_group_ids`, and `inspection_detail`.
+- `crates/daemon/core/tests/unit/workspace_runtime.rs`
+  - Removed a stale legacy constructor call by switching the fixture to
+    `CommandOps::with_commit_options_and_capture_options` with
+    `BoundedCaptureOptions::default()`.
+- `crates/e2e-test/tests/workspace-runtime-isolated/isolated_workspace_compact_remount.rs`
+  - Blocked-remount tests now assert pressure-only semantics:
+    disabled fallback policy, zero fallback counters, unchanged
+    before/after LayerStack metrics, and compact non-truncated trace fields.
+  - The hard `coverage_goal4` real pip row remains the required
+    hundreds-of-files workload: two local packages, two concurrent
+    `python3 -m pip install --no-index --target ...` processes, at least
+    500 installed files, post-remount tree hash, imports, module/data reads,
+    and public snapshot isolation.
+
+### Verification
+
+```bash
+cargo fmt --check
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p daemon compact_remount --lib
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --test workspace-runtime-isolated compact_remount --no-default-features -- --nocapture
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo run -p xtask -- package
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --features e2e --test workspace-runtime-isolated compact_remount_blocks -- --nocapture --test-threads 1
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --features e2e --test workspace-runtime-isolated compact_remount_live_remount_coverage_goal4_hard_concurrent_real_pip_install_tree -- --nocapture --test-threads 1
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --features e2e --test workspace-runtime-isolated compact_remount_live_remount -- --nocapture --test-threads 1
+CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --features e2e --test workspace-runtime-isolated compact_remount_live_remount_coverage_goal4_hard_concurrent_real_pip_install_tree -- --nocapture --test-threads 1
+```
+
+Results:
+
+- `cargo fmt --check`: passed after formatting the daemon fixture.
+- `daemon compact_remount --lib`: passed compile gate; 0 matched tests,
+  69 filtered out.
+- Broad compact-remount no-feature E2E gate: passed with 108 matching tests and
+  21 filtered out. This covers blocked cases plus the full live-remount
+  inventory in non-live skip mode.
+- `xtask package`: passed using `package-fast`; packaged
+  `dist/eosd-linux-amd64` with sha256
+  `5561d438aa1f2c6fa01feb9c3783fac0fc3ba722c994031cdc7fef43bef68e6d`.
+- Focused live blocked-remount proof after compact trace fields: passed with
+  6/6 matching tests and 123 filtered out in 14.48s.
+- Exact live real concurrent pip proof: passed with 1/1 matching test and
+  128 filtered out in 6.93s.
+- Real concurrent pip space/time bench rerun: passed with 1/1 matching test
+  and 128 filtered out in 6.96s after a 2.21s test-binary compile. It installed
+  786 files, reached install-ready in 2,759 ms, completed the verified live
+  remount operation in 75 ms, completed post-remount verification in 385 ms,
+  reduced LayerStack storage from 1,772,814 bytes to 197,168 bytes
+  (1,575,646 bytes saved, 88.88% reduction), reduced layer dirs from 19 to 2,
+  and reduced manifest depth from 19 to 1.
+- Final broad live compact-remount proof after fallback removal: passed with
+  100/100 matching tests and 29 filtered out in 789.36s. This is the current
+  package proof over the full 40 easy / 30 medium / 30 hard inventory,
+  including real concurrent pip install, large-file rewrites, many-file rows,
+  high-command rows, historical-reader rows, repeated remount cycles, and
+  complex command-integrity rows.
+- Scoped cleanup removed the failed blocked-run container
+  `run-14024-18b9b4a871889a28-1` and the successful blocked-run container
+  `run-16549-18b9b4c004b030b0-1`.
+- `CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p layerstack`:
+  passed with 102 unit tests, 1 CAS fixture test, 19 stack integration tests,
+  and doc tests.
+- `CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p operation --all-targets`:
+  passed with 81 unit tests, 4 checkpoint tests, and 1 contract test.
+- Final `cargo fmt --check`: passed.
+- Final `git diff --check`: passed.
+- Scoped cleanup removed the exact real-pip live proof container
+  `run-17552-18b9b4ca2b8c6af0-1`.
+- Scoped cleanup removed the final broad live proof containers
+  `run-26705-18b9b51ce97aa6d8-1`.
+- Scoped cleanup removed the real concurrent pip space/time bench container
+  `run-60668-18b9cb1598ccd7d8-1`.
+
+### Verdict
+
+Proceed with the report-only blocked path. Verified live remount remains the
+only path that may retarget a running lease and reclaim mounted parent-prefix
+layers. Blocked sessions now emit pressure telemetry and leave cleanup to lease
+release or a separate explicit maintenance operation.

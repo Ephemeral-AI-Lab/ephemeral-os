@@ -40,7 +40,7 @@ is verified before lease metadata is retargeted and old layers are reclaimed.
 1. Keep new command leases bounded by normalizing before command launch.
 2. Allow live remount only when the command session can be safely quiesced and
    inspected.
-3. Fall back to hard protection when live remount cannot be proven safe.
+3. Report pressure without compaction when live remount cannot be proven safe.
 4. Preserve correctness for cwd, root, open file descriptors, mounted lowerdirs,
    and command upperdir writes.
 5. Report blocked remounts with actionable pressure metadata.
@@ -65,7 +65,7 @@ is verified before lease metadata is retargeted and old layers are reclaimed.
 | Lease head | The first layer in the lease manifest, for example `l4`. |
 | Parent prefix | The lower layers under the lease head, for example `n3,n2,n1`. |
 | Compact parent | A checkpoint layer representing the parent prefix, for example `C(n3,n2,n1)`. |
-| Hard protection mode | A fallback where every layer in the current lease manifest remains protected. |
+| Hard protection boundary | The correctness rule that every layer in the current lease manifest remains protected when live remount is not verified. |
 | Live remount | Replacing the mounted overlay lowerdir stack while the session remains alive. |
 | Quiesce | Freezing or stopping the command process group before inspection and remount. |
 | Remount verified | Mountinfo and runtime checks prove the session now uses the expected new lowerdirs. |
@@ -90,7 +90,8 @@ This is the default path because no running process has to be moved.
 
 Already-running commands may be normalized only through a verified live remount
 protocol. This path is optional and conservative. If any step is uncertain, the
-system must abort the live remount and fall back to hard protection mode.
+system must abort the live remount, keep the lease on its existing lowerdirs,
+and report storage pressure without running fallback compaction.
 
 ## 7. Live Remount Protocol
 
@@ -106,7 +107,8 @@ For a running command lease:
    - mapped files if practical
    - mountinfo
 4. If any process is pinned to the workspace mount in a way we cannot safely move:
-   reject live remount and fall back to hard-protection compact.
+   reject live remount, keep the lease on its existing lowerdirs, and report
+   pressure only.
 5. Build compact parent checkpoint C(parent).
 6. Mount the new overlay at a staging mountpoint.
 7. Verify the staged overlay before touching `workspace_root`.
@@ -254,29 +256,34 @@ overlay mount path over the new mount API because common kernels can hide
 because it is narrow, still opens and validates every lower/upper/work
 directory, and exposes `lowerdir=` in mountinfo for exact verification.
 
-## 8. Fallback Contract
+## 8. Blocked Remount Contract
 
-Fallback is mandatory:
+Verified remount is the only path that may rewrite a running lease's lowerdir
+manifest:
 
 ```text
 if live_remount_verified:
     [n6,n5,l4,n3,n2,n1] -> [C(n6,n5), l4, C(n3,n2,n1)]
 else:
-    [n6,n5,l4,n3,n2,n1] -> [C(n6,n5), l4, n3, n2, n1]
+    [n6,n5,l4,n3,n2,n1] -> [n6,n5,l4,n3,n2,n1]
 ```
 
-In fallback mode:
+In blocked mode:
 
 1. Do not retarget the running lease.
 2. Do not delete parent prefix layers `n3,n2,n1`.
-3. Compact only unleased gaps outside the protected lease manifest.
+3. Do not compact unleased gaps as part of `lease_remount_blocked`.
 4. Emit `lease_remount_blocked`.
+
+Independent lease-aware maintenance may still compact unleased gaps, but it
+must be a separate operation with its own telemetry and must not be treated as a
+fallback for failed live remount.
 
 For same-file rewrites of size `S`:
 
 ```text
 verified live remount: B + 6S -> B + 3S -> B + 1S after release
-fallback hard protect: B + 6S -> B + 5S -> B + 1S after release
+blocked report-only:   B + 6S -> B + 6S -> B + 1S after release
 ```
 
 ## 9. State Machine
@@ -294,7 +301,7 @@ Command lease states:
 | `verifying_mount` | Mount and lowerdirs are checked. | `retargeting_lease`, `remount_failed` |
 | `retargeting_lease` | Lease metadata is changed to compact parent. | `gc_old_parent`, `remount_failed` |
 | `gc_old_parent` | Old parent layers are reclaimed after refcount check. | `active` |
-| `remount_blocked` | No live remount attempted; fallback compact may run. | `active` |
+| `remount_blocked` | No live remount completed; pressure is reported without compaction. | `active` |
 | `remount_failed` | Attempt failed after partial work. | `active` or command failure, depending on mount state |
 | `released` | Command/session ended; lease may be cleaned normally. | terminal |
 
@@ -333,8 +340,8 @@ Emit `lease_remount_blocked`:
 | `reason` | Stable reason code. |
 | `lease_age_s` | Age of the live lease/session. |
 | `active_commands` | Count of active command sessions protecting the lease. |
-| `command_ids` | Command ids included in the inspection. |
-| `process_group_ids` | Process groups selected for quiesce/inspection. |
+| `command_ids` | Response field only: command ids included in the inspection. Trace uses `command_id_count` to stay within bounded JSON limits. |
+| `process_group_ids` | Response field only: process groups selected for quiesce/inspection. Trace uses `process_group_count`. |
 | `process_count` | Count of inspected or expected processes. |
 | `quiesced_process_count` | Processes observed stopped after quiesce. |
 | `pinned_fd_count` | Open fds that blocked remount, if known. |
@@ -345,9 +352,18 @@ Emit `lease_remount_blocked`:
 | `inspected` | Whether process/mount inspection completed. |
 | `quiesce_attempted` | Whether the implementation attempted to stop/freeze the process group. |
 | `resumed` | Whether the process group was resumed after block/failure. |
-| `inspection_detail` | Optional diagnostic detail for the block reason. |
+| `inspection_detail` | Response field only: optional diagnostic detail for the block reason. Trace uses `inspection_detail_present`. |
 | `pinned_bytes` | Bytes still protected by the lease manifest. |
-| `fallback_compacted_layers` | Count of unleased top/suffix layers compacted. |
+| `fallback_compaction_enabled` | Must be `false` for blocked live remount; blocked sessions report pressure only. |
+| `fallback_compaction_policy` | Stable policy string; initially `disabled_report_only`. |
+| `fallback_checkpoint_count` | Compatibility counter; must be `0` because blocked live remount does not compact. |
+| `fallback_compacted_layers` | Compatibility counter; must be `0` because blocked live remount does not compact. |
+| `fallback_skipped_delta_intervals` | Compatibility counter; must be `0` because blocked live remount does not compact. |
+
+Blocked live-remount handling must not invoke hard-protection compact fallback.
+It may emit pressure telemetry and keep ordinary lease-aware maintenance as a
+separate explicit operation, but `lease_remount_blocked` itself must not retarget
+the lease, delete lowerdirs, or compact unleased gaps.
 
 Stable block reasons:
 
@@ -406,14 +422,16 @@ Experiment:
   `lease_remount_blocked`.
 - Implement inspection as blocked-by-default for running public/ephemeral
   commands.
-- Run fallback hard-protection compaction.
+- Report pressure only; do not run fallback compaction from
+  `lease_remount_blocked`.
 
 Experiment:
 
 - Start a long-running command at `l4`.
 - Trigger remount policy.
 - Assert live remount is blocked with a stable reason.
-- Assert only top/suffix gaps compact.
+- Assert no top/suffix or parent-prefix layers compact as part of the blocked
+  response.
 - Assert no lease retarget occurred and old parent layers remain.
 
 ### Phase 3: Isolated Idle Remount
@@ -511,7 +529,7 @@ Success:
 
 7. `live_remount_negative_open_fd_blocks`:
    - Keep an fd open to a workspace file.
-   - Assert remount is blocked and fallback compaction runs.
+   - Assert remount is blocked and fallback compaction is disabled.
 
 ## 13. Open Questions
 
@@ -533,7 +551,8 @@ The production solution is two-tiered:
 ```text
 New command: normalize before launch.
 Running command: live remount only with quiesce and verification.
-Uncertain command: hard-protection fallback.
+Uncertain command: report pressure only; reclaim later through release or
+explicit maintenance.
 ```
 
 This keeps storage pressure bounded for new work immediately, while making live

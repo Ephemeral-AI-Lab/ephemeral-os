@@ -245,10 +245,6 @@ impl BoundState {
             .map(|path| best_effort_file_bytes(path))
             .sum();
         let lease_age_s = (handle.last_activity - handle.created_at).max(0.0);
-        let fallback = self
-            .stack
-            .reclaim_lease_aware_checkpoints(2)
-            .map_err(setup_error)?;
         let after_manifest = self.stack.read_active_manifest().map_err(setup_error)?;
         let after_metrics = self.stack.storage_metrics().map_err(setup_error)?;
         Ok(WorkspaceRemountBlockedReport {
@@ -278,10 +274,11 @@ impl BoundState {
             before_manifest_depth: before_manifest.depth(),
             before_layer_dirs: before_metrics.layer_dirs,
             before_storage_bytes: before_metrics.storage_bytes,
-            fallback_checkpoint_count: fallback.view_checkpoint_count
-                + fallback.delta_checkpoint_count,
-            fallback_compacted_layers: fallback.removed_layer_count,
-            fallback_skipped_delta_intervals: fallback.skipped_delta_interval_count,
+            fallback_compaction_enabled: false,
+            fallback_compaction_policy: "disabled_report_only",
+            fallback_checkpoint_count: 0,
+            fallback_compacted_layers: 0,
+            fallback_skipped_delta_intervals: 0,
             after_manifest_depth: after_manifest.depth(),
             after_layer_dirs: after_metrics.layer_dirs,
             after_storage_bytes: after_metrics.storage_bytes,
@@ -428,6 +425,8 @@ pub(crate) struct WorkspaceRemountBlockedReport {
     pub before_manifest_depth: usize,
     pub before_layer_dirs: usize,
     pub before_storage_bytes: u64,
+    pub fallback_compaction_enabled: bool,
+    pub fallback_compaction_policy: &'static str,
     pub fallback_checkpoint_count: usize,
     pub fallback_compacted_layers: usize,
     pub fallback_skipped_delta_intervals: usize,
