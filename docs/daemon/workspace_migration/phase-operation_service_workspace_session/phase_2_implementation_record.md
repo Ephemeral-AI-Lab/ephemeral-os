@@ -284,48 +284,119 @@ Rules:
 
 ## Milestone 3.5: Policy-Free Command Launch And Initial Yield
 
-- Status: Not started.
+- Status: Complete.
 - Files changed:
+  - `Cargo.lock`
+  - `crates/daemon/command/Cargo.toml`
+  - `crates/daemon/command/src/launch.rs`
+  - `crates/daemon/command/src/lib.rs`
+  - `crates/daemon/command/src/process.rs`
+  - `crates/daemon/operation_service/Cargo.toml`
+  - `crates/daemon/operation_service/src/command/exec.rs`
+  - `crates/daemon/operation_service/src/command/finalize_tests.rs`
+  - `crates/daemon/operation_service/src/command/launch.rs`
+  - `crates/daemon/operation_service/src/command/mod.rs`
+  - `crates/daemon/operation_service/src/command/process_store.rs`
+  - `crates/daemon/operation_service/src/command/service.rs`
+  - `crates/daemon/operation_service/src/workspace_manager/session_manager.rs`
+  - `crates/daemon/operation_service/tests/command_exec.rs`
+  - `crates/daemon/operation_service/tests/command_ownership.rs`
+  - `crates/daemon/operation_service/tests/command_process_store.rs`
+  - `crates/daemon/operation_service/tests/support/mod.rs`
+  - `crates/daemon/operation_service/tests/workspace_manager.rs`
+  - `crates/daemon/workspace/src/lib.rs`
+  - `crates/daemon/workspace/src/model.rs`
+  - `crates/daemon/workspace/tests/unit/model.rs`
+  - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
 - Verification:
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_exec`:
+    passed, 7 matching unit tests and 7 matching integration tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_ownership`:
+    passed, 2 matching unit tests and 4 matching integration tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p command`:
+    passed.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p operation_service`:
+    passed.
+  - `cargo fmt --check`: passed.
+  - `git diff --check`: passed.
+  - `rg -n "operation::command|StartCommand|request_id|trace_id|invocation_id|remountable|CommandProcess::new|WorkspaceRuntime|CommandOps|ExecTarget|InternalHostOneShot" crates/daemon/operation_service/src/command crates/daemon/operation_service/tests/command_exec.rs`:
+    no matches; `rg` exited 1 as expected for an empty result set.
+  - Supplemental focused checks:
+    `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p command`
+    passed, 18 unit tests;
+    `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_finalize`
+    passed, 10 matching unit tests;
+    `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_process_store`
+    passed, 1 matching unit test and 9 matching integration tests;
+    `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p workspace model`
+    passed, 4 matching unit tests.
 - Deviations:
-- Unresolved issues: Replaces the Milestone 3 process-free active-record
-  scaffold with a policy-free `CommandProcess::spawn` path and initial
-  `command::yield_wait_loop` response. Must not import old `operation::command`
-  launch policy, old command DTOs, request/trace/invocation ids, or
-  `remountable`.
-- Handoff notes: Milestone 4 should consume the live process/initial-yield
-  surface from Milestone 3.5 and add finalization, completed-record retention,
-  publish/discard, and registry unbind semantics.
+  - Added `command::launch` as a policy-free helper for typed runner request
+    construction. It uses the low-level runner protocol internally, but
+    operation-service command contracts still carry no request, trace, or
+    invocation identifiers and do not carry the old remount policy flag.
+  - Added optional `WorkspaceLaunchContext` material to `WorkspaceHandle`
+    because `WorkspaceSessionHandler` previously exposed snapshot/layer facts
+    but not the `upperdir`, `workdir`, namespace fd, or cgroup facts required to
+    spawn through `command::CommandProcess::spawn`.
+  - Added a hidden command launch driver hook for tests. Production
+    `CommandOperationService` uses `RealCommandLaunchDriver`, which calls
+    `CommandProcess::spawn` and `command::yield_wait_loop::wait_for_yield`; tests
+    use a fake driver so operation-service integration tests do not spawn the
+    Rust test harness as `ns-runner`.
+  - No background finalizer watcher was added. Completed initial yields and
+    `poll` use the existing crate-private finalization path.
+- Unresolved issues: None for the M3.5 launch/yield slice. Background
+  finalizer supervision remains future work; no public collect, advance, row
+  window, remount-pending, or daemon dispatch API was added.
+- Handoff notes: M3.5 now provides live process insertion with transcript
+  artifact paths, policy-free runner request construction, cleanup on
+  admission/artifact/spawn/bind/active-insert failures, and first exec responses
+  from the command wait loop. The existing M4 finalization path can consume
+  completed initial yields and later `poll` exits; future background supervision
+  should reuse the same live-process/finalization surface without reopening old
+  command policy.
 
 ## Milestone 4: One-Shot Finalization And Persistent-Session Semantics
 
 - Status: Complete.
 - Files changed:
+  - `crates/daemon/operation_service/Cargo.toml`
   - `crates/daemon/operation_service/src/command/contract.rs`
   - `crates/daemon/operation_service/src/command/error.rs`
   - `crates/daemon/operation_service/src/command/exec.rs`
   - `crates/daemon/operation_service/src/command/finalize.rs`
+  - `crates/daemon/operation_service/src/command/finalize_tests.rs`
   - `crates/daemon/operation_service/src/command/mod.rs`
   - `crates/daemon/operation_service/src/command/process_store.rs`
+  - `crates/daemon/operation_service/src/command/remount.rs`
   - `crates/daemon/operation_service/src/command/service.rs`
+  - `crates/daemon/operation_service/src/error.rs`
   - `crates/daemon/operation_service/src/workspace_manager/session_manager.rs`
+  - `crates/daemon/operation_service/src/workspace_remount/error.rs`
+  - `crates/daemon/operation_service/src/workspace_remount/mod.rs`
+  - `crates/daemon/operation_service/tests/command_exec.rs`
   - `crates/daemon/operation_service/tests/command_finalize.rs`
+  - `crates/daemon/operation_service/tests/command_ownership.rs`
   - `crates/daemon/operation_service/tests/command_process_store.rs`
+  - `crates/daemon/operation_service/tests/support/mod.rs`
   - `crates/daemon/operation_service/tests/workspace_manager.rs`
   - `crates/daemon/workspace/src/model.rs`
   - `crates/daemon/workspace/tests/unit/model.rs`
+  - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_command_service_IMPLEMENTATION_PLAN.md`
+  - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_command_service_SPEC.md`
   - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
 - Verification:
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p workspace capture`:
     passed, 1 matching test.
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_finalize`:
-    passed, 1 matching unit test and 6 matching integration tests.
+    passed, 10 matching unit tests.
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_completion`:
-    passed, 1 matching integration test.
+    passed, 1 matching unit test.
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p operation_service`:
     passed.
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service`:
-    passed, 53 tests.
+    passed, 60 tests.
   - `cargo fmt --check`: passed.
   - `git diff --check`: passed.
   - `rg -n "WorkspaceRuntime|CommandOps|ExecTarget|InternalHostOneShot|StartCommand|CollectCompleted|layer_stack_root|request_id|trace_id|invocation_id|remountable|trace::TraceId|trace::RequestId|RequestId|TraceId|collect_completed|count_by_caller|count_commands|advance_active_commands_once|by_workspace|by_caller|workspace_index|caller_index" crates/daemon/operation_service/src/command`:
@@ -334,23 +405,19 @@ Rules:
     `owner_request_id` fields in `LatestSnapshotRequest`; those were not added
     by this milestone and are not command-service contract fields.
 - Deviations:
-  - Real command launch preparation still uses the process-free
-    `command::CommandProcess::new` scaffold from Milestone 3. Replacing it with
-    `CommandProcess::spawn` is left to the new Milestone 3.5 entry because a
-    policy-free workspace launch context is not available yet; this milestone
-    did not import old `operation::command` launch policy to force that
-    migration.
-  - `CommandOperationService::finalize_command` is a hidden supervisor entrypoint
-    rather than a daemon request API. It exists so process-exit finalization can
-    be tested and so `poll` can finalize real spawned processes once Milestone
-    3.5 launch wiring lands; no public advance, collect, or count API was added.
+  - Background finalizer supervision is still not a daemon thread. Initial exec
+    yield and `poll` can finalize completed process exits through the
+    crate-private supervisor path, but no public advance, collect, or count API
+    was added.
+  - `CommandOperationService::finalize_command` is a crate-private supervisor
+    entrypoint rather than a daemon request API. It exists so process-exit
+    finalization can be tested inside the crate and so service-owned process
+    paths can finalize without exposing daemon request surface.
 - Unresolved issues:
-  - No background finalizer watcher thread is started while exec still creates
-    process-free scaffold records. The placeholder `start_finalizer_watch` no-op
-    was removed in the cleanup pass after M4; M3.5 should add real finalizer
-    supervision only alongside real process spawn/yield wiring. Until then,
-    `poll` opportunistically finalizes real spawned processes only when a
-    process group exists.
+  - No background finalizer watcher thread is started. The placeholder
+    `start_finalizer_watch` no-op was removed in the cleanup pass after M4;
+    until background supervision is added, initial exec yield and `poll`
+    opportunistically finalize completed process exits.
 - Cleanup notes:
   - Removed the no-op finalizer-watch placeholder and tightened direct
     command-service exec validation so `workspace_id` and the resolved session
@@ -359,23 +426,42 @@ Rules:
     check from `OperationServices::exec_command`.
   - Made `finalize_session_command` and `finalize_one_shot_command` private
     helpers because only the supervisor entrypoint should route finalization.
+  - Post-review remediation made `finalize_command` crate-private, moved direct
+    finalizer coverage from the integration-test API boundary to
+    `crates/daemon/operation_service/src/command/finalize_tests.rs`, authorized
+    active failed-finalization reads before returning retained failure details,
+    and made `FinalizationState::{ResponseBuffered, WorkspaceDestroyPending,
+    Failed}` retain already-decided publish/discard metadata so destroy failures
+    report the prior outcome instead of losing it. The owner-visible error
+    payload boxes optional finalized metadata so `CommandServiceError` remains
+    small enough for clippy's `result_large_err` lint.
+  - Post-remediation launch-path fixture cleanup added direct
+    `operation_service` ownership of `serde_json`, launch-driver coverage for
+    spawn-failure cleanup and initial completed session yield, and local fake
+    launch drivers in unit tests that need manual process/finalization control.
   - Cleanup verification:
     - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_exec`:
-      passed, 7 matching unit tests and 3 matching integration tests.
+      passed, 7 matching unit tests and 5 matching integration tests.
     - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_finalize`:
-      passed, 1 matching unit test and 6 matching integration tests.
+      passed, 10 matching unit tests.
     - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service`:
-      passed, 55 tests.
+      passed, 60 tests.
     - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo clippy -p operation_service --all-targets --no-deps -- -D warnings`:
       passed.
     - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p operation_service`:
       passed.
+    - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p workspace capture`:
+      passed, 1 matching test.
     - `cargo fmt --check`: passed.
     - `git diff --check`: passed.
     - Static cleanup/legacy searches over touched command-service code:
-      no matches for the removed finalizer placeholder, public helper leaks,
-      old command policy terms, public advance/collect/count APIs, dead-code
-      allowances, or stale command-remount placeholder symbols.
+      no matches for old command policy terms, public advance/collect/count
+      APIs, request/trace/invocation ids, `remountable`, or
+      command-service caller/workspace indexes. A broader touched-file search
+      still finds expected false positives for workspace-manager
+      `layer_stack_root` session fields and `find_by_workspace_id` /
+      test-only `find_by_caller_id` helpers; those are not command-service
+      contracts, `CommandRegistry` indexes, or completion-store indexes.
 - Handoff notes:
   - Milestone 5 can build row projection on the retained
     `CompletedCommandRecord` path. Completed records now keep caller/workspace
@@ -387,7 +473,8 @@ Rules:
     workspace. Non-success/cancel/timeout one-shot exits skip capture/publish and
     still record discard plus destroy behavior. Capture/publish/destroy failures
     mark active state as `FinalizationState::Failed` instead of dropping cleanup
-    state.
+    state; destroy failures retain the already-decided Published/Discarded
+    metadata for owner-visible reporting.
   - Persistent session finalization records terminal output and metadata without
     calling `WorkspaceManagerService::capture_changes`, publishing, destroying,
     or refreshing session snapshot/layer metadata.

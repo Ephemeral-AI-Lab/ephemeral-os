@@ -1,11 +1,21 @@
+use std::fs;
+use std::path::PathBuf;
 use std::time::Instant;
+
+use command::process::{
+    CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec,
+};
+use command::yield_wait_loop::WaitOutcome;
 
 use crate::command::{
     ActiveCommandProcess, CancellationState, CommandCallContext, CommandFinalizePolicy, CommandId,
     CommandLifecycleState, CommandOutputSnapshot, CommandServiceError, CommandStatus,
     CommandTraceOrigin, CommandTranscriptStore, CommandYield, ExecCommandInput, FinalizationState,
 };
-use crate::workspace_crate::{DestroyWorkspaceRequest, NetworkMode, WorkspaceId};
+use crate::workspace_crate::{
+    DestroyWorkspaceRequest, NetworkMode, WorkspaceId, WorkspaceLaunchContext,
+    WorkspaceLaunchNamespaceFds,
+};
 use crate::workspace_manager::WorkspaceSessionHandler;
 
 use super::service::CommandOperationService;
@@ -29,8 +39,6 @@ impl CommandOperationService {
         }
         validate_workspace_handler(&input, workspace.as_ref())?;
 
-        let command_id = self.process_store().allocate_command_id();
-        let reservation = self.process_store().try_reserve()?;
         let is_session_command = workspace.is_some();
         let handler = match workspace {
             Some(handler) => handler,
@@ -40,13 +48,48 @@ impl CommandOperationService {
                 NetworkMode::Host,
             )?,
         };
+        let command_id = self.process_store().allocate_command_id();
+        let reservation = match self.process_store().try_reserve() {
+            Ok(reservation) => reservation,
+            Err(error) => {
+                return Err(self.cleanup_one_shot_workspace_after_start_failure(
+                    &command_id,
+                    is_session_command,
+                    handler,
+                    error,
+                ));
+            }
+        };
         let workspace_id = handler.workspace_id.clone();
         let finalize_policy = finalize_policy(is_session_command, &workspace_id);
+        let launch = match self.prepare_launch_context(&input, &handler, &command_id) {
+            Ok(launch) => launch,
+            Err(error) => {
+                return Err(self.cleanup_one_shot_workspace_after_start_failure(
+                    &command_id,
+                    is_session_command,
+                    handler,
+                    error,
+                ));
+            }
+        };
+        let process = match self.spawn_command_process(&command_id, &input, &launch) {
+            Ok(process) => process,
+            Err(error) => {
+                return Err(self.cleanup_one_shot_workspace_after_start_failure(
+                    &command_id,
+                    is_session_command,
+                    handler,
+                    error,
+                ));
+            }
+        };
 
         if let Err(error) = self
             .registry()
             .bind(command_id.clone(), workspace_id.clone())
         {
+            process.cancel_process();
             return Err(self.cleanup_one_shot_workspace_after_start_failure(
                 &command_id,
                 is_session_command,
@@ -54,23 +97,25 @@ impl CommandOperationService {
                 error,
             ));
         }
+        if self.process_store().active(&command_id).is_some() {
+            let _ = self.registry().unbind(&command_id);
+            process.cancel_process();
+            return Err(self.cleanup_one_shot_workspace_after_start_failure(
+                &command_id,
+                is_session_command,
+                handler,
+                CommandServiceError::DuplicateCommandId {
+                    command_id: command_id.clone(),
+                },
+            ));
+        }
         let record = ActiveCommandProcess {
             command_id: command_id.clone(),
             caller_id: context.caller_id.clone(),
             workspace_id,
-            process: ::command::CommandProcess::new(::command::CommandProcessSpec {
-                id: command_id.0.clone(),
-                caller_id: context.caller_id.0.clone(),
-                command: input.cmd,
-                timeout_seconds: input.timeout_seconds,
-            }),
+            process,
             transcript: CommandTranscriptStore {
-                transcript_path: Some(
-                    self.config()
-                        .scratch_root
-                        .join(&command_id.0)
-                        .join("transcript.log"),
-                ),
+                transcript_path: Some(launch.transcript_path.clone()),
             },
             finalize_policy,
             lifecycle_state: CommandLifecycleState::Running,
@@ -89,12 +134,121 @@ impl CommandOperationService {
             ));
         }
 
+        self.initial_exec_yield(command_id, input.yield_time_ms)
+    }
+
+    fn prepare_launch_context(
+        &self,
+        input: &ExecCommandInput,
+        handler: &WorkspaceSessionHandler,
+        command_id: &CommandId,
+    ) -> Result<PreparedCommandLaunch, CommandServiceError> {
+        let launch =
+            handler
+                .handle
+                .launch
+                .as_ref()
+                .ok_or_else(|| CommandServiceError::InvalidCommand {
+                    message: "resolved workspace lacks command launch material".to_owned(),
+                })?;
+        let command_dir = self.config().scratch_root.join(&command_id.0);
+        fs::create_dir_all(&command_dir).map_err(|error| CommandServiceError::CommandIo {
+            command_id: command_id.clone(),
+            error: format!("prepare command artifact directory: {error}"),
+        })?;
+        let run_request = command::build_exec_run_request(command::CommandExecRunRequest {
+            command_id: command_id.0.clone(),
+            caller_id: input.caller_id.0.clone(),
+            command: input.cmd.clone(),
+            cwd: input.cwd.clone(),
+            timeout_seconds: input.timeout_seconds,
+            workspace_root: handler.handle.workspace_root.clone(),
+            layer_paths: handler.layer_paths.clone(),
+            upperdir: launch.upperdir.clone(),
+            workdir: launch.workdir.clone(),
+            namespace_fds: launch.namespace_fds.map(command_namespace_fds),
+            cgroup_path: launch.cgroup_path.clone(),
+        })
+        .map_err(|error| CommandServiceError::CommandIo {
+            command_id: command_id.clone(),
+            error: error.to_string(),
+        })?;
+        Ok(PreparedCommandLaunch::new(command_dir, run_request, launch))
+    }
+
+    fn spawn_command_process(
+        &self,
+        command_id: &CommandId,
+        input: &ExecCommandInput,
+        launch: &PreparedCommandLaunch,
+    ) -> Result<CommandProcess, CommandServiceError> {
+        self.launch_driver().spawn(
+            CommandProcessSpec {
+                id: command_id.0.clone(),
+                caller_id: input.caller_id.0.clone(),
+                command: input.cmd.clone(),
+                timeout_seconds: input.timeout_seconds,
+            },
+            CommandProcessSpawn {
+                run_request: launch.run_request.clone(),
+                request_path: launch.request_path.clone(),
+                output_path: launch.output_path.clone(),
+                final_path: launch.final_path.clone(),
+                transcript_path: launch.transcript_path.clone(),
+                transcript_timestamp_timezone: &self.config().transcript_timestamp_timezone,
+                output_drain_grace_ms: self.config().output_drain_grace_ms,
+            },
+        )
+    }
+
+    fn initial_exec_yield(
+        &self,
+        command_id: CommandId,
+        yield_time_ms: Option<u64>,
+    ) -> Result<CommandYield, CommandServiceError> {
+        let wait_ms = yield_time_ms.unwrap_or(self.config().default_yield_time_ms);
+        let outcome = {
+            let active = self.process_store().active(&command_id).ok_or_else(|| {
+                CommandServiceError::CommandNotFound {
+                    command_id: command_id.clone(),
+                }
+            })?;
+            self.launch_driver()
+                .wait_for_initial_yield(&active.process, self.config(), wait_ms, 0)
+        };
+
+        match outcome {
+            WaitOutcome::Running(stdout) => Ok(CommandYield {
+                command_id: Some(command_id),
+                status: CommandStatus::Running,
+                exit_code: None,
+                output: CommandOutputSnapshot { stdout },
+                finalized: None,
+            }),
+            WaitOutcome::Completed(process_exit) => {
+                self.completed_initial_exec_yield(command_id, process_exit)
+            }
+        }
+    }
+
+    fn completed_initial_exec_yield(
+        &self,
+        command_id: CommandId,
+        process_exit: CommandProcessExit,
+    ) -> Result<CommandYield, CommandServiceError> {
+        let result = self.finalize_command(command_id.clone(), process_exit)?;
+        let finalized = self
+            .process_store()
+            .completed(&command_id)
+            .and_then(|completed| completed.finalized);
         Ok(CommandYield {
             command_id: Some(command_id),
-            status: CommandStatus::Running,
-            exit_code: None,
-            output: CommandOutputSnapshot::default(),
-            finalized: None,
+            status: result.status,
+            exit_code: result.exit_code,
+            output: CommandOutputSnapshot {
+                stdout: result.stdout,
+            },
+            finalized,
         })
     }
 
@@ -119,6 +273,30 @@ impl CommandOperationService {
                 command_error: Box::new(error),
                 cleanup_error,
             },
+        }
+    }
+}
+
+struct PreparedCommandLaunch {
+    run_request: serde_json::Value,
+    request_path: PathBuf,
+    output_path: PathBuf,
+    final_path: PathBuf,
+    transcript_path: PathBuf,
+}
+
+impl PreparedCommandLaunch {
+    fn new(
+        command_dir: PathBuf,
+        run_request: serde_json::Value,
+        _launch: &WorkspaceLaunchContext,
+    ) -> Self {
+        Self {
+            run_request,
+            request_path: command_dir.join("runner-request.json"),
+            output_path: command_dir.join("runner-result.json"),
+            final_path: command_dir.join("final.json"),
+            transcript_path: command_dir.join("transcript.log"),
         }
     }
 }
@@ -170,25 +348,40 @@ fn finalize_policy(is_session_command: bool, workspace_id: &WorkspaceId) -> Comm
     }
 }
 
+fn command_namespace_fds(fds: WorkspaceLaunchNamespaceFds) -> command::CommandLaunchNamespaceFds {
+    command::CommandLaunchNamespaceFds {
+        user: fds.user,
+        mnt: fds.mnt,
+        pid: fds.pid,
+        net: fds.net,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::VecDeque;
     use std::path::{Path, PathBuf};
+    use std::sync::atomic::{AtomicU64, Ordering};
     use std::sync::{Arc, Mutex};
     use std::time::Instant;
 
+    use command::process::{
+        CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec,
+    };
+    use command::yield_wait_loop::WaitOutcome;
+
     use crate::command::{
         ActiveCommandProcess, CancellationState, CommandCallContext, CommandFinalizePolicy,
-        CommandId, CommandLifecycleState, CommandProcessStore, CommandServiceError,
-        CommandTraceOrigin, CommandTranscriptStore, ExecCommandInput, FinalizationState,
-        OperationTraceContext,
+        CommandId, CommandLaunchDriver, CommandLifecycleState, CommandProcessStore,
+        CommandServiceError, CommandTraceOrigin, CommandTranscriptStore, ExecCommandInput,
+        FinalizationState, OperationTraceContext,
     };
     use crate::workspace_crate::{
         BaseRevision, CallerId, CaptureChangesRequest, CapturedWorkspaceChanges,
         CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult,
         LatestSnapshotRequest, LayerStackSnapshotRef, LeaseId, NetworkMode, ReadonlySnapshotHandle,
         RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceError, WorkspaceHandle,
-        WorkspaceId, WorkspaceService,
+        WorkspaceId, WorkspaceLaunchContext, WorkspaceService,
     };
     use crate::workspace_manager::{WorkspaceManagerService, WorkspaceSessionHandler};
 
@@ -301,15 +494,60 @@ mod tests {
         }
     }
 
+    #[derive(Debug, Default)]
+    struct FakeLaunchDriver {
+        outcomes: Mutex<VecDeque<WaitOutcome<CommandProcessExit>>>,
+        spawn_errors: Mutex<VecDeque<CommandServiceError>>,
+    }
+
+    impl FakeLaunchDriver {
+        fn new() -> Self {
+            Self::default()
+        }
+    }
+
+    impl CommandLaunchDriver for FakeLaunchDriver {
+        fn spawn(
+            &self,
+            spec: CommandProcessSpec,
+            _parts: CommandProcessSpawn<'_>,
+        ) -> Result<CommandProcess, CommandServiceError> {
+            if let Some(error) = self
+                .spawn_errors
+                .lock()
+                .expect("test operation succeeds")
+                .pop_front()
+            {
+                return Err(error);
+            }
+            Ok(CommandProcess::inactive_for_test(spec))
+        }
+
+        fn wait_for_initial_yield(
+            &self,
+            _process: &CommandProcess,
+            _config: &command::CommandConfig,
+            _yield_time_ms: u64,
+            _start_offset: u64,
+        ) -> WaitOutcome<CommandProcessExit> {
+            self.outcomes
+                .lock()
+                .expect("test operation succeeds")
+                .pop_front()
+                .unwrap_or_else(|| WaitOutcome::Running(String::new()))
+        }
+    }
+
     fn command_service(
         fake: Arc<FakeWorkspaceService>,
         process_store: CommandProcessStore,
     ) -> CommandOperationService {
         let workspace = Arc::new(WorkspaceManagerService::new(fake));
-        CommandOperationService::with_process_store_for_test(
+        CommandOperationService::with_process_store_and_launch_driver_for_test(
             workspace,
-            command::CommandConfig::default(),
+            test_command_config(),
             process_store,
+            Arc::new(FakeLaunchDriver::new()),
         )
     }
 
@@ -358,7 +596,35 @@ mod tests {
                 layer_count: 1,
             },
             snapshot,
+            launch: Some(test_launch_context()),
         }
+    }
+
+    fn test_command_config() -> command::CommandConfig {
+        command::CommandConfig {
+            scratch_root: std::env::temp_dir().join(format!(
+                "operation-service-exec-test-{}-{}",
+                std::process::id(),
+                unique_suffix()
+            )),
+            ..command::CommandConfig::default()
+        }
+    }
+
+    fn test_launch_context() -> WorkspaceLaunchContext {
+        let root =
+            std::env::temp_dir().join(format!("operation-service-exec-launch-{}", unique_suffix()));
+        WorkspaceLaunchContext {
+            upperdir: root.join("upper"),
+            workdir: root.join("work"),
+            namespace_fds: None,
+            cgroup_path: None,
+        }
+    }
+
+    fn unique_suffix() -> u64 {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        COUNTER.fetch_add(1, Ordering::Relaxed)
     }
 
     fn session_handler(workspace_id: &str, caller_id: &str) -> WorkspaceSessionHandler {
@@ -385,7 +651,7 @@ mod tests {
             command_id: command_id.clone(),
             caller_id: caller_id.clone(),
             workspace_id: workspace_id.clone(),
-            process: command::CommandProcess::new(command::CommandProcessSpec {
+            process: command::CommandProcess::inactive_for_test(command::CommandProcessSpec {
                 id: command_id.0.clone(),
                 caller_id: caller_id.0.clone(),
                 command: "cat".to_owned(),
@@ -487,8 +753,13 @@ mod tests {
     }
 
     #[test]
-    fn command_exec_admission_failure_does_not_create_private_workspace() {
+    fn command_exec_admission_failure_destroys_created_one_shot_workspace() {
         let fake = Arc::new(FakeWorkspaceService::new());
+        fake.push_create_result(Ok(workspace_handle(
+            "workspace-one-shot",
+            "caller-1",
+            PathBuf::from("/workspace/one-shot"),
+        )));
         let service = command_service(Arc::clone(&fake), CommandProcessStore::with_max_active(0));
 
         let error = service
@@ -503,8 +774,11 @@ mod tests {
             error,
             CommandServiceError::CommandAdmissionLimit { active: 0, max: 0 }
         ));
-        assert!(fake.create_requests().is_empty());
-        assert!(fake.destroy_calls().is_empty());
+        assert_eq!(fake.create_requests().len(), 1);
+        assert_eq!(
+            fake.destroy_calls(),
+            vec![WorkspaceId("workspace-one-shot".to_owned())]
+        );
     }
 
     #[test]

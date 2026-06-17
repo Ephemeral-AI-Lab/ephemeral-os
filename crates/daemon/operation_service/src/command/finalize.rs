@@ -24,8 +24,7 @@ pub(crate) struct ActiveFinalizationRecord {
 }
 
 impl CommandOperationService {
-    #[doc(hidden)]
-    pub fn finalize_command(
+    pub(crate) fn finalize_command(
         &self,
         command_id: CommandId,
         process_exit: ::command::process::CommandProcessExit,
@@ -102,6 +101,7 @@ impl CommandOperationService {
                 publish_result.map_err(|error| CommandServiceError::CommandFinalizationFailed {
                     command_id: record.command_id.clone(),
                     error: format!("publish captured one-shot changes: {error}"),
+                    finalized: None,
                 })?;
             finalized = metadata_from_capture(captured, publish_result, spool_dir_cleaned);
         }
@@ -109,12 +109,16 @@ impl CommandOperationService {
         self.mark_active_finalization(
             &record.command_id,
             CommandLifecycleState::Finalizing,
-            FinalizationState::ResponseBuffered,
+            FinalizationState::ResponseBuffered {
+                finalized: finalized.clone(),
+            },
         )?;
         self.mark_active_finalization(
             &record.command_id,
             CommandLifecycleState::DestroyPending,
-            FinalizationState::WorkspaceDestroyPending,
+            FinalizationState::WorkspaceDestroyPending {
+                finalized: finalized.clone(),
+            },
         )?;
         let destroy = self
             .workspace()
@@ -132,10 +136,11 @@ impl CommandOperationService {
                 command_id: command_id.clone(),
             }
         })?;
-        if let FinalizationState::Failed { error } = &active.finalization {
+        if let FinalizationState::Failed { error, finalized } = &active.finalization {
             return Err(CommandServiceError::CommandFinalizationFailed {
                 command_id: command_id.clone(),
                 error: error.clone(),
+                finalized: finalized.clone().map(Box::new),
             });
         }
         let bound_workspace_id = self.registry().workspace_for(command_id).ok_or_else(|| {
@@ -214,15 +219,19 @@ impl CommandOperationService {
         command_id: &CommandId,
         error: String,
     ) -> Result<T, CommandServiceError> {
-        let _ = self.process_store().update_active(command_id, |active| {
+        let finalized = self.process_store().update_active(command_id, |active| {
+            let finalized = retained_finalized_metadata(&active.finalization);
             active.lifecycle_state = CommandLifecycleState::FinalizationFailed;
             active.finalization = FinalizationState::Failed {
                 error: error.clone(),
+                finalized: finalized.clone(),
             };
+            finalized
         });
         Err(CommandServiceError::CommandFinalizationFailed {
             command_id: command_id.clone(),
             error,
+            finalized: finalized.flatten().map(Box::new),
         })
     }
 }
@@ -299,3 +308,18 @@ fn layerstack_protected_drops(
         })
         .collect()
 }
+
+fn retained_finalized_metadata(state: &FinalizationState) -> Option<CommandFinalizedMetadata> {
+    match state {
+        FinalizationState::ResponseBuffered { finalized }
+        | FinalizationState::WorkspaceDestroyPending { finalized } => Some(finalized.clone()),
+        FinalizationState::Failed { finalized, .. } => finalized.clone(),
+        FinalizationState::NotStarted
+        | FinalizationState::InProgress
+        | FinalizationState::Complete => None,
+    }
+}
+
+#[cfg(test)]
+#[path = "finalize_tests.rs"]
+mod tests;

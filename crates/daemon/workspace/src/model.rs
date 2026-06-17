@@ -1,4 +1,5 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
+use std::fmt;
 use std::path::PathBuf;
 
 use layerstack::service::BoundedCaptureOptions;
@@ -59,7 +60,7 @@ pub enum NetworkMode {
     Isolated,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct WorkspaceHandle {
     pub id: WorkspaceId,
     pub owner: CallerId,
@@ -67,6 +68,37 @@ pub struct WorkspaceHandle {
     pub network: NetworkMode,
     pub base_revision: BaseRevision,
     pub snapshot: LayerStackSnapshotRef,
+    pub launch: Option<WorkspaceLaunchContext>,
+}
+
+impl fmt::Debug for WorkspaceHandle {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("WorkspaceHandle")
+            .field("id", &self.id)
+            .field("owner", &self.owner)
+            .field("workspace_root", &self.workspace_root)
+            .field("network", &self.network)
+            .field("base_revision", &self.base_revision)
+            .field("snapshot", &self.snapshot)
+            .field("launch", &self.launch.as_ref().map(|_| "<available>"))
+            .finish()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkspaceLaunchContext {
+    pub upperdir: PathBuf,
+    pub workdir: PathBuf,
+    pub namespace_fds: Option<WorkspaceLaunchNamespaceFds>,
+    pub cgroup_path: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WorkspaceLaunchNamespaceFds {
+    pub user: Option<i32>,
+    pub mnt: Option<i32>,
+    pub pid: Option<i32>,
+    pub net: Option<i32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -215,8 +247,27 @@ impl From<&WorkspaceModeHandle> for WorkspaceHandle {
                 root_hash: handle.manifest_root_hash.clone(),
                 layer_paths: handle.layer_paths.clone(),
             },
+            launch: Some(WorkspaceLaunchContext {
+                upperdir: handle.dirs.upperdir.clone(),
+                workdir: handle.dirs.workdir.clone(),
+                namespace_fds: namespace_fds_from_map(&handle.ns_fds),
+                cgroup_path: handle.cgroup_path.clone(),
+            }),
         }
     }
+}
+
+fn namespace_fds_from_map(ns_fds: &HashMap<String, i32>) -> Option<WorkspaceLaunchNamespaceFds> {
+    if ns_fds.is_empty() {
+        return None;
+    }
+    let fd = |name: &str| ns_fds.get(name).copied();
+    Some(WorkspaceLaunchNamespaceFds {
+        user: fd("user"),
+        mnt: fd("mnt"),
+        pid: fd("pid"),
+        net: fd("net"),
+    })
 }
 
 #[cfg(test)]

@@ -15,6 +15,7 @@
 
 mod config;
 mod contract;
+pub mod launch;
 pub mod process;
 mod pty;
 mod transcript;
@@ -25,4 +26,5 @@ pub use contract::{
     tail_lines, CancelCommand, CollectCompleted, CommandError, ReadCommandProgress, StartCommand,
     WriteStdin,
 };
+pub use launch::{build_exec_run_request, CommandExecRunRequest, CommandLaunchNamespaceFds};
 pub use process::{CommandProcess, CommandProcessSpec};

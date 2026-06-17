@@ -1,11 +1,16 @@
 use std::collections::VecDeque;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
+use command::process::{
+    CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec,
+};
+use command::yield_wait_loop::WaitOutcome;
 use operation_service::command::{
-    CancelCommandInput, CommandCallContext, CommandId, CommandServiceError, CommandStatus,
-    ExecCommandInput, OperationTraceContext, PollCommandInput, ReadCommandLinesInput,
-    WriteStdinInput,
+    CancelCommandInput, CommandCallContext, CommandId, CommandLaunchDriver, CommandServiceError,
+    CommandStatus, ExecCommandInput, OperationTraceContext, PollCommandInput,
+    ReadCommandLinesInput, WriteStdinInput,
 };
 use operation_service::workspace_manager::WorkspaceManagerService;
 use operation_service::workspace_remount::{WorkspaceRemountOptions, WorkspaceRemountService};
@@ -14,7 +19,8 @@ use workspace::{
     BaseRevision, CallerId, CaptureChangesRequest, CapturedWorkspaceChanges,
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
     LayerStackSnapshotRef, LeaseId, NetworkMode, ReadonlySnapshotHandle, RemountWorkspaceRequest,
-    RemountWorkspaceResult, WorkspaceError, WorkspaceHandle, WorkspaceService,
+    RemountWorkspaceResult, WorkspaceError, WorkspaceHandle, WorkspaceLaunchContext,
+    WorkspaceService,
 };
 
 struct TestServices {
@@ -103,12 +109,44 @@ impl WorkspaceService for FakeWorkspaceService {
     }
 }
 
+#[derive(Debug, Default)]
+struct FakeLaunchDriver;
+
+impl FakeLaunchDriver {
+    fn new() -> Self {
+        Self
+    }
+}
+
+impl CommandLaunchDriver for FakeLaunchDriver {
+    fn spawn(
+        &self,
+        spec: CommandProcessSpec,
+        _parts: CommandProcessSpawn<'_>,
+    ) -> Result<CommandProcess, CommandServiceError> {
+        Ok(CommandProcess::inactive_for_test(spec))
+    }
+
+    fn wait_for_initial_yield(
+        &self,
+        _process: &CommandProcess,
+        _config: &command::CommandConfig,
+        _yield_time_ms: u64,
+        _start_offset: u64,
+    ) -> WaitOutcome<CommandProcessExit> {
+        WaitOutcome::Running(String::new())
+    }
+}
+
 fn build_services(fake: Arc<FakeWorkspaceService>) -> TestServices {
     let workspace = Arc::new(WorkspaceManagerService::new(fake));
-    let command = Arc::new(operation_service::CommandOperationService::new(
-        Arc::clone(&workspace),
-        command::CommandConfig::default(),
-    ));
+    let command = Arc::new(
+        operation_service::CommandOperationService::with_launch_driver_for_test(
+            Arc::clone(&workspace),
+            test_command_config(),
+            Arc::new(FakeLaunchDriver::new()),
+        ),
+    );
     let remount = Arc::new(WorkspaceRemountService::new(
         Arc::clone(&workspace),
         Arc::clone(&command),
@@ -143,7 +181,37 @@ fn workspace_handle(
             layer_count: 1,
         },
         snapshot,
+        launch: Some(test_launch_context()),
     }
+}
+
+fn test_command_config() -> command::CommandConfig {
+    command::CommandConfig {
+        scratch_root: std::env::temp_dir().join(format!(
+            "operation-service-ownership-test-{}-{}",
+            std::process::id(),
+            unique_suffix()
+        )),
+        ..command::CommandConfig::default()
+    }
+}
+
+fn test_launch_context() -> WorkspaceLaunchContext {
+    let root = std::env::temp_dir().join(format!(
+        "operation-service-ownership-launch-{}",
+        unique_suffix()
+    ));
+    WorkspaceLaunchContext {
+        upperdir: root.join("upper"),
+        workdir: root.join("work"),
+        namespace_fds: None,
+        cgroup_path: None,
+    }
+}
+
+fn unique_suffix() -> u64 {
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    COUNTER.fetch_add(1, Ordering::Relaxed)
 }
 
 fn context(caller_id: &str) -> CommandCallContext {

@@ -22,7 +22,7 @@ fn workspace_id(id: &str) -> WorkspaceId {
 }
 
 fn inactive_process(command_id: &CommandId, caller_id: &CallerId) -> command::CommandProcess {
-    command::CommandProcess::new(command::CommandProcessSpec {
+    command::CommandProcess::inactive_for_test(command::CommandProcessSpec {
         id: command_id.0.clone(),
         caller_id: caller_id.0.clone(),
         command: "echo ok".to_owned(),

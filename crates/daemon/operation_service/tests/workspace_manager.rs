@@ -196,6 +196,7 @@ fn workspace_handle(workspace_id: &str, caller_id: &str, lease_id: &str) -> Work
             layer_count: 1,
         },
         snapshot,
+        launch: None,
     }
 }
 

@@ -207,6 +207,7 @@ mod tests {
                 layer_count: 1,
             },
             snapshot,
+            launch: None,
         }
     }
 

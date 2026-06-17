@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use thiserror::Error;
 
-use crate::command::CommandId;
+use crate::command::{CommandFinalizedMetadata, CommandId};
 use crate::workspace_crate::{CallerId, WorkspaceId};
 
 #[derive(Debug, Error)]
@@ -50,6 +50,7 @@ pub enum CommandServiceError {
     CommandFinalizationFailed {
         command_id: CommandId,
         error: String,
+        finalized: Option<Box<CommandFinalizedMetadata>>,
     },
 
     #[error("duplicate command id: {command_id:?}")]

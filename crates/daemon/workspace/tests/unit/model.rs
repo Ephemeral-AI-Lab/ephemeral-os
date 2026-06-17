@@ -62,6 +62,22 @@ fn assert_handle_projection(public: &WorkspaceHandle) {
             layer_paths: vec!["/lower/one".into(), "/lower/two".into()],
         }
     );
+    let launch = public.launch.as_ref().expect("launch context is projected");
+    assert_eq!(launch.upperdir, PathBuf::from("/tmp/eos/upper"));
+    assert_eq!(launch.workdir, PathBuf::from("/tmp/eos/work"));
+    assert_eq!(
+        launch.cgroup_path,
+        Some(PathBuf::from("/sys/fs/cgroup/eos"))
+    );
+    assert_eq!(
+        launch.namespace_fds,
+        Some(WorkspaceLaunchNamespaceFds {
+            user: None,
+            mnt: Some(11),
+            pid: Some(12),
+            net: None,
+        })
+    );
 }
 
 #[test]
@@ -110,6 +126,7 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
                     root_hash: "root".to_owned(),
                     layer_paths: vec!["/lower/one".into()],
                 },
+                launch: None,
             }
         ),
         format!(
@@ -163,6 +180,7 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
                         root_hash: "root".to_owned(),
                         layer_paths: vec!["/lower/one".into()],
                     },
+                    launch: None,
                 },
             }
         ),
@@ -250,6 +268,7 @@ fn public_dtos_construct_clone_and_compare() {
             root_hash: "root".to_owned(),
             layer_paths: vec!["/lower/one".into()],
         },
+        launch: None,
     };
     let capture_request = CaptureChangesRequest {
         bounds: layerstack::service::BoundedCaptureOptions::default(),

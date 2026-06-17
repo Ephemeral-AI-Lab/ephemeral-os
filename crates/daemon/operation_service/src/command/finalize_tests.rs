@@ -3,29 +3,32 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
-use command::process::{CommandProcessExit, KillReason};
-use layerstack::{LayerChange, LayerPath, LayerStack};
-use operation_service::command::{
-    CommandCallContext, CommandFinalizationOutcome, CommandFinalizedPolicy, CommandId,
-    CommandServiceError, CommandStatus, ExecCommandInput, OperationTraceContext, PollCommandInput,
-    ReadCommandLinesInput,
+use crate::command::{
+    CancelCommandInput, CommandCallContext, CommandFinalizationOutcome, CommandFinalizedPolicy,
+    CommandId, CommandLaunchDriver, CommandServiceError, CommandStatus, ExecCommandInput,
+    FinalizationState, OperationTraceContext, PollCommandInput, ReadCommandLinesInput,
 };
-use operation_service::workspace_manager::WorkspaceManagerService;
-use operation_service::workspace_remount::{WorkspaceRemountOptions, WorkspaceRemountService};
-use operation_service::OperationServices;
+use crate::workspace_manager::WorkspaceManagerService;
+use crate::workspace_remount::{WorkspaceRemountOptions, WorkspaceRemountService};
+use crate::OperationServices;
+use command::process::{
+    CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec, KillReason,
+};
+use command::yield_wait_loop::WaitOutcome;
+use layerstack::{LayerChange, LayerPath, LayerStack};
 use workspace::{
     CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, ChangedPathKind,
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
     LayerStackSnapshotRef, LeaseId, NetworkMode, ProtectedPathDrop, ReadonlySnapshotHandle,
     RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceError, WorkspaceHandle, WorkspaceId,
-    WorkspaceService,
+    WorkspaceLaunchContext, WorkspaceService,
 };
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 struct TestEnv {
     workspace: Arc<WorkspaceManagerService>,
-    command: Arc<operation_service::CommandOperationService>,
+    command: Arc<crate::CommandOperationService>,
     services: OperationServices,
 }
 
@@ -169,6 +172,29 @@ impl WorkspaceService for FakeWorkspaceService {
     }
 }
 
+#[derive(Debug, Default)]
+struct FakeLaunchDriver;
+
+impl CommandLaunchDriver for FakeLaunchDriver {
+    fn spawn(
+        &self,
+        spec: CommandProcessSpec,
+        _parts: CommandProcessSpawn<'_>,
+    ) -> Result<CommandProcess, CommandServiceError> {
+        Ok(CommandProcess::inactive_for_test(spec))
+    }
+
+    fn wait_for_initial_yield(
+        &self,
+        _process: &CommandProcess,
+        _config: &command::CommandConfig,
+        _yield_time_ms: u64,
+        _start_offset: u64,
+    ) -> WaitOutcome<CommandProcessExit> {
+        WaitOutcome::Running(String::new())
+    }
+}
+
 struct LayerFixture {
     base: PathBuf,
     root: PathBuf,
@@ -222,9 +248,10 @@ fn unique_suffix() -> String {
 
 fn build_env(fake: Arc<FakeWorkspaceService>) -> TestEnv {
     let workspace = Arc::new(WorkspaceManagerService::new(fake));
-    let command = Arc::new(operation_service::CommandOperationService::new(
+    let command = Arc::new(crate::CommandOperationService::with_launch_driver_for_test(
         Arc::clone(&workspace),
-        command::CommandConfig::default(),
+        test_command_config(),
+        Arc::new(FakeLaunchDriver),
     ));
     let remount = Arc::new(WorkspaceRemountService::new(
         Arc::clone(&workspace),
@@ -237,6 +264,16 @@ fn build_env(fake: Arc<FakeWorkspaceService>) -> TestEnv {
         workspace,
         command,
         services,
+    }
+}
+
+fn test_command_config() -> command::CommandConfig {
+    command::CommandConfig {
+        scratch_root: std::env::temp_dir().join(format!(
+            "operation-service-command-finalize-scratch-{}",
+            unique_suffix()
+        )),
+        ..command::CommandConfig::default()
     }
 }
 
@@ -258,6 +295,16 @@ fn workspace_handle(
         network: NetworkMode::Host,
         base_revision: snapshot.base_revision(),
         snapshot,
+        launch: Some(test_launch_context(fixture)),
+    }
+}
+
+fn test_launch_context(fixture: &LayerFixture) -> WorkspaceLaunchContext {
+    WorkspaceLaunchContext {
+        upperdir: fixture.base.join("upper"),
+        workdir: fixture.base.join("work"),
+        namespace_fds: None,
+        cgroup_path: None,
     }
 }
 
@@ -513,8 +560,13 @@ fn command_finalize_destroy_failure_is_reportable_and_keeps_cleanup_state() -> T
 
     assert!(matches!(
         error,
-        CommandServiceError::CommandFinalizationFailed { command_id: id, error }
+        CommandServiceError::CommandFinalizationFailed {
+            command_id: id,
+            error,
+            finalized: Some(finalized),
+        }
             if id == command_id && error.contains("destroy failed")
+                && finalized.outcome == CommandFinalizationOutcome::Discarded
     ));
     assert!(fake.capture_calls().is_empty());
     assert_eq!(
@@ -533,8 +585,11 @@ fn command_finalize_destroy_failure_is_reportable_and_keeps_cleanup_state() -> T
         .expect_err("failed finalization remains reportable");
     assert!(matches!(
         poll_error,
-        CommandServiceError::CommandFinalizationFailed { command_id: id, .. }
-            if id == command_id
+        CommandServiceError::CommandFinalizationFailed {
+            command_id: id,
+            finalized: Some(finalized),
+            ..
+        } if id == command_id && finalized.outcome == CommandFinalizationOutcome::Discarded
     ));
     Ok(())
 }
@@ -558,7 +613,11 @@ fn command_finalize_capture_failure_records_failed_finalization_without_destroy(
 
     assert!(matches!(
         error,
-        CommandServiceError::CommandFinalizationFailed { command_id: id, error }
+        CommandServiceError::CommandFinalizationFailed {
+            command_id: id,
+            error,
+            finalized: None,
+        }
             if id == command_id && error.contains("capture failed")
     ));
     assert_eq!(
@@ -578,9 +637,193 @@ fn command_finalize_capture_failure_records_failed_finalization_without_destroy(
         .expect_err("failed finalization remains reportable");
     assert!(matches!(
         poll_error,
-        CommandServiceError::CommandFinalizationFailed { command_id: id, .. }
-            if id == command_id
+        CommandServiceError::CommandFinalizationFailed {
+            command_id: id,
+            finalized: None,
+            ..
+        } if id == command_id
     ));
+    Ok(())
+}
+
+#[test]
+fn command_finalize_publish_failure_records_failed_finalization_without_destroy() -> TestResult {
+    let fixture = LayerFixture::new("publish-failure")?;
+    let mut handle = workspace_handle("workspace-one-shot", "caller-1", &fixture);
+    handle.snapshot.manifest_version = -1;
+    handle.base_revision = handle.snapshot.base_revision();
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(handle.clone()));
+    fake.push_capture_result(Ok(captured_changes(
+        &handle,
+        vec![LayerChange::Write {
+            path: LayerPath::parse("publish-failed.txt")?,
+            content: b"not published\n".to_vec(),
+        }],
+        None,
+    )));
+    let env = build_env(Arc::clone(&fake));
+    let command_id = start_one_shot(&env, &fixture, "caller-1")?;
+
+    let error = env
+        .command
+        .finalize_command(command_id.clone(), success_exit("done\n"))
+        .expect_err("publish failure records failed finalization");
+
+    assert!(matches!(
+        error,
+        CommandServiceError::CommandFinalizationFailed {
+            command_id: id,
+            error,
+            finalized: None,
+        } if id == command_id && error.contains("manifest version must be non-negative")
+    ));
+    assert_eq!(
+        fake.capture_calls(),
+        vec![WorkspaceId("workspace-one-shot".to_owned())]
+    );
+    assert!(fake.destroy_calls().is_empty());
+    let poll_error = env
+        .command
+        .poll(
+            PollCommandInput {
+                command_id: command_id.clone(),
+                last_n_lines: None,
+            },
+            context("caller-1"),
+        )
+        .expect_err("failed publish finalization remains reportable");
+    assert!(matches!(
+        poll_error,
+        CommandServiceError::CommandFinalizationFailed {
+            command_id: id,
+            finalized: None,
+            ..
+        } if id == command_id
+    ));
+    Ok(())
+}
+
+#[test]
+fn command_finalize_success_destroy_failure_retains_published_metadata() -> TestResult {
+    let fixture = LayerFixture::new("publish-then-destroy-failure")?;
+    let handle = workspace_handle("workspace-one-shot", "caller-1", &fixture);
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(handle.clone()));
+    fake.push_capture_result(Ok(captured_changes(
+        &handle,
+        vec![LayerChange::Write {
+            path: LayerPath::parse("published-before-destroy.txt")?,
+            content: b"published before destroy\n".to_vec(),
+        }],
+        None,
+    )));
+    fake.push_destroy_result(Err(WorkspaceError::Setup {
+        step: "destroy failed".to_owned(),
+    }));
+    let env = build_env(Arc::clone(&fake));
+    let command_id = start_one_shot(&env, &fixture, "caller-1")?;
+
+    let error = env
+        .command
+        .finalize_command(command_id.clone(), success_exit("done\n"))
+        .expect_err("destroy failure retains published metadata");
+
+    assert!(matches!(
+        error,
+        CommandServiceError::CommandFinalizationFailed {
+            command_id: id,
+            error,
+            finalized: Some(finalized),
+        } if id == command_id
+            && error.contains("destroy failed")
+            && finalized.outcome == CommandFinalizationOutcome::Published
+            && finalized.changed_paths == vec!["published-before-destroy.txt".to_owned()]
+            && finalized.destroy.is_none()
+    ));
+    assert_eq!(
+        LayerStack::open(fixture.root.clone())?
+            .read_text("published-before-destroy.txt")?
+            .0,
+        "published before destroy\n"
+    );
+    let active = env
+        .command
+        .process_store()
+        .active(&command_id)
+        .expect("failed finalization keeps active cleanup state");
+    assert!(matches!(
+        &active.finalization,
+        FinalizationState::Failed {
+            finalized: Some(finalized),
+            ..
+        } if finalized.outcome == CommandFinalizationOutcome::Published
+            && finalized.changed_paths == vec!["published-before-destroy.txt".to_owned()]
+            && finalized.destroy.is_none()
+    ));
+    Ok(())
+}
+
+#[test]
+fn command_finalize_failed_active_authorizes_before_reporting_failure_details() -> TestResult {
+    let fixture = LayerFixture::new("failed-active-auth")?;
+    let handle = workspace_handle("workspace-one-shot", "caller-1", &fixture);
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(handle));
+    fake.push_capture_result(Err(WorkspaceError::Capture {
+        message: "sensitive capture path".to_owned(),
+    }));
+    let env = build_env(Arc::clone(&fake));
+    let command_id = start_one_shot(&env, &fixture, "caller-1")?;
+
+    env.command
+        .finalize_command(command_id.clone(), success_exit("done\n"))
+        .expect_err("capture failure records failed finalization");
+
+    let poll_error = env
+        .command
+        .poll(
+            PollCommandInput {
+                command_id: command_id.clone(),
+                last_n_lines: None,
+            },
+            context("caller-other"),
+        )
+        .expect_err("wrong caller cannot poll failed active command");
+    let read_error = env
+        .command
+        .read_lines(
+            ReadCommandLinesInput {
+                command_id: command_id.clone(),
+                offset: 0,
+                limit: 1,
+            },
+            context("caller-other"),
+        )
+        .expect_err("wrong caller cannot read failed active command");
+    let cancel_error = env
+        .command
+        .cancel(
+            CancelCommandInput {
+                command_id: command_id.clone(),
+            },
+            context("caller-other"),
+        )
+        .expect_err("wrong caller cannot cancel failed active command");
+
+    for error in [poll_error, read_error, cancel_error] {
+        assert!(
+            !error.to_string().contains("sensitive capture path"),
+            "authorization error leaked finalization details: {error}"
+        );
+        assert!(matches!(
+            error,
+            CommandServiceError::CommandCallerMismatch { command_id: id, expected, actual }
+                if id == command_id
+                    && expected == CallerId("caller-1".to_owned())
+                    && actual == CallerId("caller-other".to_owned())
+        ));
+    }
     Ok(())
 }
 

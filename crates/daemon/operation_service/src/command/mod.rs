@@ -1,5 +1,6 @@
 pub mod contract;
 pub mod error;
+mod launch;
 pub mod process_store;
 pub mod registry;
 pub mod service;
@@ -15,6 +16,7 @@ pub use contract::{
     WriteStdinInput,
 };
 pub use error::CommandServiceError;
+pub use launch::{CommandLaunchDriver, RealCommandLaunchDriver};
 pub use process_store::{
     ActiveCommandProcess, ActiveCommandRef, CancellationState, CommandCompletionStore,
     CommandFinalizePolicy, CommandLifecycleState, CommandProcessStore, CommandReservation,

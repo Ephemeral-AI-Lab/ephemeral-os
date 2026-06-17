@@ -1015,23 +1015,32 @@ pub struct CapturedWorkspaceChanges {
 pub enum FinalizationState {
     NotStarted,
     InProgress,
-    ResponseBuffered,
-    WorkspaceDestroyPending,
+    ResponseBuffered {
+        finalized: CommandFinalizedMetadata,
+    },
+    WorkspaceDestroyPending {
+        finalized: CommandFinalizedMetadata,
+    },
     Complete,
-    Failed { error: String },
+    Failed {
+        error: String,
+        finalized: Option<CommandFinalizedMetadata>,
+    },
 }
 ```
 
 - State is retained so finalization failure does not silently drop command or
-  workspace cleanup state.
+  workspace cleanup state. Intermediate and failed states keep already-decided
+  publish/discard metadata so destroy failures remain reportable with the
+  prior outcome.
 
 ### Service Method Contracts
 
 | Method | Contract |
 | --- | --- |
 | `pub(crate) CommandOperationService::finalize_command(command_id, process_exit)` | Purpose: route finalization by `CommandFinalizePolicy`. Inputs: command id and `command::process::CommandProcessExit`. Outputs/errors: `CommandTerminalResult` or retained finalization failure. Boundary rules: removes active state only after finalization state is recorded; removes registry binding only when finalization no longer needs remount/lifecycle coordination. Tests: exit is finalized exactly once. |
-| `pub(crate) CommandOperationService::finalize_session_command(record, exit)` | Purpose: finalize persistent session command. Inputs: active record and process exit. Outputs/errors: terminal result. Boundary rules: no publish, no workspace destroy, no session snapshot/layer update. Notes: optional changed paths come from a separate non-mutating bounded scan only, not `capture_changes`. Tests: fake workspace service sees no capture call, no destroy, no snapshot refresh. |
-| `pub(crate) CommandOperationService::finalize_one_shot_command(record, exit)` | Purpose: implement `OneShotPublishThenDestroy` for a private one-shot host command. Inputs: active record and process exit. Outputs/errors: terminal result plus publish/discard and destroy result/failure metadata. Boundary rules: success captures the generic upperdir delta and publishes; non-success/cancel/timeout discards; destroy is attempted only after the publish/discard result is recorded; destroy failure retains state. Tests: success calls upperdir-delta capture, publish, then destroy; failure records discard and then destroys. |
+| `fn CommandOperationService::finalize_session_command(record, exit)` | Purpose: finalize persistent session command. Inputs: active record and process exit. Outputs/errors: terminal result. Boundary rules: no publish, no workspace destroy, no session snapshot/layer update. Notes: optional changed paths come from a separate non-mutating bounded scan only, not `capture_changes`. Tests: fake workspace service sees no capture call, no destroy, no snapshot refresh. |
+| `fn CommandOperationService::finalize_one_shot_command(record, exit)` | Purpose: implement `OneShotPublishThenDestroy` for a private one-shot host command. Inputs: active record and process exit. Outputs/errors: terminal result plus publish/discard and destroy result/failure metadata. Boundary rules: success captures the generic upperdir delta and publishes; non-success/cancel/timeout discards; destroy is attempted only after the publish/discard result is recorded; destroy failure retains state. Tests: success calls upperdir-delta capture, publish, then destroy; failure records discard and then destroys. |
 | `WorkspaceManagerService::capture_changes(handler, request)` | Purpose: return the generic captured overlay upperdir delta from resource service. Inputs: handler and capture bounds. Outputs/errors: `CapturedWorkspaceChanges` or workspace manager error. Boundary rules: no command-specific mode, no publish/discard decision, no upperdir mutation, no workspace destroy, and no persistent-session command finalization scan. Tests: captured result passes through without workspace manager deciding publish. |
 | `pub(crate) CommandOperationService::scan_session_changed_paths(handler, bounds)` | Purpose: optional non-mutating session metadata scan. Inputs: session handler and bounds. Outputs/errors: changed-path metadata or scan error. Boundary rules: must not materialize payloads, publish, retarget leases, destroy, or refresh session snapshot/layer metadata. Tests: fake scan proves no workspace manager capture/destroy calls. |
 

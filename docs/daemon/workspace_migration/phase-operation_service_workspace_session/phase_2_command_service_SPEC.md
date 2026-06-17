@@ -906,16 +906,26 @@ pub enum CancellationState {
 pub enum FinalizationState {
     NotStarted,
     InProgress,
-    ResponseBuffered,
-    WorkspaceDestroyPending,
+    ResponseBuffered {
+        finalized: CommandFinalizedMetadata,
+    },
+    WorkspaceDestroyPending {
+        finalized: CommandFinalizedMetadata,
+    },
     Complete,
-    Failed { error: String },
+    Failed {
+        error: String,
+        finalized: Option<CommandFinalizedMetadata>,
+    },
 }
 ```
 
 The service does not need to expose these exact enum names on the wire, but the
 implementation must preserve these state distinctions internally so command
 teardown, remount, and retry-safe destroy are not collapsed into a boolean.
+Intermediate and failed states retain already-decided publish/discard metadata
+so destroy failure reporting cannot lose the outcome recorded before workspace
+teardown.
 
 ## Local OS Compatibility Projection
 

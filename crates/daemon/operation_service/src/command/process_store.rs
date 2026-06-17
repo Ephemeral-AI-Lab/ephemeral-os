@@ -266,10 +266,17 @@ pub enum CancellationState {
 pub enum FinalizationState {
     NotStarted,
     InProgress,
-    ResponseBuffered,
-    WorkspaceDestroyPending,
+    ResponseBuffered {
+        finalized: CommandFinalizedMetadata,
+    },
+    WorkspaceDestroyPending {
+        finalized: CommandFinalizedMetadata,
+    },
     Complete,
-    Failed { error: String },
+    Failed {
+        error: String,
+        finalized: Option<CommandFinalizedMetadata>,
+    },
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -361,7 +368,7 @@ mod tests {
     }
 
     fn inactive_process(command_id: &CommandId, caller_id: &CallerId) -> ::command::CommandProcess {
-        ::command::CommandProcess::new(::command::CommandProcessSpec {
+        ::command::CommandProcess::inactive_for_test(::command::CommandProcessSpec {
             id: command_id.0.clone(),
             caller_id: caller_id.0.clone(),
             command: "echo ok".to_owned(),

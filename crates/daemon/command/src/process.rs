@@ -176,6 +176,12 @@ impl CommandProcess {
         Self::with_runtime(spec, CommandProcessRuntime::inactive())
     }
 
+    #[doc(hidden)]
+    #[must_use]
+    pub fn inactive_for_test(spec: CommandProcessSpec) -> Self {
+        Self::new(spec)
+    }
+
     pub fn spawn(
         spec: CommandProcessSpec,
         parts: CommandProcessSpawn<'_>,

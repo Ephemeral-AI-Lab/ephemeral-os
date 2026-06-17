@@ -2,11 +2,11 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use crate::command::{
-    CancelCommandInput, CancellationState, CommandCallContext, CommandLifecycleState,
-    CommandLinesOutput, CommandOutputLine, CommandOutputSnapshot, CommandPollOutput,
-    CommandProcessStore, CommandRegistry, CommandServiceError, CommandStatus, CommandYield,
-    CompletedCommandRecord, FinalizationState, PollCommandInput, ReadCommandLinesInput,
-    WriteStdinInput,
+    CancelCommandInput, CancellationState, CommandCallContext, CommandLaunchDriver,
+    CommandLifecycleState, CommandLinesOutput, CommandOutputLine, CommandOutputSnapshot,
+    CommandPollOutput, CommandProcessStore, CommandRegistry, CommandServiceError, CommandStatus,
+    CommandYield, CompletedCommandRecord, FinalizationState, PollCommandInput,
+    ReadCommandLinesInput, RealCommandLaunchDriver, WriteStdinInput,
 };
 use crate::workspace_crate::CallerId;
 use crate::workspace_manager::WorkspaceManagerService;
@@ -22,6 +22,7 @@ pub struct CommandOperationService {
     config: ::command::CommandConfig,
     registry: Arc<CommandRegistry>,
     process_store: Arc<CommandProcessStore>,
+    launch_driver: Arc<dyn CommandLaunchDriver>,
     finalization_options: CommandFinalizationOptions,
 }
 
@@ -42,7 +43,25 @@ impl CommandOperationService {
             config,
             registry: Arc::new(CommandRegistry::new()),
             process_store: Arc::new(CommandProcessStore::new()),
+            launch_driver: Arc::new(RealCommandLaunchDriver),
             finalization_options,
+        }
+    }
+
+    #[doc(hidden)]
+    #[must_use]
+    pub fn with_launch_driver_for_test(
+        workspace: Arc<WorkspaceManagerService>,
+        config: ::command::CommandConfig,
+        launch_driver: Arc<dyn CommandLaunchDriver>,
+    ) -> Self {
+        Self {
+            workspace,
+            config,
+            registry: Arc::new(CommandRegistry::new()),
+            process_store: Arc::new(CommandProcessStore::new()),
+            launch_driver,
+            finalization_options: CommandFinalizationOptions::default(),
         }
     }
 
@@ -52,11 +71,27 @@ impl CommandOperationService {
         config: ::command::CommandConfig,
         process_store: CommandProcessStore,
     ) -> Self {
+        Self::with_process_store_and_launch_driver_for_test(
+            workspace,
+            config,
+            process_store,
+            Arc::new(RealCommandLaunchDriver),
+        )
+    }
+
+    #[cfg(test)]
+    pub(crate) fn with_process_store_and_launch_driver_for_test(
+        workspace: Arc<WorkspaceManagerService>,
+        config: ::command::CommandConfig,
+        process_store: CommandProcessStore,
+        launch_driver: Arc<dyn CommandLaunchDriver>,
+    ) -> Self {
         Self {
             workspace,
             config,
             registry: Arc::new(CommandRegistry::new()),
             process_store: Arc::new(process_store),
+            launch_driver,
             finalization_options: CommandFinalizationOptions::default(),
         }
     }
@@ -84,6 +119,11 @@ impl CommandOperationService {
     #[must_use]
     pub(crate) fn process_store(&self) -> &Arc<CommandProcessStore> {
         &self.process_store
+    }
+
+    #[must_use]
+    pub(crate) fn launch_driver(&self) -> &Arc<dyn CommandLaunchDriver> {
+        &self.launch_driver
     }
 
     pub fn write_stdin(
@@ -275,21 +315,21 @@ impl CommandOperationService {
         let Some(active) = self.process_store.active(command_id) else {
             return Ok(None);
         };
-        if let FinalizationState::Failed { error } = &active.finalization {
-            return Err(CommandServiceError::CommandFinalizationFailed {
-                command_id: command_id.clone(),
-                error: error.clone(),
-            });
-        }
-        if active.caller_id == *caller_id {
-            Ok(Some(active))
-        } else {
-            Err(CommandServiceError::CommandCallerMismatch {
+        if active.caller_id != *caller_id {
+            return Err(CommandServiceError::CommandCallerMismatch {
                 command_id: command_id.clone(),
                 expected: active.caller_id.clone(),
                 actual: caller_id.clone(),
-            })
+            });
         }
+        if let FinalizationState::Failed { error, finalized } = &active.finalization {
+            return Err(CommandServiceError::CommandFinalizationFailed {
+                command_id: command_id.clone(),
+                error: error.clone(),
+                finalized: finalized.clone().map(Box::new),
+            });
+        }
+        Ok(Some(active))
     }
 
     fn completed_for_owner(
@@ -460,7 +500,7 @@ mod tests {
     }
 
     fn inactive_process(command_id: &CommandId, caller_id: &CallerId) -> command::CommandProcess {
-        command::CommandProcess::new(command::CommandProcessSpec {
+        command::CommandProcess::inactive_for_test(command::CommandProcessSpec {
             id: command_id.0.clone(),
             caller_id: caller_id.0.clone(),
             command: "cat".to_owned(),
