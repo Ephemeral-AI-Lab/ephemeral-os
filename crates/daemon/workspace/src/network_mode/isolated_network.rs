@@ -152,7 +152,7 @@ pub struct WorkspaceModeHandle {
 }
 
 #[derive(Debug, Clone)]
-pub struct WorkspaceModeBinding {
+pub struct WorkspaceModeContext {
     pub caller_id: String,
     pub workspace_handle_id: String,
     pub network: NetworkMode,

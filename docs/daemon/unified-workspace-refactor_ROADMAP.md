@@ -70,7 +70,7 @@ Tasks:
 - [x] Add `CreateWorkspaceRequest`, `RunCommandRequest`, `RunCommandResult`, `CaptureChangesRequest`, `CaptureChangesResult`, `DestroyWorkspaceRequest`, and `DestroyWorkspaceResult`.
 - [x] Add `crates/daemon/workspace/src/error.rs` with `WorkspaceError`.
 - [x] Add `crates/daemon/workspace/src/service.rs` with the `WorkspaceService` trait shape.
-- [x] Keep current `HostWorkspace`, `WorkspaceModeManager`, and `WorkspaceModeBinding` exports during migration.
+- [x] Keep current `HostWorkspace`, `WorkspaceModeManager`, and `WorkspaceModeContext` exports during migration.
 - [x] Add conversions from current isolated handles to the new `WorkspaceHandle`.
 - [x] Add unit coverage for type conversion and public DTO construction/derive behavior; serialization remains deferred because the Phase 1 DTOs are not wire-facing.
 
@@ -306,7 +306,7 @@ Tasks:
 
 - [x] Stop exporting `HostWorkspace` from the workspace crate root.
 - [x] Stop exporting `WorkspaceModeManager` from the workspace crate root unless an internal crate still requires it.
-- [x] Stop exporting `WorkspaceModeBinding` from the workspace crate root unless wire compatibility requires it.
+- [x] Stop exporting `WorkspaceModeContext` from the workspace crate root unless wire compatibility requires it.
 - [x] Replace legacy names in daemon runtime and operation adapters.
 - [x] Keep compatibility aliases only where wire contract requires them.
 - [x] Update docs and generated readme pages if workspace docs change.
@@ -504,7 +504,7 @@ Append one row per meaningful gate or phase closeout.
 | 2026-06-17 | 7 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase7-target cargo check -p eosd` | Pass | Extra non-required check because Phase 7 changed the private `eosd ns-holder` dispatcher. |
 | 2026-06-17 | 7 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase7-target cargo test -p linux-namespace-subprocess holder` | Pass | Extra non-required check because Phase 7 changed holder network-mode behavior and holder tests. |
 | 2026-06-17 | 7 | `git diff --check` | Pass | Exit 0; no whitespace errors. |
-| 2026-06-17 | 8 | Phase 8 implementation review | Done | Retired workspace root exports for `HostWorkspace`, `HostWorkspaceError`, `overlay_run_dirs`, legacy isolated `WorkspaceHandle`, `WorkspaceModeManager`, `WorkspaceModeBinding`, and `WorkspaceModeHandle`; moved Host internals into `network_mode/host.rs`, isolated handle/manager/error/caps/binding internals into `network_mode/isolated_network.rs`, and updated daemon/runtime/operation imports to scoped mode and overlay paths. No root compatibility exports were retained; existing wire compatibility inputs and trace strings use host/isolated_network. |
+| 2026-06-17 | 8 | Phase 8 implementation review | Done | Retired workspace root exports for `HostWorkspace`, `HostWorkspaceError`, `overlay_run_dirs`, legacy isolated `WorkspaceHandle`, `WorkspaceModeManager`, `WorkspaceModeContext`, and `WorkspaceModeHandle`; moved Host internals into `network_mode/host.rs`, isolated handle/manager/error/caps/context internals into `network_mode/isolated_network.rs`, and updated daemon/runtime/operation imports to scoped mode and overlay paths. No root compatibility exports were retained; existing wire compatibility inputs and trace strings use host/isolated_network. |
 | 2026-06-17 | 8 | `cargo fmt` | Pass | Formatted Phase 8 Rust sources. |
 | 2026-06-17 | 8 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase8-target cargo test -p workspace` | Pass | Exit 0; 24 workspace unit tests passed; doc tests 0 passed, 0 failed. |
 | 2026-06-17 | 8 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase8-target cargo test -p daemon workspace_runtime` | Pass | Exit 0; first run caught remaining root compatibility references; after scoped import cleanup, 21 focused runtime tests passed. |

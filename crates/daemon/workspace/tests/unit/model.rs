@@ -9,7 +9,7 @@ use crate::overlay::tree::TreeResourceStats;
 
 use super::*;
 
-fn isolated_handle() -> WorkspaceModeHandle {
+fn workspace_mode_handle() -> WorkspaceModeHandle {
     WorkspaceModeHandle {
         workspace_id: WorkspaceModeId("isolated-handle".to_owned()),
         network: NetworkMode::IsolatedNetwork,
@@ -40,29 +40,7 @@ fn isolated_handle() -> WorkspaceModeHandle {
     }
 }
 
-fn isolated_binding() -> WorkspaceModeBinding {
-    WorkspaceModeBinding {
-        caller_id: "caller-2".to_owned(),
-        workspace_handle_id: "binding-handle".to_owned(),
-        network: NetworkMode::IsolatedNetwork,
-        layer_stack_root: "/layer-stack".into(),
-        manifest_version: 7,
-        manifest_root_hash: "binding-root-hash".to_owned(),
-        workspace_root: "/workspace".into(),
-        scratch_dir: "/tmp/eos/run".into(),
-        upperdir: "/tmp/eos/upper".into(),
-        workdir: "/tmp/eos/work".into(),
-        layer_paths: vec![
-            "/lower/one".into(),
-            "/lower/two".into(),
-            "/lower/three".into(),
-        ],
-        ns_fds: HashMap::from([("mnt".to_owned(), 21), ("pid".to_owned(), 22)]),
-        cgroup_path: Some("/sys/fs/cgroup/eos".into()),
-    }
-}
-
-fn assert_isolated_handle_public(public: &WorkspaceHandle) {
+fn assert_handle_projection(public: &WorkspaceHandle) {
     assert_eq!(public.id, WorkspaceId("isolated-handle".to_owned()));
     assert_eq!(public.owner, CallerId("caller-1".to_owned()));
     assert_eq!(public.workspace_root, PathBuf::from("/workspace"));
@@ -75,42 +53,27 @@ fn assert_isolated_handle_public(public: &WorkspaceHandle) {
             layer_count: 2,
         }
     );
-}
-
-fn assert_isolated_binding_public(public: &WorkspaceHandle) {
-    assert_eq!(public.id, WorkspaceId("binding-handle".to_owned()));
-    assert_eq!(public.owner, CallerId("caller-2".to_owned()));
-    assert_eq!(public.workspace_root, PathBuf::from("/workspace"));
-    assert_eq!(public.network, NetworkMode::IsolatedNetwork);
     assert_eq!(
-        public.base_revision,
-        BaseRevision {
-            version: 7,
-            root_hash: "binding-root-hash".to_owned(),
-            layer_count: 3,
+        public.snapshot,
+        LayerStackSnapshotRef {
+            lease_id: LeaseId("lease-1".to_owned()),
+            manifest_version: 42,
+            root_hash: "root-hash".to_owned(),
+            layer_paths: vec!["/lower/one".into(), "/lower/two".into()],
         }
     );
 }
 
 #[test]
-fn converts_borrowed_and_owned_isolated_handle_to_public_handle() {
-    let handle = isolated_handle();
+fn converts_workspace_mode_handle_to_public_handle() {
+    let handle = workspace_mode_handle();
 
-    assert_isolated_handle_public(&WorkspaceHandle::from(&handle));
-    assert_isolated_handle_public(&WorkspaceHandle::from(handle));
-}
-
-#[test]
-fn converts_borrowed_and_owned_isolated_binding_to_public_handle() {
-    let binding = isolated_binding();
-
-    assert_isolated_binding_public(&WorkspaceHandle::from(&binding));
-    assert_isolated_binding_public(&WorkspaceHandle::from(binding));
+    assert_handle_projection(&WorkspaceHandle::from(&handle));
 }
 
 #[test]
 fn public_handle_debug_does_not_expose_internal_storage_or_namespace_fields() {
-    let public = WorkspaceHandle::from(&isolated_handle());
+    let public = WorkspaceHandle::from(&workspace_mode_handle());
     let debug = format!("{public:?}");
 
     assert_no_internal_fields(&debug);
@@ -140,6 +103,12 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
                 workspace_root: "/workspace".into(),
                 network: NetworkMode::Host,
                 base_revision: base_revision.clone(),
+                snapshot: LayerStackSnapshotRef {
+                    lease_id: LeaseId("lease".to_owned()),
+                    manifest_version: 1,
+                    root_hash: "root".to_owned(),
+                    layer_paths: vec!["/lower/one".into()],
+                },
             }
         ),
         format!(
@@ -189,6 +158,54 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
             DestroyWorkspaceRequest {
                 grace_s: Some(1.0),
                 cancel_commands: true,
+            }
+        ),
+        format!(
+            "{:?}",
+            RemountWorkspaceRequest {
+                layer_paths: vec!["/lower/one".into()],
+            }
+        ),
+        format!(
+            "{:?}",
+            RemountWorkspaceResult {
+                handle: WorkspaceHandle {
+                    id: WorkspaceId("workspace".to_owned()),
+                    owner: CallerId("caller".to_owned()),
+                    workspace_root: "/workspace".into(),
+                    network: NetworkMode::Host,
+                    base_revision: BaseRevision {
+                        version: 1,
+                        root_hash: "root".to_owned(),
+                        layer_count: 1,
+                    },
+                    snapshot: LayerStackSnapshotRef {
+                        lease_id: LeaseId("lease".to_owned()),
+                        manifest_version: 1,
+                        root_hash: "root".to_owned(),
+                        layer_paths: vec!["/lower/one".into()],
+                    },
+                },
+            }
+        ),
+        format!(
+            "{:?}",
+            LatestSnapshotRequest {
+                workspace_root: "/workspace".into(),
+                owner_request_id: "request".to_owned(),
+            }
+        ),
+        format!(
+            "{:?}",
+            ReadonlySnapshotHandle {
+                view_root: "/view".into(),
+                generation_key: "generation".to_owned(),
+                snapshot: LayerStackSnapshotRef {
+                    lease_id: LeaseId("lease".to_owned()),
+                    manifest_version: 1,
+                    root_hash: "root".to_owned(),
+                    layer_paths: vec!["/lower/one".into()],
+                },
             }
         ),
         format!(
@@ -250,6 +267,12 @@ fn public_dtos_construct_clone_and_compare() {
         workspace_root: "/workspace".into(),
         network: NetworkMode::Host,
         base_revision: base_revision.clone(),
+        snapshot: LayerStackSnapshotRef {
+            lease_id: LeaseId("lease".to_owned()),
+            manifest_version: 1,
+            root_hash: "root".to_owned(),
+            layer_paths: vec!["/lower/one".into()],
+        },
     };
     let run = RunCommandRequest {
         invocation_id: "invocation".to_owned(),
@@ -291,6 +314,21 @@ fn public_dtos_construct_clone_and_compare() {
         grace_s: Some(1.0),
         cancel_commands: true,
     };
+    let remount_request = RemountWorkspaceRequest {
+        layer_paths: vec!["/lower/one".into()],
+    };
+    let remount = RemountWorkspaceResult {
+        handle: handle.clone(),
+    };
+    let latest_request = LatestSnapshotRequest {
+        workspace_root: "/workspace".into(),
+        owner_request_id: "request".to_owned(),
+    };
+    let readonly_snapshot = ReadonlySnapshotHandle {
+        view_root: "/view".into(),
+        generation_key: "generation".to_owned(),
+        snapshot: handle.snapshot.clone(),
+    };
     let destroy = DestroyWorkspaceResult {
         workspace_id: WorkspaceId("workspace".to_owned()),
         owner: CallerId("caller".to_owned()),
@@ -309,6 +347,10 @@ fn public_dtos_construct_clone_and_compare() {
     assert_eq!(capture_request.clone(), capture_request);
     assert_eq!(capture.clone(), capture);
     assert_eq!(destroy_request.clone(), destroy_request);
+    assert_eq!(remount_request.clone(), remount_request);
+    assert_eq!(remount.clone(), remount);
+    assert_eq!(latest_request.clone(), latest_request);
+    assert_eq!(readonly_snapshot.clone(), readonly_snapshot);
     assert_eq!(destroy.clone(), destroy);
     assert_eq!(CommandStatus::TimedOut.as_str(), "timed_out");
 }

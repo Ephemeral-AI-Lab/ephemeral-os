@@ -398,12 +398,6 @@ pub trait WorkspaceService {
         request: CreateWorkspaceRequest,
     ) -> Result<WorkspaceHandle, WorkspaceError>;
 
-    fn run_command(
-        &self,
-        handle: &WorkspaceHandle,
-        request: RunCommandRequest,
-    ) -> Result<RunCommandResult, WorkspaceError>;
-
     fn capture_changes(
         &self,
         handle: &WorkspaceHandle,
@@ -592,7 +586,7 @@ not use `FreshNs`; it must use holder-created namespaces plus `setns`.
 
 - Add `model.rs`, `error.rs`, and skeleton service/request/result types.
 - Keep current `HostWorkspace`, `WorkspaceModeManager`, and
-  `WorkspaceModeBinding` exports.
+  `WorkspaceModeContext` exports.
 - Add conversions from current isolated handle to new `WorkspaceHandle`.
 
 ### Phase 2: Resolve `workspace_root` Internally
@@ -644,7 +638,7 @@ not use `FreshNs`; it must use holder-created namespaces plus `setns`.
 ### Phase 8: Retire Legacy Names
 
 - Stop exporting `HostWorkspace`, `WorkspaceModeManager`, and
-  `WorkspaceModeBinding` from the crate root.
+  `WorkspaceModeContext` from the crate root.
 - Keep compatibility aliases only where wire contract requires them.
 
 ## 12. Test Plan

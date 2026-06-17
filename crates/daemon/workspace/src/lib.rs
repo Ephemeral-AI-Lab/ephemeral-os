@@ -18,10 +18,12 @@ pub mod service;
 
 pub use error::WorkspaceError;
 pub use model::{
-    BaseRevision, CallerId, CaptureChangesRequest, CaptureChangesResult, ChangedPathKind,
-    CommandStatus, CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult,
-    NetworkMode, ProtectedPathDrop, ProtectedPathDropReason, RunCommandRequest, RunCommandResult,
-    WorkspaceHandle, WorkspaceHandle as UnifiedWorkspaceHandle, WorkspaceId,
+    BaseRevision, CallerId, CaptureChangesRequest, CaptureChangesResult, CapturedWorkspaceChanges,
+    ChangedPathKind, CommandStatus, CreateWorkspaceRequest, DestroyWorkspaceRequest,
+    DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef, LeaseId, NetworkMode,
+    ProtectedPathDrop, ProtectedPathDropReason, ReadonlySnapshotHandle, RemountWorkspaceRequest,
+    RemountWorkspaceResult, RunCommandRequest, RunCommandResult, WorkspaceHandle,
+    WorkspaceHandle as UnifiedWorkspaceHandle, WorkspaceId,
 };
 pub use service::WorkspaceService;
 

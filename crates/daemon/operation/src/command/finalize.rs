@@ -8,7 +8,7 @@ use layerstack::{CaptureRouteStats, ChangesetResult, CommitOptions, CommitStatus
 use serde_json::{json, Map, Value};
 use trace::usize_to_f64_saturating;
 use workspace::network_mode::host::HostWorkspace;
-use workspace::network_mode::isolated_network::WorkspaceModeBinding;
+use workspace::network_mode::isolated_network::WorkspaceModeContext;
 use workspace::overlay::capture::{
     capture_upperdir, capture_upperdir_for_snapshot_with_options, RoutedCapturedChanges,
 };
@@ -254,11 +254,11 @@ pub(crate) fn finalize_host_command_with_capture_options(
 }
 
 pub(crate) fn finalize_isolated_network_command(
-    binding: &WorkspaceModeBinding,
+    context: &WorkspaceModeContext,
     request: FinalizeCommandRequest,
 ) -> Result<CommandResponse, WorkspaceApiError> {
-    let mut timings = base_timings(&binding.layer_stack_root)?;
-    let captured = capture_upperdir(&binding.upperdir)
+    let mut timings = base_timings(&context.layer_stack_root)?;
+    let captured = capture_upperdir(&context.upperdir)
         .map_err(|err| finalize_error(format!("capture isolated upperdir: {err}")))?;
     let changed_path_kinds: ChangedPathKinds = changed_path_kind_pairs(&captured.changes).collect();
     let changed_paths: Vec<String> = changed_path_kinds.keys().cloned().collect();
@@ -285,15 +285,15 @@ pub(crate) fn finalize_isolated_network_command(
     extras.insert(
         "isolated_network".to_owned(),
         json!({
-            "caller_id": binding.caller_id,
-            "workspace_handle_id": binding.workspace_handle_id,
-            "manifest_version": binding.manifest_version,
-            "manifest_root_hash": binding.manifest_root_hash,
+            "caller_id": context.caller_id,
+            "workspace_handle_id": context.workspace_handle_id,
+            "manifest_version": context.manifest_version,
+            "manifest_root_hash": context.manifest_root_hash,
             "published": false,
         }),
     );
     extras.insert("warnings".to_owned(), json!([]));
-    PublishLanesMetadata::empty(binding.manifest_version).insert_into(&mut extras);
+    PublishLanesMetadata::empty(context.manifest_version).insert_into(&mut extras);
     let mut response = command_response(
         WorkspaceKind::IsolatedNetwork,
         request,

@@ -37,7 +37,7 @@ use serde_json::Value;
 use workspace::network_mode::host::{HostWorkspace, HostWorkspaceError};
 use workspace::network_mode::isolated_network::{
     ExitOutcome as IsolatedNetworkExitOutcome, IsolatedNetworkError, RemountProbe, ResourceCaps,
-    Rfc1918Egress as RuntimeRfc1918Egress, WorkspaceModeBinding, WorkspaceModeHandle,
+    Rfc1918Egress as RuntimeRfc1918Egress, WorkspaceModeContext, WorkspaceModeHandle,
     WorkspaceModeManager, WorkspaceModeSnapshot,
 };
 use workspace::WorkspaceError;
@@ -115,7 +115,7 @@ enum WorkspaceCommandRoute {
         workspace: HostWorkspaceLifecycle,
     },
     IsolatedNetwork {
-        binding: WorkspaceModeBinding,
+        context: WorkspaceModeContext,
     },
 }
 
@@ -129,7 +129,7 @@ impl WorkspaceCommandRouteContext<'_> {
     pub(crate) fn caller_id(&self) -> &str {
         match &self.route {
             WorkspaceCommandRoute::Host { caller_id, .. } => caller_id,
-            WorkspaceCommandRoute::IsolatedNetwork { binding } => &binding.caller_id,
+            WorkspaceCommandRoute::IsolatedNetwork { context } => &context.caller_id,
         }
     }
 
@@ -156,8 +156,8 @@ impl WorkspaceCommandRouteContext<'_> {
                 workspace: Box::new(workspace.into_command_workspace()),
                 scratch_root,
             },
-            WorkspaceCommandRoute::IsolatedNetwork { binding } => ExecTarget::IsolatedNetwork {
-                binding: Box::new(binding),
+            WorkspaceCommandRoute::IsolatedNetwork { context } => ExecTarget::IsolatedNetwork {
+                context: Box::new(context),
             },
         };
         exec(target)
@@ -167,7 +167,7 @@ impl WorkspaceCommandRouteContext<'_> {
 #[derive(Debug, Clone)]
 pub(crate) enum WorkspaceFileRouteContext {
     Direct { layer_stack_root: PathBuf },
-    IsolatedNetwork { binding: WorkspaceModeBinding },
+    IsolatedNetwork { context: WorkspaceModeContext },
 }
 
 impl WorkspaceFileRouteContext {
@@ -890,9 +890,9 @@ impl WorkspaceRuntime {
         ) -> Result<HostWorkspaceLifecycle, WorkspaceError>,
     ) -> Result<WorkspaceCommandRouteContext<'a>, WorkspaceError> {
         let mode_guard = self.lock_mode_gate();
-        if let Some(binding) = self.command_binding_for(caller_id) {
+        if let Some(context) = self.workspace_mode_context_for(caller_id) {
             return Ok(WorkspaceCommandRouteContext {
-                route: WorkspaceCommandRoute::IsolatedNetwork { binding },
+                route: WorkspaceCommandRoute::IsolatedNetwork { context },
                 trace: WorkspaceRouteTraceFacts {
                     kind: "isolated_network",
                     reason: "caller_has_open_isolated_network",
@@ -923,8 +923,8 @@ impl WorkspaceRuntime {
         caller_id: &str,
         layer_stack_root: Option<&Path>,
     ) -> Result<WorkspaceFileRouteContext, WorkspaceError> {
-        if let Some(binding) = self.command_binding_for(caller_id) {
-            return Ok(WorkspaceFileRouteContext::IsolatedNetwork { binding });
+        if let Some(context) = self.workspace_mode_context_for(caller_id) {
+            return Ok(WorkspaceFileRouteContext::IsolatedNetwork { context });
         }
         Self::direct_file_context(layer_stack_root)
     }
@@ -939,8 +939,8 @@ impl WorkspaceRuntime {
     }
 
     pub(crate) fn complete_file_route(&self, route: &WorkspaceFileRouteContext) {
-        if let WorkspaceFileRouteContext::IsolatedNetwork { binding } = route {
-            self.touch(&binding.caller_id);
+        if let WorkspaceFileRouteContext::IsolatedNetwork { context } = route {
+            self.touch(&context.caller_id);
         }
     }
 
@@ -1209,17 +1209,17 @@ impl WorkspaceRuntime {
             .is_some()
     }
 
-    /// The command binding for `caller_id`'s open workspace, or `None`
-    /// when the caller is not isolated (callers then route through host mode).
+    /// The workspace mode context for `caller_id`'s open workspace, or `None`
+    /// when the caller has no isolated-network session.
     #[must_use]
-    pub fn command_binding_for(&self, caller_id: &str) -> Option<WorkspaceModeBinding> {
+    pub fn workspace_mode_context_for(&self, caller_id: &str) -> Option<WorkspaceModeContext> {
         if caller_id.is_empty() {
             return None;
         }
         let guard = self.lock_state_cell();
         let state = guard.as_ref()?;
         let handle = state.manager.get_handle(caller_id)?;
-        Some(command_binding_from(&state.layer_stack_root, handle))
+        Some(workspace_mode_context_from(&state.layer_stack_root, handle))
     }
 
     pub(crate) fn lock_mode_gate(&self) -> MutexGuard<'_, ()> {
@@ -1368,8 +1368,8 @@ impl WorkspaceRuntime {
                     // Block rebinding to a new root only while an isolated network
                     // is open: those handles pin leases/namespaces on the old root.
                     // (Isolated commands belong to an open caller, so this
-                    // already covers them; host commands are unrelated
-                    // to the isolated manager's binding and must not block a rebind.)
+                    // already covers them; host commands do not pin the
+                    // isolated-network manager root and must not block a rebind.)
                     let open_callers = state.manager.list_open_callers();
                     if !open_callers.is_empty() {
                         return Err(IsolatedNetworkError::SetupFailed {
@@ -1460,11 +1460,11 @@ impl WorkspaceRuntime {
     }
 }
 
-fn command_binding_from(
+fn workspace_mode_context_from(
     layer_stack_root: &Path,
     handle: WorkspaceModeHandle,
-) -> WorkspaceModeBinding {
-    WorkspaceModeBinding {
+) -> WorkspaceModeContext {
+    WorkspaceModeContext {
         caller_id: handle.caller_id,
         workspace_handle_id: handle.workspace_id.0,
         network: handle.network,

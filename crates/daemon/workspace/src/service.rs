@@ -1,27 +1,36 @@
 use crate::error::WorkspaceError;
 use crate::model::{
-    CaptureChangesRequest, CaptureChangesResult, CreateWorkspaceRequest, DestroyWorkspaceRequest,
-    DestroyWorkspaceResult, RunCommandRequest, RunCommandResult, WorkspaceHandle,
+    CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
+    DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, ReadonlySnapshotHandle,
+    RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceHandle,
 };
 
-pub trait WorkspaceService {
-    fn create(&self, request: CreateWorkspaceRequest) -> Result<WorkspaceHandle, WorkspaceError>;
-
-    fn run_command(
+pub trait WorkspaceService: Send + Sync {
+    fn create_workspace(
         &self,
-        handle: &WorkspaceHandle,
-        request: RunCommandRequest,
-    ) -> Result<RunCommandResult, WorkspaceError>;
+        request: CreateWorkspaceRequest,
+    ) -> Result<WorkspaceHandle, WorkspaceError>;
 
     fn capture_changes(
         &self,
         handle: &WorkspaceHandle,
         request: CaptureChangesRequest,
-    ) -> Result<CaptureChangesResult, WorkspaceError>;
+    ) -> Result<CapturedWorkspaceChanges, WorkspaceError>;
 
-    fn destroy(
+    fn remount_workspace(
+        &self,
+        handle: &WorkspaceHandle,
+        request: RemountWorkspaceRequest,
+    ) -> Result<RemountWorkspaceResult, WorkspaceError>;
+
+    fn destroy_workspace(
         &self,
         handle: WorkspaceHandle,
         request: DestroyWorkspaceRequest,
     ) -> Result<DestroyWorkspaceResult, WorkspaceError>;
+
+    fn latest_snapshot(
+        &self,
+        request: LatestSnapshotRequest,
+    ) -> Result<ReadonlySnapshotHandle, WorkspaceError>;
 }

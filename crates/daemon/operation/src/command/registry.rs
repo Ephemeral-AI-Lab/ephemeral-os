@@ -11,7 +11,7 @@ use command::process::CommandProcess;
 use command::{CollectCompleted, StartCommand};
 use layerstack::service::{LeaseReleaseHandle, Snapshot};
 use workspace::network_mode::host::HostWorkspace;
-use workspace::network_mode::isolated_network::WorkspaceModeBinding;
+use workspace::network_mode::isolated_network::WorkspaceModeContext;
 
 use super::contract::{CollectCompletedOutput, CommandCompletion, CommandResponse};
 pub(crate) struct HostRun {
@@ -26,7 +26,7 @@ pub(crate) struct HostRun {
 pub(crate) struct IsolatedNetworkRun {
     pub(crate) process: CommandProcess,
     pub(crate) trace_origin: CommandTraceOrigin,
-    pub(crate) binding: WorkspaceModeBinding,
+    pub(crate) context: WorkspaceModeContext,
     pub(crate) remountable: bool,
 }
 

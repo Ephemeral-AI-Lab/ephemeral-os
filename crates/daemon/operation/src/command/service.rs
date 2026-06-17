@@ -11,7 +11,7 @@ use layerstack::CommitOptions;
 use trace::TraceRecord;
 use workspace::network_mode::host::HostWorkspace;
 use workspace::network_mode::host::WorkspaceNamespaceFds;
-use workspace::network_mode::isolated_network::WorkspaceModeBinding;
+use workspace::network_mode::isolated_network::WorkspaceModeContext;
 
 #[cfg(test)]
 use command::process::{CommandProcess, CommandProcessSpec};
@@ -51,7 +51,7 @@ pub enum ExecTarget {
         scratch_root: PathBuf,
     },
     IsolatedNetwork {
-        binding: Box<WorkspaceModeBinding>,
+        context: Box<WorkspaceModeContext>,
     },
 }
 

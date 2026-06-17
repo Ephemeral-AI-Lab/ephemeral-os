@@ -6,7 +6,7 @@ use command::process::{CommandProcess, CommandProcessSpawn, CommandProcessSpec};
 use command::yield_wait_loop::{wait_for_yield_with_timing, WaitOutcome};
 use command::{CommandError, StartCommand};
 use serde_json::json;
-use workspace::network_mode::isolated_network::WorkspaceModeBinding;
+use workspace::network_mode::isolated_network::WorkspaceModeContext;
 
 use crate::command::contract::{CommandResponse, CommandStatus};
 use crate::command::finalize::insert_cgroup_process_resource_timings;
@@ -62,12 +62,12 @@ impl CommandOps {
                 scratch_root,
                 yield_time_ms,
             ),
-            ExecTarget::IsolatedNetwork { binding } => self.start_isolated_network(
+            ExecTarget::IsolatedNetwork { context } => self.start_isolated_network(
                 reservation,
                 spec,
                 &request,
                 &id,
-                binding,
+                context,
                 yield_time_ms,
             ),
         }
@@ -167,7 +167,7 @@ impl CommandOps {
         spec: CommandProcessSpec,
         request: &StartCommand,
         command_id: &str,
-        binding: Box<WorkspaceModeBinding>,
+        mode_context: Box<WorkspaceModeContext>,
         yield_time_ms: u64,
     ) -> Result<CommandExecOutcome, CommandExecError> {
         let prepared = prepare_isolated_network(
@@ -179,15 +179,15 @@ impl CommandOps {
                 cwd: request.cwd.as_deref(),
                 remountable: request.remountable,
                 timeout_seconds: request.timeout_seconds,
-                command_dir: binding.scratch_dir.join("commands").join(command_id),
+                command_dir: mode_context.scratch_dir.join("commands").join(command_id),
                 workspace_label: "isolated_network",
             },
-            &binding,
+            &mode_context,
         )
         .map_err(command_prepare_error)?;
         let mut trace_events = prepared.trace_events.clone();
         let process = self.spawn_process(spec, prepared, &mut trace_events)?;
-        let binding = *binding;
+        let mode_context = *mode_context;
         let trace_origin = CommandTraceOrigin::from_start(request);
         Ok(self.register_and_wait(
             reservation,
@@ -197,7 +197,7 @@ impl CommandOps {
                 ActiveCommand::IsolatedNetwork(IsolatedNetworkRun {
                     process,
                     trace_origin,
-                    binding,
+                    context: mode_context,
                     remountable: request.remountable,
                 })
             },

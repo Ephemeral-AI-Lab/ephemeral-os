@@ -5,7 +5,7 @@ use linux_namespace_subprocess::protocol::{
 };
 use serde_json::{json, Value};
 use workspace::network_mode::host::WorkspaceNamespaceFds;
-use workspace::network_mode::isolated_network::WorkspaceModeBinding;
+use workspace::network_mode::isolated_network::WorkspaceModeContext;
 use workspace::overlay::dirs::OverlayDirs;
 
 use super::outcome::WorkspaceApiError;
@@ -70,20 +70,20 @@ pub(crate) fn prepare_host(
 
 pub(crate) fn prepare_isolated_network(
     inputs: PrepareInputs<'_>,
-    binding: &WorkspaceModeBinding,
+    context: &WorkspaceModeContext,
 ) -> Result<PreparedCommand, CommandPrepareError> {
     let ns_fds =
-        require_workspace_ns_fds(ns_fds_from_map(&binding.ns_fds), "isolated_network", true)?;
+        require_workspace_ns_fds(ns_fds_from_map(&context.ns_fds), "isolated_network", true)?;
     let tool_call = tool_call(&inputs);
     let run_request = RunRequest {
         mode: RunMode::SetNs,
         tool_call,
-        workspace_root: WorkspaceRoot(binding.workspace_root.clone()),
-        layer_paths: binding.layer_paths.clone(),
-        upperdir: Some(binding.upperdir.clone()),
-        workdir: Some(binding.workdir.clone()),
+        workspace_root: WorkspaceRoot(context.workspace_root.clone()),
+        layer_paths: context.layer_paths.clone(),
+        upperdir: Some(context.upperdir.clone()),
+        workdir: Some(context.workdir.clone()),
         ns_fds: Some(ns_fds),
-        cgroup_path: binding.cgroup_path.clone(),
+        cgroup_path: context.cgroup_path.clone(),
         timeout_seconds: inputs.timeout_seconds,
     };
     let request_path = inputs.command_dir.join("runner-request.json");

@@ -444,9 +444,9 @@ fn workspace_runtime_file_route_selects_isolated_when_caller_has_active_handle()
     let route = runtime.route_file_context("caller-file", None)?;
 
     match &route {
-        WorkspaceFileRouteContext::IsolatedNetwork { binding } => {
-            assert_eq!(binding.caller_id, "caller-file");
-            assert_eq!(binding.layer_stack_root, stack_root.canonicalize()?);
+        WorkspaceFileRouteContext::IsolatedNetwork { context } => {
+            assert_eq!(context.caller_id, "caller-file");
+            assert_eq!(context.layer_stack_root, stack_root.canonicalize()?);
         }
         WorkspaceFileRouteContext::Direct { .. } => {
             return Err("file route should be isolated with an active handle".into());

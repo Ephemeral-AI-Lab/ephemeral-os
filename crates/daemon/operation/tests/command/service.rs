@@ -791,7 +791,7 @@ fn inactive_isolated_run(id: &str, caller_id: &str, root: &std::path::Path) -> A
     Arc::new(ActiveCommand::IsolatedNetwork(IsolatedNetworkRun {
         process,
         trace_origin: CommandTraceOrigin::default(),
-        binding: WorkspaceModeBinding {
+        context: WorkspaceModeContext {
             caller_id: caller_id.to_owned(),
             workspace_handle_id: "workspace-handle".to_owned(),
             network: workspace::NetworkMode::IsolatedNetwork,

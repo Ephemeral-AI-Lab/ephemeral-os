@@ -138,7 +138,7 @@ impl CommandOps {
             quiesce.inspection.process_group_ids.push(pgid);
             let command_report = inspect_isolated_command_process_group(
                 pgid,
-                &isolated.binding.workspace_root,
+                &isolated.context.workspace_root,
                 isolated.remountable,
             );
             let held = command_report.blocked_reason.is_none() && isolated.remountable;

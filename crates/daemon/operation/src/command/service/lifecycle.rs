@@ -305,18 +305,18 @@ impl CommandOps {
                 if kill.is_some() {
                     (
                         WorkspaceKind::IsolatedNetwork,
-                        Some(isolated.binding.manifest_version),
+                        Some(isolated.context.manifest_version),
                         Ok(discarded_response(
                             WorkspaceKind::IsolatedNetwork,
                             request,
-                            Some(isolated.binding.manifest_version),
+                            Some(isolated.context.manifest_version),
                         )),
                     )
                 } else {
                     (
                         WorkspaceKind::IsolatedNetwork,
-                        Some(isolated.binding.manifest_version),
-                        finalize_isolated_network_command(&isolated.binding, request),
+                        Some(isolated.context.manifest_version),
+                        finalize_isolated_network_command(&isolated.context, request),
                     )
                 }
             }

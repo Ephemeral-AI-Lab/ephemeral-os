@@ -13,7 +13,7 @@ use operation::file::{
 };
 use serde_json::{json, Map, Value};
 use thiserror::Error;
-use workspace::network_mode::isolated_network::WorkspaceModeBinding;
+use workspace::network_mode::isolated_network::WorkspaceModeContext;
 
 use crate::error::DaemonError;
 use crate::runtime::workspace_runtime::{WorkspaceFileRouteContext, WorkspaceRouteTraceFacts};
@@ -328,7 +328,7 @@ fn route_read_file(
     let direct_request = request.clone();
     route_file_op(
         context,
-        |binding| read_with_backend(&isolated_backend(binding), request),
+        |mode_context| read_with_backend(&isolated_backend(mode_context), request),
         |root| read_with_backend(&DirectBackend::new(root), direct_request),
     )
 }
@@ -341,7 +341,7 @@ fn route_write_file(
     let commit_options = context.commit_options;
     route_file_op(
         context,
-        |binding| write_with_backend(&isolated_backend(binding), request),
+        |mode_context| write_with_backend(&isolated_backend(mode_context), request),
         |root| {
             write_with_backend(
                 &DirectBackend::with_commit_options(root, commit_options),
@@ -359,7 +359,7 @@ fn route_edit_file(
     let commit_options = context.commit_options;
     route_file_op(
         context,
-        |binding| edit_with_backend(&isolated_backend(binding), request),
+        |mode_context| edit_with_backend(&isolated_backend(mode_context), request),
         |root| {
             edit_with_backend(
                 &DirectBackend::with_commit_options(root, commit_options),
@@ -371,7 +371,7 @@ fn route_edit_file(
 
 fn route_file_op<T>(
     context: FileOpContext<'_>,
-    isolated: impl FnOnce(&WorkspaceModeBinding) -> Result<T, FileOpsError>,
+    isolated: impl FnOnce(&WorkspaceModeContext) -> Result<T, FileOpsError>,
     direct: impl FnOnce(PathBuf) -> Result<T, FileOpsError>,
 ) -> Result<RoutedFileOutcome<T>, FileOpError> {
     let route = match context.workspace {
@@ -382,8 +382,10 @@ fn route_file_op<T>(
             .map_err(FileOpError::from_workspace)?,
     };
     let outcome = match &route {
-        WorkspaceFileRouteContext::IsolatedNetwork { binding } => {
-            let outcome = isolated(binding)?;
+        WorkspaceFileRouteContext::IsolatedNetwork {
+            context: mode_context,
+        } => {
+            let outcome = isolated(mode_context)?;
             if let Some(workspace) = context.workspace {
                 workspace.complete_file_route(&route);
             }
@@ -394,14 +396,14 @@ fn route_file_op<T>(
     Ok(RoutedFileOutcome { route, outcome })
 }
 
-fn isolated_backend(binding: &WorkspaceModeBinding) -> IsolatedBackend {
+fn isolated_backend(mode_context: &WorkspaceModeContext) -> IsolatedBackend {
     IsolatedBackend {
-        layer_stack_root: binding.layer_stack_root.clone(),
-        workspace_root: binding.workspace_root.clone(),
-        upperdir: binding.upperdir.clone(),
-        layer_paths: binding.layer_paths.clone(),
-        manifest_version: binding.manifest_version,
-        manifest_root_hash: binding.manifest_root_hash.clone(),
+        layer_stack_root: mode_context.layer_stack_root.clone(),
+        workspace_root: mode_context.workspace_root.clone(),
+        upperdir: mode_context.upperdir.clone(),
+        layer_paths: mode_context.layer_paths.clone(),
+        manifest_version: mode_context.manifest_version,
+        manifest_root_hash: mode_context.manifest_root_hash.clone(),
     }
 }
 

@@ -76,10 +76,10 @@ regeneration was implemented.
 
 The Phase 8 slice retires the legacy workspace source paths and root exports.
 Host implementation types moved into `network_mode/host.rs`. Isolated
-handle/manager/error/caps/binding implementation types moved into
+handle/manager/error/caps/context implementation types moved into
 `network_mode/isolated_network.rs`. The workspace crate root no longer exports
 `HostWorkspace`, `HostWorkspaceError`, `overlay_run_dirs`, the legacy
-isolated `WorkspaceHandle`, `WorkspaceModeManager`, `WorkspaceModeBinding`, or
+isolated `WorkspaceHandle`, `WorkspaceModeManager`, `WorkspaceModeContext`, or
 `WorkspaceModeHandle`; `workspace::WorkspaceHandle` is now the unified
 public DTO. Daemon runtime, op adapters, and operation command/file code import
 concrete implementation types through scoped mode paths and overlay helpers
@@ -104,10 +104,9 @@ semantics, packaging, live E2E, or `ops.json` regeneration was changed.
   - Added conversions from LayerStack captured changes and protected drops into
     the planned public capture DTO vocabulary. Runtime capture behavior remains
     deferred to Phase 5.
-  - Added conversions from the legacy isolated handle and
-    `WorkspaceModeBinding` into the new unified public handle.
-  - Added focused tests for borrowed and owned isolated handle conversion,
-    borrowed and owned isolated binding conversion, public DTO
+  - Added conversion from `WorkspaceModeHandle` into the new unified public
+    handle; per-operation `WorkspaceModeContext` is not a public handle source.
+  - Added focused tests for workspace mode handle conversion, public DTO
     construction/derive behavior, and public DTO debug output not exposing
     internal storage/namespace fields.
 - `crates/daemon/workspace/src/error.rs`
@@ -122,7 +121,7 @@ semantics, packaging, live E2E, or `ops.json` regeneration was changed.
     root.
   - Phase 8 removed root exports for `HostWorkspace`,
     `HostWorkspaceError`, `overlay_run_dirs`, the legacy isolated
-    `WorkspaceHandle`, `WorkspaceModeManager`, `WorkspaceModeBinding`, and
+    `WorkspaceHandle`, `WorkspaceModeManager`, `WorkspaceModeContext`, and
     `WorkspaceModeHandle`.
   - `workspace::WorkspaceHandle` and `workspace::UnifiedWorkspaceHandle` now
     both name the unified public DTO from `model.rs`.
@@ -241,7 +240,7 @@ semantics, packaging, live E2E, or `ops.json` regeneration was changed.
     selection; file operation crates still own read/write/edit behavior.
   - Records runtime-returned route facts and preserves legacy direct route
     timing/resource enrichment.
-  - Phase 8 imports `WorkspaceModeBinding` from
+  - Phase 8 imports `WorkspaceModeContext` from
     `workspace::network_mode::isolated_network`.
 - `crates/daemon/layerstack/src/service.rs`
   - Added exact-once `LeaseReleaseHandle` and `LeaseReleaseReport`.
@@ -266,7 +265,7 @@ semantics, packaging, live E2E, or `ops.json` regeneration was changed.
     preparation so Host workspace commands use `RunMode::SetNs`.
   - Process spawning, runner request artifact writing, and registry activation
     remain in `CommandOps`.
-  - Phase 8 imports `WorkspaceModeBinding` from
+  - Phase 8 imports `WorkspaceModeContext` from
     `workspace::network_mode::isolated_network`.
 - `crates/daemon/operation/src/command/prepare.rs`
   - Phase 7 removed workspace command selection of `RunMode::FreshNs`.
@@ -275,8 +274,8 @@ semantics, packaging, live E2E, or `ops.json` regeneration was changed.
   - Missing holder namespace FDs now fail as
     `workspace_namespace_unavailable` command preparation errors. Host requires
     user/mount/PID FDs. Isolated requires user/mount/PID/network FDs.
-  - Phase 8 imports Host namespace FDs, isolated binding, and overlay dirs from
-    scoped `workspace::network_mode` and `workspace::overlay` paths.
+  - Phase 8 imports Host namespace FDs, workspace mode context, and overlay dirs
+    from scoped `workspace::network_mode` and `workspace::overlay` paths.
 - `crates/daemon/operation/src/command/service/lifecycle.rs`
   - Command finalization and force-discard cleanup release Host leases through
     the exact-once lease handle instead of directly calling LayerStack release.
@@ -350,7 +349,7 @@ Resolution for Phase 8:
 - The legacy isolated handle is available only through the scoped internal-mode
   path `workspace::network_mode::isolated_network::WorkspaceModeHandle`.
 - `workspace::WorkspaceModeHandle` is no longer a root export.
-- `workspace::WorkspaceModeManager` and `workspace::WorkspaceModeBinding` are no
+- `workspace::WorkspaceModeManager` and `workspace::WorkspaceModeContext` are no
   longer root exports; current daemon/operation callers import them from
   `workspace::network_mode::isolated_network`.
 
@@ -358,8 +357,7 @@ No root compatibility alias remains for the legacy isolated handle.
 
 ## Conversion Rules Implemented
 
-Conversions from both the legacy isolated handle and
-`WorkspaceModeBinding` into the unified public handle use:
+Conversion from `WorkspaceModeHandle` into the unified public handle uses:
 
 - `NetworkMode::IsolatedNetwork`
 - `BaseRevision.version` from `manifest_version`

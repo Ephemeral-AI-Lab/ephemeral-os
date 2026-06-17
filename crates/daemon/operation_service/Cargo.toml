@@ -1,0 +1,13 @@
+[package]
+name = "operation_service"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+workspace.workspace = true
+
+[lints]
+workspace = true
