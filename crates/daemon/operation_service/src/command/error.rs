@@ -37,14 +37,17 @@ pub enum CommandServiceError {
         actual: WorkspaceId,
     },
 
-    #[error("command registry binding missing for active command: {command_id:?}")]
-    CommandBindingMissing { command_id: CommandId },
-
     #[error("command already completed: {command_id:?}")]
     CommandAlreadyCompleted { command_id: CommandId },
 
     #[error("command io failed for {command_id:?}: {error}")]
     CommandIo {
+        command_id: CommandId,
+        error: String,
+    },
+
+    #[error("command finalization failed for {command_id:?}: {error}")]
+    CommandFinalizationFailed {
         command_id: CommandId,
         error: String,
     },

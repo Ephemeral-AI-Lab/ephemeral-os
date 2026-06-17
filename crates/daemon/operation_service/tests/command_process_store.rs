@@ -3,9 +3,9 @@ use std::time::Instant;
 
 use operation_service::command::{
     ActiveCommandProcess, CancellationState, CommandCompletionStore, CommandFinalizePolicy,
-    CommandId, CommandLifecycleState, CommandProcessStore, CommandServiceError, CommandStatus,
-    CommandTerminalResult, CommandTraceOrigin, CommandTranscriptStore, CompletedCommandRecord,
-    FinalizationState, RetainedCommandTranscript,
+    CommandFinalizedMetadata, CommandId, CommandLifecycleState, CommandProcessStore,
+    CommandServiceError, CommandStatus, CommandTerminalResult, CommandTraceOrigin,
+    CommandTranscriptStore, CompletedCommandRecord, FinalizationState, RetainedCommandTranscript,
 };
 use workspace::{CallerId, WorkspaceId};
 
@@ -70,6 +70,7 @@ fn completed_record(
             transcript_path: Some(PathBuf::from("/tmp/retained-transcript.jsonl")),
         },
         finalization: FinalizationState::Complete,
+        finalized: Some(CommandFinalizedMetadata::default()),
         completed_at: Instant::now(),
     }
 }

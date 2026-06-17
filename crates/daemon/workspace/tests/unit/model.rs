@@ -115,7 +115,10 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
         format!(
             "{:?}",
             CaptureChangesRequest {
-                materialize_payloads: false,
+                bounds: layerstack::service::BoundedCaptureOptions {
+                    materialize_payloads: false,
+                    ..layerstack::service::BoundedCaptureOptions::default()
+                },
                 include_stats: true,
             }
         ),
@@ -128,6 +131,10 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
                 changed_path_kinds: BTreeMap::new(),
                 protected_drops: Vec::new(),
                 stats: None,
+                changes: Vec::new(),
+                route_stats: layerstack::CaptureRouteStats::default(),
+                metadata_path_count: 0,
+                spool_dir: None,
             }
         ),
         format!("{:?}", DestroyWorkspaceRequest { grace_s: Some(1.0) }),
@@ -245,7 +252,7 @@ fn public_dtos_construct_clone_and_compare() {
         },
     };
     let capture_request = CaptureChangesRequest {
-        materialize_payloads: true,
+        bounds: layerstack::service::BoundedCaptureOptions::default(),
         include_stats: true,
     };
     let capture = CaptureChangesResult {
@@ -261,6 +268,16 @@ fn public_dtos_construct_clone_and_compare() {
             files: 1,
             ..TreeResourceStats::default()
         }),
+        changes: vec![layerstack::LayerChange::Write {
+            path: layerstack::LayerPath::parse("src/main.rs").expect("valid layer path"),
+            content: b"fn main() {}\n".to_vec(),
+        }],
+        route_stats: layerstack::CaptureRouteStats {
+            gated_path_count: 1,
+            ..layerstack::CaptureRouteStats::default()
+        },
+        metadata_path_count: 1,
+        spool_dir: Some("/tmp/eos-spool".into()),
     };
     let destroy_request = DestroyWorkspaceRequest { grace_s: Some(1.0) };
     let remount_request = RemountWorkspaceRequest {

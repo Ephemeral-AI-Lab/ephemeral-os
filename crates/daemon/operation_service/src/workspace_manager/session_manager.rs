@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use crate::workspace_crate::{
@@ -21,6 +21,13 @@ pub struct WorkspaceSessionHandler {
     pub lease_id: LeaseId,
     pub snapshot: LayerStackSnapshotRef,
     pub layer_paths: Vec<PathBuf>,
+}
+
+impl WorkspaceSessionHandler {
+    #[must_use]
+    pub fn publish_root(&self) -> &Path {
+        &self.layer_stack_root
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

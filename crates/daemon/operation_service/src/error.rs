@@ -7,7 +7,4 @@ pub enum OperationServiceError {
 
     #[error(transparent)]
     Command(#[from] crate::command::CommandServiceError),
-
-    #[error(transparent)]
-    WorkspaceRemount(#[from] crate::workspace_remount::WorkspaceRemountError),
 }

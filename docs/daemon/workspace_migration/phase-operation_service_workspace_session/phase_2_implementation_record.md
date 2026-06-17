@@ -32,9 +32,7 @@ Rules:
   - `crates/daemon/operation_service/src/command/process_store.rs`
   - `crates/daemon/operation_service/src/command/service.rs`
   - `crates/daemon/operation_service/src/command/exec.rs`
-  - `crates/daemon/operation_service/src/command/remount.rs`
   - `crates/daemon/operation_service/src/workspace_remount/mod.rs`
-  - `crates/daemon/operation_service/src/workspace_remount/error.rs`
   - `crates/daemon/operation_service/src/workspace_remount/service.rs`
   - `crates/daemon/operation_service/tests/service_graph.rs`
   - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
@@ -106,7 +104,6 @@ Rules:
   - `crates/daemon/operation_service/src/command/service.rs`
   - `crates/daemon/operation_service/src/command/registry.rs`
   - `crates/daemon/operation_service/src/workspace_remount/service.rs`
-  - `crates/daemon/operation_service/src/workspace_remount/error.rs`
   - `crates/daemon/operation_service/src/workspace_manager/session_manager.rs`
   - `crates/daemon/operation_service/tests/service_graph.rs`
   - `crates/daemon/operation_service/tests/workspace_manager.rs`
@@ -176,15 +173,15 @@ Rules:
 
 ## Milestone 3: Exec Some/None Flows And Caller Ownership
 
-- Status: Partial. Ownership/admission and Some/None mode selection are
-  implemented; real process launch and yield waiting remain open.
+- Status: Complete. Ownership/admission and Some/None mode selection are
+  implemented; real process launch and yield waiting are split into Milestone
+  3.5.
 - Files changed:
   - `crates/daemon/operation_service/src/command/contract.rs`
   - `crates/daemon/operation_service/src/command/error.rs`
   - `crates/daemon/operation_service/src/command/exec.rs`
   - `crates/daemon/operation_service/src/command/mod.rs`
   - `crates/daemon/operation_service/src/command/process_store.rs`
-  - `crates/daemon/operation_service/src/command/remount.rs`
   - `crates/daemon/operation_service/src/command/service.rs`
   - `crates/daemon/operation_service/src/services.rs`
   - `crates/daemon/operation_service/src/workspace_manager/service.rs`
@@ -211,47 +208,162 @@ Rules:
   - `rg -n "WorkspaceRuntime|CommandOps|ExecTarget|InternalHostOneShot|StartCommand|CollectCompleted|layer_stack_root|request_id|trace_id|invocation_id|remountable|trace::TraceId|trace::RequestId|RequestId|TraceId|collect_completed|count_by_caller|count_commands|advance_active_commands_once|by_workspace|by_caller|workspace_index|caller_index" crates/daemon/operation_service/src/command crates/daemon/operation_service/tests/command_exec.rs crates/daemon/operation_service/tests/command_ownership.rs`:
     no matches.
 - Deviations: Milestone 3 active records still use `command::CommandProcess::new`
-  instead of real process spawning. The current `WorkspaceSessionHandler` only
-  exposes the resource-facing workspace handle and snapshot paths, not the
-  policy-free namespace/overlay launch material needed to spawn through the
-  low-level command crate without importing old `operation::command` routing
-  policy. The M3 plan is no longer marked complete until a policy-free launch
-  context and `command::yield_wait_loop` integration are added.
-- Unresolved issues: Real launch/yield behavior is still open. Ownership,
-  rollback, active/completed authorization, and private one-shot id exposure
-  findings from the M3 adversarial review have been remediated.
+  because Milestone 3.5 owns the policy-free real spawn and initial-yield slice.
+  The current `WorkspaceSessionHandler` only exposes the resource-facing
+  workspace handle and snapshot paths, not the policy-free namespace/overlay
+  launch material needed to spawn through the low-level command crate without
+  importing old `operation::command` routing policy.
+- Unresolved issues: None for Milestone 3 ownership/admission. Real launch/yield
+  behavior is tracked by Milestone 3.5. Ownership, rollback, active/completed
+  authorization, and private one-shot id exposure findings from the M3
+  adversarial review have been remediated.
 - Cleanup notes: Replaced the host-specific
   `WorkspaceManagerService::create_private_host_workspace` helper with generic
   `create_private_workspace(caller_id, workspace_root, network)` so the
   workspace manager does not imply a missing isolated twin. Removed the unused
   local exec yield-time binding left over from the not-yet-implemented real
   spawn/yield wait path. Updated the Phase 2 implementation-plan checklist for
-  completed Milestone 3 items while keeping the milestone itself open for launch
-  preparation/yield waiting. Added start-failure one-shot cleanup, direct
-  command-service root-mismatch validation, active-to-completed ownership
-  validation, service-owned completion/unbind coordination, and removed public
-  service registry/process-store accessors so one-shot workspace ids are not
-  recoverable through the command service.
-- Handoff notes: Milestone 4 should replace the process-free active record path
-  with the scoped finalization-aware launch/finalization flow once the service
-  has a policy-free launch adapter. The completed-record authorization path is
-  ready for read/poll behavior: service methods authorize active records first,
-  then retained completed records by `CompletedCommandRecord.caller_id`, and
-  completion now validates caller/workspace ownership against the active record
-  before retaining the completed record.
+  completed Milestone 3 ownership/admission items and split real launch/yield
+  work into Milestone 3.5. Added start-failure one-shot cleanup, direct
+  command-service root-mismatch validation, process-store active-to-completed
+  ownership validation, and removed public service registry/process-store
+  accessors so one-shot workspace ids are not recoverable through the command
+  service.
+- Handoff notes: Milestone 3.5 should replace the process-free active record path
+  with policy-free spawn and initial yield. The completed-record authorization
+  path is ready for read/poll behavior: service methods authorize active records
+  first, then retained completed records by `CompletedCommandRecord.caller_id`.
+  Process-store completion validates caller/workspace ownership against the
+  active record before retaining the completed record; Milestone 4 still needs
+  to add the live service-owned finalizer transition.
   One-shot commands call `WorkspaceManagerService::create_private_workspace`
   with `NetworkMode::Host`, which keeps the temporary workspace-create adapter
   out of command-service contracts without adding a host-specific workspace
   manager API.
 
-## Milestone 4: One-Shot Finalization And Persistent-Session Semantics
+### Post-Milestone 3 Cleanup Review
 
-- Status: Not started
+- Status: Complete.
+- Files changed:
+  - `crates/daemon/operation_service/src/command/mod.rs`
+  - `crates/daemon/operation_service/src/command/remount.rs`
+  - `crates/daemon/operation_service/src/error.rs`
+  - `crates/daemon/operation_service/src/workspace_remount/mod.rs`
+  - `crates/daemon/operation_service/src/workspace_remount/error.rs`
+  - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_command_service_IMPLEMENTATION_PLAN.md`
+  - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
+- Verification:
+  - `CARGO_TARGET_DIR=/tmp/eos-cleanup-operation-service-target cargo check -p command`:
+    passed.
+  - `CARGO_TARGET_DIR=/tmp/eos-cleanup-operation-service-target cargo check -p operation_service`:
+    passed.
+  - `CARGO_TARGET_DIR=/tmp/eos-cleanup-operation-service-target cargo test -p operation_service command_ownership`:
+    passed, 6 matching tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-cleanup-operation-service-target cargo test -p operation_service command_process_store`:
+    passed, 10 matching tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-cleanup-operation-service-target cargo test -p operation_service`:
+    passed, 47 tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-cleanup-operation-service-target cargo clippy -p operation_service --all-targets --no-deps -- -D warnings`:
+    passed.
+  - `cargo fmt --check`: passed.
+  - `rg -n "allow\\(dead_code\\)|expect\\(\\s*dead_code|NotImplemented|WorkspaceRemountError|CommandBindingMissing|complete_active_command|command::remount|mod remount" crates/daemon/operation_service/src crates/daemon/operation_service/tests`:
+    no matches.
+  - `rg -n "WorkspaceRuntime|CommandOps|ExecTarget|InternalHostOneShot|StartCommand|CollectCompleted|layer_stack_root|request_id|trace_id|invocation_id|remountable|trace::TraceId|trace::RequestId|RequestId|TraceId|collect_completed|count_by_caller|count_commands|advance_active_commands_once|by_workspace|by_caller|workspace_index|caller_index" crates/daemon/operation_service/src/command crates/daemon/operation_service/tests/command_exec.rs crates/daemon/operation_service/tests/command_ownership.rs`:
+    no matches.
+- Cleanup notes: Removed the empty command-side remount placeholder module and
+  its `mod` declaration. Removed the unused test-only
+  `complete_active_command` helper rather than keeping production dead-code
+  scaffolding for the future finalizer. Removed the unused `WorkspaceRemountError`
+  `NotImplemented` scaffold and the top-level conversion variant because no
+  workspace-remount service method returns it yet. Milestone 6 should create
+  `command/remount.rs` and any remount-specific errors only when command-side
+  quiesce behavior is implemented.
+- Unresolved issues: Milestone 4 still needs to add the real service-owned
+  finalizer transition and registry unbind when live command finalization is
+  implemented.
+
+## Milestone 3.5: Policy-Free Command Launch And Initial Yield
+
+- Status: Not started.
 - Files changed:
 - Verification:
 - Deviations:
+- Unresolved issues: Replaces the Milestone 3 process-free active-record
+  scaffold with a policy-free `CommandProcess::spawn` path and initial
+  `command::yield_wait_loop` response. Must not import old `operation::command`
+  launch policy, old command DTOs, request/trace/invocation ids, or
+  `remountable`.
+- Handoff notes: Milestone 4 should consume the live process/initial-yield
+  surface from Milestone 3.5 and add finalization, completed-record retention,
+  publish/discard, and registry unbind semantics.
+
+## Milestone 4: One-Shot Finalization And Persistent-Session Semantics
+
+- Status: Complete.
+- Files changed:
+  - `crates/daemon/operation_service/src/command/contract.rs`
+  - `crates/daemon/operation_service/src/command/error.rs`
+  - `crates/daemon/operation_service/src/command/exec.rs`
+  - `crates/daemon/operation_service/src/command/finalize.rs`
+  - `crates/daemon/operation_service/src/command/mod.rs`
+  - `crates/daemon/operation_service/src/command/process_store.rs`
+  - `crates/daemon/operation_service/src/command/service.rs`
+  - `crates/daemon/operation_service/src/workspace_manager/session_manager.rs`
+  - `crates/daemon/operation_service/tests/command_finalize.rs`
+  - `crates/daemon/operation_service/tests/command_process_store.rs`
+  - `crates/daemon/operation_service/tests/workspace_manager.rs`
+  - `crates/daemon/workspace/src/model.rs`
+  - `crates/daemon/workspace/tests/unit/model.rs`
+  - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
+- Verification:
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p workspace capture`:
+    passed, 1 matching test.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_finalize`:
+    passed, 1 matching unit test and 6 matching integration tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_completion`:
+    passed, 1 matching integration test.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p operation_service`:
+    passed.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service`:
+    passed, 53 tests.
+  - `cargo fmt --check`: passed.
+  - `git diff --check`: passed.
+  - `rg -n "WorkspaceRuntime|CommandOps|ExecTarget|InternalHostOneShot|StartCommand|CollectCompleted|layer_stack_root|request_id|trace_id|invocation_id|remountable|trace::TraceId|trace::RequestId|RequestId|TraceId|collect_completed|count_by_caller|count_commands|advance_active_commands_once|by_workspace|by_caller|workspace_index|caller_index" crates/daemon/operation_service/src/command`:
+    no matches. A broader workspace DTO search still finds pre-existing
+    `layer_stack_root` fields in `CreateWorkspaceRequest` and
+    `owner_request_id` fields in `LatestSnapshotRequest`; those were not added
+    by this milestone and are not command-service contract fields.
+- Deviations:
+  - Real command launch preparation still uses the process-free
+    `command::CommandProcess::new` scaffold from Milestone 3. Replacing it with
+    `CommandProcess::spawn` is left to the new Milestone 3.5 entry because a
+    policy-free workspace launch context is not available yet; this milestone
+    did not import old `operation::command` launch policy to force that
+    migration.
+  - `CommandOperationService::finalize_command` is a hidden supervisor entrypoint
+    rather than a daemon request API. It exists so process-exit finalization can
+    be tested and so `poll` can finalize real spawned processes once Milestone
+    3.5 launch wiring lands; no public advance, collect, or count API was added.
 - Unresolved issues:
+  - No background finalizer watcher thread is started while exec still creates
+    process-free scaffold records. `start_finalizer_watch` is wired as the
+    internal hook, and `poll` opportunistically finalizes real spawned processes
+    only when a process group exists.
 - Handoff notes:
+  - Milestone 5 can build row projection on the retained
+    `CompletedCommandRecord` path. Completed records now keep caller/workspace
+    ownership plus finalization metadata, and `poll`/`read_lines` authorize
+    retained completed records by `caller_id`.
+  - One-shot success finalization captures the generic upperdir delta, publishes
+    through `layerstack::service::publish_command_capture_lane_aware`, cleans any
+    capture spool directory, records publish metadata, then destroys the private
+    workspace. Non-success/cancel/timeout one-shot exits skip capture/publish and
+    still record discard plus destroy behavior. Capture/publish/destroy failures
+    mark active state as `FinalizationState::Failed` instead of dropping cleanup
+    state.
+  - Persistent session finalization records terminal output and metadata without
+    calling `WorkspaceManagerService::capture_changes`, publishing, destroying,
+    or refreshing session snapshot/layer metadata.
 
 ## Milestone 5: Local OS Row Projection
 

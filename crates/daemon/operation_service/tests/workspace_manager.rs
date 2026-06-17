@@ -227,6 +227,10 @@ fn capture_result(
         changed_path_kinds: Default::default(),
         protected_drops: Vec::new(),
         stats: None,
+        changes: Vec::new(),
+        route_stats: layerstack::CaptureRouteStats::default(),
+        metadata_path_count: 0,
+        spool_dir: None,
     }
 }
 
@@ -359,7 +363,10 @@ fn workspace_manager_rejects_stale_handler_before_raw_capture() {
         .capture_changes(
             &handler,
             CaptureChangesRequest {
-                materialize_payloads: false,
+                bounds: layerstack::service::BoundedCaptureOptions {
+                    materialize_payloads: false,
+                    ..layerstack::service::BoundedCaptureOptions::default()
+                },
                 include_stats: false,
             },
         )
@@ -385,7 +392,10 @@ fn workspace_manager_uses_canonical_handle_for_capture() {
         .capture_changes(
             &handler,
             CaptureChangesRequest {
-                materialize_payloads: false,
+                bounds: layerstack::service::BoundedCaptureOptions {
+                    materialize_payloads: false,
+                    ..layerstack::service::BoundedCaptureOptions::default()
+                },
                 include_stats: false,
             },
         )
@@ -412,7 +422,10 @@ fn workspace_manager_capture_updates_handler_snapshot_consistently() {
         .capture_changes(
             &handler,
             CaptureChangesRequest {
-                materialize_payloads: false,
+                bounds: layerstack::service::BoundedCaptureOptions {
+                    materialize_payloads: false,
+                    ..layerstack::service::BoundedCaptureOptions::default()
+                },
                 include_stats: false,
             },
         )

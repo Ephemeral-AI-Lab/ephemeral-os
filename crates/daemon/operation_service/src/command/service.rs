@@ -2,10 +2,11 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use crate::command::{
-    ActiveCommandProcess, CancelCommandInput, CancellationState, CommandCallContext,
-    CommandLifecycleState, CommandLinesOutput, CommandOutputLine, CommandOutputSnapshot,
-    CommandPollOutput, CommandProcessStore, CommandRegistry, CommandServiceError, CommandStatus,
-    CommandYield, CompletedCommandRecord, PollCommandInput, ReadCommandLinesInput, WriteStdinInput,
+    CancelCommandInput, CancellationState, CommandCallContext, CommandLifecycleState,
+    CommandLinesOutput, CommandOutputLine, CommandOutputSnapshot, CommandPollOutput,
+    CommandProcessStore, CommandRegistry, CommandServiceError, CommandStatus, CommandYield,
+    CompletedCommandRecord, FinalizationState, PollCommandInput, ReadCommandLinesInput,
+    WriteStdinInput,
 };
 use crate::workspace_crate::CallerId;
 use crate::workspace_manager::WorkspaceManagerService;
@@ -85,44 +86,6 @@ impl CommandOperationService {
         &self.process_store
     }
 
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "Milestone 4 finalizer will call this internal active-to-completed transition"
-        )
-    )]
-    pub(crate) fn complete_active_command(
-        &self,
-        record: CompletedCommandRecord,
-    ) -> Result<Option<ActiveCommandProcess>, CommandServiceError> {
-        let command_id = record.command_id.clone();
-        let Some(active) = self.process_store.active(&command_id) else {
-            return Ok(None);
-        };
-        let active_workspace_id = active.workspace_id.clone();
-        drop(active);
-
-        let bound_workspace_id = self.registry.workspace_for(&command_id).ok_or_else(|| {
-            CommandServiceError::CommandBindingMissing {
-                command_id: command_id.clone(),
-            }
-        })?;
-        if bound_workspace_id != active_workspace_id {
-            return Err(CommandServiceError::CommandWorkspaceMismatch {
-                command_id,
-                expected: active_workspace_id,
-                actual: bound_workspace_id,
-            });
-        }
-
-        let removed = self.process_store.complete_active(record)?;
-        if removed.is_some() {
-            let _ = self.registry.unbind(&command_id);
-        }
-        Ok(removed)
-    }
-
     pub fn write_stdin(
         &self,
         input: WriteStdinInput,
@@ -188,6 +151,24 @@ impl CommandOperationService {
     ) -> Result<CommandPollOutput, CommandServiceError> {
         let command_id = input.command_id;
         if let Some(active) = self.active_for_owner_or_none(&command_id, &context.caller_id)? {
+            if active.process.process_group_id().is_some() {
+                if let Some(process_exit) = active.process.take_exit() {
+                    drop(active);
+                    let result = self.finalize_command(command_id.clone(), process_exit)?;
+                    let completed = self.completed_for_owner(&command_id, &context.caller_id)?;
+                    let stdout = input.last_n_lines.map_or_else(
+                        || result.stdout.clone(),
+                        |last_n_lines| ::command::tail_lines(&result.stdout, last_n_lines),
+                    );
+                    return Ok(CommandPollOutput {
+                        command_id,
+                        status: result.status,
+                        exit_code: result.exit_code,
+                        output: CommandOutputSnapshot { stdout },
+                        finalized: completed.finalized,
+                    });
+                }
+            }
             let stdout = active
                 .process
                 .read_recent_output(input.last_n_lines.unwrap_or(200));
@@ -210,7 +191,7 @@ impl CommandOperationService {
             status: completed.result.status,
             exit_code: completed.result.exit_code,
             output: CommandOutputSnapshot { stdout },
-            finalized: Some(Default::default()),
+            finalized: completed.finalized,
         })
     }
 
@@ -294,6 +275,12 @@ impl CommandOperationService {
         let Some(active) = self.process_store.active(command_id) else {
             return Ok(None);
         };
+        if let FinalizationState::Failed { error } = &active.finalization {
+            return Err(CommandServiceError::CommandFinalizationFailed {
+                command_id: command_id.clone(),
+                error: error.clone(),
+            });
+        }
         if active.caller_id == *caller_id {
             Ok(Some(active))
         } else {
@@ -376,10 +363,11 @@ mod tests {
 
     use crate::command::{
         ActiveCommandProcess, CancellationState, CommandCallContext, CommandFinalizePolicy,
-        CommandId, CommandLifecycleState, CommandOutputLine, CommandProcessStore,
-        CommandServiceError, CommandStatus, CommandTerminalResult, CommandTraceOrigin,
-        CommandTranscriptStore, CompletedCommandRecord, FinalizationState, OperationTraceContext,
-        PollCommandInput, ReadCommandLinesInput, RetainedCommandTranscript, WriteStdinInput,
+        CommandFinalizedMetadata, CommandId, CommandLifecycleState, CommandOutputLine,
+        CommandProcessStore, CommandServiceError, CommandStatus, CommandTerminalResult,
+        CommandTraceOrigin, CommandTranscriptStore, CompletedCommandRecord, FinalizationState,
+        OperationTraceContext, PollCommandInput, ReadCommandLinesInput, RetainedCommandTranscript,
+        WriteStdinInput,
     };
     use crate::workspace_crate::{
         CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
@@ -521,6 +509,7 @@ mod tests {
                 transcript_path: Some(PathBuf::from("/tmp/retained-transcript.jsonl")),
             },
             finalization: FinalizationState::Complete,
+            finalized: Some(CommandFinalizedMetadata::default()),
             completed_at: Instant::now(),
         }
     }
@@ -555,15 +544,13 @@ mod tests {
         workspace_id: WorkspaceId,
         stdout: &str,
     ) {
+        let record = completed_record(command_id.clone(), caller_id, workspace_id, stdout);
         service
-            .complete_active_command(completed_record(
-                command_id,
-                caller_id,
-                workspace_id,
-                stdout,
-            ))
+            .process_store()
+            .complete_active(record)
             .expect("completion succeeds")
             .expect("active record is removed");
+        let _ = service.registry().unbind(&command_id);
     }
 
     #[test]
@@ -678,30 +665,5 @@ mod tests {
                         && actual == caller_id("caller-other")
             ));
         }
-    }
-
-    #[test]
-    fn command_completion_unbinds_active_registry_entry() {
-        let service = command_service();
-        let command_id = command_id("cmd_completed");
-        let owner = caller_id("caller-owner");
-        let workspace_id = workspace_id("workspace-1");
-        seed_active(
-            &service,
-            command_id.clone(),
-            owner.clone(),
-            workspace_id.clone(),
-        );
-
-        complete_seeded_active(&service, command_id.clone(), owner, workspace_id, "done\n");
-
-        assert!(service.registry().workspace_for(&command_id).is_none());
-        let error = service
-            .active_workspace_for_command(&command_id)
-            .expect_err("completed command is not active");
-        assert!(matches!(
-            error,
-            CommandServiceError::CommandNotFound { command_id: id } if id == command_id
-        ));
     }
 }

@@ -217,14 +217,17 @@ layerstack -> no operation_service
 
 ## Milestone List
 
-The suggested milestone order is kept. The only adjustment is that the generic
-upperdir-delta capture contract is grouped with one-shot/session finalization,
-because that finalization cannot be reviewed independently without the new
-capture result shape.
+The suggested milestone order is mostly kept. The only sequencing adjustment is
+the explicit Milestone 3.5 bridge: it isolates real command launch and initial
+yield from the completed M3 ownership/admission surface and keeps M4 focused on
+one-shot/session finalization. The generic upperdir-delta capture contract stays
+grouped with one-shot/session finalization, because that finalization cannot be
+reviewed independently without the new capture result shape.
 
 - [x] Milestone 1: Operation-service scaffolding and contracts.
 - [x] Milestone 2: Command service registry/process-store split.
-- [ ] Milestone 3: Exec Some/None flows and caller ownership.
+- [x] Milestone 3: Exec Some/None flows and caller ownership.
+- [ ] Milestone 3.5: Policy-free command launch and initial yield.
 - [ ] Milestone 4: One-shot finalization and persistent-session finalization semantics.
 - [ ] Milestone 5: Local OS row projection.
 - [ ] Milestone 6: `WorkspaceRemountService` and remount-pending state.
@@ -236,9 +239,9 @@ capture result shape.
 ### Objective
 
 Create the operation-service module skeleton, target top-level service wiring,
-and command/remount contract types without moving behavior yet. This milestone
-should compile with stubbed or constructor-only service methods and should not
-change daemon dispatch.
+and command plus workspace-remount contract types without moving behavior yet.
+This milestone should compile with stubbed or constructor-only service methods
+and should not change daemon dispatch.
 
 ### Implementation Record Workflow
 
@@ -659,9 +662,9 @@ against `CommandCallContext`.
   and carry forward unresolved notes from earlier milestones.
 - [x] At start, create or append the Milestone 3 entry in the implementation
   record.
-- [x] Before marking this milestone complete, update that entry with files
-  changed, verification commands/results, design deviations, unresolved issues,
-  and handoff notes for Milestone 4.
+- [x] Update that entry with current files changed, verification
+  commands/results, design deviations, unresolved issues, and handoff notes for
+  Milestone 3.5.
 
 ### Files And Modules Expected To Change
 
@@ -677,7 +680,7 @@ against `CommandCallContext`.
 
 ```text
 operation_service/src/command/
-  exec.rs            # Some/None launch selection and yield handling
+  exec.rs            # Some/None mode selection and command admission
   service.rs         # public command methods
   contract.rs        # exec/stdin/read/poll/cancel inputs
   registry.rs
@@ -738,7 +741,7 @@ pub struct CommandYield {
 | Method | Contract |
 | --- | --- |
 | `OperationServices::exec_command(input, trace)` | Purpose: resolve optional workspace and delegate. Inputs: `ExecCommandInput`, trace. Outputs/errors: `CommandYield` or `CommandServiceError`. Boundary rules: for `workspace_id: Some`, call `WorkspaceManagerService::resolve(workspace_id, input.caller_id)` and reject `workspace_root` mismatch before calling command service. For `None`, pass no handler. Tests: root mismatch rejects before command allocation. |
-| `CommandOperationService::exec_command(input, workspace, context)` | Purpose: choose session or one-shot flow. Inputs: target input, `Option<WorkspaceSessionHandler>`, call context. Outputs/errors: first yield or terminal response. Boundary rules: this is the only command method that accepts a workspace handler. Notes: validate non-empty command, allocate command id, reserve active slot, register binding and active record before waiting for yield. Tests: `Some` does not call create/destroy; `None` calls create and binds the temporary workspace id. |
+| `CommandOperationService::exec_command(input, workspace, context)` | Purpose: choose session or one-shot flow. Inputs: target input, `Option<WorkspaceSessionHandler>`, call context. Outputs/errors: command yield shell or typed error. Boundary rules: this is the only command method that accepts a workspace handler. Notes: validate non-empty command, allocate command id, reserve active slot, register binding and active record before returning the M3 running shell; Milestone 3.5 replaces the process-free shell with real spawn and initial yield. Tests: `Some` does not call create/destroy; `None` calls create and binds the temporary workspace id. |
 | `CommandOperationService::write_stdin(input, context)` | Purpose: write to a running command and optionally wait for output. Inputs: command id, chars, yield time, call context. Outputs/errors: `CommandYield` or typed error. Boundary rules: authorize active or completed command owner against `context.caller_id`; do not accept workspace handlers. Notes: control-byte cancel behavior can be preserved, but cancellation still uses command-id ownership validation. Tests: wrong caller receives authorization error, not not-found or leaked output. |
 | `CommandOperationService::read_lines(input, context)` | Purpose: read row window by offset/limit. Inputs: command id, offset, limit, context. Outputs/errors: `CommandLinesOutput` or typed error. Boundary rules: active lookup first, then completion store; both authorize caller. Notes: full row projection is completed in M5; M3 can return a minimal snapshot if the row store is stubbed. Tests: completed records remain readable by owner only. |
 | `CommandOperationService::poll(input, context)` | Purpose: return current command status and finalize if completed. Inputs: command id, optional tail size, context. Outputs/errors: `CommandPollOutput` or typed error. Boundary rules: command id only; active/completed ownership validation. Notes: no `collect_completed` replacement. Tests: wrong caller cannot poll active or completed command. |
@@ -756,11 +759,7 @@ pub struct CommandYield {
    - `None`: call `WorkspaceManagerService::create(NetworkMode::Host)` using
      `workspace_root` as the root input and temporary adapter path until the
      workspace create contract collapses duplicate roots.
-- [ ] Deferred to Milestone 4: adapt or move launch preparation from
-   `operation::command::prepare` without importing `operation::command`.
 - [x] Register command id in registry and active record in process store.
-- [ ] Deferred to Milestone 4: wait for the initial yield with
-   `command::yield_wait_loop`.
 - [x] Add caller authorization helpers that check active records first and
    completed records second.
 - [x] Add tests using fake workspace and inactive/fake command processes where
@@ -772,6 +771,8 @@ pub struct CommandYield {
 - No full `OneShotPublishThenDestroy` finalization semantics beyond enough
   temporary-workspace cleanup to keep tests deterministic.
 - No row projection beyond the method signature and minimal output shell.
+- No real process spawn, launch artifact generation, or initial yield waiting;
+  those are Milestone 3.5.
 - No remount-pending behavior yet.
 - No daemon dispatch migration.
 
@@ -788,9 +789,10 @@ git diff --check
 
 ### Risks And Rollback Notes
 
-- Risk: launch preparation still depends on `operation::command`. Roll back by
-  copying only the needed policy code into `operation_service::command::exec`
-  or extracting policy-free launch preparation into `command`.
+- Risk: M3 process-free active records are mistaken for final launch behavior.
+  Roll back by keeping M3.5 as the explicit real-launch milestone and requiring
+  `CommandProcess::spawn`/`yield_wait_loop` acceptance checks before daemon
+  dispatch migration.
 - Risk: temporary one-shot workspace ids leak as reusable session ids. Roll back
   by keeping the id private to active records and never exposing it in command
   outputs.
@@ -812,10 +814,113 @@ git diff --check
 - [x] No `ExecCommandInput` request correlation identifiers or `remountable` field
   are introduced.
 
-M3 remains open until the command service has a policy-free launch context and
-uses `command::CommandProcess::spawn` plus the yield wait loop. The implemented
-ownership/admission surface is complete, but process-free active records are not
-the final M3 launch behavior.
+M3 is closed for ownership/admission. The process-free active record scaffold is
+intentionally carried forward to Milestone 3.5, which owns real spawn and initial
+yield behavior.
+
+## Milestone 3.5: Policy-Free Command Launch And Initial Yield
+
+### Objective
+
+Replace the process-free M3 active-record scaffold with a real low-level command
+spawn path while preserving the new operation-service ownership and mode-selection
+boundaries. This milestone is only about launch preparation, `CommandProcess::spawn`,
+and the first yield response; finalization, publish/discard, row projection, remount,
+and daemon dispatch remain later milestones.
+
+### Implementation Record Workflow
+
+- [ ] Before starting, read
+  `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
+  and carry forward unresolved launch/yield notes from Milestone 3.
+- [ ] At start, create or append the Milestone 3.5 entry in the implementation
+  record.
+- [ ] Before marking this milestone complete, update that entry with files
+  changed, verification commands/results, design deviations, unresolved issues,
+  and handoff notes for Milestone 4.
+
+### Files And Modules Expected To Change
+
+- `operation_service/src/command/exec.rs`
+- `operation_service/src/command/service.rs`
+- `operation_service/src/command/process_store.rs`
+- `operation_service/src/command/contract.rs`
+- `operation_service/src/command/error.rs`
+- `operation_service/src/workspace_manager/session_manager.rs`
+- Optional policy-free launch helpers in `crates/daemon/command`.
+- Tests under `operation_service/tests/command_exec.rs` and command-service unit
+  tests.
+
+### Service Method Contracts
+
+| Method | Contract |
+| --- | --- |
+| `CommandOperationService::prepare_launch_context(input, handler, command_id)` | Purpose: assemble policy-free launch material for the low-level command runner. Inputs: exec input, resolved workspace handler, command id. Outputs/errors: runner request/artifact paths or typed command-service error. Boundary rules: no `operation::command`, no `StartCommand`, no request/trace/invocation ids, no `remountable` policy. |
+| `CommandOperationService::spawn_command_process(spec, launch)` | Purpose: call `command::CommandProcess::spawn` and map spawn/artifact errors. Inputs: `CommandProcessSpec` and `CommandProcessSpawn`. Outputs/errors: live `CommandProcess` or typed command-service error. Boundary rules: registry/process-store state is not committed until cleanup rollback paths are defined. |
+| `CommandOperationService::initial_exec_yield(command_id, process, yield_time_ms)` | Purpose: wait for first command output or completion through `command::yield_wait_loop`. Inputs: active process and yield timeout. Outputs/errors: `CommandYield`. Boundary rules: no unconditional `Running` shell; completed outcome is retained for M4 finalization handoff without exposing collect/advance APIs. |
+
+### Implementation Steps
+
+- [ ] Add a policy-free launch context that contains the runner request, request
+  path, output path, final path, transcript path, transcript timezone, and output
+  drain grace without importing `operation::command`.
+- [ ] Build `CommandProcessSpec` from operation-service command ids and caller ids
+  while keeping `ExecCommandInput` free of request correlation fields.
+- [ ] Replace the `CommandProcess::new` scaffold in
+  `CommandOperationService::exec_command` with `CommandProcess::spawn`.
+- [ ] Preserve cleanup on every launch failure: unbind registry entries, release
+  admission reservations, and destroy one-shot workspaces while leaving session
+  workspaces alive.
+- [ ] Insert the live process into `CommandProcessStore` only after spawn succeeds,
+  with transcript paths matching the low-level command artifacts.
+- [ ] Use `command::yield_wait_loop` for the first exec response and map both
+  running-output and completed outcomes into `CommandYield`.
+- [ ] Add tests proving spawn failure cleanup, active insert failure cleanup after
+  spawn, first-yield running output, and completed first-yield behavior.
+
+### Explicit Exclusions
+
+- No one-shot publish/discard or persistent-session finalization behavior.
+- No upperdir-delta capture changes.
+- No row-window implementation beyond existing command output shells.
+- No remount-pending behavior.
+- No daemon dispatch migration.
+
+### Tests And Verification Commands
+
+```text
+CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_exec
+CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_ownership
+CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p command
+CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p operation_service
+cargo fmt --check
+git diff --check
+rg -n "operation::command|StartCommand|request_id|trace_id|invocation_id|remountable|CommandProcess::new" crates/daemon/operation_service/src/command crates/daemon/operation_service/tests/command_exec.rs
+```
+
+### Risks And Rollback Notes
+
+- Risk: launch preparation imports old `operation::command` policy. Roll back by
+  moving only policy-free runner request construction into `command` or a new
+  operation-service helper.
+- Risk: one-shot workspaces leak on spawn/artifact failure. Roll back by routing
+  all failures through the existing one-shot cleanup helper before returning.
+- Risk: first-yield completion starts finalization work early. Roll back by
+  retaining terminal process outcome for M4 without publishing, destroying, or
+  exposing public collect/advance APIs.
+
+### Acceptance Criteria
+
+- [ ] `CommandOperationService::exec_command` launches through a policy-free
+  command launch context and `command::CommandProcess::spawn`, not the
+  process-free `CommandProcess::new` scaffold.
+- [ ] The first exec response is produced by `command::yield_wait_loop` instead
+  of an unconditional running shell.
+- [ ] Spawn and initial-yield tests prove cleanup is correct for one-shot and
+  persistent-session command starts.
+- [ ] Static boundary scan shows no `operation::command`, old command DTOs, request
+  correlation ids, `remountable`, or process-free spawn scaffolds in the
+  operation-service launch path.
 
 ## Milestone 4: One-Shot Finalization And Persistent-Session Semantics
 
@@ -1156,10 +1261,12 @@ Move live remount orchestration out of `WorkspaceRuntime` into
 - `operation_service/src/workspace_manager/session_manager.rs`
 - `operation_service/src/workspace_manager/service.rs`
 - `operation_service/src/workspace_manager/error.rs`
-- `operation_service/src/command/remount.rs`
+- New `operation_service/src/command/remount.rs` created with the Milestone 6
+  command-side quiesce behavior, not as an empty placeholder.
 - `operation_service/src/command/service.rs`
 - `operation_service/src/workspace_remount/service.rs`
-- `operation_service/src/workspace_remount/error.rs`
+- New or changed `operation_service/src/workspace_remount/error.rs` only if the
+  Milestone 6 behavior introduces remount-specific errors.
 - Optional policy-free helpers in `crates/daemon/command/src/quiesce.rs`
 - Tests under `operation_service/tests/workspace_remount.rs` and
   `operation_service/tests/command_remount.rs`
@@ -1663,7 +1770,7 @@ CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p e2e-test w
 - [ ] Earlier milestone scaffold has either been removed or documented as
   intentionally retained target surface.
 - [ ] No stale `#[allow(dead_code)]` suppressions or placeholder
-  `NotImplemented` errors remain in operation-service command/remount code.
+  `NotImplemented` errors remain in operation-service command or remount code.
 - [ ] Final static boundary checks pass or have only documented false positives in
   migration notes.
 

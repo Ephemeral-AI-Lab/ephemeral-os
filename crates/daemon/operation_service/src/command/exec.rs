@@ -95,6 +95,7 @@ impl CommandOperationService {
                 error,
             ));
         }
+        self.start_finalizer_watch(&command_id);
 
         Ok(CommandYield {
             command_id: Some(command_id),

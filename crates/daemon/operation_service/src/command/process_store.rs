@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Mutex, MutexGuard};
 use std::time::Instant;
 
-use crate::command::{CommandId, CommandServiceError, CommandStatus};
+use crate::command::{CommandFinalizedMetadata, CommandId, CommandServiceError, CommandStatus};
 use crate::workspace_crate::{CallerId, WorkspaceId};
 
 pub const DEFAULT_MAX_ACTIVE_COMMANDS: usize = 256;
@@ -328,6 +328,7 @@ pub struct CompletedCommandRecord {
     pub result: CommandTerminalResult,
     pub transcript: RetainedCommandTranscript,
     pub finalization: FinalizationState,
+    pub finalized: Option<CommandFinalizedMetadata>,
     pub completed_at: Instant,
 }
 
@@ -404,6 +405,7 @@ mod tests {
             },
             transcript: RetainedCommandTranscript::default(),
             finalization: FinalizationState::Complete,
+            finalized: Some(CommandFinalizedMetadata::default()),
             completed_at: Instant::now(),
         }
     }

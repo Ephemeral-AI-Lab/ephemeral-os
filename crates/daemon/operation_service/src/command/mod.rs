@@ -5,11 +5,12 @@ pub mod registry;
 pub mod service;
 
 pub(crate) mod exec;
-pub(crate) mod remount;
+pub(crate) mod finalize;
 
 pub use contract::{
-    CancelCommandInput, CommandCallContext, CommandFinalizedMetadata, CommandId,
-    CommandLinesOutput, CommandOutputLine, CommandOutputSnapshot, CommandPollOutput, CommandStatus,
+    CancelCommandInput, CommandCallContext, CommandFinalizationOutcome, CommandFinalizedMetadata,
+    CommandFinalizedPolicy, CommandId, CommandLinesOutput, CommandOutputLine,
+    CommandOutputSnapshot, CommandPollOutput, CommandStatus, CommandWorkspaceDestroyMetadata,
     CommandYield, ExecCommandInput, OperationTraceContext, PollCommandInput, ReadCommandLinesInput,
     WriteStdinInput,
 };

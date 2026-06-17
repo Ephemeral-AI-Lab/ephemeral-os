@@ -1,6 +1,9 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
+use layerstack::service::BoundedCaptureOptions;
+use layerstack::CaptureRouteStats;
+
 use crate::network_mode::isolated_network::WorkspaceModeHandle;
 use crate::overlay::tree::TreeResourceStats;
 
@@ -76,7 +79,7 @@ pub struct CreateWorkspaceRequest {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CaptureChangesRequest {
-    pub materialize_payloads: bool,
+    pub bounds: BoundedCaptureOptions,
     pub include_stats: bool,
 }
 
@@ -134,16 +137,20 @@ impl From<&layerstack::ProtectedPathDrop> for ProtectedPathDrop {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CaptureChangesResult {
+pub struct CapturedWorkspaceChanges {
     pub workspace_id: WorkspaceId,
     pub base_revision: BaseRevision,
     pub changed_paths: Vec<String>,
     pub changed_path_kinds: BTreeMap<String, ChangedPathKind>,
     pub protected_drops: Vec<ProtectedPathDrop>,
     pub stats: Option<TreeResourceStats>,
+    pub changes: Vec<layerstack::LayerChange>,
+    pub route_stats: CaptureRouteStats,
+    pub metadata_path_count: usize,
+    pub spool_dir: Option<PathBuf>,
 }
 
-pub type CapturedWorkspaceChanges = CaptureChangesResult;
+pub type CaptureChangesResult = CapturedWorkspaceChanges;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RemountWorkspaceRequest {
