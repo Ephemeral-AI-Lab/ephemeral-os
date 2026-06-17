@@ -78,6 +78,7 @@ fn snapshot_normalization(outcome: LeaseAwareCopyThroughOutcome) -> SnapshotNorm
 }
 
 struct BoundState {
+    workspace_root: PathBuf,
     layer_stack_root: PathBuf,
     stack: LayerStack,
     manager: IsolatedManager,
@@ -516,6 +517,7 @@ impl WorkspaceRuntime {
         workspace_root: &Path,
     ) -> Result<WorkspaceEnterOutcome, WorkspaceEnterError> {
         let _mode_guard = self.lock_mode_gate();
+        self.reject_active_commands(caller_id)?;
         let resolved = self.resolve_workspace_root(workspace_root)?;
         self.enter_resolved_locked(caller_id, &resolved)
     }
@@ -526,6 +528,7 @@ impl WorkspaceRuntime {
         layer_stack_root: &Path,
     ) -> Result<WorkspaceEnterOutcome, WorkspaceEnterError> {
         let _mode_guard = self.lock_mode_gate();
+        self.reject_active_commands(caller_id)?;
         let resolved = self.resolve_legacy_layer_stack_root(layer_stack_root)?;
         self.enter_resolved_locked(caller_id, &resolved)
     }
@@ -535,10 +538,6 @@ impl WorkspaceRuntime {
         caller_id: &str,
         resolved: &ResolvedWorkspaceRoot,
     ) -> Result<WorkspaceEnterOutcome, WorkspaceEnterError> {
-        let active_commands = self.command.count_by_caller(Some(caller_id));
-        if active_commands > 0 {
-            return Err(WorkspaceEnterError::ActiveCommands { active_commands });
-        }
         let recovery = self.ensure_state(resolved)?;
         let mut guard = self.lock_state_cell();
         let state = guard.as_mut().ok_or(IsolatedError::FeatureDisabled)?;
@@ -595,10 +594,12 @@ impl WorkspaceRuntime {
         workspace_root: &Path,
     ) -> Result<ResolvedWorkspaceRoot, WorkspaceError> {
         let workspace_root = validate_caller_workspace_root(workspace_root)?;
+        let mut matches = self.discover_workspace_root_bindings(&workspace_root)?;
         if let Some(resolved) = self.resolve_bound_workspace_root(&workspace_root)? {
-            return Ok(resolved);
+            matches
+                .entry(resolved.layer_stack_root.clone())
+                .or_insert(resolved);
         }
-        let matches = self.discover_workspace_root_bindings(&workspace_root)?;
         match matches.len() {
             0 => Err(WorkspaceError::InvalidRequest {
                 field: "workspace_root",
@@ -642,18 +643,7 @@ impl WorkspaceRuntime {
                     requested_root.join(WORKSPACE_BINDING_FILE).display()
                 ),
             })?;
-        let resolved = resolved_workspace_binding(binding)?;
-        if !paths_match(&requested_root, &resolved.layer_stack_root) {
-            return Err(WorkspaceError::InvalidRequest {
-                field: "layer_stack_root",
-                message: format!(
-                    "legacy layer_stack_root {} does not match binding layer_stack_root {}",
-                    requested_root.display(),
-                    resolved.layer_stack_root.display()
-                ),
-            });
-        }
-        Ok(resolved)
+        resolved_workspace_binding_at(&requested_root, binding)
     }
 
     fn resolve_bound_workspace_root(
@@ -675,7 +665,7 @@ impl WorkspaceRuntime {
         if !paths_match(Path::new(&binding.workspace_root), workspace_root) {
             return Ok(None);
         }
-        resolved_workspace_binding(binding).map(Some)
+        resolved_workspace_binding_at(&layer_stack_root, binding).map(Some)
     }
 
     fn discover_workspace_root_bindings(
@@ -716,7 +706,7 @@ impl WorkspaceRuntime {
         let _mode_guard = self.lock_mode_gate();
         let resolved = self
             .resolve_workspace_root(workspace_root)
-            .map_err(workspace_error_as_isolated_setup)?;
+            .map_err(workspace_error_as_isolated_error)?;
         self.compact_remount_open_workspace_for_test_resolved_locked(
             caller_id,
             &resolved,
@@ -735,7 +725,7 @@ impl WorkspaceRuntime {
         let _mode_guard = self.lock_mode_gate();
         let resolved = self
             .resolve_legacy_layer_stack_root(layer_stack_root)
-            .map_err(workspace_error_as_isolated_setup)?;
+            .map_err(workspace_error_as_isolated_error)?;
         self.compact_remount_open_workspace_for_test_resolved_locked(
             caller_id,
             &resolved,
@@ -983,11 +973,14 @@ impl WorkspaceRuntime {
         root: &ResolvedWorkspaceRoot,
     ) -> Result<WorkspaceRecoveryReport, IsolatedError> {
         let layer_stack_root = root.layer_stack_root.clone();
+        let workspace_root = root.workspace_root.clone();
         let mut recovery = WorkspaceRecoveryReport::default();
         {
             let mut guard = self.lock_state_cell();
             if let Some(state) = guard.as_mut() {
-                if state.layer_stack_root != layer_stack_root {
+                if state.layer_stack_root != layer_stack_root
+                    || state.workspace_root != workspace_root
+                {
                     // Block rebinding to a new root only while an isolated workspace
                     // is open: those handles pin leases/namespaces on the old root.
                     // (Isolated commands belong to an open caller, so this
@@ -997,7 +990,8 @@ impl WorkspaceRuntime {
                     if !open_callers.is_empty() {
                         return Err(IsolatedError::SetupFailed {
                             step: format!(
-                                "isolated workspace manager is bound to {} with active callers",
+                                "isolated workspace manager is bound to workspace_root {} and layer_stack_root {} with active callers",
+                                state.workspace_root.display(),
                                 state.layer_stack_root.display()
                             ),
                         });
@@ -1027,6 +1021,7 @@ impl WorkspaceRuntime {
                     }
                 }
                 *guard = Some(BoundState {
+                    workspace_root,
                     layer_stack_root,
                     stack,
                     manager,
@@ -1048,6 +1043,14 @@ impl WorkspaceRuntime {
 
     fn lock_state_cell(&self) -> MutexGuard<'_, Option<BoundState>> {
         self.state.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    fn reject_active_commands(&self, caller_id: &str) -> Result<(), WorkspaceEnterError> {
+        let active_commands = self.command.count_by_caller(Some(caller_id));
+        if active_commands > 0 {
+            return Err(WorkspaceEnterError::ActiveCommands { active_commands });
+        }
+        Ok(())
     }
 
     fn reset_test_manager_file(&self) {
@@ -1131,6 +1134,24 @@ fn resolved_workspace_binding(
     })
 }
 
+fn resolved_workspace_binding_at(
+    binding_path_root: &Path,
+    binding: WorkspaceBinding,
+) -> Result<ResolvedWorkspaceRoot, WorkspaceError> {
+    let resolved = resolved_workspace_binding(binding)?;
+    if !paths_match(binding_path_root, &resolved.layer_stack_root) {
+        return Err(WorkspaceError::InvalidRequest {
+            field: "layer_stack_root",
+            message: format!(
+                "workspace binding at {} points at different layer_stack_root {}",
+                binding_path_root.display(),
+                resolved.layer_stack_root.display()
+            ),
+        });
+    }
+    Ok(resolved)
+}
+
 fn validate_binding_root(field: &'static str, raw_root: &str) -> Result<PathBuf, WorkspaceError> {
     let root = PathBuf::from(raw_root.trim());
     validate_absolute_root(field, &root)
@@ -1148,7 +1169,7 @@ fn collect_workspace_binding_matches(
     if root.join(WORKSPACE_BINDING_FILE).is_file() {
         if let Some(binding) = read_workspace_binding(root).map_err(workspace_setup_error)? {
             if paths_match(Path::new(&binding.workspace_root), workspace_root) {
-                let resolved = resolved_workspace_binding(binding)?;
+                let resolved = resolved_workspace_binding_at(root, binding)?;
                 matches
                     .entry(resolved.layer_stack_root.clone())
                     .or_insert(resolved);
@@ -1222,9 +1243,14 @@ fn workspace_setup_error(error: layerstack::LayerStackError) -> WorkspaceError {
     }
 }
 
-fn workspace_error_as_isolated_setup(error: WorkspaceError) -> IsolatedError {
-    IsolatedError::SetupFailed {
-        step: error.to_string(),
+fn workspace_error_as_isolated_error(error: WorkspaceError) -> IsolatedError {
+    match error {
+        error @ WorkspaceError::InvalidRequest { .. } => {
+            IsolatedError::InvalidArgument(error.to_string())
+        }
+        error => IsolatedError::SetupFailed {
+            step: error.to_string(),
+        },
     }
 }
 

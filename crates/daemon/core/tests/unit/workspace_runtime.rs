@@ -8,9 +8,12 @@ use config::configs::isolated_workspace::IsolatedWorkspaceConfig;
 use layerstack::{
     service::BoundedCaptureOptions, CommitOptions, LayerChange, LayerPath, LayerStack,
 };
+use operation::command::CommandOps;
 use serde_json::{json, Value};
+use std::sync::Arc;
+use workspace::RemountProbe;
 
-use super::WorkspaceRuntime;
+use super::{WorkspaceRemountCompactionAttempt, WorkspaceRuntime};
 
 type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
@@ -119,6 +122,45 @@ fn workspace_runtime_enter_rebinds_idle_state_to_new_layer_stack_root() -> TestR
 }
 
 #[test]
+fn workspace_runtime_enter_rebinds_idle_state_when_workspace_root_changes() -> TestResult {
+    let root = test_root("same-stack-workspace-rebind");
+    let scratch = root.join("scratch");
+    let stack_root = root.join("stack");
+    let workspace_a = root.join("workspace-a");
+    let workspace_b = root.join("workspace-b");
+    let runtime = isolated_runtime(&scratch, Path::new("/testbed"));
+    seed_workspace_base(&stack_root, &workspace_a)?;
+
+    let first = runtime.enter("caller-root-a", &workspace_a)?;
+    assert_eq!(
+        first.workspace_root,
+        workspace_a.canonicalize()?.to_string_lossy()
+    );
+    runtime.exit("caller-root-a", None)?;
+
+    std::fs::create_dir_all(&workspace_b)?;
+    let mut binding =
+        layerstack::read_workspace_binding(&stack_root)?.ok_or("workspace binding should exist")?;
+    binding.workspace_root = workspace_b.to_string_lossy().into_owned();
+    std::fs::write(
+        stack_root.join(layerstack::WORKSPACE_BINDING_FILE),
+        serde_json::to_vec_pretty(&binding)?,
+    )?;
+
+    let second = runtime.enter("caller-root-b", &workspace_b)?;
+
+    assert_eq!(
+        second.workspace_root,
+        workspace_b.canonicalize()?.to_string_lossy(),
+        "same stack rebinding must refresh manager workspace_root caps"
+    );
+    runtime.exit("caller-root-b", None)?;
+    let _ = runtime.test_reset();
+    let _ = std::fs::remove_dir_all(&root);
+    Ok(())
+}
+
+#[test]
 fn workspace_runtime_enter_normalizes_snapshot_before_mounting_workspace() -> TestResult {
     let root = test_root("enter-normalizes-snapshot");
     let scratch = root.join("scratch");
@@ -160,6 +202,67 @@ fn workspace_runtime_enter_normalizes_snapshot_before_mounting_workspace() -> Te
 }
 
 #[test]
+fn workspace_runtime_compact_remount_for_test_resolves_workspace_root() -> TestResult {
+    let root = test_root("compact-remount-workspace-root");
+    let scratch = root.join("scratch");
+    let stack_root = root.join("stack");
+    let workspace_root = root.join("workspace");
+    seed_workspace_base(&stack_root, &workspace_root)?;
+    let runtime = isolated_runtime(&scratch, Path::new("/testbed"));
+    runtime.enter("caller-remount", &workspace_root)?;
+
+    let attempt = runtime.compact_remount_open_workspace_for_test(
+        "caller-remount",
+        &workspace_root,
+        RemountProbe {
+            path: None,
+            expected_content: None,
+        },
+        None,
+    )?;
+
+    match attempt {
+        WorkspaceRemountCompactionAttempt::Compacted(report) => {
+            assert_eq!(report.active_leases_after, 1);
+        }
+        WorkspaceRemountCompactionAttempt::Blocked(report) => {
+            panic!("remount should not be blocked without active commands: {report:?}");
+        }
+    }
+    runtime.exit("caller-remount", None)?;
+    let _ = runtime.test_reset();
+    let _ = std::fs::remove_dir_all(&root);
+    Ok(())
+}
+
+#[test]
+fn workspace_runtime_resolve_workspace_root_rejects_copied_binding_pointing_elsewhere() -> TestResult
+{
+    let root = test_root("resolve-copied-binding");
+    let scratch = root.join("scratch");
+    let stack_root = root.join("stack");
+    let copied_stack_root = root.join("copied-stack");
+    let workspace_root = root.join("workspace");
+    seed_workspace_base(&stack_root, &workspace_root)?;
+    std::fs::create_dir_all(&copied_stack_root)?;
+    std::fs::copy(
+        stack_root.join(layerstack::WORKSPACE_BINDING_FILE),
+        copied_stack_root.join(layerstack::WORKSPACE_BINDING_FILE),
+    )?;
+    let runtime = isolated_runtime(&scratch, Path::new("/configured-fallback"));
+
+    let error = runtime
+        .resolve_workspace_root(&workspace_root)
+        .expect_err("copied binding should not redirect to another stack root");
+
+    assert!(error
+        .to_string()
+        .contains("points at different layer_stack_root"));
+    let _ = std::fs::remove_dir_all(&root);
+    Ok(())
+}
+
+#[test]
 fn workspace_runtime_resolve_workspace_root_reads_layer_stack_binding() -> TestResult {
     let root = test_root("resolve-workspace-root");
     let scratch = root.join("scratch");
@@ -180,6 +283,30 @@ fn workspace_runtime_resolve_workspace_root_reads_layer_stack_binding() -> TestR
         resolved.binding.layer_stack_root,
         stack_root.to_string_lossy()
     );
+    let _ = std::fs::remove_dir_all(&root);
+    Ok(())
+}
+
+#[test]
+fn workspace_runtime_resolve_workspace_root_rejects_ambiguous_bindings_after_state_is_bound(
+) -> TestResult {
+    let root = test_root("resolve-ambiguous-bound-root");
+    let scratch = root.join("scratch");
+    let stack_a = root.join("stack-a");
+    let stack_b = root.join("stack-b");
+    let workspace_root = root.join("workspace");
+    seed_workspace_base(&stack_a, &workspace_root)?;
+    let runtime = isolated_runtime(&scratch, Path::new("/configured-fallback"));
+    runtime.enter("caller-bound", &workspace_root)?;
+    seed_workspace_base(&stack_b, &workspace_root)?;
+
+    let error = runtime
+        .resolve_workspace_root(&workspace_root)
+        .expect_err("bound state should not bypass ambiguity checks");
+
+    assert!(error.to_string().contains("ambiguous workspace_root"));
+    runtime.exit("caller-bound", None)?;
+    let _ = runtime.test_reset();
     let _ = std::fs::remove_dir_all(&root);
     Ok(())
 }
@@ -262,6 +389,18 @@ fn isolated_runtime_with_max_depth(
     workspace_root: &Path,
     auto_squash_max_depth: usize,
 ) -> WorkspaceRuntime {
+    isolated_runtime_with_command(
+        scratch_root,
+        workspace_root,
+        command_ops_with_max_depth(auto_squash_max_depth),
+    )
+}
+
+fn isolated_runtime_with_command(
+    scratch_root: &Path,
+    workspace_root: &Path,
+    command: Arc<CommandOps>,
+) -> WorkspaceRuntime {
     // The namespace/network layer stubs itself under the isolated-workspace
     // test harness env; every test in this binary drives the stubbed setup, so
     // the variable is set once and never removed (no cross-test race).
@@ -273,14 +412,16 @@ fn isolated_runtime_with_max_depth(
             workspace_root: workspace_root.to_path_buf(),
             ..IsolatedWorkspaceConfig::default()
         },
-        std::sync::Arc::new(
-            operation::command::CommandOps::with_commit_options_and_capture_options(
-                command::CommandConfig::default(),
-                CommitOptions::new(auto_squash_max_depth),
-                BoundedCaptureOptions::default(),
-            ),
-        ),
+        command,
     )
+}
+
+fn command_ops_with_max_depth(auto_squash_max_depth: usize) -> Arc<CommandOps> {
+    Arc::new(CommandOps::with_commit_options_and_capture_options(
+        command::CommandConfig::default(),
+        CommitOptions::new(auto_squash_max_depth),
+        BoundedCaptureOptions::default(),
+    ))
 }
 
 fn test_root(label: &str) -> PathBuf {

@@ -273,7 +273,7 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() -> 
         "iws-enter",
         json!({
             "caller_id": "caller-enabled",
-            "layer_stack_root": &env.root,
+            "workspace_root": &env.workspace,
         }),
     );
     let enter = ok_result(&enter_response);
@@ -290,7 +290,7 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() -> 
     let private_file = handle_scratch.join("upper").join("private.txt");
     std::fs::write(&private_file, "private scratch\n")?;
 
-    assert_isolated_open_state(&daemon, &env.root);
+    assert_isolated_open_state(&daemon, &env.workspace);
     let exit = dispatch_request(
         &daemon,
         "sandbox.isolation.exit",
@@ -1124,16 +1124,21 @@ fn rebuild_workspace_base(
 
 struct IsolatedLifecycleEnv {
     root: PathBuf,
+    workspace: PathBuf,
     scratch: PathBuf,
 }
 
 impl IsolatedLifecycleEnv {
     fn new() -> TestResult<Self> {
-        let (root, _workspace) = seed_layer_stack("isolated_lifecycle")?;
+        let (root, workspace) = seed_layer_stack("isolated_lifecycle")?;
         let base = root.parent().ok_or("layer root parent")?;
         let scratch = base.join("isolated-scratch");
         std::env::set_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS", "true");
-        Ok(Self { root, scratch })
+        Ok(Self {
+            root,
+            workspace,
+            scratch,
+        })
     }
 }
 
@@ -1157,7 +1162,7 @@ fn assert_isolated_test_reset(daemon: &TestDaemon, invocation_id: &str) {
     assert_eq!(reset["reset"], Value::Bool(true));
 }
 
-fn assert_isolated_open_state(daemon: &TestDaemon, root: &Path) {
+fn assert_isolated_open_state(daemon: &TestDaemon, workspace: &Path) {
     let status = dispatch_request(
         daemon,
         "sandbox.isolation.status",
@@ -1174,7 +1179,7 @@ fn assert_isolated_open_state(daemon: &TestDaemon, root: &Path) {
         "iws-enter-again",
         json!({
             "caller_id": "caller-enabled",
-            "layer_stack_root": root,
+            "workspace_root": workspace,
         }),
     );
     let duplicate = error_fault(&duplicate, "rejected");

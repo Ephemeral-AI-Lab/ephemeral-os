@@ -18,6 +18,13 @@ LayerStack workspace binding internally, and keeps legacy `layer_stack_root`
 accepted through explicit compatibility adapters. It does not implement the
 future create/run/capture/destroy lifecycle APIs.
 
+Phase 2 adversarial review follow-up tightened the root-resolution contract:
+discovered bindings must live at their declared `layer_stack_root`, cached
+runtime state now tracks `workspace_root` as part of its binding identity,
+stateful resolution no longer bypasses ambiguity checks, malformed dual-root
+payloads cannot silently fall back to legacy `layer_stack_root`, and
+test-remount invalid root requests preserve `invalid_argument` error shaping.
+
 ## Files Changed
 
 - `crates/daemon/workspace/src/model.rs`
@@ -126,6 +133,33 @@ where applicable.
 | `cargo test -p operation isolation` | Pass | 5 focused isolation contract tests passed. |
 | `cargo test -p daemon enter_trace_events_include_holder_and_dns_configuration` | Pass | 1 focused adapter trace test passed. |
 | `git diff --check` | Pass | No whitespace errors. |
+
+Follow-up verification after adversarial review fixes used
+`CARGO_TARGET_DIR=/tmp/eos-adversarial-phase2-target` where applicable.
+
+| Command | Result | Notes |
+|---|---|---|
+| `cargo fmt` | Pass | Formatted runtime, contract, tests, and roadmap edits. |
+| `cargo test -p operation isolation` | Pass | 9 focused isolation contract tests passed, including malformed dual-root rejection and compact-remount `workspace_root` parsing. |
+| `cargo test -p daemon workspace_runtime` | Pass | 12 focused runtime tests passed, including copied-binding rejection, same-stack workspace-root rebinding, cached-state ambiguity rejection, and compact-remount `workspace_root` resolution. |
+| `cargo test -p workspace` | Pass | 24 passed, 0 failed; doc tests 0 passed, 0 failed. |
+| `cargo test -p operation file` | Pass | 14 passed, 0 failed, 74 filtered out; checkpoint and contract test targets had 0 matching tests. |
+| `cargo test -p daemon --test phase2_read_paths isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled` | Pass | Dispatch lifecycle test now enters through `workspace_root`. |
+| `git diff --check` | Pass | No whitespace errors. |
+
+Cleanup pass:
+
+- Removed the unused `WorkspaceRootInput::as_path` helper and its stale `Path`
+  import.
+- Removed the duplicate active-command guard from the private
+  `enter_resolved_locked` path after both public enter paths began checking it
+  under the same mode gate.
+- Renamed the test-remount workspace error mapper from setup-specific wording to
+  neutral isolated-error wording after it began preserving invalid-request
+  errors.
+- Kept explicit legacy `layer_stack_root` compatibility adapters because
+  repo-wide references still route old isolation enter and test-remount callers
+  through them.
 
 Intermediate fixed issues:
 

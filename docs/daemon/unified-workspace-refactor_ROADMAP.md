@@ -90,13 +90,13 @@ Tasks:
 - [x] Implement `WorkspaceRuntime::resolve_workspace_root`.
 - [x] Resolve `layer_stack_root` through the LayerStack workspace binding.
 - [x] Preserve compatibility parsing for legacy `layer_stack_root`.
-- [x] Update new isolation enter/remount code and trace details to emit `workspace_root`; legacy `layer_stack_root` is compatibility-labeled.
+- [x] Update new isolation enter and test-remount parsing/resolution to accept `workspace_root`; enter trace details emit `workspace_root`, and legacy enter roots are compatibility-labeled.
 - [x] Add coverage for `workspace_root` parsing and legacy compatibility parsing.
 
 Exit criteria:
 
 - [x] Phase 2-facing runtime/root paths can be driven from `workspace_root`; full create/run/capture/destroy lifecycle surfaces remain Phase 3+ work.
-- [x] Legacy `layer_stack_root` use is isolated to explicitly named compatibility adapters for isolation enter and test compact remount.
+- [x] Phase 2 legacy `layer_stack_root` use is isolated to explicitly named compatibility adapters for isolation enter and test compact remount; command, file, checkpoint, and other legacy surfaces remain later-phase migration work.
 - [x] LayerStack validation still keeps storage outside `workspace_root`.
 
 Phase 2 is closed for root resolution. The future create/run/capture/destroy
@@ -380,7 +380,7 @@ Append one row per meaningful gate or phase closeout.
 | 2026-06-17 | 1 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase1-target cargo test -p daemon workspace_runtime` | Pass | Exit 0; daemon test targets compiled; the `workspace_runtime` filter matched 0 tests across listed targets. |
 | 2026-06-17 | 1 | Phase 1 skipped gates review | Skipped | Live Docker/Linux E2E, `cargo run -p xtask -- package`, and `cargo run -p xtask -- check-contract` were not run by Phase 1 scope. `cargo clippy -p daemon --all-targets --locked -- -D warnings` was not run because the Phase 0 baseline records the unrelated `clippy::double_must_use` failure in `crates/daemon/layerstack/src/lease_aware.rs:97`. |
 | 2026-06-17 | 1 | Phase 1 closeout | Done | Added public scaffold modules and tests. The root `workspace::WorkspaceHandle` remains the legacy isolated handle for compatibility; the unified scaffold handle is public as `workspace::model::WorkspaceHandle` and `workspace::UnifiedWorkspaceHandle`. |
-| 2026-06-17 | 2 | Phase 2 implementation review | Done | Added `ResolvedWorkspaceRoot`, `WorkspaceRuntime::resolve_workspace_root`, and `resolve_legacy_layer_stack_root`. New isolated enter/test-remount adapter paths parse `workspace_root`; legacy `layer_stack_root` parses through `WorkspaceRootInput::LegacyLayerStackRoot` and calls explicitly named compatibility methods. No host lifecycle, routing centralization, capture, holder/setns, destroy, publish, or wire-regeneration work was implemented. |
+| 2026-06-17 | 2 | Phase 2 implementation review | Done | Added `ResolvedWorkspaceRoot`, `WorkspaceRuntime::resolve_workspace_root`, and `resolve_legacy_layer_stack_root`. New isolated enter/test-remount adapter paths parse `workspace_root`; legacy `layer_stack_root` parses through `WorkspaceRootInput::LegacyLayerStackRoot` and calls explicitly named compatibility methods. Command, file, checkpoint, and other legacy `layer_stack_root` surfaces remain later-phase work. No host lifecycle, routing centralization, capture, holder/setns, destroy, publish, or wire-regeneration work was implemented. |
 | 2026-06-17 | 2 | `cargo fmt` | Pass | Formatted Phase 2 runtime, adapter, contract, and tests. |
 | 2026-06-17 | 2 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase2-target cargo test -p workspace` | Pass | Exit 0; workspace unit tests passed: 24 passed, 0 failed; doc tests 0 passed, 0 failed. |
 | 2026-06-17 | 2 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase2-target cargo test -p operation file` | Pass | Exit 0; filtered operation tests passed: 14 passed, 0 failed, 70 filtered out; checkpoint and contract test targets had 0 matching tests. |
@@ -390,3 +390,4 @@ Append one row per meaningful gate or phase closeout.
 | 2026-06-17 | 2 | `git diff --check` | Pass | Exit 0; no whitespace errors. |
 | 2026-06-17 | 2 | Phase 2 skipped gates review | Skipped | Live Docker/Linux E2E, `cargo run -p xtask -- package`, and ops.json regeneration were not run by Phase 2 scope. `cargo run -p xtask -- check-contract` was not run because the Phase 0 baseline records stale `crates/daemon/operation/ops.json`; `cargo clippy -p daemon --all-targets --locked -- -D warnings` was not run because the Phase 0 baseline records the unrelated `clippy::double_must_use` failure in `crates/daemon/layerstack/src/lease_aware.rs:97`. |
 | 2026-06-17 | 2 | Phase 2 closeout | Done | Workspace-root resolution compiles beside legacy compatibility. Residual work remains intentionally deferred to Phase 3+: host create/destroy lifecycle, route centralization, capture, holder/setns-only execution changes, target folder moves, and legacy export retirement. |
+| 2026-06-17 | 2 | Adversarial review follow-up | Done | Tightened binding discovery to reject copied bindings whose file path does not match the declared `layer_stack_root`; made cached runtime state track `workspace_root` as part of binding identity; kept ambiguity checks active when a state binding already exists; hardened malformed dual-root parsing; preserved `invalid_argument` shaping for test-remount root request errors; changed the dispatch lifecycle test to enter through `workspace_root`. Focused gates passed with `CARGO_TARGET_DIR=/tmp/eos-adversarial-phase2-target`: `cargo test -p operation isolation`, `cargo test -p daemon workspace_runtime`, `cargo test -p workspace`, `cargo test -p operation file`, and `cargo test -p daemon --test phase2_read_paths isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled`. `git diff --check` passed. |
