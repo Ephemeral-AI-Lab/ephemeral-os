@@ -202,6 +202,116 @@ fn workspace_runtime_enter_normalizes_snapshot_before_mounting_workspace() -> Te
 }
 
 #[test]
+fn workspace_runtime_host_create_acquires_leased_base_revision() -> TestResult {
+    let root = test_root("host-create-leased-base");
+    let scratch = root.join("scratch");
+    let host_scratch = root.join("host-scratch");
+    let stack_root = root.join("stack");
+    let workspace_root = root.join("workspace");
+    seed_workspace_base(&stack_root, &workspace_root)?;
+    let runtime = isolated_runtime(&scratch, Path::new("/testbed"));
+
+    let host = runtime
+        .create_host_workspace_for_legacy_layer_stack_root_with_scratch_root_for_test(
+            "caller-host",
+            "invoke-host",
+            &stack_root,
+            &host_scratch,
+        )?;
+
+    assert!(!host.leased_base.lease_id.is_empty());
+    assert_eq!(host.leased_base.version, 1);
+    assert_eq!(host.leased_base.layer_paths.len(), 1);
+    assert_eq!(host.workspace_root, workspace_root.canonicalize()?);
+    assert!(host.workspace.dirs().upperdir.is_dir());
+    assert_eq!(
+        layerstack::LayerStack::open(stack_root.clone())?.active_lease_count(),
+        1
+    );
+    let release = host.lease.release();
+    assert_eq!(release.released, Some(true));
+    assert_eq!(release.error, None);
+    drop(host);
+    assert_eq!(
+        layerstack::LayerStack::open(stack_root.clone())?.active_lease_count(),
+        0
+    );
+    let _ = std::fs::remove_dir_all(&root);
+    Ok(())
+}
+
+#[test]
+fn workspace_runtime_host_create_failure_releases_lease() -> TestResult {
+    let root = test_root("host-create-failure-release");
+    let scratch = root.join("scratch");
+    let host_scratch = root.join("host-scratch");
+    let stack_root = root.join("stack");
+    let workspace_root = root.join("workspace");
+    let invocation_id = "invoke-host-fail";
+    seed_workspace_base(&stack_root, &workspace_root)?;
+    let runtime = isolated_runtime(&scratch, Path::new("/testbed"));
+    let blocked_run_dir = host_scratch
+        .join("sandbox-overlay")
+        .join(format!("{}-{invocation_id}", std::process::id()));
+    std::fs::create_dir_all(blocked_run_dir.parent().ok_or("blocked run parent")?)?;
+    std::fs::write(&blocked_run_dir, "not a directory")?;
+
+    let error = runtime
+        .create_host_workspace_for_legacy_layer_stack_root_with_scratch_root_for_test(
+            "caller-host",
+            invocation_id,
+            &stack_root,
+            &host_scratch,
+        )
+        .expect_err("workspace dir allocation should fail after lease acquisition");
+
+    assert!(
+        error.to_string().contains("lease") && error.to_string().contains("released"),
+        "create failure should report lease release: {error}"
+    );
+    assert_eq!(
+        layerstack::LayerStack::open(stack_root.clone())?.active_lease_count(),
+        0
+    );
+    let _ = std::fs::remove_dir_all(&root);
+    Ok(())
+}
+
+#[test]
+fn workspace_runtime_host_release_is_exact_once() -> TestResult {
+    let root = test_root("host-destroy-exact-once");
+    let scratch = root.join("scratch");
+    let host_scratch = root.join("host-scratch");
+    let stack_root = root.join("stack");
+    let workspace_root = root.join("workspace");
+    seed_workspace_base(&stack_root, &workspace_root)?;
+    let runtime = isolated_runtime(&scratch, Path::new("/testbed"));
+    let host = runtime
+        .create_host_workspace_for_legacy_layer_stack_root_with_scratch_root_for_test(
+            "caller-host",
+            "invoke-host-destroy",
+            &stack_root,
+            &host_scratch,
+        )?;
+    let lease = host.lease.clone();
+
+    let first = host.lease.release();
+    drop(host);
+    let second = lease.release();
+
+    assert_eq!(first.released, Some(true));
+    assert_eq!(first.error, None);
+    assert_eq!(second.released, Some(false));
+    assert_eq!(second.error, None);
+    assert_eq!(
+        layerstack::LayerStack::open(stack_root.clone())?.active_lease_count(),
+        0
+    );
+    let _ = std::fs::remove_dir_all(&root);
+    Ok(())
+}
+
+#[test]
 fn workspace_runtime_compact_remount_for_test_resolves_workspace_root() -> TestResult {
     let root = test_root("compact-remount-workspace-root");
     let scratch = root.join("scratch");

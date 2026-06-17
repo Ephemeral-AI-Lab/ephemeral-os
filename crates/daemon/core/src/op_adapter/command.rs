@@ -45,7 +45,7 @@ enum CommandOpError {
     #[error("layer_stack_root is required")]
     MissingLayerStackRoot,
     #[error(transparent)]
-    LayerStack(#[from] layerstack::LayerStackError),
+    Workspace(#[from] workspace::WorkspaceError),
     #[error(transparent)]
     Command(#[from] CommandExecError),
 }
@@ -151,7 +151,13 @@ fn exec_command(
     }
 
     let root = layer_stack_root.ok_or(CommandOpError::MissingLayerStackRoot)?;
-    let binding = layerstack::require_workspace_binding(&root)?;
+    let workspace_runtime = workspace.ok_or(CommandOpError::MissingLayerStackRoot)?;
+    let host_workspace = workspace_runtime
+        .create_host_workspace_for_legacy_layer_stack_root_locked(
+            &caller_id,
+            &invocation_id,
+            &root,
+        )?;
     context.record_trace_event(
         "workspace.route",
         "route_selected",
@@ -175,8 +181,7 @@ fn exec_command(
                 remountable: false,
             },
             ExecTarget::Ephemeral {
-                root,
-                workspace_root: PathBuf::from(binding.workspace_root),
+                workspace: Box::new(host_workspace.into_command_workspace()),
                 scratch_root: command_ops.scratch_root(),
             },
         )
@@ -298,7 +303,7 @@ fn command_op_error(error: CommandOpError) -> DaemonError {
         CommandOpError::MissingLayerStackRoot => {
             DaemonError::InvalidRequest("layer_stack_root is required".to_owned())
         }
-        CommandOpError::LayerStack(error) => DaemonError::LayerStack(error),
+        CommandOpError::Workspace(error) => DaemonError::InvalidRequest(error.to_string()),
         CommandOpError::Command(error) => command_error(error.into_error()),
     }
 }

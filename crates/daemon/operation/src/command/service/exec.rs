@@ -5,9 +5,8 @@ use std::time::Instant;
 use command::process::{CommandProcess, CommandProcessSpawn, CommandProcessSpec};
 use command::yield_wait_loop::{wait_for_yield_with_timing, WaitOutcome};
 use command::{CommandError, StartCommand};
-use layerstack::service;
 use serde_json::json;
-use workspace::{EphemeralWorkspace, IsolatedWorkspaceBinding};
+use workspace::IsolatedWorkspaceBinding;
 
 use crate::command::contract::{CommandResponse, CommandStatus};
 use crate::command::finalize::insert_cgroup_process_resource_timings;
@@ -25,7 +24,8 @@ use crate::command::trace::{
 };
 
 use super::{
-    command_prepare_error, elapsed_ms, CommandExecError, CommandExecOutcome, CommandOps, ExecTarget,
+    command_prepare_error, elapsed_ms, CommandExecError, CommandExecOutcome, CommandOps,
+    ExecTarget, HostCommandWorkspace,
 };
 
 impl CommandOps {
@@ -51,16 +51,14 @@ impl CommandOps {
         };
         match target {
             ExecTarget::Ephemeral {
-                root,
-                workspace_root,
+                workspace,
                 scratch_root,
             } => self.start_ephemeral(
                 reservation,
                 spec,
                 &request,
                 &id,
-                root,
-                workspace_root,
+                workspace,
                 scratch_root,
                 yield_time_ms,
             ),
@@ -80,29 +78,19 @@ impl CommandOps {
         spec: CommandProcessSpec,
         request: &StartCommand,
         command_id: &str,
-        root: PathBuf,
-        workspace_root: PathBuf,
+        workspace: Box<HostCommandWorkspace>,
         scratch_root: PathBuf,
         yield_time_ms: u64,
     ) -> Result<CommandExecOutcome, CommandExecError> {
-        let request_id = format!("command:{}:{}", request.caller_id, request.invocation_id);
-        let command_snapshot = service::acquire_bounded_snapshot_for_command(
-            &root,
-            &request_id,
-            self.commit_options.auto_squash_max_depth,
-        )
-        .map_err(|error| CommandExecError::new(CommandError::Workspace(error.to_string())))?;
-        let snapshot = command_snapshot.snapshot;
-        let normalization = command_snapshot.normalization;
-        let writable_root = overlay::overlay_writable_root()
-            .map_err(|error| CommandExecError::new(CommandError::Workspace(error.to_string())));
-        let result = writable_root.and_then(|writable_root| {
-            let workspace = EphemeralWorkspace::create(
-                &writable_root.join("runtime"),
-                "sandbox-overlay",
-                &request.invocation_id,
-            )
-            .map_err(|error| CommandExecError::new(CommandError::Workspace(error.to_string())))?;
+        let HostCommandWorkspace {
+            layer_stack_root: root,
+            workspace_root,
+            snapshot,
+            normalization,
+            workspace,
+            lease,
+        } = *workspace;
+        let result = {
             let prepared = prepare_ephemeral(
                 PrepareInputs {
                     caller_id: &request.caller_id,
@@ -139,11 +127,11 @@ impl CommandOps {
             ));
             let process = self.spawn_process(spec, prepared, &mut trace_events)?;
             Ok((workspace, process, trace_events))
-        });
+        };
         let (workspace, process, trace_events) = match result {
             Ok(parts) => parts,
             Err(error) => {
-                let _ = service::release_lease(&root, &snapshot.lease_id);
+                let _ = lease.release();
                 return Err(error);
             }
         };
@@ -159,6 +147,7 @@ impl CommandOps {
                     root,
                     snapshot,
                     workspace,
+                    lease,
                 })
             },
             trace_events,

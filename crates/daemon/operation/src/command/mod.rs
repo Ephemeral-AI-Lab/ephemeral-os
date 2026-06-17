@@ -16,6 +16,6 @@ pub use outcome::{ChangedPathKinds, WorkspaceConflict, WorkspaceTimings};
 pub use service::{
     CommandExecError, CommandExecOutcome, CommandOps, CommandProgressTraceFacts,
     CommandReadProgressOutcome, CommandRemountInspection, CommandRemountQuiesce,
-    CommandStdinTraceFacts, CommandWriteStdinOutcome, ExecTarget,
+    CommandStdinTraceFacts, CommandWriteStdinOutcome, ExecTarget, HostCommandWorkspace,
 };
 pub use trace::CommandTraceEvent;

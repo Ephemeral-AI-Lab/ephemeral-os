@@ -30,6 +30,23 @@ impl EphemeralWorkspace {
         Ok(Self { dirs })
     }
 
+    /// Allocate fresh overlay dirs under the daemon runtime writable root.
+    ///
+    /// This preserves the legacy host-command scratch placement while allowing
+    /// higher-level runtime code to own the workspace lifecycle.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EphemeralWorkspaceError::DirAllocation`] when scratch
+    /// directories cannot be created.
+    pub fn create_runtime_overlay(
+        kind: &str,
+        token: &str,
+    ) -> Result<Self, EphemeralWorkspaceError> {
+        let dirs = crate::dirs::overlay_run_dirs(kind, token)?;
+        Ok(Self { dirs })
+    }
+
     #[must_use]
     pub fn dirs(&self) -> &OverlayDirs {
         &self.dirs

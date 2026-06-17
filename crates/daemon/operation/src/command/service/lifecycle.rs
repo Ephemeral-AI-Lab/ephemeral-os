@@ -6,7 +6,6 @@ use command::process::{
     CommandProcessExit, CommandProcessMetadata, KillReason, PROCESS_METADATA_FILE,
 };
 use command::CollectCompleted;
-use layerstack::service;
 use nix::sys::signal::{killpg, Signal};
 use nix::unistd::Pid;
 use serde_json::json;
@@ -143,7 +142,7 @@ impl CommandOps {
         }
         let _ = self.take_before_resource_sample(run.process().id());
         if let ActiveCommand::Ephemeral(ephemeral) = &**run {
-            let _ = service::release_lease(&ephemeral.root, &ephemeral.snapshot.lease_id);
+            let _ = ephemeral.lease.release();
         }
     }
 
@@ -295,7 +294,7 @@ impl CommandOps {
                     self.capture_options(),
                     request,
                 );
-                let _ = service::release_lease(&ephemeral.root, &ephemeral.snapshot.lease_id);
+                let _ = ephemeral.lease.release();
                 (
                     WorkspaceKind::Ephemeral,
                     Some(ephemeral.snapshot.manifest_version),

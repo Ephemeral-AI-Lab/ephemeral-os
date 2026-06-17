@@ -14,7 +14,7 @@ fn ephemeral_run(id: &str, caller: &str) -> Arc<ActiveCommand> {
     use std::path::PathBuf;
 
     use command::process::CommandProcessSpec;
-    use layerstack::service::Snapshot;
+    use layerstack::service::{LeaseReleaseHandle, Snapshot};
 
     let process = CommandProcess::new(CommandProcessSpec {
         id: id.to_owned(),
@@ -38,6 +38,7 @@ fn ephemeral_run(id: &str, caller: &str) -> Arc<ActiveCommand> {
             layer_paths: Vec::new(),
         },
         workspace,
+        lease: LeaseReleaseHandle::new(PathBuf::from("/layers"), "lease".to_owned()),
     }))
 }
 

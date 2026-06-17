@@ -9,18 +9,18 @@ use std::path::PathBuf;
 
 use command::process::CommandProcess;
 use command::{CollectCompleted, StartCommand};
-use layerstack::service::Snapshot;
+use layerstack::service::{LeaseReleaseHandle, Snapshot};
 use workspace::EphemeralWorkspace;
 use workspace::IsolatedWorkspaceBinding;
 
 use super::contract::{CollectCompletedOutput, CommandCompletion, CommandResponse};
-
 pub(crate) struct EphemeralRun {
     pub(crate) process: CommandProcess,
     pub(crate) trace_origin: CommandTraceOrigin,
     pub(crate) root: PathBuf,
     pub(crate) snapshot: Snapshot,
     pub(crate) workspace: EphemeralWorkspace,
+    pub(crate) lease: LeaseReleaseHandle,
 }
 
 pub(crate) struct IsolatedRun {

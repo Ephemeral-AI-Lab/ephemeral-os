@@ -4,9 +4,12 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Instant;
 
 use command::{CommandConfig, CommandError};
-use layerstack::service::BoundedCaptureOptions;
+use layerstack::service::{
+    BoundedCaptureOptions, LeaseReleaseHandle, Snapshot, SnapshotNormalization,
+};
 use layerstack::CommitOptions;
 use trace::TraceRecord;
+use workspace::EphemeralWorkspace;
 use workspace::IsolatedWorkspaceBinding;
 
 #[cfg(test)]
@@ -43,13 +46,43 @@ pub use remount::{CommandRemountInspection, CommandRemountQuiesce};
 
 pub enum ExecTarget {
     Ephemeral {
-        root: PathBuf,
-        workspace_root: PathBuf,
+        workspace: Box<HostCommandWorkspace>,
         scratch_root: PathBuf,
     },
     Isolated {
         binding: Box<IsolatedWorkspaceBinding>,
     },
+}
+
+#[derive(Debug)]
+pub struct HostCommandWorkspace {
+    layer_stack_root: PathBuf,
+    workspace_root: PathBuf,
+    snapshot: Snapshot,
+    normalization: SnapshotNormalization,
+    workspace: EphemeralWorkspace,
+    lease: LeaseReleaseHandle,
+}
+
+impl HostCommandWorkspace {
+    #[must_use]
+    pub fn new(
+        layer_stack_root: PathBuf,
+        workspace_root: PathBuf,
+        snapshot: Snapshot,
+        normalization: SnapshotNormalization,
+        workspace: EphemeralWorkspace,
+        lease: LeaseReleaseHandle,
+    ) -> Self {
+        Self {
+            layer_stack_root,
+            workspace_root,
+            snapshot,
+            normalization,
+            workspace,
+            lease,
+        }
+    }
 }
 
 pub struct CommandOps {

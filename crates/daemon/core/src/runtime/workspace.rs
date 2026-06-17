@@ -25,16 +25,19 @@ use config::configs::isolated_workspace::{
 };
 use layerstack::{
     read_workspace_binding,
-    service::{compact_snapshot_for_remount, SnapshotNormalization},
+    service::{
+        compact_snapshot_for_remount, LeaseReleaseHandle,
+        LeaseReleaseReport as LayerStackLeaseReleaseReport, Snapshot, SnapshotNormalization,
+    },
     LayerStack, LeaseAwareCopyThroughOutcome, WorkspaceBinding, WORKSPACE_BINDING_FILE,
 };
-use operation::command::{CommandOps, CommandRemountInspection};
+use operation::command::{CommandOps, CommandRemountInspection, HostCommandWorkspace};
 use operation::isolation::contract::IsolationTestRemountFault;
 use serde_json::Value;
 use workspace::IsolatedWorkspaceBinding;
 use workspace::{
-    IsolatedError, IsolatedManager, IsolatedSnapshot, RemountProbe, ResourceCaps,
-    Rfc1918Egress as RuntimeRfc1918Egress, WorkspaceError, WorkspaceHandle,
+    EphemeralWorkspace, IsolatedError, IsolatedManager, IsolatedSnapshot, RemountProbe,
+    ResourceCaps, Rfc1918Egress as RuntimeRfc1918Egress, WorkspaceError, WorkspaceHandle,
 };
 
 const PERSISTED_HANDLES_SCHEMA_VERSION: u64 = 1;
@@ -91,10 +94,57 @@ pub(crate) struct ResolvedWorkspaceRoot {
     pub binding: WorkspaceBinding,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct LeasedBaseRevision {
+    pub lease_id: String,
+    pub version: i64,
+    pub root_hash: String,
+    pub layer_paths: Vec<PathBuf>,
+}
+
+#[derive(Debug)]
+pub(crate) struct HostWorkspaceLifecycle {
+    pub layer_stack_root: PathBuf,
+    pub workspace_root: PathBuf,
+    pub leased_base: LeasedBaseRevision,
+    pub snapshot_normalization: SnapshotNormalization,
+    pub workspace: EphemeralWorkspace,
+    pub lease: LeaseReleaseHandle,
+}
+
+impl HostWorkspaceLifecycle {
+    #[must_use]
+    pub(crate) fn into_command_workspace(self) -> HostCommandWorkspace {
+        let snapshot = Snapshot {
+            lease_id: self.leased_base.lease_id,
+            manifest_version: self.leased_base.version,
+            root_hash: self.leased_base.root_hash,
+            layer_paths: self.leased_base.layer_paths,
+        };
+        HostCommandWorkspace::new(
+            self.layer_stack_root,
+            self.workspace_root,
+            snapshot,
+            self.snapshot_normalization,
+            self.workspace,
+            self.lease,
+        )
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct LeaseReleaseReport {
     pub released: Option<bool>,
     pub error: Option<String>,
+}
+
+impl From<LayerStackLeaseReleaseReport> for LeaseReleaseReport {
+    fn from(report: LayerStackLeaseReleaseReport) -> Self {
+        Self {
+            released: report.released,
+            error: report.error,
+        }
+    }
 }
 
 impl BoundState {
@@ -644,6 +694,96 @@ impl WorkspaceRuntime {
                 ),
             })?;
         resolved_workspace_binding_at(&requested_root, binding)
+    }
+
+    pub(crate) fn create_host_workspace_for_legacy_layer_stack_root_locked(
+        &self,
+        caller_id: &str,
+        invocation_id: &str,
+        layer_stack_root: &Path,
+    ) -> Result<HostWorkspaceLifecycle, WorkspaceError> {
+        let resolved = self.resolve_legacy_layer_stack_root(layer_stack_root)?;
+        self.create_host_workspace(caller_id, invocation_id, &resolved, || {
+            EphemeralWorkspace::create_runtime_overlay("sandbox-overlay", invocation_id)
+                .map_err(host_workspace_setup_error)
+        })
+    }
+
+    #[cfg(test)]
+    pub(crate) fn create_host_workspace_for_legacy_layer_stack_root_with_scratch_root_for_test(
+        &self,
+        caller_id: &str,
+        invocation_id: &str,
+        layer_stack_root: &Path,
+        scratch_root: &Path,
+    ) -> Result<HostWorkspaceLifecycle, WorkspaceError> {
+        let _mode_guard = self.lock_mode_gate();
+        let resolved = self.resolve_legacy_layer_stack_root(layer_stack_root)?;
+        self.create_host_workspace(caller_id, invocation_id, &resolved, || {
+            EphemeralWorkspace::create(scratch_root, "sandbox-overlay", invocation_id)
+                .map_err(host_workspace_setup_error)
+        })
+    }
+
+    fn create_host_workspace(
+        &self,
+        caller_id: &str,
+        invocation_id: &str,
+        resolved: &ResolvedWorkspaceRoot,
+        create_workspace: impl FnOnce() -> Result<EphemeralWorkspace, WorkspaceError>,
+    ) -> Result<HostWorkspaceLifecycle, WorkspaceError> {
+        let (leased_base, snapshot_normalization) =
+            self.acquire_host_base_revision(resolved, caller_id, invocation_id)?;
+        let lease = LeaseReleaseHandle::new(
+            resolved.layer_stack_root.clone(),
+            leased_base.lease_id.clone(),
+        );
+        let workspace = match create_workspace() {
+            Ok(workspace) => workspace,
+            Err(error) => {
+                let release = lease.release();
+                return Err(host_create_failed_error(
+                    error,
+                    &leased_base.lease_id,
+                    release,
+                ));
+            }
+        };
+        Ok(HostWorkspaceLifecycle {
+            layer_stack_root: resolved.layer_stack_root.clone(),
+            workspace_root: resolved.workspace_root.clone(),
+            leased_base,
+            snapshot_normalization,
+            workspace,
+            lease,
+        })
+    }
+
+    fn acquire_host_base_revision(
+        &self,
+        resolved: &ResolvedWorkspaceRoot,
+        caller_id: &str,
+        invocation_id: &str,
+    ) -> Result<(LeasedBaseRevision, SnapshotNormalization), WorkspaceError> {
+        let request_id = format!("command:{caller_id}:{invocation_id}");
+        let command_snapshot = layerstack::service::acquire_bounded_snapshot_for_command(
+            &resolved.layer_stack_root,
+            &request_id,
+            self.command.commit_options().auto_squash_max_depth,
+        )
+        .map_err(|error| WorkspaceError::SnapshotAcquire {
+            source: error.to_string(),
+        })?;
+        let snapshot = command_snapshot.snapshot;
+        Ok((
+            LeasedBaseRevision {
+                lease_id: snapshot.lease_id,
+                version: snapshot.manifest_version,
+                root_hash: snapshot.root_hash,
+                layer_paths: snapshot.layer_paths,
+            },
+            command_snapshot.normalization,
+        ))
     }
 
     fn resolve_bound_workspace_root(
@@ -1241,6 +1381,35 @@ fn workspace_setup_error(error: layerstack::LayerStackError) -> WorkspaceError {
     WorkspaceError::Setup {
         step: error.to_string(),
     }
+}
+
+fn host_workspace_setup_error(error: workspace::EphemeralWorkspaceError) -> WorkspaceError {
+    WorkspaceError::Setup {
+        step: error.to_string(),
+    }
+}
+
+fn host_create_failed_error(
+    error: WorkspaceError,
+    lease_id: &str,
+    release: LayerStackLeaseReleaseReport,
+) -> WorkspaceError {
+    let mut step = format!("host workspace create failed after lease acquisition: {error}");
+    match (release.released, release.error) {
+        (Some(true), None) => {
+            step.push_str(&format!("; lease {lease_id} released"));
+        }
+        (Some(false), None) => {
+            step.push_str(&format!("; lease {lease_id} was already released"));
+        }
+        (_, Some(release_error)) => {
+            step.push_str(&format!(
+                "; lease {lease_id} release failed: {release_error}"
+            ));
+        }
+        (None, None) => {}
+    }
+    WorkspaceError::Setup { step }
 }
 
 fn workspace_error_as_isolated_error(error: WorkspaceError) -> IsolatedError {

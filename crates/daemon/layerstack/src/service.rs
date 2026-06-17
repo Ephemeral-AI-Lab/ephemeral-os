@@ -1,6 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 use std::time::{Duration, Instant};
 
 use crate::model::{LayerChange, LayerPath, LayerRef, Manifest, MANIFEST_SCHEMA_VERSION};
@@ -239,6 +239,65 @@ pub struct SnapshotCompaction {
     pub layer_paths: Vec<PathBuf>,
     pub before_layer_count: usize,
     pub after_layer_count: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct LeaseReleaseHandle {
+    inner: Arc<Mutex<Option<LeaseReleaseState>>>,
+}
+
+#[derive(Debug, Clone)]
+struct LeaseReleaseState {
+    root: PathBuf,
+    lease_id: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct LeaseReleaseReport {
+    pub released: Option<bool>,
+    pub error: Option<String>,
+}
+
+impl LeaseReleaseHandle {
+    #[must_use]
+    pub fn new(root: PathBuf, lease_id: String) -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(Some(LeaseReleaseState { root, lease_id }))),
+        }
+    }
+
+    #[must_use]
+    pub fn release(&self) -> LeaseReleaseReport {
+        let state = self
+            .inner
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .take();
+        let Some(state) = state else {
+            return LeaseReleaseReport {
+                released: Some(false),
+                error: None,
+            };
+        };
+        match release_lease(&state.root, &state.lease_id) {
+            Ok(released) => LeaseReleaseReport {
+                released: Some(released),
+                error: None,
+            },
+            Err(error) => LeaseReleaseReport {
+                released: None,
+                error: Some(error.to_string()),
+            },
+        }
+    }
+}
+
+impl Drop for LeaseReleaseHandle {
+    fn drop(&mut self) {
+        if Arc::strong_count(&self.inner) == 1 {
+            let _ = self.release();
+        }
+    }
 }
 
 pub fn acquire_snapshot(root: &Path, request_id: &str) -> Result<Snapshot, LayerStackError> {

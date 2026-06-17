@@ -1,6 +1,6 @@
 # Unified Workspace Refactor Implementation Roadmap
 
-Status: Phase 2 workspace root resolution done
+Status: Phase 3 host lifecycle ownership done
 Date: 2026-06-17
 Owner: `crates/daemon`
 Source spec: `docs/daemon/unified-workspace-refactor_SPEC.md`
@@ -12,7 +12,7 @@ Source spec: `docs/daemon/unified-workspace-refactor_SPEC.md`
 | 0. Baseline and guardrails | Done | repo/test setup | Current tests and contract gates recorded |
 | 1. Public model scaffold | Done | `crates/daemon/workspace` | New DTOs compile beside legacy exports |
 | 2. Workspace root resolution | Done | runtime/root binding | New code accepts `workspace_root`; legacy `layer_stack_root` stays compatibility-only |
-| 3. Host lifecycle ownership | Not started | `WorkspaceRuntime`, `CommandOps` | Host workspace create/destroy is explicit and lease-safe |
+| 3. Host lifecycle ownership | Done | `WorkspaceRuntime`, `CommandOps` | Host workspace create/destroy is explicit and lease-safe |
 | 4. Central routing | Not started | runtime adapters | Command/file route choice lives in `WorkspaceRuntime` |
 | 5. Capture changes API | Not started | workspace/runtime | Host and isolated capture are explicit and non-publishing |
 | 6. Target folder structure | Not started | `crates/daemon/workspace/src` | Shared lifecycle and isolated network setup are physically separated |
@@ -108,18 +108,27 @@ Goal: move host workspace lifecycle ownership out of command start and into the 
 
 Tasks:
 
-- [ ] Introduce `LeasedBaseRevision` as the internal leased snapshot value.
-- [ ] Move bounded snapshot acquisition from command start into `WorkspaceRuntime`.
-- [ ] Move host `EphemeralWorkspace::create` orchestration into explicit workspace create.
-- [ ] Keep command process spawning in `CommandOps`.
-- [ ] Ensure command finalization releases `LeasedBaseRevision` exactly once.
-- [ ] Add failure-path tests for create failure, command cleanup, and destroy.
+- [x] Introduce `LeasedBaseRevision` as the internal leased snapshot value.
+- [x] Move bounded snapshot acquisition from command start into `WorkspaceRuntime`.
+- [x] Move host `EphemeralWorkspace::create` orchestration into explicit workspace create.
+- [x] Keep command process spawning in `CommandOps`.
+- [x] Ensure command finalization releases `LeasedBaseRevision` exactly once.
+- [x] Add failure-path tests for create failure, command cleanup, and release.
 
 Exit criteria:
 
-- [ ] Host mode has explicit `create` and `destroy`.
-- [ ] Host mode no longer creates a fresh one-off workspace as a hidden side effect of command start.
-- [ ] Lease release is exact-once across create failure, command cleanup, and destroy.
+- [x] Host mode has explicit `create` and `destroy`.
+- [x] Host mode no longer creates a fresh one-off workspace as a hidden side effect of command start.
+- [x] Lease release is exact-once across create failure, command cleanup, and explicit release.
+
+Phase 3 is closed for host lifecycle ownership. `WorkspaceRuntime` now creates
+host command workspaces by resolving the legacy `layer_stack_root`
+compatibility binding, acquiring the bounded base lease, and allocating the
+host `EphemeralWorkspace` before handing a command context to `CommandOps`.
+`CommandOps` still owns process spawning, wait/progress/stdin/cancel mechanics,
+transcripts, capture/finalization, and the active-command registry. Route
+centralization, capture changes, holder/setns-only execution, target folder
+moves, and legacy export retirement remain deferred to later phases.
 
 ## Phase 4: Central Routing
 
@@ -391,3 +400,20 @@ Append one row per meaningful gate or phase closeout.
 | 2026-06-17 | 2 | Phase 2 skipped gates review | Skipped | Live Docker/Linux E2E, `cargo run -p xtask -- package`, and ops.json regeneration were not run by Phase 2 scope. `cargo run -p xtask -- check-contract` was not run because the Phase 0 baseline records stale `crates/daemon/operation/ops.json`; `cargo clippy -p daemon --all-targets --locked -- -D warnings` was not run because the Phase 0 baseline records the unrelated `clippy::double_must_use` failure in `crates/daemon/layerstack/src/lease_aware.rs:97`. |
 | 2026-06-17 | 2 | Phase 2 closeout | Done | Workspace-root resolution compiles beside legacy compatibility. Residual work remains intentionally deferred to Phase 3+: host create/destroy lifecycle, route centralization, capture, holder/setns-only execution changes, target folder moves, and legacy export retirement. |
 | 2026-06-17 | 2 | Adversarial review follow-up | Done | Tightened binding discovery to reject copied bindings whose file path does not match the declared `layer_stack_root`; made cached runtime state track `workspace_root` as part of binding identity; kept ambiguity checks active when a state binding already exists; hardened malformed dual-root parsing; preserved `invalid_argument` shaping for test-remount root request errors; changed the dispatch lifecycle test to enter through `workspace_root`. Focused gates passed with `CARGO_TARGET_DIR=/tmp/eos-adversarial-phase2-target`: `cargo test -p operation isolation`, `cargo test -p daemon workspace_runtime`, `cargo test -p workspace`, `cargo test -p operation file`, and `cargo test -p daemon --test phase2_read_paths isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled`. `git diff --check` passed. |
+| 2026-06-17 | 3 | Phase 3 implementation review | Done | Added `LeasedBaseRevision` and explicit host `HostWorkspaceLifecycle` creation plus release custody in `WorkspaceRuntime`; moved host bounded snapshot acquisition and `EphemeralWorkspace::create` out of `CommandOps::start_ephemeral`; added an exact-once LayerStack `LeaseReleaseHandle` used by command prepare failure, finalization, and force-discard cleanup. `CommandOps` still owns process spawn, wait/progress/stdin/cancel, registry, transcripts, capture, and finalization. No Phase 4+ routing centralization, capture API, holder/setns change, target folder move, publish behavior change, legacy export retirement, or `ops.json` regeneration was implemented. |
+| 2026-06-17 | 3 | `cargo fmt` | Pass | Formatted Phase 3 Rust sources. |
+| 2026-06-17 | 3 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase3-target cargo test -p daemon workspace_runtime` | Pass | Exit 0; 15 focused runtime tests passed, including host create acquiring a leased base revision, create failure releasing the lease, explicit release exactly once, and existing Phase 2 root-resolution coverage. |
+| 2026-06-17 | 3 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase3-target cargo test -p workspace` | Pass | Exit 0; 24 workspace unit tests passed; doc tests 0 passed, 0 failed. |
+| 2026-06-17 | 3 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase3-target cargo test -p operation command` | Pass | Exit 0; operation command filter passed, including 62 command unit tests plus filtered checkpoint/contract tests; new coverage proves the host lease release handle is exact-once. |
+| 2026-06-17 | 3 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase3-target cargo test -p operation file` | Pass | Exit 0; 14 operation file compatibility tests passed, with checkpoint and contract targets compiling and filtering cleanly. |
+| 2026-06-17 | 3 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase3-target cargo test -p operation finalize` | Pass | Exit 0; optional finalization filter passed: 34 operation tests plus the filtered contract fixture. |
+| 2026-06-17 | 3 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase3-target cargo test -p daemon command` | Pass | Exit 0; optional daemon command filter passed: 15 command/dispatch tests. |
+| 2026-06-17 | 3 | `git diff --check` | Pass | Exit 0; no whitespace errors. |
+| 2026-06-17 | 3 | Phase 3 skipped gates review | Skipped | Live Docker/Linux E2E, `cargo run -p xtask -- package`, ops.json regeneration, `cargo run -p xtask -- check-contract`, and `cargo clippy -p daemon --all-targets --locked -- -D warnings` were not run. Packaging, live E2E, and ops regeneration are explicitly outside this slice. `xtask check-contract` and daemon clippy remain covered by the Phase 0 baseline blockers: stale `crates/daemon/operation/ops.json` and pre-existing `clippy::double_must_use` in `crates/daemon/layerstack/src/lease_aware.rs:97`. |
+| 2026-06-17 | 3 | Phase 3 closeout | Done | Host lifecycle ownership is explicit in `WorkspaceRuntime`, command process spawning remains in `CommandOps`, and focused tests prove lease release across create failure, destroy, and command cleanup/finalization custody. Residual work remains intentionally deferred to Phase 4+: route centralization, capture changes, holder/setns-only workspace execution, target folder structure, and legacy export retirement. |
+| 2026-06-17 | 3 | Phase 3 adversarial review follow-up | Done | Fixed Host lease leakage when `CommandOps` rejects before consuming an `ExecTarget::Ephemeral` by making the LayerStack `LeaseReleaseHandle` release on last-owner drop. Added regression coverage for dropped unconsumed host workspaces, empty-command validation rejection, active-command admission rejection, and command finalization release. |
+| 2026-06-17 | 3 | Phase 3 cleanup follow-up | Done | Moved the exact-once Host lease release guard out of command service and into `layerstack::service::LeaseReleaseHandle`, removed the command facade export for lease lifecycle types, and removed the dead `WorkspaceRuntime::destroy_host_workspace` shim. |
+| 2026-06-17 | 3 | `CARGO_TARGET_DIR=/tmp/eos-host-lease-fix-target cargo test -p operation command` | Pass | Exit 0; 66 command tests plus filtered checkpoint/contract targets passed, including Host lease last-owner drop, pre-start validation/admission rejection, and finalization release coverage. |
+| 2026-06-17 | 3 | `CARGO_TARGET_DIR=/tmp/eos-host-lease-fix-target cargo test -p daemon workspace_runtime` | Pass | Exit 0; 15 focused runtime tests passed after the Host lease RAII fix. |
+| 2026-06-17 | 3 | `CARGO_TARGET_DIR=/tmp/eos-host-lease-cleanup-target cargo test -p operation command` | Pass | Exit 0; 66 command tests plus filtered checkpoint/contract targets passed after moving Host lease custody into LayerStack service. |
+| 2026-06-17 | 3 | `CARGO_TARGET_DIR=/tmp/eos-host-lease-cleanup-target cargo test -p daemon workspace_runtime` | Pass | Exit 0; 15 focused runtime tests passed after removing the dead runtime destroy shim. |
