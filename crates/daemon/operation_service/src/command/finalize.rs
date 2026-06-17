@@ -54,7 +54,7 @@ impl CommandOperationService {
         }
     }
 
-    pub(crate) fn finalize_session_command(
+    fn finalize_session_command(
         &self,
         _record: &ActiveFinalizationRecord,
         _process_exit: &::command::process::CommandProcessExit,
@@ -66,7 +66,7 @@ impl CommandOperationService {
         })
     }
 
-    pub(crate) fn finalize_one_shot_command(
+    fn finalize_one_shot_command(
         &self,
         record: &ActiveFinalizationRecord,
         process_exit: &::command::process::CommandProcessExit,
@@ -123,9 +123,6 @@ impl CommandOperationService {
 
         Ok(finalized)
     }
-
-    pub(crate) fn start_finalizer_watch(&self, _command_id: &CommandId) {}
-
     fn begin_finalization(
         &self,
         command_id: &CommandId,

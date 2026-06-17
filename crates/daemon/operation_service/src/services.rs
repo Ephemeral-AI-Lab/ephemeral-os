@@ -39,15 +39,6 @@ impl OperationServices {
             None => None,
         };
 
-        if let Some(handler) = &workspace {
-            if handler.handle.workspace_root != input.workspace_root {
-                return Err(CommandServiceError::WorkspaceRootMismatch {
-                    expected: handler.handle.workspace_root.clone(),
-                    actual: input.workspace_root.clone(),
-                });
-            }
-        }
-
         self.command
             .exec_command(input, workspace, CommandCallContext { caller_id, trace })
     }

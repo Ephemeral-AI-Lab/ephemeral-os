@@ -27,14 +27,7 @@ impl CommandOperationService {
                 message: "exec caller must match command call context".to_owned(),
             });
         }
-        if let Some(handler) = &workspace {
-            if handler.handle.workspace_root != input.workspace_root {
-                return Err(CommandServiceError::WorkspaceRootMismatch {
-                    expected: handler.handle.workspace_root.clone(),
-                    actual: input.workspace_root.clone(),
-                });
-            }
-        }
+        validate_workspace_handler(&input, workspace.as_ref())?;
 
         let command_id = self.process_store().allocate_command_id();
         let reservation = self.process_store().try_reserve()?;
@@ -95,7 +88,6 @@ impl CommandOperationService {
                 error,
             ));
         }
-        self.start_finalizer_watch(&command_id);
 
         Ok(CommandYield {
             command_id: Some(command_id),
@@ -129,6 +121,41 @@ impl CommandOperationService {
             },
         }
     }
+}
+
+fn validate_workspace_handler(
+    input: &ExecCommandInput,
+    workspace: Option<&WorkspaceSessionHandler>,
+) -> Result<(), CommandServiceError> {
+    match (&input.workspace_id, workspace) {
+        (Some(expected), Some(handler)) if &handler.workspace_id != expected => {
+            return Err(CommandServiceError::InvalidCommand {
+                message: "exec workspace_id must match resolved workspace handler".to_owned(),
+            });
+        }
+        (Some(_), None) => {
+            return Err(CommandServiceError::InvalidCommand {
+                message: "exec workspace_id requires a resolved workspace handler".to_owned(),
+            });
+        }
+        (None, Some(_)) => {
+            return Err(CommandServiceError::InvalidCommand {
+                message: "resolved workspace handler requires exec workspace_id".to_owned(),
+            });
+        }
+        _ => {}
+    }
+
+    if let Some(handler) = workspace {
+        if handler.handle.workspace_root != input.workspace_root {
+            return Err(CommandServiceError::WorkspaceRootMismatch {
+                expected: handler.handle.workspace_root.clone(),
+                actual: input.workspace_root.clone(),
+            });
+        }
+    }
+
+    Ok(())
 }
 
 fn finalize_policy(is_session_command: bool, workspace_id: &WorkspaceId) -> CommandFinalizePolicy {
@@ -286,11 +313,15 @@ mod tests {
         )
     }
 
-    fn exec_input(caller_id: &str, workspace_root: PathBuf) -> ExecCommandInput {
+    fn exec_input(
+        caller_id: &str,
+        workspace_root: PathBuf,
+        workspace_id: Option<WorkspaceId>,
+    ) -> ExecCommandInput {
         ExecCommandInput {
             caller_id: CallerId(caller_id.to_owned()),
             workspace_root,
-            workspace_id: None,
+            workspace_id,
             cmd: "printf ok".to_owned(),
             cwd: None,
             timeout_seconds: None,
@@ -377,7 +408,11 @@ mod tests {
 
         let error = service
             .exec_command(
-                exec_input("caller-1", PathBuf::from("/workspace/other")),
+                exec_input(
+                    "caller-1",
+                    PathBuf::from("/workspace/other"),
+                    Some(WorkspaceId("workspace-session".to_owned())),
+                ),
                 Some(session_handler("workspace-session", "caller-1")),
                 context("caller-1"),
             )
@@ -396,13 +431,69 @@ mod tests {
     }
 
     #[test]
+    fn command_exec_rejects_direct_handler_workspace_id_mismatch_before_command_allocation() {
+        let fake = Arc::new(FakeWorkspaceService::new());
+        let service = command_service(fake, CommandProcessStore::new());
+
+        let error = service
+            .exec_command(
+                exec_input(
+                    "caller-1",
+                    PathBuf::from("/workspace/session"),
+                    Some(WorkspaceId("workspace-other".to_owned())),
+                ),
+                Some(session_handler("workspace-session", "caller-1")),
+                context("caller-1"),
+            )
+            .expect_err("direct command service rejects mismatched handler identity");
+
+        assert!(matches!(
+            error,
+            CommandServiceError::InvalidCommand { message }
+                if message.contains("workspace_id must match")
+        ));
+        assert_eq!(
+            service.process_store().allocate_command_id(),
+            CommandId("cmd_1".to_owned())
+        );
+    }
+
+    #[test]
+    fn command_exec_rejects_direct_workspace_id_without_handler_before_command_allocation() {
+        let fake = Arc::new(FakeWorkspaceService::new());
+        let service = command_service(fake, CommandProcessStore::new());
+
+        let error = service
+            .exec_command(
+                exec_input(
+                    "caller-1",
+                    PathBuf::from("/workspace/session"),
+                    Some(WorkspaceId("workspace-session".to_owned())),
+                ),
+                None,
+                context("caller-1"),
+            )
+            .expect_err("direct command service rejects unresolved workspace id");
+
+        assert!(matches!(
+            error,
+            CommandServiceError::InvalidCommand { message }
+                if message.contains("requires a resolved workspace handler")
+        ));
+        assert_eq!(
+            service.process_store().allocate_command_id(),
+            CommandId("cmd_1".to_owned())
+        );
+    }
+
+    #[test]
     fn command_exec_admission_failure_does_not_create_private_workspace() {
         let fake = Arc::new(FakeWorkspaceService::new());
         let service = command_service(Arc::clone(&fake), CommandProcessStore::with_max_active(0));
 
         let error = service
             .exec_command(
-                exec_input("caller-1", PathBuf::from("/workspace/one-shot")),
+                exec_input("caller-1", PathBuf::from("/workspace/one-shot"), None),
                 None,
                 context("caller-1"),
             )
@@ -423,7 +514,7 @@ mod tests {
 
         let error = service
             .exec_command(
-                exec_input("caller-1", PathBuf::from("/workspace/one-shot")),
+                exec_input("caller-1", PathBuf::from("/workspace/one-shot"), None),
                 None,
                 context("caller-1"),
             )
@@ -457,7 +548,7 @@ mod tests {
 
         let error = service
             .exec_command(
-                exec_input("caller-1", PathBuf::from("/workspace/one-shot")),
+                exec_input("caller-1", PathBuf::from("/workspace/one-shot"), None),
                 None,
                 context("caller-1"),
             )
@@ -501,7 +592,7 @@ mod tests {
 
         let error = service
             .exec_command(
-                exec_input("caller-1", PathBuf::from("/workspace/one-shot")),
+                exec_input("caller-1", PathBuf::from("/workspace/one-shot"), None),
                 None,
                 context("caller-1"),
             )

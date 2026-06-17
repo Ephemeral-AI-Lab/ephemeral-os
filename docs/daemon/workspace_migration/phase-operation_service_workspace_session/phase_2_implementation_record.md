@@ -346,9 +346,36 @@ Rules:
     3.5 launch wiring lands; no public advance, collect, or count API was added.
 - Unresolved issues:
   - No background finalizer watcher thread is started while exec still creates
-    process-free scaffold records. `start_finalizer_watch` is wired as the
-    internal hook, and `poll` opportunistically finalizes real spawned processes
-    only when a process group exists.
+    process-free scaffold records. The placeholder `start_finalizer_watch` no-op
+    was removed in the cleanup pass after M4; M3.5 should add real finalizer
+    supervision only alongside real process spawn/yield wiring. Until then,
+    `poll` opportunistically finalizes real spawned processes only when a
+    process group exists.
+- Cleanup notes:
+  - Removed the no-op finalizer-watch placeholder and tightened direct
+    command-service exec validation so `workspace_id` and the resolved session
+    handler cannot disagree. Moved root/mode validation into
+    `CommandOperationService::exec_command` and removed the duplicate wrapper
+    check from `OperationServices::exec_command`.
+  - Made `finalize_session_command` and `finalize_one_shot_command` private
+    helpers because only the supervisor entrypoint should route finalization.
+  - Cleanup verification:
+    - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_exec`:
+      passed, 7 matching unit tests and 3 matching integration tests.
+    - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_finalize`:
+      passed, 1 matching unit test and 6 matching integration tests.
+    - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service`:
+      passed, 55 tests.
+    - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo clippy -p operation_service --all-targets --no-deps -- -D warnings`:
+      passed.
+    - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p operation_service`:
+      passed.
+    - `cargo fmt --check`: passed.
+    - `git diff --check`: passed.
+    - Static cleanup/legacy searches over touched command-service code:
+      no matches for the removed finalizer placeholder, public helper leaks,
+      old command policy terms, public advance/collect/count APIs, dead-code
+      allowances, or stale command-remount placeholder symbols.
 - Handoff notes:
   - Milestone 5 can build row projection on the retained
     `CompletedCommandRecord` path. Completed records now keep caller/workspace
