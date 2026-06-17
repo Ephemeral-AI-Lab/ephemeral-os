@@ -192,7 +192,7 @@ impl CommandRunnerResult {
 }
 
 impl PtyProcess {
-    /// Process-free scaffold backing [`crate::process::CommandProcess::new`].
+    /// Process-free scaffold backing test-only inactive command processes.
     #[must_use]
     pub(crate) fn inactive(writer: File) -> Self {
         Self {

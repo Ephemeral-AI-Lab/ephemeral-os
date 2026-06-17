@@ -207,12 +207,10 @@ Rules:
   - `git diff --check`: passed.
   - `rg -n "WorkspaceRuntime|CommandOps|ExecTarget|InternalHostOneShot|StartCommand|CollectCompleted|layer_stack_root|request_id|trace_id|invocation_id|remountable|trace::TraceId|trace::RequestId|RequestId|TraceId|collect_completed|count_by_caller|count_commands|advance_active_commands_once|by_workspace|by_caller|workspace_index|caller_index" crates/daemon/operation_service/src/command crates/daemon/operation_service/tests/command_exec.rs crates/daemon/operation_service/tests/command_ownership.rs`:
     no matches.
-- Deviations: Milestone 3 active records still use `command::CommandProcess::new`
-  because Milestone 3.5 owns the policy-free real spawn and initial-yield slice.
-  The current `WorkspaceSessionHandler` only exposes the resource-facing
-  workspace handle and snapshot paths, not the policy-free namespace/overlay
-  launch material needed to spawn through the low-level command crate without
-  importing old `operation::command` routing policy.
+- Deviations: At Milestone 3 completion, active records still used a process-free
+  command scaffold because Milestone 3.5 owned the policy-free real spawn and
+  initial-yield slice. Milestone 3.5 later replaced that launch path with
+  `command::CommandProcess::spawn`.
 - Unresolved issues: None for Milestone 3 ownership/admission. Real launch/yield
   behavior is tracked by Milestone 3.5. Ownership, rollback, active/completed
   authorization, and private one-shot id exposure findings from the M3
@@ -230,8 +228,9 @@ Rules:
   accessors so one-shot workspace ids are not recoverable through the command
   service.
 - Handoff notes: Milestone 3.5 should replace the process-free active record path
-  with policy-free spawn and initial yield. The completed-record authorization
-  path is ready for read/poll behavior: service methods authorize active records
+  with policy-free spawn and initial yield; that later happened in the Milestone
+  3.5 entry below. The completed-record authorization path is ready for read/poll
+  behavior: service methods authorize active records
   first, then retained completed records by `CompletedCommandRecord.caller_id`.
   Process-store completion validates caller/workspace ownership against the
   active record before retaining the completed record; Milestone 4 still needs
@@ -291,6 +290,8 @@ Rules:
   - `crates/daemon/command/src/launch.rs`
   - `crates/daemon/command/src/lib.rs`
   - `crates/daemon/command/src/process.rs`
+  - `crates/daemon/command/src/pty.rs`
+  - `crates/daemon/command/tests/unit/process.rs`
   - `crates/daemon/operation_service/Cargo.toml`
   - `crates/daemon/operation_service/src/command/exec.rs`
   - `crates/daemon/operation_service/src/command/finalize_tests.rs`
@@ -307,7 +308,9 @@ Rules:
   - `crates/daemon/workspace/src/lib.rs`
   - `crates/daemon/workspace/src/model.rs`
   - `crates/daemon/workspace/tests/unit/model.rs`
+  - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_command_service_IMPLEMENTATION_PLAN.md`
   - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
+  - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_milestone_3_5_agent_prompt.md`
 - Verification:
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_exec`:
     passed, 7 matching unit tests and 7 matching integration tests.
@@ -330,6 +333,26 @@ Rules:
     passed, 1 matching unit test and 9 matching integration tests;
     `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p workspace model`
     passed, 4 matching unit tests.
+- Cleanup notes:
+  - Removed the now-unused `operation_service` dependency on `trace`; `cargo
+    machete --with-metadata` reports no unused dependencies.
+  - Removed the public process-free `command::CommandProcess::new` scaffold.
+    Tests use the explicit `CommandProcess::inactive_for_test` helper, while
+    production launch paths go through `CommandProcess::spawn`.
+  - Removed the stale Milestone 3.5 agent prompt after the milestone was
+    completed and updated the implementation plan to point at this record
+    instead of the obsolete prompt.
+  - Post-cleanup verification:
+    `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p command`
+    passed, 18 tests;
+    `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service`
+    passed, 60 tests;
+    `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo clippy -p command --all-targets --no-deps -- -D warnings`
+    passed;
+    `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo clippy -p operation_service --all-targets --no-deps -- -D warnings`
+    passed;
+    source-only static scans for `CommandProcess::new`, the old command policy
+    terms, and `trace.workspace` returned no matches.
 - Deviations:
   - Added `command::launch` as a policy-free helper for typed runner request
     construction. It uses the low-level runner protocol internally, but

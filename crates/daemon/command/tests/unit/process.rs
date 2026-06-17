@@ -4,7 +4,7 @@ use serde_json::json;
 
 #[test]
 fn process_exposes_identity_and_expiry() {
-    let process = CommandProcess::new(CommandProcessSpec {
+    let process = CommandProcess::inactive_for_test(CommandProcessSpec {
         id: "cmd_1".to_owned(),
         caller_id: "caller".to_owned(),
         command: "echo ok".to_owned(),

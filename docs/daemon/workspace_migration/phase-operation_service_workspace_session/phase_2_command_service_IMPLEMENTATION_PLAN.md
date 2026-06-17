@@ -597,7 +597,7 @@ pub struct CompletedCommandRecord {
 - [x] Implement `CommandRegistry` as exactly one field.
 - [x] Add process-store structs and lifecycle enums.
 - [x] Add lightweight inactive-process test builders using
-  `command::CommandProcess::new`.
+  `command::CommandProcess::inactive_for_test`.
 - [x] Wire `CommandOperationService` to own `Arc<CommandRegistry>` and
    `Arc<CommandProcessStore>`.
 - [x] Add unit tests proving registry shape, scan behavior, completion-store
@@ -820,8 +820,8 @@ yield behavior.
 
 ## Milestone 3.5: Policy-Free Command Launch And Initial Yield
 
-Agent prompt:
-`docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_milestone_3_5_agent_prompt.md`.
+The completed implementation and verification details live in
+`docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`.
 
 ### Objective
 
@@ -833,12 +833,12 @@ and daemon dispatch remain later milestones.
 
 ### Implementation Record Workflow
 
-- [ ] Before starting, read
+- [x] Before starting, read
   `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
   and carry forward unresolved launch/yield notes from Milestone 3.
-- [ ] At start, create or append the Milestone 3.5 entry in the implementation
+- [x] At start, create or append the Milestone 3.5 entry in the implementation
   record.
-- [ ] Before marking this milestone complete, update that entry with files
+- [x] Before marking this milestone complete, update that entry with files
   changed, verification commands/results, design deviations, unresolved issues,
   and handoff notes for Milestone 4.
 
@@ -864,21 +864,21 @@ and daemon dispatch remain later milestones.
 
 ### Implementation Steps
 
-- [ ] Add a policy-free launch context that contains the runner request, request
+- [x] Add a policy-free launch context that contains the runner request, request
   path, output path, final path, transcript path, transcript timezone, and output
   drain grace without importing `operation::command`.
-- [ ] Build `CommandProcessSpec` from operation-service command ids and caller ids
+- [x] Build `CommandProcessSpec` from operation-service command ids and caller ids
   while keeping `ExecCommandInput` free of request correlation fields.
-- [ ] Replace the `CommandProcess::new` scaffold in
+- [x] Replace the process-free active-record scaffold in
   `CommandOperationService::exec_command` with `CommandProcess::spawn`.
-- [ ] Preserve cleanup on every launch failure: unbind registry entries, release
+- [x] Preserve cleanup on every launch failure: unbind registry entries, release
   admission reservations, and destroy one-shot workspaces while leaving session
   workspaces alive.
-- [ ] Insert the live process into `CommandProcessStore` only after spawn succeeds,
+- [x] Insert the live process into `CommandProcessStore` only after spawn succeeds,
   with transcript paths matching the low-level command artifacts.
-- [ ] Use `command::yield_wait_loop` for the first exec response and map both
+- [x] Use `command::yield_wait_loop` for the first exec response and map both
   running-output and completed outcomes into `CommandYield`.
-- [ ] Add tests proving spawn failure cleanup, active insert failure cleanup after
+- [x] Add tests proving spawn failure cleanup, active insert failure cleanup after
   spawn, first-yield running output, and completed first-yield behavior.
 
 ### Explicit Exclusions
@@ -914,14 +914,14 @@ rg -n "operation::command|StartCommand|request_id|trace_id|invocation_id|remount
 
 ### Acceptance Criteria
 
-- [ ] `CommandOperationService::exec_command` launches through a policy-free
+- [x] `CommandOperationService::exec_command` launches through a policy-free
   command launch context and `command::CommandProcess::spawn`, not the
-  process-free `CommandProcess::new` scaffold.
-- [ ] The first exec response is produced by `command::yield_wait_loop` instead
+  process-free active-record scaffold.
+- [x] The first exec response is produced by `command::yield_wait_loop` instead
   of an unconditional running shell.
-- [ ] Spawn and initial-yield tests prove cleanup is correct for one-shot and
+- [x] Spawn and initial-yield tests prove cleanup is correct for one-shot and
   persistent-session command starts.
-- [ ] Static boundary scan shows no `operation::command`, old command DTOs, request
+- [x] Static boundary scan shows no `operation::command`, old command DTOs, request
   correlation ids, `remountable`, or process-free spawn scaffolds in the
   operation-service launch path.
 
@@ -1114,6 +1114,9 @@ git diff --check
   `advance_active_commands_once` method exists on `CommandOperationService`.
 
 ## Milestone 5: Local OS Row Projection
+
+Agent prompt:
+`docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_milestone_5_agent_prompt.md`.
 
 ### Objective
 

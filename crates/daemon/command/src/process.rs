@@ -170,16 +170,10 @@ impl CommandProcessRuntime {
 }
 
 impl CommandProcess {
-    /// Process-free scaffold for registry and identity tests.
-    #[must_use]
-    pub fn new(spec: CommandProcessSpec) -> Self {
-        Self::with_runtime(spec, CommandProcessRuntime::inactive())
-    }
-
     #[doc(hidden)]
     #[must_use]
     pub fn inactive_for_test(spec: CommandProcessSpec) -> Self {
-        Self::new(spec)
+        Self::with_runtime(spec, CommandProcessRuntime::inactive())
     }
 
     pub fn spawn(

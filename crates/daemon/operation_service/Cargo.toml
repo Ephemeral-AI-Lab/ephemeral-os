@@ -10,7 +10,6 @@ command.workspace = true
 layerstack.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
-trace.workspace = true
 workspace.workspace = true
 
 [lints]
