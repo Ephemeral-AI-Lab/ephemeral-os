@@ -1,9 +1,7 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use crate::isolated_workspace::{
-    IsolatedWorkspaceBinding, WorkspaceHandle as IsolatedWorkspaceHandle,
-};
+use crate::network_mode::isolated_network::{IsolatedWorkspaceBinding, IsolatedWorkspaceHandle};
 use crate::overlay::tree::TreeResourceStats;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

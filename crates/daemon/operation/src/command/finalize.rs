@@ -7,11 +7,12 @@ use layerstack::{service, FileResult};
 use layerstack::{CaptureRouteStats, ChangesetResult, CommitOptions, CommitStatus};
 use serde_json::{json, Map, Value};
 use trace::usize_to_f64_saturating;
-use workspace::IsolatedWorkspaceBinding;
-use workspace::{
-    capture_upperdir, capture_upperdir_for_snapshot_with_options, EphemeralWorkspace,
-    RoutedCapturedChanges, TreeResourceStats,
+use workspace::network_mode::host::EphemeralWorkspace;
+use workspace::network_mode::isolated_network::IsolatedWorkspaceBinding;
+use workspace::overlay::capture::{
+    capture_upperdir, capture_upperdir_for_snapshot_with_options, RoutedCapturedChanges,
 };
+use workspace::overlay::tree::TreeResourceStats;
 
 use super::contract::{
     u64_to_f64_saturating, CommandMetadata, CommandResponse, IgnoredPublishLaneMetadata,
@@ -903,7 +904,7 @@ mod tests {
     use crate::command::CommandStatus;
     use layerstack::{LayerChange, LayerStack};
     use serde_json::Value;
-    use workspace::TreeResourceStats;
+    use workspace::overlay::tree::TreeResourceStats;
 
     use super::*;
 

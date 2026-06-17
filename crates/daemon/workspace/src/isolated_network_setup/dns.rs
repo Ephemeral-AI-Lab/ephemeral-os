@@ -6,11 +6,11 @@ use ::linux_namespace_subprocess::protocol::{RunRequest, RunResult};
 #[cfg(target_os = "linux")]
 use serde_json::{json, Value};
 
-use crate::isolated_workspace::error::IsolatedError;
-use crate::isolated_workspace::manager::{DnsConfiguration, WorkspaceHandle};
 use crate::namespace::NamespaceRuntime;
 #[cfg(target_os = "linux")]
 use crate::namespace::{ns_runner_request, run_child};
+use crate::network_mode::isolated_network::IsolatedError;
+use crate::network_mode::isolated_network::{DnsConfiguration, WorkspaceHandle};
 
 impl NamespaceRuntime {
     pub(crate) fn configure_dns(

@@ -10,8 +10,8 @@ use std::path::PathBuf;
 use command::process::CommandProcess;
 use command::{CollectCompleted, StartCommand};
 use layerstack::service::{LeaseReleaseHandle, Snapshot};
-use workspace::EphemeralWorkspace;
-use workspace::IsolatedWorkspaceBinding;
+use workspace::network_mode::host::EphemeralWorkspace;
+use workspace::network_mode::isolated_network::IsolatedWorkspaceBinding;
 
 use super::contract::{CollectCompletedOutput, CommandCompletion, CommandResponse};
 pub(crate) struct EphemeralRun {

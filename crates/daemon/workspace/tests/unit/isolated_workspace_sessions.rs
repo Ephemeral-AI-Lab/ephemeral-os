@@ -8,10 +8,10 @@ use super::{
     check_host_capacity_against_budget, host_capacity_budget_bytes_from_memavailable_kib,
     parse_memavailable_kib, required_host_capacity_bytes, IsolatedManager, IsolatedSnapshot,
 };
-use crate::isolated_workspace::caps::ResourceCaps;
-use crate::isolated_workspace::error::IsolatedError;
 use crate::lifecycle::leases::next_handle_id;
 use crate::namespace::NamespaceRuntime;
+use crate::network_mode::isolated_network::IsolatedError;
+use crate::network_mode::isolated_network::ResourceCaps;
 
 #[test]
 fn parses_memavailable_from_proc_meminfo() {

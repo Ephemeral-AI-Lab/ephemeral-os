@@ -7,7 +7,7 @@ pub(crate) mod remount;
 use std::collections::HashMap;
 use std::time::Instant;
 
-use crate::isolated_workspace::manager::WorkspaceHandle;
+use crate::network_mode::isolated_network::WorkspaceHandle;
 
 pub use destroy::ExitOutcome;
 pub(crate) use leases::monotonic_seconds;

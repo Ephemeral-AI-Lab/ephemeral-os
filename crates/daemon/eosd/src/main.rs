@@ -67,8 +67,8 @@ fn main() -> Result<()> {
     }
 }
 
-/// `eosd ns-holder <readiness_fd> <control_fd>` — become the single-threaded
-/// child that creates and pins the isolated workspace's namespace stack and
+/// `eosd ns-holder <readiness_fd> <control_fd> [host|isolated]` — become the
+/// single-threaded child that creates and pins a workspace namespace stack and
 /// runs the readiness handshake, then `pause()`s until `SIGTERM`.
 ///
 /// Real thin call: `linux_namespace_subprocess::holder` already exposes
@@ -80,8 +80,9 @@ fn main() -> Result<()> {
 fn run_ns_holder(mut args: std::env::Args) -> Result<()> {
     let readiness_fd = parse_fd(args.next(), "readiness_fd")?;
     let control_fd = parse_fd(args.next(), "control_fd")?;
+    let network = parse_holder_network(args.next())?;
 
-    match linux_namespace_subprocess::holder::run(readiness_fd, control_fd) {
+    match linux_namespace_subprocess::holder::run(readiness_fd, control_fd, network) {
         Ok(()) => Ok(()),
         Err(err) => {
             let code = match &err {
@@ -102,6 +103,20 @@ fn run_ns_holder(mut args: std::env::Args) -> Result<()> {
             // exact Rust exit code (1 / 2) instead of anyhow's generic 1.
             std::process::exit(code);
         }
+    }
+}
+
+fn parse_holder_network(
+    value: Option<String>,
+) -> Result<linux_namespace_subprocess::holder::NamespaceNetwork> {
+    match value.as_deref() {
+        None | Some("isolated") => {
+            Ok(linux_namespace_subprocess::holder::NamespaceNetwork::Isolated)
+        }
+        Some("host") => Ok(linux_namespace_subprocess::holder::NamespaceNetwork::Host),
+        Some(other) => Err(anyhow!(
+            "invalid ns-holder network mode {other:?}; expected host or isolated"
+        )),
     }
 }
 

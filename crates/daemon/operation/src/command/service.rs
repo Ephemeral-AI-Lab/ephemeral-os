@@ -9,8 +9,9 @@ use layerstack::service::{
 };
 use layerstack::CommitOptions;
 use trace::TraceRecord;
-use workspace::EphemeralWorkspace;
-use workspace::IsolatedWorkspaceBinding;
+use workspace::network_mode::host::EphemeralWorkspace;
+use workspace::network_mode::host::WorkspaceNamespaceFds;
+use workspace::network_mode::isolated_network::IsolatedWorkspaceBinding;
 
 #[cfg(test)]
 use command::process::{CommandProcess, CommandProcessSpec};
@@ -61,6 +62,7 @@ pub struct HostCommandWorkspace {
     snapshot: Snapshot,
     normalization: SnapshotNormalization,
     workspace: EphemeralWorkspace,
+    ns_fds: Option<WorkspaceNamespaceFds>,
     lease: LeaseReleaseHandle,
 }
 
@@ -74,12 +76,56 @@ impl HostCommandWorkspace {
         workspace: EphemeralWorkspace,
         lease: LeaseReleaseHandle,
     ) -> Self {
+        let ns_fds = workspace.namespace_fds();
+        Self::from_parts(
+            layer_stack_root,
+            workspace_root,
+            snapshot,
+            normalization,
+            workspace,
+            ns_fds,
+            lease,
+        )
+    }
+
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn new_for_test(
+        layer_stack_root: PathBuf,
+        workspace_root: PathBuf,
+        snapshot: Snapshot,
+        normalization: SnapshotNormalization,
+        workspace: EphemeralWorkspace,
+        ns_fds: Option<WorkspaceNamespaceFds>,
+        lease: LeaseReleaseHandle,
+    ) -> Self {
+        Self::from_parts(
+            layer_stack_root,
+            workspace_root,
+            snapshot,
+            normalization,
+            workspace,
+            ns_fds,
+            lease,
+        )
+    }
+
+    fn from_parts(
+        layer_stack_root: PathBuf,
+        workspace_root: PathBuf,
+        snapshot: Snapshot,
+        normalization: SnapshotNormalization,
+        workspace: EphemeralWorkspace,
+        ns_fds: Option<WorkspaceNamespaceFds>,
+        lease: LeaseReleaseHandle,
+    ) -> Self {
         Self {
             layer_stack_root,
             workspace_root,
             snapshot,
             normalization,
             workspace,
+            ns_fds,
             lease,
         }
     }

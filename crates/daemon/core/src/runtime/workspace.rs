@@ -34,11 +34,13 @@ use layerstack::{
 use operation::command::{CommandOps, CommandRemountInspection, ExecTarget, HostCommandWorkspace};
 use operation::isolation::contract::IsolationTestRemountFault;
 use serde_json::Value;
-use workspace::IsolatedWorkspaceBinding;
-use workspace::{
-    EphemeralWorkspace, IsolatedError, IsolatedManager, IsolatedSnapshot, RemountProbe,
-    ResourceCaps, Rfc1918Egress as RuntimeRfc1918Egress, WorkspaceError, WorkspaceHandle,
+use workspace::network_mode::host::{EphemeralWorkspace, EphemeralWorkspaceError};
+use workspace::network_mode::isolated_network::{
+    ExitOutcome as IsolatedExitOutcome, IsolatedError, IsolatedManager, IsolatedSnapshot,
+    IsolatedWorkspaceBinding, IsolatedWorkspaceHandle as WorkspaceHandle, RemountProbe,
+    ResourceCaps, Rfc1918Egress as RuntimeRfc1918Egress,
 };
+use workspace::WorkspaceError;
 
 const PERSISTED_HANDLES_SCHEMA_VERSION: u64 = 1;
 const WORKSPACE_BINDING_SEARCH_DEPTH: usize = 4;
@@ -451,7 +453,7 @@ impl BoundState {
 /// inspection object.
 pub struct ExitOutcome {
     /// The namespace/cgroup/scratch teardown outcome from the isolated manager.
-    pub isolated: workspace::ExitOutcome,
+    pub isolated: IsolatedExitOutcome,
     /// Whether the workspace's snapshot lease was still held at release.
     pub lease_released: Option<bool>,
     /// Lease release failure retained for audit-side trace emission.
@@ -805,9 +807,17 @@ impl WorkspaceRuntime {
         layer_stack_root: &Path,
     ) -> Result<HostWorkspaceLifecycle, WorkspaceError> {
         let resolved = self.resolve_legacy_layer_stack_root(layer_stack_root)?;
-        self.create_host_workspace(caller_id, invocation_id, &resolved, || {
-            EphemeralWorkspace::create_runtime_overlay("sandbox-overlay", invocation_id)
-                .map_err(host_workspace_setup_error)
+        self.create_host_workspace(caller_id, invocation_id, &resolved, |leased_base| {
+            EphemeralWorkspace::create_runtime_host_namespace_overlay(
+                "sandbox-overlay",
+                invocation_id,
+                caller_id,
+                &resolved.workspace_root,
+                &leased_base.layer_paths,
+                self.config.setup_timeout_s,
+                self.config.exit_grace_s,
+            )
+            .map_err(host_workspace_setup_error)
         })
     }
 
@@ -845,9 +855,18 @@ impl WorkspaceRuntime {
             layer_stack_root,
             move |runtime, caller_id, invocation_id, layer_stack_root| {
                 let resolved = runtime.resolve_legacy_layer_stack_root(layer_stack_root)?;
-                runtime.create_host_workspace(caller_id, invocation_id, &resolved, || {
-                    EphemeralWorkspace::create(scratch_root, "sandbox-overlay", invocation_id)
-                        .map_err(host_workspace_setup_error)
+                runtime.create_host_workspace(caller_id, invocation_id, &resolved, |leased_base| {
+                    EphemeralWorkspace::create_with_host_namespace(
+                        scratch_root,
+                        "sandbox-overlay",
+                        invocation_id,
+                        caller_id,
+                        &resolved.workspace_root,
+                        &leased_base.layer_paths,
+                        runtime.config.setup_timeout_s,
+                        runtime.config.exit_grace_s,
+                    )
+                    .map_err(host_workspace_setup_error)
                 })
             },
         )
@@ -930,9 +949,18 @@ impl WorkspaceRuntime {
     ) -> Result<HostWorkspaceLifecycle, WorkspaceError> {
         let _mode_guard = self.lock_mode_gate();
         let resolved = self.resolve_legacy_layer_stack_root(layer_stack_root)?;
-        self.create_host_workspace(caller_id, invocation_id, &resolved, || {
-            EphemeralWorkspace::create(scratch_root, "sandbox-overlay", invocation_id)
-                .map_err(host_workspace_setup_error)
+        self.create_host_workspace(caller_id, invocation_id, &resolved, |leased_base| {
+            EphemeralWorkspace::create_with_host_namespace(
+                scratch_root,
+                "sandbox-overlay",
+                invocation_id,
+                caller_id,
+                &resolved.workspace_root,
+                &leased_base.layer_paths,
+                self.config.setup_timeout_s,
+                self.config.exit_grace_s,
+            )
+            .map_err(host_workspace_setup_error)
         })
     }
 
@@ -941,7 +969,7 @@ impl WorkspaceRuntime {
         caller_id: &str,
         invocation_id: &str,
         resolved: &ResolvedWorkspaceRoot,
-        create_workspace: impl FnOnce() -> Result<EphemeralWorkspace, WorkspaceError>,
+        create_workspace: impl FnOnce(&LeasedBaseRevision) -> Result<EphemeralWorkspace, WorkspaceError>,
     ) -> Result<HostWorkspaceLifecycle, WorkspaceError> {
         let (leased_base, snapshot_normalization) =
             self.acquire_host_base_revision(resolved, caller_id, invocation_id)?;
@@ -949,7 +977,7 @@ impl WorkspaceRuntime {
             resolved.layer_stack_root.clone(),
             leased_base.lease_id.clone(),
         );
-        let workspace = match create_workspace() {
+        let workspace = match create_workspace(&leased_base) {
             Ok(workspace) => workspace,
             Err(error) => {
                 let release = lease.release();
@@ -1604,7 +1632,7 @@ fn workspace_setup_error(error: layerstack::LayerStackError) -> WorkspaceError {
     }
 }
 
-fn host_workspace_setup_error(error: workspace::EphemeralWorkspaceError) -> WorkspaceError {
+fn host_workspace_setup_error(error: EphemeralWorkspaceError) -> WorkspaceError {
     WorkspaceError::Setup {
         step: error.to_string(),
     }

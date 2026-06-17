@@ -3,11 +3,11 @@ use std::net::Ipv4Addr;
 use std::path::{Path, PathBuf};
 
 use crate::isolated_network_setup::VethAllocation;
-use crate::isolated_workspace::caps::{HANDLE_PREFIX, PERSISTED_HANDLES_SCHEMA_VERSION};
-use crate::isolated_workspace::error::IsolatedError;
+use crate::network_mode::isolated_network::IsolatedError;
+use crate::network_mode::isolated_network::{HANDLE_PREFIX, PERSISTED_HANDLES_SCHEMA_VERSION};
 use serde_json::{json, Value};
 
-use crate::isolated_workspace::manager::{IsolatedManager, OrphanCleanupReport};
+use crate::network_mode::isolated_network::{IsolatedManager, OrphanCleanupReport};
 
 impl IsolatedManager {
     pub(crate) fn reap_persisted_orphans(&mut self) -> Result<OrphanCleanupReport, IsolatedError> {

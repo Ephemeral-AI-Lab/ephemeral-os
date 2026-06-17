@@ -242,6 +242,7 @@ fn host_workspace_lease_releases_when_command_finalizes() -> Result<(), Box<dyn 
         snapshot,
         normalization: _,
         workspace,
+        ns_fds: _,
         lease,
     } = host_workspace;
     let command_id = "cmd_finalize_release";
@@ -824,20 +825,34 @@ fn host_command_workspace_fixture(
     layerstack::build_workspace_base(&layer_stack_root, &workspace_root, true)?;
     let command_snapshot =
         layerstack::service::acquire_bounded_snapshot_for_command(&layer_stack_root, id, 64)?;
-    let workspace = workspace::EphemeralWorkspace::create(&host_scratch, "sandbox-overlay", id)?;
+    let workspace = workspace::network_mode::host::EphemeralWorkspace::create(
+        &host_scratch,
+        "sandbox-overlay",
+        id,
+    )?;
     let lease = LeaseReleaseHandle::new(
         layer_stack_root.clone(),
         command_snapshot.snapshot.lease_id.clone(),
     );
-    let host_workspace = HostCommandWorkspace::new(
+    let host_workspace = HostCommandWorkspace::new_for_test(
         layer_stack_root.clone(),
         workspace_root.canonicalize()?,
         command_snapshot.snapshot,
         command_snapshot.normalization,
         workspace,
+        Some(default_host_ns_fds()),
         lease,
     );
     Ok((root, layer_stack_root, host_workspace))
+}
+
+fn default_host_ns_fds() -> workspace::network_mode::host::WorkspaceNamespaceFds {
+    workspace::network_mode::host::WorkspaceNamespaceFds::from_raw_parts(
+        Some(10),
+        Some(11),
+        Some(12),
+        None,
+    )
 }
 
 fn start_command(cmd: &str) -> command::StartCommand {

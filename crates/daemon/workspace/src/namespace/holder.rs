@@ -20,35 +20,39 @@ use nix::fcntl::OFlag;
 #[cfg(target_os = "linux")]
 use nix::sys::signal::{kill, Signal};
 #[cfg(target_os = "linux")]
-use nix::unistd::{close, pipe2, Pid};
+use nix::unistd::{pipe2, Pid};
 
-use crate::isolated_workspace::error::IsolatedError;
-use crate::isolated_workspace::manager::WorkspaceHandle;
+use crate::network_mode::isolated_network::IsolatedError;
+use crate::network_mode::isolated_network::WorkspaceHandle;
 
 #[cfg(target_os = "linux")]
 use super::fds::{clear_cloexec, expect_line, set_nonblocking};
 #[cfg(any(target_os = "linux", test))]
 use super::setup_error;
-use super::{HolderKillReport, NamespaceRuntime};
+use super::{HolderKillReport, NamespacePlan, NamespaceRuntime};
 
 impl NamespaceRuntime {
     pub(crate) fn spawn_ns_holder(
         &self,
         handle: &mut WorkspaceHandle,
         setup_timeout_s: f64,
+        plan: NamespacePlan,
     ) -> Result<i32, IsolatedError> {
         if self.stub {
             #[cfg(test)]
             {
-                let _ = (handle, setup_timeout_s);
+                let _ = (handle, setup_timeout_s, plan);
                 return Ok(self.stub_holder_pid);
             }
             #[cfg(not(test))]
-            return Ok(0);
+            {
+                let _ = plan;
+                return Ok(0);
+            }
         }
         #[cfg(not(target_os = "linux"))]
         {
-            let _ = (handle, setup_timeout_s);
+            let _ = (handle, setup_timeout_s, plan);
             Ok(0)
         }
         #[cfg(target_os = "linux")]
@@ -63,6 +67,7 @@ impl NamespaceRuntime {
                 .arg("ns-holder")
                 .arg(readiness_child_fd.to_string())
                 .arg(control_child_fd.to_string())
+                .arg(plan.network.holder_arg())
                 .stdin(Stdio::null())
                 .stdout(Stdio::null())
                 .stderr(Stdio::piped())
@@ -70,17 +75,12 @@ impl NamespaceRuntime {
                 .map_err(setup_error)?;
             drop(readiness_write);
             drop(control_read);
-            let readiness_fd = readiness_read.into_raw_fd();
-            let control_fd = control_write.into_raw_fd();
-            handle.readiness_fd = readiness_fd;
-            handle.control_fd = control_fd;
+            let readiness_fd = readiness_read.as_raw_fd();
             if let Err(error) = set_nonblocking(readiness_fd)
                 .and_then(|()| expect_line(readiness_fd, b"ns-up", setup_timeout_s))
             {
                 let stderr = child.stderr.take();
                 let error = ns_holder_startup_error(error, &mut child, stderr);
-                let _ = close(readiness_fd);
-                let _ = close(control_fd);
                 return Err(error);
             }
             let Ok(holder_pid) = i32::try_from(child.id()) else {
@@ -90,10 +90,13 @@ impl NamespaceRuntime {
                     &mut child,
                     stderr,
                 );
-                let _ = close(readiness_fd);
-                let _ = close(control_fd);
                 return Err(error);
             };
+            let readiness_fd = readiness_read.into_raw_fd();
+            let control_fd = control_write.into_raw_fd();
+            handle.readiness_fd = readiness_fd;
+            handle.control_fd = control_fd;
+            handle.holder_pid = holder_pid;
             lock_holder_children()?.insert(holder_pid, child);
             Ok(holder_pid)
         }

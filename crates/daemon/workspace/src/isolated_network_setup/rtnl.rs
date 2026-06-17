@@ -3,7 +3,7 @@ use std::{future::Future, net::Ipv4Addr, thread};
 use futures_util::stream::TryStreamExt;
 use rtnetlink::{new_connection, Handle, LinkBridge, LinkBridgePort, LinkUnspec, LinkVeth};
 
-use crate::isolated_workspace::error::IsolatedError;
+use crate::network_mode::isolated_network::IsolatedError;
 
 use super::{network_error_at, BRIDGE_NAME, BRIDGE_PREFIX_LEN};
 

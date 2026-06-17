@@ -4,7 +4,11 @@
 
 use std::collections::HashMap;
 
-use workspace::{DnsConfiguration, IsolatedWorkspaceId, OverlayDirs, WorkspaceRemountState};
+use workspace::network_mode::isolated_network::{
+    DnsConfiguration, ExitOutcome as IsolatedExitOutcome, IsolatedWorkspaceId,
+    WorkspaceRemountState,
+};
+use workspace::overlay::dirs::OverlayDirs;
 
 use super::*;
 
@@ -105,7 +109,7 @@ fn exit_trace_events_include_teardown_phases_and_mountinfo_marker() {
     phases.insert("kill_holder".to_owned(), 1.5);
     phases.insert("rmtree_scratch".to_owned(), 2.5);
     let exit = ExitOutcome {
-        isolated: workspace::ExitOutcome {
+        isolated: IsolatedExitOutcome {
             workspace_id: IsolatedWorkspaceId("workspace-handle".to_owned()),
             caller_id: "caller-isolated".to_owned(),
             lease_id: "lease-1".to_owned(),

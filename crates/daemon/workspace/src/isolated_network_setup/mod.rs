@@ -1,9 +1,9 @@
 use std::collections::BTreeSet;
 use std::net::Ipv4Addr;
 
-use crate::isolated_workspace::caps::{Rfc1918Egress, HANDLE_PREFIX};
-use crate::isolated_workspace::error::IsolatedError;
 use crate::namespace::test_harness_enabled;
+use crate::network_mode::isolated_network::IsolatedError;
+use crate::network_mode::isolated_network::{Rfc1918Egress, HANDLE_PREFIX};
 
 mod dns;
 #[cfg(target_os = "linux")]

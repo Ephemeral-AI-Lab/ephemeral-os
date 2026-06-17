@@ -1,5 +1,5 @@
 use super::*;
-use crate::capture_upperdir;
+use crate::overlay::capture::capture_upperdir;
 use std::path::PathBuf;
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;

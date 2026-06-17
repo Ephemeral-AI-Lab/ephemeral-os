@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 use std::time::Instant;
 
-use crate::isolated_workspace::error::IsolatedError;
-use crate::isolated_workspace::manager::{
-    IsolatedManager, IsolatedSnapshot, IsolatedWorkspaceId, WorkspaceHandle,
-};
 use crate::lifecycle::leases::{monotonic_seconds, next_handle_id};
 use crate::lifecycle::remount::WorkspaceRemountState;
+use crate::namespace::NamespacePlan;
+use crate::network_mode::isolated_network::IsolatedError;
+use crate::network_mode::isolated_network::{
+    IsolatedManager, IsolatedSnapshot, IsolatedWorkspaceId, WorkspaceHandle,
+};
 use crate::overlay::dirs::create_overlay_dirs;
 
 use super::{close_handle_fds, record_phase_ms};
@@ -18,12 +19,15 @@ impl IsolatedManager {
     ) -> Result<HashMap<String, f64>, IsolatedError> {
         let mut phases_ms = HashMap::new();
         let mut phase_start = Instant::now();
-        handle.holder_pid = self
-            .runtime
-            .spawn_ns_holder(handle, self.caps.setup_timeout_s)?;
+        let namespace_plan = NamespacePlan::isolated_workspace();
+        handle.holder_pid =
+            self.runtime
+                .spawn_ns_holder(handle, self.caps.setup_timeout_s, namespace_plan)?;
         record_phase_ms(&mut phases_ms, "spawn_ns_holder", phase_start);
         phase_start = Instant::now();
-        handle.ns_fds = self.runtime.open_ns_fds(handle.holder_pid)?;
+        handle.ns_fds = self
+            .runtime
+            .open_ns_fds(handle.holder_pid, namespace_plan)?;
         record_phase_ms(&mut phases_ms, "open_ns_fds", phase_start);
         phase_start = Instant::now();
         self.network.initialize()?;

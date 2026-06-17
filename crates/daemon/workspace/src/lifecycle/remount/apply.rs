@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
-use crate::isolated_workspace::error::IsolatedError;
-use crate::isolated_workspace::manager::IsolatedManager;
 use crate::lifecycle::leases::monotonic_seconds;
+use crate::network_mode::isolated_network::IsolatedError;
+use crate::network_mode::isolated_network::IsolatedManager;
 
 use super::{RemountProbe, RemountedWorkspace, WorkspaceRemountState};
 

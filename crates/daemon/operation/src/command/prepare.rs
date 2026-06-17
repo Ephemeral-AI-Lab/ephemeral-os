@@ -4,12 +4,14 @@ use linux_namespace_subprocess::protocol::{
     NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot,
 };
 use serde_json::{json, Value};
-use workspace::IsolatedWorkspaceBinding;
-use workspace::OverlayDirs;
+use workspace::network_mode::host::WorkspaceNamespaceFds;
+use workspace::network_mode::isolated_network::IsolatedWorkspaceBinding;
+use workspace::overlay::dirs::OverlayDirs;
 
 use super::outcome::WorkspaceApiError;
 use super::trace::CommandTraceEvent;
 
+#[derive(Debug)]
 pub(crate) struct PreparedCommand {
     pub(crate) run_request: Value,
     pub(crate) request_path: PathBuf,
@@ -43,16 +45,18 @@ pub(crate) fn prepare_ephemeral(
     layer_paths: &[PathBuf],
     dirs: &OverlayDirs,
     scratch_run_dir: &Path,
+    ns_fds: Option<WorkspaceNamespaceFds>,
 ) -> Result<PreparedCommand, CommandPrepareError> {
+    let ns_fds = require_workspace_ns_fds(ns_fds.map(ns_fds_from_workspace), "host", false)?;
     let tool_call = tool_call(&inputs);
     let run_request = RunRequest {
-        mode: RunMode::FreshNs,
+        mode: RunMode::SetNs,
         tool_call,
         workspace_root: WorkspaceRoot(workspace_root.to_path_buf()),
         layer_paths: layer_paths.to_vec(),
         upperdir: Some(dirs.upperdir.clone()),
         workdir: Some(dirs.workdir.clone()),
-        ns_fds: None,
+        ns_fds: Some(ns_fds),
         cgroup_path: None,
         timeout_seconds: inputs.timeout_seconds,
     };
@@ -68,20 +72,16 @@ pub(crate) fn prepare_isolated(
     inputs: PrepareInputs<'_>,
     binding: &IsolatedWorkspaceBinding,
 ) -> Result<PreparedCommand, CommandPrepareError> {
-    let ns_fds = ns_fds_from_map(&binding.ns_fds);
+    let ns_fds = require_workspace_ns_fds(ns_fds_from_map(&binding.ns_fds), "isolated", true)?;
     let tool_call = tool_call(&inputs);
     let run_request = RunRequest {
-        mode: if ns_fds.is_some() {
-            RunMode::SetNs
-        } else {
-            RunMode::FreshNs
-        },
+        mode: RunMode::SetNs,
         tool_call,
         workspace_root: WorkspaceRoot(binding.workspace_root.clone()),
         layer_paths: binding.layer_paths.clone(),
         upperdir: Some(binding.upperdir.clone()),
         workdir: Some(binding.workdir.clone()),
-        ns_fds,
+        ns_fds: Some(ns_fds),
         cgroup_path: binding.cgroup_path.clone(),
         timeout_seconds: inputs.timeout_seconds,
     };
@@ -165,6 +165,68 @@ fn ns_fds_from_map(map: &std::collections::HashMap<String, i32>) -> Option<NsFds
         pid: fd("pid"),
         net: fd("net"),
     })
+}
+
+fn ns_fds_from_workspace(ns_fds: WorkspaceNamespaceFds) -> NsFds {
+    let fd = |raw: Option<i32>| raw.map(linux_namespace_subprocess::protocol::Fd);
+    NsFds {
+        user: fd(ns_fds.user()),
+        mnt: fd(ns_fds.mnt()),
+        pid: fd(ns_fds.pid()),
+        net: fd(ns_fds.net()),
+    }
+}
+
+fn require_workspace_ns_fds(
+    ns_fds: Option<NsFds>,
+    workspace_label: &'static str,
+    require_net: bool,
+) -> Result<NsFds, CommandPrepareError> {
+    let ns_fds = ns_fds.ok_or_else(|| {
+        workspace_namespace_error(workspace_label, "missing holder namespace fds")
+    })?;
+    for (name, fd) in [
+        ("user", ns_fds.user),
+        ("mnt", ns_fds.mnt),
+        ("pid", ns_fds.pid),
+    ] {
+        if fd.is_none() {
+            return Err(workspace_namespace_error(
+                workspace_label,
+                format!("missing holder {name} namespace fd"),
+            ));
+        }
+    }
+    if require_net && ns_fds.net.is_none() {
+        return Err(workspace_namespace_error(
+            workspace_label,
+            "missing holder net namespace fd",
+        ));
+    }
+    Ok(ns_fds)
+}
+
+fn workspace_namespace_error(
+    workspace_label: &'static str,
+    message: impl Into<String>,
+) -> CommandPrepareError {
+    CommandPrepareError {
+        error: Box::new(WorkspaceApiError::new(
+            "workspace_namespace_unavailable",
+            format!(
+                "{} workspace command requires setns holder fds: {}",
+                workspace_label,
+                message.into()
+            ),
+        )),
+        trace_events: vec![CommandTraceEvent::new(
+            "prepare_failed",
+            json!({
+                "workspace": workspace_label,
+                "reason": "missing_holder_namespace_fds",
+            }),
+        )],
+    }
 }
 
 fn prepare_artifact_error(

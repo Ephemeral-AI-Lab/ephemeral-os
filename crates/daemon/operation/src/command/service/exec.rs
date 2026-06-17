@@ -6,7 +6,7 @@ use command::process::{CommandProcess, CommandProcessSpawn, CommandProcessSpec};
 use command::yield_wait_loop::{wait_for_yield_with_timing, WaitOutcome};
 use command::{CommandError, StartCommand};
 use serde_json::json;
-use workspace::IsolatedWorkspaceBinding;
+use workspace::network_mode::isolated_network::IsolatedWorkspaceBinding;
 
 use crate::command::contract::{CommandResponse, CommandStatus};
 use crate::command::finalize::insert_cgroup_process_resource_timings;
@@ -88,6 +88,7 @@ impl CommandOps {
             snapshot,
             normalization,
             workspace,
+            ns_fds,
             lease,
         } = *workspace;
         let result = {
@@ -107,6 +108,7 @@ impl CommandOps {
                 &snapshot.layer_paths,
                 workspace.dirs(),
                 &workspace.dirs().run_dir,
+                ns_fds,
             )
             .map_err(command_prepare_error)?;
             let mut trace_events = prepared.trace_events.clone();

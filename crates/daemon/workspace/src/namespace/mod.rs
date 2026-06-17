@@ -9,9 +9,74 @@ pub(crate) use setns_runner::{ns_runner_request, run_child};
 #[cfg(test)]
 use std::sync::Arc;
 
-use crate::isolated_workspace::error::IsolatedError;
+use crate::network_mode::isolated_network::IsolatedError;
 
 pub(crate) const TEST_HARNESS_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_HARNESS";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum NamespaceNetwork {
+    Host,
+    Isolated,
+}
+
+impl NamespaceNetwork {
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    pub(crate) const fn holder_arg(self) -> &'static str {
+        match self {
+            Self::Host => "host",
+            Self::Isolated => "isolated",
+        }
+    }
+
+    pub(crate) const fn requires_net_fd(self) -> bool {
+        matches!(self, Self::Isolated)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct NamespacePlan {
+    pub(crate) user: bool,
+    pub(crate) mount: bool,
+    pub(crate) pid: bool,
+    pub(crate) network: NamespaceNetwork,
+}
+
+impl NamespacePlan {
+    pub(crate) const fn host_workspace() -> Self {
+        Self {
+            user: true,
+            mount: true,
+            pid: true,
+            network: NamespaceNetwork::Host,
+        }
+    }
+
+    pub(crate) const fn isolated_workspace() -> Self {
+        Self {
+            user: true,
+            mount: true,
+            pid: true,
+            network: NamespaceNetwork::Isolated,
+        }
+    }
+
+    pub(crate) fn fd_names(self) -> Vec<&'static str> {
+        let mut names = Vec::with_capacity(4);
+        if self.user {
+            names.push("user");
+        }
+        if self.mount {
+            names.push("mnt");
+        }
+        if self.pid {
+            names.push("pid");
+        }
+        if self.network.requires_net_fd() {
+            names.push("net");
+        }
+        names
+    }
+}
 
 pub(crate) fn setup_error(error: impl std::fmt::Display) -> IsolatedError {
     IsolatedError::SetupFailed {

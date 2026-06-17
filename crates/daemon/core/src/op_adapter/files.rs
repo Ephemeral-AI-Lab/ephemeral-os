@@ -13,7 +13,7 @@ use operation::file::{
 };
 use serde_json::{json, Map, Value};
 use thiserror::Error;
-use workspace::IsolatedWorkspaceBinding;
+use workspace::network_mode::isolated_network::IsolatedWorkspaceBinding;
 
 use crate::error::DaemonError;
 use crate::runtime::workspace_runtime::{WorkspaceFileRouteContext, WorkspaceRouteTraceFacts};

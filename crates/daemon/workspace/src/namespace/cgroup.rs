@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use crate::isolated_workspace::error::IsolatedError;
-use crate::isolated_workspace::manager::WorkspaceHandle;
+use crate::network_mode::isolated_network::IsolatedError;
+use crate::network_mode::isolated_network::WorkspaceHandle;
 
 use super::{setup_error, NamespaceRuntime};
 
@@ -10,9 +10,9 @@ impl NamespaceRuntime {
         if self.stub {
             return Ok(PathBuf::new());
         }
-        let path = PathBuf::from(crate::isolated_workspace::caps::CGROUP_ROOT).join(format!(
+        let path = PathBuf::from(crate::network_mode::isolated_network::CGROUP_ROOT).join(format!(
             "{}{}",
-            crate::isolated_workspace::caps::HANDLE_PREFIX,
+            crate::network_mode::isolated_network::HANDLE_PREFIX,
             handle.workspace_id.0
         ));
         std::fs::create_dir_all(&path).map_err(setup_error)?;

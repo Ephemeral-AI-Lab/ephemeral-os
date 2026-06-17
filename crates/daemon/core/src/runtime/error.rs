@@ -1,6 +1,7 @@
 //! Daemon error algebra and wire-kind mapping.
 
 use thiserror::Error;
+use workspace::network_mode::isolated_network::IsolatedError;
 
 #[derive(Debug, Error)]
 #[non_exhaustive]
@@ -42,7 +43,7 @@ pub enum DaemonError {
     ForbiddenInIsolatedWorkspace,
 
     #[error(transparent)]
-    Isolated(#[from] workspace::IsolatedError),
+    Isolated(#[from] IsolatedError),
 }
 
 impl DaemonError {

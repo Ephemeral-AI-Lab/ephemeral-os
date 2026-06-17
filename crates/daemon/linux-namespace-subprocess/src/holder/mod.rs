@@ -19,6 +19,18 @@ pub const READY: &[u8] = b"ready\n";
 
 pub const TEST_HOLDER_CRASH_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH";
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NamespaceNetwork {
+    Host,
+    Isolated,
+}
+
+impl NamespaceNetwork {
+    const fn is_isolated(self) -> bool {
+        matches!(self, Self::Isolated)
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum NsHolderError {
@@ -56,15 +68,22 @@ impl NsHolderError {
 struct Handshake {
     readiness_fd: RawFd,
     control_fd: RawFd,
+    network: NamespaceNetwork,
     network_config: Option<NetworkConfig>,
     _namespaces: HeldNamespaces,
 }
 
 impl Handshake {
-    const fn new(readiness_fd: RawFd, control_fd: RawFd, namespaces: HeldNamespaces) -> Self {
+    const fn new(
+        readiness_fd: RawFd,
+        control_fd: RawFd,
+        network: NamespaceNetwork,
+        namespaces: HeldNamespaces,
+    ) -> Self {
         Self {
             readiness_fd,
             control_fd,
+            network,
             network_config: None,
             _namespaces: namespaces,
         }
@@ -95,23 +114,29 @@ impl Handshake {
     }
 
     fn finish_ready(&self) -> Result<(), NsHolderError> {
-        bring_loopback_up();
-        if let Some(config) = &self.network_config {
-            configure_namespace_veth(config).map_err(|source| NsHolderError::NetworkSetup {
-                step: "veth",
-                source,
-            })?;
+        if self.network.is_isolated() {
+            bring_loopback_up();
+            if let Some(config) = &self.network_config {
+                configure_namespace_veth(config).map_err(|source| NsHolderError::NetworkSetup {
+                    step: "veth",
+                    source,
+                })?;
+            }
+            disable_ipv6_ra();
+            flush_ipv6_default_route();
         }
-        disable_ipv6_ra();
-        flush_ipv6_default_route();
         write_all_fd(self.readiness_fd, READY)
     }
 }
 
-pub fn run(readiness_fd: RawFd, control_fd: RawFd) -> Result<(), NsHolderError> {
-    let namespaces = unshare_namespace_stack(readiness_fd, control_fd)?;
+pub fn run(
+    readiness_fd: RawFd,
+    control_fd: RawFd,
+    network: NamespaceNetwork,
+) -> Result<(), NsHolderError> {
+    let namespaces = unshare_namespace_stack(readiness_fd, control_fd, network)?;
     rbind_proc();
-    let mut handshake = Handshake::new(readiness_fd, control_fd, namespaces);
+    let mut handshake = Handshake::new(readiness_fd, control_fd, network, namespaces);
     handshake.signal_ns_up()?;
     if std::env::var(TEST_HOLDER_CRASH_ENV)
         .unwrap_or_default()
@@ -119,7 +144,9 @@ pub fn run(readiness_fd: RawFd, control_fd: RawFd) -> Result<(), NsHolderError> 
     {
         return Err(NsHolderError::TestCrash);
     }
-    handshake.await_net_ready()?;
+    if network.is_isolated() {
+        handshake.await_net_ready()?;
+    }
     handshake.finish_ready()?;
     loop {
         // SAFETY: `pause(2)` has no pointer arguments and simply suspends this

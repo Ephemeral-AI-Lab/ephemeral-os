@@ -1,10 +1,14 @@
 use std::collections::HashMap;
+#[cfg(unix)]
+use std::fs::File;
 #[cfg(target_os = "linux")]
-use std::fs::{File, OpenOptions};
+use std::fs::OpenOptions;
 #[cfg(target_os = "linux")]
 use std::io::Write;
+#[cfg(unix)]
+use std::os::fd::IntoRawFd;
 #[cfg(target_os = "linux")]
-use std::os::fd::{AsRawFd, IntoRawFd, RawFd};
+use std::os::fd::{AsRawFd, RawFd};
 #[cfg(target_os = "linux")]
 use std::thread;
 #[cfg(target_os = "linux")]
@@ -19,46 +23,91 @@ use nix::fcntl::{fcntl, FcntlArg, FdFlag, OFlag};
 #[cfg(target_os = "linux")]
 use nix::unistd::read;
 
-use crate::isolated_workspace::error::IsolatedError;
+use crate::network_mode::isolated_network::IsolatedError;
 
 #[cfg(target_os = "linux")]
 use super::setup_error;
-use super::NamespaceRuntime;
+use super::{NamespacePlan, NamespaceRuntime};
 
 impl NamespaceRuntime {
     pub(crate) fn open_ns_fds(
         &self,
         holder_pid: i32,
+        plan: NamespacePlan,
     ) -> Result<HashMap<String, i32>, IsolatedError> {
-        if self.stub || holder_pid <= 0 {
+        if self.stub {
+            return open_stub_ns_fds(plan);
+        }
+        if holder_pid <= 0 {
             return Ok(HashMap::new());
         }
         #[cfg(not(target_os = "linux"))]
         {
-            let _ = holder_pid;
+            let _ = (holder_pid, plan);
             Ok(HashMap::new())
         }
         #[cfg(target_os = "linux")]
         {
-            let paths = [
-                ("user", format!("/proc/{holder_pid}/ns/user")),
-                ("mnt", format!("/proc/{holder_pid}/ns/mnt")),
-                ("pid", format!("/proc/{holder_pid}/ns/pid_for_children")),
-                ("net", format!("/proc/{holder_pid}/ns/net")),
-            ];
-            paths
-                .into_iter()
-                .map(|(name, path)| Ok((name.to_owned(), open_inheritable_fd(path)?)))
-                .collect()
+            let mut opened = Vec::new();
+            for name in plan.fd_names() {
+                opened.push((
+                    name.to_owned(),
+                    open_inheritable_fd(namespace_fd_path(holder_pid, name))?,
+                ));
+            }
+            Ok(into_raw_fd_map(opened))
         }
     }
 }
 
+#[cfg(unix)]
+fn open_stub_ns_fds(plan: NamespacePlan) -> Result<HashMap<String, i32>, IsolatedError> {
+    let mut opened = Vec::new();
+    for name in plan.fd_names() {
+        opened.push((name.to_owned(), open_stub_ns_fd()?));
+    }
+    Ok(into_raw_fd_map(opened))
+}
+
+#[cfg(not(unix))]
+fn open_stub_ns_fds(_plan: NamespacePlan) -> Result<HashMap<String, i32>, IsolatedError> {
+    Ok(HashMap::new())
+}
+
+#[cfg(unix)]
+fn open_stub_ns_fd() -> Result<File, IsolatedError> {
+    let file = File::open("/dev/null").map_err(|error| IsolatedError::SetupFailed {
+        step: format!("open stub namespace fd: {error}"),
+    })?;
+    #[cfg(target_os = "linux")]
+    clear_cloexec(file.as_raw_fd())?;
+    Ok(file)
+}
+
 #[cfg(target_os = "linux")]
-fn open_inheritable_fd(path: impl AsRef<std::path::Path>) -> Result<RawFd, IsolatedError> {
+fn namespace_fd_path(holder_pid: i32, name: &str) -> String {
+    match name {
+        "user" => format!("/proc/{holder_pid}/ns/user"),
+        "mnt" => format!("/proc/{holder_pid}/ns/mnt"),
+        "pid" => format!("/proc/{holder_pid}/ns/pid_for_children"),
+        "net" => format!("/proc/{holder_pid}/ns/net"),
+        _ => unreachable!("namespace plan emitted an unknown fd name"),
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn open_inheritable_fd(path: impl AsRef<std::path::Path>) -> Result<File, IsolatedError> {
     let file = File::open(path.as_ref()).map_err(setup_error)?;
     clear_cloexec(file.as_raw_fd())?;
-    Ok(file.into_raw_fd())
+    Ok(file)
+}
+
+#[cfg(unix)]
+fn into_raw_fd_map(opened: Vec<(String, File)>) -> HashMap<String, i32> {
+    opened
+        .into_iter()
+        .map(|(name, file)| (name, file.into_raw_fd()))
+        .collect()
 }
 
 #[cfg(target_os = "linux")]

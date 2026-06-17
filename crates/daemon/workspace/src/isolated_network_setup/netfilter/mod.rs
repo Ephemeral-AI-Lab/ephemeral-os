@@ -1,5 +1,5 @@
-use crate::isolated_workspace::caps::Rfc1918Egress;
-use crate::isolated_workspace::error::IsolatedError;
+use crate::network_mode::isolated_network::IsolatedError;
+use crate::network_mode::isolated_network::Rfc1918Egress;
 
 use super::{NFT_FILTER_TABLE, NFT_NAT_TABLE, RFC1918_NETS};
 

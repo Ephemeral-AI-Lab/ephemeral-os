@@ -15,7 +15,7 @@ use rustix::mount::{mount_change, MountPropagationFlags};
 #[cfg(target_os = "linux")]
 use rustix::thread::{set_thread_gid, set_thread_uid, unshare, UnshareFlags};
 
-use super::NsHolderError;
+use super::{NamespaceNetwork, NsHolderError};
 
 // FDs are pinned for RAII only; the daemon reads `/proc/{holder_pid}/ns/*`.
 #[derive(Debug)]
@@ -23,7 +23,7 @@ pub(crate) struct HeldNamespaces {
     _user: OwnedFd,
     _mnt: OwnedFd,
     _pid: OwnedFd,
-    _net: OwnedFd,
+    _net: Option<OwnedFd>,
     #[cfg(target_os = "linux")]
     _pid_init: Option<PidNamespaceInit>,
 }
@@ -73,13 +73,15 @@ pub(crate) const fn rbind_proc() {}
 pub(crate) fn unshare_namespace_stack(
     readiness_fd: RawFd,
     control_fd: RawFd,
+    network: NamespaceNetwork,
 ) -> Result<HeldNamespaces, NsHolderError> {
     let parent_uid = rustix::process::getuid().as_raw();
     let parent_gid = rustix::process::getgid().as_raw();
-    unshare(
-        UnshareFlags::NEWUSER | UnshareFlags::NEWNS | UnshareFlags::NEWPID | UnshareFlags::NEWNET,
-    )
-    .map_err(|_| NsHolderError::Unshare)?;
+    let mut flags = UnshareFlags::NEWUSER | UnshareFlags::NEWNS | UnshareFlags::NEWPID;
+    if network == NamespaceNetwork::Isolated {
+        flags |= UnshareFlags::NEWNET;
+    }
+    unshare(flags).map_err(|_| NsHolderError::Unshare)?;
     write_if_exists("/proc/self/setgroups", b"deny\n")?;
     write_setup_file(
         "/proc/self/uid_map",
@@ -102,7 +104,11 @@ pub(crate) fn unshare_namespace_stack(
         _user: open_owned_fd("/proc/self/ns/user")?,
         _mnt: open_owned_fd("/proc/self/ns/mnt")?,
         _pid: open_owned_fd("/proc/self/ns/pid_for_children")?,
-        _net: open_owned_fd("/proc/self/ns/net")?,
+        _net: if network == NamespaceNetwork::Isolated {
+            Some(open_owned_fd("/proc/self/ns/net")?)
+        } else {
+            None
+        },
         _pid_init: Some(pid_init),
     })
 }
@@ -111,6 +117,7 @@ pub(crate) fn unshare_namespace_stack(
 pub(crate) const fn unshare_namespace_stack(
     _readiness_fd: RawFd,
     _control_fd: RawFd,
+    _network: NamespaceNetwork,
 ) -> Result<HeldNamespaces, NsHolderError> {
     Err(NsHolderError::Unshare)
 }
@@ -238,7 +245,7 @@ impl HeldNamespaces {
             _user: dev_null_fd()?,
             _mnt: dev_null_fd()?,
             _pid: dev_null_fd()?,
-            _net: dev_null_fd()?,
+            _net: Some(dev_null_fd()?),
             #[cfg(target_os = "linux")]
             _pid_init: None,
         })

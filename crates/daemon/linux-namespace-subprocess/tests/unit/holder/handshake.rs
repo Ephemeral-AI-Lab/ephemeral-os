@@ -2,7 +2,7 @@ use std::os::fd::AsRawFd;
 
 use super::Handshake;
 use crate::holder::namespace::HeldNamespaces;
-use crate::holder::{NsHolderError, NS_UP, READY};
+use crate::holder::{NamespaceNetwork, NsHolderError, NS_UP, READY};
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
@@ -13,6 +13,7 @@ fn signal_ns_up_writes_readiness_token() -> TestResult {
     let mut handshake = Handshake::new(
         readiness_write.as_raw_fd(),
         control_write.as_raw_fd(),
+        NamespaceNetwork::Isolated,
         HeldNamespaces::for_test()?,
     );
 
@@ -32,6 +33,7 @@ fn await_net_ready_accepts_prefixed_line() -> TestResult {
     let mut handshake = Handshake::new(
         readiness_write.as_raw_fd(),
         control_read.as_raw_fd(),
+        NamespaceNetwork::Isolated,
         HeldNamespaces::for_test()?,
     );
 
@@ -48,6 +50,7 @@ fn await_net_ready_rejects_wrong_token() -> TestResult {
     let mut handshake = Handshake::new(
         readiness_write.as_raw_fd(),
         control_read.as_raw_fd(),
+        NamespaceNetwork::Isolated,
         HeldNamespaces::for_test()?,
     );
 
@@ -67,6 +70,7 @@ fn finish_ready_writes_ready_token() -> TestResult {
     let handshake = Handshake::new(
         readiness_write.as_raw_fd(),
         control_write.as_raw_fd(),
+        NamespaceNetwork::Host,
         HeldNamespaces::for_test()?,
     );
 
@@ -90,6 +94,7 @@ fn finish_ready_does_not_signal_ready_when_required_veth_is_missing() -> TestRes
     let mut handshake = Handshake::new(
         readiness_write.as_raw_fd(),
         control_read.as_raw_fd(),
+        NamespaceNetwork::Isolated,
         HeldNamespaces::for_test()?,
     );
     handshake.await_net_ready()?;

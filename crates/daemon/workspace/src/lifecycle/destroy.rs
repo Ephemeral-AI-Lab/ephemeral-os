@@ -4,9 +4,11 @@ use std::time::Instant;
 
 use serde_json::{json, Value};
 
-use crate::isolated_workspace::error::IsolatedError;
-use crate::isolated_workspace::manager::{IsolatedManager, IsolatedWorkspaceId, WorkspaceHandle};
 use crate::namespace::HolderKillReport;
+use crate::network_mode::isolated_network::IsolatedError;
+use crate::network_mode::isolated_network::{
+    IsolatedManager, IsolatedWorkspaceId, WorkspaceHandle,
+};
 use crate::overlay::tree::directory_file_bytes;
 
 use super::{close_handle_fds, monotonic_seconds, record_phase_ms};

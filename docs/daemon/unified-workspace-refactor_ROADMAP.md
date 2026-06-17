@@ -1,6 +1,6 @@
 # Unified Workspace Refactor Implementation Roadmap
 
-Status: Phase 6 target folder structure done
+Status: Phase 7 holder/setns-only workspace execution done
 Date: 2026-06-17
 Owner: `crates/daemon`
 Source spec: `docs/daemon/unified-workspace-refactor_SPEC.md`
@@ -16,7 +16,7 @@ Source spec: `docs/daemon/unified-workspace-refactor_SPEC.md`
 | 4. Central routing | Done | runtime adapters | Command/file route choice lives in `WorkspaceRuntime` |
 | 5. Capture changes API | Not started | workspace/runtime | Host and isolated capture are explicit and non-publishing |
 | 6. Target folder structure | Done | `crates/daemon/workspace/src` | Shared lifecycle and isolated network setup are physically separated |
-| 7. Holder/setns-only workspace execution | Not started | namespace subprocess, command prep | Workspace commands cannot use `FreshNs` |
+| 7. Holder/setns-only workspace execution | Done | namespace subprocess, command prep | Workspace commands cannot use `FreshNs` |
 | 8. Retire legacy names | Not started | public exports/wire compatibility | Legacy names are removed or compatibility-scoped |
 | 9. Final verification | Not started | full daemon surface | Focused unit, contract, clippy, and live E2E gates pass |
 
@@ -32,8 +32,8 @@ Statuses: `Not started`, `In progress`, `Blocked`, `Done`.
 - [ ] `LayerStack` remains the only owner of manifests, publish, OCC, snapshot leases, and capture routing.
 - [ ] `CommandOps` remains the owner of process registry, PTY/process wait, stdin/progress, and cancel mechanics.
 - [ ] `WorkspaceRuntime` coordinates caller lifecycle, route decisions, mode gates, command cancel ordering, and lease custody without owning low-level overlay mount syscalls.
-- [ ] `ns-holder` is the only namespace creator for workspace commands.
-- [ ] `ns-runner` enters prepared workspace namespaces with `setns`.
+- [x] `ns-holder` is the only namespace creator for workspace commands.
+- [x] `ns-runner` enters prepared workspace namespaces with `setns`.
 - [ ] `run_command`, `capture_changes`, and `destroy` do not publish workspace changes.
 - [x] Any single new file above roughly 500 LOC is split before merge.
 
@@ -272,19 +272,31 @@ Goal: remove workspace dependence on fresh namespace initialization.
 
 Tasks:
 
-- [ ] Make `create(NetworkMode::Host)` launch `ns-holder` with `NamespaceNetwork::Host`.
-- [ ] Make `create(NetworkMode::Isolated)` launch `ns-holder` with `NamespaceNetwork::Isolated`.
-- [ ] Make workspace `run_command` always call the setns runner path.
-- [ ] Make missing holder namespace FDs a workspace execution error.
-- [ ] Keep `FreshNs` only behind a separate legacy/non-workspace compatibility path.
-- [ ] Add tests proving workspace command requests cannot select `FreshNs`.
-- [ ] Add tests proving missing holder FDs fail instead of falling back to `FreshNs`.
+- [x] Make `create(NetworkMode::Host)` launch `ns-holder` with `NamespaceNetwork::Host`.
+- [x] Make `create(NetworkMode::Isolated)` launch `ns-holder` with `NamespaceNetwork::Isolated`.
+- [x] Make workspace `run_command` always call the setns runner path.
+- [x] Make missing holder namespace FDs a workspace execution error.
+- [x] Keep `FreshNs` only behind a separate legacy/non-workspace compatibility path.
+- [x] Add tests proving workspace command requests cannot select `FreshNs`.
+- [x] Add tests proving missing holder FDs fail instead of falling back to `FreshNs`.
 
 Exit criteria:
 
-- [ ] `ns-holder` is the single namespace creator for workspace commands.
-- [ ] `ns-runner` only enters prepared workspace namespaces with `setns`.
-- [ ] `FreshNs` cannot be selected by any new workspace command path.
+- [x] `ns-holder` is the single namespace creator for workspace commands.
+- [x] `ns-runner` only enters prepared workspace namespaces with `setns`.
+- [x] `FreshNs` cannot be selected by any new workspace command path.
+
+Phase 7 is closed for holder/setns-only workspace execution. Host command
+workspace creation now launches `ns-holder` with `NamespaceNetwork::Host`,
+opens user/mount/PID namespace FDs, mounts the overlay through the setns helper,
+and carries private holder cleanup in the Host workspace value. Isolated
+workspace creation now passes `NamespaceNetwork::Isolated` explicitly, keeping
+the dedicated network namespace and existing veth/DNS/netfilter setup. Workspace
+command preparation always serializes `RunMode::SetNs` and rejects missing
+holder namespace FDs instead of falling back to `FreshNs`. `FreshNs` remains in
+the subprocess protocol for legacy/non-workspace compatibility paths. No Phase
+8 legacy export/name retirement, publish behavior change, capture behavior
+change, packaging, live E2E, or `ops.json` regeneration was implemented.
 
 ## Phase 8: Retire Legacy Names
 
@@ -367,11 +379,11 @@ Lifecycle and routing:
 
 Namespace and runner:
 
-- [ ] `ns-holder` creates and pins workspace namespace stacks for both modes.
-- [ ] `ns-runner` only enters prepared workspace namespaces with `setns`.
-- [ ] Workspace command requests do not carry a public runner mode enum.
-- [ ] `FreshNs` exists only for legacy/non-workspace compatibility paths.
-- [ ] Missing namespace FDs on a workspace command path are errors, not fallback triggers.
+- [x] `ns-holder` creates and pins workspace namespace stacks for both modes.
+- [x] `ns-runner` only enters prepared workspace namespaces with `setns`.
+- [x] Workspace command requests do not carry a public runner mode enum.
+- [x] `FreshNs` exists only for legacy/non-workspace compatibility paths.
+- [x] Missing namespace FDs on a workspace command path are errors, not fallback triggers.
 
 Publish and capture:
 
@@ -456,11 +468,23 @@ Append one row per meaningful gate or phase closeout.
 | 2026-06-17 | 4 | Phase 4 closeout | Done | Command/file route choice lives in `WorkspaceRuntime`; adapters only parse wire args, record returned traces, invoke selected operation backends, map errors, and shape responses. Route metadata remains compatible, caller-facing storage details remain unexposed, and Phase 5+ work is intentionally deferred. |
 | 2026-06-17 | 6 | Phase 6 implementation review | Done | Moved workspace crate code into responsibility folders: `overlay/`, `lifecycle/`, `lifecycle/remount/`, `namespace`, `network_mode/`, and `isolated_network_setup/`. Kept root `capture`, `dirs`, and `tree` as thin public compatibility re-exports, moved DNS setup into `isolated_network_setup/dns.rs`, removed unused internal namespace/network shims, and kept Phase 5 capture behavior deferred. No Phase 7 holder/setns-only execution, Host holder-backed namespace creation, Phase 8 legacy export retirement, publish behavior change, packaging, live E2E, or ops regeneration was implemented. |
 | 2026-06-17 | 6 | `cargo fmt` | Pass | Formatted Phase 6 module moves and docs. |
-| 2026-06-17 | 6 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase6-target cargo test -p workspace` | Pass | Exit 0; 25 workspace unit tests passed; doc tests 0 passed, 0 failed. |
-| 2026-06-17 | 6 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase6-target cargo test -p daemon workspace_runtime` | Pass | Exit 0; 28 focused runtime tests passed, preserving route, root-resolution, Host lease, and compact-remount behavior after the file moves. |
-| 2026-06-17 | 6 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase6-target cargo test -p operation file` | Pass | Exit 0; 14 operation file tests passed with checkpoint and contract targets compiling/filtering cleanly. |
-| 2026-06-17 | 6 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase6-target cargo test -p operation command` | Pass | Exit 0; 66 operation command unit tests plus one checkpoint command test and one command contract test passed. |
-| 2026-06-17 | 6 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase6-target cargo test -p daemon --test phase2_read_paths` | Pass | Exit 0; 15 read-path/dispatch tests passed. |
-| 2026-06-17 | 6 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase6-target cargo test -p daemon --test phase3_write_paths` | Pass | Exit 0; 6 write-path tests passed. |
+| 2026-06-17 | 6 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase6-fix-target cargo test -p workspace` | Pass | Exit 0; 24 workspace unit tests passed; doc tests 0 passed, 0 failed. |
+| 2026-06-17 | 6 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase6-fix-target cargo test -p daemon workspace_runtime` | Pass | Exit 0; 21 focused runtime tests passed, preserving route, root-resolution, Host lease, and compact-remount behavior after the file moves. |
+| 2026-06-17 | 6 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase6-fix-target cargo test -p operation file` | Pass | Exit 0; 14 operation file tests passed with checkpoint and contract targets compiling/filtering cleanly. |
+| 2026-06-17 | 6 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase6-fix-target cargo test -p operation command` | Pass | Exit 0; 66 operation command unit tests plus one checkpoint command test and one command contract test passed. |
+| 2026-06-17 | 6 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase6-fix-target cargo test -p daemon --test phase2_read_paths` | Pass | Exit 0; 15 read-path/dispatch tests passed. |
+| 2026-06-17 | 6 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase6-fix-target cargo test -p daemon --test phase3_write_paths` | Pass | Exit 0; 6 write-path tests passed. |
 | 2026-06-17 | 6 | Optional workspace path tests review | Skipped | `workspace_read_paths`, `workspace_write_paths`, and `workspace_command_paths` test files are not present in this checkout, so the optional combined gate was not run. |
 | 2026-06-17 | 6 | `git diff --check` | Pass | Exit 0; no whitespace errors. |
+| 2026-06-17 | 7 | Phase 7 implementation review | Done | Host command workspace creation now launches holder-backed user/mount/PID namespaces with `NamespaceNetwork::Host`; isolated create passes `NamespaceNetwork::Isolated`; workspace command prep always serializes `RunMode::SetNs` and rejects missing holder FDs. `FreshNs` remains only in the subprocess protocol and generic finish-prepare tests for legacy/non-workspace compatibility. No Phase 8 retirement, publish/capture behavior change, packaging, live E2E, or ops regeneration was implemented. |
+| 2026-06-17 | 7 | `cargo fmt` | Pass | Formatted Phase 7 Rust sources. |
+| 2026-06-17 | 7 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase7-target cargo test -p workspace` | Pass | Exit 0; 24 workspace unit tests passed; doc tests 0 passed, 0 failed. |
+| 2026-06-17 | 7 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase7-target cargo test -p daemon workspace_runtime` | Pass | Exit 0; 21 focused runtime tests passed, including Host create/route and isolated route coverage after holder-backed Host creation. |
+| 2026-06-17 | 7 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase7-target cargo test -p operation command` | Pass | Exit 0; 68 operation command unit tests plus one checkpoint command test and one command contract test passed, including setns-only and missing-FD regression coverage. |
+| 2026-06-17 | 7 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase7-target cargo test -p operation file` | Pass | Exit 0; 14 operation file tests passed with checkpoint and contract targets compiling/filtering cleanly. |
+| 2026-06-17 | 7 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase7-target cargo test -p daemon --test phase2_read_paths` | Pass | Exit 0; 15 read-path/dispatch tests passed. |
+| 2026-06-17 | 7 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase7-target cargo test -p daemon --test phase3_write_paths` | Pass | Exit 0; 6 write-path tests passed. |
+| 2026-06-17 | 7 | Optional `workspace_command_paths` gate | Skipped | `crates/daemon/core/tests/workspace_command_paths.rs` is not present in this checkout, so the optional Phase 7 command-path test target was not run. |
+| 2026-06-17 | 7 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase7-target cargo check -p eosd` | Pass | Extra non-required check because Phase 7 changed the private `eosd ns-holder` dispatcher. |
+| 2026-06-17 | 7 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase7-target cargo test -p linux-namespace-subprocess holder` | Pass | Extra non-required check because Phase 7 changed holder network-mode behavior and holder tests. |
+| 2026-06-17 | 7 | `git diff --check` | Pass | Exit 0; no whitespace errors. |

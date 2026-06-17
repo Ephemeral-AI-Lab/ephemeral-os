@@ -26,7 +26,7 @@ fn upperdir_tree_resource_timings_capture_bounded_payload() -> TestResult {
 
     let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
     let mut timings = resource_timings(&manifest, 1);
-    let upperdir_stats = workspace::TreeResourceStats::collect(&upperdir);
+    let upperdir_stats = workspace::overlay::tree::TreeResourceStats::collect(&upperdir);
     insert_tree_resource_timings(
         &mut timings,
         "resource.command_exec.upperdir",
@@ -48,7 +48,7 @@ fn upperdir_tree_resource_timings_capture_bounded_payload() -> TestResult {
     );
 
     let truncated_upperdir_stats =
-        workspace::TreeResourceStats::collect_with_entry_limit(&upperdir, 1);
+        workspace::overlay::tree::TreeResourceStats::collect_with_entry_limit(&upperdir, 1);
     insert_tree_resource_timings(
         &mut timings,
         "resource.command_exec.upperdir",
