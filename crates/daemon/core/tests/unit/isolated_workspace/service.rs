@@ -29,7 +29,7 @@ fn enter_trace_events_include_holder_and_dns_configuration() {
     record_enter_started(
         &context,
         "caller-isolated",
-        std::path::Path::new("/tmp/layer-stack"),
+        &WorkspaceRootInput::WorkspaceRoot("/workspace".into()),
     );
     record_entered(
         &context,
@@ -51,7 +51,8 @@ fn enter_trace_events_include_holder_and_dns_configuration() {
     assert_eq!(events[0].module, "isolated_workspace");
     assert_eq!(events[0].name, "enter_started");
     assert_eq!(events[0].details["caller_id"], "caller-isolated");
-    assert_eq!(events[0].details["layer_stack_root"], "/tmp/layer-stack");
+    assert_eq!(events[0].details["workspace_root"], "/workspace");
+    assert!(events[0].details.get("layer_stack_root").is_none());
     assert_eq!(events[1].module, "layer_stack");
     assert_eq!(events[1].name, "binding_loaded");
     assert_eq!(events[1].details["workspace_root"], "/workspace");

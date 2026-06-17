@@ -15,16 +15,17 @@ use super::WorkspaceRuntime;
 type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
 #[test]
-fn cancel_runs_for_caller_tears_down_entered_handle() -> TestResult {
+fn workspace_runtime_cancel_runs_for_caller_tears_down_entered_handle() -> TestResult {
     // The per-caller workspace-run teardown discards the caller's commands
     // (owned by the command registry, not a side-map here)
     // and removes the handle, releasing its lease.
     let root = test_root("cancel-runs-teardown");
     let scratch = root.join("scratch");
+    let workspace_root = root.join("workspace");
     let runtime = isolated_runtime(&scratch, Path::new("/testbed"));
-    seed_empty_stack(&root.join("stack"))?;
+    seed_workspace_base(&root.join("stack"), &workspace_root)?;
 
-    let entered = runtime.enter("caller-command", &root.join("stack"))?;
+    let entered = runtime.enter("caller-command", &workspace_root)?;
     assert_eq!(entered.caller_id, "caller-command");
 
     let cancel = runtime.cancel_runs_for_caller("caller-command", None);
@@ -41,7 +42,7 @@ fn cancel_runs_for_caller_tears_down_entered_handle() -> TestResult {
 }
 
 #[test]
-fn enter_uses_workspace_binding_over_configured_workspace_root() -> TestResult {
+fn workspace_runtime_enter_uses_workspace_binding_over_configured_workspace_root() -> TestResult {
     let root = test_root("bound-workspace-root");
     let scratch = root.join("scratch");
     let stack_root = root.join("stack");
@@ -51,9 +52,12 @@ fn enter_uses_workspace_binding_over_configured_workspace_root() -> TestResult {
     layerstack::build_workspace_base(&stack_root, &workspace_root, true)?;
     let runtime = isolated_runtime(&scratch, Path::new("/configured-fallback"));
 
-    let entered = runtime.enter("caller-bound-root", &stack_root)?;
+    let entered = runtime.enter("caller-bound-root", &workspace_root)?;
 
-    let expected_workspace_root = workspace_root.to_string_lossy().into_owned();
+    let expected_workspace_root = workspace_root
+        .canonicalize()?
+        .to_string_lossy()
+        .into_owned();
     assert_eq!(entered.workspace_root, expected_workspace_root);
     assert!(!entered.dns_configuration.fallback_applied);
     assert_eq!(entered.dns_configuration.previous_first_nameserver, None);
@@ -72,16 +76,18 @@ fn enter_uses_workspace_binding_over_configured_workspace_root() -> TestResult {
 }
 
 #[test]
-fn enter_rebinds_idle_state_to_new_layer_stack_root() -> TestResult {
+fn workspace_runtime_enter_rebinds_idle_state_to_new_layer_stack_root() -> TestResult {
     let root = test_root("root-switch");
     let scratch = root.join("scratch");
     let stack_a = root.join("stack-a");
     let stack_b = root.join("stack-b");
+    let workspace_a = root.join("workspace-a");
+    let workspace_b = root.join("workspace-b");
     let runtime = isolated_runtime(&scratch, Path::new("/testbed"));
-    seed_empty_stack(&stack_a)?;
-    seed_empty_stack(&stack_b)?;
+    seed_workspace_base(&stack_a, &workspace_a)?;
+    seed_workspace_base(&stack_b, &workspace_b)?;
 
-    runtime.enter("caller-root-a", &stack_a)?;
+    runtime.enter_with_report_legacy_layer_stack_root("caller-root-a", &stack_a)?;
     assert_eq!(
         layerstack::LayerStack::open(stack_a.clone())?.active_lease_count(),
         1,
@@ -94,7 +100,7 @@ fn enter_rebinds_idle_state_to_new_layer_stack_root() -> TestResult {
     );
     runtime.exit("caller-root-a", None)?;
 
-    runtime.enter("caller-root-b", &stack_b)?;
+    runtime.enter_with_report_legacy_layer_stack_root("caller-root-b", &stack_b)?;
     assert_eq!(
         layerstack::LayerStack::open(stack_a.clone())?.active_lease_count(),
         0,
@@ -113,11 +119,12 @@ fn enter_rebinds_idle_state_to_new_layer_stack_root() -> TestResult {
 }
 
 #[test]
-fn enter_normalizes_snapshot_before_mounting_workspace() -> TestResult {
+fn workspace_runtime_enter_normalizes_snapshot_before_mounting_workspace() -> TestResult {
     let root = test_root("enter-normalizes-snapshot");
     let scratch = root.join("scratch");
     let stack_root = root.join("stack");
-    seed_empty_stack(&stack_root)?;
+    let workspace_root = root.join("workspace");
+    seed_workspace_base(&stack_root, &workspace_root)?;
     for index in 0..5 {
         LayerStack::open(stack_root.clone())?.publish_layer(&[LayerChange::Write {
             path: LayerPath::parse("large.txt")?,
@@ -126,13 +133,13 @@ fn enter_normalizes_snapshot_before_mounting_workspace() -> TestResult {
     }
     let runtime = isolated_runtime_with_max_depth(&scratch, Path::new("/testbed"), 2);
 
-    let entered = runtime.enter_with_report("caller-normalized", &stack_root)?;
+    let entered = runtime.enter_with_report("caller-normalized", &workspace_root)?;
 
     assert!(
         entered.snapshot_normalization.triggered,
         "enter should normalize the command snapshot before mounting"
     );
-    assert_eq!(entered.snapshot_normalization.active_depth_before, 5);
+    assert_eq!(entered.snapshot_normalization.active_depth_before, 6);
     assert_eq!(entered.snapshot_normalization.active_depth_after, 1);
     assert_eq!(
         entered.handle.layer_paths.len(),
@@ -153,7 +160,67 @@ fn enter_normalizes_snapshot_before_mounting_workspace() -> TestResult {
 }
 
 #[test]
-fn test_reset_rewrites_invalid_manager_json() -> TestResult {
+fn workspace_runtime_resolve_workspace_root_reads_layer_stack_binding() -> TestResult {
+    let root = test_root("resolve-workspace-root");
+    let scratch = root.join("scratch");
+    let stack_root = root.join("stack");
+    let workspace_root = root.join("workspace");
+    seed_workspace_base(&stack_root, &workspace_root)?;
+    let runtime = isolated_runtime(&scratch, Path::new("/configured-fallback"));
+
+    let resolved = runtime.resolve_workspace_root(&workspace_root)?;
+
+    assert_eq!(resolved.workspace_root, workspace_root.canonicalize()?);
+    assert_eq!(resolved.layer_stack_root, stack_root.canonicalize()?);
+    assert_eq!(
+        resolved.binding.workspace_root,
+        workspace_root.to_string_lossy()
+    );
+    assert_eq!(
+        resolved.binding.layer_stack_root,
+        stack_root.to_string_lossy()
+    );
+    let _ = std::fs::remove_dir_all(&root);
+    Ok(())
+}
+
+#[test]
+fn workspace_runtime_resolve_legacy_layer_stack_root_reads_compatibility_binding() -> TestResult {
+    let root = test_root("resolve-legacy-root");
+    let scratch = root.join("scratch");
+    let stack_root = root.join("stack");
+    let workspace_root = root.join("workspace");
+    seed_workspace_base(&stack_root, &workspace_root)?;
+    let runtime = isolated_runtime(&scratch, Path::new("/configured-fallback"));
+
+    let resolved = runtime.resolve_legacy_layer_stack_root(&stack_root)?;
+
+    assert_eq!(resolved.workspace_root, workspace_root.canonicalize()?);
+    assert_eq!(resolved.layer_stack_root, stack_root.canonicalize()?);
+    let _ = std::fs::remove_dir_all(&root);
+    Ok(())
+}
+
+#[test]
+fn workspace_runtime_resolve_workspace_root_rejects_ambiguous_bindings() -> TestResult {
+    let root = test_root("resolve-ambiguous-root");
+    let scratch = root.join("scratch");
+    let workspace_root = root.join("workspace");
+    seed_workspace_base(&root.join("stack-a"), &workspace_root)?;
+    seed_workspace_base(&root.join("stack-b"), &workspace_root)?;
+    let runtime = isolated_runtime(&scratch, Path::new("/configured-fallback"));
+
+    let error = runtime
+        .resolve_workspace_root(&workspace_root)
+        .expect_err("ambiguous workspace bindings should fail");
+
+    assert!(error.to_string().contains("ambiguous workspace_root"));
+    let _ = std::fs::remove_dir_all(&root);
+    Ok(())
+}
+
+#[test]
+fn workspace_runtime_test_reset_rewrites_invalid_manager_json() -> TestResult {
     let root = test_root("reset-manager");
     let scratch = root.join("scratch");
     std::fs::create_dir_all(&scratch)?;
@@ -223,12 +290,9 @@ fn test_root(label: &str) -> PathBuf {
     root
 }
 
-fn seed_empty_stack(root: &Path) -> TestResult {
-    std::fs::create_dir_all(root.join("layers"))?;
-    std::fs::create_dir_all(root.join("staging"))?;
-    std::fs::write(
-        root.join("manifest.json"),
-        r#"{"schema_version":1,"version":1,"layers":[]}"#,
-    )?;
+fn seed_workspace_base(root: &Path, workspace_root: &Path) -> TestResult {
+    std::fs::create_dir_all(workspace_root)?;
+    std::fs::write(workspace_root.join("seed.txt"), "seed\n")?;
+    layerstack::build_workspace_base(root, workspace_root, true)?;
     Ok(())
 }

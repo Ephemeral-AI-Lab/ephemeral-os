@@ -77,7 +77,7 @@ namespaces with `setns` for workspace commands.
 |---|---|---|
 | `LayerStack` | manifests, layer storage, snapshot leases, publish/OCC, capture routing | process lifecycle, network namespace lifecycle |
 | `WorkspaceRuntime` | caller lifecycle, route decision, mode gate, command cancel ordering, lease custody | low-level overlay mount syscalls |
-| `workspace` crate | overlay dirs, upperdir capture primitives, host/isolated workspace lifecycle primitives, host-side isolated network orchestration | command process registry, public operation wire shape |
+| `workspace` crate | overlay dirs, upperdir capture primitives, shared holder-backed workspace lifecycle/remount primitives, isolated-network orchestration | command process registry, public operation wire shape |
 | `CommandOps` | process registry, PTY/process wait, stdin/progress/cancel mechanics | snapshot leases, overlay dir allocation |
 | `overlay` crate | overlayfs mount/unmount mechanics | daemon policy |
 | `linux-namespace-subprocess` | single-threaded holder namespace creation, in-namespace setup, setns command execution | host bridge/veth/netfilter ownership, caller-facing workspace semantics |
@@ -143,11 +143,11 @@ pub(crate) struct OverlayDirs {
 ## 5. Target Folder Structure And LOC Budget
 
 Current `crates/daemon/workspace/src` is about 3.8k LOC. The refactor keeps
-roughly the same implementation size while moving public API into small files
-and keeping low-level mechanisms split.
+mechanism code bounded while moving public API into small files and keeping
+shared lifecycle/remount code separate from isolated-network setup mechanisms.
 
 ```text
-crates/daemon/workspace/src/                         ~4,250 LOC
+crates/daemon/workspace/src/                         ~5,000 LOC
   lib.rs                                                ~35
   model.rs                                             ~230
   error.rs                                              ~90
@@ -157,27 +157,47 @@ crates/daemon/workspace/src/                         ~4,250 LOC
     dirs.rs                                            ~120
     capture.rs                                         ~110
     tree.rs                                            ~120
-  network_mode/                                      ~3,365
-    mod.rs                                              ~45
-    host.rs                                             ~90
-    isolated.rs                                        ~120
-    isolated/                                        ~3,110
+  lifecycle/                                        ~1,120
+    mod.rs                                              ~30
+    create.rs                                          ~220
+    destroy.rs                                         ~170
+    recovery.rs                                        ~210
+    leases.rs                                          ~130
+    remount/                                           ~360
       mod.rs                                            ~40
-      types.rs                                         ~150
-      caps.rs                                           ~80
-      manager.rs                                       ~160
-      lifecycle.rs                                     ~480
-      recovery.rs                                      ~330
-      remount.rs                                       ~170
-      namespace.rs                                     ~600
-      ns_runner.rs                                     ~205
-      network/                                       ~895
-        mod.rs                                         ~220
-        rtnl.rs                                        ~190
-        netfilter/mod.rs                               ~165
-        netfilter/exprs.rs                             ~320
-        netfilter/wire.rs                              ~340
+      state.rs                                          ~80
+      plan.rs                                          ~120
+      apply.rs                                         ~120
+  namespace/                                          ~940
+    mod.rs                                             ~180
+    plan.rs                                            ~120
+    holder.rs                                          ~220
+    setns_runner.rs                                    ~205
+    fds.rs                                             ~115
+    cgroup.rs                                          ~100
+  network_mode/                                      ~280
+    mod.rs                                              ~50
+    host.rs                                            ~110
+    isolated_network.rs                                ~120
+  isolated_network_setup/                           ~1,800
+    mod.rs                                              ~45
+    types.rs                                           ~120
+    caps.rs                                             ~80
+    manager.rs                                         ~160
+    setup.rs                                           ~180
+    teardown.rs                                        ~110
+    dns.rs                                              ~90
+    rtnl.rs                                            ~190
+    netfilter/mod.rs                                   ~165
+    netfilter/exprs.rs                                 ~320
+    netfilter/wire.rs                                  ~340
 ```
+
+Public API names remain `NetworkMode::Host` and `NetworkMode::Isolated`.
+`isolated_network_setup/` is only the implementation namespace for veth, DNS,
+netfilter, and dedicated-network setup with its paired cleanup helpers. Shared
+holder lifecycle, namespace entry, cgroup handling, recovery, and remount logic
+must not be hidden under `isolated_network_setup/`.
 
 Supporting daemon/runtime files:
 
@@ -604,8 +624,11 @@ not use `FreshNs`; it must use holder-created namespaces plus `setns`.
 ### Phase 6: Move Files Into Target Structure
 
 - Move `capture.rs`, `dirs.rs`, and `tree.rs` into `overlay/`.
-- Move current isolated internals into `network_mode/isolated/`.
-- Keep mechanism names for namespace/veth/netfilter files.
+- Move shared holder lifecycle, recovery, and remount logic into `lifecycle/`.
+- Move namespace entry and cgroup handling into `namespace/`.
+- Move only dedicated-network setup/cleanup internals into
+  `isolated_network_setup/`.
+- Keep mechanism names for veth, DNS, rtnetlink, and netfilter files.
 
 ### Phase 7: Remove Workspace Dependence On Fresh Namespace Init
 
@@ -689,7 +712,10 @@ Then run focused suites:
 - `BaseRevision` and `LeasedBaseRevision` replace public/internal snapshot
   naming.
 - Overlay internals live under `overlay/`.
-- Host and isolated modes are parallel under `network_mode/`.
+- Host and isolated mode adapters are parallel under `network_mode/`.
+- Dedicated-network setup/cleanup internals live under
+  `isolated_network_setup/`; shared lifecycle, namespace, recovery, cgroup, and
+  remount code do not.
 - `ns-holder` is the only namespace creator for workspace commands.
 - `ns-runner` only enters prepared workspace namespaces with `setns`.
 - `destroy` never publishes.

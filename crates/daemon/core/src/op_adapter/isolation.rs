@@ -4,10 +4,10 @@
 use operation::isolation::contract::{
     IsolationEnterInput, IsolationEnterOutput, IsolationExitInput, IsolationExitOutput,
     IsolationStatusInput, IsolationStatusOutput, IsolationTestCompactRemountInput, ListOpenOutput,
-    TestCompactRemountOutput, TestResetOutput,
+    TestCompactRemountOutput, TestResetOutput, WorkspaceRootInput,
 };
 use serde_json::{json, Value};
-use workspace::{IsolatedError, RemountProbe, WorkspaceHandle};
+use workspace::{IsolatedError, RemountProbe, WorkspaceError, WorkspaceHandle};
 
 use crate::error::DaemonError;
 use crate::workspace_runtime::{LeaseReleaseReport, WorkspaceRemountCompactionAttempt};
@@ -23,7 +23,6 @@ pub(crate) fn op_enter(
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let caller_id = input.caller.to_string();
-    let root = input.layer_stack_root;
     context.record_trace_event(
         "workspace.route",
         "route_selected",
@@ -32,9 +31,17 @@ pub(crate) fn op_enter(
             "reason": "isolation_enter_lifecycle",
         }),
     );
-    record_enter_started(&context, &caller_id, &root);
+    record_enter_started(&context, &caller_id, &input.root);
     let workspace = &context.require_services()?.workspace;
-    match workspace.enter_with_report(&caller_id, &root) {
+    let entered = match &input.root {
+        WorkspaceRootInput::WorkspaceRoot(workspace_root) => {
+            workspace.enter_with_report(&caller_id, workspace_root)
+        }
+        WorkspaceRootInput::LegacyLayerStackRoot(layer_stack_root) => {
+            workspace.enter_with_report_legacy_layer_stack_root(&caller_id, layer_stack_root)
+        }
+    };
+    match entered {
         Ok(outcome) => {
             if outcome.recovery.attempted {
                 record_recovery_started(&context);
@@ -62,6 +69,7 @@ pub(crate) fn op_enter(
             record_lease_release_failed(&context, "isolation_enter_rollback", &lease_release);
             Ok(error_payload(&source))
         }
+        Err(WorkspaceEnterError::RootResolution(error)) => Ok(workspace_error_payload(&error)),
         Err(WorkspaceEnterError::Isolated(error)) => Ok(error_payload(&error)),
     }
 }
@@ -160,12 +168,23 @@ pub(crate) fn op_test_compact_remount(
         path: input.probe_path,
         expected_content: input.probe_content,
     };
-    match workspace.compact_remount_open_workspace_for_test(
-        &caller_id,
-        &input.layer_stack_root,
-        probe,
-        input.test_force_block_reason,
-    ) {
+    let compacted = match &input.root {
+        WorkspaceRootInput::WorkspaceRoot(workspace_root) => workspace
+            .compact_remount_open_workspace_for_test(
+                &caller_id,
+                workspace_root,
+                probe,
+                input.test_force_block_reason,
+            ),
+        WorkspaceRootInput::LegacyLayerStackRoot(layer_stack_root) => workspace
+            .compact_remount_open_workspace_for_test_legacy_layer_stack_root(
+                &caller_id,
+                layer_stack_root,
+                probe,
+                input.test_force_block_reason,
+            ),
+    };
+    match compacted {
         Ok(WorkspaceRemountCompactionAttempt::Compacted(report)) => {
             context.record_trace_event(
                 "isolated_workspace",
@@ -428,15 +447,25 @@ pub(crate) fn exit_response(exit: ExitOutcome) -> Value {
     })
 }
 
-fn record_enter_started(context: &DispatchContext<'_>, caller_id: &str, root: &std::path::Path) {
-    context.record_trace_event(
-        "isolated_workspace",
-        "enter_started",
-        json!({
-            "caller_id": caller_id,
-            "layer_stack_root": root.display().to_string(),
-        }),
-    );
+fn record_enter_started(context: &DispatchContext<'_>, caller_id: &str, root: &WorkspaceRootInput) {
+    let mut details = json!({"caller_id": caller_id});
+    if let Some(object) = details.as_object_mut() {
+        match root {
+            WorkspaceRootInput::WorkspaceRoot(workspace_root) => {
+                object.insert(
+                    "workspace_root".to_owned(),
+                    json!(workspace_root.display().to_string()),
+                );
+            }
+            WorkspaceRootInput::LegacyLayerStackRoot(layer_stack_root) => {
+                object.insert(
+                    "legacy_layer_stack_root".to_owned(),
+                    json!(layer_stack_root.display().to_string()),
+                );
+            }
+        }
+    }
+    context.record_trace_event("isolated_workspace", "enter_started", details);
 }
 
 fn record_entered(
@@ -722,6 +751,16 @@ fn error_payload(error: &IsolatedError) -> Value {
         _ => json!({}),
     };
     refused_response(error.kind(), error.to_string(), details)
+}
+
+fn workspace_error_payload(error: &WorkspaceError) -> Value {
+    let kind = match error {
+        WorkspaceError::InvalidRequest { .. } => "invalid_argument",
+        WorkspaceError::FeatureDisabled => "feature_disabled",
+        WorkspaceError::Setup { .. } => "setup_failed",
+        _ => "workspace_error",
+    };
+    refused_response(kind, error.to_string(), json!({}))
 }
 
 fn env_true(key: &str) -> bool {

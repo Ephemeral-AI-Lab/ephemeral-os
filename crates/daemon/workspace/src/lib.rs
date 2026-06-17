@@ -11,7 +11,10 @@
 pub mod capture;
 pub mod dirs;
 pub mod ephemeral_workspace;
+pub mod error;
 pub mod isolated_workspace;
+pub mod model;
+pub mod service;
 pub mod tree;
 
 pub use capture::{
@@ -20,9 +23,42 @@ pub use capture::{
 };
 pub use dirs::{DirAllocationError, OverlayDirs, OverlayDirsGuard};
 pub use ephemeral_workspace::{overlay_run_dirs, EphemeralWorkspace, EphemeralWorkspaceError};
+pub use error::WorkspaceError;
+// Compatibility export for existing isolated-workspace callers during the
+// unified workspace migration. The new public scaffold handle is available as
+// `workspace::model::WorkspaceHandle` and `workspace::UnifiedWorkspaceHandle`.
+pub use isolated_workspace::WorkspaceHandle;
 pub use isolated_workspace::{
     DnsConfiguration, ExitOutcome, IsolatedError, IsolatedManager, IsolatedSnapshot,
     IsolatedWorkspaceBinding, IsolatedWorkspaceId, RemountOverlayReport, RemountProbe,
-    RemountedWorkspace, ResourceCaps, Rfc1918Egress, WorkspaceHandle, WorkspaceRemountState,
+    RemountedWorkspace, ResourceCaps, Rfc1918Egress, WorkspaceHandle as IsolatedWorkspaceHandle,
+    WorkspaceRemountState,
 };
+pub use model::{
+    BaseRevision, CallerId, CaptureChangesRequest, CaptureChangesResult, ChangedPathKind,
+    CommandStatus, CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult,
+    NetworkMode, ProtectedPathDrop, ProtectedPathDropReason, RunCommandRequest, RunCommandResult,
+    WorkspaceHandle as UnifiedWorkspaceHandle, WorkspaceId,
+};
+pub use service::WorkspaceService;
 pub use tree::TreeResourceStats;
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn root_handle_exports_preserve_migration_aliases() {
+        fn legacy_alias(
+            handle: crate::WorkspaceHandle,
+        ) -> crate::isolated_workspace::WorkspaceHandle {
+            handle
+        }
+
+        fn unified_alias(handle: crate::UnifiedWorkspaceHandle) -> crate::model::WorkspaceHandle {
+            handle
+        }
+
+        let _: fn(crate::WorkspaceHandle) -> crate::isolated_workspace::WorkspaceHandle =
+            legacy_alias;
+        let _: fn(crate::UnifiedWorkspaceHandle) -> crate::model::WorkspaceHandle = unified_alias;
+    }
+}

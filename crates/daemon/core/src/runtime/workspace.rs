@@ -15,7 +15,7 @@
 
 #![forbid(unsafe_code)]
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -26,7 +26,7 @@ use config::configs::isolated_workspace::{
 use layerstack::{
     read_workspace_binding,
     service::{compact_snapshot_for_remount, SnapshotNormalization},
-    LayerStack, LeaseAwareCopyThroughOutcome,
+    LayerStack, LeaseAwareCopyThroughOutcome, WorkspaceBinding, WORKSPACE_BINDING_FILE,
 };
 use operation::command::{CommandOps, CommandRemountInspection};
 use operation::isolation::contract::IsolationTestRemountFault;
@@ -34,10 +34,11 @@ use serde_json::Value;
 use workspace::IsolatedWorkspaceBinding;
 use workspace::{
     IsolatedError, IsolatedManager, IsolatedSnapshot, RemountProbe, ResourceCaps,
-    Rfc1918Egress as RuntimeRfc1918Egress, WorkspaceHandle,
+    Rfc1918Egress as RuntimeRfc1918Egress, WorkspaceError, WorkspaceHandle,
 };
 
 const PERSISTED_HANDLES_SCHEMA_VERSION: u64 = 1;
+const WORKSPACE_BINDING_SEARCH_DEPTH: usize = 4;
 
 fn setup_error(error: impl std::fmt::Display) -> IsolatedError {
     IsolatedError::SetupFailed {
@@ -80,6 +81,13 @@ struct BoundState {
     layer_stack_root: PathBuf,
     stack: LayerStack,
     manager: IsolatedManager,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ResolvedWorkspaceRoot {
+    pub workspace_root: PathBuf,
+    pub layer_stack_root: PathBuf,
+    pub binding: WorkspaceBinding,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -458,6 +466,10 @@ pub enum WorkspaceEnterError {
         /// Best-effort lease release report for trace emission.
         lease_release: LeaseReleaseReport,
     },
+    /// The caller-facing workspace root could not be resolved to a LayerStack
+    /// binding.
+    #[error(transparent)]
+    RootResolution(#[from] WorkspaceError),
 }
 
 /// Instance-owned isolated-workspace service state: the typed config plus the
@@ -480,9 +492,9 @@ impl WorkspaceRuntime {
         }
     }
 
-    /// Open an isolated workspace for `caller_id` on the stack at `root`:
-    /// bind (or rebind) the manager, acquire a snapshot lease, and enter. The
-    /// lease is released again when `enter` fails.
+    /// Open an isolated workspace for `caller_id` at `workspace_root`: resolve
+    /// the LayerStack binding, bind (or rebind) the manager, acquire a snapshot
+    /// lease, and enter. The lease is released again when `enter` fails.
     ///
     /// # Errors
     ///
@@ -492,23 +504,42 @@ impl WorkspaceRuntime {
     pub fn enter(
         &self,
         caller_id: &str,
-        root: &Path,
+        workspace_root: &Path,
     ) -> Result<WorkspaceHandle, WorkspaceEnterError> {
-        self.enter_with_report(caller_id, root)
+        self.enter_with_report(caller_id, workspace_root)
             .map(|outcome| outcome.handle)
     }
 
     pub(crate) fn enter_with_report(
         &self,
         caller_id: &str,
-        root: &Path,
+        workspace_root: &Path,
     ) -> Result<WorkspaceEnterOutcome, WorkspaceEnterError> {
         let _mode_guard = self.lock_mode_gate();
+        let resolved = self.resolve_workspace_root(workspace_root)?;
+        self.enter_resolved_locked(caller_id, &resolved)
+    }
+
+    pub(crate) fn enter_with_report_legacy_layer_stack_root(
+        &self,
+        caller_id: &str,
+        layer_stack_root: &Path,
+    ) -> Result<WorkspaceEnterOutcome, WorkspaceEnterError> {
+        let _mode_guard = self.lock_mode_gate();
+        let resolved = self.resolve_legacy_layer_stack_root(layer_stack_root)?;
+        self.enter_resolved_locked(caller_id, &resolved)
+    }
+
+    fn enter_resolved_locked(
+        &self,
+        caller_id: &str,
+        resolved: &ResolvedWorkspaceRoot,
+    ) -> Result<WorkspaceEnterOutcome, WorkspaceEnterError> {
         let active_commands = self.command.count_by_caller(Some(caller_id));
         if active_commands > 0 {
             return Err(WorkspaceEnterError::ActiveCommands { active_commands });
         }
-        let recovery = self.ensure_state(root)?;
+        let recovery = self.ensure_state(resolved)?;
         let mut guard = self.lock_state_cell();
         let state = guard.as_mut().ok_or(IsolatedError::FeatureDisabled)?;
         let (snapshot, snapshot_normalization) = state.acquire_snapshot(
@@ -559,15 +590,168 @@ impl WorkspaceRuntime {
         self.with_state(|state| Ok(state.manager.get_handle(caller_id)))
     }
 
+    pub(crate) fn resolve_workspace_root(
+        &self,
+        workspace_root: &Path,
+    ) -> Result<ResolvedWorkspaceRoot, WorkspaceError> {
+        let workspace_root = validate_caller_workspace_root(workspace_root)?;
+        if let Some(resolved) = self.resolve_bound_workspace_root(&workspace_root)? {
+            return Ok(resolved);
+        }
+        let matches = self.discover_workspace_root_bindings(&workspace_root)?;
+        match matches.len() {
+            0 => Err(WorkspaceError::InvalidRequest {
+                field: "workspace_root",
+                message: format!(
+                    "no LayerStack workspace binding found for {}",
+                    workspace_root.display()
+                ),
+            }),
+            1 => Ok(matches
+                .into_values()
+                .next()
+                .expect("one match should be present")),
+            _ => {
+                let roots = matches
+                    .keys()
+                    .map(|root| root.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                Err(WorkspaceError::InvalidRequest {
+                    field: "workspace_root",
+                    message: format!(
+                        "ambiguous workspace_root {}; matching layer stack roots: {roots}",
+                        workspace_root.display()
+                    ),
+                })
+            }
+        }
+    }
+
+    pub(crate) fn resolve_legacy_layer_stack_root(
+        &self,
+        layer_stack_root: &Path,
+    ) -> Result<ResolvedWorkspaceRoot, WorkspaceError> {
+        let requested_root = validate_legacy_layer_stack_root(layer_stack_root)?;
+        let binding = read_workspace_binding(&requested_root)
+            .map_err(workspace_setup_error)?
+            .ok_or_else(|| WorkspaceError::InvalidRequest {
+                field: "layer_stack_root",
+                message: format!(
+                    "workspace binding is missing: {}",
+                    requested_root.join(WORKSPACE_BINDING_FILE).display()
+                ),
+            })?;
+        let resolved = resolved_workspace_binding(binding)?;
+        if !paths_match(&requested_root, &resolved.layer_stack_root) {
+            return Err(WorkspaceError::InvalidRequest {
+                field: "layer_stack_root",
+                message: format!(
+                    "legacy layer_stack_root {} does not match binding layer_stack_root {}",
+                    requested_root.display(),
+                    resolved.layer_stack_root.display()
+                ),
+            });
+        }
+        Ok(resolved)
+    }
+
+    fn resolve_bound_workspace_root(
+        &self,
+        workspace_root: &Path,
+    ) -> Result<Option<ResolvedWorkspaceRoot>, WorkspaceError> {
+        let Some(layer_stack_root) = self
+            .lock_state_cell()
+            .as_ref()
+            .map(|state| state.layer_stack_root.clone())
+        else {
+            return Ok(None);
+        };
+        let Some(binding) =
+            read_workspace_binding(&layer_stack_root).map_err(workspace_setup_error)?
+        else {
+            return Ok(None);
+        };
+        if !paths_match(Path::new(&binding.workspace_root), workspace_root) {
+            return Ok(None);
+        }
+        resolved_workspace_binding(binding).map(Some)
+    }
+
+    fn discover_workspace_root_bindings(
+        &self,
+        workspace_root: &Path,
+    ) -> Result<BTreeMap<PathBuf, ResolvedWorkspaceRoot>, WorkspaceError> {
+        let mut matches = BTreeMap::new();
+        for root in self.workspace_binding_search_roots(workspace_root) {
+            collect_workspace_binding_matches(
+                &root,
+                workspace_root,
+                WORKSPACE_BINDING_SEARCH_DEPTH,
+                &mut matches,
+            )?;
+        }
+        Ok(matches)
+    }
+
+    fn workspace_binding_search_roots(&self, workspace_root: &Path) -> Vec<PathBuf> {
+        let mut roots = Vec::new();
+        push_search_root(&mut roots, self.config.scratch_root.as_path());
+        if let Some(parent) = self.config.scratch_root.parent() {
+            push_search_root(&mut roots, parent);
+        }
+        if let Some(parent) = workspace_root.parent() {
+            push_search_root(&mut roots, parent);
+        }
+        roots
+    }
+
     pub(crate) fn compact_remount_open_workspace_for_test(
         &self,
         caller_id: &str,
-        root: &Path,
+        workspace_root: &Path,
         probe: RemountProbe,
         test_force_block_reason: Option<IsolationTestRemountFault>,
     ) -> Result<WorkspaceRemountCompactionAttempt, IsolatedError> {
         let _mode_guard = self.lock_mode_gate();
-        self.ensure_state(root)?;
+        let resolved = self
+            .resolve_workspace_root(workspace_root)
+            .map_err(workspace_error_as_isolated_setup)?;
+        self.compact_remount_open_workspace_for_test_resolved_locked(
+            caller_id,
+            &resolved,
+            probe,
+            test_force_block_reason,
+        )
+    }
+
+    pub(crate) fn compact_remount_open_workspace_for_test_legacy_layer_stack_root(
+        &self,
+        caller_id: &str,
+        layer_stack_root: &Path,
+        probe: RemountProbe,
+        test_force_block_reason: Option<IsolationTestRemountFault>,
+    ) -> Result<WorkspaceRemountCompactionAttempt, IsolatedError> {
+        let _mode_guard = self.lock_mode_gate();
+        let resolved = self
+            .resolve_legacy_layer_stack_root(layer_stack_root)
+            .map_err(workspace_error_as_isolated_setup)?;
+        self.compact_remount_open_workspace_for_test_resolved_locked(
+            caller_id,
+            &resolved,
+            probe,
+            test_force_block_reason,
+        )
+    }
+
+    fn compact_remount_open_workspace_for_test_resolved_locked(
+        &self,
+        caller_id: &str,
+        resolved: &ResolvedWorkspaceRoot,
+        probe: RemountProbe,
+        test_force_block_reason: Option<IsolationTestRemountFault>,
+    ) -> Result<WorkspaceRemountCompactionAttempt, IsolatedError> {
+        self.ensure_state(resolved)?;
         self.with_state(|state| state.manager.mark_remount_pending(caller_id))?;
         let result = self.compact_remount_open_workspace_marked_pending(
             caller_id,
@@ -792,14 +976,18 @@ impl WorkspaceRuntime {
     }
 
     /// Bind (or rebind) the isolated manager to `root`, initializing caps from
-    /// the runtime config and releasing leases orphaned by a prior daemon.
-    fn ensure_state(&self, root: &Path) -> Result<WorkspaceRecoveryReport, IsolatedError> {
-        let root = normalized_root(root);
+    /// the resolved workspace binding and releasing leases orphaned by a prior
+    /// daemon.
+    fn ensure_state(
+        &self,
+        root: &ResolvedWorkspaceRoot,
+    ) -> Result<WorkspaceRecoveryReport, IsolatedError> {
+        let layer_stack_root = root.layer_stack_root.clone();
         let mut recovery = WorkspaceRecoveryReport::default();
         {
             let mut guard = self.lock_state_cell();
             if let Some(state) = guard.as_mut() {
-                if state.layer_stack_root != root {
+                if state.layer_stack_root != layer_stack_root {
                     // Block rebinding to a new root only while an isolated workspace
                     // is open: those handles pin leases/namespaces on the old root.
                     // (Isolated commands belong to an open caller, so this
@@ -824,10 +1012,8 @@ impl WorkspaceRuntime {
                 if !caps.enabled {
                     return Err(IsolatedError::FeatureDisabled);
                 }
-                if let Some(binding) = read_workspace_binding(&root).map_err(setup_error)? {
-                    caps.eos_workspace_root = binding.workspace_root;
-                }
-                let mut stack = LayerStack::open(root.clone()).map_err(setup_error)?;
+                caps.eos_workspace_root = root.workspace_root.to_string_lossy().into_owned();
+                let mut stack = LayerStack::open(layer_stack_root.clone()).map_err(setup_error)?;
                 let mut manager =
                     IsolatedManager::with_scratch_root(caps, self.config.scratch_root.clone());
                 let cleanup = manager.initialize_report()?;
@@ -841,7 +1027,7 @@ impl WorkspaceRuntime {
                     }
                 }
                 *guard = Some(BoundState {
-                    layer_stack_root: root,
+                    layer_stack_root,
                     stack,
                     manager,
                 });
@@ -894,6 +1080,151 @@ fn command_binding_from(
         layer_paths: handle.layer_paths,
         ns_fds: handle.ns_fds,
         cgroup_path: handle.cgroup_path,
+    }
+}
+
+fn validate_caller_workspace_root(workspace_root: &Path) -> Result<PathBuf, WorkspaceError> {
+    validate_absolute_root("workspace_root", workspace_root)
+}
+
+fn validate_legacy_layer_stack_root(layer_stack_root: &Path) -> Result<PathBuf, WorkspaceError> {
+    validate_absolute_root("layer_stack_root", layer_stack_root)
+}
+
+fn validate_absolute_root(field: &'static str, root: &Path) -> Result<PathBuf, WorkspaceError> {
+    if root.as_os_str().is_empty() {
+        return Err(WorkspaceError::InvalidRequest {
+            field,
+            message: "path is required".to_owned(),
+        });
+    }
+    if !root.is_absolute() {
+        return Err(WorkspaceError::InvalidRequest {
+            field,
+            message: format!("path must be absolute: {}", root.display()),
+        });
+    }
+    Ok(normalized_root(root))
+}
+
+fn resolved_workspace_binding(
+    binding: WorkspaceBinding,
+) -> Result<ResolvedWorkspaceRoot, WorkspaceError> {
+    let workspace_root = validate_binding_root("workspace_root", &binding.workspace_root)?;
+    let layer_stack_root = validate_binding_root("layer_stack_root", &binding.layer_stack_root)?;
+    if paths_match(&workspace_root, &layer_stack_root)
+        || layer_stack_root.starts_with(&workspace_root)
+    {
+        return Err(WorkspaceError::InvalidRequest {
+            field: "layer_stack_root",
+            message: format!(
+                "layer_stack_root must be outside workspace_root: {} is inside {}",
+                layer_stack_root.display(),
+                workspace_root.display()
+            ),
+        });
+    }
+    Ok(ResolvedWorkspaceRoot {
+        workspace_root,
+        layer_stack_root,
+        binding,
+    })
+}
+
+fn validate_binding_root(field: &'static str, raw_root: &str) -> Result<PathBuf, WorkspaceError> {
+    let root = PathBuf::from(raw_root.trim());
+    validate_absolute_root(field, &root)
+}
+
+fn collect_workspace_binding_matches(
+    root: &Path,
+    workspace_root: &Path,
+    depth: usize,
+    matches: &mut BTreeMap<PathBuf, ResolvedWorkspaceRoot>,
+) -> Result<(), WorkspaceError> {
+    if paths_match(root, workspace_root) || !root.is_dir() {
+        return Ok(());
+    }
+    if root.join(WORKSPACE_BINDING_FILE).is_file() {
+        if let Some(binding) = read_workspace_binding(root).map_err(workspace_setup_error)? {
+            if paths_match(Path::new(&binding.workspace_root), workspace_root) {
+                let resolved = resolved_workspace_binding(binding)?;
+                matches
+                    .entry(resolved.layer_stack_root.clone())
+                    .or_insert(resolved);
+            }
+        }
+    }
+    if depth == 0 {
+        return Ok(());
+    }
+    let entries = match std::fs::read_dir(root) {
+        Ok(entries) => {
+            entries
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|err| WorkspaceError::Setup {
+                    step: format!(
+                        "read workspace binding search root {}: {err}",
+                        root.display()
+                    ),
+                })?
+        }
+        Err(err) if err.kind() == ErrorKind::NotFound => return Ok(()),
+        Err(err) => {
+            return Err(WorkspaceError::Setup {
+                step: format!(
+                    "read workspace binding search root {}: {err}",
+                    root.display()
+                ),
+            });
+        }
+    };
+    let mut children = entries;
+    children.sort_by_key(std::fs::DirEntry::file_name);
+    for child in children {
+        let file_type = child.file_type().map_err(|err| WorkspaceError::Setup {
+            step: format!(
+                "read workspace binding search entry {}: {err}",
+                child.path().display()
+            ),
+        })?;
+        if file_type.is_dir() {
+            collect_workspace_binding_matches(
+                &child.path(),
+                workspace_root,
+                depth.saturating_sub(1),
+                matches,
+            )?;
+        }
+    }
+    Ok(())
+}
+
+fn push_search_root(roots: &mut Vec<PathBuf>, root: &Path) {
+    let root = normalized_root(root);
+    if is_filesystem_root(&root) || roots.iter().any(|existing| paths_match(existing, &root)) {
+        return;
+    }
+    roots.push(root);
+}
+
+fn is_filesystem_root(path: &Path) -> bool {
+    path.parent().is_none()
+}
+
+fn paths_match(left: &Path, right: &Path) -> bool {
+    normalized_root(left) == normalized_root(right)
+}
+
+fn workspace_setup_error(error: layerstack::LayerStackError) -> WorkspaceError {
+    WorkspaceError::Setup {
+        step: error.to_string(),
+    }
+}
+
+fn workspace_error_as_isolated_setup(error: WorkspaceError) -> IsolatedError {
+    IsolatedError::SetupFailed {
+        step: error.to_string(),
     }
 }
 

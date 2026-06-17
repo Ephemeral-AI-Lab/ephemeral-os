@@ -1,23 +1,59 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::core::request::{require_caller_id, require_path, ArgProblem, ArgsError};
+use crate::core::request::{optional_path, require_caller_id, ArgProblem, ArgsError};
 use crate::CallerId;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IsolationEnterInput {
     pub caller: CallerId,
-    pub layer_stack_root: PathBuf,
+    pub root: WorkspaceRootInput,
 }
 
 impl IsolationEnterInput {
     pub(crate) fn parse(args: &Value) -> Result<Self, ArgsError> {
         Ok(Self {
             caller: require_caller_id(args)?,
-            layer_stack_root: require_path(args, "layer_stack_root")?,
+            root: WorkspaceRootInput::parse(args)?,
         })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WorkspaceRootInput {
+    WorkspaceRoot(PathBuf),
+    LegacyLayerStackRoot(PathBuf),
+}
+
+impl WorkspaceRootInput {
+    fn parse(args: &Value) -> Result<Self, ArgsError> {
+        match (
+            optional_path(args, "workspace_root"),
+            optional_path(args, "layer_stack_root"),
+        ) {
+            (Some(workspace_root), None) => Ok(Self::WorkspaceRoot(workspace_root)),
+            (None, Some(layer_stack_root)) => Ok(Self::LegacyLayerStackRoot(layer_stack_root)),
+            (Some(_), Some(_)) => Err(ArgsError {
+                key: "workspace_root",
+                problem: ArgProblem::Invalid(
+                    "workspace_root and legacy layer_stack_root are ambiguous; pass only workspace_root"
+                        .to_owned(),
+                ),
+            }),
+            (None, None) => Err(ArgsError {
+                key: "workspace_root",
+                problem: ArgProblem::Required,
+            }),
+        }
+    }
+
+    #[must_use]
+    pub fn as_path(&self) -> &Path {
+        match self {
+            Self::WorkspaceRoot(path) | Self::LegacyLayerStackRoot(path) => path,
+        }
     }
 }
 
@@ -76,7 +112,7 @@ impl IsolationTestRemountFault {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IsolationTestCompactRemountInput {
     pub caller: CallerId,
-    pub layer_stack_root: PathBuf,
+    pub root: WorkspaceRootInput,
     pub probe_path: Option<PathBuf>,
     pub probe_content: Option<String>,
     pub test_force_block_reason: Option<IsolationTestRemountFault>,
@@ -86,7 +122,7 @@ impl IsolationTestCompactRemountInput {
     pub(crate) fn parse(args: &Value) -> Result<Self, ArgsError> {
         Ok(Self {
             caller: require_caller_id(args)?,
-            layer_stack_root: require_path(args, "layer_stack_root")?,
+            root: WorkspaceRootInput::parse(args)?,
             probe_path: args
                 .get("probe_path")
                 .and_then(Value::as_str)
@@ -219,7 +255,51 @@ pub struct TestCompactRemountOutput {
 mod tests {
     use serde_json::json;
 
-    use super::{IsolationTestCompactRemountInput, IsolationTestRemountFault};
+    use super::{
+        IsolationEnterInput, IsolationTestCompactRemountInput, IsolationTestRemountFault,
+        WorkspaceRootInput,
+    };
+
+    #[test]
+    fn enter_parses_workspace_root() {
+        let input = IsolationEnterInput::parse(&json!({
+            "caller_id": "caller",
+            "workspace_root": "/workspace",
+        }))
+        .expect("input should parse");
+
+        assert_eq!(
+            input.root,
+            WorkspaceRootInput::WorkspaceRoot("/workspace".into())
+        );
+    }
+
+    #[test]
+    fn enter_parses_legacy_layer_stack_root() {
+        let input = IsolationEnterInput::parse(&json!({
+            "caller_id": "caller",
+            "layer_stack_root": "/tmp/stack",
+        }))
+        .expect("legacy input should parse");
+
+        assert_eq!(
+            input.root,
+            WorkspaceRootInput::LegacyLayerStackRoot("/tmp/stack".into())
+        );
+    }
+
+    #[test]
+    fn enter_rejects_ambiguous_roots() {
+        let error = IsolationEnterInput::parse(&json!({
+            "caller_id": "caller",
+            "workspace_root": "/workspace",
+            "layer_stack_root": "/tmp/stack",
+        }))
+        .expect_err("ambiguous roots should fail");
+
+        assert_eq!(error.key, "workspace_root");
+        assert!(error.message().contains("ambiguous"));
+    }
 
     #[test]
     fn parses_test_force_block_reason() {
