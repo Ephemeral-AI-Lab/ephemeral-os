@@ -1,7 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::{self, Read};
-#[cfg(unix)]
-use std::os::unix::fs::{FileTypeExt, MetadataExt};
 use std::path::{Path, PathBuf};
 
 use ignore::gitignore::GitignoreBuilder;
@@ -13,12 +11,13 @@ use sha2::{Digest, Sha256};
 use crate::capture::{ProtectedPathDrop, ProtectedPathDropReason};
 use crate::fs::resolve_layer_path;
 use crate::model::{hex_lower, CasError, LayerChange, LayerPath};
+use crate::whiteout::{is_kernel_whiteout_meta, LOGICAL_WHITEOUT_PREFIX, OPAQUE_MARKER};
 use crate::{LayerStack, LayerStackError, Manifest, MergedView};
 
 pub(crate) mod git_metadata;
 pub(crate) mod worker;
 
-use git_metadata::{is_canonical_loose_object_path, relative_parts as git_metadata_relative_parts};
+use git_metadata::{is_canonical_loose_object_path, parts_after_git_dir};
 pub(crate) use worker::{CommitQueue, CommitTransaction, PreparedChangeset};
 
 pub(crate) const GIT_METADATA_UNSUPPORTED_DROP_REASON: &str = "git_metadata_unsupported";
@@ -42,12 +41,6 @@ pub(crate) const OPAQUE_DIR_MIXED_ROUTES_DROP_REASON: &str = "opaque_dir_mixed_r
 pub(crate) const OPAQUE_DIR_EXPANSION_LIMIT_DROP_REASON: &str = "opaque_dir_expansion_limit";
 
 const OPAQUE_DIR_EXPANSION_LIMIT: usize = 4096;
-const LOGICAL_WHITEOUT_PREFIX: &str = ".wh.";
-const OPAQUE_MARKER: &str = ".wh..wh..opq";
-#[cfg(target_os = "linux")]
-const TRUSTED_OVERLAY_WHITEOUT_XATTR: &str = "trusted.overlay.whiteout";
-#[cfg(target_os = "linux")]
-const USER_OVERLAY_WHITEOUT_XATTR: &str = "user.overlay.whiteout";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum RouteDropReason {
@@ -711,7 +704,7 @@ fn command_git_metadata_decision(
     change: &LayerChange,
 ) -> Result<PublishDecision, CommitError> {
     let path = change.path();
-    let Some(parts) = git_metadata_relative_parts(path) else {
+    let Some(parts) = parts_after_git_dir(path) else {
         return Err(CommitError::RoutePreparation(format!(
             "expected git metadata path: {}",
             path.as_str()
@@ -842,7 +835,7 @@ fn git_object_write_decision(
 }
 
 fn command_git_protected_drop_reason(path: &LayerPath) -> RouteDropReason {
-    let Some(parts) = git_metadata_relative_parts(path) else {
+    let Some(parts) = parts_after_git_dir(path) else {
         return RouteDropReason::GitMetadataUnsupported;
     };
     restricted_git_metadata_reason(&parts).unwrap_or(RouteDropReason::GitMetadataUnsupported)
@@ -1093,7 +1086,7 @@ pub(crate) fn route_decision_for_path_from_source(
 }
 
 pub(crate) fn is_git_metadata_path(path: &LayerPath) -> bool {
-    git_metadata_relative_parts(path).is_some()
+    parts_after_git_dir(path).is_some()
 }
 
 fn protected_path_drop_reason(path: &LayerPath) -> Option<RouteDropReason> {
@@ -1471,37 +1464,8 @@ fn is_equal_or_descendant(path: &str, ancestor: &str) -> bool {
             .is_some_and(|suffix| suffix.starts_with('/'))
 }
 
-#[cfg(unix)]
-fn is_kernel_whiteout_meta(_path: &Path, meta: &std::fs::Metadata) -> bool {
-    if meta.file_type().is_char_device() && meta.rdev() == 0 {
-        return true;
-    }
-    #[cfg(target_os = "linux")]
-    {
-        meta.is_file()
-            && meta.len() == 0
-            && (has_xattr(_path, TRUSTED_OVERLAY_WHITEOUT_XATTR)
-                || has_xattr(_path, USER_OVERLAY_WHITEOUT_XATTR))
-    }
-    #[cfg(not(target_os = "linux"))]
-    {
-        false
-    }
-}
-
-#[cfg(not(unix))]
-const fn is_kernel_whiteout_meta(_path: &Path, _meta: &std::fs::Metadata) -> bool {
-    false
-}
-
-#[cfg(target_os = "linux")]
-fn has_xattr(path: &Path, name: &str) -> bool {
-    let mut value = [0_u8; 1];
-    rustix::fs::lgetxattr(path, name, &mut value).is_ok()
-}
-
 #[must_use]
-pub fn hash_current(content: Option<&[u8]>, exists: bool) -> Option<String> {
+pub(crate) fn hash_current(content: Option<&[u8]>, exists: bool) -> Option<String> {
     if !exists {
         return None;
     }

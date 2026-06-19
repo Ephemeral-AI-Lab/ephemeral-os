@@ -371,7 +371,7 @@ fn io_error_name(err: &std::io::Error) -> &'static str {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 mod tests {
     use super::*;
 

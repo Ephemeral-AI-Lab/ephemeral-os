@@ -24,7 +24,7 @@ pub(crate) fn attach_request_sidecar(
     attach_request_sidecar_inner(response, trace, op, facts, &[])
 }
 
-#[cfg(test)]
+#[allow(dead_code)]
 pub(crate) fn attach_request_sidecar_with_events(
     response: Value,
     trace: Option<&RequestTraceContext>,

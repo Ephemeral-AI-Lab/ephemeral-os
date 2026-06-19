@@ -13,6 +13,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use anyhow::{bail, Context, Result};
+use ignore::WalkBuilder;
 use sha2::{Digest, Sha256};
 
 const AMD64_TARGET: &str = "x86_64-unknown-linux-musl";
@@ -29,11 +30,51 @@ fn main() -> Result<()> {
         .as_deref()
     {
         Some("package") => package(&PackageArgs::parse(args)?),
+        Some("check-inline-cfg-test") => check_inline_cfg_test(&InlineCfgTestArgs::parse(args)?),
         Some("help" | "--help" | "-h") | None => {
             print_help();
             Ok(())
         }
         Some(other) => bail!("unknown xtask command {other:?}; run `cargo run -p xtask -- help`"),
+    }
+}
+
+#[derive(Debug)]
+struct InlineCfgTestArgs {
+    roots: Vec<PathBuf>,
+}
+
+#[derive(Debug)]
+struct InlineCfgTestViolation {
+    path: PathBuf,
+    line_number: usize,
+    line: String,
+}
+
+impl InlineCfgTestArgs {
+    fn parse<I>(args: I) -> Result<Self>
+    where
+        I: IntoIterator<Item = OsString>,
+    {
+        let mut roots = Vec::new();
+        let mut iter = args.into_iter();
+        while let Some(arg) = iter.next() {
+            let arg = arg
+                .into_string()
+                .map_err(|_| anyhow::anyhow!("xtask arguments must be valid UTF-8"))?;
+            match arg.as_str() {
+                "--root" => roots.push(PathBuf::from(next_string(&mut iter, "--root")?)),
+                "--help" | "-h" => {
+                    print_help();
+                    std::process::exit(0);
+                }
+                other => bail!("unknown check-inline-cfg-test option {other:?}"),
+            }
+        }
+        if roots.is_empty() {
+            roots.extend([PathBuf::from("crates"), PathBuf::from("xtask")]);
+        }
+        Ok(Self { roots })
     }
 }
 
@@ -115,6 +156,91 @@ impl PackageArgs {
             minisign_key,
         })
     }
+}
+
+fn check_inline_cfg_test(args: &InlineCfgTestArgs) -> Result<()> {
+    let root = workspace_root()?;
+    let mut violations = Vec::new();
+    for scan_root in &args.roots {
+        let scan_root = absolutize(&root, scan_root);
+        for entry in WalkBuilder::new(&scan_root).build() {
+            let entry = entry.with_context(|| format!("walk {}", scan_root.display()))?;
+            let path = entry.path();
+            if !entry
+                .file_type()
+                .is_some_and(|file_type| file_type.is_file())
+                || !is_rust_source(path)
+                || is_under_tests_dir(path)
+            {
+                continue;
+            }
+            collect_inline_cfg_test_violations(path, &mut violations)?;
+        }
+    }
+
+    if violations.is_empty() {
+        println!("no inline #[cfg(test)] attributes found in non-test Rust sources");
+        return Ok(());
+    }
+
+    eprintln!(
+        "inline #[cfg(test)] attributes are forbidden in non-test Rust sources; \
+move tests to crate tests/ modules and keep production code test-neutral."
+    );
+    for violation in &violations {
+        eprintln!(
+            "{}:{}: {}",
+            relative_to(&root, &violation.path).display(),
+            violation.line_number,
+            violation.line.trim()
+        );
+    }
+    bail!(
+        "found {} forbidden inline #[cfg(test)] attributes",
+        violations.len()
+    )
+}
+
+fn collect_inline_cfg_test_violations(
+    path: &Path,
+    violations: &mut Vec<InlineCfgTestViolation>,
+) -> Result<()> {
+    let body = fs::read_to_string(path).with_context(|| format!("read {}", path.display()))?;
+    for (line_index, line) in body.lines().enumerate() {
+        if line_has_inline_cfg_test(line) {
+            violations.push(InlineCfgTestViolation {
+                path: path.to_path_buf(),
+                line_number: line_index + 1,
+                line: line.to_owned(),
+            });
+        }
+    }
+    Ok(())
+}
+
+fn line_has_inline_cfg_test(line: &str) -> bool {
+    let trimmed = line.trim_start();
+    if trimmed.starts_with("//") {
+        return false;
+    }
+    let compact = trimmed
+        .chars()
+        .filter(|ch| !ch.is_whitespace())
+        .collect::<String>();
+    compact.starts_with("#[cfg(test)]") || compact.starts_with("#![cfg(test)]")
+}
+
+fn is_rust_source(path: &Path) -> bool {
+    path.extension().is_some_and(|extension| extension == "rs")
+}
+
+fn is_under_tests_dir(path: &Path) -> bool {
+    path.components()
+        .any(|component| component.as_os_str() == "tests")
+}
+
+fn relative_to<'a>(root: &Path, path: &'a Path) -> &'a Path {
+    path.strip_prefix(root).unwrap_or(path)
 }
 
 fn package(args: &PackageArgs) -> Result<()> {
@@ -383,6 +509,8 @@ fn print_help() {
     println!(
         "\
 xtask commands:
+  check-inline-cfg-test [--root <path> ...]
+          fail if non-test Rust sources contain inline #[cfg(test)] attributes
   package [--target <triple>] [--out-dir <dir>] [--builder rust-lld|cargo|cross]
           [--profile <name> | --fast] [--no-build] [--sign --minisign-key <path>]
 

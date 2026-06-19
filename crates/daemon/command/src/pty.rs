@@ -482,7 +482,3 @@ fn stdin_backpressure() -> io::Error {
         "stdin_backpressure: command is not draining its stdin",
     )
 }
-
-#[cfg(test)]
-#[path = "../tests/unit/pty.rs"]
-mod tests;

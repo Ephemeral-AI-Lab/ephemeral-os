@@ -232,7 +232,7 @@ fn write_payload(target: &mut OutputTarget, payload: &[u8]) -> Result<()> {
     Ok(())
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 mod tests {
     use std::os::unix::net::UnixStream;
 

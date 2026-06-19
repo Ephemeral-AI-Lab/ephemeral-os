@@ -435,7 +435,7 @@ pub(super) fn query_plan_for(conn: &Connection, sql: &str) -> Result<Vec<String>
     Ok(rows)
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(super) fn resource_span_ids_for_request(
     conn: &Connection,
     request_id: &str,

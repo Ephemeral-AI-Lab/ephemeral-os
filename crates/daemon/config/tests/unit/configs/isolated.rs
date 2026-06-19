@@ -1,5 +1,3 @@
-use super::*;
-
 #[test]
 fn config_prd_isolated_section_deserializes_and_validates() {
     prd_config()

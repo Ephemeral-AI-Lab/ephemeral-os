@@ -12,10 +12,9 @@ use std::path::{Path, PathBuf};
 
 use thiserror::Error;
 
+use crate::whiteout::{LOGICAL_WHITEOUT_PREFIX, OPAQUE_MARKER};
 use crate::{CasError, LayerChange, LayerPath};
 
-const WHITEOUT_PREFIX: &str = ".wh.";
-pub(crate) const OPAQUE_MARKER: &str = ".wh..wh..opq";
 pub(crate) const MAX_CAPTURE_FILE_BYTES: usize = 8 * 1024 * 1024;
 
 /// Failures raised while capturing layer changes from an overlay upperdir.
@@ -599,7 +598,9 @@ fn path_component_string(component: &std::ffi::OsStr) -> Result<String> {
 }
 
 fn is_whiteout_marker(name: &str) -> bool {
-    name.starts_with(WHITEOUT_PREFIX) && name != OPAQUE_MARKER && name.len() > WHITEOUT_PREFIX.len()
+    name.starts_with(LOGICAL_WHITEOUT_PREFIX)
+        && name != OPAQUE_MARKER
+        && name.len() > LOGICAL_WHITEOUT_PREFIX.len()
 }
 
 fn whiteout_target(rel: &Path) -> PathBuf {
@@ -607,7 +608,7 @@ fn whiteout_target(rel: &Path) -> PathBuf {
         .file_name()
         .and_then(|name| name.to_str())
         .unwrap_or_default();
-    let target_name = &name[WHITEOUT_PREFIX.len()..];
+    let target_name = &name[LOGICAL_WHITEOUT_PREFIX.len()..];
     rel.parent()
         .filter(|parent| !parent.as_os_str().is_empty())
         .map_or_else(

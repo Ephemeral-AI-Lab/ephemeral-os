@@ -8,6 +8,7 @@ license.workspace = true
 [features]
 default = []
 e2e-support = []
+test-support = []
 
 [dependencies]
 anyhow.workspace = true

@@ -116,7 +116,3 @@ pub fn decode_value(value: Value) -> Result<WireMessage, ProtocolError> {
     }
     Ok(WireMessage::Response(value))
 }
-
-#[cfg(test)]
-#[path = "../../tests/unit/wire/message.rs"]
-mod tests;

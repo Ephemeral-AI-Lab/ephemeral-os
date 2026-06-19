@@ -62,7 +62,3 @@ impl RunnerConfig {
         Ok(())
     }
 }
-
-#[cfg(test)]
-#[path = "../../tests/unit/configs/runner.rs"]
-mod tests;

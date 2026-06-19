@@ -3,7 +3,7 @@ use std::fs;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 use std::sync::{Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -17,18 +17,18 @@ const DAEMON_AUTH_TOKEN_ENV: &str = "EOS_DAEMON_AUTH_TOKEN";
 const DAEMON_FORWARD_AUTH_TOKEN_ENV: &str = "EOS_DAEMON_FORWARD_AUTH_TOKEN";
 const DAEMON_CONFIG_YAML_ENV: &str = "EOS_DAEMON_CONFIG_YAML";
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 static DOCKER_COMMAND_OVERRIDE: OnceLock<Mutex<Option<PathBuf>>> = OnceLock::new();
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 static DOCKER_COMMAND_OVERRIDE_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) struct DockerCommandOverrideGuard {
     previous: Option<PathBuf>,
     _lock: std::sync::MutexGuard<'static, ()>,
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 impl Drop for DockerCommandOverrideGuard {
     fn drop(&mut self) {
         let override_slot = DOCKER_COMMAND_OVERRIDE.get_or_init(|| Mutex::new(None));
@@ -36,7 +36,7 @@ impl Drop for DockerCommandOverrideGuard {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn override_docker_command_for_tests(path: PathBuf) -> DockerCommandOverrideGuard {
     let lock = DOCKER_COMMAND_OVERRIDE_LOCK
         .get_or_init(|| Mutex::new(()))
@@ -568,7 +568,7 @@ fn redact_key_assignments(text: &str, key: &str) -> String {
     output
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 fn docker_command() -> Command {
     let path = DOCKER_COMMAND_OVERRIDE
         .get_or_init(|| Mutex::new(None))
@@ -579,7 +579,7 @@ fn docker_command() -> Command {
     Command::new(path)
 }
 
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "test-support")))]
 fn docker_command() -> Command {
     Command::new("docker")
 }
@@ -810,6 +810,6 @@ pub fn container_ids_by_ancestor(image: &str) -> Result<Vec<String>> {
     Ok(out.split_whitespace().map(str::to_owned).collect())
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 #[path = "../tests/unit/runtime.rs"]
 mod tests;

@@ -227,7 +227,3 @@ fn is_filesystem_root(path: &std::path::Path) -> bool {
             .ok()
             .is_some_and(|canonical| canonical.parent().is_none())
 }
-
-#[cfg(test)]
-#[path = "../../tests/unit/configs/daemon.rs"]
-mod tests;

@@ -15,7 +15,7 @@ use crate::runner::protocol::{NamespaceCommandRequest, RunResult};
 use serde_json::{json, Value};
 
 #[cfg(target_os = "linux")]
-mod request;
+pub(crate) mod request;
 #[cfg(target_os = "linux")]
 mod wait;
 

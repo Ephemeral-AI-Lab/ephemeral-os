@@ -51,7 +51,3 @@ pub fn load_test_override(path: impl AsRef<Path>) -> Result<ConfigDocument, Conf
     baseline.merge(override_doc)?;
     Ok(baseline)
 }
-
-#[cfg(test)]
-#[path = "../tests/unit/lib.rs"]
-mod tests;

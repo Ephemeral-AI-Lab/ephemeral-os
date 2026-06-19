@@ -519,7 +519,3 @@ struct NetlinkSocketAddress {
     nl_pid: u32,
     nl_groups: u32,
 }
-
-#[cfg(test)]
-#[path = "../../tests/unit/holder/network.rs"]
-mod tests;

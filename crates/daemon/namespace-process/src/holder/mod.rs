@@ -1,7 +1,7 @@
 //! Isolated-workspace namespace holder.
 
-mod namespace;
-mod network;
+pub(crate) mod namespace;
+pub(crate) mod network;
 
 use std::os::fd::RawFd;
 
@@ -65,7 +65,7 @@ impl NsHolderError {
 }
 
 #[derive(Debug)]
-struct Handshake {
+pub(crate) struct Handshake {
     readiness_fd: RawFd,
     control_fd: RawFd,
     network: NamespaceNetwork,
@@ -74,7 +74,7 @@ struct Handshake {
 }
 
 impl Handshake {
-    const fn new(
+    pub(crate) const fn new(
         readiness_fd: RawFd,
         control_fd: RawFd,
         network: NamespaceNetwork,
@@ -89,11 +89,11 @@ impl Handshake {
         }
     }
 
-    fn signal_ns_up(&mut self) -> Result<(), NsHolderError> {
+    pub(crate) fn signal_ns_up(&mut self) -> Result<(), NsHolderError> {
         write_all_fd(self.readiness_fd, NS_UP)
     }
 
-    fn await_net_ready(&mut self) -> Result<(), NsHolderError> {
+    pub(crate) fn await_net_ready(&mut self) -> Result<(), NsHolderError> {
         let mut buf = [0_u8; 256];
         let mut offset = 0;
         while offset < buf.len() {
@@ -113,7 +113,7 @@ impl Handshake {
         Ok(())
     }
 
-    fn finish_ready(&self) -> Result<(), NsHolderError> {
+    pub(crate) fn finish_ready(&self) -> Result<(), NsHolderError> {
         if self.network.is_isolated() {
             bring_loopback_up();
             if let Some(config) = &self.network_config {
@@ -193,7 +193,3 @@ fn read_fd(fd: RawFd, bytes: &mut [u8]) -> Result<usize, NsHolderError> {
         }
     }
 }
-
-#[cfg(test)]
-#[path = "../../tests/unit/holder/handshake.rs"]
-mod tests;

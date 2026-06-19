@@ -8,7 +8,6 @@ use std::fs;
 use std::os::fd::RawFd;
 #[cfg(target_os = "linux")]
 use std::os::unix::ffi::OsStrExt;
-#[cfg(any(test, target_os = "linux"))]
 use std::path::PathBuf;
 #[cfg(target_os = "linux")]
 use std::path::{Component, Path};
@@ -19,9 +18,7 @@ use std::time::Instant;
 use overlay::OverlayHandle;
 
 use super::RunnerError;
-#[cfg(any(test, target_os = "linux"))]
-use crate::runner::protocol::NsFds;
-use crate::runner::protocol::{NamespaceCommandRequest, RunResult};
+use crate::runner::protocol::{NamespaceCommandRequest, NsFds, RunResult};
 
 #[cfg(target_os = "linux")]
 const RESOLV_CONF: &str = "/etc/resolv.conf";
@@ -369,11 +366,11 @@ fn overlay_mount_verified(request: &NamespaceCommandRequest, workspace_root: &Pa
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg(target_os = "linux")]
-struct WorkspaceMountInfo {
-    mount_point: String,
-    fs_type: String,
-    lowerdir_count: Option<usize>,
-    lowerdir: Option<String>,
+pub(crate) struct WorkspaceMountInfo {
+    pub(crate) mount_point: String,
+    pub(crate) fs_type: String,
+    pub(crate) lowerdir_count: Option<usize>,
+    pub(crate) lowerdir: Option<String>,
 }
 
 #[cfg(target_os = "linux")]
@@ -406,7 +403,7 @@ fn workspace_mountinfo(workspace_root: &Path) -> Option<WorkspaceMountInfo> {
 }
 
 #[cfg(target_os = "linux")]
-fn mountinfo_lowerdir_count_matched(
+pub(crate) fn mountinfo_lowerdir_count_matched(
     mountinfo: Option<&WorkspaceMountInfo>,
     expected_count: usize,
 ) -> Option<bool> {
@@ -416,7 +413,7 @@ fn mountinfo_lowerdir_count_matched(
 }
 
 #[cfg(target_os = "linux")]
-fn mountinfo_lowerdir_verified(
+pub(crate) fn mountinfo_lowerdir_verified(
     mountinfo: Option<&WorkspaceMountInfo>,
     expected_layers: &[PathBuf],
 ) -> Option<bool> {
@@ -577,15 +574,17 @@ pub const fn configure_dns(
     Err(RunnerError::Unsupported)
 }
 
-#[cfg(any(test, target_os = "linux"))]
-fn require_ns_fds(request: &NamespaceCommandRequest) -> Result<NsFds, RunnerError> {
+#[allow(dead_code)]
+pub(crate) fn require_ns_fds(request: &NamespaceCommandRequest) -> Result<NsFds, RunnerError> {
     request
         .ns_fds
         .ok_or_else(|| RunnerError::InvalidRequest("setns mode requires ns_fds".to_owned()))
 }
 
 #[cfg(target_os = "linux")]
-fn namespace_fd_order_with_types(ns_fds: &NsFds) -> Vec<(&'static str, RawFd, libc::c_int)> {
+pub(crate) fn namespace_fd_order_with_types(
+    ns_fds: &NsFds,
+) -> Vec<(&'static str, RawFd, libc::c_int)> {
     [
         ("user", ns_fds.user, libc::CLONE_NEWUSER),
         ("mnt", ns_fds.mnt, libc::CLONE_NEWNS),
@@ -610,8 +609,8 @@ fn setns_user_mnt(request: &NamespaceCommandRequest, operation: &str) -> Result<
     setns_fd("mnt", mnt.0, libc::CLONE_NEWNS)
 }
 
-#[cfg(any(test, target_os = "linux"))]
-fn overlay_layer_paths(request: &NamespaceCommandRequest) -> Vec<PathBuf> {
+#[allow(dead_code)]
+pub(crate) fn overlay_layer_paths(request: &NamespaceCommandRequest) -> Vec<PathBuf> {
     if request.layer_paths.is_empty() {
         vec![request.workspace_root.0.clone()]
     } else {
@@ -619,8 +618,8 @@ fn overlay_layer_paths(request: &NamespaceCommandRequest) -> Vec<PathBuf> {
     }
 }
 
-#[cfg(any(test, target_os = "linux"))]
-fn first_nameserver(content: &str) -> Option<&str> {
+#[allow(dead_code)]
+pub(crate) fn first_nameserver(content: &str) -> Option<&str> {
     content.lines().find_map(|line| {
         let stripped = line.trim();
         stripped
@@ -629,8 +628,8 @@ fn first_nameserver(content: &str) -> Option<&str> {
     })
 }
 
-#[cfg(any(test, target_os = "linux"))]
-fn needs_fallback_dns(addr: &str) -> bool {
+#[allow(dead_code)]
+pub(crate) fn needs_fallback_dns(addr: &str) -> bool {
     addr.starts_with("127.")
 }
 
@@ -715,7 +714,3 @@ fn setns_fd(name: &str, fd: RawFd, nstype: libc::c_int) -> Result<(), RunnerErro
         format!("setns({name}, fd={fd}, nstype=0x{nstype:x}) failed: {err}"),
     )))
 }
-
-#[cfg(test)]
-#[path = "../../tests/unit/runner/setns.rs"]
-mod tests;

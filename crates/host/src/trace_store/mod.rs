@@ -119,7 +119,7 @@ impl TraceStore {
         Ok(store)
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     #[must_use]
     pub fn startup_pending_sidecar_recovery_limit_for_tests() -> usize {
         sidecar::MAX_STARTUP_PENDING_SIDECAR_RECOVERY
@@ -131,29 +131,29 @@ impl TraceStore {
         &self.db_path
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fn fail_next_request_start_for_tests(&self) {
         self.fail_next_request_start.store(true, Ordering::SeqCst);
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fn fail_next_response_persisted_for_tests(&self) {
         self.fail_next_response_persisted
             .store(true, Ordering::SeqCst);
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fn fail_next_trace_batch_ingest_for_tests(&self) {
         self.fail_next_trace_batch_ingest
             .store(true, Ordering::SeqCst);
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fn fail_next_trace_event_for_tests(&self) {
         self.fail_next_trace_event.store(true, Ordering::SeqCst);
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fn pending_sidecar_count_for_tests(&self) -> Result<usize, TraceStoreError> {
         let count: i64 =
             self.lock()
@@ -347,6 +347,6 @@ pub(super) fn usize_to_u64(value: usize) -> u64 {
     u64::try_from(value).unwrap_or(u64::MAX)
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 #[path = "../../tests/unit/trace_store.rs"]
 mod tests;

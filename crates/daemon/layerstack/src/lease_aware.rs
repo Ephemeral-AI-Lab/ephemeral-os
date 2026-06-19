@@ -4,43 +4,33 @@ use crate::error::LayerStackError;
 use crate::model::{LayerRef, Manifest};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LeaseAwareCheckpointMode {
+pub(crate) enum LeaseAwareCheckpointMode {
     View,
     DeltaRequired,
 }
 
-impl LeaseAwareCheckpointMode {
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::View => "view",
-            Self::DeltaRequired => "delta_required",
-        }
-    }
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ReclaimingInterval {
+    pub(crate) layers: Vec<LayerRef>,
+    pub(crate) checkpoint_mode: LeaseAwareCheckpointMode,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ReclaimingInterval {
-    pub layers: Vec<LayerRef>,
-    pub checkpoint_mode: LeaseAwareCheckpointMode,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum LeaseAwarePlanEntry {
+pub(crate) enum LeaseAwarePlanEntry {
     KeepProtected(LayerRef),
     KeepUnleased(LayerRef),
     ReclaimingInterval(ReclaimingInterval),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct LeaseAwarePlan {
-    pub active_version: i64,
-    pub active_layer_count: usize,
-    pub protected_layer_count: usize,
-    pub kept_unleased_layer_count: usize,
-    pub reclaiming_interval_count: usize,
-    pub reclaiming_layer_count: usize,
-    pub entries: Vec<LeaseAwarePlanEntry>,
+pub(crate) struct LeaseAwarePlan {
+    pub(crate) active_version: i64,
+    pub(crate) active_layer_count: usize,
+    pub(crate) protected_layer_count: usize,
+    pub(crate) kept_unleased_layer_count: usize,
+    pub(crate) reclaiming_interval_count: usize,
+    pub(crate) reclaiming_layer_count: usize,
+    pub(crate) entries: Vec<LeaseAwarePlanEntry>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -82,26 +72,7 @@ pub struct LeaseParentCompactionOutcome {
     pub active_depth_after: usize,
 }
 
-impl LeaseAwarePlan {
-    #[must_use]
-    pub fn active_depth_after_reclaiming_checkpoints(&self) -> usize {
-        self.entries.len()
-    }
-
-    #[must_use]
-    pub fn has_reclaiming_intervals(&self) -> bool {
-        self.reclaiming_interval_count > 0
-    }
-
-    pub fn reclaiming_intervals(&self) -> impl Iterator<Item = &ReclaimingInterval> {
-        self.entries.iter().filter_map(|entry| match entry {
-            LeaseAwarePlanEntry::ReclaimingInterval(interval) => Some(interval),
-            LeaseAwarePlanEntry::KeepProtected(_) | LeaseAwarePlanEntry::KeepUnleased(_) => None,
-        })
-    }
-}
-
-pub fn plan_lease_aware_gaps(
+pub(crate) fn plan_lease_aware_gaps(
     active_manifest: &Manifest,
     protected_layers: &[LayerRef],
     min_reclaiming_interval_layers: usize,

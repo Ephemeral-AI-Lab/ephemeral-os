@@ -4,12 +4,12 @@
 //! submodules below.
 
 mod envelope_meta;
-mod sidecar;
+pub(crate) mod sidecar;
 mod spool;
 
 pub(crate) use sidecar::attach_request_sidecar;
-#[cfg(test)]
+#[allow(unused_imports)]
 pub(crate) use spool::now_ms;
-#[cfg(test)]
+#[allow(unused_imports)]
 pub(crate) use spool::RequestTraceEvent;
 pub(crate) use spool::{next_connection_id, RequestTraceFacts};

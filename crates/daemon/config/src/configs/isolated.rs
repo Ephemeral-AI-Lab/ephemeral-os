@@ -120,7 +120,3 @@ fn paths_match_or_resolve_equal(left: &Path, right: &Path) -> bool {
             _ => false,
         }
 }
-
-#[cfg(test)]
-#[path = "../../tests/unit/configs/isolated.rs"]
-mod tests;

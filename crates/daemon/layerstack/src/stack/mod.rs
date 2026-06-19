@@ -15,9 +15,9 @@ use crate::model::{
 
 use crate::error::LayerStackError;
 use crate::fs::{
-    allocate_layer_dirs, fsync_dir, fsync_tree_files, layer_digest_path, next_unique,
+    allocate_layer_dirs, count_dirs, fsync_dir, fsync_tree_files, layer_digest_path, next_unique,
     read_manifest, record_elapsed, remove_path, replace_workspace_contents, resolve_layer_path,
-    write_layer_digest, write_manifest,
+    storage_bytes, write_layer_digest, write_manifest,
 };
 use crate::lock::StorageWriterLockLease;
 use crate::squash::{
@@ -30,10 +30,7 @@ use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, LAYER_METADATA_DIR, STAGING_DIR};
 mod layer_write;
 mod lease_cleanup;
 mod leases;
-mod metrics;
-mod projection;
 mod view;
-mod whiteout;
 mod workspace_commit;
 
 use layer_write::write_layer_changes;
@@ -45,8 +42,7 @@ use leases::{
     lock_shared_registry, lock_shared_registry_recover, shared_registry_for_root,
     SharedLeaseRegistry,
 };
-use metrics::{count_dirs, storage_bytes};
-use projection::layer_has_boundary_markers;
+use view::layer_has_boundary_markers;
 pub use view::MergedView;
 pub(crate) use workspace_commit::*;
 

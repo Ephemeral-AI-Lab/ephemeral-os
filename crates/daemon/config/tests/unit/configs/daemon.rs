@@ -1,5 +1,3 @@
-use super::*;
-
 #[test]
 fn config_prd_daemon_section_deserializes_and_validates() {
     prd_config().validate().expect("prd daemon config is valid");

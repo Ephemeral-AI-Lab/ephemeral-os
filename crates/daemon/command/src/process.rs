@@ -21,10 +21,6 @@ use crate::transcript::{read_full_transcript_stdout, read_transcript_since, read
 use crate::yield_wait_loop::CommandWaitTarget;
 use crate::CommandError;
 
-#[cfg(test)]
-#[path = "../tests/unit/process.rs"]
-mod tests;
-
 /// PTY/process substrate for one command. It owns the child process, transcript,
 /// and cancel flag, but no workspace policy: the run that owns this process
 /// decides publish-vs-discard.
@@ -121,7 +117,7 @@ pub struct CommandTranscriptPersistenceError {
 }
 
 /// Per-command process state: the child, its paths, and the kill/exit flags.
-struct CommandProcessRuntime {
+pub(crate) struct CommandProcessRuntime {
     process: PtyProcess,
     output_path: PathBuf,
     final_path: PathBuf,
@@ -136,7 +132,7 @@ struct CommandProcessRuntime {
 }
 
 impl CommandProcessRuntime {
-    fn new(
+    pub(crate) fn new(
         process: PtyProcess,
         output_path: PathBuf,
         final_path: PathBuf,
@@ -231,7 +227,7 @@ impl CommandProcess {
         ))
     }
 
-    fn with_runtime(spec: CommandProcessSpec, runtime: CommandProcessRuntime) -> Self {
+    pub(crate) fn with_runtime(spec: CommandProcessSpec, runtime: CommandProcessRuntime) -> Self {
         Self {
             id: spec.id,
             caller_id: spec.caller_id,
@@ -262,9 +258,8 @@ impl CommandProcess {
         self.runtime.process.process_group_id()
     }
 
-    #[cfg(test)]
     #[must_use]
-    pub const fn started_at(&self) -> Instant {
+    pub(crate) const fn started_at(&self) -> Instant {
         self.started_at
     }
 
@@ -367,7 +362,7 @@ impl CommandProcess {
     }
 }
 
-fn build_namespace_command_request(
+pub(crate) fn build_namespace_command_request(
     spec: &CommandProcessSpec,
     entry: WorkspaceEntry,
 ) -> NamespaceCommandRequest {
@@ -477,7 +472,10 @@ fn process_metadata_path(final_path: &Path) -> Result<PathBuf, CommandError> {
         })
 }
 
-fn write_process_metadata(path: &Path, process_group_id: Option<i32>) -> Result<(), CommandError> {
+pub(crate) fn write_process_metadata(
+    path: &Path,
+    process_group_id: Option<i32>,
+) -> Result<(), CommandError> {
     let bytes = CommandProcessMetadata::new(process_group_id).to_pretty_vec()?;
     let mut file = std::fs::OpenOptions::new()
         .create(true)

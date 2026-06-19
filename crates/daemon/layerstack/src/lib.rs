@@ -10,6 +10,7 @@ mod model;
 pub mod service;
 mod squash;
 mod stack;
+mod whiteout;
 mod workspace;
 
 pub use model::{
@@ -19,14 +20,12 @@ pub use model::{
 
 pub use capture::{CaptureError, CaptureStats, ProtectedPathDrop, ProtectedPathDropReason};
 pub use commit::{
-    hash_current, CaptureRouteStats, ChangesetResult, CommitError, CommitOptions, CommitStatus,
-    FileResult, OccTraceEvent,
+    CaptureRouteStats, ChangesetResult, CommitError, CommitOptions, CommitStatus, FileResult,
+    OccTraceEvent,
 };
 pub use error::LayerStackError;
 pub use lease_aware::{
-    plan_lease_aware_gaps, LeaseAwareCheckpointMode, LeaseAwareCopyThroughOutcome, LeaseAwarePlan,
-    LeaseAwarePlanEntry, LeaseAwareReclaimOutcome, LeaseParentCompactionOutcome,
-    ReclaimingInterval,
+    LeaseAwareCopyThroughOutcome, LeaseAwareReclaimOutcome, LeaseParentCompactionOutcome,
 };
 pub use stack::{BoundedCommandSnapshot, LayerStack, Lease, MergedView, SquashOutcome};
 pub use workspace::{

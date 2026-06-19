@@ -141,7 +141,3 @@ fn timing(
 fn elapsed_ms(from: Instant, to: Instant) -> u64 {
     u64::try_from(to.duration_since(from).as_millis()).unwrap_or(u64::MAX)
 }
-
-#[cfg(test)]
-#[path = "../tests/unit/yield_wait_loop.rs"]
-mod tests;

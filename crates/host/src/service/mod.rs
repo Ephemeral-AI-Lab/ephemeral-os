@@ -1161,6 +1161,6 @@ struct HostContainerTarget {
     container: String,
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 #[path = "../../tests/unit/host.rs"]
 mod tests;

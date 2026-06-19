@@ -4,8 +4,8 @@ use trace::{SpanKind, SpanRecord, SpanStatus, SpanUid};
 use super::resources::optional_u64;
 use super::RequestTraceEvent;
 
-pub(super) const COMMAND_PROCESS_SPAWN_SPAN_ID: SpanUid = SpanUid::new(5);
-pub(super) const COMMAND_PROCESS_WAIT_SPAN_ID: SpanUid = SpanUid::new(6);
+pub(crate) const COMMAND_PROCESS_SPAWN_SPAN_ID: SpanUid = SpanUid::new(5);
+pub(crate) const COMMAND_PROCESS_WAIT_SPAN_ID: SpanUid = SpanUid::new(6);
 
 pub(super) fn child_spans_from_request_events(
     events: &[RequestTraceEvent],

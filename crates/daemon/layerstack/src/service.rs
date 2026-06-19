@@ -1,6 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::{Duration, Instant};
 
 use crate::model::{LayerChange, LayerPath, LayerRef, Manifest, MANIFEST_SCHEMA_VERSION};
@@ -10,7 +10,7 @@ use crate::capture::{
     MAX_CAPTURE_FILE_BYTES,
 };
 use crate::commit::{
-    git_metadata::{is_canonical_loose_object_path, relative_parts as git_metadata_relative_parts},
+    git_metadata::{is_canonical_loose_object_path, parts_after_git_dir},
     publish_command_decisions_for_manifest_with_protected_drops, CaptureRouteStats,
     ChangesetResult, CommitError, CommitOptions, CommitWriter, PublishDecision, Route,
     RouteDropReason,
@@ -22,57 +22,26 @@ pub(crate) type RootService = Arc<CommitWriter>;
 pub(crate) const SERVICE_CACHE_MAX: usize = 256;
 
 #[derive(Default)]
-pub(crate) struct ServiceCacheStats {
-    pub(crate) hits_total: u64,
-    pub(crate) misses_total: u64,
-    pub(crate) creates_total: u64,
-    pub(crate) evictions_total: u64,
-    pub(crate) lock_wait_s_total: f64,
-    pub(crate) lock_wait_s_max: f64,
-}
-
-#[derive(Default)]
 pub(crate) struct ServiceCache {
     pub(crate) entries: HashMap<String, RootService>,
     lru: VecDeque<String>,
-    pub(crate) stats: ServiceCacheStats,
 }
 
 impl ServiceCache {
-    fn record_lock_wait(&mut self, lock_wait_s: f64) {
-        self.stats.lock_wait_s_total += lock_wait_s;
-        self.stats.lock_wait_s_max = self.stats.lock_wait_s_max.max(lock_wait_s);
-    }
-
-    fn get(&mut self, key: &str, lock_wait_s: f64) -> Option<RootService> {
-        self.record_lock_wait(lock_wait_s);
+    fn get(&mut self, key: &str) -> Option<RootService> {
         let service = self.entries.get(key)?.clone();
         self.touch(key);
-        self.stats.hits_total += 1;
         Some(service)
     }
 
-    pub(crate) fn insert_or_get(
-        &mut self,
-        key: String,
-        service: RootService,
-        lock_wait_s: f64,
-    ) -> RootService {
-        self.record_lock_wait(lock_wait_s);
+    pub(crate) fn insert_or_get(&mut self, key: String, service: RootService) -> RootService {
         if let Some(existing) = self.entries.get(&key).cloned() {
             self.touch(&key);
-            self.stats.hits_total += 1;
             return existing;
         }
-        self.stats.misses_total += 1;
-        self.stats.creates_total += 1;
         self.lru.push_back(key.clone());
         self.entries.insert(key, service.clone());
-        let evicted_count = self.evict_oldest();
-        self.stats.evictions_total = self
-            .stats
-            .evictions_total
-            .saturating_add(u64::try_from(evicted_count).unwrap_or(u64::MAX));
+        self.evict_oldest();
         service
     }
 
@@ -83,17 +52,13 @@ impl ServiceCache {
         self.lru.push_back(key.to_owned());
     }
 
-    fn evict_oldest(&mut self) -> usize {
-        let mut evicted_count = 0;
+    fn evict_oldest(&mut self) {
         while self.entries.len() > SERVICE_CACHE_MAX {
             let Some(key) = self.lru.pop_front() else {
                 break;
             };
-            if self.entries.remove(&key).is_some() {
-                evicted_count += 1;
-            }
+            self.entries.remove(&key);
         }
-        evicted_count
     }
 }
 
@@ -169,17 +134,15 @@ pub struct BoundedCapturedUpperdir {
 fn service_for_root(root: &Path, options: CommitOptions) -> Result<RootService, CommitError> {
     let options = CommitOptions::new(options.auto_squash_max_depth);
     let key = service_cache_key(root, options);
-    let lock_start = Instant::now();
     {
         let mut cache = lock_services()?;
-        if let Some(service) = cache.get(&key, lock_start.elapsed().as_secs_f64()) {
+        if let Some(service) = cache.get(&key) {
             return Ok(service);
         }
     }
     let service = Arc::new(CommitWriter::with_options(root.to_path_buf(), options)?);
-    let lock_start = Instant::now();
     let mut cache = lock_services()?;
-    Ok(cache.insert_or_get(key, service, lock_start.elapsed().as_secs_f64()))
+    Ok(cache.insert_or_get(key, service))
 }
 
 pub(crate) fn normalize_root_key(root: &Path) -> String {
@@ -228,71 +191,12 @@ pub struct SnapshotCompaction {
     pub after_layer_count: usize,
 }
 
-#[derive(Debug, Clone)]
-pub struct LeaseReleaseHandle {
-    inner: Arc<Mutex<Option<LeaseReleaseState>>>,
-}
-
-#[derive(Debug, Clone)]
-struct LeaseReleaseState {
-    root: PathBuf,
-    lease_id: String,
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct LeaseReleaseReport {
-    pub released: Option<bool>,
-    pub error: Option<String>,
-}
-
-impl LeaseReleaseHandle {
-    #[must_use]
-    pub fn new(root: PathBuf, lease_id: String) -> Self {
-        Self {
-            inner: Arc::new(Mutex::new(Some(LeaseReleaseState { root, lease_id }))),
-        }
-    }
-
-    #[must_use]
-    pub fn release(&self) -> LeaseReleaseReport {
-        let state = self
-            .inner
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .take();
-        let Some(state) = state else {
-            return LeaseReleaseReport {
-                released: Some(false),
-                error: None,
-            };
-        };
-        match release_lease(&state.root, &state.lease_id) {
-            Ok(released) => LeaseReleaseReport {
-                released: Some(released),
-                error: None,
-            },
-            Err(error) => LeaseReleaseReport {
-                released: None,
-                error: Some(error.to_string()),
-            },
-        }
-    }
-}
-
-impl Drop for LeaseReleaseHandle {
-    fn drop(&mut self) {
-        if Arc::strong_count(&self.inner) == 1 {
-            let _ = self.release();
-        }
-    }
-}
-
 pub fn acquire_snapshot(root: &Path, request_id: &str) -> Result<Snapshot, LayerStackError> {
     let lease = LayerStack::open(root.to_path_buf())?.acquire_snapshot(request_id)?;
     Ok(snapshot_from_lease(lease))
 }
 
-pub fn acquire_bounded_snapshot_for_command(
+pub(crate) fn acquire_bounded_snapshot_for_command(
     root: &Path,
     request_id: &str,
     max_depth: usize,
@@ -319,8 +223,7 @@ pub fn release_lease(root: &Path, lease_id: &str) -> Result<bool, LayerStackErro
     LayerStack::open(root.to_path_buf())?.release_lease(lease_id)
 }
 
-#[doc(hidden)]
-pub fn compact_snapshot_for_remount(
+pub(crate) fn compact_snapshot_for_remount(
     root: &Path,
     snapshot_manifest_version: i64,
     snapshot_layer_paths: &[PathBuf],
@@ -441,7 +344,7 @@ fn command_route_probe_change(entry: &CapturedUpperdirEntry) -> Result<LayerChan
 }
 
 fn command_git_metadata_probe_needs_payload(path: &LayerPath) -> bool {
-    let Some(parts) = git_metadata_relative_parts(path) else {
+    let Some(parts) = parts_after_git_dir(path) else {
         return false;
     };
     parts == ["index"]

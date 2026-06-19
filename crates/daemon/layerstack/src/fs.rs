@@ -70,6 +70,39 @@ pub(crate) fn remove_path(path: &Path) -> Result<(), LayerStackError> {
     Ok(())
 }
 
+pub(crate) fn count_dirs(path: &Path) -> Result<usize, LayerStackError> {
+    if !path.exists() {
+        return Ok(0);
+    }
+    let mut count = 0;
+    for entry in std::fs::read_dir(path)? {
+        if entry?.file_type()?.is_dir() {
+            count += 1;
+        }
+    }
+    Ok(count)
+}
+
+pub(crate) fn storage_bytes(path: &Path) -> Result<u64, LayerStackError> {
+    if !path.exists() {
+        return Ok(0);
+    }
+    let mut total = 0;
+    let mut stack = vec![path.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        for entry in std::fs::read_dir(dir)? {
+            let entry = entry?;
+            let meta = entry.metadata()?;
+            if meta.is_dir() {
+                stack.push(entry.path());
+            } else if meta.is_file() {
+                total += meta.len();
+            }
+        }
+    }
+    Ok(total)
+}
+
 pub(crate) fn join_layer_path(root: &Path, rel: &str) -> PathBuf {
     rel.split('/').fold(root.to_path_buf(), |path, part| {
         if part.is_empty() {

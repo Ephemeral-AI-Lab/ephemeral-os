@@ -277,7 +277,9 @@ fn trimmed_string(args: &serde_json::Value, key: &str) -> String {
         .to_owned()
 }
 
-fn protocol_version_error(value: Option<&serde_json::Value>) -> Option<serde_json::Value> {
+pub(crate) fn protocol_version_error(
+    value: Option<&serde_json::Value>,
+) -> Option<serde_json::Value> {
     let Some(value) = value else {
         return Some(crate::dispatcher::error_response(
             ErrorKind::InvalidRequest,
@@ -306,54 +308,5 @@ fn protocol_version_error(value: Option<&serde_json::Value>) -> Option<serde_jso
                 "found": value,
             }),
         )),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use serde_json::json;
-
-    use super::protocol_version_error;
-
-    #[test]
-    fn protocol_version_accepts_supported_version() {
-        assert!(
-            protocol_version_error(Some(&json!(crate::wire::DAEMON_PROTOCOL_VERSION))).is_none()
-        );
-    }
-
-    #[test]
-    fn protocol_version_rejects_absent_version() {
-        let response = protocol_version_error(None).expect("error response");
-
-        assert_eq!(response["status"], "error");
-        assert_eq!(response["error"]["kind"], "invalid_request");
-        assert_eq!(
-            response["error"]["details"]["fields"]["expected"],
-            json!(crate::wire::DAEMON_PROTOCOL_VERSION)
-        );
-        assert_eq!(response["error"]["details"]["fields"]["found"], json!(null));
-    }
-
-    #[test]
-    fn protocol_version_rejects_unsupported_version() {
-        let response = protocol_version_error(Some(&json!(999))).expect("error response");
-
-        assert_eq!(response["status"], "error");
-        assert_eq!(response["error"]["kind"], "invalid_request");
-        assert_eq!(
-            response["error"]["details"]["fields"]["expected"],
-            json!(crate::wire::DAEMON_PROTOCOL_VERSION)
-        );
-        assert_eq!(response["error"]["details"]["fields"]["found"], json!(999));
-    }
-
-    #[test]
-    fn protocol_version_rejects_non_integer_version() {
-        let response = protocol_version_error(Some(&json!("1"))).expect("error response");
-
-        assert_eq!(response["status"], "error");
-        assert_eq!(response["error"]["kind"], "invalid_request");
-        assert_eq!(response["error"]["details"]["fields"]["found"], json!("1"));
     }
 }

@@ -2,8 +2,8 @@
 //! connection, dispatch through the daemon dispatcher, and token-driven
 //! shutdown. Connection handlers keep mutex guards out of await points.
 
-mod connection;
-mod dispatch;
+pub(crate) mod connection;
+pub(crate) mod dispatch;
 mod lifecycle;
 mod trace_context;
 
@@ -16,10 +16,7 @@ use tokio_util::sync::CancellationToken;
 use crate::invocation_registry::InFlightRegistry;
 
 const MAX_REQUEST_BYTES: usize = crate::wire::MAX_REQUEST_BYTES;
-#[cfg(not(test))]
 const REQUEST_READ_TIMEOUT_S: f64 = crate::wire::REQUEST_READ_TIMEOUT_S;
-#[cfg(test)]
-const REQUEST_READ_TIMEOUT_S: f64 = 0.1;
 
 /// Where the daemon binds + writes its pid, plus the optional TCP listener.
 #[derive(Debug, Clone)]

@@ -1,6 +1,6 @@
 use crate::model::LayerPath;
 
-pub(crate) fn relative_parts(path: &LayerPath) -> Option<Vec<&str>> {
+pub(crate) fn parts_after_git_dir(path: &LayerPath) -> Option<Vec<&str>> {
     let mut parts = Vec::new();
     let mut found_git = false;
     for part in path.as_str().split('/') {

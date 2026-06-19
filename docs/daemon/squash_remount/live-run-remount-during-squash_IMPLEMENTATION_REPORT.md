@@ -265,7 +265,7 @@ There are two related mechanisms:
 This applies when only the lease head is protected.
 
 2. Lease-aware gap reclaim around all protected leased layers.
-   - `plan_lease_aware_gaps` treats all currently leased layers as protected.
+   - The internal gap planner treats all currently leased layers as protected.
    - Unleased runs above, between, or below protected layers can be compacted
      into view or delta checkpoints.
    - Protected layers are retained exactly.
@@ -518,11 +518,10 @@ Required production invariants:
 
 ## Verification Commands To Reproduce
 
-LayerStack unit and benchmark surface:
+LayerStack unit surface:
 
 ```bash
 CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p layerstack
-CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo run -q -p layerstack --release --example bench_layerstack_gap_reclaim
 ```
 
 Archived focused live real-pip proof:

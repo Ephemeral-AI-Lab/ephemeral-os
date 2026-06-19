@@ -53,7 +53,13 @@ fn captures_upperdir_files_whiteouts_symlinks_and_opaque_markers() -> TestResult
     std::fs::create_dir_all(fixture.base.join("dir"))?;
     std::fs::write(fixture.base.join("dir/file.txt"), b"hello")?;
     std::fs::write(fixture.base.join(".wh.old.txt"), b"")?;
-    std::fs::write(fixture.base.join("dir").join(OPAQUE_MARKER), b"")?;
+    std::fs::write(
+        fixture
+            .base
+            .join("dir")
+            .join(crate::whiteout::OPAQUE_MARKER),
+        b"",
+    )?;
     std::os::unix::fs::symlink("../target", fixture.base.join("link"))?;
 
     let changes = capture_changes_for_test(&fixture.base)?;

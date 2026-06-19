@@ -93,6 +93,16 @@ async fn read_request_line<R>(reader: &mut R) -> Result<Vec<u8>, DaemonError>
 where
     R: AsyncRead + Unpin,
 {
+    read_request_line_with_timeout(reader, REQUEST_READ_TIMEOUT_S).await
+}
+
+pub(crate) async fn read_request_line_with_timeout<R>(
+    reader: &mut R,
+    timeout_s: f64,
+) -> Result<Vec<u8>, DaemonError>
+where
+    R: AsyncRead + Unpin,
+{
     let mut buf = Vec::new();
     let read = async {
         let limit = u64::try_from(MAX_REQUEST_BYTES)
@@ -107,7 +117,7 @@ where
         }
         Ok::<(), DaemonError>(())
     };
-    timeout(Duration::from_secs_f64(REQUEST_READ_TIMEOUT_S), read)
+    timeout(Duration::from_secs_f64(timeout_s), read)
         .await
         .map_err(|_| {
             DaemonError::Io(std::io::Error::new(
@@ -116,36 +126,4 @@ where
             ))
         })??;
     Ok(buf)
-}
-
-#[cfg(test)]
-mod tests {
-    use tokio::io::AsyncReadExt as _;
-
-    use super::*;
-
-    #[tokio::test]
-    async fn read_request_line_rejects_oversized_payloads() {
-        let mut reader = tokio::io::repeat(b'x').take(
-            u64::try_from(MAX_REQUEST_BYTES)
-                .expect("max request bytes fits u64")
-                .saturating_add(1),
-        );
-        let err = read_request_line(&mut reader)
-            .await
-            .expect_err("oversized request rejected");
-        assert!(matches!(err, DaemonError::RequestTooLarge { .. }));
-    }
-
-    #[tokio::test]
-    async fn read_request_line_times_out_waiting_for_line() {
-        let (_writer, mut reader) = tokio::io::duplex(64);
-        let err = read_request_line(&mut reader)
-            .await
-            .expect_err("hanging request times out");
-        assert!(
-            matches!(err, DaemonError::Io(ref source) if source.kind() == std::io::ErrorKind::TimedOut),
-            "{err:?}"
-        );
-    }
 }

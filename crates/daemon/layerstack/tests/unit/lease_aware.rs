@@ -19,13 +19,20 @@ fn manifest(ids: &[&str]) -> Result<Manifest, crate::model::CasError> {
 }
 
 fn interval_ids(plan: &LeaseAwarePlan) -> Vec<Vec<&str>> {
-    plan.reclaiming_intervals()
-        .map(|interval| {
-            interval
-                .layers
-                .iter()
-                .map(|layer| layer.layer_id.as_str())
-                .collect()
+    plan.entries
+        .iter()
+        .filter_map(|entry| {
+            if let LeaseAwarePlanEntry::ReclaimingInterval(interval) = entry {
+                Some(
+                    interval
+                        .layers
+                        .iter()
+                        .map(|layer| layer.layer_id.as_str())
+                        .collect(),
+                )
+            } else {
+                None
+            }
         })
         .collect()
 }
@@ -43,8 +50,15 @@ fn protected_ids(plan: &LeaseAwarePlan) -> Vec<&str> {
 }
 
 fn checkpoint_modes(plan: &LeaseAwarePlan) -> Vec<LeaseAwareCheckpointMode> {
-    plan.reclaiming_intervals()
-        .map(|interval| interval.checkpoint_mode)
+    plan.entries
+        .iter()
+        .filter_map(|entry| {
+            if let LeaseAwarePlanEntry::ReclaimingInterval(interval) = entry {
+                Some(interval.checkpoint_mode)
+            } else {
+                None
+            }
+        })
         .collect()
 }
 
@@ -64,7 +78,7 @@ fn fully_leased_stack_has_no_reclaiming_intervals() -> TestResult {
     assert_eq!(plan.protected_layer_count, 50);
     assert_eq!(plan.reclaiming_interval_count, 0);
     assert_eq!(plan.reclaiming_layer_count, 0);
-    assert_eq!(plan.active_depth_after_reclaiming_checkpoints(), 50);
+    assert_eq!(plan.entries.len(), 50);
     assert_eq!(protected_ids(&plan).len(), 50);
     Ok(())
 }
@@ -99,7 +113,7 @@ fn unleased_prefix_compacts_above_protected_suffix() -> TestResult {
         checkpoint_modes(&plan),
         [LeaseAwareCheckpointMode::DeltaRequired]
     );
-    assert_eq!(plan.active_depth_after_reclaiming_checkpoints(), 51);
+    assert_eq!(plan.entries.len(), 51);
     Ok(())
 }
 
@@ -126,7 +140,7 @@ fn same_file_gap_plans_around_single_protected_layer() -> TestResult {
         ]
     );
     assert_eq!(protected_ids(&plan), ["l4"]);
-    assert_eq!(plan.active_depth_after_reclaiming_checkpoints(), 3);
+    assert_eq!(plan.entries.len(), 3);
     Ok(())
 }
 
@@ -145,7 +159,7 @@ fn mounted_l4_lease_keeps_lower_prefix_until_normalized_or_released() -> TestRes
     assert_eq!(plan.reclaiming_layer_count, 2);
     assert_eq!(interval_ids(&plan), vec![vec!["n6", "n5"]]);
     assert_eq!(protected_ids(&plan), ["l4", "n3", "n2", "n1"]);
-    assert_eq!(plan.active_depth_after_reclaiming_checkpoints(), 5);
+    assert_eq!(plan.entries.len(), 5);
     Ok(())
 }
 
@@ -164,7 +178,7 @@ fn mounted_l4_lease_after_parent_normalization_keeps_compact_parent() -> TestRes
     assert_eq!(plan.reclaiming_layer_count, 2);
     assert_eq!(interval_ids(&plan), vec![vec!["n6", "n5"]]);
     assert_eq!(protected_ids(&plan), ["l4", "c_n3_n1"]);
-    assert_eq!(plan.active_depth_after_reclaiming_checkpoints(), 3);
+    assert_eq!(plan.entries.len(), 3);
     Ok(())
 }
 
@@ -181,6 +195,6 @@ fn alternating_single_unleased_layers_are_kept_by_minimum_interval() -> TestResu
     assert_eq!(plan.protected_layer_count, 3);
     assert_eq!(plan.kept_unleased_layer_count, 3);
     assert_eq!(plan.reclaiming_interval_count, 0);
-    assert_eq!(plan.active_depth_after_reclaiming_checkpoints(), 6);
+    assert_eq!(plan.entries.len(), 6);
     Ok(())
 }

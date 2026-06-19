@@ -144,7 +144,3 @@ pub fn allocate_overlay_writable_dirs(run_dir: &Path) -> Result<OverlayWritableD
     std::fs::create_dir_all(&workdir).map_err(|err| OverlayError::capture(&workdir, err))?;
     Ok(OverlayWritableDirs { upperdir, workdir })
 }
-
-#[cfg(test)]
-#[path = "../tests/unit/writable_dirs.rs"]
-mod writable_dirs_tests;

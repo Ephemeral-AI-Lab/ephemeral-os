@@ -1,9 +1,7 @@
 mod budget;
-mod build;
-mod events;
+pub(crate) mod build;
+pub(crate) mod events;
 mod resources;
-#[cfg(test)]
-mod tests;
 
 use super::envelope_meta::stamp_pending_envelope_meta;
 use super::spool::{daemon_boot_id, now_ms, RequestTraceEvent, RequestTraceFacts};

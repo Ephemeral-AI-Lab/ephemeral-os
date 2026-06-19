@@ -36,7 +36,7 @@ pub(crate) struct RequestTraceEvent {
 }
 
 impl RequestTraceEvent {
-    #[cfg(test)]
+    #[allow(dead_code)]
     pub(crate) fn operation(
         module: impl Into<String>,
         name: impl Into<String>,

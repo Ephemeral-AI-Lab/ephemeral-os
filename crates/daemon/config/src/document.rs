@@ -31,7 +31,7 @@ impl ConfigDocument {
         Ok(Self { value })
     }
 
-    #[cfg(test)]
+    #[allow(dead_code)]
     pub(crate) fn from_yaml_str(text: &str) -> Result<Self, ConfigError> {
         Self::parse(Path::new("<test>"), text)
     }
@@ -54,7 +54,7 @@ impl ConfigDocument {
         yaml::to_string(&self.value).map_err(|source| ConfigError::Serialize { source })
     }
 
-    #[cfg(test)]
+    #[allow(dead_code)]
     pub(crate) fn into_value(self) -> Value {
         self.value
     }

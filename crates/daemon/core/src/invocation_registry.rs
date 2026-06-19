@@ -71,7 +71,7 @@ impl InvocationTaskHandle {
 /// Tracks daemon-side tasks by invocation id for cancellation + TTL cleanup.
 #[derive(Debug)]
 pub struct InFlightRegistry {
-    inner: Mutex<HashMap<String, InFlightInvocation>>,
+    pub(crate) inner: Mutex<HashMap<String, InFlightInvocation>>,
     ttl_s: f64,
     reaper_interval_s: f64,
 }
@@ -238,7 +238,3 @@ fn monotonic_seconds() -> f64 {
     static START: OnceLock<Instant> = OnceLock::new();
     START.get_or_init(Instant::now).elapsed().as_secs_f64()
 }
-
-#[cfg(test)]
-#[path = "../tests/unit/invocation_registry/mod.rs"]
-mod tests;

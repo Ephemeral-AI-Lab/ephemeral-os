@@ -213,7 +213,7 @@ impl TraceStore {
         query::query_plan_for(&self.lock(), sql)
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fn resource_span_ids_for_request(
         &self,
         request_id: &str,

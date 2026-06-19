@@ -7,7 +7,7 @@ use std::path::{Component, Path, PathBuf};
 use crate::runner::protocol::NamespaceCommandRequest;
 use crate::runner::RunnerError;
 
-pub(super) fn shell_argv(request: &NamespaceCommandRequest) -> Result<Vec<String>, RunnerError> {
+pub(crate) fn shell_argv(request: &NamespaceCommandRequest) -> Result<Vec<String>, RunnerError> {
     let shell_args = &request.args;
     let Some(command) = shell_args.get("command") else {
         return Err(RunnerError::InvalidRequest(
@@ -34,7 +34,7 @@ pub(super) fn shell_argv(request: &NamespaceCommandRequest) -> Result<Vec<String
     ))
 }
 
-pub(super) fn shell_cwd(request: &NamespaceCommandRequest) -> Result<PathBuf, RunnerError> {
+pub(crate) fn shell_cwd(request: &NamespaceCommandRequest) -> Result<PathBuf, RunnerError> {
     let raw = request
         .args
         .get("cwd")
@@ -75,7 +75,7 @@ pub(super) fn shell_cwd(request: &NamespaceCommandRequest) -> Result<PathBuf, Ru
     Ok(resolved)
 }
 
-fn normalize_lexical(path: &Path) -> PathBuf {
+pub(crate) fn normalize_lexical(path: &Path) -> PathBuf {
     let mut normalized = PathBuf::new();
     for component in path.components() {
         match component {
@@ -135,7 +135,3 @@ pub(super) fn command_environment(args: &serde_json::Value) -> BTreeMap<String, 
     env.insert("GIT_OPTIONAL_LOCKS".to_owned(), "0".to_owned());
     env
 }
-
-#[cfg(test)]
-#[path = "../../../tests/unit/runner/shell_exec/request.rs"]
-mod tests;

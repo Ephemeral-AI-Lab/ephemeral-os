@@ -20,19 +20,19 @@ pub mod service;
 mod squash;
 #[path = "../src/stack/mod.rs"]
 mod stack;
+#[path = "../src/whiteout.rs"]
+mod whiteout;
 #[path = "../src/workspace.rs"]
 mod workspace;
 
 pub use capture::{CaptureError, CaptureStats, ProtectedPathDrop, ProtectedPathDropReason};
-pub use commit::{
+pub(crate) use commit::{
     hash_current, CaptureRouteStats, ChangesetResult, CommitError, CommitOptions, CommitStatus,
     FileResult, OccTraceEvent,
 };
 pub use error::LayerStackError;
-pub use lease_aware::{
-    plan_lease_aware_gaps, LeaseAwareCheckpointMode, LeaseAwareCopyThroughOutcome, LeaseAwarePlan,
-    LeaseAwarePlanEntry, LeaseAwareReclaimOutcome, LeaseParentCompactionOutcome,
-    ReclaimingInterval,
+pub(crate) use lease_aware::{
+    plan_lease_aware_gaps, LeaseAwareCheckpointMode, LeaseAwarePlan, LeaseAwarePlanEntry,
 };
 pub use model::{
     aggregate_layer_changes, layer_digest, manifest_root_hash, CasError, LayerChange, LayerPath,

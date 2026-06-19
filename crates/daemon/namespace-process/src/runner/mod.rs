@@ -15,7 +15,7 @@ use thiserror::Error;
 
 pub mod protocol;
 pub mod setns;
-mod shell_exec;
+pub(crate) mod shell_exec;
 
 pub mod config {
     pub use config::configs::runner::*;

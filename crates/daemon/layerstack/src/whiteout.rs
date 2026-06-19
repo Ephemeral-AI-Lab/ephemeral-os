@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 
 use crate::error::LayerStackError;
 
-pub(super) const LOGICAL_WHITEOUT_PREFIX: &str = ".wh.";
-pub(super) const OPAQUE_MARKER: &str = ".wh..wh..opq";
+pub(crate) const LOGICAL_WHITEOUT_PREFIX: &str = ".wh.";
+pub(crate) const OPAQUE_MARKER: &str = ".wh..wh..opq";
 
 const TRUSTED_OVERLAY_WHITEOUT_XATTR: &str = "trusted.overlay.whiteout";
 const USER_OVERLAY_WHITEOUT_XATTR: &str = "user.overlay.whiteout";
@@ -16,7 +16,7 @@ const WHITEOUT_DEVICE_MAJOR: u32 = 0;
 const WHITEOUT_DEVICE_MINOR: u32 = 0;
 
 #[cfg(target_os = "linux")]
-pub(super) fn write_kernel_whiteout(path: &Path) -> Result<(), LayerStackError> {
+pub(crate) fn write_kernel_whiteout(path: &Path) -> Result<(), LayerStackError> {
     let device = rustix::fs::makedev(WHITEOUT_DEVICE_MAJOR, WHITEOUT_DEVICE_MINOR);
     let mknod = rustix::fs::mknodat(
         rustix::fs::CWD,
@@ -56,7 +56,7 @@ pub(super) fn write_kernel_whiteout(path: &Path) -> Result<(), LayerStackError> 
 }
 
 #[cfg(not(target_os = "linux"))]
-pub(super) fn write_kernel_whiteout(path: &Path) -> Result<(), LayerStackError> {
+pub(crate) fn write_kernel_whiteout(path: &Path) -> Result<(), LayerStackError> {
     let logical = logical_whiteout_path_for_target(path);
     if let Some(parent) = logical.parent() {
         std::fs::create_dir_all(parent)?;
@@ -65,7 +65,7 @@ pub(super) fn write_kernel_whiteout(path: &Path) -> Result<(), LayerStackError> 
     Ok(())
 }
 
-pub(super) fn logical_whiteout_path_for_target(path: &Path) -> PathBuf {
+pub(crate) fn logical_whiteout_path_for_target(path: &Path) -> PathBuf {
     let name = path.file_name().unwrap_or_default();
     let mut whiteout_name = OsString::from(LOGICAL_WHITEOUT_PREFIX);
     whiteout_name.push(name);
@@ -78,12 +78,12 @@ pub(super) fn logical_whiteout_path_for_target(path: &Path) -> PathBuf {
     }
 }
 
-pub(super) fn is_kernel_whiteout(path: &Path) -> bool {
+pub(crate) fn is_kernel_whiteout(path: &Path) -> bool {
     std::fs::symlink_metadata(path).is_ok_and(|meta| is_kernel_whiteout_meta(path, &meta))
 }
 
 #[cfg(unix)]
-pub(super) fn is_kernel_whiteout_meta(path: &Path, meta: &std::fs::Metadata) -> bool {
+pub(crate) fn is_kernel_whiteout_meta(path: &Path, meta: &std::fs::Metadata) -> bool {
     if meta.file_type().is_char_device() && meta.rdev() == 0 {
         return true;
     }
@@ -94,7 +94,7 @@ pub(super) fn is_kernel_whiteout_meta(path: &Path, meta: &std::fs::Metadata) -> 
 }
 
 #[cfg(not(unix))]
-pub(super) fn is_kernel_whiteout_meta(_path: &Path, _meta: &std::fs::Metadata) -> bool {
+pub(crate) fn is_kernel_whiteout_meta(_path: &Path, _meta: &std::fs::Metadata) -> bool {
     false
 }
 

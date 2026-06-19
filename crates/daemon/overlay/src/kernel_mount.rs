@@ -267,17 +267,17 @@ pub const fn mount_overlay_legacy(
 }
 
 #[cfg(target_os = "linux")]
-struct ValidatedMountInputs {
+pub(crate) struct ValidatedMountInputs {
     workspace_root: PathBuf,
-    layer_paths: Vec<PathBuf>,
-    upperdir: PathBuf,
-    workdir: PathBuf,
+    pub(crate) layer_paths: Vec<PathBuf>,
+    pub(crate) upperdir: PathBuf,
+    pub(crate) workdir: PathBuf,
     _fds: Vec<File>,
 }
 
 #[cfg(target_os = "linux")]
 impl ValidatedMountInputs {
-    fn open(workspace_root: &Path, handle: &OverlayHandle) -> Result<Self> {
+    pub(crate) fn open(workspace_root: &Path, handle: &OverlayHandle) -> Result<Self> {
         if handle.layer_paths.is_empty() {
             return Err(OverlayError::InvalidMountInput(
                 "layer_paths must not be empty".to_owned(),
@@ -449,7 +449,3 @@ impl<T> MountIo<T> for rustix::io::Result<T> {
         })
     }
 }
-
-#[cfg(all(test, target_os = "linux"))]
-#[path = "../tests/unit/kernel_mount.rs"]
-mod tests;

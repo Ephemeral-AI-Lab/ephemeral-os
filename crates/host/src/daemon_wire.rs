@@ -467,7 +467,7 @@ pub fn response_is_accepted(response: &Value) -> bool {
     matches!(response_envelope_status(response), "ok" | "running")
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 mod tests {
     use super::{
         decode_trace_sidecar_base64, read_response_line_with_limit, response_domain_status,

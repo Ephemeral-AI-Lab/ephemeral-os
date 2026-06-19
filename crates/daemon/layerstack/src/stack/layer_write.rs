@@ -4,7 +4,7 @@ use crate::error::LayerStackError;
 use crate::fs::{join_layer_path, remove_path};
 use crate::model::{aggregate_layer_changes, LayerChange};
 
-use super::whiteout::{write_kernel_whiteout, OPAQUE_MARKER};
+use crate::whiteout::{write_kernel_whiteout, OPAQUE_MARKER};
 
 pub(super) fn write_layer_changes(
     layer_dir: &Path,

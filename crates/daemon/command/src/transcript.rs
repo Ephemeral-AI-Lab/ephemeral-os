@@ -6,8 +6,9 @@ use time::{OffsetDateTime, UtcOffset};
 
 use crate::contract::tail_lines;
 
-const MAX_TRANSCRIPT_READ_BYTES: u64 = 1024 * 1024;
-const TRANSCRIPT_TRUNCATED_NOTICE: &str = "[eos: transcript truncated to last 1048576 bytes]\n";
+pub(crate) const MAX_TRANSCRIPT_READ_BYTES: u64 = 1024 * 1024;
+pub(crate) const TRANSCRIPT_TRUNCATED_NOTICE: &str =
+    "[eos: transcript truncated to last 1048576 bytes]\n";
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct TranscriptTimestampTimezone {
@@ -27,7 +28,7 @@ impl TranscriptTimestampTimezone {
             .ok_or_else(|| "timezone must be UTC, Z, or a fixed offset like +08:00".to_owned())
     }
 
-    fn format_prefix_at(self, now: OffsetDateTime) -> String {
+    pub(crate) fn format_prefix_at(self, now: OffsetDateTime) -> String {
         let now = now.to_offset(self.offset);
         format!(
             "[{year:04}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}.{millisecond:03}{offset}] ",
@@ -60,7 +61,7 @@ impl TranscriptTimestampPrefixer {
         self.prefix_at(bytes, OffsetDateTime::now_utc())
     }
 
-    fn prefix_at(&mut self, bytes: &[u8], now: OffsetDateTime) -> Vec<u8> {
+    pub(crate) fn prefix_at(&mut self, bytes: &[u8], now: OffsetDateTime) -> Vec<u8> {
         let mut out = Vec::with_capacity(bytes.len());
         for byte in bytes {
             if self.at_line_start {
@@ -147,7 +148,3 @@ fn offset_suffix(offset: UtcOffset) -> String {
     let minutes = (abs % 3600) / 60;
     format!("{sign}{hours:02}:{minutes:02}")
 }
-
-#[cfg(test)]
-#[path = "../tests/unit/transcript.rs"]
-mod tests;
