@@ -118,7 +118,9 @@ impl CommandOps {
         for run in runs {
             let command_id = run.process().id().to_owned();
             quiesce.inspection.command_ids.push(command_id.clone());
-            let ActiveCommand::Workspace(isolated) = &*run;
+            let ActiveCommand::Workspace(isolated) = &*run else {
+                continue;
+            };
             if isolated.remountable {
                 quiesce.inspection.remountable_commands += 1;
             }

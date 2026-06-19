@@ -57,6 +57,43 @@ fn workspace_command_missing_holder_fds_fails_without_freshns_fallback(
 }
 
 #[test]
+fn one_shot_command_prepares_fresh_namespace_overlay() -> Result<(), Box<dyn std::error::Error>> {
+    let root = prepare_root("one-shot-freshns");
+    let dirs = workspace::overlay::dirs::create_overlay_dirs(root.join("run"))?;
+    let workspace_root = root.join("workspace");
+    let layer_paths = vec![root.join("lower")];
+
+    let prepared = prepare_one_shot(
+        prepare_inputs(&root, "one-shot-command", "one_shot"),
+        &workspace_root,
+        &layer_paths,
+        &dirs,
+        &dirs.run_dir,
+    )
+    .expect("one-shot command prepares");
+    let request: RunRequest = serde_json::from_value(prepared.run_request)?;
+
+    assert_eq!(request.mode, RunMode::FreshNs);
+    assert_eq!(request.workspace_root, WorkspaceRoot(workspace_root));
+    assert_eq!(request.layer_paths, layer_paths);
+    assert_eq!(request.upperdir, Some(dirs.upperdir));
+    assert_eq!(request.workdir, Some(dirs.workdir));
+    assert_eq!(request.ns_fds, None);
+    assert_eq!(request.cgroup_path, None);
+    assert_eq!(
+        prepared.request_path,
+        dirs.run_dir.join("command-runner-request.json")
+    );
+    assert_eq!(
+        prepared.output_path,
+        dirs.run_dir.join("command-runner-result.json")
+    );
+
+    let _ = std::fs::remove_dir_all(root);
+    Ok(())
+}
+
+#[test]
 fn finish_prepare_records_prepared_and_metadata_artifact_events() {
     let root =
         std::env::temp_dir().join(format!("operation-command-prepare-{}", std::process::id()));

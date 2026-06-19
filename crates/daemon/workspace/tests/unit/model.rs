@@ -22,7 +22,12 @@ fn workspace_mode_handle() -> WorkspaceModeHandle {
             workdir: "/tmp/eos/work".into(),
         },
         layer_paths: vec!["/lower/one".into(), "/lower/two".into()],
-        ns_fds: HashMap::from([("mnt".to_owned(), 11), ("pid".to_owned(), 12)]),
+        ns_fds: HashMap::from([
+            ("user".to_owned(), 10),
+            ("mnt".to_owned(), 11),
+            ("pid".to_owned(), 12),
+            ("net".to_owned(), 13),
+        ]),
         holder_pid: 1234,
         readiness_fd: 13,
         control_fd: 14,
@@ -61,21 +66,30 @@ fn assert_handle_projection(public: &WorkspaceHandle) {
         }
     );
     let launch = public.launch.as_ref().expect("launch context is projected");
-    assert_eq!(launch.upperdir, PathBuf::from("/tmp/eos/upper"));
-    assert_eq!(launch.workdir, PathBuf::from("/tmp/eos/work"));
-    assert_eq!(
-        launch.cgroup_path,
-        Some(PathBuf::from("/sys/fs/cgroup/eos"))
-    );
-    assert_eq!(
-        launch.namespace_fds,
-        Some(WorkspaceLaunchNamespaceFds {
-            user: None,
-            mnt: Some(11),
-            pid: Some(12),
-            net: None,
+    let request = launch
+        .command_run_request(WorkspaceCommandRunRequest {
+            command_id: "cmd-1".to_owned(),
+            caller_id: "caller-1".to_owned(),
+            command: "pwd".to_owned(),
+            cwd: Some("/workspace/src".into()),
+            timeout_seconds: Some(2.0),
         })
-    );
+        .expect("launch context produces runner request");
+    assert_eq!(request["mode"], "set_ns");
+    assert_eq!(request["tool_call"]["invocation_id"], "cmd-1");
+    assert_eq!(request["tool_call"]["caller_id"], "caller-1");
+    assert_eq!(request["tool_call"]["args"]["command"], "pwd");
+    assert_eq!(request["tool_call"]["args"]["cwd"], "/workspace/src");
+    assert_eq!(request["workspace_root"], "/workspace");
+    assert_eq!(request["layer_paths"][0], "/lower/one");
+    assert_eq!(request["upperdir"], "/tmp/eos/upper");
+    assert_eq!(request["workdir"], "/tmp/eos/work");
+    assert_eq!(request["ns_fds"]["user"], 10);
+    assert_eq!(request["ns_fds"]["mnt"], 11);
+    assert_eq!(request["ns_fds"]["pid"], 12);
+    assert_eq!(request["ns_fds"]["net"], 13);
+    assert_eq!(request["cgroup_path"], "/sys/fs/cgroup/eos");
+    assert_eq!(request["timeout_seconds"], 2.0);
 }
 
 #[test]
@@ -99,15 +113,13 @@ fn launch_context_debug_does_not_expose_internal_paths_or_fd_numbers() {
     let launch = public.launch.expect("launch context is projected");
 
     let context_debug = format!("{launch:?}");
-    let fds_debug = format!(
+    let holder_debug = format!(
         "{:?}",
-        launch
-            .namespace_fds
-            .expect("namespace fd context is projected")
+        launch.holder_fds.expect("holder fd context is projected")
     );
 
     assert_no_internal_fields(&context_debug);
-    assert_no_internal_fields(&fds_debug);
+    assert_no_internal_fields(&holder_debug);
     for forbidden in [
         "/tmp/eos/upper",
         "/tmp/eos/work",
@@ -120,9 +132,90 @@ fn launch_context_debug_does_not_expose_internal_paths_or_fd_numbers() {
             "launch context debug output exposed {forbidden}: {context_debug}"
         );
         assert!(
-            !fds_debug.contains(forbidden),
-            "namespace fd debug output exposed {forbidden}: {fds_debug}"
+            !holder_debug.contains(forbidden),
+            "holder fd debug output exposed {forbidden}: {holder_debug}"
         );
+    }
+}
+
+#[test]
+fn host_compatible_command_request_uses_holder_launch_without_network_fd() {
+    let launch = WorkspaceLaunchContext {
+        profile: WorkspaceProfile::HostCompatible,
+        workspace_root: "/workspace".into(),
+        layer_paths: vec!["/lower/one".into()],
+        upperdir: "/upper/host".into(),
+        workdir: "/work/host".into(),
+        holder_fds: Some(WorkspaceLaunchFds {
+            user: Some(20),
+            mnt: Some(21),
+            pid: Some(22),
+            net: None,
+        }),
+        cgroup_path: Some("/sys/fs/cgroup/eos-host".into()),
+    };
+
+    let request = launch
+        .command_run_request(WorkspaceCommandRunRequest {
+            command_id: "cmd-1".to_owned(),
+            caller_id: "caller-1".to_owned(),
+            command: "pwd".to_owned(),
+            cwd: None,
+            timeout_seconds: None,
+        })
+        .expect("host-compatible holder launch is valid");
+
+    assert_eq!(request["mode"], "set_ns");
+    assert_eq!(request["ns_fds"]["user"], 20);
+    assert_eq!(request["ns_fds"]["mnt"], 21);
+    assert_eq!(request["ns_fds"]["pid"], 22);
+    assert!(request["ns_fds"]["net"].is_null());
+    assert_eq!(request["cgroup_path"], "/sys/fs/cgroup/eos-host");
+}
+
+#[test]
+fn command_request_rejects_incomplete_holder_launch() {
+    for (profile, holder_fds) in [
+        (
+            WorkspaceProfile::HostCompatible,
+            WorkspaceLaunchFds {
+                user: Some(10),
+                mnt: None,
+                pid: Some(12),
+                net: None,
+            },
+        ),
+        (
+            WorkspaceProfile::Isolated,
+            WorkspaceLaunchFds {
+                user: Some(10),
+                mnt: Some(11),
+                pid: Some(12),
+                net: None,
+            },
+        ),
+    ] {
+        let launch = WorkspaceLaunchContext {
+            profile,
+            workspace_root: "/workspace".into(),
+            layer_paths: vec!["/lower/one".into()],
+            upperdir: "/upper".into(),
+            workdir: "/work".into(),
+            holder_fds: Some(holder_fds),
+            cgroup_path: None,
+        };
+
+        let error = launch
+            .command_run_request(WorkspaceCommandRunRequest {
+                command_id: "cmd-1".to_owned(),
+                caller_id: "caller-1".to_owned(),
+                command: "pwd".to_owned(),
+                cwd: None,
+                timeout_seconds: None,
+            })
+            .expect_err("incomplete holder launch is rejected");
+
+        assert_eq!(error.to_string(), "workspace launch context is incomplete");
     }
 }
 

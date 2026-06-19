@@ -4,6 +4,7 @@ use linux_namespace_subprocess::protocol::{
     NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot,
 };
 use serde_json::{json, Value};
+use workspace::overlay::dirs::OverlayDirs;
 use workspace::profile::WorkspaceModeContext;
 
 use super::outcome::WorkspaceApiError;
@@ -35,6 +36,33 @@ pub(crate) struct PrepareInputs<'a> {
     pub(crate) timeout_seconds: Option<f64>,
     pub(crate) command_dir: PathBuf,
     pub(crate) workspace_label: &'a str,
+}
+
+pub(crate) fn prepare_one_shot(
+    inputs: PrepareInputs<'_>,
+    workspace_root: &Path,
+    layer_paths: &[PathBuf],
+    dirs: &OverlayDirs,
+    scratch_run_dir: &Path,
+) -> Result<PreparedCommand, CommandPrepareError> {
+    let tool_call = tool_call(&inputs);
+    let run_request = RunRequest {
+        mode: RunMode::FreshNs,
+        tool_call,
+        workspace_root: WorkspaceRoot(workspace_root.to_path_buf()),
+        layer_paths: layer_paths.to_vec(),
+        upperdir: Some(dirs.upperdir.clone()),
+        workdir: Some(dirs.workdir.clone()),
+        ns_fds: None,
+        cgroup_path: None,
+        timeout_seconds: inputs.timeout_seconds,
+    };
+    finish_prepare(
+        inputs,
+        run_request,
+        scratch_run_dir.join("command-runner-request.json"),
+        scratch_run_dir.join("command-runner-result.json"),
+    )
 }
 
 pub(crate) fn prepare_workspace(

@@ -4,8 +4,97 @@ use std::collections::BTreeMap;
 use std::time::Instant;
 
 use layerstack::Manifest;
+use operation::OpError;
+use protocol::{FaultDetails, OperationEnvelope, OperationFault, ResponseMeta};
+use serde::Serialize;
 use serde_json::{json, Value};
 use trace::usize_to_f64_saturating;
+
+use crate::wire::ErrorKind;
+
+pub(crate) fn to_wire_value(output: impl serde::Serialize) -> Value {
+    serde_json::to_value(output).expect("operation output DTO serializes to JSON")
+}
+
+pub(crate) fn ok_envelope(output: impl Serialize) -> Value {
+    let output = to_wire_value(output);
+    if is_operation_envelope(&output) {
+        return output;
+    }
+    to_wire_value(OperationEnvelope::ok(output, ResponseMeta::default()))
+}
+
+pub(crate) fn rejected_envelope(error: OpError) -> Value {
+    to_wire_value(OperationEnvelope::<Value>::rejected(
+        operation_fault(
+            error.kind,
+            error.message,
+            error.details.unwrap_or_else(|| serde_json::json!({})),
+        ),
+        ResponseMeta::default(),
+    ))
+}
+
+pub(crate) fn rejected_fault_envelope(
+    kind: &'static str,
+    message: impl Into<String>,
+    details: Value,
+) -> Value {
+    rejected_envelope(OpError {
+        kind,
+        message: message.into(),
+        details: Some(details),
+    })
+}
+
+pub(crate) fn error_envelope(kind: ErrorKind, message: impl Into<String>, details: Value) -> Value {
+    let fault = if kind == ErrorKind::InternalError {
+        OperationFault::internal(message, fault_details(details))
+    } else {
+        operation_fault(error_kind_wire_name(kind), message, details)
+    };
+    to_wire_value(OperationEnvelope::<Value>::error(
+        fault,
+        ResponseMeta::default(),
+    ))
+}
+
+pub(crate) fn is_operation_envelope(value: &Value) -> bool {
+    let Some(object) = value.as_object() else {
+        return false;
+    };
+    let Some("ok" | "running" | "rejected" | "cancelled" | "timed_out" | "error") =
+        object.get("status").and_then(Value::as_str)
+    else {
+        return false;
+    };
+    object.contains_key("meta") && (object.contains_key("result") || object.contains_key("error"))
+}
+
+fn operation_fault(
+    kind: impl Into<String>,
+    message: impl Into<String>,
+    details: Value,
+) -> OperationFault {
+    OperationFault::new(kind, message).with_details(fault_details(details))
+}
+
+fn fault_details(details: Value) -> FaultDetails {
+    match details {
+        Value::Null => FaultDetails::default(),
+        Value::Object(fields) if fields.is_empty() => FaultDetails::default(),
+        Value::Object(fields) => fields
+            .into_iter()
+            .fold(FaultDetails::default(), |details, (key, value)| {
+                details.with_field(key, value)
+            }),
+        value => FaultDetails::default().with_field("value", value),
+    }
+}
+
+fn error_kind_wire_name(kind: ErrorKind) -> &'static str {
+    kind.as_str()
+}
 
 pub(crate) fn u64_to_f64_saturating(value: u64) -> f64 {
     const U32_FACTOR: f64 = 4_294_967_296.0;
@@ -247,5 +336,5 @@ fn insert_process_resource_timings(timings: &mut serde_json::Map<String, Value>)
 }
 
 #[cfg(test)]
-#[path = "../../tests/unit/response/mod.rs"]
+#[path = "../tests/unit/response/mod.rs"]
 mod tests;

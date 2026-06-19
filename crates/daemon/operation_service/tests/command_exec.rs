@@ -8,14 +8,12 @@ use operation_service::command::{
     CommandCallContext, CommandFinalizationOutcome, CommandFinalizedPolicy, CommandId,
     CommandServiceError, CommandStatus, ExecCommandInput, OperationTraceContext, PollCommandInput,
 };
-use workspace::{
-    CallerId, WorkspaceId, WorkspaceLaunchContext, WorkspaceLaunchNamespaceFds, WorkspaceProfile,
-};
+use workspace::{CallerId, WorkspaceId, WorkspaceProfile};
 
 use support::{
     assert_private_create_request, build_services, build_services_with_launch_driver,
-    create_request, success_exit, workspace_handle, workspace_handle_with_launch, FakeLaunchDriver,
-    FakeWorkspaceService,
+    create_request, success_exit, workspace_handle, workspace_handle_unavailable_launch,
+    workspace_handle_without_launch, FakeLaunchDriver, FakeWorkspaceService,
 };
 
 fn exec_input(
@@ -260,24 +258,12 @@ fn command_exec_spawn_failure_keeps_session_workspace_alive() {
 fn command_exec_passes_launch_material_to_runner_request_and_spawn_paths() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let workspace_root = PathBuf::from("/workspace/one-shot");
-    let launch = WorkspaceLaunchContext {
-        upperdir: PathBuf::from("/upper/custom"),
-        workdir: PathBuf::from("/work/custom"),
-        namespace_fds: Some(WorkspaceLaunchNamespaceFds {
-            user: Some(10),
-            mnt: Some(11),
-            pid: Some(12),
-            net: Some(13),
-        }),
-        cgroup_path: Some(PathBuf::from("/sys/fs/cgroup/eos")),
-    };
-    fake.push_create_result(Ok(workspace_handle_with_launch(
+    fake.push_create_result(Ok(workspace_handle(
         "workspace-one-shot",
         "caller-1",
         "lease-1",
         workspace_root.clone(),
         WorkspaceProfile::Isolated,
-        Some(launch),
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
@@ -338,7 +324,6 @@ fn command_exec_passes_launch_material_to_runner_request_and_spawn_paths() {
     );
 
     let request = &observation.run_request;
-    assert_eq!(request["mode"], "set_ns");
     assert_eq!(request["tool_call"]["invocation_id"], "cmd_1");
     assert_eq!(request["tool_call"]["caller_id"], "caller-1");
     assert_eq!(request["tool_call"]["verb"], "exec_command");
@@ -352,74 +337,19 @@ fn command_exec_passes_launch_material_to_runner_request_and_spawn_paths() {
         request["workspace_root"].as_str(),
         Some(workspace_root.to_string_lossy().as_ref())
     );
-    assert_eq!(request["layer_paths"][0], "/lower/one");
-    assert_eq!(request["upperdir"], "/upper/custom");
-    assert_eq!(request["workdir"], "/work/custom");
-    assert_eq!(request["ns_fds"]["user"], 10);
-    assert_eq!(request["ns_fds"]["mnt"], 11);
-    assert_eq!(request["ns_fds"]["pid"], 12);
-    assert_eq!(request["ns_fds"]["net"], 13);
-    assert_eq!(request["cgroup_path"], "/sys/fs/cgroup/eos");
     assert_eq!(request["timeout_seconds"], 2.5);
-}
-
-#[test]
-fn command_exec_host_compatible_launch_uses_setns_without_net_fd() {
-    let fake = Arc::new(FakeWorkspaceService::new());
-    let workspace_root = PathBuf::from("/workspace/one-shot");
-    let launch = WorkspaceLaunchContext {
-        upperdir: PathBuf::from("/upper/host"),
-        workdir: PathBuf::from("/work/host"),
-        namespace_fds: Some(WorkspaceLaunchNamespaceFds {
-            user: Some(20),
-            mnt: Some(21),
-            pid: Some(22),
-            net: None,
-        }),
-        cgroup_path: Some(PathBuf::from("/sys/fs/cgroup/eos-host")),
-    };
-    fake.push_create_result(Ok(workspace_handle_with_launch(
-        "workspace-one-shot",
-        "caller-1",
-        "lease-1",
-        workspace_root.clone(),
-        WorkspaceProfile::HostCompatible,
-        Some(launch),
-    )));
-    let launch_driver = Arc::new(FakeLaunchDriver::new());
-    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
-
-    let output = env
-        .services
-        .exec_command(
-            exec_input("caller-1", workspace_root, None),
-            OperationTraceContext,
-        )
-        .expect("host-compatible one-shot command exec succeeds");
-
-    assert_eq!(output.command_id, Some(CommandId("cmd_1".to_owned())));
-    let observations = launch_driver.spawn_observations();
-    assert_eq!(observations.len(), 1);
-    let request = &observations[0].run_request;
-    assert_eq!(request["mode"], "set_ns");
-    assert_eq!(request["ns_fds"]["user"], 20);
-    assert_eq!(request["ns_fds"]["mnt"], 21);
-    assert_eq!(request["ns_fds"]["pid"], 22);
-    assert!(request["ns_fds"]["net"].is_null());
-    assert_eq!(request["cgroup_path"], "/sys/fs/cgroup/eos-host");
 }
 
 #[test]
 fn command_exec_missing_launch_material_destroys_one_shot_without_spawn() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let workspace_root = PathBuf::from("/workspace/one-shot");
-    fake.push_create_result(Ok(workspace_handle_with_launch(
+    fake.push_create_result(Ok(workspace_handle_without_launch(
         "workspace-one-shot",
         "caller-1",
         "lease-1",
         workspace_root.clone(),
         WorkspaceProfile::HostCompatible,
-        None,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
@@ -449,22 +379,15 @@ fn command_exec_missing_launch_material_destroys_one_shot_without_spawn() {
 }
 
 #[test]
-fn command_exec_missing_namespace_fds_destroys_one_shot_without_spawn() {
+fn command_exec_unavailable_workspace_launch_destroys_one_shot_without_spawn() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let workspace_root = PathBuf::from("/workspace/one-shot");
-    let launch = WorkspaceLaunchContext {
-        upperdir: PathBuf::from("/upper/missing-fds"),
-        workdir: PathBuf::from("/work/missing-fds"),
-        namespace_fds: None,
-        cgroup_path: None,
-    };
-    fake.push_create_result(Ok(workspace_handle_with_launch(
+    fake.push_create_result(Ok(workspace_handle_unavailable_launch(
         "workspace-one-shot",
         "caller-1",
         "lease-1",
         workspace_root.clone(),
         WorkspaceProfile::HostCompatible,
-        Some(launch),
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
@@ -475,12 +398,12 @@ fn command_exec_missing_namespace_fds_destroys_one_shot_without_spawn() {
             exec_input("caller-1", workspace_root, None),
             OperationTraceContext,
         )
-        .expect_err("missing namespace fds reject holder-backed workspace exec");
+        .expect_err("unavailable workspace launch rejects exec");
 
     assert!(matches!(
         error,
         CommandServiceError::InvalidCommand { message }
-            if message.contains("requires namespace FDs")
+            if message.contains("workspace launch context is incomplete")
     ));
     assert!(launch_driver.spawn_observations().is_empty());
     assert_eq!(
@@ -489,72 +412,8 @@ fn command_exec_missing_namespace_fds_destroys_one_shot_without_spawn() {
     );
     assert!(
         !env.command.config().scratch_root.join("cmd_1").exists(),
-        "missing namespace fds should not leave command artifacts"
+        "unavailable workspace launch should not leave command artifacts"
     );
-}
-
-#[test]
-fn command_exec_partial_namespace_fds_destroy_one_shot_without_spawn() {
-    for (profile, namespace_fds, missing_name) in [
-        (
-            WorkspaceProfile::HostCompatible,
-            WorkspaceLaunchNamespaceFds {
-                user: Some(10),
-                mnt: None,
-                pid: Some(12),
-                net: None,
-            },
-            "mnt",
-        ),
-        (
-            WorkspaceProfile::Isolated,
-            WorkspaceLaunchNamespaceFds {
-                user: Some(10),
-                mnt: Some(11),
-                pid: Some(12),
-                net: None,
-            },
-            "net",
-        ),
-    ] {
-        let fake = Arc::new(FakeWorkspaceService::new());
-        let workspace_root = PathBuf::from(format!("/workspace/{profile:?}"));
-        let launch = WorkspaceLaunchContext {
-            upperdir: PathBuf::from("/upper/partial-fds"),
-            workdir: PathBuf::from("/work/partial-fds"),
-            namespace_fds: Some(namespace_fds),
-            cgroup_path: None,
-        };
-        fake.push_create_result(Ok(workspace_handle_with_launch(
-            "workspace-one-shot",
-            "caller-1",
-            "lease-1",
-            workspace_root.clone(),
-            profile,
-            Some(launch),
-        )));
-        let launch_driver = Arc::new(FakeLaunchDriver::new());
-        let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
-
-        let error = env
-            .services
-            .exec_command(
-                exec_input("caller-1", workspace_root, None),
-                OperationTraceContext,
-            )
-            .expect_err("partial namespace fds reject holder-backed workspace exec");
-
-        assert!(matches!(
-            error,
-            CommandServiceError::InvalidCommand { message }
-                if message.contains("requires namespace FDs") && message.contains(missing_name)
-        ));
-        assert!(launch_driver.spawn_observations().is_empty());
-        assert_eq!(
-            fake.destroy_calls(),
-            vec![WorkspaceId("workspace-one-shot".to_owned())]
-        );
-    }
 }
 
 #[test]

@@ -22,8 +22,8 @@ use workspace::{
     BaseRevision, CallerId, CaptureChangesRequest, CapturedWorkspaceChanges,
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
     LayerStackSnapshotRef, LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest,
-    RemountWorkspaceResult, WorkspaceError, WorkspaceHandle, WorkspaceId, WorkspaceLaunchContext,
-    WorkspaceLaunchNamespaceFds, WorkspaceProfile, WorkspaceService,
+    RemountWorkspaceResult, WorkspaceError, WorkspaceHandle, WorkspaceId, WorkspaceProfile,
+    WorkspaceService,
 };
 
 struct TestServices {
@@ -312,29 +312,16 @@ fn workspace_handle_with_profile(
         root_hash: "root".to_owned(),
         layer_paths: vec![PathBuf::from("/lower/one")],
     };
-    WorkspaceHandle {
-        id: WorkspaceId(workspace_id.to_owned()),
-        owner: CallerId(caller_id.to_owned()),
+    WorkspaceHandle::holder_backed_for_test(
+        WorkspaceId(workspace_id.to_owned()),
+        CallerId(caller_id.to_owned()),
         workspace_root,
         profile,
-        base_revision: BaseRevision {
-            version: 1,
-            root_hash: "root".to_owned(),
-            layer_count: 1,
-        },
         snapshot,
-        launch: Some(WorkspaceLaunchContext {
-            upperdir: PathBuf::from("/tmp/command-remount-upper"),
-            workdir: PathBuf::from("/tmp/command-remount-work"),
-            namespace_fds: Some(WorkspaceLaunchNamespaceFds {
-                user: Some(10),
-                mnt: Some(11),
-                pid: Some(12),
-                net: (profile == WorkspaceProfile::Isolated).then_some(13),
-            }),
-            cgroup_path: None,
-        }),
-    }
+        PathBuf::from("/tmp/command-remount-upper"),
+        PathBuf::from("/tmp/command-remount-work"),
+        None,
+    )
 }
 
 fn create_session_and_command() -> (

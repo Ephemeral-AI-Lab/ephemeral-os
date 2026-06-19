@@ -10,7 +10,7 @@ use super::{
     WorkspaceModeSnapshot,
 };
 use crate::lifecycle::leases::next_handle_id;
-use crate::model::{WorkspaceHandle, WorkspaceProfile};
+use crate::model::{WorkspaceCommandRunRequest, WorkspaceHandle, WorkspaceProfile};
 use crate::namespace::NamespaceRuntime;
 use crate::overlay::dirs::create_overlay_dirs;
 use crate::profile::common::{new_workspace_handle, WorkspaceHandleSpec};
@@ -486,19 +486,31 @@ fn persisted_remount_state(
 
 fn assert_common_launch_shape(handle: &WorkspaceHandle, profile: WorkspaceProfile) {
     assert_eq!(handle.profile, profile);
-    let launch = handle
-        .launch
-        .as_ref()
-        .expect("manager-created workspace projects launch context");
-    assert!(launch.upperdir.ends_with("upper"));
-    assert!(launch.workdir.ends_with("work"));
-    let fds = launch
-        .namespace_fds
-        .expect("manager-created workspace projects namespace fds");
-    assert!(fds.user.is_some());
-    assert!(fds.mnt.is_some());
-    assert!(fds.pid.is_some());
-    assert_eq!(fds.net.is_some(), profile == WorkspaceProfile::Isolated);
+    let request = handle
+        .command_run_request(WorkspaceCommandRunRequest {
+            command_id: "cmd-1".to_owned(),
+            caller_id: "caller-1".to_owned(),
+            command: "pwd".to_owned(),
+            cwd: None,
+            timeout_seconds: None,
+        })
+        .expect("manager-created workspace projects command launch");
+    assert_eq!(request["mode"], "set_ns");
+    assert!(request["upperdir"]
+        .as_str()
+        .expect("upperdir is encoded")
+        .ends_with("upper"));
+    assert!(request["workdir"]
+        .as_str()
+        .expect("workdir is encoded")
+        .ends_with("work"));
+    assert!(request["ns_fds"]["user"].is_number());
+    assert!(request["ns_fds"]["mnt"].is_number());
+    assert!(request["ns_fds"]["pid"].is_number());
+    assert_eq!(
+        request["ns_fds"]["net"].is_number(),
+        profile == WorkspaceProfile::Isolated
+    );
 }
 
 fn unwired_handle(

@@ -1,16 +1,22 @@
+use std::collections::BTreeMap;
 use std::path::Path;
 use std::time::Instant;
 
-use layerstack::service;
+use layerstack::service::{self, BoundedCaptureOptions, Snapshot};
+use layerstack::{CaptureRouteStats, ChangesetResult, CommitOptions, CommitStatus, FileResult};
 use serde_json::{json, Map, Value};
 use trace::usize_to_f64_saturating;
-use workspace::overlay::capture::capture_upperdir;
+use workspace::overlay::capture::{
+    capture_upperdir, capture_upperdir_for_snapshot_with_options, RoutedCapturedChanges,
+};
 use workspace::overlay::tree::TreeResourceStats;
 use workspace::profile::WorkspaceModeContext;
 
+use super::command_workspace::OneShotCommandWorkspace;
 use super::contract::{
     u64_to_f64_saturating, CommandMetadata, CommandResponse, IgnoredPublishLaneMetadata,
     PublishLanesMetadata, SourcePublishLaneMetadata, PUBLISH_LANES_METADATA_KEY,
+    PUBLISH_REJECTION_DETAILS_METADATA_KEY,
 };
 use super::outcome::{
     ChangedPathKinds, FinalizeCommandRequest, MutationSource, WorkspaceApiError, WorkspaceConflict,
@@ -18,6 +24,233 @@ use super::outcome::{
 };
 use crate::core::changed_path_kind_pairs;
 use crate::{CommandId, MutationCore};
+
+pub(crate) fn finalize_one_shot_command_with_capture_options(
+    root: &Path,
+    snapshot: &Snapshot,
+    workspace: &OneShotCommandWorkspace,
+    commit_options: CommitOptions,
+    mut capture_options: BoundedCaptureOptions,
+    request: FinalizeCommandRequest,
+) -> Result<CommandResponse, WorkspaceApiError> {
+    let mut timings = base_timings(root)?;
+    let command_success = request.command_succeeded();
+    capture_options.materialize_payloads = command_success;
+    let spool_dir = workspace
+        .dirs()
+        .run_dir
+        .join("spool")
+        .join("publish-capture");
+    let captured = match capture_upperdir_for_snapshot_with_options(
+        root,
+        snapshot,
+        &workspace.dirs().upperdir,
+        &spool_dir,
+        capture_options,
+    ) {
+        Ok(captured) => captured,
+        Err(error) if !command_success => {
+            timings.insert(
+                "command_exec.capture_upperdir_error".to_owned(),
+                json!(error.to_string()),
+            );
+            copy_runner_timings(&mut timings, request.runner_result.as_ref());
+            insert_command_timings(&mut timings, 0, 0.0, 0.0, request.command_elapsed_s, false);
+            return Ok(command_response(
+                WorkspaceKind::Host,
+                request,
+                CommandFinalization {
+                    success: false,
+                    changed_paths: Vec::new(),
+                    changed_path_kinds: ChangedPathKinds::default(),
+                    mutation_source: None,
+                    conflict: None,
+                    conflict_reason: None,
+                    timings,
+                    extras: publish_lanes_extras(PublishLanesMetadata::dropped_command_failed(
+                        snapshot.manifest_version,
+                    )),
+                },
+            ));
+        }
+        Err(error) => {
+            let error = error.to_string();
+            timings.insert(
+                "command_exec.capture_upperdir_error".to_owned(),
+                json!(error.clone()),
+            );
+            copy_runner_timings(&mut timings, request.runner_result.as_ref());
+            insert_command_timings(&mut timings, 0, 0.0, 0.0, request.command_elapsed_s, false);
+            return Ok(command_response(
+                WorkspaceKind::Host,
+                request,
+                CommandFinalization {
+                    success: false,
+                    changed_paths: Vec::new(),
+                    changed_path_kinds: ChangedPathKinds::default(),
+                    mutation_source: None,
+                    conflict: None,
+                    conflict_reason: Some(error),
+                    timings,
+                    extras: publish_lanes_extras(command_finalize_failed_lanes(
+                        snapshot.manifest_version,
+                    )),
+                },
+            ));
+        }
+    };
+    let RoutedCapturedChanges {
+        captured: captured_changes,
+        route_stats,
+        metadata_path_count: captured_path_count,
+        spool_dir,
+    } = captured;
+    let _spool_cleanup = SpoolCleanup::new(spool_dir);
+    let changed_path_kinds: ChangedPathKinds =
+        changed_path_kind_pairs(&captured_changes.changes).collect();
+
+    insert_tree_resource_timings(
+        &mut timings,
+        "resource.command_exec.upperdir",
+        &captured_changes.stats,
+    );
+    timings.insert(
+        "resource.command_exec.upperdir_tree_sampler_duration_us".to_owned(),
+        json!(captured_changes.capture_s * 1_000_000.0),
+    );
+    let run_dir_walk_start = Instant::now();
+    let run_dir_stats = TreeResourceStats::collect(&workspace.dirs().run_dir);
+    insert_tree_resource_timings(
+        &mut timings,
+        "resource.command_exec.run_dir",
+        &run_dir_stats,
+    );
+    timings.insert(
+        "resource.command_exec.run_dir_tree_sampler_duration_us".to_owned(),
+        json!(u64::try_from(run_dir_walk_start.elapsed().as_micros()).unwrap_or(u64::MAX)),
+    );
+    copy_runner_timings(&mut timings, request.runner_result.as_ref());
+
+    if !command_success {
+        let publish_lanes = publish_lanes_with_route_drop_summary(
+            dropped_command_failed_lanes_with_counts(
+                route_stats.gated_path_count,
+                route_stats.direct_path_count,
+                route_stats.direct_bytes,
+                snapshot.manifest_version,
+            ),
+            route_stats.drop_path_count,
+            route_stats.drop_reason_counts.clone(),
+        );
+        insert_command_timings(
+            &mut timings,
+            captured_path_count,
+            captured_changes.capture_s,
+            0.0,
+            request.command_elapsed_s,
+            false,
+        );
+        return Ok(command_response(
+            WorkspaceKind::Host,
+            request,
+            CommandFinalization {
+                success: false,
+                changed_paths: Vec::new(),
+                changed_path_kinds: ChangedPathKinds::default(),
+                mutation_source: None,
+                conflict: None,
+                conflict_reason: None,
+                timings,
+                extras: publish_lanes_extras(publish_lanes),
+            },
+        ));
+    }
+
+    let publish_start = Instant::now();
+    let changeset = match service::publish_command_capture_lane_aware(
+        root,
+        snapshot.manifest_version,
+        &snapshot.layer_paths,
+        &captured_changes.changes,
+        &captured_changes.protected_drops,
+        commit_options,
+    ) {
+        Ok(changeset) => changeset,
+        Err(error) => {
+            let error = error.to_string();
+            let publish_s = publish_start.elapsed().as_secs_f64();
+            timings.insert(
+                "command_exec.publish_error".to_owned(),
+                json!(error.clone()),
+            );
+            insert_command_timings(
+                &mut timings,
+                captured_path_count,
+                captured_changes.capture_s,
+                publish_s,
+                request.command_elapsed_s,
+                false,
+            );
+            return Ok(command_response(
+                WorkspaceKind::Host,
+                request,
+                CommandFinalization {
+                    success: false,
+                    changed_paths: Vec::new(),
+                    changed_path_kinds,
+                    mutation_source: Some(MutationSource::OverlayCapture),
+                    conflict: None,
+                    conflict_reason: Some(error),
+                    timings,
+                    extras: publish_lanes_extras(publish_lanes_from_publish_error(
+                        route_stats,
+                        snapshot.manifest_version,
+                    )),
+                },
+            ));
+        }
+    };
+    let publish_s = publish_start.elapsed().as_secs_f64();
+
+    let first_conflict = changeset.first_conflict();
+    let publish_success = changeset.success();
+    let publish_lanes =
+        publish_lanes_from_changeset(&changeset, route_stats, snapshot.manifest_version);
+    let publish_rejection_details =
+        publish_rejection_details_from_changeset(&changeset, &publish_lanes);
+
+    for (key, value) in &changeset.timings {
+        timings.insert(key.clone(), json!(value));
+    }
+    let occ_s = changeset
+        .timings
+        .get("occ.commit.total_s")
+        .copied()
+        .unwrap_or(publish_s);
+    insert_command_timings(
+        &mut timings,
+        captured_path_count,
+        captured_changes.capture_s,
+        occ_s,
+        request.command_elapsed_s,
+        false,
+    );
+
+    Ok(command_response(
+        WorkspaceKind::Host,
+        request,
+        CommandFinalization {
+            success: command_success && publish_success,
+            changed_paths: changeset.published_paths(),
+            changed_path_kinds,
+            mutation_source: Some(MutationSource::OverlayCapture),
+            conflict: first_conflict.map(conflict_from_file),
+            conflict_reason: first_conflict.map(conflict_message).map(str::to_owned),
+            timings,
+            extras: publish_lanes_extras_with_rejections(publish_lanes, publish_rejection_details),
+        },
+    ))
+}
 
 pub(crate) fn finalize_workspace_command(
     context: &WorkspaceModeContext,
@@ -143,6 +376,24 @@ struct CommandFinalization {
     extras: Map<String, Value>,
 }
 
+struct SpoolCleanup {
+    path: Option<std::path::PathBuf>,
+}
+
+impl SpoolCleanup {
+    fn new(path: Option<std::path::PathBuf>) -> Self {
+        Self { path }
+    }
+}
+
+impl Drop for SpoolCleanup {
+    fn drop(&mut self) {
+        if let Some(path) = &self.path {
+            let _ = std::fs::remove_dir_all(path);
+        }
+    }
+}
+
 fn command_response(
     workspace_kind: WorkspaceKind,
     request: FinalizeCommandRequest,
@@ -171,11 +422,24 @@ fn command_response(
 }
 
 fn publish_lanes_extras(publish_lanes: PublishLanesMetadata) -> Map<String, Value> {
+    publish_lanes_extras_with_rejections(publish_lanes, Vec::new())
+}
+
+fn publish_lanes_extras_with_rejections(
+    publish_lanes: PublishLanesMetadata,
+    rejection_details: Vec<Value>,
+) -> Map<String, Value> {
     let mut extras = Map::new();
     extras.insert(
         PUBLISH_LANES_METADATA_KEY.to_owned(),
         publish_lanes.to_value(),
     );
+    if !rejection_details.is_empty() {
+        extras.insert(
+            PUBLISH_REJECTION_DETAILS_METADATA_KEY.to_owned(),
+            Value::Array(rejection_details),
+        );
+    }
     extras
 }
 
@@ -192,6 +456,207 @@ fn command_finalize_failed_lanes(route_manifest_version: i64) -> PublishLanesMet
         ),
         route_manifest_version,
     )
+}
+
+fn dropped_command_failed_lanes_with_counts(
+    source_path_count: usize,
+    ignored_path_count: usize,
+    ignored_bytes: u64,
+    route_manifest_version: i64,
+) -> PublishLanesMetadata {
+    PublishLanesMetadata::new(
+        SourcePublishLaneMetadata::new(source_path_count, "dropped_command_failed", None::<String>),
+        IgnoredPublishLaneMetadata::new(
+            ignored_path_count,
+            ignored_bytes,
+            0,
+            "dropped_command_failed",
+            None::<String>,
+            None::<String>,
+        ),
+        route_manifest_version,
+    )
+}
+
+fn publish_lanes_from_publish_error(
+    route_stats: CaptureRouteStats,
+    route_manifest_version: i64,
+) -> PublishLanesMetadata {
+    let source_publish_status = if route_stats.gated_path_count == 0 {
+        "empty"
+    } else {
+        "failed"
+    };
+    let source_drop_reason = if route_stats.gated_path_count == 0 {
+        None
+    } else {
+        Some("publish_failed")
+    };
+    let ignored_publish_status = if route_stats.direct_path_count == 0 {
+        "empty"
+    } else {
+        "failed"
+    };
+    let ignored_drop_reason = if route_stats.direct_path_count == 0 {
+        None
+    } else {
+        Some("publish_failed")
+    };
+    publish_lanes_with_route_drop_summary(
+        PublishLanesMetadata::new(
+            SourcePublishLaneMetadata::new(
+                route_stats.gated_path_count,
+                source_publish_status,
+                source_drop_reason,
+            ),
+            IgnoredPublishLaneMetadata::new(
+                route_stats.direct_path_count,
+                route_stats.direct_bytes,
+                route_stats.direct_spooled_bytes,
+                ignored_publish_status,
+                None::<String>,
+                ignored_drop_reason,
+            ),
+            route_manifest_version,
+        ),
+        route_stats.drop_path_count,
+        route_stats.drop_reason_counts,
+    )
+}
+
+fn publish_lanes_from_changeset(
+    changeset: &ChangesetResult,
+    route_stats: CaptureRouteStats,
+    route_manifest_version: i64,
+) -> PublishLanesMetadata {
+    let source_path_count = route_stats.gated_path_count;
+    let source_status = source_publish_status(changeset, source_path_count);
+    let (ignored_status, ignored_mode, ignored_drop_reason) =
+        ignored_publish_outcome(changeset, &route_stats, source_status);
+
+    let publish_lanes = PublishLanesMetadata::new(
+        SourcePublishLaneMetadata::new(source_path_count, source_status, None::<String>),
+        IgnoredPublishLaneMetadata::new(
+            route_stats.direct_path_count,
+            route_stats.direct_bytes,
+            route_stats.direct_spooled_bytes,
+            ignored_status,
+            ignored_mode,
+            ignored_drop_reason,
+        ),
+        route_manifest_version,
+    );
+    publish_lanes_with_route_drop_summary(
+        publish_lanes,
+        route_stats.drop_path_count,
+        route_stats.drop_reason_counts,
+    )
+}
+
+fn publish_lanes_with_route_drop_summary(
+    mut publish_lanes: PublishLanesMetadata,
+    dropped_path_count: usize,
+    drop_reason_counts: BTreeMap<String, usize>,
+) -> PublishLanesMetadata {
+    publish_lanes.routing.dropped_path_count = dropped_path_count;
+    publish_lanes.routing.drop_reason_counts = drop_reason_counts;
+    publish_lanes
+}
+
+fn source_publish_status(changeset: &ChangesetResult, source_path_count: usize) -> &'static str {
+    if source_path_count == 0 {
+        return "empty";
+    }
+    if changeset
+        .files
+        .iter()
+        .any(|file| file.status == CommitStatus::AbortedVersion)
+    {
+        return "conflict";
+    }
+    if changeset
+        .files
+        .iter()
+        .any(|file| file.status == CommitStatus::Failed)
+    {
+        return "failed";
+    }
+    if changeset.published_manifest_version.is_some() {
+        "committed"
+    } else {
+        "accepted_noop"
+    }
+}
+
+fn ignored_publish_outcome(
+    changeset: &ChangesetResult,
+    route_stats: &CaptureRouteStats,
+    source_status: &str,
+) -> (&'static str, Option<&'static str>, Option<String>) {
+    if route_stats.direct_path_count == 0 {
+        return ("empty", None, None);
+    }
+    if source_status == "conflict" {
+        return (
+            "dropped_due_to_source_conflict",
+            None,
+            Some("source_not_published".to_owned()),
+        );
+    }
+    if route_rejection_failed(changeset, route_stats) {
+        return ("failed", None, Some("publish_failed".to_owned()));
+    }
+    if source_status == "failed" {
+        return (
+            "dropped_due_to_source_conflict",
+            None,
+            Some("source_not_published".to_owned()),
+        );
+    }
+    if let Some(reason) = route_stats.ignored_limit_drop_reason.as_deref() {
+        return ("dropped_due_to_limits", None, Some(reason.to_owned()));
+    }
+    if changeset.success() {
+        return ("published_lww", Some("direct_lww"), None);
+    }
+    ("failed", None, Some("publish_failed".to_owned()))
+}
+
+fn route_rejection_failed(changeset: &ChangesetResult, route_stats: &CaptureRouteStats) -> bool {
+    if route_stats.drop_reason_counts.is_empty() {
+        return false;
+    }
+    changeset.files.iter().any(|file| {
+        file.status == CommitStatus::Failed
+            && route_stats
+                .drop_reason_counts
+                .contains_key(file.message.as_str())
+    })
+}
+
+fn publish_rejection_details_from_changeset(
+    changeset: &ChangesetResult,
+    publish_lanes: &PublishLanesMetadata,
+) -> Vec<Value> {
+    let publish_lanes = publish_lanes.to_value();
+    changeset
+        .files
+        .iter()
+        .filter(|file| !file.status.is_non_conflicting())
+        .map(|file| {
+            let reason = file.conflict_message(file.status.wire_str());
+            json!({
+                "path": file.path.as_str(),
+                "status": file.status.wire_str(),
+                "reason": reason,
+                "message": reason,
+                "route_validation": file.observed_state.as_deref() == Some("route_rejected"),
+                "observed_state": file.observed_state.as_deref(),
+                "observed_version": file.observed_version,
+                "publish_lanes": publish_lanes.clone(),
+            })
+        })
+        .collect()
 }
 
 fn insert_command_timings(
@@ -403,6 +868,15 @@ fn copy_runner_timings(timings: &mut WorkspaceTimings, runner_result: Option<&Va
     for (key, value) in runner_timings {
         timings.entry(key.clone()).or_insert_with(|| value.clone());
     }
+}
+
+fn conflict_from_file(file: &FileResult) -> WorkspaceConflict {
+    let reason = file.status.wire_str();
+    WorkspaceConflict::path(reason, file.path.as_str(), file.conflict_message(reason))
+}
+
+fn conflict_message(file: &FileResult) -> &str {
+    file.conflict_message(file.status.wire_str())
 }
 
 fn insert_tree_resource_timings(

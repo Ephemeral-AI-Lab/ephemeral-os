@@ -115,51 +115,6 @@ fn empty_trace_export_batch() -> TraceExportBatch {
     }
 }
 
-pub(crate) fn idle_workspace_evict_record(
-    report: &crate::workspace_runtime::IdleWorkspaceEvictionReport,
-) -> TraceRecord {
-    let now = now_ms();
-    let mut span = SpanRecord::new(
-        SpanUid::ROOT,
-        None,
-        "workspace.idle.evict",
-        SpanKind::IsolatedNetwork,
-        json!({
-            "evicted_count": report.evicted.len(),
-        }),
-    );
-    span.started_at_unix_ms = now;
-    span.finished_at_unix_ms = now;
-    span.status = Some(SpanStatus::Ok);
-
-    let mut record = TraceRecord::new(TraceId::new(), SpanUid::ROOT);
-    record.kind = TraceKind::IdleWorkspaceEvict;
-    record.started_at_unix_ms = now;
-    record.finished_at_unix_ms = now;
-    record.spans.push(span);
-    for eviction in &report.evicted {
-        let mut event = EventRecord::new(
-            SpanUid::ROOT,
-            "workspace_evicted",
-            "isolated_network",
-            json!({
-                "caller_id": eviction.caller_id,
-                "workspace_handle_id": eviction.workspace_handle_id,
-                "lease_id": eviction.lease_id,
-                "evicted_upperdir_bytes": eviction.evicted_upperdir_bytes,
-                "lifetime_s": eviction.lifetime_s,
-                "total_ms": eviction.total_ms,
-                "lease_released": eviction.lease_release.released,
-                "lease_release_error": eviction.lease_release.error,
-                "active_leases_after": eviction.active_leases_after,
-            }),
-        );
-        event.at_unix_ms = now;
-        record.events.push(event);
-    }
-    record
-}
-
 fn background_spool() -> &'static Mutex<TraceSpool> {
     BACKGROUND_SPOOL.get_or_init(|| Mutex::new(TraceSpool::default()))
 }
@@ -197,38 +152,5 @@ mod tests {
             sink.drain().is_empty(),
             "poisoned trace sink should drop events instead of panicking"
         );
-    }
-
-    #[test]
-    fn idle_workspace_evict_record_carries_evicted_workspace_facts() {
-        let report = crate::workspace_runtime::IdleWorkspaceEvictionReport {
-            evicted: vec![crate::workspace_runtime::IdleWorkspaceEviction {
-                caller_id: "caller".to_owned(),
-                workspace_handle_id: "workspace-handle".to_owned(),
-                lease_id: "lease-1".to_owned(),
-                evicted_upperdir_bytes: 4096,
-                lifetime_s: 12.5,
-                total_ms: 3.0,
-                lease_release: crate::workspace_runtime::LeaseReleaseReport {
-                    released: Some(true),
-                    error: None,
-                },
-                active_leases_after: 0,
-            }],
-        };
-
-        let record = idle_workspace_evict_record(&report);
-
-        assert_eq!(record.kind, TraceKind::IdleWorkspaceEvict);
-        assert_eq!(record.spans[0].kind, SpanKind::IsolatedNetwork);
-        let event = record.events.first().expect("eviction event");
-        assert_eq!(event.module, "isolated_network");
-        assert_eq!(event.name, "workspace_evicted");
-        assert_eq!(event.details.value["caller_id"], "caller");
-        assert_eq!(
-            event.details.value["workspace_handle_id"],
-            "workspace-handle"
-        );
-        assert_eq!(event.details.value["lease_released"], true);
     }
 }

@@ -550,7 +550,7 @@ creates a temporary one-shot host workspace through `WorkspaceManagerService`,
 runs the command there, finalizes publish/discard policy, and destroys that
 temporary workspace.
 
-If `Some(handler)` has `handler.handle.network == NetworkMode::Isolated`, the
+If `Some(handler)` has `handler.handle.profile == WorkspaceProfile::Isolated`, the
 command is an isolated session command. The service should not infer isolation
 from caller id, cwd, or root paths.
 
@@ -639,8 +639,8 @@ operation_service dispatch
   call CommandOperationService::exec_command(input, None, trace)
 
 CommandOperationService
-  WorkspaceManagerService::create(NetworkMode::Host)
-    creates temporary one-shot host workspace
+  WorkspaceManagerService::create(WorkspaceProfile::HostCompatible)
+    creates temporary one-shot host-compatible workspace
     records temporary session state while command is active
   allocate command_id
   register command with:

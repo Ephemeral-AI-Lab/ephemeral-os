@@ -255,5 +255,5 @@ fn monotonic_seconds() -> f64 {
 }
 
 #[cfg(test)]
-#[path = "../../tests/unit/invocation_registry/mod.rs"]
+#[path = "../tests/unit/invocation_registry/mod.rs"]
 mod tests;

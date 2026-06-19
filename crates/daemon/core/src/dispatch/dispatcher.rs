@@ -17,7 +17,7 @@ use layerstack::LayerStack;
 use crate::builtin;
 #[cfg(test)]
 use crate::invocation_registry::InFlightRegistry;
-use crate::op_adapter::error_envelope;
+use crate::response::error_envelope;
 #[cfg(test)]
 use crate::response::{insert_tree_resource_timings, resource_timings, TreeResourceStats};
 use crate::DispatchContext;

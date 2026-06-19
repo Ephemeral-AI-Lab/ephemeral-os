@@ -14,11 +14,10 @@ use operation_service::workspace_manager::WorkspaceManagerService;
 use operation_service::workspace_remount::{WorkspaceRemountOptions, WorkspaceRemountService};
 use operation_service::OperationServices;
 use workspace::{
-    BaseRevision, CallerId, CaptureChangesRequest, CapturedWorkspaceChanges,
-    CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
-    LayerStackSnapshotRef, LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest,
-    RemountWorkspaceResult, WorkspaceError, WorkspaceHandle, WorkspaceLaunchContext,
-    WorkspaceLaunchNamespaceFds, WorkspaceProfile, WorkspaceService,
+    CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
+    DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef,
+    LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult,
+    WorkspaceError, WorkspaceHandle, WorkspaceProfile, WorkspaceService,
 };
 
 pub struct TestServices {
@@ -279,43 +278,53 @@ pub fn workspace_handle(
     workspace_root: PathBuf,
     profile: WorkspaceProfile,
 ) -> WorkspaceHandle {
-    workspace_handle_with_launch(
-        workspace_id,
-        caller_id,
-        lease_id,
+    let base_dir = test_launch_base_dir();
+    WorkspaceHandle::holder_backed_for_test(
+        WorkspaceId(workspace_id.to_owned()),
+        CallerId(caller_id.to_owned()),
         workspace_root,
         profile,
-        Some(test_launch_context()),
+        test_snapshot(lease_id),
+        base_dir.join("upper"),
+        base_dir.join("work"),
+        None,
     )
 }
 
-pub fn workspace_handle_with_launch(
+pub fn workspace_handle_without_launch(
     workspace_id: &str,
     caller_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
     profile: WorkspaceProfile,
-    launch: Option<WorkspaceLaunchContext>,
 ) -> WorkspaceHandle {
-    let snapshot = LayerStackSnapshotRef {
-        lease_id: LeaseId(lease_id.to_owned()),
-        manifest_version: 1,
-        root_hash: "root".to_owned(),
-        layer_paths: vec![PathBuf::from("/lower/one")],
-    };
-    WorkspaceHandle {
-        id: WorkspaceId(workspace_id.to_owned()),
-        owner: CallerId(caller_id.to_owned()),
+    WorkspaceHandle::without_launch_for_test(
+        WorkspaceId(workspace_id.to_owned()),
+        CallerId(caller_id.to_owned()),
         workspace_root,
         profile,
-        base_revision: BaseRevision {
-            version: 1,
-            root_hash: "root".to_owned(),
-            layer_count: 1,
-        },
-        snapshot,
-        launch,
-    }
+        test_snapshot(lease_id),
+    )
+}
+
+pub fn workspace_handle_unavailable_launch(
+    workspace_id: &str,
+    caller_id: &str,
+    lease_id: &str,
+    workspace_root: PathBuf,
+    profile: WorkspaceProfile,
+) -> WorkspaceHandle {
+    let base_dir = test_launch_base_dir();
+    WorkspaceHandle::unavailable_for_test(
+        WorkspaceId(workspace_id.to_owned()),
+        CallerId(caller_id.to_owned()),
+        workspace_root,
+        profile,
+        test_snapshot(lease_id),
+        base_dir.join("upper"),
+        base_dir.join("work"),
+        None,
+    )
 }
 
 pub fn destroy_result(handle: &WorkspaceHandle) -> DestroyWorkspaceResult {
@@ -353,21 +362,19 @@ fn test_command_config() -> command::CommandConfig {
     }
 }
 
-fn test_launch_context() -> WorkspaceLaunchContext {
-    let root = std::env::temp_dir().join(format!(
+fn test_launch_base_dir() -> PathBuf {
+    std::env::temp_dir().join(format!(
         "operation-service-workspace-launch-{}",
         unique_suffix()
-    ));
-    WorkspaceLaunchContext {
-        upperdir: root.join("upper"),
-        workdir: root.join("work"),
-        namespace_fds: Some(WorkspaceLaunchNamespaceFds {
-            user: Some(10),
-            mnt: Some(11),
-            pid: Some(12),
-            net: None,
-        }),
-        cgroup_path: None,
+    ))
+}
+
+fn test_snapshot(lease_id: &str) -> LayerStackSnapshotRef {
+    LayerStackSnapshotRef {
+        lease_id: LeaseId(lease_id.to_owned()),
+        manifest_version: 1,
+        root_hash: "root".to_owned(),
+        layer_paths: vec![PathBuf::from("/lower/one")],
     }
 }
 

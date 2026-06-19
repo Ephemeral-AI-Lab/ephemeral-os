@@ -16,6 +16,7 @@ use command::{ReadCommandProgress, WriteStdin};
 #[cfg(test)]
 use serde_json::json;
 
+use super::command_workspace::OneShotCommandWorkspace;
 #[cfg(test)]
 use super::contract::CommandCompletion;
 use super::contract::{CommandResponse, CommandStatus};
@@ -25,7 +26,7 @@ use super::prepare::CommandPrepareError;
 use super::prepare::PreparedCommand;
 use super::registry::CommandRegistry;
 #[cfg(test)]
-use super::registry::{ActiveCommand, CommandTraceOrigin, WorkspaceRun};
+use super::registry::{ActiveCommand, CommandTraceOrigin, OneShotRun, WorkspaceRun};
 use super::trace::CommandTraceEvent;
 #[cfg(test)]
 use super::trace::{
@@ -42,7 +43,13 @@ mod remount;
 pub use remount::{CommandRemountInspection, CommandRemountQuiesce};
 
 pub enum ExecTarget {
-    Workspace { context: Box<WorkspaceModeContext> },
+    OneShot {
+        workspace: Box<OneShotCommandWorkspace>,
+        scratch_root: PathBuf,
+    },
+    Workspace {
+        context: Box<WorkspaceModeContext>,
+    },
 }
 
 pub struct CommandOps {

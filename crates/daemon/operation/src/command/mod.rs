@@ -2,6 +2,7 @@
 
 pub mod contract;
 
+mod command_workspace;
 mod finalize;
 mod outcome;
 mod prepare;
@@ -9,6 +10,7 @@ mod registry;
 mod service;
 mod trace;
 
+pub use command_workspace::OneShotCommandWorkspace;
 pub use contract::{
     CollectCompletedOutput, CommandCompletion, CommandMetadata, CommandResponse, CommandStatus,
 };

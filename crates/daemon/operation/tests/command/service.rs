@@ -1,7 +1,7 @@
 use crate::command::registry::CompletionBufferEviction;
 use command::process::{CommandFinalResponsePersistence, CommandPersistenceOutcome, KillReason};
 use command::CollectCompleted;
-use layerstack::service::{BoundedCaptureOptions, IgnoredCaptureLimits};
+use layerstack::service::{BoundedCaptureOptions, IgnoredCaptureLimits, LeaseReleaseHandle};
 use std::path::PathBuf;
 use std::time::Duration;
 use trace::{SpanKind, SpanStatus, TraceKind, TraceLinkKind};
@@ -101,6 +101,78 @@ fn command_ops_capture_options_reflect_configured_ignored_limits() {
             max_metadata_capture_duration: Duration::from_millis(7),
         }
     );
+}
+
+#[test]
+fn one_shot_workspace_lease_releases_when_command_validation_rejects_before_start(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let (root, layer_stack_root, workspace) =
+        one_shot_command_workspace_fixture("validation-reject-release")?;
+    let ops = CommandOps::new(command::CommandConfig::default());
+
+    let error = ops
+        .exec_command_with_trace(
+            start_command("   "),
+            ExecTarget::OneShot {
+                workspace: Box::new(workspace),
+                scratch_root: ops.scratch_root(),
+            },
+        )
+        .expect_err("empty command should be rejected before command start");
+
+    assert!(
+        error.to_string().contains("cmd must be non-empty"),
+        "unexpected validation error: {error}"
+    );
+    assert_eq!(
+        layerstack::LayerStack::open(layer_stack_root.clone())?.active_lease_count(),
+        0
+    );
+    let _ = std::fs::remove_dir_all(root);
+    Ok(())
+}
+
+#[test]
+fn one_shot_workspace_lease_releases_when_command_finalizes(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let (root, layer_stack_root, workspace) =
+        one_shot_command_workspace_fixture("finalize-release")?;
+    let command_id = "cmd_one_shot_finalize_release";
+    let ops = CommandOps::new(command::CommandConfig::default());
+    let process = CommandProcess::inactive_for_test(CommandProcessSpec {
+        id: command_id.to_owned(),
+        caller_id: "caller-one-shot".to_owned(),
+        command: "echo cancelled".to_owned(),
+        timeout_seconds: None,
+    });
+    let run = Arc::new(ActiveCommand::OneShot(OneShotRun {
+        process,
+        trace_origin: CommandTraceOrigin::default(),
+        workspace,
+    }));
+
+    let response = ops.finalize_command(
+        run,
+        command::process::CommandProcessExit {
+            status: "cancelled".to_owned(),
+            exit_code: 130,
+            signal: None,
+            runner_result: None,
+            stdout: String::new(),
+            elapsed_s: 0.0,
+            kill: Some(KillReason::Cancelled),
+        },
+        false,
+        false,
+    );
+
+    assert_eq!(response.status, CommandStatus::Cancelled);
+    assert_eq!(
+        layerstack::LayerStack::open(layer_stack_root.clone())?.active_lease_count(),
+        0
+    );
+    let _ = std::fs::remove_dir_all(root);
+    Ok(())
 }
 
 #[test]
@@ -625,6 +697,56 @@ fn inactive_isolated_run(id: &str, caller_id: &str, root: &std::path::Path) -> A
         },
         remountable: false,
     }))
+}
+
+fn one_shot_command_workspace_fixture(
+    id: &str,
+) -> Result<(PathBuf, PathBuf, OneShotCommandWorkspace), Box<dyn std::error::Error>> {
+    let root = std::env::temp_dir().join(format!(
+        "operation-command-one-shot-workspace-{}-{id}",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&root);
+    let layer_stack_root = root.join("stack");
+    let workspace_root = root.join("workspace");
+    let run_dir = root.join("one-shot-run");
+    std::fs::create_dir_all(&workspace_root)?;
+    std::fs::write(workspace_root.join("seed.txt"), "seed\n")?;
+    layerstack::build_workspace_base(&layer_stack_root, &workspace_root, true)?;
+    let command_snapshot =
+        layerstack::service::acquire_bounded_snapshot_for_command(&layer_stack_root, id, 64)?;
+    let lease = LeaseReleaseHandle::new(
+        layer_stack_root.clone(),
+        command_snapshot.snapshot.lease_id.clone(),
+    );
+    let dirs = workspace::overlay::dirs::create_overlay_dirs(run_dir)?;
+    let workspace = OneShotCommandWorkspace::new_for_test(
+        layer_stack_root.clone(),
+        workspace_root.canonicalize()?,
+        command_snapshot.snapshot,
+        command_snapshot.normalization,
+        dirs,
+        lease,
+    );
+    assert_eq!(
+        layerstack::LayerStack::open(layer_stack_root.clone())?.active_lease_count(),
+        1
+    );
+    Ok((root, layer_stack_root, workspace))
+}
+
+fn start_command(cmd: &str) -> command::StartCommand {
+    command::StartCommand {
+        invocation_id: "invoke-one-shot".to_owned(),
+        caller_id: "caller-one-shot".to_owned(),
+        cmd: cmd.to_owned(),
+        trace_id: None,
+        request_id: None,
+        timeout_seconds: None,
+        yield_time_ms: 0,
+        cwd: None,
+        remountable: false,
+    }
 }
 
 fn command_ops_with_orphan_dir(id: &str) -> (CommandOps, PathBuf, PathBuf) {

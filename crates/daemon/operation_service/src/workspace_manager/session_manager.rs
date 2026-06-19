@@ -251,19 +251,13 @@ mod tests {
             root_hash: "root".to_owned(),
             layer_paths: vec![PathBuf::from("/lower/one")],
         };
-        WorkspaceHandle {
-            id: WorkspaceId(workspace_id.to_owned()),
-            owner: CallerId(caller_id.to_owned()),
-            workspace_root: PathBuf::from("/workspace"),
-            profile: WorkspaceProfile::HostCompatible,
-            base_revision: BaseRevision {
-                version: 1,
-                root_hash: "root".to_owned(),
-                layer_count: 1,
-            },
+        WorkspaceHandle::without_launch_for_test(
+            WorkspaceId(workspace_id.to_owned()),
+            CallerId(caller_id.to_owned()),
+            PathBuf::from("/workspace"),
+            WorkspaceProfile::HostCompatible,
             snapshot,
-            launch: None,
-        }
+        )
     }
 
     #[test]

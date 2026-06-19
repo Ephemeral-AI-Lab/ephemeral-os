@@ -10,6 +10,7 @@ command.workspace = true
 config.workspace = true
 layerstack.workspace = true
 operation.workspace = true
+operation_service.workspace = true
 plugin-contract.workspace = true
 plugin.workspace = true
 protocol.workspace = true

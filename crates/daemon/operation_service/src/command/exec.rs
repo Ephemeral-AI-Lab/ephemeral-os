@@ -14,7 +14,7 @@ use crate::command::{
     CommandTraceOrigin, CommandTranscriptStore, CommandYield, ExecCommandInput, FinalizationState,
 };
 use crate::workspace_crate::{
-    DestroyWorkspaceRequest, WorkspaceId, WorkspaceLaunchNamespaceFds, WorkspaceProfile,
+    DestroyWorkspaceRequest, WorkspaceCommandRunRequest, WorkspaceId, WorkspaceProfile,
 };
 use crate::workspace_manager::WorkspaceSessionHandler;
 
@@ -187,43 +187,23 @@ impl CommandOperationService {
         handler: &WorkspaceSessionHandler,
         command_id: &CommandId,
     ) -> Result<PreparedCommandLaunch, CommandServiceError> {
-        let launch =
-            handler
-                .handle
-                .launch
-                .as_ref()
-                .ok_or_else(|| CommandServiceError::InvalidCommand {
-                    message: "resolved workspace lacks command launch material".to_owned(),
-                })?;
-        let namespace_fds =
-            launch
-                .namespace_fds
-                .ok_or_else(|| CommandServiceError::InvalidCommand {
-                    message: "holder-backed workspace command requires namespace FDs".to_owned(),
-                })?;
-        validate_namespace_fds(handler.handle.profile, namespace_fds)?;
         let command_dir = self.config().scratch_root.join(&command_id.0);
         fs::create_dir_all(&command_dir).map_err(|error| CommandServiceError::CommandIo {
             command_id: command_id.clone(),
             error: format!("prepare command artifact directory: {error}"),
         })?;
-        let run_request = command::build_exec_run_request(command::CommandExecRunRequest {
-            command_id: command_id.0.clone(),
-            caller_id: input.caller_id.0.clone(),
-            command: input.cmd.clone(),
-            cwd: input.cwd.clone(),
-            timeout_seconds: input.timeout_seconds,
-            workspace_root: handler.handle.workspace_root.clone(),
-            layer_paths: handler.layer_paths.clone(),
-            upperdir: launch.upperdir.clone(),
-            workdir: launch.workdir.clone(),
-            namespace_fds: Some(command_namespace_fds(namespace_fds)),
-            cgroup_path: launch.cgroup_path.clone(),
-        })
-        .map_err(|error| CommandServiceError::CommandIo {
-            command_id: command_id.clone(),
-            error: error.to_string(),
-        })?;
+        let run_request = handler
+            .handle
+            .command_run_request(WorkspaceCommandRunRequest {
+                command_id: command_id.0.clone(),
+                caller_id: input.caller_id.0.clone(),
+                command: input.cmd.clone(),
+                cwd: input.cwd.clone(),
+                timeout_seconds: input.timeout_seconds,
+            })
+            .map_err(|error| CommandServiceError::InvalidCommand {
+                message: error.to_string(),
+            })?;
         Ok(PreparedCommandLaunch::new(command_dir, run_request))
     }
 
@@ -430,43 +410,6 @@ fn finalize_policy(is_session_command: bool, workspace_id: &WorkspaceId) -> Comm
     }
 }
 
-fn command_namespace_fds(fds: WorkspaceLaunchNamespaceFds) -> command::CommandLaunchNamespaceFds {
-    command::CommandLaunchNamespaceFds {
-        user: fds.user,
-        mnt: fds.mnt,
-        pid: fds.pid,
-        net: fds.net,
-    }
-}
-
-fn validate_namespace_fds(
-    profile: WorkspaceProfile,
-    fds: WorkspaceLaunchNamespaceFds,
-) -> Result<(), CommandServiceError> {
-    let mut missing = Vec::new();
-    if fds.user.is_none() {
-        missing.push("user");
-    }
-    if fds.mnt.is_none() {
-        missing.push("mnt");
-    }
-    if fds.pid.is_none() {
-        missing.push("pid");
-    }
-    if profile == WorkspaceProfile::Isolated && fds.net.is_none() {
-        missing.push("net");
-    }
-    if missing.is_empty() {
-        return Ok(());
-    }
-    Err(CommandServiceError::InvalidCommand {
-        message: format!(
-            "holder-backed {profile:?} workspace command requires namespace FDs: {}",
-            missing.join(", ")
-        ),
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use std::collections::VecDeque;
@@ -491,7 +434,7 @@ mod tests {
         CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult,
         LatestSnapshotRequest, LayerStackSnapshotRef, LeaseId, ReadonlySnapshotHandle,
         RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceError, WorkspaceHandle,
-        WorkspaceId, WorkspaceLaunchContext, WorkspaceProfile, WorkspaceService,
+        WorkspaceId, WorkspaceProfile, WorkspaceService,
     };
     use crate::workspace_manager::{WorkspaceManagerService, WorkspaceSessionHandler};
 
@@ -695,19 +638,18 @@ mod tests {
             root_hash: "root".to_owned(),
             layer_paths: vec![PathBuf::from("/lower/one")],
         };
-        WorkspaceHandle {
-            id: WorkspaceId(workspace_id.to_owned()),
-            owner: CallerId(caller_id.to_owned()),
+        let base_dir =
+            std::env::temp_dir().join(format!("operation-service-exec-launch-{}", unique_suffix()));
+        WorkspaceHandle::holder_backed_for_test(
+            WorkspaceId(workspace_id.to_owned()),
+            CallerId(caller_id.to_owned()),
             workspace_root,
-            profile: WorkspaceProfile::HostCompatible,
-            base_revision: BaseRevision {
-                version: 1,
-                root_hash: "root".to_owned(),
-                layer_count: 1,
-            },
+            WorkspaceProfile::HostCompatible,
             snapshot,
-            launch: Some(test_launch_context()),
-        }
+            base_dir.join("upper"),
+            base_dir.join("work"),
+            None,
+        )
     }
 
     fn test_command_config() -> command::CommandConfig {
@@ -718,22 +660,6 @@ mod tests {
                 unique_suffix()
             )),
             ..command::CommandConfig::default()
-        }
-    }
-
-    fn test_launch_context() -> WorkspaceLaunchContext {
-        let root =
-            std::env::temp_dir().join(format!("operation-service-exec-launch-{}", unique_suffix()));
-        WorkspaceLaunchContext {
-            upperdir: root.join("upper"),
-            workdir: root.join("work"),
-            namespace_fds: Some(crate::workspace_crate::WorkspaceLaunchNamespaceFds {
-                user: Some(10),
-                mnt: Some(11),
-                pid: Some(12),
-                net: None,
-            }),
-            cgroup_path: None,
         }
     }
 

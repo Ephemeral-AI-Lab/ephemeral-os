@@ -9,7 +9,14 @@ use command::process::CommandProcess;
 use command::{CollectCompleted, StartCommand};
 use workspace::profile::WorkspaceModeContext;
 
+use super::command_workspace::OneShotCommandWorkspace;
 use super::contract::{CollectCompletedOutput, CommandCompletion, CommandResponse};
+pub(crate) struct OneShotRun {
+    pub(crate) process: CommandProcess,
+    pub(crate) trace_origin: CommandTraceOrigin,
+    pub(crate) workspace: OneShotCommandWorkspace,
+}
+
 pub(crate) struct WorkspaceRun {
     pub(crate) process: CommandProcess,
     pub(crate) trace_origin: CommandTraceOrigin,
@@ -33,18 +40,21 @@ impl CommandTraceOrigin {
 }
 
 pub(crate) enum ActiveCommand {
+    OneShot(OneShotRun),
     Workspace(WorkspaceRun),
 }
 
 impl ActiveCommand {
     pub(crate) fn process(&self) -> &CommandProcess {
         match self {
+            Self::OneShot(run) => &run.process,
             Self::Workspace(run) => &run.process,
         }
     }
 
     pub(crate) fn trace_origin(&self) -> &CommandTraceOrigin {
         match self {
+            Self::OneShot(run) => &run.trace_origin,
             Self::Workspace(run) => &run.trace_origin,
         }
     }

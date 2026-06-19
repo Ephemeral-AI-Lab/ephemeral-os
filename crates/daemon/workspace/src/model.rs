@@ -1,9 +1,13 @@
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use layerstack::service::BoundedCaptureOptions;
 use layerstack::CaptureRouteStats;
+use linux_namespace_subprocess::protocol::{
+    Fd, NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot,
+};
+use serde_json::{json, Value};
 
 use crate::overlay::tree::TreeResourceStats;
 use crate::profile::WorkspaceModeHandle;
@@ -89,7 +93,7 @@ pub struct WorkspaceHandle {
     pub profile: WorkspaceProfile,
     pub base_revision: BaseRevision,
     pub snapshot: LayerStackSnapshotRef,
-    pub launch: Option<WorkspaceLaunchContext>,
+    launch: Option<WorkspaceLaunchContext>,
 }
 
 impl fmt::Debug for WorkspaceHandle {
@@ -106,12 +110,113 @@ impl fmt::Debug for WorkspaceHandle {
     }
 }
 
+impl WorkspaceHandle {
+    pub fn command_run_request(
+        &self,
+        request: WorkspaceCommandRunRequest,
+    ) -> Result<Value, WorkspaceLaunchError> {
+        self.launch
+            .as_ref()
+            .ok_or_else(WorkspaceLaunchError::missing_launch_material)?
+            .command_run_request(request)
+    }
+
+    #[must_use]
+    pub fn holder_backed_for_test(
+        id: WorkspaceId,
+        owner: CallerId,
+        workspace_root: PathBuf,
+        profile: WorkspaceProfile,
+        snapshot: LayerStackSnapshotRef,
+        upperdir: PathBuf,
+        workdir: PathBuf,
+        cgroup_path: Option<PathBuf>,
+    ) -> Self {
+        Self::with_launch_for_test(
+            id,
+            owner,
+            workspace_root.clone(),
+            profile,
+            snapshot.clone(),
+            Some(WorkspaceLaunchContext::holder_backed_for_test(
+                profile,
+                workspace_root,
+                snapshot.layer_paths.clone(),
+                upperdir,
+                workdir,
+                cgroup_path,
+            )),
+        )
+    }
+
+    #[must_use]
+    pub fn unavailable_for_test(
+        id: WorkspaceId,
+        owner: CallerId,
+        workspace_root: PathBuf,
+        profile: WorkspaceProfile,
+        snapshot: LayerStackSnapshotRef,
+        upperdir: PathBuf,
+        workdir: PathBuf,
+        cgroup_path: Option<PathBuf>,
+    ) -> Self {
+        Self::with_launch_for_test(
+            id,
+            owner,
+            workspace_root.clone(),
+            profile,
+            snapshot.clone(),
+            Some(WorkspaceLaunchContext::unavailable_for_test(
+                profile,
+                workspace_root,
+                snapshot.layer_paths.clone(),
+                upperdir,
+                workdir,
+                cgroup_path,
+            )),
+        )
+    }
+
+    #[must_use]
+    pub fn without_launch_for_test(
+        id: WorkspaceId,
+        owner: CallerId,
+        workspace_root: PathBuf,
+        profile: WorkspaceProfile,
+        snapshot: LayerStackSnapshotRef,
+    ) -> Self {
+        Self::with_launch_for_test(id, owner, workspace_root, profile, snapshot, None)
+    }
+
+    fn with_launch_for_test(
+        id: WorkspaceId,
+        owner: CallerId,
+        workspace_root: PathBuf,
+        profile: WorkspaceProfile,
+        snapshot: LayerStackSnapshotRef,
+        launch: Option<WorkspaceLaunchContext>,
+    ) -> Self {
+        Self {
+            id,
+            owner,
+            workspace_root,
+            profile,
+            base_revision: snapshot.base_revision(),
+            snapshot,
+            launch,
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
-pub struct WorkspaceLaunchContext {
-    pub upperdir: PathBuf,
-    pub workdir: PathBuf,
-    pub namespace_fds: Option<WorkspaceLaunchNamespaceFds>,
-    pub cgroup_path: Option<PathBuf>,
+struct WorkspaceLaunchContext {
+    profile: WorkspaceProfile,
+    workspace_root: PathBuf,
+    layer_paths: Vec<PathBuf>,
+    upperdir: PathBuf,
+    workdir: PathBuf,
+    holder_fds: Option<WorkspaceLaunchFds>,
+    cgroup_path: Option<PathBuf>,
 }
 
 impl fmt::Debug for WorkspaceLaunchContext {
@@ -119,31 +224,174 @@ impl fmt::Debug for WorkspaceLaunchContext {
         f.debug_struct("WorkspaceLaunchContext")
             .field("storage", &"<hidden>")
             .field(
-                "namespaces",
-                &self.namespace_fds.as_ref().map(|_| "<available>"),
+                "holder_context",
+                &self.holder_fds.as_ref().map(|_| "<available>"),
             )
             .field("cgroup", &self.cgroup_path.as_ref().map(|_| "<available>"))
             .finish()
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub struct WorkspaceLaunchNamespaceFds {
-    pub user: Option<i32>,
-    pub mnt: Option<i32>,
-    pub pid: Option<i32>,
-    pub net: Option<i32>,
+impl WorkspaceLaunchContext {
+    #[must_use]
+    pub fn holder_backed_for_test(
+        profile: WorkspaceProfile,
+        workspace_root: PathBuf,
+        layer_paths: Vec<PathBuf>,
+        upperdir: PathBuf,
+        workdir: PathBuf,
+        cgroup_path: Option<PathBuf>,
+    ) -> Self {
+        Self {
+            profile,
+            workspace_root,
+            layer_paths,
+            upperdir,
+            workdir,
+            holder_fds: Some(WorkspaceLaunchFds {
+                user: Some(10),
+                mnt: Some(11),
+                pid: Some(12),
+                net: (profile == WorkspaceProfile::Isolated).then_some(13),
+            }),
+            cgroup_path,
+        }
+    }
+
+    #[must_use]
+    pub fn unavailable_for_test(
+        profile: WorkspaceProfile,
+        workspace_root: PathBuf,
+        layer_paths: Vec<PathBuf>,
+        upperdir: PathBuf,
+        workdir: PathBuf,
+        cgroup_path: Option<PathBuf>,
+    ) -> Self {
+        Self {
+            profile,
+            workspace_root,
+            layer_paths,
+            upperdir,
+            workdir,
+            holder_fds: None,
+            cgroup_path,
+        }
+    }
+
+    pub fn command_run_request(
+        &self,
+        request: WorkspaceCommandRunRequest,
+    ) -> Result<Value, WorkspaceLaunchError> {
+        let cwd = request
+            .cwd
+            .as_deref()
+            .unwrap_or_else(|| Path::new("."))
+            .to_string_lossy()
+            .into_owned();
+        let run_request = RunRequest {
+            mode: RunMode::SetNs,
+            tool_call: ToolCall {
+                invocation_id: request.command_id,
+                caller_id: request.caller_id,
+                verb: RunnerVerb::ExecCommand,
+                args: json!({
+                    "command": request.command,
+                    "cwd": cwd,
+                }),
+                background: false,
+            },
+            workspace_root: WorkspaceRoot(self.workspace_root.clone()),
+            layer_paths: self.layer_paths.clone(),
+            upperdir: Some(self.upperdir.clone()),
+            workdir: Some(self.workdir.clone()),
+            ns_fds: Some(self.required_holder_fds()?),
+            cgroup_path: self.cgroup_path.clone(),
+            timeout_seconds: request.timeout_seconds,
+        };
+        serde_json::to_value(run_request).map_err(|error| WorkspaceLaunchError {
+            message: format!("serialize workspace command launch request: {error}"),
+        })
+    }
+
+    fn required_holder_fds(&self) -> Result<NsFds, WorkspaceLaunchError> {
+        let Some(fds) = self.holder_fds else {
+            return Err(WorkspaceLaunchError::incomplete());
+        };
+        if fds.user.is_none() || fds.mnt.is_none() || fds.pid.is_none() {
+            return Err(WorkspaceLaunchError::incomplete());
+        }
+        if self.profile == WorkspaceProfile::Isolated && fds.net.is_none() {
+            return Err(WorkspaceLaunchError::incomplete());
+        }
+        Ok(fds.into())
+    }
 }
 
-impl fmt::Debug for WorkspaceLaunchNamespaceFds {
+#[derive(Debug, Clone, PartialEq)]
+pub struct WorkspaceCommandRunRequest {
+    pub command_id: String,
+    pub caller_id: String,
+    pub command: String,
+    pub cwd: Option<PathBuf>,
+    pub timeout_seconds: Option<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkspaceLaunchError {
+    message: String,
+}
+
+impl WorkspaceLaunchError {
+    fn missing_launch_material() -> Self {
+        Self {
+            message: "resolved workspace lacks command launch material".to_owned(),
+        }
+    }
+
+    fn incomplete() -> Self {
+        Self {
+            message: "workspace launch context is incomplete".to_owned(),
+        }
+    }
+}
+
+impl fmt::Display for WorkspaceLaunchError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
+impl std::error::Error for WorkspaceLaunchError {}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct WorkspaceLaunchFds {
+    user: Option<i32>,
+    mnt: Option<i32>,
+    pid: Option<i32>,
+    net: Option<i32>,
+}
+
+impl fmt::Debug for WorkspaceLaunchFds {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let available = |fd: Option<i32>| fd.map(|_| "<available>");
-        f.debug_struct("WorkspaceLaunchNamespaceFds")
+        f.debug_struct("WorkspaceLaunchFds")
             .field("user", &available(self.user))
             .field("mnt", &available(self.mnt))
             .field("pid", &available(self.pid))
             .field("net", &available(self.net))
             .finish()
+    }
+}
+
+impl From<WorkspaceLaunchFds> for NsFds {
+    fn from(fds: WorkspaceLaunchFds) -> Self {
+        let fd = |raw: Option<i32>| raw.map(Fd);
+        Self {
+            user: fd(fds.user),
+            mnt: fd(fds.mnt),
+            pid: fd(fds.pid),
+            net: fd(fds.net),
+        }
     }
 }
 
@@ -288,21 +536,24 @@ impl From<&WorkspaceModeHandle> for WorkspaceHandle {
                 layer_paths: handle.layer_paths.clone(),
             },
             launch: Some(WorkspaceLaunchContext {
+                profile: handle.profile,
+                workspace_root: PathBuf::from(&handle.workspace_root),
+                layer_paths: handle.layer_paths.clone(),
                 upperdir: handle.dirs.upperdir.clone(),
                 workdir: handle.dirs.workdir.clone(),
-                namespace_fds: namespace_fds_from_map(&handle.ns_fds),
+                holder_fds: holder_fds_from_map(&handle.ns_fds),
                 cgroup_path: handle.cgroup_path.clone(),
             }),
         }
     }
 }
 
-fn namespace_fds_from_map(ns_fds: &HashMap<String, i32>) -> Option<WorkspaceLaunchNamespaceFds> {
+fn holder_fds_from_map(ns_fds: &HashMap<String, i32>) -> Option<WorkspaceLaunchFds> {
     if ns_fds.is_empty() {
         return None;
     }
     let fd = |name: &str| ns_fds.get(name).copied();
-    Some(WorkspaceLaunchNamespaceFds {
+    Some(WorkspaceLaunchFds {
         user: fd("user"),
         mnt: fd("mnt"),
         pid: fd("pid"),

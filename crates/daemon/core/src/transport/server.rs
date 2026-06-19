@@ -50,7 +50,6 @@ pub struct DaemonServer {
     services: Arc<RuntimeServices>,
     file_limits: FileLimitsConfig,
     invocation_registry: Arc<InFlightRegistry>,
-    idle_workspace_eviction_interval_ms: u64,
     shutdown: CancellationToken,
 }
 
@@ -74,7 +73,6 @@ impl DaemonServer {
                 crate::DEFAULT_TTL_S,
                 crate::DEFAULT_REAPER_INTERVAL_S,
             )),
-            idle_workspace_eviction_interval_ms: 500,
             shutdown: CancellationToken::new(),
         }
     }
@@ -101,7 +99,6 @@ impl DaemonServer {
                 daemon_config.inflight.ttl_s,
                 daemon_config.inflight.reaper_interval_s,
             )),
-            idle_workspace_eviction_interval_ms: daemon_config.idle_workspace_eviction.interval_ms,
             shutdown: CancellationToken::new(),
         }
     }

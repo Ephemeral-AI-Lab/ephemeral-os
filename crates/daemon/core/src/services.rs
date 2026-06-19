@@ -1,4 +1,4 @@
-//! Daemon-owned runtime services shared by dispatch handlers.
+//! Daemon-owned services shared by dispatch handlers.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -8,39 +8,18 @@ use config::configs::daemon::{CommandConfig as ConfigCommandConfig, PluginRuntim
 use config::configs::isolated_network::IsolatedNetworkConfig;
 use layerstack::service::{BoundedCaptureOptions, IgnoredCaptureLimits};
 use layerstack::CommitOptions;
-use operation::command::CommandOps;
+use operation_service::command::CommandFinalizationOptions;
+use operation_service::workspace_manager::WorkspaceManagerService;
+use operation_service::workspace_remount::{WorkspaceRemountOptions, WorkspaceRemountService};
+use operation_service::{CommandOperationService, OperationServices};
 use plugin::{PluginRuntime, PluginRuntimeError};
 use serde_json::Value;
-
-use crate::WorkspaceRuntime;
-
-pub(crate) mod background_tasks {
-    use operation::command::CommandOps;
-
-    use crate::WorkspaceRuntime;
-
-    #[must_use]
-    pub(crate) fn evict_idle_workspaces_once(workspace: &WorkspaceRuntime) -> usize {
-        let report = workspace.evict_idle_workspaces_report();
-        let count = report.evicted.len();
-        if count > 0 {
-            crate::trace::push_background_record(crate::trace::idle_workspace_evict_record(
-                &report,
-            ));
-        }
-        count
-    }
-
-    pub(crate) fn advance_active_commands_once(command: &CommandOps) {
-        for record in command.advance_active_commands_once(std::time::Instant::now()) {
-            crate::trace::push_background_record(record);
-        }
-    }
-
-    pub(crate) fn recover_orphaned_commands(command: &CommandOps) {
-        command.recover_orphaned_commands();
-    }
-}
+use workspace::{
+    CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
+    DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, ReadonlySnapshotHandle,
+    RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceError, WorkspaceHandle,
+    WorkspaceService,
+};
 
 #[must_use]
 pub(crate) fn command_config_from_schema(config: &ConfigCommandConfig) -> CommandConfig {
@@ -75,10 +54,9 @@ pub(crate) fn capture_options_from_schema(config: &ConfigCommandConfig) -> Bound
 
 /// Runtime service instances shared by daemon dispatch handlers.
 pub struct RuntimeServices {
-    pub command: Arc<CommandOps>,
+    pub operation: OperationServices,
     pub commit_options: CommitOptions,
     pub plugin: PluginRuntime,
-    pub workspace: WorkspaceRuntime,
 }
 
 impl RuntimeServices {
@@ -100,21 +78,31 @@ impl RuntimeServices {
     #[must_use]
     pub fn with_commit_options_and_capture_options(
         plugin: PluginRuntimeConfig,
-        isolated_network: IsolatedNetworkConfig,
+        _isolated_network: IsolatedNetworkConfig,
         command: CommandConfig,
         commit_options: CommitOptions,
         capture_options: BoundedCaptureOptions,
     ) -> Self {
-        let command = Arc::new(CommandOps::with_commit_options_and_capture_options(
+        let workspace = Arc::new(WorkspaceManagerService::new(Arc::new(
+            UnsupportedWorkspaceService,
+        )));
+        let command = Arc::new(CommandOperationService::with_finalization_options(
+            Arc::clone(&workspace),
             command,
-            commit_options,
-            capture_options,
+            CommandFinalizationOptions {
+                one_shot_capture: capture_options,
+                one_shot_publish: commit_options,
+            },
+        ));
+        let remount = Arc::new(WorkspaceRemountService::new(
+            Arc::clone(&workspace),
+            Arc::clone(&command),
+            WorkspaceRemountOptions::default(),
         ));
         Self {
-            command: Arc::clone(&command),
+            operation: OperationServices::new(workspace, command, remount),
             commit_options,
             plugin: PluginRuntime::new(plugin),
-            workspace: WorkspaceRuntime::new(isolated_network, command),
         }
     }
 
@@ -125,9 +113,49 @@ impl RuntimeServices {
     }
 
     pub fn ensure_plugin_caller_allowed(&self, caller: &str) -> Result<(), PluginRuntimeError> {
-        if !caller.is_empty() && self.workspace.caller_has_active_handle(caller) {
-            return Err(PluginRuntimeError::ForbiddenInIsolatedNetwork);
-        }
+        let _ = caller;
         Ok(())
+    }
+}
+
+struct UnsupportedWorkspaceService;
+
+impl WorkspaceService for UnsupportedWorkspaceService {
+    fn create_workspace(
+        &self,
+        _request: CreateWorkspaceRequest,
+    ) -> Result<WorkspaceHandle, WorkspaceError> {
+        Err(WorkspaceError::FeatureDisabled)
+    }
+
+    fn capture_changes(
+        &self,
+        _handle: &WorkspaceHandle,
+        _request: CaptureChangesRequest,
+    ) -> Result<CapturedWorkspaceChanges, WorkspaceError> {
+        Err(WorkspaceError::FeatureDisabled)
+    }
+
+    fn remount_workspace(
+        &self,
+        _handle: &WorkspaceHandle,
+        _request: RemountWorkspaceRequest,
+    ) -> Result<RemountWorkspaceResult, WorkspaceError> {
+        Err(WorkspaceError::FeatureDisabled)
+    }
+
+    fn destroy_workspace(
+        &self,
+        _handle: WorkspaceHandle,
+        _request: DestroyWorkspaceRequest,
+    ) -> Result<DestroyWorkspaceResult, WorkspaceError> {
+        Err(WorkspaceError::FeatureDisabled)
+    }
+
+    fn latest_snapshot(
+        &self,
+        _request: LatestSnapshotRequest,
+    ) -> Result<ReadonlySnapshotHandle, WorkspaceError> {
+        Err(WorkspaceError::FeatureDisabled)
     }
 }

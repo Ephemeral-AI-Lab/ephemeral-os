@@ -1,5 +1,3 @@
-use base64::Engine as _;
-use operation::control::contract::{TraceExportAckInput, TraceExportInput};
 use serde_json::json;
 use trace::{
     decode_trace_batch, DetailBudget, EventRecord, ResourceStatsKind, SpanKind, SpanUid, TraceId,
@@ -9,7 +7,10 @@ use trace::{
 use super::build::{attach_request_sidecar, attach_request_sidecar_with_events};
 use super::events::{COMMAND_PROCESS_SPAWN_SPAN_ID, COMMAND_PROCESS_WAIT_SPAN_ID};
 use super::transport_failure::{push_transport_failure_from_sidecar, trace_sidecar_bytes};
-use crate::trace::{now_ms, push_background_record, RequestTraceEvent, RequestTraceFacts};
+use crate::trace::{
+    ack_background_export, lease_background_records, now_ms, push_background_record,
+    RequestTraceEvent, RequestTraceFacts,
+};
 use crate::wire::RequestTraceContext;
 
 #[test]
@@ -24,41 +25,22 @@ fn trace_export_drains_background_spool_as_protobuf_batch() {
     ));
     push_background_record(record);
 
-    let response =
-        crate::op_adapter::control::op_trace_export(TraceExportInput { max_records: 16 });
-    assert_eq!(response["success"], true);
-    assert_eq!(response["record_count"], 1);
-    assert_eq!(response["spool_pending_after"], 1);
-    let export_id = response["export_id"]
-        .as_str()
-        .expect("export id")
-        .to_owned();
-    let batch_sha256 = response["batch_sha256"]
-        .as_str()
-        .expect("batch sha")
-        .to_owned();
-    let encoded = response["trace_batch_base64"]
-        .as_str()
-        .expect("trace batch");
-    let batch = decode_trace_batch(
-        &base64::engine::general_purpose::STANDARD
-            .decode(encoded)
-            .expect("base64"),
-    )
-    .expect("trace batch decodes");
+    let response = lease_background_records(16);
+    assert_eq!(response.record_count, 1);
+    assert_eq!(response.spool_pending_after, 1);
+    let export_id = response.export_id.clone().expect("export id");
+    let batch_sha256 = response.batch_sha256.clone().expect("batch sha");
+    let encoded = response.trace_batch_bytes.expect("trace batch");
+    let batch = decode_trace_batch(&encoded).expect("trace batch decodes");
     assert_eq!(batch.records.len(), 1);
     assert_eq!(batch.records[0].trace_id, trace_id);
 
-    let replay = crate::op_adapter::control::op_trace_export(TraceExportInput { max_records: 16 });
-    assert_eq!(replay["export_id"], export_id);
-    assert_eq!(replay["batch_sha256"], batch_sha256);
+    let replay = lease_background_records(16);
+    assert_eq!(replay.export_id.as_ref(), Some(&export_id));
+    assert_eq!(replay.batch_sha256.as_ref(), Some(&batch_sha256));
 
-    let ack = crate::op_adapter::control::op_trace_export_ack(TraceExportAckInput {
-        export_id,
-        batch_sha256,
-        record_count: 1,
-    });
-    assert_eq!(ack["acked"], true);
+    let ack = ack_background_export(&export_id, &batch_sha256, 1);
+    assert!(ack);
 
     let trace = RequestTraceContext {
         trace_id: "trace-write-failed".to_owned(),
@@ -91,18 +73,10 @@ fn trace_export_drains_background_spool_as_protobuf_batch() {
         "response_write_failed",
         &std::io::Error::new(std::io::ErrorKind::BrokenPipe, "peer closed"),
     );
-    let response =
-        crate::op_adapter::control::op_trace_export(TraceExportInput { max_records: 16 });
-    assert_eq!(response["record_count"], 1);
-    let encoded = response["trace_batch_base64"]
-        .as_str()
-        .expect("trace batch");
-    let batch = decode_trace_batch(
-        &base64::engine::general_purpose::STANDARD
-            .decode(encoded)
-            .expect("base64"),
-    )
-    .expect("trace batch decodes");
+    let response = lease_background_records(16);
+    assert_eq!(response.record_count, 1);
+    let encoded = response.trace_batch_bytes.clone().expect("trace batch");
+    let batch = decode_trace_batch(&encoded).expect("trace batch decodes");
     let record = batch.records.first().expect("failure record");
     assert_eq!(record.trace_id.as_str(), "trace-write-failed");
     assert_eq!(
@@ -112,18 +86,12 @@ fn trace_export_drains_background_spool_as_protobuf_batch() {
             .map(|event| (event.module.as_str(), event.name.as_str())),
         Some(("daemon.transport", "response_write_failed"))
     );
-    let ack = crate::op_adapter::control::op_trace_export_ack(TraceExportAckInput {
-        export_id: response["export_id"]
-            .as_str()
-            .expect("export id")
-            .to_owned(),
-        batch_sha256: response["batch_sha256"]
-            .as_str()
-            .expect("batch sha")
-            .to_owned(),
-        record_count: 1,
-    });
-    assert_eq!(ack["acked"], true);
+    let ack = ack_background_export(
+        &response.export_id.expect("export id"),
+        &response.batch_sha256.expect("batch sha"),
+        1,
+    );
+    assert!(ack);
 }
 
 #[test]

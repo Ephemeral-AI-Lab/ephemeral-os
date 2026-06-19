@@ -113,7 +113,6 @@ checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 name = "command"
 version = "0.1.0"
 dependencies = [
- "linux-namespace-subprocess",
  "nix 0.29.0",
  "rustix 0.38.44",
  "serde",
@@ -186,6 +185,7 @@ dependencies = [
  "config",
  "layerstack",
  "operation",
+ "operation_service",
  "plugin",
  "plugin-contract",
  "proptest",

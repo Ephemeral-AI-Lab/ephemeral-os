@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -7,12 +8,15 @@ use command::{CommandError, StartCommand};
 use serde_json::json;
 use workspace::profile::WorkspaceModeContext;
 
+use crate::command::command_workspace::OneShotCommandWorkspace;
 use crate::command::contract::{CommandResponse, CommandStatus};
 use crate::command::finalize::insert_cgroup_process_resource_timings;
 use crate::command::outcome::WorkspaceTimings;
-use crate::command::prepare::{prepare_workspace, PrepareInputs, PreparedCommand};
+use crate::command::prepare::{
+    prepare_one_shot, prepare_workspace, PrepareInputs, PreparedCommand,
+};
 use crate::command::registry::{
-    ActiveCommand, CommandReservation, CommandTraceOrigin, WorkspaceRun,
+    ActiveCommand, CommandReservation, CommandTraceOrigin, OneShotRun, WorkspaceRun,
 };
 use crate::command::trace::{
     command_process_wait_host_resource_stats_event, command_process_wait_resource_stats_event,
@@ -46,10 +50,99 @@ impl CommandOps {
             timeout_seconds: request.timeout_seconds,
         };
         match target {
+            ExecTarget::OneShot {
+                workspace,
+                scratch_root,
+            } => self.start_one_shot(
+                reservation,
+                spec,
+                &request,
+                &id,
+                workspace,
+                scratch_root,
+                yield_time_ms,
+            ),
             ExecTarget::Workspace { context } => {
                 self.start_workspace(reservation, spec, &request, &id, context, yield_time_ms)
             }
         }
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "start inputs are one-shot plumbing from the typed target"
+    )]
+    fn start_one_shot(
+        &self,
+        reservation: CommandReservation,
+        spec: CommandProcessSpec,
+        request: &StartCommand,
+        command_id: &str,
+        workspace: Box<OneShotCommandWorkspace>,
+        scratch_root: PathBuf,
+        yield_time_ms: u64,
+    ) -> Result<CommandExecOutcome, CommandExecError> {
+        let result = {
+            let prepared = prepare_one_shot(
+                PrepareInputs {
+                    caller_id: &request.caller_id,
+                    command_id,
+                    invocation_id: &request.invocation_id,
+                    cmd: &request.cmd,
+                    cwd: request.cwd.as_deref(),
+                    remountable: false,
+                    timeout_seconds: request.timeout_seconds,
+                    command_dir: scratch_root.join(command_id),
+                    workspace_label: "one_shot",
+                },
+                workspace.workspace_root(),
+                &workspace.snapshot().layer_paths,
+                workspace.dirs(),
+                &workspace.dirs().run_dir,
+            )
+            .map_err(command_prepare_error)?;
+            let mut trace_events = prepared.trace_events.clone();
+            let normalization = workspace.normalization();
+            trace_events.push(CommandTraceEvent::new(
+                "command_snapshot_normalized",
+                json!({
+                    "triggered": normalization.triggered,
+                    "max_depth": self.commit_options.auto_squash_max_depth,
+                    "active_depth_before": normalization.active_depth_before,
+                    "active_depth_after": normalization.active_depth_after,
+                    "checkpoint_count": normalization.checkpoint_count,
+                    "removed_layer_count": normalization.removed_layer_count,
+                    "bytes_added": normalization.bytes_added,
+                    "protected_layer_count": normalization.protected_layer_count,
+                    "protected_pinned_bytes": normalization.protected_pinned_bytes,
+                    "lease_layer_count": workspace.snapshot().layer_paths.len(),
+                }),
+            ));
+            let process = self.spawn_process(spec, prepared, &mut trace_events)?;
+            Ok((process, trace_events))
+        };
+        let (process, trace_events) = match result {
+            Ok(parts) => parts,
+            Err(error) => {
+                let _ = workspace.release_lease();
+                return Err(error);
+            }
+        };
+        let workspace = *workspace;
+        let trace_origin = CommandTraceOrigin::from_start(request);
+        Ok(self.register_and_wait(
+            reservation,
+            process,
+            yield_time_ms,
+            move |process| {
+                ActiveCommand::OneShot(OneShotRun {
+                    process,
+                    trace_origin,
+                    workspace,
+                })
+            },
+            trace_events,
+        ))
     }
 
     fn start_workspace(

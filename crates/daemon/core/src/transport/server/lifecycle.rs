@@ -9,7 +9,6 @@ use tokio::sync::Semaphore;
 use super::trace_context::unix_ms;
 use super::DaemonServer;
 use crate::error::DaemonError;
-use crate::runtime_services::background_tasks;
 
 const MAX_CONCURRENT_CONNECTIONS: usize = 256;
 
@@ -42,59 +41,6 @@ impl DaemonServer {
                 }
             })
         };
-        let _isolated_ttl_task = {
-            let shutdown = server.shutdown.clone();
-            let eviction_interval_ms = server.idle_workspace_eviction_interval_ms;
-            let services = Arc::clone(&server.services);
-            tokio::spawn(async move {
-                loop {
-                    tokio::select! {
-                        () = shutdown.cancelled() => break,
-                        () = tokio::time::sleep(Duration::from_millis(eviction_interval_ms)) => {
-                            let services = Arc::clone(&services);
-                            if let Err(error) = tokio::task::spawn_blocking(move || {
-                                background_tasks::evict_idle_workspaces_once(&services.workspace)
-                            })
-                            .await
-                            {
-                                emit_boot_event(
-                                    "idle_workspace_eviction_failed",
-                                    serde_json::json!({"error": error.to_string()}),
-                                );
-                            }
-                        }
-                    }
-                }
-            })
-        };
-        // Command advancement can touch process state and the filesystem.
-        let _command_advancer = {
-            let shutdown = server.shutdown.clone();
-            let services = Arc::clone(&server.services);
-            tokio::spawn(async move {
-                loop {
-                    tokio::select! {
-                        () = shutdown.cancelled() => break,
-                        () = tokio::time::sleep(Duration::from_millis(50)) => {
-                            let command = Arc::clone(&services.command);
-                            if let Err(error) = tokio::task::spawn_blocking(
-                                move || background_tasks::advance_active_commands_once(&command),
-                            )
-                            .await
-                            {
-                                emit_boot_event(
-                                    "command_advancement_failed",
-                                    serde_json::json!({"error": error.to_string()}),
-                                );
-                            }
-                        }
-                    }
-                }
-            })
-        };
-        // Recover stale commands left by a prior daemon, before accepting.
-        background_tasks::recover_orphaned_commands(&server.services.command);
-
         if let Some(parent) = server.config.socket_path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
@@ -248,22 +194,7 @@ where
 }
 
 async fn cleanup_active_runs_on_shutdown(server: &Arc<DaemonServer>) {
-    let services = Arc::clone(&server.services);
-    match tokio::task::spawn_blocking(move || services.workspace.cancel_all_runs(None)).await {
-        Ok((cancelled_commands, isolated_exited)) => emit_boot_event(
-            "workspace_runs_cancelled",
-            serde_json::json!({
-                "cancelled_commands": cancelled_commands,
-                "isolated_exited": isolated_exited,
-            }),
-        ),
-        Err(error) => emit_boot_event(
-            "workspace_run_cleanup_failed",
-            serde_json::json!({
-                "error": error.to_string(),
-            }),
-        ),
-    }
+    let _ = server;
 }
 
 async fn signal_shutdown() {

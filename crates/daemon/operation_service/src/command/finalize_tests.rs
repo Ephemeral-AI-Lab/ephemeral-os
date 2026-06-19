@@ -21,7 +21,7 @@ use workspace::{
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
     LayerStackSnapshotRef, LeaseId, ProtectedPathDrop, ReadonlySnapshotHandle,
     RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceError, WorkspaceHandle, WorkspaceId,
-    WorkspaceLaunchContext, WorkspaceLaunchNamespaceFds, WorkspaceProfile, WorkspaceService,
+    WorkspaceProfile, WorkspaceService,
 };
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
@@ -288,29 +288,16 @@ fn workspace_handle(
         root_hash: fixture.snapshot.root_hash.clone(),
         layer_paths: fixture.snapshot.layer_paths.clone(),
     };
-    WorkspaceHandle {
-        id: WorkspaceId(workspace_id.to_owned()),
-        owner: CallerId(caller_id.to_owned()),
-        workspace_root: fixture.root.clone(),
-        profile: WorkspaceProfile::HostCompatible,
-        base_revision: snapshot.base_revision(),
+    WorkspaceHandle::holder_backed_for_test(
+        WorkspaceId(workspace_id.to_owned()),
+        CallerId(caller_id.to_owned()),
+        fixture.root.clone(),
+        WorkspaceProfile::HostCompatible,
         snapshot,
-        launch: Some(test_launch_context(fixture)),
-    }
-}
-
-fn test_launch_context(fixture: &LayerFixture) -> WorkspaceLaunchContext {
-    WorkspaceLaunchContext {
-        upperdir: fixture.base.join("upper"),
-        workdir: fixture.base.join("work"),
-        namespace_fds: Some(WorkspaceLaunchNamespaceFds {
-            user: Some(10),
-            mnt: Some(11),
-            pid: Some(12),
-            net: None,
-        }),
-        cgroup_path: None,
-    }
+        fixture.base.join("upper"),
+        fixture.base.join("work"),
+        None,
+    )
 }
 
 fn destroy_result(handle: &WorkspaceHandle) -> DestroyWorkspaceResult {
