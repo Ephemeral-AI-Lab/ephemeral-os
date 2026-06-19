@@ -239,7 +239,7 @@ impl WorkspaceSessionManager {
 #[cfg(test)]
 mod tests {
     use crate::workspace_crate::{
-        BaseRevision, LayerStackSnapshotRef, NetworkMode, WorkspaceHandle,
+        BaseRevision, LayerStackSnapshotRef, WorkspaceHandle, WorkspaceProfile,
     };
 
     use super::*;
@@ -255,7 +255,7 @@ mod tests {
             id: WorkspaceId(workspace_id.to_owned()),
             owner: CallerId(caller_id.to_owned()),
             workspace_root: PathBuf::from("/workspace"),
-            network: NetworkMode::Host,
+            profile: WorkspaceProfile::HostCompatible,
             base_revision: BaseRevision {
                 version: 1,
                 root_hash: "root".to_owned(),

@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::isolated_network_setup::VethAllocation;
 use crate::lifecycle::remount::WorkspaceRemountState;
-use crate::model::NetworkMode;
+use crate::model::WorkspaceProfile;
 use crate::overlay::dirs::OverlayDirs;
 
 pub(crate) const HANDLE_PREFIX: &str = "eos-iws-";
@@ -31,7 +31,7 @@ pub struct DnsConfiguration {
 #[derive(Debug, Clone)]
 pub struct WorkspaceModeHandle {
     pub workspace_id: WorkspaceModeId,
-    pub network: NetworkMode,
+    pub profile: WorkspaceProfile,
     pub caller_id: String,
     pub lease_id: String,
     pub manifest_version: i64,
@@ -55,7 +55,7 @@ pub struct WorkspaceModeHandle {
 pub struct WorkspaceModeContext {
     pub caller_id: String,
     pub workspace_handle_id: String,
-    pub network: NetworkMode,
+    pub profile: WorkspaceProfile,
     pub layer_stack_root: PathBuf,
     pub manifest_version: i64,
     pub manifest_root_hash: String,

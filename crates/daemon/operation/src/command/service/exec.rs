@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -11,11 +10,9 @@ use workspace::profile::WorkspaceModeContext;
 use crate::command::contract::{CommandResponse, CommandStatus};
 use crate::command::finalize::insert_cgroup_process_resource_timings;
 use crate::command::outcome::WorkspaceTimings;
-use crate::command::prepare::{
-    prepare_host, prepare_isolated_network, PrepareInputs, PreparedCommand,
-};
+use crate::command::prepare::{prepare_workspace, PrepareInputs, PreparedCommand};
 use crate::command::registry::{
-    ActiveCommand, CommandReservation, CommandTraceOrigin, HostRun, IsolatedNetworkRun,
+    ActiveCommand, CommandReservation, CommandTraceOrigin, WorkspaceRun,
 };
 use crate::command::trace::{
     command_process_wait_host_resource_stats_event, command_process_wait_resource_stats_event,
@@ -24,8 +21,7 @@ use crate::command::trace::{
 };
 
 use super::{
-    command_prepare_error, elapsed_ms, CommandExecError, CommandExecOutcome, CommandOps,
-    ExecTarget, HostCommandWorkspace,
+    command_prepare_error, elapsed_ms, CommandExecError, CommandExecOutcome, CommandOps, ExecTarget,
 };
 
 impl CommandOps {
@@ -50,120 +46,13 @@ impl CommandOps {
             timeout_seconds: request.timeout_seconds,
         };
         match target {
-            ExecTarget::Host {
-                workspace,
-                scratch_root,
-            } => self.start_host(
-                reservation,
-                spec,
-                &request,
-                &id,
-                workspace,
-                scratch_root,
-                yield_time_ms,
-            ),
-            ExecTarget::IsolatedNetwork { context } => self.start_isolated_network(
-                reservation,
-                spec,
-                &request,
-                &id,
-                context,
-                yield_time_ms,
-            ),
+            ExecTarget::Workspace { context } => {
+                self.start_workspace(reservation, spec, &request, &id, context, yield_time_ms)
+            }
         }
     }
 
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "start inputs are one-shot plumbing from the typed target"
-    )]
-    fn start_host(
-        &self,
-        reservation: CommandReservation,
-        spec: CommandProcessSpec,
-        request: &StartCommand,
-        command_id: &str,
-        workspace: Box<HostCommandWorkspace>,
-        scratch_root: PathBuf,
-        yield_time_ms: u64,
-    ) -> Result<CommandExecOutcome, CommandExecError> {
-        let HostCommandWorkspace {
-            layer_stack_root: root,
-            workspace_root,
-            snapshot,
-            normalization,
-            workspace,
-            ns_fds,
-            cgroup_path,
-            lease,
-        } = *workspace;
-        let result = {
-            let prepared = prepare_host(
-                PrepareInputs {
-                    caller_id: &request.caller_id,
-                    command_id,
-                    invocation_id: &request.invocation_id,
-                    cmd: &request.cmd,
-                    cwd: request.cwd.as_deref(),
-                    remountable: false,
-                    timeout_seconds: request.timeout_seconds,
-                    command_dir: scratch_root.join(command_id),
-                    workspace_label: "host",
-                },
-                &workspace_root,
-                &snapshot.layer_paths,
-                workspace.dirs(),
-                &workspace.dirs().run_dir,
-                ns_fds,
-                cgroup_path,
-            )
-            .map_err(command_prepare_error)?;
-            let mut trace_events = prepared.trace_events.clone();
-            trace_events.push(CommandTraceEvent::new(
-                "command_snapshot_normalized",
-                json!({
-                    "triggered": normalization.triggered,
-                    "max_depth": self.commit_options.auto_squash_max_depth,
-                    "active_depth_before": normalization.active_depth_before,
-                    "active_depth_after": normalization.active_depth_after,
-                    "checkpoint_count": normalization.checkpoint_count,
-                    "removed_layer_count": normalization.removed_layer_count,
-                    "bytes_added": normalization.bytes_added,
-                    "protected_layer_count": normalization.protected_layer_count,
-                    "protected_pinned_bytes": normalization.protected_pinned_bytes,
-                    "lease_layer_count": snapshot.layer_paths.len(),
-                }),
-            ));
-            let process = self.spawn_process(spec, prepared, &mut trace_events)?;
-            Ok((workspace, process, trace_events))
-        };
-        let (workspace, process, trace_events) = match result {
-            Ok(parts) => parts,
-            Err(error) => {
-                let _ = lease.release();
-                return Err(error);
-            }
-        };
-        let trace_origin = CommandTraceOrigin::from_start(request);
-        Ok(self.register_and_wait(
-            reservation,
-            process,
-            yield_time_ms,
-            move |process| {
-                ActiveCommand::Host(HostRun {
-                    process,
-                    trace_origin,
-                    root,
-                    snapshot,
-                    workspace,
-                    lease,
-                })
-            },
-            trace_events,
-        ))
-    }
-
-    fn start_isolated_network(
+    fn start_workspace(
         &self,
         reservation: CommandReservation,
         spec: CommandProcessSpec,
@@ -172,7 +61,7 @@ impl CommandOps {
         mode_context: Box<WorkspaceModeContext>,
         yield_time_ms: u64,
     ) -> Result<CommandExecOutcome, CommandExecError> {
-        let prepared = prepare_isolated_network(
+        let prepared = prepare_workspace(
             PrepareInputs {
                 caller_id: &request.caller_id,
                 command_id,
@@ -182,7 +71,7 @@ impl CommandOps {
                 remountable: request.remountable,
                 timeout_seconds: request.timeout_seconds,
                 command_dir: mode_context.scratch_dir.join("commands").join(command_id),
-                workspace_label: "isolated_network",
+                workspace_label: "workspace",
             },
             &mode_context,
         )
@@ -196,7 +85,7 @@ impl CommandOps {
             process,
             yield_time_ms,
             move |process| {
-                ActiveCommand::IsolatedNetwork(IsolatedNetworkRun {
+                ActiveCommand::Workspace(WorkspaceRun {
                     process,
                     trace_origin,
                     context: mode_context,

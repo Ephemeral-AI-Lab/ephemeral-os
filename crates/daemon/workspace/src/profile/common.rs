@@ -4,7 +4,7 @@ use std::time::Instant;
 
 use crate::isolated_network_setup::{IsolatedNetwork, VethAllocation};
 use crate::lifecycle::remount::WorkspaceRemountState;
-use crate::model::NetworkMode;
+use crate::model::WorkspaceProfile;
 use crate::namespace::{HolderKillReport, NamespacePlan, NamespaceRuntime};
 use crate::overlay::dirs::OverlayDirs;
 use crate::profile::host_compatible::HostCompatibleProfile;
@@ -14,7 +14,7 @@ use crate::profile::resource_control;
 use crate::profile::{WorkspaceModeHandle, WorkspaceModeId};
 
 pub(crate) trait ProfileHooks {
-    fn kind(&self) -> NetworkMode;
+    fn kind(&self) -> WorkspaceProfile;
 
     fn namespace_plan(&self) -> NamespacePlan;
 
@@ -45,29 +45,29 @@ pub(crate) trait ProfileHooks {
     }
 }
 
-pub(crate) enum WorkspaceProfile<'a> {
+pub(crate) enum WorkspaceProfileRuntime<'a> {
     HostCompatible(HostCompatibleProfile),
     Isolated(IsolatedProfile<'a>),
 }
 
-impl<'a> WorkspaceProfile<'a> {
-    pub(crate) fn for_mode(
-        network_mode: NetworkMode,
+impl<'a> WorkspaceProfileRuntime<'a> {
+    pub(crate) fn for_profile(
+        profile: WorkspaceProfile,
         network: &'a mut IsolatedNetwork,
         fallback_dns: &'a str,
         setup_timeout_s: f64,
     ) -> Self {
-        match network_mode {
-            NetworkMode::Host => Self::HostCompatible(HostCompatibleProfile),
-            NetworkMode::Isolated => {
+        match profile {
+            WorkspaceProfile::HostCompatible => Self::HostCompatible(HostCompatibleProfile),
+            WorkspaceProfile::Isolated => {
                 Self::Isolated(IsolatedProfile::new(network, fallback_dns, setup_timeout_s))
             }
         }
     }
 }
 
-impl ProfileHooks for WorkspaceProfile<'_> {
-    fn kind(&self) -> NetworkMode {
+impl ProfileHooks for WorkspaceProfileRuntime<'_> {
+    fn kind(&self) -> WorkspaceProfile {
         match self {
             Self::HostCompatible(profile) => profile.kind(),
             Self::Isolated(profile) => profile.kind(),
@@ -178,7 +178,7 @@ impl WorkspaceProfileNetworkTeardownContext<'_> {
 
 pub(crate) struct WorkspaceHandleSpec {
     pub workspace_id: WorkspaceModeId,
-    pub network: NetworkMode,
+    pub profile: WorkspaceProfile,
     pub caller_id: String,
     pub lease_id: String,
     pub manifest_version: i64,
@@ -194,7 +194,7 @@ pub(crate) struct WorkspaceHandleSpec {
 pub(crate) fn new_workspace_handle(spec: WorkspaceHandleSpec) -> WorkspaceModeHandle {
     WorkspaceModeHandle {
         workspace_id: spec.workspace_id,
-        network: spec.network,
+        profile: spec.profile,
         caller_id: spec.caller_id,
         lease_id: spec.lease_id,
         manifest_version: spec.manifest_version,
@@ -223,11 +223,11 @@ pub(crate) fn wire_workspace(
     hooks: &mut impl ProfileHooks,
 ) -> Result<HashMap<String, f64>, IsolatedNetworkError> {
     let mut phases_ms = HashMap::new();
-    if hooks.kind() != handle.network {
+    if hooks.kind() != handle.profile {
         return Err(IsolatedNetworkError::InvalidArgument(format!(
             "profile {:?} cannot wire {:?} workspace",
             hooks.kind(),
-            handle.network
+            handle.profile
         )));
     }
     let namespace_plan = hooks.namespace_plan();

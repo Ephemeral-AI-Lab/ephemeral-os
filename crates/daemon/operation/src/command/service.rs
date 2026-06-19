@@ -25,7 +25,7 @@ use super::prepare::CommandPrepareError;
 use super::prepare::PreparedCommand;
 use super::registry::CommandRegistry;
 #[cfg(test)]
-use super::registry::{ActiveCommand, CommandTraceOrigin, IsolatedNetworkRun};
+use super::registry::{ActiveCommand, CommandTraceOrigin, WorkspaceRun};
 use super::trace::CommandTraceEvent;
 #[cfg(test)]
 use super::trace::{
@@ -33,7 +33,6 @@ use super::trace::{
     command_process_wait_host_resource_stats_event, command_process_wait_resource_stats_event,
     command_process_wait_tree_resource_stats_events, CommandFinalizeTraceFacts,
 };
-use super::command_workspace::HostCommandWorkspace;
 
 mod exec;
 mod io;
@@ -43,13 +42,7 @@ mod remount;
 pub use remount::{CommandRemountInspection, CommandRemountQuiesce};
 
 pub enum ExecTarget {
-    Host {
-        workspace: Box<HostCommandWorkspace>,
-        scratch_root: PathBuf,
-    },
-    IsolatedNetwork {
-        context: Box<WorkspaceModeContext>,
-    },
+    Workspace { context: Box<WorkspaceModeContext> },
 }
 
 pub struct CommandOps {

@@ -19,9 +19,9 @@ use layerstack::{LayerChange, LayerPath, LayerStack};
 use workspace::{
     CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, ChangedPathKind,
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
-    LayerStackSnapshotRef, LeaseId, NetworkMode, ProtectedPathDrop, ReadonlySnapshotHandle,
+    LayerStackSnapshotRef, LeaseId, ProtectedPathDrop, ReadonlySnapshotHandle,
     RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceError, WorkspaceHandle, WorkspaceId,
-    WorkspaceLaunchContext, WorkspaceLaunchNamespaceFds, WorkspaceService,
+    WorkspaceLaunchContext, WorkspaceLaunchNamespaceFds, WorkspaceProfile, WorkspaceService,
 };
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
@@ -292,7 +292,7 @@ fn workspace_handle(
         id: WorkspaceId(workspace_id.to_owned()),
         owner: CallerId(caller_id.to_owned()),
         workspace_root: fixture.root.clone(),
-        network: NetworkMode::Host,
+        profile: WorkspaceProfile::HostCompatible,
         base_revision: snapshot.base_revision(),
         snapshot,
         launch: Some(test_launch_context(fixture)),
@@ -842,7 +842,7 @@ fn command_finalize_session_does_not_capture_publish_destroy_or_refresh_snapshot
     let handler = env.workspace.create_private_workspace(
         CallerId("caller-1".to_owned()),
         fixture.root.clone(),
-        NetworkMode::Host,
+        WorkspaceProfile::HostCompatible,
     )?;
     let command = env.services.exec_command(
         exec_input(

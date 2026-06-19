@@ -3,8 +3,8 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use crate::workspace_crate::{
     CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
-    DestroyWorkspaceRequest, DestroyWorkspaceResult, NetworkMode, RemountWorkspaceRequest,
-    WorkspaceId, WorkspaceService,
+    DestroyWorkspaceRequest, DestroyWorkspaceResult, RemountWorkspaceRequest, WorkspaceId,
+    WorkspaceProfile, WorkspaceService,
 };
 use crate::workspace_manager::session_manager::{
     WorkspaceRemountState, WorkspaceSession, WorkspaceSessionManager,
@@ -61,13 +61,13 @@ impl WorkspaceManagerService {
         &self,
         caller_id: CallerId,
         workspace_root: PathBuf,
-        network: NetworkMode,
+        profile: WorkspaceProfile,
     ) -> Result<WorkspaceSessionHandler, WorkspaceManagerError> {
         self.create(CreateWorkspaceRequest {
             caller_id,
             layer_stack_root: workspace_root.clone(),
             workspace_root,
-            network,
+            profile,
         })
     }
 

@@ -8,7 +8,7 @@ use operation_service::command::{
     ExecCommandInput, OperationTraceContext, PollCommandInput, ReadCommandLinesInput,
     WriteStdinInput,
 };
-use workspace::{CallerId, NetworkMode};
+use workspace::{CallerId, WorkspaceProfile};
 
 use support::{build_services, workspace_handle, FakeWorkspaceService, TestServices};
 
@@ -39,7 +39,7 @@ fn command_service_with_active_command() -> (TestServices, CommandId) {
         "caller-owner",
         "lease-1",
         workspace_root.clone(),
-        NetworkMode::Host,
+        WorkspaceProfile::HostCompatible,
     )));
     let env = build_services(fake);
     let output = env

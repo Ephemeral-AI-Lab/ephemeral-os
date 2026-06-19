@@ -5,7 +5,7 @@ use std::time::Instant;
 use serde_json::{json, Value};
 
 use crate::overlay::tree::directory_file_bytes;
-use crate::profile::common::{record_phase_ms, teardown_workspace, WorkspaceProfile};
+use crate::profile::common::{record_phase_ms, teardown_workspace, WorkspaceProfileRuntime};
 use crate::profile::manager::IsolatedNetworkError;
 use crate::profile::{WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeManager};
 
@@ -29,8 +29,8 @@ impl WorkspaceModeManager {
         handle: &WorkspaceModeHandle,
         grace_s: f64,
     ) -> (Value, HashMap<String, f64>) {
-        let mut profile = WorkspaceProfile::for_mode(
-            handle.network,
+        let mut profile = WorkspaceProfileRuntime::for_profile(
+            handle.profile,
             &mut self.network,
             &self.caps.fallback_dns,
             self.caps.setup_timeout_s,

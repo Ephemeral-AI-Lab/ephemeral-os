@@ -900,7 +900,7 @@ Rules:
 
 ## Milestone 6.6: Workspace Profile Symmetry
 
-- Status: Complete.
+- Status: Reopened for post-implementation cleanup.
 - Spec:
   `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_milestone_6_6_workspace_profile_symmetry_SPEC.md`
 - Files changed:
@@ -1014,6 +1014,103 @@ Rules:
     session handles. It should not treat `HostWorkspace`,
     `operation::command::ExecTarget`, or `WorkspaceRuntime` as target
     architecture.
+
+### 2026-06-19 Post-Implementation Boundary Correction
+
+- Reviewer concern:
+  - `HostCommandWorkspace` is the wrong abstraction. A command launched against
+    a workspace id may be host-compatible or isolated, so command execution must
+    consume one profile-neutral command workspace/launch context instead of a
+    host-specific command workspace plus no isolated equivalent.
+  - `operation_service` must not perform workspace setup. It may resolve a
+    workspace session or request a one-shot workspace, but creation must delegate
+    to `workspace::WorkspaceService::create_workspace`; overlay allocation,
+    namespace-holder startup, cgroup creation, profile setup, teardown, and
+    recovery stay in the workspace crate.
+  - `workspace_data` was a poor placeholder name and must not remain as a
+    concept. The intended concept is `CommandWorkspace`: command launch material
+    supplied by a workspace handle, not profile-specific setup state.
+- Required correction:
+  - Delete `HostCommandWorkspace` from public and internal command-service APIs.
+  - Do not introduce `IsolatedCommandWorkspace`.
+  - Keep `CommandOperationService::exec_command` profile-neutral:
+    `workspace_id = Some(...)` resolves a session and consumes its
+    `WorkspaceHandle.launch`; `workspace_id = None` creates a one-shot workspace
+    only through `WorkspaceService::create_workspace`.
+  - Add static checks for `HostCommandWorkspace`, `IsolatedCommandWorkspace`,
+    `workspace_data`, and operation-service direct setup calls.
+- Current verification after this review:
+  - `rg -n "HostCommandWorkspace|IsolatedCommandWorkspace|workspace_data" crates/daemon/operation/src crates/daemon/operation_service/src crates/daemon/core/src`:
+    no matches; `rg` exited 1 as expected for an empty result set.
+  - `rg -n "allocate_overlay|create_overlay|spawn_ns_holder|create_cgroup|join_holder_cgroup|WorkspaceProfile::for_mode" crates/daemon/operation_service/src`:
+    no matches; `rg` exited 1 as expected for an empty result set.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase66-target cargo check -p operation_service`:
+    passed.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase66-target cargo check -p operation`:
+    passed.
+  - `cargo fmt --check`: passed.
+  - `git diff --check`: passed.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase66-target cargo check -p daemon`: failed
+    because legacy `WorkspaceRuntime`/old `operation::command` still import the
+    removed `workspace::profile::host_compatible::HostWorkspace` and still need
+    to be migrated off host-specific command-workspace construction.
+
+## Milestone 6.7: Workspace Profile Carrier Rename
+
+- Status: In progress.
+- Spec:
+  `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_milestone_6_6_workspace_profile_symmetry_SPEC.md`
+- Starting state:
+  - `git status --short --untracked-files=all`: existing modified files were
+    present in `daemon/core`, `daemon/operation`, `daemon/workspace`, and Phase
+    2 migration docs; the Milestone 6.7 prompt file was untracked.
+  - `git diff --stat`: 13 files changed, 137 insertions(+), 756 deletions(-)
+    before further Milestone 6.7 edits.
+  - `git diff --check`: passed with no whitespace errors.
+- Intended files:
+  - `crates/daemon/workspace/src/model.rs`
+  - `crates/daemon/workspace/src/lib.rs`
+  - `crates/daemon/workspace/src/profile/common.rs`
+  - `crates/daemon/workspace/src/profile/handle.rs`
+  - `crates/daemon/workspace/src/profile/host_compatible.rs`
+  - `crates/daemon/workspace/src/profile/isolated.rs`
+  - `crates/daemon/workspace/src/lifecycle/create.rs`
+  - `crates/daemon/workspace/src/lifecycle/destroy.rs`
+  - `crates/daemon/workspace/src/lifecycle/recovery.rs`
+  - `crates/daemon/workspace/src/lifecycle/remount/apply.rs`
+  - `crates/daemon/operation_service/src/workspace_manager/service.rs`
+  - `crates/daemon/operation_service/src/workspace_manager/session_manager.rs`
+  - `crates/daemon/operation_service/src/command/exec.rs`
+  - `crates/daemon/core/src/runtime/workspace.rs`
+  - `crates/daemon/core/src/op_adapter/command.rs`
+  - `crates/daemon/core/src/op_adapter/files.rs`
+  - focused tests under `crates/daemon/workspace/tests`,
+    `crates/daemon/operation_service/tests`, `crates/daemon/operation/tests`,
+    and `crates/daemon/core/tests`
+  - Phase 2 migration docs.
+- Plan:
+  - Preserve Phase 6.6 behavior: host-compatible and isolated profiles continue
+    to differ only in network setup.
+  - No temporary `NetworkMode` compatibility alias is planned; if compilation
+    reveals an unavoidable bridge, this record must be updated with removal
+    criteria before completion.
+  - Persisted manager rows currently write no profile selector; new rows should
+    write `profile`, while old rows without a selector remain cleanup-only
+    recovery inputs.
+- Current surface classification before code edits:
+  - Target code: `NetworkMode`, `.network`, `network:` carriers,
+    `enter_with_network`, `WorkspaceProfile<'a>`, and `for_mode` in workspace
+    model/profile/lifecycle, operation-service command/workspace manager, daemon
+    runtime adapter code, and focused tests.
+  - Lower-level network implementation: `NamespaceNetwork`,
+    `NamespacePlan::isolated_network`, `WorkspaceLaunchNamespaceFds.net`,
+    isolated-network setup, veth, DNS, net-ready, and holder network arguments.
+  - Historical docs/test fixture references: older milestone notes and agent
+    prompts that intentionally describe pre-6.7 vocabulary.
+- Verification:
+- Deviations:
+- Unresolved issues:
+- Handoff notes:
 
 ## Milestone 7: Daemon Dispatch Migration Away From WorkspaceRuntime
 

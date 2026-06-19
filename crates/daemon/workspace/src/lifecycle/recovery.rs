@@ -175,6 +175,7 @@ impl WorkspaceModeManager {
                     "lease_id": handle.lease_id,
                     "manifest_version": handle.manifest_version,
                     "manifest_root_hash": handle.manifest_root_hash,
+                    "profile": handle.profile.as_str(),
                     "workspace_root": handle.workspace_root,
                     "scratch_dir": handle.dirs.run_dir.to_string_lossy(),
                     "upperdir": handle.dirs.upperdir.to_string_lossy(),

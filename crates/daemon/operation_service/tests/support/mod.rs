@@ -16,9 +16,9 @@ use operation_service::OperationServices;
 use workspace::{
     BaseRevision, CallerId, CaptureChangesRequest, CapturedWorkspaceChanges,
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
-    LayerStackSnapshotRef, LeaseId, NetworkMode, ReadonlySnapshotHandle, RemountWorkspaceRequest,
+    LayerStackSnapshotRef, LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest,
     RemountWorkspaceResult, WorkspaceError, WorkspaceHandle, WorkspaceLaunchContext,
-    WorkspaceLaunchNamespaceFds, WorkspaceService,
+    WorkspaceLaunchNamespaceFds, WorkspaceProfile, WorkspaceService,
 };
 
 pub struct TestServices {
@@ -256,7 +256,7 @@ pub fn create_request(caller_id: &str, workspace_root: PathBuf) -> CreateWorkspa
         caller_id: CallerId(caller_id.to_owned()),
         workspace_root,
         layer_stack_root: PathBuf::from("/layers"),
-        network: NetworkMode::Host,
+        profile: WorkspaceProfile::HostCompatible,
     }
 }
 
@@ -264,12 +264,12 @@ pub fn assert_private_create_request(
     request: &CreateWorkspaceRequest,
     caller_id: &str,
     workspace_root: &PathBuf,
-    network: NetworkMode,
+    profile: WorkspaceProfile,
 ) {
     assert_eq!(request.caller_id, CallerId(caller_id.to_owned()));
     assert_eq!(&request.workspace_root, workspace_root);
     assert_eq!(&request.layer_stack_root, workspace_root);
-    assert_eq!(request.network, network);
+    assert_eq!(request.profile, profile);
 }
 
 pub fn workspace_handle(
@@ -277,14 +277,14 @@ pub fn workspace_handle(
     caller_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
-    network: NetworkMode,
+    profile: WorkspaceProfile,
 ) -> WorkspaceHandle {
     workspace_handle_with_launch(
         workspace_id,
         caller_id,
         lease_id,
         workspace_root,
-        network,
+        profile,
         Some(test_launch_context()),
     )
 }
@@ -294,7 +294,7 @@ pub fn workspace_handle_with_launch(
     caller_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
-    network: NetworkMode,
+    profile: WorkspaceProfile,
     launch: Option<WorkspaceLaunchContext>,
 ) -> WorkspaceHandle {
     let snapshot = LayerStackSnapshotRef {
@@ -307,7 +307,7 @@ pub fn workspace_handle_with_launch(
         id: WorkspaceId(workspace_id.to_owned()),
         owner: CallerId(caller_id.to_owned()),
         workspace_root,
-        network,
+        profile,
         base_revision: BaseRevision {
             version: 1,
             root_hash: "root".to_owned(),

@@ -4,9 +4,7 @@ use linux_namespace_subprocess::protocol::{
     NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot,
 };
 use serde_json::{json, Value};
-use workspace::overlay::dirs::OverlayDirs;
 use workspace::profile::WorkspaceModeContext;
-use workspace::WorkspaceLaunchNamespaceFds;
 
 use super::outcome::WorkspaceApiError;
 use super::trace::CommandTraceEvent;
@@ -39,42 +37,11 @@ pub(crate) struct PrepareInputs<'a> {
     pub(crate) workspace_label: &'a str,
 }
 
-pub(crate) fn prepare_host(
-    inputs: PrepareInputs<'_>,
-    workspace_root: &Path,
-    layer_paths: &[PathBuf],
-    dirs: &OverlayDirs,
-    scratch_run_dir: &Path,
-    ns_fds: Option<WorkspaceLaunchNamespaceFds>,
-    cgroup_path: Option<PathBuf>,
-) -> Result<PreparedCommand, CommandPrepareError> {
-    let ns_fds = require_workspace_ns_fds(ns_fds.map(ns_fds_from_workspace), "host", false)?;
-    let tool_call = tool_call(&inputs);
-    let run_request = RunRequest {
-        mode: RunMode::SetNs,
-        tool_call,
-        workspace_root: WorkspaceRoot(workspace_root.to_path_buf()),
-        layer_paths: layer_paths.to_vec(),
-        upperdir: Some(dirs.upperdir.clone()),
-        workdir: Some(dirs.workdir.clone()),
-        ns_fds: Some(ns_fds),
-        cgroup_path,
-        timeout_seconds: inputs.timeout_seconds,
-    };
-    finish_prepare(
-        inputs,
-        run_request,
-        scratch_run_dir.join("command-runner-request.json"),
-        scratch_run_dir.join("command-runner-result.json"),
-    )
-}
-
-pub(crate) fn prepare_isolated_network(
+pub(crate) fn prepare_workspace(
     inputs: PrepareInputs<'_>,
     context: &WorkspaceModeContext,
 ) -> Result<PreparedCommand, CommandPrepareError> {
-    let ns_fds =
-        require_workspace_ns_fds(ns_fds_from_map(&context.ns_fds), "isolated_network", true)?;
+    let ns_fds = require_workspace_ns_fds(ns_fds_from_map(&context.ns_fds), "workspace", true)?;
     let tool_call = tool_call(&inputs);
     let run_request = RunRequest {
         mode: RunMode::SetNs,
@@ -169,16 +136,6 @@ fn ns_fds_from_map(map: &std::collections::HashMap<String, i32>) -> Option<NsFds
     })
 }
 
-fn ns_fds_from_workspace(ns_fds: WorkspaceLaunchNamespaceFds) -> NsFds {
-    let fd = |raw: Option<i32>| raw.map(linux_namespace_subprocess::protocol::Fd);
-    NsFds {
-        user: fd(ns_fds.user),
-        mnt: fd(ns_fds.mnt),
-        pid: fd(ns_fds.pid),
-        net: fd(ns_fds.net),
-    }
-}
-
 fn require_workspace_ns_fds(
     ns_fds: Option<NsFds>,
     workspace_label: &'static str,
@@ -216,8 +173,7 @@ fn workspace_namespace_error(
         error: Box::new(WorkspaceApiError::new(
             "workspace_namespace_unavailable",
             format!(
-                "{} workspace command requires setns holder fds: {}",
-                workspace_label,
+                "command workspace requires setns holder fds: {}",
                 message.into()
             ),
         )),

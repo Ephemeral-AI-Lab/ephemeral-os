@@ -68,6 +68,10 @@ temporary compatibility that is outside the target architecture.
   isolated workspaces.
 - Keep command lifecycle, one-shot versus persistent lifetime, capture/publish,
   remount, and file routing outside profile implementations.
+- Require every operation-service workspace acquisition to go through
+  `workspace::WorkspaceService::create_workspace`; operation-service code must
+  not allocate overlays, spawn namespace holders, create cgroups, or run
+  profile setup directly.
 - Make compatibility shims explicit, temporary, and policy-free.
 - Add acceptance criteria and static checks that catch reintroduced profile
   policy leakage.
@@ -92,6 +96,7 @@ temporary compatibility that is outside the target architecture.
 | Namespace FD ownership and projection | common workspace lifecycle and launch projection | host omits only net FD; isolated includes net FD | command/file launch consumes one projected context shape |
 | Scratch directory lifecycle | common workspace lifecycle | none | create, rollback, teardown, and recovery use common code |
 | Cgroup lifecycle | common resource-control lifecycle | none | host-compatible and isolated both create, join, remove, and recover cgroups the same way |
+| Workspace creation and setup | `workspace::WorkspaceService::create_workspace` and workspace crate lifecycle | profile selects network setup only | operation-service creation requests delegate to workspace crate; no operation-service overlay, holder, namespace, or cgroup setup |
 | Caller-owned lifetime | `WorkspaceManagerService` / session manager | none | one-shot/session lifetime is selected by command/workspace policy, not profile kind |
 | Capture/publish policy | `CommandOperationService` and layerstack publish policy | none | profiles never choose publish, discard, or snapshot refresh |
 | Command lifecycle | `CommandOperationService` and command crate substrate | none | start/finalize/cancel paths do not branch on profile except launch context data |
@@ -247,6 +252,15 @@ making the profile boundary symmetric and proving it.
      shape as persistent host-compatible workspaces.
 
 5. Make command launch profile-neutral.
+   - `CommandOperationService` must consume `WorkspaceHandle.launch` from the
+     workspace crate; it must not construct launch material through
+     profile-specific setup.
+   - `ExecCommandInput.workspace_id = Some(...)` must resolve an existing
+     workspace session and use its handle unchanged, regardless of host versus
+     isolated profile.
+   - `ExecCommandInput.workspace_id = None` may create a one-shot workspace, but
+     only by sending a `CreateWorkspaceRequest` to
+     `workspace::WorkspaceService::create_workspace`.
    - Workspace-session command launch must require holder namespace FDs.
    - Missing namespace FDs are an error for holder-backed workspace commands, not
      a silent `FreshNs` fallback.
@@ -270,6 +284,8 @@ Required static checks:
 rg -n "HostWorkspace|HostNamespaceWorkspaceRequest|WorkspaceModeContext|WorkspaceModeManager|ExecTarget::Host|ExecTarget::IsolatedNetwork|IsolatedNetworkError|network_mode" crates/daemon/workspace/src crates/daemon/operation/src crates/daemon/operation_service/src crates/daemon/core/src
 rg -n "one.shot|one_shot|publish|published|remountable|cgroup|ResourcePolicy" crates/daemon/workspace/src/profile crates/daemon/operation/src/command crates/daemon/operation_service/src/command
 rg -n "FreshNs|namespace_fds: None|NetworkMode::Host" crates/daemon/command/src crates/daemon/operation_service/src crates/daemon/core/src
+rg -n "allocate_overlay|create_overlay|spawn_ns_holder|create_cgroup|join_holder_cgroup|WorkspaceProfile::for_mode" crates/daemon/operation_service/src
+rg -n "HostCommandWorkspace|IsolatedCommandWorkspace|workspace_data" crates/daemon/operation/src crates/daemon/operation_service/src crates/daemon/core/src
 git diff --check -- docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_milestone_6_6_workspace_profile_symmetry_SPEC.md docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_command_service_IMPLEMENTATION_PLAN.md
 ```
 
@@ -299,6 +315,10 @@ test fixture, or bug before the milestone is accepted.
 - [ ] Host-compatible and isolated workspaces share one create/setup/teardown
   sequence.
 - [ ] Both profiles produce one handle/context shape.
+- [ ] Operation-service workspace creation delegates to
+  `workspace::WorkspaceService::create_workspace`.
+- [ ] Operation-service code contains no overlay allocation, namespace-holder
+  spawning, cgroup creation, or profile setup.
 - [ ] Cgroup create, holder join, command join, teardown, and recovery cleanup
   are common and profile-neutral.
 - [ ] `WorkspaceProfile` or profile hooks cannot mutate common lifecycle policy
@@ -308,6 +328,8 @@ test fixture, or bug before the milestone is accepted.
 - [ ] One-shot versus persistent lifetime is owned outside profiles.
 - [ ] Capture/publish policy is owned outside profiles.
 - [ ] Command lifecycle is owned outside profiles.
+- [ ] Command workspace launch is represented by one profile-neutral command
+  workspace concept, not `HostCommandWorkspace` plus a missing isolated twin.
 - [ ] Remount eligibility is owned outside profiles.
 - [ ] File-operation routing policy is owned outside profiles.
 - [ ] The only accepted profile-specific difference is host network access versus
@@ -323,3 +345,56 @@ test fixture, or bug before the milestone is accepted.
   file routing cannot be left as an unowned profile asymmetry.
 - Which live E2E environments can reliably prove host-compatible cgroup behavior
   and isolated network setup without requiring privileged host access?
+
+## Phase 6.7: Workspace Profile Carrier Rename
+
+Milestone 6.7 is a terminology-only follow-up to the Milestone 6.6 behavioral
+symmetry work. Host-compatible and isolated workspaces remain the same two
+profiles with the same lifecycle behavior; this milestone renames the public
+selector and the carrier fields so the code vocabulary matches the model.
+
+### Rename Target
+
+| Before | After |
+| --- | --- |
+| `NetworkMode` | `WorkspaceProfile` |
+| `NetworkMode::Host` | `WorkspaceProfile::HostCompatible` |
+| `NetworkMode::Isolated` | `WorkspaceProfile::Isolated` |
+| `WorkspaceHandle.network` | `WorkspaceHandle.profile` |
+| `CreateWorkspaceRequest.network` | `CreateWorkspaceRequest.profile` |
+| `WorkspaceModeHandle.network` | `WorkspaceModeHandle.profile` |
+| `WorkspaceModeContext.network` | `WorkspaceModeContext.profile` |
+| `WorkspaceHandleSpec.network` | `WorkspaceHandleSpec.profile` |
+| internal `WorkspaceProfile<'a>` hook dispatcher | `WorkspaceProfileRuntime<'a>` |
+| `WorkspaceProfile::for_mode(...)` | `WorkspaceProfileRuntime::for_profile(...)` |
+| `enter_with_network(...)` | `enter_with_profile(...)` |
+
+### Boundary
+
+The public selector name `WorkspaceProfile` describes the workspace environment
+profile. Lower-level network namespace implementation names must stay
+network-specific when they model actual network mechanics, including
+`NamespaceNetwork`, `NamespacePlan::host_workspace()`,
+`NamespacePlan::isolated_network()`, `WorkspaceLaunchNamespaceFds.net`, holder
+network arguments, veth, DNS, net-ready, and isolated-network setup names.
+
+### Persisted Handles
+
+Persisted workspace manager rows must be handled deliberately. If a selector is
+written, new rows should write `profile`; old rows with `network` must either be
+read compatibly or recorded as out of scope with evidence. Rows that never
+persisted a selector may keep recovery cleanup behavior independent of profile
+selection.
+
+### Acceptance Criteria
+
+- [ ] Public workspace selector is named `WorkspaceProfile`.
+- [ ] Workspace resource carriers use `profile`, not `network`.
+- [ ] Internal hook dispatcher does not occupy the public `WorkspaceProfile`
+  type name.
+- [ ] Lifecycle and service APIs use profile terminology.
+- [ ] Command launch validation reads `profile` and branches only for isolated
+  launch requirements.
+- [ ] Lower-level network namespace implementation vocabulary remains
+  network-specific.
+- [ ] Phase 6.6 behavioral symmetry remains unchanged.

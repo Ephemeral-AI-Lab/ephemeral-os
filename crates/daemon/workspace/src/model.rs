@@ -54,21 +54,31 @@ impl From<layerstack::service::Snapshot> for LayerStackSnapshotRef {
     }
 }
 
-/// Isolation profile for a private mounted workspace.
+/// Workspace environment profile for a private mounted workspace.
 ///
-/// The enum name reflects the current concrete split: whether the workspace
-/// preserves host network access or adds a dedicated network boundary. It does
-/// not encode lifecycle length, publication behavior, or whether the caller is
-/// running a one-shot operation. Those decisions belong to the runtime or
-/// operation layer that owns the workspace handle.
+/// The selector reflects the current concrete split: whether the workspace
+/// preserves host-compatible network access or adds a dedicated network
+/// boundary. It does not encode lifecycle length, publication behavior, or
+/// whether the caller is running a one-shot operation. Those decisions belong
+/// to the runtime or operation layer that owns the workspace handle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NetworkMode {
+pub enum WorkspaceProfile {
     /// Host-compatible profile: private overlay and holder namespace stack with
     /// host network access.
-    Host,
+    HostCompatible,
     /// Fully isolated profile: private overlay and holder namespace stack plus
     /// a dedicated network boundary.
     Isolated,
+}
+
+impl WorkspaceProfile {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::HostCompatible => "host_compatible",
+            Self::Isolated => "isolated",
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -76,7 +86,7 @@ pub struct WorkspaceHandle {
     pub id: WorkspaceId,
     pub owner: CallerId,
     pub workspace_root: PathBuf,
-    pub network: NetworkMode,
+    pub profile: WorkspaceProfile,
     pub base_revision: BaseRevision,
     pub snapshot: LayerStackSnapshotRef,
     pub launch: Option<WorkspaceLaunchContext>,
@@ -88,7 +98,7 @@ impl fmt::Debug for WorkspaceHandle {
             .field("id", &self.id)
             .field("owner", &self.owner)
             .field("workspace_root", &self.workspace_root)
-            .field("network", &self.network)
+            .field("profile", &self.profile)
             .field("base_revision", &self.base_revision)
             .field("snapshot", &self.snapshot)
             .field("launch", &self.launch.as_ref().map(|_| "<available>"))
@@ -142,7 +152,7 @@ pub struct CreateWorkspaceRequest {
     pub caller_id: CallerId,
     pub workspace_root: PathBuf,
     pub layer_stack_root: PathBuf,
-    pub network: NetworkMode,
+    pub profile: WorkspaceProfile,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -265,7 +275,7 @@ impl From<&WorkspaceModeHandle> for WorkspaceHandle {
             id: WorkspaceId(handle.workspace_id.0.clone()),
             owner: CallerId(handle.caller_id.clone()),
             workspace_root: PathBuf::from(&handle.workspace_root),
-            network: handle.network,
+            profile: handle.profile,
             base_revision: BaseRevision {
                 version: handle.manifest_version,
                 root_hash: handle.manifest_root_hash.clone(),

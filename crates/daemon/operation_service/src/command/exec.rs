@@ -14,7 +14,7 @@ use crate::command::{
     CommandTraceOrigin, CommandTranscriptStore, CommandYield, ExecCommandInput, FinalizationState,
 };
 use crate::workspace_crate::{
-    DestroyWorkspaceRequest, NetworkMode, WorkspaceId, WorkspaceLaunchNamespaceFds,
+    DestroyWorkspaceRequest, WorkspaceId, WorkspaceLaunchNamespaceFds, WorkspaceProfile,
 };
 use crate::workspace_manager::WorkspaceSessionHandler;
 
@@ -65,7 +65,7 @@ impl CommandOperationService {
             ExecCommandMode::OneShot => self.workspace().create_private_workspace(
                 context.caller_id.clone(),
                 input.workspace_root.clone(),
-                NetworkMode::Host,
+                WorkspaceProfile::HostCompatible,
             )?,
         };
         let admission_guard = if is_session_command {
@@ -201,7 +201,7 @@ impl CommandOperationService {
                 .ok_or_else(|| CommandServiceError::InvalidCommand {
                     message: "holder-backed workspace command requires namespace FDs".to_owned(),
                 })?;
-        validate_namespace_fds(handler.handle.network, namespace_fds)?;
+        validate_namespace_fds(handler.handle.profile, namespace_fds)?;
         let command_dir = self.config().scratch_root.join(&command_id.0);
         fs::create_dir_all(&command_dir).map_err(|error| CommandServiceError::CommandIo {
             command_id: command_id.clone(),
@@ -440,7 +440,7 @@ fn command_namespace_fds(fds: WorkspaceLaunchNamespaceFds) -> command::CommandLa
 }
 
 fn validate_namespace_fds(
-    network: NetworkMode,
+    profile: WorkspaceProfile,
     fds: WorkspaceLaunchNamespaceFds,
 ) -> Result<(), CommandServiceError> {
     let mut missing = Vec::new();
@@ -453,7 +453,7 @@ fn validate_namespace_fds(
     if fds.pid.is_none() {
         missing.push("pid");
     }
-    if network == NetworkMode::Isolated && fds.net.is_none() {
+    if profile == WorkspaceProfile::Isolated && fds.net.is_none() {
         missing.push("net");
     }
     if missing.is_empty() {
@@ -461,7 +461,7 @@ fn validate_namespace_fds(
     }
     Err(CommandServiceError::InvalidCommand {
         message: format!(
-            "holder-backed {network:?} workspace command requires namespace FDs: {}",
+            "holder-backed {profile:?} workspace command requires namespace FDs: {}",
             missing.join(", ")
         ),
     })
@@ -489,9 +489,9 @@ mod tests {
     use crate::workspace_crate::{
         BaseRevision, CallerId, CaptureChangesRequest, CapturedWorkspaceChanges,
         CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult,
-        LatestSnapshotRequest, LayerStackSnapshotRef, LeaseId, NetworkMode, ReadonlySnapshotHandle,
+        LatestSnapshotRequest, LayerStackSnapshotRef, LeaseId, ReadonlySnapshotHandle,
         RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceError, WorkspaceHandle,
-        WorkspaceId, WorkspaceLaunchContext, WorkspaceService,
+        WorkspaceId, WorkspaceLaunchContext, WorkspaceProfile, WorkspaceService,
     };
     use crate::workspace_manager::{WorkspaceManagerService, WorkspaceSessionHandler};
 
@@ -699,7 +699,7 @@ mod tests {
             id: WorkspaceId(workspace_id.to_owned()),
             owner: CallerId(caller_id.to_owned()),
             workspace_root,
-            network: NetworkMode::Host,
+            profile: WorkspaceProfile::HostCompatible,
             base_revision: BaseRevision {
                 version: 1,
                 root_hash: "root".to_owned(),
@@ -759,7 +759,7 @@ mod tests {
             .create_private_workspace(
                 CallerId(caller_id.to_owned()),
                 workspace_root,
-                NetworkMode::Host,
+                WorkspaceProfile::HostCompatible,
             )
             .expect("test session create succeeds")
     }

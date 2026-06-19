@@ -226,30 +226,6 @@ impl PublishLanesMetadata {
         )
     }
 
-    pub(crate) fn dropped_command_failed_with_counts(
-        source_path_count: usize,
-        ignored_path_count: usize,
-        ignored_bytes: u64,
-        route_manifest_version: i64,
-    ) -> Self {
-        Self::new(
-            SourcePublishLaneMetadata::new(
-                source_path_count,
-                "dropped_command_failed",
-                None::<String>,
-            ),
-            IgnoredPublishLaneMetadata::new(
-                ignored_path_count,
-                ignored_bytes,
-                0,
-                "dropped_command_failed",
-                None::<String>,
-                None::<String>,
-            ),
-            route_manifest_version,
-        )
-    }
-
     pub(crate) fn insert_into(self, extras: &mut Map<String, Value>) {
         extras.insert(PUBLISH_LANES_METADATA_KEY.to_owned(), self.to_value());
     }

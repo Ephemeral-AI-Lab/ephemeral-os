@@ -20,8 +20,7 @@ use crate::command::contract::{
     PUBLISH_LANES_METADATA_KEY,
 };
 use crate::command::finalize::{
-    discarded_response, finalization_error_response, finalize_host_command_with_capture_options,
-    finalize_isolated_network_command,
+    discarded_response, finalization_error_response, finalize_workspace_command,
 };
 use crate::command::outcome::FinalizeCommandRequest;
 use crate::command::registry::ActiveCommand;
@@ -141,9 +140,6 @@ impl CommandOps {
             return;
         }
         let _ = self.take_before_resource_sample(run.process().id());
-        if let ActiveCommand::Host(host) = &**run {
-            let _ = host.lease.release();
-        }
     }
 
     pub fn advance_active_commands_once(&self, now: Instant) -> Vec<TraceRecord> {
@@ -284,42 +280,23 @@ impl CommandOps {
             command_id: Some(command_id.clone()),
         };
         let request_for_error = request.clone();
-        let (workspace_kind, route_manifest_version, outcome) = match &*run {
-            ActiveCommand::Host(host) => {
-                let outcome = finalize_host_command_with_capture_options(
-                    &host.root,
-                    &host.snapshot,
-                    &host.workspace,
-                    self.commit_options(),
-                    self.capture_options(),
+        let ActiveCommand::Workspace(workspace) = &*run;
+        let (workspace_kind, route_manifest_version, outcome) = if kill.is_some() {
+            (
+                WorkspaceKind::IsolatedNetwork,
+                Some(workspace.context.manifest_version),
+                Ok(discarded_response(
+                    WorkspaceKind::IsolatedNetwork,
                     request,
-                );
-                let _ = host.lease.release();
-                (
-                    WorkspaceKind::Host,
-                    Some(host.snapshot.manifest_version),
-                    outcome,
-                )
-            }
-            ActiveCommand::IsolatedNetwork(isolated) => {
-                if kill.is_some() {
-                    (
-                        WorkspaceKind::IsolatedNetwork,
-                        Some(isolated.context.manifest_version),
-                        Ok(discarded_response(
-                            WorkspaceKind::IsolatedNetwork,
-                            request,
-                            Some(isolated.context.manifest_version),
-                        )),
-                    )
-                } else {
-                    (
-                        WorkspaceKind::IsolatedNetwork,
-                        Some(isolated.context.manifest_version),
-                        finalize_isolated_network_command(&isolated.context, request),
-                    )
-                }
-            }
+                    Some(workspace.context.manifest_version),
+                )),
+            )
+        } else {
+            (
+                WorkspaceKind::IsolatedNetwork,
+                Some(workspace.context.manifest_version),
+                finalize_workspace_command(&workspace.context, request),
+            )
         };
         let response = match outcome {
             Ok(response) => response,

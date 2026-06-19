@@ -118,13 +118,7 @@ impl CommandOps {
         for run in runs {
             let command_id = run.process().id().to_owned();
             quiesce.inspection.command_ids.push(command_id.clone());
-            let ActiveCommand::IsolatedNetwork(isolated) = &*run else {
-                quiesce
-                    .inspection
-                    .blocked_reason
-                    .get_or_insert("session_not_marked_remountable");
-                continue;
-            };
+            let ActiveCommand::Workspace(isolated) = &*run;
             if isolated.remountable {
                 quiesce.inspection.remountable_commands += 1;
             }

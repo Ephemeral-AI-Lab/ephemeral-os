@@ -236,6 +236,7 @@ reviewed independently without the new capture result shape.
 - [x] Milestone 6.5: Exec command boundary migration to
   `CommandOperationService`.
 - [ ] Milestone 6.6: Workspace profile symmetry.
+- [ ] Milestone 6.7: Workspace profile carrier rename.
 - [ ] Milestone 7: Daemon dispatch migration away from `WorkspaceRuntime`.
 - [ ] Milestone 8: Compatibility wrapper cleanup and final gates.
 
@@ -1657,6 +1658,91 @@ Milestone 7 daemon dispatch migration must not depend on `HostWorkspace`,
 `operation::command::ExecTarget`, or `WorkspaceRuntime` profile routing as target
 architecture. It should call operation-service command/file/remount owners with
 profile-neutral workspace session handles.
+
+## Milestone 6.7: Workspace Profile Carrier Rename
+
+### Objective
+
+Rename the remaining workspace profile selector and carrier surface from
+`NetworkMode` / `network` to `WorkspaceProfile` / `profile`, while preserving
+the lower-level network namespace implementation vocabulary.
+
+Milestone 6.6 established the behavior: host-compatible and isolated workspaces
+share one lifecycle shape, and their only intended profile-specific difference
+is network setup. Milestone 6.7 aligns public and internal carrier terminology
+with that model without changing behavior.
+
+### Implementation Record Workflow
+
+- [ ] Before starting, create or update the Milestone 6.7 entry in the
+  implementation record.
+- [ ] Record whether a temporary `NetworkMode` compatibility alias remains.
+- [ ] Before marking complete, update the entry with changed files,
+  verification commands/results, static-scan classification, persisted-handle
+  compatibility handling, deviations, unresolved issues, and handoff notes for
+  Milestone 7.
+
+### Scope
+
+- Rename public workspace selector `NetworkMode` to `WorkspaceProfile`.
+- Rename variants `Host` and `Isolated` to `HostCompatible` and `Isolated`.
+- Rename workspace resource carriers from `network` to `profile`.
+- Rename the internal profile hook dispatcher away from
+  `WorkspaceProfile<'a>` so the public selector owns the `WorkspaceProfile`
+  name.
+- Rename lifecycle and service APIs such as `enter_with_network` to profile
+  terminology.
+- Update command launch validation to read `profile` and branch only for
+  isolated launch requirements.
+- Update focused tests and Phase 2 migration docs.
+
+### Explicit Exclusions
+
+- No daemon dispatch migration. That remains Milestone 7.
+- No behavior change to host-compatible or isolated workspace setup.
+- No new workspace profile variant.
+- No new wire protocol shape.
+- No broad docs rewrite outside Phase 2 migration docs.
+- No conversion of lower-level network namespace, veth, DNS, holder network,
+  net-ready, or isolated-network setup names to profile terminology.
+- No reintroduction of the compatibility `network_mode` module path.
+
+### Tests And Verification Commands
+
+```text
+rg -n "NetworkMode|\\.network\\b|network:|enter_with_network|for_mode|network_mode" crates/daemon/workspace/src crates/daemon/operation_service/src crates/daemon/core/src crates/daemon/operation/src
+rg -n "WorkspaceProfile<'|enum WorkspaceProfile<'|trait WorkspaceProfile" crates/daemon/workspace/src/profile
+rg -n "NetworkMode::Host|NetworkMode::Isolated|network mode|network_mode" docs/daemon/workspace_migration/phase-operation_service_workspace_session
+CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p workspace
+CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p workspace
+CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p operation_service
+CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_exec
+CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_remount
+CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service workspace_remount
+CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p daemon
+cargo fmt --check
+git diff --check
+```
+
+The static `rg` commands are evidence scans. Every remaining match must be
+classified as lower-level network implementation, temporary compatibility,
+historical documentation, test fixture, or bug before acceptance.
+
+### Acceptance Criteria
+
+- [ ] Public workspace selector is named `WorkspaceProfile`.
+- [ ] `NetworkMode` is removed from production target code, or remains only as a
+  documented temporary alias with removal criteria.
+- [ ] Workspace resource carriers use `profile`, not `network`.
+- [ ] Internal hook dispatcher no longer uses the public `WorkspaceProfile`
+  name.
+- [ ] Command launch validation reads `profile` and branches only for isolated
+  launch requirements.
+- [ ] Lower-level network namespace implementation names remain
+  network-specific.
+- [ ] Persisted-handle compatibility is preserved intentionally or explicitly
+  declared out of scope with evidence.
+- [ ] Milestone 6.6 behavioral symmetry remains unchanged.
 
 ## Milestone 7: Daemon Dispatch Migration Away From WorkspaceRuntime
 

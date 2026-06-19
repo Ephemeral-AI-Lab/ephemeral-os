@@ -1,7 +1,5 @@
-use crate::command::registry::{CompletionBufferEviction, HostRun};
-use command::process::{
-    CommandFinalResponsePersistence, CommandPersistenceOutcome, CommandProcessExit, KillReason,
-};
+use crate::command::registry::CompletionBufferEviction;
+use command::process::{CommandFinalResponsePersistence, CommandPersistenceOutcome, KillReason};
 use command::CollectCompleted;
 use layerstack::service::{BoundedCaptureOptions, IgnoredCaptureLimits};
 use std::path::PathBuf;
@@ -103,187 +101,6 @@ fn command_ops_capture_options_reflect_configured_ignored_limits() {
             max_metadata_capture_duration: Duration::from_millis(7),
         }
     );
-}
-
-#[test]
-fn host_workspace_lease_release_is_exact_once() -> Result<(), Box<dyn std::error::Error>> {
-    let root = std::env::temp_dir().join(format!(
-        "operation-command-host-lease-{}",
-        std::process::id()
-    ));
-    let _ = std::fs::remove_dir_all(&root);
-    let layer_stack_root = root.join("stack");
-    let workspace_root = root.join("workspace");
-    std::fs::create_dir_all(&workspace_root)?;
-    std::fs::write(workspace_root.join("seed.txt"), "seed\n")?;
-    layerstack::build_workspace_base(&layer_stack_root, &workspace_root, true)?;
-    let snapshot =
-        layerstack::service::acquire_bounded_snapshot_for_command(&layer_stack_root, "test", 64)?;
-    let lease =
-        LeaseReleaseHandle::new(layer_stack_root.clone(), snapshot.snapshot.lease_id.clone());
-
-    assert_eq!(
-        layerstack::LayerStack::open(layer_stack_root.clone())?.active_lease_count(),
-        1
-    );
-    let first = lease.release();
-    let second = lease.release();
-
-    assert_eq!(first.released, Some(true));
-    assert_eq!(first.error, None);
-    assert_eq!(second.released, Some(false));
-    assert_eq!(second.error, None);
-    assert_eq!(
-        layerstack::LayerStack::open(layer_stack_root.clone())?.active_lease_count(),
-        0
-    );
-    let _ = std::fs::remove_dir_all(root);
-    Ok(())
-}
-
-#[test]
-fn host_workspace_lease_drop_releases_last_owner() -> Result<(), Box<dyn std::error::Error>> {
-    let (root, layer_stack_root, host_workspace) = host_command_workspace_fixture("drop-release")?;
-    let lease = host_workspace.lease.clone();
-
-    assert_eq!(
-        layerstack::LayerStack::open(layer_stack_root.clone())?.active_lease_count(),
-        1
-    );
-    drop(host_workspace);
-
-    assert_eq!(
-        layerstack::LayerStack::open(layer_stack_root.clone())?.active_lease_count(),
-        1,
-        "dropping one of multiple lease handles must not release early"
-    );
-    drop(lease);
-    assert_eq!(
-        layerstack::LayerStack::open(layer_stack_root.clone())?.active_lease_count(),
-        0
-    );
-    let _ = std::fs::remove_dir_all(root);
-    Ok(())
-}
-
-#[test]
-fn host_workspace_lease_releases_when_command_validation_rejects_before_start(
-) -> Result<(), Box<dyn std::error::Error>> {
-    let (root, layer_stack_root, host_workspace) =
-        host_command_workspace_fixture("validation-reject-release")?;
-    let ops = CommandOps::new(command::CommandConfig::default());
-
-    let error = ops
-        .exec_command_with_trace(
-            start_command("   "),
-            ExecTarget::Host {
-                workspace: Box::new(host_workspace),
-                scratch_root: ops.scratch_root(),
-            },
-        )
-        .expect_err("empty command should be rejected before command start");
-
-    assert!(
-        error.to_string().contains("cmd must be non-empty"),
-        "unexpected validation error: {error}"
-    );
-    assert_eq!(
-        layerstack::LayerStack::open(layer_stack_root.clone())?.active_lease_count(),
-        0
-    );
-    let _ = std::fs::remove_dir_all(root);
-    Ok(())
-}
-
-#[test]
-fn host_workspace_lease_releases_when_command_admission_rejects_before_start(
-) -> Result<(), Box<dyn std::error::Error>> {
-    let (root, layer_stack_root, host_workspace) =
-        host_command_workspace_fixture("admission-reject-release")?;
-    let ops = CommandOps::new(command::CommandConfig::default());
-    for index in 0..crate::command::registry::MAX_ACTIVE_COMMANDS {
-        ops.registry.insert(inactive_isolated_run(
-            &format!("cmd_admission_{index}"),
-            "caller-admission",
-            &root.join(format!("active-{index}")),
-        ));
-    }
-
-    let error = ops
-        .exec_command_with_trace(
-            start_command("echo should-not-start"),
-            ExecTarget::Host {
-                workspace: Box::new(host_workspace),
-                scratch_root: ops.scratch_root(),
-            },
-        )
-        .expect_err("full registry should reject before command start");
-
-    assert!(
-        error.to_string().contains("too many active commands"),
-        "unexpected admission error: {error}"
-    );
-    assert_eq!(
-        layerstack::LayerStack::open(layer_stack_root.clone())?.active_lease_count(),
-        0
-    );
-    let _ = std::fs::remove_dir_all(root);
-    Ok(())
-}
-
-#[test]
-fn host_workspace_lease_releases_when_command_finalizes() -> Result<(), Box<dyn std::error::Error>>
-{
-    let (root, layer_stack_root, host_workspace) =
-        host_command_workspace_fixture("finalize-release")?;
-    let HostCommandWorkspace {
-        layer_stack_root: command_root,
-        workspace_root: _,
-        snapshot,
-        normalization: _,
-        workspace,
-        ns_fds: _,
-        lease,
-    } = host_workspace;
-    let command_id = "cmd_finalize_release";
-    let ops = CommandOps::new(command::CommandConfig::default());
-    let process = CommandProcess::new(CommandProcessSpec {
-        id: command_id.to_owned(),
-        caller_id: "caller-host".to_owned(),
-        command: "echo cancelled".to_owned(),
-        timeout_seconds: None,
-    });
-    let run = Arc::new(ActiveCommand::Host(HostRun {
-        process,
-        trace_origin: CommandTraceOrigin::default(),
-        root: command_root,
-        snapshot,
-        workspace,
-        lease,
-    }));
-
-    let response = ops.finalize_command(
-        run,
-        CommandProcessExit {
-            status: "cancelled".to_owned(),
-            exit_code: 130,
-            signal: None,
-            runner_result: None,
-            stdout: String::new(),
-            elapsed_s: 0.0,
-            kill: Some(KillReason::Cancelled),
-        },
-        false,
-        false,
-    );
-
-    assert_eq!(response.status, CommandStatus::Cancelled);
-    assert_eq!(
-        layerstack::LayerStack::open(layer_stack_root.clone())?.active_lease_count(),
-        0
-    );
-    let _ = std::fs::remove_dir_all(root);
-    Ok(())
 }
 
 #[test]
@@ -782,19 +599,19 @@ fn inactive_isolated_run(id: &str, caller_id: &str, root: &std::path::Path) -> A
     ] {
         std::fs::create_dir_all(path).expect("create command test scaffold");
     }
-    let process = CommandProcess::new(CommandProcessSpec {
+    let process = CommandProcess::inactive_for_test(CommandProcessSpec {
         id: id.to_owned(),
         caller_id: caller_id.to_owned(),
         command: "cat".to_owned(),
         timeout_seconds: None,
     });
-    Arc::new(ActiveCommand::IsolatedNetwork(IsolatedNetworkRun {
+    Arc::new(ActiveCommand::Workspace(WorkspaceRun {
         process,
         trace_origin: CommandTraceOrigin::default(),
         context: WorkspaceModeContext {
             caller_id: caller_id.to_owned(),
             workspace_handle_id: "workspace-handle".to_owned(),
-            network: workspace::NetworkMode::Isolated,
+            profile: workspace::WorkspaceProfile::Isolated,
             layer_stack_root,
             manifest_version: 1,
             manifest_root_hash: "root".to_owned(),
@@ -810,66 +627,6 @@ fn inactive_isolated_run(id: &str, caller_id: &str, root: &std::path::Path) -> A
     }))
 }
 
-fn host_command_workspace_fixture(
-    id: &str,
-) -> Result<(PathBuf, PathBuf, HostCommandWorkspace), Box<dyn std::error::Error>> {
-    let root = std::env::temp_dir().join(format!(
-        "operation-command-host-workspace-{}-{id}",
-        std::process::id()
-    ));
-    let _ = std::fs::remove_dir_all(&root);
-    let layer_stack_root = root.join("stack");
-    let workspace_root = root.join("workspace");
-    let host_scratch = root.join("host-scratch");
-    std::fs::create_dir_all(&workspace_root)?;
-    std::fs::write(workspace_root.join("seed.txt"), "seed\n")?;
-    layerstack::build_workspace_base(&layer_stack_root, &workspace_root, true)?;
-    let command_snapshot =
-        layerstack::service::acquire_bounded_snapshot_for_command(&layer_stack_root, id, 64)?;
-    let workspace = workspace::profile::host_compatible::HostWorkspace::create(
-        &host_scratch,
-        "sandbox-overlay",
-        id,
-    )?;
-    let lease = LeaseReleaseHandle::new(
-        layer_stack_root.clone(),
-        command_snapshot.snapshot.lease_id.clone(),
-    );
-    let host_workspace = HostCommandWorkspace::new_for_test(
-        layer_stack_root.clone(),
-        workspace_root.canonicalize()?,
-        command_snapshot.snapshot,
-        command_snapshot.normalization,
-        workspace,
-        Some(default_host_ns_fds()),
-        lease,
-    );
-    Ok((root, layer_stack_root, host_workspace))
-}
-
-fn default_host_ns_fds() -> workspace::profile::host_compatible::WorkspaceNamespaceFds {
-    workspace::profile::host_compatible::WorkspaceNamespaceFds::from_raw_parts(
-        Some(10),
-        Some(11),
-        Some(12),
-        None,
-    )
-}
-
-fn start_command(cmd: &str) -> command::StartCommand {
-    command::StartCommand {
-        invocation_id: "invoke-host".to_owned(),
-        caller_id: "caller-host".to_owned(),
-        cmd: cmd.to_owned(),
-        trace_id: None,
-        request_id: None,
-        timeout_seconds: None,
-        yield_time_ms: 0,
-        cwd: None,
-        remountable: false,
-    }
-}
-
 fn command_ops_with_orphan_dir(id: &str) -> (CommandOps, PathBuf, PathBuf) {
     let scratch_root = std::env::temp_dir().join(format!(
         "operation-command-orphan-{}-{id}",
@@ -878,22 +635,21 @@ fn command_ops_with_orphan_dir(id: &str) -> (CommandOps, PathBuf, PathBuf) {
     let _ = std::fs::remove_dir_all(&scratch_root);
     let command_dir = scratch_root.join(id);
     std::fs::create_dir_all(&command_dir).expect("create orphan command dir");
-    let ops = CommandOps::new(command::CommandConfig {
-        scratch_root: scratch_root.clone(),
-        ..command::CommandConfig::default()
-    });
-    (ops, scratch_root, command_dir)
+    let mut config = command::CommandConfig::default();
+    config.scratch_root = scratch_root.clone();
+    (CommandOps::new(config), scratch_root, command_dir)
 }
 
-fn write_orphan_metadata(command_dir: &std::path::Path, command_id: &str) {
+fn write_orphan_metadata(command_dir: &std::path::Path, id: &str) {
+    let metadata = serde_json::json!({
+        "command_id": id,
+        "caller_id": "caller",
+        "command": "echo orphan",
+        "status": "running",
+    });
     std::fs::write(
         command_dir.join("metadata.json"),
-        serde_json::to_vec(&json!({
-            "command_id": command_id,
-            "caller_id": "caller",
-            "command": "echo ok",
-        }))
-        .expect("orphan metadata serializes"),
+        serde_json::to_vec_pretty(&metadata).expect("serialize orphan metadata"),
     )
     .expect("write orphan metadata");
 }

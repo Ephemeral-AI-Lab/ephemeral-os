@@ -3,7 +3,6 @@
 pub mod contract;
 
 mod finalize;
-mod command_workspace;
 mod outcome;
 mod prepare;
 mod registry;
@@ -20,4 +19,3 @@ pub use service::{
     CommandStdinTraceFacts, CommandWriteStdinOutcome, ExecTarget,
 };
 pub use trace::CommandTraceEvent;
-pub use command_workspace::{CommandWorkspace, HostCommandWorkspace};

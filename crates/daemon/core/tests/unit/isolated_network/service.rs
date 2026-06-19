@@ -194,7 +194,7 @@ fn recovery_trace_events_include_manager_json_and_cleanup_errors() {
 fn test_handle() -> WorkspaceModeHandle {
     WorkspaceModeHandle {
         workspace_id: WorkspaceModeId("workspace-handle".to_owned()),
-        network: workspace::NetworkMode::Isolated,
+        profile: workspace::WorkspaceProfile::Isolated,
         caller_id: "caller-isolated".to_owned(),
         lease_id: "lease-1".to_owned(),
         manifest_version: 7,

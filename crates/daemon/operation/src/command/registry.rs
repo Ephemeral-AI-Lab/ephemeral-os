@@ -5,25 +5,12 @@ use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use std::path::PathBuf;
-
 use command::process::CommandProcess;
 use command::{CollectCompleted, StartCommand};
-use layerstack::service::{LeaseReleaseHandle, Snapshot};
 use workspace::profile::WorkspaceModeContext;
 
 use super::contract::{CollectCompletedOutput, CommandCompletion, CommandResponse};
-use super::command_workspace::CommandWorkspace;
-pub(crate) struct HostRun {
-    pub(crate) process: CommandProcess,
-    pub(crate) trace_origin: CommandTraceOrigin,
-    pub(crate) root: PathBuf,
-    pub(crate) snapshot: Snapshot,
-    pub(crate) workspace: CommandWorkspace,
-    pub(crate) lease: LeaseReleaseHandle,
-}
-
-pub(crate) struct IsolatedNetworkRun {
+pub(crate) struct WorkspaceRun {
     pub(crate) process: CommandProcess,
     pub(crate) trace_origin: CommandTraceOrigin,
     pub(crate) context: WorkspaceModeContext,
@@ -46,22 +33,19 @@ impl CommandTraceOrigin {
 }
 
 pub(crate) enum ActiveCommand {
-    Host(HostRun),
-    IsolatedNetwork(IsolatedNetworkRun),
+    Workspace(WorkspaceRun),
 }
 
 impl ActiveCommand {
     pub(crate) fn process(&self) -> &CommandProcess {
         match self {
-            Self::Host(run) => &run.process,
-            Self::IsolatedNetwork(run) => &run.process,
+            Self::Workspace(run) => &run.process,
         }
     }
 
     pub(crate) fn trace_origin(&self) -> &CommandTraceOrigin {
         match self {
-            Self::Host(run) => &run.trace_origin,
-            Self::IsolatedNetwork(run) => &run.trace_origin,
+            Self::Workspace(run) => &run.trace_origin,
         }
     }
 }

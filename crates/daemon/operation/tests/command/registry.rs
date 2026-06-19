@@ -10,13 +10,10 @@ fn sample_completion(id: &str) -> CommandCompletion {
 }
 
 #[cfg(not(target_os = "linux"))]
-fn host_run(id: &str, caller: &str) -> Arc<ActiveCommand> {
-    use std::path::PathBuf;
-
+fn workspace_run(id: &str, caller: &str) -> Arc<ActiveCommand> {
     use command::process::CommandProcessSpec;
-    use layerstack::service::{LeaseReleaseHandle, Snapshot};
 
-    let process = CommandProcess::new(CommandProcessSpec {
+    let process = CommandProcess::inactive_for_test(CommandProcessSpec {
         id: id.to_owned(),
         caller_id: caller.to_owned(),
         command: "sleep 1".to_owned(),
@@ -26,19 +23,39 @@ fn host_run(id: &str, caller: &str) -> Arc<ActiveCommand> {
         "operation-command-registry-{}-{id}-{caller}",
         std::process::id()
     ));
-    let workspace = HostWorkspace::create(&scratch, "test", id).expect("scaffold workspace");
-    Arc::new(ActiveCommand::Host(HostRun {
+    let layer_stack_root = scratch.join("layers");
+    let workspace_root = scratch.join("workspace");
+    let scratch_dir = scratch.join("scratch");
+    let upperdir = scratch.join("upper");
+    let workdir = scratch.join("work");
+    for path in [
+        &layer_stack_root,
+        &workspace_root,
+        &scratch_dir,
+        &upperdir,
+        &workdir,
+    ] {
+        std::fs::create_dir_all(path).expect("scaffold workspace");
+    }
+    Arc::new(ActiveCommand::Workspace(WorkspaceRun {
         process,
         trace_origin: CommandTraceOrigin::default(),
-        root: PathBuf::from("/layers"),
-        snapshot: Snapshot {
-            lease_id: "lease".to_owned(),
+        context: WorkspaceModeContext {
+            caller_id: caller.to_owned(),
+            workspace_handle_id: "workspace-handle".to_owned(),
+            profile: workspace::WorkspaceProfile::Isolated,
+            layer_stack_root,
             manifest_version: 1,
-            root_hash: "hash".to_owned(),
+            manifest_root_hash: "hash".to_owned(),
+            workspace_root,
+            scratch_dir,
+            upperdir,
+            workdir,
             layer_paths: Vec::new(),
+            ns_fds: std::collections::HashMap::new(),
+            cgroup_path: None,
         },
-        workspace,
-        lease: LeaseReleaseHandle::new(PathBuf::from("/layers"), "lease".to_owned()),
+        remountable: false,
     }))
 }
 
@@ -46,9 +63,9 @@ fn host_run(id: &str, caller: &str) -> Arc<ActiveCommand> {
 #[test]
 fn insert_get_count_remove_track_caller_runs() {
     let registry = CommandRegistry::new();
-    registry.insert(host_run("cmd_1", "caller"));
-    registry.insert(host_run("cmd_2", "caller"));
-    registry.insert(host_run("cmd_3", "other"));
+    registry.insert(workspace_run("cmd_1", "caller"));
+    registry.insert(workspace_run("cmd_2", "caller"));
+    registry.insert(workspace_run("cmd_3", "other"));
 
     assert_eq!(registry.count_by_caller(Some("caller")), 2);
     assert_eq!(registry.count_by_caller(Some("other")), 1);

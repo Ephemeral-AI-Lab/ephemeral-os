@@ -13,7 +13,7 @@ use operation_service::command::{
     CommandStream, CommandTranscriptRow, ExecCommandInput, OperationTraceContext, PollCommandInput,
     ReadCommandLinesInput,
 };
-use workspace::{CallerId, NetworkMode};
+use workspace::{CallerId, WorkspaceProfile};
 
 use support::{
     build_services_with_launch_driver, create_request, success_exit, workspace_handle,
@@ -133,7 +133,7 @@ fn session_with_driver(driver: impl CommandLaunchDriver + 'static) -> (TestServi
         "caller-owner",
         "lease-1",
         workspace_root.clone(),
-        NetworkMode::Host,
+        WorkspaceProfile::HostCompatible,
     )));
     let env = build_services_with_launch_driver(Arc::clone(&fake), Arc::new(driver));
     let handler = env
@@ -478,7 +478,7 @@ fn command_transcript_rows_report_running_status_for_one_shot_active_command() {
         "caller-owner",
         "lease-1",
         workspace_root.clone(),
-        NetworkMode::Host,
+        WorkspaceProfile::HostCompatible,
     )));
     let env = build_services_with_launch_driver(
         fake,

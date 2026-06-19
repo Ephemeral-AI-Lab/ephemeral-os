@@ -20,9 +20,9 @@ use operation_service::OperationServices;
 use workspace::{
     BaseRevision, CallerId, CaptureChangesRequest, CapturedWorkspaceChanges,
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
-    LayerStackSnapshotRef, LeaseId, NetworkMode, ReadonlySnapshotHandle, RemountWorkspaceRequest,
+    LayerStackSnapshotRef, LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest,
     RemountWorkspaceResult, WorkspaceError, WorkspaceHandle, WorkspaceId, WorkspaceLaunchContext,
-    WorkspaceLaunchNamespaceFds, WorkspaceService,
+    WorkspaceLaunchNamespaceFds, WorkspaceProfile, WorkspaceService,
 };
 
 struct TestServices {
@@ -300,19 +300,19 @@ fn build_services_with_process_group_controller(
 }
 
 fn create_request(caller_id: &str, workspace_root: PathBuf) -> CreateWorkspaceRequest {
-    create_request_with_network(caller_id, workspace_root, NetworkMode::Host)
+    create_request_with_profile(caller_id, workspace_root, WorkspaceProfile::HostCompatible)
 }
 
-fn create_request_with_network(
+fn create_request_with_profile(
     caller_id: &str,
     workspace_root: PathBuf,
-    network: NetworkMode,
+    profile: WorkspaceProfile,
 ) -> CreateWorkspaceRequest {
     CreateWorkspaceRequest {
         caller_id: CallerId(caller_id.to_owned()),
         workspace_root,
         layer_stack_root: PathBuf::from("/layers"),
-        network,
+        profile,
     }
 }
 
@@ -341,21 +341,21 @@ fn workspace_handle(
     lease_id: &str,
     workspace_root: PathBuf,
 ) -> WorkspaceHandle {
-    workspace_handle_with_network(
+    workspace_handle_with_profile(
         workspace_id,
         caller_id,
         lease_id,
         workspace_root,
-        NetworkMode::Host,
+        WorkspaceProfile::HostCompatible,
     )
 }
 
-fn workspace_handle_with_network(
+fn workspace_handle_with_profile(
     workspace_id: &str,
     caller_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
-    network: NetworkMode,
+    profile: WorkspaceProfile,
 ) -> WorkspaceHandle {
     let snapshot = LayerStackSnapshotRef {
         lease_id: LeaseId(lease_id.to_owned()),
@@ -367,7 +367,7 @@ fn workspace_handle_with_network(
         id: WorkspaceId(workspace_id.to_owned()),
         owner: CallerId(caller_id.to_owned()),
         workspace_root,
-        network,
+        profile,
         base_revision: BaseRevision {
             version: 1,
             root_hash: "root".to_owned(),
@@ -381,7 +381,7 @@ fn workspace_handle_with_network(
                 user: Some(10),
                 mnt: Some(11),
                 pid: Some(12),
-                net: (network == NetworkMode::Isolated).then_some(13),
+                net: (profile == WorkspaceProfile::Isolated).then_some(13),
             }),
             cgroup_path: None,
         }),
@@ -409,33 +409,33 @@ fn workspace_remount_isolated_no_active_command_path_succeeds_and_clears_pending
     let fake = Arc::new(RemountWorkspaceServiceFake::default());
     let services = build_services(Arc::clone(&fake));
     let workspace_root = PathBuf::from("/workspace");
-    let mut remounted = workspace_handle_with_network(
+    let mut remounted = workspace_handle_with_profile(
         "workspace-1",
         "caller-1",
         "lease-2",
         workspace_root.clone(),
-        NetworkMode::Isolated,
+        WorkspaceProfile::Isolated,
     );
     remounted.snapshot.manifest_version = 2;
     remounted.snapshot.root_hash = "root-2".to_owned();
     remounted.snapshot.layer_paths = vec![PathBuf::from("/lower/two")];
     remounted.base_revision = remounted.snapshot.base_revision();
-    fake.push_create_result(Ok(workspace_handle_with_network(
+    fake.push_create_result(Ok(workspace_handle_with_profile(
         "workspace-1",
         "caller-1",
         "lease-1",
         workspace_root.clone(),
-        NetworkMode::Isolated,
+        WorkspaceProfile::Isolated,
     )));
     fake.push_remount_result(Ok(RemountWorkspaceResult {
         handle: remounted.clone(),
     }));
     let handler = services
         .workspace
-        .create(create_request_with_network(
+        .create(create_request_with_profile(
             "caller-1",
             workspace_root,
-            NetworkMode::Isolated,
+            WorkspaceProfile::Isolated,
         ))
         .expect("create isolated workspace session succeeds");
 
@@ -452,8 +452,8 @@ fn workspace_remount_isolated_no_active_command_path_succeeds_and_clears_pending
             .updated_handler
             .expect("updated handler is returned")
             .handle
-            .network,
-        NetworkMode::Isolated
+            .profile,
+        WorkspaceProfile::Isolated
     );
     assert_eq!(
         services

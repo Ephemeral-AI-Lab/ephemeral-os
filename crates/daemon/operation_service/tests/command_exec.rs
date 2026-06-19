@@ -9,7 +9,7 @@ use operation_service::command::{
     CommandServiceError, CommandStatus, ExecCommandInput, OperationTraceContext, PollCommandInput,
 };
 use workspace::{
-    CallerId, NetworkMode, WorkspaceId, WorkspaceLaunchContext, WorkspaceLaunchNamespaceFds,
+    CallerId, WorkspaceId, WorkspaceLaunchContext, WorkspaceLaunchNamespaceFds, WorkspaceProfile,
 };
 
 use support::{
@@ -43,7 +43,7 @@ fn command_exec_some_uses_resolved_session_without_workspace_create_or_destroy()
         "caller-1",
         "lease-1",
         workspace_root.clone(),
-        NetworkMode::Host,
+        WorkspaceProfile::HostCompatible,
     )));
     let env = build_services(Arc::clone(&fake));
     let handler = env
@@ -91,7 +91,7 @@ fn command_exec_none_creates_private_host_workspace_and_binds_it() {
         "caller-1",
         "lease-1",
         workspace_root.clone(),
-        NetworkMode::Host,
+        WorkspaceProfile::HostCompatible,
     )));
     let env = build_services(Arc::clone(&fake));
 
@@ -112,7 +112,7 @@ fn command_exec_none_creates_private_host_workspace_and_binds_it() {
         &create_requests[0],
         "caller-1",
         &workspace_root,
-        NetworkMode::Host,
+        WorkspaceProfile::HostCompatible,
     );
     assert!(fake.destroy_calls().is_empty());
     let poll = env
@@ -155,7 +155,7 @@ fn command_exec_rejects_context_caller_mismatch_before_workspace_create() {
         "caller-1",
         "lease-1",
         workspace_root.clone(),
-        NetworkMode::Host,
+        WorkspaceProfile::HostCompatible,
     )));
     let output = env
         .command
@@ -176,7 +176,7 @@ fn command_exec_spawn_failure_destroys_created_one_shot_workspace() {
         "caller-1",
         "lease-1",
         workspace_root.clone(),
-        NetworkMode::Host,
+        WorkspaceProfile::HostCompatible,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_spawn_error(CommandServiceError::CommandIo {
@@ -219,7 +219,7 @@ fn command_exec_spawn_failure_keeps_session_workspace_alive() {
         "caller-1",
         "lease-1",
         workspace_root.clone(),
-        NetworkMode::Host,
+        WorkspaceProfile::HostCompatible,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_spawn_error(CommandServiceError::CommandIo {
@@ -276,7 +276,7 @@ fn command_exec_passes_launch_material_to_runner_request_and_spawn_paths() {
         "caller-1",
         "lease-1",
         workspace_root.clone(),
-        NetworkMode::Isolated,
+        WorkspaceProfile::Isolated,
         Some(launch),
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
@@ -383,7 +383,7 @@ fn command_exec_host_compatible_launch_uses_setns_without_net_fd() {
         "caller-1",
         "lease-1",
         workspace_root.clone(),
-        NetworkMode::Host,
+        WorkspaceProfile::HostCompatible,
         Some(launch),
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
@@ -418,7 +418,7 @@ fn command_exec_missing_launch_material_destroys_one_shot_without_spawn() {
         "caller-1",
         "lease-1",
         workspace_root.clone(),
-        NetworkMode::Host,
+        WorkspaceProfile::HostCompatible,
         None,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
@@ -463,7 +463,7 @@ fn command_exec_missing_namespace_fds_destroys_one_shot_without_spawn() {
         "caller-1",
         "lease-1",
         workspace_root.clone(),
-        NetworkMode::Host,
+        WorkspaceProfile::HostCompatible,
         Some(launch),
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
@@ -495,9 +495,9 @@ fn command_exec_missing_namespace_fds_destroys_one_shot_without_spawn() {
 
 #[test]
 fn command_exec_partial_namespace_fds_destroy_one_shot_without_spawn() {
-    for (network, namespace_fds, missing_name) in [
+    for (profile, namespace_fds, missing_name) in [
         (
-            NetworkMode::Host,
+            WorkspaceProfile::HostCompatible,
             WorkspaceLaunchNamespaceFds {
                 user: Some(10),
                 mnt: None,
@@ -507,7 +507,7 @@ fn command_exec_partial_namespace_fds_destroy_one_shot_without_spawn() {
             "mnt",
         ),
         (
-            NetworkMode::Isolated,
+            WorkspaceProfile::Isolated,
             WorkspaceLaunchNamespaceFds {
                 user: Some(10),
                 mnt: Some(11),
@@ -518,7 +518,7 @@ fn command_exec_partial_namespace_fds_destroy_one_shot_without_spawn() {
         ),
     ] {
         let fake = Arc::new(FakeWorkspaceService::new());
-        let workspace_root = PathBuf::from(format!("/workspace/{network:?}"));
+        let workspace_root = PathBuf::from(format!("/workspace/{profile:?}"));
         let launch = WorkspaceLaunchContext {
             upperdir: PathBuf::from("/upper/partial-fds"),
             workdir: PathBuf::from("/work/partial-fds"),
@@ -530,7 +530,7 @@ fn command_exec_partial_namespace_fds_destroy_one_shot_without_spawn() {
             "caller-1",
             "lease-1",
             workspace_root.clone(),
-            network,
+            profile,
             Some(launch),
         )));
         let launch_driver = Arc::new(FakeLaunchDriver::new());
@@ -566,7 +566,7 @@ fn command_exec_artifact_directory_failure_destroys_one_shot_without_spawn() {
         "caller-1",
         "lease-1",
         workspace_root.clone(),
-        NetworkMode::Host,
+        WorkspaceProfile::HostCompatible,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
@@ -606,7 +606,7 @@ fn command_exec_initial_running_yield_returns_wait_loop_output() {
         "caller-1",
         "lease-1",
         workspace_root.clone(),
-        NetworkMode::Host,
+        WorkspaceProfile::HostCompatible,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_outcome(WaitOutcome::Running("hello from wait\n".to_owned()));
@@ -633,7 +633,7 @@ fn command_exec_initial_completed_session_returns_finalized_metadata() {
         "caller-1",
         "lease-1",
         workspace_root.clone(),
-        NetworkMode::Host,
+        WorkspaceProfile::HostCompatible,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_outcome(WaitOutcome::Completed(success_exit("session done\n")));
@@ -689,7 +689,7 @@ fn command_exec_rejects_workspace_root_mismatch_before_command_allocation() {
         "caller-1",
         "lease-1",
         PathBuf::from("/workspace/session"),
-        NetworkMode::Host,
+        WorkspaceProfile::HostCompatible,
     )));
     let env = build_services(Arc::clone(&fake));
     let handler = env

@@ -1,4 +1,4 @@
-use crate::model::NetworkMode;
+use crate::model::WorkspaceProfile;
 use crate::namespace::NamespacePlan;
 use crate::profile::common::ProfileHooks;
 
@@ -6,8 +6,8 @@ use crate::profile::common::ProfileHooks;
 pub(crate) struct HostCompatibleProfile;
 
 impl ProfileHooks for HostCompatibleProfile {
-    fn kind(&self) -> NetworkMode {
-        NetworkMode::Host
+    fn kind(&self) -> WorkspaceProfile {
+        WorkspaceProfile::HostCompatible
     }
 
     fn namespace_plan(&self) -> NamespacePlan {

@@ -26,17 +26,14 @@ use config::configs::isolated_network::{
 use layerstack::{
     read_workspace_binding,
     service::{
-        compact_snapshot_for_remount, LeaseReleaseHandle,
-        LeaseReleaseReport as LayerStackLeaseReleaseReport, Snapshot, SnapshotNormalization,
+        compact_snapshot_for_remount, LeaseReleaseReport as LayerStackLeaseReleaseReport,
+        SnapshotNormalization,
     },
     LayerStack, LeaseAwareCopyThroughOutcome, WorkspaceBinding, WORKSPACE_BINDING_FILE,
 };
-use operation::command::{CommandOps, CommandRemountInspection, ExecTarget, HostCommandWorkspace};
+use operation::command::{CommandOps, CommandRemountInspection, ExecTarget};
 use operation::isolation::contract::IsolationTestRemountFault;
 use serde_json::Value;
-#[cfg(test)]
-use workspace::profile::host_compatible::HostNamespaceWorkspaceRequest;
-use workspace::profile::host_compatible::{HostWorkspace, HostWorkspaceError};
 use workspace::profile::{
     ExitOutcome as IsolatedNetworkExitOutcome, IsolatedNetworkError, RemountProbe, ResourceCaps,
     Rfc1918Egress as RuntimeRfc1918Egress, WorkspaceModeContext, WorkspaceModeHandle,
@@ -112,13 +109,7 @@ pub(crate) struct WorkspaceCommandRouteContext<'a> {
 }
 
 enum WorkspaceCommandRoute {
-    Host {
-        caller_id: String,
-        workspace: HostWorkspaceLifecycle,
-    },
-    IsolatedNetwork {
-        context: WorkspaceModeContext,
-    },
+    Workspace { context: WorkspaceModeContext },
 }
 
 impl WorkspaceCommandRouteContext<'_> {
@@ -130,16 +121,14 @@ impl WorkspaceCommandRouteContext<'_> {
     #[must_use]
     pub(crate) fn caller_id(&self) -> &str {
         match &self.route {
-            WorkspaceCommandRoute::Host { caller_id, .. } => caller_id,
-            WorkspaceCommandRoute::IsolatedNetwork { context } => &context.caller_id,
+            WorkspaceCommandRoute::Workspace { context } => &context.caller_id,
         }
     }
 
     #[must_use]
     pub(crate) fn remountable(&self, requested: bool) -> bool {
         match &self.route {
-            WorkspaceCommandRoute::Host { .. } => false,
-            WorkspaceCommandRoute::IsolatedNetwork { .. } => requested,
+            WorkspaceCommandRoute::Workspace { .. } => requested,
         }
     }
 
@@ -154,14 +143,11 @@ impl WorkspaceCommandRouteContext<'_> {
             _mode_guard,
         } = self;
         let target = match route {
-            WorkspaceCommandRoute::Host { workspace, .. } => ExecTarget::Host {
-                workspace: Box::new(workspace.into_command_workspace()),
-                scratch_root,
-            },
-            WorkspaceCommandRoute::IsolatedNetwork { context } => ExecTarget::IsolatedNetwork {
+            WorkspaceCommandRoute::Workspace { context } => ExecTarget::Workspace {
                 context: Box::new(context),
             },
         };
+        let _ = scratch_root;
         exec(target)
     }
 }
@@ -195,44 +181,6 @@ impl WorkspaceFileRouteContext {
             Self::Direct { layer_stack_root } => Some(layer_stack_root),
             Self::IsolatedNetwork { .. } => None,
         }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct LeasedBaseRevision {
-    pub lease_id: String,
-    pub version: i64,
-    pub root_hash: String,
-    pub layer_paths: Vec<PathBuf>,
-}
-
-#[derive(Debug)]
-pub(crate) struct HostWorkspaceLifecycle {
-    pub layer_stack_root: PathBuf,
-    pub workspace_root: PathBuf,
-    pub leased_base: LeasedBaseRevision,
-    pub snapshot_normalization: SnapshotNormalization,
-    pub workspace: HostWorkspace,
-    pub lease: LeaseReleaseHandle,
-}
-
-impl HostWorkspaceLifecycle {
-    #[must_use]
-    pub(crate) fn into_command_workspace(self) -> HostCommandWorkspace {
-        let snapshot = Snapshot {
-            lease_id: self.leased_base.lease_id,
-            manifest_version: self.leased_base.version,
-            root_hash: self.leased_base.root_hash,
-            layer_paths: self.leased_base.layer_paths,
-        };
-        HostCommandWorkspace::new(
-            self.layer_stack_root,
-            self.workspace_root,
-            snapshot,
-            self.snapshot_normalization,
-            self.workspace,
-            self.lease,
-        )
     }
 }
 
@@ -807,98 +755,18 @@ impl WorkspaceRuntime {
         resolved_workspace_binding_at(&requested_root, binding)
     }
 
-    pub(crate) fn create_host_for_legacy_layer_stack_root_locked(
-        &self,
-        caller_id: &str,
-        invocation_id: &str,
-        layer_stack_root: &Path,
-    ) -> Result<HostWorkspaceLifecycle, WorkspaceError> {
-        let resolved = self.resolve_legacy_layer_stack_root(layer_stack_root)?;
-        self.create_host(caller_id, invocation_id, &resolved, |leased_base| {
-            HostWorkspace::create_runtime_host_namespace_overlay(
-                "sandbox-overlay",
-                invocation_id,
-                caller_id,
-                &resolved.workspace_root,
-                &leased_base.layer_paths,
-                self.config.setup_timeout_s,
-                self.config.exit_grace_s,
-            )
-            .map_err(host_setup_error)
-        })
-    }
-
     pub(crate) fn route_command_context<'a>(
         &'a self,
         caller_id: &str,
-        invocation_id: &str,
+        _invocation_id: &str,
         layer_stack_root: Option<PathBuf>,
-    ) -> Result<WorkspaceCommandRouteContext<'a>, WorkspaceError> {
-        self.route_command_context_with_host_creator(
-            caller_id,
-            invocation_id,
-            layer_stack_root,
-            |runtime, caller_id, invocation_id, layer_stack_root| {
-                runtime.create_host_for_legacy_layer_stack_root_locked(
-                    caller_id,
-                    invocation_id,
-                    layer_stack_root,
-                )
-            },
-        )
-    }
-
-    #[cfg(test)]
-    pub(crate) fn route_command_context_with_scratch_root_for_test<'a>(
-        &'a self,
-        caller_id: &str,
-        invocation_id: &str,
-        layer_stack_root: Option<PathBuf>,
-        scratch_root: &'a Path,
-    ) -> Result<WorkspaceCommandRouteContext<'a>, WorkspaceError> {
-        self.route_command_context_with_host_creator(
-            caller_id,
-            invocation_id,
-            layer_stack_root,
-            move |runtime, caller_id, invocation_id, layer_stack_root| {
-                let resolved = runtime.resolve_legacy_layer_stack_root(layer_stack_root)?;
-                runtime.create_host(caller_id, invocation_id, &resolved, |leased_base| {
-                    HostWorkspace::create_with_host_namespace(
-                        scratch_root,
-                        HostNamespaceWorkspaceRequest {
-                            kind: "sandbox-overlay",
-                            token: invocation_id,
-                            caller_id,
-                            workspace_root: &resolved.workspace_root,
-                            layer_paths: &leased_base.layer_paths,
-                            setup_timeout_s: runtime.config.setup_timeout_s,
-                            exit_grace_s: runtime.config.exit_grace_s,
-                        },
-                    )
-                    .map_err(host_setup_error)
-                })
-            },
-        )
-    }
-
-    fn route_command_context_with_host_creator<'a>(
-        &'a self,
-        caller_id: &str,
-        invocation_id: &str,
-        layer_stack_root: Option<PathBuf>,
-        create_host: impl FnOnce(
-            &Self,
-            &str,
-            &str,
-            &Path,
-        ) -> Result<HostWorkspaceLifecycle, WorkspaceError>,
     ) -> Result<WorkspaceCommandRouteContext<'a>, WorkspaceError> {
         let mode_guard = self.lock_mode_gate();
         if let Some(context) = self.workspace_mode_context_for(caller_id) {
             return Ok(WorkspaceCommandRouteContext {
-                route: WorkspaceCommandRoute::IsolatedNetwork { context },
+                route: WorkspaceCommandRoute::Workspace { context },
                 trace: WorkspaceRouteTraceFacts {
-                    kind: "isolated_network",
+                    kind: "workspace",
                     reason: "caller_has_open_isolated_network",
                     layer_stack_root: None,
                 },
@@ -906,19 +774,18 @@ impl WorkspaceRuntime {
             });
         }
 
-        let requested_root = layer_stack_root.ok_or_else(missing_layer_stack_root_error)?;
-        let workspace = create_host(self, caller_id, invocation_id, &requested_root)?;
-        Ok(WorkspaceCommandRouteContext {
-            route: WorkspaceCommandRoute::Host {
-                caller_id: caller_id.to_owned(),
-                workspace,
-            },
-            trace: WorkspaceRouteTraceFacts {
-                kind: "host",
-                reason: "no_isolated_network_for_caller",
-                layer_stack_root: Some(requested_root),
-            },
-            _mode_guard: mode_guard,
+        let message = match layer_stack_root {
+            Some(root) => format!(
+                "no active command workspace for caller {caller_id}; legacy layer_stack_root fallback is removed ({})",
+                root.display()
+            ),
+            None => format!(
+                "no active command workspace for caller {caller_id}; create or enter a workspace before exec"
+            ),
+        };
+        Err(WorkspaceError::InvalidRequest {
+            field: "workspace_id",
+            message,
         })
     }
 
@@ -948,94 +815,6 @@ impl WorkspaceRuntime {
         if let WorkspaceFileRouteContext::IsolatedNetwork { context } = route {
             self.touch(&context.caller_id);
         }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn create_host_for_legacy_layer_stack_root_with_scratch_root_for_test(
-        &self,
-        caller_id: &str,
-        invocation_id: &str,
-        layer_stack_root: &Path,
-        scratch_root: &Path,
-    ) -> Result<HostWorkspaceLifecycle, WorkspaceError> {
-        let _mode_guard = self.lock_mode_gate();
-        let resolved = self.resolve_legacy_layer_stack_root(layer_stack_root)?;
-        self.create_host(caller_id, invocation_id, &resolved, |leased_base| {
-            HostWorkspace::create_with_host_namespace(
-                scratch_root,
-                HostNamespaceWorkspaceRequest {
-                    kind: "sandbox-overlay",
-                    token: invocation_id,
-                    caller_id,
-                    workspace_root: &resolved.workspace_root,
-                    layer_paths: &leased_base.layer_paths,
-                    setup_timeout_s: self.config.setup_timeout_s,
-                    exit_grace_s: self.config.exit_grace_s,
-                },
-            )
-            .map_err(host_setup_error)
-        })
-    }
-
-    fn create_host(
-        &self,
-        caller_id: &str,
-        invocation_id: &str,
-        resolved: &ResolvedWorkspaceRoot,
-        create_workspace: impl FnOnce(&LeasedBaseRevision) -> Result<HostWorkspace, WorkspaceError>,
-    ) -> Result<HostWorkspaceLifecycle, WorkspaceError> {
-        let (leased_base, snapshot_normalization) =
-            self.acquire_host_base_revision(resolved, caller_id, invocation_id)?;
-        let lease = LeaseReleaseHandle::new(
-            resolved.layer_stack_root.clone(),
-            leased_base.lease_id.clone(),
-        );
-        let workspace = match create_workspace(&leased_base) {
-            Ok(workspace) => workspace,
-            Err(error) => {
-                let release = lease.release();
-                return Err(host_create_failed_error(
-                    error,
-                    &leased_base.lease_id,
-                    release,
-                ));
-            }
-        };
-        Ok(HostWorkspaceLifecycle {
-            layer_stack_root: resolved.layer_stack_root.clone(),
-            workspace_root: resolved.workspace_root.clone(),
-            leased_base,
-            snapshot_normalization,
-            workspace,
-            lease,
-        })
-    }
-
-    fn acquire_host_base_revision(
-        &self,
-        resolved: &ResolvedWorkspaceRoot,
-        caller_id: &str,
-        invocation_id: &str,
-    ) -> Result<(LeasedBaseRevision, SnapshotNormalization), WorkspaceError> {
-        let request_id = format!("command:{caller_id}:{invocation_id}");
-        let command_snapshot = layerstack::service::acquire_bounded_snapshot_for_command(
-            &resolved.layer_stack_root,
-            &request_id,
-            self.command.commit_options().auto_squash_max_depth,
-        )
-        .map_err(|error| WorkspaceError::SnapshotAcquire {
-            source: error.to_string(),
-        })?;
-        let snapshot = command_snapshot.snapshot;
-        Ok((
-            LeasedBaseRevision {
-                lease_id: snapshot.lease_id,
-                version: snapshot.manifest_version,
-                root_hash: snapshot.root_hash,
-                layer_paths: snapshot.layer_paths,
-            },
-            command_snapshot.normalization,
-        ))
     }
 
     fn resolve_bound_workspace_root(
@@ -1475,7 +1254,7 @@ fn workspace_mode_context_from(
     WorkspaceModeContext {
         caller_id: handle.caller_id,
         workspace_handle_id: handle.workspace_id.0,
-        network: handle.network,
+        profile: handle.profile,
         layer_stack_root: layer_stack_root.to_path_buf(),
         manifest_version: handle.manifest_version,
         manifest_root_hash: handle.manifest_root_hash,
@@ -1644,35 +1423,6 @@ fn workspace_setup_error(error: layerstack::LayerStackError) -> WorkspaceError {
     WorkspaceError::Setup {
         step: error.to_string(),
     }
-}
-
-fn host_setup_error(error: HostWorkspaceError) -> WorkspaceError {
-    WorkspaceError::Setup {
-        step: error.to_string(),
-    }
-}
-
-fn host_create_failed_error(
-    error: WorkspaceError,
-    lease_id: &str,
-    release: LayerStackLeaseReleaseReport,
-) -> WorkspaceError {
-    let mut step = format!("host workspace create failed after lease acquisition: {error}");
-    match (release.released, release.error) {
-        (Some(true), None) => {
-            step.push_str(&format!("; lease {lease_id} released"));
-        }
-        (Some(false), None) => {
-            step.push_str(&format!("; lease {lease_id} was already released"));
-        }
-        (_, Some(release_error)) => {
-            step.push_str(&format!(
-                "; lease {lease_id} release failed: {release_error}"
-            ));
-        }
-        (None, None) => {}
-    }
-    WorkspaceError::Setup { step }
 }
 
 fn missing_layer_stack_root_error() -> WorkspaceError {

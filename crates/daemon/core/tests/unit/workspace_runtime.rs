@@ -203,114 +203,6 @@ fn workspace_runtime_enter_normalizes_snapshot_before_mounting_workspace() -> Te
 }
 
 #[test]
-fn workspace_runtime_host_create_acquires_leased_base_revision() -> TestResult {
-    let root = test_root("host-create-leased-base");
-    let scratch = root.join("scratch");
-    let host_scratch = root.join("host-scratch");
-    let stack_root = root.join("stack");
-    let workspace_root = root.join("workspace");
-    seed_workspace_base(&stack_root, &workspace_root)?;
-    let runtime = isolated_runtime(&scratch, Path::new("/testbed"));
-
-    let host = runtime.create_host_for_legacy_layer_stack_root_with_scratch_root_for_test(
-        "caller-host",
-        "invoke-host",
-        &stack_root,
-        &host_scratch,
-    )?;
-
-    assert!(!host.leased_base.lease_id.is_empty());
-    assert_eq!(host.leased_base.version, 1);
-    assert_eq!(host.leased_base.layer_paths.len(), 1);
-    assert_eq!(host.workspace_root, workspace_root.canonicalize()?);
-    assert!(host.workspace.dirs().upperdir.is_dir());
-    assert_eq!(
-        layerstack::LayerStack::open(stack_root.clone())?.active_lease_count(),
-        1
-    );
-    let release = host.lease.release();
-    assert_eq!(release.released, Some(true));
-    assert_eq!(release.error, None);
-    drop(host);
-    assert_eq!(
-        layerstack::LayerStack::open(stack_root.clone())?.active_lease_count(),
-        0
-    );
-    let _ = std::fs::remove_dir_all(&root);
-    Ok(())
-}
-
-#[test]
-fn workspace_runtime_host_create_failure_releases_lease() -> TestResult {
-    let root = test_root("host-create-failure-release");
-    let scratch = root.join("scratch");
-    let host_scratch = root.join("host-scratch");
-    let stack_root = root.join("stack");
-    let workspace_root = root.join("workspace");
-    let invocation_id = "invoke-host-fail";
-    seed_workspace_base(&stack_root, &workspace_root)?;
-    let runtime = isolated_runtime(&scratch, Path::new("/testbed"));
-    let blocked_run_dir = host_scratch
-        .join("sandbox-overlay")
-        .join(format!("{}-{invocation_id}", std::process::id()));
-    std::fs::create_dir_all(blocked_run_dir.parent().ok_or("blocked run parent")?)?;
-    std::fs::write(&blocked_run_dir, "not a directory")?;
-
-    let error = runtime
-        .create_host_for_legacy_layer_stack_root_with_scratch_root_for_test(
-            "caller-host",
-            invocation_id,
-            &stack_root,
-            &host_scratch,
-        )
-        .expect_err("workspace dir allocation should fail after lease acquisition");
-
-    assert!(
-        error.to_string().contains("lease") && error.to_string().contains("released"),
-        "create failure should report lease release: {error}"
-    );
-    assert_eq!(
-        layerstack::LayerStack::open(stack_root.clone())?.active_lease_count(),
-        0
-    );
-    let _ = std::fs::remove_dir_all(&root);
-    Ok(())
-}
-
-#[test]
-fn workspace_runtime_host_release_is_exact_once() -> TestResult {
-    let root = test_root("host-destroy-exact-once");
-    let scratch = root.join("scratch");
-    let host_scratch = root.join("host-scratch");
-    let stack_root = root.join("stack");
-    let workspace_root = root.join("workspace");
-    seed_workspace_base(&stack_root, &workspace_root)?;
-    let runtime = isolated_runtime(&scratch, Path::new("/testbed"));
-    let host = runtime.create_host_for_legacy_layer_stack_root_with_scratch_root_for_test(
-        "caller-host",
-        "invoke-host-destroy",
-        &stack_root,
-        &host_scratch,
-    )?;
-    let lease = host.lease.clone();
-
-    let first = host.lease.release();
-    drop(host);
-    let second = lease.release();
-
-    assert_eq!(first.released, Some(true));
-    assert_eq!(first.error, None);
-    assert_eq!(second.released, Some(false));
-    assert_eq!(second.error, None);
-    assert_eq!(
-        layerstack::LayerStack::open(stack_root.clone())?.active_lease_count(),
-        0
-    );
-    let _ = std::fs::remove_dir_all(&root);
-    Ok(())
-}
-
-#[test]
 fn workspace_runtime_command_route_selects_isolated_when_caller_has_active_handle() -> TestResult {
     let root = test_root("command-route-isolated");
     let scratch = root.join("scratch");
@@ -322,7 +214,7 @@ fn workspace_runtime_command_route_selects_isolated_when_caller_has_active_handl
 
     let route = runtime.route_command_context("caller-route", "invoke-route", None)?;
 
-    assert_eq!(route.trace_facts().kind, "isolated_network");
+    assert_eq!(route.trace_facts().kind, "workspace");
     assert_eq!(
         route.trace_facts().reason,
         "caller_has_open_isolated_network"
@@ -338,63 +230,27 @@ fn workspace_runtime_command_route_selects_isolated_when_caller_has_active_handl
 }
 
 #[test]
-fn workspace_runtime_command_route_selects_host_when_no_active_handle() -> TestResult {
-    let root = test_root("command-route-host");
+fn workspace_runtime_command_route_rejects_when_no_active_workspace() -> TestResult {
+    let root = test_root("command-route-reject-no-workspace");
     let scratch = root.join("scratch");
-    let host_scratch = root.join("host-scratch");
     let stack_root = root.join("stack");
     let workspace_root = root.join("workspace");
     seed_workspace_base(&stack_root, &workspace_root)?;
     let runtime = isolated_runtime(&scratch, Path::new("/testbed"));
 
-    let route = runtime.route_command_context_with_scratch_root_for_test(
+    let Err(error) = runtime.route_command_context(
         "caller-route",
-        "invoke-route-host",
+        "invoke-route-no-workspace",
         Some(stack_root.clone()),
-        &host_scratch,
-    )?;
-
-    assert_eq!(route.trace_facts().kind, "host");
-    assert_eq!(route.trace_facts().reason, "no_isolated_network_for_caller");
-    assert_eq!(
-        route.trace_facts().layer_stack_root,
-        Some(stack_root.clone())
-    );
-    assert_eq!(route.caller_id(), "caller-route");
-    assert!(!route.remountable(true));
-    assert_eq!(
-        layerstack::LayerStack::open(stack_root.clone())?.active_lease_count(),
-        1
-    );
-    drop(route);
-    assert_eq!(
-        layerstack::LayerStack::open(stack_root.clone())?.active_lease_count(),
-        0
-    );
-    let _ = std::fs::remove_dir_all(&root);
-    Ok(())
-}
-
-#[test]
-fn workspace_runtime_command_route_missing_root_stays_compatible() -> TestResult {
-    let root = test_root("command-route-missing-root");
-    let scratch = root.join("scratch");
-    let host_scratch = root.join("host-scratch");
-    let runtime = isolated_runtime(&scratch, Path::new("/testbed"));
-
-    let Err(error) = runtime.route_command_context_with_scratch_root_for_test(
-        "caller-route",
-        "invoke-route-missing-root",
-        None,
-        &host_scratch,
     ) else {
-        return Err("missing command route root unexpectedly succeeded".into());
+        return Err("command route without active workspace unexpectedly succeeded".into());
     };
 
     assert!(matches!(
         error,
         workspace::WorkspaceError::InvalidRequest { field, ref message }
-            if field == "layer_stack_root" && message == "layer_stack_root is required"
+            if field == "workspace_id"
+                && message.contains("legacy layer_stack_root fallback is removed")
     ));
     let _ = std::fs::remove_dir_all(&root);
     Ok(())

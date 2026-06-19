@@ -10,7 +10,7 @@ use super::*;
 fn workspace_mode_handle() -> WorkspaceModeHandle {
     WorkspaceModeHandle {
         workspace_id: WorkspaceModeId("isolated-handle".to_owned()),
-        network: NetworkMode::Isolated,
+        profile: WorkspaceProfile::Isolated,
         caller_id: "caller-1".to_owned(),
         lease_id: "lease-1".to_owned(),
         manifest_version: 42,
@@ -42,7 +42,7 @@ fn assert_handle_projection(public: &WorkspaceHandle) {
     assert_eq!(public.id, WorkspaceId("isolated-handle".to_owned()));
     assert_eq!(public.owner, CallerId("caller-1".to_owned()));
     assert_eq!(public.workspace_root, PathBuf::from("/workspace"));
-    assert_eq!(public.network, NetworkMode::Isolated);
+    assert_eq!(public.profile, WorkspaceProfile::Isolated);
     assert_eq!(
         public.base_revision,
         BaseRevision {
@@ -140,7 +140,7 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
                 caller_id: CallerId("caller".to_owned()),
                 workspace_root: "/workspace".into(),
                 layer_stack_root: "/layers".into(),
-                network: NetworkMode::Host,
+                profile: WorkspaceProfile::HostCompatible,
             }
         ),
         format!(
@@ -149,7 +149,7 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
                 id: WorkspaceId("workspace".to_owned()),
                 owner: CallerId("caller".to_owned()),
                 workspace_root: "/workspace".into(),
-                network: NetworkMode::Host,
+                profile: WorkspaceProfile::HostCompatible,
                 base_revision: base_revision.clone(),
                 snapshot: LayerStackSnapshotRef {
                     lease_id: LeaseId("lease".to_owned()),
@@ -199,7 +199,7 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
                     id: WorkspaceId("workspace".to_owned()),
                     owner: CallerId("caller".to_owned()),
                     workspace_root: "/workspace".into(),
-                    network: NetworkMode::Host,
+                    profile: WorkspaceProfile::HostCompatible,
                     base_revision: BaseRevision {
                         version: 1,
                         root_hash: "root".to_owned(),
@@ -285,13 +285,13 @@ fn public_dtos_construct_clone_and_compare() {
         caller_id: CallerId("caller".to_owned()),
         workspace_root: "/workspace".into(),
         layer_stack_root: "/layers".into(),
-        network: NetworkMode::Host,
+        profile: WorkspaceProfile::HostCompatible,
     };
     let handle = WorkspaceHandle {
         id: WorkspaceId("workspace".to_owned()),
         owner: CallerId("caller".to_owned()),
         workspace_root: "/workspace".into(),
-        network: NetworkMode::Host,
+        profile: WorkspaceProfile::HostCompatible,
         base_revision: base_revision.clone(),
         snapshot: LayerStackSnapshotRef {
             lease_id: LeaseId("lease".to_owned()),

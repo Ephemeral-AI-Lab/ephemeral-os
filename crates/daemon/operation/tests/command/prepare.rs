@@ -5,36 +5,19 @@ use linux_namespace_subprocess::protocol::{
 use super::*;
 
 #[test]
-fn workspace_command_prepares_setns_for_host_and_isolated() -> Result<(), Box<dyn std::error::Error>>
-{
+fn workspace_command_prepares_setns_from_workspace_context(
+) -> Result<(), Box<dyn std::error::Error>> {
     let root = prepare_root("setns-only");
-    let host_dirs = overlay_dirs(&root.join("host-run"));
-    let host_prepared = prepare_host(
-        prepare_inputs(&root, "host-command", "host"),
-        &root.join("workspace"),
-        &[root.join("layer")],
-        &host_dirs,
-        &host_dirs.run_dir,
-        Some(host_ns_fds()),
-    )
-    .expect("host workspace command prepares");
-    let host_request: RunRequest = serde_json::from_value(host_prepared.run_request)?;
-    assert_eq!(host_request.mode, RunMode::SetNs);
-    assert_eq!(host_request.ns_fds.expect("host ns_fds").net, None);
-
     let mode_context = workspace_mode_context(&root, all_ns_fds_map());
-    let isolated_network_prepared = prepare_isolated_network(
-        prepare_inputs(&root, "isolated-command", "isolated_network"),
+    let prepared = prepare_workspace(
+        prepare_inputs(&root, "workspace-command", "workspace"),
         &mode_context,
     )
-    .expect("isolated network command prepares");
-    let isolated_request: RunRequest =
-        serde_json::from_value(isolated_network_prepared.run_request)?;
-    assert_eq!(isolated_request.mode, RunMode::SetNs);
-    assert_eq!(
-        isolated_request.ns_fds.expect("isolated ns_fds").net,
-        Some(Fd(13))
-    );
+    .expect("workspace command prepares");
+    let request: RunRequest = serde_json::from_value(prepared.run_request)?;
+    assert_eq!(request.mode, RunMode::SetNs);
+    assert_eq!(request.ns_fds.expect("workspace ns_fds").net, Some(Fd(13)));
+    assert_eq!(request.cgroup_path, mode_context.cgroup_path);
 
     let _ = std::fs::remove_dir_all(root);
     Ok(())
@@ -44,41 +27,26 @@ fn workspace_command_prepares_setns_for_host_and_isolated() -> Result<(), Box<dy
 fn workspace_command_missing_holder_fds_fails_without_freshns_fallback(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let root = prepare_root("missing-holder-fds");
-    let host_dirs = overlay_dirs(&root.join("host-run"));
-
-    let host_error = prepare_host(
-        prepare_inputs(&root, "host-missing", "host"),
-        &root.join("workspace"),
-        &[root.join("layer")],
-        &host_dirs,
-        &host_dirs.run_dir,
-        None,
-    )
-    .expect_err("host command should reject missing holder fds");
-    assert!(host_error
-        .error
-        .to_string()
-        .contains("host workspace command requires setns holder fds"));
 
     let missing_fds_context = workspace_mode_context(&root, std::collections::HashMap::new());
-    let isolated_network_error = prepare_isolated_network(
-        prepare_inputs(&root, "isolated-missing", "isolated_network"),
+    let missing_fds_error = prepare_workspace(
+        prepare_inputs(&root, "workspace-missing", "workspace"),
         &missing_fds_context,
     )
-    .expect_err("isolated command should reject missing holder fds");
-    assert!(isolated_network_error
+    .expect_err("workspace command should reject missing holder fds");
+    assert!(missing_fds_error
         .error
         .to_string()
-        .contains("isolated_network workspace command requires setns holder fds"));
+        .contains("command workspace requires setns holder fds"));
 
     let mut missing_net = all_ns_fds_map();
     missing_net.remove("net");
     let missing_net_context = workspace_mode_context(&root, missing_net);
-    let missing_net_error = prepare_isolated_network(
-        prepare_inputs(&root, "isolated-missing-net", "isolated_network"),
+    let missing_net_error = prepare_workspace(
+        prepare_inputs(&root, "workspace-missing-net", "workspace"),
         &missing_net_context,
     )
-    .expect_err("isolated command should require net fd");
+    .expect_err("workspace command should require net fd");
     assert!(missing_net_error
         .error
         .to_string()
@@ -107,7 +75,7 @@ fn finish_prepare_records_prepared_and_metadata_artifact_events() {
             remountable: false,
             timeout_seconds: Some(5.0),
             command_dir: command_dir.clone(),
-            workspace_label: "isolated_network",
+            workspace_label: "workspace",
         },
         RunRequest {
             mode: RunMode::FreshNs,
@@ -137,10 +105,7 @@ fn finish_prepare_records_prepared_and_metadata_artifact_events() {
         prepared.trace_events[0].details["command_id"],
         "cmd_prepare"
     );
-    assert_eq!(
-        prepared.trace_events[0].details["workspace"],
-        "isolated_network"
-    );
+    assert_eq!(prepared.trace_events[0].details["workspace"], "workspace");
     assert_eq!(prepared.trace_events[1].name, "artifact_written");
     assert_eq!(prepared.trace_events[1].details["artifact"], "metadata");
     assert_eq!(
@@ -182,7 +147,7 @@ fn finish_prepare_reports_metadata_artifact_write_failure() {
             remountable: false,
             timeout_seconds: Some(5.0),
             command_dir: command_dir.clone(),
-            workspace_label: "isolated_network",
+            workspace_label: "workspace",
         },
         RunRequest {
             mode: RunMode::FreshNs,
@@ -251,23 +216,6 @@ fn prepare_inputs(
     }
 }
 
-fn overlay_dirs(run_dir: &std::path::Path) -> OverlayDirs {
-    OverlayDirs {
-        run_dir: run_dir.to_path_buf(),
-        upperdir: run_dir.join("upper"),
-        workdir: run_dir.join("work"),
-    }
-}
-
-fn host_ns_fds() -> workspace::profile::host_compatible::WorkspaceNamespaceFds {
-    workspace::profile::host_compatible::WorkspaceNamespaceFds::from_raw_parts(
-        Some(10),
-        Some(11),
-        Some(12),
-        None,
-    )
-}
-
 fn all_ns_fds_map() -> std::collections::HashMap<String, i32> {
     [("user", 10), ("mnt", 11), ("pid", 12), ("net", 13)]
         .into_iter()
@@ -282,7 +230,7 @@ fn workspace_mode_context(
     workspace::profile::WorkspaceModeContext {
         caller_id: "caller".to_owned(),
         workspace_handle_id: "workspace-handle".to_owned(),
-        network: workspace::NetworkMode::Isolated,
+        profile: workspace::WorkspaceProfile::Isolated,
         layer_stack_root: root.join("stack"),
         manifest_version: 1,
         manifest_root_hash: "root".to_owned(),

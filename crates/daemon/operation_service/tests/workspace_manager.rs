@@ -8,8 +8,9 @@ use operation_service::workspace_manager::{
 use workspace::{
     BaseRevision, CallerId, CaptureChangesRequest, CapturedWorkspaceChanges,
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
-    LayerStackSnapshotRef, LeaseId, NetworkMode, ReadonlySnapshotHandle, RemountWorkspaceRequest,
-    RemountWorkspaceResult, WorkspaceError, WorkspaceHandle, WorkspaceId, WorkspaceService,
+    LayerStackSnapshotRef, LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest,
+    RemountWorkspaceResult, WorkspaceError, WorkspaceHandle, WorkspaceId, WorkspaceProfile,
+    WorkspaceService,
 };
 
 struct FakeWorkspaceService {
@@ -176,7 +177,7 @@ fn create_request(caller_id: &str) -> CreateWorkspaceRequest {
         caller_id: CallerId(caller_id.to_owned()),
         workspace_root: PathBuf::from("/workspace"),
         layer_stack_root: PathBuf::from("/layers"),
-        network: NetworkMode::Host,
+        profile: WorkspaceProfile::HostCompatible,
     }
 }
 
@@ -191,7 +192,7 @@ fn workspace_handle(workspace_id: &str, caller_id: &str, lease_id: &str) -> Work
         id: WorkspaceId(workspace_id.to_owned()),
         owner: CallerId(caller_id.to_owned()),
         workspace_root: PathBuf::from("/workspace"),
-        network: NetworkMode::Host,
+        profile: WorkspaceProfile::HostCompatible,
         base_revision: BaseRevision {
             version: 1,
             root_hash: "root".to_owned(),
