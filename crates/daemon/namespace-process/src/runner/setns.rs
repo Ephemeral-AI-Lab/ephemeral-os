@@ -29,7 +29,7 @@ const RESOLV_CONF: &str = "/etc/resolv.conf";
 #[cfg(target_os = "linux")]
 pub(crate) fn run_setns(request: &NamespaceCommandRequest) -> Result<RunResult, RunnerError> {
     let ns_fds = require_ns_fds(request)?;
-    let mut timings = super::command_exec::RunnerPhaseTimings::default();
+    let mut timings = super::shell_exec::RunnerPhaseTimings::default();
     let cgroup_start = Instant::now();
     join_cgroup(request)?;
     timings.insert_s(
@@ -42,7 +42,7 @@ pub(crate) fn run_setns(request: &NamespaceCommandRequest) -> Result<RunResult, 
         "workspace.setns_join_s",
         setns_start.elapsed().as_secs_f64(),
     );
-    super::command_exec::execute_command(request, timings, Instant::now(), None)
+    super::shell_exec::execute_shell(request, timings, Instant::now(), None)
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -326,7 +326,7 @@ fn remount_verification_report(
     let lowerdir_count_matched =
         mountinfo_lowerdir_count_matched(mountinfo.as_ref(), lowerdir_expected_count);
     let lowerdir_verified = mountinfo_lowerdir_verified(mountinfo.as_ref(), &request.layer_paths);
-    let probe_verified = probe.as_ref().map_or(true, RemountReadProbe::verified);
+    let probe_verified = probe.as_ref().is_none_or(RemountReadProbe::verified);
     let mount_verified = overlay_mounted
         && lowerdir_verified == Some(true)
         && probe_verified
@@ -363,7 +363,7 @@ fn overlay_mount_verified(request: &NamespaceCommandRequest, workspace_root: &Pa
     let lowerdir_verified = mountinfo_lowerdir_verified(mountinfo.as_ref(), &request.layer_paths);
     let probe_verified = read_probe_at_root(request, workspace_root)
         .as_ref()
-        .map_or(true, RemountReadProbe::verified);
+        .is_none_or(RemountReadProbe::verified);
     overlay_mounted && lowerdir_verified == Some(true) && probe_verified
 }
 

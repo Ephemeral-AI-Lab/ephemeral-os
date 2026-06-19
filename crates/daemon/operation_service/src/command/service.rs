@@ -1,16 +1,12 @@
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 use crate::command::{
-    CancellationState, CommandLaunchDriver, CommandLifecycleState, CommandProcessStore,
-    CommandRegistry, CommandServiceError, CompletedCommandRecord, FinalizationState,
-    RealCommandLaunchDriver,
+    CommandLaunchDriver, CommandProcessStore, CommandRegistry, CommandServiceError,
+    CompletedCommandRecord, FinalizationState, RealCommandLaunchDriver,
 };
-use crate::workspace_crate::{CallerId, WorkspaceId};
-use crate::workspace_remount::command_quiesce::{merge_report, ProcProcessGroupController};
-use crate::workspace_remount::{
-    CommandRemountInspection, CommandRemountQuiesce, ProcessGroupController,
-    RemountCancellationToken, RemountSwitchState,
-};
+use crate::workspace_crate::CallerId;
+use crate::workspace_remount::command_quiesce::ProcProcessGroupController;
+use crate::workspace_remount::ProcessGroupController;
 use crate::workspace_session::WorkspaceSessionService;
 
 mod impls;
@@ -167,92 +163,6 @@ impl CommandOperationService {
         self.remount_admission
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
-    }
-
-    pub(crate) fn begin_remount_quiesce_for_workspace_session(
-        &self,
-        workspace_session_id: &WorkspaceId,
-    ) -> CommandRemountQuiesce {
-        let _admission_guard = self.lock_remount_admission();
-        let command_ids = self
-            .registry()
-            .commands_for_workspace_session(workspace_session_id);
-        let cancellation = RemountCancellationToken::new();
-        let mut quiesce = CommandRemountQuiesce {
-            inspection: CommandRemountInspection {
-                active_commands: command_ids.len(),
-                ..CommandRemountInspection::default()
-            },
-            held_process_group_ids: Vec::new(),
-            command_ids: Vec::new(),
-            process_store: Arc::clone(self.process_store()),
-            cancellation,
-            switch_state: RemountSwitchState::Quiescing,
-            controller: self.remount_controller(),
-        };
-        if command_ids.is_empty() {
-            quiesce.switch_state = RemountSwitchState::ReadyToSwitch;
-            return quiesce;
-        }
-
-        for command_id in command_ids {
-            quiesce.inspection.command_ids.push(command_id.clone());
-            let Some(active) = self.process_store().active(&command_id) else {
-                quiesce
-                    .inspection
-                    .blocked_reason
-                    .get_or_insert_with(|| "active_command_missing".to_owned());
-                continue;
-            };
-            let process = Arc::clone(&active.process);
-            let workspace_root = active.workspace_root.clone();
-            drop(active);
-
-            let Some(pgid) = process.process_group_id() else {
-                quiesce
-                    .inspection
-                    .blocked_reason
-                    .get_or_insert_with(|| "process_group_unavailable".to_owned());
-                continue;
-            };
-            quiesce.inspection.process_group_ids.push(pgid);
-            quiesce.command_ids.push(command_id.clone());
-            let cancellation = quiesce.cancellation.clone();
-            if self
-                .process_store()
-                .update_active(&command_id, |active| {
-                    active.lifecycle_state = CommandLifecycleState::QuiescedForRemount;
-                    active.cancellation = CancellationState::None;
-                    active.remount_cancellation = Some(cancellation);
-                    active.remount_switch_state = Some(RemountSwitchState::Quiescing);
-                })
-                .is_none()
-            {
-                quiesce
-                    .inspection
-                    .blocked_reason
-                    .get_or_insert_with(|| "active_command_missing".to_owned());
-                continue;
-            }
-            let command_report = quiesce
-                .controller
-                .inspect_command_process_group(pgid, &workspace_root);
-            let held = command_report.blocked_reason.is_none();
-            merge_report(&mut quiesce.inspection, command_report);
-            if held {
-                quiesce.held_process_group_ids.push(pgid);
-            }
-        }
-
-        quiesce.inspection.command_ids.sort();
-        quiesce.inspection.command_ids.dedup();
-        quiesce.inspection.process_group_ids.sort_unstable();
-        quiesce.inspection.process_group_ids.dedup();
-        quiesce.set_switch_state(RemountSwitchState::ReadyToSwitch);
-        if !quiesce.inspection.can_live_remount() {
-            quiesce.resume();
-        }
-        quiesce
     }
 
     pub(crate) fn active_for_owner<'a>(

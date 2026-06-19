@@ -1,4 +1,4 @@
-//! Namespace command execution shared by setns runner modes.
+//! Namespace shell execution shared by setns runner modes.
 
 #[cfg(target_os = "linux")]
 use std::path::PathBuf;
@@ -15,14 +15,14 @@ use crate::runner::protocol::{NamespaceCommandRequest, RunResult};
 use serde_json::{json, Value};
 
 #[cfg(target_os = "linux")]
-mod child;
+mod request;
 #[cfg(target_os = "linux")]
-mod command;
+mod wait;
 
 #[cfg(target_os = "linux")]
-use child::*;
+use request::*;
 #[cfg(target_os = "linux")]
-use command::*;
+use wait::*;
 
 #[cfg(target_os = "linux")]
 #[derive(Debug, Default)]
@@ -47,17 +47,7 @@ impl RunnerPhaseTimings {
 }
 
 #[cfg(target_os = "linux")]
-pub(crate) fn execute_command(
-    request: &NamespaceCommandRequest,
-    timings: RunnerPhaseTimings,
-    run_start: Instant,
-    hidden_paths: Option<&[PathBuf]>,
-) -> Result<RunResult, RunnerError> {
-    execute_shell(request, timings, run_start, hidden_paths)
-}
-
-#[cfg(target_os = "linux")]
-fn execute_shell(
+pub(crate) fn execute_shell(
     request: &NamespaceCommandRequest,
     mut timings: RunnerPhaseTimings,
     run_start: Instant,

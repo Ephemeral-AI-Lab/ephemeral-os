@@ -30,7 +30,7 @@ pub(super) fn shell_argv(request: &NamespaceCommandRequest) -> Result<Vec<String
         ]);
     }
     Err(RunnerError::InvalidRequest(
-        "exec_command requires a shell-format command string".to_owned(),
+        "shell execution requires a shell-format command string".to_owned(),
     ))
 }
 
@@ -137,5 +137,5 @@ pub(super) fn command_environment(args: &serde_json::Value) -> BTreeMap<String, 
 }
 
 #[cfg(test)]
-#[path = "../../../tests/unit/runner/command_exec/command.rs"]
+#[path = "../../../tests/unit/runner/shell_exec/request.rs"]
 mod tests;

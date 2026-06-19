@@ -10,24 +10,17 @@ use command::yield_wait_loop::WaitOutcome;
 use operation_service::command::{
     CommandLaunchDriver, CommandOperationService, CommandServiceError,
 };
-use operation_service::workspace_remount::{
-    CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountOptions,
-    WorkspaceRemountService,
-};
 use operation_service::workspace_session::WorkspaceSessionService;
-use operation_service::OperationServices;
 use workspace::{
     CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef,
     LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult,
-    WorkspaceError, WorkspaceHandle, WorkspaceProfile, WorkspaceService,
+    WorkspaceError, WorkspaceHandle, WorkspaceId, WorkspaceProfile, WorkspaceService,
 };
 
 pub struct TestServices {
     pub workspace: Arc<WorkspaceSessionService>,
     pub command: Arc<CommandOperationService>,
-    #[allow(dead_code)]
-    pub services: OperationServices,
 }
 
 #[derive(Default)]
@@ -37,8 +30,6 @@ pub struct FakeWorkspaceService {
     create_requests: Mutex<Vec<CreateWorkspaceRequest>>,
     destroy_calls: Mutex<Vec<WorkspaceId>>,
 }
-
-use workspace::WorkspaceId;
 
 #[derive(Debug, Default)]
 pub struct FakeLaunchDriver {
@@ -240,20 +231,7 @@ pub fn build_services_with_launch_driver(
         test_command_config(),
         launch_driver,
     ));
-    let remount_workspace: Arc<dyn RemountWorkspaceSession> = workspace.clone();
-    let remount_command: Arc<dyn CommandRemountCoordinator> = command.clone();
-    let remount = Arc::new(WorkspaceRemountService::new(
-        remount_workspace,
-        remount_command,
-        WorkspaceRemountOptions::default(),
-    ));
-    let services = OperationServices::new(Arc::clone(&workspace), Arc::clone(&command), remount);
-
-    TestServices {
-        workspace,
-        command,
-        services,
-    }
+    TestServices { workspace, command }
 }
 
 pub fn create_request(caller_id: &str, workspace_root: PathBuf) -> CreateWorkspaceRequest {

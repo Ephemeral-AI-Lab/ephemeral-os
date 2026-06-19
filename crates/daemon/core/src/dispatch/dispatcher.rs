@@ -1,5 +1,4 @@
-//! Request validation and unknown-operation responses after removal of the
-//! legacy operation adapter.
+//! Request validation and unknown-operation responses for the daemon dispatcher.
 
 use serde_json::{json, Value};
 

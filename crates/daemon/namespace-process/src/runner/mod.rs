@@ -13,9 +13,9 @@ use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
-mod command_exec;
 pub mod protocol;
 pub mod setns;
+mod shell_exec;
 
 pub mod config {
     pub use config::configs::runner::*;

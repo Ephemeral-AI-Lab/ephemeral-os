@@ -5,7 +5,7 @@ use std::path::Path;
 type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
 #[test]
-fn exec_command_string_uses_non_login_bash() -> TestResult {
+fn shell_exec_command_string_uses_non_login_bash() -> TestResult {
     let argv = shell_argv(&request(serde_json::json!({"command": "echo hi"})))?;
     assert_eq!(
         argv,
@@ -17,10 +17,10 @@ fn exec_command_string_uses_non_login_bash() -> TestResult {
 }
 
 #[test]
-fn exec_command_rejects_raw_argv() -> TestResult {
+fn shell_exec_rejects_raw_argv() -> TestResult {
     let error = match shell_argv(&request(serde_json::json!({"command": ["echo", "hi"]}))) {
         Ok(argv) => {
-            return Err(format!("exec_command raw argv unexpectedly accepted: {argv:?}").into())
+            return Err(format!("shell_exec raw argv unexpectedly accepted: {argv:?}").into())
         }
         Err(error) => error,
     };
@@ -29,7 +29,7 @@ fn exec_command_rejects_raw_argv() -> TestResult {
 }
 
 #[test]
-fn exec_command_rejects_external_cwd_unless_remountable() -> TestResult {
+fn shell_exec_rejects_external_cwd_unless_remountable() -> TestResult {
     let external = format!("/tmp/namespace-remountable-cwd-{}", std::process::id());
     let rejected = request(serde_json::json!({"command": "pwd", "cwd": external}));
     let error = shell_cwd(&rejected).expect_err("external cwd should require remountable opt-in");
@@ -38,7 +38,7 @@ fn exec_command_rejects_external_cwd_unless_remountable() -> TestResult {
 }
 
 #[test]
-fn exec_command_remountable_allows_external_cwd() -> TestResult {
+fn shell_exec_remountable_allows_external_cwd() -> TestResult {
     let external =
         std::env::temp_dir().join(format!("namespace-remountable-cwd-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&external);

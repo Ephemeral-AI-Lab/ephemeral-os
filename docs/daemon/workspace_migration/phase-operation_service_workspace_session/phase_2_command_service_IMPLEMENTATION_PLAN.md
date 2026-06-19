@@ -1772,7 +1772,7 @@ operation services, and shape protocol responses.
 - `crates/shared/protocol/src/catalog.rs`
 - `crates/daemon/core/tests/unit/command/*`
 - `crates/daemon/operation_service/tests/command_exec.rs`
-- `crates/daemon/namespace-process/tests/unit/runner/command_exec/*`
+- `crates/daemon/namespace-process/tests/unit/runner/shell_exec/*`
 - Temporary compatibility files in `crates/daemon/operation/src/command` only
   if needed
 
