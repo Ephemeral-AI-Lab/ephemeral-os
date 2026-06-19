@@ -1057,7 +1057,7 @@ Rules:
 
 ## Milestone 6.7: Workspace Profile Carrier Rename
 
-- Status: In progress.
+- Status: Complete.
 - Spec:
   `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_milestone_6_6_workspace_profile_symmetry_SPEC.md`
 - Starting state:
@@ -1107,10 +1107,77 @@ Rules:
     isolated-network setup, veth, DNS, net-ready, and holder network arguments.
   - Historical docs/test fixture references: older milestone notes and agent
     prompts that intentionally describe pre-6.7 vocabulary.
+- Files changed:
+  - `crates/daemon/workspace/src/model.rs`
+  - `crates/daemon/workspace/src/lib.rs`
+  - `crates/daemon/workspace/src/profile/common.rs`
+  - `crates/daemon/workspace/src/profile/handle.rs`
+  - `crates/daemon/workspace/src/profile/host_compatible.rs`
+  - `crates/daemon/workspace/src/profile/isolated.rs`
+  - `crates/daemon/workspace/src/lifecycle/create.rs`
+  - `crates/daemon/workspace/src/lifecycle/destroy.rs`
+  - `crates/daemon/workspace/src/lifecycle/recovery.rs`
+  - focused workspace tests under `crates/daemon/workspace/tests`
+  - `crates/daemon/operation_service/src/workspace_manager/service.rs`
+  - `crates/daemon/operation_service/src/workspace_manager/session_manager.rs`
+  - `crates/daemon/operation_service/src/command/exec.rs`
+  - `crates/daemon/operation_service/src/command/finalize_tests.rs`
+  - focused operation-service tests under
+    `crates/daemon/operation_service/tests`
+  - `crates/daemon/core/src/runtime/workspace.rs`
+  - focused operation/core tests that construct workspace contexts
+  - Phase 2 migration docs, including the parent plan, this implementation
+    record, the Phase 6.6/6.7 spec, and the Milestone 6.7 prompt.
 - Verification:
+  - Static scan:
+    `rg -n "NetworkMode|\\.network\\b|network:|enter_with_network|for_mode|network_mode" crates/daemon/workspace/src crates/daemon/operation_service/src crates/daemon/core/src crates/daemon/operation/src`
+    returned only accepted lower-level network implementation/config matches:
+    `IsolatedNetwork` fields/parameters and `self.network` calls, daemon
+    `isolated_network` config names, `NamespaceNetwork` and namespace-plan
+    fields, holder network arguments, lifecycle calls into the isolated-network
+    manager, and netfilter `network: Ipv4Addr`.
+  - Static scan:
+    `rg -n "WorkspaceProfile<'|enum WorkspaceProfile<'|trait WorkspaceProfile" crates/daemon/workspace/src/profile`
+    returned no matches; the internal dispatcher is now
+    `WorkspaceProfileRuntime<'a>`.
+  - Static scan:
+    `rg -n "NetworkMode::Host|NetworkMode::Isolated|network mode|network_mode" docs/daemon/workspace_migration/phase-operation_service_workspace_session`
+    returned historical milestone/prompt/spec references and static-scan
+    commands only; these are documentation history or explicit rename evidence,
+    not current production code.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p workspace`:
+    passed.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p workspace`:
+    passed, 26 unit tests and 0 doc tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p operation_service`:
+    passed.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_exec`:
+    passed, 7 matching unit tests and 14 matching integration tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_remount`:
+    passed, 7 matching unit tests and 6 matching integration tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service workspace_remount`:
+    passed, 1 matching service-graph test and 6 matching integration tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p daemon`:
+    passed.
+  - `cargo fmt --check`: passed.
+  - `git diff --check`: passed.
 - Deviations:
+  - No temporary `NetworkMode` compatibility alias remains. New code imports and
+    uses `WorkspaceProfile`.
+  - Persisted manager rows previously did not write a selector. New persisted
+    rows write `profile`; old rows without a selector remain compatible because
+    recovery cleanup reads holder, namespace, cgroup, veth, and scratch fields
+    without needing to reconstruct the selector.
+  - Existing operation/runtime dispatch edits from the pre-6.7 working tree were
+    left intact and were not expanded as part of the selector/carrier rename.
 - Unresolved issues:
+  - None for Milestone 6.7.
+  - Historical migration docs and prompts intentionally retain old
+    `NetworkMode`/`network_mode` vocabulary as history and scan evidence.
 - Handoff notes:
+  - Milestone 7 should continue from the profile-neutral
+    `WorkspaceProfile`/`profile` carrier surface and must preserve lower-level
+    network namespace vocabulary for actual network mechanics.
 
 ## Milestone 7: Daemon Dispatch Migration Away From WorkspaceRuntime
 
