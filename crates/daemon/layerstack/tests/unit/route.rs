@@ -5,9 +5,7 @@ use crate::model::LayerChange;
 use crate::test_fixture::{lp, Fixture, TestResult};
 use crate::{service, CommitOptions, CommitStatus, LayerStack};
 
-use super::{
-    publish_decision_for_opaque_dir, publish_decisions_for_manifest,
-    route_decision_for_path_from_source, ManifestIgnoreSource, Route,
+use crate::commit::route::model::{
     COMMAND_SCRATCH_PATH_DROP_REASON, DAEMON_CONTROL_PATH_DROP_REASON,
     GIT_HOOK_WRITE_REJECT_REASON, GIT_INCOMPLETE_OPERATION_REJECT_REASON,
     GIT_INDEX_STAGED_STATE_REJECT_REASON, GIT_INDEX_STAT_REFRESH_DROP_REASON,
@@ -16,6 +14,10 @@ use super::{
     GIT_OBJECT_REWRITE_REJECT_REASON, GIT_REFLOG_REWRITE_REJECT_REASON,
     GIT_REF_WRITE_REJECT_REASON, OPAQUE_DIR_EXPANSION_LIMIT_DROP_REASON,
     OPAQUE_DIR_MIXED_ROUTES_DROP_REASON, OPAQUE_DIR_PROTECTED_DESCENDANT_DROP_REASON,
+};
+use crate::commit::route::{
+    publish_decision_for_opaque_dir, publish_decisions_for_manifest,
+    route_decision_for_path_from_source, ManifestIgnoreSource, Route,
 };
 
 #[test]

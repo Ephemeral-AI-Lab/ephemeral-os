@@ -98,6 +98,138 @@ async fn inline_async_test() {}
 }
 
 #[test]
+fn rejects_test_support_attribute_in_source() {
+    let root = temp_root("source-test-support-attribute");
+    let src = root.join("crate/src");
+    fs::create_dir_all(&src).expect("create source dir");
+    fs::write(
+        src.join("lib.rs"),
+        r#"
+#[should_panic]
+fn helper() {}
+"#,
+    )
+    .expect("write source file");
+
+    let output = run_check(&root);
+
+    fs::remove_dir_all(&root).expect("remove temp root");
+    assert!(!output.status.success(), "test support attrs should fail");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("test support attribute"), "{stderr}");
+}
+
+#[test]
+fn rejects_bench_attribute_in_source() {
+    let root = temp_root("source-bench-attribute");
+    let src = root.join("crate/src");
+    fs::create_dir_all(&src).expect("create source dir");
+    fs::write(
+        src.join("lib.rs"),
+        r#"
+#[divan::bench]
+fn helper() {}
+"#,
+    )
+    .expect("write source file");
+
+    let output = run_check(&root);
+
+    fs::remove_dir_all(&root).expect("remove temp root");
+    assert!(!output.status.success(), "bench attrs should fail");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("bench attribute"), "{stderr}");
+}
+
+#[test]
+fn rejects_broad_allow_in_source() {
+    let root = temp_root("source-broad-allow");
+    let src = root.join("crate/src");
+    fs::create_dir_all(&src).expect("create source dir");
+    fs::write(
+        src.join("lib.rs"),
+        r#"
+#[allow(dead_code)]
+fn helper() {}
+"#,
+    )
+    .expect("write source file");
+
+    let output = run_check(&root);
+
+    fs::remove_dir_all(&root).expect("remove temp root");
+    assert!(!output.status.success(), "broad allow attrs should fail");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("broad lint suppression"), "{stderr}");
+}
+
+#[test]
+fn rejects_module_layout_escape_hatches_in_source() {
+    let root = temp_root("source-module-layout-attribute");
+    let src = root.join("crate/src");
+    fs::create_dir_all(&src).expect("create source dir");
+    fs::write(
+        src.join("lib.rs"),
+        r#"
+#[path = "other.rs"]
+mod other;
+"#,
+    )
+    .expect("write source file");
+
+    let output = run_check(&root);
+
+    fs::remove_dir_all(&root).expect("remove temp root");
+    assert!(!output.status.success(), "path attrs should fail");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("path attribute"), "{stderr}");
+}
+
+#[test]
+fn rejects_macro_use_in_source() {
+    let root = temp_root("source-macro-use");
+    let src = root.join("crate/src");
+    fs::create_dir_all(&src).expect("create source dir");
+    fs::write(
+        src.join("lib.rs"),
+        r#"
+#[macro_use]
+extern crate legacy;
+"#,
+    )
+    .expect("write source file");
+
+    let output = run_check(&root);
+
+    fs::remove_dir_all(&root).expect("remove temp root");
+    assert!(!output.status.success(), "macro_use attrs should fail");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("macro_use attribute"), "{stderr}");
+}
+
+#[test]
+fn rejects_abi_linkage_attribute_in_source() {
+    let root = temp_root("source-abi-linkage");
+    let src = root.join("crate/src");
+    fs::create_dir_all(&src).expect("create source dir");
+    fs::write(
+        src.join("lib.rs"),
+        r#"
+#[repr(C, packed)]
+struct Wire([u8; 4]);
+"#,
+    )
+    .expect("write source file");
+
+    let output = run_check(&root);
+
+    fs::remove_dir_all(&root).expect("remove temp root");
+    assert!(!output.status.success(), "ABI/linkage attrs should fail");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("ABI/linkage attribute"), "{stderr}");
+}
+
+#[test]
 fn allows_crate_root_tests_directory() {
     let root = temp_root("crate-tests");
     let crate_root = root.join("crate");
@@ -123,6 +255,36 @@ fn external_test() {}
     assert!(
         output.status.success(),
         "crate-root tests/ directories should be allowed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
+fn allows_crate_root_benches_directory() {
+    let root = temp_root("crate-benches");
+    let crate_root = root.join("crate");
+    let benches = crate_root.join("benches");
+    fs::create_dir_all(&benches).expect("create benches dir");
+    fs::write(
+        crate_root.join("Cargo.toml"),
+        "[package]\nname = \"fake\"\n",
+    )
+    .expect("write manifest");
+    fs::write(
+        benches.join("bench.rs"),
+        r#"
+#[divan::bench]
+fn external_bench() {}
+"#,
+    )
+    .expect("write bench file");
+
+    let output = run_check(&root);
+
+    fs::remove_dir_all(&root).expect("remove temp root");
+    assert!(
+        output.status.success(),
+        "crate-root benches/ directories should be allowed: {}",
         String::from_utf8_lossy(&output.stderr)
     );
 }

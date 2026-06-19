@@ -1,4 +1,5 @@
-use crate::commit::{publish_decisions_for_manifest, CommitError};
+use crate::commit::route::publish_decisions_for_manifest;
+use crate::commit::CommitError;
 
 use super::super::cache::service_for_root;
 use super::super::model::{PublishChangesRequest, PublishChangesResult};

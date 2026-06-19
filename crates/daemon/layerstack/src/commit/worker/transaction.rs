@@ -8,7 +8,8 @@ use crate::fs::resolve_layer_path;
 use crate::model::{LayerChange, LayerPath, Manifest};
 use crate::{CommitOptions, LayerStack, MergedView};
 
-use super::super::{hash_current, ChangesetResult, CommitStatus, FileResult, OccTraceEvent, Route};
+use super::super::model::{ChangesetResult, CommitStatus, FileResult, OccTraceEvent};
+use super::super::route::{hash_current, PublishDecision, Route};
 use super::auto_squash::{run_auto_squash, AutoSquashTrace};
 use super::queue::{PreparedChangeset, PublishConflict};
 use trace::usize_to_f64_saturating;
@@ -300,7 +301,7 @@ fn validate_gated_group(
     root: &Path,
     view: &MergedView,
     manifest: &Manifest,
-    group: &super::super::PublishDecision,
+    group: &PublishDecision,
     parent_absent_cache: &mut HashMap<String, bool>,
 ) -> FileResult {
     if let Some(validation_base_hashes) = &group.validation_base_hashes {

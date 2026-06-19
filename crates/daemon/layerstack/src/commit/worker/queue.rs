@@ -4,9 +4,9 @@ use std::time::Duration;
 
 use serde_json::json;
 
-use super::super::{
-    ChangesetResult, CommitError, CommitStatus, FileResult, OccTraceEvent, PublishDecision, Route,
-};
+use super::super::model::{ChangesetResult, CommitStatus, FileResult, OccTraceEvent};
+use super::super::route::{PublishDecision, Route};
+use super::super::CommitError;
 use super::transaction::{commit_timings, CommitTransaction};
 
 pub(crate) const COMMIT_QUEUE_THREAD_NAME: &str = "occ-commit-queue";

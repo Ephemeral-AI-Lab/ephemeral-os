@@ -1,11 +1,12 @@
 use std::path::PathBuf;
 
-use crate::commit::{hash_current, CommitStatus, PreparedChangeset, PublishDecision, Route};
+use crate::commit::route::{hash_current, PublishDecision, Route};
+use crate::commit::worker::auto_squash::run_auto_squash;
+use crate::commit::worker::{CommitTransaction, PreparedChangeset};
+use crate::commit::CommitStatus;
 use crate::model::LayerChange;
 use crate::test_fixture::{lp, Fixture, TestResult};
 use crate::{CommitOptions, LayerPath, LayerStack, LayerStackError, Manifest, MergedView};
-
-use super::{run_auto_squash, CommitTransaction};
 
 fn transaction(fixture: &Fixture) -> CommitTransaction {
     CommitTransaction {

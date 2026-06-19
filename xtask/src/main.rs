@@ -20,6 +20,7 @@ const AMD64_TARGET: &str = "x86_64-unknown-linux-musl";
 const ARM64_TARGET: &str = "aarch64-unknown-linux-musl";
 const DEFAULT_PACKAGE_PROFILE: &str = "package-fast";
 const FAST_PACKAGE_PROFILE: &str = "package-fast";
+const MAX_MOD_OR_LIB_LINES: usize = 300;
 
 fn main() -> Result<()> {
     let mut args = env::args_os();
@@ -30,6 +31,9 @@ fn main() -> Result<()> {
         .as_deref()
     {
         Some("package") => package(&PackageArgs::parse(args)?),
+        Some("check-mod-lib-size") => {
+            check_mod_lib_size_policy(&ModLibSizePolicyArgs::parse(args)?)
+        }
         Some("check-inline-cfg-test" | "check-inline-tests") => {
             check_inline_test_policy(&InlineTestPolicyArgs::parse(args)?)
         }
@@ -47,6 +51,18 @@ struct InlineTestPolicyArgs {
 }
 
 #[derive(Debug)]
+struct ModLibSizePolicyArgs {
+    roots: Vec<PathBuf>,
+    max_lines: usize,
+}
+
+#[derive(Debug)]
+struct ModLibSizePolicyViolation {
+    path: PathBuf,
+    line_count: usize,
+}
+
+#[derive(Debug)]
 struct InlineTestPolicyViolation {
     path: PathBuf,
     line_number: usize,
@@ -54,11 +70,74 @@ struct InlineTestPolicyViolation {
     kind: InlineTestPolicyViolationKind,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum InlineTestPolicyViolationKind {
+    AbiLinkageAttribute,
+    BenchAttribute,
+    BroadAllowAttribute,
     CfgTest,
+    MacroUseAttribute,
+    PathAttribute,
+    TestSupportAttribute,
     TestAttribute,
 }
+
+#[derive(Debug)]
+struct InlineTestPolicyException {
+    path: &'static str,
+    kind: InlineTestPolicyViolationKind,
+}
+
+const INLINE_TEST_POLICY_EXCEPTIONS: &[InlineTestPolicyException] = &[
+    InlineTestPolicyException {
+        path: "crates/daemon/core/src/trace/mod.rs",
+        kind: InlineTestPolicyViolationKind::BroadAllowAttribute,
+    },
+    InlineTestPolicyException {
+        path: "crates/daemon/core/src/trace/sidecar/build.rs",
+        kind: InlineTestPolicyViolationKind::BroadAllowAttribute,
+    },
+    InlineTestPolicyException {
+        path: "crates/daemon/core/src/trace/spool.rs",
+        kind: InlineTestPolicyViolationKind::BroadAllowAttribute,
+    },
+    InlineTestPolicyException {
+        path: "crates/daemon/layerstack/src/service.rs",
+        kind: InlineTestPolicyViolationKind::BroadAllowAttribute,
+    },
+    InlineTestPolicyException {
+        path: "crates/daemon/layerstack/src/service.rs",
+        kind: InlineTestPolicyViolationKind::PathAttribute,
+    },
+    InlineTestPolicyException {
+        path: "crates/daemon/namespace-process/src/holder/namespace.rs",
+        kind: InlineTestPolicyViolationKind::BroadAllowAttribute,
+    },
+    InlineTestPolicyException {
+        path: "crates/daemon/namespace-process/src/runner/setns.rs",
+        kind: InlineTestPolicyViolationKind::BroadAllowAttribute,
+    },
+    InlineTestPolicyException {
+        path: "crates/daemon/operation_service/src/command/mod.rs",
+        kind: InlineTestPolicyViolationKind::PathAttribute,
+    },
+    InlineTestPolicyException {
+        path: "crates/daemon/operation_service/src/workspace_session/mod.rs",
+        kind: InlineTestPolicyViolationKind::PathAttribute,
+    },
+    InlineTestPolicyException {
+        path: "crates/host/src/container.rs",
+        kind: InlineTestPolicyViolationKind::BroadAllowAttribute,
+    },
+    InlineTestPolicyException {
+        path: "crates/host/src/daemon_wire.rs",
+        kind: InlineTestPolicyViolationKind::BroadAllowAttribute,
+    },
+    InlineTestPolicyException {
+        path: "crates/host/src/trace_store/mod.rs",
+        kind: InlineTestPolicyViolationKind::BroadAllowAttribute,
+    },
+];
 
 impl InlineTestPolicyArgs {
     fn parse<I>(args: I) -> Result<Self>
@@ -84,6 +163,42 @@ impl InlineTestPolicyArgs {
             roots.extend([PathBuf::from("crates"), PathBuf::from("xtask")]);
         }
         Ok(Self { roots })
+    }
+}
+
+impl ModLibSizePolicyArgs {
+    fn parse<I>(args: I) -> Result<Self>
+    where
+        I: IntoIterator<Item = OsString>,
+    {
+        let mut roots = Vec::new();
+        let mut max_lines = MAX_MOD_OR_LIB_LINES;
+        let mut iter = args.into_iter();
+        while let Some(arg) = iter.next() {
+            let arg = arg
+                .into_string()
+                .map_err(|_| anyhow::anyhow!("xtask arguments must be valid UTF-8"))?;
+            match arg.as_str() {
+                "--root" => roots.push(PathBuf::from(next_string(&mut iter, "--root")?)),
+                "--max-lines" => {
+                    max_lines = next_string(&mut iter, "--max-lines")?
+                        .parse()
+                        .context("--max-lines must be a positive integer")?;
+                    if max_lines == 0 {
+                        bail!("--max-lines must be positive");
+                    }
+                }
+                "--help" | "-h" => {
+                    print_help();
+                    std::process::exit(0);
+                }
+                other => bail!("unknown check-mod-lib-size option {other:?}"),
+            }
+        }
+        if roots.is_empty() {
+            roots.extend([PathBuf::from("crates"), PathBuf::from("xtask")]);
+        }
+        Ok(Self { roots, max_lines })
     }
 }
 
@@ -179,22 +294,23 @@ fn check_inline_test_policy(args: &InlineTestPolicyArgs) -> Result<()> {
                 .file_type()
                 .is_some_and(|file_type| file_type.is_file())
                 || !is_rust_source(path)
-                || is_under_crate_tests_dir(path)
+                || is_under_crate_dir(path, "tests")
+                || is_under_crate_dir(path, "benches")
             {
                 continue;
             }
-            collect_inline_test_policy_violations(path, &mut violations)?;
+            collect_inline_test_policy_violations(&root, path, &mut violations)?;
         }
     }
 
     if violations.is_empty() {
-        println!("no inline test-only attributes found in non-test Rust sources");
+        println!("no forbidden inline attributes found in production Rust sources");
         return Ok(());
     }
 
     eprintln!(
-        "inline #[cfg(test)] and #[test] attributes are forbidden in non-test Rust sources; \
-move tests to crate tests/ modules and keep production code test-neutral."
+        "test, bench, broad lint-suppression, module path, macro_use, and ABI/linkage \
+attributes are forbidden in production Rust sources unless explicitly allowlisted."
     );
     for violation in &violations {
         eprintln!(
@@ -206,18 +322,70 @@ move tests to crate tests/ modules and keep production code test-neutral."
         );
     }
     bail!(
-        "found {} forbidden inline test-only attributes",
+        "found {} forbidden inline production attributes",
         violations.len()
     )
 }
 
+fn check_mod_lib_size_policy(args: &ModLibSizePolicyArgs) -> Result<()> {
+    let root = workspace_root()?;
+    let mut violations = Vec::new();
+    for scan_root in &args.roots {
+        let scan_root = absolutize(&root, scan_root);
+        for entry in WalkBuilder::new(&scan_root).build() {
+            let entry = entry.with_context(|| format!("walk {}", scan_root.display()))?;
+            let path = entry.path();
+            if !entry
+                .file_type()
+                .is_some_and(|file_type| file_type.is_file())
+                || !is_mod_or_lib_source(path)
+            {
+                continue;
+            }
+            let line_count = count_lines(path)?;
+            if line_count > args.max_lines {
+                violations.push(ModLibSizePolicyViolation {
+                    path: path.to_path_buf(),
+                    line_count,
+                });
+            }
+        }
+    }
+
+    if violations.is_empty() {
+        println!(
+            "all mod.rs and lib.rs files are within {max_lines} lines",
+            max_lines = args.max_lines
+        );
+        return Ok(());
+    }
+
+    eprintln!(
+        "mod.rs and lib.rs files must be at most {} lines; move implementation \
+into focused sibling modules and keep facades small.",
+        args.max_lines
+    );
+    for violation in &violations {
+        eprintln!(
+            "{}: {} lines",
+            relative_to(&root, &violation.path).display(),
+            violation.line_count
+        );
+    }
+    bail!("found {} oversized mod.rs/lib.rs files", violations.len())
+}
+
 fn collect_inline_test_policy_violations(
+    root: &Path,
     path: &Path,
     violations: &mut Vec<InlineTestPolicyViolation>,
 ) -> Result<()> {
     let body = fs::read_to_string(path).with_context(|| format!("read {}", path.display()))?;
     for (line_index, line) in body.lines().enumerate() {
-        if let Some(kind) = line_inline_test_policy_violation_kind(line) {
+        let Some(kind) = line_inline_test_policy_violation_kind(line) else {
+            continue;
+        };
+        if !inline_test_policy_exception_allowed(root, path, &kind) {
             violations.push(InlineTestPolicyViolation {
                 path: path.to_path_buf(),
                 line_number: line_index + 1,
@@ -240,34 +408,113 @@ fn line_inline_test_policy_violation_kind(line: &str) -> Option<InlineTestPolicy
         .collect::<String>();
     if compact.starts_with("#[cfg(test)]") || compact.starts_with("#![cfg(test)]") {
         Some(InlineTestPolicyViolationKind::CfgTest)
-    } else if line_has_test_attribute(&compact) {
+    } else {
+        attribute_violation_kind(&compact)
+    }
+}
+
+fn attribute_violation_kind(compact_line: &str) -> Option<InlineTestPolicyViolationKind> {
+    let attribute = attribute_body(compact_line)?;
+    let (path, args) = attribute_path_and_args(attribute);
+    if is_test_attribute(path) {
         Some(InlineTestPolicyViolationKind::TestAttribute)
+    } else if is_test_support_attribute(path) {
+        Some(InlineTestPolicyViolationKind::TestSupportAttribute)
+    } else if is_bench_attribute(path) {
+        Some(InlineTestPolicyViolationKind::BenchAttribute)
+    } else if is_broad_allow_attribute(path, args) {
+        Some(InlineTestPolicyViolationKind::BroadAllowAttribute)
+    } else if path == "path" {
+        Some(InlineTestPolicyViolationKind::PathAttribute)
+    } else if path == "macro_use" {
+        Some(InlineTestPolicyViolationKind::MacroUseAttribute)
+    } else if is_abi_linkage_attribute(path, args) {
+        Some(InlineTestPolicyViolationKind::AbiLinkageAttribute)
     } else {
         None
     }
 }
 
-fn line_has_test_attribute(compact_line: &str) -> bool {
-    let Some(attribute) = compact_line.strip_prefix("#[") else {
-        return false;
-    };
-    let Some(attribute) = attribute.strip_suffix(']').or_else(|| {
+fn attribute_body(compact_line: &str) -> Option<&str> {
+    let attribute = compact_line
+        .strip_prefix("#![")
+        .or_else(|| compact_line.strip_prefix("#["))?;
+    attribute.strip_suffix(']').or_else(|| {
         attribute
             .split_once(']')
             .map(|(attribute, _rest)| attribute)
-    }) else {
-        return false;
-    };
-    let path = attribute
-        .split_once('(')
-        .map_or(attribute, |(path, _args)| path);
+    })
+}
+
+fn attribute_path_and_args(attribute: &str) -> (&str, Option<&str>) {
+    if let Some((path, args)) = attribute.split_once('(') {
+        (path, args.strip_suffix(')'))
+    } else if let Some((path, _value)) = attribute.split_once('=') {
+        (path, None)
+    } else {
+        (attribute, None)
+    }
+}
+
+fn is_test_attribute(path: &str) -> bool {
     path == "test" || path.ends_with("::test")
+}
+
+fn is_test_support_attribute(path: &str) -> bool {
+    matches!(
+        path,
+        "should_panic" | "ignore" | "rstest" | "case" | "test_case" | "quickcheck" | "proptest"
+    ) || path.ends_with("::rstest")
+        || path.ends_with("::case")
+        || path.ends_with("::test_case")
+        || path.ends_with("::quickcheck")
+        || path.ends_with("::proptest")
+}
+
+fn is_bench_attribute(path: &str) -> bool {
+    path == "bench" || path.ends_with("::bench")
+}
+
+fn is_broad_allow_attribute(path: &str, args: Option<&str>) -> bool {
+    if path != "allow" {
+        return false;
+    }
+    args.is_some_and(|args| {
+        args.split(',').any(|lint| {
+            matches!(
+                lint,
+                "warnings" | "unused" | "dead_code" | "unused_imports" | "clippy::all"
+            )
+        })
+    })
+}
+
+fn is_abi_linkage_attribute(path: &str, args: Option<&str>) -> bool {
+    matches!(path, "no_mangle" | "export_name" | "link_section" | "naked")
+        || (path == "repr" && args.is_some_and(|args| args.split(',').any(|arg| arg == "packed")))
+}
+
+fn inline_test_policy_exception_allowed(
+    root: &Path,
+    path: &Path,
+    kind: &InlineTestPolicyViolationKind,
+) -> bool {
+    let relative_path = relative_to(root, path);
+    INLINE_TEST_POLICY_EXCEPTIONS
+        .iter()
+        .any(|exception| relative_path == Path::new(exception.path) && exception.kind == *kind)
 }
 
 impl InlineTestPolicyViolationKind {
     fn label(&self) -> &'static str {
         match self {
+            Self::AbiLinkageAttribute => "ABI/linkage attribute",
+            Self::BenchAttribute => "bench attribute",
+            Self::BroadAllowAttribute => "broad lint suppression",
             Self::CfgTest => "inline cfg(test)",
+            Self::MacroUseAttribute => "macro_use attribute",
+            Self::PathAttribute => "path attribute",
+            Self::TestSupportAttribute => "test support attribute",
             Self::TestAttribute => "inline test attribute",
         }
     }
@@ -277,9 +524,20 @@ fn is_rust_source(path: &Path) -> bool {
     path.extension().is_some_and(|extension| extension == "rs")
 }
 
-fn is_under_crate_tests_dir(path: &Path) -> bool {
+fn is_mod_or_lib_source(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| matches!(name, "mod.rs" | "lib.rs"))
+}
+
+fn count_lines(path: &Path) -> Result<usize> {
+    let body = fs::read_to_string(path).with_context(|| format!("read {}", path.display()))?;
+    Ok(body.lines().count())
+}
+
+fn is_under_crate_dir(path: &Path, dir_name: &str) -> bool {
     path.ancestors().any(|ancestor| {
-        ancestor.file_name().is_some_and(|name| name == "tests")
+        ancestor.file_name().is_some_and(|name| name == dir_name)
             && ancestor
                 .parent()
                 .is_some_and(|parent| parent.join("Cargo.toml").is_file())
@@ -556,8 +814,10 @@ fn print_help() {
     println!(
         "\
 xtask commands:
+  check-mod-lib-size [--root <path> ...] [--max-lines <n>]
+          fail if any mod.rs or lib.rs file exceeds 300 lines by default
   check-inline-tests [--root <path> ...]
-          fail if non-test Rust sources contain inline #[cfg(test)] or #[test] attributes
+          fail if production Rust sources contain forbidden inline attributes
           alias: check-inline-cfg-test
   package [--target <triple>] [--out-dir <dir>] [--builder rust-lld|cargo|cross]
           [--profile <name> | --fast] [--no-build] [--sign --minisign-key <path>]

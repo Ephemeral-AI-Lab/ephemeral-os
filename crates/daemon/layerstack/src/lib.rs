@@ -2,30 +2,27 @@
 
 mod commit;
 mod error;
-pub(crate) mod fs;
-mod lease_aware;
-pub(crate) mod lock;
 mod model;
 pub mod service;
-mod squash;
 mod stack;
-mod whiteout;
-mod workspace;
+mod storage;
+mod workspace_base;
+
+pub(crate) use storage::{fs, lock, whiteout};
 
 pub use model::{
     aggregate_layer_changes, layer_digest, manifest_root_hash, CasError, LayerChange, LayerPath,
     LayerRef, Manifest, MANIFEST_SCHEMA_VERSION,
 };
 
-pub use commit::{
-    ChangesetResult, CommitError, CommitOptions, CommitStatus, FileResult, OccTraceEvent,
-};
+pub use commit::model::FileResult;
+pub use commit::{ChangesetResult, CommitError, CommitOptions, CommitStatus, OccTraceEvent};
 pub use error::LayerStackError;
-pub use lease_aware::{
+pub use stack::lease_aware::{
     LeaseAwareCopyThroughOutcome, LeaseAwareReclaimOutcome, LeaseParentCompactionOutcome,
 };
 pub use stack::{LayerStack, Lease, MergedView, SquashOutcome};
-pub use workspace::{
+pub use workspace_base::{
     build_workspace_base, ensure_workspace_base, read_workspace_binding, require_workspace_binding,
     WorkspaceBinding, WORKSPACE_BINDING_FILE,
 };

@@ -3,7 +3,7 @@ use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use crate::lease_aware::{
+use self::lease_aware::{
     plan_lease_aware_gaps, LeaseAwareCheckpointMode, LeaseAwareCopyThroughOutcome,
     LeaseAwarePlanEntry, LeaseAwareReclaimOutcome, LeaseParentCompactionOutcome,
     ReclaimingInterval,
@@ -12,6 +12,10 @@ use crate::model::{
     layer_digest, manifest_root_hash, try_layer_digest, LayerChange, LayerPath, LayerRef, Manifest,
 };
 
+use self::squash::{
+    manifest_prefix_before_plan, CheckpointSegment, LayerCheckpointSquasher, SquashPlanDecision,
+    SquashPlanEntry,
+};
 use crate::error::LayerStackError;
 use crate::fs::{
     allocate_layer_dirs, count_dirs, fsync_dir, fsync_tree_files, layer_digest_path, next_unique,
@@ -19,17 +23,15 @@ use crate::fs::{
     storage_bytes, write_layer_digest, write_manifest,
 };
 use crate::lock::StorageWriterLockLease;
-use crate::squash::{
-    manifest_prefix_before_plan, CheckpointSegment, LayerCheckpointSquasher, SquashPlanDecision,
-    SquashPlanEntry,
-};
-use crate::workspace::build_workspace_base_from_snapshot;
+use crate::workspace_base::build_workspace_base_from_snapshot;
 use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, LAYER_METADATA_DIR, STAGING_DIR};
 
 mod layer_read;
 mod layer_write;
+pub(crate) mod lease_aware;
 mod lease_cleanup;
 mod leases;
+pub(crate) mod squash;
 mod view;
 mod workspace_commit;
 

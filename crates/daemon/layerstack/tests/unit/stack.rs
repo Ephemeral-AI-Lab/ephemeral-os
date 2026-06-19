@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use super::*;
 use crate::fs::{clear_storage_root_preserving_lock_and_names, remove_path, write_manifest};
-use crate::workspace::{
+use crate::workspace_base::{
     build_workspace_base, build_workspace_base_from_snapshot, read_workspace_binding,
 };
 

@@ -4,36 +4,32 @@
 mod commit;
 #[path = "../src/error.rs"]
 mod error;
-#[path = "../src/fs.rs"]
+#[path = "../src/storage/fs.rs"]
 pub(crate) mod fs;
-#[path = "../src/lease_aware.rs"]
-mod lease_aware;
-#[path = "../src/lock.rs"]
+#[path = "../src/storage/lock.rs"]
 pub(crate) mod lock;
-#[path = "../src/model.rs"]
+#[path = "../src/model/mod.rs"]
 mod model;
 #[path = "../src/service.rs"]
 pub mod service;
-#[path = "../src/squash.rs"]
-mod squash;
 #[path = "../src/stack/mod.rs"]
 mod stack;
-#[path = "../src/whiteout.rs"]
+#[path = "../src/storage/whiteout.rs"]
 mod whiteout;
-#[path = "../src/workspace.rs"]
-mod workspace;
+#[path = "../src/workspace_base/mod.rs"]
+mod workspace_base;
 
 pub(crate) use commit::{ChangesetResult, CommitError, CommitOptions, CommitStatus};
 pub use error::LayerStackError;
-pub(crate) use lease_aware::{
-    plan_lease_aware_gaps, LeaseAwareCheckpointMode, LeaseAwarePlan, LeaseAwarePlanEntry,
-};
 pub use model::{
     aggregate_layer_changes, layer_digest, manifest_root_hash, CasError, LayerChange, LayerPath,
     LayerRef, Manifest, MANIFEST_SCHEMA_VERSION,
 };
+pub(crate) use stack::lease_aware::{
+    plan_lease_aware_gaps, LeaseAwareCheckpointMode, LeaseAwarePlan, LeaseAwarePlanEntry,
+};
 pub use stack::{LayerStack, Lease, MergedView, SquashOutcome};
-pub use workspace::{
+pub use workspace_base::{
     build_workspace_base, ensure_workspace_base, read_workspace_binding, require_workspace_binding,
     WorkspaceBinding, WORKSPACE_BINDING_FILE,
 };
@@ -58,14 +54,10 @@ pub(crate) fn process_state_test_lock() -> std::sync::MutexGuard<'static, ()> {
         .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
-pub(crate) use commit::worker::auto_squash::*;
-pub(crate) use commit::worker::queue::*;
-pub(crate) use commit::worker::transaction::*;
-pub(crate) use commit::*;
 pub(crate) use lock::*;
 pub(crate) use model::*;
 pub(crate) use service::*;
-pub(crate) use squash::*;
+pub(crate) use stack::squash::*;
 pub(crate) use stack::*;
 
 #[path = "unit/test_fixture.rs"]
