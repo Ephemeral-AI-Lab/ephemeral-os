@@ -14,7 +14,7 @@ use crate::command::{
     CommandTraceOrigin, CommandTranscriptStore, CommandYield, ExecCommandInput, FinalizationState,
 };
 use crate::workspace_crate::{
-    DestroyWorkspaceRequest, WorkspaceCommandRunRequest, WorkspaceId, WorkspaceProfile,
+    DestroyWorkspaceRequest, WorkspaceCommandRequest, WorkspaceId, WorkspaceProfile,
 };
 use crate::workspace_manager::WorkspaceSessionHandler;
 
@@ -33,7 +33,7 @@ impl CommandOperationService {
         }
         if input.caller_id != context.caller_id {
             return Err(CommandServiceError::InvalidCommand {
-                message: "exec caller must match command call context".to_owned(),
+                message: "exec caller must match command context".to_owned(),
             });
         }
 
@@ -187,14 +187,9 @@ impl CommandOperationService {
         handler: &WorkspaceSessionHandler,
         command_id: &CommandId,
     ) -> Result<PreparedCommandLaunch, CommandServiceError> {
-        let command_dir = self.config().scratch_root.join(&command_id.0);
-        fs::create_dir_all(&command_dir).map_err(|error| CommandServiceError::CommandIo {
-            command_id: command_id.clone(),
-            error: format!("prepare command artifact directory: {error}"),
-        })?;
-        let run_request = handler
+        let command_request = handler
             .handle
-            .command_run_request(WorkspaceCommandRunRequest {
+            .command_request(WorkspaceCommandRequest {
                 command_id: command_id.0.clone(),
                 caller_id: input.caller_id.0.clone(),
                 command: input.cmd.clone(),
@@ -204,7 +199,12 @@ impl CommandOperationService {
             .map_err(|error| CommandServiceError::InvalidCommand {
                 message: error.to_string(),
             })?;
-        Ok(PreparedCommandLaunch::new(command_dir, run_request))
+        let command_dir = self.config().scratch_root.join(&command_id.0);
+        fs::create_dir_all(&command_dir).map_err(|error| CommandServiceError::CommandIo {
+            command_id: command_id.clone(),
+            error: format!("prepare command artifact directory: {error}"),
+        })?;
+        Ok(PreparedCommandLaunch::new(command_dir, command_request))
     }
 
     fn spawn_command_process(
@@ -221,7 +221,7 @@ impl CommandOperationService {
                 timeout_seconds: input.timeout_seconds,
             },
             CommandProcessSpawn {
-                run_request: launch.run_request.clone(),
+                command_request: launch.command_request.clone(),
                 request_path: launch.request_path.clone(),
                 output_path: launch.output_path.clone(),
                 final_path: launch.final_path.clone(),
@@ -347,7 +347,7 @@ impl ExecCommandMode {
 
 struct PreparedCommandLaunch {
     command_dir: PathBuf,
-    run_request: serde_json::Value,
+    command_request: serde_json::Value,
     request_path: PathBuf,
     output_path: PathBuf,
     final_path: PathBuf,
@@ -355,11 +355,11 @@ struct PreparedCommandLaunch {
 }
 
 impl PreparedCommandLaunch {
-    fn new(command_dir: PathBuf, run_request: serde_json::Value) -> Self {
+    fn new(command_dir: PathBuf, command_request: serde_json::Value) -> Self {
         Self {
             command_dir: command_dir.clone(),
-            run_request,
-            request_path: command_dir.join("runner-request.json"),
+            command_request,
+            request_path: command_dir.join("command-request.json"),
             output_path: command_dir.join("runner-result.json"),
             final_path: command_dir.join("final.json"),
             transcript_path: command_dir.join("transcript.log"),

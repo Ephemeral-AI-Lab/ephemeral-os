@@ -75,7 +75,7 @@ pub(super) fn request_event_span_id(event: &RequestTraceEvent) -> SpanUid {
             "spawned" => COMMAND_PROCESS_SPAWN_SPAN_ID,
             "artifact_written"
                 if event.details.get("artifact").and_then(Value::as_str)
-                    == Some("runner_request") =>
+                    == Some("command_request") =>
             {
                 COMMAND_PROCESS_SPAWN_SPAN_ID
             }

@@ -67,19 +67,18 @@ fn assert_handle_projection(public: &WorkspaceHandle) {
     );
     let launch = public.launch.as_ref().expect("launch context is projected");
     let request = launch
-        .command_run_request(WorkspaceCommandRunRequest {
+        .command_request(WorkspaceCommandRequest {
             command_id: "cmd-1".to_owned(),
             caller_id: "caller-1".to_owned(),
             command: "pwd".to_owned(),
             cwd: Some("/workspace/src".into()),
             timeout_seconds: Some(2.0),
         })
-        .expect("launch context produces runner request");
-    assert_eq!(request["mode"], "set_ns");
-    assert_eq!(request["tool_call"]["invocation_id"], "cmd-1");
-    assert_eq!(request["tool_call"]["caller_id"], "caller-1");
-    assert_eq!(request["tool_call"]["args"]["command"], "pwd");
-    assert_eq!(request["tool_call"]["args"]["cwd"], "/workspace/src");
+        .expect("launch context produces command request");
+    assert_eq!(request["invocation_id"], "cmd-1");
+    assert_eq!(request["caller_id"], "caller-1");
+    assert_eq!(request["args"]["command"], "pwd");
+    assert_eq!(request["args"]["cwd"], "/workspace/src");
     assert_eq!(request["workspace_root"], "/workspace");
     assert_eq!(request["layer_paths"][0], "/lower/one");
     assert_eq!(request["upperdir"], "/tmp/eos/upper");
@@ -156,7 +155,7 @@ fn host_compatible_command_request_uses_holder_launch_without_network_fd() {
     };
 
     let request = launch
-        .command_run_request(WorkspaceCommandRunRequest {
+        .command_request(WorkspaceCommandRequest {
             command_id: "cmd-1".to_owned(),
             caller_id: "caller-1".to_owned(),
             command: "pwd".to_owned(),
@@ -165,7 +164,6 @@ fn host_compatible_command_request_uses_holder_launch_without_network_fd() {
         })
         .expect("host-compatible holder launch is valid");
 
-    assert_eq!(request["mode"], "set_ns");
     assert_eq!(request["ns_fds"]["user"], 20);
     assert_eq!(request["ns_fds"]["mnt"], 21);
     assert_eq!(request["ns_fds"]["pid"], 22);
@@ -206,7 +204,7 @@ fn command_request_rejects_incomplete_holder_launch() {
         };
 
         let error = launch
-            .command_run_request(WorkspaceCommandRunRequest {
+            .command_request(WorkspaceCommandRequest {
                 command_id: "cmd-1".to_owned(),
                 caller_id: "caller-1".to_owned(),
                 command: "pwd".to_owned(),

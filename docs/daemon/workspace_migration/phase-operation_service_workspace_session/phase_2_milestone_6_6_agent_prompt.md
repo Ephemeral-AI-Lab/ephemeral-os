@@ -82,7 +82,7 @@ Implement only:
 - Removal or quarantine of `HostWorkspace` as a permanent public target
   abstraction.
 - Holder-backed command launch behavior that treats missing namespace FDs as an
-  error instead of silently falling back to fresh namespace launch.
+  error instead of silently falling back to a retired runner path.
 - Profile-neutral remount eligibility and file-operation routing ownership.
 - Focused tests proving host-compatible and isolated use the same lifecycle
   contract where platform support permits.
@@ -140,7 +140,7 @@ Before editing code, classify current matches from:
 ```text
 rg -n "HostWorkspace|HostNamespaceWorkspaceRequest|WorkspaceModeContext|WorkspaceModeManager|ExecTarget::Host|ExecTarget::IsolatedNetwork|IsolatedNetworkError|network_mode" crates/daemon/workspace/src crates/daemon/operation/src crates/daemon/operation_service/src crates/daemon/core/src
 rg -n "one.shot|one_shot|publish|published|remountable|cgroup|ResourcePolicy" crates/daemon/workspace/src/profile crates/daemon/operation/src/command crates/daemon/operation_service/src/command
-rg -n "FreshNs|namespace_fds: None|NetworkMode::Host" crates/daemon/command/src crates/daemon/operation_service/src crates/daemon/core/src
+rg -n "namespace_fds: None|NetworkMode::Host" crates/daemon/command/src crates/daemon/operation_service/src crates/daemon/core/src
 ```
 
 Use the classification to decide the smallest implementation path. Do not treat
@@ -236,7 +236,7 @@ for `SetNs`.
 Rules:
 
 - missing namespace FDs for a holder-backed workspace command are an error;
-- no silent `FreshNs` fallback for workspace-session command launch;
+- no silent retired-runner fallback for workspace-session command launch;
 - one-shot versus persistent finalization remains `CommandOperationService`
   policy;
 - command cgroup join uses common launch/resource-control data, not profile kind.
@@ -300,7 +300,7 @@ Run static evidence scans and document remaining matches:
 ```text
 rg -n "HostWorkspace|HostNamespaceWorkspaceRequest|WorkspaceModeContext|WorkspaceModeManager|ExecTarget::Host|ExecTarget::IsolatedNetwork|IsolatedNetworkError|network_mode" crates/daemon/workspace/src crates/daemon/operation/src crates/daemon/operation_service/src crates/daemon/core/src
 rg -n "one.shot|one_shot|publish|published|remountable|cgroup|ResourcePolicy" crates/daemon/workspace/src/profile crates/daemon/operation/src/command crates/daemon/operation_service/src/command
-rg -n "FreshNs|namespace_fds: None|NetworkMode::Host" crates/daemon/command/src crates/daemon/operation_service/src crates/daemon/core/src
+rg -n "namespace_fds: None|NetworkMode::Host" crates/daemon/command/src crates/daemon/operation_service/src crates/daemon/core/src
 ```
 
 Every remaining match must be classified as target code, temporary

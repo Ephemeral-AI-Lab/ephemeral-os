@@ -144,7 +144,7 @@ fn command_exec_rejects_context_caller_mismatch_before_workspace_create() {
     assert!(matches!(
         error,
         CommandServiceError::InvalidCommand { message }
-            if message.contains("exec caller must match command call context")
+            if message.contains("exec caller must match command context")
     ));
     assert!(fake.create_requests().is_empty());
 
@@ -255,7 +255,7 @@ fn command_exec_spawn_failure_keeps_session_workspace_alive() {
 }
 
 #[test]
-fn command_exec_passes_launch_material_to_runner_request_and_spawn_paths() {
+fn command_exec_passes_launch_material_to_command_request_and_spawn_paths() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let workspace_root = PathBuf::from("/workspace/one-shot");
     fake.push_create_result(Ok(workspace_handle(
@@ -288,7 +288,7 @@ fn command_exec_passes_launch_material_to_runner_request_and_spawn_paths() {
             .config()
             .scratch_root
             .join("cmd_1")
-            .join("runner-request.json")
+            .join("command-request.json")
     );
     assert_eq!(
         observation.output_path,
@@ -323,16 +323,12 @@ fn command_exec_passes_launch_material_to_runner_request_and_spawn_paths() {
         env.command.config().output_drain_grace_ms
     );
 
-    let request = &observation.run_request;
-    assert_eq!(request["tool_call"]["invocation_id"], "cmd_1");
-    assert_eq!(request["tool_call"]["caller_id"], "caller-1");
-    assert_eq!(request["tool_call"]["verb"], "exec_command");
-    assert_eq!(request["tool_call"]["background"], false);
-    assert_eq!(request["tool_call"]["args"]["command"], "printf ok");
-    assert_eq!(
-        request["tool_call"]["args"]["cwd"],
-        "/workspace/one-shot/src"
-    );
+    let request = &observation.command_request;
+    assert!(request.get("mode").is_none());
+    assert_eq!(request["invocation_id"], "cmd_1");
+    assert_eq!(request["caller_id"], "caller-1");
+    assert_eq!(request["args"]["command"], "printf ok");
+    assert_eq!(request["args"]["cwd"], "/workspace/one-shot/src");
     assert_eq!(
         request["workspace_root"].as_str(),
         Some(workspace_root.to_string_lossy().as_ref())

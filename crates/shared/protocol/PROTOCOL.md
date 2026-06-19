@@ -90,12 +90,12 @@ must branch on them in order:
 2. **`result.status`** — the *domain* outcome, present for command ops:
    - Command ops: `running | ok | cancelled | error | timed_out`.
 
-Foot-gun: a backgrounded command and even `command_not_found` come back as
+Foot-gun: a running command and even `command_not_found` come back as
 envelope `status: "ok"` (the *transport* succeeded) with the real outcome nested
 at `result.status`. Branch the envelope `status` first, then `result.status`.
 
 ```jsonc
-// Backgrounded command still running — envelope ok, domain running.
+// Command still running — envelope ok, domain running.
 {"status":"ok","result":{"status":"running","command_id":"cmd-7f3a","output":""},"meta":{"envelope_version":2,"op":"sandbox.command.exec","…":"…"}}
 // command_not_found — transport ok, domain error + exit_code 127.
 {"status":"ok","result":{"status":"error","exit_code":127,"output":"bash: nosuchcmd: command not found"},"meta":{"envelope_version":2,"op":"sandbox.command.exec","…":"…"}}

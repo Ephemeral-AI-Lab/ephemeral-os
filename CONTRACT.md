@@ -55,14 +55,14 @@ domain status is present, and a client must branch on them in order:
 2. **`result.status`** — the *domain* outcome, present for command ops:
    `running | ok | cancelled | error | timed_out`.
 
-The foot-gun: a backgrounded command and even a `command_not_found` come back
+The foot-gun: a running command and even a `command_not_found` come back
 as envelope `status: "ok"` — the *transport* succeeded — while the real outcome
 is nested at `result.status`. A naive client that reads only the envelope
 `status` mis-parses every command. Always branch envelope `status` first, then
 `result.status` for command ops.
 
 ```jsonc
-// Backgrounded command still running: envelope ok, domain running.
+// Command still running: envelope ok, domain running.
 { "status": "ok",
   "result": { "status": "running", "command_id": "cmd-7f3a", "output": "" },
   "meta": { "envelope_version": 2, /* ... */ } }

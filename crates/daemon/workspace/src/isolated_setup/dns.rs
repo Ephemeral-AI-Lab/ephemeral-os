@@ -2,13 +2,13 @@
 use std::process::Stdio;
 
 #[cfg(target_os = "linux")]
-use ::linux_namespace_subprocess::protocol::{RunRequest, RunResult};
+use ::linux_namespace_subprocess::protocol::{NamespaceCommandRequest, RunResult};
 #[cfg(target_os = "linux")]
 use serde_json::{json, Value};
 
 use crate::namespace::NamespaceRuntime;
 #[cfg(target_os = "linux")]
-use crate::namespace::{ns_runner_request, run_child};
+use crate::namespace::{ns_command_request, run_child};
 use crate::profile::IsolatedNetworkError;
 use crate::profile::{DnsConfiguration, WorkspaceModeHandle};
 
@@ -29,10 +29,9 @@ impl NamespaceRuntime {
         }
         #[cfg(target_os = "linux")]
         {
-            let request = ns_runner_request(
+            let request = ns_command_request(
                 handle,
                 "configure-dns",
-                "configure_dns",
                 json!({"fallback_dns": fallback_dns}),
                 Vec::new(),
             );
@@ -43,7 +42,7 @@ impl NamespaceRuntime {
 
 #[cfg(target_os = "linux")]
 fn configure_dns_child(
-    request: &RunRequest,
+    request: &NamespaceCommandRequest,
     setup_timeout_s: f64,
 ) -> Result<DnsConfiguration, IsolatedNetworkError> {
     let output = run_child(request, "--configure-dns", Stdio::piped(), setup_timeout_s)?;

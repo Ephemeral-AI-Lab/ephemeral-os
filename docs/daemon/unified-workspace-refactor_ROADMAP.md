@@ -16,7 +16,7 @@ Source spec: `docs/daemon/unified-workspace-refactor_SPEC.md`
 | 4. Central routing | Done | runtime adapters | Command/file route choice lives in `WorkspaceRuntime` |
 | 5. Capture changes API | Not started | workspace/runtime | Host and isolated capture are explicit and non-publishing |
 | 6. Target folder structure | Done | `crates/daemon/workspace/src` | Shared lifecycle and isolated network setup are physically separated |
-| 7. Holder/setns-only workspace execution | Done | namespace subprocess, command prep | Workspace commands cannot use `FreshNs` |
+| 7. Holder/setns-only workspace execution | Done | namespace subprocess, command prep | Workspace commands cannot select a non-setns runner path |
 | 8. Retire legacy names | Done | public exports/wire compatibility | Legacy names are removed or compatibility-scoped |
 | 9. Final verification | Not started | full daemon surface | Focused unit, contract, clippy, and live E2E gates pass |
 
@@ -90,13 +90,13 @@ Tasks:
 - [x] Implement `WorkspaceRuntime::resolve_workspace_root`.
 - [x] Resolve `layer_stack_root` through the LayerStack workspace binding.
 - [x] Preserve compatibility parsing for legacy `layer_stack_root`.
-- [x] Update new isolation enter and test-remount parsing/resolution to accept `workspace_root`; enter trace details emit `workspace_root`, and legacy enter roots are compatibility-labeled.
+- [x] Update new legacy isolation lifecycle and test-remount parsing/resolution to accept `workspace_root`; lifecycle trace details emit `workspace_root`, and legacy enter roots are compatibility-labeled.
 - [x] Add coverage for `workspace_root` parsing and legacy compatibility parsing.
 
 Exit criteria:
 
 - [x] Phase 2-facing runtime/root paths can be driven from `workspace_root`; full create/run/capture/destroy lifecycle surfaces remain Phase 3+ work.
-- [x] Phase 2 legacy `layer_stack_root` use is isolated to explicitly named compatibility adapters for isolation enter and test compact remount; command, file, checkpoint, and other legacy surfaces remain later-phase migration work.
+- [x] Phase 2 legacy `layer_stack_root` use is isolated to explicitly named compatibility adapters for legacy isolation lifecycle and test compact remount; command, file, checkpoint, and other legacy surfaces remain later-phase migration work.
 - [x] LayerStack validation still keeps storage outside `workspace_root`.
 
 Phase 2 is closed for root resolution. The future create/run/capture/destroy
@@ -268,7 +268,7 @@ holder/setns-only execution changes, Host holder-backed creation changes, Phase
 
 ## Phase 7: Holder/Setns-Only Workspace Execution
 
-Goal: remove workspace dependence on fresh namespace initialization.
+Goal: remove workspace dependence on non-setns namespace initialization.
 
 Tasks:
 
@@ -276,15 +276,15 @@ Tasks:
 - [x] Make `create(NetworkMode::IsolatedNetwork)` launch `ns-holder` with `NamespaceNetwork::Isolated`.
 - [x] Make workspace `run_command` always call the setns runner path.
 - [x] Make missing holder namespace FDs a workspace execution error.
-- [x] Keep `FreshNs` only behind a separate legacy/non-workspace compatibility path.
-- [x] Add tests proving workspace command requests cannot select `FreshNs`.
-- [x] Add tests proving missing holder FDs fail instead of falling back to `FreshNs`.
+- [x] Delete the non-setns runner path from the workspace protocol.
+- [x] Add tests proving workspace command requests cannot select an alternate runner path.
+- [x] Add tests proving missing holder FDs fail instead of falling back to a retired runner path.
 
 Exit criteria:
 
 - [x] `ns-holder` is the single namespace creator for workspace commands.
 - [x] `ns-runner` only enters prepared workspace namespaces with `setns`.
-- [x] `FreshNs` cannot be selected by any new workspace command path.
+- [x] A non-setns runner path cannot be selected by any workspace command path.
 
 Phase 7 is closed for holder/setns-only workspace execution. Host command
 workspace creation now launches `ns-holder` with `NamespaceNetwork::Host`,
@@ -292,11 +292,10 @@ opens user/mount/PID namespace FDs, mounts the overlay through the setns helper,
 and carries private holder cleanup in the Host workspace value. Isolated-network
 workspace creation now passes `NamespaceNetwork::Isolated` explicitly, keeping
 the dedicated network namespace and existing veth/DNS/netfilter setup. Workspace
-command preparation always serializes `RunMode::SetNs` and rejects missing
-holder namespace FDs instead of falling back to `FreshNs`. `FreshNs` remains in
-the subprocess protocol for legacy/non-workspace compatibility paths. No Phase
+command preparation always serializes a flat namespace command request and rejects missing
+holder namespace FDs instead of falling back to a retired runner path. No Phase
 8 legacy export/name retirement, publish behavior change, capture behavior
-change, packaging, live E2E, or `ops.json` regeneration was implemented.
+change, packaging, live verification, or `ops.json` regeneration was implemented.
 
 ## Phase 8: Retire Legacy Names
 
@@ -329,7 +328,7 @@ and shared overlay helpers live under `workspace::overlay`. The legacy root
 compatibility exports were retained. Wire compatibility remains only for legacy
 `layer_stack_root` inputs; route and response literals now use `host` and
 `isolated`.
-No publish behavior, capture behavior, `FreshNs` compatibility, holder/setns
+No publish behavior, capture behavior, holder/setns
 execution semantics, packaging, live E2E, or `ops.json` regeneration was
 changed.
 
@@ -389,7 +388,7 @@ Namespace and runner:
 - [x] `ns-holder` creates and pins workspace namespace stacks for both modes.
 - [x] `ns-runner` only enters prepared workspace namespaces with `setns`.
 - [x] Workspace command requests do not carry a public runner mode enum.
-- [x] `FreshNs` exists only for legacy/non-workspace compatibility paths.
+- [x] The retired non-setns runner path is absent from workspace command protocol.
 - [x] Missing namespace FDs on a workspace command path are errors, not fallback triggers.
 
 Publish and capture:
@@ -468,7 +467,7 @@ Append one row per meaningful gate or phase closeout.
 | 2026-06-17 | 4 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase4-target cargo test -p operation command` | Pass | Exit 0; 66 command unit tests plus focused checkpoint/contract command targets passed. Command process lifecycle and Host lease release behavior remain in `CommandOps`/LayerStack after route centralization. |
 | 2026-06-17 | 4 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase4-target cargo test -p operation file` | Pass | Exit 0; 14 operation file tests passed with checkpoint/contract targets compiling and filtering cleanly. Direct and isolated file backends still own concrete read/write/edit behavior. |
 | 2026-06-17 | 4 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase4-target cargo test -p workspace` | Pass | Exit 0; 24 workspace unit tests passed; doc tests 0 passed, 0 failed. |
-| 2026-06-17 | 4 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase4-target cargo test -p daemon --test phase2_read_paths` | Fail then Pass | Initial full run failed because disabled isolation enter returned `invalid_argument` before `feature_disabled` when given a missing legacy root. Fixed disabled-mode precedence before root resolution; rerun passed 15 tests, including file fast-path route trace metadata. |
+| 2026-06-17 | 4 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase4-target cargo test -p daemon --test phase2_read_paths` | Fail then Pass | Initial full run failed because disabled legacy isolation lifecycle returned `invalid_argument` before `feature_disabled` when given a missing legacy root. Fixed disabled-mode precedence before root resolution; rerun passed 15 tests, including file fast-path route trace metadata. |
 | 2026-06-17 | 4 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase4-target cargo test -p daemon --test phase3_write_paths` | Pass | Exit 0; 6 write-path tests passed, covering direct file write/edit behavior and OCC/drop compatibility. |
 | 2026-06-17 | 4 | `git diff --check` | Pass | Exit 0; no whitespace errors. |
 | 2026-06-17 | 4 | Phase 4 skipped gates review | Skipped | Live Docker/Linux E2E, `cargo run -p xtask -- package`, ops.json regeneration, optional `workspace_read_paths`/`workspace_write_paths`/`workspace_command_paths`, `cargo run -p xtask -- check-contract`, and daemon clippy were not run. Packaging, live E2E, ops regeneration, and Phase 5+ target tests are outside this slice. `xtask check-contract` and daemon clippy remain covered by the Phase 0 baseline blockers: stale `crates/daemon/operation/ops.json` and pre-existing `clippy::double_must_use` in `crates/daemon/layerstack/src/lease_aware.rs:97`. |
@@ -483,7 +482,7 @@ Append one row per meaningful gate or phase closeout.
 | 2026-06-17 | 6 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase6-fix-target cargo test -p daemon --test phase3_write_paths` | Pass | Exit 0; 6 write-path tests passed. |
 | 2026-06-17 | 6 | Optional workspace path tests review | Skipped | `workspace_read_paths`, `workspace_write_paths`, and `workspace_command_paths` test files are not present in this checkout, so the optional combined gate was not run. |
 | 2026-06-17 | 6 | `git diff --check` | Pass | Exit 0; no whitespace errors. |
-| 2026-06-17 | 7 | Phase 7 implementation review | Done | Host command workspace creation now launches holder-backed user/mount/PID namespaces with `NamespaceNetwork::Host`; isolated create passes `NamespaceNetwork::Isolated`; workspace command prep always serializes `RunMode::SetNs` and rejects missing holder FDs. `FreshNs` remains only in the subprocess protocol and generic finish-prepare tests for legacy/non-workspace compatibility. No Phase 8 retirement, publish/capture behavior change, packaging, live E2E, or ops regeneration was implemented. |
+| 2026-06-17 | 7 | Phase 7 implementation review | Done | Host command workspace creation now launches holder-backed user/mount/PID namespaces with `NamespaceNetwork::Host`; isolated create passes `NamespaceNetwork::Isolated`; workspace command prep serializes a flat namespace command request and rejects missing holder FDs. No Phase 8 retirement, publish/capture behavior change, packaging, live E2E, or ops regeneration was implemented. |
 | 2026-06-17 | 7 | `cargo fmt` | Pass | Formatted Phase 7 Rust sources. |
 | 2026-06-17 | 7 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase7-target cargo test -p workspace` | Pass | Exit 0; 24 workspace unit tests passed; doc tests 0 passed, 0 failed. |
 | 2026-06-17 | 7 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase7-target cargo test -p daemon workspace_runtime` | Pass | Exit 0; 21 focused runtime tests passed, including Host create/route and isolated route coverage after holder-backed Host creation. |

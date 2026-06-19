@@ -143,11 +143,6 @@ impl DaemonServer {
     ) -> serde_json::Value {
         let invocation_id = request.invocation_id.clone();
         let caller_id = trimmed_string(&request.args, "caller_id");
-        let background = request
-            .args
-            .get("background")
-            .and_then(serde_json::Value::as_bool)
-            .unwrap_or(false);
         let op = request.op.clone();
         let registry = Arc::clone(&self.invocation_registry);
         let (start_tx, start_rx) = std_mpsc::channel::<()>();
@@ -163,7 +158,6 @@ impl DaemonServer {
             task.abort_handle(),
             registered_started,
             &caller_id,
-            background,
         );
         let _ = start_tx.send(());
         let response = match task.await {

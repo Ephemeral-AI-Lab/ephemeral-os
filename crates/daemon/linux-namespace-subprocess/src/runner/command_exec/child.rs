@@ -21,25 +21,6 @@ pub(super) struct CommandExecutionScopeTiming {
     pub(super) poll_sleep_s: f64,
 }
 
-pub(super) fn wait_for_child(
-    child: &mut std::process::Child,
-    timeout_seconds: Option<f64>,
-) -> Result<i32, RunnerError> {
-    let deadline = timeout_deadline(timeout_seconds);
-    loop {
-        if let Some(status) = child.try_wait().map_err(RunnerError::Child)? {
-            return Ok(exit_code(status));
-        }
-        if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
-            let pid = Pid::from_child(child);
-            let _ = kill_process_group(pid, Signal::Kill);
-            let _ = child.wait();
-            return Err(RunnerError::TimedOut);
-        }
-        thread::sleep(CHILD_WAIT_POLL);
-    }
-}
-
 pub(super) fn wait_for_command_execution_scope(
     child: &mut std::process::Child,
     timeout_seconds: Option<f64>,

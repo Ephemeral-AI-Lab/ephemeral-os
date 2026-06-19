@@ -1,5 +1,5 @@
 //! In-flight invocation registry: invocation id -> task handle, heartbeat,
-//! cancel-by-id, and background TTL reaping.
+//! cancel-by-id, and TTL reaping.
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -10,7 +10,7 @@ use std::time::Instant;
 
 use tokio::task::AbortHandle;
 
-/// Default TTL before an idle background invocation is reaped (seconds).
+/// Default TTL before an idle invocation is reaped (seconds).
 pub const DEFAULT_TTL_S: f64 = 300.0;
 
 /// Default reaper sweep interval (seconds).
@@ -25,8 +25,6 @@ pub(crate) struct InFlightInvocation {
     pub caller_id: String,
     /// Monotonic seconds of the last heartbeat / registration.
     pub last_seen: f64,
-    /// Whether this is a background invocation (only background entries reap).
-    pub background: bool,
     /// Set once the reaper has cancelled this entry (idempotent guard).
     pub ttl_reaped: bool,
 }
@@ -102,13 +100,7 @@ impl InFlightRegistry {
     }
 
     /// Register a task under `invocation_id`. Empty ids are ignored.
-    pub fn register(
-        &self,
-        invocation_id: &str,
-        abort: AbortHandle,
-        caller_id: &str,
-        background: bool,
-    ) {
+    pub fn register(&self, invocation_id: &str, abort: AbortHandle, caller_id: &str) {
         if invocation_id.is_empty() {
             return;
         }
@@ -119,7 +111,6 @@ impl InFlightRegistry {
                 task: InvocationTaskHandle::Async(abort),
                 caller_id: caller_id.to_owned(),
                 last_seen: monotonic_seconds(),
-                background,
                 ttl_reaped: false,
             },
         );
@@ -133,7 +124,6 @@ impl InFlightRegistry {
         abort: AbortHandle,
         started: Arc<AtomicBool>,
         caller_id: &str,
-        background: bool,
     ) {
         if invocation_id.is_empty() {
             return;
@@ -145,7 +135,6 @@ impl InFlightRegistry {
                 task: InvocationTaskHandle::Blocking { abort, started },
                 caller_id: caller_id.to_owned(),
                 last_seen: monotonic_seconds(),
-                background,
                 ttl_reaped: false,
             },
         );
@@ -209,16 +198,12 @@ impl InFlightRegistry {
         touched
     }
 
-    /// Count live background invocations for `caller_id`. Backs
-    /// `sandbox.call.count`.
+    /// Count live invocations for `caller_id`. Backs `sandbox.call.count`.
     pub fn count_by_caller(&self, caller_id: &str) -> usize {
         self.lock_state()
             .values()
             .filter(|entry| {
-                entry.background
-                    && entry.caller_id == caller_id
-                    && !entry.ttl_reaped
-                    && !entry.task.is_finished()
+                entry.caller_id == caller_id && !entry.ttl_reaped && !entry.task.is_finished()
             })
             .count()
     }
@@ -228,12 +213,12 @@ impl InFlightRegistry {
         self.lock_state().len()
     }
 
-    /// Cancel every background entry idle past the TTL.
+    /// Cancel every entry idle past the TTL.
     pub fn ttl_sweep(&self) {
         let mut state = self.lock_state();
         let now = monotonic_seconds();
         for entry in state.values_mut() {
-            if entry.background && !entry.ttl_reaped && now - entry.last_seen > self.ttl_s {
+            if !entry.ttl_reaped && now - entry.last_seen > self.ttl_s {
                 let _ = entry.task.cancel();
                 entry.ttl_reaped = true;
             }

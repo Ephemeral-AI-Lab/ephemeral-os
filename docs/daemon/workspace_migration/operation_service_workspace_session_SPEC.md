@@ -21,7 +21,7 @@ operation_service:
   workspace session manager
   request session lookup
   operation service collection
-  background maintenance policy
+  maintenance policy
   squash/remount pressure trigger
 
 operation crates:

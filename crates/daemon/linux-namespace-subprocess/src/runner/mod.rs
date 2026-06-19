@@ -1,6 +1,6 @@
-//! Per-tool namespace runner.
+//! Namespace command runner.
 
-use crate::protocol::{RunMode, RunRequest, RunResult};
+use crate::protocol::{NamespaceCommandRequest, RunResult};
 #[cfg(target_os = "linux")]
 use rustix::io::Errno;
 #[cfg(target_os = "linux")]
@@ -13,7 +13,7 @@ use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
-mod fresh_ns;
+mod command_exec;
 pub mod setns;
 
 pub mod config {
@@ -31,7 +31,7 @@ pub enum RunnerError {
     Overlay(#[source] overlay::OverlayError),
     #[error("child process failed")]
     Child(#[source] std::io::Error),
-    #[error("tool call timed out")]
+    #[error("runner command timed out")]
     TimedOut,
     #[error("namespace runner is only supported on linux")]
     Unsupported,
@@ -49,11 +49,8 @@ impl From<overlay::OverlayError> for RunnerError {
     }
 }
 
-pub fn run(request: &RunRequest, config: &config::RunnerConfig) -> Result<RunResult, RunnerError> {
-    match request.mode {
-        RunMode::FreshNs => fresh_ns::run_fresh_ns(request, config),
-        RunMode::SetNs => setns::run_setns(request),
-    }
+pub fn run(request: &NamespaceCommandRequest) -> Result<RunResult, RunnerError> {
+    setns::run_setns(request)
 }
 
 #[cfg(target_os = "linux")]

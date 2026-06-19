@@ -382,7 +382,6 @@ Phase 1 should avoid broad edits under:
 crates/daemon/core/src/op_adapter/
 crates/daemon/operation/src/command/
 crates/daemon/operation/src/file/
-crates/e2e-test/tests/
 ```
 
 Those belong to later routing and live E2E phases unless a narrow compile fix is

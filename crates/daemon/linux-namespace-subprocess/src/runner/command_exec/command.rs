@@ -1,14 +1,14 @@
-//! Argv, cwd, and environment construction for fresh-ns command execution.
+//! Argv, cwd, and environment construction for namespace command execution.
 
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
-use crate::protocol::RunRequest;
+use crate::protocol::NamespaceCommandRequest;
 use crate::runner::RunnerError;
 
-pub(super) fn shell_argv(request: &RunRequest) -> Result<Vec<String>, RunnerError> {
-    let shell_args = &request.tool_call.args;
+pub(super) fn shell_argv(request: &NamespaceCommandRequest) -> Result<Vec<String>, RunnerError> {
+    let shell_args = &request.args;
     let Some(command) = shell_args.get("command") else {
         return Err(RunnerError::InvalidRequest(
             "shell args require command".to_owned(),
@@ -34,15 +34,13 @@ pub(super) fn shell_argv(request: &RunRequest) -> Result<Vec<String>, RunnerErro
     ))
 }
 
-pub(super) fn shell_cwd(request: &RunRequest) -> Result<PathBuf, RunnerError> {
+pub(super) fn shell_cwd(request: &NamespaceCommandRequest) -> Result<PathBuf, RunnerError> {
     let raw = request
-        .tool_call
         .args
         .get("cwd")
         .and_then(serde_json::Value::as_str)
         .unwrap_or(".");
     let allow_external_cwd = request
-        .tool_call
         .args
         .get("remountable")
         .and_then(serde_json::Value::as_bool)
@@ -139,5 +137,5 @@ pub(super) fn command_environment(args: &serde_json::Value) -> BTreeMap<String, 
 }
 
 #[cfg(test)]
-#[path = "../../../tests/unit/runner/fresh_ns/command.rs"]
+#[path = "../../../tests/unit/runner/command_exec/command.rs"]
 mod tests;

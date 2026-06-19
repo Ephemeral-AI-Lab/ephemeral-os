@@ -47,7 +47,7 @@ pub struct FakeLaunchDriver {
 pub struct SpawnObservation {
     pub spec_id: String,
     pub spec_caller_id: String,
-    pub run_request: serde_json::Value,
+    pub command_request: serde_json::Value,
     pub request_path: PathBuf,
     pub output_path: PathBuf,
     pub final_path: PathBuf,
@@ -103,7 +103,7 @@ impl CommandLaunchDriver for FakeLaunchDriver {
             .push(SpawnObservation {
                 spec_id: spec.id.clone(),
                 spec_caller_id: spec.caller_id.clone(),
-                run_request: parts.run_request.clone(),
+                command_request: parts.command_request.clone(),
                 request_path: parts.request_path.clone(),
                 output_path: parts.output_path.clone(),
                 final_path: parts.final_path.clone(),

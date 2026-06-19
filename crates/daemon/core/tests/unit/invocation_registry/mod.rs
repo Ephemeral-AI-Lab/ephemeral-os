@@ -10,22 +10,22 @@ use tokio::task::JoinHandle;
 type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
 #[tokio::test]
-async fn cancel_heartbeat_and_count_track_background_task() -> TestResult {
+async fn cancel_heartbeat_and_count_track_invocation() -> TestResult {
     let registry = InFlightRegistry::new(300.0, 30.0);
     let task = tokio::spawn(future::pending::<()>());
-    registry.register("bg-1", task.abort_handle(), "caller-a", true);
+    registry.register("invocation-1", task.abort_handle(), "caller-a");
 
     assert_eq!(registry.count_by_caller("caller-a"), 1);
     assert_eq!(
-        registry.heartbeat(&["bg-1".to_owned(), "missing".to_owned()]),
+        registry.heartbeat(&["invocation-1".to_owned(), "missing".to_owned()]),
         1
     );
-    assert!(registry.cancel("bg-1"));
+    assert!(registry.cancel("invocation-1"));
     assert_task_cancelled(task).await?;
     assert_eq!(registry.count_by_caller("caller-a"), 0);
 
-    registry.deregister("bg-1");
-    assert!(!registry.contains("bg-1"));
+    registry.deregister("invocation-1");
+    assert!(!registry.contains("invocation-1"));
     Ok(())
 }
 
@@ -46,27 +46,27 @@ async fn control_paths_recover_poisoned_registry_lock() -> TestResult {
     }
 
     let task = tokio::spawn(future::pending::<()>());
-    registry.register("bg-poisoned", task.abort_handle(), "caller-a", true);
+    registry.register("poisoned", task.abort_handle(), "caller-a");
 
     assert_eq!(registry.count_by_caller("caller-a"), 1);
-    assert_eq!(registry.heartbeat(&["bg-poisoned".to_owned()]), 1);
+    assert_eq!(registry.heartbeat(&["poisoned".to_owned()]), 1);
     registry.ttl_sweep();
-    assert!(registry.cancel("bg-poisoned"));
+    assert!(registry.cancel("poisoned"));
     assert_task_cancelled(task).await?;
-    registry.deregister("bg-poisoned");
-    assert!(!registry.contains("bg-poisoned"));
+    registry.deregister("poisoned");
+    assert!(!registry.contains("poisoned"));
     Ok(())
 }
 
 #[tokio::test]
-async fn ttl_sweep_reaps_active_background_task() -> TestResult {
+async fn ttl_sweep_reaps_idle_invocation() -> TestResult {
     let registry = InFlightRegistry::new(0.001, 30.0);
     let task = tokio::spawn(future::pending::<()>());
-    registry.register("bg-ttl", task.abort_handle(), "caller-a", true);
+    registry.register("ttl", task.abort_handle(), "caller-a");
 
     thread::sleep(Duration::from_millis(3));
     registry.ttl_sweep();
-    assert!(registry.contains("bg-ttl"));
+    assert!(registry.contains("ttl"));
     assert_eq!(registry.count_by_caller("caller-a"), 0);
 
     assert_task_cancelled(task).await?;
@@ -83,7 +83,6 @@ async fn started_blocking_invocation_reports_uncancellable() -> TestResult {
         task.abort_handle(),
         Arc::new(AtomicBool::new(true)),
         "caller-a",
-        true,
     );
 
     assert_eq!(
@@ -99,7 +98,7 @@ async fn started_blocking_invocation_reports_uncancellable() -> TestResult {
 }
 
 #[tokio::test]
-async fn ttl_sweep_hides_started_blocking_background_invocation() -> TestResult {
+async fn ttl_sweep_hides_started_blocking_invocation() -> TestResult {
     let registry = InFlightRegistry::new(0.001, 30.0);
     let task = tokio::spawn(future::pending::<()>());
     registry.register_blocking(
@@ -107,7 +106,6 @@ async fn ttl_sweep_hides_started_blocking_background_invocation() -> TestResult 
         task.abort_handle(),
         Arc::new(AtomicBool::new(true)),
         "caller-a",
-        true,
     );
 
     assert_eq!(registry.count_by_caller("caller-a"), 1);

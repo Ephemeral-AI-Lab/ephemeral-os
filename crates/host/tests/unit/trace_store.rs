@@ -389,9 +389,9 @@ fn batches_without_dropped_traces_write_no_loss_entry() -> Result<(), TraceStore
 }
 
 #[test]
-fn background_command_links_without_request_id_are_deduplicated() -> Result<(), TraceStoreError> {
-    let store = temp_store("background-command-link-dedupe")?;
-    let trace_id = TraceId::parse("trace-background-command-link").expect("trace id");
+fn command_links_without_request_id_are_deduplicated() -> Result<(), TraceStoreError> {
+    let store = temp_store("command-link-dedupe")?;
+    let trace_id = TraceId::parse("trace-command-link").expect("trace id");
     let mut record = TraceRecord::new(trace_id.clone(), SpanUid::ROOT);
     record.links.push(TraceLink {
         kind: TraceLinkKind::Command,

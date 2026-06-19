@@ -27,8 +27,7 @@ Owner: `crates/daemon`
   runner mode enum; entering the holder namespace with `setns` is implicit.
 - In workspace code, "mode" means `NetworkMode`. In the namespace subprocess
   protocol, workspace command execution always uses the setns runner path. Any
-  fresh namespace execution path should be a separate legacy/non-workspace API
-  until those callers are migrated or deleted.
+  non-setns execution path is retired from this workspace protocol.
 
 ## 1. Goal
 
@@ -87,7 +86,7 @@ namespaces with `setns` for workspace commands.
 
 ### `workspace_root`
 
-The filesystem root visible to the tool or command. This is caller-facing.
+The filesystem root visible to the command. This is caller-facing.
 Example: `/testbed`.
 
 ### `layer_stack_root`
@@ -485,9 +484,8 @@ workspace mode is `NetworkMode::{Host, IsolatedNetwork}`. Workspace command
 requests should not include a runner mode enum. They always execute by entering
 the holder-created namespace with `setns`.
 
-During migration, the existing fresh namespace runner may remain only behind a
-separate legacy/non-workspace compatibility path. No workspace command path
-should select it.
+The earlier non-setns runner path is retired. No workspace command path should
+carry a runner mode enum or select an alternate runner.
 
 ## 9. Error Shape
 
@@ -574,11 +572,10 @@ dedicated network namespace:
 - destroy kills holder, closes FDs, tears down veth/cgroup, removes scratch,
   persists manager state, and releases the lease
 
-### Fresh Namespace Compatibility
+### Retired Non-Setns Path
 
-`FreshNs` remains only as a migration compatibility path for legacy workspace
-commands and non-workspace subprocess uses. New workspace command execution must
-not use `FreshNs`; it must use holder-created namespaces plus `setns`.
+The old non-setns runner path is no longer part of active workspace execution.
+Workspace command execution must use holder-created namespaces plus `setns`.
 
 ## 11. Migration Plan
 
@@ -625,15 +622,15 @@ not use `FreshNs`; it must use holder-created namespaces plus `setns`.
   `isolated_setup/`.
 - Keep mechanism names for veth, DNS, rtnetlink, and netfilter files.
 
-### Phase 7: Remove Workspace Dependence On Fresh Namespace Init
+### Phase 7: Remove Workspace Dependence On Non-Setns Init
 
 - Make `create(NetworkMode::Host)` launch `ns-holder` with
   `NamespaceNetwork::Host`.
 - Make `create(NetworkMode::IsolatedNetwork)` launch `ns-holder` with
   `NamespaceNetwork::Isolated`.
 - Make workspace `run_command` always call the `setns` runner path.
-- Keep `FreshNs` only for legacy/non-workspace callers until those callers are
-  migrated or explicitly documented.
+- Delete the non-setns runner path from the workspace protocol once callers are
+  migrated.
 
 ### Phase 8: Retire Legacy Names
 

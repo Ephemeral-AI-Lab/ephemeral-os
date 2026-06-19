@@ -263,7 +263,7 @@ making the profile boundary symmetric and proving it.
      `workspace::WorkspaceService::create_workspace`.
    - Workspace-session command launch must require holder namespace FDs.
    - Missing namespace FDs are an error for holder-backed workspace commands, not
-     a silent `FreshNs` fallback.
+     a silent fallback to a retired runner path.
    - One-shot versus persistent finalization remains command policy.
 
 6. Make remount and file routing policy profile-neutral.
@@ -283,7 +283,7 @@ Required static checks:
 ```text
 rg -n "HostWorkspace|HostNamespaceWorkspaceRequest|WorkspaceModeContext|WorkspaceModeManager|ExecTarget::Host|ExecTarget::IsolatedNetwork|IsolatedNetworkError|network_mode" crates/daemon/workspace/src crates/daemon/operation/src crates/daemon/operation_service/src crates/daemon/core/src
 rg -n "one.shot|one_shot|publish|published|remountable|cgroup|ResourcePolicy" crates/daemon/workspace/src/profile crates/daemon/operation/src/command crates/daemon/operation_service/src/command
-rg -n "FreshNs|namespace_fds: None|NetworkMode::Host" crates/daemon/command/src crates/daemon/operation_service/src crates/daemon/core/src
+rg -n "namespace_fds: None|NetworkMode::Host" crates/daemon/command/src crates/daemon/operation_service/src crates/daemon/core/src
 rg -n "allocate_overlay|create_overlay|spawn_ns_holder|create_cgroup|join_holder_cgroup|WorkspaceProfile::for_mode" crates/daemon/operation_service/src
 rg -n "HostCommandWorkspace|IsolatedCommandWorkspace|workspace_data" crates/daemon/operation/src crates/daemon/operation_service/src crates/daemon/core/src
 git diff --check -- docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_milestone_6_6_workspace_profile_symmetry_SPEC.md docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_command_service_IMPLEMENTATION_PLAN.md

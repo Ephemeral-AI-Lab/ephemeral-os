@@ -4,9 +4,7 @@ use std::path::{Path, PathBuf};
 
 use layerstack::service::BoundedCaptureOptions;
 use layerstack::CaptureRouteStats;
-use linux_namespace_subprocess::protocol::{
-    Fd, NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot,
-};
+use linux_namespace_subprocess::protocol::{Fd, NamespaceCommandRequest, NsFds, WorkspaceRoot};
 use serde_json::{json, Value};
 
 use crate::overlay::tree::TreeResourceStats;
@@ -111,14 +109,14 @@ impl fmt::Debug for WorkspaceHandle {
 }
 
 impl WorkspaceHandle {
-    pub fn command_run_request(
+    pub fn command_request(
         &self,
-        request: WorkspaceCommandRunRequest,
+        request: WorkspaceCommandRequest,
     ) -> Result<Value, WorkspaceLaunchError> {
         self.launch
             .as_ref()
             .ok_or_else(WorkspaceLaunchError::missing_launch_material)?
-            .command_run_request(request)
+            .command_request(request)
     }
 
     #[must_use]
@@ -278,9 +276,9 @@ impl WorkspaceLaunchContext {
         }
     }
 
-    pub fn command_run_request(
+    pub fn command_request(
         &self,
-        request: WorkspaceCommandRunRequest,
+        request: WorkspaceCommandRequest,
     ) -> Result<Value, WorkspaceLaunchError> {
         let cwd = request
             .cwd
@@ -288,18 +286,13 @@ impl WorkspaceLaunchContext {
             .unwrap_or_else(|| Path::new("."))
             .to_string_lossy()
             .into_owned();
-        let run_request = RunRequest {
-            mode: RunMode::SetNs,
-            tool_call: ToolCall {
-                invocation_id: request.command_id,
-                caller_id: request.caller_id,
-                verb: RunnerVerb::ExecCommand,
-                args: json!({
-                    "command": request.command,
-                    "cwd": cwd,
-                }),
-                background: false,
-            },
+        let command_request = NamespaceCommandRequest {
+            invocation_id: request.command_id,
+            caller_id: request.caller_id,
+            args: json!({
+                "command": request.command,
+                "cwd": cwd,
+            }),
             workspace_root: WorkspaceRoot(self.workspace_root.clone()),
             layer_paths: self.layer_paths.clone(),
             upperdir: Some(self.upperdir.clone()),
@@ -308,7 +301,7 @@ impl WorkspaceLaunchContext {
             cgroup_path: self.cgroup_path.clone(),
             timeout_seconds: request.timeout_seconds,
         };
-        serde_json::to_value(run_request).map_err(|error| WorkspaceLaunchError {
+        serde_json::to_value(command_request).map_err(|error| WorkspaceLaunchError {
             message: format!("serialize workspace command launch request: {error}"),
         })
     }
@@ -328,7 +321,7 @@ impl WorkspaceLaunchContext {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct WorkspaceCommandRunRequest {
+pub struct WorkspaceCommandRequest {
     pub command_id: String,
     pub caller_id: String,
     pub command: String,

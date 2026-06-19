@@ -148,16 +148,15 @@ This summary is grounded in the live tree at plan creation time:
   and quiesces through `CommandOps` at `:1129-1145`, and protects idle
   workspaces through command counts at `:1292` and `:1433`.
 - `RuntimeServices` still owns `Arc<CommandOps>` and `WorkspaceRuntime` in
-  `daemon/core/src/runtime/services.rs:77-81`, and its background task calls
+  `daemon/core/src/runtime/services.rs:77-81`, and its maintenance task calls
   `advance_active_commands_once` at `:34`.
 - `protocol` still advertises command exec/write/poll/cancel plus
   collect/count in `crates/shared/protocol/src/catalog.rs:320-331`.
-- The TypeScript `packages/coding-agent/src/tools/local_os/...` paths cited by
-  the spec are not present in this checkout. Live local_os command evidence in
-  this tree is currently the daemon E2E test
-  `crates/e2e-test/tests/workspace-runtime-command/command_local_os_sandbox.rs`,
-  which exercises the legacy status/stdout command surface rather than the
-  target row projection.
+- The TypeScript local_os command references cited by
+  the spec are not present in this checkout. The retired live command suite has
+  been archived out of the active workspace; current command coverage should
+  use `crates/daemon/operation_service/tests/command_exec.rs` plus the
+  `linux-namespace-subprocess` runner unit tests.
 
 ## Target File And Folder Structure
 
@@ -1068,7 +1067,7 @@ supervisor with the policy-free spawn/yield work. Do not keep a no-op
 - [x] Add one-shot `OneShotPublishThenDestroy` finalization path that uses
    `CommandFinalizationOptions` for publish/capture policy.
 - [x] Add crate-private finalization for completed initial-yield and poll paths;
-   background watcher registration remains deferred in the implementation record.
+   watcher registration remains deferred in the implementation record.
 - [x] Store completed records in `CommandCompletionStore` with caller/workspace
    metadata and transcript retention.
 - [x] Add tests for success, non-success, cancellation, timeout, destroy failure,
@@ -1607,7 +1606,7 @@ remountability, and file-operation routing must be common and profile-neutral.
 ```text
 rg -n "HostWorkspace|HostNamespaceWorkspaceRequest|WorkspaceModeContext|WorkspaceModeManager|ExecTarget::Host|ExecTarget::IsolatedNetwork|IsolatedNetworkError|network_mode" crates/daemon/workspace/src crates/daemon/operation/src crates/daemon/operation_service/src crates/daemon/core/src
 rg -n "one.shot|one_shot|publish|published|remountable|cgroup|ResourcePolicy" crates/daemon/workspace/src/profile crates/daemon/operation/src/command crates/daemon/operation_service/src/command
-rg -n "FreshNs|namespace_fds: None|NetworkMode::Host" crates/daemon/command/src crates/daemon/operation_service/src crates/daemon/core/src
+rg -n "namespace_fds: None|NetworkMode::Host" crates/daemon/command/src crates/daemon/operation_service/src crates/daemon/core/src
 CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p workspace
 CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p workspace
 CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p operation_service
@@ -1772,8 +1771,8 @@ operation services, and shape protocol responses.
 - `crates/daemon/core/src/transport/server.rs`
 - `crates/shared/protocol/src/catalog.rs`
 - `crates/daemon/core/tests/unit/command/*`
-- `crates/e2e-test/tests/workspace-runtime-command/*` or replacement command
-  E2E tests
+- `crates/daemon/operation_service/tests/command_exec.rs`
+- `crates/daemon/linux-namespace-subprocess/tests/unit/runner/command_exec/*`
 - Temporary compatibility files in `crates/daemon/operation/src/command` only
   if needed
 
@@ -1855,7 +1854,7 @@ struct WireExecCommandRequest {
    according to the protocol migration decision.
 - [ ] Update protocol catalog schemas from `operation.command.*` to
    `operation_service.command.*` once wire contracts are migrated.
-- [ ] Move command finalizer scheduling into command service or daemon background
+- [ ] Move command finalizer scheduling into command service or daemon maintenance
    task without exposing `advance_active_commands_once`.
 - [ ] Add focused daemon unit tests and, after packaging, live command E2E if
    daemon behavior changed.
@@ -1884,7 +1883,8 @@ Conditional live E2E after packaging:
 
 ```text
 cargo run -p xtask -- package
-CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p e2e-test workspace-runtime-command
+CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_exec
+CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p linux-namespace-subprocess
 ```
 
 ### Risks And Rollback Notes
@@ -1892,7 +1892,7 @@ CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p e2e-test w
 - Risk: wire compatibility for existing `layer_stack_root` callers breaks before
   clients migrate. Roll back by keeping legacy parsing in the daemon adapter,
   but convert to `workspace_root` before constructing `ExecCommandInput`.
-- Risk: background finalization loses trace records previously emitted by
+- Risk: deferred finalization loses trace records previously emitted by
   `advance_active_commands_once`. Roll back by adding an internal finalizer
   trace sink, not a public command-service method.
 - Risk: `WorkspaceRuntime` is still needed by non-command adapters. Keep command
@@ -1952,7 +1952,7 @@ crates/daemon/operation/src/command/
 
 crates/daemon/core/src/runtime/
   no WorkspaceRuntime command routing
-  no public command lifecycle background advance API
+  no public command lifecycle advance API
 
 crates/daemon/operation_service/src/
   command/
@@ -2048,7 +2048,8 @@ Conditional live E2E:
 
 ```text
 cargo run -p xtask -- package
-CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p e2e-test workspace-runtime-command
+CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_exec
+CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p linux-namespace-subprocess
 ```
 
 ### Risks And Rollback Notes
@@ -2173,7 +2174,8 @@ Conditional live E2E gate:
 
 ```text
 cargo run -p xtask -- package
-CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p e2e-test workspace-runtime-command
+CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_exec
+CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p linux-namespace-subprocess
 ```
 
 ## Open Questions And Blockers
@@ -2202,12 +2204,12 @@ CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p e2e-test w
    response shaping map it to retryable invalid-state/error metadata.
 
 5. Should the finalizer supervisor run inside `CommandOperationService` or as a
-   daemon background task over a private method?
+   daemon maintenance task over a private method?
    Recommendation: prefer service-owned registration where possible. If daemon
    scheduling is required, keep the callable `pub(crate)` and do not expose a
    public `advance_active_commands_once` equivalent.
 
-6. The referenced TypeScript local_os tool files are not present in this
+6. The referenced TypeScript local_os command files are not present in this
    checkout. The live repo has daemon E2E coverage for legacy command stdout and
    command count behavior instead.
    Recommendation: add Rust operation-service row-projection tests first, then

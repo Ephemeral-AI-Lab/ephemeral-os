@@ -1,5 +1,5 @@
 use super::{first_nameserver, needs_fallback_dns, overlay_layer_paths, require_ns_fds};
-use crate::protocol::{Fd, NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
+use crate::protocol::{Fd, NamespaceCommandRequest, NsFds, WorkspaceRoot};
 use std::path::Path;
 #[cfg(target_os = "linux")]
 use std::path::PathBuf;
@@ -120,16 +120,11 @@ fn dns_fallback_applies_only_to_loopback_first_nameserver() {
     assert_eq!(first_nameserver("search local\n"), None);
 }
 
-fn request(ns_fds: Option<NsFds>) -> RunRequest {
-    RunRequest {
-        mode: RunMode::SetNs,
-        tool_call: ToolCall {
-            invocation_id: "test".to_owned(),
-            caller_id: "caller".to_owned(),
-            verb: RunnerVerb::ExecCommand,
-            args: serde_json::json!({"command": "true"}),
-            background: false,
-        },
+fn request(ns_fds: Option<NsFds>) -> NamespaceCommandRequest {
+    NamespaceCommandRequest {
+        invocation_id: "test".to_owned(),
+        caller_id: "caller".to_owned(),
+        args: serde_json::json!({"command": "true"}),
         workspace_root: WorkspaceRoot(Path::new("/workspace").to_path_buf()),
         layer_paths: vec![],
         upperdir: Some(Path::new("/tmp/iws/upper").to_path_buf()),

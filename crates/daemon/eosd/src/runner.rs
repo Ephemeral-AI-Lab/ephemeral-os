@@ -10,8 +10,8 @@ use anyhow::{anyhow, Context, Result};
 
 const DAEMON_CONFIG_YAML_ENV: &str = "EOS_DAEMON_CONFIG_YAML";
 
-/// Execute one tool call inside a namespace (fresh-ns or setns), reading the
-/// resolved `RunRequest` payload and emitting the `RunResult` JSON.
+/// Execute one command inside a holder namespace, reading the
+/// resolved `NamespaceCommandRequest` payload and emitting the `RunResult` JSON.
 ///
 /// This is a thin call into the `linux-namespace-subprocess` runner module:
 /// read the request payload from stdin or `--request <path>`, load the runner
@@ -21,7 +21,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let config = RunnerCliConfig::parse(args)?;
     wait_for_start_ack(config.start_ack_fd)?;
     let request_json = read_payload(config.request_path.as_ref())?;
-    let request: linux_namespace_subprocess::protocol::RunRequest =
+    let request: linux_namespace_subprocess::protocol::NamespaceCommandRequest =
         serde_json::from_str(&request_json).context("failed to decode ns-runner request JSON")?;
     let runner_config = load_runner_config()?;
     let mut output_target = OutputTarget::open(config.output_path.as_ref())?;
@@ -47,8 +47,9 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
             payload: linux_namespace_subprocess::runner::setns::configure_dns(&request)
                 .context("ns-runner configure dns failed")?,
         },
-        RunnerCliMode::Run => linux_namespace_subprocess::runner::run(&request, &runner_config)
-            .context("ns-runner failed")?,
+        RunnerCliMode::Run => {
+            linux_namespace_subprocess::runner::run(&request).context("ns-runner failed")?
+        }
     };
     let output = serde_json::to_vec(&result).context("failed to encode ns-runner result JSON")?;
     write_payload(&mut output_target, &output)
@@ -76,7 +77,7 @@ fn load_runner_config() -> Result<linux_namespace_subprocess::runner::config::Ru
     Ok(config)
 }
 
-/// Which ns-runner operation the CLI flags selected; default is a tool call.
+/// Which ns-runner operation the CLI flags selected; default is command execution.
 enum RunnerCliMode {
     Run,
     MountOverlay,

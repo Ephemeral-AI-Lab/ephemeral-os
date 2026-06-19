@@ -1316,9 +1316,8 @@ fn protected_path_drop_reason(path: &LayerPath) -> Option<RouteDropReason> {
 fn is_command_scratch_path(path: &str) -> bool {
     if matches!(
         path,
-        "command-runner-request.json"
+        "command-request.json"
             | "command-runner-result.json"
-            | "runner-request.json"
             | "runner-result.json"
             | "metadata.json"
             | "final.json"

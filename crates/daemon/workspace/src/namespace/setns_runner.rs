@@ -11,9 +11,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 #[cfg(target_os = "linux")]
-use ::linux_namespace_subprocess::protocol::{RunMode, RunnerVerb, ToolCall, WorkspaceRoot};
-#[cfg(target_os = "linux")]
-use ::linux_namespace_subprocess::protocol::{RunRequest, RunResult};
+use ::linux_namespace_subprocess::protocol::{NamespaceCommandRequest, RunResult, WorkspaceRoot};
 #[cfg(target_os = "linux")]
 use nix::sys::signal::{kill, Signal};
 #[cfg(target_os = "linux")]
@@ -51,13 +49,7 @@ impl NamespaceRuntime {
         }
         #[cfg(target_os = "linux")]
         {
-            let request = ns_runner_request(
-                handle,
-                "mount",
-                "setns_overlay_mount",
-                json!({}),
-                layer_paths.to_vec(),
-            );
+            let request = ns_command_request(handle, "mount", json!({}), layer_paths.to_vec());
             mount_overlay_child(&request, setup_timeout_s)?;
         }
         Ok(())
@@ -80,10 +72,9 @@ impl NamespaceRuntime {
         }
         #[cfg(target_os = "linux")]
         {
-            let request = ns_runner_request(
+            let request = ns_command_request(
                 handle,
                 "remount",
-                "remount_overlay",
                 json!({
                     "probe_path": probe
                         .path
@@ -130,22 +121,16 @@ impl NamespaceRuntime {
 }
 
 #[cfg(target_os = "linux")]
-pub(crate) fn ns_runner_request(
+pub(crate) fn ns_command_request(
     handle: &WorkspaceModeHandle,
     invocation: &str,
-    verb: &str,
     args: serde_json::Value,
     layer_paths: Vec<PathBuf>,
-) -> RunRequest {
-    RunRequest {
-        mode: RunMode::SetNs,
-        tool_call: ToolCall {
-            invocation_id: format!("isolated-{invocation}-{}", handle.workspace_id.0),
-            caller_id: handle.caller_id.clone(),
-            verb: RunnerVerb::from(verb),
-            args,
-            background: false,
-        },
+) -> NamespaceCommandRequest {
+    NamespaceCommandRequest {
+        invocation_id: format!("isolated-{invocation}-{}", handle.workspace_id.0),
+        caller_id: handle.caller_id.clone(),
+        args,
         workspace_root: WorkspaceRoot(PathBuf::from(&handle.workspace_root)),
         layer_paths,
         upperdir: Some(handle.dirs.upperdir.clone()),
@@ -158,7 +143,7 @@ pub(crate) fn ns_runner_request(
 
 #[cfg(target_os = "linux")]
 pub(super) fn mount_overlay_child(
-    request: &RunRequest,
+    request: &NamespaceCommandRequest,
     setup_timeout_s: f64,
 ) -> Result<(), IsolatedNetworkError> {
     let output = run_child(request, "--mount-overlay", Stdio::null(), setup_timeout_s)?;
@@ -176,7 +161,7 @@ pub(super) fn mount_overlay_child(
 
 #[cfg(target_os = "linux")]
 pub(super) fn remount_overlay_child(
-    request: &RunRequest,
+    request: &NamespaceCommandRequest,
     setup_timeout_s: f64,
 ) -> Result<RemountOverlayReport, IsolatedNetworkError> {
     let output = run_child(
@@ -204,7 +189,7 @@ pub(super) fn remount_overlay_child(
 
 #[cfg(target_os = "linux")]
 pub(crate) fn run_child(
-    request: &RunRequest,
+    request: &NamespaceCommandRequest,
     mode_arg: &str,
     stdout: Stdio,
     setup_timeout_s: f64,

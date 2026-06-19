@@ -43,7 +43,7 @@ pub struct CommandProcessSpec {
 }
 
 pub struct CommandProcessSpawn<'a> {
-    pub run_request: Value,
+    pub command_request: Value,
     pub request_path: PathBuf,
     pub output_path: PathBuf,
     pub final_path: PathBuf,
@@ -202,7 +202,7 @@ impl CommandProcess {
     ) -> Result<Self, CommandError> {
         let process = spawn_current_exe_ns_runner(
             &parts.request_path,
-            &parts.run_request,
+            &parts.command_request,
             &parts.output_path,
             parts.transcript_path.clone(),
             parts.transcript_timestamp_timezone,

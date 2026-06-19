@@ -12,7 +12,7 @@
 //!   `linux_namespace_subprocess::holder`.
 //!
 //! Three real processes, one static binary. This is the launcher chain:
-//! `daemon` owns the RPC server, `ns-runner` owns fresh/setns tool execution,
+//! `daemon` owns the RPC server, `ns-runner` owns setns command execution,
 //! and `ns-holder` owns the persistent isolated namespace holder lifecycle.
 //!
 //! `anyhow` is allowed here (binary crate); library crates keep `thiserror`. A

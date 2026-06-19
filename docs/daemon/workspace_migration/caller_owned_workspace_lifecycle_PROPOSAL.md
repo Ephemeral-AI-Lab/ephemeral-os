@@ -108,9 +108,9 @@ operation::file write/edit -> LayerChange -> layerstack.publish_to_layer_stack
 operation::command -> workspace capture -> LayerChange -> layerstack.publish_to_layer_stack
 ```
 
-External tool metadata such as `ToolCall.intent` or `mutates_state` may still
-exist for admission, audit, tracing, or UI. It must not define workspace mode,
-workspace lifecycle, or LayerStack publish behavior.
+External command metadata such as intent or `mutates_state` may still exist for
+admission, audit, tracing, or UI. It must not define workspace mode, workspace
+lifecycle, or LayerStack publish behavior.
 
 ## Public Model
 

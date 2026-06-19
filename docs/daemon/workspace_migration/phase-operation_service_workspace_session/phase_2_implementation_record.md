@@ -367,16 +367,16 @@ Rules:
     `CommandProcess::spawn` and `command::yield_wait_loop::wait_for_yield`; tests
     use a fake driver so operation-service integration tests do not spawn the
     Rust test harness as `ns-runner`.
-  - No background finalizer watcher was added. Completed initial yields and
+  - No deferred finalizer watcher was added. Completed initial yields and
     `poll` use the existing crate-private finalization path.
-- Unresolved issues: None for the M3.5 launch/yield slice. Background
+- Unresolved issues: None for the M3.5 launch/yield slice. Deferred
   finalizer supervision remains future work; no public collect, advance, row
   window, remount-pending, or daemon dispatch API was added.
 - Handoff notes: M3.5 now provides live process insertion with transcript
   artifact paths, policy-free runner request construction, cleanup on
   admission/artifact/spawn/bind/active-insert failures, and first exec responses
   from the command wait loop. The existing M4 finalization path can consume
-  completed initial yields and later `poll` exits; future background supervision
+  completed initial yields and later `poll` exits; future deferred supervision
   should reuse the same live-process/finalization surface without reopening old
   command policy.
 
@@ -437,9 +437,9 @@ Rules:
     finalization can be tested inside the crate and so service-owned process
     paths can finalize without exposing daemon request surface.
 - Unresolved issues:
-  - No background finalizer watcher thread is started. The placeholder
+  - No deferred finalizer watcher thread is started. The placeholder
     `start_finalizer_watch` no-op was removed in the cleanup pass after M4;
-    until background supervision is added, initial exec yield and `poll`
+    until deferred supervision is added, initial exec yield and `poll`
     opportunistically finalize completed process exits.
 - Cleanup notes:
   - Removed the no-op finalizer-watch placeholder and tightened direct
@@ -532,14 +532,11 @@ Rules:
     one documented false positive in
     `crates/daemon/operation_service/tests/command_exec.rs`, where the test
     asserts the low-level `command` crate runner payload field
-    `tool_call.invocation_id`; this is not an operation-service command
+    `call.invocation_id`; this is not an operation-service command
     contract field and was pre-existing outside the Milestone 5 row projection
     scope.
-  - `rg -n "tool_call|ToolCall|tool call" crates/daemon/linux-namespace-subprocess/src crates/daemon/command/src crates/daemon/workspace/src/namespace crates/daemon/operation/src/command crates/daemon/operation_service/tests docs/daemon/workspace_migration`:
-    intentionally not clean. It records sandbox protocol debt in
-    `docs/daemon/workspace_migration/tool_call_sandbox_protocol_FINDINGS.md`,
-    low-level command/workspace producers, ns-runner consumers, and tests that
-    still assert the serialized runner request shape.
+  - The old command-request field-name debt remained at this point and was
+    cleaned up later by the flat `NamespaceCommandRequest` migration.
 - Deviations:
   - Row projection is implemented in
     `operation_service::command::transcript` rather than in the low-level
@@ -666,19 +663,18 @@ Rules:
     offset fields are skipped instead of being synthesized as stdout rows. Raw
     PTY transcript lines that are not structured row candidates still project as
     stdout after timestamp-prefix stripping.
-  - The `tool_call` sandbox-protocol note now records that `RunRequest` is a
-    serialized daemon-to-namespace-runner wire DTO, that cleanup must preserve
-    command/plugin/setup/setns/unknown verb compatibility, and that the rename is
-    future work rather than part of Milestone 5.
+  - The runner-call protocol note recorded that the namespace command request is a serialized
+    daemon-to-namespace-runner wire DTO and that cleanup must preserve command,
+    setup/setns, and unknown verb compatibility. That note was removed after
+    the runner request shape moved to flat `NamespaceCommandRequest` fields.
   - The static-search record now distinguishes the narrow operation-service
-    forbidden-term false positive from the broader `tool_call` inventory that is
-    intentionally documenting low-level protocol debt.
+    forbidden-term false positive from the broader runner-call inventory that
+    documented low-level protocol debt at the time.
 - Files changed:
   - `crates/daemon/operation_service/src/command/error.rs`
   - `crates/daemon/operation_service/src/command/service.rs`
   - `crates/daemon/operation_service/src/command/transcript.rs`
   - `crates/daemon/operation_service/tests/command_transcript_rows.rs`
-  - `docs/daemon/workspace_migration/tool_call_sandbox_protocol_FINDINGS.md`
   - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
 - Verification:
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-fix-target cargo test -p operation_service command_transcript_rows`:
@@ -696,10 +692,10 @@ Rules:
   - `rg -n "operation::command|StartCommand|request_id|trace_id|invocation_id|remountable|WorkspaceRuntime|CommandOps|ExecTarget|InternalHostOneShot|advance_active_commands_once|collect_completed|count_commands|count_by_caller" crates/daemon/operation_service/src/command crates/daemon/operation_service/tests`:
     one expected false positive remains in
     `crates/daemon/operation_service/tests/command_exec.rs`, where the test
-    asserts the low-level runner JSON field `tool_call.invocation_id`.
-  - `rg -n "tool_call|ToolCall|tool call" crates/daemon/linux-namespace-subprocess/src crates/daemon/command/src crates/daemon/workspace/src/namespace crates/daemon/operation/src/command crates/daemon/operation_service/tests docs/daemon/workspace_migration`:
-    intentionally returns the documented sandbox protocol producers, consumers,
-    tests, and migration notes.
+    asserts the low-level runner JSON field `call.invocation_id`.
+  - The old runner field-name scan was intentionally dirty at that time. It is
+    expected to be clean after the later flat `NamespaceCommandRequest`
+    migration.
 - Deviations:
   - Operation-service row projection tests still use fake launch drivers for the
     command process boundary. This layer now proves the command runner payload
@@ -941,9 +937,9 @@ Rules:
     live in `profile::common`, `profile::resource_control`, and namespace
     cgroup helpers, with no `IsolatedProfile` cgroup ownership remaining.
   - Required static scan:
-    `rg -n "FreshNs|namespace_fds: None|NetworkMode::Host" crates/daemon/command/src crates/daemon/operation_service/src crates/daemon/core/src`
-    returned 9 matches. Classification: `command::launch` still supports
-    policy-free `FreshNs` for non holder-backed substrate callers; operation
+    `rg -n "namespace_fds: None|NetworkMode::Host" crates/daemon/command/src crates/daemon/operation_service/src crates/daemon/core/src`
+    returned 9 matches. Classification: `command::launch` still supported
+    a policy-free non-setns path for non holder-backed substrate callers at this checkpoint; operation
     service uses `NetworkMode::Host` only for explicit one-shot workspace
     creation and tests; missing namespace FD matches are tests/fixtures, while
     production holder-backed launch now rejects missing FDs before spawn.
@@ -988,8 +984,8 @@ Rules:
     Milestone 7/M8 cleanup work. The export now carries removal criteria and
     holder-backed host-compatible manager creation goes through the common
     profile handle path.
-  - The lower-level `command` crate still supports `FreshNs` for policy-free
-    non-workspace launch DTO construction. Operation-service holder-backed
+  - At this checkpoint, the lower-level `command` crate still supported a
+    policy-free non-setns launch DTO construction path. Operation-service holder-backed
     workspace launch now rejects missing or partial required namespace FDs before
     calling that helper, so workspace-session commands no longer silently fall
     back.

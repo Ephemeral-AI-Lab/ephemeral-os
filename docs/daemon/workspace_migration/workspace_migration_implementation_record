@@ -67,9 +67,9 @@ overlay through the setns helper, and carries private holder cleanup in the
 Host workspace value. Isolated-network workspace creation now passes
 `NamespaceNetwork::Isolated` explicitly, preserving the dedicated network
 namespace plus existing veth, DNS, and netfilter setup. Workspace command
-preparation now always serializes `RunMode::SetNs`; missing holder namespace
-FDs fail as command preparation errors instead of falling back to `FreshNs`.
-`FreshNs` was preserved only for legacy/non-workspace subprocess
+preparation now always serializes the holder-backed setns command request; missing holder namespace
+FDs fail as command preparation errors instead of falling back to legacy fresh namespace mode.
+legacy fresh namespace mode was preserved only for legacy/non-workspace subprocess
 compatibility. No Phase 8 legacy export/name retirement, publish behavior
 change, capture behavior change, packaging, live E2E, or `ops.json`
 regeneration was implemented.
@@ -87,7 +87,7 @@ through `workspace::overlay`. The legacy root `capture.rs`, `dirs.rs`, and
 `tree.rs` paths were removed. Wire compatibility remains only where current
 operation contracts require it, including legacy `layer_stack_root` inputs;
 route and response literals now use `host` and `isolated`. No publish
-behavior, capture behavior, `FreshNs` compatibility, holder/setns execution
+behavior, capture behavior, legacy fresh namespace mode compatibility, holder/setns execution
 semantics, packaging, live E2E, or `ops.json` regeneration was changed.
 
 ## Files Changed
@@ -189,14 +189,14 @@ semantics, packaging, live E2E, or `ops.json` regeneration was changed.
   - Removed in Phase 8 after isolated manager definitions moved into
     `network_mode/isolated.rs`.
 - `crates/daemon/operation/src/isolation/contract.rs`
-  - Added `WorkspaceRootInput` so isolation enter and compact-remount test
+  - Added `WorkspaceRootInput` so legacy isolation lifecycle and compact-remount test
     inputs accept `workspace_root` while rejecting ambiguous dual-root input.
   - Preserved `layer_stack_root` parsing as legacy compatibility.
 - `crates/daemon/core/src/runtime/workspace.rs`
   - Added `ResolvedWorkspaceRoot` and root-resolution helpers that discover
     LayerStack workspace bindings from caller-facing `workspace_root`.
   - Added explicit legacy `layer_stack_root` compatibility entrypoints for
-    isolation enter and compact remount.
+    legacy isolation lifecycle and compact remount.
   - Bound isolated manager state from resolved workspace bindings instead of
     trusting caller-supplied storage roots directly.
 - `crates/daemon/core/src/op_adapter/isolation.rs`
@@ -262,15 +262,15 @@ semantics, packaging, live E2E, or `ops.json` regeneration was changed.
     instead of acquiring the snapshot lease or creating `HostWorkspace`
     internally.
   - Phase 7 Host command start passes the holder FD payload into command
-    preparation so Host workspace commands use `RunMode::SetNs`.
+    preparation so Host workspace commands use the holder-backed setns command request.
   - Process spawning, runner request artifact writing, and registry activation
     remain in `CommandOps`.
   - Phase 8 imports `WorkspaceModeContext` from
     `workspace::network_mode::isolated`.
 - `crates/daemon/operation/src/command/prepare.rs`
-  - Phase 7 removed workspace command selection of `RunMode::FreshNs`.
+  - Phase 7 removed workspace command selection of legacy fresh namespace mode.
     Host and isolated-network workspace command preparation now always serializes
-    `RunMode::SetNs`.
+    the holder-backed setns command request.
   - Missing holder namespace FDs now fail as
     `workspace_namespace_unavailable` command preparation errors. Host requires
     user/mount/PID FDs. Isolated requires user/mount/PID/network FDs.
@@ -313,8 +313,8 @@ semantics, packaging, live E2E, or `ops.json` regeneration was changed.
     finalization coverage for the Host lease release handle.
 - `crates/daemon/operation/tests/command/prepare.rs`
   - Phase 7 added regression coverage proving Host and isolated-network workspace
-    command requests serialize `RunMode::SetNs`, and missing holder FDs fail
-    instead of falling back to `FreshNs`.
+    command requests serialize the holder-backed setns command request, and missing holder FDs fail
+    instead of falling back to legacy fresh namespace mode.
 - `crates/daemon/linux-namespace-subprocess/tests/unit/holder/handshake.rs`
   - Updated holder handshake tests for explicit Host/isolated holder modes.
 - `crates/daemon/operation/tests/command/registry.rs`
@@ -391,7 +391,7 @@ central route authority.
   dropped before `CommandOps` consumes the `ExecTarget`, including command
   validation and active-command admission failures.
 - Host command execution now uses holder-created namespaces plus the setns
-  runner path. `FreshNs` remains only for legacy/non-workspace compatibility.
+  runner path. legacy fresh namespace mode remains only for legacy/non-workspace compatibility.
 - Host command capture/publish behavior is unchanged. Explicit non-publishing
   `capture_changes` remains deferred to Phase 5; command finalization still
   owns its legacy publish path.
@@ -472,11 +472,11 @@ Phase 7 makes workspace command execution holder/setns-only.
 - Isolated-network workspace create now passes `NamespaceNetwork::Isolated` explicitly.
   The existing isolated create path still creates user, mount, PID, and network
   namespaces and keeps the existing isolated network setup.
-- Host and isolated-network workspace command prep both serialize `RunMode::SetNs`.
+- Host and isolated-network workspace command prep both serialize the holder-backed setns command request.
   Workspace command requests do not carry a public runner-mode enum.
 - Missing holder FDs are command preparation errors. Host requires user, mount,
   and PID FDs. Isolated requires user, mount, PID, and network FDs.
-- `FreshNs` remains in `linux-namespace-subprocess::protocol::RunMode` only for
+- legacy fresh namespace mode remains in `linux-namespace-subprocess::protocol::the removed mode enum` only for
   legacy/non-workspace subprocess compatibility. Phase 7 did not retire the
   enum variant or legacy compatibility paths.
 - Phase 8 legacy export/name retirement was implemented after this holder/setns
@@ -553,7 +553,7 @@ Phase 4 verification used
 | `cargo test -p operation command` | Pass | 66 command tests plus focused checkpoint/contract command targets passed. Command process lifecycle and Host lease release behavior remain in `CommandOps`/LayerStack after route centralization. |
 | `cargo test -p operation file` | Pass | 14 operation file tests passed with checkpoint/contract targets compiling and filtering cleanly. Direct and isolated file backends still own concrete read/write/edit behavior. |
 | `cargo test -p workspace` | Pass | 24 passed, 0 failed; doc tests 0 passed, 0 failed. |
-| `cargo test -p daemon --test phase2_read_paths` | Fail then Pass | Initial full run failed because disabled isolation enter returned `invalid_argument` before `feature_disabled` when given a missing legacy root. Fixed disabled-mode precedence before root resolution; rerun passed 15 tests, including file fast-path route trace metadata. |
+| `cargo test -p daemon --test phase2_read_paths` | Fail then Pass | Initial full run failed because disabled legacy isolation lifecycle returned `invalid_argument` before `feature_disabled` when given a missing legacy root. Fixed disabled-mode precedence before root resolution; rerun passed 15 tests, including file fast-path route trace metadata. |
 | `cargo test -p daemon --test phase3_write_paths` | Pass | 6 write-path tests passed, covering direct file write/edit behavior and OCC/drop compatibility. |
 | `git diff --check` | Pass | No whitespace errors. |
 
@@ -617,7 +617,7 @@ Cleanup pass:
   neutral isolated-error wording after it began preserving invalid-request
   errors.
 - Kept explicit legacy `layer_stack_root` compatibility adapters because
-  repo-wide references still route old isolation enter and test-remount callers
+  repo-wide references still route old legacy isolation lifecycle and test-remount callers
   through them.
 
 Intermediate fixed issues:
@@ -635,7 +635,7 @@ Intermediate fixed issues:
   runtime assertions now compare against canonicalized workspace roots because
   the resolver normalizes roots.
 - The first Phase 4 full `phase2_read_paths` run failed because disabled
-  isolation enter resolved a missing legacy root before returning
+  legacy isolation lifecycle resolved a missing legacy root before returning
   `feature_disabled`. The fix restores disabled-mode precedence before root
   validation while leaving enabled root-validation behavior unchanged.
 - The first Phase 6 `cargo fmt` run failed because the moved netfilter exprs

@@ -190,7 +190,7 @@ Adversarial questions:
   write stdin, cancel, and failed finalization reporting?
 - Did the hidden launch-driver hook weaken production finalization behavior or
   let tests bypass a critical live-process invariant?
-- Does the absence of a background finalizer watcher remain a documented future
+- Does the absence of a deferred finalizer watcher remain a documented future
   limitation rather than an accidental behavior regression?
 
 Expected output from this agent:
@@ -219,8 +219,8 @@ Adversarial questions:
 - Are there focused tests for session versus one-shot launch, spawn/artifact
   failure cleanup, bind/insert failure cleanup, running initial yield, completed
   initial yield, and ownership after completion?
-- Are command-crate tests sufficient for `build_exec_run_request` and related
-  runner-request shape?
+- Are command-crate tests sufficient for `build_exec_command_request` and related
+  command-request shape?
 - Does the implementation record accurately list files changed, verification
   commands, deviations, unresolved issues, and handoff notes?
 - Are there important Linux-only or namespace-runner assumptions that are not

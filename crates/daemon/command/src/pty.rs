@@ -309,13 +309,13 @@ impl PendingPtyProcess {
 
 pub(crate) fn spawn_current_exe_ns_runner(
     request_path: &Path,
-    run_request: &Value,
+    command_request: &Value,
     output_path: &Path,
     transcript_path: PathBuf,
     transcript_timestamp_timezone: &str,
 ) -> Result<PendingPtyProcess, CommandError> {
-    write_run_request(request_path, run_request)
-        .map_err(|error| CommandError::artifact_write("runner_request", request_path, error))?;
+    write_command_request(request_path, command_request)
+        .map_err(|error| CommandError::artifact_write("command_request", request_path, error))?;
     let (master, slave) = open_pty_pair()?;
     let (start_ack_read, start_ack_write) = start_ack_pipe()?;
     let start_ack_fd = start_ack_read.as_raw_fd();
@@ -416,7 +416,7 @@ fn spawn_command_output_reader(
     done_rx
 }
 
-fn write_run_request(path: &Path, request: &Value) -> io::Result<()> {
+fn write_command_request(path: &Path, request: &Value) -> io::Result<()> {
     let bytes = serde_json::to_vec(request).map_err(|error| {
         io::Error::new(
             io::ErrorKind::InvalidData,

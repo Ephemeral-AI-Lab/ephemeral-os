@@ -1,4 +1,4 @@
-//! Setns mode: join holder namespaces, optionally mount overlay/DNS, run tool.
+//! Setns mode: join holder namespaces, optionally mount overlay/DNS, run a command.
 
 #[cfg(target_os = "linux")]
 use std::ffi::CString;
@@ -21,15 +21,15 @@ use overlay::OverlayHandle;
 use super::RunnerError;
 #[cfg(any(test, target_os = "linux"))]
 use crate::protocol::NsFds;
-use crate::protocol::{RunRequest, RunResult};
+use crate::protocol::{NamespaceCommandRequest, RunResult};
 
 #[cfg(target_os = "linux")]
 const RESOLV_CONF: &str = "/etc/resolv.conf";
 
 #[cfg(target_os = "linux")]
-pub(crate) fn run_setns(request: &RunRequest) -> Result<RunResult, RunnerError> {
+pub(crate) fn run_setns(request: &NamespaceCommandRequest) -> Result<RunResult, RunnerError> {
     let ns_fds = require_ns_fds(request)?;
-    let mut timings = super::fresh_ns::RunnerPhaseTimings::default();
+    let mut timings = super::command_exec::RunnerPhaseTimings::default();
     let cgroup_start = Instant::now();
     join_cgroup(request)?;
     timings.insert_s(
@@ -42,18 +42,18 @@ pub(crate) fn run_setns(request: &RunRequest) -> Result<RunResult, RunnerError> 
         "workspace.setns_join_s",
         setns_start.elapsed().as_secs_f64(),
     );
-    super::fresh_ns::execute_tool(request, timings, Instant::now(), None)
+    super::command_exec::execute_command(request, timings, Instant::now(), None)
 }
 
 #[cfg(not(target_os = "linux"))]
-pub(crate) fn run_setns(_request: &RunRequest) -> Result<RunResult, RunnerError> {
+pub(crate) fn run_setns(_request: &NamespaceCommandRequest) -> Result<RunResult, RunnerError> {
     Err(RunnerError::Unsupported)
 }
 
 /// Mount the overlay inside an existing workspace mount namespace.
 #[cfg(target_os = "linux")]
 pub fn setns_overlay_mount(
-    request: &RunRequest,
+    request: &NamespaceCommandRequest,
     config: &super::config::RunnerConfig,
 ) -> Result<(), RunnerError> {
     setns_user_mnt(request, "setns overlay mount")?;
@@ -79,7 +79,7 @@ pub fn setns_overlay_mount(
 
 #[cfg(not(target_os = "linux"))]
 pub fn setns_overlay_mount(
-    _request: &RunRequest,
+    _request: &NamespaceCommandRequest,
     _config: &super::config::RunnerConfig,
 ) -> Result<(), RunnerError> {
     Err(RunnerError::Unsupported)
@@ -88,7 +88,7 @@ pub fn setns_overlay_mount(
 /// Remount an overlay inside the runner's current mount namespace.
 #[cfg(target_os = "linux")]
 pub fn remount_overlay(
-    request: &RunRequest,
+    request: &NamespaceCommandRequest,
     config: &super::config::RunnerConfig,
 ) -> Result<serde_json::Value, RunnerError> {
     setns_user_mnt(request, "remount overlay")?;
@@ -117,7 +117,7 @@ pub fn remount_overlay(
 
 #[cfg(not(target_os = "linux"))]
 pub fn remount_overlay(
-    _request: &RunRequest,
+    _request: &NamespaceCommandRequest,
     _config: &super::config::RunnerConfig,
 ) -> Result<serde_json::Value, RunnerError> {
     Err(RunnerError::Unsupported)
@@ -221,7 +221,7 @@ impl Drop for RemountStagingDirs {
 
 #[cfg(target_os = "linux")]
 fn staged_remount_overlay(
-    request: &RunRequest,
+    request: &NamespaceCommandRequest,
     handle: &OverlayHandle,
     mask_guard: &mut RemountMaskGuard<'_>,
 ) -> Result<RemountSwitchTelemetry, RunnerError> {
@@ -310,7 +310,7 @@ fn rollback_staged_switch(workspace_root: &Path, dirs: &RemountStagingDirs) -> O
 
 #[cfg(target_os = "linux")]
 fn remount_verification_report(
-    request: &RunRequest,
+    request: &NamespaceCommandRequest,
     workspace_root: &Path,
     telemetry: &RemountSwitchTelemetry,
 ) -> serde_json::Value {
@@ -355,7 +355,7 @@ fn remount_verification_report(
 }
 
 #[cfg(target_os = "linux")]
-fn overlay_mount_verified(request: &RunRequest, workspace_root: &Path) -> bool {
+fn overlay_mount_verified(request: &NamespaceCommandRequest, workspace_root: &Path) -> bool {
     let mountinfo = workspace_mountinfo(workspace_root);
     let overlay_mounted = mountinfo
         .as_ref()
@@ -472,15 +472,16 @@ impl RemountReadProbe {
 }
 
 #[cfg(target_os = "linux")]
-fn read_probe_at_root(request: &RunRequest, workspace_root: &Path) -> Option<RemountReadProbe> {
+fn read_probe_at_root(
+    request: &NamespaceCommandRequest,
+    workspace_root: &Path,
+) -> Option<RemountReadProbe> {
     let path = request
-        .tool_call
         .args
         .get("probe_path")
         .and_then(serde_json::Value::as_str)
         .filter(|value| !value.trim().is_empty())?;
     let expected = request
-        .tool_call
         .args
         .get("probe_content")
         .and_then(serde_json::Value::as_str);
@@ -536,9 +537,8 @@ fn validated_relative_probe_path(path: &str) -> Result<PathBuf, String> {
 
 /// Configure `/etc/resolv.conf` inside an existing workspace mount namespace.
 #[cfg(target_os = "linux")]
-pub fn configure_dns(request: &RunRequest) -> Result<serde_json::Value, RunnerError> {
+pub fn configure_dns(request: &NamespaceCommandRequest) -> Result<serde_json::Value, RunnerError> {
     let fallback_dns = request
-        .tool_call
         .args
         .get("fallback_dns")
         .and_then(serde_json::Value::as_str)
@@ -571,12 +571,14 @@ pub fn configure_dns(request: &RunRequest) -> Result<serde_json::Value, RunnerEr
 }
 
 #[cfg(not(target_os = "linux"))]
-pub const fn configure_dns(_request: &RunRequest) -> Result<serde_json::Value, RunnerError> {
+pub const fn configure_dns(
+    _request: &NamespaceCommandRequest,
+) -> Result<serde_json::Value, RunnerError> {
     Err(RunnerError::Unsupported)
 }
 
 #[cfg(any(test, target_os = "linux"))]
-fn require_ns_fds(request: &RunRequest) -> Result<NsFds, RunnerError> {
+fn require_ns_fds(request: &NamespaceCommandRequest) -> Result<NsFds, RunnerError> {
     request
         .ns_fds
         .ok_or_else(|| RunnerError::InvalidRequest("setns mode requires ns_fds".to_owned()))
@@ -596,7 +598,7 @@ fn namespace_fd_order_with_types(ns_fds: &NsFds) -> Vec<(&'static str, RawFd, li
 }
 
 #[cfg(target_os = "linux")]
-fn setns_user_mnt(request: &RunRequest, operation: &str) -> Result<(), RunnerError> {
+fn setns_user_mnt(request: &NamespaceCommandRequest, operation: &str) -> Result<(), RunnerError> {
     let ns_fds = require_ns_fds(request)?;
     let user = ns_fds
         .user
@@ -609,7 +611,7 @@ fn setns_user_mnt(request: &RunRequest, operation: &str) -> Result<(), RunnerErr
 }
 
 #[cfg(any(test, target_os = "linux"))]
-fn overlay_layer_paths(request: &RunRequest) -> Vec<PathBuf> {
+fn overlay_layer_paths(request: &NamespaceCommandRequest) -> Vec<PathBuf> {
     if request.layer_paths.is_empty() {
         vec![request.workspace_root.0.clone()]
     } else {
@@ -680,7 +682,7 @@ fn unique_suffix() -> u128 {
 }
 
 #[cfg(target_os = "linux")]
-fn join_cgroup(request: &RunRequest) -> Result<(), RunnerError> {
+fn join_cgroup(request: &NamespaceCommandRequest) -> Result<(), RunnerError> {
     let Some(cgroup_path) = request.cgroup_path.as_ref() else {
         return Ok(());
     };

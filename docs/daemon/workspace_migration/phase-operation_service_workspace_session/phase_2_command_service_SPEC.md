@@ -125,8 +125,8 @@ The current codebase shows the migration split clearly:
 - `crates/shared/protocol/src/catalog.rs:320` lists command exec/write/poll/
   cancel/collect/count as the current daemon-native command operations. Phase 2
   keeps exec/write/read/poll/cancel in the command service target and drops
-  collect/count/background advancement from that service API.
-- `packages/coding-agent/src/tools/local_os/exec-command.ts:53` and
+  collect/count lifecycle advancement from that service API.
+- The local_os `exec-command` reference and
   `helper/command-transcript.ts:87` show the local_os row-oriented output
   projection that Phase 2 must preserve where relevant:
   `{ offset, next_offset, total_lines, output_truncated, output: rows }`.
@@ -389,7 +389,7 @@ target command contract must not carry a second LayerStack-root path.
 Request correlation identifiers are not part of the target command-service
 input. Request correlation belongs in `CommandCallContext`/trace context, and
 command identity belongs to the allocated `command_id`. If a lower-level runner
-request still needs a tool-call correlation value during migration, derive it
+request still needs a command correlation value during migration, derive it
 inside launch preparation from `command_id` or request context rather than
 adding a request-correlation field back to `ExecCommandInput`.
 
@@ -679,14 +679,14 @@ always:
 The temporary one-shot host `workspace_id` exists only so active command
 lifecycle, cleanup, remount guards, and destroy failure reporting have one
 consistent workspace session shape. It is not a public session id.
-Running/backgrounded responses expose `command_id`, not the temporary
+Running responses expose `command_id`, not the temporary
 `workspace_id`.
 
 If a foreground exec yields `running`, the temporary one-shot workspace stays
 alive until the command finalizer can prove the command-owned process tree is
 drained and finalizes the run. A PTY runner/direct child exit by itself is not
 enough to capture, publish, or destroy the one-shot workspace. For example, a
-command that backgrounds long-lived work with `nohup ... &` can make the shell
+command that starts detached long-lived work with `nohup ... &` can make the shell
 or PTY runner return immediately while descendants continue mutating the
 workspace. Those descendants keep the one-shot command active until they exit,
 are cancelled, or time out. Destroy failure must retain enough service state to
@@ -929,7 +929,7 @@ teardown.
 
 ## Local OS Compatibility Projection
 
-The local_os tools expose row-oriented output:
+The local_os command surface exposes row-oriented output:
 
 ```text
 output: [{ offset, stream, text }]
@@ -939,11 +939,11 @@ total_lines
 status
 exit_code
 output_truncated
-command_id when running/backgrounded
+command_id when running
 ```
 
 Phase 2 should add daemon command projections that can satisfy equivalent
-tools:
+commands:
 
 ```rust
 pub struct CommandTranscriptRow {
@@ -1411,7 +1411,7 @@ Rules:
     registry removal.
 12. Add row-oriented transcript projection for local_os-compatible reads.
 13. Move stdin/read/poll/cancel logic into `CommandOperationService` and leave
-    collect/count/background advancement out of the Phase 2 command-service API.
+    collect/count lifecycle advancement out of the Phase 2 command-service API.
 14. Move command-side remount quiesce and `/proc` inspection into
     `operation_service::command::remount`.
 15. Move remount orchestration out of `WorkspaceRuntime` into

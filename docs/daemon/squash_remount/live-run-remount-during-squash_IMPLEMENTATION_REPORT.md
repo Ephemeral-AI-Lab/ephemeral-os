@@ -385,10 +385,11 @@ processes while still completing the verified remount in tens of milliseconds.
 
 ### Real Concurrent Pip Install Test
 
-Focused command:
+Archived live command:
 
 ```bash
-CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --features e2e --test workspace-runtime-isolated compact_remount_live_remount_coverage_goal4_hard_concurrent_real_pip_install_tree -- --nocapture --test-threads 1
+The original live remount suite was retired and archived out of the active
+workspace. This section records the previously captured result only.
 ```
 
 Latest captured result:
@@ -524,16 +525,18 @@ CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p layerstack
 CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo run -q -p layerstack --release --example bench_layerstack_gap_reclaim
 ```
 
-Focused live real-pip proof:
+Archived focused live real-pip proof:
 
 ```bash
-CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --features e2e --test workspace-runtime-isolated compact_remount_live_remount_coverage_goal4_hard_concurrent_real_pip_install_tree -- --nocapture --test-threads 1
+The original live remount suite was retired and archived out of the active
+workspace. Keep this as historical evidence rather than an active command.
 ```
 
-Broad live compact-remount proof:
+Archived broad live compact-remount proof:
 
 ```bash
-CARGO_TARGET_DIR=/tmp/ephemeral-os-remount-target cargo test -p e2e-test --features e2e --test workspace-runtime-isolated compact_remount_live_remount -- --nocapture --test-threads 1
+The original live remount suite was retired and archived out of the active
+workspace. Keep this as historical evidence rather than an active command.
 ```
 
 Report generation note: this document records the previously captured benchmark
