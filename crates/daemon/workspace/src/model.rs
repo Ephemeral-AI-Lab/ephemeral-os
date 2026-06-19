@@ -1,11 +1,11 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::fmt;
 use std::path::PathBuf;
 
 use namespace_process::runner::protocol::{Fd, NsFds};
 
 use crate::overlay::tree::TreeResourceStats;
-use crate::profile::WorkspaceModeHandle;
+use crate::profile::{WorkspaceModeFds, WorkspaceModeHandle};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct WorkspaceId(pub String);
@@ -37,17 +37,6 @@ impl fmt::Debug for LayerStackSnapshotView {
             .field("root_hash", &self.root_hash)
             .field("layer_count", &self.layer_paths.len())
             .finish()
-    }
-}
-
-impl LayerStackSnapshotView {
-    #[must_use]
-    pub fn base_revision(&self) -> BaseRevision {
-        BaseRevision {
-            version: self.manifest_version,
-            root_hash: self.root_hash.clone(),
-            layer_count: self.layer_paths.len(),
-        }
     }
 }
 
@@ -174,27 +163,26 @@ impl WorkspaceHandle {
         workdir: PathBuf,
         cgroup_path: Option<PathBuf>,
     ) -> Self {
-        let layer_paths = snapshot.layer_paths.clone();
         Self::with_launch_for_test(
             id,
             owner,
             workspace_root.clone(),
             profile,
-            snapshot,
-            Some(WorkspaceLaunchContext {
+            snapshot.clone(),
+            Some(launch_context_for_test(
                 profile,
                 workspace_root,
-                layer_paths,
+                snapshot.layer_paths.clone(),
                 upperdir,
                 workdir,
-                holder_fds: Some(WorkspaceLaunchFds {
+                Some(WorkspaceLaunchFds {
                     user: Some(10),
                     mnt: Some(11),
                     pid: Some(12),
                     net: (profile == WorkspaceProfile::Isolated).then_some(13),
                 }),
                 cgroup_path,
-            }),
+            )),
         )
     }
 
@@ -210,22 +198,21 @@ impl WorkspaceHandle {
         workdir: PathBuf,
         cgroup_path: Option<PathBuf>,
     ) -> Self {
-        let layer_paths = snapshot.layer_paths.clone();
         Self::with_launch_for_test(
             id,
             owner,
             workspace_root.clone(),
             profile,
-            snapshot,
-            Some(WorkspaceLaunchContext {
+            snapshot.clone(),
+            Some(launch_context_for_test(
                 profile,
                 workspace_root,
-                layer_paths,
+                snapshot.layer_paths.clone(),
                 upperdir,
                 workdir,
-                holder_fds: None,
+                None,
                 cgroup_path,
-            }),
+            )),
         )
     }
 
@@ -260,6 +247,26 @@ impl WorkspaceHandle {
     }
 }
 
+fn launch_context_for_test(
+    profile: WorkspaceProfile,
+    workspace_root: PathBuf,
+    layer_paths: Vec<PathBuf>,
+    upperdir: PathBuf,
+    workdir: PathBuf,
+    holder_fds: Option<WorkspaceLaunchFds>,
+    cgroup_path: Option<PathBuf>,
+) -> WorkspaceLaunchContext {
+    WorkspaceLaunchContext {
+        profile,
+        workspace_root,
+        layer_paths,
+        upperdir,
+        workdir,
+        holder_fds,
+        cgroup_path,
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 struct WorkspaceLaunchContext {
     profile: WorkspaceProfile,
@@ -269,19 +276,6 @@ struct WorkspaceLaunchContext {
     workdir: PathBuf,
     holder_fds: Option<WorkspaceLaunchFds>,
     cgroup_path: Option<PathBuf>,
-}
-
-impl fmt::Debug for WorkspaceLaunchContext {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("WorkspaceLaunchContext")
-            .field("storage", &"<hidden>")
-            .field(
-                "holder_context",
-                &self.holder_fds.as_ref().map(|_| "<available>"),
-            )
-            .field("cgroup", &self.cgroup_path.as_ref().map(|_| "<available>"))
-            .finish()
-    }
 }
 
 impl WorkspaceLaunchContext {
@@ -399,18 +393,6 @@ struct WorkspaceLaunchFds {
     mnt: Option<i32>,
     pid: Option<i32>,
     net: Option<i32>,
-}
-
-impl fmt::Debug for WorkspaceLaunchFds {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let available = |fd: Option<i32>| fd.map(|_| "<available>");
-        f.debug_struct("WorkspaceLaunchFds")
-            .field("user", &available(self.user))
-            .field("mnt", &available(self.mnt))
-            .field("pid", &available(self.pid))
-            .field("net", &available(self.net))
-            .finish()
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -534,22 +516,21 @@ impl From<&WorkspaceModeHandle> for WorkspaceHandle {
                 layer_paths: handle.layer_paths.clone(),
                 upperdir: handle.dirs.upperdir.clone(),
                 workdir: handle.dirs.workdir.clone(),
-                holder_fds: holder_fds_from_map(&handle.ns_fds),
+                holder_fds: holder_fds_from_mode(handle.ns_fds),
                 cgroup_path: handle.cgroup_path.clone(),
             }),
         }
     }
 }
 
-fn holder_fds_from_map(ns_fds: &HashMap<String, i32>) -> Option<WorkspaceLaunchFds> {
+fn holder_fds_from_mode(ns_fds: WorkspaceModeFds) -> Option<WorkspaceLaunchFds> {
     if ns_fds.is_empty() {
         return None;
     }
-    let fd = |name: &str| ns_fds.get(name).copied();
     Some(WorkspaceLaunchFds {
-        user: fd("user"),
-        mnt: fd("mnt"),
-        pid: fd("pid"),
-        net: fd("net"),
+        user: ns_fds.user,
+        mnt: ns_fds.mnt,
+        pid: ns_fds.pid,
+        net: ns_fds.net,
     })
 }

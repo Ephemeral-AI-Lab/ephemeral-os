@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 #[cfg(unix)]
 use std::fs::File;
 #[cfg(target_os = "linux")]
@@ -23,55 +22,52 @@ use nix::fcntl::{fcntl, FcntlArg, FdFlag, OFlag};
 #[cfg(target_os = "linux")]
 use nix::unistd::read;
 
-use crate::profile::IsolatedNetworkError;
+use crate::profile::{IsolatedNetworkError, WorkspaceModeFds};
 
 #[cfg(target_os = "linux")]
 use super::setup_error;
-use super::{NamespacePlan, NamespaceRuntime};
+use super::{NamespaceFd, NamespacePlan, NamespaceRuntime};
 
 impl NamespaceRuntime {
     pub(crate) fn open_ns_fds(
         &self,
         holder_pid: i32,
         plan: NamespacePlan,
-    ) -> Result<HashMap<String, i32>, IsolatedNetworkError> {
+    ) -> Result<WorkspaceModeFds, IsolatedNetworkError> {
         if self.stub {
             return open_stub_ns_fds(plan);
         }
         if holder_pid <= 0 {
-            return Ok(HashMap::new());
+            return Ok(WorkspaceModeFds::default());
         }
         #[cfg(not(target_os = "linux"))]
         {
             let _ = (holder_pid, plan);
-            Ok(HashMap::new())
+            Ok(WorkspaceModeFds::default())
         }
         #[cfg(target_os = "linux")]
         {
-            let mut opened = Vec::new();
-            for name in plan.fd_names() {
-                opened.push((
-                    name.to_owned(),
-                    open_inheritable_fd(namespace_fd_path(holder_pid, name))?,
-                ));
+            let mut fds = WorkspaceModeFds::default();
+            for &fd in plan.fds() {
+                set_fd(&mut fds, fd, open_inheritable_fd(fd.proc_path(holder_pid))?);
             }
-            Ok(into_raw_fd_map(opened))
+            Ok(fds)
         }
     }
 }
 
 #[cfg(unix)]
-fn open_stub_ns_fds(plan: NamespacePlan) -> Result<HashMap<String, i32>, IsolatedNetworkError> {
-    let mut opened = Vec::new();
-    for name in plan.fd_names() {
-        opened.push((name.to_owned(), open_stub_ns_fd()?));
+fn open_stub_ns_fds(plan: NamespacePlan) -> Result<WorkspaceModeFds, IsolatedNetworkError> {
+    let mut fds = WorkspaceModeFds::default();
+    for &fd in plan.fds() {
+        set_fd(&mut fds, fd, open_stub_ns_fd()?);
     }
-    Ok(into_raw_fd_map(opened))
+    Ok(fds)
 }
 
 #[cfg(not(unix))]
-fn open_stub_ns_fds(_plan: NamespacePlan) -> Result<HashMap<String, i32>, IsolatedNetworkError> {
-    Ok(HashMap::new())
+fn open_stub_ns_fds(_plan: NamespacePlan) -> Result<WorkspaceModeFds, IsolatedNetworkError> {
+    Ok(WorkspaceModeFds::default())
 }
 
 #[cfg(unix)]
@@ -85,17 +81,6 @@ fn open_stub_ns_fd() -> Result<File, IsolatedNetworkError> {
 }
 
 #[cfg(target_os = "linux")]
-fn namespace_fd_path(holder_pid: i32, name: &str) -> String {
-    match name {
-        "user" => format!("/proc/{holder_pid}/ns/user"),
-        "mnt" => format!("/proc/{holder_pid}/ns/mnt"),
-        "pid" => format!("/proc/{holder_pid}/ns/pid_for_children"),
-        "net" => format!("/proc/{holder_pid}/ns/net"),
-        _ => unreachable!("namespace plan emitted an unknown fd name"),
-    }
-}
-
-#[cfg(target_os = "linux")]
 fn open_inheritable_fd(path: impl AsRef<std::path::Path>) -> Result<File, IsolatedNetworkError> {
     let file = File::open(path.as_ref()).map_err(setup_error)?;
     clear_cloexec(file.as_raw_fd())?;
@@ -103,11 +88,14 @@ fn open_inheritable_fd(path: impl AsRef<std::path::Path>) -> Result<File, Isolat
 }
 
 #[cfg(unix)]
-fn into_raw_fd_map(opened: Vec<(String, File)>) -> HashMap<String, i32> {
-    opened
-        .into_iter()
-        .map(|(name, file)| (name, file.into_raw_fd()))
-        .collect()
+fn set_fd(fds: &mut WorkspaceModeFds, fd: NamespaceFd, file: File) {
+    let raw_fd = file.into_raw_fd();
+    match fd {
+        NamespaceFd::User => fds.user = Some(raw_fd),
+        NamespaceFd::Mnt => fds.mnt = Some(raw_fd),
+        NamespaceFd::Pid => fds.pid = Some(raw_fd),
+        NamespaceFd::Net => fds.net = Some(raw_fd),
+    }
 }
 
 #[cfg(target_os = "linux")]
@@ -179,11 +167,11 @@ pub(super) fn write_all_fd(fd: RawFd, bytes: &[u8]) -> Result<(), IsolatedNetwor
 }
 
 #[cfg(target_os = "linux")]
-pub(super) fn ns_fds_from_map(map: &HashMap<String, i32>) -> Option<NsFds> {
-    (!map.is_empty()).then(|| NsFds {
-        user: map.get("user").copied().map(Fd),
-        mnt: map.get("mnt").copied().map(Fd),
-        pid: map.get("pid").copied().map(Fd),
-        net: map.get("net").copied().map(Fd),
+pub(super) fn ns_fds_from_mode(fds: WorkspaceModeFds) -> Option<NsFds> {
+    (!fds.is_empty()).then(|| NsFds {
+        user: fds.user.map(Fd),
+        mnt: fds.mnt.map(Fd),
+        pid: fds.pid.map(Fd),
+        net: fds.net.map(Fd),
     })
 }

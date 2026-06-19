@@ -6,11 +6,9 @@ use crate::error::LayerStackError;
 use crate::fs::{allocate_layer_dirs, check_layer_path, fsync_dir, resolve_layer_path};
 use crate::{MergedView, LAYERS_DIR};
 
-mod auto_squash;
-mod ops;
 mod planning;
 
-pub(crate) use auto_squash::{run_auto_squash, AutoSquashTrace};
+pub(crate) use crate::stack::ops::{run_auto_squash, AutoSquashTrace};
 use planning::segment_around_lease_heads;
 
 pub(crate) const CHECKPOINT_ID_PREFIX: char = 'B';

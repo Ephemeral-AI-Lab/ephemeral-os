@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
@@ -39,7 +38,7 @@ pub struct WorkspaceModeHandle {
     pub workspace_root: String,
     pub dirs: OverlayDirs,
     pub layer_paths: Vec<PathBuf>,
-    pub ns_fds: HashMap<String, i32>,
+    pub ns_fds: WorkspaceModeFds,
     pub holder_pid: i32,
     pub readiness_fd: i32,
     pub control_fd: i32,
@@ -49,4 +48,28 @@ pub struct WorkspaceModeHandle {
     pub remount_state: WorkspaceRemountState,
     pub created_at: f64,
     pub last_activity: f64,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct WorkspaceModeFds {
+    pub user: Option<i32>,
+    pub mnt: Option<i32>,
+    pub pid: Option<i32>,
+    pub net: Option<i32>,
+}
+
+impl WorkspaceModeFds {
+    pub(crate) fn len(self) -> usize {
+        self.values().count()
+    }
+
+    pub(crate) fn is_empty(self) -> bool {
+        self.user.is_none() && self.mnt.is_none() && self.pid.is_none() && self.net.is_none()
+    }
+
+    pub(crate) fn values(self) -> impl Iterator<Item = i32> {
+        [self.user, self.mnt, self.pid, self.net]
+            .into_iter()
+            .flatten()
+    }
 }

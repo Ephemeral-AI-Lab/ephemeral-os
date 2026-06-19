@@ -73,42 +73,35 @@ pub(crate) enum Route {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum ValidationBase {
-    Path(Option<String>),
-    Paths(Vec<(LayerPath, Option<String>)>),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum PublishDecision {
-    Publish {
-        path: LayerPath,
-        route: PublishRoute,
-    },
-    Drop {
-        path: LayerPath,
-        reason: Option<RouteDropReason>,
-        reject_publish: bool,
-    },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum PublishRoute {
-    Direct,
-    Gated(ValidationBase),
+pub(crate) struct PublishDecision {
+    path: LayerPath,
+    route: Route,
+    base_hash: Option<String>,
+    drop_reason: Option<RouteDropReason>,
+    reject_publish: bool,
+    validation_base_hashes: Option<Vec<(LayerPath, Option<String>)>>,
 }
 
 impl PublishDecision {
-    pub(crate) fn direct(path: LayerPath) -> Self {
-        Self::Publish {
+    fn new(path: LayerPath, route: Route) -> Self {
+        Self {
             path,
-            route: PublishRoute::Direct,
+            route,
+            base_hash: None,
+            drop_reason: None,
+            reject_publish: false,
+            validation_base_hashes: None,
         }
     }
 
+    pub(crate) fn direct(path: LayerPath) -> Self {
+        Self::new(path, Route::Direct)
+    }
+
     pub(crate) fn gated(path: LayerPath, base_hash: Option<String>) -> Self {
-        Self::Publish {
-            path,
-            route: PublishRoute::Gated(ValidationBase::Path(base_hash)),
+        Self {
+            base_hash,
+            ..Self::new(path, Route::Gated)
         }
     }
 
@@ -116,96 +109,71 @@ impl PublishDecision {
         path: LayerPath,
         validation_base_hashes: Vec<(LayerPath, Option<String>)>,
     ) -> Self {
-        Self::Publish {
-            path,
-            route: PublishRoute::Gated(ValidationBase::Paths(validation_base_hashes)),
+        Self {
+            validation_base_hashes: Some(validation_base_hashes),
+            ..Self::new(path, Route::Gated)
         }
     }
 
     pub(crate) fn dropped(path: LayerPath, reason: Option<RouteDropReason>) -> Self {
-        Self::Drop {
-            path,
-            reason,
-            reject_publish: false,
+        Self {
+            drop_reason: reason,
+            ..Self::new(path, Route::Drop)
         }
     }
 
     pub(crate) fn rejected_drop(path: LayerPath, reason: RouteDropReason) -> Self {
-        Self::Drop {
-            path,
-            reason: Some(reason),
+        Self {
+            drop_reason: Some(reason),
             reject_publish: true,
+            ..Self::new(path, Route::Drop)
         }
     }
 
     pub(crate) fn path(&self) -> &LayerPath {
-        match self {
-            Self::Publish { path, .. } | Self::Drop { path, .. } => path,
-        }
+        &self.path
     }
 
     pub(crate) const fn route(&self) -> Route {
-        match self {
-            Self::Publish {
-                route: PublishRoute::Direct,
-                ..
-            } => Route::Direct,
-            Self::Publish {
-                route: PublishRoute::Gated(_),
-                ..
-            } => Route::Gated,
-            Self::Drop { .. } => Route::Drop,
-        }
+        self.route
     }
 
     pub(crate) const fn is_publishable(&self) -> bool {
-        matches!(self, Self::Publish { .. })
+        !matches!(self.route, Route::Drop)
     }
 
     pub(crate) const fn drop_reason(&self) -> Option<RouteDropReason> {
-        match self {
-            Self::Drop { reason, .. } => *reason,
-            Self::Publish { .. } => None,
-        }
+        self.drop_reason
     }
 
     pub(crate) const fn reject_publish(&self) -> bool {
-        match self {
-            Self::Drop { reject_publish, .. } => *reject_publish,
-            Self::Publish { .. } => false,
-        }
+        self.reject_publish
     }
 
-    pub(crate) fn validation_base(&self) -> Option<&ValidationBase> {
-        match self {
-            Self::Publish {
-                route: PublishRoute::Gated(validation),
-                ..
-            } => Some(validation),
-            Self::Publish { .. } | Self::Drop { .. } => None,
-        }
+    pub(crate) fn base_hash(&self) -> Option<&str> {
+        self.base_hash.as_deref()
     }
 
-    pub(crate) fn drop_file_result(&self) -> Option<FileResult> {
-        self.drop_file_result_with_default("change dropped")
+    pub(crate) fn validation_base_hashes(&self) -> Option<&[(LayerPath, Option<String>)]> {
+        self.validation_base_hashes.as_deref()
     }
 
     pub(crate) fn drop_file_result_with_default(
         &self,
         default_message: &'static str,
     ) -> Option<FileResult> {
-        let reject_publish = self.reject_publish();
-        let Self::Drop { path, reason, .. } = self else {
+        if self.route != Route::Drop {
             return None;
-        };
+        }
+        let reject_publish = self.reject_publish();
         Some(FileResult {
-            path: path.clone(),
+            path: self.path.clone(),
             status: if reject_publish {
                 CommitStatus::Failed
             } else {
                 CommitStatus::Dropped
             },
-            message: reason.map_or_else(
+            message: self.drop_reason.map_or_else(
                 || default_message.to_owned(),
                 |reason| reason.as_str().to_owned(),
             ),

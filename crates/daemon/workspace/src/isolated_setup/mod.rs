@@ -21,6 +21,10 @@ pub const BRIDGE_NAME: &str = "eos-shared0";
 #[cfg(target_os = "linux")]
 pub const GATEWAY: &str = "10.244.0.1";
 #[cfg(target_os = "linux")]
+pub const GATEWAY_ADDR: Ipv4Addr = Ipv4Addr::new(10, 244, 0, 1);
+#[cfg(target_os = "linux")]
+pub const BRIDGE_NETWORK: Ipv4Addr = Ipv4Addr::new(10, 244, 0, 0);
+#[cfg(target_os = "linux")]
 pub const NFT_NAT_TABLE: &str = "eos_iws_nat";
 #[cfg(target_os = "linux")]
 pub const NFT_FILTER_TABLE: &str = "eos_iws_filter";
@@ -125,13 +129,12 @@ impl IsolatedNetwork {
         if !self.initialized {
             self.initialize()?;
         }
-        let (host_name, ns_name) = veth_names(workspace_handle_id);
-        let ns_ip = self.pool.allocate()?;
+        let allocation = self.allocate_veth(workspace_handle_id)?;
         if !test_harness_enabled() && holder_pid > 0 {
             #[cfg(target_os = "linux")]
             {
-                let host = host_name.clone();
-                let ns = ns_name.clone();
+                let host = allocation.host_name.clone();
+                let ns = allocation.ns_name.clone();
                 let holder_pid = u32::try_from(holder_pid).map_err(|_| {
                     IsolatedNetworkError::NetworkUnavailable(format!(
                         "invalid isolated holder pid {holder_pid}"
@@ -140,16 +143,12 @@ impl IsolatedNetwork {
                 if let Err(error) = run_netlink(move |handle| async move {
                     install_veth_pair(&handle, &host, &ns, holder_pid).await
                 }) {
-                    self.pool.free(ns_ip);
+                    self.pool.free(allocation.ns_ip);
                     return Err(error);
                 }
             }
         }
-        Ok(VethAllocation {
-            host_name,
-            ns_name,
-            ns_ip,
-        })
+        Ok(allocation)
     }
 
     pub(crate) fn install_stub_veth(
@@ -157,6 +156,13 @@ impl IsolatedNetwork {
         workspace_handle_id: &str,
     ) -> Result<VethAllocation, IsolatedNetworkError> {
         self.initialized = true;
+        self.allocate_veth(workspace_handle_id)
+    }
+
+    fn allocate_veth(
+        &mut self,
+        workspace_handle_id: &str,
+    ) -> Result<VethAllocation, IsolatedNetworkError> {
         let (host_name, ns_name) = veth_names(workspace_handle_id);
         let ns_ip = self.pool.allocate()?;
         Ok(VethAllocation {

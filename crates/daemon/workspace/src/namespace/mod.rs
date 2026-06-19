@@ -31,6 +31,26 @@ impl NamespaceNetwork {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum NamespaceFd {
+    User,
+    Mnt,
+    Pid,
+    Net,
+}
+
+impl NamespaceFd {
+    #[cfg(target_os = "linux")]
+    pub(crate) fn proc_path(self, holder_pid: i32) -> String {
+        match self {
+            Self::User => format!("/proc/{holder_pid}/ns/user"),
+            Self::Mnt => format!("/proc/{holder_pid}/ns/mnt"),
+            Self::Pid => format!("/proc/{holder_pid}/ns/pid_for_children"),
+            Self::Net => format!("/proc/{holder_pid}/ns/net"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct NamespacePlan {
     pub(crate) network: NamespaceNetwork,
 }
@@ -48,13 +68,17 @@ impl NamespacePlan {
         }
     }
 
-    pub(crate) fn fd_names(self) -> Vec<&'static str> {
-        let mut names = Vec::with_capacity(4);
-        names.extend(["user", "mnt", "pid"]);
+    pub(crate) const fn fds(self) -> &'static [NamespaceFd] {
         if self.network.requires_net_fd() {
-            names.push("net");
+            &[
+                NamespaceFd::User,
+                NamespaceFd::Mnt,
+                NamespaceFd::Pid,
+                NamespaceFd::Net,
+            ]
+        } else {
+            &[NamespaceFd::User, NamespaceFd::Mnt, NamespaceFd::Pid]
         }
-        names
     }
 }
 

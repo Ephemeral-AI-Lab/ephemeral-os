@@ -6,9 +6,8 @@ use serde_json::{json, Value};
 
 use crate::model::WorkspaceProfile;
 use crate::namespace::HolderKillReport;
-use crate::overlay::tree::directory_file_bytes;
+use crate::overlay::tree::TreeResourceStats;
 use crate::profile::manager::IsolatedNetworkError;
-use crate::profile::resource_control;
 use crate::profile::{WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeManager};
 
 use super::{monotonic_seconds, record_phase_ms};
@@ -44,7 +43,11 @@ impl WorkspaceModeManager {
         record_phase_ms(&mut phases_ms, "kill_holder", phase_start);
         close_handle_fds(handle);
         self.teardown_isolated_network(handle, &mut phases_ms);
-        let _ = resource_control::remove_cgroup(handle, &mut phases_ms);
+        let phase_start = Instant::now();
+        if let Some(cgroup_path) = handle.cgroup_path.as_ref() {
+            let _ = std::fs::remove_dir(cgroup_path);
+        }
+        record_phase_ms(&mut phases_ms, "cgroup_rmdir", phase_start);
         let phase_start = Instant::now();
         let _ = std::fs::remove_dir_all(&handle.dirs.run_dir);
         record_phase_ms(&mut phases_ms, "rmtree_scratch", phase_start);
@@ -120,7 +123,7 @@ impl WorkspaceModeManager {
             return Err(IsolatedNetworkError::NotOpen);
         };
         let timer = Instant::now();
-        let upperdir_bytes = directory_file_bytes(&handle.dirs.upperdir);
+        let upperdir_bytes = TreeResourceStats::collect(&handle.dirs.upperdir).bytes;
         let (mut inspection, mut phases_ms) =
             self.teardown_handle(&handle, grace_s.unwrap_or(self.caps.exit_grace_s));
         let phase_start = Instant::now();
@@ -144,7 +147,7 @@ impl WorkspaceModeManager {
 }
 
 fn close_handle_fds(handle: &WorkspaceModeHandle) {
-    for fd in handle.ns_fds.values().copied() {
+    for fd in handle.ns_fds.values() {
         close_fd(fd);
     }
     close_fd(handle.readiness_fd);

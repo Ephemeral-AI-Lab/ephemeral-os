@@ -29,12 +29,6 @@ impl TreeResourceStats {
     }
 }
 
-/// Count regular-file bytes in a directory tree.
-#[must_use]
-pub fn directory_file_bytes(path: &Path) -> u64 {
-    TreeResourceStats::collect(path).bytes
-}
-
 fn collect_path(path: &Path, stats: &mut TreeResourceStats, remaining_entries: &mut usize) {
     if *remaining_entries == 0 {
         stats.truncated = true;

@@ -4,6 +4,7 @@ mod commit;
 mod error;
 mod git_index;
 mod model;
+mod opaque_hidden;
 pub mod service;
 mod stack;
 mod storage;

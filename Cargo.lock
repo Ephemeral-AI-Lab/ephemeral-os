@@ -1771,7 +1771,6 @@ dependencies = [
  "layerstack",
  "libc",
  "namespace-process",
- "netlink-sys",
  "nix 0.29.0",
  "rtnetlink",
  "rustix 0.38.44",

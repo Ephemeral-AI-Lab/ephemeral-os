@@ -1,40 +1,82 @@
 use crate::lifecycle::leases::monotonic_seconds;
-use crate::profile::{IsolatedNetworkError, WorkspaceModeManager};
+use crate::profile::{
+    IsolatedNetworkError, WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeManager,
+};
 
-use super::{RemountPlan, RemountProbe, WorkspaceRemountState};
+use super::{RemountProbe, WorkspaceRemountState};
 
 impl WorkspaceModeManager {
-    fn prepare_remount(
+    pub(crate) fn remount_with_layers(
         &mut self,
         caller_id: &str,
         layer_paths: Vec<std::path::PathBuf>,
-        probe: RemountProbe,
-    ) -> Result<RemountPlan, IsolatedNetworkError> {
-        let plan = RemountPlan::new(caller_id.to_owned(), layer_paths, probe)?;
+        probe: &RemountProbe,
+    ) -> Result<WorkspaceModeHandle, IsolatedNetworkError> {
+        if caller_id.trim().is_empty() {
+            return Err(IsolatedNetworkError::InvalidArgument(
+                "caller_id is required".to_owned(),
+            ));
+        }
+        if layer_paths.is_empty() {
+            return Err(IsolatedNetworkError::InvalidArgument(
+                "layer_paths must not be empty".to_owned(),
+            ));
+        }
         let workspace_id = self
             .by_caller
-            .get(plan.caller_id())
+            .get(caller_id)
             .cloned()
             .ok_or(IsolatedNetworkError::NotOpen)?;
         if !self.handles.contains_key(&workspace_id) {
             return Err(IsolatedNetworkError::NotOpen);
         }
-        self.set_remount_state(plan.caller_id(), WorkspaceRemountState::Pending)?;
-        Ok(plan)
+        self.set_remount_state(caller_id, WorkspaceRemountState::Pending)?;
+        let result = self.apply_remount(&workspace_id, layer_paths, probe);
+        if result.is_err() {
+            let _ = self.block_remount(caller_id);
+        }
+        result
     }
 
     pub(crate) fn block_remount(&mut self, caller_id: &str) -> Result<(), IsolatedNetworkError> {
         self.set_remount_state(caller_id, WorkspaceRemountState::Active)
     }
 
-    pub(crate) fn remount_with_layers(
+    fn apply_remount(
         &mut self,
-        caller_id: &str,
+        workspace_id: &WorkspaceModeId,
         layer_paths: Vec<std::path::PathBuf>,
         probe: &RemountProbe,
-    ) -> Result<crate::profile::WorkspaceModeHandle, IsolatedNetworkError> {
-        let plan = self.prepare_remount(caller_id, layer_paths, probe.clone())?;
-        self.apply_prepared_remount(plan)
+    ) -> Result<WorkspaceModeHandle, IsolatedNetworkError> {
+        let handle = self
+            .handles
+            .get(workspace_id)
+            .cloned()
+            .ok_or(IsolatedNetworkError::NotOpen)?;
+        let remount = self.runtime.remount_overlay(
+            &handle,
+            &layer_paths,
+            probe,
+            self.caps.setup_timeout_s,
+        )?;
+        if !remount.mount_verified {
+            return Err(IsolatedNetworkError::SetupFailed {
+                step: format!(
+                    "remount overlay verification failed: {}",
+                    remount.failure_summary()
+                ),
+            });
+        }
+        let updated = self
+            .handles
+            .get_mut(workspace_id)
+            .ok_or(IsolatedNetworkError::NotOpen)?;
+        updated.layer_paths = layer_paths;
+        updated.remount_state = WorkspaceRemountState::Active;
+        updated.last_activity = monotonic_seconds();
+        let updated = updated.clone();
+        self.persist_handles()?;
+        Ok(updated)
     }
 
     pub(super) fn set_remount_state(

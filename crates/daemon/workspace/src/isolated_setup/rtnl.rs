@@ -1,11 +1,11 @@
-use std::{future::Future, net::Ipv4Addr, thread};
+use std::{future::Future, thread};
 
 use futures_util::stream::TryStreamExt;
 use rtnetlink::{new_connection, Handle, LinkBridge, LinkBridgePort, LinkUnspec, LinkVeth};
 
 use crate::profile::IsolatedNetworkError;
 
-use super::{network_error_at, BRIDGE_NAME, BRIDGE_PREFIX_LEN};
+use super::{network_error_at, BRIDGE_NAME, BRIDGE_PREFIX_LEN, GATEWAY_ADDR};
 
 pub(super) fn run_netlink<T, F, Fut>(operation: F) -> Result<T, IsolatedNetworkError>
 where
@@ -45,7 +45,7 @@ pub(super) async fn ensure_bridge(handle: &Handle) -> Result<u32, IsolatedNetwor
         "add shared bridge gateway",
         handle
             .address()
-            .add(bridge_index, gateway_addr().into(), BRIDGE_PREFIX_LEN)
+            .add(bridge_index, GATEWAY_ADDR.into(), BRIDGE_PREFIX_LEN)
             .execute()
             .await,
     )?;
@@ -185,8 +185,4 @@ fn ignore_matching(
 fn is_error_text(error: &rtnetlink::Error, needles: &[&str]) -> bool {
     let text = error.to_string().to_ascii_lowercase();
     needles.iter().any(|needle| text.contains(needle))
-}
-
-const fn gateway_addr() -> Ipv4Addr {
-    Ipv4Addr::new(10, 244, 0, 1)
 }

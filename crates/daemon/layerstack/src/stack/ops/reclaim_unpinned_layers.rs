@@ -1,10 +1,5 @@
 use std::collections::BTreeMap;
 
-use super::{
-    plan_reclaim_unpinned_layers, LeaseParentCompactionOutcome,
-    ReclaimUnpinnedLayersCheckpointMode, ReclaimUnpinnedLayersCopyThroughOutcome,
-    ReclaimUnpinnedLayersOutcome, ReclaimUnpinnedLayersPlanEntry, ReclaimingInterval,
-};
 use crate::error::LayerStackError;
 use crate::fs::{
     allocate_layer_dirs, fsync_dir, fsync_tree_files, layer_digest_path, remove_path,
@@ -14,6 +9,11 @@ use crate::model::{layer_digest, LayerChange, LayerPath, LayerRef, Manifest};
 use crate::stack::layer::{read_layer_dir, write_layer_changes};
 use crate::stack::lease::{lock_shared_registry, remove_unreferenced_layer_candidates_locked};
 use crate::stack::projection::layer_has_boundary_markers;
+use crate::stack::reclaim_unpinned_layers::{
+    plan_reclaim_unpinned_layers, LeaseParentCompactionOutcome,
+    ReclaimUnpinnedLayersCheckpointMode, ReclaimUnpinnedLayersCopyThroughOutcome,
+    ReclaimUnpinnedLayersOutcome, ReclaimUnpinnedLayersPlanEntry, ReclaimingInterval,
+};
 use crate::stack::squash::{CheckpointSegment, LayerCheckpointSquasher};
 use crate::stack::LayerStack;
 use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR};

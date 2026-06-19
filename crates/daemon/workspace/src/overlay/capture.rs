@@ -60,18 +60,11 @@ impl CaptureError {
 type Result<T> = std::result::Result<T, CaptureError>;
 
 #[derive(Debug)]
-struct CapturedUpperdirMetadata {
-    entries: Vec<CapturedUpperdirEntry>,
-    protected_drops: Vec<ProtectedPathDrop>,
-    stats: TreeResourceStats,
-}
-
-#[derive(Debug)]
-enum CapturedUpperdirEntry {
+enum PendingChange {
     Write {
         path: LayerPath,
         source_path: PathBuf,
-        meta: RegularFileCaptureMeta,
+        meta: std::fs::Metadata,
     },
     Delete {
         path: LayerPath,
@@ -85,44 +78,20 @@ enum CapturedUpperdirEntry {
     },
 }
 
-impl CapturedUpperdirEntry {
-    fn materialize_in_memory(&self, max_bytes: usize) -> Result<LayerChange> {
+impl PendingChange {
+    fn materialize_in_memory(self, max_bytes: usize) -> Result<LayerChange> {
         match self {
             Self::Write {
                 path,
                 source_path,
                 meta,
             } => Ok(LayerChange::Write {
-                path: path.clone(),
-                content: read_regular_file(source_path, meta, max_bytes)?,
+                content: read_regular_file(&source_path, &meta, max_bytes)?,
+                path,
             }),
-            Self::Delete { path } => Ok(LayerChange::Delete { path: path.clone() }),
-            Self::Symlink { path, source_path } => Ok(LayerChange::Symlink {
-                path: path.clone(),
-                source_path: source_path.clone(),
-            }),
-            Self::OpaqueDir { path } => Ok(LayerChange::OpaqueDir { path: path.clone() }),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-struct RegularFileCaptureMeta {
-    len: u64,
-    #[cfg(unix)]
-    dev: u64,
-    #[cfg(unix)]
-    ino: u64,
-}
-
-impl RegularFileCaptureMeta {
-    fn from_metadata(meta: &std::fs::Metadata) -> Self {
-        Self {
-            len: meta.len(),
-            #[cfg(unix)]
-            dev: meta.dev(),
-            #[cfg(unix)]
-            ino: meta.ino(),
+            Self::Delete { path } => Ok(LayerChange::Delete { path }),
+            Self::Symlink { path, source_path } => Ok(LayerChange::Symlink { path, source_path }),
+            Self::OpaqueDir { path } => Ok(LayerChange::OpaqueDir { path }),
         }
     }
 }
@@ -134,16 +103,6 @@ impl RegularFileCaptureMeta {
 /// Returns [`CaptureError`] when metadata capture or selected payload
 /// materialization fails.
 pub fn capture_upperdir(upperdir: &Path) -> Result<CapturedChanges> {
-    let metadata = capture_upperdir_metadata(upperdir)?;
-    let changes = materialize_entries_in_memory(&metadata.entries, MAX_CAPTURE_FILE_BYTES)?;
-    Ok(CapturedChanges {
-        changes,
-        protected_drops: metadata.protected_drops,
-        stats: metadata.stats,
-    })
-}
-
-fn capture_upperdir_metadata(upperdir: &Path) -> Result<CapturedUpperdirMetadata> {
     std::fs::create_dir_all(upperdir).map_err(|err| CaptureError::capture(upperdir, err))?;
     let mut emitted_opaque_dirs = HashSet::new();
     let mut entries = Vec::new();
@@ -160,8 +119,12 @@ fn capture_upperdir_metadata(upperdir: &Path) -> Result<CapturedUpperdirMetadata
         &mut protected_drops,
         &mut stats,
     )?;
-    Ok(CapturedUpperdirMetadata {
-        entries,
+    let changes = entries
+        .into_iter()
+        .map(|entry| entry.materialize_in_memory(MAX_CAPTURE_FILE_BYTES))
+        .collect::<Result<Vec<_>>>()?;
+    Ok(CapturedChanges {
+        changes,
         protected_drops,
         stats,
     })
@@ -171,7 +134,7 @@ fn walk_upperdir(
     root: &Path,
     dir: &Path,
     emitted_opaque_dirs: &mut HashSet<String>,
-    entries: &mut Vec<CapturedUpperdirEntry>,
+    entries: &mut Vec<PendingChange>,
     protected_drops: &mut Vec<ProtectedPathDrop>,
     stats: &mut TreeResourceStats,
 ) -> Result<()> {
@@ -231,7 +194,7 @@ fn capture_file_entry_metadata(
     entry: &Path,
     meta: &std::fs::Metadata,
     emitted_opaque_dirs: &mut HashSet<String>,
-    entries: &mut Vec<CapturedUpperdirEntry>,
+    entries: &mut Vec<PendingChange>,
     protected_drops: &mut Vec<ProtectedPathDrop>,
 ) -> Result<()> {
     let rel = relative_path(root, entry)?;
@@ -252,13 +215,13 @@ fn capture_file_entry_metadata(
     if is_whiteout_marker(name) {
         let target = whiteout_target(&rel);
         if let Some(path) = layer_path_from_relative_or_drop(&target, protected_drops) {
-            entries.push(CapturedUpperdirEntry::Delete { path });
+            entries.push(PendingChange::Delete { path });
         }
         return Ok(());
     }
     if is_overlay_whiteout(entry, meta)? {
         if let Some(path) = layer_path_from_relative_or_drop(&rel, protected_drops) {
-            entries.push(CapturedUpperdirEntry::Delete { path });
+            entries.push(PendingChange::Delete { path });
         }
         return Ok(());
     }
@@ -268,10 +231,10 @@ fn capture_file_entry_metadata(
     if meta.file_type().is_symlink() {
         entries.push(symlink_entry(path, entry)?);
     } else if meta.is_file() {
-        entries.push(CapturedUpperdirEntry::Write {
+        entries.push(PendingChange::Write {
             path,
             source_path: entry.to_path_buf(),
-            meta: RegularFileCaptureMeta::from_metadata(meta),
+            meta: meta.clone(),
         });
     } else {
         protected_drops.push(ProtectedPathDrop {
@@ -295,19 +258,19 @@ fn record_file_stats(stats: &mut TreeResourceStats, meta: &std::fs::Metadata) {
 fn push_opaque_dir(
     path: LayerPath,
     emitted_opaque_dirs: &mut HashSet<String>,
-    entries: &mut Vec<CapturedUpperdirEntry>,
+    entries: &mut Vec<PendingChange>,
 ) {
     if emitted_opaque_dirs.insert(path.as_str().to_owned()) {
-        entries.push(CapturedUpperdirEntry::OpaqueDir { path });
+        entries.push(PendingChange::OpaqueDir { path });
     }
 }
 
 fn read_regular_file(
     entry: &Path,
-    expected_meta: &RegularFileCaptureMeta,
+    expected_meta: &std::fs::Metadata,
     max_bytes: usize,
 ) -> Result<Vec<u8>> {
-    ensure_capture_file_size(entry, expected_meta.len, max_bytes)?;
+    ensure_capture_file_size(entry, expected_meta.len(), max_bytes)?;
     let file =
         open_regular_file_no_follow(entry).map_err(|err| CaptureError::capture(entry, err))?;
     let actual_meta = file
@@ -362,12 +325,12 @@ fn open_regular_file_no_follow(entry: &Path) -> io::Result<std::fs::File> {
 }
 
 #[cfg(unix)]
-fn same_file(left: &RegularFileCaptureMeta, right: &std::fs::Metadata) -> bool {
-    left.dev == right.dev() && left.ino == right.ino()
+fn same_file(left: &std::fs::Metadata, right: &std::fs::Metadata) -> bool {
+    left.dev() == right.dev() && left.ino() == right.ino()
 }
 
 #[cfg(not(unix))]
-fn same_file(_left: &RegularFileCaptureMeta, _right: &std::fs::Metadata) -> bool {
+fn same_file(_left: &std::fs::Metadata, _right: &std::fs::Metadata) -> bool {
     true
 }
 
@@ -391,23 +354,13 @@ fn capture_file_too_large(entry: &Path, size: u64, max_bytes: usize) -> CaptureE
     )
 }
 
-fn symlink_entry(path: LayerPath, entry: &Path) -> Result<CapturedUpperdirEntry> {
-    Ok(CapturedUpperdirEntry::Symlink {
+fn symlink_entry(path: LayerPath, entry: &Path) -> Result<PendingChange> {
+    Ok(PendingChange::Symlink {
         path,
         source_path: path_string(
             &std::fs::read_link(entry).map_err(|err| CaptureError::capture(entry, err))?,
         )?,
     })
-}
-
-fn materialize_entries_in_memory(
-    entries: &[CapturedUpperdirEntry],
-    max_bytes: usize,
-) -> Result<Vec<LayerChange>> {
-    entries
-        .iter()
-        .map(|entry| entry.materialize_in_memory(max_bytes))
-        .collect()
 }
 
 fn layer_path(path: &str) -> Result<LayerPath> {

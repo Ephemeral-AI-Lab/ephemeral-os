@@ -1,21 +1,12 @@
+use std::io::Write;
+use std::process::{Command, Stdio};
+
 use crate::profile::IsolatedNetworkError;
 use crate::profile::Rfc1918Egress;
 
-use super::{NFT_FILTER_TABLE, NFT_NAT_TABLE, RFC1918_NETS};
-
-mod exprs;
-mod wire;
-
-use exprs::{
-    nft_imds_drop_rule_exprs, nft_masquerade_rule_exprs, nft_peer_isolation_rule_exprs,
-    nft_rfc1918_drop_rule_exprs, IpHeader, NFTA_CHAIN_HOOK, NFTA_CHAIN_NAME, NFTA_CHAIN_TABLE,
-    NFTA_CHAIN_TYPE, NFTA_HOOK_HOOKNUM, NFTA_HOOK_PRIORITY, NFTA_LIST_ELEM, NFTA_RULE_CHAIN,
-    NFTA_RULE_EXPRESSIONS, NFTA_RULE_TABLE, NFTA_TABLE_FLAGS, NFTA_TABLE_NAME,
-};
-use wire::{
-    append_be_i32_attr, append_be_u32_attr, append_cstr_attr, append_nested_attr,
-    libc_c_int_to_u16, libc_c_int_to_u32, libc_c_int_to_u8, nft_create_flags, nft_rule_flags,
-    send_nft_command,
+use super::{
+    BRIDGE_NETWORK, BRIDGE_PREFIX_LEN, GATEWAY_ADDR, IMDS_ADDR, NFT_FILTER_TABLE, NFT_NAT_TABLE,
+    RFC1918_NETS,
 };
 
 const NFT_BRIDGE_FILTER_TABLE: &str = "eos_iws_bridge_filter";
@@ -24,52 +15,49 @@ pub(super) fn install_static_rules(
     rfc1918_egress: Rfc1918Egress,
     bridge_index: u32,
 ) -> Result<(), IsolatedNetworkError> {
-    let inet_family = libc_c_int_to_u8(libc::NFPROTO_INET, "NFPROTO_INET")?;
-    add_nft_table(inet_family, NFT_NAT_TABLE)?;
-    add_nft_base_chain(
-        inet_family,
+    add_table("inet", NFT_NAT_TABLE)?;
+    add_chain(
+        "inet",
         NFT_NAT_TABLE,
         "postrouting",
-        "nat",
-        libc_c_int_to_u32(libc::NF_INET_POST_ROUTING, "NF_INET_POST_ROUTING")?,
-        100,
+        "type nat hook postrouting priority 100;",
     )?;
-    add_nft_rule(
-        inet_family,
+    add_rule(
+        "inet",
         NFT_NAT_TABLE,
         "postrouting",
-        nft_masquerade_rule_exprs(bridge_index)?,
+        format!("ip saddr {BRIDGE_NETWORK}/{BRIDGE_PREFIX_LEN} oif != {bridge_index} masquerade"),
     )?;
 
-    add_nft_table(inet_family, NFT_FILTER_TABLE)?;
-    add_nft_base_chain(
-        inet_family,
+    add_table("inet", NFT_FILTER_TABLE)?;
+    add_chain(
+        "inet",
         NFT_FILTER_TABLE,
         "forward",
-        "filter",
-        libc_c_int_to_u32(libc::NF_INET_FORWARD, "NF_INET_FORWARD")?,
-        0,
+        "type filter hook forward priority 0;",
     )?;
-    add_nft_rule(
-        inet_family,
+    add_rule(
+        "inet",
         NFT_FILTER_TABLE,
         "forward",
-        nft_imds_drop_rule_exprs()?,
+        format!("ip daddr {IMDS_ADDR} drop"),
     )?;
-    add_nft_rule(
-        inet_family,
+    add_rule(
+        "inet",
         NFT_FILTER_TABLE,
         "forward",
-        nft_peer_isolation_rule_exprs(IpHeader::Inet)?,
+        peer_isolation_match(""),
     )?;
     install_bridge_peer_isolation_rule()?;
     if rfc1918_egress == Rfc1918Egress::Deny {
         for (network, prefix_len) in RFC1918_NETS {
-            add_nft_rule(
-                inet_family,
+            add_rule(
+                "inet",
                 NFT_FILTER_TABLE,
                 "forward",
-                nft_rfc1918_drop_rule_exprs(network, prefix_len)?,
+                format!(
+                    "ip daddr {network}/{prefix_len} ip daddr != {BRIDGE_NETWORK}/{BRIDGE_PREFIX_LEN} drop"
+                ),
             )?;
         }
     }
@@ -77,86 +65,82 @@ pub(super) fn install_static_rules(
 }
 
 fn install_bridge_peer_isolation_rule() -> Result<(), IsolatedNetworkError> {
-    let family = libc_c_int_to_u8(libc::NFPROTO_BRIDGE, "NFPROTO_BRIDGE")?;
-    add_nft_table(family, NFT_BRIDGE_FILTER_TABLE)?;
-    add_nft_base_chain(
-        family,
+    add_table("bridge", NFT_BRIDGE_FILTER_TABLE)?;
+    add_chain(
+        "bridge",
         NFT_BRIDGE_FILTER_TABLE,
         "forward",
-        "filter",
-        libc_c_int_to_u32(libc::NF_BR_FORWARD, "NF_BR_FORWARD")?,
-        0,
+        "type filter hook forward priority 0;",
     )?;
-    add_nft_rule(
-        family,
+    add_rule(
+        "bridge",
         NFT_BRIDGE_FILTER_TABLE,
         "forward",
-        nft_peer_isolation_rule_exprs(IpHeader::Bridge)?,
+        peer_isolation_match("ether type ip "),
     )
 }
 
-fn add_nft_table(family: u8, name: &str) -> Result<(), IsolatedNetworkError> {
-    let mut attrs = Vec::new();
-    append_cstr_attr(&mut attrs, NFTA_TABLE_NAME, name);
-    append_be_u32_attr(&mut attrs, NFTA_TABLE_FLAGS, 0);
-    send_nft_command(
-        family,
-        format!("create nft table {name}"),
-        libc_c_int_to_u16(libc::NFT_MSG_NEWTABLE, "NFT_MSG_NEWTABLE")?,
-        nft_create_flags(),
-        &attrs,
-        true,
+fn peer_isolation_match(prefix: &str) -> String {
+    format!(
+        "{prefix}ip saddr {BRIDGE_NETWORK}/{BRIDGE_PREFIX_LEN} ip saddr != {GATEWAY_ADDR} ip daddr {BRIDGE_NETWORK}/{BRIDGE_PREFIX_LEN} ip daddr != {GATEWAY_ADDR} drop"
     )
 }
 
-fn add_nft_base_chain(
-    family: u8,
-    table: &str,
-    name: &str,
-    chain_type: &str,
-    hook: u32,
-    priority: i32,
-) -> Result<(), IsolatedNetworkError> {
-    let mut hook_attrs = Vec::new();
-    append_be_u32_attr(&mut hook_attrs, NFTA_HOOK_HOOKNUM, hook);
-    append_be_i32_attr(&mut hook_attrs, NFTA_HOOK_PRIORITY, priority);
-
-    let mut attrs = Vec::new();
-    append_cstr_attr(&mut attrs, NFTA_CHAIN_TABLE, table);
-    append_cstr_attr(&mut attrs, NFTA_CHAIN_NAME, name);
-    append_cstr_attr(&mut attrs, NFTA_CHAIN_TYPE, chain_type);
-    append_nested_attr(&mut attrs, NFTA_CHAIN_HOOK, &hook_attrs);
-    send_nft_command(
-        family,
-        format!("create nft chain {table}/{name}"),
-        libc_c_int_to_u16(libc::NFT_MSG_NEWCHAIN, "NFT_MSG_NEWCHAIN")?,
-        nft_create_flags(),
-        &attrs,
-        true,
-    )
+fn add_table(family: &str, table: &str) -> Result<(), IsolatedNetworkError> {
+    run_nft(format!("add table {family} {table}"), true)
 }
 
-fn add_nft_rule(
-    family: u8,
+fn add_chain(
+    family: &str,
     table: &str,
     chain: &str,
-    expressions: Vec<Vec<u8>>,
+    hook: &str,
 ) -> Result<(), IsolatedNetworkError> {
-    let mut expression_list = Vec::new();
-    for expression in expressions {
-        append_nested_attr(&mut expression_list, NFTA_LIST_ELEM, &expression);
-    }
-
-    let mut attrs = Vec::new();
-    append_cstr_attr(&mut attrs, NFTA_RULE_TABLE, table);
-    append_cstr_attr(&mut attrs, NFTA_RULE_CHAIN, chain);
-    append_nested_attr(&mut attrs, NFTA_RULE_EXPRESSIONS, &expression_list);
-    send_nft_command(
-        family,
-        format!("add nft rule {table}/{chain}"),
-        libc_c_int_to_u16(libc::NFT_MSG_NEWRULE, "NFT_MSG_NEWRULE")?,
-        nft_rule_flags(),
-        &attrs,
+    run_nft(
+        format!("add chain {family} {table} {chain} {{ {hook} }}"),
         true,
     )
+}
+
+fn add_rule(
+    family: &str,
+    table: &str,
+    chain: &str,
+    rule: impl std::fmt::Display,
+) -> Result<(), IsolatedNetworkError> {
+    run_nft(format!("add rule {family} {table} {chain} {rule}"), true)
+}
+
+fn run_nft(command: String, ignore_exists: bool) -> Result<(), IsolatedNetworkError> {
+    let mut child = Command::new("nft")
+        .arg("-f")
+        .arg("-")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|err| nft_error(&command, err))?;
+    let command_line = format!("{command}\n");
+    child
+        .stdin
+        .as_mut()
+        .ok_or_else(|| nft_error(&command, "stdin unavailable"))?
+        .write_all(command_line.as_bytes())
+        .map_err(|err| nft_error(&command, err))?;
+    drop(child.stdin.take());
+    let output = child
+        .wait_with_output()
+        .map_err(|err| nft_error(&command, err))?;
+    if output.status.success() {
+        return Ok(());
+    }
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    if ignore_exists && stderr.to_ascii_lowercase().contains("exists") {
+        return Ok(());
+    }
+    Err(nft_error(&command, stderr.trim()))
+}
+
+fn nft_error(command: &str, error: impl std::fmt::Display) -> IsolatedNetworkError {
+    IsolatedNetworkError::NetworkUnavailable(format!("nft `{command}`: {error}"))
 }

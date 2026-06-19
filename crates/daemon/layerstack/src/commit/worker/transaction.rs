@@ -9,7 +9,7 @@ use crate::model::{LayerChange, LayerPath, Manifest};
 use crate::{CommitOptions, LayerStack, MergedView};
 
 use super::super::model::{ChangesetResult, CommitStatus, FileResult, OccTraceEvent};
-use super::super::route::{hash_current, PublishDecision, Route, ValidationBase};
+use super::super::route::{hash_current, PublishDecision, Route};
 use super::queue::{PreparedChangeset, PublishConflict};
 use crate::stack::squash::{run_auto_squash, AutoSquashTrace};
 use trace::usize_to_f64_saturating;
@@ -42,11 +42,7 @@ impl CommitTransaction {
         };
         let (active, active_lease_count, validations) = snapshot;
         let validate_s = validate_start.elapsed().as_secs_f64();
-        if combined.atomic
-            && validations
-                .iter()
-                .any(|file| is_validation_failure(file.status))
-        {
+        if combined.atomic && validations.iter().any(|f| !f.status.is_non_conflicting()) {
             return Ok(atomic_validation_drop_result(
                 combined,
                 validations,
@@ -266,7 +262,7 @@ fn validate_prepared(
         .iter()
         .map(|decision| match decision.route() {
             Route::Drop => decision
-                .drop_file_result()
+                .drop_file_result_with_default("change dropped")
                 .expect("drop route has drop file result"),
             Route::Direct => accepted_file(decision.path()),
             Route::Gated => {
@@ -293,43 +289,41 @@ fn validate_gated_group(
     group: &PublishDecision,
     parent_absent_cache: &mut HashMap<String, bool>,
 ) -> FileResult {
-    match group.validation_base() {
-        Some(ValidationBase::Paths(validation_base_hashes)) => {
-            for (path, base_hash) in validation_base_hashes {
-                let result = validate_gated_path(
-                    root,
-                    view,
-                    manifest,
-                    path,
-                    base_hash.as_deref(),
-                    parent_absent_cache,
-                );
-                if !result.status.is_non_conflicting() {
-                    return FileResult {
-                        path: group.path().clone(),
-                        status: result.status,
-                        message: format!(
-                            "opaque directory descendant {}: {}",
-                            path.as_str(),
-                            result.conflict_message(result.status.wire_str())
-                        ),
-                        observed_version: result.observed_version,
-                        observed_state: result.observed_state,
-                    };
-                }
+    if let Some(validation_base_hashes) = group.validation_base_hashes() {
+        for (path, base_hash) in validation_base_hashes {
+            let result = validate_gated_path(
+                root,
+                view,
+                manifest,
+                path,
+                base_hash.as_deref(),
+                parent_absent_cache,
+            );
+            if !result.status.is_non_conflicting() {
+                return FileResult {
+                    path: group.path().clone(),
+                    status: result.status,
+                    message: format!(
+                        "opaque directory descendant {}: {}",
+                        path.as_str(),
+                        result.conflict_message(result.status.wire_str())
+                    ),
+                    observed_version: result.observed_version,
+                    observed_state: result.observed_state,
+                };
             }
-            accepted_file(group.path())
         }
-        Some(ValidationBase::Path(base_hash)) => validate_gated_path(
-            root,
-            view,
-            manifest,
-            group.path(),
-            base_hash.as_deref(),
-            parent_absent_cache,
-        ),
-        None => accepted_file(group.path()),
+        return accepted_file(group.path());
     }
+
+    validate_gated_path(
+        root,
+        view,
+        manifest,
+        group.path(),
+        group.base_hash(),
+        parent_absent_cache,
+    )
 }
 
 fn validate_gated_path(
@@ -386,10 +380,6 @@ fn parent_absent_from_manifest(root: &Path, manifest: &Manifest, parent: &str) -
             Err(err) if err.kind() == std::io::ErrorKind::NotFound
         )
     })
-}
-
-const fn is_validation_failure(status: CommitStatus) -> bool {
-    !status.is_non_conflicting()
 }
 
 fn failed_changeset_with_timings(

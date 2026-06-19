@@ -12,7 +12,7 @@ use serde::Deserialize;
 use crate::isolated_setup::IsolatedNetwork;
 use crate::namespace::NamespaceRuntime;
 pub use crate::profile::{
-    DnsConfiguration, WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeSnapshot,
+    DnsConfiguration, WorkspaceModeFds, WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeSnapshot,
 };
 
 pub use crate::lifecycle::remount::{RemountOverlayReport, RemountProbe, WorkspaceRemountState};

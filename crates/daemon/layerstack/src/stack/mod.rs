@@ -6,9 +6,9 @@ use crate::lock::StorageWriterLockLease;
 use crate::model::{manifest_root_hash, LayerRef, Manifest};
 use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, STAGING_DIR};
 
-mod io;
 mod layer;
 mod lease;
+mod ops;
 mod projection;
 pub(crate) mod reclaim_unpinned_layers;
 pub(crate) mod squash;

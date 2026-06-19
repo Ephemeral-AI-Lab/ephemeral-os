@@ -10,7 +10,6 @@ use crate::model::WorkspaceProfile;
 use crate::namespace::NamespacePlan;
 use crate::overlay::dirs::create_overlay_dirs;
 use crate::profile::manager::IsolatedNetworkError;
-use crate::profile::resource_control;
 use crate::profile::{
     WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeManager, WorkspaceModeSnapshot,
 };
@@ -52,7 +51,15 @@ impl WorkspaceModeManager {
             self.setup_isolated_network_after_mount(handle, &mut phases_ms)?;
         }
 
-        resource_control::create_cgroup(&self.runtime, handle, &mut phases_ms)?;
+        phase_start = Instant::now();
+        let cgroup_path = self.runtime.create_cgroup(handle)?;
+        record_phase_ms(&mut phases_ms, "create_cgroup", phase_start);
+        if !cgroup_path.as_os_str().is_empty() {
+            handle.cgroup_path = Some(cgroup_path);
+        }
+        phase_start = Instant::now();
+        self.runtime.join_holder_cgroup(handle)?;
+        record_phase_ms(&mut phases_ms, "join_holder_cgroup", phase_start);
         Ok(phases_ms)
     }
 
@@ -133,7 +140,7 @@ impl WorkspaceModeManager {
         let workspace_id = WorkspaceModeId(next_handle_id());
         let dirs = create_overlay_dirs(self.owned_scratch_root().join(&workspace_id.0)).map_err(
             |err| IsolatedNetworkError::SetupFailed {
-                step: format!("{}: {}", err.path.display(), err.reason),
+                step: format!("create overlay scratch: {err}"),
             },
         )?;
 
@@ -148,7 +155,7 @@ impl WorkspaceModeManager {
             workspace_root,
             dirs,
             layer_paths: snapshot.layer_paths,
-            ns_fds: HashMap::new(),
+            ns_fds: Default::default(),
             holder_pid: 0,
             readiness_fd: -1,
             control_fd: -1,

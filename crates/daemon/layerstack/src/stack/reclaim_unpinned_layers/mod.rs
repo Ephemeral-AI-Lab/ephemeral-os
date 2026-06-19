@@ -3,8 +3,6 @@ use std::collections::BTreeSet;
 use crate::error::LayerStackError;
 use crate::model::{LayerRef, Manifest};
 
-mod ops;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ReclaimUnpinnedLayersCheckpointMode {
     View,

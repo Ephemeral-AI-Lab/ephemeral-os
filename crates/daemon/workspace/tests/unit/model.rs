@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use workspace::model::{
@@ -12,7 +12,7 @@ use workspace::model::{
 use workspace::overlay::dirs::OverlayDirs;
 use workspace::overlay::tree::TreeResourceStats;
 use workspace::profile::{
-    DnsConfiguration, WorkspaceModeHandle, WorkspaceModeId, WorkspaceRemountState,
+    DnsConfiguration, WorkspaceModeFds, WorkspaceModeHandle, WorkspaceModeId, WorkspaceRemountState,
 };
 
 fn workspace_mode_handle() -> WorkspaceModeHandle {
@@ -30,12 +30,12 @@ fn workspace_mode_handle() -> WorkspaceModeHandle {
             workdir: "/tmp/eos/work".into(),
         },
         layer_paths: vec!["/lower/one".into(), "/lower/two".into()],
-        ns_fds: HashMap::from([
-            ("user".to_owned(), 10),
-            ("mnt".to_owned(), 11),
-            ("pid".to_owned(), 12),
-            ("net".to_owned(), 13),
-        ]),
+        ns_fds: WorkspaceModeFds {
+            user: Some(10),
+            mnt: Some(11),
+            pid: Some(12),
+            net: Some(13),
+        },
         holder_pid: 1234,
         readiness_fd: 13,
         control_fd: 14,
@@ -151,10 +151,10 @@ fn host_compatible_entry_uses_holder_launch_without_network_fd() {
 fn entry_rejects_incomplete_holder_launch() {
     let mut missing_mount = workspace_mode_handle();
     missing_mount.profile = WorkspaceProfile::HostCompatible;
-    missing_mount.ns_fds.remove("mnt");
+    missing_mount.ns_fds.mnt = None;
 
     let mut missing_net = workspace_mode_handle();
-    missing_net.ns_fds.remove("net");
+    missing_net.ns_fds.net = None;
 
     for handle in [missing_mount, missing_net] {
         let public = WorkspaceHandle::from(&handle);

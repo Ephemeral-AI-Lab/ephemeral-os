@@ -26,7 +26,7 @@ use crate::profile::IsolatedNetworkError;
 use crate::profile::WorkspaceModeHandle;
 
 #[cfg(target_os = "linux")]
-use super::fds::{expect_line, ns_fds_from_map, write_all_fd};
+use super::fds::{expect_line, ns_fds_from_mode, write_all_fd};
 #[cfg(target_os = "linux")]
 use super::holder::ns_holder_runtime_error;
 #[cfg(target_os = "linux")]
@@ -135,7 +135,7 @@ pub(crate) fn ns_command_request(
         layer_paths,
         upperdir: Some(handle.dirs.upperdir.clone()),
         workdir: Some(handle.dirs.workdir.clone()),
-        ns_fds: ns_fds_from_map(&handle.ns_fds),
+        ns_fds: ns_fds_from_mode(handle.ns_fds),
         cgroup_path: handle.cgroup_path.clone(),
         timeout_seconds: None,
     }

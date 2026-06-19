@@ -12,6 +12,8 @@ mod git_index;
 pub(crate) mod lock;
 #[path = "../src/model/mod.rs"]
 mod model;
+#[path = "../src/opaque_hidden.rs"]
+mod opaque_hidden;
 #[path = "../src/service.rs"]
 pub mod service;
 #[path = "../src/stack/mod.rs"]
