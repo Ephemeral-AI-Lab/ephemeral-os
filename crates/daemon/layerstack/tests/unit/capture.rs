@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use super::*;
 
+type Result<T> = std::result::Result<T, CaptureError>;
 type TestResult<T = ()> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 #[derive(Debug)]
@@ -22,6 +23,28 @@ fn capture_for_test(upperdir: &Path) -> Result<CapturedForTest> {
         changes,
         protected_drops: metadata.protected_drops,
     })
+}
+
+fn capture_file_entry(
+    root: &Path,
+    entry: &Path,
+    meta: &std::fs::Metadata,
+    emitted_opaque_dirs: &mut std::collections::HashSet<String>,
+    changes: &mut Vec<LayerChange>,
+    protected_drops: &mut Vec<ProtectedPathDrop>,
+    max_file_bytes: usize,
+) -> Result<()> {
+    let mut entries = Vec::new();
+    capture_file_entry_metadata(
+        root,
+        entry,
+        meta,
+        emitted_opaque_dirs,
+        &mut entries,
+        protected_drops,
+    )?;
+    changes.extend(materialize_entries_in_memory(&entries, max_file_bytes)?);
+    Ok(())
 }
 
 #[test]
@@ -179,10 +202,22 @@ fn regular_file_capture_rejects_oversized_files_before_write_change() -> TestRes
     std::fs::write(&entry, b"abcdef")?;
     let meta = std::fs::symlink_metadata(&entry)?;
 
-    let error = write_change_limited(LayerPath::parse("large.txt")?, &entry, &meta, 2)
-        .expect_err("oversized file capture must be rejected");
+    let mut changes = Vec::new();
+    let mut protected_drops = Vec::new();
+    let error = capture_file_entry(
+        &fixture.base,
+        &entry,
+        &meta,
+        &mut std::collections::HashSet::new(),
+        &mut changes,
+        &mut protected_drops,
+        2,
+    )
+    .expect_err("oversized file capture must be rejected");
 
     assert!(matches!(error, CaptureError::Capture { .. }));
+    assert!(changes.is_empty());
+    assert!(protected_drops.is_empty());
     assert!(
         error
             .to_string()

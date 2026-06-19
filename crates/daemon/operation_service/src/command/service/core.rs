@@ -1,10 +1,10 @@
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
+use crate::command::command_quiesce::ProcProcessGroupController;
 use crate::command::{
-    CommandLaunchDriver, CommandProcessStore, CommandRegistry, RealCommandLaunchDriver,
+    CommandLaunchDriver, CommandProcessStore, CommandRegistry, ProcessGroupController,
+    RealCommandLaunchDriver,
 };
-use crate::workspace_remount::command_quiesce::ProcProcessGroupController;
-use crate::workspace_remount::ProcessGroupController;
 use crate::workspace_session::WorkspaceSessionService;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]

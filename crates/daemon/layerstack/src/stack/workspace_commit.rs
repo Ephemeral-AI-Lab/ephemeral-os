@@ -13,11 +13,11 @@ use crate::ACTIVE_MANIFEST_FILE;
 
 use super::MergedView;
 
-pub(super) const COMMIT_WORKSPACE_JOURNAL_FILE: &str = "commit_to_workspace.json";
+pub(crate) const COMMIT_WORKSPACE_JOURNAL_FILE: &str = "commit_to_workspace.json";
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub(super) enum CommitWorkspacePhase {
+pub(crate) enum CommitWorkspacePhase {
     Staged,
     ReplacingWorkspace { workspace_root: String },
     WorkspaceReplaced,
@@ -29,11 +29,11 @@ struct CommitWorkspaceJournal {
     staged_storage_root: String,
 }
 
-pub(super) fn commit_workspace_journal_path(storage_root: &Path) -> PathBuf {
+pub(crate) fn commit_workspace_journal_path(storage_root: &Path) -> PathBuf {
     storage_root.join(COMMIT_WORKSPACE_JOURNAL_FILE)
 }
 
-pub(super) fn write_commit_workspace_journal(
+pub(crate) fn write_commit_workspace_journal(
     storage_root: &Path,
     phase: CommitWorkspacePhase,
     staged_storage: &Path,
@@ -47,7 +47,7 @@ pub(super) fn write_commit_workspace_journal(
     write_atomic(commit_workspace_journal_path(storage_root), &encoded)
 }
 
-pub(super) fn recover_commit_to_workspace(storage_root: &Path) -> Result<(), LayerStackError> {
+pub(crate) fn recover_commit_to_workspace(storage_root: &Path) -> Result<(), LayerStackError> {
     let journal_path = commit_workspace_journal_path(storage_root);
     if !journal_path.exists() {
         return Ok(());
@@ -94,7 +94,7 @@ fn recover_workspace_replacement(
     result
 }
 
-pub(super) fn allocate_commit_projection_dir(
+pub(crate) fn allocate_commit_projection_dir(
     storage_root: &Path,
     prefix: &str,
 ) -> Result<PathBuf, LayerStackError> {
@@ -129,7 +129,7 @@ fn validate_workspace_root_path(workspace_root: &str) -> Result<PathBuf, LayerSt
     Ok(path)
 }
 
-pub(super) fn install_staged_workspace_commit(
+pub(crate) fn install_staged_workspace_commit(
     storage_root: &Path,
     staged_storage: &Path,
 ) -> Result<(), LayerStackError> {
@@ -180,7 +180,7 @@ fn validate_staged_storage_path(
     Ok(path)
 }
 
-pub(super) fn staged_storage_name_prefix(storage_root: &Path) -> String {
+pub(crate) fn staged_storage_name_prefix(storage_root: &Path) -> String {
     let name = storage_root
         .file_name()
         .and_then(|name| name.to_str())

@@ -1,6 +1,6 @@
-mod auto_squash;
-mod queue;
-mod transaction;
+pub(crate) mod auto_squash;
+pub(crate) mod queue;
+pub(crate) mod transaction;
 
-pub(super) use queue::{CommitQueue, PreparedChangeset};
-pub(super) use transaction::CommitTransaction;
+pub(crate) use queue::{CommitQueue, PreparedChangeset};
+pub(crate) use transaction::CommitTransaction;

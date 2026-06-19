@@ -19,7 +19,7 @@ pub(crate) mod git_metadata;
 pub(crate) mod worker;
 
 use git_metadata::{is_canonical_loose_object_path, relative_parts as git_metadata_relative_parts};
-use worker::{CommitQueue, CommitTransaction, PreparedChangeset};
+pub(crate) use worker::{CommitQueue, CommitTransaction, PreparedChangeset};
 
 pub(crate) const GIT_METADATA_UNSUPPORTED_DROP_REASON: &str = "git_metadata_unsupported";
 pub(crate) const GIT_INDEX_STAT_REFRESH_DROP_REASON: &str = "git_index_stat_refresh";
@@ -527,7 +527,7 @@ pub(crate) fn publish_command_decisions_for_manifest_with_protected_drops(
     publish_decisions_for_manifest_with_protected_drops(root, manifest, changes, protected_drops)
 }
 
-fn publish_decisions_for_manifest_with_protected_drops(
+pub(crate) fn publish_decisions_for_manifest_with_protected_drops(
     root: &Path,
     manifest: &Manifest,
     changes: &[LayerChange],
@@ -628,7 +628,7 @@ fn rejected_drop_decision(path: LayerPath, drop_reason: RouteDropReason) -> Publ
     }
 }
 
-fn publish_decision_for_opaque_dir(
+pub(crate) fn publish_decision_for_opaque_dir(
     root: &Path,
     source: &impl IgnoreSource,
     view: &MergedView,
@@ -1075,7 +1075,7 @@ fn route_for_path_from_source(
     Ok(route_decision_for_path_from_source(source, path)?.0)
 }
 
-fn route_decision_for_path_from_source(
+pub(crate) fn route_decision_for_path_from_source(
     source: &impl IgnoreSource,
     path: &LayerPath,
 ) -> Result<(Route, Option<RouteDropReason>), LayerStackError> {
@@ -1170,7 +1170,7 @@ fn snapshot_base_hash_for_path(
     Ok(hash_current(bytes.as_deref(), exists))
 }
 
-trait IgnoreSource {
+pub(crate) trait IgnoreSource {
     fn read_bytes(&self, path: &str) -> Result<(Option<Vec<u8>>, bool), LayerStackError>;
 }
 
@@ -1180,9 +1180,9 @@ impl IgnoreSource for LayerStack {
     }
 }
 
-struct ManifestIgnoreSource<'a> {
-    view: &'a MergedView,
-    manifest: &'a Manifest,
+pub(crate) struct ManifestIgnoreSource<'a> {
+    pub(crate) view: &'a MergedView,
+    pub(crate) manifest: &'a Manifest,
 }
 
 impl IgnoreSource for ManifestIgnoreSource<'_> {
@@ -1500,28 +1500,6 @@ fn has_xattr(path: &Path, name: &str) -> bool {
     rustix::fs::lgetxattr(path, name, &mut value).is_ok()
 }
 
-#[cfg(test)]
-pub(crate) fn base_hashes_for_snapshot(
-    root: &Path,
-    manifest: &Manifest,
-    changes: &[LayerChange],
-) -> Result<Vec<(LayerPath, Option<String>)>, LayerStackError> {
-    let view = MergedView::new(root.to_path_buf());
-    changes
-        .iter()
-        .map(|change| {
-            if matches!(change, LayerChange::OpaqueDir { .. }) {
-                return Ok((change.path().clone(), None));
-            }
-            let (bytes, exists) = view.read_bytes(change.path().as_str(), manifest)?;
-            Ok((
-                change.path().clone(),
-                hash_current(bytes.as_deref(), exists),
-            ))
-        })
-        .collect()
-}
-
 #[must_use]
 pub fn hash_current(content: Option<&[u8]>, exists: bool) -> Option<String> {
     if !exists {
@@ -1533,7 +1511,3 @@ pub fn hash_current(content: Option<&[u8]>, exists: bool) -> Option<String> {
         hex_lower(hasher.finalize())
     })
 }
-
-#[cfg(test)]
-#[path = "../../tests/unit/route.rs"]
-mod route_tests;

@@ -8,12 +8,12 @@ use crate::LayerStack;
 
 use super::super::OccTraceEvent;
 
-pub(super) struct AutoSquashTrace {
-    pub(super) timings: BTreeMap<String, f64>,
-    pub(super) events: Vec<OccTraceEvent>,
+pub(crate) struct AutoSquashTrace {
+    pub(crate) timings: BTreeMap<String, f64>,
+    pub(crate) events: Vec<OccTraceEvent>,
 }
 
-pub(super) fn run_auto_squash(stack: &mut LayerStack, max_depth: usize) -> AutoSquashTrace {
+pub(crate) fn run_auto_squash(stack: &mut LayerStack, max_depth: usize) -> AutoSquashTrace {
     let mut timings = BTreeMap::new();
     let max_depth = max_depth.max(1);
     let (depth_before, decision) = match stack.squash_plan_decision(max_depth, 2) {

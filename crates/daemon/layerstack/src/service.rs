@@ -17,7 +17,7 @@ use crate::commit::{
 };
 use crate::{LayerStack, LayerStackError};
 
-type RootService = Arc<CommitWriter>;
+pub(crate) type RootService = Arc<CommitWriter>;
 
 pub(crate) const SERVICE_CACHE_MAX: usize = 256;
 
@@ -97,7 +97,7 @@ impl ServiceCache {
     }
 }
 
-fn services() -> &'static Mutex<ServiceCache> {
+pub(crate) fn services() -> &'static Mutex<ServiceCache> {
     static SERVICES: OnceLock<Mutex<ServiceCache>> = OnceLock::new();
     SERVICES.get_or_init(|| Mutex::new(ServiceCache::default()))
 }
@@ -164,18 +164,6 @@ pub struct BoundedCapturedUpperdir {
     pub route_stats: CaptureRouteStats,
     pub metadata_path_count: usize,
     pub spool_dir: Option<PathBuf>,
-}
-
-#[cfg(test)]
-pub(crate) fn service_cache_contains_root_for_tests(root: &Path) -> bool {
-    let key = normalize_root_key(root);
-    let key_prefix = format!("{key}|");
-    services()
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-        .entries
-        .keys()
-        .any(|entry| entry == &key || entry.starts_with(&key_prefix))
 }
 
 fn service_for_root(root: &Path, options: CommitOptions) -> Result<RootService, CommitError> {
@@ -597,7 +585,7 @@ fn materialize_direct_entry(
     }
 }
 
-fn snapshot_manifest(
+pub(crate) fn snapshot_manifest(
     root: &Path,
     version: i64,
     layer_paths: &[PathBuf],
@@ -605,7 +593,7 @@ fn snapshot_manifest(
     snapshot_manifest_with_layer_ids(root, version, layer_paths, false)
 }
 
-fn snapshot_manifest_preserving_layer_ids(
+pub(crate) fn snapshot_manifest_preserving_layer_ids(
     root: &Path,
     version: i64,
     layer_paths: &[PathBuf],
@@ -680,7 +668,3 @@ fn manifest_version_u64(version: i64) -> Result<u64, LayerStackError> {
         LayerStackError::Manifest(format!("manifest version must be non-negative: {version}"))
     })
 }
-
-#[cfg(test)]
-#[path = "../tests/unit/service.rs"]
-mod tests;

@@ -6,9 +6,11 @@ use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Instant;
 
-use crate::command::{CommandFinalizedMetadata, CommandId, CommandServiceError, CommandStatus};
+use crate::command::{
+    CommandFinalizedMetadata, CommandId, CommandServiceError, CommandStatus,
+    RemountCancellationToken, RemountSwitchState,
+};
 use crate::workspace_crate::{CallerId, WorkspaceId};
-use crate::workspace_remount::{RemountCancellationToken, RemountSwitchState};
 
 pub const DEFAULT_MAX_ACTIVE_COMMANDS: usize = 256;
 

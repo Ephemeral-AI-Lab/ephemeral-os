@@ -1,5 +1,5 @@
+use crate::command::command_quiesce::RemountBlockReason;
 use crate::workspace_crate::{RemountWorkspaceRequest, WorkspaceId};
-use crate::workspace_remount::command_quiesce::RemountBlockReason;
 use crate::workspace_remount::{
     RemountSwitchState, WorkspaceRemountError, WorkspaceRemountReport, WorkspaceRemountService,
 };

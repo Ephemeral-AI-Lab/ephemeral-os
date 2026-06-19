@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use super::*;
 
 type TestResult<T = ()> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;

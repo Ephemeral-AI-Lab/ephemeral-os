@@ -1,3 +1,5 @@
+use std::sync::mpsc;
+
 use crate::model::LayerPath;
 
 use super::*;

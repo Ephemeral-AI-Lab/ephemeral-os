@@ -196,7 +196,7 @@ pub(crate) struct RegularFileCaptureMeta {
 }
 
 impl RegularFileCaptureMeta {
-    fn from_metadata(meta: &std::fs::Metadata) -> Self {
+    pub(crate) fn from_metadata(meta: &std::fs::Metadata) -> Self {
         Self {
             len: meta.len(),
             #[cfg(unix)]

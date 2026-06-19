@@ -715,6 +715,10 @@ fn command_admission_bounded_snapshot(base: &Path) -> Result<ReclaimRow<'static>
     ))
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "benchmark CSV rows intentionally mirror measured columns"
+)]
 fn row_from_snapshots(
     case: &'static str,
     before: Snapshot,
@@ -746,6 +750,10 @@ fn row_from_snapshots(
     )
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "benchmark CSV rows intentionally mirror measured columns"
+)]
 fn row_from_snapshots_with_leases(
     case: &'static str,
     before: Snapshot,

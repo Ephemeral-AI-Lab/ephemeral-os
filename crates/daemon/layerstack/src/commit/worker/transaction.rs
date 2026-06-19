@@ -14,13 +14,13 @@ use super::queue::{PreparedChangeset, PublishConflict};
 use trace::usize_to_f64_saturating;
 
 #[derive(Clone)]
-pub(in crate::commit) struct CommitTransaction {
-    pub(in crate::commit) root: PathBuf,
-    pub(in crate::commit) options: CommitOptions,
+pub(crate) struct CommitTransaction {
+    pub(crate) root: PathBuf,
+    pub(crate) options: CommitOptions,
 }
 
 impl CommitTransaction {
-    pub(in crate::commit) fn revalidate_and_publish(
+    pub(crate) fn revalidate_and_publish(
         &self,
         combined: &PreparedChangeset,
     ) -> std::result::Result<ChangesetResult, PublishConflict> {
@@ -423,7 +423,7 @@ fn failed_changeset_with_timings(
     }
 }
 
-pub(super) fn commit_timings(
+pub(crate) fn commit_timings(
     prepared: &PreparedChangeset,
     validate_s: f64,
     publish_s: f64,
@@ -459,7 +459,3 @@ pub(super) fn commit_timings(
 fn manifest_version_u64_optional(version: i64) -> Option<u64> {
     u64::try_from(version).ok()
 }
-
-#[cfg(test)]
-#[path = "../../../tests/unit/commit/transaction.rs"]
-mod transaction_tests;

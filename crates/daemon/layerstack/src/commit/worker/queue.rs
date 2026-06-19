@@ -18,20 +18,20 @@ pub(crate) const BATCH_WINDOW_S: f64 = 0.002;
 pub(crate) const MAX_OCC_CAS_RETRIES: u32 = 3;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(in crate::commit) struct PreparedChangeset {
-    pub(in crate::commit) path_groups: Vec<PublishDecision>,
-    pub(in crate::commit) changes: Vec<crate::model::LayerChange>,
-    pub(in crate::commit) atomic: bool,
+pub(crate) struct PreparedChangeset {
+    pub(crate) path_groups: Vec<PublishDecision>,
+    pub(crate) changes: Vec<crate::model::LayerChange>,
+    pub(crate) atomic: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(in crate::commit) struct PublishConflict {
-    pub(in crate::commit) observed_version: Option<u64>,
+pub(crate) struct PublishConflict {
+    pub(crate) observed_version: Option<u64>,
 }
 
-pub(super) struct WorkItem {
-    pub(super) prepared: PreparedChangeset,
-    pub(super) reply: mpsc::Sender<Result<ChangesetResult, CommitError>>,
+pub(crate) struct WorkItem {
+    pub(crate) prepared: PreparedChangeset,
+    pub(crate) reply: mpsc::Sender<Result<ChangesetResult, CommitError>>,
 }
 
 enum QueueItem {
@@ -39,7 +39,7 @@ enum QueueItem {
     Stop,
 }
 
-pub(in crate::commit) struct CommitQueue {
+pub(crate) struct CommitQueue {
     sender: mpsc::Sender<QueueItem>,
     receiver: Mutex<Option<mpsc::Receiver<QueueItem>>>,
     transaction: Mutex<Option<CommitTransaction>>,
@@ -53,7 +53,7 @@ struct CommitWorker {
 }
 
 impl CommitQueue {
-    pub(in crate::commit) fn new(transaction: CommitTransaction) -> Self {
+    pub(crate) fn new(transaction: CommitTransaction) -> Self {
         let (sender, receiver) = mpsc::channel();
         Self {
             sender,
@@ -64,7 +64,7 @@ impl CommitQueue {
         }
     }
 
-    pub(in crate::commit) fn start(&mut self) -> Result<(), CommitError> {
+    pub(crate) fn start(&mut self) -> Result<(), CommitError> {
         if self.closed {
             return Err(CommitError::QueueClosed);
         }
@@ -101,7 +101,7 @@ impl CommitQueue {
         Ok(())
     }
 
-    pub(in crate::commit) fn close(&mut self) -> Result<(), CommitError> {
+    pub(crate) fn close(&mut self) -> Result<(), CommitError> {
         if self.closed {
             return Ok(());
         }
@@ -115,7 +115,7 @@ impl CommitQueue {
         })
     }
 
-    pub(in crate::commit) fn submit(
+    pub(crate) fn submit(
         &self,
         prepared: PreparedChangeset,
     ) -> Result<mpsc::Receiver<Result<ChangesetResult, CommitError>>, CommitError> {
@@ -215,7 +215,7 @@ fn drain_ready(
     false
 }
 
-fn disjoint_batches(items: Vec<WorkItem>) -> Vec<Vec<WorkItem>> {
+pub(crate) fn disjoint_batches(items: Vec<WorkItem>) -> Vec<Vec<WorkItem>> {
     let mut pending: Vec<(WorkItem, HashSet<String>)> = items
         .into_iter()
         .map(|item| {
@@ -287,7 +287,7 @@ fn result_files_for_item(
         .collect()
 }
 
-fn cas_exhaustion_result(
+pub(crate) fn cas_exhaustion_result(
     prepared: &PreparedChangeset,
     conflict: &PublishConflict,
     max_cas_retries: u32,
@@ -339,7 +339,3 @@ fn cas_exhaustion_result(
         events: Vec::new(),
     }
 }
-
-#[cfg(test)]
-#[path = "../../../tests/unit/commit/queue.rs"]
-mod queue_tests;

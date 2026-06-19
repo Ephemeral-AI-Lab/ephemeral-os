@@ -6,8 +6,8 @@ use crate::test_fixture::{lp, unique_suffix, Fixture, TestResult};
 use crate::{reset_process_state_for_tests, service, CommitOptions, LayerStack, MergedView};
 
 use super::{
-    normalize_root_key, snapshot_manifest, snapshot_manifest_preserving_layer_ids, RootService,
-    ServiceCache, SERVICE_CACHE_MAX,
+    normalize_root_key, services, snapshot_manifest, snapshot_manifest_preserving_layer_ids,
+    RootService, ServiceCache, SERVICE_CACHE_MAX,
 };
 
 fn root_service(root: &Path) -> TestResult<RootService> {
@@ -15,6 +15,17 @@ fn root_service(root: &Path) -> TestResult<RootService> {
         root.to_path_buf(),
         CommitOptions::default(),
     )?))
+}
+
+fn service_cache_contains_root_for_tests(root: &Path) -> bool {
+    let key = normalize_root_key(root);
+    let key_prefix = format!("{key}|");
+    services()
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .entries
+        .keys()
+        .any(|entry| entry == &key || entry.starts_with(&key_prefix))
 }
 
 #[test]
@@ -136,15 +147,11 @@ fn process_state_reset_clears_service_cache_and_lease_registry() -> TestResult {
         CommitOptions::default(),
     )?;
     assert!(result.success(), "commit creates a cached per-root writer");
-    assert!(service::service_cache_contains_root_for_tests(
-        &fixture.root
-    ));
+    assert!(service_cache_contains_root_for_tests(&fixture.root));
 
     reset_process_state_for_tests();
 
-    assert!(!service::service_cache_contains_root_for_tests(
-        &fixture.root
-    ));
+    assert!(!service_cache_contains_root_for_tests(&fixture.root));
     let stack = LayerStack::open(fixture.root.clone())?;
     assert_eq!(stack.active_lease_count(), 0, "lease registry was reset");
     Ok(())

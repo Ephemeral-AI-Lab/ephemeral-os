@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
+use crate::command::{CommandRemountInspection, CommandRemountQuiesce};
 use crate::workspace_crate::{RemountWorkspaceRequest, WorkspaceId};
-use crate::workspace_remount::command_quiesce::{CommandRemountInspection, CommandRemountQuiesce};
 use crate::workspace_session::{WorkspaceSessionError, WorkspaceSessionHandler};
 
 pub trait CommandRemountCoordinator: Send + Sync {

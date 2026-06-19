@@ -1,11 +1,9 @@
 use std::path::PathBuf;
 
-use crate::commit::{
-    base_hashes_for_snapshot, hash_current, CommitStatus, PreparedChangeset, PublishDecision, Route,
-};
+use crate::commit::{hash_current, CommitStatus, PreparedChangeset, PublishDecision, Route};
 use crate::model::LayerChange;
 use crate::test_fixture::{lp, Fixture, TestResult};
-use crate::{CommitOptions, LayerStack};
+use crate::{CommitOptions, LayerPath, LayerStack, LayerStackError, Manifest, MergedView};
 
 use super::{run_auto_squash, CommitTransaction};
 
@@ -39,6 +37,27 @@ impl Drop for EnvVarGuard {
 
 fn readme_base_hash() -> TestResult<String> {
     hash_current(Some(b"# README\n"), true).ok_or_else(|| "missing readme hash".into())
+}
+
+fn base_hashes_for_snapshot(
+    root: &std::path::Path,
+    manifest: &Manifest,
+    changes: &[LayerChange],
+) -> Result<Vec<(LayerPath, Option<String>)>, LayerStackError> {
+    let view = MergedView::new(root.to_path_buf());
+    changes
+        .iter()
+        .map(|change| {
+            if matches!(change, LayerChange::OpaqueDir { .. }) {
+                return Ok((change.path().clone(), None));
+            }
+            let (bytes, exists) = view.read_bytes(change.path().as_str(), manifest)?;
+            Ok((
+                change.path().clone(),
+                hash_current(bytes.as_deref(), exists),
+            ))
+        })
+        .collect()
 }
 
 fn publish_decision(

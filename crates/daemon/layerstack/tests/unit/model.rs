@@ -103,7 +103,8 @@ fn aggregate_last_write_wins() -> TestResult {
 // holds — colliding paths would change the last-write-wins survivor).
 fn arb_change_unique() -> impl Strategy<Value = LayerChange> {
     // single-segment lowercase paths keep them unique-able and always valid.
-    let path = "[a-z]{1,8}".prop_map(LayerPath);
+    let path =
+        "[a-z]{1,8}".prop_map(|path| LayerPath::parse(&path).expect("generated path is valid"));
     prop_oneof![
         (path.clone(), prop::collection::vec(any::<u8>(), 0..32))
             .prop_map(|(path, content)| LayerChange::Write { path, content }),

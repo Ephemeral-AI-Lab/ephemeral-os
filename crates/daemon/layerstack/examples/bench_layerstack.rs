@@ -62,6 +62,10 @@ struct CsvRow<'a> {
 }
 
 impl<'a> CsvRow<'a> {
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "benchmark CSV rows intentionally mirror measured columns"
+    )]
     fn new(
         kind: &'a str,
         case: &'a str,
