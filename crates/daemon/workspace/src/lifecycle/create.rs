@@ -1,76 +1,44 @@
 use std::collections::HashMap;
-use std::time::Instant;
 
 use crate::lifecycle::leases::{monotonic_seconds, next_handle_id};
-use crate::lifecycle::remount::WorkspaceRemountState;
 use crate::model::NetworkMode;
-use crate::namespace::NamespacePlan;
-use crate::network_mode::isolated_network::IsolatedNetworkError;
-use crate::network_mode::isolated_network::{
+use crate::overlay::dirs::create_overlay_dirs;
+use crate::profile::common::{
+    new_workspace_handle, teardown_workspace, wire_workspace, WorkspaceHandleSpec,
+};
+use crate::profile::isolated::IsolatedProfile;
+use crate::profile::manager::IsolatedNetworkError;
+use crate::profile::{
     WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeManager, WorkspaceModeSnapshot,
 };
-use crate::overlay::dirs::create_overlay_dirs;
-
-use super::{close_handle_fds, record_phase_ms};
 
 impl WorkspaceModeManager {
     pub(crate) fn wire_handle(
         &mut self,
         handle: &mut WorkspaceModeHandle,
     ) -> Result<HashMap<String, f64>, IsolatedNetworkError> {
-        let mut phases_ms = HashMap::new();
-        let mut phase_start = Instant::now();
-        let namespace_plan = NamespacePlan::isolated_network();
-        handle.holder_pid =
-            self.runtime
-                .spawn_ns_holder(handle, self.caps.setup_timeout_s, namespace_plan)?;
-        record_phase_ms(&mut phases_ms, "spawn_ns_holder", phase_start);
-        phase_start = Instant::now();
-        handle.ns_fds = self
-            .runtime
-            .open_ns_fds(handle.holder_pid, namespace_plan)?;
-        record_phase_ms(&mut phases_ms, "open_ns_fds", phase_start);
-        phase_start = Instant::now();
-        self.network.initialize()?;
-        handle.veth = Some(
-            self.network
-                .install_veth(&handle.workspace_id.0, handle.holder_pid)?,
-        );
-        record_phase_ms(&mut phases_ms, "install_veth", phase_start);
-        phase_start = Instant::now();
-        self.runtime.mount_overlay(
-            handle,
-            &handle.layer_paths.clone(),
-            self.caps.setup_timeout_s,
-        )?;
-        record_phase_ms(&mut phases_ms, "mount_overlay", phase_start);
-        phase_start = Instant::now();
-        handle.dns_configuration = self.runtime.configure_dns(
-            handle,
+        let layer_paths = handle.layer_paths.clone();
+        let mut profile = IsolatedProfile::new(
+            &mut self.network,
             &self.caps.fallback_dns,
             self.caps.setup_timeout_s,
-        )?;
-        record_phase_ms(&mut phases_ms, "configure_dns", phase_start);
-        self.runtime
-            .signal_net_ready(handle, self.caps.setup_timeout_s)?;
-        phase_start = Instant::now();
-        let cgroup_path = self.runtime.create_cgroup(handle)?;
-        record_phase_ms(&mut phases_ms, "create_cgroup", phase_start);
-        if !cgroup_path.as_os_str().is_empty() {
-            handle.cgroup_path = Some(cgroup_path);
-        }
-        Ok(phases_ms)
+        );
+        wire_workspace(
+            &self.runtime,
+            handle,
+            &layer_paths,
+            self.caps.setup_timeout_s,
+            &mut profile,
+        )
     }
 
     pub(crate) fn rollback_partial(&mut self, handle: &WorkspaceModeHandle) {
-        close_handle_fds(handle);
-        if let Some(veth) = handle.veth.as_ref() {
-            self.network.teardown_veth(veth);
-        }
-        if handle.holder_pid > 0 {
-            let _ = self.runtime.kill_holder(handle.holder_pid, 1.0);
-        }
-        let _ = std::fs::remove_dir_all(&handle.dirs.run_dir);
+        let mut profile = IsolatedProfile::new(
+            &mut self.network,
+            &self.caps.fallback_dns,
+            self.caps.setup_timeout_s,
+        );
+        let _ = teardown_workspace(&self.runtime, handle, &mut profile, 1.0);
     }
 
     pub fn enter(
@@ -116,7 +84,7 @@ impl WorkspaceModeManager {
         )?;
 
         let now = monotonic_seconds();
-        let mut handle = WorkspaceModeHandle {
+        let mut handle = new_workspace_handle(WorkspaceHandleSpec {
             workspace_id: workspace_id.clone(),
             network: NetworkMode::Isolated,
             caller_id: caller_id.to_owned(),
@@ -126,17 +94,9 @@ impl WorkspaceModeManager {
             workspace_root,
             dirs,
             layer_paths: snapshot.layer_paths,
-            ns_fds: HashMap::new(),
-            holder_pid: 0,
-            readiness_fd: -1,
-            control_fd: -1,
-            veth: None,
-            cgroup_path: None,
-            dns_configuration: Default::default(),
-            remount_state: WorkspaceRemountState::Active,
             created_at: now,
             last_activity: now,
-        };
+        });
 
         if let Err(err) = self.wire_handle(&mut handle) {
             self.rollback_partial(&handle);

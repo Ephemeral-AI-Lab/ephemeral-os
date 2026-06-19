@@ -259,8 +259,8 @@ fn overlay_dirs(run_dir: &std::path::Path) -> OverlayDirs {
     }
 }
 
-fn host_ns_fds() -> workspace::network_mode::host::WorkspaceNamespaceFds {
-    workspace::network_mode::host::WorkspaceNamespaceFds::from_raw_parts(
+fn host_ns_fds() -> workspace::profile::host_compatible::WorkspaceNamespaceFds {
+    workspace::profile::host_compatible::WorkspaceNamespaceFds::from_raw_parts(
         Some(10),
         Some(11),
         Some(12),
@@ -278,8 +278,8 @@ fn all_ns_fds_map() -> std::collections::HashMap<String, i32> {
 fn workspace_mode_context(
     root: &std::path::Path,
     ns_fds: std::collections::HashMap<String, i32>,
-) -> workspace::network_mode::isolated_network::WorkspaceModeContext {
-    workspace::network_mode::isolated_network::WorkspaceModeContext {
+) -> workspace::profile::WorkspaceModeContext {
+    workspace::profile::WorkspaceModeContext {
         caller_id: "caller".to_owned(),
         workspace_handle_id: "workspace-handle".to_owned(),
         network: workspace::NetworkMode::Isolated,

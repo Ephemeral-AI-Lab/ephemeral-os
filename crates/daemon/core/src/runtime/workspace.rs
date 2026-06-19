@@ -35,9 +35,9 @@ use operation::command::{CommandOps, CommandRemountInspection, ExecTarget, HostC
 use operation::isolation::contract::IsolationTestRemountFault;
 use serde_json::Value;
 #[cfg(test)]
-use workspace::network_mode::host::HostNamespaceWorkspaceRequest;
-use workspace::network_mode::host::{HostWorkspace, HostWorkspaceError};
-use workspace::network_mode::isolated_network::{
+use workspace::profile::host_compatible::HostNamespaceWorkspaceRequest;
+use workspace::profile::host_compatible::{HostWorkspace, HostWorkspaceError};
+use workspace::profile::{
     ExitOutcome as IsolatedNetworkExitOutcome, IsolatedNetworkError, RemountProbe, ResourceCaps,
     Rfc1918Egress as RuntimeRfc1918Egress, WorkspaceModeContext, WorkspaceModeHandle,
     WorkspaceModeManager, WorkspaceModeSnapshot,

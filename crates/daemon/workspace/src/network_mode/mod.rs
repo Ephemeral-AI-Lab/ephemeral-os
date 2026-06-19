@@ -1,8 +1,16 @@
-//! Implementations for workspace isolation profiles.
+//! Compatibility exports for the previous `network_mode` module path.
 //!
-//! Both adapters create private overlay-backed workspaces. Host mode preserves
-//! host network access; isolated mode adds a dedicated network boundary and
-//! network plumbing. Workspace lifetime and publish behavior are caller-owned.
+//! New implementation code lives under `crate::profile`.
 
-pub mod host;
-pub mod isolated_network;
+pub mod host {
+    pub use crate::profile::host_compatible::*;
+}
+
+pub mod isolated_network {
+    pub use crate::profile::{
+        DnsConfiguration, ExitOutcome, IsolatedNetworkError, OrphanCleanupReport,
+        RemountOverlayReport, RemountProbe, RemountedWorkspace, ResourceCaps, Rfc1918Egress,
+        WorkspaceModeContext, WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeManager,
+        WorkspaceModeSnapshot, WorkspaceRemountState,
+    };
+}

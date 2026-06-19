@@ -4,9 +4,9 @@ use linux_namespace_subprocess::protocol::{
     NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot,
 };
 use serde_json::{json, Value};
-use workspace::network_mode::host::WorkspaceNamespaceFds;
-use workspace::network_mode::isolated_network::WorkspaceModeContext;
 use workspace::overlay::dirs::OverlayDirs;
+use workspace::profile::host_compatible::WorkspaceNamespaceFds;
+use workspace::profile::WorkspaceModeContext;
 
 use super::outcome::WorkspaceApiError;
 use super::trace::CommandTraceEvent;

@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::path::PathBuf;
-use std::sync::mpsc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -35,7 +35,6 @@ struct TestServices {
 #[derive(Default)]
 struct PendingGuardWorkspaceService {
     create_results: Mutex<VecDeque<Result<WorkspaceHandle, WorkspaceError>>>,
-    remount_results: Mutex<VecDeque<Result<RemountWorkspaceResult, WorkspaceError>>>,
     remount_calls: Mutex<Vec<WorkspaceId>>,
     remount_notifier: Mutex<Option<mpsc::Sender<()>>>,
 }
@@ -43,13 +42,6 @@ struct PendingGuardWorkspaceService {
 impl PendingGuardWorkspaceService {
     fn push_create_result(&self, result: Result<WorkspaceHandle, WorkspaceError>) {
         self.create_results
-            .lock()
-            .expect("test operation succeeds")
-            .push_back(result);
-    }
-
-    fn push_remount_result(&self, result: Result<RemountWorkspaceResult, WorkspaceError>) {
-        self.remount_results
             .lock()
             .expect("test operation succeeds")
             .push_back(result);
@@ -113,15 +105,9 @@ impl WorkspaceService for PendingGuardWorkspaceService {
         {
             let _ = notifier.send(());
         }
-        self.remount_results
-            .lock()
-            .expect("test operation succeeds")
-            .pop_front()
-            .unwrap_or_else(|| {
-                Err(WorkspaceError::Setup {
-                    step: "remount result not configured".to_owned(),
-                })
-            })
+        Err(WorkspaceError::Setup {
+            step: "remount result not configured".to_owned(),
+        })
     }
 
     fn destroy_workspace(
@@ -341,10 +327,10 @@ fn create_session_and_command() -> (
         .create(create_request("caller-1", workspace_root.clone()))
         .expect("create workspace session succeeds");
     let output = services
-        .services
+        .command
         .exec_command(
             exec_input(handler.workspace_id.clone(), workspace_root),
-            OperationTraceContext,
+            context("caller-1"),
         )
         .expect("exec command succeeds");
     (
@@ -391,10 +377,10 @@ fn command_remount_start_rejects_for_pending_persistent_workspace() {
         .expect("begin remount succeeds");
 
     let error = services
-        .services
+        .command
         .exec_command(
             exec_input(handler.workspace_id.clone(), workspace_root),
-            OperationTraceContext,
+            context("caller-1"),
         )
         .expect_err("exec rejects pending remount");
 
@@ -414,7 +400,10 @@ fn command_remount_waits_for_in_flight_persistent_exec_admission() {
     fake.notify_on_remount(remount_called_tx);
     let services = build_services_with_launch_driver(
         Arc::clone(&fake),
-        Arc::new(BlockingLaunchDriver::new(spawn_started_tx, release_spawn_rx)),
+        Arc::new(BlockingLaunchDriver::new(
+            spawn_started_tx,
+            release_spawn_rx,
+        )),
     );
     let workspace_root = PathBuf::from("/workspace");
     fake.push_create_result(Ok(workspace_handle(
@@ -428,12 +417,12 @@ fn command_remount_waits_for_in_flight_persistent_exec_admission() {
         .create(create_request("caller-1", workspace_root.clone()))
         .expect("create workspace session succeeds");
 
-    let exec_services = services.services.clone();
+    let exec_command = Arc::clone(&services.command);
     let exec_workspace_id = handler.workspace_id.clone();
     let exec_thread = thread::spawn(move || {
-        exec_services.exec_command(
+        exec_command.exec_command(
             exec_input(exec_workspace_id, workspace_root),
-            OperationTraceContext,
+            context("caller-1"),
         )
     });
     spawn_started_rx

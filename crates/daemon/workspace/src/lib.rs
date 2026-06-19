@@ -6,9 +6,9 @@
 //! `NetworkMode` selects the isolation profile applied to that workspace; higher
 //! layers decide when a workspace is created, destroyed, captured, or published.
 //!
-//! `network_mode::host` is the host-compatible profile: it keeps the private
+//! `profile::host_compatible` is the host-compatible profile: it keeps the private
 //! workspace overlay and holder namespace stack while preserving host network
-//! access. `network_mode::isolated_network` is the fully isolated profile: it
+//! access. `profile::isolated` is the fully isolated profile: it
 //! adds a dedicated network boundary with veth, DNS, policy, and cgroup
 //! resources. `overlay` holds the filesystem and telemetry contracts both
 //! profiles share.
@@ -21,6 +21,7 @@ pub mod model;
 mod namespace;
 pub mod network_mode;
 pub mod overlay;
+pub mod profile;
 pub mod service;
 
 pub use error::WorkspaceError;

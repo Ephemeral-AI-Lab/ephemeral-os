@@ -112,7 +112,7 @@ impl RemountOverlayReport {
 
 #[derive(Debug, Clone)]
 pub struct RemountedWorkspace {
-    pub handle: crate::network_mode::isolated_network::WorkspaceModeHandle,
+    pub handle: crate::profile::WorkspaceModeHandle,
     pub remount: RemountOverlayReport,
 }
 

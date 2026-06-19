@@ -1,21 +1,22 @@
-//! Fully isolated workspace implementation.
+//! Caller-keyed workspace profile manager.
 //!
-//! This adapter uses the same private overlay and holder-backed workspace shape
-//! as host mode, then adds a dedicated network boundary, veth attachment, DNS
-//! configuration, network policy, and cgroup resources. The current manager
-//! keeps caller-keyed handles open across commands, but that persistence policy
-//! is separate from the definition of `NetworkMode::Isolated`.
+//! The manager owns admission policy, quotas, caller indexing, persistence, and
+//! orphan cleanup. Profile-specific environment setup lives in
+//! `profile::isolated`; shared holder/overlay lifecycle lives in
+//! `profile::common`.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
-use crate::isolated_network_setup::{IsolatedNetwork, VethAllocation};
+use crate::isolated_network_setup::IsolatedNetwork;
 use crate::lifecycle::monotonic_seconds;
-use crate::model::NetworkMode;
 use crate::namespace::NamespaceRuntime;
-use crate::overlay::dirs::OverlayDirs;
+pub use crate::profile::{
+    DnsConfiguration, WorkspaceModeContext, WorkspaceModeHandle, WorkspaceModeId,
+    WorkspaceModeSnapshot,
+};
 
 #[cfg(test)]
 #[path = "../../tests/unit/isolated_network_sessions.rs"]
@@ -27,8 +28,6 @@ pub use crate::lifecycle::remount::{
 pub use crate::lifecycle::ExitOutcome;
 
 pub(crate) const PERSISTED_HANDLES_SCHEMA_VERSION: u32 = 1;
-pub(crate) const HANDLE_PREFIX: &str = "eos-iws-";
-pub(crate) const CGROUP_ROOT: &str = "/sys/fs/cgroup";
 
 const DEFAULT_EOS_WORKSPACE_ROOT: &str = "/testbed";
 const HOST_BUDGET_FALLBACK_BYTES: u64 = 1_u64 << 62;
@@ -117,63 +116,6 @@ impl IsolatedNetworkError {
             Self::SetupFailed { .. } | Self::NetworkUnavailable(_) => "setup_failed",
         }
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct WorkspaceModeId(pub String);
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WorkspaceModeSnapshot {
-    pub lease_id: String,
-    pub manifest_version: i64,
-    pub manifest_root_hash: String,
-    pub layer_paths: Vec<PathBuf>,
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct DnsConfiguration {
-    pub fallback_applied: bool,
-    pub previous_first_nameserver: Option<String>,
-}
-
-#[derive(Debug, Clone)]
-pub struct WorkspaceModeHandle {
-    pub workspace_id: WorkspaceModeId,
-    pub network: NetworkMode,
-    pub caller_id: String,
-    pub lease_id: String,
-    pub manifest_version: i64,
-    pub manifest_root_hash: String,
-    pub workspace_root: String,
-    pub dirs: OverlayDirs,
-    pub layer_paths: Vec<PathBuf>,
-    pub ns_fds: HashMap<String, i32>,
-    pub holder_pid: i32,
-    pub readiness_fd: i32,
-    pub control_fd: i32,
-    pub veth: Option<VethAllocation>,
-    pub cgroup_path: Option<PathBuf>,
-    pub dns_configuration: DnsConfiguration,
-    pub remount_state: WorkspaceRemountState,
-    pub created_at: f64,
-    pub last_activity: f64,
-}
-
-#[derive(Debug, Clone)]
-pub struct WorkspaceModeContext {
-    pub caller_id: String,
-    pub workspace_handle_id: String,
-    pub network: NetworkMode,
-    pub layer_stack_root: PathBuf,
-    pub manifest_version: i64,
-    pub manifest_root_hash: String,
-    pub workspace_root: PathBuf,
-    pub scratch_dir: PathBuf,
-    pub upperdir: PathBuf,
-    pub workdir: PathBuf,
-    pub layer_paths: Vec<PathBuf>,
-    pub ns_fds: HashMap<String, i32>,
-    pub cgroup_path: Option<PathBuf>,
 }
 
 pub struct WorkspaceModeManager {

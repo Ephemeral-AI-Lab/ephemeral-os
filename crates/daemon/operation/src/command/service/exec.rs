@@ -6,7 +6,7 @@ use command::process::{CommandProcess, CommandProcessSpawn, CommandProcessSpec};
 use command::yield_wait_loop::{wait_for_yield_with_timing, WaitOutcome};
 use command::{CommandError, StartCommand};
 use serde_json::json;
-use workspace::network_mode::isolated_network::WorkspaceModeContext;
+use workspace::profile::WorkspaceModeContext;
 
 use crate::command::contract::{CommandResponse, CommandStatus};
 use crate::command::finalize::insert_cgroup_process_resource_timings;

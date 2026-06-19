@@ -1,7 +1,7 @@
 //! Daemon error algebra and wire-kind mapping.
 
 use thiserror::Error;
-use workspace::network_mode::isolated_network::IsolatedNetworkError;
+use workspace::profile::IsolatedNetworkError;
 
 #[derive(Debug, Error)]
 #[non_exhaustive]

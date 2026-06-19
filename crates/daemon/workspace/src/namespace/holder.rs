@@ -22,8 +22,8 @@ use nix::sys::signal::{kill, Signal};
 #[cfg(target_os = "linux")]
 use nix::unistd::{pipe2, Pid};
 
-use crate::network_mode::isolated_network::IsolatedNetworkError;
-use crate::network_mode::isolated_network::WorkspaceModeHandle;
+use crate::profile::IsolatedNetworkError;
+use crate::profile::WorkspaceModeHandle;
 
 #[cfg(target_os = "linux")]
 use super::fds::{clear_cloexec, expect_line, set_nonblocking};

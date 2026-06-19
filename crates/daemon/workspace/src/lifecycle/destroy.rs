@@ -4,14 +4,13 @@ use std::time::Instant;
 
 use serde_json::{json, Value};
 
-use crate::namespace::HolderKillReport;
-use crate::network_mode::isolated_network::IsolatedNetworkError;
-use crate::network_mode::isolated_network::{
-    WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeManager,
-};
 use crate::overlay::tree::directory_file_bytes;
+use crate::profile::common::{record_phase_ms, teardown_workspace};
+use crate::profile::isolated::IsolatedProfile;
+use crate::profile::manager::IsolatedNetworkError;
+use crate::profile::{WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeManager};
 
-use super::{close_handle_fds, monotonic_seconds, record_phase_ms};
+use super::monotonic_seconds;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExitOutcome {
@@ -31,31 +30,13 @@ impl WorkspaceModeManager {
         handle: &WorkspaceModeHandle,
         grace_s: f64,
     ) -> (Value, HashMap<String, f64>) {
-        let mut phases_ms = HashMap::new();
-        let phase_start = Instant::now();
-        let (holder_kill_report, holder_kill_error) = if handle.holder_pid > 0 {
-            match self.runtime.kill_holder(handle.holder_pid, grace_s) {
-                Ok(report) => (report, None),
-                Err(err) => (HolderKillReport::default(), Some(err.to_string())),
-            }
-        } else {
-            (HolderKillReport::default(), None)
-        };
-        record_phase_ms(&mut phases_ms, "kill_holder", phase_start);
-        close_handle_fds(handle);
-        let phase_start = Instant::now();
-        if let Some(veth) = handle.veth.as_ref() {
-            self.network.teardown_veth(veth);
-        }
-        record_phase_ms(&mut phases_ms, "teardown_veth", phase_start);
-        let phase_start = Instant::now();
-        if let Some(cgroup_path) = handle.cgroup_path.as_ref() {
-            let _ = std::fs::remove_dir(cgroup_path);
-        }
-        record_phase_ms(&mut phases_ms, "cgroup_rmdir", phase_start);
-        let phase_start = Instant::now();
-        let _ = std::fs::remove_dir_all(&handle.dirs.run_dir);
-        record_phase_ms(&mut phases_ms, "rmtree_scratch", phase_start);
+        let mut profile = IsolatedProfile::new(
+            &mut self.network,
+            &self.caps.fallback_dns,
+            self.caps.setup_timeout_s,
+        );
+        let teardown = teardown_workspace(&self.runtime, handle, &mut profile, grace_s);
+        let phases_ms = teardown.phases_ms;
         let cgroup_exists_after = handle.cgroup_path.as_ref().map(|path| path.exists());
         let inspection = json!({
             "handle_registered_after": self.handles.contains_key(&handle.workspace_id),
@@ -63,11 +44,11 @@ impl WorkspaceModeManager {
             "open_handle_count_after": self.handles.len(),
             "open_agent_count_after": self.by_caller.len(),
             "holder_pid": handle.holder_pid,
-            "holder_was_alive": holder_kill_report.holder_was_alive,
-            "holder_exit_status": holder_kill_report.exit_status,
-            "holder_signal": holder_kill_report.signal,
-            "holder_status_raw": holder_kill_report.status_raw,
-            "holder_kill_error": holder_kill_error,
+            "holder_was_alive": teardown.holder_kill_report.holder_was_alive,
+            "holder_exit_status": teardown.holder_kill_report.exit_status,
+            "holder_signal": teardown.holder_kill_report.signal,
+            "holder_status_raw": teardown.holder_kill_report.status_raw,
+            "holder_kill_error": teardown.holder_kill_error,
             "ns_fd_count": handle.ns_fds.len(),
             "readiness_fd_was_open": handle.readiness_fd >= 0,
             "control_fd_was_open": handle.control_fd >= 0,

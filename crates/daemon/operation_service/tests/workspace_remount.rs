@@ -449,9 +449,7 @@ fn workspace_remount_live_command_success_finishes_before_resume() {
         "lease-1",
         workspace_root.clone(),
     )));
-    fake.push_remount_result(Ok(RemountWorkspaceResult {
-        handle: remounted,
-    }));
+    fake.push_remount_result(Ok(RemountWorkspaceResult { handle: remounted }));
     let handler = services
         .workspace
         .create(create_request("caller-1", workspace_root.clone()))
@@ -477,7 +475,10 @@ fn workspace_remount_live_command_success_finishes_before_resume() {
     assert!(report.remounted);
     assert_eq!(report.command_inspection.active_commands, 1);
     assert_eq!(controller.resumed(), vec![101]);
-    assert_eq!(controller.resume_states(), vec![WorkspaceRemountState::Active]);
+    assert_eq!(
+        controller.resume_states(),
+        vec![WorkspaceRemountState::Active]
+    );
     assert_eq!(
         services
             .workspace
@@ -506,9 +507,7 @@ fn workspace_remount_cancel_during_critical_switch_still_applies_and_resumes() {
         "lease-1",
         workspace_root.clone(),
     )));
-    fake.push_remount_result(Ok(RemountWorkspaceResult {
-        handle: remounted,
-    }));
+    fake.push_remount_result(Ok(RemountWorkspaceResult { handle: remounted }));
     let handler = services
         .workspace
         .create(create_request("caller-1", workspace_root.clone()))
@@ -547,7 +546,10 @@ fn workspace_remount_cancel_during_critical_switch_still_applies_and_resumes() {
     assert!(report.remounted);
     assert_eq!(fake.remount_calls(), vec![handler.workspace_id]);
     assert_eq!(controller.resumed(), vec![101]);
-    assert_eq!(controller.resume_states(), vec![WorkspaceRemountState::Active]);
+    assert_eq!(
+        controller.resume_states(),
+        vec![WorkspaceRemountState::Active]
+    );
 }
 
 #[test]

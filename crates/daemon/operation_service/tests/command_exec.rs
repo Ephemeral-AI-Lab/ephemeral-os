@@ -53,14 +53,14 @@ fn command_exec_some_uses_resolved_session_without_workspace_create_or_destroy()
     let create_count_before_exec = fake.create_requests().len();
 
     let output = env
-        .services
+        .command
         .exec_command(
             exec_input(
                 "caller-1",
                 workspace_root,
                 Some(handler.workspace_id.clone()),
             ),
-            OperationTraceContext,
+            context("caller-1"),
         )
         .expect("session command exec succeeds");
 
@@ -96,10 +96,10 @@ fn command_exec_none_creates_private_host_workspace_and_binds_it() {
     let env = build_services(Arc::clone(&fake));
 
     let output = env
-        .services
+        .command
         .exec_command(
             exec_input("caller-1", workspace_root.clone(), None),
-            OperationTraceContext,
+            context("caller-1"),
         )
         .expect("one-shot command exec succeeds");
 
@@ -127,6 +127,44 @@ fn command_exec_none_creates_private_host_workspace_and_binds_it() {
         .expect("owner can poll one-shot command");
     assert_eq!(poll.command_id, command_id);
     assert_eq!(poll.status, CommandStatus::Running);
+}
+
+#[test]
+fn command_exec_rejects_context_caller_mismatch_before_workspace_create() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let workspace_root = PathBuf::from("/workspace/one-shot");
+    let env = build_services(Arc::clone(&fake));
+
+    let error = env
+        .command
+        .exec_command(
+            exec_input("caller-1", workspace_root.clone(), None),
+            context("caller-2"),
+        )
+        .expect_err("caller mismatch rejects before one-shot create");
+
+    assert!(matches!(
+        error,
+        CommandServiceError::InvalidCommand { message }
+            if message.contains("exec caller must match command call context")
+    ));
+    assert!(fake.create_requests().is_empty());
+
+    fake.push_create_result(Ok(workspace_handle(
+        "workspace-one-shot",
+        "caller-1",
+        "lease-1",
+        workspace_root.clone(),
+        NetworkMode::Host,
+    )));
+    let output = env
+        .command
+        .exec_command(
+            exec_input("caller-1", workspace_root, None),
+            context("caller-1"),
+        )
+        .expect("subsequent valid exec succeeds");
+    assert_eq!(output.command_id, Some(CommandId("cmd_1".to_owned())));
 }
 
 #[test]
@@ -508,14 +546,14 @@ fn command_exec_rejects_workspace_root_mismatch_before_command_allocation() {
         .expect("session create succeeds");
 
     let error = env
-        .services
+        .command
         .exec_command(
             exec_input(
                 "caller-1",
                 PathBuf::from("/workspace/other"),
                 Some(handler.workspace_id),
             ),
-            OperationTraceContext,
+            context("caller-1"),
         )
         .expect_err("root mismatch is rejected");
 
@@ -527,14 +565,14 @@ fn command_exec_rejects_workspace_root_mismatch_before_command_allocation() {
         other => panic!("expected workspace root mismatch, got {other:?}"),
     }
     let output = env
-        .services
+        .command
         .exec_command(
             exec_input(
                 "caller-1",
                 PathBuf::from("/workspace/session"),
                 Some(WorkspaceId("workspace-session".to_owned())),
             ),
-            OperationTraceContext,
+            context("caller-1"),
         )
         .expect("subsequent valid exec succeeds");
     assert_eq!(output.command_id, Some(CommandId("cmd_1".to_owned())));

@@ -5,8 +5,8 @@ use std::path::PathBuf;
 use layerstack::service::BoundedCaptureOptions;
 use layerstack::CaptureRouteStats;
 
-use crate::network_mode::isolated_network::WorkspaceModeHandle;
 use crate::overlay::tree::TreeResourceStats;
+use crate::profile::WorkspaceModeHandle;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct WorkspaceId(pub String);

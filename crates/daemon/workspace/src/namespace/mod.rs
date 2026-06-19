@@ -9,7 +9,7 @@ pub(crate) use setns_runner::{ns_runner_request, run_child};
 #[cfg(test)]
 use std::sync::Arc;
 
-use crate::network_mode::isolated_network::IsolatedNetworkError;
+use crate::profile::IsolatedNetworkError;
 
 pub(crate) const TEST_HARNESS_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_HARNESS";
 

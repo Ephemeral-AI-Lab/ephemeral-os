@@ -21,7 +21,9 @@ the target boundaries from the spec:
 - `crates/daemon/command` remains the low-level PTY/process/transcript substrate.
 - `CommandRegistry` remains exactly one map:
   `HashMap<CommandId, WorkspaceId>`.
-- Only `exec_command` may receive `Option<WorkspaceSessionHandler>`.
+- After Milestone 6.5, no public or crate-public command-service exec boundary
+  may receive `Option<WorkspaceSessionHandler>`; workspace resolution belongs
+  inside `CommandOperationService::exec_command(input, context)`.
 - Stdin/read/poll/cancel are command-id based and authorize through
   `CommandCallContext`.
 - `ExecCommandInput` uses `workspace_root` as its only root path, has no request
@@ -230,7 +232,9 @@ reviewed independently without the new capture result shape.
 - [x] Milestone 3.5: Policy-free command launch and initial yield.
 - [x] Milestone 4: One-shot finalization and persistent-session finalization semantics.
 - [x] Milestone 5: Local OS row projection.
-- [ ] Milestone 6: `WorkspaceRemountService` and remount-pending state.
+- [x] Milestone 6: `WorkspaceRemountService` and remount-pending state.
+- [x] Milestone 6.5: Exec command boundary migration to
+  `CommandOperationService`.
 - [ ] Milestone 7: Daemon dispatch migration away from `WorkspaceRuntime`.
 - [ ] Milestone 8: Compatibility wrapper cleanup and final gates.
 
@@ -381,7 +385,7 @@ pub struct ExecCommandInput {
 | Method | Contract |
 | --- | --- |
 | `OperationServices::new(workspace, command, remount) -> Self` | Purpose: wire the three service domains. Inputs: three `Arc` services. Outputs/errors: infallible. Ownership rules: does not construct child dependencies or inline orchestration. Notes: tests assert all arcs are preserved. |
-| `OperationServices::exec_command(input, trace) -> Result<CommandYield, CommandServiceError>` | Purpose: top-level dispatch helper that resolves an optional workspace and delegates to command service. Inputs: `ExecCommandInput`, trace context. Outputs/errors: command yield or typed command/workspace error. Ownership rules: only this method resolves `workspace_id` to `WorkspaceSessionHandler`; only it passes `Option<WorkspaceSessionHandler>` to command service. Notes: this can be a compile-only placeholder in M1 if M3 implements behavior. Tests: M1 asserts signature and root-mismatch error type existence; M3 proves behavior. |
+| `OperationServices::exec_command(input, trace) -> Result<CommandYield, CommandServiceError>` | Historical M1-M6 contract, superseded by Milestone 6.5. Purpose during early milestones: top-level dispatch helper that resolved an optional workspace and delegated to command service. Current boundary after Milestone 6.5: this method may remain only as a forwarding shim to `CommandOperationService::exec_command(input, context)` and must not resolve workspace ids or own command-start policy. |
 | `CommandOperationService::new(workspace, config) -> Self` | Purpose: construct command service with default registry/store/finalization options. Inputs: `Arc<WorkspaceManagerService>`, `command::CommandConfig`. Outputs/errors: infallible. Ownership rules: creates its own `CommandRegistry` and `CommandProcessStore`. Tests: construction exposes no old `CommandOps` dependency. |
 | `CommandOperationService::with_finalization_options(...) -> Self` | Purpose: test/config seam for one-shot capture/publish options. Inputs: workspace, config, options. Outputs/errors: infallible. Ownership rules: stores options but does not apply them until M4. Tests: options are retained. |
 | `WorkspaceRemountService::new(workspace, command, options) -> Self` | Purpose: construct orchestration service. Inputs: workspace service, command service, options. Outputs/errors: infallible. Ownership rules: this is the only type allowed to hold both workspace and command services for remount. Tests: workspace module has no command-service imports. |
@@ -740,8 +744,8 @@ pub struct CommandYield {
 
 | Method | Contract |
 | --- | --- |
-| `OperationServices::exec_command(input, trace)` | Purpose: resolve optional workspace and delegate. Inputs: `ExecCommandInput`, trace. Outputs/errors: `CommandYield` or `CommandServiceError`. Boundary rules: for `workspace_id: Some`, call `WorkspaceManagerService::resolve(workspace_id, input.caller_id)` and reject `workspace_root` mismatch before calling command service. For `None`, pass no handler. Tests: root mismatch rejects before command allocation. |
-| `CommandOperationService::exec_command(input, workspace, context)` | Purpose: choose session or one-shot flow. Inputs: target input, `Option<WorkspaceSessionHandler>`, call context. Outputs/errors: command yield shell or typed error. Boundary rules: this is the only command method that accepts a workspace handler. Notes: validate non-empty command, allocate command id, reserve active slot, register binding and active record before returning the M3 running shell; Milestone 3.5 replaces the process-free shell with real spawn and initial yield. Tests: `Some` does not call create/destroy; `None` calls create and binds the temporary workspace id. |
+| `OperationServices::exec_command(input, trace)` | Historical M3 contract, superseded by Milestone 6.5. The retained method is now only a temporary forwarding shim that builds `CommandCallContext` from `input.caller_id` and `trace`, then calls `CommandOperationService::exec_command(input, context)`. |
+| `CommandOperationService::exec_command(input, context)` | Current Milestone 6.5 public boundary. Purpose: validate exec input, resolve `workspace_id: Some` through the command service's `WorkspaceManagerService`, create private one-shot host workspaces for `workspace_id: None`, and run the existing launch/finalization flow. Inputs: `ExecCommandInput`, call context. Outputs/errors: command yield shell or typed error. Boundary rules: no public or crate-public handler-taking overload; validation happens before workspace creation or command allocation. |
 | `CommandOperationService::write_stdin(input, context)` | Purpose: write to a running command and optionally wait for output. Inputs: command id, chars, yield time, call context. Outputs/errors: `CommandYield` or typed error. Boundary rules: authorize active or completed command owner against `context.caller_id`; do not accept workspace handlers. Notes: control-byte cancel behavior can be preserved, but cancellation still uses command-id ownership validation. Tests: wrong caller receives authorization error, not not-found or leaked output. |
 | `CommandOperationService::read_lines(input, context)` | Purpose: read row window by offset/limit. Inputs: command id, offset, limit, context. Outputs/errors: `CommandLinesOutput` or typed error. Boundary rules: active lookup first, then completion store; both authorize caller. Notes: full row projection is completed in M5; M3 can return a minimal snapshot if the row store is stubbed. Tests: completed records remain readable by owner only. |
 | `CommandOperationService::poll(input, context)` | Purpose: return current command status and finalize if completed. Inputs: command id, optional tail size, context. Outputs/errors: `CommandPollOutput` or typed error. Boundary rules: command id only; active/completed ownership validation. Notes: no `collect_completed` replacement. Tests: wrong caller cannot poll active or completed command. |
@@ -750,8 +754,8 @@ pub struct CommandYield {
 
 ### Implementation Steps
 
-- [x] Implement `OperationServices::exec_command` dispatch and root mismatch
-  error.
+- [x] Implement the historical `OperationServices::exec_command` dispatch and root
+  mismatch behavior; superseded by the Milestone 6.5 command-service boundary.
 - [x] Add command service public methods with target signatures.
 - [x] Implement `exec_command` mode selection:
    - `Some(handler)`: use handler workspace root, network mode, layer paths, and
@@ -801,10 +805,12 @@ git diff --check
 
 ### Acceptance Criteria
 
-- [x] Only `CommandOperationService::exec_command` accepts
-  `Option<WorkspaceSessionHandler>`.
-- [x] `OperationServices::exec_command` validates caller ownership and root match
-  for `workspace_id: Some`.
+- [x] Historical M3 state: only `CommandOperationService::exec_command` accepted
+  `Option<WorkspaceSessionHandler>`. Superseded by Milestone 6.5: no public or
+  crate-public command exec accepts an optional handler.
+- [x] Historical M3 state: `OperationServices::exec_command` validated caller
+  ownership and root match for `workspace_id: Some`. Superseded by Milestone 6.5:
+  command service owns that resolution and validation.
 - [x] `Some(handler)` exec does not create, destroy, or implicitly publish a
   workspace.
 - [x] `None` exec creates a private one-shot host workspace and binds its workspace
@@ -1389,27 +1395,27 @@ pub enum RemountSwitchState {
 | `WorkspaceManagerService::finish_or_block_remount(workspace_id, reason)` | Purpose: clear or mark blocked after failed/blocked attempt. Inputs: workspace id and reason. Outputs/errors: state update result. Boundary rules: no command-service imports. Tests: blocked reason retained if supported. |
 | `WorkspaceManagerService::is_remount_pending(workspace_id) -> bool` | Purpose: command service guard for starts/stdin. Inputs: workspace id. Outputs/errors: bool. Boundary rules: read-only workspace state. Tests: start rejects while pending. |
 | `pub(crate) CommandOperationService::begin_workspace_remount_quiesce(workspace_id)` | Purpose: freeze and inspect active commands for workspace. Inputs: workspace id. Outputs/errors: `CommandRemountQuiesce`. Boundary rules: scans `CommandRegistry.command_workspace`; every command is quiesce eligible; no per-command remount flag. Tests: workspace scan finds active commands and resumes on block. |
-| `pub(crate) CommandOperationService::inspect_workspace_remount(workspace_id)` | Purpose: inspect pressure without holding quiesce if needed. Inputs: workspace id. Outputs/errors: inspection report. Boundary rules: command-side only. Tests: unknown `/proc` state blocks. |
 | `WorkspaceRemountService::compact_or_remount_session(workspace_id)` | Purpose: full mounted-snapshot compaction/remount orchestration. Inputs: workspace id. Outputs/errors: compacted or blocked report. Boundary rules: owns sequencing between workspace and command services. Notes: lease retarget after mount verification only; old lowerdirs deleted only after lease retarget success. Tests: no-active, live-success, live-blocked, failure-resume, cancel-race paths. |
 | `CommandOperationService::cancel(input, context)` with remount token | Purpose: record deterministic cancellation during quiesce. Inputs: cancel request and context. Outputs/errors: terminal/yield result. Boundary rules: do not kill stopped process group before remount guard resumes it. Tests: cancel before critical switch aborts/remount resumes before termination; cancel during critical switch waits for resume. |
 
 ### Implementation Steps
 
-- [ ] Add remount state to `WorkspaceSession` and handler/status projection.
-- [ ] Add `begin_remount`, `apply_remount`, `finish_remount`, and blocked-state
+- [x] Add remount state to `WorkspaceSession` and handler/status projection.
+- [x] Add `begin_remount`, `apply_remount`, `finish_remount`, and blocked-state
    methods to `WorkspaceManagerService`.
-- [ ] Move command-side quiesce and `/proc` inspection from old
+- [x] Move command-side quiesce and `/proc` inspection from old
    `operation::command::service::remount` into `operation_service::command`.
-- [ ] Change quiesce lookup from caller based to workspace-id based registry scan.
-- [ ] Remove per-command `remountable` gating from the new command-side API.
-- [ ] Add remount cancellation token and switch-state guard.
-- [ ] Implement `WorkspaceRemountService::compact_or_remount_session` using full
-   mounted-snapshot compaction.
-- [ ] Make command starts and stdin reject with retryable
+- [x] Change quiesce lookup from caller based to workspace-id based registry scan.
+- [x] Remove per-command `remountable` gating from the new command-side API.
+- [x] Add remount cancellation token and switch-state guard.
+- [x] Implement `WorkspaceRemountService::compact_or_remount_session` using the
+   current mounted layer remount primitive; parent-prefix production compaction
+   remains excluded from this milestone.
+- [x] Make command starts and stdin reject with retryable
    `workspace_remount_pending` while pending.
-- [ ] Allow read/poll during pending and report pending/quiesced metadata where the
+- [x] Allow read/poll during pending and report pending/quiesced metadata where the
    response shape supports it.
-- [ ] Add unit tests for state transitions, quiesce/resume invariants, cancellation
+- [x] Add unit tests for state transitions, quiesce/resume invariants, cancellation
     races, and blocked telemetry.
 
 ### Explicit Exclusions
@@ -1443,18 +1449,50 @@ git diff --check
 
 ### Acceptance Criteria
 
-- [ ] `WorkspaceRemountService` exists under
+- [x] `WorkspaceRemountService` exists under
   `operation_service/src/workspace_remount/service.rs`.
-- [ ] `WorkspaceManagerService` owns remount-pending state and resource remount
+- [x] `WorkspaceManagerService` owns remount-pending state and resource remount
   application and has no command-service imports.
-- [ ] `CommandOperationService` owns only command-side quiesce/resume/inspection.
-- [ ] `begin_workspace_remount_quiesce` scans `CommandRegistry` by workspace id.
-- [ ] Every active command is remount-quiesce eligible.
-- [ ] Unknown inspection state blocks remount.
-- [ ] Stopped process groups resume on success, failure, early return, and cancel.
-- [ ] Command starts and stdin reject while remount is pending; read/poll remain
+- [x] `CommandOperationService` owns only command-side quiesce/resume/inspection.
+- [x] `begin_workspace_remount_quiesce` scans `CommandRegistry` by workspace id.
+- [x] Every active command is remount-quiesce eligible.
+- [x] Unknown inspection state blocks remount.
+- [x] Stopped process groups resume on success, failure, early return, and cancel.
+- [x] Command starts and stdin reject while remount is pending; read/poll remain
   allowed.
-- [ ] Cancellation never kills a stopped process group before required resume.
+- [x] Cancellation never kills a stopped process group before required resume.
+
+## Milestone 6.5: Exec Command Boundary Migration
+
+Spec:
+`docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_milestone_6_5_exec_command_boundary_SPEC.md`
+
+This narrow bridge milestone moves the public exec boundary from
+`OperationServices::exec_command` to
+`CommandOperationService::exec_command(input, context)` before daemon dispatch
+migration. It keeps daemon dispatch itself out of scope and may retain
+`OperationServices::exec_command` only as a temporary forwarding shim.
+
+### Implementation Steps
+
+- [x] Make `CommandOperationService::exec_command(input, context)` the public exec
+  boundary.
+- [x] Move `workspace_id: Some` resolution and workspace-root validation into
+  command service.
+- [x] Keep `workspace_id: None` one-shot host workspace creation inside command
+  service.
+- [x] Reduce `OperationServices::exec_command` to a forwarding shim only.
+- [x] Preserve remount admission, pending-state rejection, one-shot finalization,
+  and persistent-session finalization behavior.
+- [x] Keep daemon dispatch migration assigned to Milestone 7.
+
+### Milestone 7 Handoff
+
+Milestone 7 daemon exec dispatch should call:
+
+```rust
+RuntimeServices.operation.command.exec_command(exec_input, command_call_context)
+```
 
 ## Milestone 7: Daemon Dispatch Migration Away From WorkspaceRuntime
 
@@ -1546,7 +1584,7 @@ struct WireExecCommandRequest {
 
 | Method | Contract |
 | --- | --- |
-| `op_exec_command(input, context)` | Purpose: parse wire exec request and call `OperationServices::exec_command`. Inputs: wire input plus dispatch context. Outputs/errors: protocol JSON response or daemon error. Boundary rules: no `WorkspaceRuntime::route_command_context`, no `command::StartCommand`, no `operation::command::ExecTarget`. Tests: exec with `workspace_id: Some` resolves through workspace manager; `None` one-shot works. |
+| `op_exec_command(input, context)` | Purpose: parse wire exec request and call `RuntimeServices.operation.command.exec_command(exec_input, command_call_context)`. Inputs: wire input plus dispatch context. Outputs/errors: protocol JSON response or daemon error. Boundary rules: no `WorkspaceRuntime::route_command_context`, no `command::StartCommand`, no `operation::command::ExecTarget`, and no call through the temporary `OperationServices::exec_command` shim. Tests: exec with `workspace_id: Some` resolves through command service; `None` one-shot works. |
 | `command_write_stdin(input, context)` | Purpose: call `CommandOperationService::write_stdin`. Inputs: wire command id/chars/yield. Outputs/errors: response JSON. Boundary rules: build `CommandCallContext` from dispatch context caller; no workspace handler. Tests: unauthorized caller rejected. |
 | `command_read_progress` / `command_read_lines` | Purpose: map legacy poll and row-read surfaces to command service. Inputs: command id plus poll/read args. Outputs/errors: legacy or row response. Boundary rules: no collect-completed side channel. Tests: existing poll behavior and new row behavior. |
 | `command_cancel(input, context)` | Purpose: call command service cancel. Inputs: command id. Outputs/errors: response JSON. Boundary rules: command service handles remount cancellation token. Tests: cancel during running and remount-pending states. |
@@ -1699,7 +1737,7 @@ Retained target contracts:
 | Removed `CommandOps::collect_completed` | Purpose: none in target. Inputs/outputs: removed. Boundary rule: completed command polling/reads use command id and retained completion store. Tests: static search and compile fail if called. |
 | Removed `CommandOps::count_by_caller` / `count_commands` | Purpose: none as public command service API. Inputs/outputs: removed. Boundary rule: internal pressure counts may be private scans but not public API. Tests: protocol/daemon no longer call command count for command-service behavior. |
 | Removed `CommandOps::advance_active_commands_once` | Purpose: replaced by internal finalization supervisor. Inputs/outputs: removed. Boundary rule: no public command-service finalization tick. Tests: running command finalizes after exit without public advance. |
-| Removed `WorkspaceRuntime::route_command_context` | Purpose: replaced by `OperationServices::exec_command` plus workspace manager resolve/create. Inputs/outputs: removed. Boundary rule: daemon dispatch does no workspace command routing. Tests: static search and daemon command tests. |
+| Removed `WorkspaceRuntime::route_command_context` | Purpose: replaced by `RuntimeServices.operation.command.exec_command(...)` plus command-service workspace resolve/create. Inputs/outputs: removed. Boundary rule: daemon dispatch does no workspace command routing. Tests: static search and daemon command tests. |
 | Removed `WorkspaceRuntime` remount test hooks | Purpose: replaced by `WorkspaceRemountService` test hooks. Inputs/outputs: removed. Boundary rule: remount orchestration owned by operation service. Tests: remount unit/E2E tests use new service. |
 
 ### Implementation Steps
@@ -1833,7 +1871,7 @@ Architecture gates:
   quiesce.
 - `CommandRegistry` has exactly one binding map:
   `HashMap<CommandId, WorkspaceId>`.
-- Only `exec_command` accepts `Option<WorkspaceSessionHandler>`.
+- No public or crate-public command exec accepts `Option<WorkspaceSessionHandler>`.
 - Stdin/read/poll/cancel are command-id based and authorize through
   `CommandCallContext`.
 - `ExecCommandInput` has `workspace_root` as its only root path.

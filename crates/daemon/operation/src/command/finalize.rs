@@ -7,12 +7,12 @@ use layerstack::{service, FileResult};
 use layerstack::{CaptureRouteStats, ChangesetResult, CommitOptions, CommitStatus};
 use serde_json::{json, Map, Value};
 use trace::usize_to_f64_saturating;
-use workspace::network_mode::host::HostWorkspace;
-use workspace::network_mode::isolated_network::WorkspaceModeContext;
 use workspace::overlay::capture::{
     capture_upperdir, capture_upperdir_for_snapshot_with_options, RoutedCapturedChanges,
 };
 use workspace::overlay::tree::TreeResourceStats;
+use workspace::profile::host_compatible::HostWorkspace;
+use workspace::profile::WorkspaceModeContext;
 
 use super::contract::{
     u64_to_f64_saturating, CommandMetadata, CommandResponse, IgnoredPublishLaneMetadata,

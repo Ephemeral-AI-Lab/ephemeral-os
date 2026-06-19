@@ -1,7 +1,7 @@
 use std::net::Ipv4Addr;
 
 use crate::isolated_network_setup::{BRIDGE_PREFIX_LEN, IMDS_ADDR};
-use crate::network_mode::isolated_network::IsolatedNetworkError;
+use crate::profile::IsolatedNetworkError;
 
 use super::wire::{
     append_be_u32_attr, append_cstr_attr, append_data_value_attr, append_nested_attr, ipv4_mask,

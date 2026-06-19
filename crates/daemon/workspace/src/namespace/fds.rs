@@ -23,7 +23,7 @@ use nix::fcntl::{fcntl, FcntlArg, FdFlag, OFlag};
 #[cfg(target_os = "linux")]
 use nix::unistd::read;
 
-use crate::network_mode::isolated_network::IsolatedNetworkError;
+use crate::profile::IsolatedNetworkError;
 
 #[cfg(target_os = "linux")]
 use super::setup_error;

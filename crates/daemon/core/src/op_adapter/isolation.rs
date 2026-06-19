@@ -7,9 +7,7 @@ use operation::isolation::contract::{
     TestCompactRemountOutput, TestResetOutput, WorkspaceRootInput,
 };
 use serde_json::{json, Value};
-use workspace::network_mode::isolated_network::{
-    IsolatedNetworkError, RemountProbe, WorkspaceModeHandle,
-};
+use workspace::profile::{IsolatedNetworkError, RemountProbe, WorkspaceModeHandle};
 use workspace::WorkspaceError;
 
 use crate::error::DaemonError;

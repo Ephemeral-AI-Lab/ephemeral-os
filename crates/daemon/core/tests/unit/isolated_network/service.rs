@@ -4,11 +4,11 @@
 
 use std::collections::HashMap;
 
-use workspace::network_mode::isolated_network::{
+use workspace::overlay::dirs::OverlayDirs;
+use workspace::profile::{
     DnsConfiguration, ExitOutcome as IsolatedNetworkExitOutcome, WorkspaceModeId,
     WorkspaceRemountState,
 };
-use workspace::overlay::dirs::OverlayDirs;
 
 use super::*;
 

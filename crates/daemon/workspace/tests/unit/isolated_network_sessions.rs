@@ -11,8 +11,8 @@ use super::{
 };
 use crate::lifecycle::leases::next_handle_id;
 use crate::namespace::NamespaceRuntime;
-use crate::network_mode::isolated_network::IsolatedNetworkError;
-use crate::network_mode::isolated_network::ResourceCaps;
+use crate::profile::IsolatedNetworkError;
+use crate::profile::ResourceCaps;
 
 #[test]
 fn parses_memavailable_from_proc_meminfo() {

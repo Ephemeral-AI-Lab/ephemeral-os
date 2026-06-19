@@ -234,14 +234,6 @@ impl CommandOperationService {
         &self,
         workspace_id: &WorkspaceId,
     ) -> CommandRemountQuiesce {
-        self.begin_workspace_remount_quiesce_with_controller(workspace_id, self.remount_controller())
-    }
-
-    fn begin_workspace_remount_quiesce_with_controller(
-        &self,
-        workspace_id: &WorkspaceId,
-        controller: Arc<dyn ProcessGroupController>,
-    ) -> CommandRemountQuiesce {
         let _admission_guard = self.lock_remount_admission();
         let command_ids = self.registry().commands_for_workspace(workspace_id);
         let cancellation = RemountCancellationToken::new();
@@ -255,7 +247,7 @@ impl CommandOperationService {
             process_store: Arc::clone(self.process_store()),
             cancellation,
             switch_state: RemountSwitchState::Quiescing,
-            controller,
+            controller: self.remount_controller(),
         };
         if command_ids.is_empty() {
             quiesce.switch_state = RemountSwitchState::ReadyToSwitch;
@@ -660,19 +652,18 @@ fn path_is_inside(path: &Path, root: &Path) -> bool {
 mod tests {
     use std::collections::VecDeque;
     use std::path::PathBuf;
-    use std::sync::Mutex;
+    use std::sync::{Arc, Mutex};
     use std::time::Instant;
 
     use crate::command::{
         ActiveCommandProcess, CommandFinalizePolicy, CommandProcessStore, CommandTraceOrigin,
-        CommandTranscriptStore, FinalizationState,
+        CommandTranscriptStore, FinalizationState, RealCommandLaunchDriver,
     };
     use crate::workspace_crate::{
-        BaseRevision, CallerId, CaptureChangesRequest, CapturedWorkspaceChanges,
-        CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult,
-        LatestSnapshotRequest, LayerStackSnapshotRef, LeaseId, NetworkMode, ReadonlySnapshotHandle,
-        RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceError, WorkspaceHandle,
-        WorkspaceService,
+        CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
+        DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
+        ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceError,
+        WorkspaceHandle, WorkspaceService,
     };
     use crate::workspace_manager::WorkspaceManagerService;
 
@@ -841,6 +832,18 @@ mod tests {
         )
     }
 
+    fn command_service_with_controller(
+        controller: Arc<dyn ProcessGroupController>,
+    ) -> CommandOperationService {
+        let workspace = Arc::new(WorkspaceManagerService::new(Arc::new(NoopWorkspaceService)));
+        CommandOperationService::with_launch_driver_and_remount_controller_for_test(
+            workspace,
+            command::CommandConfig::default(),
+            Arc::new(RealCommandLaunchDriver),
+            controller,
+        )
+    }
+
     fn command_id(id: &str) -> CommandId {
         CommandId(id.to_owned())
     }
@@ -915,8 +918,8 @@ mod tests {
 
     #[test]
     fn command_remount_workspace_scan_finds_multiple_active_command_ids() {
-        let service = command_service();
         let controller = Arc::new(FakeProcessGroupController::default());
+        let service = command_service_with_controller(controller.clone());
         seed_active(
             &service,
             command_id("cmd_b"),
@@ -934,10 +937,7 @@ mod tests {
             Some(11),
         );
 
-        let quiesce = service.begin_workspace_remount_quiesce_with_controller(
-            &workspace_id("workspace-1"),
-            controller,
-        );
+        let quiesce = service.begin_workspace_remount_quiesce(&workspace_id("workspace-1"));
 
         assert_eq!(
             quiesce.inspection().command_ids,
@@ -984,8 +984,8 @@ mod tests {
 
     #[test]
     fn command_remount_blocked_inspection_resumes_stopped_groups() {
-        let service = command_service();
         let controller = Arc::new(FakeProcessGroupController::default());
+        let service = command_service_with_controller(controller.clone());
         controller.push_report(CommandRemountInspection {
             active_commands: 1,
             process_count: 1,
@@ -1021,10 +1021,7 @@ mod tests {
         );
 
         let inspection = service
-            .begin_workspace_remount_quiesce_with_controller(
-                &workspace_id("workspace-1"),
-                controller.clone(),
-            )
+            .begin_workspace_remount_quiesce(&workspace_id("workspace-1"))
             .finish();
 
         assert_eq!(
@@ -1036,8 +1033,8 @@ mod tests {
 
     #[test]
     fn command_remount_drop_resumes_held_groups() {
-        let service = command_service();
         let controller = Arc::new(FakeProcessGroupController::default());
+        let service = command_service_with_controller(controller.clone());
         seed_active(
             &service,
             command_id("cmd_1"),
@@ -1048,10 +1045,7 @@ mod tests {
         );
 
         {
-            let _quiesce = service.begin_workspace_remount_quiesce_with_controller(
-                &workspace_id("workspace-1"),
-                controller.clone(),
-            );
+            let _quiesce = service.begin_workspace_remount_quiesce(&workspace_id("workspace-1"));
         }
 
         assert_eq!(controller.resumed(), vec![101]);
@@ -1059,8 +1053,8 @@ mod tests {
 
     #[test]
     fn command_remount_cancel_while_quiesced_kills_only_after_resume() {
-        let service = command_service();
         let controller = Arc::new(FakeProcessGroupController::default());
+        let service = command_service_with_controller(controller.clone());
         let command_id = command_id("cmd_1");
         seed_active(
             &service,
@@ -1070,10 +1064,7 @@ mod tests {
             PathBuf::from("/workspace"),
             Some(101),
         );
-        let mut quiesce = service.begin_workspace_remount_quiesce_with_controller(
-            &workspace_id("workspace-1"),
-            controller.clone(),
-        );
+        let mut quiesce = service.begin_workspace_remount_quiesce(&workspace_id("workspace-1"));
 
         quiesce.cancellation().request_cancel();
         service
@@ -1106,8 +1097,8 @@ mod tests {
 
     #[test]
     fn command_remount_cancel_during_inspection_waits_until_resume() {
-        let service = Arc::new(command_service());
         let controller = Arc::new(FakeProcessGroupController::default());
+        let service = Arc::new(command_service_with_controller(controller.clone()));
         let command_id = command_id("cmd_1");
         seed_active(
             service.as_ref(),
@@ -1119,10 +1110,7 @@ mod tests {
         );
         controller.cancel_during_inspection(Arc::clone(&service), command_id.clone());
 
-        let mut quiesce = service.begin_workspace_remount_quiesce_with_controller(
-            &workspace_id("workspace-1"),
-            controller.clone(),
-        );
+        let mut quiesce = service.begin_workspace_remount_quiesce(&workspace_id("workspace-1"));
 
         assert_eq!(controller.resumed(), Vec::<i32>::new());
         assert_eq!(
@@ -1174,31 +1162,6 @@ mod tests {
 
         inspect_pinned_paths(&mut report, &pids, Path::new("/workspace"));
 
-        assert_eq!(
-            report.blocked_reason.as_deref(),
-            Some("cwd_unavailable")
-        );
-    }
-
-    fn _workspace_handle(workspace_id: &str, caller_id: &str) -> WorkspaceHandle {
-        let snapshot = LayerStackSnapshotRef {
-            lease_id: LeaseId("lease-1".to_owned()),
-            manifest_version: 1,
-            root_hash: "root".to_owned(),
-            layer_paths: vec![PathBuf::from("/lower/one")],
-        };
-        WorkspaceHandle {
-            id: WorkspaceId(workspace_id.to_owned()),
-            owner: CallerId(caller_id.to_owned()),
-            workspace_root: PathBuf::from("/workspace"),
-            network: NetworkMode::Host,
-            base_revision: BaseRevision {
-                version: 1,
-                root_hash: "root".to_owned(),
-                layer_count: 1,
-            },
-            snapshot,
-            launch: None,
-        }
+        assert_eq!(report.blocked_reason.as_deref(), Some("cwd_unavailable"));
     }
 }

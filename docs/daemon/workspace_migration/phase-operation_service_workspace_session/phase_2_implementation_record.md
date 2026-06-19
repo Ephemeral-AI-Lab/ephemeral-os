@@ -650,9 +650,10 @@ Rules:
     service boundary.
 - Unresolved issues: None for this remediation slice.
 - Handoff notes:
-  - External callers should continue to use `OperationServices::exec_command`.
-    `CommandOperationService::exec_command` is an internal implementation hook
-    and must not be treated as a stable public entry point.
+  - Superseded by Milestone 6.5: the stable public exec boundary moves to
+    `CommandOperationService::exec_command(input, context)`, while
+    `OperationServices::exec_command` is retained only as a temporary forwarding
+    shim.
 
 ### Post-Milestone 5 Row Projection Review Fixes
 
@@ -736,7 +737,9 @@ Rules:
   - `crates/daemon/operation_service/tests/workspace_manager.rs`
   - `crates/daemon/operation_service/tests/command_remount.rs`
   - `crates/daemon/operation_service/tests/workspace_remount.rs`
+  - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_command_service_IMPLEMENTATION_PLAN.md`
   - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
+  - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_milestone_6_agent_prompt.md`
 - Carried-forward notes:
   - From Milestone 4: command finalization is service-owned but still driven by
     initial yield and `poll`; no public collect/count/advance APIs should be
@@ -746,8 +749,11 @@ Rules:
   - From Milestone 5: row projection and retained transcript reads remain
     separate from remount; `read_lines` and `poll` must stay allowed while a
     workspace remount is pending.
-  - From Milestone 5: direct command-service exec remains crate-internal;
-    external callers should continue through `OperationServices::exec_command`.
+  - From Milestone 5, superseded by Milestone 6.5: direct command-service exec
+    was crate-internal before this bridge milestone. Milestone 6.5 promotes
+    `CommandOperationService::exec_command(input, context)` to the public
+    command-service boundary and keeps `OperationServices::exec_command` only as
+    a temporary shim.
   - Daemon dispatch migration away from `WorkspaceRuntime` remains Milestone 7
     and is intentionally out of scope for this milestone.
 - Post-completion cleanup:
@@ -758,41 +764,55 @@ Rules:
   - Split the new remount integration tests away from the broad shared test
     support and removed remount-only shared fake state, keeping
     `operation_service` all-target clippy clean under `-D warnings`.
+  - Post-review fix: serialized persistent exec admission with workspace-remount
+    quiesce scans so an exec that passed the pending guard cannot spawn while
+    remaining invisible to remount inspection.
+  - Post-review fix: command records receive the remount cancellation token
+    before process-group inspection can stop a group, so cancellation is
+    deferred until resume instead of killing a stopped group.
+  - Post-review fix: unknown `/proc` cwd/root/fd/maps/mountinfo reads now block
+    live remount instead of being treated as safe.
+  - Post-review fix: `WorkspaceRemountService` records finish/block workspace
+    state before explicit process-group resume, and cancellation after
+    `CriticalSwitch` no longer aborts the resource remount.
+  - Post-review fix: `WorkspaceManagerService::apply_remount` blocks the remount
+    state on resource or refresh failure, and the old direct manager
+    `remount_workspace` bypass was removed.
+  - Follow-up cleanup: removed the private
+    `begin_workspace_remount_quiesce_with_controller` test seam now that
+    command remount tests exercise the service-level injected process-group
+    controller.
+  - Follow-up cleanup: removed the unused `_workspace_handle` unit-test helper
+    and its obsolete workspace metadata imports from command remount tests.
 - Verification:
-  - `CARGO_TARGET_DIR=/tmp/eos-phase2-cleanup-target cargo clippy -p operation_service --all-targets --no-deps -- -D warnings`:
-    passed.
-  - `CARGO_TARGET_DIR=/tmp/eos-phase2-cleanup-target cargo test -p operation_service command_remount`:
-    passed, 6 matching command-remount unit tests and 4 matching integration
-    tests.
-  - `CARGO_TARGET_DIR=/tmp/eos-phase2-cleanup-target cargo test -p operation_service workspace_remount`:
-    passed, 3 matching integration tests plus the existing matching service-graph
-    test.
-  - `CARGO_TARGET_DIR=/tmp/eos-phase2-cleanup-target cargo test -p operation_service`:
-    passed, 99 total tests across unit, integration, and doc-test binaries.
-  - `CARGO_TARGET_DIR=/tmp/eos-phase2-cleanup-target cargo clippy -p command --all-targets --no-deps -- -D warnings`:
-    passed.
-  - `CARGO_TARGET_DIR=/tmp/eos-phase2-cleanup-target cargo test -p command`:
-    passed, 18 tests total across unit, integration, and doc-test binaries.
-  - `CARGO_TARGET_DIR=/tmp/eos-phase2-cleanup-target cargo check -p operation_service`:
-    passed.
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service workspace_remount`:
-    passed, 3 matching integration tests plus the existing matching service-graph
+    passed, 5 matching integration tests plus the existing matching service-graph
     test.
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_remount`:
-    passed, 6 matching command-remount unit tests and 4 matching integration
+    passed, 7 matching command-remount unit tests and 5 matching integration
     tests.
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_ownership`:
     passed, 2 matching unit tests and 4 matching integration tests.
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_exec`:
     passed, 7 matching unit tests and 10 matching integration tests.
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service`:
-    passed, 99 total tests across unit, integration, and doc-test binaries.
+    passed, 104 total tests across unit, integration, and doc-test binaries.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service --test workspace_manager`:
+    passed, 15 integration tests.
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p operation_service`:
     passed.
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p command`:
     passed.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p command`:
+    passed, 18 total tests across unit, integration, and doc-test binaries.
+  - `cargo clippy -p operation_service --all-targets --no-deps -- -D warnings`:
+    passed.
+  - `cargo test -p operation_service`:
+    passed, 104 total tests across unit, integration, and doc-test binaries.
   - `cargo fmt --check`: passed.
   - `git diff --check`: passed.
+  - `rg -n -e 'begin_workspace_remount_quiesce_with_controller' -e '_workspace_handle\(' -e 'inspect_workspace_remount' -e 'begin_live_remount_for_caller' -e 'inspect_live_remount_for_caller' -e '\bremountable\b' -e 'remountable_commands' -e 'session_not_marked_remountable' -e 'WorkspaceRuntime' -e 'CommandOps' -e 'operation::command' -e 'collect_completed' -e 'count_by_caller' -e 'advance_active_commands_once' crates/daemon/operation_service/src crates/daemon/operation_service/tests`:
+    no matches.
   - `rg -n "begin_live_remount_for_caller|inspect_live_remount_for_caller|remountable|remountable_commands|session_not_marked_remountable|WorkspaceRuntime|CommandOps|operation::command|collect_completed|count_by_caller|advance_active_commands_once" crates/daemon/operation_service/src crates/daemon/operation_service/tests`:
     no matches.
 - Deviations:
@@ -824,6 +844,59 @@ Rules:
     remount quiesce, treats every active command as quiesce eligible, blocks on
     unknown process group or `/proc` state, and resumes held process groups on
     success, block, error, drop, and deferred cancel paths.
+
+## Milestone 6.5: Exec Command Boundary Migration
+
+- Status: Complete.
+- Spec:
+  `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_milestone_6_5_exec_command_boundary_SPEC.md`
+- Files changed:
+  - `crates/daemon/operation_service/src/command/exec.rs`
+  - `crates/daemon/operation_service/src/services.rs`
+  - `crates/daemon/operation_service/tests/command_exec.rs`
+  - `crates/daemon/operation_service/tests/command_remount.rs`
+  - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_command_service_IMPLEMENTATION_PLAN.md`
+  - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
+- Verification:
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_exec`:
+    passed, 7 matching unit tests and 11 matching integration tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_ownership`:
+    passed, 2 matching unit tests and 4 matching integration tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_remount`:
+    passed, 7 matching unit tests and 5 matching integration tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service workspace_remount`:
+    passed, 1 matching service-graph test and 5 matching integration tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service`:
+    passed, 105 total tests across unit, integration, and doc-test targets.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo clippy -p operation_service --all-targets --no-deps -- -D warnings`:
+    passed.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p operation_service`:
+    passed.
+  - `cargo fmt --check`: passed.
+  - `git diff --check`: passed.
+  - `rg -n "pub\\(crate\\) fn exec_command\\(|Option<WorkspaceSessionHandler>" crates/daemon/operation_service/src/command`:
+    no matches; `rg` exited 1 as expected for an empty result set.
+  - `rg -n "self\\.workspace\\.resolve|WorkspaceManagerService::resolve" crates/daemon/operation_service/src/services.rs`:
+    no matches; `rg` exited 1 as expected for an empty result set.
+  - Static stale-doc scan for the two phrases named in the Milestone 6.5 spec
+    around retained-public-shim wording and external-caller handoff wording:
+    expected false positives only in
+    `phase_2_milestone_6_5_exec_command_boundary_SPEC.md` and
+    `phase_2_milestone_6_5_agent_prompt.md`, where those files quote the static
+    check command itself; no stale narrative handoff text remains.
+  - `rg -n "request_id|trace_id|invocation_id|remountable|layer_stack_root" crates/daemon/operation_service/src/command`:
+    no matches; `rg` exited 1 as expected for an empty result set.
+- Deviations:
+  - `OperationServices::exec_command` was retained as the planned temporary
+    forwarding shim to avoid daemon-dispatch call-site churn before Milestone 7.
+  - The private `ExecCommandMode::Session` stores its resolved
+    `WorkspaceSessionHandler` behind `Box` to keep the mode enum clippy-clean
+    under `-D warnings`; this does not change the public API.
+- Unresolved issues: None for Milestone 6.5.
+- Handoff notes: Daemon dispatch migration remains Milestone 7 and should call
+  `RuntimeServices.operation.command.exec_command(...)` directly. The temporary
+  `OperationServices::exec_command` shim should be removed or explicitly
+  justified during Milestone 8 cleanup.
 
 ## Milestone 7: Daemon Dispatch Migration Away From WorkspaceRuntime
 

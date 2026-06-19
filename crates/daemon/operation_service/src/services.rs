@@ -34,12 +34,7 @@ impl OperationServices {
         trace: OperationTraceContext,
     ) -> Result<CommandYield, CommandServiceError> {
         let caller_id = input.caller_id.clone();
-        let workspace = match input.workspace_id.clone() {
-            Some(workspace_id) => Some(self.workspace.resolve(workspace_id, caller_id.clone())?),
-            None => None,
-        };
-
         self.command
-            .exec_command(input, workspace, CommandCallContext { caller_id, trace })
+            .exec_command(input, CommandCallContext { caller_id, trace })
     }
 }

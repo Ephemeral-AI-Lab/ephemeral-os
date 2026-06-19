@@ -24,8 +24,8 @@ use serde_json::json;
 #[cfg(target_os = "linux")]
 use crate::isolated_network_setup::{BRIDGE_PREFIX_LEN, GATEWAY};
 use crate::lifecycle::remount::{RemountOverlayReport, RemountProbe};
-use crate::network_mode::isolated_network::IsolatedNetworkError;
-use crate::network_mode::isolated_network::WorkspaceModeHandle;
+use crate::profile::IsolatedNetworkError;
+use crate::profile::WorkspaceModeHandle;
 
 #[cfg(target_os = "linux")]
 use super::fds::{expect_line, ns_fds_from_map, write_all_fd};

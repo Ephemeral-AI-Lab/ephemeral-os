@@ -826,8 +826,11 @@ fn host_command_workspace_fixture(
     layerstack::build_workspace_base(&layer_stack_root, &workspace_root, true)?;
     let command_snapshot =
         layerstack::service::acquire_bounded_snapshot_for_command(&layer_stack_root, id, 64)?;
-    let workspace =
-        workspace::network_mode::host::HostWorkspace::create(&host_scratch, "sandbox-overlay", id)?;
+    let workspace = workspace::profile::host_compatible::HostWorkspace::create(
+        &host_scratch,
+        "sandbox-overlay",
+        id,
+    )?;
     let lease = LeaseReleaseHandle::new(
         layer_stack_root.clone(),
         command_snapshot.snapshot.lease_id.clone(),
@@ -844,8 +847,8 @@ fn host_command_workspace_fixture(
     Ok((root, layer_stack_root, host_workspace))
 }
 
-fn default_host_ns_fds() -> workspace::network_mode::host::WorkspaceNamespaceFds {
-    workspace::network_mode::host::WorkspaceNamespaceFds::from_raw_parts(
+fn default_host_ns_fds() -> workspace::profile::host_compatible::WorkspaceNamespaceFds {
+    workspace::profile::host_compatible::WorkspaceNamespaceFds::from_raw_parts(
         Some(10),
         Some(11),
         Some(12),

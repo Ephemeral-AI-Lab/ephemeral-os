@@ -21,10 +21,9 @@ use crate::workspace_manager::WorkspaceSessionHandler;
 use super::service::CommandOperationService;
 
 impl CommandOperationService {
-    pub(crate) fn exec_command(
+    pub fn exec_command(
         &self,
         input: ExecCommandInput,
-        workspace: Option<WorkspaceSessionHandler>,
         context: CommandCallContext,
     ) -> Result<CommandYield, CommandServiceError> {
         if input.cmd.trim().is_empty() {
@@ -37,28 +36,37 @@ impl CommandOperationService {
                 message: "exec caller must match command call context".to_owned(),
             });
         }
-        let is_session_command = workspace.is_some();
-        let handler = match workspace {
-            Some(_) => {
-                let workspace_id = input.workspace_id.clone().ok_or_else(|| {
-                    CommandServiceError::InvalidCommand {
-                        message: "resolved workspace handler requires exec workspace_id".to_owned(),
-                    }
-                })?;
+
+        let mode = match input.workspace_id.clone() {
+            Some(workspace_id) => {
                 let handler = self
                     .workspace()
                     .resolve(workspace_id, context.caller_id.clone())?;
-                validate_workspace_handler(&input, Some(&handler))?;
-                handler
+                validate_workspace_root(&input, &handler)?;
+                ExecCommandMode::Session {
+                    handler: Box::new(handler),
+                }
             }
-            None => {
-                validate_workspace_handler(&input, None)?;
-                self.workspace().create_private_workspace(
-                    context.caller_id.clone(),
-                    input.workspace_root.clone(),
-                    NetworkMode::Host,
-                )?
-            }
+            None => ExecCommandMode::OneShot,
+        };
+
+        self.exec_resolved_command(input, mode, context)
+    }
+
+    fn exec_resolved_command(
+        &self,
+        input: ExecCommandInput,
+        mode: ExecCommandMode,
+        context: CommandCallContext,
+    ) -> Result<CommandYield, CommandServiceError> {
+        let is_session_command = mode.is_session();
+        let handler = match mode {
+            ExecCommandMode::Session { handler } => *handler,
+            ExecCommandMode::OneShot => self.workspace().create_private_workspace(
+                context.caller_id.clone(),
+                input.workspace_root.clone(),
+                NetworkMode::Host,
+            )?,
         };
         let admission_guard = if is_session_command {
             Some(self.lock_remount_admission())
@@ -337,6 +345,19 @@ impl CommandOperationService {
     }
 }
 
+enum ExecCommandMode {
+    Session {
+        handler: Box<WorkspaceSessionHandler>,
+    },
+    OneShot,
+}
+
+impl ExecCommandMode {
+    fn is_session(&self) -> bool {
+        matches!(self, Self::Session { .. })
+    }
+}
+
 struct PreparedCommandLaunch {
     command_dir: PathBuf,
     run_request: serde_json::Value,
@@ -376,36 +397,15 @@ impl PreparedCommandLaunch {
     }
 }
 
-fn validate_workspace_handler(
+fn validate_workspace_root(
     input: &ExecCommandInput,
-    workspace: Option<&WorkspaceSessionHandler>,
+    handler: &WorkspaceSessionHandler,
 ) -> Result<(), CommandServiceError> {
-    match (&input.workspace_id, workspace) {
-        (Some(expected), Some(handler)) if &handler.workspace_id != expected => {
-            return Err(CommandServiceError::InvalidCommand {
-                message: "exec workspace_id must match resolved workspace handler".to_owned(),
-            });
-        }
-        (Some(_), None) => {
-            return Err(CommandServiceError::InvalidCommand {
-                message: "exec workspace_id requires a resolved workspace handler".to_owned(),
-            });
-        }
-        (None, Some(_)) => {
-            return Err(CommandServiceError::InvalidCommand {
-                message: "resolved workspace handler requires exec workspace_id".to_owned(),
-            });
-        }
-        _ => {}
-    }
-
-    if let Some(handler) = workspace {
-        if handler.handle.workspace_root != input.workspace_root {
-            return Err(CommandServiceError::WorkspaceRootMismatch {
-                expected: handler.handle.workspace_root.clone(),
-                actual: input.workspace_root.clone(),
-            });
-        }
+    if handler.handle.workspace_root != input.workspace_root {
+        return Err(CommandServiceError::WorkspaceRootMismatch {
+            expected: handler.handle.workspace_root.clone(),
+            actual: input.workspace_root.clone(),
+        });
     }
 
     Ok(())
@@ -752,10 +752,10 @@ mod tests {
     }
 
     #[test]
-    fn command_exec_rejects_direct_handler_root_mismatch_before_command_allocation() {
+    fn command_exec_rejects_resolved_session_root_mismatch_before_command_allocation() {
         let fake = Arc::new(FakeWorkspaceService::new());
         let service = command_service(Arc::clone(&fake), CommandProcessStore::new());
-        let handler = create_service_session(
+        let _handler = create_service_session(
             &service,
             &fake,
             "workspace-session",
@@ -770,10 +770,9 @@ mod tests {
                     PathBuf::from("/workspace/other"),
                     Some(WorkspaceId("workspace-session".to_owned())),
                 ),
-                Some(handler),
                 context("caller-1"),
             )
-            .expect_err("direct command service rejects root mismatch");
+            .expect_err("command service rejects root mismatch");
 
         assert!(matches!(
             error,
@@ -788,7 +787,7 @@ mod tests {
     }
 
     #[test]
-    fn command_exec_resolves_direct_handler_and_ignores_forged_launch_material() {
+    fn command_exec_resolves_workspace_id_with_canonical_session() {
         let fake = Arc::new(FakeWorkspaceService::new());
         let service = command_service(Arc::clone(&fake), CommandProcessStore::new());
         let canonical = create_service_session(
@@ -798,20 +797,14 @@ mod tests {
             "caller-1",
             PathBuf::from("/workspace/session"),
         );
-        let mut forged = canonical.clone();
-        forged.workspace_id = WorkspaceId("workspace-forged".to_owned());
-        forged.handle.id = WorkspaceId("workspace-forged".to_owned());
-        forged.handle.workspace_root = PathBuf::from("/workspace/forged");
-        forged.handle.launch = None;
 
         let output = service
             .exec_command(
                 exec_input(
                     "caller-1",
                     PathBuf::from("/workspace/session"),
-                    Some(WorkspaceId("workspace-session".to_owned())),
+                    Some(canonical.workspace_id),
                 ),
-                Some(forged),
                 context("caller-1"),
             )
             .expect("exec resolves canonical workspace session");
@@ -821,9 +814,9 @@ mod tests {
     }
 
     #[test]
-    fn command_exec_rejects_direct_workspace_id_without_handler_before_command_allocation() {
+    fn command_exec_rejects_unknown_workspace_id_before_command_allocation() {
         let fake = Arc::new(FakeWorkspaceService::new());
-        let service = command_service(fake, CommandProcessStore::new());
+        let service = command_service(Arc::clone(&fake), CommandProcessStore::new());
 
         let error = service
             .exec_command(
@@ -832,16 +825,12 @@ mod tests {
                     PathBuf::from("/workspace/session"),
                     Some(WorkspaceId("workspace-session".to_owned())),
                 ),
-                None,
                 context("caller-1"),
             )
-            .expect_err("direct command service rejects unresolved workspace id");
+            .expect_err("command service rejects unknown workspace id");
 
-        assert!(matches!(
-            error,
-            CommandServiceError::InvalidCommand { message }
-                if message.contains("requires a resolved workspace handler")
-        ));
+        assert!(matches!(error, CommandServiceError::WorkspaceManager(_)));
+        assert!(fake.create_requests().is_empty());
         assert_eq!(
             service.process_store().allocate_command_id(),
             CommandId("cmd_1".to_owned())
@@ -861,7 +850,6 @@ mod tests {
         let error = service
             .exec_command(
                 exec_input("caller-1", PathBuf::from("/workspace/one-shot"), None),
-                None,
                 context("caller-1"),
             )
             .expect_err("admission limit rejects before create");
@@ -885,7 +873,6 @@ mod tests {
         let error = service
             .exec_command(
                 exec_input("caller-1", PathBuf::from("/workspace/one-shot"), None),
-                None,
                 context("caller-1"),
             )
             .expect_err("workspace create failure rejects exec");
@@ -919,7 +906,6 @@ mod tests {
         let error = service
             .exec_command(
                 exec_input("caller-1", PathBuf::from("/workspace/one-shot"), None),
-                None,
                 context("caller-1"),
             )
             .expect_err("duplicate bind rejects exec");
@@ -963,7 +949,6 @@ mod tests {
         let error = service
             .exec_command(
                 exec_input("caller-1", PathBuf::from("/workspace/one-shot"), None),
-                None,
                 context("caller-1"),
             )
             .expect_err("duplicate active insert rejects exec");

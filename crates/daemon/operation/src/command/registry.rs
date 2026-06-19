@@ -10,8 +10,8 @@ use std::path::PathBuf;
 use command::process::CommandProcess;
 use command::{CollectCompleted, StartCommand};
 use layerstack::service::{LeaseReleaseHandle, Snapshot};
-use workspace::network_mode::host::HostWorkspace;
-use workspace::network_mode::isolated_network::WorkspaceModeContext;
+use workspace::profile::host_compatible::HostWorkspace;
+use workspace::profile::WorkspaceModeContext;
 
 use super::contract::{CollectCompletedOutput, CommandCompletion, CommandResponse};
 pub(crate) struct HostRun {

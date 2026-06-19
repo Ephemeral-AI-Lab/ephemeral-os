@@ -12,7 +12,7 @@ use operation::command::CommandOps;
 use serde_json::{json, Value};
 use std::sync::Arc;
 use std::time::Duration;
-use workspace::network_mode::isolated_network::RemountProbe;
+use workspace::profile::RemountProbe;
 
 use super::{WorkspaceFileRouteContext, WorkspaceRemountCompactionAttempt, WorkspaceRuntime};
 

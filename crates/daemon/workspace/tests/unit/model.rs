@@ -1,11 +1,9 @@
 use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 
-use crate::network_mode::isolated_network::{
-    DnsConfiguration, WorkspaceModeId, WorkspaceRemountState,
-};
 use crate::overlay::dirs::OverlayDirs;
 use crate::overlay::tree::TreeResourceStats;
+use crate::profile::{DnsConfiguration, WorkspaceModeId, WorkspaceRemountState};
 
 use super::*;
 

@@ -9,9 +9,9 @@ use layerstack::service::{
 };
 use layerstack::CommitOptions;
 use trace::TraceRecord;
-use workspace::network_mode::host::HostWorkspace;
-use workspace::network_mode::host::WorkspaceNamespaceFds;
-use workspace::network_mode::isolated_network::WorkspaceModeContext;
+use workspace::profile::host_compatible::HostWorkspace;
+use workspace::profile::host_compatible::WorkspaceNamespaceFds;
+use workspace::profile::WorkspaceModeContext;
 
 #[cfg(test)]
 use command::process::{CommandProcess, CommandProcessSpec};

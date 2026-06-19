@@ -27,6 +27,7 @@ pub use process_store::{
 };
 pub use registry::CommandRegistry;
 pub use remount::{
-    CommandRemountInspection, CommandRemountQuiesce, RemountCancellationToken, RemountSwitchState,
+    CommandRemountInspection, CommandRemountQuiesce, ProcessGroupController,
+    RemountCancellationToken, RemountSwitchState,
 };
 pub use service::{CommandFinalizationOptions, CommandOperationService};
