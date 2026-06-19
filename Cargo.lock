@@ -181,7 +181,6 @@ name = "daemon"
 version = "0.1.0"
 dependencies = [
  "base64",
- "command",
  "config",
  "layerstack",
  "proptest",
@@ -227,8 +226,7 @@ dependencies = [
  "anyhow",
  "config",
  "daemon",
- "linux-namespace-subprocess",
- "protocol",
+ "namespace-process",
  "serde_json",
  "tokio",
 ]
@@ -582,20 +580,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "linux-namespace-subprocess"
-version = "0.1.0"
-dependencies = [
- "config",
- "libc",
- "nix 0.29.0",
- "overlay",
- "rustix 0.38.44",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
-]
-
-[[package]]
 name = "linux-raw-sys"
 version = "0.4.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -644,6 +628,20 @@ name = "multimap"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d87ecb2933e8aeadb3e3a02b828fed80a7528047e68b4f424523a0981a3a084"
+
+[[package]]
+name = "namespace-process"
+version = "0.1.0"
+dependencies = [
+ "config",
+ "libc",
+ "nix 0.29.0",
+ "overlay",
+ "rustix 0.38.44",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+]
 
 [[package]]
 name = "netlink-packet-core"
@@ -1770,7 +1768,7 @@ dependencies = [
  "futures-util",
  "layerstack",
  "libc",
- "linux-namespace-subprocess",
+ "namespace-process",
  "netlink-sys",
  "nix 0.29.0",
  "overlay",
@@ -1786,7 +1784,6 @@ name = "xtask"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "serde_json",
  "sha2",
 ]
 

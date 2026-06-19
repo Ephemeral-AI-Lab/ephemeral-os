@@ -19,12 +19,12 @@ use support::{
 fn exec_input(
     caller_id: &str,
     workspace_root: PathBuf,
-    workspace_id: Option<WorkspaceId>,
+    workspace_session_id: Option<WorkspaceId>,
 ) -> ExecCommandInput {
     ExecCommandInput {
         caller_id: CallerId(caller_id.to_owned()),
         workspace_root,
-        workspace_id,
+        workspace_session_id,
         cmd: "printf ok".to_owned(),
         cwd: None,
         timeout_seconds: None,
@@ -46,7 +46,7 @@ fn command_exec_some_uses_resolved_session_without_workspace_create_or_destroy()
     let env = build_services(Arc::clone(&fake));
     let handler = env
         .workspace
-        .create(create_request("caller-1", workspace_root.clone()))
+        .create_workspace_session(create_request("caller-1", workspace_root.clone()))
         .expect("session create succeeds");
     let create_count_before_exec = fake.create_requests().len();
 
@@ -56,7 +56,7 @@ fn command_exec_some_uses_resolved_session_without_workspace_create_or_destroy()
             exec_input(
                 "caller-1",
                 workspace_root,
-                Some(handler.workspace_id.clone()),
+                Some(handler.workspace_session_id.clone()),
             ),
             context("caller-1"),
         )
@@ -184,10 +184,10 @@ fn command_exec_spawn_failure_destroys_created_one_shot_workspace() {
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
 
     let error = env
-        .services
+        .command
         .exec_command(
             exec_input("caller-1", workspace_root, None),
-            OperationTraceContext,
+            context("caller-1"),
         )
         .expect_err("spawn failure rejects exec");
 
@@ -227,18 +227,18 @@ fn command_exec_spawn_failure_keeps_session_workspace_alive() {
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
     let handler = env
         .workspace
-        .create(create_request("caller-1", workspace_root.clone()))
+        .create_workspace_session(create_request("caller-1", workspace_root.clone()))
         .expect("session create succeeds");
 
     let error = env
-        .services
+        .command
         .exec_command(
             exec_input(
                 "caller-1",
                 workspace_root,
-                Some(handler.workspace_id.clone()),
+                Some(handler.workspace_session_id.clone()),
             ),
-            OperationTraceContext,
+            context("caller-1"),
         )
         .expect_err("spawn failure rejects session exec");
 
@@ -272,8 +272,8 @@ fn command_exec_passes_launch_material_to_command_request_and_spawn_paths() {
     input.timeout_seconds = Some(2.5);
 
     let output = env
-        .services
-        .exec_command(input, OperationTraceContext)
+        .command
+        .exec_command(input, context("caller-1"))
         .expect("one-shot command exec succeeds");
 
     assert_eq!(output.command_id, Some(CommandId("cmd_1".to_owned())));
@@ -351,10 +351,10 @@ fn command_exec_missing_launch_material_destroys_one_shot_without_spawn() {
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
 
     let error = env
-        .services
+        .command
         .exec_command(
             exec_input("caller-1", workspace_root, None),
-            OperationTraceContext,
+            context("caller-1"),
         )
         .expect_err("missing launch material rejects exec");
 
@@ -389,10 +389,10 @@ fn command_exec_unavailable_workspace_launch_destroys_one_shot_without_spawn() {
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
 
     let error = env
-        .services
+        .command
         .exec_command(
             exec_input("caller-1", workspace_root, None),
-            OperationTraceContext,
+            context("caller-1"),
         )
         .expect_err("unavailable workspace launch rejects exec");
 
@@ -432,10 +432,10 @@ fn command_exec_artifact_directory_failure_destroys_one_shot_without_spawn() {
     .expect("scratch root file fixture is written");
 
     let error = env
-        .services
+        .command
         .exec_command(
             exec_input("caller-1", workspace_root, None),
-            OperationTraceContext,
+            context("caller-1"),
         )
         .expect_err("artifact directory failure rejects exec");
 
@@ -468,10 +468,10 @@ fn command_exec_initial_running_yield_returns_wait_loop_output() {
     let env = build_services_with_launch_driver(fake, launch_driver);
 
     let output = env
-        .services
+        .command
         .exec_command(
             exec_input("caller-1", workspace_root, None),
-            OperationTraceContext,
+            context("caller-1"),
         )
         .expect("exec returns initial running yield");
 
@@ -495,18 +495,18 @@ fn command_exec_initial_completed_session_returns_finalized_metadata() {
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
     let handler = env
         .workspace
-        .create(create_request("caller-1", workspace_root.clone()))
+        .create_workspace_session(create_request("caller-1", workspace_root.clone()))
         .expect("session create succeeds");
 
     let output = env
-        .services
+        .command
         .exec_command(
             exec_input(
                 "caller-1",
                 workspace_root,
-                Some(handler.workspace_id.clone()),
+                Some(handler.workspace_session_id.clone()),
             ),
-            OperationTraceContext,
+            context("caller-1"),
         )
         .expect("session command completes during initial yield");
 
@@ -549,7 +549,7 @@ fn command_exec_rejects_workspace_root_mismatch_before_command_allocation() {
     let env = build_services(Arc::clone(&fake));
     let handler = env
         .workspace
-        .create(create_request(
+        .create_workspace_session(create_request(
             "caller-1",
             PathBuf::from("/workspace/session"),
         ))
@@ -561,7 +561,7 @@ fn command_exec_rejects_workspace_root_mismatch_before_command_allocation() {
             exec_input(
                 "caller-1",
                 PathBuf::from("/workspace/other"),
-                Some(handler.workspace_id),
+                Some(handler.workspace_session_id),
             ),
             context("caller-1"),
         )

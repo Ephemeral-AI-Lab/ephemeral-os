@@ -8,8 +8,11 @@ use crate::command::{
     CommandId, CommandLaunchDriver, CommandServiceError, CommandStatus, ExecCommandInput,
     FinalizationState, OperationTraceContext, PollCommandInput, ReadCommandLinesInput,
 };
-use crate::workspace_manager::WorkspaceManagerService;
-use crate::workspace_remount::{WorkspaceRemountOptions, WorkspaceRemountService};
+use crate::workspace_remount::{
+    CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountOptions,
+    WorkspaceRemountService,
+};
+use crate::workspace_session::WorkspaceSessionService;
 use crate::OperationServices;
 use command::process::{
     CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec, KillReason,
@@ -27,7 +30,7 @@ use workspace::{
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 struct TestEnv {
-    workspace: Arc<WorkspaceManagerService>,
+    workspace: Arc<WorkspaceSessionService>,
     command: Arc<crate::CommandOperationService>,
     services: OperationServices,
 }
@@ -247,15 +250,17 @@ fn unique_suffix() -> String {
 }
 
 fn build_env(fake: Arc<FakeWorkspaceService>) -> TestEnv {
-    let workspace = Arc::new(WorkspaceManagerService::new(fake));
+    let workspace = Arc::new(WorkspaceSessionService::new(fake));
     let command = Arc::new(crate::CommandOperationService::with_launch_driver_for_test(
         Arc::clone(&workspace),
         test_command_config(),
         Arc::new(FakeLaunchDriver),
     ));
+    let remount_workspace: Arc<dyn RemountWorkspaceSession> = workspace.clone();
+    let remount_command: Arc<dyn CommandRemountCoordinator> = command.clone();
     let remount = Arc::new(WorkspaceRemountService::new(
-        Arc::clone(&workspace),
-        Arc::clone(&command),
+        remount_workspace,
+        remount_command,
         WorkspaceRemountOptions::default(),
     ));
     let services = OperationServices::new(Arc::clone(&workspace), Arc::clone(&command), remount);
@@ -278,7 +283,7 @@ fn test_command_config() -> command::CommandConfig {
 }
 
 fn workspace_handle(
-    workspace_id: &str,
+    workspace_session_id: &str,
     caller_id: &str,
     fixture: &LayerFixture,
 ) -> WorkspaceHandle {
@@ -289,7 +294,7 @@ fn workspace_handle(
         layer_paths: fixture.snapshot.layer_paths.clone(),
     };
     WorkspaceHandle::holder_backed_for_test(
-        WorkspaceId(workspace_id.to_owned()),
+        WorkspaceId(workspace_session_id.to_owned()),
         CallerId(caller_id.to_owned()),
         fixture.root.clone(),
         WorkspaceProfile::HostCompatible,
@@ -350,12 +355,12 @@ fn captured_changes(
 fn exec_input(
     caller_id: &str,
     root: PathBuf,
-    workspace_id: Option<WorkspaceId>,
+    workspace_session_id: Option<WorkspaceId>,
 ) -> ExecCommandInput {
     ExecCommandInput {
         caller_id: CallerId(caller_id.to_owned()),
         workspace_root: root,
-        workspace_id,
+        workspace_session_id,
         cmd: "printf ok".to_owned(),
         cwd: None,
         timeout_seconds: None,
@@ -415,9 +420,9 @@ fn start_one_shot(
     fixture: &LayerFixture,
     caller_id: &str,
 ) -> Result<CommandId, CommandServiceError> {
-    let output = env.services.exec_command(
+    let output = env.services.command.exec_command(
         exec_input(caller_id, fixture.root.clone(), None),
-        OperationTraceContext,
+        context(caller_id),
     )?;
     Ok(output.command_id.expect("running command id is returned"))
 }
@@ -826,18 +831,21 @@ fn command_finalize_session_does_not_capture_publish_destroy_or_refresh_snapshot
     let fake = Arc::new(FakeWorkspaceService::new());
     fake.push_create_result(Ok(handle));
     let env = build_env(Arc::clone(&fake));
-    let handler = env.workspace.create_private_workspace(
-        CallerId("caller-1".to_owned()),
-        fixture.root.clone(),
-        WorkspaceProfile::HostCompatible,
-    )?;
-    let command = env.services.exec_command(
+    let handler = env
+        .workspace
+        .create_workspace_session(CreateWorkspaceRequest {
+            caller_id: CallerId("caller-1".to_owned()),
+            layer_stack_root: fixture.root.clone(),
+            workspace_root: fixture.root.clone(),
+            profile: WorkspaceProfile::HostCompatible,
+        })?;
+    let command = env.services.command.exec_command(
         exec_input(
             "caller-1",
             fixture.root.clone(),
-            Some(handler.workspace_id.clone()),
+            Some(handler.workspace_session_id.clone()),
         ),
-        OperationTraceContext,
+        context("caller-1"),
     )?;
     let command_id = command.command_id.expect("running command id is returned");
 
@@ -846,7 +854,7 @@ fn command_finalize_session_does_not_capture_publish_destroy_or_refresh_snapshot
 
     assert!(fake.capture_calls().is_empty());
     assert!(fake.destroy_calls().is_empty());
-    let resolved = env.workspace.resolve(
+    let resolved = env.workspace.resolve_session(
         WorkspaceId("workspace-session".to_owned()),
         CallerId("caller-1".to_owned()),
     )?;

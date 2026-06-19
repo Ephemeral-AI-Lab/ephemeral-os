@@ -18,7 +18,7 @@ use super::service::CommandOperationService;
 pub(crate) struct ActiveFinalizationRecord {
     command_id: CommandId,
     caller_id: CallerId,
-    workspace_id: WorkspaceId,
+    workspace_session_id: WorkspaceId,
     transcript: CommandTranscriptStore,
     finalize_policy: CommandFinalizePolicy,
 }
@@ -70,9 +70,10 @@ impl CommandOperationService {
         record: &ActiveFinalizationRecord,
         process_exit: &::command::process::CommandProcessExit,
     ) -> Result<CommandFinalizedMetadata, CommandServiceError> {
-        let handler = self
-            .workspace()
-            .resolve(record.workspace_id.clone(), record.caller_id.clone())?;
+        let handler = self.workspace().resolve_session(
+            record.workspace_session_id.clone(),
+            record.caller_id.clone(),
+        )?;
         let mut finalized = CommandFinalizedMetadata {
             policy: CommandFinalizedPolicy::OneShotPublishThenDestroy,
             outcome: CommandFinalizationOutcome::Discarded,
@@ -80,7 +81,7 @@ impl CommandOperationService {
         };
 
         if process_exit_succeeded(process_exit) {
-            let captured = self.workspace().capture_changes(
+            let captured = self.workspace().capture_session_changes(
                 &handler,
                 CaptureChangesRequest {
                     bounds: self.finalization_options().one_shot_capture,
@@ -122,7 +123,7 @@ impl CommandOperationService {
         )?;
         let destroy = self
             .workspace()
-            .destroy(handler, DestroyWorkspaceRequest::default())?;
+            .destroy_session(handler, DestroyWorkspaceRequest::default())?;
         finalized.destroy = Some(destroy_metadata(destroy));
 
         Ok(finalized)
@@ -143,22 +144,23 @@ impl CommandOperationService {
                 finalized: finalized.clone().map(Box::new),
             });
         }
-        let bound_workspace_id = self.registry().workspace_for(command_id).ok_or_else(|| {
-            CommandServiceError::CommandNotFound {
+        let bound_workspace_session_id = self
+            .registry()
+            .workspace_session_for(command_id)
+            .ok_or_else(|| CommandServiceError::CommandNotFound {
                 command_id: command_id.clone(),
-            }
-        })?;
-        if bound_workspace_id != active.workspace_id {
-            return Err(CommandServiceError::CommandWorkspaceMismatch {
+            })?;
+        if bound_workspace_session_id != active.workspace_session_id {
+            return Err(CommandServiceError::CommandWorkspaceSessionMismatch {
                 command_id: command_id.clone(),
-                expected: active.workspace_id.clone(),
-                actual: bound_workspace_id,
+                expected: active.workspace_session_id.clone(),
+                actual: bound_workspace_session_id,
             });
         }
         let record = ActiveFinalizationRecord {
             command_id: active.command_id.clone(),
             caller_id: active.caller_id.clone(),
-            workspace_id: active.workspace_id.clone(),
+            workspace_session_id: active.workspace_session_id.clone(),
             transcript: active.transcript.clone(),
             finalize_policy: active.finalize_policy.clone(),
         };
@@ -182,7 +184,7 @@ impl CommandOperationService {
         let completed = CompletedCommandRecord {
             command_id: command_id.clone(),
             caller_id: record.caller_id,
-            workspace_id: record.workspace_id,
+            workspace_session_id: record.workspace_session_id,
             result,
             transcript: RetainedCommandTranscript {
                 transcript_path: record.transcript.transcript_path,

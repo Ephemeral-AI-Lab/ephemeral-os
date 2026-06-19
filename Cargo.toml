@@ -9,7 +9,7 @@ members = [
     "crates/daemon/eosd",
     "crates/daemon/core",
     "crates/daemon/workspace",
-    "crates/daemon/linux-namespace-subprocess",
+    "crates/daemon/namespace-process",
     "crates/daemon/layerstack",
     "crates/daemon/overlay",
     "crates/host",
@@ -58,7 +58,7 @@ config = { path = "crates/daemon/config" }
 layerstack = { path = "crates/daemon/layerstack" }
 operation_service = { path = "crates/daemon/operation_service" }
 overlay = { path = "crates/daemon/overlay" }
-linux-namespace-subprocess = { path = "crates/daemon/linux-namespace-subprocess" }
+namespace-process = { path = "crates/daemon/namespace-process" }
 trace = { path = "crates/shared/trace" }
 protocol = { path = "crates/shared/protocol" }
 daemon = { path = "crates/daemon/core" }

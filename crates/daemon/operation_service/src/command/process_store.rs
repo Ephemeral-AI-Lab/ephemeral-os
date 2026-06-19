@@ -6,11 +6,9 @@ use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Instant;
 
-use crate::command::{
-    CommandFinalizedMetadata, CommandId, CommandServiceError, CommandStatus,
-    RemountCancellationToken, RemountSwitchState,
-};
+use crate::command::{CommandFinalizedMetadata, CommandId, CommandServiceError, CommandStatus};
 use crate::workspace_crate::{CallerId, WorkspaceId};
+use crate::workspace_remount::{RemountCancellationToken, RemountSwitchState};
 
 pub const DEFAULT_MAX_ACTIVE_COMMANDS: usize = 256;
 
@@ -127,11 +125,11 @@ impl CommandProcessStore {
                 actual: record.caller_id,
             });
         }
-        if active_record.workspace_id != record.workspace_id {
-            return Err(CommandServiceError::CommandWorkspaceMismatch {
+        if active_record.workspace_session_id != record.workspace_session_id {
+            return Err(CommandServiceError::CommandWorkspaceSessionMismatch {
                 command_id,
-                expected: active_record.workspace_id.clone(),
-                actual: record.workspace_id,
+                expected: active_record.workspace_session_id.clone(),
+                actual: record.workspace_session_id,
             });
         }
 
@@ -226,7 +224,7 @@ impl Deref for ActiveCommandRef<'_> {
 pub struct ActiveCommandProcess {
     pub command_id: CommandId,
     pub caller_id: CallerId,
-    pub workspace_id: WorkspaceId,
+    pub workspace_session_id: WorkspaceId,
     pub workspace_root: PathBuf,
     pub process: Arc<::command::CommandProcess>,
     pub transcript: CommandTranscriptStore,
@@ -242,17 +240,20 @@ pub struct ActiveCommandProcess {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CommandFinalizePolicy {
-    Session { workspace_id: WorkspaceId },
-    OneShotPublishThenDestroy { workspace_id: WorkspaceId },
+    Session { workspace_session_id: WorkspaceId },
+    OneShotPublishThenDestroy { workspace_session_id: WorkspaceId },
 }
 
 impl CommandFinalizePolicy {
     #[must_use]
-    pub const fn workspace_id(&self) -> &WorkspaceId {
+    pub const fn workspace_session_id(&self) -> &WorkspaceId {
         match self {
-            Self::Session { workspace_id } | Self::OneShotPublishThenDestroy { workspace_id } => {
-                workspace_id
+            Self::Session {
+                workspace_session_id,
             }
+            | Self::OneShotPublishThenDestroy {
+                workspace_session_id,
+            } => workspace_session_id,
         }
     }
 }
@@ -347,7 +348,7 @@ impl CommandCompletionStore {
 pub struct CompletedCommandRecord {
     pub command_id: CommandId,
     pub caller_id: CallerId,
-    pub workspace_id: WorkspaceId,
+    pub workspace_session_id: WorkspaceId,
     pub result: CommandTerminalResult,
     pub transcript: RetainedCommandTranscript,
     pub finalization: FinalizationState,
@@ -379,7 +380,7 @@ mod tests {
         CallerId(id.to_owned())
     }
 
-    fn workspace_id(id: &str) -> WorkspaceId {
+    fn workspace_session_id(id: &str) -> WorkspaceId {
         WorkspaceId(id.to_owned())
     }
 
@@ -395,16 +396,18 @@ mod tests {
     fn active_record(
         command_id: CommandId,
         caller_id: CallerId,
-        workspace_id: WorkspaceId,
+        workspace_session_id: WorkspaceId,
     ) -> ActiveCommandProcess {
         ActiveCommandProcess {
             command_id: command_id.clone(),
             caller_id: caller_id.clone(),
-            workspace_id: workspace_id.clone(),
+            workspace_session_id: workspace_session_id.clone(),
             workspace_root: PathBuf::from("/workspace"),
             process: Arc::new(inactive_process(&command_id, &caller_id)),
             transcript: CommandTranscriptStore::default(),
-            finalize_policy: CommandFinalizePolicy::Session { workspace_id },
+            finalize_policy: CommandFinalizePolicy::Session {
+                workspace_session_id,
+            },
             lifecycle_state: CommandLifecycleState::Running,
             cancellation: CancellationState::None,
             remount_cancellation: None,
@@ -418,12 +421,12 @@ mod tests {
     fn completed_record(
         command_id: CommandId,
         caller_id: CallerId,
-        workspace_id: WorkspaceId,
+        workspace_session_id: WorkspaceId,
     ) -> CompletedCommandRecord {
         CompletedCommandRecord {
             command_id,
             caller_id,
-            workspace_id,
+            workspace_session_id,
             result: CommandTerminalResult {
                 status: CommandStatus::Completed,
                 exit_code: Some(0),
@@ -437,13 +440,13 @@ mod tests {
     }
 
     #[test]
-    fn command_finalize_policy_returns_workspace_id() {
-        let workspace_id = WorkspaceId("workspace-1".to_owned());
+    fn command_finalize_policy_returns_workspace_session_id() {
+        let workspace_session_id = WorkspaceId("workspace-1".to_owned());
         let policy = CommandFinalizePolicy::Session {
-            workspace_id: workspace_id.clone(),
+            workspace_session_id: workspace_session_id.clone(),
         };
 
-        assert_eq!(policy.workspace_id(), &workspace_id);
+        assert_eq!(policy.workspace_session_id(), &workspace_session_id);
     }
 
     #[test]
@@ -451,13 +454,17 @@ mod tests {
         let store = CommandProcessStore::with_max_active(1);
         let command_id = command_id("cmd_completed");
         let caller_id = caller_id("caller-owner");
-        let workspace_id = workspace_id("workspace-1");
+        let workspace_session_id = workspace_session_id("workspace-1");
         let reservation = store.try_reserve().expect("reservation succeeds");
 
         store
             .insert_active(
                 reservation,
-                active_record(command_id.clone(), caller_id.clone(), workspace_id.clone()),
+                active_record(
+                    command_id.clone(),
+                    caller_id.clone(),
+                    workspace_session_id.clone(),
+                ),
             )
             .expect("active insert succeeds");
         store
@@ -465,14 +472,14 @@ mod tests {
             .insert(completed_record(
                 command_id.clone(),
                 caller_id.clone(),
-                workspace_id.clone(),
+                workspace_session_id.clone(),
             ))
             .expect("preexisting completed record inserted");
 
         let error = match store.complete_active(completed_record(
             command_id.clone(),
             caller_id,
-            workspace_id,
+            workspace_session_id,
         )) {
             Err(error) => error,
             Ok(_) => panic!("duplicate completed id is rejected before active removal"),
@@ -498,13 +505,13 @@ mod tests {
         let store = CommandProcessStore::new();
         let command_id = command_id("cmd_active");
         let caller_id = caller_id("caller-owner");
-        let workspace_id = workspace_id("workspace-1");
+        let workspace_session_id = workspace_session_id("workspace-1");
         let reservation = store.try_reserve().expect("reservation succeeds");
 
         store
             .insert_active(
                 reservation,
-                active_record(command_id.clone(), caller_id, workspace_id),
+                active_record(command_id.clone(), caller_id, workspace_session_id),
             )
             .expect("active insert succeeds");
 

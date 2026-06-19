@@ -15,7 +15,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 #[cfg(target_os = "linux")]
-use linux_namespace_subprocess::protocol::{Fd, NsFds};
+use namespace_process::runner::protocol::{Fd, NsFds};
 #[cfg(target_os = "linux")]
 use nix::errno::Errno;
 #[cfg(target_os = "linux")]

@@ -10,8 +10,11 @@ use command::yield_wait_loop::WaitOutcome;
 use operation_service::command::{
     CommandLaunchDriver, CommandOperationService, CommandServiceError,
 };
-use operation_service::workspace_manager::WorkspaceManagerService;
-use operation_service::workspace_remount::{WorkspaceRemountOptions, WorkspaceRemountService};
+use operation_service::workspace_remount::{
+    CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountOptions,
+    WorkspaceRemountService,
+};
+use operation_service::workspace_session::WorkspaceSessionService;
 use operation_service::OperationServices;
 use workspace::{
     CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
@@ -21,8 +24,9 @@ use workspace::{
 };
 
 pub struct TestServices {
-    pub workspace: Arc<WorkspaceManagerService>,
+    pub workspace: Arc<WorkspaceSessionService>,
     pub command: Arc<CommandOperationService>,
+    #[allow(dead_code)]
     pub services: OperationServices,
 }
 
@@ -230,15 +234,17 @@ pub fn build_services_with_launch_driver(
     fake: Arc<FakeWorkspaceService>,
     launch_driver: Arc<dyn CommandLaunchDriver>,
 ) -> TestServices {
-    let workspace = Arc::new(WorkspaceManagerService::new(fake));
+    let workspace = Arc::new(WorkspaceSessionService::new(fake));
     let command = Arc::new(CommandOperationService::with_launch_driver_for_test(
         Arc::clone(&workspace),
         test_command_config(),
         launch_driver,
     ));
+    let remount_workspace: Arc<dyn RemountWorkspaceSession> = workspace.clone();
+    let remount_command: Arc<dyn CommandRemountCoordinator> = command.clone();
     let remount = Arc::new(WorkspaceRemountService::new(
-        Arc::clone(&workspace),
-        Arc::clone(&command),
+        remount_workspace,
+        remount_command,
         WorkspaceRemountOptions::default(),
     ));
     let services = OperationServices::new(Arc::clone(&workspace), Arc::clone(&command), remount);
@@ -272,7 +278,7 @@ pub fn assert_private_create_request(
 }
 
 pub fn workspace_handle(
-    workspace_id: &str,
+    workspace_session_id: &str,
     caller_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
@@ -280,7 +286,7 @@ pub fn workspace_handle(
 ) -> WorkspaceHandle {
     let base_dir = test_launch_base_dir();
     WorkspaceHandle::holder_backed_for_test(
-        WorkspaceId(workspace_id.to_owned()),
+        WorkspaceId(workspace_session_id.to_owned()),
         CallerId(caller_id.to_owned()),
         workspace_root,
         profile,
@@ -292,14 +298,14 @@ pub fn workspace_handle(
 }
 
 pub fn workspace_handle_without_launch(
-    workspace_id: &str,
+    workspace_session_id: &str,
     caller_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
     profile: WorkspaceProfile,
 ) -> WorkspaceHandle {
     WorkspaceHandle::without_launch_for_test(
-        WorkspaceId(workspace_id.to_owned()),
+        WorkspaceId(workspace_session_id.to_owned()),
         CallerId(caller_id.to_owned()),
         workspace_root,
         profile,
@@ -308,7 +314,7 @@ pub fn workspace_handle_without_launch(
 }
 
 pub fn workspace_handle_unavailable_launch(
-    workspace_id: &str,
+    workspace_session_id: &str,
     caller_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
@@ -316,7 +322,7 @@ pub fn workspace_handle_unavailable_launch(
 ) -> WorkspaceHandle {
     let base_dir = test_launch_base_dir();
     WorkspaceHandle::unavailable_for_test(
-        WorkspaceId(workspace_id.to_owned()),
+        WorkspaceId(workspace_session_id.to_owned()),
         CallerId(caller_id.to_owned()),
         workspace_root,
         profile,

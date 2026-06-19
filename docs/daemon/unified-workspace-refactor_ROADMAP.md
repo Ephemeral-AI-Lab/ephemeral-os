@@ -365,7 +365,7 @@ Architecture and ownership:
 - [ ] `CommandOps` remains the owner of command process lifecycle.
 - [ ] `workspace` owns overlay dirs, upperdir capture primitives, holder-backed lifecycle/remount primitives, and isolated-network setup mechanics.
 - [ ] `overlay` remains a low-level overlayfs mount/unmount mechanism crate.
-- [ ] `linux-namespace-subprocess` owns holder namespace creation and setns command execution, not caller-facing workspace semantics.
+- [ ] `namespace-process` owns holder namespace creation and setns command execution, not caller-facing workspace semantics.
 
 API and DTOs:
 
@@ -492,7 +492,7 @@ Append one row per meaningful gate or phase closeout.
 | 2026-06-17 | 7 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase7-target cargo test -p daemon --test phase3_write_paths` | Pass | Exit 0; 6 write-path tests passed. |
 | 2026-06-17 | 7 | Optional `workspace_command_paths` gate | Skipped | `crates/daemon/core/tests/workspace_command_paths.rs` is not present in this checkout, so the optional Phase 7 command-path test target was not run. |
 | 2026-06-17 | 7 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase7-target cargo check -p eosd` | Pass | Extra non-required check because Phase 7 changed the private `eosd ns-holder` dispatcher. |
-| 2026-06-17 | 7 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase7-target cargo test -p linux-namespace-subprocess holder` | Pass | Extra non-required check because Phase 7 changed holder network-mode behavior and holder tests. |
+| 2026-06-17 | 7 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase7-target cargo test -p namespace-process holder` | Pass | Extra non-required check because Phase 7 changed holder network-mode behavior and holder tests. |
 | 2026-06-17 | 7 | `git diff --check` | Pass | Exit 0; no whitespace errors. |
 | 2026-06-17 | 8 | Phase 8 implementation review | Done | Retired workspace root exports for `HostWorkspace`, `HostWorkspaceError`, `overlay_run_dirs`, legacy isolated `WorkspaceHandle`, `WorkspaceModeManager`, `WorkspaceModeContext`, and `WorkspaceModeHandle`; moved Host internals into `network_mode/host.rs`, isolated handle/manager/error/caps/context internals into `network_mode/isolated.rs`, and updated daemon/runtime/operation imports to scoped mode and overlay paths. No root compatibility exports were retained; existing wire compatibility inputs and trace strings use host/isolated. |
 | 2026-06-17 | 8 | `cargo fmt` | Pass | Formatted Phase 8 Rust sources. |

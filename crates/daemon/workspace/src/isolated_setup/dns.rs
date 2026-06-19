@@ -2,7 +2,7 @@
 use std::process::Stdio;
 
 #[cfg(target_os = "linux")]
-use ::linux_namespace_subprocess::protocol::{NamespaceCommandRequest, RunResult};
+use ::namespace_process::runner::protocol::{NamespaceCommandRequest, RunResult};
 #[cfg(target_os = "linux")]
 use serde_json::{json, Value};
 

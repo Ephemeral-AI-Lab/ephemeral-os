@@ -5,8 +5,11 @@ use operation_service::command::{
     CommandCallContext, CommandFinalizationOptions, CommandOperationService, ExecCommandInput,
     OperationTraceContext,
 };
-use operation_service::workspace_manager::WorkspaceManagerService;
-use operation_service::workspace_remount::{WorkspaceRemountOptions, WorkspaceRemountService};
+use operation_service::workspace_remount::{
+    CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountOptions,
+    WorkspaceRemountService,
+};
+use operation_service::workspace_session::WorkspaceSessionService;
 use operation_service::OperationServices;
 use workspace::{
     CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
@@ -67,20 +70,22 @@ impl WorkspaceService for NoopWorkspaceService {
     }
 }
 
-fn workspace_manager() -> Arc<WorkspaceManagerService> {
-    Arc::new(WorkspaceManagerService::new(Arc::new(NoopWorkspaceService)))
+fn workspace_session() -> Arc<WorkspaceSessionService> {
+    Arc::new(WorkspaceSessionService::new(Arc::new(NoopWorkspaceService)))
 }
 
 #[test]
 fn operation_services_wires_top_level_domains() {
-    let workspace = workspace_manager();
+    let workspace = workspace_session();
     let command = Arc::new(CommandOperationService::new(
         Arc::clone(&workspace),
         command::CommandConfig::default(),
     ));
+    let remount_workspace: Arc<dyn RemountWorkspaceSession> = workspace.clone();
+    let remount_command: Arc<dyn CommandRemountCoordinator> = command.clone();
     let remount = Arc::new(WorkspaceRemountService::new(
-        Arc::clone(&workspace),
-        Arc::clone(&command),
+        remount_workspace,
+        remount_command,
         WorkspaceRemountOptions::default(),
     ));
 
@@ -100,7 +105,7 @@ fn command_contract_keeps_roots_and_trace_context_separate() {
     let input = ExecCommandInput {
         caller_id: CallerId("caller-1".to_owned()),
         workspace_root: PathBuf::from("/workspace"),
-        workspace_id: Some(WorkspaceId("workspace-1".to_owned())),
+        workspace_session_id: Some(WorkspaceId("workspace-1".to_owned())),
         cmd: "pwd".to_owned(),
         cwd: None,
         timeout_seconds: None,
@@ -113,7 +118,7 @@ fn command_contract_keeps_roots_and_trace_context_separate() {
 
     assert_eq!(input.workspace_root, PathBuf::from("/workspace"));
     assert_eq!(
-        input.workspace_id,
+        input.workspace_session_id,
         Some(WorkspaceId("workspace-1".to_owned()))
     );
     assert_eq!(context.caller_id, CallerId("caller-1".to_owned()));
@@ -121,7 +126,7 @@ fn command_contract_keeps_roots_and_trace_context_separate() {
 
 #[test]
 fn command_service_retains_one_shot_finalization_options() {
-    let workspace = workspace_manager();
+    let workspace = workspace_session();
     let config = command::CommandConfig::default();
     let options = CommandFinalizationOptions {
         one_shot_capture: layerstack::service::BoundedCaptureOptions {
@@ -144,7 +149,7 @@ fn command_service_retains_one_shot_finalization_options() {
 
 #[test]
 fn workspace_remount_options_are_constructor_owned() {
-    let workspace = workspace_manager();
+    let workspace = workspace_session();
     let command = Arc::new(CommandOperationService::new(
         Arc::clone(&workspace),
         command::CommandConfig::default(),
@@ -152,10 +157,9 @@ fn workspace_remount_options_are_constructor_owned() {
     let options = WorkspaceRemountOptions {
         live_quiesce_timeout_ms: 7_500,
     };
-    let remount =
-        WorkspaceRemountService::new(Arc::clone(&workspace), Arc::clone(&command), options);
+    let remount_workspace: Arc<dyn RemountWorkspaceSession> = workspace.clone();
+    let remount_command: Arc<dyn CommandRemountCoordinator> = command.clone();
+    let remount = WorkspaceRemountService::new(remount_workspace, remount_command, options);
 
-    assert!(Arc::ptr_eq(remount.workspace(), &workspace));
-    assert!(Arc::ptr_eq(remount.command(), &command));
     assert_eq!(remount.options(), options);
 }

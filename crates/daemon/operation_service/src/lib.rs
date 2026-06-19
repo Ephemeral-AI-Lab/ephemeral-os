@@ -3,10 +3,11 @@
 pub(crate) extern crate workspace as workspace_crate;
 
 pub mod command;
+pub mod dispatch;
 pub mod error;
 pub mod services;
-pub mod workspace_manager;
 pub mod workspace_remount;
+pub mod workspace_session;
 
 pub use command::CommandOperationService;
 pub use error::OperationServiceError;

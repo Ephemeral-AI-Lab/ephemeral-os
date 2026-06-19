@@ -294,7 +294,7 @@ semantics, packaging, live E2E, or `ops.json` regeneration was changed.
     `NamespaceNetwork::Host`, open user/mount/PID FDs, mount the overlay through
     the setns helper, and keep holder/FD cleanup private to
     `HostWorkspace`.
-- `crates/daemon/linux-namespace-subprocess/src/holder/{mod.rs,namespace.rs}`
+- `crates/daemon/namespace-process/src/holder/{mod.rs,namespace.rs}`
   - Phase 7 added private holder network modes. `NamespaceNetwork::Host`
     creates user/mount/PID namespaces without `CLONE_NEWNET` and skips the
     net-ready/veth/DNS setup path. `NamespaceNetwork::Isolated` preserves the
@@ -315,7 +315,7 @@ semantics, packaging, live E2E, or `ops.json` regeneration was changed.
   - Phase 7 added regression coverage proving Host and isolated-network workspace
     command requests serialize the holder-backed setns command request, and missing holder FDs fail
     instead of falling back to legacy fresh namespace mode.
-- `crates/daemon/linux-namespace-subprocess/tests/unit/holder/handshake.rs`
+- `crates/daemon/namespace-process/tests/unit/holder/handshake.rs`
   - Updated holder handshake tests for explicit Host/isolated holder modes.
 - `crates/daemon/operation/tests/command/registry.rs`
   - Updated the host registry scaffold to carry the Host lease handle.
@@ -476,7 +476,7 @@ Phase 7 makes workspace command execution holder/setns-only.
   Workspace command requests do not carry a public runner-mode enum.
 - Missing holder FDs are command preparation errors. Host requires user, mount,
   and PID FDs. Isolated requires user, mount, PID, and network FDs.
-- legacy fresh namespace mode remains in `linux-namespace-subprocess::protocol::the removed mode enum` only for
+- legacy fresh namespace mode remains in `namespace-process::protocol::the removed mode enum` only for
   legacy/non-workspace subprocess compatibility. Phase 7 did not retire the
   enum variant or legacy compatibility paths.
 - Phase 8 legacy export/name retirement was implemented after this holder/setns
@@ -589,7 +589,7 @@ Phase 7 verification used
 | `cargo test -p daemon --test phase3_write_paths` | Pass | 6 write-path tests passed. |
 | Optional `workspace_command_paths` gate | Skipped | `crates/daemon/core/tests/workspace_command_paths.rs` is not present in this checkout. |
 | `cargo check -p eosd` | Pass | Extra non-required check because Phase 7 changed the private `eosd ns-holder` dispatcher. |
-| `cargo test -p linux-namespace-subprocess holder` | Pass | Extra non-required check because Phase 7 changed holder network-mode behavior and holder tests. |
+| `cargo test -p namespace-process holder` | Pass | Extra non-required check because Phase 7 changed holder network-mode behavior and holder tests. |
 | `git diff --check` | Pass | No whitespace errors. |
 
 Phase 8 verification used

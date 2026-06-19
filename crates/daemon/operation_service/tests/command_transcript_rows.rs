@@ -138,22 +138,22 @@ fn session_with_driver(driver: impl CommandLaunchDriver + 'static) -> (TestServi
     let env = build_services_with_launch_driver(Arc::clone(&fake), Arc::new(driver));
     let handler = env
         .workspace
-        .create(create_request("caller-owner", workspace_root.clone()))
+        .create_workspace_session(create_request("caller-owner", workspace_root.clone()))
         .expect("session create succeeds");
 
     let output = env
-        .services
+        .command
         .exec_command(
             ExecCommandInput {
                 caller_id: CallerId("caller-owner".to_owned()),
                 workspace_root,
-                workspace_id: Some(handler.workspace_id.clone()),
+                workspace_session_id: Some(handler.workspace_session_id.clone()),
                 cmd: "printf rows".to_owned(),
                 cwd: None,
                 timeout_seconds: None,
                 yield_time_ms: Some(0),
             },
-            OperationTraceContext,
+            context("caller-owner"),
         )
         .expect("command exec succeeds");
 
@@ -485,18 +485,18 @@ fn command_transcript_rows_report_running_status_for_one_shot_active_command() {
         Arc::new(TranscriptLaunchDriver::running("one-shot row\n")),
     );
     let output = env
-        .services
+        .command
         .exec_command(
             ExecCommandInput {
                 caller_id: CallerId("caller-owner".to_owned()),
                 workspace_root,
-                workspace_id: None,
+                workspace_session_id: None,
                 cmd: "printf rows".to_owned(),
                 cwd: None,
                 timeout_seconds: None,
                 yield_time_ms: Some(0),
             },
-            OperationTraceContext,
+            context("caller-owner"),
         )
         .expect("one-shot command starts");
     let command_id = output.command_id.expect("command id is returned");

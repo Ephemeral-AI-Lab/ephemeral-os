@@ -8,7 +8,7 @@ use crate::workspace_crate::{CallerId, WorkspaceId};
 #[derive(Debug, Error)]
 pub enum CommandServiceError {
     #[error(transparent)]
-    WorkspaceManager(#[from] crate::workspace_manager::WorkspaceManagerError),
+    WorkspaceSession(#[from] crate::workspace_session::WorkspaceSessionError),
 
     #[error("workspace root mismatch: expected {expected:?}, actual {actual:?}")]
     WorkspaceRootMismatch { expected: PathBuf, actual: PathBuf },
@@ -29,16 +29,16 @@ pub enum CommandServiceError {
     },
 
     #[error(
-        "command workspace mismatch for {command_id:?}: expected {expected:?}, actual {actual:?}"
+        "command workspace session mismatch for {command_id:?}: expected {expected:?}, actual {actual:?}"
     )]
-    CommandWorkspaceMismatch {
+    CommandWorkspaceSessionMismatch {
         command_id: CommandId,
         expected: WorkspaceId,
         actual: WorkspaceId,
     },
 
-    #[error("workspace remount pending: {workspace_id:?}")]
-    WorkspaceRemountPending { workspace_id: WorkspaceId },
+    #[error("workspace session remount pending: {workspace_session_id:?}")]
+    WorkspaceSessionRemountPending { workspace_session_id: WorkspaceId },
 
     #[error("command already completed: {command_id:?}")]
     CommandAlreadyCompleted { command_id: CommandId },
@@ -78,7 +78,7 @@ pub enum CommandServiceError {
     OneShotWorkspaceCleanupFailed {
         command_id: CommandId,
         command_error: Box<CommandServiceError>,
-        cleanup_error: crate::workspace_manager::WorkspaceManagerError,
+        cleanup_error: crate::workspace_session::WorkspaceSessionError,
     },
 
     #[error(

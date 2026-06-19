@@ -7,9 +7,9 @@
 //!
 //! - `eosd daemon`     -> the async RPC server in `daemon`.
 //! - `eosd ns-runner`  -> the single-threaded namespace runner in
-//!   `linux_namespace_subprocess::runner`.
+//!   `namespace_process::runner`.
 //! - `eosd ns-holder`  -> the single-threaded namespace holder in
-//!   `linux_namespace_subprocess::holder`.
+//!   `namespace_process::holder`.
 //!
 //! Three real processes, one static binary. This is the launcher chain:
 //! `daemon` owns the RPC server, `ns-runner` owns setns command execution,
@@ -27,7 +27,7 @@
 //! [`std::process::exit`]:
 //! - ns-holder: `1` (control pipe closed), `2` (unexpected token), `7` (test
 //!   crash knob) —
-//!   `linux_namespace_subprocess::holder::NsHolderError::{CONTROL_CLOSED_EXIT,
+//!   `namespace_process::holder::NsHolderError::{CONTROL_CLOSED_EXIT,
 //!   UNEXPECTED_TOKEN_EXIT, TEST_CRASH_EXIT}`.
 //! - thin-client / daemon connect path: `97` (`CONNECT_FAILED`), `98`
 //!   (`IO_FAILED`) — `daemon::wire::{CONNECT_FAILED, IO_FAILED}`.
@@ -65,7 +65,7 @@ fn main() -> Result<()> {
 /// single-threaded child that creates and pins a workspace namespace stack and
 /// runs the readiness handshake, then `pause()`s until `SIGTERM`.
 ///
-/// Real thin call: `linux_namespace_subprocess::holder` already exposes
+/// Real thin call: `namespace_process::holder` already exposes
 /// `run(readiness_fd, control_fd)`, and its lib doc sanctions keeping the
 /// argv -> FD parsing here.
 /// We parse the two positional FD ints and dispatch; the holder's typed errors
@@ -76,18 +76,18 @@ fn run_ns_holder(mut args: std::env::Args) -> Result<()> {
     let control_fd = parse_fd(args.next(), "control_fd")?;
     let network = parse_holder_network(args.next())?;
 
-    match linux_namespace_subprocess::holder::run(readiness_fd, control_fd, network) {
+    match namespace_process::holder::run(readiness_fd, control_fd, network) {
         Ok(()) => Ok(()),
         Err(err) => {
             let code = match &err {
-                linux_namespace_subprocess::holder::NsHolderError::ControlPipeClosed => {
-                    linux_namespace_subprocess::holder::NsHolderError::CONTROL_CLOSED_EXIT
+                namespace_process::holder::NsHolderError::ControlPipeClosed => {
+                    namespace_process::holder::NsHolderError::CONTROL_CLOSED_EXIT
                 }
-                linux_namespace_subprocess::holder::NsHolderError::UnexpectedToken => {
-                    linux_namespace_subprocess::holder::NsHolderError::UNEXPECTED_TOKEN_EXIT
+                namespace_process::holder::NsHolderError::UnexpectedToken => {
+                    namespace_process::holder::NsHolderError::UNEXPECTED_TOKEN_EXIT
                 }
-                linux_namespace_subprocess::holder::NsHolderError::TestCrash => {
-                    linux_namespace_subprocess::holder::NsHolderError::TEST_CRASH_EXIT
+                namespace_process::holder::NsHolderError::TestCrash => {
+                    namespace_process::holder::NsHolderError::TEST_CRASH_EXIT
                 }
                 // Unshare / pipe-i/o failures have no dedicated Rust exit code;
                 // surface the message and fall through to the generic status.
@@ -102,12 +102,10 @@ fn run_ns_holder(mut args: std::env::Args) -> Result<()> {
 
 fn parse_holder_network(
     value: Option<String>,
-) -> Result<linux_namespace_subprocess::holder::NamespaceNetwork> {
+) -> Result<namespace_process::holder::NamespaceNetwork> {
     match value.as_deref() {
-        None | Some("isolated") => {
-            Ok(linux_namespace_subprocess::holder::NamespaceNetwork::Isolated)
-        }
-        Some("host") => Ok(linux_namespace_subprocess::holder::NamespaceNetwork::Host),
+        None | Some("isolated") => Ok(namespace_process::holder::NamespaceNetwork::Isolated),
+        Some("host") => Ok(namespace_process::holder::NamespaceNetwork::Host),
         Some(other) => Err(anyhow!(
             "invalid ns-holder network mode {other:?}; expected host or isolated"
         )),

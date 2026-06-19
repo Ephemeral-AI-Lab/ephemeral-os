@@ -1,9 +1,12 @@
 use std::sync::Arc;
 
-use crate::command::{CommandOperationService, CommandRemountInspection, RemountSwitchState};
-use crate::workspace_crate::{RemountWorkspaceRequest, WorkspaceId};
-use crate::workspace_manager::{WorkspaceManagerService, WorkspaceSessionHandler};
-use crate::workspace_remount::WorkspaceRemountError;
+use crate::workspace_crate::WorkspaceId;
+use crate::workspace_remount::{
+    CommandRemountCoordinator, CommandRemountInspection, RemountWorkspaceSession,
+};
+use crate::workspace_session::WorkspaceSessionHandler;
+
+mod impls;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct WorkspaceRemountOptions {
@@ -19,14 +22,14 @@ impl Default for WorkspaceRemountOptions {
 }
 
 pub struct WorkspaceRemountService {
-    workspace: Arc<WorkspaceManagerService>,
-    command: Arc<CommandOperationService>,
+    workspace: Arc<dyn RemountWorkspaceSession>,
+    command: Arc<dyn CommandRemountCoordinator>,
     options: WorkspaceRemountOptions,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkspaceRemountReport {
-    pub workspace_id: WorkspaceId,
+    pub workspace_session_id: WorkspaceId,
     pub remounted: bool,
     pub blocked_reason: Option<String>,
     pub command_inspection: CommandRemountInspection,
@@ -36,8 +39,8 @@ pub struct WorkspaceRemountReport {
 impl WorkspaceRemountService {
     #[must_use]
     pub fn new(
-        workspace: Arc<WorkspaceManagerService>,
-        command: Arc<CommandOperationService>,
+        workspace: Arc<dyn RemountWorkspaceSession>,
+        command: Arc<dyn CommandRemountCoordinator>,
         options: WorkspaceRemountOptions,
     ) -> Self {
         Self {
@@ -53,77 +56,12 @@ impl WorkspaceRemountService {
     }
 
     #[must_use]
-    pub fn workspace(&self) -> &Arc<WorkspaceManagerService> {
+    pub fn workspace(&self) -> &Arc<dyn RemountWorkspaceSession> {
         &self.workspace
     }
 
     #[must_use]
-    pub fn command(&self) -> &Arc<CommandOperationService> {
+    pub fn command(&self) -> &Arc<dyn CommandRemountCoordinator> {
         &self.command
-    }
-
-    pub fn compact_or_remount_session(
-        &self,
-        workspace_id: WorkspaceId,
-    ) -> Result<WorkspaceRemountReport, WorkspaceRemountError> {
-        let handler = self.workspace.begin_remount(workspace_id.clone())?;
-        let mut quiesce = self.command.begin_workspace_remount_quiesce(&workspace_id);
-
-        if let Some(reason) = quiesce.inspection().blocked_reason.clone() {
-            self.workspace
-                .finish_or_block_remount(workspace_id.clone(), Some(reason.clone()))?;
-            let inspection = quiesce.finish();
-            return Ok(WorkspaceRemountReport {
-                workspace_id,
-                remounted: false,
-                blocked_reason: Some(reason),
-                command_inspection: inspection,
-                updated_handler: None,
-            });
-        }
-
-        if quiesce.cancellation_requested() {
-            let reason = "remount_cancelled_before_switch".to_owned();
-            self.workspace
-                .finish_or_block_remount(workspace_id.clone(), Some(reason.clone()))?;
-            let inspection = quiesce.finish();
-            return Ok(WorkspaceRemountReport {
-                workspace_id,
-                remounted: false,
-                blocked_reason: Some(reason),
-                command_inspection: inspection,
-                updated_handler: None,
-            });
-        }
-
-        quiesce.set_switch_state(RemountSwitchState::CriticalSwitch);
-        let request = RemountWorkspaceRequest {
-            layer_paths: handler.layer_paths.clone(),
-        };
-        let remount_result = self.workspace.apply_remount(&handler, request);
-        quiesce.set_switch_state(RemountSwitchState::Resuming);
-
-        match remount_result {
-            Ok(updated_handler) => {
-                self.workspace.finish_remount(workspace_id.clone())?;
-                let inspection = quiesce.finish();
-                Ok(WorkspaceRemountReport {
-                    workspace_id,
-                    remounted: true,
-                    blocked_reason: None,
-                    command_inspection: inspection,
-                    updated_handler: Some(updated_handler),
-                })
-            }
-            Err(error) => {
-                let reason = error.to_string();
-                if self.workspace.is_remount_pending(&workspace_id) {
-                    self.workspace
-                        .finish_or_block_remount(workspace_id.clone(), Some(reason))?;
-                }
-                let _inspection = quiesce.finish();
-                Err(WorkspaceRemountError::WorkspaceManager(error))
-            }
-        }
     }
 }

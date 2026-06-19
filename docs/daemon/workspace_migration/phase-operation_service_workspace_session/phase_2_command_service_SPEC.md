@@ -362,7 +362,7 @@ crates/daemon/operation_service/src/command/
 ```
 
 The `command` crate may take a dependency on low-level mechanism crates such as
-`linux-namespace-subprocess` if needed for runner request types. It must not
+`namespace-process` if needed for runner request types. It must not
 depend on `operation_service`, `operation`, `workspace`, or `layerstack`.
 
 ## Command Service API
@@ -1339,7 +1339,7 @@ operation_service
   -> trace
 
 command
-  -> linux-namespace-subprocess, nix, rustix, serde, serde_json, time, thiserror
+  -> namespace-process, nix, rustix, serde, serde_json, time, thiserror
   -> no workspace
   -> no layerstack
   -> no operation_service

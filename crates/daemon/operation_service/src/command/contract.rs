@@ -19,7 +19,7 @@ pub struct CommandCallContext {
 pub struct ExecCommandInput {
     pub caller_id: CallerId,
     pub workspace_root: PathBuf,
-    pub workspace_id: Option<WorkspaceId>,
+    pub workspace_session_id: Option<WorkspaceId>,
     pub cmd: String,
     pub cwd: Option<PathBuf>,
     pub timeout_seconds: Option<f64>,

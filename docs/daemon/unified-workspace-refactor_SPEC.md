@@ -80,7 +80,7 @@ namespaces with `setns` for workspace commands.
 | `workspace` crate | overlay dirs, upperdir capture primitives, shared holder-backed workspace lifecycle/remount primitives, isolated-network orchestration | command process registry, public operation wire shape |
 | `CommandOps` | process registry, PTY/process wait, stdin/progress/cancel mechanics | snapshot leases, overlay dir allocation |
 | `overlay` crate | overlayfs mount/unmount mechanics | daemon policy |
-| `linux-namespace-subprocess` | single-threaded holder namespace creation, in-namespace setup, setns command execution | host bridge/veth/netfilter ownership, caller-facing workspace semantics |
+| `namespace-process` | single-threaded holder namespace creation, in-namespace setup, setns command execution | host bridge/veth/netfilter ownership, caller-facing workspace semantics |
 
 ## 4. Terminology
 
@@ -217,7 +217,7 @@ crates/daemon/operation/src/workspace/
 crates/daemon/core/src/op_adapter/
   workspace.rs                                        ~260
 
-crates/daemon/linux-namespace-subprocess/src/          existing +120 LOC
+crates/daemon/namespace-process/src/          existing +120 LOC
   holder/
     namespace.rs                                      existing +80
     network.rs                                        existing +40

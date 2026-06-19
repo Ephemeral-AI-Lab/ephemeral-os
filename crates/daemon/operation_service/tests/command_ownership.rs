@@ -23,7 +23,7 @@ fn exec_input(caller_id: &str, workspace_root: PathBuf) -> ExecCommandInput {
     ExecCommandInput {
         caller_id: CallerId(caller_id.to_owned()),
         workspace_root,
-        workspace_id: None,
+        workspace_session_id: None,
         cmd: "cat".to_owned(),
         cwd: None,
         timeout_seconds: None,
@@ -43,10 +43,10 @@ fn command_service_with_active_command() -> (TestServices, CommandId) {
     )));
     let env = build_services(fake);
     let output = env
-        .services
+        .command
         .exec_command(
             exec_input("caller-owner", workspace_root),
-            OperationTraceContext,
+            context("caller-owner"),
         )
         .expect("active command starts");
     let command_id = output.command_id.expect("running command id is returned");

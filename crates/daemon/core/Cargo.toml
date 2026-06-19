@@ -6,7 +6,6 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
-command.workspace = true
 config.workspace = true
 layerstack.workspace = true
 protocol.workspace = true

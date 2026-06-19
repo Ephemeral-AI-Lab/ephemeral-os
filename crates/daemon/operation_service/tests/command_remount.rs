@@ -15,8 +15,11 @@ use operation_service::command::{
     ExecCommandInput, OperationTraceContext, PollCommandInput, ReadCommandLinesInput,
     WriteStdinInput,
 };
-use operation_service::workspace_manager::{WorkspaceManagerService, WorkspaceRemountState};
-use operation_service::workspace_remount::{WorkspaceRemountOptions, WorkspaceRemountService};
+use operation_service::workspace_remount::{
+    CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountOptions,
+    WorkspaceRemountService,
+};
+use operation_service::workspace_session::WorkspaceSessionService;
 use operation_service::OperationServices;
 use workspace::{
     CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
@@ -26,7 +29,7 @@ use workspace::{
 };
 
 struct TestServices {
-    workspace: Arc<WorkspaceManagerService>,
+    workspace: Arc<WorkspaceSessionService>,
     command: Arc<CommandOperationService>,
     services: OperationServices,
 }
@@ -205,15 +208,17 @@ impl CommandLaunchDriver for BlockingLaunchDriver {
 }
 
 fn build_services(fake: Arc<PendingGuardWorkspaceService>) -> TestServices {
-    let workspace = Arc::new(WorkspaceManagerService::new(fake));
+    let workspace = Arc::new(WorkspaceSessionService::new(fake));
     let command = Arc::new(CommandOperationService::with_launch_driver_for_test(
         Arc::clone(&workspace),
         command_config(),
         Arc::new(PendingGuardLaunchDriver),
     ));
+    let remount_workspace: Arc<dyn RemountWorkspaceSession> = workspace.clone();
+    let remount_command: Arc<dyn CommandRemountCoordinator> = command.clone();
     let remount = Arc::new(WorkspaceRemountService::new(
-        Arc::clone(&workspace),
-        Arc::clone(&command),
+        remount_workspace,
+        remount_command,
         WorkspaceRemountOptions::default(),
     ));
     let services = OperationServices::new(Arc::clone(&workspace), Arc::clone(&command), remount);
@@ -228,15 +233,17 @@ fn build_services_with_launch_driver(
     fake: Arc<PendingGuardWorkspaceService>,
     launch_driver: Arc<dyn CommandLaunchDriver>,
 ) -> TestServices {
-    let workspace = Arc::new(WorkspaceManagerService::new(fake));
+    let workspace = Arc::new(WorkspaceSessionService::new(fake));
     let command = Arc::new(CommandOperationService::with_launch_driver_for_test(
         Arc::clone(&workspace),
         command_config(),
         launch_driver,
     ));
+    let remount_workspace: Arc<dyn RemountWorkspaceSession> = workspace.clone();
+    let remount_command: Arc<dyn CommandRemountCoordinator> = command.clone();
     let remount = Arc::new(WorkspaceRemountService::new(
-        Arc::clone(&workspace),
-        Arc::clone(&command),
+        remount_workspace,
+        remount_command,
         WorkspaceRemountOptions::default(),
     ));
     let services = OperationServices::new(Arc::clone(&workspace), Arc::clone(&command), remount);
@@ -264,11 +271,11 @@ fn create_request_with_profile(
     }
 }
 
-fn exec_input(workspace_id: WorkspaceId, workspace_root: PathBuf) -> ExecCommandInput {
+fn exec_input(workspace_session_id: WorkspaceId, workspace_root: PathBuf) -> ExecCommandInput {
     ExecCommandInput {
         caller_id: CallerId("caller-1".to_owned()),
         workspace_root,
-        workspace_id: Some(workspace_id),
+        workspace_session_id: Some(workspace_session_id),
         cmd: "echo ok".to_owned(),
         cwd: None,
         timeout_seconds: None,
@@ -284,13 +291,13 @@ fn context(caller_id: &str) -> CommandCallContext {
 }
 
 fn workspace_handle(
-    workspace_id: &str,
+    workspace_session_id: &str,
     caller_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
 ) -> WorkspaceHandle {
     workspace_handle_with_profile(
-        workspace_id,
+        workspace_session_id,
         caller_id,
         lease_id,
         workspace_root,
@@ -299,7 +306,7 @@ fn workspace_handle(
 }
 
 fn workspace_handle_with_profile(
-    workspace_id: &str,
+    workspace_session_id: &str,
     caller_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
@@ -312,7 +319,7 @@ fn workspace_handle_with_profile(
         layer_paths: vec![PathBuf::from("/lower/one")],
     };
     WorkspaceHandle::holder_backed_for_test(
-        WorkspaceId(workspace_id.to_owned()),
+        WorkspaceId(workspace_session_id.to_owned()),
         CallerId(caller_id.to_owned()),
         workspace_root,
         profile,
@@ -339,18 +346,18 @@ fn create_session_and_command() -> (
     )));
     let handler = services
         .workspace
-        .create(create_request("caller-1", workspace_root.clone()))
+        .create_workspace_session(create_request("caller-1", workspace_root.clone()))
         .expect("create workspace session succeeds");
     let output = services
         .command
         .exec_command(
-            exec_input(handler.workspace_id.clone(), workspace_root),
+            exec_input(handler.workspace_session_id.clone(), workspace_root),
             context("caller-1"),
         )
         .expect("exec command succeeds");
     (
         services,
-        handler.workspace_id,
+        handler.workspace_session_id,
         output.command_id.expect("running command has id"),
     )
 }
@@ -385,7 +392,7 @@ fn command_remount_start_rejects_for_pending_isolated_workspace() {
     )));
     let handler = services
         .workspace
-        .create(create_request_with_profile(
+        .create_workspace_session(create_request_with_profile(
             "caller-1",
             workspace_root.clone(),
             WorkspaceProfile::Isolated,
@@ -393,21 +400,21 @@ fn command_remount_start_rejects_for_pending_isolated_workspace() {
         .expect("create isolated workspace session succeeds");
     services
         .workspace
-        .begin_remount(handler.workspace_id.clone())
+        .begin_remount(handler.workspace_session_id.clone())
         .expect("begin remount succeeds");
 
     let error = services
         .command
         .exec_command(
-            exec_input(handler.workspace_id.clone(), workspace_root),
+            exec_input(handler.workspace_session_id.clone(), workspace_root),
             context("caller-1"),
         )
         .expect_err("exec rejects pending isolated remount");
 
     assert!(matches!(
         error,
-        CommandServiceError::WorkspaceRemountPending { workspace_id }
-            if workspace_id == WorkspaceId("workspace-1".to_owned())
+        CommandServiceError::WorkspaceSessionRemountPending { workspace_session_id }
+            if workspace_session_id == WorkspaceId("workspace-1".to_owned())
     ));
 }
 
@@ -424,25 +431,25 @@ fn command_remount_start_rejects_for_pending_persistent_workspace() {
     )));
     let handler = services
         .workspace
-        .create(create_request("caller-1", workspace_root.clone()))
+        .create_workspace_session(create_request("caller-1", workspace_root.clone()))
         .expect("create workspace session succeeds");
     services
         .workspace
-        .begin_remount(handler.workspace_id.clone())
+        .begin_remount(handler.workspace_session_id.clone())
         .expect("begin remount succeeds");
 
     let error = services
         .command
         .exec_command(
-            exec_input(handler.workspace_id.clone(), workspace_root),
+            exec_input(handler.workspace_session_id.clone(), workspace_root),
             context("caller-1"),
         )
         .expect_err("exec rejects pending remount");
 
     assert!(matches!(
         error,
-        CommandServiceError::WorkspaceRemountPending { workspace_id }
-            if workspace_id == WorkspaceId("workspace-1".to_owned())
+        CommandServiceError::WorkspaceSessionRemountPending { workspace_session_id }
+            if workspace_session_id == WorkspaceId("workspace-1".to_owned())
     ));
 }
 
@@ -469,14 +476,14 @@ fn command_remount_waits_for_in_flight_persistent_exec_admission() {
     )));
     let handler = services
         .workspace
-        .create(create_request("caller-1", workspace_root.clone()))
+        .create_workspace_session(create_request("caller-1", workspace_root.clone()))
         .expect("create workspace session succeeds");
 
     let exec_command = Arc::clone(&services.command);
-    let exec_workspace_id = handler.workspace_id.clone();
+    let exec_workspace_session_id = handler.workspace_session_id.clone();
     let exec_thread = thread::spawn(move || {
         exec_command.exec_command(
-            exec_input(exec_workspace_id, workspace_root),
+            exec_input(exec_workspace_session_id, workspace_root),
             context("caller-1"),
         )
     });
@@ -485,9 +492,9 @@ fn command_remount_waits_for_in_flight_persistent_exec_admission() {
         .expect("exec reached blocked spawn");
 
     let remount = Arc::clone(&services.services.remount);
-    let remount_workspace_id = handler.workspace_id.clone();
+    let remount_workspace_session_id = handler.workspace_session_id.clone();
     let remount_thread =
-        thread::spawn(move || remount.compact_or_remount_session(remount_workspace_id));
+        thread::spawn(move || remount.remount_workspace_session(remount_workspace_session_id));
 
     assert!(
         remount_called_rx
@@ -515,10 +522,10 @@ fn command_remount_waits_for_in_flight_persistent_exec_admission() {
 
 #[test]
 fn command_remount_stdin_rejects_for_active_command_when_workspace_becomes_pending() {
-    let (services, workspace_id, command_id) = create_session_and_command();
+    let (services, workspace_session_id, command_id) = create_session_and_command();
     services
         .workspace
-        .begin_remount(workspace_id.clone())
+        .begin_remount(workspace_session_id.clone())
         .expect("begin remount succeeds");
 
     let error = services
@@ -535,17 +542,17 @@ fn command_remount_stdin_rejects_for_active_command_when_workspace_becomes_pendi
 
     assert!(matches!(
         error,
-        CommandServiceError::WorkspaceRemountPending { workspace_id: pending }
-            if pending == workspace_id
+        CommandServiceError::WorkspaceSessionRemountPending { workspace_session_id: pending }
+            if pending == workspace_session_id
     ));
 }
 
 #[test]
 fn command_remount_read_lines_and_poll_remain_allowed_while_pending() {
-    let (services, workspace_id, command_id) = create_session_and_command();
+    let (services, workspace_session_id, command_id) = create_session_and_command();
     services
         .workspace
-        .begin_remount(workspace_id)
+        .begin_remount(workspace_session_id)
         .expect("begin remount succeeds");
 
     let rows = services
@@ -582,10 +589,10 @@ fn command_remount_read_lines_and_poll_remain_allowed_while_pending() {
 
 #[test]
 fn command_remount_wrong_caller_does_not_observe_pending_state() {
-    let (services, workspace_id, command_id) = create_session_and_command();
+    let (services, workspace_session_id, command_id) = create_session_and_command();
     services
         .workspace
-        .begin_remount(workspace_id)
+        .begin_remount(workspace_session_id)
         .expect("begin remount succeeds");
 
     let error = services
@@ -604,11 +611,7 @@ fn command_remount_wrong_caller_does_not_observe_pending_state() {
         error,
         CommandServiceError::CommandCallerMismatch { command_id: id, .. } if id == command_id
     ));
-    assert_eq!(
-        services
-            .workspace
-            .remount_state(&WorkspaceId("workspace-1".to_owned()))
-            .expect("remount state is readable"),
-        WorkspaceRemountState::RemountPending
-    );
+    assert!(services
+        .workspace
+        .is_remount_pending(&WorkspaceId("workspace-1".to_owned())));
 }

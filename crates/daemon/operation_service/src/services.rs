@@ -1,15 +1,12 @@
 use std::sync::Arc;
 
-use crate::command::{
-    CommandCallContext, CommandOperationService, CommandServiceError, CommandYield,
-    ExecCommandInput, OperationTraceContext,
-};
-use crate::workspace_manager::WorkspaceManagerService;
+use crate::command::CommandOperationService;
 use crate::workspace_remount::WorkspaceRemountService;
+use crate::workspace_session::WorkspaceSessionService;
 
 #[derive(Clone)]
 pub struct OperationServices {
-    pub workspace: Arc<WorkspaceManagerService>,
+    pub workspace: Arc<WorkspaceSessionService>,
     pub command: Arc<CommandOperationService>,
     pub remount: Arc<WorkspaceRemountService>,
 }
@@ -17,7 +14,7 @@ pub struct OperationServices {
 impl OperationServices {
     #[must_use]
     pub fn new(
-        workspace: Arc<WorkspaceManagerService>,
+        workspace: Arc<WorkspaceSessionService>,
         command: Arc<CommandOperationService>,
         remount: Arc<WorkspaceRemountService>,
     ) -> Self {
@@ -26,15 +23,5 @@ impl OperationServices {
             command,
             remount,
         }
-    }
-
-    pub fn exec_command(
-        &self,
-        input: ExecCommandInput,
-        trace: OperationTraceContext,
-    ) -> Result<CommandYield, CommandServiceError> {
-        let caller_id = input.caller_id.clone();
-        self.command
-            .exec_command(input, CommandCallContext { caller_id, trace })
     }
 }

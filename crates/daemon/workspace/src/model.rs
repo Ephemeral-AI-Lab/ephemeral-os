@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use layerstack::service::BoundedCaptureOptions;
 use layerstack::CaptureRouteStats;
-use linux_namespace_subprocess::protocol::{Fd, NamespaceCommandRequest, NsFds, WorkspaceRoot};
+use namespace_process::runner::protocol::{Fd, NamespaceCommandRequest, NsFds, WorkspaceRoot};
 use serde_json::{json, Value};
 
 use crate::overlay::tree::TreeResourceStats;

@@ -165,7 +165,7 @@ reports `mount_verified`, then updates and persists the handle's `layer_paths`.
 
 Main file:
 
-- `crates/daemon/linux-namespace-subprocess/src/runner/setns.rs`
+- `crates/daemon/namespace-process/src/runner/setns.rs`
 
 The live remount implementation mounts the new overlay at a staging mountpoint,
 verifies it, moves the old workspace mount to a rollback mountpoint, moves the

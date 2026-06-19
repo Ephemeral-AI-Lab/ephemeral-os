@@ -156,7 +156,7 @@ This summary is grounded in the live tree at plan creation time:
   the spec are not present in this checkout. The retired live command suite has
   been archived out of the active workspace; current command coverage should
   use `crates/daemon/operation_service/tests/command_exec.rs` plus the
-  `linux-namespace-subprocess` runner unit tests.
+  `namespace-process` runner unit tests.
 
 ## Target File And Folder Structure
 
@@ -1772,7 +1772,7 @@ operation services, and shape protocol responses.
 - `crates/shared/protocol/src/catalog.rs`
 - `crates/daemon/core/tests/unit/command/*`
 - `crates/daemon/operation_service/tests/command_exec.rs`
-- `crates/daemon/linux-namespace-subprocess/tests/unit/runner/command_exec/*`
+- `crates/daemon/namespace-process/tests/unit/runner/command_exec/*`
 - Temporary compatibility files in `crates/daemon/operation/src/command` only
   if needed
 
@@ -1884,7 +1884,7 @@ Conditional live E2E after packaging:
 ```text
 cargo run -p xtask -- package
 CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_exec
-CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p linux-namespace-subprocess
+CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p namespace-process
 ```
 
 ### Risks And Rollback Notes
@@ -2049,7 +2049,7 @@ Conditional live E2E:
 ```text
 cargo run -p xtask -- package
 CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_exec
-CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p linux-namespace-subprocess
+CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p namespace-process
 ```
 
 ### Risks And Rollback Notes
@@ -2175,7 +2175,7 @@ Conditional live E2E gate:
 ```text
 cargo run -p xtask -- package
 CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_exec
-CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p linux-namespace-subprocess
+CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p namespace-process
 ```
 
 ## Open Questions And Blockers

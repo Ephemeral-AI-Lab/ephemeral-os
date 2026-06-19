@@ -1,17 +1,19 @@
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
-use std::time::Instant;
 
 use crate::command::{
-    CancelCommandInput, CancellationState, CommandCallContext, CommandLaunchDriver,
-    CommandLifecycleState, CommandLinesOutput, CommandOutputSnapshot, CommandPollOutput,
-    CommandProcessStore, CommandRegistry, CommandServiceError, CommandStatus, CommandYield,
-    CompletedCommandRecord, FinalizationState, PollCommandInput, ReadCommandLinesInput,
-    RealCommandLaunchDriver, WriteStdinInput,
+    CancellationState, CommandLaunchDriver, CommandLifecycleState, CommandProcessStore,
+    CommandRegistry, CommandServiceError, CompletedCommandRecord, FinalizationState,
+    RealCommandLaunchDriver,
 };
-use crate::workspace_crate::CallerId;
-use crate::workspace_manager::WorkspaceManagerService;
+use crate::workspace_crate::{CallerId, WorkspaceId};
+use crate::workspace_remount::command_quiesce::{merge_report, ProcProcessGroupController};
+use crate::workspace_remount::{
+    CommandRemountInspection, CommandRemountQuiesce, ProcessGroupController,
+    RemountCancellationToken, RemountSwitchState,
+};
+use crate::workspace_session::WorkspaceSessionService;
 
-use super::remount::{ProcProcessGroupController, ProcessGroupController};
+mod impls;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct CommandFinalizationOptions {
@@ -20,7 +22,7 @@ pub struct CommandFinalizationOptions {
 }
 
 pub struct CommandOperationService {
-    workspace: Arc<WorkspaceManagerService>,
+    workspace: Arc<WorkspaceSessionService>,
     config: ::command::CommandConfig,
     registry: Arc<CommandRegistry>,
     process_store: Arc<CommandProcessStore>,
@@ -32,13 +34,13 @@ pub struct CommandOperationService {
 
 impl CommandOperationService {
     #[must_use]
-    pub fn new(workspace: Arc<WorkspaceManagerService>, config: ::command::CommandConfig) -> Self {
+    pub fn new(workspace: Arc<WorkspaceSessionService>, config: ::command::CommandConfig) -> Self {
         Self::with_finalization_options(workspace, config, CommandFinalizationOptions::default())
     }
 
     #[must_use]
     pub fn with_finalization_options(
-        workspace: Arc<WorkspaceManagerService>,
+        workspace: Arc<WorkspaceSessionService>,
         config: ::command::CommandConfig,
         finalization_options: CommandFinalizationOptions,
     ) -> Self {
@@ -57,7 +59,7 @@ impl CommandOperationService {
     #[doc(hidden)]
     #[must_use]
     pub fn with_launch_driver_for_test(
-        workspace: Arc<WorkspaceManagerService>,
+        workspace: Arc<WorkspaceSessionService>,
         config: ::command::CommandConfig,
         launch_driver: Arc<dyn CommandLaunchDriver>,
     ) -> Self {
@@ -76,7 +78,7 @@ impl CommandOperationService {
     #[doc(hidden)]
     #[must_use]
     pub fn with_launch_driver_and_remount_controller_for_test(
-        workspace: Arc<WorkspaceManagerService>,
+        workspace: Arc<WorkspaceSessionService>,
         config: ::command::CommandConfig,
         launch_driver: Arc<dyn CommandLaunchDriver>,
         remount_controller: Arc<dyn ProcessGroupController>,
@@ -95,7 +97,7 @@ impl CommandOperationService {
 
     #[cfg(test)]
     pub(crate) fn with_process_store_for_test(
-        workspace: Arc<WorkspaceManagerService>,
+        workspace: Arc<WorkspaceSessionService>,
         config: ::command::CommandConfig,
         process_store: CommandProcessStore,
     ) -> Self {
@@ -109,7 +111,7 @@ impl CommandOperationService {
 
     #[cfg(test)]
     pub(crate) fn with_process_store_and_launch_driver_for_test(
-        workspace: Arc<WorkspaceManagerService>,
+        workspace: Arc<WorkspaceSessionService>,
         config: ::command::CommandConfig,
         process_store: CommandProcessStore,
         launch_driver: Arc<dyn CommandLaunchDriver>,
@@ -132,7 +134,7 @@ impl CommandOperationService {
     }
 
     #[must_use]
-    pub fn workspace(&self) -> &Arc<WorkspaceManagerService> {
+    pub fn workspace(&self) -> &Arc<WorkspaceSessionService> {
         &self.workspace
     }
 
@@ -167,158 +169,93 @@ impl CommandOperationService {
             .unwrap_or_else(PoisonError::into_inner)
     }
 
-    pub fn write_stdin(
+    pub(crate) fn begin_remount_quiesce_for_workspace_session(
         &self,
-        input: WriteStdinInput,
-        context: CommandCallContext,
-    ) -> Result<CommandYield, CommandServiceError> {
-        let command_id = input.command_id;
-        let yield_time_ms = input
-            .yield_time_ms
-            .unwrap_or(self.config.default_yield_time_ms);
-        let (process, workspace_id) = {
-            let active = self.active_for_owner(&command_id, &context.caller_id)?;
-            (Arc::clone(&active.process), active.workspace_id.clone())
+        workspace_session_id: &WorkspaceId,
+    ) -> CommandRemountQuiesce {
+        let _admission_guard = self.lock_remount_admission();
+        let command_ids = self
+            .registry()
+            .commands_for_workspace_session(workspace_session_id);
+        let cancellation = RemountCancellationToken::new();
+        let mut quiesce = CommandRemountQuiesce {
+            inspection: CommandRemountInspection {
+                active_commands: command_ids.len(),
+                ..CommandRemountInspection::default()
+            },
+            held_process_group_ids: Vec::new(),
+            command_ids: Vec::new(),
+            process_store: Arc::clone(self.process_store()),
+            cancellation,
+            switch_state: RemountSwitchState::Quiescing,
+            controller: self.remount_controller(),
         };
-        if self.workspace().is_remount_pending(&workspace_id) {
-            return Err(CommandServiceError::WorkspaceRemountPending { workspace_id });
+        if command_ids.is_empty() {
+            quiesce.switch_state = RemountSwitchState::ReadyToSwitch;
+            return quiesce;
         }
-        let output = {
-            process.write_process_stdin(&input.chars).map_err(|error| {
-                CommandServiceError::CommandIo {
-                    command_id: command_id.clone(),
-                    error: error.to_string(),
-                }
-            })?;
-            if yield_time_ms == 0 {
-                String::new()
-            } else {
-                process.read_output_since(0)
-            }
-        };
 
-        Ok(CommandYield {
-            command_id: Some(command_id),
-            status: CommandStatus::Running,
-            exit_code: None,
-            output: CommandOutputSnapshot { stdout: output },
-            finalized: None,
-        })
-    }
-
-    pub fn read_lines(
-        &self,
-        input: ReadCommandLinesInput,
-        context: CommandCallContext,
-    ) -> Result<CommandLinesOutput, CommandServiceError> {
-        let command_id = input.command_id;
-        if let Some(active) = self.active_for_owner_or_none(&command_id, &context.caller_id)? {
-            let transcript = active.transcript.clone();
+        for command_id in command_ids {
+            quiesce.inspection.command_ids.push(command_id.clone());
+            let Some(active) = self.process_store().active(&command_id) else {
+                quiesce
+                    .inspection
+                    .blocked_reason
+                    .get_or_insert_with(|| "active_command_missing".to_owned());
+                continue;
+            };
+            let process = Arc::clone(&active.process);
+            let workspace_root = active.workspace_root.clone();
             drop(active);
-            return Ok(transcript.window(input.offset, input.limit).into_output(
-                command_id,
-                CommandStatus::Running,
-                None,
-            ));
-        }
 
-        let completed = self.completed_for_owner(&command_id, &context.caller_id)?;
-        Ok(completed
-            .transcript
-            .window(&command_id, input.offset, input.limit)?
-            .into_output(
-                command_id,
-                completed.result.status,
-                completed.result.exit_code,
-            ))
-    }
-
-    pub fn poll(
-        &self,
-        input: PollCommandInput,
-        context: CommandCallContext,
-    ) -> Result<CommandPollOutput, CommandServiceError> {
-        let command_id = input.command_id;
-        if let Some(active) = self.active_for_owner_or_none(&command_id, &context.caller_id)? {
-            if active.process.process_group_id().is_some() {
-                if let Some(process_exit) = active.process.take_exit() {
-                    drop(active);
-                    let result = self.finalize_command(command_id.clone(), process_exit)?;
-                    let completed = self.completed_for_owner(&command_id, &context.caller_id)?;
-                    let stdout = input.last_n_lines.map_or_else(
-                        || result.stdout.clone(),
-                        |last_n_lines| ::command::tail_lines(&result.stdout, last_n_lines),
-                    );
-                    return Ok(CommandPollOutput {
-                        command_id,
-                        status: result.status,
-                        exit_code: result.exit_code,
-                        output: CommandOutputSnapshot { stdout },
-                        finalized: completed.finalized,
-                    });
-                }
+            let Some(pgid) = process.process_group_id() else {
+                quiesce
+                    .inspection
+                    .blocked_reason
+                    .get_or_insert_with(|| "process_group_unavailable".to_owned());
+                continue;
+            };
+            quiesce.inspection.process_group_ids.push(pgid);
+            quiesce.command_ids.push(command_id.clone());
+            let cancellation = quiesce.cancellation.clone();
+            if self
+                .process_store()
+                .update_active(&command_id, |active| {
+                    active.lifecycle_state = CommandLifecycleState::QuiescedForRemount;
+                    active.cancellation = CancellationState::None;
+                    active.remount_cancellation = Some(cancellation);
+                    active.remount_switch_state = Some(RemountSwitchState::Quiescing);
+                })
+                .is_none()
+            {
+                quiesce
+                    .inspection
+                    .blocked_reason
+                    .get_or_insert_with(|| "active_command_missing".to_owned());
+                continue;
             }
-            let stdout = active
-                .process
-                .read_recent_output(input.last_n_lines.unwrap_or(200));
-            return Ok(CommandPollOutput {
-                command_id,
-                status: CommandStatus::Running,
-                exit_code: None,
-                output: CommandOutputSnapshot { stdout },
-                finalized: None,
-            });
+            let command_report = quiesce
+                .controller
+                .inspect_command_process_group(pgid, &workspace_root);
+            let held = command_report.blocked_reason.is_none();
+            merge_report(&mut quiesce.inspection, command_report);
+            if held {
+                quiesce.held_process_group_ids.push(pgid);
+            }
         }
 
-        let completed = self.completed_for_owner(&command_id, &context.caller_id)?;
-        let stdout = input.last_n_lines.map_or_else(
-            || completed.result.stdout.clone(),
-            |last_n_lines| ::command::tail_lines(&completed.result.stdout, last_n_lines),
-        );
-        Ok(CommandPollOutput {
-            command_id,
-            status: completed.result.status,
-            exit_code: completed.result.exit_code,
-            output: CommandOutputSnapshot { stdout },
-            finalized: completed.finalized,
-        })
+        quiesce.inspection.command_ids.sort();
+        quiesce.inspection.command_ids.dedup();
+        quiesce.inspection.process_group_ids.sort_unstable();
+        quiesce.inspection.process_group_ids.dedup();
+        quiesce.set_switch_state(RemountSwitchState::ReadyToSwitch);
+        if !quiesce.inspection.can_live_remount() {
+            quiesce.resume();
+        }
+        quiesce
     }
 
-    pub fn cancel(
-        &self,
-        input: CancelCommandInput,
-        context: CommandCallContext,
-    ) -> Result<CommandYield, CommandServiceError> {
-        let command_id = input.command_id;
-        self.ensure_active_owner(&command_id, &context.caller_id)?;
-        let output = self
-            .process_store
-            .update_active(&command_id, |active| {
-                if let Some(token) = active.remount_cancellation.clone() {
-                    token.request_cancel();
-                } else {
-                    active.process.cancel_process();
-                    active.lifecycle_state = CommandLifecycleState::Cancelled;
-                }
-                active.cancellation = CancellationState::Requested {
-                    requested_at: Instant::now(),
-                };
-                active.process.read_output_since(0)
-            })
-            .ok_or_else(|| CommandServiceError::CommandNotFound {
-                command_id: command_id.clone(),
-            })?;
-
-        Ok(CommandYield {
-            command_id: Some(command_id),
-            status: CommandStatus::Running,
-            exit_code: None,
-            output: CommandOutputSnapshot { stdout: output },
-            finalized: None,
-        })
-    }
-
-    fn active_for_owner<'a>(
+    pub(crate) fn active_for_owner<'a>(
         &'a self,
         command_id: &crate::command::CommandId,
         caller_id: &CallerId,
@@ -343,7 +280,7 @@ impl CommandOperationService {
         }
     }
 
-    fn active_for_owner_or_none<'a>(
+    pub(crate) fn active_for_owner_or_none<'a>(
         &'a self,
         command_id: &crate::command::CommandId,
         caller_id: &CallerId,
@@ -368,7 +305,7 @@ impl CommandOperationService {
         Ok(Some(active))
     }
 
-    fn completed_for_owner(
+    pub(crate) fn completed_for_owner(
         &self,
         command_id: &crate::command::CommandId,
         caller_id: &CallerId,
@@ -389,7 +326,7 @@ impl CommandOperationService {
         }
     }
 
-    fn ensure_active_owner(
+    pub(crate) fn ensure_active_owner(
         &self,
         command_id: &crate::command::CommandId,
         caller_id: &CallerId,
@@ -420,7 +357,7 @@ mod tests {
         ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceError,
         WorkspaceHandle, WorkspaceId, WorkspaceService,
     };
-    use crate::workspace_manager::WorkspaceManagerService;
+    use crate::workspace_session::WorkspaceSessionService;
 
     use super::CommandOperationService;
 
@@ -477,7 +414,7 @@ mod tests {
     }
 
     fn command_service() -> CommandOperationService {
-        let workspace = Arc::new(WorkspaceManagerService::new(Arc::new(NoopWorkspaceService)));
+        let workspace = Arc::new(WorkspaceSessionService::new(Arc::new(NoopWorkspaceService)));
         CommandOperationService::with_process_store_for_test(
             workspace,
             command::CommandConfig::default(),
@@ -493,7 +430,7 @@ mod tests {
         CallerId(id.to_owned())
     }
 
-    fn workspace_id(id: &str) -> WorkspaceId {
+    fn workspace_session_id(id: &str) -> WorkspaceId {
         WorkspaceId(id.to_owned())
     }
 
@@ -516,18 +453,20 @@ mod tests {
     fn active_record(
         command_id: CommandId,
         caller_id: CallerId,
-        workspace_id: WorkspaceId,
+        workspace_session_id: WorkspaceId,
     ) -> ActiveCommandProcess {
         ActiveCommandProcess {
             command_id: command_id.clone(),
             caller_id: caller_id.clone(),
-            workspace_id: workspace_id.clone(),
+            workspace_session_id: workspace_session_id.clone(),
             workspace_root: PathBuf::from("/workspace"),
             process: Arc::new(inactive_process(&command_id, &caller_id)),
             transcript: CommandTranscriptStore {
                 transcript_path: Some(write_transcript(&command_id, "active", "active output\n")),
             },
-            finalize_policy: CommandFinalizePolicy::Session { workspace_id },
+            finalize_policy: CommandFinalizePolicy::Session {
+                workspace_session_id,
+            },
             lifecycle_state: CommandLifecycleState::Running,
             cancellation: CancellationState::None,
             remount_cancellation: None,
@@ -541,13 +480,13 @@ mod tests {
     fn completed_record(
         command_id: CommandId,
         caller_id: CallerId,
-        workspace_id: WorkspaceId,
+        workspace_session_id: WorkspaceId,
         stdout: &str,
     ) -> CompletedCommandRecord {
         CompletedCommandRecord {
             command_id: command_id.clone(),
             caller_id,
-            workspace_id,
+            workspace_session_id,
             result: CommandTerminalResult {
                 status: CommandStatus::Completed,
                 exit_code: Some(0),
@@ -582,11 +521,11 @@ mod tests {
         service: &CommandOperationService,
         command_id: CommandId,
         caller_id: CallerId,
-        workspace_id: WorkspaceId,
+        workspace_session_id: WorkspaceId,
     ) {
         service
             .registry()
-            .bind(command_id.clone(), workspace_id.clone())
+            .bind(command_id.clone(), workspace_session_id.clone())
             .expect("registry bind succeeds");
         let reservation = service
             .process_store()
@@ -596,7 +535,7 @@ mod tests {
             .process_store()
             .insert_active(
                 reservation,
-                active_record(command_id, caller_id, workspace_id),
+                active_record(command_id, caller_id, workspace_session_id),
             )
             .expect("active insert succeeds");
     }
@@ -605,10 +544,10 @@ mod tests {
         service: &CommandOperationService,
         command_id: CommandId,
         caller_id: CallerId,
-        workspace_id: WorkspaceId,
+        workspace_session_id: WorkspaceId,
         stdout: &str,
     ) {
-        let record = completed_record(command_id.clone(), caller_id, workspace_id, stdout);
+        let record = completed_record(command_id.clone(), caller_id, workspace_session_id, stdout);
         service
             .process_store()
             .complete_active(record)
@@ -622,18 +561,18 @@ mod tests {
         let service = command_service();
         let command_id = command_id("cmd_completed");
         let owner = caller_id("caller-owner");
-        let workspace_id = workspace_id("workspace-1");
+        let workspace_session_id = workspace_session_id("workspace-1");
         seed_active(
             &service,
             command_id.clone(),
             owner.clone(),
-            workspace_id.clone(),
+            workspace_session_id.clone(),
         );
         complete_seeded_active(
             &service,
             command_id.clone(),
             owner,
-            workspace_id,
+            workspace_session_id,
             "first\nsecond\nthird\n",
         );
 
@@ -687,14 +626,20 @@ mod tests {
         let service = command_service();
         let command_id = command_id("cmd_completed");
         let owner = caller_id("caller-owner");
-        let workspace_id = workspace_id("workspace-1");
+        let workspace_session_id = workspace_session_id("workspace-1");
         seed_active(
             &service,
             command_id.clone(),
             owner.clone(),
-            workspace_id.clone(),
+            workspace_session_id.clone(),
         );
-        complete_seeded_active(&service, command_id.clone(), owner, workspace_id, "done\n");
+        complete_seeded_active(
+            &service,
+            command_id.clone(),
+            owner,
+            workspace_session_id,
+            "done\n",
+        );
 
         let poll_error = service
             .poll(

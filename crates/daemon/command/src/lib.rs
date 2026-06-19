@@ -7,7 +7,7 @@
 //! and what happens to the upperdir at finalization, is the command-ops tier's
 //! concern. The mode string a final response carries is opaque here.
 //!
-//! Mechanism crate, like `overlay` and `linux-namespace-subprocess`. The sandbox
+//! Mechanism crate, like `overlay` and `namespace-process`. The sandbox
 //! runtime this crate backs only ever runs on Linux, so the crate compiles
 //! for Linux alone; type-check from other hosts via
 //! `cargo check --target x86_64-unknown-linux-gnu`.

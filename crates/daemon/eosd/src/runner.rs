@@ -13,7 +13,7 @@ const DAEMON_CONFIG_YAML_ENV: &str = "EOS_DAEMON_CONFIG_YAML";
 /// Execute one command inside a holder namespace, reading the
 /// resolved `NamespaceCommandRequest` payload and emitting the `RunResult` JSON.
 ///
-/// This is a thin call into the `linux-namespace-subprocess` runner module:
+/// This is a thin call into the `namespace-process` runner module:
 /// read the request payload from stdin or `--request <path>`, load the runner
 /// config, dispatch the selected [`RunnerCliMode`], and write the compact
 /// `RunResult` JSON to stdout or `--output <path>`.
@@ -21,48 +21,42 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let config = RunnerCliConfig::parse(args)?;
     wait_for_start_ack(config.start_ack_fd)?;
     let request_json = read_payload(config.request_path.as_ref())?;
-    let request: linux_namespace_subprocess::protocol::NamespaceCommandRequest =
+    let request: namespace_process::runner::protocol::NamespaceCommandRequest =
         serde_json::from_str(&request_json).context("failed to decode ns-runner request JSON")?;
     let runner_config = load_runner_config()?;
     let mut output_target = OutputTarget::open(config.output_path.as_ref())?;
     let result = match config.mode {
-        RunnerCliMode::RemountOverlay => linux_namespace_subprocess::protocol::RunResult {
+        RunnerCliMode::RemountOverlay => namespace_process::runner::protocol::RunResult {
             exit_code: 0,
-            payload: linux_namespace_subprocess::runner::setns::remount_overlay(
-                &request,
-                &runner_config,
-            )
-            .context("ns-runner remount overlay failed")?,
+            payload: namespace_process::runner::setns::remount_overlay(&request, &runner_config)
+                .context("ns-runner remount overlay failed")?,
         },
         RunnerCliMode::MountOverlay => {
-            linux_namespace_subprocess::runner::setns::setns_overlay_mount(
-                &request,
-                &runner_config,
-            )
-            .context("ns-runner setns overlay mount failed")?;
+            namespace_process::runner::setns::setns_overlay_mount(&request, &runner_config)
+                .context("ns-runner setns overlay mount failed")?;
             ok_result()
         }
-        RunnerCliMode::ConfigureDns => linux_namespace_subprocess::protocol::RunResult {
+        RunnerCliMode::ConfigureDns => namespace_process::runner::protocol::RunResult {
             exit_code: 0,
-            payload: linux_namespace_subprocess::runner::setns::configure_dns(&request)
+            payload: namespace_process::runner::setns::configure_dns(&request)
                 .context("ns-runner configure dns failed")?,
         },
         RunnerCliMode::Run => {
-            linux_namespace_subprocess::runner::run(&request).context("ns-runner failed")?
+            namespace_process::runner::run(&request).context("ns-runner failed")?
         }
     };
     let output = serde_json::to_vec(&result).context("failed to encode ns-runner result JSON")?;
     write_payload(&mut output_target, &output)
 }
 
-fn ok_result() -> linux_namespace_subprocess::protocol::RunResult {
-    linux_namespace_subprocess::protocol::RunResult {
+fn ok_result() -> namespace_process::runner::protocol::RunResult {
+    namespace_process::runner::protocol::RunResult {
         exit_code: 0,
         payload: serde_json::json!({"success": true, "status": "ok"}),
     }
 }
 
-fn load_runner_config() -> Result<linux_namespace_subprocess::runner::config::RunnerConfig> {
+fn load_runner_config() -> Result<namespace_process::runner::config::RunnerConfig> {
     let doc = match std::env::var_os(DAEMON_CONFIG_YAML_ENV) {
         Some(path) => {
             let path = PathBuf::from(path);
@@ -71,7 +65,7 @@ fn load_runner_config() -> Result<linux_namespace_subprocess::runner::config::Ru
         None => config::load_prd().context("load eos-sandbox/config/prd.yml")?,
     };
     let config = doc
-        .section::<linux_namespace_subprocess::runner::config::RunnerConfig>("runner")
+        .section::<namespace_process::runner::config::RunnerConfig>("runner")
         .context("deserialize runner config section")?;
     config.validate().context("validate runner config")?;
     Ok(config)

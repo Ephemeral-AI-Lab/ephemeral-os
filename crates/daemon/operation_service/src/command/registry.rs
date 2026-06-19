@@ -6,7 +6,7 @@ use crate::workspace_crate::WorkspaceId;
 
 #[derive(Debug, Default)]
 pub struct CommandRegistry {
-    command_workspace: Mutex<HashMap<CommandId, WorkspaceId>>,
+    command_workspace_session: Mutex<HashMap<CommandId, WorkspaceId>>,
 }
 
 impl CommandRegistry {
@@ -18,32 +18,39 @@ impl CommandRegistry {
     pub fn bind(
         &self,
         command_id: CommandId,
-        workspace_id: WorkspaceId,
+        workspace_session_id: WorkspaceId,
     ) -> Result<(), CommandServiceError> {
-        let mut command_workspace = lock(&self.command_workspace);
-        if command_workspace.contains_key(&command_id) {
+        let mut command_workspace_session = lock(&self.command_workspace_session);
+        if command_workspace_session.contains_key(&command_id) {
             return Err(CommandServiceError::DuplicateCommandId { command_id });
         }
 
-        command_workspace.insert(command_id, workspace_id);
+        command_workspace_session.insert(command_id, workspace_session_id);
         Ok(())
     }
 
     #[must_use]
-    pub fn workspace_for(&self, command_id: &CommandId) -> Option<WorkspaceId> {
-        lock(&self.command_workspace).get(command_id).cloned()
+    pub fn workspace_session_for(&self, command_id: &CommandId) -> Option<WorkspaceId> {
+        lock(&self.command_workspace_session)
+            .get(command_id)
+            .cloned()
     }
 
     #[must_use]
     pub fn unbind(&self, command_id: &CommandId) -> Option<WorkspaceId> {
-        lock(&self.command_workspace).remove(command_id)
+        lock(&self.command_workspace_session).remove(command_id)
     }
 
     #[must_use]
-    pub fn commands_for_workspace(&self, workspace_id: &WorkspaceId) -> Vec<CommandId> {
-        let mut command_ids = lock(&self.command_workspace)
+    pub fn commands_for_workspace_session(
+        &self,
+        workspace_session_id: &WorkspaceId,
+    ) -> Vec<CommandId> {
+        let mut command_ids = lock(&self.command_workspace_session)
             .iter()
-            .filter(|(_, bound_workspace_id)| *bound_workspace_id == workspace_id)
+            .filter(|(_, bound_workspace_session_id)| {
+                *bound_workspace_session_id == workspace_session_id
+            })
             .map(|(command_id, _)| command_id.clone())
             .collect::<Vec<_>>();
         command_ids.sort();
@@ -63,8 +70,10 @@ mod tests {
 
     #[test]
     fn command_registry_contains_only_binding_map() {
-        let CommandRegistry { command_workspace } = CommandRegistry::new();
+        let CommandRegistry {
+            command_workspace_session,
+        } = CommandRegistry::new();
 
-        assert!(lock(&command_workspace).is_empty());
+        assert!(lock(&command_workspace_session).is_empty());
     }
 }

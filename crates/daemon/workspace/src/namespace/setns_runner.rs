@@ -11,7 +11,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 #[cfg(target_os = "linux")]
-use ::linux_namespace_subprocess::protocol::{NamespaceCommandRequest, RunResult, WorkspaceRoot};
+use ::namespace_process::runner::protocol::{NamespaceCommandRequest, RunResult, WorkspaceRoot};
 #[cfg(target_os = "linux")]
 use nix::sys::signal::{kill, Signal};
 #[cfg(target_os = "linux")]
