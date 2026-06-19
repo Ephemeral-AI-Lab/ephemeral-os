@@ -37,12 +37,22 @@ pub enum CommandServiceError {
         actual: WorkspaceId,
     },
 
+    #[error("workspace remount pending: {workspace_id:?}")]
+    WorkspaceRemountPending { workspace_id: WorkspaceId },
+
     #[error("command already completed: {command_id:?}")]
     CommandAlreadyCompleted { command_id: CommandId },
 
     #[error("command io failed for {command_id:?}: {error}")]
     CommandIo {
         command_id: CommandId,
+        error: String,
+    },
+
+    #[error("command transcript unavailable for {command_id:?} at {path:?}: {error}")]
+    CommandTranscriptUnavailable {
+        command_id: CommandId,
+        path: Option<PathBuf>,
         error: String,
     },
 

@@ -13,6 +13,16 @@ pub(crate) enum WorkspaceLifecycleState {
     Closing,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub enum WorkspaceRemountState {
+    #[default]
+    Active,
+    RemountPending,
+    RemountBlocked {
+        reason: String,
+    },
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkspaceSessionHandler {
     pub workspace_id: WorkspaceId,
@@ -21,6 +31,7 @@ pub struct WorkspaceSessionHandler {
     pub lease_id: LeaseId,
     pub snapshot: LayerStackSnapshotRef,
     pub layer_paths: Vec<PathBuf>,
+    pub remount_state: WorkspaceRemountState,
 }
 
 impl WorkspaceSessionHandler {
@@ -40,6 +51,7 @@ pub(crate) struct WorkspaceSession {
     pub snapshot: LayerStackSnapshotRef,
     pub layer_paths: Vec<PathBuf>,
     pub lifecycle_state: WorkspaceLifecycleState,
+    pub remount_state: WorkspaceRemountState,
     pub created_at: SystemTime,
     pub last_activity: SystemTime,
 }
@@ -56,6 +68,7 @@ impl WorkspaceSession {
             snapshot: handle.snapshot.clone(),
             handle,
             lifecycle_state: WorkspaceLifecycleState::Active,
+            remount_state: WorkspaceRemountState::Active,
             created_at: now,
             last_activity: now,
         }
@@ -69,6 +82,7 @@ impl WorkspaceSession {
             lease_id: self.lease_id.clone(),
             snapshot: self.snapshot.clone(),
             layer_paths: self.layer_paths.clone(),
+            remount_state: self.remount_state.clone(),
         }
     }
 
@@ -96,6 +110,47 @@ impl WorkspaceSession {
     pub(crate) fn mark_active(&mut self) {
         self.lifecycle_state = WorkspaceLifecycleState::Active;
         self.last_activity = SystemTime::now();
+    }
+
+    pub(crate) fn begin_remount(
+        &mut self,
+    ) -> Result<WorkspaceSessionHandler, WorkspaceManagerError> {
+        self.ensure_active()?;
+        if matches!(self.remount_state, WorkspaceRemountState::RemountPending) {
+            return Err(WorkspaceManagerError::RemountAlreadyPending {
+                workspace_id: self.workspace_id.clone(),
+            });
+        }
+        self.remount_state = WorkspaceRemountState::RemountPending;
+        self.last_activity = SystemTime::now();
+        Ok(self.handler())
+    }
+
+    pub(crate) fn finish_remount(&mut self) -> Result<(), WorkspaceManagerError> {
+        self.ensure_active()?;
+        if !matches!(
+            self.remount_state,
+            WorkspaceRemountState::RemountPending | WorkspaceRemountState::RemountBlocked { .. }
+        ) {
+            return Err(WorkspaceManagerError::RemountNotPending {
+                workspace_id: self.workspace_id.clone(),
+            });
+        }
+        self.remount_state = WorkspaceRemountState::Active;
+        self.last_activity = SystemTime::now();
+        Ok(())
+    }
+
+    pub(crate) fn block_remount(&mut self, reason: String) -> Result<(), WorkspaceManagerError> {
+        self.ensure_active()?;
+        if !matches!(self.remount_state, WorkspaceRemountState::RemountPending) {
+            return Err(WorkspaceManagerError::RemountNotPending {
+                workspace_id: self.workspace_id.clone(),
+            });
+        }
+        self.remount_state = WorkspaceRemountState::RemountBlocked { reason };
+        self.last_activity = SystemTime::now();
+        Ok(())
     }
 
     pub(crate) fn refresh_after_capture(&mut self, base_revision: BaseRevision) {

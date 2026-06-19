@@ -5,7 +5,8 @@ use std::path::Path;
 use serde_json::Value;
 
 use crate::command::{
-    CommandId, CommandLinesOutput, CommandStatus, CommandStream, CommandTranscriptRow,
+    CommandId, CommandLinesOutput, CommandServiceError, CommandStatus, CommandStream,
+    CommandTranscriptRow,
 };
 
 use super::process_store::{CommandTranscriptStore, RetainedCommandTranscript};
@@ -30,9 +31,19 @@ impl CommandTranscriptStore {
 }
 
 impl RetainedCommandTranscript {
-    #[must_use]
-    pub(crate) fn window(&self, offset: u64, limit: usize) -> CommandTranscriptWindow {
-        transcript_window(self.transcript_path.as_deref(), offset, limit)
+    pub(crate) fn window(
+        &self,
+        command_id: &CommandId,
+        offset: u64,
+        limit: usize,
+    ) -> Result<CommandTranscriptWindow, CommandServiceError> {
+        required_transcript_window(self.transcript_path.as_deref(), offset, limit).map_err(
+            |error| CommandServiceError::CommandTranscriptUnavailable {
+                command_id: command_id.clone(),
+                path: self.transcript_path.clone(),
+                error,
+            },
+        )
     }
 }
 
@@ -59,7 +70,7 @@ impl CommandTranscriptWindow {
 }
 
 fn transcript_window(path: Option<&Path>, offset: u64, limit: usize) -> CommandTranscriptWindow {
-    let retained = path.and_then(read_transcript);
+    let retained = path.and_then(|path| read_transcript(path).ok());
     let (rows, truncated_before) = retained.map_or_else(
         || (Vec::new(), 0),
         |retained| {
@@ -70,6 +81,21 @@ fn transcript_window(path: Option<&Path>, offset: u64, limit: usize) -> CommandT
         },
     );
     window_rows(rows, offset, limit, truncated_before)
+}
+
+fn required_transcript_window(
+    path: Option<&Path>,
+    offset: u64,
+    limit: usize,
+) -> Result<CommandTranscriptWindow, String> {
+    let path = path.ok_or_else(|| "retained transcript path is missing".to_owned())?;
+    let retained = read_transcript(path)?;
+    Ok(window_rows(
+        parse_transcript_rows(&retained.text, retained.truncated_before),
+        offset,
+        limit,
+        retained.truncated_before,
+    ))
 }
 
 fn window_rows(
@@ -114,115 +140,159 @@ struct RetainedTranscript {
     truncated_before: u64,
 }
 
-fn read_transcript(path: &Path) -> Option<RetainedTranscript> {
+fn read_transcript(path: &Path) -> Result<RetainedTranscript, String> {
     if path.as_os_str().is_empty() {
-        return None;
+        return Err("transcript path is empty".to_owned());
     }
-    let mut file = File::open(path).ok()?;
-    let len = file.metadata().ok()?.len();
+    let mut file =
+        File::open(path).map_err(|error| format!("open transcript {}: {error}", path.display()))?;
+    let len = file
+        .metadata()
+        .map_err(|error| format!("read transcript metadata {}: {error}", path.display()))?
+        .len();
     let bounded_start = len.saturating_sub(MAX_TRANSCRIPT_WINDOW_BYTES);
-    let retained_start = line_aligned_retained_start(&mut file, bounded_start, len)?;
-    let truncated_before = count_rows_before(&mut file, retained_start)?;
-    file.seek(SeekFrom::Start(retained_start)).ok()?;
+    let retained_start = line_aligned_retained_start(&mut file, bounded_start, len)
+        .map_err(|error| format!("align transcript window {}: {error}", path.display()))?;
+    let truncated_before = count_rows_before(&mut file, retained_start)
+        .map_err(|error| format!("count transcript rows {}: {error}", path.display()))?;
+    file.seek(SeekFrom::Start(retained_start))
+        .map_err(|error| format!("seek transcript {}: {error}", path.display()))?;
     let read_len = len.saturating_sub(retained_start);
     let mut bytes = Vec::new();
-    file.take(read_len).read_to_end(&mut bytes).ok()?;
-    Some(RetainedTranscript {
+    file.take(read_len)
+        .read_to_end(&mut bytes)
+        .map_err(|error| format!("read transcript {}: {error}", path.display()))?;
+    Ok(RetainedTranscript {
         text: String::from_utf8_lossy(&bytes).into_owned(),
         truncated_before,
     })
 }
 
-fn line_aligned_retained_start(file: &mut File, bounded_start: u64, len: u64) -> Option<u64> {
+fn line_aligned_retained_start(
+    file: &mut File,
+    bounded_start: u64,
+    len: u64,
+) -> Result<u64, String> {
     if bounded_start == 0 {
-        return Some(0);
+        return Ok(0);
     }
     file.seek(SeekFrom::Start(bounded_start.saturating_sub(1)))
-        .ok()?;
+        .map_err(|error| error.to_string())?;
     let mut previous = [0_u8; 1];
-    file.read_exact(&mut previous).ok()?;
+    file.read_exact(&mut previous)
+        .map_err(|error| error.to_string())?;
     if previous[0] == b'\n' {
-        return Some(bounded_start);
+        return Ok(bounded_start);
     }
 
-    file.seek(SeekFrom::Start(bounded_start)).ok()?;
+    file.seek(SeekFrom::Start(bounded_start))
+        .map_err(|error| error.to_string())?;
     let mut current = bounded_start;
     let mut buffer = [0_u8; 8192];
     while current < len {
-        let read = file.read(&mut buffer).ok()?;
+        let read = file.read(&mut buffer).map_err(|error| error.to_string())?;
         if read == 0 {
             break;
         }
         if let Some(index) = buffer[..read].iter().position(|byte| *byte == b'\n') {
-            return Some(
-                current
-                    .saturating_add(u64::try_from(index).ok()?)
-                    .saturating_add(1),
-            );
+            return Ok(current
+                .saturating_add(u64::try_from(index).map_err(|error| error.to_string())?)
+                .saturating_add(1));
         }
-        current = current.saturating_add(u64::try_from(read).ok()?);
+        current = current.saturating_add(u64::try_from(read).map_err(|error| error.to_string())?);
     }
-    Some(len)
+    Ok(len)
 }
 
-fn count_rows_before(file: &mut File, end: u64) -> Option<u64> {
+fn count_rows_before(file: &mut File, end: u64) -> Result<u64, String> {
     if end == 0 {
-        return Some(0);
+        return Ok(0);
     }
-    file.seek(SeekFrom::Start(0)).ok()?;
+    file.seek(SeekFrom::Start(0))
+        .map_err(|error| error.to_string())?;
     let mut remaining = end;
     let mut rows = 0_u64;
     let mut last_byte = None;
     let mut buffer = [0_u8; 8192];
     while remaining > 0 {
-        let read_limit = usize::try_from(remaining.min(buffer.len() as u64)).ok()?;
-        let read = file.read(&mut buffer[..read_limit]).ok()?;
+        let read_limit = usize::try_from(remaining.min(buffer.len() as u64))
+            .map_err(|error| error.to_string())?;
+        let read = file
+            .read(&mut buffer[..read_limit])
+            .map_err(|error| error.to_string())?;
         if read == 0 {
             break;
         }
         rows = rows.saturating_add(
-            u64::try_from(buffer[..read].iter().filter(|byte| **byte == b'\n').count()).ok()?,
+            u64::try_from(buffer[..read].iter().filter(|byte| **byte == b'\n').count())
+                .map_err(|error| error.to_string())?,
         );
         last_byte = Some(buffer[read - 1]);
-        remaining = remaining.saturating_sub(u64::try_from(read).ok()?);
+        remaining =
+            remaining.saturating_sub(u64::try_from(read).map_err(|error| error.to_string())?);
     }
     if last_byte.is_some_and(|byte| byte != b'\n') {
         rows = rows.saturating_add(1);
     }
-    Some(rows)
+    Ok(rows)
 }
 
 fn parse_transcript_rows(text: &str, fallback_start_offset: u64) -> Vec<CommandTranscriptRow> {
     let mut rows = Vec::new();
     for raw_line in text.lines() {
-        if let Some(row) = parse_json_row(raw_line) {
-            rows.push(row);
-            continue;
+        match parse_json_row(raw_line) {
+            Ok(Some(row)) => rows.push(row),
+            Ok(None) => rows.push(CommandTranscriptRow {
+                offset: fallback_start_offset
+                    .saturating_add(u64::try_from(rows.len()).unwrap_or(u64::MAX)),
+                stream: CommandStream::Stdout,
+                text: strip_transcript_timestamp(raw_line).to_owned(),
+            }),
+            Err(()) => {}
         }
-        rows.push(CommandTranscriptRow {
-            offset: fallback_start_offset
-                .saturating_add(u64::try_from(rows.len()).unwrap_or(u64::MAX)),
-            stream: CommandStream::Stdout,
-            text: strip_transcript_timestamp(raw_line).to_owned(),
-        });
     }
     rows
 }
 
-fn parse_json_row(raw_line: &str) -> Option<CommandTranscriptRow> {
-    let value = serde_json::from_str::<Value>(raw_line).ok()?;
-    let offset = value.get("offset")?.as_u64()?;
-    let stream = match value.get("stream")?.as_str()? {
+fn parse_json_row(raw_line: &str) -> Result<Option<CommandTranscriptRow>, ()> {
+    let value = match serde_json::from_str::<Value>(raw_line) {
+        Ok(value) => value,
+        Err(_) if looks_like_structured_row(raw_line) => return Err(()),
+        Err(_) => return Ok(None),
+    };
+    let Value::Object(object) = &value else {
+        return Ok(None);
+    };
+    if !(object.contains_key("offset")
+        && object.contains_key("stream")
+        && object.contains_key("text"))
+    {
+        return Ok(None);
+    }
+    let offset = value.get("offset").and_then(Value::as_u64).ok_or(())?;
+    let stream = match value.get("stream").and_then(Value::as_str).ok_or(())? {
         "stdout" => CommandStream::Stdout,
         "stderr" => CommandStream::Stderr,
-        _ => return None,
+        _ => return Err(()),
     };
-    let text = value.get("text")?.as_str()?.to_owned();
-    Some(CommandTranscriptRow {
+    let text = value
+        .get("text")
+        .and_then(Value::as_str)
+        .ok_or(())?
+        .to_owned();
+    Ok(Some(CommandTranscriptRow {
         offset,
         stream,
         text,
-    })
+    }))
+}
+
+fn looks_like_structured_row(raw_line: &str) -> bool {
+    let trimmed = raw_line.trim_start();
+    trimmed.starts_with('{')
+        && trimmed.contains("\"offset\"")
+        && trimmed.contains("\"stream\"")
+        && trimmed.contains("\"text\"")
 }
 
 fn strip_transcript_timestamp(line: &str) -> &str {
@@ -290,6 +360,33 @@ mod tests {
                 },
                 CommandTranscriptRow {
                     offset: 1,
+                    stream: CommandStream::Stderr,
+                    text: "err".to_owned(),
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn transcript_window_skips_malformed_structured_rows() {
+        let rows = parse_transcript_rows(
+            "{\"offset\":0,\"stream\":\"stdout\",\"text\":\"out\"}\n\
+             {\"offset\":1,\"stream\":\"stderr\",\"text\":\n\
+             {\"offset\":1,\"stream\":\"unknown\",\"text\":\"bad\"}\n\
+             {\"offset\":2,\"stream\":\"stderr\",\"text\":\"err\"}\n",
+            0,
+        );
+
+        assert_eq!(
+            rows,
+            vec![
+                CommandTranscriptRow {
+                    offset: 0,
+                    stream: CommandStream::Stdout,
+                    text: "out".to_owned(),
+                },
+                CommandTranscriptRow {
+                    offset: 2,
                     stream: CommandStream::Stderr,
                     text: "err".to_owned(),
                 },

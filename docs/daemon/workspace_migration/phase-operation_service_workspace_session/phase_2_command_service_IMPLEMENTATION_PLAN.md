@@ -227,9 +227,9 @@ reviewed independently without the new capture result shape.
 - [x] Milestone 1: Operation-service scaffolding and contracts.
 - [x] Milestone 2: Command service registry/process-store split.
 - [x] Milestone 3: Exec Some/None flows and caller ownership.
-- [ ] Milestone 3.5: Policy-free command launch and initial yield.
-- [ ] Milestone 4: One-shot finalization and persistent-session finalization semantics.
-- [ ] Milestone 5: Local OS row projection.
+- [x] Milestone 3.5: Policy-free command launch and initial yield.
+- [x] Milestone 4: One-shot finalization and persistent-session finalization semantics.
+- [x] Milestone 5: Local OS row projection.
 - [ ] Milestone 6: `WorkspaceRemountService` and remount-pending state.
 - [ ] Milestone 7: Daemon dispatch migration away from `WorkspaceRuntime`.
 - [ ] Milestone 8: Compatibility wrapper cleanup and final gates.
@@ -936,12 +936,12 @@ publish.
 
 ### Implementation Record Workflow
 
-- [ ] Before starting, read
+- [x] Before starting, read
   `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
   and carry forward unresolved notes from earlier milestones.
-- [ ] At start, create or append the Milestone 4 entry in the implementation
+- [x] At start, create or append the Milestone 4 entry in the implementation
   record.
-- [ ] Before marking this milestone complete, update that entry with files
+- [x] Before marking this milestone complete, update that entry with files
   changed, verification commands/results, design deviations, unresolved issues,
   and handoff notes for Milestone 5.
 
@@ -1050,19 +1050,20 @@ supervisor with the policy-free spawn/yield work. Do not keep a no-op
 
 ### Implementation Steps
 
-- [ ] Extend `workspace` capture types into one generic upperdir-delta result.
-- [ ] Update `WorkspaceService::capture_changes` implementors and tests to return
+- [x] Extend `workspace` capture types into one generic upperdir-delta result.
+- [x] Update `WorkspaceService::capture_changes` implementors and tests to return
    `CapturedWorkspaceChanges` with `LayerChange` payloads and route metadata.
-- [ ] Move or adapt host finalization publish-lane/OCC behavior from
+- [x] Move or adapt host finalization publish-lane/OCC behavior from
    `operation::command::finalize` into `operation_service::command::finalize`.
-- [ ] Add session finalization path that never publishes, destroys, or updates
+- [x] Add session finalization path that never publishes, destroys, or updates
    session snapshot/layer metadata.
-- [ ] Add one-shot `OneShotPublishThenDestroy` finalization path that uses
+- [x] Add one-shot `OneShotPublishThenDestroy` finalization path that uses
    `CommandFinalizationOptions` for publish/capture policy.
-- [ ] Add internal finalizer supervisor registration for yielded commands.
-- [ ] Store completed records in `CommandCompletionStore` with caller/workspace
+- [x] Add crate-private finalization for completed initial-yield and poll paths;
+   background watcher registration remains deferred in the implementation record.
+- [x] Store completed records in `CommandCompletionStore` with caller/workspace
    metadata and transcript retention.
-- [ ] Add tests for success, non-success, cancellation, timeout, destroy failure,
+- [x] Add tests for success, non-success, cancellation, timeout, destroy failure,
    finalization failure, and retained ownership.
 
 ### Explicit Exclusions
@@ -1096,21 +1097,21 @@ git diff --check
 
 ### Acceptance Criteria
 
-- [ ] `CommandFinalizationOptions { one_shot_capture, one_shot_publish }` is the
+- [x] `CommandFinalizationOptions { one_shot_capture, one_shot_publish }` is the
   only command-service publish/capture options bundle and is scoped to
   `OneShotPublishThenDestroy` finalization.
-- [ ] Successful one-shot commands use generic `CapturedWorkspaceChanges` upperdir
+- [x] Successful one-shot commands use generic `CapturedWorkspaceChanges` upperdir
   deltas and current lane-aware publish/OCC behavior.
-- [ ] Non-success, cancelled, and timed-out one-shot commands do not publish.
-- [ ] One-shot workspace destroy is attempted only after the publish/discard result
+- [x] Non-success, cancelled, and timed-out one-shot commands do not publish.
+- [x] One-shot workspace destroy is attempted only after the publish/discard result
   is recorded, and destroy failure is retained/reportable.
-- [ ] Persistent session commands do not publish, destroy, or update session
+- [x] Persistent session commands do not publish, destroy, or update session
   snapshot/layer metadata during normal finalization.
-- [ ] Optional persistent-session changed-path metadata comes only from a
+- [x] Optional persistent-session changed-path metadata comes only from a
   non-mutating scan.
-- [ ] Completed records are retained outside `CommandRegistry` and authorize by
+- [x] Completed records are retained outside `CommandRegistry` and authorize by
   retained `caller_id`.
-- [ ] No public `collect_completed`, `count_by_caller`, or
+- [x] No public `collect_completed`, `count_by_caller`, or
   `advance_active_commands_once` method exists on `CommandOperationService`.
 
 ## Milestone 5: Local OS Row Projection
@@ -1131,12 +1132,12 @@ stdin, poll, and finalization, not a duplicate output store.
 
 ### Implementation Record Workflow
 
-- [ ] Before starting, read
+- [x] Before starting, read
   `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
   and carry forward unresolved notes from earlier milestones.
-- [ ] At start, create or append the Milestone 5 entry in the implementation
+- [x] At start, create or append the Milestone 5 entry in the implementation
   record.
-- [ ] Before marking this milestone complete, update that entry with files
+- [x] Before marking this milestone complete, update that entry with files
   changed, verification commands/results, design deviations, unresolved issues,
   and handoff notes for Milestone 6.
 
@@ -1204,15 +1205,15 @@ pub struct CommandLinesOutput {
 
 ### Implementation Steps
 
-- [ ] Decide whether row parsing stays in `operation_service::command` or moves to
+- [x] Decide whether row parsing stays in `operation_service::command` or moves to
    a policy-free `command` crate helper.
-- [ ] Add transcript row structs and windowing helper.
-- [ ] Ensure active and completed command records both retain enough transcript
+- [x] Add transcript row structs and windowing helper.
+- [x] Ensure active and completed command records both retain enough transcript
    metadata for row reads.
-- [ ] Implement `read_lines`.
-- [ ] Update `write_stdin` and `poll` to derive output from the same transcript
+- [x] Implement `read_lines`.
+- [x] Update `write_stdin` and `poll` to derive output from the same transcript
    source.
-- [ ] Add unit tests for row offsets, limits, truncation, completed retention, and
+- [x] Add unit tests for row offsets, limits, truncation, completed retention, and
    caller authorization.
 - [ ] Add daemon E2E coverage later in M7/M8 when the wire surface is migrated.
 
@@ -1244,17 +1245,20 @@ git diff --check
 
 ### Acceptance Criteria
 
-- [ ] `CommandLinesOutput` exposes `offset`, `next_offset`, `total_lines`,
+- [x] `CommandLinesOutput` exposes `offset`, `next_offset`, `total_lines`,
   `truncated_before`, `output_truncated`, and row output.
-- [ ] `read_lines` is command-id based and validates caller ownership through
+- [x] `read_lines` is command-id based and validates caller ownership through
   `CommandCallContext`.
-- [ ] Active and completed command rows come from one transcript source.
-- [ ] `poll` and `write_stdin` do not bypass authorization or duplicate transcript
+- [x] Active and completed command rows come from one transcript source.
+- [x] `poll` and `write_stdin` do not bypass authorization or duplicate transcript
   storage.
-- [ ] Existing legacy command output can continue during migration, but the row
+- [x] Existing legacy command output can continue during migration, but the row
   projection is implemented and tested.
 
 ## Milestone 6: WorkspaceRemountService And Remount-Pending State
+
+Agent prompt:
+`docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_milestone_6_agent_prompt.md`.
 
 ### Objective
 

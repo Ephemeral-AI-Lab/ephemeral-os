@@ -60,6 +60,11 @@ impl CommandOperationService {
                 )?
             }
         };
+        if is_session_command && self.workspace().is_remount_pending(&handler.workspace_id) {
+            return Err(CommandServiceError::WorkspaceRemountPending {
+                workspace_id: handler.workspace_id.clone(),
+            });
+        }
         let command_id = self.process_store().allocate_command_id();
         let reservation = match self.process_store().try_reserve() {
             Ok(reservation) => reservation,
@@ -74,6 +79,7 @@ impl CommandOperationService {
             }
         };
         let workspace_id = handler.workspace_id.clone();
+        let workspace_root = handler.handle.workspace_root.clone();
         let finalize_policy = finalize_policy(is_session_command, &workspace_id);
         let launch = match self.prepare_launch_context(&input, &handler, &command_id) {
             Ok(launch) => launch,
@@ -132,6 +138,7 @@ impl CommandOperationService {
             command_id: command_id.clone(),
             caller_id: context.caller_id.clone(),
             workspace_id,
+            workspace_root,
             process,
             transcript: CommandTranscriptStore {
                 transcript_path: Some(launch.transcript_path.clone()),
@@ -139,6 +146,8 @@ impl CommandOperationService {
             finalize_policy,
             lifecycle_state: CommandLifecycleState::Running,
             cancellation: CancellationState::None,
+            remount_cancellation: None,
+            remount_switch_state: None,
             finalization: FinalizationState::NotStarted,
             trace_origin: CommandTraceOrigin,
             started_at: Instant::now(),
@@ -715,6 +724,7 @@ mod tests {
             command_id: command_id.clone(),
             caller_id: caller_id.clone(),
             workspace_id: workspace_id.clone(),
+            workspace_root: PathBuf::from("/workspace"),
             process: Arc::new(command::CommandProcess::inactive_for_test(
                 command::CommandProcessSpec {
                     id: command_id.0.clone(),
@@ -727,6 +737,8 @@ mod tests {
             finalize_policy: CommandFinalizePolicy::Session { workspace_id },
             lifecycle_state: CommandLifecycleState::Running,
             cancellation: CancellationState::None,
+            remount_cancellation: None,
+            remount_switch_state: None,
             finalization: FinalizationState::NotStarted,
             trace_origin: CommandTraceOrigin,
             started_at: Instant::now(),

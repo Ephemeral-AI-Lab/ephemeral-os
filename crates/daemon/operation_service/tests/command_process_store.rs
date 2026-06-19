@@ -40,6 +40,7 @@ fn active_record(
         command_id: command_id.clone(),
         caller_id: caller_id.clone(),
         workspace_id: workspace_id.clone(),
+        workspace_root: PathBuf::from("/workspace"),
         process: Arc::new(inactive_process(&command_id, &caller_id)),
         transcript: CommandTranscriptStore {
             transcript_path: Some(PathBuf::from("/tmp/transcript.jsonl")),
@@ -47,6 +48,8 @@ fn active_record(
         finalize_policy: CommandFinalizePolicy::Session { workspace_id },
         lifecycle_state: CommandLifecycleState::Running,
         cancellation: CancellationState::None,
+        remount_cancellation: None,
+        remount_switch_state: None,
         finalization: FinalizationState::NotStarted,
         trace_origin: CommandTraceOrigin,
         started_at: Instant::now(),

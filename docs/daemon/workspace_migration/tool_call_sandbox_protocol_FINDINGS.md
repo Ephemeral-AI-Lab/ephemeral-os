@@ -35,6 +35,22 @@ namespace-runner request shape.
   [`fresh_ns/command.rs`](../../../crates/daemon/linux-namespace-subprocess/src/runner/fresh_ns/command.rs#L19-L27),
   and [`setns.rs`](../../../crates/daemon/linux-namespace-subprocess/src/runner/setns.rs#L477-L483).
 
+- `RunRequest` is a daemon-to-namespace-runner wire DTO, not only an in-process
+  helper type. The workspace setns path serializes it to the ns-runner child's
+  stdin, and the command path writes the same request shape as a runner artifact:
+  [`protocol/mod.rs`](../../../crates/daemon/linux-namespace-subprocess/src/protocol/mod.rs#L1-L1),
+  [`setns_runner.rs`](../../../crates/daemon/workspace/src/namespace/setns_runner.rs#L206-L229),
+  and
+  [`pty.rs`](../../../crates/daemon/command/src/pty.rs#L300-L344).
+
+- The request is not command-only. `RunnerVerb` also carries `plugin_service`,
+  `plugin_setup`, and unknown verb passthrough, and workspace namespace helpers
+  can construct arbitrary setns verbs such as overlay mount/remount operations:
+  [`protocol/mod.rs`](../../../crates/daemon/linux-namespace-subprocess/src/protocol/mod.rs#L32-L45),
+  [`fresh_ns.rs`](../../../crates/daemon/linux-namespace-subprocess/src/runner/fresh_ns.rs#L83-L89),
+  and
+  [`setns_runner.rs`](../../../crates/daemon/workspace/src/namespace/setns_runner.rs#L133-L156).
+
 - Tests currently assert the serialized legacy field name:
   [`crates/daemon/command/src/launch.rs`](../../../crates/daemon/command/src/launch.rs#L103-L107)
   and
@@ -47,5 +63,10 @@ namespace-runner request shape.
   crosses into namespace runner code.
 - Rename or replace `ToolCall` / `tool_call` in
   `linux-namespace-subprocess::protocol` with sandbox-native request vocabulary.
+- Treat this as a wire-compatibility migration: support old and new serialized
+  request forms, or version the runner request, until every daemon producer and
+  ns-runner consumer has moved together.
+- Preserve `RunnerVerb` compatibility for command, plugin, setup, setns overlay,
+  remount/probe, and unknown passthrough forms during the rename.
 - Preserve compatibility until daemon dispatch migration and legacy
   `operation::command` cleanup no longer require the old serialized field name.

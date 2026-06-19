@@ -1,3 +1,11 @@
+//! Isolated-network workspace implementation.
+//!
+//! This adapter uses the same private overlay and holder-backed workspace shape
+//! as host mode, then adds a dedicated network namespace, veth attachment, DNS
+//! configuration, network policy, and cgroup resources. The current manager
+//! keeps caller-keyed handles open across commands, but that persistence policy
+//! is separate from the definition of `NetworkMode::Isolated`.
+
 use std::collections::HashMap;
 use std::path::PathBuf;
 

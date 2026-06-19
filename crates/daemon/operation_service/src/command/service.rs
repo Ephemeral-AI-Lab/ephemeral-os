@@ -135,19 +135,24 @@ impl CommandOperationService {
         let yield_time_ms = input
             .yield_time_ms
             .unwrap_or(self.config.default_yield_time_ms);
-        let output = {
+        let (process, workspace_id) = {
             let active = self.active_for_owner(&command_id, &context.caller_id)?;
-            active
-                .process
-                .write_process_stdin(&input.chars)
-                .map_err(|error| CommandServiceError::CommandIo {
+            (Arc::clone(&active.process), active.workspace_id.clone())
+        };
+        if self.workspace().is_remount_pending(&workspace_id) {
+            return Err(CommandServiceError::WorkspaceRemountPending { workspace_id });
+        }
+        let output = {
+            process.write_process_stdin(&input.chars).map_err(|error| {
+                CommandServiceError::CommandIo {
                     command_id: command_id.clone(),
                     error: error.to_string(),
-                })?;
+                }
+            })?;
             if yield_time_ms == 0 {
                 String::new()
             } else {
-                active.process.read_output_since(0)
+                process.read_output_since(0)
             }
         };
 
@@ -179,7 +184,7 @@ impl CommandOperationService {
         let completed = self.completed_for_owner(&command_id, &context.caller_id)?;
         Ok(completed
             .transcript
-            .window(input.offset, input.limit)
+            .window(&command_id, input.offset, input.limit)?
             .into_output(
                 command_id,
                 completed.result.status,
@@ -245,12 +250,15 @@ impl CommandOperationService {
     ) -> Result<CommandYield, CommandServiceError> {
         let command_id = input.command_id;
         self.ensure_active_owner(&command_id, &context.caller_id)?;
-        let _workspace_id = self.active_workspace_for_command(&command_id)?;
         let output = self
             .process_store
             .update_active(&command_id, |active| {
-                active.process.cancel_process();
-                active.lifecycle_state = CommandLifecycleState::Cancelled;
+                if let Some(token) = active.remount_cancellation.clone() {
+                    token.request_cancel();
+                } else {
+                    active.process.cancel_process();
+                    active.lifecycle_state = CommandLifecycleState::Cancelled;
+                }
                 active.cancellation = CancellationState::Requested {
                     requested_at: Instant::now(),
                 };
@@ -266,22 +274,6 @@ impl CommandOperationService {
             exit_code: None,
             output: CommandOutputSnapshot { stdout: output },
             finalized: None,
-        })
-    }
-
-    pub(crate) fn active_workspace_for_command(
-        &self,
-        command_id: &crate::command::CommandId,
-    ) -> Result<crate::workspace_crate::WorkspaceId, CommandServiceError> {
-        if self.process_store.active(command_id).is_none() {
-            return Err(CommandServiceError::CommandNotFound {
-                command_id: command_id.clone(),
-            });
-        }
-        self.registry.workspace_for(command_id).ok_or_else(|| {
-            CommandServiceError::CommandNotFound {
-                command_id: command_id.clone(),
-            }
         })
     }
 
@@ -489,6 +481,7 @@ mod tests {
             command_id: command_id.clone(),
             caller_id: caller_id.clone(),
             workspace_id: workspace_id.clone(),
+            workspace_root: PathBuf::from("/workspace"),
             process: Arc::new(inactive_process(&command_id, &caller_id)),
             transcript: CommandTranscriptStore {
                 transcript_path: Some(write_transcript(&command_id, "active", "active output\n")),
@@ -496,6 +489,8 @@ mod tests {
             finalize_policy: CommandFinalizePolicy::Session { workspace_id },
             lifecycle_state: CommandLifecycleState::Running,
             cancellation: CancellationState::None,
+            remount_cancellation: None,
+            remount_switch_state: None,
             finalization: FinalizationState::NotStarted,
             trace_origin: CommandTraceOrigin,
             started_at: Instant::now(),

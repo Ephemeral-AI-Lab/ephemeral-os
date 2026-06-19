@@ -2,7 +2,9 @@ use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use operation_service::workspace_manager::{WorkspaceManagerError, WorkspaceManagerService};
+use operation_service::workspace_manager::{
+    WorkspaceManagerError, WorkspaceManagerService, WorkspaceRemountState,
+};
 use workspace::{
     BaseRevision, CallerId, CaptureChangesRequest, CapturedWorkspaceChanges,
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
@@ -442,6 +444,144 @@ fn workspace_manager_capture_updates_handler_snapshot_consistently() {
     assert_eq!(resolved.handle.snapshot.manifest_version, 2);
     assert_eq!(resolved.snapshot.root_hash, "root-2");
     assert_eq!(resolved.handle.snapshot.root_hash, "root-2");
+}
+
+#[test]
+fn workspace_manager_begin_remount_marks_pending_and_rejects_duplicate_begin() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
+    let manager = manager_with(&fake);
+    manager
+        .create(create_request("caller-1"))
+        .expect("test operation succeeds");
+
+    let handler = manager
+        .begin_remount(WorkspaceId("workspace-1".to_owned()))
+        .expect("begin remount succeeds");
+
+    assert_eq!(handler.remount_state, WorkspaceRemountState::RemountPending);
+    assert!(manager.is_remount_pending(&WorkspaceId("workspace-1".to_owned())));
+    assert_eq!(
+        manager
+            .remount_state(&WorkspaceId("workspace-1".to_owned()))
+            .expect("remount state is readable"),
+        WorkspaceRemountState::RemountPending
+    );
+    let duplicate = manager
+        .begin_remount(WorkspaceId("workspace-1".to_owned()))
+        .expect_err("duplicate begin is rejected");
+    assert!(matches!(
+        duplicate,
+        WorkspaceManagerError::RemountAlreadyPending { workspace_id }
+            if workspace_id == WorkspaceId("workspace-1".to_owned())
+    ));
+}
+
+#[test]
+fn workspace_manager_finish_remount_returns_session_to_active() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
+    let manager = manager_with(&fake);
+    manager
+        .create(create_request("caller-1"))
+        .expect("test operation succeeds");
+    manager
+        .begin_remount(WorkspaceId("workspace-1".to_owned()))
+        .expect("begin remount succeeds");
+
+    manager
+        .finish_remount(WorkspaceId("workspace-1".to_owned()))
+        .expect("finish remount succeeds");
+
+    assert!(!manager.is_remount_pending(&WorkspaceId("workspace-1".to_owned())));
+    assert_eq!(
+        manager
+            .remount_state(&WorkspaceId("workspace-1".to_owned()))
+            .expect("remount state is readable"),
+        WorkspaceRemountState::Active
+    );
+}
+
+#[test]
+fn workspace_manager_blocked_remount_reason_is_retained() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
+    let manager = manager_with(&fake);
+    manager
+        .create(create_request("caller-1"))
+        .expect("test operation succeeds");
+    manager
+        .begin_remount(WorkspaceId("workspace-1".to_owned()))
+        .expect("begin remount succeeds");
+
+    manager
+        .finish_or_block_remount(
+            WorkspaceId("workspace-1".to_owned()),
+            Some("fd_pinned_workspace".to_owned()),
+        )
+        .expect("block remount succeeds");
+
+    assert_eq!(
+        manager
+            .remount_state(&WorkspaceId("workspace-1".to_owned()))
+            .expect("remount state is readable"),
+        WorkspaceRemountState::RemountBlocked {
+            reason: "fd_pinned_workspace".to_owned()
+        }
+    );
+    assert!(!manager.is_remount_pending(&WorkspaceId("workspace-1".to_owned())));
+}
+
+#[test]
+fn workspace_manager_apply_remount_refreshes_canonical_handle() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let handle = workspace_handle("workspace-1", "caller-1", "lease-1");
+    let mut remounted = workspace_handle("workspace-1", "caller-1", "lease-2");
+    remounted.snapshot.manifest_version = 2;
+    remounted.snapshot.root_hash = "root-2".to_owned();
+    remounted.snapshot.layer_paths = vec![PathBuf::from("/lower/two")];
+    remounted.base_revision = remounted.snapshot.base_revision();
+    fake.push_create_result(Ok(handle));
+    fake.push_remount_result(Ok(RemountWorkspaceResult {
+        handle: remounted.clone(),
+    }));
+    let manager = manager_with(&fake);
+    manager
+        .create(create_request("caller-1"))
+        .expect("test operation succeeds");
+    let handler = manager
+        .begin_remount(WorkspaceId("workspace-1".to_owned()))
+        .expect("begin remount succeeds");
+
+    let updated = manager
+        .apply_remount(
+            &handler,
+            RemountWorkspaceRequest {
+                layer_paths: vec![PathBuf::from("/lower/two")],
+            },
+        )
+        .expect("apply remount succeeds");
+
+    assert_eq!(updated.lease_id, LeaseId("lease-2".to_owned()));
+    assert_eq!(updated.snapshot.manifest_version, 2);
+    assert_eq!(updated.layer_paths, vec![PathBuf::from("/lower/two")]);
+    assert_eq!(
+        fake.remount_calls(),
+        vec![WorkspaceId("workspace-1".to_owned())]
+    );
+}
+
+#[test]
+fn workspace_manager_files_do_not_import_command_service() {
+    let service = include_str!("../src/workspace_manager/service.rs");
+    let session_manager = include_str!("../src/workspace_manager/session_manager.rs");
+    let error = include_str!("../src/workspace_manager/error.rs");
+
+    for source in [service, session_manager, error] {
+        assert!(!source.contains("crate::command"));
+        assert!(!source.contains("CommandOperationService"));
+        assert!(!source.contains("CommandRemount"));
+    }
 }
 
 #[test]

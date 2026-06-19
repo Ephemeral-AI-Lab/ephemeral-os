@@ -3,6 +3,7 @@ pub mod error;
 mod launch;
 pub mod process_store;
 pub mod registry;
+pub mod remount;
 pub mod service;
 mod transcript;
 
@@ -25,4 +26,7 @@ pub use process_store::{
     FinalizationState, RetainedCommandTranscript, DEFAULT_MAX_ACTIVE_COMMANDS,
 };
 pub use registry::CommandRegistry;
+pub use remount::{
+    CommandRemountInspection, CommandRemountQuiesce, RemountCancellationToken, RemountSwitchState,
+};
 pub use service::{CommandFinalizationOptions, CommandOperationService};

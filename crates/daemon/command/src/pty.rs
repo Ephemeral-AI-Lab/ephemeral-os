@@ -203,6 +203,16 @@ impl PtyProcess {
         }
     }
 
+    #[must_use]
+    pub(crate) fn inactive_with_process_group_for_test(writer: File, pgid: i32) -> Self {
+        Self {
+            pgid: Some(pgid),
+            writer: Mutex::new(writer),
+            reader_done: Mutex::new(None),
+            child: Mutex::new(None),
+        }
+    }
+
     /// Push `bytes` to the command's stdin without blocking unbounded. The master
     /// is non-blocking; when the consumer stops draining, `write` returns
     /// `WouldBlock` and we wait for writability only up to `STDIN_WRITE_DEADLINE`

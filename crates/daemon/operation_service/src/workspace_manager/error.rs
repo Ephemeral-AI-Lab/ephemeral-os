@@ -19,6 +19,12 @@ pub enum WorkspaceManagerError {
     #[error("workspace session is closing: {workspace_id:?}")]
     Closing { workspace_id: WorkspaceId },
 
+    #[error("workspace remount already pending: {workspace_id:?}")]
+    RemountAlreadyPending { workspace_id: WorkspaceId },
+
+    #[error("workspace remount is not pending: {workspace_id:?}")]
+    RemountNotPending { workspace_id: WorkspaceId },
+
     #[error("workspace remount returned mismatched workspace id: expected {expected:?}, actual {actual:?}")]
     RemountWorkspaceIdMismatch {
         expected: WorkspaceId,

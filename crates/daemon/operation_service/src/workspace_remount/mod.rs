@@ -1,3 +1,5 @@
+pub mod error;
 pub mod service;
 
-pub use service::{WorkspaceRemountOptions, WorkspaceRemountService};
+pub use error::WorkspaceRemountError;
+pub use service::{WorkspaceRemountOptions, WorkspaceRemountReport, WorkspaceRemountService};

@@ -507,6 +507,7 @@ Rules:
 - Status: Complete.
 - Files changed:
   - `crates/daemon/operation_service/src/command/contract.rs`
+  - `crates/daemon/operation_service/src/command/error.rs`
   - `crates/daemon/operation_service/src/command/mod.rs`
   - `crates/daemon/operation_service/src/command/service.rs`
   - `crates/daemon/operation_service/src/command/transcript.rs`
@@ -534,6 +535,11 @@ Rules:
     `tool_call.invocation_id`; this is not an operation-service command
     contract field and was pre-existing outside the Milestone 5 row projection
     scope.
+  - `rg -n "tool_call|ToolCall|tool call" crates/daemon/linux-namespace-subprocess/src crates/daemon/command/src crates/daemon/workspace/src/namespace crates/daemon/operation/src/command crates/daemon/operation_service/tests docs/daemon/workspace_migration`:
+    intentionally not clean. It records sandbox protocol debt in
+    `docs/daemon/workspace_migration/tool_call_sandbox_protocol_FINDINGS.md`,
+    low-level command/workspace producers, ns-runner consumers, and tests that
+    still assert the serialized runner request shape.
 - Deviations:
   - Row projection is implemented in
     `operation_service::command::transcript` rather than in the low-level
@@ -544,6 +550,10 @@ Rules:
     `CommandStream::Stdout`; the parser also accepts structured JSONL rows with
     explicit `stdout`/`stderr` streams for any future command-service row
     sidecar without changing the public row contract.
+  - Active commands may report an empty pending row window before the transcript
+    file exists. Retained completed command reads are stricter: a missing or
+    unreadable retained transcript path is reported as a command transcript
+    error instead of being collapsed into empty output.
   - Superseded by the post-review remediation below: direct command-service exec
     is now crate-internal and treats a supplied session handler only as a
     session marker before re-resolving canonical workspace state.
@@ -559,6 +569,8 @@ Rules:
   - `CommandOperationService::read_lines` authorizes active records first, then
     retained completed records by caller id, and reads rows from the retained
     transcript path instead of `read_output_since(0)` or completed stdout.
+    Retained completed reads fail if that transcript path is unavailable, so
+    lost retained output is distinguishable from true empty output.
   - `poll` and `write_stdin` remain daemon-native and continue to use the
     command process transcript source; no duplicate output store or daemon
     dispatch migration was added.
@@ -642,14 +654,176 @@ Rules:
     `CommandOperationService::exec_command` is an internal implementation hook
     and must not be treated as a stable public entry point.
 
+### Post-Milestone 5 Row Projection Review Fixes
+
+- Status: Complete.
+- Issues fixed:
+  - Retained completed transcript reads no longer silently report missing or
+    unreadable transcript files as empty output. Active commands still allow an
+    empty pending row window before any transcript has been created.
+  - Structured JSONL row candidates with malformed JSON or invalid stream/text/
+    offset fields are skipped instead of being synthesized as stdout rows. Raw
+    PTY transcript lines that are not structured row candidates still project as
+    stdout after timestamp-prefix stripping.
+  - The `tool_call` sandbox-protocol note now records that `RunRequest` is a
+    serialized daemon-to-namespace-runner wire DTO, that cleanup must preserve
+    command/plugin/setup/setns/unknown verb compatibility, and that the rename is
+    future work rather than part of Milestone 5.
+  - The static-search record now distinguishes the narrow operation-service
+    forbidden-term false positive from the broader `tool_call` inventory that is
+    intentionally documenting low-level protocol debt.
+- Files changed:
+  - `crates/daemon/operation_service/src/command/error.rs`
+  - `crates/daemon/operation_service/src/command/service.rs`
+  - `crates/daemon/operation_service/src/command/transcript.rs`
+  - `crates/daemon/operation_service/tests/command_transcript_rows.rs`
+  - `docs/daemon/workspace_migration/tool_call_sandbox_protocol_FINDINGS.md`
+  - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
+- Verification:
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-fix-target cargo test -p operation_service command_transcript_rows`:
+    passed, 9 matching integration tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-fix-target cargo test -p operation_service command_ownership`:
+    passed, 2 matching unit tests and 4 matching integration tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-fix-target cargo test -p operation_service command_finalize`:
+    passed, 10 matching unit tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-fix-target cargo test -p operation_service`:
+    passed, 81 tests total across unit, integration, and doc-test binaries.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-fix-target cargo check -p operation_service`:
+    passed.
+  - `cargo fmt --check`: passed.
+  - `git diff --check`: passed.
+  - `rg -n "operation::command|StartCommand|request_id|trace_id|invocation_id|remountable|WorkspaceRuntime|CommandOps|ExecTarget|InternalHostOneShot|advance_active_commands_once|collect_completed|count_commands|count_by_caller" crates/daemon/operation_service/src/command crates/daemon/operation_service/tests`:
+    one expected false positive remains in
+    `crates/daemon/operation_service/tests/command_exec.rs`, where the test
+    asserts the low-level runner JSON field `tool_call.invocation_id`.
+  - `rg -n "tool_call|ToolCall|tool call" crates/daemon/linux-namespace-subprocess/src crates/daemon/command/src crates/daemon/workspace/src/namespace crates/daemon/operation/src/command crates/daemon/operation_service/tests docs/daemon/workspace_migration`:
+    intentionally returns the documented sandbox protocol producers, consumers,
+    tests, and migration notes.
+- Deviations:
+  - Operation-service row projection tests still use fake launch drivers for the
+    command process boundary. This layer now proves the command runner payload
+    includes the expected transcript path and that retained reads fail when that
+    retained path is missing. A full live ns-runner transcript creation proof
+    belongs to daemon/live E2E or the lower-level command substrate.
+- Unresolved issues:
+  - True stderr fidelity remains unavailable from existing merged PTY transcript
+    logs until a future structured sidecar or substrate change writes stream rows
+    at capture time.
+
 ## Milestone 6: WorkspaceRemountService And Remount-Pending State
 
-- Status: Not started
+- Status: Complete.
 - Files changed:
+  - `Cargo.lock`
+  - `crates/daemon/command/src/process.rs`
+  - `crates/daemon/command/src/pty.rs`
+  - `crates/daemon/operation_service/Cargo.toml`
+  - `crates/daemon/operation_service/src/error.rs`
+  - `crates/daemon/operation_service/src/command/mod.rs`
+  - `crates/daemon/operation_service/src/command/error.rs`
+  - `crates/daemon/operation_service/src/command/exec.rs`
+  - `crates/daemon/operation_service/src/command/process_store.rs`
+  - `crates/daemon/operation_service/src/command/service.rs`
+  - `crates/daemon/operation_service/src/command/remount.rs`
+  - `crates/daemon/operation_service/src/workspace_manager/mod.rs`
+  - `crates/daemon/operation_service/src/workspace_manager/session_manager.rs`
+  - `crates/daemon/operation_service/src/workspace_manager/service.rs`
+  - `crates/daemon/operation_service/src/workspace_manager/error.rs`
+  - `crates/daemon/operation_service/src/workspace_remount/mod.rs`
+  - `crates/daemon/operation_service/src/workspace_remount/error.rs`
+  - `crates/daemon/operation_service/src/workspace_remount/service.rs`
+  - `crates/daemon/operation_service/tests/command_process_store.rs`
+  - `crates/daemon/operation_service/tests/workspace_manager.rs`
+  - `crates/daemon/operation_service/tests/command_remount.rs`
+  - `crates/daemon/operation_service/tests/workspace_remount.rs`
+  - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
+- Carried-forward notes:
+  - From Milestone 4: command finalization is service-owned but still driven by
+    initial yield and `poll`; no public collect/count/advance APIs should be
+    added while implementing remount.
+  - From Milestone 4: persistent session finalization must not publish, destroy,
+    or refresh session snapshot/layer metadata.
+  - From Milestone 5: row projection and retained transcript reads remain
+    separate from remount; `read_lines` and `poll` must stay allowed while a
+    workspace remount is pending.
+  - From Milestone 5: direct command-service exec remains crate-internal;
+    external callers should continue through `OperationServices::exec_command`.
+  - Daemon dispatch migration away from `WorkspaceRuntime` remains Milestone 7
+    and is intentionally out of scope for this milestone.
+- Post-completion cleanup:
+  - Removed the unused public `CommandOperationService::inspect_workspace_remount`
+    convenience method. Tests now finish the remount quiesce guard directly, so
+    the command service keeps only the orchestration primitive needed by
+    `WorkspaceRemountService`.
+  - Split the new remount integration tests away from the broad shared test
+    support and removed remount-only shared fake state, keeping
+    `operation_service` all-target clippy clean under `-D warnings`.
 - Verification:
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-cleanup-target cargo clippy -p operation_service --all-targets --no-deps -- -D warnings`:
+    passed.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-cleanup-target cargo test -p operation_service command_remount`:
+    passed, 6 matching command-remount unit tests and 4 matching integration
+    tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-cleanup-target cargo test -p operation_service workspace_remount`:
+    passed, 3 matching integration tests plus the existing matching service-graph
+    test.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-cleanup-target cargo test -p operation_service`:
+    passed, 99 total tests across unit, integration, and doc-test binaries.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-cleanup-target cargo clippy -p command --all-targets --no-deps -- -D warnings`:
+    passed.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-cleanup-target cargo test -p command`:
+    passed, 18 tests total across unit, integration, and doc-test binaries.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-cleanup-target cargo check -p operation_service`:
+    passed.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service workspace_remount`:
+    passed, 3 matching integration tests plus the existing matching service-graph
+    test.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_remount`:
+    passed, 6 matching command-remount unit tests and 4 matching integration
+    tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_ownership`:
+    passed, 2 matching unit tests and 4 matching integration tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_exec`:
+    passed, 7 matching unit tests and 10 matching integration tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service`:
+    passed, 99 total tests across unit, integration, and doc-test binaries.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p operation_service`:
+    passed.
+  - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p command`:
+    passed.
+  - `cargo fmt --check`: passed.
+  - `git diff --check`: passed.
+  - `rg -n "begin_live_remount_for_caller|inspect_live_remount_for_caller|remountable|remountable_commands|session_not_marked_remountable|WorkspaceRuntime|CommandOps|operation::command|collect_completed|count_by_caller|advance_active_commands_once" crates/daemon/operation_service/src crates/daemon/operation_service/tests`:
+    no matches.
 - Deviations:
+  - Added `command::CommandProcess::inactive_with_process_group_for_test` and a
+    policy-free inactive PTY helper so operation-service remount tests can prove
+    process-group resume/drop/cancel behavior without spawning the namespace
+    runner.
+  - `compact_or_remount_session` does not add a production compaction policy; it
+    applies the current mounted layer paths through the workspace resource
+    remount primitive, preserving the Milestone 6 exclusion on parent-prefix
+    compaction.
 - Unresolved issues:
+  - No daemon dispatch migration was done; mapping the new
+    `WorkspaceRemountPending` command error into daemon retryable response
+    metadata remains Milestone 7.
+  - Command remount tests use an injected process-group controller for
+    deterministic quiesce/resume/cancel races. The real Linux `/proc` helper
+    retains parser coverage, but live signal-level E2E remains outside this
+    milestone.
 - Handoff notes:
+  - Milestone 7 should route command exec/stdin/read/poll/cancel through
+    operation-service APIs and preserve the pending-state behavior landed here:
+    starts and stdin reject during pending, while read/poll remain allowed and
+    wrong callers still receive authorization errors.
+  - `WorkspaceManagerService` now owns remount state transitions and resource
+    remount application. `WorkspaceRemountService` is the only owner that holds
+    both workspace and command services for remount orchestration.
+  - `CommandOperationService` now scans `CommandRegistry` by workspace id for
+    remount quiesce, treats every active command as quiesce eligible, blocks on
+    unknown process group or `/proc` state, and resumes held process groups on
+    success, block, error, drop, and deferred cancel paths.
 
 ## Milestone 7: Daemon Dispatch Migration Away From WorkspaceRuntime
 

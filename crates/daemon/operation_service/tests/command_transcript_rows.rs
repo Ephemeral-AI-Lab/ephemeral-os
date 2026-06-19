@@ -26,6 +26,11 @@ struct TranscriptLaunchDriver {
     outcomes: Mutex<VecDeque<WaitOutcome<CommandProcessExit>>>,
 }
 
+#[derive(Debug)]
+struct MissingTranscriptLaunchDriver {
+    outcomes: Mutex<VecDeque<WaitOutcome<CommandProcessExit>>>,
+}
+
 impl TranscriptLaunchDriver {
     fn running(transcript: &str) -> Self {
         Self {
@@ -37,6 +42,22 @@ impl TranscriptLaunchDriver {
     fn completed(transcript: &str, stdout: &str) -> Self {
         Self {
             transcript: transcript.to_owned(),
+            outcomes: Mutex::new(VecDeque::from([WaitOutcome::Completed(success_exit(
+                stdout,
+            ))])),
+        }
+    }
+}
+
+impl MissingTranscriptLaunchDriver {
+    fn running() -> Self {
+        Self {
+            outcomes: Mutex::new(VecDeque::from([WaitOutcome::Running(String::new())])),
+        }
+    }
+
+    fn completed(stdout: &str) -> Self {
+        Self {
             outcomes: Mutex::new(VecDeque::from([WaitOutcome::Completed(success_exit(
                 stdout,
             ))])),
@@ -80,7 +101,31 @@ impl CommandLaunchDriver for TranscriptLaunchDriver {
     }
 }
 
-fn session_with_driver(driver: TranscriptLaunchDriver) -> (TestServices, CommandId) {
+impl CommandLaunchDriver for MissingTranscriptLaunchDriver {
+    fn spawn(
+        &self,
+        spec: CommandProcessSpec,
+        _parts: CommandProcessSpawn<'_>,
+    ) -> Result<CommandProcess, CommandServiceError> {
+        Ok(CommandProcess::inactive_for_test(spec))
+    }
+
+    fn wait_for_initial_yield(
+        &self,
+        _process: &CommandProcess,
+        _config: &command::CommandConfig,
+        _yield_time_ms: u64,
+        _start_offset: u64,
+    ) -> WaitOutcome<CommandProcessExit> {
+        self.outcomes
+            .lock()
+            .expect("test operation succeeds")
+            .pop_front()
+            .unwrap_or_else(|| WaitOutcome::Running(String::new()))
+    }
+}
+
+fn session_with_driver(driver: impl CommandLaunchDriver + 'static) -> (TestServices, CommandId) {
     let fake = Arc::new(FakeWorkspaceService::new());
     let workspace_root = PathBuf::from("/workspace/session");
     fake.push_create_result(Ok(workspace_handle(
@@ -275,6 +320,57 @@ fn command_transcript_rows_report_bounded_window_truncation() {
             },
         ]
     );
+}
+
+#[test]
+fn command_transcript_rows_allow_active_missing_transcript_as_empty_pending_window() {
+    let (env, command_id) = session_with_driver(MissingTranscriptLaunchDriver::running());
+
+    let output = env
+        .command
+        .read_lines(
+            ReadCommandLinesInput {
+                command_id,
+                offset: 0,
+                limit: 10,
+            },
+            context("caller-owner"),
+        )
+        .expect("active command without output yet returns an empty pending window");
+
+    assert_eq!(output.status, CommandStatus::Running);
+    assert_eq!(output.exit_code, None);
+    assert_eq!(output.next_offset, 0);
+    assert_eq!(output.total_lines, 0);
+    assert!(!output.output_truncated);
+    assert!(output.output.is_empty());
+}
+
+#[test]
+fn command_transcript_rows_error_when_completed_transcript_is_missing() {
+    let (env, command_id) = session_with_driver(MissingTranscriptLaunchDriver::completed(
+        "terminal stdout\n",
+    ));
+
+    let error = env
+        .command
+        .read_lines(
+            ReadCommandLinesInput {
+                command_id: command_id.clone(),
+                offset: 0,
+                limit: 10,
+            },
+            context("caller-owner"),
+        )
+        .expect_err("completed command with missing retained transcript is not empty output");
+
+    assert!(matches!(
+        error,
+        CommandServiceError::CommandTranscriptUnavailable { command_id: id, path: Some(path), error }
+            if id == command_id
+                && path.ends_with("transcript.log")
+                && error.contains("open transcript")
+    ));
 }
 
 #[test]

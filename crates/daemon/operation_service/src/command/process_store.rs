@@ -6,7 +6,10 @@ use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Instant;
 
-use crate::command::{CommandFinalizedMetadata, CommandId, CommandServiceError, CommandStatus};
+use crate::command::{
+    CommandFinalizedMetadata, CommandId, CommandServiceError, CommandStatus,
+    RemountCancellationToken, RemountSwitchState,
+};
 use crate::workspace_crate::{CallerId, WorkspaceId};
 
 pub const DEFAULT_MAX_ACTIVE_COMMANDS: usize = 256;
@@ -224,11 +227,14 @@ pub struct ActiveCommandProcess {
     pub command_id: CommandId,
     pub caller_id: CallerId,
     pub workspace_id: WorkspaceId,
+    pub workspace_root: PathBuf,
     pub process: Arc<::command::CommandProcess>,
     pub transcript: CommandTranscriptStore,
     pub finalize_policy: CommandFinalizePolicy,
     pub lifecycle_state: CommandLifecycleState,
     pub cancellation: CancellationState,
+    pub remount_cancellation: Option<RemountCancellationToken>,
+    pub remount_switch_state: Option<RemountSwitchState>,
     pub finalization: FinalizationState,
     pub trace_origin: CommandTraceOrigin,
     pub started_at: Instant,
@@ -395,11 +401,14 @@ mod tests {
             command_id: command_id.clone(),
             caller_id: caller_id.clone(),
             workspace_id: workspace_id.clone(),
+            workspace_root: PathBuf::from("/workspace"),
             process: Arc::new(inactive_process(&command_id, &caller_id)),
             transcript: CommandTranscriptStore::default(),
             finalize_policy: CommandFinalizePolicy::Session { workspace_id },
             lifecycle_state: CommandLifecycleState::Running,
             cancellation: CancellationState::None,
+            remount_cancellation: None,
+            remount_switch_state: None,
             finalization: FinalizationState::NotStarted,
             trace_origin: CommandTraceOrigin,
             started_at: Instant::now(),

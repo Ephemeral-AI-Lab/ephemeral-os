@@ -176,6 +176,26 @@ impl CommandProcess {
         Self::with_runtime(spec, CommandProcessRuntime::inactive())
     }
 
+    #[doc(hidden)]
+    #[must_use]
+    pub fn inactive_with_process_group_for_test(spec: CommandProcessSpec, pgid: i32) -> Self {
+        let writer = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open("/dev/null")
+            .expect("open /dev/null for inactive command process");
+        Self::with_runtime(
+            spec,
+            CommandProcessRuntime::new(
+                PtyProcess::inactive_with_process_group_for_test(writer, pgid),
+                PathBuf::new(),
+                PathBuf::new(),
+                PathBuf::new(),
+                0,
+            ),
+        )
+    }
+
     pub fn spawn(
         spec: CommandProcessSpec,
         parts: CommandProcessSpawn<'_>,

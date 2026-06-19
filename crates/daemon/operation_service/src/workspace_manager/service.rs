@@ -6,7 +6,9 @@ use crate::workspace_crate::{
     DestroyWorkspaceRequest, DestroyWorkspaceResult, NetworkMode, RemountWorkspaceRequest,
     WorkspaceId, WorkspaceService,
 };
-use crate::workspace_manager::session_manager::{WorkspaceSession, WorkspaceSessionManager};
+use crate::workspace_manager::session_manager::{
+    WorkspaceRemountState, WorkspaceSession, WorkspaceSessionManager,
+};
 use crate::workspace_manager::WorkspaceManagerError;
 
 use super::session_manager::WorkspaceSessionHandler;
@@ -109,6 +111,96 @@ impl WorkspaceManagerService {
         session.refresh_after_capture(result.base_revision.clone());
 
         Ok(result)
+    }
+
+    pub fn begin_remount(
+        &self,
+        workspace_id: WorkspaceId,
+    ) -> Result<WorkspaceSessionHandler, WorkspaceManagerError> {
+        let mut sessions = self.lock_sessions()?;
+        let session = sessions
+            .find_by_workspace_id_mut(&workspace_id)
+            .ok_or_else(|| WorkspaceManagerError::NotFound {
+                workspace_id: workspace_id.clone(),
+            })?;
+
+        session.begin_remount()
+    }
+
+    pub fn apply_remount(
+        &self,
+        handler: &WorkspaceSessionHandler,
+        request: RemountWorkspaceRequest,
+    ) -> Result<WorkspaceSessionHandler, WorkspaceManagerError> {
+        let mut sessions = self.lock_sessions()?;
+        let session = sessions
+            .find_by_workspace_id_mut(&handler.workspace_id)
+            .ok_or_else(|| WorkspaceManagerError::NotFound {
+                workspace_id: handler.workspace_id.clone(),
+            })?;
+        session.ensure_active()?;
+        if !matches!(session.remount_state, WorkspaceRemountState::RemountPending) {
+            return Err(WorkspaceManagerError::RemountNotPending {
+                workspace_id: handler.workspace_id.clone(),
+            });
+        }
+
+        let result = self.workspace.remount_workspace(&session.handle, request)?;
+        session.refresh_from_handle(result.handle)?;
+        Ok(session.handler())
+    }
+
+    pub fn finish_remount(&self, workspace_id: WorkspaceId) -> Result<(), WorkspaceManagerError> {
+        let mut sessions = self.lock_sessions()?;
+        let session = sessions
+            .find_by_workspace_id_mut(&workspace_id)
+            .ok_or_else(|| WorkspaceManagerError::NotFound {
+                workspace_id: workspace_id.clone(),
+            })?;
+
+        session.finish_remount()
+    }
+
+    pub fn finish_or_block_remount(
+        &self,
+        workspace_id: WorkspaceId,
+        reason: Option<String>,
+    ) -> Result<(), WorkspaceManagerError> {
+        let mut sessions = self.lock_sessions()?;
+        let session = sessions
+            .find_by_workspace_id_mut(&workspace_id)
+            .ok_or_else(|| WorkspaceManagerError::NotFound {
+                workspace_id: workspace_id.clone(),
+            })?;
+
+        match reason {
+            Some(reason) => session.block_remount(reason),
+            None => session.finish_remount(),
+        }
+    }
+
+    #[must_use]
+    pub fn is_remount_pending(&self, workspace_id: &WorkspaceId) -> bool {
+        self.lock_sessions().is_ok_and(|sessions| {
+            sessions
+                .find_by_workspace_id(workspace_id)
+                .is_some_and(|session| {
+                    matches!(session.remount_state, WorkspaceRemountState::RemountPending)
+                })
+        })
+    }
+
+    pub fn remount_state(
+        &self,
+        workspace_id: &WorkspaceId,
+    ) -> Result<WorkspaceRemountState, WorkspaceManagerError> {
+        let sessions = self.lock_sessions()?;
+        sessions
+            .find_by_workspace_id(workspace_id)
+            .map(|session| session.remount_state.clone())
+            .ok_or_else(|| WorkspaceManagerError::NotFound {
+                workspace_id: workspace_id.clone(),
+            })
     }
 
     pub fn remount_workspace(

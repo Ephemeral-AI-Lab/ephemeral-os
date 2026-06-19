@@ -1,10 +1,15 @@
-//! Shared workspace runtime primitives plus concrete workspace modes.
+//! Shared workspace runtime primitives plus concrete network modes.
 //!
-//! `network_mode::host` owns one-operation Host overlay transactions.
-//! `network_mode::isolated_network` owns caller-keyed private namespaces whose
-//! upperdir is discarded on exit. `overlay` holds the filesystem and telemetry
-//! contracts both modes share so they expose the same core operation vocabulary
-//! without hiding their different lifecycle rules.
+//! Every mode creates a private mounted workspace: fresh overlay directories
+//! plus the holder-owned namespace stack used to run and remount commands.
+//! `NetworkMode` only selects the workspace's network topology; higher layers
+//! decide when a workspace is created, destroyed, captured, or published.
+//!
+//! `network_mode::host` shares the host network namespace while keeping the
+//! private workspace overlay and holder namespace stack.
+//! `network_mode::isolated_network` adds a dedicated network namespace with
+//! veth, DNS, policy, and cgroup resources. `overlay` holds the filesystem and
+//! telemetry contracts both modes share.
 #![forbid(unsafe_code)]
 
 pub mod error;

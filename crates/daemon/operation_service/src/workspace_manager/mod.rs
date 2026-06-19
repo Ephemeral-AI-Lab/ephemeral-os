@@ -4,4 +4,4 @@ mod session_manager;
 
 pub use error::WorkspaceManagerError;
 pub use service::WorkspaceManagerService;
-pub use session_manager::WorkspaceSessionHandler;
+pub use session_manager::{WorkspaceRemountState, WorkspaceSessionHandler};

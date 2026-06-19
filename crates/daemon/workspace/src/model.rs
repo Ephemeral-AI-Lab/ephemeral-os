@@ -54,9 +54,18 @@ impl From<layerstack::service::Snapshot> for LayerStackSnapshotRef {
     }
 }
 
+/// Network topology for a private mounted workspace.
+///
+/// This does not encode lifecycle length, publication behavior, or whether the
+/// caller is running a one-shot operation. Those decisions belong to the
+/// runtime or operation layer that owns the workspace handle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NetworkMode {
+    /// Share the host network namespace while using a private overlay and
+    /// holder namespace stack for the workspace.
     Host,
+    /// Add a dedicated network namespace and isolated network plumbing to the
+    /// private workspace.
     Isolated,
 }
 
