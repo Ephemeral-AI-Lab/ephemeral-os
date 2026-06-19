@@ -2,8 +2,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 use crate::command::remount::ProcProcessGroupController;
 use crate::command::{
-    CommandLaunchDriver, CommandProcessStore, CommandRegistry, ProcessGroupController,
-    RealCommandLaunchDriver,
+    CommandLaunchDriver, CommandProcessStore, ProcessGroupController, RealCommandLaunchDriver,
 };
 use crate::workspace_session::WorkspaceSessionService;
 
@@ -15,7 +14,6 @@ pub struct CommandFinalizationOptions {
 pub struct CommandOperationService {
     workspace: Arc<WorkspaceSessionService>,
     config: ::command::CommandConfig,
-    registry: Arc<CommandRegistry>,
     process_store: Arc<CommandProcessStore>,
     launch_driver: Arc<dyn CommandLaunchDriver>,
     remount_controller: Arc<dyn ProcessGroupController>,
@@ -87,7 +85,6 @@ impl CommandOperationService {
         Self {
             workspace,
             config,
-            registry: Arc::new(CommandRegistry::new()),
             process_store: Arc::new(CommandProcessStore::new()),
             launch_driver,
             remount_controller,
@@ -109,11 +106,6 @@ impl CommandOperationService {
     #[must_use]
     pub fn config(&self) -> &::command::CommandConfig {
         &self.config
-    }
-
-    #[must_use]
-    pub(crate) fn registry(&self) -> &Arc<CommandRegistry> {
-        &self.registry
     }
 
     #[must_use]

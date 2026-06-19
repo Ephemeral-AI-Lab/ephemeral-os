@@ -6,13 +6,9 @@ use crate::workspace_crate::{CallerId, ChangedPathKind, WorkspaceId};
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct CommandId(pub String);
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct OperationTraceContext;
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandCallContext {
     pub caller_id: CallerId,
-    pub trace: OperationTraceContext,
 }
 
 #[derive(Debug, Clone, PartialEq)]

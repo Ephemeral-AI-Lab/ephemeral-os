@@ -6,8 +6,7 @@ use std::sync::Arc;
 use command::yield_wait_loop::WaitOutcome;
 use operation_service::command::{
     CancelCommandInput, CommandCallContext, CommandId, CommandServiceError, CommandStatus,
-    ExecCommandInput, OperationTraceContext, PollCommandInput, ReadCommandLinesInput,
-    WriteStdinInput,
+    ExecCommandInput, PollCommandInput, ReadCommandLinesInput, WriteStdinInput,
 };
 use workspace::{CallerId, WorkspaceProfile};
 
@@ -19,7 +18,6 @@ use support::{
 fn context(caller_id: &str) -> CommandCallContext {
     CommandCallContext {
         caller_id: CallerId(caller_id.to_owned()),
-        trace: OperationTraceContext,
     }
 }
 

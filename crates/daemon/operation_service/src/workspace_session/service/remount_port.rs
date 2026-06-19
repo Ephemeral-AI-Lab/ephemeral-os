@@ -31,11 +31,7 @@ impl WorkspaceSessionService {
         finish: bool,
     ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {
         let mut sessions = self.lock_sessions()?;
-        let session = sessions
-            .find_by_workspace_session_id_mut(&handler.workspace_session_id)
-            .ok_or_else(|| WorkspaceSessionError::NotFound {
-                workspace_session_id: handler.workspace_session_id.clone(),
-            })?;
+        let session = sessions.session_mut(&handler.workspace_session_id)?;
         session.ensure_active()?;
         if !matches!(session.remount_state, WorkspaceRemountState::RemountPending) {
             return Err(WorkspaceSessionError::RemountNotPending {
@@ -59,11 +55,7 @@ impl WorkspaceSessionService {
         reason: String,
     ) -> Result<(), WorkspaceSessionError> {
         let mut sessions = self.lock_sessions()?;
-        let session = sessions
-            .find_by_workspace_session_id_mut(workspace_session_id)
-            .ok_or_else(|| WorkspaceSessionError::NotFound {
-                workspace_session_id: workspace_session_id.clone(),
-            })?;
+        let session = sessions.session_mut(workspace_session_id)?;
         if matches!(session.remount_state, WorkspaceRemountState::RemountPending) {
             session.block_remount(reason)?;
         }
@@ -95,11 +87,7 @@ impl RemountWorkspaceSession for WorkspaceSessionService {
         workspace_session_id: WorkspaceId,
     ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {
         let mut sessions = self.lock_sessions()?;
-        let session = sessions
-            .find_by_workspace_session_id_mut(&workspace_session_id)
-            .ok_or_else(|| WorkspaceSessionError::NotFound {
-                workspace_session_id: workspace_session_id.clone(),
-            })?;
+        let session = sessions.session_mut(&workspace_session_id)?;
 
         session.begin_remount()
     }
@@ -125,11 +113,7 @@ impl RemountWorkspaceSession for WorkspaceSessionService {
         workspace_session_id: WorkspaceId,
     ) -> Result<(), WorkspaceSessionError> {
         let mut sessions = self.lock_sessions()?;
-        let session = sessions
-            .find_by_workspace_session_id_mut(&workspace_session_id)
-            .ok_or_else(|| WorkspaceSessionError::NotFound {
-                workspace_session_id: workspace_session_id.clone(),
-            })?;
+        let session = sessions.session_mut(&workspace_session_id)?;
 
         session.finish_remount()
     }
@@ -140,11 +124,7 @@ impl RemountWorkspaceSession for WorkspaceSessionService {
         reason: Option<String>,
     ) -> Result<(), WorkspaceSessionError> {
         let mut sessions = self.lock_sessions()?;
-        let session = sessions
-            .find_by_workspace_session_id_mut(&workspace_session_id)
-            .ok_or_else(|| WorkspaceSessionError::NotFound {
-                workspace_session_id: workspace_session_id.clone(),
-            })?;
+        let session = sessions.session_mut(&workspace_session_id)?;
 
         match reason {
             Some(reason) => session.block_remount(reason),

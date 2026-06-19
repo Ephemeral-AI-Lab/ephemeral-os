@@ -6,7 +6,7 @@ use std::sync::Arc;
 use command::yield_wait_loop::WaitOutcome;
 use operation_service::command::{
     CommandCallContext, CommandFinalizationOutcome, CommandFinalizedPolicy, CommandId,
-    CommandServiceError, CommandStatus, ExecCommandInput, OperationTraceContext, PollCommandInput,
+    CommandServiceError, CommandStatus, ExecCommandInput, PollCommandInput,
 };
 use workspace::{CallerId, WorkspaceId, WorkspaceProfile};
 
@@ -601,6 +601,5 @@ fn command_exec_rejects_workspace_root_mismatch_before_command_allocation() {
 fn context(caller_id: &str) -> CommandCallContext {
     CommandCallContext {
         caller_id: CallerId(caller_id.to_owned()),
-        trace: OperationTraceContext,
     }
 }

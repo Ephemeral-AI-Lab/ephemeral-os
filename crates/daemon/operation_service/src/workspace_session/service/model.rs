@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use std::time::SystemTime;
 
 use crate::workspace_crate::{BaseRevision, WorkspaceHandle, WorkspaceId};
 use crate::workspace_session::WorkspaceSessionError;
@@ -34,21 +33,16 @@ pub(crate) struct WorkspaceSession {
     pub layer_stack_root: PathBuf,
     pub lifecycle_state: WorkspaceLifecycleState,
     pub remount_state: WorkspaceRemountState,
-    pub created_at: SystemTime,
-    pub last_activity: SystemTime,
 }
 
 impl WorkspaceSession {
     pub(crate) fn from_handle(handle: WorkspaceHandle, layer_stack_root: PathBuf) -> Self {
-        let now = SystemTime::now();
         Self {
             workspace_session_id: handle.id.clone(),
             layer_stack_root,
             handle,
             lifecycle_state: WorkspaceLifecycleState::Active,
             remount_state: WorkspaceRemountState::Active,
-            created_at: now,
-            last_activity: now,
         }
     }
 
@@ -88,13 +82,11 @@ impl WorkspaceSession {
         self.ensure_active()?;
         self.ensure_remount_not_pending()?;
         self.lifecycle_state = WorkspaceLifecycleState::Closing;
-        self.last_activity = SystemTime::now();
         Ok(self.handle.clone())
     }
 
     pub(crate) fn mark_active(&mut self) {
         self.lifecycle_state = WorkspaceLifecycleState::Active;
-        self.last_activity = SystemTime::now();
     }
 
     pub(crate) fn begin_remount(
@@ -107,7 +99,6 @@ impl WorkspaceSession {
             });
         }
         self.remount_state = WorkspaceRemountState::RemountPending;
-        self.last_activity = SystemTime::now();
         Ok(self.handler())
     }
 
@@ -122,7 +113,6 @@ impl WorkspaceSession {
             });
         }
         self.remount_state = WorkspaceRemountState::Active;
-        self.last_activity = SystemTime::now();
         Ok(())
     }
 
@@ -134,7 +124,6 @@ impl WorkspaceSession {
             });
         }
         self.remount_state = WorkspaceRemountState::RemountBlocked { reason };
-        self.last_activity = SystemTime::now();
         Ok(())
     }
 
@@ -142,7 +131,6 @@ impl WorkspaceSession {
         self.handle.base_revision = base_revision;
         self.handle.snapshot.manifest_version = self.handle.base_revision.version;
         self.handle.snapshot.root_hash = self.handle.base_revision.root_hash.clone();
-        self.last_activity = SystemTime::now();
     }
 
     pub(crate) fn refresh_from_handle(
@@ -157,7 +145,6 @@ impl WorkspaceSession {
         }
 
         self.handle = handle;
-        self.last_activity = SystemTime::now();
         Ok(())
     }
 }

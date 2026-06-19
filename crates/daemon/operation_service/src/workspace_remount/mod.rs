@@ -7,6 +7,6 @@ pub use crate::command::{
 };
 pub use error::WorkspaceRemountError;
 pub use service::{
-    CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountOptions,
-    WorkspaceRemountReport, WorkspaceRemountService,
+    CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountReport,
+    WorkspaceRemountService,
 };

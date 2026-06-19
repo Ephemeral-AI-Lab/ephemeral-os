@@ -5,8 +5,8 @@ use std::time::Instant;
 use operation_service::command::{
     ActiveCommandProcess, CancellationState, CommandCompletionStore, CommandFinalizePolicy,
     CommandFinalizedMetadata, CommandId, CommandLifecycleState, CommandProcessStore,
-    CommandServiceError, CommandStatus, CommandTerminalResult, CommandTraceOrigin,
-    CommandTranscriptStore, CompletedCommandRecord, FinalizationState, RetainedCommandTranscript,
+    CommandServiceError, CommandStatus, CommandTerminalResult, CommandTranscriptStore,
+    CompletedCommandRecord, FinalizationState, RetainedCommandTranscript,
 };
 use workspace::{CallerId, WorkspaceId};
 
@@ -54,7 +54,6 @@ fn active_record(
         remount_cancellation: None,
         remount_switch_state: None,
         finalization: FinalizationState::NotStarted,
-        trace_origin: CommandTraceOrigin,
         started_at: Instant::now(),
     }
 }

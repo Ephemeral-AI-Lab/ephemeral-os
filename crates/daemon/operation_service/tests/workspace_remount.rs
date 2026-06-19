@@ -9,12 +9,11 @@ use command::process::{
 use command::yield_wait_loop::WaitOutcome;
 use operation_service::command::{
     CancelCommandInput, CommandCallContext, CommandLaunchDriver, CommandOperationService,
-    CommandServiceError, ExecCommandInput, OperationTraceContext,
+    CommandServiceError, ExecCommandInput,
 };
 use operation_service::workspace_remount::{
     CommandRemountCoordinator, CommandRemountInspection, ProcessGroupController,
-    RemountWorkspaceSession, WorkspaceRemountError, WorkspaceRemountOptions,
-    WorkspaceRemountService,
+    RemountWorkspaceSession, WorkspaceRemountError, WorkspaceRemountService,
 };
 use operation_service::workspace_session::WorkspaceSessionService;
 use operation_service::OperationServices;
@@ -283,7 +282,6 @@ fn build_services(fake: Arc<RemountWorkspaceServiceFake>) -> TestServices {
     let remount = Arc::new(WorkspaceRemountService::new(
         remount_workspace,
         remount_command,
-        WorkspaceRemountOptions::default(),
     ));
     let services = OperationServices::new(Arc::clone(&workspace), command, remount);
     TestServices {
@@ -314,7 +312,6 @@ fn build_services_with_process_group_controller(
     let remount = Arc::new(WorkspaceRemountService::new(
         remount_workspace,
         remount_command,
-        WorkspaceRemountOptions::default(),
     ));
     let services = OperationServices::new(Arc::clone(&workspace), Arc::clone(&command), remount);
     TestServices {
@@ -356,7 +353,6 @@ fn exec_input(workspace_session_id: WorkspaceId, workspace_root: PathBuf) -> Exe
 fn command_context(caller_id: &str) -> CommandCallContext {
     CommandCallContext {
         caller_id: CallerId(caller_id.to_owned()),
-        trace: OperationTraceContext,
     }
 }
 

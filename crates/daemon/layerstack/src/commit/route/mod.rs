@@ -2,6 +2,7 @@ mod git_metadata;
 mod ignore;
 pub(crate) mod model;
 mod opaque_dir;
+mod opaque_hidden;
 mod protected_paths;
 mod snapshot;
 

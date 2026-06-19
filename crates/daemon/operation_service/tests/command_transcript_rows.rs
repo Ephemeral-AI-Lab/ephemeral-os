@@ -10,8 +10,7 @@ use command::process::{
 use command::yield_wait_loop::WaitOutcome;
 use operation_service::command::{
     CommandCallContext, CommandId, CommandLaunchDriver, CommandServiceError, CommandStatus,
-    CommandStream, CommandTranscriptRow, ExecCommandInput, OperationTraceContext, PollCommandInput,
-    ReadCommandLinesInput,
+    CommandStream, CommandTranscriptRow, ExecCommandInput, PollCommandInput, ReadCommandLinesInput,
 };
 use workspace::{CallerId, WorkspaceProfile};
 
@@ -166,7 +165,6 @@ fn session_with_driver(driver: impl CommandLaunchDriver + 'static) -> (TestServi
 fn context(caller_id: &str) -> CommandCallContext {
     CommandCallContext {
         caller_id: CallerId(caller_id.to_owned()),
-        trace: OperationTraceContext,
     }
 }
 

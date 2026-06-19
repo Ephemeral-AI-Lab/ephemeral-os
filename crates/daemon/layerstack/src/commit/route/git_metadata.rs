@@ -1,11 +1,11 @@
 use std::io::Read;
 
 use crate::commit::git_metadata::{is_canonical_loose_object_path, parts_after_git_dir};
-use crate::git_index::git_index_semantically_unchanged;
 use crate::model::{LayerChange, LayerPath};
 use crate::{Manifest, MergedView};
 
 use super::super::error::CommitError;
+use super::super::git_index::git_index_semantically_unchanged;
 use super::model::{
     publish_decision, rejected_drop_decision, PublishDecision, Route, RouteDropReason,
 };

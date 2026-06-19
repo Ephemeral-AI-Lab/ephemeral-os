@@ -16,8 +16,8 @@ impl CommandRemountCoordinator for CommandOperationService {
     ) -> CommandRemountQuiesce {
         let _admission_guard = self.lock_remount_admission();
         let command_ids = self
-            .registry()
-            .commands_for_workspace_session(workspace_session_id);
+            .process_store()
+            .active_command_ids_for_workspace_session(workspace_session_id);
         let cancellation = RemountCancellationToken::new();
         let mut quiesce = CommandRemountQuiesce {
             inspection: CommandRemountInspection {

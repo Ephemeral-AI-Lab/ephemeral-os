@@ -141,19 +141,6 @@ impl CommandOperationService {
                 finalized: finalized.clone().map(Box::new),
             });
         }
-        let bound_workspace_session_id = self
-            .registry()
-            .workspace_session_for(command_id)
-            .ok_or_else(|| CommandServiceError::CommandNotFound {
-                command_id: command_id.clone(),
-            })?;
-        if bound_workspace_session_id != active.workspace_session_id {
-            return Err(CommandServiceError::CommandWorkspaceSessionMismatch {
-                command_id: command_id.clone(),
-                expected: active.workspace_session_id.clone(),
-                actual: bound_workspace_session_id,
-            });
-        }
         let record = ActiveFinalizationRecord {
             command_id: active.command_id.clone(),
             caller_id: active.caller_id.clone(),
@@ -190,10 +177,7 @@ impl CommandOperationService {
             finalized: Some(finalized),
             completed_at: Instant::now(),
         };
-        let removed = self.process_store().complete_active(completed)?;
-        if removed.is_some() {
-            let _ = self.registry().unbind(&command_id);
-        }
+        let _ = self.process_store().complete_active(completed)?;
         Ok(())
     }
 

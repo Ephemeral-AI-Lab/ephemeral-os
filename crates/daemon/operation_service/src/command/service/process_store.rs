@@ -108,6 +108,20 @@ impl CommandProcessStore {
             .map(|active| Arc::clone(&active.process))
     }
 
+    #[must_use]
+    pub(crate) fn active_command_ids_for_workspace_session(
+        &self,
+        workspace_session_id: &WorkspaceId,
+    ) -> Vec<CommandId> {
+        let mut command_ids = lock(&self.active)
+            .iter()
+            .filter(|(_, active)| &active.workspace_session_id == workspace_session_id)
+            .map(|(command_id, _)| command_id.clone())
+            .collect::<Vec<_>>();
+        command_ids.sort();
+        command_ids
+    }
+
     pub fn complete_active(
         &self,
         record: CompletedCommandRecord,
@@ -236,7 +250,6 @@ pub struct ActiveCommandProcess {
     pub remount_cancellation: Option<RemountCancellationToken>,
     pub remount_switch_state: Option<RemountSwitchState>,
     pub finalization: FinalizationState,
-    pub trace_origin: CommandTraceOrigin,
     pub started_at: Instant,
 }
 
@@ -246,29 +259,12 @@ pub enum CommandFinalizePolicy {
     OneShotPublishThenDestroy { workspace_session_id: WorkspaceId },
 }
 
-impl CommandFinalizePolicy {
-    #[must_use]
-    pub const fn workspace_session_id(&self) -> &WorkspaceId {
-        match self {
-            Self::Session {
-                workspace_session_id,
-            }
-            | Self::OneShotPublishThenDestroy {
-                workspace_session_id,
-            } => workspace_session_id,
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CommandLifecycleState {
-    Starting,
     Running,
     QuiescedForRemount,
     Finalizing,
-    Completed,
     Cancelled,
-    TimedOut,
     FinalizationFailed,
     DestroyPending,
 }
@@ -277,8 +273,6 @@ pub enum CommandLifecycleState {
 pub enum CancellationState {
     None,
     Requested { requested_at: Instant },
-    Sent { sent_at: Instant },
-    Finalized,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -297,9 +291,6 @@ pub enum FinalizationState {
         finalized: Option<CommandFinalizedMetadata>,
     },
 }
-
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct CommandTraceOrigin;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CommandTranscriptStore {

@@ -15,7 +15,6 @@ serde_json.workspace = true
 thiserror.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
-libc.workspace = true
 rtnetlink.workspace = true
 tokio.workspace = true
 futures-util.workspace = true

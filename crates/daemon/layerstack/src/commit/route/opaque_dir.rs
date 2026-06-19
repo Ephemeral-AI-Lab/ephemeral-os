@@ -1,7 +1,6 @@
 use std::path::Path;
 
 use crate::model::LayerPath;
-use crate::opaque_hidden::{visible_paths_hidden_by_opaque_dir, OpaqueDirExpansion};
 use crate::{Manifest, MergedView};
 
 use super::super::error::CommitError;
@@ -9,6 +8,7 @@ use super::ignore::IgnoreSource;
 use super::model::{
     publish_decision, rejected_drop_decision, PublishDecision, Route, RouteDropReason,
 };
+use super::opaque_hidden::{visible_paths_hidden_by_opaque_dir, OpaqueDirExpansion};
 use super::protected_paths::{
     is_git_metadata_path, route_decision_for_path_from_source, route_for_path_from_source,
 };

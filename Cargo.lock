@@ -1769,7 +1769,6 @@ version = "0.1.0"
 dependencies = [
  "futures-util",
  "layerstack",
- "libc",
  "namespace-process",
  "nix 0.29.0",
  "rtnetlink",

@@ -3,11 +3,9 @@ use std::sync::Arc;
 
 use operation_service::command::{
     CommandCallContext, CommandFinalizationOptions, CommandOperationService, ExecCommandInput,
-    OperationTraceContext,
 };
 use operation_service::workspace_remount::{
-    CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountOptions,
-    WorkspaceRemountService,
+    CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountService,
 };
 use operation_service::workspace_session::WorkspaceSessionService;
 use operation_service::OperationServices;
@@ -71,7 +69,6 @@ fn operation_services_wires_top_level_domains() {
     let remount = Arc::new(WorkspaceRemountService::new(
         remount_workspace,
         remount_command,
-        WorkspaceRemountOptions::default(),
     ));
 
     let services = OperationServices::new(
@@ -86,7 +83,7 @@ fn operation_services_wires_top_level_domains() {
 }
 
 #[test]
-fn command_contract_keeps_roots_and_trace_context_separate() {
+fn command_contract_keeps_roots_and_call_context_separate() {
     let input = ExecCommandInput {
         caller_id: CallerId("caller-1".to_owned()),
         workspace_root: PathBuf::from("/workspace"),
@@ -98,7 +95,6 @@ fn command_contract_keeps_roots_and_trace_context_separate() {
     };
     let context = CommandCallContext {
         caller_id: input.caller_id.clone(),
-        trace: OperationTraceContext,
     };
 
     assert_eq!(input.workspace_root, PathBuf::from("/workspace"));
@@ -126,21 +122,4 @@ fn command_service_retains_one_shot_finalization_options() {
     assert!(Arc::ptr_eq(command.workspace(), &workspace));
     assert_eq!(command.config(), &config);
     assert_eq!(command.finalization_options(), &options);
-}
-
-#[test]
-fn workspace_remount_options_are_constructor_owned() {
-    let workspace = workspace_session();
-    let command = Arc::new(CommandOperationService::new(
-        Arc::clone(&workspace),
-        command::CommandConfig::default(),
-    ));
-    let options = WorkspaceRemountOptions {
-        live_quiesce_timeout_ms: 7_500,
-    };
-    let remount_workspace: Arc<dyn RemountWorkspaceSession> = workspace.clone();
-    let remount_command: Arc<dyn CommandRemountCoordinator> = command.clone();
-    let remount = WorkspaceRemountService::new(remount_workspace, remount_command, options);
-
-    assert_eq!(remount.options(), options);
 }

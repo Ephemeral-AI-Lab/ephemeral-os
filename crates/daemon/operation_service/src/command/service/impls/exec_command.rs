@@ -11,7 +11,7 @@ use command::yield_wait_loop::WaitOutcome;
 use crate::command::{
     ActiveCommandProcess, CancellationState, CommandCallContext, CommandFinalizePolicy, CommandId,
     CommandLifecycleState, CommandOutputSnapshot, CommandServiceError, CommandStatus,
-    CommandTraceOrigin, CommandTranscriptStore, CommandYield, ExecCommandInput, FinalizationState,
+    CommandTranscriptStore, CommandYield, ExecCommandInput, FinalizationState,
 };
 use crate::workspace_crate::{
     CreateWorkspaceRequest, DestroyWorkspaceRequest, WorkspaceEntry, WorkspaceId, WorkspaceProfile,
@@ -127,21 +127,7 @@ impl CommandOperationService {
             }
         };
 
-        if let Err(error) = self
-            .registry()
-            .bind(command_id.clone(), workspace_session_id.clone())
-        {
-            process.cancel_process();
-            return Err(self.cleanup_start_failure(
-                &command_id,
-                is_session_command,
-                handler,
-                Some(&launch),
-                error,
-            ));
-        }
         if self.process_store().active(&command_id).is_some() {
-            let _ = self.registry().unbind(&command_id);
             process.cancel_process();
             return Err(self.cleanup_start_failure(
                 &command_id,
@@ -170,11 +156,9 @@ impl CommandOperationService {
             remount_cancellation: None,
             remount_switch_state: None,
             finalization: FinalizationState::NotStarted,
-            trace_origin: CommandTraceOrigin,
             started_at: Instant::now(),
         };
         if let Err(error) = self.process_store().insert_active(reservation, record) {
-            let _ = self.registry().unbind(&command_id);
             process_for_rollback.cancel_process();
             return Err(self.cleanup_start_failure(
                 &command_id,

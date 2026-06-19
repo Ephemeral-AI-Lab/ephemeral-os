@@ -44,4 +44,14 @@ impl WorkspaceSessionStore {
     ) -> Option<&mut WorkspaceSession> {
         self.sessions.get_mut(workspace_session_id)
     }
+
+    pub(crate) fn session_mut(
+        &mut self,
+        workspace_session_id: &WorkspaceId,
+    ) -> Result<&mut WorkspaceSession, WorkspaceSessionError> {
+        self.find_by_workspace_session_id_mut(workspace_session_id)
+            .ok_or_else(|| WorkspaceSessionError::NotFound {
+                workspace_session_id: workspace_session_id.clone(),
+            })
+    }
 }

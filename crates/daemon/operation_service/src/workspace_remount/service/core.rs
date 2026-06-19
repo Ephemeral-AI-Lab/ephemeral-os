@@ -56,23 +56,9 @@ pub struct WorkspaceRemountReport {
     pub updated_handler: Option<WorkspaceSessionHandler>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct WorkspaceRemountOptions {
-    pub live_quiesce_timeout_ms: u64,
-}
-
-impl Default for WorkspaceRemountOptions {
-    fn default() -> Self {
-        Self {
-            live_quiesce_timeout_ms: 30_000,
-        }
-    }
-}
-
 pub struct WorkspaceRemountService {
     workspace: Arc<dyn RemountWorkspaceSession>,
     command: Arc<dyn CommandRemountCoordinator>,
-    options: WorkspaceRemountOptions,
 }
 
 impl WorkspaceRemountService {
@@ -80,18 +66,8 @@ impl WorkspaceRemountService {
     pub fn new(
         workspace: Arc<dyn RemountWorkspaceSession>,
         command: Arc<dyn CommandRemountCoordinator>,
-        options: WorkspaceRemountOptions,
     ) -> Self {
-        Self {
-            workspace,
-            command,
-            options,
-        }
-    }
-
-    #[must_use]
-    pub const fn options(&self) -> WorkspaceRemountOptions {
-        self.options
+        Self { workspace, command }
     }
 
     #[must_use]

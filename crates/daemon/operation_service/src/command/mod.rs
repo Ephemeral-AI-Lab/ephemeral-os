@@ -5,8 +5,6 @@ pub mod error;
 mod launch;
 #[path = "service/process_store.rs"]
 pub mod process_store;
-#[path = "service/registry.rs"]
-pub mod registry;
 pub(crate) mod remount;
 pub mod service;
 #[path = "service/transcript.rs"]
@@ -19,18 +17,17 @@ pub use contract::{
     CancelCommandInput, CommandCallContext, CommandFinalizationOutcome, CommandFinalizedMetadata,
     CommandFinalizedPolicy, CommandId, CommandLinesOutput, CommandOutputSnapshot,
     CommandPollOutput, CommandStatus, CommandStream, CommandTranscriptRow,
-    CommandWorkspaceDestroyMetadata, CommandYield, ExecCommandInput, OperationTraceContext,
-    PollCommandInput, ReadCommandLinesInput, WriteStdinInput,
+    CommandWorkspaceDestroyMetadata, CommandYield, ExecCommandInput, PollCommandInput,
+    ReadCommandLinesInput, WriteStdinInput,
 };
 pub use error::CommandServiceError;
 pub use launch::{CommandLaunchDriver, RealCommandLaunchDriver};
 pub use process_store::{
     ActiveCommandProcess, ActiveCommandRef, CancellationState, CommandCompletionStore,
     CommandFinalizePolicy, CommandLifecycleState, CommandProcessStore, CommandReservation,
-    CommandTerminalResult, CommandTraceOrigin, CommandTranscriptStore, CompletedCommandRecord,
-    FinalizationState, RetainedCommandTranscript, DEFAULT_MAX_ACTIVE_COMMANDS,
+    CommandTerminalResult, CommandTranscriptStore, CompletedCommandRecord, FinalizationState,
+    RetainedCommandTranscript, DEFAULT_MAX_ACTIVE_COMMANDS,
 };
-pub use registry::CommandRegistry;
 pub use remount::{
     CommandRemountInspection, CommandRemountQuiesce, ProcessGroupController,
     RemountCancellationToken, RemountSwitchState,
