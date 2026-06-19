@@ -234,7 +234,7 @@ impl CommandLaunchDriver for BlockingLaunchDriver {
 
 fn build_services(fake: Arc<PendingGuardWorkspaceService>) -> TestServices {
     let workspace = Arc::new(WorkspaceSessionService::new(fake_workspace_runtime(fake)));
-    let command = Arc::new(CommandOperationService::with_launch_driver_for_test(
+    let command = Arc::new(CommandOperationService::with_launch_driver(
         Arc::clone(&workspace),
         command_config(),
         Arc::new(PendingGuardLaunchDriver),
@@ -259,7 +259,7 @@ fn build_services_with_launch_driver(
     launch_driver: Arc<dyn CommandLaunchDriver>,
 ) -> TestServices {
     let workspace = Arc::new(WorkspaceSessionService::new(fake_workspace_runtime(fake)));
-    let command = Arc::new(CommandOperationService::with_launch_driver_for_test(
+    let command = Arc::new(CommandOperationService::with_launch_driver(
         Arc::clone(&workspace),
         command_config(),
         launch_driver,
