@@ -12,8 +12,9 @@ pub(crate) use sidecar::{
     attach_request_sidecar, attach_request_sidecar_with_events, push_transport_failure_from_sidecar,
 };
 #[cfg(test)]
-pub(crate) use spool::now_ms;
 pub(crate) use spool::{
-    ack_background_export, lease_background_records, next_connection_id, push_background_record,
-    RequestTraceEvent, RequestTraceEventSink, RequestTraceFacts,
+    ack_background_export, lease_background_records, now_ms, push_background_record,
+};
+pub(crate) use spool::{
+    next_connection_id, RequestTraceEvent, RequestTraceEventSink, RequestTraceFacts,
 };

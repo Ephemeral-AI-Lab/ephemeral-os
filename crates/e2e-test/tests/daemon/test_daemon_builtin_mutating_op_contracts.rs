@@ -7,16 +7,16 @@ use serde_json::{json, Value};
 
 use crate::support::{
     as_bool, as_str, envelope_error_kind, envelope_error_kind_or_status, envelope_result,
-    envelope_status, live_pool_or_skip, reset_isolated_networks,
+    envelope_status, live_pool_or_skip, reset_isolateds,
 };
 
 #[test]
-fn isolated_network_lifecycle_ops_are_live() -> Result<()> {
+fn isolated_lifecycle_ops_are_live() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_networks(&lease);
+    reset_isolateds(&lease);
 
     let caller_id = lease.caller_id().to_owned();
     let body = (|| -> Result<()> {
@@ -75,7 +75,7 @@ fn isolated_network_lifecycle_ops_are_live() -> Result<()> {
 }
 
 #[test]
-fn isolated_network_test_reset_op_is_live_and_harness_gated() -> Result<()> {
+fn isolated_test_reset_op_is_live_and_harness_gated() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };

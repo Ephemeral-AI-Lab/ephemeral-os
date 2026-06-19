@@ -16,7 +16,7 @@ impl MutationSource {
         match self {
             Self::DirectWrite => "direct_write",
             Self::DirectEdit => "direct_edit",
-            Self::IsolatedNetwork => "isolated_network",
+            Self::IsolatedNetwork => "isolated",
             Self::OverlayCapture => "overlay_capture",
             Self::PluginOverlay => "plugin_overlay",
         }

@@ -11,7 +11,7 @@ use std::path::PathBuf;
 
 use serde::Deserialize;
 
-use crate::isolated_network_setup::IsolatedNetwork;
+use crate::isolated_setup::IsolatedNetwork;
 use crate::lifecycle::monotonic_seconds;
 use crate::namespace::NamespaceRuntime;
 pub use crate::profile::{
@@ -20,7 +20,7 @@ pub use crate::profile::{
 };
 
 #[cfg(test)]
-#[path = "../../tests/unit/isolated_network_sessions.rs"]
+#[path = "../../tests/unit/isolated_sessions.rs"]
 mod tests;
 
 pub use crate::lifecycle::remount::{

@@ -4,7 +4,6 @@ use std::collections::BTreeMap;
 use std::time::Instant;
 
 use layerstack::Manifest;
-use operation::OpError;
 use protocol::{FaultDetails, OperationEnvelope, OperationFault, ResponseMeta};
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -22,29 +21,6 @@ pub(crate) fn ok_envelope(output: impl Serialize) -> Value {
         return output;
     }
     to_wire_value(OperationEnvelope::ok(output, ResponseMeta::default()))
-}
-
-pub(crate) fn rejected_envelope(error: OpError) -> Value {
-    to_wire_value(OperationEnvelope::<Value>::rejected(
-        operation_fault(
-            error.kind,
-            error.message,
-            error.details.unwrap_or_else(|| serde_json::json!({})),
-        ),
-        ResponseMeta::default(),
-    ))
-}
-
-pub(crate) fn rejected_fault_envelope(
-    kind: &'static str,
-    message: impl Into<String>,
-    details: Value,
-) -> Value {
-    rejected_envelope(OpError {
-        kind,
-        message: message.into(),
-        details: Some(details),
-    })
 }
 
 pub(crate) fn error_envelope(kind: ErrorKind, message: impl Into<String>, details: Value) -> Value {

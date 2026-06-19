@@ -1,6 +1,6 @@
 use std::net::Ipv4Addr;
 
-use crate::isolated_network_setup::{BRIDGE_PREFIX_LEN, IMDS_ADDR};
+use crate::isolated_setup::{BRIDGE_PREFIX_LEN, IMDS_ADDR};
 use crate::profile::IsolatedNetworkError;
 
 use super::wire::{

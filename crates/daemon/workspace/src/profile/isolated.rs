@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::time::Instant;
 
-use crate::isolated_network_setup::IsolatedNetwork;
+use crate::isolated_setup::IsolatedNetwork;
 use crate::model::WorkspaceProfile;
 use crate::namespace::{NamespacePlan, NamespaceRuntime};
 use crate::profile::common::{
@@ -36,7 +36,7 @@ impl ProfileHooks for IsolatedProfile<'_> {
     }
 
     fn namespace_plan(&self) -> NamespacePlan {
-        NamespacePlan::isolated_network()
+        NamespacePlan::isolated()
     }
 
     fn setup_network_after_namespace(

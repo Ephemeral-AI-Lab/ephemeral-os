@@ -22,7 +22,7 @@ use nix::unistd::Pid;
 use serde_json::json;
 
 #[cfg(target_os = "linux")]
-use crate::isolated_network_setup::{BRIDGE_PREFIX_LEN, GATEWAY};
+use crate::isolated_setup::{BRIDGE_PREFIX_LEN, GATEWAY};
 use crate::lifecycle::remount::{RemountOverlayReport, RemountProbe};
 use crate::profile::IsolatedNetworkError;
 use crate::profile::WorkspaceModeHandle;

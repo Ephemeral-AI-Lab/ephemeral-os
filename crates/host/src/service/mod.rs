@@ -8,7 +8,7 @@ use ::protocol::catalog::{
     BuiltinOp, OpContract, HOST_CONTAINER_ADOPT, HOST_CONTAINER_LIST, HOST_CONTAINER_REMOVE,
     HOST_CONTAINER_START, HOST_CONTAINER_STOP, HOST_IMAGE_LIST, HOST_IMAGE_PROFILES_LIST,
     HOST_IMAGE_PULL, HOST_SANDBOX_ACQUIRE, HOST_SANDBOX_RELEASE, HOST_TRACE_REQUESTS,
-    HOST_TRACE_SHOW, HOST_TRACE_VERIFY, SANDBOX_CHECKPOINT_BUILD_BASE,
+    HOST_TRACE_SHOW, HOST_TRACE_VERIFY,
 };
 use ::protocol::HostGatewayErrorKind;
 use anyhow::{anyhow, bail, Context, Result};
@@ -352,32 +352,15 @@ impl SandboxHost {
             }),
         );
 
-        let setup_request_id = format!("{}-setup-base", trace.request_id.as_str());
-        let response = client
-            .request(
-                SANDBOX_CHECKPOINT_BUILD_BASE,
-                &setup_request_id,
-                &json!({
-                    "layer_stack_root": DEFAULT_LAYER_STACK_ROOT,
-                    "workspace_root": workspace_root,
-                    "reset": true,
-                }),
-            )
-            .context("build sandbox workspace base")?;
-        let accepted = response_is_accepted(&response);
         self.record_host_lifecycle_event(
             sandbox_id,
             trace,
-            "sandbox_setup_base_built",
+            "sandbox_setup_base_skipped",
             json!({
-                "request_id": setup_request_id,
-                "accepted": accepted,
-                "response": response,
+                "reason": "workspace base op removed",
             }),
         );
-        if !accepted {
-            bail!("workspace base setup was rejected");
-        }
+        let _ = client;
         Ok(())
     }
 

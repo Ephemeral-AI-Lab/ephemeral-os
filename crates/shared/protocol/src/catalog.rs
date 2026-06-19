@@ -21,8 +21,6 @@ pub enum OpFamily {
     Image,
     /// Host-side Docker container lifecycle operations.
     Container,
-    /// LayerStack base, metrics, and checkpoint materialization.
-    Checkpoint,
     /// Shared workspace file read/write/edit operations.
     Files,
     /// Static first-party plugin provider operations.
@@ -45,7 +43,6 @@ impl OpFamily {
             Self::Trace => "Trace",
             Self::Image => "Image",
             Self::Container => "Container",
-            Self::Checkpoint => "Checkpoint",
             Self::Files => "Files",
             Self::Plugins => "Plugins",
             Self::IsolatedNetwork => "IsolatedNetwork",
@@ -277,16 +274,6 @@ declare_builtin_ops! {
         Daemon, Control, Internal, false, None, "operation.control.TraceExportInput", "operation.control.TraceExportOutput", "Lease bounded daemon background trace records for host ingest.";
     TraceExportAck, SANDBOX_TRACE_EXPORT_ACK, "sandbox.trace.export_ack",
         Daemon, Control, Internal, true, None, "operation.control.TraceExportAckInput", "operation.control.TraceExportAckOutput", "Ack a durably ingested daemon trace export lease.";
-    LayerMetrics, SANDBOX_CHECKPOINT_LAYER_METRICS, "sandbox.checkpoint.layer_metrics",
-        Daemon, Checkpoint, Operator, false, None, "operation.checkpoint.LayerMetricsInput", "operation.checkpoint.LayerMetricsOutput", "Report LayerStack and storage metrics for the sandbox.";
-    BuildWorkspaceBase, SANDBOX_CHECKPOINT_BUILD_BASE, "sandbox.checkpoint.build_base",
-        Daemon, Checkpoint, Operator, true, None, "operation.checkpoint.BuildBaseInput", "operation.checkpoint.WorkspaceBaseOutput", "Build or rebuild a workspace base binding.";
-    CommitToWorkspace, SANDBOX_CHECKPOINT_COMMIT_TO_WORKSPACE, "sandbox.checkpoint.commit_to_workspace",
-        Daemon, Checkpoint, Operator, true, None, "operation.checkpoint.CommitToWorkspaceInput", "operation.checkpoint.CommitToWorkspaceOutput", "Materialize LayerStack state into the bound workspace.";
-    CommitToGit, SANDBOX_CHECKPOINT_COMMIT_TO_GIT, "sandbox.checkpoint.commit_to_git",
-        Daemon, Checkpoint, Operator, true, None, "operation.checkpoint.CommitInput", "operation.checkpoint.CommitOutput", "Commit a LayerStack snapshot into the bound workspace's durable Git repo.";
-    WorkspaceBinding, SANDBOX_CHECKPOINT_BINDING, "sandbox.checkpoint.binding",
-        Daemon, Checkpoint, Operator, false, None, "operation.checkpoint.BindingInput", "operation.checkpoint.BindingOutput", "Inspect the workspace binding for a layer stack root.";
     ReadFile, SANDBOX_FILE_READ, "sandbox.file.read",
         Daemon, Files, Public, false, None, "operation.file.ReadFileInput", "operation.file.ReadFileResponse", "Read one file from the layer stack or isolated network.";
     WriteFile, SANDBOX_FILE_WRITE, "sandbox.file.write",

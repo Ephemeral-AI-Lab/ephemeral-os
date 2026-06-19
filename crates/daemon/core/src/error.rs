@@ -78,33 +78,3 @@ fn layer_stack_lifecycle_in_progress(error: &layerstack::LayerStackError) -> boo
             if message.contains("blocked by active leases")
     )
 }
-
-impl From<plugin::PluginRuntimeError> for DaemonError {
-    fn from(err: plugin::PluginRuntimeError) -> Self {
-        use plugin::PluginRuntimeError;
-        match err {
-            PluginRuntimeError::ForbiddenInIsolatedNetwork => Self::ForbiddenInIsolatedNetwork,
-            PluginRuntimeError::StateLockPoisoned(what) => Self::StateLockPoisoned(what),
-            PluginRuntimeError::InvalidRequest(message) => Self::InvalidRequest(message),
-            PluginRuntimeError::Io(source) => Self::Io(source),
-            PluginRuntimeError::LayerStack(source) => Self::LayerStack(source),
-            PluginRuntimeError::PluginDisabled(provider) => {
-                Self::Forbidden(format!("plugin provider {provider} is disabled"))
-            }
-            PluginRuntimeError::PyrightLsp(message) => Self::OverlayPipeline(message),
-        }
-    }
-}
-
-impl From<operation::checkpoint::CheckpointError> for DaemonError {
-    fn from(err: operation::checkpoint::CheckpointError) -> Self {
-        use operation::checkpoint::CheckpointError;
-        match err {
-            CheckpointError::InvalidRequest(message) => Self::InvalidRequest(message),
-            CheckpointError::Forbidden(message) => Self::Forbidden(message),
-            CheckpointError::OverlayPipeline(message) => Self::OverlayPipeline(message),
-            CheckpointError::LayerStack(source) => Self::LayerStack(source),
-            CheckpointError::Io(source) => Self::Io(source),
-        }
-    }
-}

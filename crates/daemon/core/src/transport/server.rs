@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use config::configs::{
     daemon::{DaemonConfig, FileLimitsConfig},
-    isolated_network::IsolatedNetworkConfig,
+    isolated::IsolatedNetworkConfig,
 };
 use tokio_util::sync::CancellationToken;
 

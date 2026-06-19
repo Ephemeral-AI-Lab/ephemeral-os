@@ -67,7 +67,7 @@ Lower-level network mechanics must keep network vocabulary:
 ```text
 NamespaceNetwork
 NamespacePlan::host_workspace()
-NamespacePlan::isolated_network()
+NamespacePlan::isolated()
 WorkspaceLaunchNamespaceFds.net
 IsolatedNetwork
 veth / DNS / net-ready / holder network args
@@ -128,7 +128,7 @@ Files to inspect:
 - `crates/daemon/workspace/src/profile/isolated.rs`
 - `crates/daemon/workspace/src/lifecycle/create.rs`
 - `crates/daemon/workspace/src/lifecycle/destroy.rs`
-- `crates/daemon/workspace/tests/unit/isolated_network_sessions.rs`
+- `crates/daemon/workspace/tests/unit/isolated_sessions.rs`
 
 Adversarial questions:
 
@@ -196,7 +196,7 @@ Files to inspect:
 - `crates/daemon/operation/tests/command/prepare.rs`
 - `crates/daemon/operation/tests/command/registry.rs`
 - `crates/daemon/operation/tests/command/service.rs`
-- `crates/daemon/core/tests/unit/isolated_network/service.rs`
+- `crates/daemon/core/tests/unit/isolated/service.rs`
 
 Adversarial questions:
 

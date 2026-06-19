@@ -179,8 +179,8 @@ crates/daemon/workspace/src/                         ~5,000 LOC
   network_mode/                                      ~280
     mod.rs                                              ~50
     host.rs                                            ~110
-    isolated_network.rs                                ~120
-  isolated_network_setup/                           ~1,800
+    isolated.rs                                ~120
+  isolated_setup/                           ~1,800
     mod.rs                                              ~45
     types.rs                                           ~120
     caps.rs                                             ~80
@@ -195,10 +195,10 @@ crates/daemon/workspace/src/                         ~5,000 LOC
 ```
 
 Public API names remain `NetworkMode::Host` and `NetworkMode::IsolatedNetwork`.
-`isolated_network_setup/` is only the implementation namespace for veth, DNS,
+`isolated_setup/` is only the implementation namespace for veth, DNS,
 netfilter, and dedicated-network setup with its paired cleanup helpers. Shared
 holder lifecycle, namespace entry, cgroup handling, recovery, and remount logic
-must not be hidden under `isolated_network_setup/`.
+must not be hidden under `isolated_setup/`.
 
 Supporting daemon/runtime files:
 
@@ -622,7 +622,7 @@ not use `FreshNs`; it must use holder-created namespaces plus `setns`.
 - Move shared holder lifecycle, recovery, and remount logic into `lifecycle/`.
 - Move namespace entry and cgroup handling into `namespace/`.
 - Move only dedicated-network setup/cleanup internals into
-  `isolated_network_setup/`.
+  `isolated_setup/`.
 - Keep mechanism names for veth, DNS, rtnetlink, and netfilter files.
 
 ### Phase 7: Remove Workspace Dependence On Fresh Namespace Init
@@ -709,7 +709,7 @@ Then run focused suites:
 - Overlay internals live under `overlay/`.
 - Host and isolated mode adapters are parallel under `network_mode/`.
 - Dedicated-network setup/cleanup internals live under
-  `isolated_network_setup/`; shared lifecycle, namespace, recovery, cgroup, and
+  `isolated_setup/`; shared lifecycle, namespace, recovery, cgroup, and
   remount code do not.
 - `ns-holder` is the only namespace creator for workspace commands.
 - `ns-runner` only enters prepared workspace namespaces with `setns`.

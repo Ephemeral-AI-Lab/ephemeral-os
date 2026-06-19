@@ -37,7 +37,7 @@ pub enum Rfc1918Egress {
 }
 
 impl Default for IsolatedNetworkConfig {
-    /// Disabled-by-default fallbacks used when no `isolated_network` section
+    /// Disabled-by-default fallbacks used when no `isolated` section
     /// is injected (matches `eos-sandbox/config/prd.yml`).
     fn default() -> Self {
         Self {
@@ -63,27 +63,23 @@ impl IsolatedNetworkConfig {
     /// # Errors
     /// Returns an error when a field violates isolated-workspace runtime policy.
     pub fn validate(&self) -> Result<(), ConfigFieldError> {
-        require_absolute(&self.scratch_root, "isolated_network.scratch_root")?;
-        require_f64_gt(self.ttl_s, 0.0, "isolated_network.ttl_s")?;
+        require_absolute(&self.scratch_root, "isolated.scratch_root")?;
+        require_f64_gt(self.ttl_s, 0.0, "isolated.ttl_s")?;
         if self.enabled {
-            require_u32_at_least(self.total_cap, 1, "isolated_network.total_cap")?;
+            require_u32_at_least(self.total_cap, 1, "isolated.total_cap")?;
         }
-        require_u64_at_least(self.upperdir_bytes, 1, "isolated_network.upperdir_bytes")?;
-        require_ratio(self.memavail_fraction, "isolated_network.memavail_fraction")?;
-        require_f64_gt(
-            self.setup_timeout_s,
-            0.0,
-            "isolated_network.setup_timeout_s",
-        )?;
-        require_f64_at_least(self.exit_grace_s, 0.0, "isolated_network.exit_grace_s")?;
-        require_non_empty(&self.fallback_dns, "isolated_network.fallback_dns")?;
-        require_absolute(&self.workspace_root, "isolated_network.workspace_root")?;
+        require_u64_at_least(self.upperdir_bytes, 1, "isolated.upperdir_bytes")?;
+        require_ratio(self.memavail_fraction, "isolated.memavail_fraction")?;
+        require_f64_gt(self.setup_timeout_s, 0.0, "isolated.setup_timeout_s")?;
+        require_f64_at_least(self.exit_grace_s, 0.0, "isolated.exit_grace_s")?;
+        require_non_empty(&self.fallback_dns, "isolated.fallback_dns")?;
+        require_absolute(&self.workspace_root, "isolated.workspace_root")?;
         reject_dangerous_scratch_root(&self.scratch_root, &self.workspace_root)?;
         if self.sample_interval_s.is_finite() && self.sample_interval_s >= 0.01 {
             Ok(())
         } else {
             Err(ConfigFieldError::new(
-                "isolated_network.sample_interval_s",
+                "isolated.sample_interval_s",
                 "must be at least 0.01",
             ))
         }
@@ -96,14 +92,14 @@ fn reject_dangerous_scratch_root(
 ) -> Result<(), ConfigFieldError> {
     if is_filesystem_root(scratch_root) {
         return Err(ConfigFieldError::new(
-            "isolated_network.scratch_root",
+            "isolated.scratch_root",
             "must not be the filesystem root",
         ));
     }
     if paths_match_or_resolve_equal(scratch_root, workspace_root) {
         return Err(ConfigFieldError::new(
-            "isolated_network.scratch_root",
-            "must not resolve to isolated_network.workspace_root",
+            "isolated.scratch_root",
+            "must not resolve to isolated.workspace_root",
         ));
     }
     Ok(())
@@ -126,5 +122,5 @@ fn paths_match_or_resolve_equal(left: &Path, right: &Path) -> bool {
 }
 
 #[cfg(test)]
-#[path = "../../tests/unit/configs/isolated_network.rs"]
+#[path = "../../tests/unit/configs/isolated.rs"]
 mod tests;

@@ -69,11 +69,6 @@ usage:
   sandbox-gateway daemon --sandbox-id SANDBOX_ID isolation enter --caller-id ID
   sandbox-gateway daemon --sandbox-id SANDBOX_ID isolation status --caller-id ID
   sandbox-gateway daemon --sandbox-id SANDBOX_ID isolation exit --caller-id ID [--grace-s SECONDS]
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint metrics
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint binding
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint build-base --workspace-root PATH [--reset]
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint commit-workspace --workspace-root PATH
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID checkpoint commit-git --workspace-root PATH --message TEXT [PATH...]
   sandbox-gateway daemon --sandbox-id SANDBOX_ID run end --caller-id ID [--grace-s SECONDS]
   sandbox-gateway daemon --sandbox-id SANDBOX_ID run cancel-all [--grace-s SECONDS]
   sandbox-gateway daemon --sandbox-id SANDBOX_ID op OP [ARGS_JSON] [--operator]
@@ -156,7 +151,7 @@ fn request_from_host(mut args: Vec<String>, options: &ClientOptions) -> Result<G
 fn request_from_daemon(mut args: Vec<String>, options: &ClientOptions) -> Result<GatewayRequest> {
     let Some(group) = shift(&mut args) else {
         bail!(
-            "missing daemon command; expected ping | files | commands | plugins | pyright | isolation | checkpoint | run | op"
+            "missing daemon command; expected ping | files | commands | plugins | pyright | isolation | run | op"
         )
     };
     let sandbox_id = require_sandbox_id(options)?;
@@ -175,11 +170,10 @@ fn request_from_daemon(mut args: Vec<String>, options: &ClientOptions) -> Result
         "plugins" => request_from_daemon_plugins(args, sandbox_id),
         "pyright" => request_from_daemon_pyright(args, sandbox_id),
         "isolation" => request_from_daemon_isolation(args, sandbox_id),
-        "checkpoint" => request_from_daemon_checkpoint(args, sandbox_id),
         "run" => request_from_daemon_run(args, sandbox_id),
         "op" => request_from_op(args, Some(sandbox_id), false),
         other => bail!(
-            "unknown daemon command {other:?}; expected ping | files | commands | plugins | pyright | isolation | checkpoint | run | op"
+            "unknown daemon command {other:?}; expected ping | files | commands | plugins | pyright | isolation | run | op"
         ),
     }
 }
@@ -747,98 +741,6 @@ fn request_from_daemon_isolation(
     }
 }
 
-fn request_from_daemon_checkpoint(
-    mut args: Vec<String>,
-    sandbox_id: String,
-) -> Result<GatewayRequest> {
-    let Some(subcommand) = shift(&mut args) else {
-        bail!(
-            "missing daemon checkpoint subcommand; expected metrics | binding | build-base | commit-workspace | commit-git"
-        )
-    };
-    match subcommand.as_str() {
-        "metrics" => {
-            let layer_stack_root = layer_stack_root_or_default(&mut args)?;
-            expect_no_args(&args)?;
-            Ok(daemon_request(
-                "sandbox.checkpoint.layer_metrics",
-                json!({ "layer_stack_root": layer_stack_root }),
-                sandbox_id,
-                true,
-            ))
-        }
-        "binding" => {
-            let layer_stack_root = layer_stack_root_or_default(&mut args)?;
-            expect_no_args(&args)?;
-            Ok(daemon_request(
-                "sandbox.checkpoint.binding",
-                json!({ "layer_stack_root": layer_stack_root }),
-                sandbox_id,
-                true,
-            ))
-        }
-        "build-base" => {
-            let reset = take_switch(&mut args, "--reset");
-            let mut request = checkpoint_workspace_request(
-                "sandbox.checkpoint.build_base",
-                args,
-                sandbox_id,
-                true,
-            )?;
-            if reset {
-                request.args["reset"] = json!(true);
-            }
-            Ok(request)
-        }
-        "commit-workspace" => checkpoint_workspace_request(
-            "sandbox.checkpoint.commit_to_workspace",
-            args,
-            sandbox_id,
-            true,
-        ),
-        "commit-git" => {
-            let layer_stack_root = layer_stack_root_or_default(&mut args)?;
-            let workspace_root = workspace_root_required(&mut args)?;
-            let message = take_required_flag(&mut args, "--message")?;
-            let paths = args;
-            let mut body = json!({
-                "layer_stack_root": layer_stack_root,
-                "workspace_root": workspace_root,
-                "message": message,
-            });
-            if !paths.is_empty() {
-                body["paths"] = json!(paths);
-            }
-            Ok(daemon_request(
-                "sandbox.checkpoint.commit_to_git",
-                body,
-                sandbox_id,
-                true,
-            ))
-        }
-        other => bail!(
-            "unknown daemon checkpoint subcommand {other:?}; expected metrics | binding | build-base | commit-workspace | commit-git"
-        ),
-    }
-}
-
-fn checkpoint_workspace_request(
-    op: &str,
-    mut args: Vec<String>,
-    sandbox_id: String,
-    operator: bool,
-) -> Result<GatewayRequest> {
-    let layer_stack_root = layer_stack_root_or_default(&mut args)?;
-    let workspace_root = workspace_root_required(&mut args)?;
-    expect_no_args(&args)?;
-    Ok(daemon_request(
-        op,
-        json!({ "layer_stack_root": layer_stack_root, "workspace_root": workspace_root }),
-        sandbox_id,
-        operator,
-    ))
-}
-
 fn request_from_daemon_run(mut args: Vec<String>, sandbox_id: String) -> Result<GatewayRequest> {
     let Some(subcommand) = shift(&mut args) else {
         bail!("missing daemon run subcommand; expected end | cancel-all")
@@ -1068,26 +970,10 @@ fn take_required_flag(args: &mut Vec<String>, flag: &str) -> Result<String> {
     take_optional_flag(args, flag)?.with_context(|| format!("{flag} is required"))
 }
 
-fn take_required_flag_any(
-    args: &mut Vec<String>,
-    flags: &[&str],
-    canonical: &str,
-) -> Result<String> {
-    take_optional_flag_any(args, flags)?.with_context(|| format!("{canonical} is required"))
-}
-
 fn layer_stack_root_or_default(args: &mut Vec<String>) -> Result<String> {
     Ok(
         take_optional_flag_any(args, &["--layer-stack-root", "--layer_stack_root"])?
             .unwrap_or_else(|| DEFAULT_LAYER_STACK_ROOT.to_owned()),
-    )
-}
-
-fn workspace_root_required(args: &mut Vec<String>) -> Result<String> {
-    take_required_flag_any(
-        args,
-        &["--workspace-root", "--workspace_root"],
-        "--workspace-root",
     )
 }
 

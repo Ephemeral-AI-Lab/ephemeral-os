@@ -16,7 +16,7 @@
 #![forbid(unsafe_code)]
 
 pub mod error;
-mod isolated_network_setup;
+mod isolated_setup;
 mod lifecycle;
 pub mod model;
 mod namespace;

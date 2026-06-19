@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::isolated_network_setup::VethAllocation;
+use crate::isolated_setup::VethAllocation;
 use crate::lifecycle::remount::WorkspaceRemountState;
 use crate::model::WorkspaceProfile;
 use crate::overlay::dirs::OverlayDirs;

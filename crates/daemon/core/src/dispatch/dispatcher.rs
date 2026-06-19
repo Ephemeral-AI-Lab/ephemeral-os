@@ -5,9 +5,7 @@
 use std::path::PathBuf;
 use std::time::Instant;
 
-use operation::OpRequest;
-use operation::RequestError;
-use protocol::catalog::BuiltinOp;
+use protocol::catalog::{BuiltinOp, ServedBy};
 use serde_json::{json, Value};
 
 use crate::wire::{ErrorKind, Request};
@@ -50,18 +48,14 @@ pub fn dispatch_with_context(request: &Request, context: DispatchContext<'_>) ->
             json!({"op": request.op}),
         );
     };
-    let parsed = match OpRequest::parse(op, &request.args, &request.invocation_id) {
-        Ok(parsed) => parsed,
-        Err(RequestError::Args(error)) => return builtin::parse_error_response(op, error),
-        Err(RequestError::NotDaemonServed(_)) => {
-            return error_response(
-                ErrorKind::Forbidden,
-                format!("op {} is served by the host gateway", request.op),
-                json!({"op": request.op, "served_by": "host"}),
-            );
-        }
-    };
-    builtin::dispatch(parsed, context)
+    if op.contract().served_by != ServedBy::Daemon {
+        return error_response(
+            ErrorKind::Forbidden,
+            format!("op {} is served by the host gateway", request.op),
+            json!({"op": request.op, "served_by": "host"}),
+        );
+    }
+    builtin::dispatch(op, context)
 }
 
 #[must_use]

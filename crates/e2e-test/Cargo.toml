@@ -56,10 +56,6 @@ name = "workspace-runtime-isolated"
 path = "tests/workspace-runtime-isolated/mod.rs"
 
 [[test]]
-name = "layerstack"
-path = "tests/layerstack/mod.rs"
-
-[[test]]
 name = "workspace-publish-gate"
 path = "tests/workspace-publish-gate/mod.rs"
 

@@ -9,7 +9,7 @@ use base64::Engine as _;
 use config::configs::daemon::{
     FileLimitsConfig, PluginRuntimeConfig, MAX_FILE_BYTES, MAX_READ_BYTES,
 };
-use config::configs::isolated_network::IsolatedNetworkConfig;
+use config::configs::isolated::IsolatedNetworkConfig;
 use daemon::wire::{
     decode, encode, Request, WireMessage, DAEMON_AUTH_FIELD, DAEMON_FORWARD_AUTH_FIELD,
     DAEMON_PROTOCOL_FIELD, DAEMON_PROTOCOL_VERSION,
@@ -63,7 +63,7 @@ impl TestDaemon {
         ))
     }
 
-    fn with_isolated_network(scratch_root: &Path) -> Self {
+    fn with_isolated(scratch_root: &Path) -> Self {
         Self::with_services(test_services(
             PluginRuntimeConfig::default(),
             IsolatedNetworkConfig {
@@ -83,11 +83,8 @@ impl TestDaemon {
     }
 }
 
-fn test_services(
-    plugin: PluginRuntimeConfig,
-    isolated_network: IsolatedNetworkConfig,
-) -> RuntimeServices {
-    RuntimeServices::new(plugin, isolated_network, command::CommandConfig::default())
+fn test_services(plugin: PluginRuntimeConfig, isolated: IsolatedNetworkConfig) -> RuntimeServices {
+    RuntimeServices::new(plugin, isolated, command::CommandConfig::default())
 }
 
 #[test]
@@ -146,48 +143,6 @@ fn dispatches_runtime_ready_probe() -> TestResult {
 }
 
 #[test]
-fn dispatches_workspace_base_control_ops_for_fresh_stack() -> TestResult {
-    let (root, workspace, outside_target) = seed_workspace_base_fixture()?;
-    let daemon = TestDaemon::new();
-
-    let build_response = dispatch_request(
-        &daemon,
-        "sandbox.checkpoint.build_base",
-        "build",
-        json!({
-            "layer_stack_root": &root,
-            "workspace_root": &workspace,
-        }),
-    );
-    let built = ok_result(&build_response);
-    assert_workspace_base_created(built, &root, &workspace);
-    assert_workspace_base_symlinks(&root, &outside_target)?;
-
-    let binding_response = dispatch_request(
-        &daemon,
-        "sandbox.checkpoint.binding",
-        "binding",
-        json!({"layer_stack_root": &root}),
-    );
-    let binding = ok_result(&binding_response);
-    assert_eq!(
-        binding["binding"]["base_root_hash"],
-        built["binding"]["base_root_hash"]
-    );
-    assert_read_content(
-        &daemon,
-        &root,
-        &json!(workspace.join("README.md")),
-        "# base\n",
-    );
-    assert_duplicate_workspace_base_build_rejected(&daemon, &root, &workspace);
-
-    rebuild_workspace_base(&daemon, &root, &workspace, built)?;
-    assert_read_content(&daemon, &root, &json!("README.md"), "# reset\n");
-    Ok(())
-}
-
-#[test]
 fn unknown_op_uses_structured_contract() {
     let request = Request {
         op: "sandbox.does_not_exist".to_owned(),
@@ -206,7 +161,7 @@ fn unknown_op_uses_structured_contract() {
 }
 
 #[test]
-fn isolated_network_ops_are_registered_and_disabled_by_default() -> TestResult {
+fn isolated_ops_are_registered_and_disabled_by_default() -> TestResult {
     let _guard = ISOLATED_ENV_LOCK
         .lock()
         .map_err(|_| "isolated env lock poisoned")?;
@@ -255,12 +210,12 @@ fn isolated_network_ops_are_registered_and_disabled_by_default() -> TestResult {
 }
 
 #[test]
-fn isolated_network_lifecycle_ops_open_status_list_and_exit_when_enabled() -> TestResult {
+fn isolated_lifecycle_ops_open_status_list_and_exit_when_enabled() -> TestResult {
     let _guard = ISOLATED_ENV_LOCK
         .lock()
         .map_err(|_| "isolated env lock poisoned")?;
     let env = IsolatedLifecycleEnv::new()?;
-    let daemon = TestDaemon::with_isolated_network(&env.scratch);
+    let daemon = TestDaemon::with_isolated(&env.scratch);
     assert_isolated_test_reset(&daemon, "iws-reset");
 
     let enter_response = dispatch_request(
@@ -300,7 +255,7 @@ fn isolated_network_lifecycle_ops_open_status_list_and_exit_when_enabled() -> Te
 }
 
 #[test]
-fn isolated_network_ops_validate_required_arguments() -> TestResult {
+fn isolated_ops_validate_required_arguments() -> TestResult {
     let _guard = ISOLATED_ENV_LOCK
         .lock()
         .map_err(|_| "isolated env lock poisoned")?;
@@ -546,7 +501,6 @@ async fn tcp_server_rejects_non_public_ops_without_forward_authority() -> TestRe
 
     for op in [
         "sandbox.runtime.ready",
-        "sandbox.checkpoint.layer_metrics",
         "sandbox.run.cancel_all",
         "sandbox.isolation.test_reset",
     ] {
@@ -755,7 +709,7 @@ async fn tcp_server_sidecar_records_file_fast_path_route() -> TestResult {
     assert_eq!(route_events[0].details.value["kind"], json!("fast_path"));
     assert_eq!(
         route_events[0].details.value["reason"],
-        json!("no_isolated_network_for_caller")
+        json!("no_isolated_for_caller")
     );
     assert!(
         record.events.iter().any(|event| event.module == "file"
@@ -988,136 +942,6 @@ fn assert_error_sidecar_event(
     Ok(())
 }
 
-fn seed_workspace_base_fixture() -> TestResult<(PathBuf, PathBuf, PathBuf)> {
-    let (root, workspace) = empty_workspace("workspace_base")?;
-    std::fs::create_dir_all(workspace.join("src"))?;
-    std::fs::write(workspace.join("README.md"), "# base\n")?;
-    std::fs::write(workspace.join("src").join("a.py"), "print('base')\n")?;
-    std::os::unix::fs::symlink("src/a.py", workspace.join("link.py"))?;
-    std::fs::create_dir_all(workspace.join("links"))?;
-    let outside_target = workspace
-        .parent()
-        .ok_or("workspace parent")?
-        .join("outside.txt");
-    std::fs::write(&outside_target, "outside\n")?;
-    std::os::unix::fs::symlink("../src/a.py", workspace.join("links").join("inside"))?;
-    std::os::unix::fs::symlink(&outside_target, workspace.join("links").join("outside"))?;
-    Ok((root, workspace, outside_target))
-}
-
-fn assert_workspace_base_created(ensure: &Value, root: &Path, workspace: &Path) {
-    assert_eq!(ensure["success"], Value::Bool(true));
-    assert_eq!(ensure["created"], Value::Bool(true));
-    assert_eq!(
-        ensure["binding"]["workspace_root"],
-        json!(workspace.to_string_lossy().as_ref())
-    );
-    assert_eq!(
-        ensure["binding"]["layer_stack_root"],
-        json!(root.to_string_lossy().as_ref())
-    );
-    assert_eq!(ensure["binding"]["base_manifest_version"], json!(1));
-    assert_eq!(
-        ensure["binding"]["base_root_hash"].as_str().map(str::len),
-        Some(64)
-    );
-    assert!(
-        ensure.get("timings").is_none(),
-        "workspace-base timings live in trace/meta, not the result payload: {ensure}"
-    );
-}
-
-fn assert_workspace_base_symlinks(root: &Path, outside_target: &Path) -> TestResult {
-    assert_eq!(
-        std::fs::read_link(
-            root.join("layers")
-                .join("B000001-base")
-                .join("links")
-                .join("inside")
-        )?
-        .to_string_lossy(),
-        "../src/a.py"
-    );
-    assert_eq!(
-        std::fs::read_link(
-            root.join("layers")
-                .join("B000001-base")
-                .join("links")
-                .join("outside")
-        )?,
-        outside_target
-    );
-    Ok(())
-}
-
-fn assert_read_content(daemon: &TestDaemon, root: &Path, path: &Value, content: &str) {
-    let read = dispatch_request(
-        daemon,
-        "sandbox.file.read",
-        "read",
-        json!({
-            "layer_stack_root": root,
-            "path": path,
-        }),
-    );
-    assert_eq!(read["status"], Value::String("ok".to_owned()), "{read}");
-    assert_eq!(read["result"]["content"], Value::String(content.to_owned()));
-}
-
-fn assert_duplicate_workspace_base_build_rejected(
-    daemon: &TestDaemon,
-    root: &Path,
-    workspace: &Path,
-) {
-    let duplicate = dispatch_request(
-        daemon,
-        "sandbox.checkpoint.build_base",
-        "build-again",
-        json!({
-            "layer_stack_root": root,
-            "workspace_root": workspace,
-        }),
-    );
-    assert_eq!(
-        duplicate["status"],
-        Value::String("error".to_owned()),
-        "{duplicate}"
-    );
-    assert!(
-        duplicate["error"]["message"]
-            .as_str()
-            .is_some_and(|message| message.contains("workspace base already exists")),
-        "{duplicate}"
-    );
-}
-
-fn rebuild_workspace_base(
-    daemon: &TestDaemon,
-    root: &Path,
-    workspace: &Path,
-    original_base: &Value,
-) -> TestResult {
-    std::fs::write(workspace.join("README.md"), "# reset\n")?;
-    let rebuilt = dispatch_request(
-        daemon,
-        "sandbox.checkpoint.build_base",
-        "rebuild",
-        json!({
-            "layer_stack_root": root,
-            "workspace_root": workspace,
-            "reset": true,
-        }),
-    );
-    let rebuilt = ok_result(&rebuilt);
-    assert_eq!(rebuilt["success"], Value::Bool(true));
-    assert_eq!(rebuilt["created"], Value::Bool(true));
-    assert_ne!(
-        rebuilt["binding"]["base_root_hash"],
-        original_base["binding"]["base_root_hash"]
-    );
-    Ok(())
-}
-
 struct IsolatedLifecycleEnv {
     root: PathBuf,
     workspace: PathBuf,
@@ -1248,20 +1072,6 @@ fn seed_layer_stack(label: &str) -> TestResult<(PathBuf, PathBuf)> {
             "base_root_hash": "base",
         }),
     )?;
-    Ok((root, workspace))
-}
-
-fn empty_workspace(label: &str) -> TestResult<(PathBuf, PathBuf)> {
-    static COUNTER: AtomicU64 = AtomicU64::new(0);
-    let base = PathBuf::from("/tmp").join(format!(
-        "eosd-empty-{label}-{}-{}",
-        std::process::id(),
-        COUNTER.fetch_add(1, Ordering::Relaxed)
-    ));
-    let _ = std::fs::remove_dir_all(&base);
-    let workspace = base.join("workspace");
-    let root = base.join("layer-stack");
-    std::fs::create_dir_all(&workspace)?;
     Ok((root, workspace))
 }
 

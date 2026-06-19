@@ -375,7 +375,7 @@ The public selector name `WorkspaceProfile` describes the workspace environment
 profile. Lower-level network namespace implementation names must stay
 network-specific when they model actual network mechanics, including
 `NamespaceNetwork`, `NamespacePlan::host_workspace()`,
-`NamespacePlan::isolated_network()`, `WorkspaceLaunchNamespaceFds.net`, holder
+`NamespacePlan::isolated()`, `WorkspaceLaunchNamespaceFds.net`, holder
 network arguments, veth, DNS, net-ready, and isolated-network setup names.
 
 ### Persisted Handles

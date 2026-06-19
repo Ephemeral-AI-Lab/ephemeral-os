@@ -8,6 +8,6 @@ pub mod e2e_test;
 
 pub mod gateway;
 
-pub mod isolated_network;
+pub mod isolated;
 
 pub mod runner;

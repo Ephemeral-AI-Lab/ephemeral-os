@@ -2,7 +2,7 @@ use std::io::Write;
 use std::net::Ipv4Addr;
 use std::path::{Path, PathBuf};
 
-use crate::isolated_network_setup::VethAllocation;
+use crate::isolated_setup::VethAllocation;
 use crate::profile::IsolatedNetworkError;
 use crate::profile::{HANDLE_PREFIX, PERSISTED_HANDLES_SCHEMA_VERSION};
 use serde_json::{json, Value};

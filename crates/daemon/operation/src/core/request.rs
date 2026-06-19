@@ -2,9 +2,6 @@ use std::path::PathBuf;
 
 use serde_json::Value;
 
-use crate::checkpoint::contract::{
-    BindingInput, BuildBaseInput, CommitInput, CommitToWorkspaceInput, LayerMetricsInput,
-};
 use crate::command::contract::{
     CancelCommandInput, CollectCompletedInput, ExecCommandInput, ReadProgressInput, WriteStdinInput,
 };
@@ -66,11 +63,6 @@ pub enum OpRequest {
     InflightCount(CallerCountInput),
     TraceExport(TraceExportInput),
     TraceExportAck(TraceExportAckInput),
-    LayerMetrics(LayerMetricsInput),
-    BuildWorkspaceBase(BuildBaseInput),
-    CommitToWorkspace(CommitToWorkspaceInput),
-    CommitToGit(CommitInput),
-    WorkspaceBinding(BindingInput),
     ReadFile(ReadFileInput),
     WriteFile(WriteFileInput),
     EditFile(EditFileInput),
@@ -129,13 +121,6 @@ impl OpRequest {
             BuiltinOp::InflightCount => Self::InflightCount(CallerCountInput::parse(args)),
             BuiltinOp::TraceExport => Self::TraceExport(TraceExportInput::parse(args)),
             BuiltinOp::TraceExportAck => Self::TraceExportAck(TraceExportAckInput::parse(args)?),
-            BuiltinOp::LayerMetrics => Self::LayerMetrics(LayerMetricsInput::parse(args)?),
-            BuiltinOp::BuildWorkspaceBase => Self::BuildWorkspaceBase(BuildBaseInput::parse(args)?),
-            BuiltinOp::CommitToWorkspace => {
-                Self::CommitToWorkspace(CommitToWorkspaceInput::parse(args)?)
-            }
-            BuiltinOp::CommitToGit => Self::CommitToGit(CommitInput::parse(args)?),
-            BuiltinOp::WorkspaceBinding => Self::WorkspaceBinding(BindingInput::parse(args)?),
             BuiltinOp::ReadFile => Self::ReadFile(ReadFileInput::parse(args)?),
             BuiltinOp::WriteFile => Self::WriteFile(WriteFileInput::parse(args)?),
             BuiltinOp::EditFile => Self::EditFile(EditFileInput::parse(args)?),

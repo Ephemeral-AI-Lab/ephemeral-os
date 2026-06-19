@@ -1,7 +1,7 @@
 //! `NodePool` — up to `sandboxes` daemon containers behind a blocking semaphore,
 //! plus `NodeLease`, the ergonomic per-test handle that mints a fresh
-//! `layer_stack_root`, resets the configured workspace root, and builds the
-//! base binding before injecting the standard response members.
+//! `layer_stack_root`, resets the configured workspace root, and injects the
+//! standard response members.
 //!
 //! A lease holds its node exclusively for the test's duration; the node (and its
 //! daemon) is reused across leases until `recycle_after` checkouts bound scratch
@@ -10,7 +10,6 @@
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 
 use anyhow::{bail, Result};
-use protocol::catalog;
 use serde_json::{json, Map, Value};
 
 use crate::client::{response_fault_kind, response_is_accepted, ProtocolClient, TraceWireContext};
@@ -233,44 +232,13 @@ impl<'p> NodeLease<'p> {
         {
             return Err(Box::new((node, err)));
         }
-        let iid = next_invocation_id();
-        let setup = node.container.client().request(
-            catalog::SANDBOX_CHECKPOINT_BUILD_BASE,
-            &iid,
-            &json!({
-                "layer_stack_root": stack_root,
-                "workspace_root": workspace_root,
-                "caller_id": caller_id,
-            }),
-        );
-        match setup {
-            Ok(resp) => {
-                if let Err(err) = pool.run.record_response(
-                    catalog::SANDBOX_CHECKPOINT_BUILD_BASE,
-                    &iid,
-                    &caller_id,
-                    node.container.name(),
-                    &resp,
-                ) {
-                    return Err(Box::new((node, err)));
-                }
-                if response_is_accepted(&resp) {
-                    Ok(Self {
-                        pool,
-                        node: Some(node),
-                        stack_root,
-                        workspace_root,
-                        caller_id,
-                    })
-                } else {
-                    Err(Box::new((
-                        node,
-                        anyhow::anyhow!("build_workspace_base failed: {resp}"),
-                    )))
-                }
-            }
-            Err(err) => Err(Box::new((node, err.into()))),
-        }
+        Ok(Self {
+            pool,
+            node: Some(node),
+            stack_root,
+            workspace_root,
+            caller_id,
+        })
     }
 
     fn node(&self) -> &Node {

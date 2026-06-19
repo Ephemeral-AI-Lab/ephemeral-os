@@ -1,25 +1,12 @@
 //! Daemon-owned services shared by dispatch handlers.
 
-use std::sync::Arc;
 use std::time::Duration;
 
 use command::CommandConfig;
 use config::configs::daemon::{CommandConfig as ConfigCommandConfig, PluginRuntimeConfig};
-use config::configs::isolated_network::IsolatedNetworkConfig;
+use config::configs::isolated::IsolatedNetworkConfig;
 use layerstack::service::{BoundedCaptureOptions, IgnoredCaptureLimits};
 use layerstack::CommitOptions;
-use operation_service::command::CommandFinalizationOptions;
-use operation_service::workspace_manager::WorkspaceManagerService;
-use operation_service::workspace_remount::{WorkspaceRemountOptions, WorkspaceRemountService};
-use operation_service::{CommandOperationService, OperationServices};
-use plugin::{PluginRuntime, PluginRuntimeError};
-use serde_json::Value;
-use workspace::{
-    CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
-    DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, ReadonlySnapshotHandle,
-    RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceError, WorkspaceHandle,
-    WorkspaceService,
-};
 
 #[must_use]
 pub(crate) fn command_config_from_schema(config: &ConfigCommandConfig) -> CommandConfig {
@@ -54,21 +41,19 @@ pub(crate) fn capture_options_from_schema(config: &ConfigCommandConfig) -> Bound
 
 /// Runtime service instances shared by daemon dispatch handlers.
 pub struct RuntimeServices {
-    pub operation: OperationServices,
     pub commit_options: CommitOptions,
-    pub plugin: PluginRuntime,
 }
 
 impl RuntimeServices {
     #[must_use]
     pub fn new(
         plugin: PluginRuntimeConfig,
-        isolated_network: IsolatedNetworkConfig,
+        isolated: IsolatedNetworkConfig,
         command: CommandConfig,
     ) -> Self {
         Self::with_commit_options_and_capture_options(
             plugin,
-            isolated_network,
+            isolated,
             command,
             CommitOptions::default(),
             BoundedCaptureOptions::default(),
@@ -77,85 +62,14 @@ impl RuntimeServices {
 
     #[must_use]
     pub fn with_commit_options_and_capture_options(
-        plugin: PluginRuntimeConfig,
-        _isolated_network: IsolatedNetworkConfig,
-        command: CommandConfig,
+        _plugin: PluginRuntimeConfig,
+        _isolated: IsolatedNetworkConfig,
+        _command: CommandConfig,
         commit_options: CommitOptions,
-        capture_options: BoundedCaptureOptions,
+        _capture_options: BoundedCaptureOptions,
     ) -> Self {
-        let workspace = Arc::new(WorkspaceManagerService::new(Arc::new(
-            UnsupportedWorkspaceService,
-        )));
-        let command = Arc::new(CommandOperationService::with_finalization_options(
-            Arc::clone(&workspace),
-            command,
-            CommandFinalizationOptions {
-                one_shot_capture: capture_options,
-                one_shot_publish: commit_options,
-            },
-        ));
-        let remount = Arc::new(WorkspaceRemountService::new(
-            Arc::clone(&workspace),
-            Arc::clone(&command),
-            WorkspaceRemountOptions::default(),
-        ));
         Self {
-            operation: OperationServices::new(workspace, command, remount),
             commit_options,
-            plugin: PluginRuntime::new(plugin),
         }
-    }
-
-    pub fn ensure_plugin_family_allowed(&self, args: &Value) -> Result<(), PluginRuntimeError> {
-        plugin_contract::validate_plugin_caller_fields(args)
-            .map_err(|err| PluginRuntimeError::InvalidRequest(err.message()))?;
-        self.ensure_plugin_caller_allowed(plugin_contract::CallerId::from_wire(args).as_str())
-    }
-
-    pub fn ensure_plugin_caller_allowed(&self, caller: &str) -> Result<(), PluginRuntimeError> {
-        let _ = caller;
-        Ok(())
-    }
-}
-
-struct UnsupportedWorkspaceService;
-
-impl WorkspaceService for UnsupportedWorkspaceService {
-    fn create_workspace(
-        &self,
-        _request: CreateWorkspaceRequest,
-    ) -> Result<WorkspaceHandle, WorkspaceError> {
-        Err(WorkspaceError::FeatureDisabled)
-    }
-
-    fn capture_changes(
-        &self,
-        _handle: &WorkspaceHandle,
-        _request: CaptureChangesRequest,
-    ) -> Result<CapturedWorkspaceChanges, WorkspaceError> {
-        Err(WorkspaceError::FeatureDisabled)
-    }
-
-    fn remount_workspace(
-        &self,
-        _handle: &WorkspaceHandle,
-        _request: RemountWorkspaceRequest,
-    ) -> Result<RemountWorkspaceResult, WorkspaceError> {
-        Err(WorkspaceError::FeatureDisabled)
-    }
-
-    fn destroy_workspace(
-        &self,
-        _handle: WorkspaceHandle,
-        _request: DestroyWorkspaceRequest,
-    ) -> Result<DestroyWorkspaceResult, WorkspaceError> {
-        Err(WorkspaceError::FeatureDisabled)
-    }
-
-    fn latest_snapshot(
-        &self,
-        _request: LatestSnapshotRequest,
-    ) -> Result<ReadonlySnapshotHandle, WorkspaceError> {
-        Err(WorkspaceError::FeatureDisabled)
     }
 }

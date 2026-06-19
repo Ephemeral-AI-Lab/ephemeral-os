@@ -51,7 +51,7 @@ impl NamespacePlan {
         }
     }
 
-    pub(crate) const fn isolated_network() -> Self {
+    pub(crate) const fn isolated() -> Self {
         Self {
             user: true,
             mount: true,

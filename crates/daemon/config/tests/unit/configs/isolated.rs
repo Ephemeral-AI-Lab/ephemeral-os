@@ -1,14 +1,14 @@
 use super::*;
 
 #[test]
-fn config_prd_isolated_network_section_deserializes_and_validates() {
+fn config_prd_isolated_section_deserializes_and_validates() {
     prd_config()
         .validate()
         .expect("prd isolated network config is valid");
 }
 
 #[test]
-fn config_default_isolated_network_is_disabled_and_valid() {
+fn config_default_isolated_is_disabled_and_valid() {
     let config = IsolatedNetworkConfig::default();
     assert!(!config.enabled);
     config.validate().expect("default config is valid");
@@ -18,39 +18,39 @@ fn config_default_isolated_network_is_disabled_and_valid() {
 fn config_validation_rejects_invalid_isolated_values() {
     let mut cfg = prd_config();
     cfg.scratch_root = PathBuf::from("relative");
-    assert_invalid(cfg, "isolated_network.scratch_root");
+    assert_invalid(cfg, "isolated.scratch_root");
 
     let mut cfg = prd_config();
     cfg.scratch_root = PathBuf::from("/");
-    assert_invalid(cfg, "isolated_network.scratch_root");
+    assert_invalid(cfg, "isolated.scratch_root");
 
     let mut cfg = prd_config();
     cfg.scratch_root = cfg.workspace_root.clone();
-    assert_invalid(cfg, "isolated_network.scratch_root");
+    assert_invalid(cfg, "isolated.scratch_root");
 
     let mut cfg = prd_config();
     cfg.enabled = true;
     cfg.total_cap = 0;
-    assert_invalid(cfg, "isolated_network.total_cap");
+    assert_invalid(cfg, "isolated.total_cap");
 
     let mut cfg = prd_config();
     cfg.memavail_fraction = 0.0;
-    assert_invalid(cfg, "isolated_network.memavail_fraction");
+    assert_invalid(cfg, "isolated.memavail_fraction");
 
     let mut cfg = prd_config();
     cfg.exit_grace_s = -0.1;
-    assert_invalid(cfg, "isolated_network.exit_grace_s");
+    assert_invalid(cfg, "isolated.exit_grace_s");
 
     let mut cfg = prd_config();
     cfg.sample_interval_s = 0.001;
-    assert_invalid(cfg, "isolated_network.sample_interval_s");
+    assert_invalid(cfg, "isolated.sample_interval_s");
 }
 
 fn prd_config() -> IsolatedNetworkConfig {
     crate::load_prd()
         .expect("prd config loads")
-        .section("isolated_network")
-        .expect("isolated_network section deserializes")
+        .section("isolated")
+        .expect("isolated section deserializes")
 }
 
 fn assert_invalid(config: IsolatedNetworkConfig, field: &str) {

@@ -622,7 +622,7 @@ Foreground completion response:
 - Preserve `publish_lanes` as empty/dropped metadata where the current command
   response contract expects it, but mark session command publication as not
   performed.
-- Preserve `isolated_network.published: false` equivalent metadata for
+- Preserve `isolated.published: false` equivalent metadata for
   isolated sessions until a broader response schema replaces it.
 
 ## Exec Flow With `None`

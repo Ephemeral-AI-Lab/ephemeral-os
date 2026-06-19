@@ -2,7 +2,6 @@
 
 pub mod core;
 
-pub mod checkpoint;
 pub mod command;
 pub mod control;
 pub mod file;

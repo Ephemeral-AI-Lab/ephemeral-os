@@ -113,7 +113,7 @@ Keep lower-level network implementation names unchanged:
 
 - `NamespaceNetwork`
 - `NamespacePlan::host_workspace()`
-- `NamespacePlan::isolated_network()`
+- `NamespacePlan::isolated()`
 - `WorkspaceLaunchNamespaceFds.net`
 - `ns-holder host/isolated` arguments
 - veth, DNS, net-ready, and isolated-network setup names
@@ -221,7 +221,7 @@ Do not rename network-specific implementation code merely because it contains
 the word network. Keep these names when they model network mechanics:
 
 - `NamespaceNetwork`
-- `NamespacePlan::isolated_network`
+- `NamespacePlan::isolated`
 - `WorkspaceLaunchNamespaceFds.net`
 - `IsolatedNetwork`
 - veth, DNS, bridge, net-ready, holder network args

@@ -282,7 +282,7 @@ pub(crate) fn finalize_workspace_command(
     );
     let mut extras = Map::new();
     extras.insert(
-        "isolated_network".to_owned(),
+        "isolated".to_owned(),
         json!({
             "caller_id": context.caller_id,
             "workspace_handle_id": context.workspace_handle_id,

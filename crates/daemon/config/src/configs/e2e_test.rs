@@ -11,7 +11,7 @@ use std::time::Duration;
 use anyhow::{bail, Context, Result};
 use serde::Deserialize;
 
-use crate::configs::isolated_network::IsolatedNetworkConfig;
+use crate::configs::isolated::IsolatedNetworkConfig;
 use crate::{ConfigDocument, ConfigPath};
 
 /// How nodes (containers) map to tests.
@@ -316,11 +316,9 @@ impl Config {
     pub fn from_document(doc: &ConfigDocument) -> Result<Self> {
         let e2e = EosE2eTestConfig::from_document(doc)?;
         let isolated = doc
-            .section::<IsolatedNetworkConfig>("isolated_network")
-            .context("deserialize isolated_network config section")?;
-        isolated
-            .validate()
-            .context("validate isolated_network config")?;
+            .section::<IsolatedNetworkConfig>("isolated")
+            .context("deserialize isolated config section")?;
+        isolated.validate().context("validate isolated config")?;
         Self::from_sections(e2e, isolated)
     }
 

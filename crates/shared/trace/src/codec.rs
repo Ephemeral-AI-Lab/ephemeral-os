@@ -380,7 +380,6 @@ fn span_kind_code(kind: SpanKind) -> i32 {
         SpanKind::IsolatedNetwork => 16,
         SpanKind::Plugin => 17,
         SpanKind::File => 18,
-        SpanKind::Checkpoint => 19,
         SpanKind::Resource => 20,
         SpanKind::Control => 21,
     }
@@ -410,7 +409,6 @@ fn span_kind_from_code(
         16 => SpanKind::IsolatedNetwork,
         17 => SpanKind::Plugin,
         18 => SpanKind::File,
-        19 => SpanKind::Checkpoint,
         20 => SpanKind::Resource,
         21 => SpanKind::Control,
         _ => {

@@ -9,7 +9,6 @@ license.workspace = true
 command.workspace = true
 layerstack.workspace = true
 linux-namespace-subprocess.workspace = true
-overlay.workspace = true
 plugin-contract.workspace = true
 protocol.workspace = true
 trace.workspace = true
@@ -21,13 +20,6 @@ serde.workspace = true
 serde_json = { workspace = true, features = ["preserve_order"] }
 thiserror.workspace = true
 uuid.workspace = true
-
-[dev-dependencies]
-overlay = { workspace = true, features = ["test-root-override"] }
-
-[[test]]
-name = "checkpoint_commit"
-path = "tests/checkpoint/commit.rs"
 
 [lints]
 workspace = true

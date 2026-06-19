@@ -76,7 +76,7 @@ impl BridgeAddressPool {
             }
         }
         Err(IsolatedNetworkError::NetworkUnavailable(
-            "isolated_network_ip_pool_exhausted".to_owned(),
+            "isolated_ip_pool_exhausted".to_owned(),
         ))
     }
 

@@ -184,10 +184,7 @@ dependencies = [
  "command",
  "config",
  "layerstack",
- "operation",
  "operation_service",
- "plugin",
- "plugin-contract",
  "proptest",
  "protocol",
  "serde",
@@ -756,26 +753,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 
 [[package]]
-name = "operation"
-version = "0.1.0"
-dependencies = [
- "command",
- "layerstack",
- "linux-namespace-subprocess",
- "nix 0.29.0",
- "overlay",
- "plugin-contract",
- "protocol",
- "rustix 0.38.44",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "trace",
- "uuid",
- "workspace",
-]
-
-[[package]]
 name = "operation_service"
 version = "0.1.0"
 dependencies = [
@@ -845,26 +822,6 @@ name = "pkg-config"
 version = "0.3.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19f132c84eca552bf34cab8ec81f1c1dcc229b811638f9d283dceabe58c5569e"
-
-[[package]]
-name = "plugin"
-version = "0.1.0"
-dependencies = [
- "config",
- "layerstack",
- "nix 0.29.0",
- "plugin-contract",
- "serde_json",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "plugin-contract"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
-]
 
 [[package]]
 name = "powerfmt"

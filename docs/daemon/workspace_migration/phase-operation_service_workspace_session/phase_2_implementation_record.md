@@ -904,7 +904,7 @@ Rules:
 - Spec:
   `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_milestone_6_6_workspace_profile_symmetry_SPEC.md`
 - Files changed:
-  - `crates/daemon/workspace/src/isolated_network_setup/mod.rs`
+  - `crates/daemon/workspace/src/isolated_setup/mod.rs`
   - `crates/daemon/workspace/src/lib.rs`
   - `crates/daemon/workspace/src/lifecycle/create.rs`
   - `crates/daemon/workspace/src/lifecycle/destroy.rs`
@@ -913,7 +913,7 @@ Rules:
   - `crates/daemon/workspace/src/profile/host_compatible.rs`
   - `crates/daemon/workspace/src/profile/isolated.rs`
   - `crates/daemon/workspace/src/profile/manager.rs`
-  - `crates/daemon/workspace/tests/unit/isolated_network_sessions.rs`
+  - `crates/daemon/workspace/tests/unit/isolated_sessions.rs`
   - `crates/daemon/operation_service/src/command/exec.rs`
   - `crates/daemon/operation_service/src/command/finalize_tests.rs`
   - `crates/daemon/operation_service/tests/command_exec.rs`
@@ -1103,7 +1103,7 @@ Rules:
     model/profile/lifecycle, operation-service command/workspace manager, daemon
     runtime adapter code, and focused tests.
   - Lower-level network implementation: `NamespaceNetwork`,
-    `NamespacePlan::isolated_network`, `WorkspaceLaunchNamespaceFds.net`,
+    `NamespacePlan::isolated`, `WorkspaceLaunchNamespaceFds.net`,
     isolated-network setup, veth, DNS, net-ready, and holder network arguments.
   - Historical docs/test fixture references: older milestone notes and agent
     prompts that intentionally describe pre-6.7 vocabulary.
@@ -1133,7 +1133,7 @@ Rules:
     `rg -n "NetworkMode|\\.network\\b|network:|enter_with_network|for_mode|network_mode" crates/daemon/workspace/src crates/daemon/operation_service/src crates/daemon/core/src crates/daemon/operation/src`
     returned only accepted lower-level network implementation/config matches:
     `IsolatedNetwork` fields/parameters and `self.network` calls, daemon
-    `isolated_network` config names, `NamespaceNetwork` and namespace-plan
+    `isolated` config names, `NamespaceNetwork` and namespace-plan
     fields, holder network arguments, lifecycle calls into the isolated-network
     manager, and netfilter `network: Ipv4Addr`.
   - Static scan:

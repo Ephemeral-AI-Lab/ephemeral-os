@@ -7,9 +7,8 @@ use serde_json::{json, Value};
 
 use crate::support::{
     array, as_bool, as_str, finalize_foreground_command, isolated_command_transcript_path,
-    live_pool_or_skip, reset_isolated_networks, stdout, unwrap_operation_result,
-    wait_for_active_leases, wait_for_command_count, wait_for_container_path,
-    wait_for_isolated_command_transcript_recycled,
+    live_pool_or_skip, reset_isolateds, stdout, unwrap_operation_result, wait_for_active_leases,
+    wait_for_command_count, wait_for_container_path, wait_for_isolated_command_transcript_recycled,
 };
 
 #[test]
@@ -18,7 +17,7 @@ fn iws_same_port_discard() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_networks(&lease);
+    reset_isolateds(&lease);
     // Log to /tmp (writable): /eos is read-only by the mount mask, so a
     // `>/eos/scratch/...` redirect makes the server fail before it binds the
     // port (the `&&` short-circuits on the mkdir). The log is throwaway.
@@ -80,7 +79,7 @@ fn iws_prompt_stdin_poll_cancel_private_discard() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_networks(&lease);
+    reset_isolateds(&lease);
     let path = format!(
         "iws-command/prompt-{}.txt",
         e2e_test::unique_suffix().replace('-', "_")
@@ -236,7 +235,7 @@ fn setsid_descendant_reaped_on_isolated_exit() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_networks(&lease);
+    reset_isolateds(&lease);
     let marker = format!(
         "eos_e2e_iws_escape_{}",
         e2e_test::unique_suffix().replace('-', "_")

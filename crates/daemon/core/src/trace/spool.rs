@@ -2,11 +2,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use serde_json::{json, Value};
-use trace::{
-    BootId, EventRecord, ExportId, SpanKind, SpanRecord, SpanStatus, SpanUid, TraceExportBatch,
-    TraceId, TraceKind, TraceRecord, TraceSpool,
-};
+use serde_json::Value;
+use trace::{BootId, ExportId, SpanUid, TraceExportBatch, TraceRecord, TraceSpool};
 
 static CONNECTION_SEQ: AtomicU64 = AtomicU64::new(1);
 static BACKGROUND_SPOOL: OnceLock<Mutex<TraceSpool>> = OnceLock::new();
@@ -129,8 +126,6 @@ pub(crate) fn now_ms() -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use trace::{SpanKind, TraceKind};
-
     use super::*;
 
     #[test]

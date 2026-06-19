@@ -142,8 +142,8 @@ The blocked path reports:
 
 Main files:
 
-- `crates/daemon/workspace/src/isolated_network/manager/lifecycle.rs`
-- `crates/daemon/workspace/src/isolated_network/remount.rs`
+- `crates/daemon/workspace/src/isolated/manager/lifecycle.rs`
+- `crates/daemon/workspace/src/isolated/remount.rs`
 
 `IsolatedManager::remount_with_layers` validates the caller and new layer list,
 calls the runtime overlay remount, rejects the operation unless the runtime

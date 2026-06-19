@@ -242,13 +242,6 @@ fn identical_head_write_is_idempotent() -> TestResult {
         Value::String("ok".to_owned())
     );
 
-    let metrics = Request {
-        op: "sandbox.checkpoint.layer_metrics".to_owned(),
-        invocation_id: "inv-metrics".to_owned(),
-        args: request.args,
-    };
-    let response = daemon::dispatch(&metrics);
-    assert_eq!(response["result"]["manifest_depth"], json!(2), "{response}");
     Ok(())
 }
 

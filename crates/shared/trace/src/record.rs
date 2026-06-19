@@ -59,7 +59,6 @@ pub enum SpanKind {
     IsolatedNetwork,
     Plugin,
     File,
-    Checkpoint,
     Resource,
     Control,
 }
@@ -75,7 +74,7 @@ impl SpanKind {
             | Self::HostTransport
             | Self::DaemonTransport => SpanSubsystem::Wire,
             Self::Dispatch => SpanSubsystem::Dispatch,
-            Self::Operation | Self::File | Self::Checkpoint => SpanSubsystem::Op,
+            Self::Operation | Self::File => SpanSubsystem::Op,
             Self::LayerStack | Self::Occ => SpanSubsystem::LayerStack,
             Self::Overlay => SpanSubsystem::Overlay,
             Self::CommandProcessSpawn | Self::CommandProcessWait | Self::CommandFinalize => {

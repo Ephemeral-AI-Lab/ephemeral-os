@@ -26,9 +26,9 @@ Statuses: `Not started`, `In progress`, `Blocked`, `Done`.
 
 - [ ] Caller-facing APIs use `workspace_root`, not `layer_stack_root`.
 - [ ] Public workspace modes remain `NetworkMode::Host` and `NetworkMode::IsolatedNetwork`.
-- [x] `network_mode/` contains mode-specific Host and isolated surfaces; shared mechanics stay in `overlay/`, `lifecycle/`, `namespace/`, and `isolated_network_setup/`.
-- [x] `isolated_network_setup/` contains only dedicated-network setup/cleanup mechanics.
-- [x] Shared holder lifecycle, recovery, cgroup, namespace entry, and remount logic do not live under `isolated_network_setup/`.
+- [x] `network_mode/` contains mode-specific Host and isolated surfaces; shared mechanics stay in `overlay/`, `lifecycle/`, `namespace/`, and `isolated_setup/`.
+- [x] `isolated_setup/` contains only dedicated-network setup/cleanup mechanics.
+- [x] Shared holder lifecycle, recovery, cgroup, namespace entry, and remount logic do not live under `isolated_setup/`.
 - [ ] `LayerStack` remains the only owner of manifests, publish, OCC, snapshot leases, and capture routing.
 - [ ] `CommandOps` remains the owner of process registry, PTY/process wait, stdin/progress, and cancel mechanics.
 - [ ] `WorkspaceRuntime` coordinates caller lifecycle, route decisions, mode gates, command cancel ordering, and lease custody without owning low-level overlay mount syscalls.
@@ -222,8 +222,8 @@ crates/daemon/workspace/src/
   network_mode/
     mod.rs
     host.rs
-    isolated_network.rs
-  isolated_network_setup/
+    isolated.rs
+  isolated_setup/
     mod.rs
     dns.rs
     rtnl.rs
@@ -238,14 +238,14 @@ Tasks:
 - [x] Move shared create/destroy/recovery/lease logic into `lifecycle/`.
 - [x] Move remount state/plan/apply logic into `lifecycle/remount/`.
 - [x] Move holder entry, setns runner prep, FD mapping, and cgroup handling into `namespace/`.
-- [x] Move mode adapter logic into `network_mode/host.rs` and `network_mode/isolated_network.rs`.
-- [x] Move only veth, DNS, rtnetlink, netfilter, and dedicated-network setup/cleanup into `isolated_network_setup/`.
+- [x] Move mode adapter logic into `network_mode/host.rs` and `network_mode/isolated.rs`.
+- [x] Move only veth, DNS, rtnetlink, netfilter, and dedicated-network setup/cleanup into `isolated_setup/`.
 - [x] Keep module re-exports narrow and caller-facing names stable.
 - [x] Split any new file above roughly 500 LOC.
 
 Exit criteria:
 
-- [x] `isolated_network_setup/` does not contain shared lifecycle, namespace, recovery, cgroup, or remount code.
+- [x] `isolated_setup/` does not contain shared lifecycle, namespace, recovery, cgroup, or remount code.
 - [x] `network_mode/` is a thin adapter layer.
 - [x] Workspace crate public exports are intentional and minimal.
 - [x] File moves are behavior-preserving before Phase 7 semantic changes.
@@ -258,9 +258,9 @@ compatibility shims. Isolated-network workspace lifecycle code now lives under
 request prep, and cgroup creation now live under `namespace/`. Host and
 isolated-network mode exports are routed through thin
 `network_mode/` adapters. Dedicated-network setup/cleanup internals moved to
-`isolated_network_setup/`, retaining recognizable `dns`, `rtnl`, and
+`isolated_setup/`, retaining recognizable `dns`, `rtnl`, and
 `netfilter` mechanism files; the remaining veth/IP-pool manager code stays in
-`isolated_network_setup/mod.rs` because it is small and behavior-preserving to
+`isolated_setup/mod.rs` because it is small and behavior-preserving to
 leave unsplit in this phase. No Phase 5 capture behavior, Phase 7
 holder/setns-only execution changes, Host holder-backed creation changes, Phase
 8 legacy export retirement, publish behavior changes, packaging, live E2E, or
@@ -321,14 +321,14 @@ Phase 8 is closed for legacy source path and root export retirement. The
 workspace crate root now exports unified DTO/service/error vocabulary only;
 `workspace::WorkspaceHandle` is the unified public handle, and the legacy
 isolated handle lives at
-`workspace::network_mode::isolated_network::WorkspaceModeHandle`. Host
+`workspace::network_mode::isolated::WorkspaceModeHandle`. Host
 implementation types live under `workspace::network_mode::host`, isolated-network mode
-implementation types live under `workspace::network_mode::isolated_network`,
+implementation types live under `workspace::network_mode::isolated`,
 and shared overlay helpers live under `workspace::overlay`. The legacy root
 `capture.rs`, `dirs.rs`, and `tree.rs` source paths were removed. No root
 compatibility exports were retained. Wire compatibility remains only for legacy
 `layer_stack_root` inputs; route and response literals now use `host` and
-`isolated_network`.
+`isolated`.
 No publish behavior, capture behavior, `FreshNs` compatibility, holder/setns
 execution semantics, packaging, live E2E, or `ops.json` regeneration was
 changed.
@@ -415,7 +415,7 @@ Directory structure:
 - [x] Shared holder lifecycle, recovery, leases, and remount live under `lifecycle/`.
 - [x] Namespace planning, holder/setns entry, FD mapping, and cgroup code live under `namespace/`.
 - [x] Host and isolated mode adapters live under `network_mode/`.
-- [x] Dedicated-network setup/cleanup internals live under `isolated_network_setup/`.
+- [x] Dedicated-network setup/cleanup internals live under `isolated_setup/`.
 - [x] No single new file above roughly 500 LOC is merged.
 
 ## Evidence Log
@@ -453,7 +453,7 @@ Append one row per meaningful gate or phase closeout.
 | 2026-06-17 | 2 | `git diff --check` | Pass | Exit 0; no whitespace errors. |
 | 2026-06-17 | 2 | Phase 2 skipped gates review | Skipped | Live Docker/Linux E2E, `cargo run -p xtask -- package`, and ops.json regeneration were not run by Phase 2 scope. `cargo run -p xtask -- check-contract` was not run because the Phase 0 baseline records stale `crates/daemon/operation/ops.json`; `cargo clippy -p daemon --all-targets --locked -- -D warnings` was not run because the Phase 0 baseline records the unrelated `clippy::double_must_use` failure in `crates/daemon/layerstack/src/lease_aware.rs:97`. |
 | 2026-06-17 | 2 | Phase 2 closeout | Done | Workspace-root resolution compiles beside legacy compatibility. Residual work remains intentionally deferred to Phase 3+: host create/destroy lifecycle, route centralization, capture, holder/setns-only execution changes, target folder moves, and legacy export retirement. |
-| 2026-06-17 | 2 | Adversarial review follow-up | Done | Tightened binding discovery to reject copied bindings whose file path does not match the declared `layer_stack_root`; made cached runtime state track `workspace_root` as part of binding identity; kept ambiguity checks active when a state binding already exists; hardened malformed dual-root parsing; preserved `invalid_argument` shaping for test-remount root request errors; changed the dispatch lifecycle test to enter through `workspace_root`. Focused gates passed with `CARGO_TARGET_DIR=/tmp/eos-adversarial-phase2-target`: `cargo test -p operation isolation`, `cargo test -p daemon workspace_runtime`, `cargo test -p workspace`, `cargo test -p operation file`, and `cargo test -p daemon --test phase2_read_paths isolated_network_lifecycle_ops_open_status_list_and_exit_when_enabled`. `git diff --check` passed. |
+| 2026-06-17 | 2 | Adversarial review follow-up | Done | Tightened binding discovery to reject copied bindings whose file path does not match the declared `layer_stack_root`; made cached runtime state track `workspace_root` as part of binding identity; kept ambiguity checks active when a state binding already exists; hardened malformed dual-root parsing; preserved `invalid_argument` shaping for test-remount root request errors; changed the dispatch lifecycle test to enter through `workspace_root`. Focused gates passed with `CARGO_TARGET_DIR=/tmp/eos-adversarial-phase2-target`: `cargo test -p operation isolation`, `cargo test -p daemon workspace_runtime`, `cargo test -p workspace`, `cargo test -p operation file`, and `cargo test -p daemon --test phase2_read_paths isolated_lifecycle_ops_open_status_list_and_exit_when_enabled`. `git diff --check` passed. |
 | 2026-06-17 | 3 | Phase 3 implementation review | Done | Added `LeasedBaseRevision` and explicit host `HostWorkspaceLifecycle` creation plus release custody in `WorkspaceRuntime`; moved host bounded snapshot acquisition and `HostWorkspace::create` out of `CommandOps::start_host`; added an exact-once LayerStack `LeaseReleaseHandle` used by command prepare failure, finalization, and force-discard cleanup. `CommandOps` still owns process spawn, wait/progress/stdin/cancel, registry, transcripts, capture, and finalization. No Phase 4+ routing centralization, capture API, holder/setns change, target folder move, publish behavior change, legacy export retirement, or `ops.json` regeneration was implemented. |
 | 2026-06-17 | 3 | `cargo fmt` | Pass | Formatted Phase 3 Rust sources. |
 | 2026-06-17 | 3 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase3-target cargo test -p daemon workspace_runtime` | Pass | Exit 0; 15 focused runtime tests passed, including host create acquiring a leased base revision, create failure releasing the lease, explicit release exactly once, and existing Phase 2 root-resolution coverage. |
@@ -482,7 +482,7 @@ Append one row per meaningful gate or phase closeout.
 | 2026-06-17 | 4 | `git diff --check` | Pass | Exit 0; no whitespace errors. |
 | 2026-06-17 | 4 | Phase 4 skipped gates review | Skipped | Live Docker/Linux E2E, `cargo run -p xtask -- package`, ops.json regeneration, optional `workspace_read_paths`/`workspace_write_paths`/`workspace_command_paths`, `cargo run -p xtask -- check-contract`, and daemon clippy were not run. Packaging, live E2E, ops regeneration, and Phase 5+ target tests are outside this slice. `xtask check-contract` and daemon clippy remain covered by the Phase 0 baseline blockers: stale `crates/daemon/operation/ops.json` and pre-existing `clippy::double_must_use` in `crates/daemon/layerstack/src/lease_aware.rs:97`. |
 | 2026-06-17 | 4 | Phase 4 closeout | Done | Command/file route choice lives in `WorkspaceRuntime`; adapters only parse wire args, record returned traces, invoke selected operation backends, map errors, and shape responses. Route metadata remains compatible, caller-facing storage details remain unexposed, and Phase 5+ work is intentionally deferred. |
-| 2026-06-17 | 6 | Phase 6 implementation review | Done | Moved workspace crate code into responsibility folders: `overlay/`, `lifecycle/`, `lifecycle/remount/`, `namespace`, `network_mode/`, and `isolated_network_setup/`. Kept root `capture`, `dirs`, and `tree` as thin public compatibility re-exports, moved DNS setup into `isolated_network_setup/dns.rs`, removed unused internal namespace/network shims, and kept Phase 5 capture behavior deferred. No Phase 7 holder/setns-only execution, Host holder-backed namespace creation, Phase 8 legacy export retirement, publish behavior change, packaging, live E2E, or ops regeneration was implemented. |
+| 2026-06-17 | 6 | Phase 6 implementation review | Done | Moved workspace crate code into responsibility folders: `overlay/`, `lifecycle/`, `lifecycle/remount/`, `namespace`, `network_mode/`, and `isolated_setup/`. Kept root `capture`, `dirs`, and `tree` as thin public compatibility re-exports, moved DNS setup into `isolated_setup/dns.rs`, removed unused internal namespace/network shims, and kept Phase 5 capture behavior deferred. No Phase 7 holder/setns-only execution, Host holder-backed namespace creation, Phase 8 legacy export retirement, publish behavior change, packaging, live E2E, or ops regeneration was implemented. |
 | 2026-06-17 | 6 | `cargo fmt` | Pass | Formatted Phase 6 module moves and docs. |
 | 2026-06-17 | 6 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase6-fix-target cargo test -p workspace` | Pass | Exit 0; 24 workspace unit tests passed; doc tests 0 passed, 0 failed. |
 | 2026-06-17 | 6 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase6-fix-target cargo test -p daemon workspace_runtime` | Pass | Exit 0; 21 focused runtime tests passed, preserving route, root-resolution, Host lease, and compact-remount behavior after the file moves. |
@@ -504,7 +504,7 @@ Append one row per meaningful gate or phase closeout.
 | 2026-06-17 | 7 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase7-target cargo check -p eosd` | Pass | Extra non-required check because Phase 7 changed the private `eosd ns-holder` dispatcher. |
 | 2026-06-17 | 7 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase7-target cargo test -p linux-namespace-subprocess holder` | Pass | Extra non-required check because Phase 7 changed holder network-mode behavior and holder tests. |
 | 2026-06-17 | 7 | `git diff --check` | Pass | Exit 0; no whitespace errors. |
-| 2026-06-17 | 8 | Phase 8 implementation review | Done | Retired workspace root exports for `HostWorkspace`, `HostWorkspaceError`, `overlay_run_dirs`, legacy isolated `WorkspaceHandle`, `WorkspaceModeManager`, `WorkspaceModeContext`, and `WorkspaceModeHandle`; moved Host internals into `network_mode/host.rs`, isolated handle/manager/error/caps/context internals into `network_mode/isolated_network.rs`, and updated daemon/runtime/operation imports to scoped mode and overlay paths. No root compatibility exports were retained; existing wire compatibility inputs and trace strings use host/isolated_network. |
+| 2026-06-17 | 8 | Phase 8 implementation review | Done | Retired workspace root exports for `HostWorkspace`, `HostWorkspaceError`, `overlay_run_dirs`, legacy isolated `WorkspaceHandle`, `WorkspaceModeManager`, `WorkspaceModeContext`, and `WorkspaceModeHandle`; moved Host internals into `network_mode/host.rs`, isolated handle/manager/error/caps/context internals into `network_mode/isolated.rs`, and updated daemon/runtime/operation imports to scoped mode and overlay paths. No root compatibility exports were retained; existing wire compatibility inputs and trace strings use host/isolated. |
 | 2026-06-17 | 8 | `cargo fmt` | Pass | Formatted Phase 8 Rust sources. |
 | 2026-06-17 | 8 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase8-target cargo test -p workspace` | Pass | Exit 0; 24 workspace unit tests passed; doc tests 0 passed, 0 failed. |
 | 2026-06-17 | 8 | `CARGO_TARGET_DIR=/tmp/eos-unified-workspace-phase8-target cargo test -p daemon workspace_runtime` | Pass | Exit 0; first run caught remaining root compatibility references; after scoped import cleanup, 21 focused runtime tests passed. |

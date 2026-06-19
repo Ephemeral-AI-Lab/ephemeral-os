@@ -1,4 +1,4 @@
-isolated_network:
+isolated:
   enabled: true
   total_cap: 12
   upperdir_bytes: 67108864

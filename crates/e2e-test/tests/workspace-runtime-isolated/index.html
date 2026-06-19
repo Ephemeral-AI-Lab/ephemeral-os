@@ -43,7 +43,7 @@
   },
   "checklist": [
     {
-      "id": "isolated_network-lifecycle-pin",
+      "id": "isolated-lifecycle-pin",
       "title": "Isolated Workspace Lifecycle Pin",
       "description": "Enter and status expose the same manifest pin, and exit unregisters the handle, releases the lease, and reports holder/cgroup teardown.",
       "tags": [
@@ -51,7 +51,7 @@
       ]
     },
     {
-      "id": "isolated_network-private-persistence",
+      "id": "isolated-private-persistence",
       "title": "Isolated Workspace Private Persistence",
       "description": "Isolated writes and reads persist across tool calls while the handle is open and report isolated-network workspace/mutation fields.",
       "tags": [
@@ -59,7 +59,7 @@
       ]
     },
     {
-      "id": "isolated_network-no-publish",
+      "id": "isolated-no-publish",
       "title": "Isolated Workspace No Publish",
       "description": "Isolated write, edit, and exec paths do not publish through OCC or release public LayerStack leases.",
       "tags": [
@@ -67,7 +67,7 @@
       ]
     },
     {
-      "id": "isolated_network-discard-exit",
+      "id": "isolated-discard-exit",
       "title": "Isolated Workspace Discard Exit",
       "description": "Exit evicts the private upperdir, and public or host reads cannot see isolated-only files afterward.",
       "tags": [
@@ -75,7 +75,7 @@
       ]
     },
     {
-      "id": "isolated_network-network-isolation",
+      "id": "isolated-network-isolation",
       "title": "Isolated Workspace Network Isolation",
       "description": "A dedicated isolated netns and veth allow an isolated caller to bind a port already held in the container netns.",
       "tags": [
@@ -83,7 +83,7 @@
       ]
     },
     {
-      "id": "isolated_network-same-netns-conflict",
+      "id": "isolated-same-netns-conflict",
       "title": "Isolated Workspace Same Netns Conflict",
       "description": "Reusing a port in the same namespace conflicts unless the isolated session has exited and cleaned the prior command.",
       "tags": [
@@ -91,7 +91,7 @@
       ]
     },
     {
-      "id": "isolated_network-exit-cleanup",
+      "id": "isolated-exit-cleanup",
       "title": "Isolated Workspace Exit Cleanup",
       "description": "Exit or cancel drains long-lived isolated commands and removes namespace resources so re-enter starts cleanly.",
       "tags": [
@@ -99,7 +99,7 @@
       ]
     },
     {
-      "id": "isolated_network-tool-routing-contract",
+      "id": "isolated-tool-routing-contract",
       "title": "Isolated Workspace Tool Routing Contract",
       "description": "File tools in isolated mode return explicit workspace, mode, mutation, publish, and conflict fields, then route back to host after exit.",
       "tags": [
@@ -107,7 +107,7 @@
       ]
     },
     {
-      "id": "isolated_network-exec-private-discard",
+      "id": "isolated-exec-private-discard",
       "title": "Isolated Workspace Exec Private Discard",
       "description": "Exec writes inside isolated mode remain private while open, then disappear on exit without OCC publication.",
       "tags": [
@@ -115,7 +115,7 @@
       ]
     },
     {
-      "id": "isolated_network-lifecycle-gates",
+      "id": "isolated-lifecycle-gates",
       "title": "Isolated Workspace Lifecycle Gates",
       "description": "Enter rejects active sandbox-bound background work, repeated enter reports an already-open or lifecycle-in-progress state, and exit drain timeout/retry remains stable.",
       "tags": [
@@ -123,7 +123,7 @@
       ]
     },
     {
-      "id": "isolated_network-network-peer-block",
+      "id": "isolated-network-peer-block",
       "title": "Isolated Workspace Network Peer Block",
       "description": "Isolated callers can reach their own loopback service but cannot reach peer isolated sessions through namespace or bridge addresses.",
       "tags": [
@@ -131,7 +131,7 @@
       ]
     },
     {
-      "id": "isolated_network-audit-trail",
+      "id": "isolated-audit-trail",
       "title": "Isolated Workspace Audit Trail",
       "description": "Enter, exit, and isolated tool calls keep teardown trace events, discarded-byte facts, and no-publish behavior observable through response meta and trace-store rows.",
       "tags": [
@@ -139,7 +139,7 @@
       ]
     },
     {
-      "id": "isolated_network-ttl-eviction",
+      "id": "isolated-ttl-eviction",
       "title": "Isolated Workspace Ttl Eviction",
       "description": "Short test config TTL evicts idle isolated sessions and preserves coherent status/list-open behavior.",
       "tags": [
@@ -147,7 +147,7 @@
       ]
     },
     {
-      "id": "isolated_network-cross-mode-consistency",
+      "id": "isolated-cross-mode-consistency",
       "title": "Isolated Workspace Cross Mode Consistency",
       "description": "Public writes from non-isolated callers can advance OCC while an isolated caller is open, but the isolated pin/private upperdir stays stable and is discarded without overwriting public state.",
       "tags": [
@@ -155,7 +155,7 @@
       ]
     },
     {
-      "id": "isolated_network-compact-remount",
+      "id": "isolated-compact-remount",
       "title": "Isolated Workspace Compact Remount",
       "description": "An open isolated session can compact/remount onto a bounded lowerdir set while preserving public snapshot and private upperdir state, and non-open host callers report `not_open`.",
       "tags": [
@@ -163,7 +163,7 @@
       ]
     },
     {
-      "id": "isolated_network-daemon-restart-reconciliation",
+      "id": "isolated-daemon-restart-reconciliation",
       "title": "Isolated Workspace Daemon Restart Reconciliation",
       "description": "A hard daemon restart runs startup orphan reconciliation, reaping an open isolated handle so `list_open` empties, releasing its snapshot lease with none stranded, and serving fresh isolated enters again.",
       "tags": [
@@ -173,111 +173,111 @@
   ],
   "test": [
     {
-      "id": "isolated_network_lifecycle_and_teardown",
-      "name": "isolated_network_lifecycle_and_teardown",
+      "id": "isolated_lifecycle_and_teardown",
+      "name": "isolated_lifecycle_and_teardown",
       "description": "Groups `enter_status_exit_pin_and_teardown`, `isolated_enter_status_reports_manifest_pin`, `isolated_exit_discards_private_upperdir`, and `isolated_exit_reports_dedicated_netns`: enter/status pins must match, exit must unregister and tear down resources, and re-enter must start cleanly.",
       "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-isolated --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
-        "isolated_network-lifecycle-pin",
-        "isolated_network-discard-exit",
-        "isolated_network-exit-cleanup"
+        "isolated-lifecycle-pin",
+        "isolated-discard-exit",
+        "isolated-exit-cleanup"
       ]
     },
     {
-      "id": "isolated_network_lifecycle_gates_and_audit",
-      "name": "isolated_network_lifecycle_gates_and_audit",
+      "id": "isolated_lifecycle_gates_and_audit",
+      "name": "isolated_lifecycle_gates_and_audit",
       "description": "Uses `enter_rejects_active_command_and_repeated_enter_reports_already_open`: active commands block enter and repeated enter reports already-open, with teardown cleanup and no-publish facts trace-visible.",
       "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-isolated --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
-        "isolated_network-lifecycle-gates",
-        "isolated_network-audit-trail",
-        "isolated_network-tool-routing-contract"
+        "isolated-lifecycle-gates",
+        "isolated-audit-trail",
+        "isolated-tool-routing-contract"
       ]
     },
     {
-      "id": "isolated_network_private_file_routing",
-      "name": "isolated_network_private_file_routing",
+      "id": "isolated_private_file_routing",
+      "name": "isolated_private_file_routing",
       "description": "Groups `isolated_write_is_discarded_on_exit`, `isolated_read_after_exit_routes_ephemeral`, `isolated_write_response_fields`, and `isolated_read_file_sees_private_upperdir`: private file state is visible while open, carries isolated response fields, disappears after exit, and later reads route host.",
       "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-isolated --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
-        "isolated_network-private-persistence",
-        "isolated_network-discard-exit",
-        "isolated_network-tool-routing-contract"
+        "isolated-private-persistence",
+        "isolated-discard-exit",
+        "isolated-tool-routing-contract"
       ]
     },
     {
-      "id": "isolated_network_no_publish_contract",
-      "name": "isolated_network_no_publish_contract",
+      "id": "isolated_no_publish_contract",
+      "name": "isolated_no_publish_contract",
       "description": "Groups `isolated_write_does_not_publish_or_release_lease` and `isolated_edit_conflict_response_fields`: isolated write/edit paths must avoid OCC publication and public lease release while preserving explicit conflict response fields.",
       "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-isolated --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
-        "isolated_network-no-publish",
-        "isolated_network-tool-routing-contract"
+        "isolated-no-publish",
+        "isolated-tool-routing-contract"
       ]
     },
     {
-      "id": "isolated_network_network_port_matrix",
-      "name": "isolated_network_network_port_matrix",
+      "id": "isolated_port_matrix",
+      "name": "isolated_port_matrix",
       "description": "Groups `cross_mode_same_port_no_conflict`, `same_mode_same_port_conflicts`, `isolated_exit_reports_dedicated_netns`, and `isolated_to_isolated_same_port_matrix`: cross-namespace same-port binds must work, same-namespace binds must conflict, netns/veth teardown must be visible, and two isolated callers can bind the same port independently.",
       "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-isolated --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
-        "isolated_network-network-isolation",
-        "isolated_network-same-netns-conflict",
-        "isolated_network-exit-cleanup"
+        "isolated-network-isolation",
+        "isolated-same-netns-conflict",
+        "isolated-exit-cleanup"
       ]
     },
     {
-      "id": "isolated_network_network_peer_block",
-      "name": "isolated_network_network_peer_block",
+      "id": "isolated_peer_block",
+      "name": "isolated_peer_block",
       "description": "Uses `isolated_loopback_service_is_not_reachable_from_peer_session`: one isolated caller can reach its own loopback service while another isolated caller on the same daemon receives a blocked/refused loopback probe.",
       "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-isolated --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
-        "isolated_network-network-peer-block",
-        "isolated_network-network-isolation"
+        "isolated-network-peer-block",
+        "isolated-network-isolation"
       ]
     },
     {
-      "id": "isolated_network_exec_private_discard",
-      "name": "isolated_network_exec_private_discard",
+      "id": "isolated_exec_private_discard",
+      "name": "isolated_exec_private_discard",
       "description": "Adds `isolated_exec_write_is_private_and_discarded`: `sandbox.command.exec` writes inside isolated mode are readable while open, never OCC-published, and gone after exit.",
       "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-isolated --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
-        "isolated_network-exec-private-discard",
-        "isolated_network-no-publish",
-        "isolated_network-discard-exit"
+        "isolated-exec-private-discard",
+        "isolated-no-publish",
+        "isolated-discard-exit"
       ]
     },
     {
-      "id": "isolated_network_cross_mode_consistency",
-      "name": "isolated_network_cross_mode_consistency",
+      "id": "isolated_cross_mode_consistency",
+      "name": "isolated_cross_mode_consistency",
       "description": "Groups `isolated_private_same_path_does_not_overwrite_public_publish` and `isolated_pin_hides_later_public_paths_until_exit`: same-path private isolated writes do not overwrite public publishes after exit, and an isolated manifest pin remains stable while later public paths stay hidden until the caller exits.",
       "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-isolated --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
-        "isolated_network-cross-mode-consistency",
-        "isolated_network-no-publish",
-        "isolated_network-discard-exit",
-        "isolated_network-tool-routing-contract"
+        "isolated-cross-mode-consistency",
+        "isolated-no-publish",
+        "isolated-discard-exit",
+        "isolated-tool-routing-contract"
       ]
     },
     {
-      "id": "isolated_network_compact_remount",
-      "name": "isolated_network_compact_remount",
-      "description": "Groups `compact_remount_open_isolated_network_reclaims_old_lower_chain` and `compact_remount_reports_not_open_for_ephemeral_caller`: open isolated sessions compact/remount from a long public lowerdir chain to a bounded chain without losing private upperdir state, while host callers without an open isolated handle report `not_open`.",
+      "id": "isolated_compact_remount",
+      "name": "isolated_compact_remount",
+      "description": "Groups `compact_remount_open_isolated_reclaims_old_lower_chain` and `compact_remount_reports_not_open_for_ephemeral_caller`: open isolated sessions compact/remount from a long public lowerdir chain to a bounded chain without losing private upperdir state, while host callers without an open isolated handle report `not_open`.",
       "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-isolated --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
-        "isolated_network-compact-remount",
-        "isolated_network-cross-mode-consistency"
+        "isolated-compact-remount",
+        "isolated-cross-mode-consistency"
       ]
     },
     {
-      "id": "isolated_network_daemon_restart_reconciliation",
-      "name": "isolated_network_daemon_restart_reconciliation",
+      "id": "isolated_daemon_restart_reconciliation",
+      "name": "isolated_daemon_restart_reconciliation",
       "description": "Uses `daemon_restart_reaps_orphaned_isolated_handle`: an open isolated handle holds a snapshot lease, the daemon is hard-restarted, and startup reconciliation reaps the now-orphaned handle (`list_open` empty), leaves no stranded snapshot lease, and serves a fresh enter/exit cleanly afterward.",
       "command": "cargo run -p e2e-test --bin e2e-runner -- --suites workspace-runtime-isolated --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4",
       "checklist": [
-        "isolated_network-daemon-restart-reconciliation",
-        "isolated_network-exit-cleanup",
-        "isolated_network-lifecycle-pin"
+        "isolated-daemon-restart-reconciliation",
+        "isolated-exit-cleanup",
+        "isolated-lifecycle-pin"
       ]
     }
   ]

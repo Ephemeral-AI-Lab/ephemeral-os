@@ -52,7 +52,7 @@ under `lifecycle/`; remount state, report/plan, and apply logic live under
 `lifecycle/remount/`; holder control, setns-runner prep, FD mapping, and cgroup
 creation live under `namespace/`; Host and isolated mode exports route through
 thin `network_mode/` adapters; and veth/IP-pool, DNS, rtnetlink, and netfilter
-dedicated-network setup/cleanup internals live under `isolated_network_setup/`.
+dedicated-network setup/cleanup internals live under `isolated_setup/`.
 Legacy root `capture`, `dirs`, and `tree` modules were thin public re-export
 shims during Phase 6, while unused internal isolated-workspace namespace/network
 shims were removed. No Phase 5 capture behavior, Phase 7 holder/setns-only
@@ -77,7 +77,7 @@ regeneration was implemented.
 The Phase 8 slice retires the legacy workspace source paths and root exports.
 Host implementation types moved into `network_mode/host.rs`. Isolated
 handle/manager/error/caps/context implementation types moved into
-`network_mode/isolated_network.rs`. The workspace crate root no longer exports
+`network_mode/isolated.rs`. The workspace crate root no longer exports
 `HostWorkspace`, `HostWorkspaceError`, `overlay_run_dirs`, the legacy
 isolated `WorkspaceHandle`, `WorkspaceModeManager`, `WorkspaceModeContext`, or
 `WorkspaceModeHandle`; `workspace::WorkspaceHandle` is now the unified
@@ -86,7 +86,7 @@ concrete implementation types through scoped mode paths and overlay helpers
 through `workspace::overlay`. The legacy root `capture.rs`, `dirs.rs`, and
 `tree.rs` paths were removed. Wire compatibility remains only where current
 operation contracts require it, including legacy `layer_stack_root` inputs;
-route and response literals now use `host` and `isolated_network`. No publish
+route and response literals now use `host` and `isolated`. No publish
 behavior, capture behavior, `FreshNs` compatibility, holder/setns execution
 semantics, packaging, live E2E, or `ops.json` regeneration was changed.
 
@@ -127,7 +127,7 @@ semantics, packaging, live E2E, or `ops.json` regeneration was changed.
     both name the unified public DTO from `model.rs`.
   - `network_mode/` and `overlay/` are public module roots for scoped internal
     mode surfaces and shared overlay primitives; `lifecycle/`, `namespace/`,
-    and `isolated_network_setup/` remain implementation modules.
+    and `isolated_setup/` remain implementation modules.
 - `crates/daemon/workspace/src/capture.rs`
   - Removed in Phase 8; callers use `workspace::overlay::capture`.
 - `crates/daemon/workspace/src/dirs.rs`
@@ -141,7 +141,7 @@ semantics, packaging, live E2E, or `ops.json` regeneration was changed.
   - Own isolated-network workspace create/wiring, destroy/eviction teardown, persisted
     recovery/orphan cleanup, and handle identity/time helpers after the Phase 6
     move.
-  - Phase 7 isolated create now passes `NamespacePlan::isolated_network()`
+  - Phase 7 isolated create now passes `NamespacePlan::isolated()`
     when spawning `ns-holder` and opening namespace FDs.
 - `crates/daemon/workspace/src/lifecycle/remount/{state.rs,plan.rs,apply.rs}`
   - Own remount state, remount report/probe/result DTOs, and remount apply
@@ -152,12 +152,12 @@ semantics, packaging, live E2E, or `ops.json` regeneration was changed.
   - Phase 7 added internal `NamespacePlan` and `NamespaceNetwork` values.
     Holder spawn passes `host` or `isolated` to `eosd ns-holder`, and FD
     opening follows the selected plan so Host omits the network FD.
-- `crates/daemon/workspace/src/network_mode/{host.rs,isolated_network.rs}`
+- `crates/daemon/workspace/src/network_mode/{host.rs,isolated.rs}`
   - Phase 8 moved Host workspace implementation, namespace FD DTO, and
     `HostWorkspaceError` into `host.rs`.
   - Phase 8 moved isolated handle, binding, manager, caps, error, DNS, snapshot,
-    and remount-facing exports into `isolated_network.rs`.
-- `crates/daemon/workspace/src/isolated_network_setup/`
+    and remount-facing exports into `isolated.rs`.
+- `crates/daemon/workspace/src/isolated_setup/`
   - Owns dedicated-network setup/cleanup internals after the Phase 6 move,
     including veth/IP-pool manager code, `dns.rs`, `rtnl.rs`, and
     `netfilter/*`.
@@ -175,7 +175,7 @@ semantics, packaging, live E2E, or `ops.json` regeneration was changed.
 - Old isolated-network namespace module
   - Moved into `namespace/` in Phase 6.
 - Old isolated-network setup module
-  - Moved into `isolated_network_setup/` in Phase 6.
+  - Moved into `isolated_setup/` in Phase 6.
 - Old host workspace module
   - Removed in Phase 8 after Host implementation moved into
     `network_mode/host.rs`.
@@ -184,10 +184,10 @@ semantics, packaging, live E2E, or `ops.json` regeneration was changed.
     `network_mode/host.rs`.
 - Old isolated-network binding/caps/error module
   - Removed in Phase 8 after isolated mode definitions moved into
-    `network_mode/isolated_network.rs`.
+    `network_mode/isolated.rs`.
 - Old isolated-network manager module
   - Removed in Phase 8 after isolated manager definitions moved into
-    `network_mode/isolated_network.rs`.
+    `network_mode/isolated.rs`.
 - `crates/daemon/operation/src/isolation/contract.rs`
   - Added `WorkspaceRootInput` so isolation enter and compact-remount test
     inputs accept `workspace_root` while rejecting ambiguous dual-root input.
@@ -206,7 +206,7 @@ semantics, packaging, live E2E, or `ops.json` regeneration was changed.
 - `crates/daemon/core/tests/unit/workspace_runtime.rs`
   - Added runtime coverage for `workspace_root` resolution, legacy root
     compatibility, ambiguous bindings, rebinding, and normalized snapshot entry.
-- `crates/daemon/core/tests/unit/isolated_network/service.rs`
+- `crates/daemon/core/tests/unit/isolated/service.rs`
   - Updated enter trace assertions for the new `workspace_root` trace detail.
 - `crates/daemon/core/src/op_adapter/command.rs`
   - Parses command wire args and delegates Host vs isolated route selection to
@@ -231,7 +231,7 @@ semantics, packaging, live E2E, or `ops.json` regeneration was changed.
     test-scratch equivalent, so Host routes get holder-created user/mount/PID
     namespaces before `CommandOps` starts the command.
   - Phase 8 imports Host and isolated implementation types from
-    `workspace::network_mode::{host,isolated_network}` instead of legacy root
+    `workspace::network_mode::{host,isolated}` instead of legacy root
     exports.
 - `crates/daemon/core/src/op_adapter/files.rs`
   - Parses file wire args and delegates isolated vs direct/Host route selection
@@ -241,7 +241,7 @@ semantics, packaging, live E2E, or `ops.json` regeneration was changed.
   - Records runtime-returned route facts and preserves legacy direct route
     timing/resource enrichment.
   - Phase 8 imports `WorkspaceModeContext` from
-    `workspace::network_mode::isolated_network`.
+    `workspace::network_mode::isolated`.
 - `crates/daemon/layerstack/src/service.rs`
   - Added exact-once `LeaseReleaseHandle` and `LeaseReleaseReport`.
   - `LeaseReleaseHandle::release` consumes the stored release state under a
@@ -266,7 +266,7 @@ semantics, packaging, live E2E, or `ops.json` regeneration was changed.
   - Process spawning, runner request artifact writing, and registry activation
     remain in `CommandOps`.
   - Phase 8 imports `WorkspaceModeContext` from
-    `workspace::network_mode::isolated_network`.
+    `workspace::network_mode::isolated`.
 - `crates/daemon/operation/src/command/prepare.rs`
   - Phase 7 removed workspace command selection of `RunMode::FreshNs`.
     Host and isolated-network workspace command preparation now always serializes
@@ -347,11 +347,11 @@ Resolution for Phase 8:
 - `workspace::UnifiedWorkspaceHandle` remains an explicit alias for the same
   unified public handle.
 - The legacy isolated handle is available only through the scoped internal-mode
-  path `workspace::network_mode::isolated_network::WorkspaceModeHandle`.
+  path `workspace::network_mode::isolated::WorkspaceModeHandle`.
 - `workspace::WorkspaceModeHandle` is no longer a root export.
 - `workspace::WorkspaceModeManager` and `workspace::WorkspaceModeContext` are no
   longer root exports; current daemon/operation callers import them from
-  `workspace::network_mode::isolated_network`.
+  `workspace::network_mode::isolated`.
 
 No root compatibility alias remains for the legacy isolated handle.
 
@@ -414,9 +414,9 @@ Phase 4 centralizes command and file route choice in `WorkspaceRuntime`.
   isolated file operations so active-handle liveness touch behavior remains
   intact.
 - Runtime route facts preserve existing trace metadata:
-  `isolated_network/caller_has_open_isolated_network`,
-  `host/no_isolated_network_for_caller`, and
-  `fast_path/no_isolated_network_for_caller`.
+  `isolated/caller_has_open_isolated`,
+  `host/no_isolated_for_caller`, and
+  `fast_path/no_isolated_for_caller`.
 - Adapters no longer inspect active isolated handles directly to choose Host,
   direct, or isolated behavior. They still parse wire args, record route traces,
   map errors, and shape responses.
@@ -426,7 +426,7 @@ Phase 4 centralizes command and file route choice in `WorkspaceRuntime`.
   where current contracts require them.
 - Phase 8 keeps legacy `layer_stack_root` wire inputs only because existing
   operation contracts and callers require current wire behavior. Trace and
-  response literals now use `host` and `isolated_network`. No root
+  response literals now use `host` and `isolated`. No root
   compatibility exports remain.
 
 ## Deferred Capture Changes
@@ -451,13 +451,13 @@ legacy shim paths that Phase 6 left behind.
   creation live under `namespace/`.
 - Host and isolated mode surfaces live under `network_mode/`.
 - Dedicated-network setup/cleanup internals live under
-  `isolated_network_setup/`. `dns.rs`, `rtnl.rs`, and `netfilter/*` kept their
+  `isolated_setup/`. `dns.rs`, `rtnl.rs`, and `netfilter/*` kept their
   mechanism names. The veth/IP-pool manager remains in
-  `isolated_network_setup/mod.rs` because the file is small and further
+  `isolated_setup/mod.rs` because the file is small and further
   splitting would add churn without behavior value in this phase.
 - Legacy host and isolated-network source modules were removed in Phase 8 after
   remaining definitions moved into `network_mode/host.rs` and
-  `network_mode/isolated_network.rs`.
+  `network_mode/isolated.rs`.
 
 ## Holder/Setns-Only Execution
 
@@ -508,7 +508,7 @@ Follow-up verification after adversarial review fixes used
 | `cargo test -p daemon workspace_runtime` | Pass | 12 focused runtime tests passed, including copied-binding rejection, same-stack workspace-root rebinding, cached-state ambiguity rejection, and compact-remount `workspace_root` resolution. |
 | `cargo test -p workspace` | Pass | 24 passed, 0 failed; doc tests 0 passed, 0 failed. |
 | `cargo test -p operation file` | Pass | 14 passed, 0 failed, 74 filtered out; checkpoint and contract test targets had 0 matching tests. |
-| `cargo test -p daemon --test phase2_read_paths isolated_network_lifecycle_ops_open_status_list_and_exit_when_enabled` | Pass | Dispatch lifecycle test now enters through `workspace_root`. |
+| `cargo test -p daemon --test phase2_read_paths isolated_lifecycle_ops_open_status_list_and_exit_when_enabled` | Pass | Dispatch lifecycle test now enters through `workspace_root`. |
 | `git diff --check` | Pass | No whitespace errors. |
 
 Phase 3 verification used
@@ -640,15 +640,15 @@ Intermediate fixed issues:
   validation while leaving enabled root-validation behavior unchanged.
 - The first Phase 6 `cargo fmt` run failed because the moved netfilter exprs
   test fixture still used the old relative `#[path]` depth. The path was
-  adjusted from the new `isolated_network_setup/netfilter` location.
+  adjusted from the new `isolated_setup/netfilter` location.
 - The first Phase 6 `cargo test -p workspace` run failed because lifecycle and
-  namespace impls moved out from under private `isolated_network` modules.
+  namespace impls moved out from under private `isolated` modules.
   The fix made those modules crate-visible only, corrected one moved test helper
   import, and kept external exports unchanged.
 - The first Phase 8 `cargo test -p daemon workspace_runtime` run failed because
   daemon runtime/error and tests still referenced removed root compatibility
   exports for `IsolatedError`, `ExitOutcome`, and `RemountProbe`. The fix moved
-  those references to scoped `workspace::network_mode::isolated_network` paths.
+  those references to scoped `workspace::network_mode::isolated` paths.
 
 ## Skipped Gates And Known Baseline Blockers
 

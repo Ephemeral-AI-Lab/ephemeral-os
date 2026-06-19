@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 use serde_json::json;
 
 use config::configs::daemon::PluginRuntimeConfig;
-use config::configs::isolated_network::IsolatedNetworkConfig;
+use config::configs::isolated::IsolatedNetworkConfig;
 
 use crate::RuntimeServices;
 
@@ -59,40 +59,6 @@ fn upperdir_tree_resource_timings_capture_bounded_payload() -> TestResult {
         1.0
     );
     Ok(())
-}
-
-#[test]
-fn builtin_table_routes_commit_to_workspace() {
-    let response = dispatch(&Request {
-        op: "sandbox.checkpoint.commit_to_workspace".to_owned(),
-        invocation_id: "commit-to-workspace-route-test".to_owned(),
-        args: json!({}),
-    });
-
-    assert_eq!(response["status"], json!("error"));
-    assert_ne!(response["error"]["kind"], json!("unknown_op"));
-    assert_eq!(response["error"]["kind"], json!("invalid_request"));
-    assert!(response["error"]["message"]
-        .as_str()
-        .unwrap_or_default()
-        .contains("layer_stack_root is required"));
-}
-
-#[test]
-fn builtin_table_routes_commit_to_git() {
-    let response = dispatch(&Request {
-        op: "sandbox.checkpoint.commit_to_git".to_owned(),
-        invocation_id: "commit-to-git-route-test".to_owned(),
-        args: json!({}),
-    });
-
-    assert_eq!(response["status"], json!("error"));
-    assert_ne!(response["error"]["kind"], json!("unknown_op"));
-    assert_eq!(response["error"]["kind"], json!("invalid_request"));
-    assert!(response["error"]["message"]
-        .as_str()
-        .unwrap_or_default()
-        .contains("layer_stack_root is required"));
 }
 
 #[test]

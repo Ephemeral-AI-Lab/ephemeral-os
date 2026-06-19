@@ -491,7 +491,7 @@ mod tests {
         changed_path_kinds.insert("src/main.rs".to_owned(), ChangedPathKind::Write);
         let mut extras = Map::new();
         extras.insert(
-            "isolated_network".to_owned(),
+            "isolated".to_owned(),
             json!({"caller_id": "caller", "published": false}),
         );
         PublishLanesMetadata::new(
@@ -526,7 +526,7 @@ mod tests {
 
         assert_eq!(response["status"], "ok");
         assert_eq!(response["command_id"], "cmd_1");
-        assert_eq!(response["workspace"], "isolated_network");
+        assert_eq!(response["workspace"], "isolated");
         assert_eq!(response["success"], true);
         assert!(response.get("timings").is_none());
         assert_eq!(response["changed_paths"], json!(["src/main.rs"]));
@@ -534,8 +534,8 @@ mod tests {
             response["changed_path_kinds"],
             json!({"src/main.rs": "write"})
         );
-        assert_eq!(response["mutation_source"], "isolated_network");
-        assert_eq!(response["isolated_network"]["caller_id"], "caller");
+        assert_eq!(response["mutation_source"], "isolated");
+        assert_eq!(response["isolated"]["caller_id"], "caller");
         assert_eq!(
             response[PUBLISH_LANES_METADATA_KEY],
             json!({

@@ -156,14 +156,14 @@ fn request_sidecar_drops_children_when_over_budget() {
 #[test]
 fn request_sidecar_merges_subsystem_events() {
     let trace = RequestTraceContext {
-        trace_id: "trace-checkpoint-events".to_owned(),
-        request_id: "request-checkpoint-events".to_owned(),
+        trace_id: "trace-command-events".to_owned(),
+        request_id: "request-command-events".to_owned(),
         parent_span_id: None,
         link_hints: Vec::new(),
         capture_budget_version: 1,
     };
     let facts = RequestTraceFacts {
-        connection_id: "daemon-conn-checkpoint-events".to_owned(),
+        connection_id: "daemon-conn-command-events".to_owned(),
         accepted_at_unix_ms: now_ms(),
         listener_kind: "unix",
         peer_addr: None,
@@ -178,13 +178,13 @@ fn request_sidecar_merges_subsystem_events() {
     let response = attach_request_sidecar_with_events(
         json!({"success": true}),
         Some(&trace),
-        "sandbox.checkpoint.commit_to_git",
+        "sandbox.command.exec",
         &facts,
         &[
             RequestTraceEvent::operation(
-                "checkpoint",
-                "git_command_finished",
-                json!({"argv_summary": "git add -A -- <paths>", "exit_code": 0, "stderr_tail": ""}),
+                "command",
+                "prepared",
+                json!({"command_id": "cmd-trace", "workspace": "host"}),
             ),
             RequestTraceEvent::operation(
                 "workspace.route",
@@ -198,14 +198,11 @@ fn request_sidecar_merges_subsystem_events() {
     let record = batch.records.first().expect("request trace record");
 
     assert!(
-        record
-            .events
-            .iter()
-            .any(|event| event.module == "checkpoint"
-                && event.name == "git_command_finished"
-                && event.details.value["argv_summary"] == "git add -A -- <paths>"
-                && event.span_id == SpanUid::new(4)),
-        "checkpoint event merged into operation span"
+        record.events.iter().any(|event| event.module == "command"
+            && event.name == "prepared"
+            && event.details.value["command_id"] == "cmd-trace"
+            && event.span_id == SpanUid::new(4)),
+        "command event merged into operation span"
     );
     let route_events: Vec<_> = record
         .events

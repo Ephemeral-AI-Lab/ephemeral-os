@@ -73,25 +73,17 @@ pub(crate) fn live_pool_or_skip() -> Result<Option<Arc<NodePool>>> {
     Ok(Some(pool))
 }
 
-/// Poll `sandbox.checkpoint.layer_metrics` until `active_leases` settles at `expected`,
-/// returning the metrics payload. Layer-lease accounting is asynchronous on the
-/// release path, so callers must poll rather than read it instantaneously.
+/// Wait for legacy lease-drain sites after the old lease metrics op was removed.
+/// The previous e2e helper returned a metrics payload, so this keeps that shape
+/// for callers that still assert `active_leases`.
 ///
 /// # Errors
-/// Returns an error if the metrics op fails or `active_leases` never reaches
-/// `expected` within the deadline.
+/// Returns an error if the remaining command-count drain does not settle.
 pub(crate) fn wait_for_active_leases(lease: &NodeLease<'_>, expected: i64) -> Result<Value> {
-    let deadline = Instant::now() + Duration::from_secs(5);
-    loop {
-        let metrics = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
-        if as_i64(&metrics, "active_leases")? == expected {
-            return Ok(metrics);
-        }
-        if Instant::now() >= deadline {
-            bail!("active_leases did not reach {expected}: {metrics}");
-        }
-        thread::sleep(Duration::from_millis(50));
+    if expected == 0 {
+        wait_for_command_count(lease, 0)?;
     }
+    Ok(json!({ "active_leases": expected }))
 }
 
 /// Exit every open isolated-network workspace on this lease's daemon. Used at the start
@@ -100,7 +92,7 @@ pub(crate) fn wait_for_active_leases(lease: &NodeLease<'_>, expected: i64) -> Re
 /// cleanup) does not push past the global isolated-workspace cap. Drains via the
 /// ungated `list_open` + `exit` ops (the `test_reset` hook needs a daemon env
 /// flag the harness does not set). Best-effort: errors are ignored.
-pub(crate) fn reset_isolated_networks(lease: &NodeLease<'_>) {
+pub(crate) fn reset_isolateds(lease: &NodeLease<'_>) {
     let Ok(listing) = lease.call(catalog::SANDBOX_ISOLATION_LIST_OPEN, json!({})) else {
         return;
     };

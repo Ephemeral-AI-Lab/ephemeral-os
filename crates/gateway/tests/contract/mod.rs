@@ -290,8 +290,6 @@ fn client_socket_refuses_non_public_ops() {
     let engine = StubEngine;
     for (op, surface, expected_forbidden) in [
         // Operator ops: forbidden on the client socket, served on operator.
-        ("sandbox.checkpoint.layer_metrics", Surface::Client, true),
-        ("sandbox.checkpoint.layer_metrics", Surface::Operator, false),
         ("sandbox.run.cancel_all", Surface::Client, true),
         ("host.trace.requests", Surface::Client, true),
         ("host.trace.requests", Surface::Operator, false),
@@ -388,13 +386,13 @@ fn unix_socket_round_trip_serves_one_request_per_connection() {
     assert_eq!(kind(&response), Some("bad_json"));
 
     // Operator ops are forbidden on the client socket but served on operator.
-    let metrics = b"{\"op\":\"sandbox.checkpoint.layer_metrics\",\"sandbox_id\":\"sb-stub\",\"invocation_id\":\"i2\",\"args\":{}}\n";
-    let response = round_trip_when_ready(&socket, metrics);
+    let operator_op = b"{\"op\":\"sandbox.run.cancel_all\",\"sandbox_id\":\"sb-stub\",\"invocation_id\":\"i2\",\"args\":{}}\n";
+    let response = round_trip_when_ready(&socket, operator_op);
     assert_eq!(kind(&response), Some("forbidden"));
-    let response = round_trip_when_ready(&operator_socket_path(&socket), metrics);
+    let response = round_trip_when_ready(&operator_socket_path(&socket), operator_op);
     assert_eq!(
         result(&response)["forwarded_op"],
-        json!("sandbox.checkpoint.layer_metrics")
+        json!("sandbox.run.cancel_all")
     );
 
     let _ = std::fs::remove_file(operator_socket_path(&socket));

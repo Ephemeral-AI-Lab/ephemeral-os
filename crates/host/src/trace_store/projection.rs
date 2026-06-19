@@ -184,7 +184,7 @@ fn project_request_rollup_tx(
         .iter()
         .filter(|event| event.module == "workspace.route" && event.name == "route_selected")
         .find_map(|event| event.details.value.get("kind").and_then(Value::as_str))
-        .filter(|kind| matches!(*kind, "host" | "isolated_network" | "fast_path" | "none"));
+        .filter(|kind| matches!(*kind, "host" | "isolated" | "fast_path" | "none"));
     let mut modules: Vec<String> = Vec::new();
     for span in &record.spans {
         let subsystem = serde_label(span.subsystem);

@@ -55,7 +55,7 @@ daemon:
     max_read_bytes: 8388608
     max_write_bytes: 8388608
 
-isolated_network:
+isolated:
   enabled: false
   scratch_root: /eos/scratch/isolated
   ttl_s: 1800

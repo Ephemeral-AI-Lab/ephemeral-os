@@ -48,7 +48,7 @@ impl ProtocolErrorKind {
             Self::UnknownOp => "unknown_op",
             Self::InternalError => "internal_error",
             Self::Forbidden => "forbidden",
-            Self::ForbiddenInIsolatedNetwork => "forbidden_in_isolated_network",
+            Self::ForbiddenInIsolatedNetwork => "forbidden_in_isolated",
             Self::LifecycleInProgress => "lifecycle_in_progress",
         }
     }

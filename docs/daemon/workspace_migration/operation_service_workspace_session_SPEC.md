@@ -138,7 +138,7 @@ daemon session lookup
 
 The daemon operation layer preserves workspace sessions.
 
-When `enter_isolated_network` creates a workspace, the daemon records a
+When `enter_isolated` creates a workspace, the daemon records a
 session. Later requests carry `workspace_id`; the operation layer uses that id
 to resolve a handler and inject it into the operation method.
 
@@ -324,7 +324,7 @@ pub struct CommandOperation {
 `WorkspaceSessionManager` before returning the handler. The operation decides
 whether the returned `workspace_id` is exposed to the caller:
 
-- `enter_isolated_network` returns the `workspace_id` to the caller.
+- `enter_isolated` returns the `workspace_id` to the caller.
 - one-shot command execution keeps the handler internal and destroys it before
   returning the command result.
 - workspace-run end/cancel-all routes are handled by `WorkspaceManagerService`;
@@ -414,7 +414,7 @@ should be added only in the later phases that implement those behaviors.
 ### Enter Isolated Workspace
 
 ```text
-request: enter_isolated_network(caller_id, workspace_root)
+request: enter_isolated(caller_id, workspace_root)
 
 operation_service:
   resolve workspace_root and layer_stack_root
@@ -422,7 +422,7 @@ operation_service:
   return workspace_id
 ```
 
-`enter_isolated_network` is a workspace lifecycle route. It is not a separate
+`enter_isolated` is a workspace lifecycle route. It is not a separate
 operation service; it creates an isolated workspace by calling
 `WorkspaceManagerService::create` with `NetworkMode::Isolated`. Normal
 command/file operations must not create isolated sessions implicitly.
@@ -527,20 +527,20 @@ Semantics:
 - `Some(handler)` means the operation must use the provided workspace and must
   not create or destroy a workspace internally.
 - `Some(handler)` is a persisted workspace session, typically created by
-  `enter_isolated_network`.
+  `enter_isolated`.
 - `None` for `command_operation` means the command operation owns its normal
   one-shot `NetworkMode::Host` workspace lifecycle through
   `WorkspaceManagerService`.
 - `None` for targeted file operations can mean a non-mounted workflow such as
   readonly latest snapshot plus direct layer publish.
-- explicit lifecycle operations, such as `enter_isolated_network` and
-  `exit_isolated_network`, are the only operations that create or destroy
+- explicit lifecycle operations, such as `enter_isolated` and
+  `exit_isolated`, are the only operations that create or destroy
   persisted isolated-network workspace sessions.
 
 ## Exit Isolated Workspace
 
 ```text
-request: exit_isolated_network(workspace_id, grace_s)
+request: exit_isolated(workspace_id, grace_s)
 
 operation_service:
   resolve session
@@ -549,7 +549,7 @@ operation_service:
   return destroy report
 ```
 
-`exit_isolated_network` is a workspace lifecycle route. It is not a separate
+`exit_isolated` is a workspace lifecycle route. It is not a separate
 operation service; it destroys an isolated workspace by calling
 `WorkspaceManagerService::destroy`. Exit discards the isolated-network
 workspace upperdir by default. It must not publish implicitly.
@@ -722,7 +722,7 @@ and its session model into a lower-level crate/module used by
 3. Move session/routing policy out of `daemon/core`.
 4. Use `workspace_id` in request contracts where open-workspace binding is
    needed.
-5. Return `workspace_id` from `enter_isolated_network`.
+5. Return `workspace_id` from `enter_isolated`.
 6. Make operation methods accept optional or explicit `WorkspaceSessionHandler`.
 7. Route tracked workspace create/capture/remount/destroy through
    `WorkspaceManagerService` instead of raw workspace service calls.
@@ -736,7 +736,7 @@ and its session model into a lower-level crate/module used by
 - Should ordinary operations reject missing `workspace_id` when the
   caller owns an active isolated session, or should caller-keyed compatibility
   routing remain during migration?
-- Should `exit_isolated_network` cancel active commands by default, or reject
+- Should `exit_isolated` cancel active commands by default, or reject
   while commands are active unless `force` is provided?
 - Should live remount use full snapshot compaction or leased-head plus
   compact-parent compaction as the default production representation?

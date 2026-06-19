@@ -17,7 +17,7 @@ use anyhow::{bail, ensure, Context, Result};
 use protocol::catalog;
 use serde_json::{json, Value};
 
-use crate::support::{as_str, live_pool_or_skip, reset_isolated_networks, stdout};
+use crate::support::{as_str, live_pool_or_skip, reset_isolateds, stdout};
 
 /// A high, per-run-unique port so a server that outlives one test (e.g. its
 /// `timeout` window) never collides with the same fixed port in the next run.
@@ -178,7 +178,7 @@ fn cross_mode_same_port_no_conflict() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_networks(&lease);
+    reset_isolateds(&lease);
     let port = unique_port();
     let caller_b = format!("iws-net-b-{}", e2e_test::unique_suffix());
 
@@ -274,7 +274,7 @@ fn isolated_loopback_service_is_not_reachable_from_peer_session() -> Result<()> 
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_networks(&lease);
+    reset_isolateds(&lease);
     let port = unique_port();
     let caller_a = format!("iws-loopback-a-{}", e2e_test::unique_suffix());
     let caller_b = format!("iws-loopback-b-{}", e2e_test::unique_suffix());
@@ -359,7 +359,7 @@ fn isolated_exit_reports_dedicated_netns() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_networks(&lease);
+    reset_isolateds(&lease);
     lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
     let exit = lease.call_ok(catalog::SANDBOX_ISOLATION_EXIT, json!({}))?;
     let inspection = exit.get("inspection").context("exit inspection")?;
@@ -394,7 +394,7 @@ fn isolated_to_isolated_same_port_matrix() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    reset_isolated_networks(&lease);
+    reset_isolateds(&lease);
     let port = unique_port();
     let caller_a = format!("iws-net-a-{}", e2e_test::unique_suffix());
     let caller_b = format!("iws-net-b-{}", e2e_test::unique_suffix());

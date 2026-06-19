@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Instant;
 
-use crate::isolated_network_setup::{IsolatedNetwork, VethAllocation};
+use crate::isolated_setup::{IsolatedNetwork, VethAllocation};
 use crate::lifecycle::remount::WorkspaceRemountState;
 use crate::model::WorkspaceProfile;
 use crate::namespace::{HolderKillReport, NamespacePlan, NamespaceRuntime};

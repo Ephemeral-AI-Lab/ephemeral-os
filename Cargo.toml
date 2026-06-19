@@ -3,14 +3,11 @@ resolver = "2"
 members = [
     "crates/shared/trace",
     "crates/shared/protocol",
-    "crates/daemon/plugin-contract",
-    "crates/daemon/operation",
     "crates/daemon/operation_service",
     "crates/daemon/command",
     "crates/daemon/config",
     "crates/daemon/eosd",
     "crates/daemon/core",
-    "crates/daemon/plugin",
     "crates/daemon/workspace",
     "crates/daemon/linux-namespace-subprocess",
     "crates/daemon/layerstack",
@@ -60,15 +57,12 @@ netlink-sys = "0.8"
 command = { path = "crates/daemon/command" }
 config = { path = "crates/daemon/config" }
 layerstack = { path = "crates/daemon/layerstack" }
-operation = { path = "crates/daemon/operation" }
 operation_service = { path = "crates/daemon/operation_service" }
 overlay = { path = "crates/daemon/overlay" }
 linux-namespace-subprocess = { path = "crates/daemon/linux-namespace-subprocess" }
 trace = { path = "crates/shared/trace" }
 protocol = { path = "crates/shared/protocol" }
-plugin-contract = { path = "crates/daemon/plugin-contract" }
 daemon = { path = "crates/daemon/core" }
-plugin = { path = "crates/daemon/plugin" }
 eosd = { path = "crates/daemon/eosd" }
 gateway = { path = "crates/gateway" }
 host = { path = "crates/host" }

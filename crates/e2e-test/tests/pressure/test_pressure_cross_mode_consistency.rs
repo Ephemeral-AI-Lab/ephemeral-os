@@ -8,7 +8,7 @@ use serde_json::json;
 
 use crate::helpers::{pressure_levels, request_with_identity, response_result, result_committed};
 use crate::support::{
-    as_bool, as_i64, as_str, live_pool_or_skip, reset_isolated_networks, wait_for_active_leases,
+    as_bool, as_i64, as_str, live_pool_or_skip, reset_isolateds, wait_for_active_leases,
 };
 
 #[test]
@@ -20,7 +20,7 @@ fn public_and_isolated_same_path_at_12() -> Result<()> {
     let lease = pool.acquire()?;
 
     for level in levels {
-        reset_isolated_networks(&lease);
+        reset_isolateds(&lease);
         let suffix = unique_suffix().replace('-', "_");
         let callers: Vec<String> = (0..level)
             .map(|index| format!("pressure-cross-mode-{level}-{index}-{suffix}"))

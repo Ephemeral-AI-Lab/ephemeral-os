@@ -23,7 +23,7 @@ impl WorkspaceKind {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Host => "host",
-            Self::IsolatedNetwork => "isolated_network",
+            Self::IsolatedNetwork => "isolated",
         }
     }
 }
