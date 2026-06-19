@@ -128,7 +128,6 @@ Files to inspect:
 - `crates/daemon/workspace/src/profile/isolated.rs`
 - `crates/daemon/workspace/src/lifecycle/create.rs`
 - `crates/daemon/workspace/src/lifecycle/destroy.rs`
-- `crates/daemon/workspace/tests/unit/isolated_sessions.rs`
 
 Adversarial questions:
 

@@ -39,9 +39,6 @@ pub enum DaemonError {
     #[error("overlay pipeline failure: {0}")]
     OverlayPipeline(String),
 
-    #[error("plugin ops are forbidden while caller has an isolated network")]
-    ForbiddenInIsolatedNetwork,
-
     #[error(transparent)]
     Isolated(#[from] IsolatedNetworkError),
 }
@@ -65,7 +62,6 @@ impl DaemonError {
             {
                 ErrorKind::LifecycleInProgress
             }
-            Self::ForbiddenInIsolatedNetwork => ErrorKind::ForbiddenInIsolatedNetwork,
             _ => ErrorKind::InternalError,
         }
     }

@@ -238,7 +238,7 @@ fn request_sidecar_stamps_envelope_meta_from_trace_record() {
     let response = attach_request_sidecar_with_events(
         json!({"status": "ok", "result": {"published": true}, "meta": {}}),
         Some(&trace),
-        "sandbox.file.write",
+        "sandbox.command.exec",
         &facts,
         &[RequestTraceEvent::operation(
             "workspace.route",
@@ -248,7 +248,7 @@ fn request_sidecar_stamps_envelope_meta_from_trace_record() {
     );
 
     assert_eq!(response["status"], "ok");
-    assert_eq!(response["meta"]["op"], "sandbox.file.write");
+    assert_eq!(response["meta"]["op"], "sandbox.command.exec");
     assert_eq!(response["meta"]["request_id"], "request-envelope-meta");
     assert_eq!(response["meta"]["trace"]["trace_id"], "trace-envelope-meta");
     assert_eq!(

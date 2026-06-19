@@ -9,7 +9,6 @@ license.workspace = true
 command.workspace = true
 config.workspace = true
 layerstack.workspace = true
-operation_service.workspace = true
 protocol.workspace = true
 trace.workspace = true
 workspace.workspace = true

@@ -347,18 +347,9 @@ Focused local gates:
 - [ ] `cargo clippy -p daemon --all-targets --locked -- -D warnings`
 - [ ] `cargo machete --with-metadata`
 
-Live E2E preparation:
+Packaging:
 
 - [ ] `cargo run -p xtask -- package`
-- [ ] `cargo test -p e2e-test --features e2e --no-run`
-
-Focused live E2E suites:
-
-- [ ] `core`
-- [ ] `workspace-runtime-command`
-- [ ] `workspace-runtime-isolated`
-- [ ] `host_workspace`
-- [ ] pressure cross-mode suite
 
 Exit criteria:
 

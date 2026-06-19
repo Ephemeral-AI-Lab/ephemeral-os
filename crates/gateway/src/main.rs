@@ -3,28 +3,12 @@
 
 use anyhow::{bail, Result};
 
-mod catalog;
 mod client;
 mod engine;
 mod router;
 mod serve;
 mod transport;
 mod wire;
-
-#[cfg(test)]
-pub(crate) use catalog::{Catalog, Route, Visibility};
-#[cfg(test)]
-pub(crate) use engine::Engine;
-#[cfg(test)]
-pub(crate) use router::{handle, Surface};
-#[cfg(test)]
-pub(crate) use transport::{handle_connection, operator_socket_path, serve_with_catalog};
-#[cfg(test)]
-pub(crate) use wire::{parse_request, ClientRequest};
-
-#[cfg(test)]
-#[path = "../tests/contract/mod.rs"]
-mod contract;
 
 fn main() -> Result<()> {
     let mut args = std::env::args();

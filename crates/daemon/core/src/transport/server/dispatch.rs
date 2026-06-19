@@ -5,8 +5,6 @@ use super::trace_context::{trace_facts, TransportTraceContext};
 use super::DaemonServer;
 use crate::error::DaemonError;
 use crate::wire::{decode_value, ErrorKind, Request, RequestTraceContext, WireMessage};
-use crate::DispatchContext;
-use protocol::catalog::{BuiltinOp, OpVisibility};
 
 impl DaemonServer {
     pub(super) async fn dispatch_bytes(
@@ -152,25 +150,13 @@ impl DaemonServer {
             .unwrap_or(false);
         let op = request.op.clone();
         let registry = Arc::clone(&self.invocation_registry);
-        let task_registry = Arc::clone(&registry);
-        let task_services = Arc::clone(&self.services);
-        let file_limits = self.file_limits;
-        let trace_events = crate::trace::RequestTraceEventSink::default();
-        let task_trace_events = trace_events.clone();
-        let task_trace_identity = trace.clone();
         let (start_tx, start_rx) = std_mpsc::channel::<()>();
         let task_started = Arc::new(AtomicBool::new(false));
         let registered_started = Arc::clone(&task_started);
         let task = tokio::task::spawn_blocking(move || {
             let _ = start_rx.recv();
             task_started.store(true, Ordering::SeqCst);
-            let mut context =
-                DispatchContext::with_runtime_config(&task_services, &task_registry, file_limits)
-                    .with_trace_events(task_trace_events);
-            if let Some(trace) = task_trace_identity {
-                context = context.with_trace_identity(trace.trace_id, trace.request_id);
-            }
-            crate::dispatcher::dispatch_with_context(&request, context)
+            crate::dispatcher::dispatch(&request)
         });
         registry.register_blocking(
             &invocation_id,
@@ -194,14 +180,7 @@ impl DaemonServer {
             ),
         };
         registry.deregister(&invocation_id);
-        let request_events = trace_events.drain();
-        crate::trace::attach_request_sidecar_with_events(
-            response,
-            trace.as_ref(),
-            &op,
-            &facts,
-            &request_events,
-        )
+        crate::trace::attach_request_sidecar(response, trace.as_ref(), &op, &facts)
     }
 
     pub(super) fn tcp_auth_required(&self, is_tcp: bool) -> bool {
@@ -282,13 +261,22 @@ fn enforce_tcp_visibility(
     let Some(op) = value.get("op").and_then(serde_json::Value::as_str) else {
         return Ok(());
     };
-    let visibility = BuiltinOp::from_op_name(op).map(|op| op.contract().visibility);
-    if visibility.is_some_and(|visibility| visibility != OpVisibility::Public) {
+    if is_known_non_public_op(op) {
         return Err(DaemonError::Forbidden(format!(
             "raw daemon TCP may not invoke non-public op {op}"
         )));
     }
     Ok(())
+}
+
+fn is_known_non_public_op(op: &str) -> bool {
+    matches!(
+        op,
+        "sandbox.runtime.ready"
+            | "sandbox.trace.export"
+            | "sandbox.trace.export_ack"
+            | "sandbox.run.cancel_all"
+    )
 }
 
 /// Transport-level caller extraction for in-flight registry keys; runs before

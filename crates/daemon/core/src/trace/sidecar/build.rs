@@ -7,7 +7,7 @@ use trace::{
 
 use super::budget::enforce_sidecar_record_budget;
 use super::events::{
-    child_spans_from_request_events, op_family, op_span_name, op_verb, request_event_span_id,
+    child_spans_from_request_events, op_span_name, op_verb, request_event_span_id,
 };
 use super::resources::resource_stats_from_event;
 use super::{
@@ -93,7 +93,7 @@ pub(crate) fn attach_request_sidecar_with_events(
         Some(SpanUid::new(3)),
         op_span_name(op),
         SpanKind::Operation,
-        json!({"op": op, "family": op_family(op), "verb": op_verb(op)}),
+        json!({"op": op, "verb": op_verb(op)}),
     );
     operation.started_at_unix_ms = now;
     operation.finished_at_unix_ms = now;
@@ -161,7 +161,7 @@ pub(crate) fn attach_request_sidecar_with_events(
             SpanUid::new(3),
             "op_resolved",
             "daemon.dispatch",
-            json!({"op": op, "family": op_family(op), "verb": op_verb(op)}),
+            json!({"op": op, "verb": op_verb(op)}),
         ),
         EventRecord::new(
             SpanUid::new(3),

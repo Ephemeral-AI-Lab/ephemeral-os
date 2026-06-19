@@ -35,7 +35,7 @@ fn stamped_encoder_reproduces_read_file_fixture() {
         "path": "/workspace/repo/README.md",
         "caller_id": "caller-1",
     });
-    let encoded = encode_request_with_metadata("sandbox.file.read", invocation_id, &args, None);
+    let encoded = encode_request_with_metadata("sandbox.command.count", invocation_id, &args, None);
     assert_eq!(
         encoded,
         fixture_line(READ_FILE_FIXTURE),

@@ -125,16 +125,4 @@ impl NamespaceRuntime {
             killed_holders: None,
         }
     }
-
-    #[cfg(test)]
-    pub(crate) fn stubbed_with_holder(
-        pid: i32,
-        killed_holders: Arc<std::sync::Mutex<Vec<i32>>>,
-    ) -> Self {
-        Self {
-            stub: true,
-            stub_holder_pid: pid,
-            killed_holders: Some(killed_holders),
-        }
-    }
 }

@@ -174,7 +174,6 @@ CREATE TABLE IF NOT EXISTS trace_requests (
   trace_id         TEXT NOT NULL,
   sandbox_id       TEXT NOT NULL,
   op               TEXT NOT NULL,
-  family           TEXT NOT NULL,
   caller_id        TEXT,
   args_summary     TEXT,
   args_digest      TEXT,

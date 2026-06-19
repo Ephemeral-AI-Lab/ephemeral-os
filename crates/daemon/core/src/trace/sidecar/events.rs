@@ -96,14 +96,10 @@ pub(super) fn request_event_span_id(event: &RequestTraceEvent) -> SpanUid {
     event.span_id
 }
 
-pub(super) fn op_family(op: &str) -> &str {
-    op.split('.').nth(1).unwrap_or("unknown")
-}
-
 pub(super) fn op_verb(op: &str) -> &str {
     op.rsplit('.').next().unwrap_or("unknown")
 }
 
 pub(super) fn op_span_name(op: &str) -> String {
-    format!("op.{}.{}", op_family(op), op_verb(op))
+    format!("op.{}", op_verb(op))
 }

@@ -42,7 +42,6 @@ pub(crate) struct ForwardRequestInput<'a> {
     pub(crate) trace_drainer: &'a TraceExportDrainer,
     pub(crate) trace_context: ForwardTraceContext,
     pub(crate) mutates_state: bool,
-    pub(crate) family: &'a str,
     pub(crate) op: &'a str,
     pub(crate) invocation_id: &'a str,
     pub(crate) args: &'a Value,
@@ -56,7 +55,6 @@ pub(crate) fn forward_request(input: ForwardRequestInput<'_>) -> Result<Value, F
         trace_drainer,
         trace_context,
         mutates_state,
-        family,
         op,
         invocation_id,
         args,
@@ -84,7 +82,6 @@ pub(crate) fn forward_request(input: ForwardRequestInput<'_>) -> Result<Value, F
             trace_id: trace_context.trace_id.clone(),
             request_id: trace_context.request_id.clone(),
             op,
-            family,
             caller_id,
             mutates_state,
             args: args.clone(),
@@ -117,7 +114,7 @@ pub(crate) fn forward_request(input: ForwardRequestInput<'_>) -> Result<Value, F
         &attempt,
         "host.protocol",
         "forward_started",
-        json!({"op": op, "family": family, "mutates_state": mutates_state}),
+        json!({"op": op, "mutates_state": mutates_state}),
     );
     let mut result = run_recovery(&attempt);
     match &mut result {

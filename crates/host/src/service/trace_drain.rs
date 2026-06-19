@@ -2,7 +2,6 @@ use std::collections::HashSet;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
-use ::protocol::catalog::{SANDBOX_TRACE_EXPORT, SANDBOX_TRACE_EXPORT_ACK};
 use base64::Engine as _;
 use serde_json::{json, Value};
 
@@ -15,6 +14,9 @@ use crate::trace_store::{
     HeartbeatInput, PendingSidecarInput, TraceEventInput, TraceIngestFailedInput, TraceStore,
 };
 use trace::{RequestId, TraceId};
+
+const SANDBOX_TRACE_EXPORT: &str = "sandbox.trace.export";
+const SANDBOX_TRACE_EXPORT_ACK: &str = "sandbox.trace.export_ack";
 
 #[derive(Clone, Default)]
 pub(crate) struct TraceExportDrainer {

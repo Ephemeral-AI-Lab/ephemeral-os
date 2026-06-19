@@ -29,441 +29,12 @@ fn main() -> Result<()> {
         .as_deref()
     {
         Some("package") => package(&PackageArgs::parse(args)?),
-        Some("check-contract") => check_contract(),
-        Some("gen-docs") => gen_docs(),
         Some("help" | "--help" | "-h") | None => {
             print_help();
             Ok(())
         }
         Some(other) => bail!("unknown xtask command {other:?}; run `cargo run -p xtask -- help`"),
     }
-}
-
-/// Regenerate `docs/API.md` from the committed
-/// `crates/daemon/operation/ops.json`.
-fn gen_docs() -> Result<()> {
-    let root = workspace_root()?;
-    let rendered = render_api_doc(&root)?;
-    let path = root.join("docs").join("API.md");
-    fs::write(&path, rendered).with_context(|| format!("write {}", path.display()))?;
-    println!("gen-docs: wrote docs/API.md");
-    Ok(())
-}
-
-/// Render the API doc deterministically from
-/// `crates/daemon/operation/ops.json`.
-fn render_api_doc(root: &Path) -> Result<String> {
-    let ops_path = op_catalog_path(root);
-    let document: serde_json::Value = serde_json::from_str(
-        &fs::read_to_string(&ops_path).with_context(|| format!("read {}", ops_path.display()))?,
-    )
-    .context("parse crates/daemon/operation/ops.json")?;
-    let protocol_version = document
-        .get("protocol_version")
-        .and_then(serde_json::Value::as_i64)
-        .context("ops.json missing protocol_version")?;
-    let ops = document
-        .get("ops")
-        .and_then(serde_json::Value::as_array)
-        .context("ops.json missing ops array")?;
-
-    let field = |op: &serde_json::Value, key: &str| -> Result<String> {
-        Ok(op
-            .get(key)
-            .and_then(serde_json::Value::as_str)
-            .with_context(|| format!("catalog op missing {key}"))?
-            .to_owned())
-    };
-    let mut sections: std::collections::BTreeMap<&str, Vec<String>> =
-        std::collections::BTreeMap::new();
-    for op in ops {
-        let name = field(op, "name")?;
-        let visibility = field(op, "visibility")?;
-        let served_by = field(op, "served_by")?;
-        let family = field(op, "family")?;
-        let args_schema = field(op, "args_schema")?;
-        let response_schema = field(op, "response_schema")?;
-        let summary = field(op, "summary")?;
-        let mutates = op
-            .get("mutates_state")
-            .and_then(serde_json::Value::as_bool)
-            .context("catalog op missing mutates_state")?;
-        let key = match visibility.as_str() {
-            "public" => "public",
-            "operator" => "operator",
-            "internal" => "internal",
-            "test" => "test",
-            other => bail!("unknown visibility {other:?}"),
-        };
-        sections.entry(key).or_default().push(format!(
-            "| `{name}` | {served_by} | {family} | {} | `{args_schema}` | `{response_schema}` | {summary} |",
-            if mutates { "yes" } else { "no" }
-        ));
-    }
-
-    let mut body = String::new();
-    body.push_str("# Sandbox API — op catalog\n\n");
-    body.push_str(
-        "GENERATED from `crates/daemon/operation/ops.json` by `cargo run -p xtask -- gen-docs`.\n\
-         Do not edit by hand: `cargo run -p xtask -- check-contract` fails when\n\
-         this file drifts from the committed catalog.\n\n",
-    );
-    let _ = writeln!(&mut body, "Protocol version: **{protocol_version}**\n");
-    for (key, title, blurb) in [
-        (
-            "public",
-            "Public ops (client socket)",
-            "The complete public vocabulary served on the `gateway` client socket.",
-        ),
-        (
-            "operator",
-            "Operator ops (operator socket)",
-            "Served only on the operator socket beside the client socket; never the client socket.",
-        ),
-        (
-            "internal",
-            "Internal ops",
-            "Reserved for the host recovery machine; not served from any socket.",
-        ),
-        (
-            "test",
-            "Test ops",
-            "Daemon-side test hooks; refused by `gateway` and exercised only by direct-daemon test harnesses.",
-        ),
-    ] {
-        let Some(rows) = sections.get(key) else {
-            continue;
-        };
-        let _ = writeln!(&mut body, "## {title}\n\n{blurb}\n");
-        body.push_str("| Op | Served by | Family | Mutates | Args DTO | Response DTO | Summary |\n");
-        body.push_str("|---|---|---|---|---|---|---|\n");
-        for row in rows {
-            body.push_str(row);
-            body.push('\n');
-        }
-        body.push('\n');
-    }
-    body.push_str(
-        "## Plugin providers\n\nFirst-party plugin providers are static catalog entries under \
-         `sandbox.plugin.*`. The initial provider is `sandbox.plugin.pyright_lsp.*`; dynamic \
-         plugin-op forwarding is not part of the public API.\n",
-    );
-    Ok(body)
-}
-
-/// The CI drift gate for the sandbox contract:
-/// 1. `eosd dump-ops` must equal the committed
-///    `crates/daemon/operation/ops.json`.
-/// 2. Name integrity: canonical names unique.
-/// 3. Both sides' conformance test suites pass against owner-local fixtures.
-fn check_contract() -> Result<()> {
-    let root = workspace_root()?;
-
-    let committed_path = op_catalog_path(&root);
-    let committed = fs::read_to_string(&committed_path)
-        .with_context(|| format!("read {}", committed_path.display()))?;
-    let generated = capture_stdout(
-        &root,
-        &["run", "--quiet", "-p", "eosd", "--", "dump-ops"],
-        "eosd dump-ops",
-    )?;
-    if committed != generated {
-        bail!(
-            "crates/daemon/operation/ops.json is stale: regenerate with \
-             `cargo run -p eosd -- dump-ops > crates/daemon/operation/ops.json`"
-        );
-    }
-    check_name_integrity(&committed)?;
-
-    let api_doc_path = root.join("docs").join("API.md");
-    let committed_doc = fs::read_to_string(&api_doc_path)
-        .with_context(|| format!("read {}", api_doc_path.display()))?;
-    if committed_doc != render_api_doc(&root)? {
-        bail!("docs/API.md is stale: regenerate with `cargo run -p xtask -- gen-docs`");
-    }
-    check_live_docs_do_not_teach_stale_terms(&root)?;
-
-    for suite in CONFORMANCE_SUITES {
-        check_conformance_tests_are_present(&root, suite)?;
-        let mut cargo_args = vec![
-            "test".to_owned(),
-            "--quiet".to_owned(),
-            "-p".to_owned(),
-            suite.package.to_owned(),
-        ];
-        push_feature_args(&mut cargo_args, suite.features);
-        for test in suite.tests {
-            cargo_args.extend(["--test".to_owned(), (*test).to_owned()]);
-        }
-        run_cargo(&root, &cargo_args, suite.package)?;
-    }
-
-    println!("check-contract: ops.json in sync, names sound, docs clean, conformance suites green");
-    Ok(())
-}
-
-/// Conformance suites the gate runs, host side and box side. Extend this list
-/// as contract tests land in new crates.
-struct ConformanceSuite {
-    package: &'static str,
-    tests: &'static [&'static str],
-    features: &'static [&'static str],
-}
-
-const CONFORMANCE_SUITES: &[ConformanceSuite] = &[
-    // Box side: daemon wire-message conformance + the 18 golden CAS cases.
-    ConformanceSuite {
-        package: "daemon",
-        tests: &["contract"],
-        features: &[],
-    },
-    ConformanceSuite {
-        package: "layerstack",
-        tests: &["cas_fixtures"],
-        features: &[],
-    },
-    ConformanceSuite {
-        package: "operation",
-        tests: &["contract"],
-        features: &[],
-    },
-    // Host side: request-fixture encoding + router/visibility coverage.
-    ConformanceSuite {
-        package: "host",
-        tests: &["contract"],
-        features: &["e2e-support"],
-    },
-    ConformanceSuite {
-        package: "gateway",
-        tests: &[],
-        features: &[],
-    },
-];
-
-fn check_conformance_tests_are_present(root: &Path, suite: &ConformanceSuite) -> Result<()> {
-    for test in suite.tests {
-        let mut cargo_args = vec![
-            "test".to_owned(),
-            "--quiet".to_owned(),
-            "-p".to_owned(),
-            suite.package.to_owned(),
-        ];
-        push_feature_args(&mut cargo_args, suite.features);
-        cargo_args.extend([
-            "--test".to_owned(),
-            (*test).to_owned(),
-            "--".to_owned(),
-            "--list".to_owned(),
-        ]);
-        let label = format!("{} --test {test} -- --list", suite.package);
-        let stdout = capture_stdout(root, &cargo_args, &label)?;
-        let test_count = listed_test_count(&stdout);
-        if test_count == 0 {
-            bail!("conformance suite {label} listed zero tests");
-        }
-    }
-    Ok(())
-}
-
-fn push_feature_args(cargo_args: &mut Vec<String>, features: &[&str]) {
-    if !features.is_empty() {
-        cargo_args.extend(["--features".to_owned(), features.join(",")]);
-    }
-}
-
-fn listed_test_count(stdout: &str) -> usize {
-    stdout
-        .lines()
-        .filter(|line| line.trim_end().ends_with(": test"))
-        .count()
-}
-
-fn check_name_integrity(ops_json: &str) -> Result<()> {
-    let document: serde_json::Value =
-        serde_json::from_str(ops_json).context("parse crates/daemon/operation/ops.json")?;
-    let ops = document
-        .get("ops")
-        .and_then(serde_json::Value::as_array)
-        .context("crates/daemon/operation/ops.json must carry an `ops` array")?;
-
-    let mut names = std::collections::BTreeSet::new();
-    for op in ops {
-        let name = op
-            .get("name")
-            .and_then(serde_json::Value::as_str)
-            .context("catalog op missing `name`")?;
-        if !names.insert(name) {
-            bail!("canonical name claimed twice in crates/daemon/operation/ops.json: {name}");
-        }
-        let served_by = op
-            .get("served_by")
-            .and_then(serde_json::Value::as_str)
-            .with_context(|| format!("catalog op {name} missing `served_by`"))?;
-        match served_by {
-            "host" => {
-                let host_verb = op
-                    .get("host_verb")
-                    .and_then(serde_json::Value::as_str)
-                    .with_context(|| format!("host catalog op {name} missing `host_verb`"))?;
-                if host_verb.trim().is_empty() {
-                    bail!("host catalog op {name} has empty `host_verb`");
-                }
-            }
-            "daemon" => {
-                if !op.get("host_verb").is_some_and(serde_json::Value::is_null) {
-                    bail!("daemon catalog op {name} must set `host_verb` to null");
-                }
-            }
-            other => bail!("catalog op {name} has unknown `served_by` {other:?}"),
-        }
-        for key in ["args_schema", "response_schema"] {
-            let value = op
-                .get(key)
-                .and_then(serde_json::Value::as_str)
-                .with_context(|| format!("catalog op {name} missing `{key}`"))?;
-            if value.trim().is_empty() {
-                bail!("catalog op {name} has empty `{key}`");
-            }
-        }
-    }
-    Ok(())
-}
-
-const STALE_LIVE_DOC_TERMS: &[&str] = &[
-    "api.v1",
-    "api.runtime",
-    "api.audit",
-    "meta.protocol_version",
-    "command-session",
-    "command_session",
-    "CommandSession",
-    "sandbox.audit",
-    "eos-protocol",
-    "backend/src/eos-sandbox",
-];
-
-const HISTORICAL_DOC_PATHS: &[&str] = &[
-    "docs/SPEC-operation-core.md",
-    "docs/SPEC-operation-unified-op-io.md",
-    "docs/SPEC-operation-v3-unified-contract.md",
-    "docs/command-naming-update-note.md",
-    "docs/sandbox-bridge-findings.md",
-    "docs/sandbox-bridge-issues.md",
-    "docs/sandbox-bridge-spec.md",
-    "docs/sandbox-crates-code-review.md",
-    "docs/sandbox-crates-refactor-plan.md",
-    "docs/sandbox-event-tracing-response-plan.md",
-    "docs/sandbox-response-observability-findings.md",
-    "improvement.spec.md",
-];
-
-const HISTORICAL_DOC_PREFIXES: &[&str] = &["docs/contract/"];
-
-fn check_live_docs_do_not_teach_stale_terms(root: &Path) -> Result<()> {
-    let mut docs = Vec::new();
-    collect_markdown_docs(&root.join("docs"), &mut docs)?;
-    collect_root_markdown_docs(root, &mut docs)?;
-    docs.sort();
-
-    let mut violations = Vec::new();
-    for path in docs {
-        let relative = path
-            .strip_prefix(root)
-            .with_context(|| format!("strip workspace root from {}", path.display()))?;
-        let relative = relative
-            .to_str()
-            .with_context(|| format!("doc path is not valid UTF-8: {}", path.display()))?;
-        if is_historical_doc(relative) {
-            continue;
-        }
-
-        let body = fs::read_to_string(&path).with_context(|| format!("read {}", path.display()))?;
-        for (line_index, line) in body.lines().enumerate() {
-            for term in STALE_LIVE_DOC_TERMS {
-                if line.contains(term) {
-                    violations.push(format!("{relative}:{} contains {term:?}", line_index + 1));
-                }
-            }
-        }
-    }
-
-    if !violations.is_empty() {
-        violations.sort();
-        bail!(
-            "live docs contain stale sandbox vocabulary:\n{}",
-            violations.join("\n")
-        );
-    }
-    Ok(())
-}
-
-fn collect_root_markdown_docs(root: &Path, docs: &mut Vec<PathBuf>) -> Result<()> {
-    for entry in fs::read_dir(root).with_context(|| format!("read {}", root.display()))? {
-        let entry = entry.with_context(|| format!("read entry in {}", root.display()))?;
-        let path = entry.path();
-        let file_type = entry
-            .file_type()
-            .with_context(|| format!("read file type for {}", path.display()))?;
-        if file_type.is_file() && path.extension().is_some_and(|extension| extension == "md") {
-            docs.push(path);
-        }
-    }
-    Ok(())
-}
-
-fn collect_markdown_docs(dir: &Path, docs: &mut Vec<PathBuf>) -> Result<()> {
-    for entry in fs::read_dir(dir).with_context(|| format!("read {}", dir.display()))? {
-        let entry = entry.with_context(|| format!("read entry in {}", dir.display()))?;
-        let path = entry.path();
-        let file_type = entry
-            .file_type()
-            .with_context(|| format!("read file type for {}", path.display()))?;
-        if file_type.is_dir() {
-            collect_markdown_docs(&path, docs)?;
-        } else if path.extension().is_some_and(|extension| extension == "md") {
-            docs.push(path);
-        }
-    }
-    Ok(())
-}
-
-fn is_historical_doc(relative: &str) -> bool {
-    HISTORICAL_DOC_PATHS.contains(&relative)
-        || HISTORICAL_DOC_PREFIXES
-            .iter()
-            .any(|prefix| relative.starts_with(prefix))
-}
-
-fn capture_stdout<S: AsRef<std::ffi::OsStr>>(
-    root: &Path,
-    cargo_args: &[S],
-    what: &str,
-) -> Result<String> {
-    let output = Command::new("cargo")
-        .args(cargo_args)
-        .current_dir(root)
-        .output()
-        .with_context(|| format!("spawn {what}"))?;
-    if !output.status.success() {
-        bail!(
-            "{what} failed with {}:\n{}",
-            output.status,
-            String::from_utf8_lossy(&output.stderr)
-        );
-    }
-    String::from_utf8(output.stdout).with_context(|| format!("{what} produced non-UTF-8 output"))
-}
-
-fn run_cargo<S: AsRef<std::ffi::OsStr>>(root: &Path, cargo_args: &[S], what: &str) -> Result<()> {
-    let status = Command::new("cargo")
-        .args(cargo_args)
-        .current_dir(root)
-        .status()
-        .with_context(|| format!("spawn cargo for {what}"))?;
-    if !status.success() {
-        bail!("conformance suite failed for {what} with {status}");
-    }
-    Ok(())
 }
 
 #[derive(Debug)]
@@ -570,17 +141,8 @@ fn package(args: &PackageArgs) -> Result<()> {
     set_executable(&artifact)?;
 
     let sha = sha256_file(&artifact)?;
-    let protocol_version = read_protocol_version(&root)?;
-    write_protocol_version(&out_dir, protocol_version)?;
     write_checksums(&out_dir)?;
-    write_manifest(
-        &out_dir,
-        &args.target,
-        arch,
-        &artifact_name,
-        &sha,
-        protocol_version,
-    )?;
+    write_manifest(&out_dir, &args.target, arch, &artifact_name, &sha)?;
 
     if args.sign {
         let key = args
@@ -591,8 +153,8 @@ fn package(args: &PackageArgs) -> Result<()> {
     }
 
     println!(
-        "packaged {artifact_name} target={} profile={} sha256={} protocol_version={}",
-        args.target, args.profile, sha, protocol_version
+        "packaged {artifact_name} target={} profile={} sha256={}",
+        args.target, args.profile, sha
     );
     Ok(())
 }
@@ -612,13 +174,6 @@ fn workspace_root() -> Result<PathBuf> {
         .parent()
         .map(Path::to_path_buf)
         .context("xtask manifest directory has no parent")
-}
-
-fn op_catalog_path(root: &Path) -> PathBuf {
-    root.join("crates")
-        .join("daemon")
-        .join("operation")
-        .join("ops.json")
 }
 
 fn absolutize(root: &Path, path: &Path) -> PathBuf {
@@ -750,26 +305,6 @@ fn sha256_file(path: &Path) -> Result<String> {
     Ok(format!("{:x}", hasher.finalize()))
 }
 
-fn read_protocol_version(root: &Path) -> Result<i64> {
-    let path = op_catalog_path(root);
-    let document: serde_json::Value = serde_json::from_str(
-        &fs::read_to_string(&path).with_context(|| format!("read {}", path.display()))?,
-    )
-    .context("parse crates/daemon/operation/ops.json")?;
-    document
-        .get("protocol_version")
-        .and_then(serde_json::Value::as_i64)
-        .context("crates/daemon/operation/ops.json missing protocol_version")
-}
-
-fn write_protocol_version(out_dir: &Path, protocol_version: i64) -> Result<()> {
-    fs::write(
-        out_dir.join("protocol_version"),
-        format!("{protocol_version}\n"),
-    )
-    .with_context(|| format!("write {}", out_dir.join("protocol_version").display()))
-}
-
 fn write_checksums(out_dir: &Path) -> Result<()> {
     let mut artifacts = fs::read_dir(out_dir)
         .with_context(|| format!("read {}", out_dir.display()))?
@@ -802,14 +337,12 @@ fn write_manifest(
     arch: &str,
     artifact_name: &str,
     sha256: &str,
-    protocol_version: i64,
 ) -> Result<()> {
     let body = format!(
         concat!(
             "{{\n",
             "  \"artifact\": \"{}\",\n",
             "  \"arch\": \"{}\",\n",
-            "  \"protocol_version\": {},\n",
             "  \"sha256\": \"{}\",\n",
             "  \"target\": \"{}\",\n",
             "  \"version\": \"{}\"\n",
@@ -817,7 +350,6 @@ fn write_manifest(
         ),
         artifact_name,
         arch,
-        protocol_version,
         sha256,
         target,
         env!("CARGO_PKG_VERSION"),
@@ -853,10 +385,6 @@ fn print_help() {
 xtask commands:
   package [--target <triple>] [--out-dir <dir>] [--builder rust-lld|cargo|cross]
           [--profile <name> | --fast] [--no-build] [--sign --minisign-key <path>]
-  check-contract    verify crates/daemon/operation/ops.json matches `eosd dump-ops`, alias
-                    integrity holds, docs/API.md is fresh, and the
-                    conformance suites pass
-  gen-docs          regenerate docs/API.md from crates/daemon/operation/ops.json
 
 Targets:
   {AMD64_TARGET} -> eosd-linux-amd64

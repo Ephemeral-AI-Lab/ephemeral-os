@@ -4,8 +4,6 @@ pub mod daemon;
 
 pub mod validate;
 
-pub mod e2e_test;
-
 pub mod gateway;
 
 pub mod isolated;

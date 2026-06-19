@@ -6,7 +6,6 @@ pub struct RequestStartInput<'a> {
     pub trace_id: TraceId,
     pub request_id: RequestId,
     pub op: &'a str,
-    pub family: &'a str,
     pub caller_id: Option<&'a str>,
     pub mutates_state: bool,
     pub args: Value,
@@ -17,7 +16,6 @@ pub(super) struct DegradedRequestInput<'a> {
     pub(super) trace_id: TraceId,
     pub(super) request_id: RequestId,
     pub(super) op: &'a str,
-    pub(super) family: &'a str,
     pub(super) caller_id: Option<&'a str>,
     pub(super) args: Value,
 }

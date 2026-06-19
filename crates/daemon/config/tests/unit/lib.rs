@@ -11,8 +11,8 @@ use super::*;
 fn load_prd_reads_committed_baseline() {
     let doc = load_prd().expect("prd.yml loads");
     let section = doc
-        .section::<Value>("e2e_test")
-        .expect("e2e_test section exists");
+        .section::<Value>("daemon")
+        .expect("daemon section exists");
 
     assert!(matches!(section, Value::Mapping(_)));
 }
@@ -25,11 +25,11 @@ daemon:
   commands:
     default_yield_time_ms: 1000
     max_command_s: 21600
-  plugin:
-    max_response_bytes: 8388608
-e2e_test:
-  docker:
-    cap_add: [SYS_ADMIN, NET_ADMIN]
+  layer_stack:
+    auto_squash_max_depth: 100
+runner:
+  env:
+    inherit_keys: [PATH, HOME]
 "#,
     )
     .expect("baseline parses");
@@ -38,9 +38,9 @@ e2e_test:
 daemon:
   commands:
     max_command_s: 2
-e2e_test:
-  docker:
-    cap_add: [SYS_PTRACE]
+runner:
+  env:
+    inherit_keys: [TZ]
 "#,
     )
     .expect("override parses");
@@ -57,12 +57,12 @@ e2e_test:
         Value::Number(2.into())
     );
     assert_eq!(
-        merged["daemon"]["plugin"]["max_response_bytes"],
-        Value::Number(8_388_608.into())
+        merged["daemon"]["layer_stack"]["auto_squash_max_depth"],
+        Value::Number(100.into())
     );
     assert_eq!(
-        merged["e2e_test"]["docker"]["cap_add"],
-        Value::Sequence(vec![Value::String("SYS_PTRACE".to_owned())])
+        merged["runner"]["env"]["inherit_keys"],
+        Value::Sequence(vec![Value::String("TZ".to_owned())])
     );
 }
 
@@ -127,20 +127,24 @@ fn load_test_override_merges_sandbox_local_test_yaml() {
     fs::write(
         &override_path,
         r#"
-e2e_test:
-  pool:
-    keep_container: false
-    sandboxes: 1
+runner:
+  env:
+    inherit_keys: [PATH]
 "#,
     )
     .expect("write override");
 
     let doc = load_test_override(&override_path).expect("override loads");
-    let section = doc.section::<Value>("e2e_test").expect("section loads");
+    let section = doc.section::<Value>("runner").expect("section loads");
 
-    assert_eq!(section["pool"]["keep_container"], Value::Bool(false));
-    assert_eq!(section["pool"]["sandboxes"], Value::Number(1.into()));
-    assert_eq!(section["pool"]["recycle_after"], Value::Number(50.into()));
+    assert_eq!(
+        section["env"]["inherit_keys"],
+        Value::Sequence(vec![Value::String("PATH".to_owned())])
+    );
+    assert!(matches!(
+        section["env"]["restricted_keys"],
+        Value::Sequence(_)
+    ));
 }
 
 #[test]

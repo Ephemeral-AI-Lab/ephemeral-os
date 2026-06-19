@@ -8,7 +8,6 @@ use std::time::Instant;
 use anyhow::{Context, Result};
 use serde_json::json;
 
-use crate::catalog::Catalog;
 use crate::engine::Engine;
 use crate::router::{handle, Surface};
 use crate::wire::{
@@ -77,20 +76,10 @@ pub(crate) fn operator_socket_path(listen: &Path) -> PathBuf {
 }
 
 pub(crate) fn serve(listen: &Path, engine: Arc<dyn Engine>) -> Result<()> {
-    let catalog = Arc::new(Catalog::load_builtin()?);
-    serve_with_catalog(listen, catalog, engine)
-}
-
-pub(crate) fn serve_with_catalog(
-    listen: &Path,
-    catalog: Arc<Catalog>,
-    engine: Arc<dyn Engine>,
-) -> Result<()> {
     let operator_path = operator_socket_path(listen);
     let operator = bind(&operator_path)?;
     let connection_limiter = Arc::new(ConnectionLimiter::new());
     {
-        let catalog = Arc::clone(&catalog);
         let engine = Arc::clone(&engine);
         let socket_path: Arc<str> = Arc::from(operator_path.to_string_lossy().as_ref());
         let connection_limiter = Arc::clone(&connection_limiter);
@@ -99,7 +88,6 @@ pub(crate) fn serve_with_catalog(
                 &operator,
                 Surface::Operator,
                 &socket_path,
-                catalog,
                 engine,
                 connection_limiter,
             );
@@ -116,7 +104,6 @@ pub(crate) fn serve_with_catalog(
         &client,
         Surface::Client,
         &socket_path,
-        catalog,
         engine,
         connection_limiter,
     );
@@ -153,7 +140,6 @@ fn accept_loop(
     listener: &UnixListener,
     surface: Surface,
     socket_path: &Arc<str>,
-    catalog: Arc<Catalog>,
     engine: Arc<dyn Engine>,
     connection_limiter: Arc<ConnectionLimiter>,
 ) {
@@ -165,12 +151,11 @@ fn accept_loop(
             write_overload_response(stream);
             continue;
         };
-        let catalog = Arc::clone(&catalog);
         let engine = Arc::clone(&engine);
         let socket_path = Arc::clone(socket_path);
         std::thread::spawn(move || {
             let _permit = permit;
-            handle_connection(stream, surface, &socket_path, &catalog, &*engine);
+            handle_connection(stream, surface, &socket_path, &*engine);
         });
     }
 }
@@ -187,7 +172,6 @@ pub(crate) fn handle_connection(
     stream: UnixStream,
     surface: Surface,
     socket_path: &str,
-    catalog: &Catalog,
     engine: &dyn Engine,
 ) {
     let _ = stream.set_read_timeout(Some(REQUEST_READ_TIMEOUT));
@@ -225,7 +209,7 @@ pub(crate) fn handle_connection(
                 .sandbox_id
                 .clone()
                 .map(|sandbox_id| (sandbox_id, request.trace.clone()));
-            (handle(catalog, engine, surface, &request), trace_target)
+            (handle(engine, surface, &request), trace_target)
         }
         Err(err) => {
             // A parse failure with a known sandbox still closes its trace; a

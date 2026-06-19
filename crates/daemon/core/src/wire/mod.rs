@@ -4,7 +4,7 @@
 //! This is in-box code. The shared vocabulary lives in the dependency-light
 //! `protocol` crate, with owner-local protocol fixtures/prose catching
 //! wire-format drift through the conformance suites run by
-//! `cargo xtask check-contract`.
+//! the host-side wire client.
 
 pub mod message;
 

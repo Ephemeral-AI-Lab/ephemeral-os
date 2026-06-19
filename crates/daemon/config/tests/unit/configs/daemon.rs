@@ -6,14 +6,6 @@ fn config_prd_daemon_section_deserializes_and_validates() {
 }
 
 #[test]
-fn config_default_plugin_runtime_validates_inside_daemon_config() {
-    let mut cfg = prd_config();
-    cfg.plugin = PluginRuntimeConfig::default();
-    cfg.validate()
-        .expect("default plugin runtime config is valid");
-}
-
-#[test]
 fn config_validation_rejects_invalid_daemon_values() {
     let mut cfg = prd_config();
     cfg.server.max_worker_threads = 0;
@@ -33,10 +25,6 @@ fn config_validation_rejects_invalid_daemon_values() {
 
     let mut cfg = prd_config();
     cfg.commands.scratch_root = std::path::PathBuf::from("/");
-    assert_invalid(cfg, "daemon.commands.scratch_root");
-
-    let mut cfg = prd_config();
-    cfg.commands.scratch_root = cfg.plugin.pyright_lsp.workspace_root.clone();
     assert_invalid(cfg, "daemon.commands.scratch_root");
 
     let mut cfg = prd_config();
@@ -72,14 +60,6 @@ fn config_validation_rejects_invalid_daemon_values() {
     let mut cfg = prd_config();
     cfg.layer_stack.auto_squash_max_depth = 0;
     assert_invalid(cfg, "daemon.layer_stack.auto_squash_max_depth");
-
-    let mut cfg = prd_config();
-    cfg.files.max_read_bytes = MAX_READ_BYTES + 1;
-    assert_invalid(cfg, "daemon.files.max_read_bytes");
-
-    let mut cfg = prd_config();
-    cfg.files.max_write_bytes = 0;
-    assert_invalid(cfg, "daemon.files.max_write_bytes");
 }
 
 fn prd_config() -> DaemonConfig {

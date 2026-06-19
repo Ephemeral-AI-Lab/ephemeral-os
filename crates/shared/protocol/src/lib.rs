@@ -5,12 +5,10 @@
 //! `trace`) so the gateway, host, daemon, and operation crates agree on these
 //! types without any of them depending on the engine.
 
-pub mod catalog;
 pub mod envelope;
 pub mod error;
 pub mod fault;
 
-pub use catalog::*;
 pub use envelope::{
     OperationEnvelope, OperationStatus, OperationWarning, ResourceSummary, ResponseMeta,
     StepSummary, TraceRef, WorkspaceRouteRef, ENVELOPE_VERSION,

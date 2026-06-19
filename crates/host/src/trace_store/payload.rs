@@ -20,7 +20,6 @@ pub(super) struct TraceDegradedPayload {
     pub(super) request_id: String,
     pub(super) sandbox_id: String,
     pub(super) op: String,
-    pub(super) family: String,
     pub(super) caller_id: Option<String>,
     pub(super) args_summary: String,
     pub(super) args_digest: String,

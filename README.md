@@ -23,37 +23,28 @@ eosd / daemon  (bin+lib, in-container)   executes in-box ops: files (layer
 
 | Component | Kind | Job | Must never |
 |---|---|---|---|
-| `gateway` | bin | decode requests, enforce visibility, route by catalog, return response | contain fleet logic or per-op branches |
+| `gateway` | bin | decode requests, enforce visibility, route by local table, return response | contain fleet logic or per-op branches |
 | `host` | lib | host engine, protocol client, Docker runtime | depend on daemon implementation crates |
-| `eosd` / `daemon` | bin+lib | dispatch and execute the in-box op catalog | know about Docker, sandbox_ids, or the fleet |
-| `crates/daemon/operation/ops.json` | data | reviewed static op catalog | drift from `eosd dump-ops` |
-| `crates/shared/protocol/` | shared contract | op catalog, envelope/fault vocabulary, wire protocol prose and fixtures | depend on host/gateway/daemon implementation crates |
+| `eosd` / `daemon` | bin+lib | dispatch in-box daemon requests | know about Docker, sandbox_ids, or the fleet |
+| `crates/shared/protocol/` | shared contract | envelope/fault vocabulary, wire protocol prose and fixtures | depend on host/gateway/daemon implementation crates |
 | `layerstack` | lib (in-box) | the two frozen content hashes + manifest/layer types, storage, leases, checkpoint squashing | be depended on by host-side crates |
 
 **Boundary law:** host/gateway crates do not depend on daemon implementation
 crates, and daemon crates do not depend on host/gateway crates. Cross-boundary
-schemas live in `crates/shared/protocol` and `crates/shared/trace`; the
-reviewed generated artifact is `crates/daemon/operation/ops.json`. Wire,
-operation, and CAS fixtures live with their owning crates. `cargo run -p xtask
--- check-contract` is the drift gate.
+schemas live in `crates/shared/protocol` and `crates/shared/trace`. Wire and
+CAS fixtures live with their owning crates. `cargo run -p xtask -- check-contract`
+is the drift gate.
 
 ## The pieces
 
-- `crates/daemon/operation/ops.json` — the op catalog: canonical `host.*`
-  names for host/fleet operations, canonical `sandbox.*` names for daemon
-  operations, visibility, routing metadata, and protocol version.
 - `crates/shared/protocol/PROTOCOL.md` — framing/auth/errors/canonicalization
   plus immutable wire fixtures in `crates/shared/protocol/fixtures/`.
-- `crates/daemon/layerstack/tests/fixtures/` and
-  `crates/daemon/operation/fixtures/` — daemon-owned CAS and operation
-  fixtures.
+- `crates/daemon/layerstack/tests/fixtures/` — daemon-owned CAS fixtures.
 - `crates/` — the workspace. Shared: `shared/protocol`, `shared/trace`.
   Gateway: `gateway`. Host: `host`. Daemon side:
   `daemon/eosd`, `daemon/core`, `daemon/layerstack`, `daemon/overlay`,
-  `daemon/namespace`, `daemon/command`, `daemon/operation`,
-  `daemon/plugin`, `daemon/workspace`, and `daemon/config`.
-- `docs/API.md` — the public op reference, generated from
-  `crates/daemon/operation/ops.json` (`cargo run -p xtask -- gen-docs`).
+  `daemon/namespace`, `daemon/command`, `daemon/operation_service`,
+  `daemon/workspace`, and `daemon/config`.
 - `docs/contract/` — the frozen historical wire/CAS/audit contracts.
 - `config/prd.yml` — the single daemon config baseline (see `config/README.md`).
 - `dist/` — packaged static `eosd` binaries uploaded into sandbox containers.
@@ -64,20 +55,11 @@ operation, and CAS fixtures live with their owning crates. `cargo run -p xtask
 # the contract drift gate (CI-required)
 cargo run -p xtask -- check-contract
 
-# regenerate the catalog artifact and its rendered doc after editing
-# protocol::catalog
-cargo run -p eosd -- dump-ops > crates/daemon/operation/ops.json
-cargo run -p xtask -- gen-docs
-
 # package the in-container daemon binary for Docker/E2E iteration
 cargo run -p xtask -- package
 
 # final fat-LTO package
 cargo run -p xtask -- package --profile release
-
-# live end-to-end suite against real Docker sandboxes
-cargo run -p e2e-test --bin e2e-runner -- \
-    --max-parallel 5 --container-weight-cap 10 --heavy-test-threads 4
 
 # optional: set a shared custom socket once instead of passing --listen/--socket
 # export EOS_GATEWAY_SOCKET=/tmp/eos-sandbox.sock

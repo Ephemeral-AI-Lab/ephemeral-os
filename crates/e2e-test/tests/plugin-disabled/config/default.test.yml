@@ -1,8 +1,0 @@
-daemon:
-  plugin:
-    enabled_plugins: []
-
-e2e_test:
-  pool:
-    mode: per-test
-    keep_container: false

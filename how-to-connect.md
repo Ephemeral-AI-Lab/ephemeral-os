@@ -56,7 +56,7 @@ The gateway binds **two** sockets and gates every op by the socket's surface:
 `internal` and `test` ops are reachable from **neither** socket. So a normal
 coding-agent runs against the **client** socket and sees only `public` ops; an
 operator/observability process uses the **`.operator`** socket to also reach the
-`operator` ops (checkpoint metrics, isolation list, and trace query/verify ops).
+`operator` ops (checkpoint metrics and trace query/verify ops).
 (`crates/gateway/src/gateway.rs:222-247`.)
 
 ### Starting the gateway
@@ -187,7 +187,7 @@ to the user rather than re-issuing.
 
 There is no distinct `run_id` type. A "workspace run" is keyed by **`caller_id`**,
 where by convention `caller_id == agent_run_id`. `caller_id` groups a run's
-commands and isolated workspace so `sandbox.run.end` can tear exactly that run
+commands and workspace cleanup so `sandbox.run.end` can tear exactly that run
 down. Pass `caller_id` in `args` on every daemon op you want grouped; it defaults
 to `"default"` when absent.
 
@@ -195,9 +195,9 @@ to `"default"` when absent.
 
 ## 3. Operations offered (the API)
 
-33 ops across 8 families. `H`=host-served, `D`=daemon-served; `pub`/`op`/`int`/`test`
-= visibility; `★`=mutates state. A coding agent uses mainly **Files**,
-**Command**, **Isolated workspace**, and **Sandbox lifecycle**.
+`H`=host-served, `D`=daemon-served; `pub`/`op`/`int`/`test` = visibility;
+`★`=mutates state. A coding agent uses mainly **Files**, **Command**,
+**Workspace run**, and **Sandbox lifecycle**.
 
 ### Sandbox lifecycle — `H`, public (no daemon hop)
 
@@ -216,9 +216,9 @@ to `"default"` when absent.
 | `sandbox.file.write` ★ | `path!`, `content!`, `overwrite?`(=true), `caller_id?`, `layer_stack_root?` | mutation outcome: `{ success, status, changed_paths, changed_path_kinds, mutation_source?, conflict?, conflict_reason?, workspace, published }` |
 | `sandbox.file.edit` ★ | `path!`, `edits!: [{old_text, new_text, replace_all?}]`, `caller_id?`, `layer_stack_root?` | same mutation outcome + `applied_edits` |
 
-`layer_stack_root` is required **only** on the direct (non-isolated) route; when
-the `caller_id` has an open isolated workspace, the op routes there and the root
-is implicit. Mutation `status` ∈ `accepted|committed|rejected|aborted_version|aborted_overlap|dropped|failed`.
+`layer_stack_root` is required on legacy direct file routes. When an operation
+is associated with an existing workspace session, the root is implicit. Mutation
+`status` ∈ `accepted|committed|rejected|aborted_version|aborted_overlap|dropped|failed`.
 
 ### Command — `D`, public (async: exec → poll → collect)
 
@@ -233,19 +233,6 @@ is implicit. Mutation `status` ∈ `accepted|committed|rejected|aborted_version|
 
 Command `result.status` ∈ `running|ok|cancelled|error|timed_out`. `running` means
 "poll me": keep the `command_id` and call `sandbox.command.poll` until terminal.
-
-### Isolated workspace — `D` (lifecycle for caller-keyed private workspaces)
-
-| Op | Vis | Args | Result (`result.*`) |
-|---|---|---|---|
-| `sandbox.isolation.enter` ★ | pub | `caller_id!`, `layer_stack_root!` | `{ success, manifest_version, manifest_root_hash, workspace_handle_id, workspace_root }` |
-| `sandbox.isolation.exit` ★ | pub | `caller_id!`, `grace_s?` | `{ success, evicted_upperdir_bytes, lifetime_s, total_ms, phases_ms, inspection }` |
-| `sandbox.isolation.status` | pub | `caller_id!` | `{ success, open, … }` |
-| `sandbox.isolation.list_open` | op | *(none)* | `{ success, open_caller_ids }` |
-| `sandbox.isolation.test_reset` ★ | test | *(none)* | test-only; unreachable on both sockets |
-
-`enter` refuses with `rejected` faults: `active_background_work`, `already_open`,
-`quota_exceeded`, `host_ram_pressure`, `setup_failed`.
 
 ### Workspace run — `D` (run-scoped teardown)
 

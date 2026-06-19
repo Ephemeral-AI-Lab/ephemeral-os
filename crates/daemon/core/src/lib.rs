@@ -3,27 +3,22 @@
 //!
 #![forbid(unsafe_code)]
 
-pub(crate) mod context;
 pub(crate) mod dispatch;
 pub(crate) mod error;
 pub(crate) mod invocation_registry;
 pub(crate) mod response;
-pub(crate) mod services;
 pub(crate) mod trace;
 pub(crate) mod transport;
 pub mod wire;
 
-pub(crate) use dispatch::{builtin, dispatcher};
+pub(crate) use dispatch::dispatcher;
 pub(crate) use transport::server;
 
-pub use context::DispatchContext;
-pub use dispatcher::{dispatch, dispatch_with_context};
+pub use dispatcher::dispatch;
 
 pub use invocation_registry::InFlightRegistry;
 pub(crate) use invocation_registry::{DEFAULT_REAPER_INTERVAL_S, DEFAULT_TTL_S};
 pub use server::{DaemonServer, ServerConfig};
-pub(crate) use services as runtime_services;
-pub use services::RuntimeServices;
 
 #[cfg(test)]
 mod dependency_guard {

@@ -10,15 +10,10 @@ mod trace_context;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use config::configs::{
-    daemon::{DaemonConfig, FileLimitsConfig},
-    isolated::IsolatedNetworkConfig,
-};
+use config::configs::daemon::DaemonConfig;
 use tokio_util::sync::CancellationToken;
 
 use crate::invocation_registry::InFlightRegistry;
-use crate::runtime_services::{capture_options_from_schema, command_config_from_schema};
-use crate::RuntimeServices;
 
 const MAX_REQUEST_BYTES: usize = crate::wire::MAX_REQUEST_BYTES;
 #[cfg(not(test))]
@@ -43,32 +38,21 @@ pub struct ServerConfig {
     pub forward_auth_token: Option<String>,
 }
 
-/// The running daemon: op table, runtime services, invocation registry, and
+/// The running daemon: request dispatch state, invocation registry, and
 /// shutdown token.
 pub struct DaemonServer {
     config: ServerConfig,
-    services: Arc<RuntimeServices>,
-    file_limits: FileLimitsConfig,
     invocation_registry: Arc<InFlightRegistry>,
     shutdown: CancellationToken,
 }
 
 impl DaemonServer {
-    /// Assemble a daemon over `config`, wiring the op table, the owned
-    /// services, the invocation registry, and the shutdown token.
+    /// Assemble a daemon over `config`, wiring the invocation registry and
+    /// shutdown token.
     #[must_use]
     pub fn new(config: ServerConfig) -> Self {
         Self {
             config,
-            services: Arc::new(RuntimeServices::new(
-                config::configs::daemon::PluginRuntimeConfig::default(),
-                IsolatedNetworkConfig::default(),
-                command::CommandConfig::default(),
-            )),
-            file_limits: FileLimitsConfig {
-                max_read_bytes: config::configs::daemon::MAX_READ_BYTES,
-                max_write_bytes: config::configs::daemon::MAX_FILE_BYTES,
-            },
             invocation_registry: Arc::new(InFlightRegistry::new(
                 crate::DEFAULT_TTL_S,
                 crate::DEFAULT_REAPER_INTERVAL_S,
@@ -83,18 +67,10 @@ impl DaemonServer {
     pub fn with_daemon_config(
         config: ServerConfig,
         daemon_config: &DaemonConfig,
-        isolated_config: &IsolatedNetworkConfig,
+        _isolated_config: &config::configs::isolated::IsolatedNetworkConfig,
     ) -> Self {
         Self {
             config,
-            services: Arc::new(RuntimeServices::with_commit_options_and_capture_options(
-                daemon_config.plugin.clone(),
-                isolated_config.clone(),
-                command_config_from_schema(&daemon_config.commands),
-                layerstack::CommitOptions::new(daemon_config.layer_stack.auto_squash_max_depth),
-                capture_options_from_schema(&daemon_config.commands),
-            )),
-            file_limits: daemon_config.files,
             invocation_registry: Arc::new(InFlightRegistry::new(
                 daemon_config.inflight.ttl_s,
                 daemon_config.inflight.reaper_interval_s,

@@ -4,12 +4,6 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use ::protocol::catalog::{
-    BuiltinOp, OpContract, HOST_CONTAINER_ADOPT, HOST_CONTAINER_LIST, HOST_CONTAINER_REMOVE,
-    HOST_CONTAINER_START, HOST_CONTAINER_STOP, HOST_IMAGE_LIST, HOST_IMAGE_PROFILES_LIST,
-    HOST_IMAGE_PULL, HOST_SANDBOX_ACQUIRE, HOST_SANDBOX_RELEASE, HOST_TRACE_REQUESTS,
-    HOST_TRACE_SHOW, HOST_TRACE_VERIFY,
-};
 use ::protocol::HostGatewayErrorKind;
 use anyhow::{anyhow, bail, Context, Result};
 use serde_json::{json, Value};
@@ -42,6 +36,19 @@ const TRACE_SHOW_MAX_SECTION_LIMIT: usize = 5_000;
 const SANDBOX_SCRATCH_TMPFS: &str = "/eos/scratch:rw,exec,size=2g,mode=1777";
 const SANDBOX_OVERLAY_ROOT: &str = "/eos/scratch/overlay";
 const DEFAULT_WORKSPACE_ROOT: &str = "/testbed";
+const HOST_SANDBOX_ACQUIRE: &str = "host.sandbox.acquire";
+const HOST_SANDBOX_RELEASE: &str = "host.sandbox.release";
+const HOST_IMAGE_PROFILES_LIST: &str = "host.image_profiles.list";
+const HOST_IMAGE_LIST: &str = "host.image.list";
+const HOST_IMAGE_PULL: &str = "host.image.pull";
+const HOST_CONTAINER_LIST: &str = "host.container.list";
+const HOST_CONTAINER_START: &str = "host.container.start";
+const HOST_CONTAINER_ADOPT: &str = "host.container.adopt";
+const HOST_CONTAINER_STOP: &str = "host.container.stop";
+const HOST_CONTAINER_REMOVE: &str = "host.container.remove";
+const HOST_TRACE_REQUESTS: &str = "host.trace.requests";
+const HOST_TRACE_SHOW: &str = "host.trace.show";
+const HOST_TRACE_VERIFY: &str = "host.trace.verify";
 
 #[derive(Debug, Clone)]
 pub struct HostConfig {
@@ -124,7 +131,6 @@ pub(crate) struct ForwardTraceEvent {
 pub struct HostForwardRequest<'a> {
     pub sandbox_id: &'a str,
     pub mutates_state: bool,
-    pub family: &'a str,
     pub op: &'a str,
     pub invocation_id: &'a str,
     pub args: &'a Value,
@@ -180,11 +186,10 @@ impl SandboxHost {
 
     pub fn acquire_with_trace(&self, trace: &ForwardTraceContext, args: &Value) -> Result<String> {
         let sandbox_id = format!("sb-{}", random_hex(16)?);
-        let contract = BuiltinOp::HostSandboxAcquire.contract();
         let (image, platform) = self.resolve_image_profile(args)?;
         let workspace_root = workspace_root_from_args(args)?;
         self.start_managed_sandbox(
-            contract,
+            HOST_SANDBOX_ACQUIRE,
             trace,
             args,
             ManagedSandboxStart {
@@ -199,7 +204,7 @@ impl SandboxHost {
 
     fn start_managed_sandbox(
         &self,
-        contract: &OpContract,
+        op: &'static str,
         trace: &ForwardTraceContext,
         args: &Value,
         start: ManagedSandboxStart,
@@ -217,10 +222,9 @@ impl SandboxHost {
             sandbox_id: &sandbox_id,
             trace_id: trace.trace_id.clone(),
             request_id: trace.request_id.clone(),
-            op: contract.name,
-            family: contract.family.as_str(),
+            op,
             caller_id: args.get("caller_id").and_then(Value::as_str),
-            mutates_state: contract.mutates_state,
+            mutates_state: true,
             args: args.clone(),
         })?;
         self.record_host_gateway_events(&sandbox_id, trace);
@@ -377,15 +381,13 @@ impl SandboxHost {
         args: &Value,
     ) -> Result<bool> {
         let op_started = Instant::now();
-        let contract = BuiltinOp::HostSandboxRelease.contract();
         self.trace_store.prepare_forward(RequestStartInput {
             sandbox_id,
             trace_id: trace.trace_id.clone(),
             request_id: trace.request_id.clone(),
-            op: contract.name,
-            family: contract.family.as_str(),
+            op: HOST_SANDBOX_RELEASE,
             caller_id: args.get("caller_id").and_then(Value::as_str),
-            mutates_state: contract.mutates_state,
+            mutates_state: true,
             args: args.clone(),
         })?;
         self.record_host_gateway_events(sandbox_id, trace);
@@ -553,9 +555,8 @@ impl SandboxHost {
                 Some(name) => name.to_owned(),
                 None => format!("sb-{}", random_hex(16)?),
             };
-            let contract = BuiltinOp::HostContainerStart.contract();
             let sandbox_id = self.start_managed_sandbox(
-                contract,
+                HOST_CONTAINER_START,
                 trace,
                 args,
                 ManagedSandboxStart {
@@ -851,7 +852,6 @@ impl SandboxHost {
         let HostForwardRequest {
             sandbox_id,
             mutates_state,
-            family,
             op,
             invocation_id,
             args,
@@ -865,7 +865,6 @@ impl SandboxHost {
             trace_drainer: &self.trace_drainer,
             trace_context: trace,
             mutates_state,
-            family,
             op,
             invocation_id,
             args,

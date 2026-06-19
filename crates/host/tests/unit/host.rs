@@ -31,25 +31,6 @@ use crate::trace_store::{
 };
 
 #[test]
-fn direct_daemon_ops_match_catalog_contracts() {
-    use ::protocol::catalog::{
-        BuiltinOp, OpVisibility, ServedBy, SANDBOX_TRACE_EXPORT, SANDBOX_TRACE_EXPORT_ACK,
-    };
-
-    for (name, visibility) in [
-        (crate::daemon_wire::READY_OP, OpVisibility::Internal),
-        (crate::daemon_wire::HEARTBEAT_OP, OpVisibility::Public),
-        (SANDBOX_TRACE_EXPORT, OpVisibility::Internal),
-        (SANDBOX_TRACE_EXPORT_ACK, OpVisibility::Internal),
-    ] {
-        let op = BuiltinOp::from_op_name(name).expect("direct host-daemon op is catalogued");
-        let contract = op.contract();
-        assert_eq!(contract.served_by, ServedBy::Daemon, "{name}");
-        assert_eq!(contract.visibility, visibility, "{name}");
-    }
-}
-
-#[test]
 fn acquire_workspace_root_defaults_to_testbed_and_allows_absolute_override() -> Result<()> {
     assert_eq!(
         super::workspace_root_from_args(&json!({}))?,
@@ -347,7 +328,6 @@ fn forward_request_persists_transport_events_and_strips_sidecar() -> Result<()> 
         trace_drainer: &TraceExportDrainer::default(),
         trace_context: trace,
         mutates_state: false,
-        family: "Control",
         op: "sandbox.runtime.ready",
         invocation_id: "request-forward",
         args: &json!({"caller_id": "caller-1"}),
@@ -550,7 +530,6 @@ fn decoded_sidecar_ingest_failures_are_spooled_and_recovered() -> Result<()> {
         trace_id: trace_id.clone(),
         request_id: request_id.clone(),
         op: "sandbox.runtime.ready",
-        family: "Runtime",
         caller_id: Some("caller-1"),
         mutates_state: false,
         args: json!({"caller_id": "caller-1"}),
@@ -916,7 +895,7 @@ fn mutating_response_persistence_failure_does_not_return_success() -> Result<()>
     let request_id = RequestId::parse("request-response-persist-failure")?;
     let args = json!({});
     let mut tcp_line =
-        encode_request_with_metadata("sandbox.file.write", request_id.as_str(), &args, None);
+        encode_request_with_metadata("sandbox.command.exec", request_id.as_str(), &args, None);
     tcp_line.push(b'\n');
     let attempt = ForwardAttempt {
         record: &record,
@@ -926,7 +905,7 @@ fn mutating_response_persistence_failure_does_not_return_success() -> Result<()>
         request_id,
         mutates_state: true,
         tcp_line,
-        op: "sandbox.file.write",
+        op: "sandbox.command.exec",
         invocation_id: "response-persist-failure",
         args: &args,
     };

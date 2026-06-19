@@ -14,7 +14,6 @@ members = [
     "crates/daemon/overlay",
     "crates/host",
     "crates/gateway",
-    "crates/e2e-test",
     "xtask",
 ]
 
@@ -66,7 +65,6 @@ daemon = { path = "crates/daemon/core" }
 eosd = { path = "crates/daemon/eosd" }
 gateway = { path = "crates/gateway" }
 host = { path = "crates/host" }
-e2e-test = { path = "crates/e2e-test" }
 workspace = { path = "crates/daemon/workspace" }
 xtask = { path = "xtask" }
 

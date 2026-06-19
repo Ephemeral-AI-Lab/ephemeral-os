@@ -175,7 +175,6 @@ impl TraceStore {
             trace_id: input.trace_id.clone(),
             request_id: input.request_id.clone(),
             op: input.op,
-            family: input.family,
             caller_id: input.caller_id,
             args: input.args.clone(),
         };
@@ -260,7 +259,6 @@ impl TraceStore {
                 trace_id: input.trace_id.as_str(),
                 request_id: input.request_id.as_str(),
                 op: input.op,
-                family: input.family,
                 caller_id: input.caller_id,
                 args_summary: &args_summary.encoded_value(),
                 args_digest: &sha256_hex(&args_bytes),
@@ -287,7 +285,6 @@ impl TraceStore {
             request_id: input.request_id.to_string(),
             sandbox_id: input.sandbox_id.to_owned(),
             op: input.op.to_owned(),
-            family: input.family.to_owned(),
             caller_id: input.caller_id.map(ToOwned::to_owned),
             args_summary: args_summary.encoded_value(),
             args_digest: sha256_hex(&args_bytes),

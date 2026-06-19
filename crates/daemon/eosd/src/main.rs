@@ -52,17 +52,11 @@ fn main() -> Result<()> {
         Some("daemon") => daemon::run(args),
         Some("ns-runner") => runner::run(args),
         Some("ns-holder") => run_ns_holder(args),
-        // The committed `crates/daemon/operation/ops.json`; `cargo xtask
-        // check-contract` fails when this output drifts from the artifact.
-        Some("dump-ops") => {
-            print!("{}", protocol::catalog::ops_json_document());
-            Ok(())
-        }
         Some(other) => Err(anyhow!(
-            "unknown subcommand {other:?}; expected daemon | ns-runner | ns-holder | dump-ops | --version"
+            "unknown subcommand {other:?}; expected daemon | ns-runner | ns-holder | --version"
         )),
         None => Err(anyhow!(
-            "missing subcommand; expected daemon | ns-runner | ns-holder | dump-ops | --version"
+            "missing subcommand; expected daemon | ns-runner | ns-holder | --version"
         )),
     }
 }

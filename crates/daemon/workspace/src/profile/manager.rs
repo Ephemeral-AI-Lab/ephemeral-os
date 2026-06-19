@@ -19,10 +19,6 @@ pub use crate::profile::{
     WorkspaceModeSnapshot,
 };
 
-#[cfg(test)]
-#[path = "../../tests/unit/isolated_sessions.rs"]
-mod tests;
-
 pub use crate::lifecycle::remount::{
     RemountOverlayReport, RemountProbe, RemountedWorkspace, WorkspaceRemountState,
 };
@@ -179,19 +175,6 @@ impl WorkspaceModeManager {
             }
         })?;
         self.reap_persisted_orphans()
-    }
-
-    #[must_use]
-    pub fn get_handle(&self, caller_id: &str) -> Option<WorkspaceModeHandle> {
-        self.by_caller
-            .get(caller_id)
-            .and_then(|workspace_id| self.handles.get(workspace_id))
-            .cloned()
-    }
-
-    #[must_use]
-    pub fn list_open_callers(&self) -> Vec<String> {
-        self.by_caller.keys().cloned().collect()
     }
 
     pub fn touch(&mut self, caller_id: &str) {

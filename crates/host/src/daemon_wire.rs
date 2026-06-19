@@ -17,8 +17,8 @@ pub const MAX_REQUEST_BYTES: usize = 16 * 1024 * 1024;
 pub const MAX_RESPONSE_BYTES: usize = 16 * 1024 * 1024;
 #[cfg(any(not(test), feature = "e2e-support"))]
 pub const CONNECT_RETRY_DELAYS_S: [f64; 4] = [0.25, 0.5, 1.0, 2.0];
-pub(crate) const HEARTBEAT_OP: &str = ::protocol::catalog::SANDBOX_CALL_HEARTBEAT;
-pub(crate) const READY_OP: &str = ::protocol::catalog::SANDBOX_RUNTIME_READY;
+pub(crate) const HEARTBEAT_OP: &str = "sandbox.call.heartbeat";
+pub(crate) const READY_OP: &str = "sandbox.runtime.ready";
 pub(crate) const DEFAULT_LAYER_STACK_ROOT: &str = "/eos/layer-stack";
 
 #[derive(Debug, thiserror::Error)]

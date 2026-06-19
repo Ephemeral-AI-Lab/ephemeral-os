@@ -913,7 +913,6 @@ Rules:
   - `crates/daemon/workspace/src/profile/host_compatible.rs`
   - `crates/daemon/workspace/src/profile/isolated.rs`
   - `crates/daemon/workspace/src/profile/manager.rs`
-  - `crates/daemon/workspace/tests/unit/isolated_sessions.rs`
   - `crates/daemon/operation_service/src/command/exec.rs`
   - `crates/daemon/operation_service/src/command/finalize_tests.rs`
   - `crates/daemon/operation_service/tests/command_exec.rs`

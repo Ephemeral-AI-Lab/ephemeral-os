@@ -51,24 +51,12 @@ usage:
   sandbox-gateway host op OP [ARGS_JSON] [--sandbox-id SANDBOX_ID] [--operator]
 
   sandbox-gateway daemon --sandbox-id SANDBOX_ID ping
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID files read PATH
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID files write PATH --content TEXT
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID files edit PATH --old TEXT --new TEXT [--replace-all]
   sandbox-gateway daemon --sandbox-id SANDBOX_ID commands exec -- COMMAND
   sandbox-gateway daemon --sandbox-id SANDBOX_ID commands stdin COMMAND_ID TEXT
   sandbox-gateway daemon --sandbox-id SANDBOX_ID commands poll COMMAND_ID [--last-n-lines N]
   sandbox-gateway daemon --sandbox-id SANDBOX_ID commands cancel COMMAND_ID
   sandbox-gateway daemon --sandbox-id SANDBOX_ID commands collect [COMMAND_ID...]
   sandbox-gateway daemon --sandbox-id SANDBOX_ID commands count [--caller-id ID]
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID plugins list
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID plugins health
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID pyright symbols FILE [--query TEXT] [--workspace]
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID pyright definition FILE --line N --column N
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID pyright references FILE --line N --column N
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID pyright diagnostics FILE
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID isolation enter --caller-id ID
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID isolation status --caller-id ID
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID isolation exit --caller-id ID [--grace-s SECONDS]
   sandbox-gateway daemon --sandbox-id SANDBOX_ID run end --caller-id ID [--grace-s SECONDS]
   sandbox-gateway daemon --sandbox-id SANDBOX_ID run cancel-all [--grace-s SECONDS]
   sandbox-gateway daemon --sandbox-id SANDBOX_ID op OP [ARGS_JSON] [--operator]
@@ -150,9 +138,7 @@ fn request_from_host(mut args: Vec<String>, options: &ClientOptions) -> Result<G
 
 fn request_from_daemon(mut args: Vec<String>, options: &ClientOptions) -> Result<GatewayRequest> {
     let Some(group) = shift(&mut args) else {
-        bail!(
-            "missing daemon command; expected ping | files | commands | plugins | pyright | isolation | run | op"
-        )
+        bail!("missing daemon command; expected ping | commands | run | op")
     };
     let sandbox_id = require_sandbox_id(options)?;
     match group.as_str() {
@@ -165,16 +151,10 @@ fn request_from_daemon(mut args: Vec<String>, options: &ClientOptions) -> Result
                 false,
             ))
         }
-        "files" => request_from_daemon_files(args, sandbox_id),
         "commands" => request_from_daemon_commands(args, sandbox_id),
-        "plugins" => request_from_daemon_plugins(args, sandbox_id),
-        "pyright" => request_from_daemon_pyright(args, sandbox_id),
-        "isolation" => request_from_daemon_isolation(args, sandbox_id),
         "run" => request_from_daemon_run(args, sandbox_id),
         "op" => request_from_op(args, Some(sandbox_id), false),
-        other => bail!(
-            "unknown daemon command {other:?}; expected ping | files | commands | plugins | pyright | isolation | run | op"
-        ),
+        other => bail!("unknown daemon command {other:?}; expected ping | commands | run | op"),
     }
 }
 
@@ -363,76 +343,6 @@ fn request_from_host_traces(
     }
 }
 
-fn request_from_daemon_files(mut args: Vec<String>, sandbox_id: String) -> Result<GatewayRequest> {
-    let Some(subcommand) = shift(&mut args) else {
-        bail!("missing daemon files subcommand; expected read | write | edit")
-    };
-    match subcommand.as_str() {
-        "read" => {
-            let caller_id = take_optional_flag(&mut args, "--caller-id")?;
-            let layer_stack_root = layer_stack_root_or_default(&mut args)?;
-            let Some(path) = shift(&mut args) else {
-                bail!("daemon files read requires PATH")
-            };
-            expect_no_args(&args)?;
-            let mut body = json!({ "path": path, "layer_stack_root": layer_stack_root });
-            insert_optional(&mut body, "caller_id", caller_id);
-            Ok(daemon_request("sandbox.file.read", body, sandbox_id, false))
-        }
-        "write" => {
-            let caller_id = take_optional_flag(&mut args, "--caller-id")?;
-            let layer_stack_root = layer_stack_root_or_default(&mut args)?;
-            let content = take_optional_flag(&mut args, "--content")?;
-            let overwrite = take_optional_bool(&mut args, "--overwrite")?;
-            let Some(path) = shift(&mut args) else {
-                bail!("daemon files write requires PATH")
-            };
-            expect_no_args(&args)?;
-            let content = content.context("daemon files write requires --content TEXT")?;
-            let mut body =
-                json!({ "path": path, "content": content, "layer_stack_root": layer_stack_root });
-            insert_optional(&mut body, "caller_id", caller_id);
-            if let Some(overwrite) = overwrite {
-                body["overwrite"] = json!(overwrite);
-            }
-            Ok(daemon_request(
-                "sandbox.file.write",
-                body,
-                sandbox_id,
-                false,
-            ))
-        }
-        "edit" => {
-            let caller_id = take_optional_flag(&mut args, "--caller-id")?;
-            let layer_stack_root = layer_stack_root_or_default(&mut args)?;
-            let edits_json = take_optional_flag(&mut args, "--edits-json")?;
-            let old_text = take_optional_flag(&mut args, "--old")?;
-            let new_text = take_optional_flag(&mut args, "--new")?;
-            let replace_all = take_switch(&mut args, "--replace-all");
-            let Some(path) = shift(&mut args) else {
-                bail!("daemon files edit requires PATH")
-            };
-            expect_no_args(&args)?;
-            let edits = match edits_json {
-                Some(raw) => serde_json::from_str::<Value>(&raw).context("parse --edits-json")?,
-                None => json!([{
-                    "old_text": old_text.context("daemon files edit requires --old TEXT")?,
-                    "new_text": new_text.context("daemon files edit requires --new TEXT")?,
-                    "replace_all": replace_all,
-                }]),
-            };
-            if !edits.is_array() {
-                bail!("--edits-json must be a JSON array");
-            }
-            let mut body =
-                json!({ "path": path, "edits": edits, "layer_stack_root": layer_stack_root });
-            insert_optional(&mut body, "caller_id", caller_id);
-            Ok(daemon_request("sandbox.file.edit", body, sandbox_id, false))
-        }
-        other => bail!("unknown daemon files subcommand {other:?}; expected read | write | edit"),
-    }
-}
-
 fn request_from_daemon_commands(
     mut args: Vec<String>,
     sandbox_id: String,
@@ -533,210 +443,6 @@ fn request_from_daemon_commands(
         }
         other => bail!(
             "unknown daemon commands subcommand {other:?}; expected exec | stdin | poll | cancel | collect | count"
-        ),
-    }
-}
-
-fn request_from_daemon_plugins(
-    mut args: Vec<String>,
-    sandbox_id: String,
-) -> Result<GatewayRequest> {
-    let Some(subcommand) = shift(&mut args) else {
-        bail!("missing daemon plugins subcommand; expected list | health")
-    };
-    match subcommand.as_str() {
-        "list" => {
-            let caller_id = take_optional_flag(&mut args, "--caller-id")?;
-            expect_no_args(&args)?;
-            let mut body = json!({});
-            insert_optional(&mut body, "caller_id", caller_id);
-            Ok(daemon_request(
-                "sandbox.plugin.list",
-                body,
-                sandbox_id,
-                false,
-            ))
-        }
-        "health" => {
-            let caller_id = take_optional_flag(&mut args, "--caller-id")?;
-            let layer_stack_root = layer_stack_root_or_default(&mut args)?;
-            expect_no_args(&args)?;
-            let mut body = json!({ "layer_stack_root": layer_stack_root });
-            insert_optional(&mut body, "caller_id", caller_id);
-            Ok(daemon_request(
-                "sandbox.plugin.health",
-                body,
-                sandbox_id,
-                false,
-            ))
-        }
-        other => bail!("unknown daemon plugins subcommand {other:?}; expected list | health"),
-    }
-}
-
-fn request_from_daemon_pyright(
-    mut args: Vec<String>,
-    sandbox_id: String,
-) -> Result<GatewayRequest> {
-    let Some(subcommand) = shift(&mut args) else {
-        bail!("missing daemon pyright subcommand; expected symbols | definition | references | diagnostics")
-    };
-    match subcommand.as_str() {
-        "symbols" => {
-            let common = PyrightCommon::parse(&mut args)?;
-            let query = take_optional_flag(&mut args, "--query")?;
-            let workspace = take_switch(&mut args, "--workspace");
-            let Some(file_path) = shift(&mut args) else {
-                bail!("daemon pyright symbols requires FILE")
-            };
-            expect_no_args(&args)?;
-            let mut body = common.body(file_path);
-            insert_optional(&mut body, "query", query);
-            if workspace {
-                body["workspace"] = json!(true);
-            }
-            Ok(daemon_request(
-                "sandbox.plugin.pyright_lsp.query_symbols",
-                body,
-                sandbox_id,
-                false,
-            ))
-        }
-        "definition" => {
-            let common = PyrightCommon::parse(&mut args)?;
-            let position = take_position(&mut args)?;
-            let Some(file_path) = shift(&mut args) else {
-                bail!("daemon pyright definition requires FILE")
-            };
-            expect_no_args(&args)?;
-            let mut body = common.body(file_path);
-            body["position"] = position;
-            Ok(daemon_request(
-                "sandbox.plugin.pyright_lsp.definition",
-                body,
-                sandbox_id,
-                false,
-            ))
-        }
-        "references" => {
-            let common = PyrightCommon::parse(&mut args)?;
-            let position = take_position(&mut args)?;
-            let include_declaration = take_optional_bool(&mut args, "--include-declaration")?;
-            let Some(file_path) = shift(&mut args) else {
-                bail!("daemon pyright references requires FILE")
-            };
-            expect_no_args(&args)?;
-            let mut body = common.body(file_path);
-            body["position"] = position;
-            if let Some(include_declaration) = include_declaration {
-                body["include_declaration"] = json!(include_declaration);
-            }
-            Ok(daemon_request(
-                "sandbox.plugin.pyright_lsp.references",
-                body,
-                sandbox_id,
-                false,
-            ))
-        }
-        "diagnostics" => {
-            let common = PyrightCommon::parse(&mut args)?;
-            let Some(file_path) = shift(&mut args) else {
-                bail!("daemon pyright diagnostics requires FILE")
-            };
-            expect_no_args(&args)?;
-            Ok(daemon_request(
-                "sandbox.plugin.pyright_lsp.diagnostics",
-                common.body(file_path),
-                sandbox_id,
-                false,
-            ))
-        }
-        other => bail!(
-            "unknown daemon pyright subcommand {other:?}; expected symbols | definition | references | diagnostics"
-        ),
-    }
-}
-
-struct PyrightCommon {
-    caller_id: Option<String>,
-    layer_stack_root: String,
-}
-
-impl PyrightCommon {
-    fn parse(args: &mut Vec<String>) -> Result<Self> {
-        let caller_id = take_optional_flag(args, "--caller-id")?;
-        let layer_stack_root = layer_stack_root_or_default(args)?;
-        Ok(Self {
-            caller_id,
-            layer_stack_root,
-        })
-    }
-
-    fn body(&self, file_path: String) -> Value {
-        let mut body = json!({
-            "layer_stack_root": self.layer_stack_root.clone(),
-            "file_path": file_path,
-        });
-        insert_optional(&mut body, "caller_id", self.caller_id.clone());
-        body
-    }
-}
-
-fn request_from_daemon_isolation(
-    mut args: Vec<String>,
-    sandbox_id: String,
-) -> Result<GatewayRequest> {
-    let Some(subcommand) = shift(&mut args) else {
-        bail!("missing daemon isolation subcommand; expected enter | status | exit | list-open")
-    };
-    match subcommand.as_str() {
-        "enter" => {
-            let caller_id = take_required_flag(&mut args, "--caller-id")?;
-            let layer_stack_root = layer_stack_root_or_default(&mut args)?;
-            expect_no_args(&args)?;
-            Ok(daemon_request(
-                "sandbox.isolation.enter",
-                json!({ "caller_id": caller_id, "layer_stack_root": layer_stack_root }),
-                sandbox_id,
-                false,
-            ))
-        }
-        "status" => {
-            let caller_id = take_required_flag(&mut args, "--caller-id")?;
-            expect_no_args(&args)?;
-            Ok(daemon_request(
-                "sandbox.isolation.status",
-                json!({ "caller_id": caller_id }),
-                sandbox_id,
-                false,
-            ))
-        }
-        "exit" => {
-            let caller_id = take_required_flag(&mut args, "--caller-id")?;
-            let grace_s = take_optional_f64(&mut args, "--grace-s")?;
-            expect_no_args(&args)?;
-            let mut body = json!({ "caller_id": caller_id });
-            if let Some(grace_s) = grace_s {
-                body["grace_s"] = json!(grace_s);
-            }
-            Ok(daemon_request(
-                "sandbox.isolation.exit",
-                body,
-                sandbox_id,
-                false,
-            ))
-        }
-        "list-open" => {
-            expect_no_args(&args)?;
-            Ok(daemon_request(
-                "sandbox.isolation.list_open",
-                json!({}),
-                sandbox_id,
-                true,
-            ))
-        }
-        other => bail!(
-            "unknown daemon isolation subcommand {other:?}; expected enter | status | exit | list-open"
         ),
     }
 }
@@ -941,15 +647,6 @@ fn command_string(mut args: Vec<String>) -> Result<String> {
     Ok(args.join(" "))
 }
 
-fn take_switch(args: &mut Vec<String>, flag: &str) -> bool {
-    if let Some(index) = args.iter().position(|arg| arg == flag) {
-        args.remove(index);
-        true
-    } else {
-        false
-    }
-}
-
 fn take_optional_flag(args: &mut Vec<String>, flag: &str) -> Result<Option<String>> {
     let Some(index) = args.iter().position(|arg| arg == flag) else {
         return Ok(None);
@@ -987,29 +684,6 @@ fn take_optional_f64(args: &mut Vec<String>, flag: &str) -> Result<Option<f64>> 
     take_optional_flag(args, flag)?
         .map(|value| value.parse().with_context(|| format!("parse {flag}")))
         .transpose()
-}
-
-fn take_optional_bool(args: &mut Vec<String>, flag: &str) -> Result<Option<bool>> {
-    take_optional_flag(args, flag)?
-        .map(|value| match value.as_str() {
-            "true" | "1" | "yes" => Ok(true),
-            "false" | "0" | "no" => Ok(false),
-            _ => bail!("{flag} must be true or false"),
-        })
-        .transpose()
-}
-
-fn take_position(args: &mut Vec<String>) -> Result<Value> {
-    let line = take_required_flag(args, "--line")?
-        .parse::<u64>()
-        .context("parse --line")?;
-    let character = take_required_flag(args, "--column")?
-        .parse::<u64>()
-        .context("parse --column")?;
-    Ok(json!({
-        "line": line,
-        "character": character,
-    }))
 }
 
 fn take_flag_value(args: &mut Vec<String>, index: usize, flag: &str) -> Result<String> {
@@ -1114,39 +788,17 @@ mod tests {
     }
 
     #[test]
-    fn daemon_pyright_definition_maps_column_to_character() -> Result<()> {
-        let request = request_from_daemon(
-            vec![
-                "pyright".to_owned(),
-                "definition".to_owned(),
-                "--line".to_owned(),
-                "3".to_owned(),
-                "--column".to_owned(),
-                "7".to_owned(),
-                "src/main.py".to_owned(),
-            ],
-            &daemon_options(),
-        )?;
-
-        assert_eq!(request.op, "sandbox.plugin.pyright_lsp.definition");
-        assert_eq!(request.args["layer_stack_root"], json!("/eos/layer-stack"));
-        assert_eq!(request.args["position"]["line"], json!(3));
-        assert_eq!(request.args["position"]["character"], json!(7));
-        Ok(())
-    }
-
-    #[test]
     fn generic_daemon_op_accepts_json_args_and_sandbox() -> Result<()> {
         let request = request_from_daemon(
             vec![
                 "op".to_owned(),
-                "sandbox.file.read".to_owned(),
+                "sandbox.command.count".to_owned(),
                 r#"{"path":"README.md"}"#.to_owned(),
             ],
             &daemon_options(),
         )?;
 
-        assert_eq!(request.op, "sandbox.file.read");
+        assert_eq!(request.op, "sandbox.command.count");
         assert_eq!(request.sandbox_id.as_deref(), Some("sb-1"));
         assert_eq!(request.args["path"], json!("README.md"));
         Ok(())

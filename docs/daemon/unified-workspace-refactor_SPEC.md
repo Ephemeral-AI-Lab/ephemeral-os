@@ -648,7 +648,6 @@ Target test structure:
 ```text
 crates/daemon/workspace/tests/unit/
   modes/host_overlay.rs                     ~90 LOC
-  modes/isolated_sessions.rs               ~360 LOC
   primitives/overlay_dirs_capture.rs       ~120 LOC
 
 crates/daemon/core/tests/unit/workspace_runtime/
@@ -686,20 +685,11 @@ cargo test -p daemon workspace_runtime
 cargo test -p daemon --test workspace_read_paths --test workspace_write_paths --test workspace_command_paths
 ```
 
-Live E2E gates after packaging:
+Packaging gate:
 
 ```sh
 cargo run -p xtask -- package
-cargo test -p e2e-test --features e2e --no-run
 ```
-
-Then run focused suites:
-
-- `core`
-- `workspace-runtime-command`
-- `workspace-runtime-isolated`
-- `host_workspace`
-- pressure cross-mode suite
 
 ## 13. Acceptance Criteria
 

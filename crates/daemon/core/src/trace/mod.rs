@@ -15,6 +15,4 @@ pub(crate) use sidecar::{
 pub(crate) use spool::{
     ack_background_export, lease_background_records, now_ms, push_background_record,
 };
-pub(crate) use spool::{
-    next_connection_id, RequestTraceEvent, RequestTraceEventSink, RequestTraceFacts,
-};
+pub(crate) use spool::{next_connection_id, RequestTraceEvent, RequestTraceFacts};

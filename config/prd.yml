@@ -35,25 +35,8 @@ daemon:
   idle_workspace_eviction:
     interval_ms: 500
 
-  plugin:
-    max_response_bytes: 8388608
-    enabled_plugins:
-      - pyright_lsp
-    pyright_lsp:
-      node_path: /usr/local/bin/node
-      pyright_langserver_path: /usr/local/lib/node_modules/pyright/langserver.index.js
-      workspace_root: /eos/runtime/plugins/pyright_lsp/workspace
-      analysis_timeout_ms: 10000
-      refresh_timeout_ms: 5000
-
   layer_stack:
     auto_squash_max_depth: 100
-
-  files:
-    # Per-file read/write caps. Keep below the 16 MiB transport frame so file
-    # content fits one request/response message.
-    max_read_bytes: 8388608
-    max_write_bytes: 8388608
 
 isolated:
   enabled: false
@@ -91,39 +74,3 @@ runner:
     testbed_path_prefix:
       - /opt/miniconda3/envs/testbed/bin
       - /opt/miniconda3/bin
-
-e2e_test:
-  docker:
-    image: sweevo-dask__dask-10042:latest
-    platform: linux/amd64
-    privileged: true
-    eosd_path: dist/eosd-linux-amd64
-    remote_daemon_dir: /eos/runtime/daemon
-    remote_eosd_path: /eos/runtime/daemon/eosd
-    root_dir: /eos/state/e2e
-    cap_add: [SYS_ADMIN, NET_ADMIN]
-    security_opt:
-      - seccomp=unconfined
-      - apparmor=unconfined
-    tmpfs:
-      - /eos/state:rw,exec,size=2g,mode=1777
-      - /eos/scratch:rw,exec,size=2g,mode=1777
-    tcp_port: 37657
-    non_kept_container_ttl_s: 1800
-
-  pool:
-    mode: pool
-    sandboxes: 2
-    recycle_after: 50
-    keep_container: true
-
-  timeouts:
-    ready_s: 60
-    request_s: 30
-
-  workload:
-    concurrency_levels: [1, 3, 6, 12]
-    write_iterations: 8
-    sample_count: 1
-    perf_artifact_dir: target/e2e-perf
-    timeout_s: 30

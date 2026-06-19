@@ -6,8 +6,8 @@ type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 #[test]
 fn error_kind_snake_case_wire() -> TestResult {
-    let v = serde_json::to_value(ErrorKind::ForbiddenInIsolatedNetwork)?;
-    assert_eq!(v, Value::String("forbidden_in_isolated".to_owned()));
+    let v = serde_json::to_value(ErrorKind::LifecycleInProgress)?;
+    assert_eq!(v, Value::String("lifecycle_in_progress".to_owned()));
     assert_eq!(
         serde_json::to_value(ErrorKind::UnknownOp)?,
         Value::String("unknown_op".to_owned())

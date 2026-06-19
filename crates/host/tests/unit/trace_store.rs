@@ -28,7 +28,7 @@ fn request_start_args_digest_excludes_the_daemon_auth_token() -> Result<(), Trac
     let args = json!({"caller_id": "caller-1", "path": "README.md"});
     store.append_request_start(request_input(
         "sb-1",
-        "sandbox.file.read",
+        "sandbox.command.count",
         false,
         "digest-token-free",
     ))?;
@@ -43,7 +43,7 @@ fn request_start_args_digest_excludes_the_daemon_auth_token() -> Result<(), Trac
 
     // A token-bearing frame must never produce the recorded digest.
     let token_frame = serde_json::to_vec(&json!({
-        "op": "sandbox.file.read",
+        "op": "sandbox.command.count",
         "args": args,
         "_eos_daemon_auth_token": "super-secret-token",
     }))
@@ -66,7 +66,6 @@ fn audit_payload_summaries_are_redacted_before_persistence() -> Result<(), Trace
         trace_id: trace_id.clone(),
         request_id: request_id.clone(),
         op: "sandbox.command.exec",
-        family: "Commands",
         caller_id: Some("caller-1"),
         mutates_state: true,
         args: json!({
@@ -171,16 +170,24 @@ fn request_start_failures_fail_closed_for_mutations_and_degrade_reads(
     let store = temp_store("fail-closed")?;
 
     store.fail_next_request_start_for_tests();
-    let mutating =
-        store.prepare_forward(request_input("sb-1", "sandbox.file.write", true, "write-1"));
+    let mutating = store.prepare_forward(request_input(
+        "sb-1",
+        "sandbox.command.exec",
+        true,
+        "write-1",
+    ));
     assert!(matches!(
         mutating,
         Err(TraceStoreError::InjectedRequestStartFailure)
     ));
 
     store.fail_next_request_start_for_tests();
-    let read =
-        store.prepare_forward(request_input("sb-1", "sandbox.file.read", false, "read-1"))?;
+    let read = store.prepare_forward(request_input(
+        "sb-1",
+        "sandbox.command.count",
+        false,
+        "read-1",
+    ))?;
     assert!(read.degraded);
 
     let degraded_count: i64 = store.lock().query_row(
@@ -487,7 +494,7 @@ fn background_links_without_request_id_are_deduplicated() -> Result<(), TraceSto
 fn response_finalization_and_host_events_rebuild_from_audit_entries() -> Result<(), TraceStoreError>
 {
     let store = temp_store("response-finalization")?;
-    let request = request_input("sb-1", "sandbox.file.read", false, "request-finalized");
+    let request = request_input("sb-1", "sandbox.command.count", false, "request-finalized");
     let trace_id = request.trace_id.clone();
     let request_id = request.request_id.clone();
     store.append_request_start(request)?;
@@ -550,7 +557,12 @@ fn response_finalization_and_host_events_rebuild_from_audit_entries() -> Result<
 #[test]
 fn response_projection_classifies_new_envelope_errors() -> Result<(), TraceStoreError> {
     let store = temp_store("response-envelope-error")?;
-    let request = request_input("sb-1", "sandbox.file.read", false, "request-envelope-error");
+    let request = request_input(
+        "sb-1",
+        "sandbox.command.count",
+        false,
+        "request-envelope-error",
+    );
     let trace_id = request.trace_id.clone();
     let request_id = request.request_id.clone();
     store.append_request_start(request)?;
@@ -589,7 +601,7 @@ fn response_projection_classifies_new_envelope_errors() -> Result<(), TraceStore
 #[test]
 fn audit_verifier_accepts_intact_store_and_reports_tampering() -> Result<(), TraceStoreError> {
     let store = temp_store("audit-verify")?;
-    let request = request_input("sb-1", "sandbox.file.read", false, "verify-request");
+    let request = request_input("sb-1", "sandbox.command.count", false, "verify-request");
     let trace_id = request.trace_id.clone();
     let request_id = request.request_id.clone();
     store.append_request_start(request)?;
@@ -627,7 +639,7 @@ fn audit_verifier_accepts_intact_store_and_reports_tampering() -> Result<(), Tra
 #[test]
 fn audit_verifier_reports_chain_and_projection_failures() -> Result<(), TraceStoreError> {
     let store = temp_store("audit-verify-failures")?;
-    let request = request_input("sb-1", "sandbox.file.read", false, "verify-chain");
+    let request = request_input("sb-1", "sandbox.command.count", false, "verify-chain");
     let trace_id = request.trace_id.clone();
     store.append_request_start(request)?;
 
@@ -642,7 +654,7 @@ fn audit_verifier_reports_chain_and_projection_failures() -> Result<(), TraceSto
     );
 
     let store = temp_store("audit-verify-projection")?;
-    let request = request_input("sb-1", "sandbox.file.read", false, "verify-projection");
+    let request = request_input("sb-1", "sandbox.command.count", false, "verify-projection");
     let trace_id = request.trace_id.clone();
     store.append_request_start(request)?;
     store.lock().execute(
@@ -662,7 +674,12 @@ fn startup_reconciles_prior_boot_incomplete_requests_to_uncertain() -> Result<()
     let dir = temp_dir("reconcile");
     {
         let store = TraceStore::open(&dir)?;
-        store.append_request_start(request_input("sb-1", "sandbox.file.write", true, "orphan"))?;
+        store.append_request_start(request_input(
+            "sb-1",
+            "sandbox.command.exec",
+            true,
+            "orphan",
+        ))?;
     }
 
     let reopened = TraceStore::open(&dir)?;
@@ -904,7 +921,6 @@ fn request_input<'a>(
         trace_id: TraceId::parse(format!("trace-{request_id}")).expect("trace id"),
         request_id: RequestId::parse(request_id).expect("request id"),
         op,
-        family: "Files",
         caller_id: Some("caller-1"),
         mutates_state,
         args: json!({"caller_id": "caller-1", "path": "README.md"}),
@@ -1008,7 +1024,7 @@ fn acceptance_queries(trace_id: &str) -> Vec<String> {
         ),
         "SELECT s.kind, s.subsystem, s.duration_us/1e3 ms, s.fields_json FROM trace_spans s WHERE s.request_id='request-plan' ORDER BY s.started_us".to_owned(),
         "SELECT o.request_id, o.op, o.status, o.sent_at_ms FROM trace_requests o JOIN trace_links l ON l.trace_id=o.trace_id WHERE l.link_kind='command' AND l.link_id='cmd-plan' ORDER BY o.sent_at_ms".to_owned(),
-        "SELECT * FROM trace_requests WHERE family='Plugins' AND status IN ('error','rejected') AND workspace_route='isolated' AND sent_at_ms > 0".to_owned(),
+        "SELECT * FROM trace_requests WHERE status IN ('error','rejected') AND workspace_route='isolated' AND sent_at_ms > 0".to_owned(),
         format!(
             "SELECT audit_seq, entry_kind, payload_sha256, prev_global_sha256, prev_sandbox_sha256, entry_sha256 FROM audit_entries WHERE trace_id='{trace_id}' ORDER BY audit_seq"
         ),

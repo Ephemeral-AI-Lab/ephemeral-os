@@ -9,7 +9,6 @@ pub(super) struct ProjectRequestStart<'a> {
     pub(super) trace_id: &'a str,
     pub(super) request_id: &'a str,
     pub(super) op: &'a str,
-    pub(super) family: &'a str,
     pub(super) caller_id: Option<&'a str>,
     pub(super) args_summary: &'a str,
     pub(super) args_digest: &'a str,
@@ -23,15 +22,14 @@ pub(super) fn project_request_start_tx(
 ) -> Result<(), rusqlite::Error> {
     tx.execute(
         "INSERT OR REPLACE INTO trace_requests
-         (request_id, trace_id, sandbox_id, op, family, caller_id, args_summary,
+         (request_id, trace_id, sandbox_id, op, caller_id, args_summary,
           args_digest, sent_at_ms, host_boot_id)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         params![
             row.request_id,
             row.trace_id,
             row.sandbox_id,
             row.op,
-            row.family,
             row.caller_id,
             row.args_summary,
             row.args_digest,
@@ -53,7 +51,6 @@ pub(super) fn project_trace_degraded_tx(
             trace_id: &payload.trace_id,
             request_id: &payload.request_id,
             op: &payload.op,
-            family: &payload.family,
             caller_id: payload.caller_id.as_deref(),
             args_summary: &payload.args_summary,
             args_digest: &payload.args_digest,
