@@ -205,42 +205,6 @@ fn request_start_failures_fail_closed_for_mutations_and_degrade_reads(
 }
 
 #[test]
-fn heartbeat_samples_are_audit_backed_and_projected() -> Result<(), TraceStoreError> {
-    let store = temp_store("heartbeat-audit-backed")?;
-    store.record_heartbeat(HeartbeatInput {
-        sandbox_id: "sb-1",
-        daemon_boot_id: Some("boot-1"),
-        reachable: true,
-        spool_pending: Some(3),
-        spool_dropped_total: Some(5),
-    })?;
-
-    let (reachable, spool_pending, spool_dropped_total): (i64, i64, i64) = store.lock().query_row(
-        "SELECT reachable, spool_pending, spool_dropped_total
-         FROM sandbox_heartbeats WHERE sandbox_id='sb-1'",
-        [],
-        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-    )?;
-    assert_eq!((reachable, spool_pending, spool_dropped_total), (1, 3, 5));
-
-    let (entry_kind, trace_id, payload): (String, String, Vec<u8>) = store.lock().query_row(
-        "SELECT entry_kind, trace_id, payload
-         FROM audit_entries WHERE sandbox_id='sb-1' AND entry_kind='heartbeat'",
-        [],
-        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-    )?;
-    assert_eq!(entry_kind, "heartbeat");
-    assert_eq!(trace_id, "_heartbeat");
-    let entry = proto::AuditEntry::decode(payload.as_slice())?;
-    let body: serde_json::Value =
-        serde_json::from_slice(&entry.payload).expect("heartbeat payload is json");
-    assert_eq!(body["daemon_boot_id"], json!("boot-1"));
-    assert_eq!(body["spool_pending"], json!(3));
-    assert!(store.verify_audit(None)?.ok);
-    Ok(())
-}
-
-#[test]
 fn sidecar_ingest_rebuilds_lookup_projections_from_audit_entries() -> Result<(), TraceStoreError> {
     let store = temp_store("ingest")?;
     let request = request_input("sb-1", "sandbox.command.exec", true, "request-ingest");
@@ -404,49 +368,6 @@ fn dropped_trace_loss_entries_use_counter_deltas() -> Result<(), TraceStoreError
 }
 
 #[test]
-fn trace_export_batch_replay_is_idempotent_by_export_id() -> Result<(), TraceStoreError> {
-    let store = temp_store("trace-export-idempotent")?;
-    let trace_id = TraceId::parse("trace-export-idempotent").expect("trace id");
-    let mut record = TraceRecord::new(trace_id.clone(), SpanUid::ROOT);
-    record.events.push(EventRecord::new(
-        SpanUid::ROOT,
-        "background_finished",
-        "daemon.background",
-        json!({"kind": "unit"}),
-    ));
-    let encoded = encode_trace_batch(&TraceBatch {
-        records: vec![record],
-        dropped_traces: 0,
-        daemon_boot_id: Some("boot-export-idempotent".to_owned()),
-    });
-    let digest = trace::sha256_hex(&encoded);
-
-    store.ingest_trace_export_batch_once("sb-1", "export-1", &digest, 1, &encoded)?;
-    store.record_trace_export_ack_failure("export-1", "temporary ack failure")?;
-    store.ingest_trace_export_batch_once("sb-1", "export-1", &digest, 1, &encoded)?;
-    store.record_trace_export_ack_success("export-1")?;
-
-    assert_eq!(store.events_for_trace(trace_id.as_str())?.len(), 1);
-    let audit_count: i64 = store.lock().query_row(
-        "SELECT COUNT(*) FROM audit_entries WHERE entry_kind='trace_batch'",
-        [],
-        |row| row.get(0),
-    )?;
-    assert_eq!(audit_count, 1);
-    let (acked_at_ms, retry_count, last_error): (Option<i64>, i64, Option<String>) =
-        store.lock().query_row(
-            "SELECT acked_at_ms, retry_count, last_ack_error
-             FROM trace_export_batches WHERE export_id='export-1'",
-            [],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-        )?;
-    assert!(acked_at_ms.is_some());
-    assert_eq!(retry_count, 1);
-    assert!(last_error.is_none());
-    Ok(())
-}
-
-#[test]
 fn batches_without_dropped_traces_write_no_loss_entry() -> Result<(), TraceStoreError> {
     let store = temp_store("no-dropped-traces")?;
     let trace_id = TraceId::parse("trace-clean").expect("trace id");
@@ -468,22 +389,22 @@ fn batches_without_dropped_traces_write_no_loss_entry() -> Result<(), TraceStore
 }
 
 #[test]
-fn background_links_without_request_id_are_deduplicated() -> Result<(), TraceStoreError> {
-    let store = temp_store("background-link-dedupe")?;
-    let trace_id = TraceId::parse("trace-background-link").expect("trace id");
+fn background_command_links_without_request_id_are_deduplicated() -> Result<(), TraceStoreError> {
+    let store = temp_store("background-command-link-dedupe")?;
+    let trace_id = TraceId::parse("trace-background-command-link").expect("trace id");
     let mut record = TraceRecord::new(trace_id.clone(), SpanUid::ROOT);
     record.links.push(TraceLink {
-        kind: TraceLinkKind::PluginService,
-        value: "svc-1".to_owned(),
+        kind: TraceLinkKind::Command,
+        value: "cmd-1".to_owned(),
     });
     record.links.push(TraceLink {
-        kind: TraceLinkKind::PluginService,
-        value: "svc-1".to_owned(),
+        kind: TraceLinkKind::Command,
+        value: "cmd-1".to_owned(),
     });
 
     store.ingest_trace_batch("sb-1", &encode_trace_batch(&TraceBatch::single(record)))?;
     assert_eq!(
-        store.trace_ids_for_link("plugin_service", "svc-1")?,
+        store.trace_ids_for_link("command", "cmd-1")?,
         vec![trace_id.to_string()]
     );
 
@@ -707,32 +628,6 @@ fn newer_schema_versions_are_refused() -> Result<(), TraceStoreError> {
 }
 
 #[test]
-fn migrations_repair_partial_trace_export_tables_before_bumping_version(
-) -> Result<(), TraceStoreError> {
-    let dir = temp_dir("partial-trace-export-migration");
-    std::fs::create_dir_all(&dir).expect("create temp dir");
-    let db = dir.join("sandbox-traces.sqlite");
-    let conn = rusqlite::Connection::open(&db)?;
-    conn.execute(
-        "CREATE TABLE trace_export_batches (export_id TEXT PRIMARY KEY)",
-        [],
-    )?;
-    conn.pragma_update(None, "user_version", 2_u32)?;
-    drop(conn);
-
-    let store = TraceStore::open(&dir)?;
-    let conn = store.lock();
-    let columns = table_columns(&conn, "trace_export_batches")?;
-    assert!(columns.iter().any(|column| column == "sandbox_id"));
-    assert!(columns.iter().any(|column| column == "ingested_at_ms"));
-    assert!(columns.iter().any(|column| column == "retry_count"));
-    assert!(columns.iter().any(|column| column == "last_ack_error"));
-    let version: u32 = conn.pragma_query_value(None, "user_version", |row| row.get(0))?;
-    assert_eq!(version, 3);
-    Ok(())
-}
-
-#[test]
 fn acceptance_queries_use_indexes() -> Result<(), TraceStoreError> {
     let store = temp_store("query-plan")?;
     let request = request_input("sb-1", "sandbox.command.exec", true, "request-plan");
@@ -751,9 +646,9 @@ fn acceptance_queries_use_indexes() -> Result<(), TraceStoreError> {
     record.spans.push(SpanRecord::new(
         SpanUid::new(2),
         Some(SpanUid::ROOT),
-        "plugin_overlay_run",
-        SpanKind::Plugin,
-        json!({"op": "plugin.generic.query"}),
+        "command_overlay_run",
+        SpanKind::CommandProcessSpawn,
+        json!({"op": "sandbox.command.exec"}),
     ));
     record.events.push(EventRecord::new(
         SpanUid::ROOT,
@@ -791,7 +686,7 @@ fn acceptance_queries_use_indexes() -> Result<(), TraceStoreError> {
         ResourceStats::available(
             ResourceStatsKind::CgroupProcess,
             Some("before".to_owned()),
-            "plugin.overlay.run",
+            "command.overlay.run",
             2,
             1,
             json!({"cpu": {"usage_usec": 20}}),
@@ -802,7 +697,7 @@ fn acceptance_queries_use_indexes() -> Result<(), TraceStoreError> {
         ResourceStats::available(
             ResourceStatsKind::CgroupProcess,
             Some("after".to_owned()),
-            "plugin.overlay.run",
+            "command.overlay.run",
             2,
             1,
             json!({"cpu": {"usage_usec": 25}}),
@@ -813,7 +708,7 @@ fn acceptance_queries_use_indexes() -> Result<(), TraceStoreError> {
         ResourceStats::available(
             ResourceStatsKind::MountCost,
             Some("after".to_owned()),
-            "plugin.overlay.mount",
+            "command.overlay.mount",
             0,
             1,
             json!({
@@ -878,7 +773,7 @@ fn acceptance_queries_use_indexes() -> Result<(), TraceStoreError> {
         |row| row.get(0),
     )?;
     assert!(paired_sources.contains("command.process.wait"));
-    assert!(paired_sources.contains("plugin.overlay.run"));
+    assert!(paired_sources.contains("command.overlay.run"));
     let mount_cost: (i64, i64, i64) = store.lock().query_row(
         "SELECT json_extract(values_json,'$.payload.mount.layer_count'),
                 json_extract(values_json,'$.payload.mount.fsconfig_calls'),
@@ -1005,16 +900,6 @@ fn temp_dir(name: &str) -> std::path::PathBuf {
     ));
     let _ = std::fs::remove_dir_all(&dir);
     dir
-}
-
-fn table_columns(conn: &rusqlite::Connection, table: &str) -> Result<Vec<String>, TraceStoreError> {
-    let mut stmt = conn.prepare(&format!("PRAGMA table_info({table})"))?;
-    let rows = stmt.query_map([], |row| row.get::<_, String>(1))?;
-    let mut columns = Vec::new();
-    for row in rows {
-        columns.push(row?);
-    }
-    Ok(columns)
 }
 
 fn acceptance_queries(trace_id: &str) -> Vec<String> {

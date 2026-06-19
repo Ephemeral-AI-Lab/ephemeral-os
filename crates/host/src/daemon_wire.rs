@@ -290,9 +290,6 @@ fn trace_sidecar_payload(sidecar: &Value) -> Result<&str, TraceSidecarError> {
             {
                 return Err(TraceSidecarError::InvalidEnvelope);
             }
-            if !object.get("spool_pending").is_some_and(Value::is_boolean) {
-                return Err(TraceSidecarError::InvalidEnvelope);
-            }
             object
                 .get("data")
                 .and_then(Value::as_str)
@@ -595,7 +592,6 @@ mod tests {
             "_trace_events": {
                 "schema": DAEMON_TRACE_SIDECAR_SCHEMA,
                 "encoding": DAEMON_TRACE_SIDECAR_ENCODING,
-                "spool_pending": false,
                 "data": "AQID",
             },
         });
@@ -618,7 +614,6 @@ mod tests {
             "_trace_events": {
                 "schema": DAEMON_TRACE_SIDECAR_SCHEMA,
                 "encoding": DAEMON_TRACE_SIDECAR_ENCODING,
-                "spool_pending": false,
                 "data": "not base64",
             },
         });

@@ -16,18 +16,17 @@ host   (lib, host)   owns and reaches sandboxes: host engine,
    │                             protocol, runtime.
    │  loopback TCP (docker-published port) + auth token; `docker exec` fallback
    ▼
-eosd / daemon  (bin+lib, in-container)   executes in-box ops: files (layer
-                                 stack + OCC), commands (PTY), isolated
-                                 workspaces, plugins (PPC), audit, checkpoint.
+eosd / daemon  (bin+lib, in-container)   executes in-box commands and
+                                 isolated workspace lifecycle.
 ```
 
 | Component | Kind | Job | Must never |
 |---|---|---|---|
-| `gateway` | bin | decode requests, enforce visibility, route by local table, return response | contain fleet logic or per-op branches |
+| `gateway` | bin | decode requests, enforce visibility, route by local table, return response | contain fleet logic |
 | `host` | lib | host engine, protocol client, Docker runtime | depend on daemon implementation crates |
 | `eosd` / `daemon` | bin+lib | dispatch in-box daemon requests | know about Docker, sandbox_ids, or the fleet |
 | `crates/shared/protocol/` | shared contract | envelope/fault vocabulary, wire protocol prose and fixtures | depend on host/gateway/daemon implementation crates |
-| `layerstack` | lib (in-box) | the two frozen content hashes + manifest/layer types, storage, leases, checkpoint squashing | be depended on by host-side crates |
+| `layerstack` | lib (in-box) | the two frozen content hashes + manifest/layer types, storage, leases, and compaction | be depended on by host-side crates |
 
 **Boundary law:** host/gateway crates do not depend on daemon implementation
 crates, and daemon crates do not depend on host/gateway crates. Cross-boundary
@@ -81,8 +80,6 @@ sandbox-gateway host containers start <docker-image>
 SID=$(sandbox-gateway host sandboxes acquire | jq -r .sandbox_id)
 sandbox-gateway host sandboxes setup --sandbox-id "$SID" --workspace-root /testbed
 sandbox-gateway daemon --sandbox-id "$SID" ping
-sandbox-gateway daemon --sandbox-id "$SID" files write daemon-speed.txt --content hello
-sandbox-gateway daemon --sandbox-id "$SID" files edit daemon-speed.txt --old hello --new hi
 sandbox-gateway daemon --sandbox-id "$SID" commands exec -- pwd
 sandbox-gateway host sandboxes release "$SID"
 ```

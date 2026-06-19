@@ -270,13 +270,7 @@ fn enforce_tcp_visibility(
 }
 
 fn is_known_non_public_op(op: &str) -> bool {
-    matches!(
-        op,
-        "sandbox.runtime.ready"
-            | "sandbox.trace.export"
-            | "sandbox.trace.export_ack"
-            | "sandbox.run.cancel_all"
-    )
+    matches!(op, "sandbox.runtime.ready" | "sandbox.run.cancel_all")
 }
 
 /// Transport-level caller extraction for in-flight registry keys; runs before

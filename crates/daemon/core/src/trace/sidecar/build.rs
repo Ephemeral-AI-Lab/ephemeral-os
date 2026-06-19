@@ -21,10 +21,21 @@ pub(crate) fn attach_request_sidecar(
     op: &str,
     facts: &RequestTraceFacts,
 ) -> Value {
-    attach_request_sidecar_with_events(response, trace, op, facts, &[])
+    attach_request_sidecar_inner(response, trace, op, facts, &[])
 }
 
+#[cfg(test)]
 pub(crate) fn attach_request_sidecar_with_events(
+    response: Value,
+    trace: Option<&RequestTraceContext>,
+    op: &str,
+    facts: &RequestTraceFacts,
+    request_events: &[RequestTraceEvent],
+) -> Value {
+    attach_request_sidecar_inner(response, trace, op, facts, request_events)
+}
+
+fn attach_request_sidecar_inner(
     mut response: Value,
     trace: Option<&RequestTraceContext>,
     op: &str,
@@ -245,7 +256,6 @@ pub(crate) fn attach_request_sidecar_with_events(
         json!({
             "schema": TRACE_SIDECAR_SCHEMA,
             "encoding": TRACE_SIDECAR_ENCODING,
-            "spool_pending": false,
             "data": base64::engine::general_purpose::STANDARD.encode(encoded),
         }),
     );

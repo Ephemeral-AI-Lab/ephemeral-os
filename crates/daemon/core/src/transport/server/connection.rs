@@ -80,19 +80,9 @@ impl DaemonServer {
         };
         let framed = encode(&WireMessage::Response(response.clone()))?;
         if let Err(err) = writer.write_all(&framed).await {
-            crate::trace::push_transport_failure_from_sidecar(
-                &response,
-                "response_write_failed",
-                &err,
-            );
             return Err(DaemonError::Io(err));
         }
         if let Err(err) = writer.shutdown().await {
-            crate::trace::push_transport_failure_from_sidecar(
-                &response,
-                "response_shutdown_failed",
-                &err,
-            );
             return Err(DaemonError::Io(err));
         }
         Ok(())

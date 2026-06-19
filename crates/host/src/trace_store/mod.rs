@@ -35,9 +35,8 @@ use types::DegradedRequestInput;
 #[cfg(feature = "e2e-support")]
 pub use types::TraceVerifyFailure;
 pub use types::{
-    ForwardTraceDecision, HeartbeatInput, PendingSidecarInput, RequestStartInput,
-    ResponseMissingInput, ResponsePersistedInput, TraceEventInput, TraceIngestFailedInput,
-    TraceVerifyReport,
+    ForwardTraceDecision, PendingSidecarInput, RequestStartInput, ResponseMissingInput,
+    ResponsePersistedInput, TraceEventInput, TraceIngestFailedInput, TraceVerifyReport,
 };
 
 const HOST_SANDBOX_ID: &str = "_host";
@@ -66,8 +65,6 @@ pub enum TraceStoreError {
     InjectedTraceBatchIngestFailure,
     #[error("trace event append intentionally failed for test")]
     InjectedTraceEventFailure,
-    #[error("trace export {export_id} replay digest mismatch")]
-    TraceExportReplayMismatch { export_id: String },
 }
 
 pub struct TraceStore {

@@ -341,7 +341,6 @@ fn trace_kind_code(kind: TraceKind) -> i32 {
         TraceKind::CommandFinalize => 2,
         TraceKind::ActiveCommandAdvance => 3,
         TraceKind::IdleWorkspaceEvict => 4,
-        TraceKind::PluginService => 5,
     }
 }
 
@@ -351,7 +350,6 @@ fn trace_kind_from_code(code: i32, record_index: usize) -> Result<TraceKind, Dec
         2 => TraceKind::CommandFinalize,
         3 => TraceKind::ActiveCommandAdvance,
         4 => TraceKind::IdleWorkspaceEvict,
-        5 => TraceKind::PluginService,
         _ => {
             return Err(invalid(format!(
                 "records[{record_index}].kind has unknown code {code}"
@@ -378,7 +376,6 @@ fn span_kind_code(kind: SpanKind) -> i32 {
         SpanKind::CommandFinalize => 14,
         SpanKind::WorkspaceRoute => 15,
         SpanKind::IsolatedNetwork => 16,
-        SpanKind::Plugin => 17,
         SpanKind::File => 18,
         SpanKind::Resource => 20,
         SpanKind::Control => 21,
@@ -407,7 +404,6 @@ fn span_kind_from_code(
         14 => SpanKind::CommandFinalize,
         15 => SpanKind::WorkspaceRoute,
         16 => SpanKind::IsolatedNetwork,
-        17 => SpanKind::Plugin,
         18 => SpanKind::File,
         20 => SpanKind::Resource,
         21 => SpanKind::Control,
@@ -428,7 +424,6 @@ fn subsystem_code(subsystem: SpanSubsystem) -> i32 {
         SpanSubsystem::Overlay => 5,
         SpanSubsystem::Command => 6,
         SpanSubsystem::Workspace => 7,
-        SpanSubsystem::Plugin => 8,
         SpanSubsystem::Control => 9,
     }
 }
@@ -469,7 +464,6 @@ fn trace_link_kind_code(kind: TraceLinkKind) -> i32 {
     match kind {
         TraceLinkKind::Command => 1,
         TraceLinkKind::WorkspaceHandle => 2,
-        TraceLinkKind::PluginService => 3,
         TraceLinkKind::ManifestVersion => 4,
     }
 }
@@ -482,7 +476,6 @@ fn trace_link_kind_from_code(
     Ok(match code {
         1 => TraceLinkKind::Command,
         2 => TraceLinkKind::WorkspaceHandle,
-        3 => TraceLinkKind::PluginService,
         4 => TraceLinkKind::ManifestVersion,
         _ => {
             return Err(invalid(format!(

@@ -32,8 +32,6 @@ pub struct NsFds {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RunnerVerb {
     ExecCommand,
-    PluginService,
-    PluginSetup,
     Unknown(String),
 }
 
@@ -41,8 +39,6 @@ impl From<&str> for RunnerVerb {
     fn from(value: &str) -> Self {
         match value {
             "exec_command" => Self::ExecCommand,
-            "plugin_service" => Self::PluginService,
-            "plugin_setup" => Self::PluginSetup,
             other => Self::Unknown(other.to_owned()),
         }
     }
@@ -55,8 +51,6 @@ impl Serialize for RunnerVerb {
     {
         serializer.serialize_str(match self {
             Self::ExecCommand => "exec_command",
-            Self::PluginService => "plugin_service",
-            Self::PluginSetup => "plugin_setup",
             Self::Unknown(verb) => verb,
         })
     }

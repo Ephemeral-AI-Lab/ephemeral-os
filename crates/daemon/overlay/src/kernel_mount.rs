@@ -376,8 +376,7 @@ fn legacy_overlay_options(
 ) -> Result<CString> {
     let mut data = Vec::new();
     data.extend_from_slice(b"lowerdir=");
-    // Plugin refresh remounts run after plugin masking has hidden /proc, so
-    // the legacy mount data cannot use the fd-backed lower paths used by the
+    // The legacy mount API cannot use the fd-backed lower paths used by the
     // new mount API. These original paths were already validated/opened above.
     for (index, layer) in handle.layer_paths.iter().enumerate() {
         if index > 0 {

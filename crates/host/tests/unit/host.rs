@@ -1,9 +1,8 @@
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
-use std::net::{SocketAddr, TcpListener};
+use std::net::TcpListener;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use anyhow::Result;
@@ -24,7 +23,6 @@ use crate::service::forward::{
     tcp_once, tcp_with_connect_backoff, ForwardAttempt, ForwardRequestInput,
 };
 use crate::service::registry::{SandboxRecord, SandboxRegistry};
-use crate::service::trace_drain::{drain_trace_export_once, TraceDrainTarget, TraceExportDrainer};
 use crate::service::{ForwardTraceContext, HostConfig, SandboxHost};
 use crate::trace_store::{
     PendingSidecarInput, RequestStartInput, TraceEventInput, TraceEventRow, TraceStore,
@@ -271,7 +269,6 @@ fn forward_request_persists_transport_events_and_strips_sidecar() -> Result<()> 
         response[DAEMON_TRACE_SIDECAR_FIELD] = json!({
             "schema": DAEMON_TRACE_SIDECAR_SCHEMA,
             "encoding": DAEMON_TRACE_SIDECAR_ENCODING,
-            "spool_pending": false,
             "data": sidecar,
         });
         writeln!(stream, "{}", serde_json::to_string(&response)?)?;
@@ -325,7 +322,6 @@ fn forward_request_persists_transport_events_and_strips_sidecar() -> Result<()> 
         record: Arc::clone(&record),
         config: &config,
         trace_store: &store,
-        trace_drainer: &TraceExportDrainer::default(),
         trace_context: trace,
         mutates_state: false,
         op: "sandbox.runtime.ready",
@@ -468,7 +464,6 @@ fn malformed_sidecar_is_stripped_and_recorded_as_host_event() -> Result<()> {
         "_trace_events": {
             "schema": DAEMON_TRACE_SIDECAR_SCHEMA,
             "encoding": DAEMON_TRACE_SIDECAR_ENCODING,
-            "spool_pending": false,
             "data": "not base64",
         },
     });
@@ -569,7 +564,6 @@ fn decoded_sidecar_ingest_failures_are_spooled_and_recovered() -> Result<()> {
         "_trace_events": {
             "schema": DAEMON_TRACE_SIDECAR_SCHEMA,
             "encoding": DAEMON_TRACE_SIDECAR_ENCODING,
-            "spool_pending": false,
             "data": sidecar,
         },
     });
@@ -588,180 +582,6 @@ fn decoded_sidecar_ingest_failures_are_spooled_and_recovered() -> Result<()> {
         "sandbox.runtime",
         "ready_checked",
     );
-
-    let _ = fs::remove_dir_all(dir);
-    Ok(())
-}
-
-#[test]
-fn background_trace_export_ingest_failures_are_spooled_and_recovered() -> Result<()> {
-    let trace_id = TraceId::parse("trace-background-drain-pending")?;
-    let request_id = RequestId::parse("request-background-drain-pending")?;
-    let mut trace_record = TraceRecord::new(trace_id.clone(), SpanUid::ROOT);
-    trace_record.request_id = Some(request_id);
-    trace_record.events.push(EventRecord::new(
-        SpanUid::ROOT,
-        "background_finished",
-        "daemon.background",
-        json!({"kind": "unit"}),
-    ));
-    let trace_batch = encode_trace_batch(&TraceBatch {
-        records: vec![trace_record],
-        dropped_traces: 0,
-        daemon_boot_id: Some("daemon-boot-drain".to_owned()),
-    });
-    let response = json!({
-        "status": "ok",
-        "success": true,
-        "record_count": 1,
-        "spool_pending_after": 0,
-        "dropped_traces": 0,
-        "trace_batch_base64": base64::engine::general_purpose::STANDARD.encode(trace_batch),
-    });
-    let (endpoint, server) = spawn_trace_export_server(response)?;
-
-    let dir = temp_host_dir("background-drain-pending");
-    let store = TraceStore::open(&dir)?;
-    store.fail_next_trace_batch_ingest_for_tests();
-    let target = TraceDrainTarget {
-        sandbox_id: "sb-background-drain-pending".to_owned(),
-        forward_token: "token".to_owned(),
-        record: Arc::new(SandboxRecord::new(
-            "sb-background-drain-pending".to_owned(),
-            "sb-background-drain-pending".to_owned(),
-            "token".to_owned(),
-            endpoint.port(),
-            "test".to_owned(),
-            Some(endpoint),
-        )),
-        request_timeout: Duration::from_secs(1),
-    };
-
-    assert_eq!(drain_trace_export_once(&target, &store)?, 0);
-    server.join().expect("trace export server")?;
-    assert_eq!(store.pending_sidecar_count_for_tests()?, 1);
-    assert_event(
-        &store.events_for_trace(trace_id.as_str())?,
-        "host.trace_drain",
-        "trace_batch_ingest_failed",
-    );
-    assert_eq!(store.recover_pending_sidecars()?, 1);
-    assert_eq!(store.pending_sidecar_count_for_tests()?, 0);
-    assert_event(
-        &store.events_for_trace(trace_id.as_str())?,
-        "daemon.background",
-        "background_finished",
-    );
-
-    let _ = fs::remove_dir_all(dir);
-    Ok(())
-}
-
-#[test]
-fn trace_export_heartbeat_records_remaining_spool_depth() -> Result<()> {
-    let response = json!({
-        "status": "ok",
-        "success": true,
-        "record_count": 1,
-        "spool_pending_after": 0,
-        "dropped_traces": 7,
-    });
-    let (endpoint, server) = spawn_trace_export_server(response)?;
-
-    let dir = temp_host_dir("trace-export-spool-depth");
-    let store = TraceStore::open(&dir)?;
-    let target = TraceDrainTarget {
-        sandbox_id: "sb-trace-export-spool-depth".to_owned(),
-        forward_token: "token".to_owned(),
-        record: Arc::new(SandboxRecord::new(
-            "sb-trace-export-spool-depth".to_owned(),
-            "sb-trace-export-spool-depth".to_owned(),
-            "token".to_owned(),
-            endpoint.port(),
-            "test".to_owned(),
-            Some(endpoint),
-        )),
-        request_timeout: Duration::from_secs(1),
-    };
-
-    assert_eq!(drain_trace_export_once(&target, &store)?, 1);
-    server.join().expect("trace export server")?;
-    let conn = rusqlite::Connection::open(store.db_path())?;
-    let (spool_pending, spool_dropped_total): (i64, i64) = conn.query_row(
-        "SELECT spool_pending, spool_dropped_total
-         FROM sandbox_heartbeats
-         WHERE sandbox_id=?1
-         ORDER BY ts_ms DESC
-         LIMIT 1",
-        [&target.sandbox_id],
-        |row| Ok((row.get(0)?, row.get(1)?)),
-    )?;
-    assert_eq!(spool_pending, 0);
-    assert_eq!(spool_dropped_total, 7);
-
-    let _ = fs::remove_dir_all(dir);
-    Ok(())
-}
-
-#[test]
-fn trace_export_ack_is_sent_after_durable_ingest() -> Result<()> {
-    let trace_id = TraceId::parse("trace-background-ack")?;
-    let mut trace_record = TraceRecord::new(trace_id.clone(), SpanUid::ROOT);
-    trace_record.events.push(EventRecord::new(
-        SpanUid::ROOT,
-        "background_finished",
-        "daemon.background",
-        json!({"kind": "unit"}),
-    ));
-    let trace_batch = encode_trace_batch(&TraceBatch {
-        records: vec![trace_record],
-        dropped_traces: 0,
-        daemon_boot_id: Some("daemon-boot-ack".to_owned()),
-    });
-    let batch_sha256 = trace::sha256_hex(&trace_batch);
-    let response = json!({
-        "status": "ok",
-        "success": true,
-        "record_count": 1,
-        "spool_pending_after": 1,
-        "dropped_traces": 0,
-        "export_id": "export-ack-1",
-        "batch_sha256": batch_sha256,
-        "trace_batch_base64": base64::engine::general_purpose::STANDARD.encode(trace_batch),
-    });
-    let (endpoint, server) =
-        spawn_trace_export_ack_server(response, "export-ack-1", &batch_sha256, 1)?;
-
-    let dir = temp_host_dir("trace-export-ack");
-    let store = TraceStore::open(&dir)?;
-    let target = TraceDrainTarget {
-        sandbox_id: "sb-trace-export-ack".to_owned(),
-        forward_token: "token".to_owned(),
-        record: Arc::new(SandboxRecord::new(
-            "sb-trace-export-ack".to_owned(),
-            "sb-trace-export-ack".to_owned(),
-            "token".to_owned(),
-            endpoint.port(),
-            "test".to_owned(),
-            Some(endpoint),
-        )),
-        request_timeout: Duration::from_secs(1),
-    };
-
-    assert_eq!(drain_trace_export_once(&target, &store)?, 1);
-    server.join().expect("trace export ack server")?;
-    assert_event(
-        &store.events_for_trace(trace_id.as_str())?,
-        "daemon.background",
-        "background_finished",
-    );
-    let conn = rusqlite::Connection::open(store.db_path())?;
-    let acked_at_ms: Option<i64> = conn.query_row(
-        "SELECT acked_at_ms FROM trace_export_batches WHERE export_id='export-ack-1'",
-        [],
-        |row| row.get(0),
-    )?;
-    assert!(acked_at_ms.is_some());
 
     let _ = fs::remove_dir_all(dir);
     Ok(())
@@ -954,7 +774,6 @@ fn host_lifecycle_response_persistence_failure_does_not_return_success() -> Resu
         config_yaml: String::new(),
         registry,
         trace_store: Arc::clone(&trace_store),
-        trace_drainer: TraceExportDrainer::default(),
     };
     let trace = ForwardTraceContext::new("lifecycle-persist-failure");
 
@@ -1016,7 +835,6 @@ fn release_keeps_registry_entry_when_container_removal_fails() -> Result<()> {
         config_yaml: String::new(),
         registry: Arc::clone(&registry),
         trace_store: Arc::clone(&trace_store),
-        trace_drainer: TraceExportDrainer::default(),
     };
     let docker = dir.join("docker");
     fs::write(
@@ -1076,7 +894,6 @@ fn operator_trace_queries_are_audit_events_even_without_sandbox_id() -> Result<(
         config_yaml: String::new(),
         registry: Arc::new(SandboxRegistry::open(dir.clone())?),
         trace_store: Arc::clone(&trace_store),
-        trace_drainer: TraceExportDrainer::default(),
     };
     let trace = ForwardTraceContext::new("operator-trace-read");
 
@@ -1120,7 +937,6 @@ fn trace_show_applies_section_limit_and_reports_truncation() -> Result<()> {
         config_yaml: String::new(),
         registry: Arc::new(SandboxRegistry::open(dir.clone())?),
         trace_store: Arc::clone(&trace_store),
-        trace_drainer: TraceExportDrainer::default(),
     };
     let shown_trace = TraceId::parse("trace-show-limit")?;
     for index in 0..3 {
@@ -1338,62 +1154,6 @@ fn assert_event(events: &[TraceEventRow], module: &str, event: &str) {
             .any(|row| row.module == module && row.event == event),
         "missing {module}/{event}: {events:?}"
     );
-}
-
-fn spawn_trace_export_server(response: Value) -> Result<(SocketAddr, JoinHandle<Result<()>>)> {
-    let listener = TcpListener::bind("127.0.0.1:0")?;
-    let endpoint = listener.local_addr()?;
-    let server = std::thread::spawn(move || -> Result<()> {
-        let (mut stream, _) = listener.accept()?;
-        let mut line = String::new();
-        BufReader::new(stream.try_clone()?).read_line(&mut line)?;
-        let request: Value = serde_json::from_str(line.trim_end())?;
-        assert_eq!(request["op"], json!("sandbox.trace.export"));
-        writeln!(stream, "{}", serde_json::to_string(&response)?)?;
-        Ok(())
-    });
-    Ok((endpoint, server))
-}
-
-fn spawn_trace_export_ack_server(
-    response: Value,
-    export_id: &str,
-    batch_sha256: &str,
-    record_count: u64,
-) -> Result<(SocketAddr, JoinHandle<Result<()>>)> {
-    let listener = TcpListener::bind("127.0.0.1:0")?;
-    let endpoint = listener.local_addr()?;
-    let export_id = export_id.to_owned();
-    let batch_sha256 = batch_sha256.to_owned();
-    let server = std::thread::spawn(move || -> Result<()> {
-        let (mut stream, _) = listener.accept()?;
-        let mut line = String::new();
-        BufReader::new(stream.try_clone()?).read_line(&mut line)?;
-        let request: Value = serde_json::from_str(line.trim_end())?;
-        assert_eq!(request["op"], json!("sandbox.trace.export"));
-        writeln!(stream, "{}", serde_json::to_string(&response)?)?;
-
-        let (mut stream, _) = listener.accept()?;
-        let mut line = String::new();
-        BufReader::new(stream.try_clone()?).read_line(&mut line)?;
-        let request: Value = serde_json::from_str(line.trim_end())?;
-        assert_eq!(request["op"], json!("sandbox.trace.export_ack"));
-        assert_eq!(request["args"]["export_id"], json!(export_id));
-        assert_eq!(request["args"]["batch_sha256"], json!(batch_sha256));
-        assert_eq!(request["args"]["record_count"], json!(record_count));
-        writeln!(
-            stream,
-            "{}",
-            serde_json::to_string(&json!({
-                "status": "ok",
-                "success": true,
-                "export_id": export_id,
-                "acked": true,
-            }))?
-        )?;
-        Ok(())
-    });
-    Ok((endpoint, server))
 }
 
 fn temp_host_dir(name: &str) -> PathBuf {

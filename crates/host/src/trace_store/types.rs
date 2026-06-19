@@ -73,14 +73,6 @@ pub struct PendingSidecarInput<'a> {
     pub error: &'a str,
 }
 
-pub struct HeartbeatInput<'a> {
-    pub sandbox_id: &'a str,
-    pub daemon_boot_id: Option<&'a str>,
-    pub reachable: bool,
-    pub spool_pending: Option<u64>,
-    pub spool_dropped_total: Option<u64>,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ForwardTraceDecision {
     pub trace_id: TraceId,

@@ -6,7 +6,8 @@ use super::audit::{
     append_audit_entry_tx, append_dropped_traces_loss_tx, AuditAppend, TRACE_BATCH_SCHEMA,
 };
 use super::projection::project_trace_batch_tx;
-use super::{now_ms, u64_to_i64, write_transaction, TraceStore, TraceStoreError};
+use super::u64_to_i64;
+use super::{now_ms, write_transaction, TraceStore, TraceStoreError};
 
 impl TraceStore {
     pub fn ingest_trace_batch(
@@ -35,94 +36,6 @@ impl TraceStore {
         }
         Ok(batch)
     }
-
-    pub fn ingest_trace_export_batch_once(
-        &self,
-        sandbox_id: &str,
-        export_id: &str,
-        batch_sha256: &str,
-        record_count: u64,
-        batch_bytes: &[u8],
-    ) -> Result<(), TraceStoreError> {
-        let batch = decode_trace_batch(batch_bytes)?;
-        if self
-            .fail_next_trace_batch_ingest
-            .swap(false, std::sync::atomic::Ordering::SeqCst)
-        {
-            return Err(TraceStoreError::InjectedTraceBatchIngestFailure);
-        }
-        let mut conn = self.lock();
-        let tx = write_transaction(&mut conn)?;
-        if let Some((existing_sha, existing_count)) = trace_export_batch_tx(&tx, export_id)? {
-            if existing_sha == batch_sha256 && existing_count == record_count {
-                tx.commit()?;
-                return Ok(());
-            }
-            return Err(TraceStoreError::TraceExportReplayMismatch {
-                export_id: export_id.to_owned(),
-            });
-        }
-
-        ingest_trace_batch_tx(&tx, sandbox_id, &batch, batch_bytes)?;
-        tx.execute(
-            "INSERT INTO trace_export_batches
-             (export_id, sandbox_id, daemon_boot_id, batch_sha256, record_count, ingested_at_ms)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-            params![
-                export_id,
-                sandbox_id,
-                batch.daemon_boot_id.as_deref(),
-                batch_sha256,
-                u64_to_i64(record_count),
-                u64_to_i64(now_ms()),
-            ],
-        )?;
-        tx.commit()?;
-        Ok(())
-    }
-
-    pub fn record_trace_export_ack_success(&self, export_id: &str) -> Result<(), TraceStoreError> {
-        let now = u64_to_i64(now_ms());
-        self.lock().execute(
-            "UPDATE trace_export_batches
-             SET acked_at_ms=?2, last_ack_error=NULL
-             WHERE export_id=?1",
-            params![export_id, now],
-        )?;
-        Ok(())
-    }
-
-    pub fn record_trace_export_ack_failure(
-        &self,
-        export_id: &str,
-        error: &str,
-    ) -> Result<(), TraceStoreError> {
-        self.lock().execute(
-            "UPDATE trace_export_batches
-             SET retry_count=retry_count+1, last_ack_error=?2
-             WHERE export_id=?1",
-            params![export_id, error],
-        )?;
-        Ok(())
-    }
-}
-
-fn trace_export_batch_tx(
-    tx: &Transaction<'_>,
-    export_id: &str,
-) -> Result<Option<(String, u64)>, TraceStoreError> {
-    let existing = tx
-        .query_row(
-            "SELECT batch_sha256, record_count FROM trace_export_batches WHERE export_id=?1",
-            params![export_id],
-            |row| {
-                let sha: String = row.get(0)?;
-                let count: i64 = row.get(1)?;
-                Ok((sha, count))
-            },
-        )
-        .optional()?;
-    Ok(existing.map(|(sha, count)| (sha, u64::try_from(count).unwrap_or(0))))
 }
 
 pub(super) fn ingest_trace_batch_tx(

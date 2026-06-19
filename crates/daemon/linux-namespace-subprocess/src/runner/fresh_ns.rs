@@ -80,14 +80,6 @@ pub(crate) fn run_fresh_ns(
     let namespace_timings = enter_fresh_namespace()?;
     timings.extend(namespace_timings);
     timings.insert_elapsed("workspace.namespace_enter_s", namespace_start);
-    if matches!(request.tool_call.verb, RunnerVerb::PluginSetup) {
-        return execute_tool(
-            request,
-            timings,
-            Instant::now(),
-            Some(&config.mount_mask.hidden_paths),
-        );
-    }
     let upperdir = request
         .upperdir
         .as_ref()
@@ -170,154 +162,12 @@ pub(crate) fn execute_tool(
 ) -> Result<RunResult, RunnerError> {
     match &request.tool_call.verb {
         RunnerVerb::ExecCommand => execute_shell(request, timings, run_start, hidden_paths),
-        RunnerVerb::PluginService => {
-            execute_plugin_service(request, timings, run_start, hidden_paths)
-        }
-        RunnerVerb::PluginSetup => execute_plugin_setup(request, timings, run_start, hidden_paths),
         RunnerVerb::Unknown(verb) => Ok(error_result(
             2,
             "unsupported_runner_verb",
             &format!("fresh namespace runner does not support verb {}", verb),
         )),
     }
-}
-
-#[cfg(target_os = "linux")]
-fn execute_plugin_setup(
-    request: &RunRequest,
-    mut timings: RunnerPhaseTimings,
-    run_start: Instant,
-    hidden_paths: Option<&[PathBuf]>,
-) -> Result<RunResult, RunnerError> {
-    let prepare_start = Instant::now();
-    let argv = plugin_setup_argv(request)?;
-    let cwd = plugin_setup_cwd(request)?;
-    let setup_tmp_root = setup_path_arg(request, "setup_tmp_root")?;
-    mask_plugin_setup_paths(hidden_paths)?;
-
-    let capture_dir = setup_tmp_root.join("tmp");
-    fs::create_dir_all(&capture_dir).map_err(RunnerError::Child)?;
-    let unique = format!("setup-{}", std::process::id());
-    let stdout_path = capture_dir.join(format!("{unique}.stdout"));
-    let stderr_path = capture_dir.join(format!("{unique}.stderr"));
-    let stdout = fs::File::create(&stdout_path).map_err(RunnerError::Child)?;
-    let stderr = fs::File::create(&stderr_path).map_err(RunnerError::Child)?;
-
-    let mut command = Command::new(&argv[0]);
-    command
-        .args(&argv[1..])
-        .current_dir(cwd)
-        .env_clear()
-        .envs(setup_environment(&request.tool_call.args))
-        .stdin(Stdio::null())
-        .stdout(Stdio::from(stdout))
-        .stderr(Stdio::from(stderr))
-        .process_group(0);
-    timings.insert_elapsed("workspace.plugin_prepare_s", prepare_start);
-
-    let spawn_start = Instant::now();
-    let mut child = command.spawn().map_err(RunnerError::Child)?;
-    timings.insert_elapsed("workspace.plugin_spawn_s", spawn_start);
-    let child_pid = Pid::from_child(&child);
-    let wait_start = Instant::now();
-    let (exit_code, timed_out) = match wait_for_child(&mut child, request.timeout_seconds) {
-        Ok(exit_code) => (exit_code, false),
-        Err(RunnerError::TimedOut) => (124, true),
-        Err(err) => return Err(err),
-    };
-    timings.insert_elapsed("workspace.plugin_wait_s", wait_start);
-    if timed_out {
-        let _ = kill_process_group(child_pid, Signal::Kill);
-    }
-    let stdout_tail = read_tail(&stdout_path)?;
-    let stderr_tail = read_tail(&stderr_path)?;
-    let _ = fs::remove_file(&stdout_path);
-    let _ = fs::remove_file(&stderr_path);
-    Ok(RunResult {
-        exit_code,
-        payload: serde_json::json!({
-            "success": exit_code == 0,
-            "workspace": "plugin_setup",
-            "timings": timings.into_json(run_start),
-            "status": result_status(exit_code, timed_out),
-            "exit_code": exit_code,
-            "timed_out": timed_out,
-            "stdout_tail": stdout_tail,
-            "stderr_tail": stderr_tail,
-        }),
-    })
-}
-
-#[cfg(target_os = "linux")]
-fn execute_plugin_service(
-    request: &RunRequest,
-    mut timings: RunnerPhaseTimings,
-    run_start: Instant,
-    hidden_paths: Option<&[PathBuf]>,
-) -> Result<RunResult, RunnerError> {
-    let prepare_start = Instant::now();
-    let argv = plugin_service_argv(request)?;
-    let cwd = shell_cwd(request)?;
-    mask_plugin_runtime_paths(hidden_paths)?;
-    let mut command = Command::new(&argv[0]);
-    command
-        .args(&argv[1..])
-        .current_dir(cwd)
-        .env_clear()
-        .envs(command_environment(&request.tool_call.args))
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .process_group(0);
-    timings.insert_elapsed("workspace.plugin_prepare_s", prepare_start);
-
-    let spawn_start = Instant::now();
-    let mut child = command.spawn().map_err(RunnerError::Child)?;
-    timings.insert_elapsed("workspace.plugin_spawn_s", spawn_start);
-    let child_pid = Pid::from_child(&child);
-    let wait_start = Instant::now();
-    let (exit_code, timed_out) = match wait_for_child(&mut child, request.timeout_seconds) {
-        Ok(exit_code) => (exit_code, false),
-        Err(RunnerError::TimedOut) => (124, true),
-        Err(err) => return Err(err),
-    };
-    timings.insert_elapsed("workspace.plugin_wait_s", wait_start);
-    if timed_out || !matches!(request.mode, crate::protocol::RunMode::SetNs) {
-        let _ = kill_process_group(child_pid, Signal::Kill);
-    }
-    Ok(RunResult {
-        exit_code,
-        payload: serde_json::json!({
-            "success": exit_code == 0,
-            "workspace": "host",
-            "timings": timings.into_json(run_start),
-            "status": result_status(exit_code, timed_out),
-        }),
-    })
-}
-
-#[cfg(target_os = "linux")]
-fn mask_plugin_setup_paths(hidden_paths: Option<&[PathBuf]>) -> Result<(), RunnerError> {
-    super::mask_model_shell_paths(&plugin_mask_paths(hidden_paths))
-}
-
-#[cfg(target_os = "linux")]
-fn mask_plugin_runtime_paths(hidden_paths: Option<&[PathBuf]>) -> Result<(), RunnerError> {
-    super::mask_model_shell_paths(&plugin_mask_paths(hidden_paths))
-}
-
-#[cfg(target_os = "linux")]
-fn plugin_mask_paths(hidden_paths: Option<&[PathBuf]>) -> Vec<PathBuf> {
-    let mut paths = hidden_paths
-        .unwrap_or_default()
-        .iter()
-        .filter(|path| path.as_path() != Path::new("/eos"))
-        .cloned()
-        .collect::<Vec<_>>();
-    paths.extend([PathBuf::from("/root"), PathBuf::from("/var")]);
-    paths.sort();
-    paths.dedup();
-    paths
 }
 
 #[cfg(target_os = "linux")]
@@ -506,40 +356,6 @@ fn record_overlay_teardown(
                 }));
             }
         }
-    }
-}
-
-#[cfg(all(test, target_os = "linux"))]
-mod tests {
-    use std::path::{Path, PathBuf};
-
-    use super::plugin_mask_paths;
-
-    #[test]
-    fn plugin_mask_keeps_eos_runtime_available_for_remount() {
-        let paths = plugin_mask_paths(Some(&[
-            PathBuf::from("/eos"),
-            PathBuf::from("/proc"),
-            PathBuf::from("/sys/fs/cgroup"),
-        ]));
-
-        assert!(
-            !paths.iter().any(|path| path == Path::new("/eos")),
-            "plugin setup/service paths under /eos must remain available"
-        );
-        assert!(paths.iter().any(|path| path == Path::new("/proc")));
-        assert!(
-            !paths
-                .iter()
-                .any(|path| path == Path::new("/eos/runtime/daemon")),
-            "plugin remount needs the daemon runtime directory visible"
-        );
-        assert!(
-            !paths
-                .iter()
-                .any(|path| path == Path::new("/eos/runtime/daemon/eosd")),
-            "plugin remount needs the daemon binary visible inside the service mount namespace"
-        );
     }
 }
 

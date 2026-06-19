@@ -21,7 +21,6 @@ pub enum TraceKind {
     CommandFinalize,
     ActiveCommandAdvance,
     IdleWorkspaceEvict,
-    PluginService,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -34,7 +33,6 @@ pub enum SpanSubsystem {
     Overlay,
     Command,
     Workspace,
-    Plugin,
     Control,
 }
 
@@ -57,7 +55,6 @@ pub enum SpanKind {
     CommandFinalize,
     WorkspaceRoute,
     IsolatedNetwork,
-    Plugin,
     File,
     Resource,
     Control,
@@ -81,7 +78,6 @@ impl SpanKind {
                 SpanSubsystem::Command
             }
             Self::WorkspaceRoute | Self::IsolatedNetwork => SpanSubsystem::Workspace,
-            Self::Plugin => SpanSubsystem::Plugin,
             Self::Resource | Self::Control => SpanSubsystem::Control,
         }
     }
@@ -116,7 +112,6 @@ impl SpanStatus {
 pub enum TraceLinkKind {
     Command,
     WorkspaceHandle,
-    PluginService,
     ManifestVersion,
 }
 

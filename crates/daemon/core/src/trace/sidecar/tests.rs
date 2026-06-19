@@ -1,97 +1,32 @@
-use serde_json::json;
+use base64::Engine as _;
+use serde_json::{json, Value};
 use trace::{
-    decode_trace_batch, DetailBudget, EventRecord, ResourceStatsKind, SpanKind, SpanUid, TraceId,
-    TraceRecord, TRACE_SIDECAR_ENCODING, TRACE_SIDECAR_FIELD, TRACE_SIDECAR_SCHEMA,
+    decode_trace_batch, DetailBudget, ResourceStatsKind, SpanKind, SpanUid, TRACE_SIDECAR_ENCODING,
+    TRACE_SIDECAR_FIELD, TRACE_SIDECAR_SCHEMA,
 };
 
-use super::build::{attach_request_sidecar, attach_request_sidecar_with_events};
+use super::build::attach_request_sidecar_with_events;
 use super::events::{COMMAND_PROCESS_SPAWN_SPAN_ID, COMMAND_PROCESS_WAIT_SPAN_ID};
-use super::transport_failure::{push_transport_failure_from_sidecar, trace_sidecar_bytes};
-use crate::trace::{
-    ack_background_export, lease_background_records, now_ms, push_background_record,
-    RequestTraceEvent, RequestTraceFacts,
-};
+use crate::trace::{now_ms, RequestTraceEvent, RequestTraceFacts};
 use crate::wire::RequestTraceContext;
 
-#[test]
-fn trace_export_drains_background_spool_as_protobuf_batch() {
-    let trace_id = TraceId::parse("trace-export-test").expect("trace id");
-    let mut record = TraceRecord::new(trace_id.clone(), SpanUid::ROOT);
-    record.events.push(EventRecord::new(
-        SpanUid::ROOT,
-        "background_finished",
-        "daemon.background",
-        json!({"kind": "unit"}),
-    ));
-    push_background_record(record);
-
-    let response = lease_background_records(16);
-    assert_eq!(response.record_count, 1);
-    assert_eq!(response.spool_pending_after, 1);
-    let export_id = response.export_id.clone().expect("export id");
-    let batch_sha256 = response.batch_sha256.clone().expect("batch sha");
-    let encoded = response.trace_batch_bytes.expect("trace batch");
-    let batch = decode_trace_batch(&encoded).expect("trace batch decodes");
-    assert_eq!(batch.records.len(), 1);
-    assert_eq!(batch.records[0].trace_id, trace_id);
-
-    let replay = lease_background_records(16);
-    assert_eq!(replay.export_id.as_ref(), Some(&export_id));
-    assert_eq!(replay.batch_sha256.as_ref(), Some(&batch_sha256));
-
-    let ack = ack_background_export(&export_id, &batch_sha256, 1);
-    assert!(ack);
-
-    let trace = RequestTraceContext {
-        trace_id: "trace-write-failed".to_owned(),
-        request_id: "request-write-failed".to_owned(),
-        parent_span_id: None,
-        link_hints: Vec::new(),
-        capture_budget_version: 1,
+fn trace_sidecar_bytes(response: &Value) -> Option<Vec<u8>> {
+    let sidecar = response.get(TRACE_SIDECAR_FIELD)?;
+    let encoded = match sidecar {
+        Value::Object(object) => {
+            if object.get("schema").and_then(Value::as_str) != Some(TRACE_SIDECAR_SCHEMA) {
+                return None;
+            }
+            if object.get("encoding").and_then(Value::as_str) != Some(TRACE_SIDECAR_ENCODING) {
+                return None;
+            }
+            object.get("data").and_then(Value::as_str)?
+        }
+        _ => return None,
     };
-    let facts = RequestTraceFacts {
-        connection_id: "daemon-conn-write-failed".to_owned(),
-        accepted_at_unix_ms: now_ms(),
-        listener_kind: "tcp",
-        peer_addr: Some("127.0.0.1:51000".to_owned()),
-        local_addr: Some("127.0.0.1:50000".to_owned()),
-        is_tcp: true,
-        request_bytes: 16,
-        read_duration_us: 10,
-        auth_required: true,
-        auth_ok: true,
-        protocol_version: Some(1),
-    };
-    let response = attach_request_sidecar(
-        json!({"success": true}),
-        Some(&trace),
-        "sandbox.runtime.ready",
-        &facts,
-    );
-    push_transport_failure_from_sidecar(
-        &response,
-        "response_write_failed",
-        &std::io::Error::new(std::io::ErrorKind::BrokenPipe, "peer closed"),
-    );
-    let response = lease_background_records(16);
-    assert_eq!(response.record_count, 1);
-    let encoded = response.trace_batch_bytes.clone().expect("trace batch");
-    let batch = decode_trace_batch(&encoded).expect("trace batch decodes");
-    let record = batch.records.first().expect("failure record");
-    assert_eq!(record.trace_id.as_str(), "trace-write-failed");
-    assert_eq!(
-        record
-            .events
-            .first()
-            .map(|event| (event.module.as_str(), event.name.as_str())),
-        Some(("daemon.transport", "response_write_failed"))
-    );
-    let ack = ack_background_export(
-        &response.export_id.expect("export id"),
-        &response.batch_sha256.expect("batch sha"),
-        1,
-    );
-    assert!(ack);
+    base64::engine::general_purpose::STANDARD
+        .decode(encoded)
+        .ok()
 }
 
 #[test]
@@ -272,7 +207,6 @@ fn request_sidecar_stamps_envelope_meta_from_trace_record() {
         response[TRACE_SIDECAR_FIELD]["encoding"],
         TRACE_SIDECAR_ENCODING
     );
-    assert_eq!(response[TRACE_SIDECAR_FIELD]["spool_pending"], false);
     assert!(response[TRACE_SIDECAR_FIELD]["data"]
         .as_str()
         .is_some_and(|data| !data.is_empty()));

@@ -52,7 +52,7 @@ Legacy Rust E2E selection through `e2e.toml`, `EOS_E2E_CONFIG`,
 
 Do not move protocol op names, schema versions, file layout names, kernel
 constants, netlink constants, nft constants, wire field names, namespace
-handshake tokens, or plugin manifest contract defaults into YAML.
+handshake tokens, or package contract defaults into YAML.
 
 Runtime and test harness policy belongs in YAML. Static contracts belong in Rust
 code near their owner.

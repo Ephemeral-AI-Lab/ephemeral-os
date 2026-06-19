@@ -132,9 +132,7 @@ pub(crate) fn handle(engine: &dyn Engine, surface: Surface, request: &ClientRequ
             }
             forward(engine, request, true)
         }
-        "sandbox.runtime.ready" | "sandbox.trace.export" | "sandbox.trace.export_ack" => {
-            forbidden_socket(engine, surface, request)
-        }
+        "sandbox.runtime.ready" => forbidden_socket(engine, surface, request),
         _ => unknown_op(engine, surface, request),
     }
 }

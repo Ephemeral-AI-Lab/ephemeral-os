@@ -1,7 +1,4 @@
-use super::{
-    normalize_lexical, plugin_service_argv, plugin_setup_argv, plugin_setup_cwd, shell_argv,
-    shell_cwd,
-};
+use super::{normalize_lexical, shell_argv, shell_cwd};
 use crate::protocol::{RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
 use std::path::Path;
 
@@ -64,63 +61,6 @@ fn exec_command_remountable_allows_external_cwd() -> TestResult {
     );
     assert_eq!(shell_cwd(&allowed)?, external);
     let _ = std::fs::remove_dir_all(external);
-    Ok(())
-}
-
-#[test]
-fn plugin_service_requires_argv_command() -> TestResult {
-    let argv = plugin_service_argv(&request(
-        "plugin_service",
-        serde_json::json!({"command": ["python3", "/eos/plugin/harness.py"]}),
-    ))?;
-    assert_eq!(
-        argv,
-        ["python3", "/eos/plugin/harness.py"]
-            .map(str::to_owned)
-            .to_vec()
-    );
-
-    let error = match plugin_service_argv(&request(
-        "plugin_service",
-        serde_json::json!({"command": "python3 /eos/plugin/harness.py"}),
-    )) {
-        Ok(argv) => {
-            return Err(
-                format!("plugin_service string command unexpectedly accepted: {argv:?}").into(),
-            );
-        }
-        Err(error) => error,
-    };
-    assert!(error.to_string().contains("argv list"));
-    Ok(())
-}
-
-#[test]
-fn plugin_setup_uses_argv_and_rejects_cwd_escape() -> TestResult {
-    let setup = request(
-        "plugin_setup",
-        serde_json::json!({
-            "command": ["./setup.sh"],
-            "cwd": ".",
-            "package_root": "/eos/runtime/plugins/catalog/demo/digest",
-        }),
-    );
-    assert_eq!(plugin_setup_argv(&setup)?, vec!["./setup.sh".to_owned()]);
-    assert_eq!(
-        plugin_setup_cwd(&setup)?,
-        Path::new("/eos/runtime/plugins/catalog/demo/digest")
-    );
-
-    let escaped = request(
-        "plugin_setup",
-        serde_json::json!({
-            "command": ["./setup.sh"],
-            "cwd": "..",
-            "package_root": "/eos/runtime/plugins/catalog/demo/digest",
-        }),
-    );
-    let error = plugin_setup_cwd(&escaped).expect_err("cwd escape rejected");
-    assert!(error.to_string().contains("escapes package root"));
     Ok(())
 }
 

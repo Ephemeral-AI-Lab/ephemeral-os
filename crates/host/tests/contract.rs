@@ -11,8 +11,6 @@ use host::e2e_support::{
     DAEMON_PROTOCOL_VERSION, MAX_REQUEST_BYTES,
 };
 
-const READ_FILE_FIXTURE: &[u8] =
-    include_bytes!("../../shared/protocol/fixtures/wire_messages/read_file_request.json");
 const HEARTBEAT_FIXTURE: &[u8] =
     include_bytes!("../../shared/protocol/fixtures/wire_messages/heartbeat_request.json");
 fn fixture_line(raw: &[u8]) -> Vec<u8> {
@@ -21,26 +19,6 @@ fn fixture_line(raw: &[u8]) -> Vec<u8> {
         line.pop();
     }
     line
-}
-
-/// The host encoder reproduces the read_file request fixture: caller-ordered
-/// args with the protocol version explicit mid-object and the invocation id
-/// stamp appended last.
-#[test]
-fn stamped_encoder_reproduces_read_file_fixture() {
-    let invocation_id = "00000000000000000000000000000001";
-    let args = json!({
-        "layer_stack_root": "/eos/layer-stack",
-        DAEMON_PROTOCOL_FIELD: DAEMON_PROTOCOL_VERSION,
-        "path": "/workspace/repo/README.md",
-        "caller_id": "caller-1",
-    });
-    let encoded = encode_request_with_metadata("sandbox.command.count", invocation_id, &args, None);
-    assert_eq!(
-        encoded,
-        fixture_line(READ_FILE_FIXTURE),
-        "host-encoded read_file request must be byte-identical to the fixture"
-    );
 }
 
 /// The heartbeat fixture: protocol version stamped by the host

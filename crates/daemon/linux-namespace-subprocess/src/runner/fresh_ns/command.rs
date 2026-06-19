@@ -7,50 +7,6 @@ use std::path::{Component, Path, PathBuf};
 use crate::protocol::RunRequest;
 use crate::runner::RunnerError;
 
-pub(super) fn plugin_service_argv(request: &RunRequest) -> Result<Vec<String>, RunnerError> {
-    argv_command(request, "plugin_service")
-}
-
-pub(super) fn plugin_setup_argv(request: &RunRequest) -> Result<Vec<String>, RunnerError> {
-    argv_command(request, "plugin_setup")
-}
-
-fn argv_command(request: &RunRequest, label: &str) -> Result<Vec<String>, RunnerError> {
-    let Some(command) = request.tool_call.args.get("command") else {
-        return Err(RunnerError::InvalidRequest(format!(
-            "{label} requires command argv"
-        )));
-    };
-    let parts = command.as_array().ok_or_else(|| {
-        RunnerError::InvalidRequest(format!("{label} command must be an argv list"))
-    })?;
-    if parts.is_empty() {
-        return Err(RunnerError::InvalidRequest(format!(
-            "{label} command argv must not be empty"
-        )));
-    }
-    let argv: Result<Vec<String>, RunnerError> = parts
-        .iter()
-        .map(|part| {
-            part.as_str().map_or_else(
-                || {
-                    Err(RunnerError::InvalidRequest(format!(
-                        "{label} command argv entries must be strings"
-                    )))
-                },
-                |value| Ok(value.to_owned()),
-            )
-        })
-        .collect();
-    let argv = argv?;
-    if argv[0].trim().is_empty() {
-        return Err(RunnerError::InvalidRequest(format!(
-            "{label} command argv[0] must not be empty"
-        )));
-    }
-    Ok(argv)
-}
-
 pub(super) fn shell_argv(request: &RunRequest) -> Result<Vec<String>, RunnerError> {
     let shell_args = &request.tool_call.args;
     let Some(command) = shell_args.get("command") else {
@@ -121,39 +77,6 @@ pub(super) fn shell_cwd(request: &RunRequest) -> Result<PathBuf, RunnerError> {
     Ok(resolved)
 }
 
-pub(super) fn plugin_setup_cwd(request: &RunRequest) -> Result<PathBuf, RunnerError> {
-    let package_root = setup_path_arg(request, "package_root")?;
-    let raw = request
-        .tool_call
-        .args
-        .get("cwd")
-        .and_then(serde_json::Value::as_str)
-        .unwrap_or(".");
-    let candidate = PathBuf::from(raw);
-    let resolved = if candidate.is_absolute() {
-        normalize_lexical(&candidate)
-    } else {
-        normalize_lexical(&package_root.join(candidate))
-    };
-    if !resolved.starts_with(&package_root) {
-        return Err(RunnerError::InvalidRequest(format!(
-            "plugin_setup cwd escapes package root: {raw}"
-        )));
-    }
-    Ok(resolved)
-}
-
-pub(super) fn setup_path_arg(request: &RunRequest, key: &str) -> Result<PathBuf, RunnerError> {
-    request
-        .tool_call
-        .args
-        .get(key)
-        .and_then(serde_json::Value::as_str)
-        .filter(|value| !value.trim().is_empty())
-        .map(PathBuf::from)
-        .ok_or_else(|| RunnerError::InvalidRequest(format!("plugin_setup requires {key}")))
-}
-
 fn normalize_lexical(path: &Path) -> PathBuf {
     let mut normalized = PathBuf::new();
     for component in path.components() {
@@ -213,19 +136,6 @@ pub(super) fn command_environment(args: &serde_json::Value) -> BTreeMap<String, 
     }
     env.insert("GIT_OPTIONAL_LOCKS".to_owned(), "0".to_owned());
     env
-}
-
-pub(super) fn setup_environment(args: &serde_json::Value) -> BTreeMap<String, String> {
-    args.get("env")
-        .and_then(serde_json::Value::as_object)
-        .map(|env| {
-            env.iter()
-                .filter_map(|(key, value)| {
-                    value.as_str().map(|value| (key.clone(), value.to_owned()))
-                })
-                .collect()
-        })
-        .unwrap_or_default()
 }
 
 #[cfg(test)]

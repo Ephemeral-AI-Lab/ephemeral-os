@@ -53,16 +53,6 @@ pub(super) struct ResponseMissingPayload {
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub(super) struct HeartbeatPayload {
-    pub(super) sandbox_id: String,
-    pub(super) daemon_boot_id: Option<String>,
-    pub(super) reachable: bool,
-    pub(super) spool_pending: Option<u64>,
-    pub(super) spool_dropped_total: Option<u64>,
-    pub(super) received_at_ms: u64,
-}
-
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub(super) struct TraceEventLossPayload {
     pub(super) reason: String,
     pub(super) trace_id: String,

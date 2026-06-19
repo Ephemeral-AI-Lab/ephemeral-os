@@ -33,9 +33,6 @@ fn apply_migrations(conn: &Connection, version: u32) -> Result<(), rusqlite::Err
     if version < 2 {
         migrate_to_v2(conn)?;
     }
-    if version < 3 {
-        migrate_to_v3(conn)?;
-    }
     Ok(())
 }
 
@@ -68,61 +65,6 @@ fn migrate_to_v2(conn: &Connection) -> Result<(), rusqlite::Error> {
         "trace_spool_drop_cursors",
         "updated_at_ms",
         "INTEGER NOT NULL DEFAULT 0",
-    )
-}
-
-fn migrate_to_v3(conn: &Connection) -> Result<(), rusqlite::Error> {
-    conn.execute_batch(
-        r#"
-        CREATE TABLE IF NOT EXISTS trace_export_batches (
-          export_id       TEXT PRIMARY KEY,
-          sandbox_id      TEXT NOT NULL,
-          daemon_boot_id  TEXT,
-          batch_sha256    TEXT NOT NULL,
-          record_count    INTEGER NOT NULL,
-          ingested_at_ms  INTEGER NOT NULL,
-          acked_at_ms     INTEGER,
-          retry_count     INTEGER NOT NULL DEFAULT 0,
-          last_ack_error  TEXT
-        );
-        "#,
-    )?;
-    ensure_column(
-        conn,
-        "trace_export_batches",
-        "sandbox_id",
-        "TEXT NOT NULL DEFAULT ''",
-    )?;
-    ensure_column(conn, "trace_export_batches", "daemon_boot_id", "TEXT")?;
-    ensure_column(
-        conn,
-        "trace_export_batches",
-        "batch_sha256",
-        "TEXT NOT NULL DEFAULT ''",
-    )?;
-    ensure_column(
-        conn,
-        "trace_export_batches",
-        "record_count",
-        "INTEGER NOT NULL DEFAULT 0",
-    )?;
-    ensure_column(
-        conn,
-        "trace_export_batches",
-        "ingested_at_ms",
-        "INTEGER NOT NULL DEFAULT 0",
-    )?;
-    ensure_column(conn, "trace_export_batches", "acked_at_ms", "INTEGER")?;
-    ensure_column(
-        conn,
-        "trace_export_batches",
-        "retry_count",
-        "INTEGER NOT NULL DEFAULT 0",
-    )?;
-    ensure_column(conn, "trace_export_batches", "last_ack_error", "TEXT")?;
-    conn.execute_batch(
-        "CREATE INDEX IF NOT EXISTS idx_trace_export_batches_sandbox
-         ON trace_export_batches(sandbox_id, ingested_at_ms);",
     )
 }
 
@@ -228,25 +170,6 @@ CREATE TABLE IF NOT EXISTS trace_links (
   request_id TEXT NOT NULL DEFAULT '',
   PRIMARY KEY (trace_id, link_kind, link_id, request_id)
 );
-CREATE TABLE IF NOT EXISTS sandbox_heartbeats (
-  sandbox_id        TEXT NOT NULL,
-  ts_ms             INTEGER NOT NULL,
-  daemon_boot_id    TEXT,
-  reachable         INTEGER NOT NULL,
-  uptime_s          REAL,
-  manifest_version  INTEGER, manifest_depth INTEGER,
-  active_leases     INTEGER, storage_bytes INTEGER, layer_dirs INTEGER, staging_dirs INTEGER,
-  open_isolated     INTEGER, overlay_mounts INTEGER,
-  active_commands   INTEGER, running_commands INTEGER, completed_unclaimed_commands INTEGER,
-  plugin_services_ok INTEGER, plugin_services_failed INTEGER,
-  cpu_usage_usec    INTEGER, cpu_throttled_usec INTEGER, cpu_nr_throttled INTEGER,
-  memory_current_bytes INTEGER, memory_peak_bytes INTEGER,
-  memory_oom_events INTEGER, memory_oom_kill_events INTEGER,
-  io_rbytes         INTEGER, io_wbytes INTEGER, process_rss_bytes INTEGER,
-  inflight_requests INTEGER, spool_pending INTEGER, spool_dropped_total INTEGER,
-  details_json      TEXT,
-  PRIMARY KEY (sandbox_id, ts_ms)
-);
 CREATE TABLE IF NOT EXISTS pending_trace_sidecars (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   sandbox_id      TEXT NOT NULL,
@@ -266,18 +189,6 @@ CREATE TABLE IF NOT EXISTS trace_spool_drop_cursors (
   updated_at_ms         INTEGER NOT NULL,
   PRIMARY KEY (sandbox_id, daemon_boot_id)
 );
-CREATE TABLE IF NOT EXISTS trace_export_batches (
-  export_id       TEXT PRIMARY KEY,
-  sandbox_id      TEXT NOT NULL,
-  daemon_boot_id  TEXT,
-  batch_sha256    TEXT NOT NULL,
-  record_count    INTEGER NOT NULL,
-  ingested_at_ms  INTEGER NOT NULL,
-  acked_at_ms     INTEGER,
-  retry_count     INTEGER NOT NULL DEFAULT 0,
-  last_ack_error  TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_hb_time         ON sandbox_heartbeats(ts_ms);
 CREATE INDEX IF NOT EXISTS idx_audit_trace     ON audit_entries(trace_id, audit_seq);
 CREATE INDEX IF NOT EXISTS idx_audit_sandbox   ON audit_entries(sandbox_id, audit_seq);
 CREATE INDEX IF NOT EXISTS idx_audit_request   ON audit_entries(request_id);
@@ -293,5 +204,4 @@ CREATE INDEX IF NOT EXISTS idx_links_id       ON trace_links(link_kind, link_id)
 CREATE INDEX IF NOT EXISTS idx_events_span    ON trace_events(trace_id, span_id);
 CREATE INDEX IF NOT EXISTS idx_events_event   ON trace_events(event);
 CREATE INDEX IF NOT EXISTS idx_pending_sidecar_request ON pending_trace_sidecars(request_id);
-CREATE INDEX IF NOT EXISTS idx_trace_export_batches_sandbox ON trace_export_batches(sandbox_id, ingested_at_ms);
 "#;
