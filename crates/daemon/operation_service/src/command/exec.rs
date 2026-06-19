@@ -60,6 +60,11 @@ impl CommandOperationService {
                 )?
             }
         };
+        let admission_guard = if is_session_command {
+            Some(self.lock_remount_admission())
+        } else {
+            None
+        };
         if is_session_command && self.workspace().is_remount_pending(&handler.workspace_id) {
             return Err(CommandServiceError::WorkspaceRemountPending {
                 workspace_id: handler.workspace_id.clone(),
@@ -163,6 +168,7 @@ impl CommandOperationService {
                 error,
             ));
         }
+        drop(admission_guard);
 
         self.initial_exec_yield(command_id, input.yield_time_ms)
     }

@@ -37,12 +37,12 @@ impl HostWorkspaceError {
     }
 }
 
-/// Overlay-backed private workspace that shares the host network namespace.
+/// Host-compatible overlay-backed private workspace.
 ///
 /// A host workspace owns fresh overlay directories and, when holder-backed,
-/// user/mount/PID namespaces. It deliberately skips the dedicated network
-/// namespace, veth, DNS rewrite, and network policy resources used by isolated
-/// mode.
+/// user/mount/PID namespaces while preserving host network access. It
+/// deliberately skips the dedicated network boundary, veth, DNS rewrite, and
+/// network policy resources used by isolated mode.
 ///
 /// Dropping the workspace removes its run directory (best-effort), so the caller
 /// can capture the upperdir on success or just drop on cancel/discard.
@@ -52,7 +52,7 @@ pub struct HostWorkspace {
     holder: Option<HostHolder>,
 }
 
-/// Inputs for creating a holder-backed host-network workspace.
+/// Inputs for creating a holder-backed host-compatible workspace.
 #[derive(Debug, Clone, Copy)]
 pub struct HostNamespaceWorkspaceRequest<'a> {
     pub kind: &'a str,

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Instant;
 
 use crate::command::{
@@ -10,6 +10,8 @@ use crate::command::{
 };
 use crate::workspace_crate::CallerId;
 use crate::workspace_manager::WorkspaceManagerService;
+
+use super::remount::{ProcProcessGroupController, ProcessGroupController};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct CommandFinalizationOptions {
@@ -23,6 +25,8 @@ pub struct CommandOperationService {
     registry: Arc<CommandRegistry>,
     process_store: Arc<CommandProcessStore>,
     launch_driver: Arc<dyn CommandLaunchDriver>,
+    remount_controller: Arc<dyn ProcessGroupController>,
+    remount_admission: Mutex<()>,
     finalization_options: CommandFinalizationOptions,
 }
 
@@ -44,6 +48,8 @@ impl CommandOperationService {
             registry: Arc::new(CommandRegistry::new()),
             process_store: Arc::new(CommandProcessStore::new()),
             launch_driver: Arc::new(RealCommandLaunchDriver),
+            remount_controller: Arc::new(ProcProcessGroupController),
+            remount_admission: Mutex::new(()),
             finalization_options,
         }
     }
@@ -61,6 +67,28 @@ impl CommandOperationService {
             registry: Arc::new(CommandRegistry::new()),
             process_store: Arc::new(CommandProcessStore::new()),
             launch_driver,
+            remount_controller: Arc::new(ProcProcessGroupController),
+            remount_admission: Mutex::new(()),
+            finalization_options: CommandFinalizationOptions::default(),
+        }
+    }
+
+    #[doc(hidden)]
+    #[must_use]
+    pub fn with_launch_driver_and_remount_controller_for_test(
+        workspace: Arc<WorkspaceManagerService>,
+        config: ::command::CommandConfig,
+        launch_driver: Arc<dyn CommandLaunchDriver>,
+        remount_controller: Arc<dyn ProcessGroupController>,
+    ) -> Self {
+        Self {
+            workspace,
+            config,
+            registry: Arc::new(CommandRegistry::new()),
+            process_store: Arc::new(CommandProcessStore::new()),
+            launch_driver,
+            remount_controller,
+            remount_admission: Mutex::new(()),
             finalization_options: CommandFinalizationOptions::default(),
         }
     }
@@ -92,6 +120,8 @@ impl CommandOperationService {
             registry: Arc::new(CommandRegistry::new()),
             process_store: Arc::new(process_store),
             launch_driver,
+            remount_controller: Arc::new(ProcProcessGroupController),
+            remount_admission: Mutex::new(()),
             finalization_options: CommandFinalizationOptions::default(),
         }
     }
@@ -124,6 +154,17 @@ impl CommandOperationService {
     #[must_use]
     pub(crate) fn launch_driver(&self) -> &Arc<dyn CommandLaunchDriver> {
         &self.launch_driver
+    }
+
+    #[must_use]
+    pub(crate) fn remount_controller(&self) -> Arc<dyn ProcessGroupController> {
+        Arc::clone(&self.remount_controller)
+    }
+
+    pub(crate) fn lock_remount_admission(&self) -> MutexGuard<'_, ()> {
+        self.remount_admission
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
     }
 
     pub fn write_stdin(

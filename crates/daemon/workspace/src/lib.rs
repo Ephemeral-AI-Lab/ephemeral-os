@@ -1,15 +1,17 @@
-//! Shared workspace runtime primitives plus concrete network modes.
+//! Shared workspace runtime primitives plus concrete workspace isolation
+//! profiles.
 //!
-//! Every mode creates a private mounted workspace: fresh overlay directories
+//! Every profile creates a private mounted workspace: fresh overlay directories
 //! plus the holder-owned namespace stack used to run and remount commands.
-//! `NetworkMode` only selects the workspace's network topology; higher layers
-//! decide when a workspace is created, destroyed, captured, or published.
+//! `NetworkMode` selects the isolation profile applied to that workspace; higher
+//! layers decide when a workspace is created, destroyed, captured, or published.
 //!
-//! `network_mode::host` shares the host network namespace while keeping the
-//! private workspace overlay and holder namespace stack.
-//! `network_mode::isolated_network` adds a dedicated network namespace with
-//! veth, DNS, policy, and cgroup resources. `overlay` holds the filesystem and
-//! telemetry contracts both modes share.
+//! `network_mode::host` is the host-compatible profile: it keeps the private
+//! workspace overlay and holder namespace stack while preserving host network
+//! access. `network_mode::isolated_network` is the fully isolated profile: it
+//! adds a dedicated network boundary with veth, DNS, policy, and cgroup
+//! resources. `overlay` holds the filesystem and telemetry contracts both
+//! profiles share.
 #![forbid(unsafe_code)]
 
 pub mod error;

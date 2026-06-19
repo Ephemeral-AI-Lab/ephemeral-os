@@ -54,18 +54,20 @@ impl From<layerstack::service::Snapshot> for LayerStackSnapshotRef {
     }
 }
 
-/// Network topology for a private mounted workspace.
+/// Isolation profile for a private mounted workspace.
 ///
-/// This does not encode lifecycle length, publication behavior, or whether the
-/// caller is running a one-shot operation. Those decisions belong to the
-/// runtime or operation layer that owns the workspace handle.
+/// The enum name reflects the current concrete split: whether the workspace
+/// preserves host network access or adds a dedicated network boundary. It does
+/// not encode lifecycle length, publication behavior, or whether the caller is
+/// running a one-shot operation. Those decisions belong to the runtime or
+/// operation layer that owns the workspace handle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NetworkMode {
-    /// Share the host network namespace while using a private overlay and
-    /// holder namespace stack for the workspace.
+    /// Host-compatible profile: private overlay and holder namespace stack with
+    /// host network access.
     Host,
-    /// Add a dedicated network namespace and isolated network plumbing to the
-    /// private workspace.
+    /// Fully isolated profile: private overlay and holder namespace stack plus
+    /// a dedicated network boundary.
     Isolated,
 }
 

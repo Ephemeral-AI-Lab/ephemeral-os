@@ -145,8 +145,19 @@ impl WorkspaceManagerService {
             });
         }
 
-        let result = self.workspace.remount_workspace(&session.handle, request)?;
-        session.refresh_from_handle(result.handle)?;
+        let result = match self.workspace.remount_workspace(&session.handle, request) {
+            Ok(result) => result,
+            Err(error) => {
+                let reason = error.to_string();
+                let _ = session.block_remount(reason);
+                return Err(WorkspaceManagerError::Workspace(error));
+            }
+        };
+        if let Err(error) = session.refresh_from_handle(result.handle) {
+            let reason = error.to_string();
+            let _ = session.block_remount(reason);
+            return Err(error);
+        }
         Ok(session.handler())
     }
 
@@ -201,23 +212,6 @@ impl WorkspaceManagerService {
             .ok_or_else(|| WorkspaceManagerError::NotFound {
                 workspace_id: workspace_id.clone(),
             })
-    }
-
-    pub fn remount_workspace(
-        &self,
-        handler: &WorkspaceSessionHandler,
-        request: RemountWorkspaceRequest,
-    ) -> Result<WorkspaceSessionHandler, WorkspaceManagerError> {
-        let mut sessions = self.lock_sessions()?;
-        let session = sessions
-            .find_by_workspace_id_mut(&handler.workspace_id)
-            .ok_or_else(|| WorkspaceManagerError::NotFound {
-                workspace_id: handler.workspace_id.clone(),
-            })?;
-        let handle = session.active_handle()?;
-        let result = self.workspace.remount_workspace(&handle, request)?;
-        session.refresh_from_handle(result.handle)?;
-        Ok(session.handler())
     }
 
     pub fn destroy(

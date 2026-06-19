@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -8,8 +8,9 @@ use command::process::{
 };
 use command::yield_wait_loop::WaitOutcome;
 use operation_service::command::{
-    CommandLaunchDriver, CommandOperationService, CommandServiceError, ExecCommandInput,
-    OperationTraceContext,
+    CancelCommandInput, CommandCallContext, CommandLaunchDriver, CommandOperationService,
+    CommandRemountInspection, CommandServiceError, ExecCommandInput, OperationTraceContext,
+    ProcessGroupController,
 };
 use operation_service::workspace_manager::{WorkspaceManagerService, WorkspaceRemountState};
 use operation_service::workspace_remount::{
@@ -26,6 +27,7 @@ use workspace::{
 
 struct TestServices {
     workspace: Arc<WorkspaceManagerService>,
+    command: Arc<CommandOperationService>,
     services: OperationServices,
 }
 
@@ -34,6 +36,7 @@ struct RemountWorkspaceServiceFake {
     create_results: Mutex<VecDeque<Result<WorkspaceHandle, WorkspaceError>>>,
     remount_results: Mutex<VecDeque<Result<RemountWorkspaceResult, WorkspaceError>>>,
     remount_calls: Mutex<Vec<WorkspaceId>>,
+    remount_callback: Mutex<Option<Arc<dyn Fn() + Send + Sync>>>,
 }
 
 impl RemountWorkspaceServiceFake {
@@ -56,6 +59,13 @@ impl RemountWorkspaceServiceFake {
             .lock()
             .expect("test operation succeeds")
             .clone()
+    }
+
+    fn on_remount(&self, callback: Arc<dyn Fn() + Send + Sync>) {
+        *self
+            .remount_callback
+            .lock()
+            .expect("test operation succeeds") = Some(callback);
     }
 }
 
@@ -94,6 +104,14 @@ impl WorkspaceService for RemountWorkspaceServiceFake {
             .lock()
             .expect("test operation succeeds")
             .push(handle.id.clone());
+        let callback = self
+            .remount_callback
+            .lock()
+            .expect("test operation succeeds")
+            .clone();
+        if let Some(callback) = callback {
+            callback();
+        }
         self.remount_results
             .lock()
             .expect("test operation succeeds")
@@ -131,7 +149,9 @@ impl WorkspaceService for RemountWorkspaceServiceFake {
     }
 }
 
-struct InactiveLaunchDriver;
+struct InactiveLaunchDriver {
+    process_group_id: Option<i32>,
+}
 
 impl CommandLaunchDriver for InactiveLaunchDriver {
     fn spawn(
@@ -139,7 +159,10 @@ impl CommandLaunchDriver for InactiveLaunchDriver {
         spec: CommandProcessSpec,
         _parts: CommandProcessSpawn<'_>,
     ) -> Result<CommandProcess, CommandServiceError> {
-        Ok(CommandProcess::inactive_for_test(spec))
+        Ok(match self.process_group_id {
+            Some(pgid) => CommandProcess::inactive_with_process_group_for_test(spec, pgid),
+            None => CommandProcess::inactive_for_test(spec),
+        })
     }
 
     fn wait_for_initial_yield(
@@ -153,12 +176,86 @@ impl CommandLaunchDriver for InactiveLaunchDriver {
     }
 }
 
+#[derive(Default)]
+struct FakeProcessGroupController {
+    resumed: Mutex<Vec<i32>>,
+    resume_states: Mutex<Vec<WorkspaceRemountState>>,
+    state_probe: Mutex<Option<(Arc<WorkspaceManagerService>, WorkspaceId)>>,
+}
+
+impl FakeProcessGroupController {
+    fn observe_state_on_resume(
+        &self,
+        workspace: Arc<WorkspaceManagerService>,
+        workspace_id: WorkspaceId,
+    ) {
+        *self.state_probe.lock().expect("test operation succeeds") =
+            Some((workspace, workspace_id));
+    }
+
+    fn resumed(&self) -> Vec<i32> {
+        self.resumed
+            .lock()
+            .expect("test operation succeeds")
+            .clone()
+    }
+
+    fn resume_states(&self) -> Vec<WorkspaceRemountState> {
+        self.resume_states
+            .lock()
+            .expect("test operation succeeds")
+            .clone()
+    }
+}
+
+impl ProcessGroupController for FakeProcessGroupController {
+    fn inspect_command_process_group(
+        &self,
+        _pgid: i32,
+        _workspace_root: &Path,
+    ) -> CommandRemountInspection {
+        CommandRemountInspection {
+            active_commands: 1,
+            process_count: 1,
+            quiesced_process_count: 1,
+            inspected: true,
+            quiesce_attempted: true,
+            ..CommandRemountInspection::default()
+        }
+    }
+
+    fn resume_process_group_id(&self, pgid: i32) -> bool {
+        self.resumed
+            .lock()
+            .expect("test operation succeeds")
+            .push(pgid);
+        if let Some((workspace, workspace_id)) = self
+            .state_probe
+            .lock()
+            .expect("test operation succeeds")
+            .as_ref()
+        {
+            self.resume_states
+                .lock()
+                .expect("test operation succeeds")
+                .push(
+                    workspace
+                        .remount_state(workspace_id)
+                        .expect("remount state is readable"),
+                );
+        }
+        true
+    }
+}
+
 fn build_services(fake: Arc<RemountWorkspaceServiceFake>) -> TestServices {
     let workspace = Arc::new(WorkspaceManagerService::new(fake));
     let command = Arc::new(CommandOperationService::with_launch_driver_for_test(
         Arc::clone(&workspace),
         command_config(),
-        Arc::new(InactiveLaunchDriver),
+        Arc::new(InactiveLaunchDriver {
+            process_group_id: None,
+        }),
     ));
     let remount = Arc::new(WorkspaceRemountService::new(
         Arc::clone(&workspace),
@@ -168,6 +265,36 @@ fn build_services(fake: Arc<RemountWorkspaceServiceFake>) -> TestServices {
     let services = OperationServices::new(Arc::clone(&workspace), command, remount);
     TestServices {
         workspace,
+        command: Arc::clone(&services.command),
+        services,
+    }
+}
+
+fn build_services_with_process_group_controller(
+    fake: Arc<RemountWorkspaceServiceFake>,
+    controller: Arc<dyn ProcessGroupController>,
+    process_group_id: i32,
+) -> TestServices {
+    let workspace = Arc::new(WorkspaceManagerService::new(fake));
+    let command = Arc::new(
+        CommandOperationService::with_launch_driver_and_remount_controller_for_test(
+            Arc::clone(&workspace),
+            command_config(),
+            Arc::new(InactiveLaunchDriver {
+                process_group_id: Some(process_group_id),
+            }),
+            controller,
+        ),
+    );
+    let remount = Arc::new(WorkspaceRemountService::new(
+        Arc::clone(&workspace),
+        Arc::clone(&command),
+        WorkspaceRemountOptions::default(),
+    ));
+    let services = OperationServices::new(Arc::clone(&workspace), Arc::clone(&command), remount);
+    TestServices {
+        workspace,
+        command,
         services,
     }
 }
@@ -190,6 +317,13 @@ fn exec_input(workspace_id: WorkspaceId, workspace_root: PathBuf) -> ExecCommand
         cwd: None,
         timeout_seconds: None,
         yield_time_ms: Some(0),
+    }
+}
+
+fn command_context(caller_id: &str) -> CommandCallContext {
+    CommandCallContext {
+        caller_id: CallerId(caller_id.to_owned()),
+        trace: OperationTraceContext,
     }
 }
 
@@ -294,6 +428,126 @@ fn workspace_remount_no_active_command_path_succeeds_and_clears_pending() {
             .expect("remount state is readable"),
         WorkspaceRemountState::Active
     );
+}
+
+#[test]
+fn workspace_remount_live_command_success_finishes_before_resume() {
+    let fake = Arc::new(RemountWorkspaceServiceFake::default());
+    let controller = Arc::new(FakeProcessGroupController::default());
+    let services =
+        build_services_with_process_group_controller(Arc::clone(&fake), controller.clone(), 101);
+    let workspace_root = PathBuf::from("/workspace");
+    let mut remounted =
+        workspace_handle("workspace-1", "caller-1", "lease-2", workspace_root.clone());
+    remounted.snapshot.manifest_version = 2;
+    remounted.snapshot.root_hash = "root-2".to_owned();
+    remounted.snapshot.layer_paths = vec![PathBuf::from("/lower/two")];
+    remounted.base_revision = remounted.snapshot.base_revision();
+    fake.push_create_result(Ok(workspace_handle(
+        "workspace-1",
+        "caller-1",
+        "lease-1",
+        workspace_root.clone(),
+    )));
+    fake.push_remount_result(Ok(RemountWorkspaceResult {
+        handle: remounted,
+    }));
+    let handler = services
+        .workspace
+        .create(create_request("caller-1", workspace_root.clone()))
+        .expect("create workspace session succeeds");
+    services
+        .services
+        .exec_command(
+            exec_input(handler.workspace_id.clone(), workspace_root),
+            OperationTraceContext,
+        )
+        .expect("exec command succeeds");
+    controller.observe_state_on_resume(
+        Arc::clone(&services.workspace),
+        handler.workspace_id.clone(),
+    );
+
+    let report = services
+        .services
+        .remount
+        .compact_or_remount_session(handler.workspace_id.clone())
+        .expect("live remount succeeds");
+
+    assert!(report.remounted);
+    assert_eq!(report.command_inspection.active_commands, 1);
+    assert_eq!(controller.resumed(), vec![101]);
+    assert_eq!(controller.resume_states(), vec![WorkspaceRemountState::Active]);
+    assert_eq!(
+        services
+            .workspace
+            .remount_state(&WorkspaceId("workspace-1".to_owned()))
+            .expect("remount state is readable"),
+        WorkspaceRemountState::Active
+    );
+}
+
+#[test]
+fn workspace_remount_cancel_during_critical_switch_still_applies_and_resumes() {
+    let fake = Arc::new(RemountWorkspaceServiceFake::default());
+    let controller = Arc::new(FakeProcessGroupController::default());
+    let services =
+        build_services_with_process_group_controller(Arc::clone(&fake), controller.clone(), 101);
+    let workspace_root = PathBuf::from("/workspace");
+    let mut remounted =
+        workspace_handle("workspace-1", "caller-1", "lease-2", workspace_root.clone());
+    remounted.snapshot.manifest_version = 2;
+    remounted.snapshot.root_hash = "root-2".to_owned();
+    remounted.snapshot.layer_paths = vec![PathBuf::from("/lower/two")];
+    remounted.base_revision = remounted.snapshot.base_revision();
+    fake.push_create_result(Ok(workspace_handle(
+        "workspace-1",
+        "caller-1",
+        "lease-1",
+        workspace_root.clone(),
+    )));
+    fake.push_remount_result(Ok(RemountWorkspaceResult {
+        handle: remounted,
+    }));
+    let handler = services
+        .workspace
+        .create(create_request("caller-1", workspace_root.clone()))
+        .expect("create workspace session succeeds");
+    let command_id = services
+        .services
+        .exec_command(
+            exec_input(handler.workspace_id.clone(), workspace_root),
+            OperationTraceContext,
+        )
+        .expect("exec command succeeds")
+        .command_id
+        .expect("running command has id");
+    controller.observe_state_on_resume(
+        Arc::clone(&services.workspace),
+        handler.workspace_id.clone(),
+    );
+    let command = Arc::clone(&services.command);
+    fake.on_remount(Arc::new(move || {
+        command
+            .cancel(
+                CancelCommandInput {
+                    command_id: command_id.clone(),
+                },
+                command_context("caller-1"),
+            )
+            .expect("cancel during remount is accepted");
+    }));
+
+    let report = services
+        .services
+        .remount
+        .compact_or_remount_session(handler.workspace_id.clone())
+        .expect("live remount succeeds despite cancellation");
+
+    assert!(report.remounted);
+    assert_eq!(fake.remount_calls(), vec![handler.workspace_id]);
+    assert_eq!(controller.resumed(), vec![101]);
+    assert_eq!(controller.resume_states(), vec![WorkspaceRemountState::Active]);
 }
 
 #[test]

@@ -572,6 +572,52 @@ fn workspace_manager_apply_remount_refreshes_canonical_handle() {
 }
 
 #[test]
+fn workspace_manager_apply_remount_failure_blocks_and_keeps_session_available() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
+    fake.push_remount_result(Err(WorkspaceError::Setup {
+        step: "remount failed".to_owned(),
+    }));
+    let manager = manager_with(&fake);
+    manager
+        .create(create_request("caller-1"))
+        .expect("test operation succeeds");
+    let handler = manager
+        .begin_remount(WorkspaceId("workspace-1".to_owned()))
+        .expect("begin remount succeeds");
+
+    let error = manager
+        .apply_remount(
+            &handler,
+            RemountWorkspaceRequest {
+                layer_paths: vec![PathBuf::from("/lower/two")],
+            },
+        )
+        .expect_err("apply remount fails");
+
+    assert!(matches!(
+        error,
+        WorkspaceManagerError::Workspace(WorkspaceError::Setup { .. })
+    ));
+    assert!(!manager.is_remount_pending(&WorkspaceId("workspace-1".to_owned())));
+    match manager
+        .remount_state(&WorkspaceId("workspace-1".to_owned()))
+        .expect("remount state is readable")
+    {
+        WorkspaceRemountState::RemountBlocked { reason } => {
+            assert!(reason.contains("remount failed"));
+        }
+        other => panic!("expected blocked remount state, got {other:?}"),
+    }
+    assert!(manager
+        .resolve(
+            WorkspaceId("workspace-1".to_owned()),
+            CallerId("caller-1".to_owned()),
+        )
+        .is_ok());
+}
+
+#[test]
 fn workspace_manager_files_do_not_import_command_service() {
     let service = include_str!("../src/workspace_manager/service.rs");
     let session_manager = include_str!("../src/workspace_manager/session_manager.rs");
@@ -595,9 +641,12 @@ fn workspace_manager_rejects_remount_workspace_id_mismatch() {
     let handler = manager
         .create(create_request("caller-1"))
         .expect("test operation succeeds");
+    let handler = manager
+        .begin_remount(handler.workspace_id)
+        .expect("test operation succeeds");
 
     let error = manager
-        .remount_workspace(
+        .apply_remount(
             &handler,
             RemountWorkspaceRequest {
                 layer_paths: vec![PathBuf::from("/lower/two")],
@@ -615,6 +664,13 @@ fn workspace_manager_rejects_remount_workspace_id_mismatch() {
         fake.remount_calls(),
         vec![WorkspaceId("workspace-1".to_owned())]
     );
+    assert!(!manager.is_remount_pending(&WorkspaceId("workspace-1".to_owned())));
+    assert!(matches!(
+        manager
+            .remount_state(&WorkspaceId("workspace-1".to_owned()))
+            .expect("remount state is readable"),
+        WorkspaceRemountState::RemountBlocked { .. }
+    ));
     assert!(manager
         .resolve(
             WorkspaceId("workspace-1".to_owned()),

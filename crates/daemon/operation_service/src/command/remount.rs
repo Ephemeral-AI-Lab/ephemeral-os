@@ -167,7 +167,7 @@ impl CommandRemountQuiesce {
         }
         self.resume_command_records();
         self.switch_state = RemountSwitchState::Finished;
-        self.inspection.resumed = had_held_process_groups && all_resumed;
+        self.inspection.resumed |= had_held_process_groups && all_resumed;
         all_resumed
     }
 
@@ -201,7 +201,8 @@ impl Drop for CommandRemountQuiesce {
     }
 }
 
-trait ProcessGroupController: Send + Sync {
+#[doc(hidden)]
+pub trait ProcessGroupController: Send + Sync {
     fn inspect_command_process_group(
         &self,
         pgid: i32,
@@ -211,7 +212,7 @@ trait ProcessGroupController: Send + Sync {
     fn resume_process_group_id(&self, pgid: i32) -> bool;
 }
 
-struct ProcProcessGroupController;
+pub(crate) struct ProcProcessGroupController;
 
 impl ProcessGroupController for ProcProcessGroupController {
     fn inspect_command_process_group(
@@ -233,10 +234,7 @@ impl CommandOperationService {
         &self,
         workspace_id: &WorkspaceId,
     ) -> CommandRemountQuiesce {
-        self.begin_workspace_remount_quiesce_with_controller(
-            workspace_id,
-            Arc::new(ProcProcessGroupController),
-        )
+        self.begin_workspace_remount_quiesce_with_controller(workspace_id, self.remount_controller())
     }
 
     fn begin_workspace_remount_quiesce_with_controller(
@@ -244,6 +242,7 @@ impl CommandOperationService {
         workspace_id: &WorkspaceId,
         controller: Arc<dyn ProcessGroupController>,
     ) -> CommandRemountQuiesce {
+        let _admission_guard = self.lock_remount_admission();
         let command_ids = self.registry().commands_for_workspace(workspace_id);
         let cancellation = RemountCancellationToken::new();
         let mut quiesce = CommandRemountQuiesce {
@@ -284,6 +283,24 @@ impl CommandOperationService {
                 continue;
             };
             quiesce.inspection.process_group_ids.push(pgid);
+            quiesce.command_ids.push(command_id.clone());
+            let cancellation = quiesce.cancellation.clone();
+            if self
+                .process_store()
+                .update_active(&command_id, |active| {
+                    active.lifecycle_state = CommandLifecycleState::QuiescedForRemount;
+                    active.cancellation = CancellationState::None;
+                    active.remount_cancellation = Some(cancellation);
+                    active.remount_switch_state = Some(RemountSwitchState::Quiescing);
+                })
+                .is_none()
+            {
+                quiesce
+                    .inspection
+                    .blocked_reason
+                    .get_or_insert_with(|| "active_command_missing".to_owned());
+                continue;
+            }
             let command_report = quiesce
                 .controller
                 .inspect_command_process_group(pgid, &workspace_root);
@@ -291,14 +308,6 @@ impl CommandOperationService {
             merge_report(&mut quiesce.inspection, command_report);
             if held {
                 quiesce.held_process_group_ids.push(pgid);
-                quiesce.command_ids.push(command_id.clone());
-                let cancellation = quiesce.cancellation.clone();
-                self.process_store().update_active(&command_id, |active| {
-                    active.lifecycle_state = CommandLifecycleState::QuiescedForRemount;
-                    active.cancellation = CancellationState::None;
-                    active.remount_cancellation = Some(cancellation);
-                    active.remount_switch_state = Some(RemountSwitchState::ReadyToSwitch);
-                });
             }
         }
 
@@ -306,7 +315,7 @@ impl CommandOperationService {
         quiesce.inspection.command_ids.dedup();
         quiesce.inspection.process_group_ids.sort_unstable();
         quiesce.inspection.process_group_ids.dedup();
-        quiesce.switch_state = RemountSwitchState::ReadyToSwitch;
+        quiesce.set_switch_state(RemountSwitchState::ReadyToSwitch);
         if !quiesce.inspection.can_live_remount() {
             quiesce.resume();
         }
@@ -484,17 +493,39 @@ fn inspect_pinned_paths(
     workspace_root: &Path,
 ) {
     for pid in pids {
-        if proc_link_points_inside(*pid, "cwd", workspace_root) {
-            report.pinned_cwd_count += 1;
-            report
-                .blocked_reason
-                .get_or_insert_with(|| "cwd_pinned_workspace".to_owned());
+        match proc_link_points_inside(*pid, "cwd", workspace_root) {
+            Some(true) => {
+                report.pinned_cwd_count += 1;
+                report
+                    .blocked_reason
+                    .get_or_insert_with(|| "cwd_pinned_workspace".to_owned());
+            }
+            Some(false) => {}
+            None => {
+                report
+                    .blocked_reason
+                    .get_or_insert_with(|| "cwd_unavailable".to_owned());
+                report
+                    .detail
+                    .get_or_insert_with(|| format!("failed to inspect cwd for pid {pid}"));
+            }
         }
-        if proc_link_points_inside(*pid, "root", workspace_root) {
-            report.pinned_root_count += 1;
-            report
-                .blocked_reason
-                .get_or_insert_with(|| "root_pinned_workspace".to_owned());
+        match proc_link_points_inside(*pid, "root", workspace_root) {
+            Some(true) => {
+                report.pinned_root_count += 1;
+                report
+                    .blocked_reason
+                    .get_or_insert_with(|| "root_pinned_workspace".to_owned());
+            }
+            Some(false) => {}
+            None => {
+                report
+                    .blocked_reason
+                    .get_or_insert_with(|| "root_unavailable".to_owned());
+                report
+                    .detail
+                    .get_or_insert_with(|| format!("failed to inspect root for pid {pid}"));
+            }
         }
         match inspect_proc_fds(*pid, workspace_root) {
             Some(count) => {
@@ -521,6 +552,13 @@ fn inspect_pinned_paths(
                     .blocked_reason
                     .get_or_insert_with(|| "mapped_file_pinned_workspace".to_owned());
             }
+        } else {
+            report
+                .blocked_reason
+                .get_or_insert_with(|| "mapped_file_unavailable".to_owned());
+            report
+                .detail
+                .get_or_insert_with(|| format!("failed to inspect mapped files for pid {pid}"));
         }
         match mountinfo_has_workspace_mount(*pid, workspace_root) {
             Some(true) => report.mountinfo_checked_count += 1,
@@ -543,16 +581,20 @@ fn inspect_pinned_paths(
 }
 
 #[cfg(target_os = "linux")]
-fn proc_link_points_inside(pid: i32, name: &str, root: &Path) -> bool {
-    std::fs::read_link(format!("/proc/{pid}/{name}")).is_ok_and(|path| path_is_inside(&path, root))
+fn proc_link_points_inside(pid: i32, name: &str, root: &Path) -> Option<bool> {
+    std::fs::read_link(format!("/proc/{pid}/{name}"))
+        .ok()
+        .map(|path| path_is_inside(&path, root))
 }
 
 #[cfg(target_os = "linux")]
 fn inspect_proc_fds(pid: i32, root: &Path) -> Option<usize> {
     let entries = std::fs::read_dir(format!("/proc/{pid}/fd")).ok()?;
     let mut count = 0;
-    for entry in entries.filter_map(Result::ok) {
-        if std::fs::read_link(entry.path()).is_ok_and(|path| path_is_inside(&path, root)) {
+    for entry in entries {
+        let entry = entry.ok()?;
+        let path = std::fs::read_link(entry.path()).ok()?;
+        if path_is_inside(&path, root) {
             count += 1;
         }
     }
@@ -693,6 +735,7 @@ mod tests {
         reports: Mutex<VecDeque<CommandRemountInspection>>,
         resumed: Mutex<Vec<i32>>,
         cancel_during_inspection: Mutex<Option<(Arc<CommandOperationService>, CommandId)>>,
+        observed_lifecycle_after_cancel: Mutex<Option<CommandLifecycleState>>,
     }
 
     impl FakeProcessGroupController {
@@ -719,6 +762,13 @@ mod tests {
                 .cancel_during_inspection
                 .lock()
                 .expect("test operation succeeds") = Some((service, command_id));
+        }
+
+        fn observed_lifecycle_after_cancel(&self) -> Option<CommandLifecycleState> {
+            self.observed_lifecycle_after_cancel
+                .lock()
+                .expect("test operation succeeds")
+                .clone()
         }
     }
 
@@ -748,6 +798,16 @@ mod tests {
                         };
                     })
                     .expect("active command exists");
+                let lifecycle = service
+                    .process_store()
+                    .active(&command_id)
+                    .expect("active command exists")
+                    .lifecycle_state
+                    .clone();
+                *self
+                    .observed_lifecycle_after_cancel
+                    .lock()
+                    .expect("test operation succeeds") = Some(lifecycle);
             }
             self.reports
                 .lock()
@@ -1065,6 +1125,10 @@ mod tests {
         );
 
         assert_eq!(controller.resumed(), Vec::<i32>::new());
+        assert_eq!(
+            controller.observed_lifecycle_after_cancel(),
+            Some(CommandLifecycleState::QuiescedForRemount)
+        );
         assert_eq!(
             service
                 .process_store()

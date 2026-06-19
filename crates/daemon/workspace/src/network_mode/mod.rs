@@ -1,7 +1,7 @@
-//! Implementations for the workspace network topologies.
+//! Implementations for workspace isolation profiles.
 //!
-//! Both adapters create private overlay-backed workspaces. Host mode shares the
-//! host network namespace; isolated mode adds a dedicated network namespace and
+//! Both adapters create private overlay-backed workspaces. Host mode preserves
+//! host network access; isolated mode adds a dedicated network boundary and
 //! network plumbing. Workspace lifetime and publish behavior are caller-owned.
 
 pub mod host;

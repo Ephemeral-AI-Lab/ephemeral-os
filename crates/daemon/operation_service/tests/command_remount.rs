@@ -1,7 +1,10 @@
 use std::collections::VecDeque;
 use std::path::PathBuf;
+use std::sync::mpsc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Duration;
 
 use command::process::{
     CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec,
@@ -32,6 +35,9 @@ struct TestServices {
 #[derive(Default)]
 struct PendingGuardWorkspaceService {
     create_results: Mutex<VecDeque<Result<WorkspaceHandle, WorkspaceError>>>,
+    remount_results: Mutex<VecDeque<Result<RemountWorkspaceResult, WorkspaceError>>>,
+    remount_calls: Mutex<Vec<WorkspaceId>>,
+    remount_notifier: Mutex<Option<mpsc::Sender<()>>>,
 }
 
 impl PendingGuardWorkspaceService {
@@ -40,6 +46,27 @@ impl PendingGuardWorkspaceService {
             .lock()
             .expect("test operation succeeds")
             .push_back(result);
+    }
+
+    fn push_remount_result(&self, result: Result<RemountWorkspaceResult, WorkspaceError>) {
+        self.remount_results
+            .lock()
+            .expect("test operation succeeds")
+            .push_back(result);
+    }
+
+    fn notify_on_remount(&self, notifier: mpsc::Sender<()>) {
+        *self
+            .remount_notifier
+            .lock()
+            .expect("test operation succeeds") = Some(notifier);
+    }
+
+    fn remount_calls(&self) -> Vec<WorkspaceId> {
+        self.remount_calls
+            .lock()
+            .expect("test operation succeeds")
+            .clone()
     }
 }
 
@@ -71,12 +98,30 @@ impl WorkspaceService for PendingGuardWorkspaceService {
 
     fn remount_workspace(
         &self,
-        _handle: &WorkspaceHandle,
+        handle: &WorkspaceHandle,
         _request: RemountWorkspaceRequest,
     ) -> Result<RemountWorkspaceResult, WorkspaceError> {
-        Err(WorkspaceError::Setup {
-            step: "remount result not configured".to_owned(),
-        })
+        self.remount_calls
+            .lock()
+            .expect("test operation succeeds")
+            .push(handle.id.clone());
+        if let Some(notifier) = self
+            .remount_notifier
+            .lock()
+            .expect("test operation succeeds")
+            .as_ref()
+        {
+            let _ = notifier.send(());
+        }
+        self.remount_results
+            .lock()
+            .expect("test operation succeeds")
+            .pop_front()
+            .unwrap_or_else(|| {
+                Err(WorkspaceError::Setup {
+                    step: "remount result not configured".to_owned(),
+                })
+            })
     }
 
     fn destroy_workspace(
@@ -127,12 +172,82 @@ impl CommandLaunchDriver for PendingGuardLaunchDriver {
     }
 }
 
+struct BlockingLaunchDriver {
+    spawn_started: Mutex<Option<mpsc::Sender<()>>>,
+    release_spawn: Mutex<mpsc::Receiver<()>>,
+}
+
+impl BlockingLaunchDriver {
+    fn new(spawn_started: mpsc::Sender<()>, release_spawn: mpsc::Receiver<()>) -> Self {
+        Self {
+            spawn_started: Mutex::new(Some(spawn_started)),
+            release_spawn: Mutex::new(release_spawn),
+        }
+    }
+}
+
+impl CommandLaunchDriver for BlockingLaunchDriver {
+    fn spawn(
+        &self,
+        spec: CommandProcessSpec,
+        _parts: CommandProcessSpawn<'_>,
+    ) -> Result<CommandProcess, CommandServiceError> {
+        if let Some(sender) = self
+            .spawn_started
+            .lock()
+            .expect("test operation succeeds")
+            .take()
+        {
+            sender.send(()).expect("test receiver is alive");
+        }
+        self.release_spawn
+            .lock()
+            .expect("test operation succeeds")
+            .recv()
+            .expect("test releases spawn");
+        Ok(CommandProcess::inactive_for_test(spec))
+    }
+
+    fn wait_for_initial_yield(
+        &self,
+        _process: &CommandProcess,
+        _config: &command::CommandConfig,
+        _yield_time_ms: u64,
+        _start_offset: u64,
+    ) -> WaitOutcome<CommandProcessExit> {
+        WaitOutcome::Running(String::new())
+    }
+}
+
 fn build_services(fake: Arc<PendingGuardWorkspaceService>) -> TestServices {
     let workspace = Arc::new(WorkspaceManagerService::new(fake));
     let command = Arc::new(CommandOperationService::with_launch_driver_for_test(
         Arc::clone(&workspace),
         command_config(),
         Arc::new(PendingGuardLaunchDriver),
+    ));
+    let remount = Arc::new(WorkspaceRemountService::new(
+        Arc::clone(&workspace),
+        Arc::clone(&command),
+        WorkspaceRemountOptions::default(),
+    ));
+    let services = OperationServices::new(Arc::clone(&workspace), Arc::clone(&command), remount);
+    TestServices {
+        workspace,
+        command,
+        services,
+    }
+}
+
+fn build_services_with_launch_driver(
+    fake: Arc<PendingGuardWorkspaceService>,
+    launch_driver: Arc<dyn CommandLaunchDriver>,
+) -> TestServices {
+    let workspace = Arc::new(WorkspaceManagerService::new(fake));
+    let command = Arc::new(CommandOperationService::with_launch_driver_for_test(
+        Arc::clone(&workspace),
+        command_config(),
+        launch_driver,
     ));
     let remount = Arc::new(WorkspaceRemountService::new(
         Arc::clone(&workspace),
@@ -288,6 +403,70 @@ fn command_remount_start_rejects_for_pending_persistent_workspace() {
         CommandServiceError::WorkspaceRemountPending { workspace_id }
             if workspace_id == WorkspaceId("workspace-1".to_owned())
     ));
+}
+
+#[test]
+fn command_remount_waits_for_in_flight_persistent_exec_admission() {
+    let fake = Arc::new(PendingGuardWorkspaceService::default());
+    let (spawn_started_tx, spawn_started_rx) = mpsc::channel();
+    let (release_spawn_tx, release_spawn_rx) = mpsc::channel();
+    let (remount_called_tx, remount_called_rx) = mpsc::channel();
+    fake.notify_on_remount(remount_called_tx);
+    let services = build_services_with_launch_driver(
+        Arc::clone(&fake),
+        Arc::new(BlockingLaunchDriver::new(spawn_started_tx, release_spawn_rx)),
+    );
+    let workspace_root = PathBuf::from("/workspace");
+    fake.push_create_result(Ok(workspace_handle(
+        "workspace-1",
+        "caller-1",
+        "lease-1",
+        workspace_root.clone(),
+    )));
+    let handler = services
+        .workspace
+        .create(create_request("caller-1", workspace_root.clone()))
+        .expect("create workspace session succeeds");
+
+    let exec_services = services.services.clone();
+    let exec_workspace_id = handler.workspace_id.clone();
+    let exec_thread = thread::spawn(move || {
+        exec_services.exec_command(
+            exec_input(exec_workspace_id, workspace_root),
+            OperationTraceContext,
+        )
+    });
+    spawn_started_rx
+        .recv_timeout(Duration::from_secs(1))
+        .expect("exec reached blocked spawn");
+
+    let remount = Arc::clone(&services.services.remount);
+    let remount_workspace_id = handler.workspace_id.clone();
+    let remount_thread =
+        thread::spawn(move || remount.compact_or_remount_session(remount_workspace_id));
+
+    assert!(
+        remount_called_rx
+            .recv_timeout(Duration::from_millis(100))
+            .is_err(),
+        "remount must not scan past in-flight persistent exec admission"
+    );
+    release_spawn_tx.send(()).expect("exec thread is alive");
+    let output = exec_thread
+        .join()
+        .expect("exec thread does not panic")
+        .expect("exec succeeds");
+    assert!(output.command_id.is_some());
+
+    let report = remount_thread
+        .join()
+        .expect("remount thread does not panic")
+        .expect("remount returns blocked report");
+    assert_eq!(
+        report.blocked_reason.as_deref(),
+        Some("process_group_unavailable")
+    );
+    assert!(fake.remount_calls().is_empty());
 }
 
 #[test]
