@@ -63,17 +63,3 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn command_registry_contains_only_binding_map() {
-        let CommandRegistry {
-            command_workspace_session,
-        } = CommandRegistry::new();
-
-        assert!(lock(&command_workspace_session).is_empty());
-    }
-}

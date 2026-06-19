@@ -1,7 +1,8 @@
 use crate::error::WorkspaceError;
 use crate::model::{RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceHandle};
 use crate::profile::RemountProbe;
-use crate::service::{active_mode_id, workspace_error_from_mode_error, WorkspaceRuntimeService};
+use crate::service::support::{active_mode_id, workspace_error_from_mode_error};
+use crate::service::WorkspaceRuntimeService;
 
 impl WorkspaceRuntimeService {
     pub fn remount_workspace(

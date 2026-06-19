@@ -321,7 +321,3 @@ fn retained_finalized_metadata(state: &FinalizationState) -> Option<CommandFinal
         | FinalizationState::Complete => None,
     }
 }
-
-#[cfg(test)]
-#[path = "finalize_tests.rs"]
-mod tests;

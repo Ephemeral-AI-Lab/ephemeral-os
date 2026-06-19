@@ -5,7 +5,8 @@ use crate::model::{
     CaptureChangesRequest, CapturedWorkspaceChanges, ChangedPathKind, ProtectedPathDrop,
     WorkspaceHandle,
 };
-use crate::service::{active_mode_id, snapshot_from_public, WorkspaceRuntimeService};
+use crate::service::support::{active_mode_id, snapshot_from_public};
+use crate::service::WorkspaceRuntimeService;
 
 impl WorkspaceRuntimeService {
     pub fn capture_changes(

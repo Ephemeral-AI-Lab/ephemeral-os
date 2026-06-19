@@ -1,11 +1,11 @@
 use crate::error::WorkspaceError;
 use crate::model::{CreateWorkspaceRequest, WorkspaceHandle};
 use crate::profile::WorkspaceModeId;
-use crate::service::{
+use crate::service::support::{
     ensure_absolute, ensure_configured_workspace_root, ensure_non_empty,
     mode_snapshot_from_layerstack, workspace_error_from_mode_error, workspace_id_from_mode_id,
-    WorkspaceRuntimeService,
 };
+use crate::service::WorkspaceRuntimeService;
 
 impl WorkspaceRuntimeService {
     pub fn create_workspace(

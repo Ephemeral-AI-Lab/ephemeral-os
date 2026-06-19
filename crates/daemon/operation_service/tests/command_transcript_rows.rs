@@ -400,7 +400,7 @@ fn command_transcript_rows_authorize_active_reads_by_caller() {
 
 #[test]
 fn command_transcript_rows_keep_completed_rows_and_authorization() {
-    let transcript = "completed one\ncompleted two\n";
+    let transcript = "completed one\ncompleted two\ncompleted three\n";
     let (env, command_id) = session_with_driver(TranscriptLaunchDriver::completed(
         transcript,
         "terminal stdout\n",
@@ -432,7 +432,7 @@ fn command_transcript_rows_keep_completed_rows_and_authorization() {
     assert_eq!(lines.exit_code, Some(0));
     assert_eq!(poll.status, lines.status);
     assert_eq!(poll.exit_code, lines.exit_code);
-    assert_eq!(lines.total_lines, 2);
+    assert_eq!(lines.total_lines, 3);
     assert_eq!(
         lines.output,
         vec![
@@ -446,7 +446,38 @@ fn command_transcript_rows_keep_completed_rows_and_authorization() {
                 stream: CommandStream::Stdout,
                 text: "completed two".to_owned(),
             },
+            CommandTranscriptRow {
+                offset: 2,
+                stream: CommandStream::Stdout,
+                text: "completed three".to_owned(),
+            },
         ]
+    );
+
+    let window = env
+        .command
+        .read_lines(
+            ReadCommandLinesInput {
+                command_id: command_id.clone(),
+                offset: 1,
+                limit: 1,
+            },
+            context("caller-owner"),
+        )
+        .expect("owner can read a completed command window");
+    assert_eq!(window.status, CommandStatus::Completed);
+    assert_eq!(window.exit_code, Some(0));
+    assert_eq!(window.total_lines, 3);
+    assert_eq!(window.truncated_before, 0);
+    assert_eq!(window.next_offset, 2);
+    assert!(window.output_truncated);
+    assert_eq!(
+        window.output,
+        vec![CommandTranscriptRow {
+            offset: 1,
+            stream: CommandStream::Stdout,
+            text: "completed two".to_owned(),
+        }]
     );
 
     let error = env

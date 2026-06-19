@@ -25,12 +25,23 @@ pub struct BaseRevision {
     pub layer_count: usize,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct LayerStackSnapshotRef {
     pub lease_id: LeaseId,
     pub manifest_version: i64,
     pub root_hash: String,
     pub layer_paths: Vec<PathBuf>,
+}
+
+impl fmt::Debug for LayerStackSnapshotRef {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("LayerStackSnapshotRef")
+            .field("lease_id", &self.lease_id)
+            .field("manifest_version", &self.manifest_version)
+            .field("root_hash", &self.root_hash)
+            .field("layer_count", &self.layer_paths.len())
+            .finish()
+    }
 }
 
 impl LayerStackSnapshotRef {

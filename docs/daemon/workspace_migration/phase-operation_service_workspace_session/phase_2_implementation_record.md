@@ -1190,7 +1190,15 @@ Rules:
   - `Cargo.lock`
   - `crates/daemon/workspace/src/model.rs`
   - `crates/daemon/workspace/src/lib.rs`
+  - `crates/daemon/workspace/src/service.rs`
+  - `crates/daemon/workspace/src/service/impls/capture_changes.rs`
+  - `crates/daemon/workspace/src/service/impls/create_workspace.rs`
+  - `crates/daemon/workspace/src/service/impls/destroy_workspace.rs`
+  - `crates/daemon/workspace/src/service/impls/latest_snapshot.rs`
+  - `crates/daemon/workspace/src/service/impls/mod.rs`
+  - `crates/daemon/workspace/src/service/impls/remount_workspace.rs`
   - `crates/daemon/workspace/tests/unit/model.rs`
+  - `crates/daemon/workspace/tests/unit/service.rs`
   - `crates/daemon/command/Cargo.toml`
   - `crates/daemon/command/src/process.rs`
   - `crates/daemon/command/src/pty.rs`
@@ -1209,6 +1217,7 @@ Rules:
   - `crates/daemon/operation_service/tests/workspace_remount.rs`
   - `crates/daemon/operation_service/tests/workspace_session.rs`
   - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
+  - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_milestone_6_8_minimal_command_launch_SPEC.md`
 - Verification:
   - `CARGO_TARGET_DIR=/tmp/eos-minimal-command-launch-target cargo test -p workspace model`:
     passed, 7 matching unit tests.
@@ -1263,14 +1272,30 @@ Rules:
 - Status: Complete.
 - Files changed:
   - `crates/daemon/workspace/src/service.rs`
+  - `crates/daemon/workspace/src/service/hooks.rs`
+  - `crates/daemon/workspace/src/service/support.rs`
+  - `crates/daemon/workspace/src/service/impls/capture_changes.rs`
+  - `crates/daemon/workspace/src/service/impls/create_workspace.rs`
+  - `crates/daemon/workspace/src/service/impls/destroy_workspace.rs`
+  - `crates/daemon/workspace/src/service/impls/latest_snapshot.rs`
+  - `crates/daemon/workspace/src/service/impls/remount_workspace.rs`
   - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
 - Cleanup notes:
   - `cargo machete --with-metadata` found no unused dependencies, so no
     dependency pruning was justified.
+  - `workspace::WorkspaceRuntimeService` remains concrete; the removed
+    `WorkspaceService` trait was not reintroduced.
+  - `service.rs` is now the thin runtime shell. Hook aliases live in
+    `service/hooks.rs`, and internal validation/conversion helpers live in
+    `service/support.rs`.
   - Static scans for removed command-launch APIs found no code matches for
     `WorkspaceCommandRequest`, `WorkspaceLaunchError`,
     `command_request: serde_json::Value`, `parts.command_request`, or
     workspace `command_request` builders.
+  - Static scans for stale workspace-service API names found no Rust code
+    matches for `WorkspaceService`, `WorkspaceTestCallbacks`,
+    `from_test_callbacks`, or `test_callbacks`; historical design docs were
+    left as historical records.
   - The only compiler-backed cleanup target was the workspace runtime hook test
     seam: clippy flagged complex callback field types in
     `WorkspaceRuntimeHooks`. Those function signatures are now factored into
@@ -1279,12 +1304,17 @@ Rules:
     behavior, not dead compatibility code.
 - Verification:
   - `cargo machete --with-metadata`: passed; no unused dependencies found.
+  - `cargo fmt --check`: passed.
+  - `git diff --check`: passed.
   - `CARGO_TARGET_DIR=/tmp/eos-cleanup-minimal-command-launch-target cargo clippy -p command -p workspace -p operation_service --all-targets --no-deps -- -D warnings`:
+    passed.
+  - `cargo clippy -p workspace -p operation_service -p command --all-targets --no-deps -- -D warnings`:
     passed.
   - `CARGO_TARGET_DIR=/tmp/eos-cleanup-minimal-command-launch-target cargo test -p workspace service`:
     passed, 2 matching unit tests.
   - `CARGO_TARGET_DIR=/tmp/eos-cleanup-minimal-command-launch-target cargo test -p operation_service command_exec`:
     passed, 7 matching unit tests and 12 matching integration tests.
+  - `cargo test -p workspace -p operation_service`: passed.
 
 ## Milestone 7: Daemon Dispatch Migration Away From WorkspaceRuntime
 

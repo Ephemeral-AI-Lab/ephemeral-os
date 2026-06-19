@@ -1,6 +1,7 @@
 use crate::error::WorkspaceError;
 use crate::model::{DestroyWorkspaceRequest, DestroyWorkspaceResult, WorkspaceHandle};
-use crate::service::{active_mode_id, workspace_error_from_mode_error, WorkspaceRuntimeService};
+use crate::service::support::{active_mode_id, workspace_error_from_mode_error};
+use crate::service::WorkspaceRuntimeService;
 
 impl WorkspaceRuntimeService {
     pub fn destroy_workspace(

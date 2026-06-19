@@ -1,6 +1,7 @@
 use crate::error::WorkspaceError;
 use crate::model::{LatestSnapshotRequest, ReadonlySnapshotHandle};
-use crate::service::{ensure_absolute, ensure_non_empty, WorkspaceRuntimeService};
+use crate::service::support::{ensure_absolute, ensure_non_empty};
+use crate::service::WorkspaceRuntimeService;
 
 impl WorkspaceRuntimeService {
     pub fn latest_snapshot(

@@ -93,6 +93,12 @@ fn public_handle_debug_does_not_expose_internal_storage_or_namespace_fields() {
     let debug = format!("{public:?}");
 
     assert_no_internal_fields(&debug);
+    for forbidden in ["/lower/one", "/lower/two"] {
+        assert!(
+            !debug.contains(forbidden),
+            "public handle debug output exposed snapshot path {forbidden}: {debug}"
+        );
+    }
 }
 
 #[test]
