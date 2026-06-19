@@ -1,11 +1,17 @@
+#[path = "service/contract.rs"]
 pub mod contract;
 pub mod error;
+#[path = "service/launch.rs"]
 mod launch;
+#[path = "service/process_store.rs"]
 pub mod process_store;
+#[path = "service/registry.rs"]
 pub mod registry;
 pub mod service;
+#[path = "service/transcript.rs"]
 mod transcript;
 
+#[path = "service/finalize.rs"]
 pub(crate) mod finalize;
 
 pub use contract::{

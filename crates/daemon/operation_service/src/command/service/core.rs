@@ -48,8 +48,9 @@ impl CommandOperationService {
         }
     }
 
+    #[doc(hidden)]
     #[must_use]
-    pub fn with_launch_driver(
+    pub fn with_launch_driver_for_test(
         workspace: Arc<WorkspaceSessionService>,
         config: ::command::CommandConfig,
         launch_driver: Arc<dyn CommandLaunchDriver>,
@@ -66,8 +67,9 @@ impl CommandOperationService {
         }
     }
 
+    #[doc(hidden)]
     #[must_use]
-    pub fn with_launch_driver_and_remount_controller(
+    pub fn with_launch_driver_and_remount_controller_for_test(
         workspace: Arc<WorkspaceSessionService>,
         config: ::command::CommandConfig,
         launch_driver: Arc<dyn CommandLaunchDriver>,

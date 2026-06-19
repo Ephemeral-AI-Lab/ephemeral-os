@@ -621,7 +621,7 @@ fn workspace_session_apply_remount_failure_blocks_and_keeps_session_available() 
 #[test]
 fn workspace_session_files_do_not_import_command_service() {
     let service = include_str!("../src/workspace_session/service.rs");
-    let session_store = include_str!("../src/workspace_session/session_store.rs");
+    let session_store = include_str!("../src/workspace_session/service/session_store.rs");
     let error = include_str!("../src/workspace_session/error.rs");
 
     for source in [service, session_store, error] {

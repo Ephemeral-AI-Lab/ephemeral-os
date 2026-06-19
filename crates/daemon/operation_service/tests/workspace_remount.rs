@@ -271,7 +271,7 @@ impl ProcessGroupController for FakeProcessGroupController {
 
 fn build_services(fake: Arc<RemountWorkspaceServiceFake>) -> TestServices {
     let workspace = Arc::new(WorkspaceSessionService::new(fake_workspace_runtime(fake)));
-    let command = Arc::new(CommandOperationService::with_launch_driver(
+    let command = Arc::new(CommandOperationService::with_launch_driver_for_test(
         Arc::clone(&workspace),
         command_config(),
         Arc::new(InactiveLaunchDriver {
@@ -300,7 +300,7 @@ fn build_services_with_process_group_controller(
 ) -> TestServices {
     let workspace = Arc::new(WorkspaceSessionService::new(fake_workspace_runtime(fake)));
     let command = Arc::new(
-        CommandOperationService::with_launch_driver_and_remount_controller(
+        CommandOperationService::with_launch_driver_and_remount_controller_for_test(
             Arc::clone(&workspace),
             command_config(),
             Arc::new(InactiveLaunchDriver {

@@ -198,6 +198,7 @@ impl Drop for CommandRemountQuiesce {
     }
 }
 
+#[doc(hidden)]
 pub trait ProcessGroupController: Send + Sync {
     fn inspect_command_process_group(
         &self,
