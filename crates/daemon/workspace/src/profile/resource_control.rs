@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::time::Instant;
 
+use crate::lifecycle::record_phase_ms;
 use crate::namespace::NamespaceRuntime;
-use crate::profile::common::record_phase_ms;
 use crate::profile::manager::IsolatedNetworkError;
 use crate::profile::WorkspaceModeHandle;
 

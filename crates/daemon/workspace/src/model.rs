@@ -138,20 +138,27 @@ impl WorkspaceHandle {
         workdir: PathBuf,
         cgroup_path: Option<PathBuf>,
     ) -> Self {
+        let layer_paths = snapshot.layer_paths.clone();
         Self::with_launch_for_test(
             id,
             owner,
             workspace_root.clone(),
             profile,
-            snapshot.clone(),
-            Some(WorkspaceLaunchContext::holder_backed_for_test(
+            snapshot,
+            Some(WorkspaceLaunchContext {
                 profile,
                 workspace_root,
-                snapshot.layer_paths.clone(),
+                layer_paths,
                 upperdir,
                 workdir,
+                holder_fds: Some(WorkspaceLaunchFds {
+                    user: Some(10),
+                    mnt: Some(11),
+                    pid: Some(12),
+                    net: (profile == WorkspaceProfile::Isolated).then_some(13),
+                }),
                 cgroup_path,
-            )),
+            }),
         )
     }
 
@@ -167,20 +174,22 @@ impl WorkspaceHandle {
         workdir: PathBuf,
         cgroup_path: Option<PathBuf>,
     ) -> Self {
+        let layer_paths = snapshot.layer_paths.clone();
         Self::with_launch_for_test(
             id,
             owner,
             workspace_root.clone(),
             profile,
-            snapshot.clone(),
-            Some(WorkspaceLaunchContext::unavailable_for_test(
+            snapshot,
+            Some(WorkspaceLaunchContext {
                 profile,
                 workspace_root,
-                snapshot.layer_paths.clone(),
+                layer_paths,
                 upperdir,
                 workdir,
+                holder_fds: None,
                 cgroup_path,
-            )),
+            }),
         )
     }
 
@@ -240,51 +249,6 @@ impl fmt::Debug for WorkspaceLaunchContext {
 }
 
 impl WorkspaceLaunchContext {
-    #[must_use]
-    pub fn holder_backed_for_test(
-        profile: WorkspaceProfile,
-        workspace_root: PathBuf,
-        layer_paths: Vec<PathBuf>,
-        upperdir: PathBuf,
-        workdir: PathBuf,
-        cgroup_path: Option<PathBuf>,
-    ) -> Self {
-        Self {
-            profile,
-            workspace_root,
-            layer_paths,
-            upperdir,
-            workdir,
-            holder_fds: Some(WorkspaceLaunchFds {
-                user: Some(10),
-                mnt: Some(11),
-                pid: Some(12),
-                net: (profile == WorkspaceProfile::Isolated).then_some(13),
-            }),
-            cgroup_path,
-        }
-    }
-
-    #[must_use]
-    pub fn unavailable_for_test(
-        profile: WorkspaceProfile,
-        workspace_root: PathBuf,
-        layer_paths: Vec<PathBuf>,
-        upperdir: PathBuf,
-        workdir: PathBuf,
-        cgroup_path: Option<PathBuf>,
-    ) -> Self {
-        Self {
-            profile,
-            workspace_root,
-            layer_paths,
-            upperdir,
-            workdir,
-            holder_fds: None,
-            cgroup_path,
-        }
-    }
-
     pub fn entry(&self) -> Result<WorkspaceEntry, WorkspaceEntryError> {
         Ok(WorkspaceEntry {
             workspace_root: self.workspace_root.clone(),

@@ -11,9 +11,9 @@ use crate::capture::{
 };
 use crate::commit::{
     git_metadata::{is_canonical_loose_object_path, relative_parts as git_metadata_relative_parts},
-    publish_command_decisions_for_manifest_with_protected_drops,
-    publish_decisions_for_manifest_with_protected_drops, CaptureRouteStats, ChangesetResult,
-    CommitError, CommitOptions, CommitWriter, PublishDecision, Route, RouteDropReason,
+    publish_command_decisions_for_manifest_with_protected_drops, CaptureRouteStats,
+    ChangesetResult, CommitError, CommitOptions, CommitWriter, PublishDecision, Route,
+    RouteDropReason,
 };
 use crate::{LayerStack, LayerStackError};
 
@@ -356,75 +356,6 @@ pub fn compact_snapshot_for_remount(
         before_layer_count: manifest.layers.len(),
         after_layer_count: 1,
     })
-}
-
-pub(crate) fn commit_direct(
-    root: &Path,
-    snapshot_version: Option<u64>,
-    changes: &[LayerChange],
-    base_hashes: &[(LayerPath, Option<String>)],
-) -> Result<ChangesetResult, CommitError> {
-    commit_direct_with_options(
-        root,
-        snapshot_version,
-        changes,
-        base_hashes,
-        CommitOptions::default(),
-    )
-}
-
-pub(crate) fn commit_direct_with_options(
-    root: &Path,
-    snapshot_version: Option<u64>,
-    changes: &[LayerChange],
-    base_hashes: &[(LayerPath, Option<String>)],
-    options: CommitOptions,
-) -> Result<ChangesetResult, CommitError> {
-    service_for_root(root, options)?.apply_changeset_with_base_hashes(
-        changes,
-        snapshot_version,
-        true,
-        base_hashes,
-    )
-}
-
-pub(crate) fn publish_capture(
-    root: &Path,
-    snapshot_manifest_version: i64,
-    snapshot_layer_paths: &[PathBuf],
-    changes: &[LayerChange],
-) -> Result<ChangesetResult, CommitError> {
-    publish_capture_with_options_and_protected_drops(
-        root,
-        snapshot_manifest_version,
-        snapshot_layer_paths,
-        changes,
-        &[],
-        CommitOptions::default(),
-    )
-}
-
-pub(crate) fn publish_capture_with_options_and_protected_drops(
-    root: &Path,
-    snapshot_manifest_version: i64,
-    snapshot_layer_paths: &[PathBuf],
-    changes: &[LayerChange],
-    protected_drops: &[ProtectedPathDrop],
-    options: CommitOptions,
-) -> Result<ChangesetResult, CommitError> {
-    let manifest = snapshot_manifest(root, snapshot_manifest_version, snapshot_layer_paths)?;
-    let decisions = publish_decisions_for_manifest_with_protected_drops(
-        root,
-        &manifest,
-        changes,
-        protected_drops,
-    )?;
-    service_for_root(root, options)?.apply_changeset_with_decisions(
-        changes,
-        Some(manifest_version_u64(snapshot_manifest_version)?),
-        true,
-        decisions,
-    )
 }
 
 pub fn publish_command_capture_lane_aware(

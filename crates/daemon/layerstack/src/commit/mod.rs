@@ -16,29 +16,30 @@ use crate::model::{hex_lower, CasError, LayerChange, LayerPath};
 use crate::{LayerStack, LayerStackError, Manifest, MergedView};
 
 pub(crate) mod git_metadata;
-mod worker;
+pub(crate) mod worker;
 
 use git_metadata::{is_canonical_loose_object_path, relative_parts as git_metadata_relative_parts};
 use worker::{CommitQueue, CommitTransaction, PreparedChangeset};
 
-const GIT_METADATA_UNSUPPORTED_DROP_REASON: &str = "git_metadata_unsupported";
-const GIT_INDEX_STAT_REFRESH_DROP_REASON: &str = "git_index_stat_refresh";
-const GIT_INDEX_STAGED_STATE_REJECT_REASON: &str = "git_index_staged_state";
-const GIT_LOCK_FILE_REJECT_REASON: &str = "git_lock_file";
-const GIT_INCOMPLETE_OPERATION_REJECT_REASON: &str = "git_incomplete_operation";
-const GIT_HOOK_WRITE_REJECT_REASON: &str = "git_hook_write";
-const GIT_METADATA_DELETE_REJECT_REASON: &str = "git_metadata_delete";
-const GIT_METADATA_OPAQUE_REPLACE_REJECT_REASON: &str = "git_metadata_opaque_replace";
-const GIT_REF_WRITE_REJECT_REASON: &str = "git_ref_write";
-const GIT_OBJECT_REWRITE_REJECT_REASON: &str = "git_object_rewrite";
-const GIT_REFLOG_REWRITE_REJECT_REASON: &str = "git_reflog_rewrite";
-const DAEMON_CONTROL_PATH_DROP_REASON: &str = "daemon_control_path";
-const COMMAND_SCRATCH_PATH_DROP_REASON: &str = "command_scratch_path";
-const UNSUPPORTED_SPECIAL_FILE_DROP_REASON: &str = "unsupported_special_file";
-const INVALID_LAYER_PATH_DROP_REASON: &str = "invalid_layer_path";
-const OPAQUE_DIR_PROTECTED_DESCENDANT_DROP_REASON: &str = "opaque_dir_protected_descendant";
-const OPAQUE_DIR_MIXED_ROUTES_DROP_REASON: &str = "opaque_dir_mixed_routes";
-const OPAQUE_DIR_EXPANSION_LIMIT_DROP_REASON: &str = "opaque_dir_expansion_limit";
+pub(crate) const GIT_METADATA_UNSUPPORTED_DROP_REASON: &str = "git_metadata_unsupported";
+pub(crate) const GIT_INDEX_STAT_REFRESH_DROP_REASON: &str = "git_index_stat_refresh";
+pub(crate) const GIT_INDEX_STAGED_STATE_REJECT_REASON: &str = "git_index_staged_state";
+pub(crate) const GIT_LOCK_FILE_REJECT_REASON: &str = "git_lock_file";
+pub(crate) const GIT_INCOMPLETE_OPERATION_REJECT_REASON: &str = "git_incomplete_operation";
+pub(crate) const GIT_HOOK_WRITE_REJECT_REASON: &str = "git_hook_write";
+pub(crate) const GIT_METADATA_DELETE_REJECT_REASON: &str = "git_metadata_delete";
+pub(crate) const GIT_METADATA_OPAQUE_REPLACE_REJECT_REASON: &str = "git_metadata_opaque_replace";
+pub(crate) const GIT_REF_WRITE_REJECT_REASON: &str = "git_ref_write";
+pub(crate) const GIT_OBJECT_REWRITE_REJECT_REASON: &str = "git_object_rewrite";
+pub(crate) const GIT_REFLOG_REWRITE_REJECT_REASON: &str = "git_reflog_rewrite";
+pub(crate) const DAEMON_CONTROL_PATH_DROP_REASON: &str = "daemon_control_path";
+pub(crate) const COMMAND_SCRATCH_PATH_DROP_REASON: &str = "command_scratch_path";
+pub(crate) const UNSUPPORTED_SPECIAL_FILE_DROP_REASON: &str = "unsupported_special_file";
+pub(crate) const INVALID_LAYER_PATH_DROP_REASON: &str = "invalid_layer_path";
+pub(crate) const OPAQUE_DIR_PROTECTED_DESCENDANT_DROP_REASON: &str =
+    "opaque_dir_protected_descendant";
+pub(crate) const OPAQUE_DIR_MIXED_ROUTES_DROP_REASON: &str = "opaque_dir_mixed_routes";
+pub(crate) const OPAQUE_DIR_EXPANSION_LIMIT_DROP_REASON: &str = "opaque_dir_expansion_limit";
 
 const OPAQUE_DIR_EXPANSION_LIMIT: usize = 4096;
 const LOGICAL_WHITEOUT_PREFIX: &str = ".wh.";
@@ -93,12 +94,6 @@ impl RouteDropReason {
             Self::OpaqueDirExpansionLimit => OPAQUE_DIR_EXPANSION_LIMIT_DROP_REASON,
         }
     }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum GitMetadataPolicy {
-    UnsupportedDrop,
-    CommandOccFloor,
 }
 
 impl From<ProtectedPathDropReason> for RouteDropReason {
@@ -272,10 +267,6 @@ impl CaptureRouteStats {
             .entry(reason.to_owned())
             .or_default() += 1;
     }
-
-    fn record_route_drop_reason(&mut self, reason: RouteDropReason) {
-        self.record_drop_reason(reason.as_str());
-    }
 }
 
 impl Default for CommitOptions {
@@ -398,7 +389,6 @@ impl ChangesetResult {
 }
 
 pub(crate) struct CommitWriter {
-    root: PathBuf,
     commit_queue: CommitQueue,
 }
 
@@ -411,59 +401,7 @@ impl CommitWriter {
         };
         let mut commit_queue = CommitQueue::new(transaction);
         commit_queue.start()?;
-        Ok(Self { root, commit_queue })
-    }
-
-    pub(crate) fn apply_changeset_with_base_hashes(
-        &self,
-        changes: &[LayerChange],
-        snapshot_version: Option<u64>,
-        atomic: bool,
-        base_hashes: &[(LayerPath, Option<String>)],
-    ) -> Result<ChangesetResult, CommitError> {
-        let stack = self.open_stack()?;
-        let manifest = stack
-            .read_active_manifest()
-            .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
-        let view = MergedView::new(self.root.clone());
-        let source = ManifestIgnoreSource {
-            view: &view,
-            manifest: &manifest,
-        };
-        let mut path_groups = Vec::with_capacity(changes.len());
-        for change in changes {
-            let path = change.path().clone();
-            let decision = if matches!(change, LayerChange::OpaqueDir { .. }) {
-                publish_decision_for_opaque_dir(
-                    &self.root,
-                    &source,
-                    &view,
-                    &manifest,
-                    &path,
-                    OPAQUE_DIR_EXPANSION_LIMIT,
-                    GitMetadataPolicy::UnsupportedDrop,
-                )?
-            } else {
-                let route = route_for_path(&stack, &path)
-                    .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
-                let base_hash = if route == Route::Gated {
-                    match base_hashes.iter().find(|(candidate, _)| candidate == &path) {
-                        Some((_, hash)) => hash.clone(),
-                        None => stack_base_hash(&stack, &path)?,
-                    }
-                } else {
-                    None
-                };
-                publish_decision(
-                    path,
-                    route,
-                    base_hash,
-                    drop_reason_code(route, change.path()),
-                )
-            };
-            path_groups.push(decision);
-        }
-        self.apply_changeset_with_decisions(changes, snapshot_version, atomic, path_groups)
+        Ok(Self { commit_queue })
     }
 
     pub(crate) fn apply_changeset_with_decisions(
@@ -534,11 +472,6 @@ impl CommitWriter {
     ) -> Result<ChangesetResult, CommitError> {
         self.apply_changeset_with_decisions(changes, snapshot_version, true, path_groups)
     }
-
-    fn open_stack(&self) -> Result<LayerStack, CommitError> {
-        LayerStack::open(self.root.clone())
-            .map_err(|err| CommitError::RoutePreparation(err.to_string()))
-    }
 }
 
 impl Drop for CommitWriter {
@@ -552,6 +485,24 @@ fn worker_handoff_event(
     publishable_change_count: usize,
     atomic: bool,
 ) -> OccTraceEvent {
+    let mut gated_path_count = 0;
+    let mut direct_path_count = 0;
+    let mut drop_path_count = 0;
+    let mut drop_reason_counts: BTreeMap<String, usize> = BTreeMap::new();
+    for group in path_groups {
+        match group.route {
+            Route::Gated => gated_path_count += 1,
+            Route::Direct => direct_path_count += 1,
+            Route::Drop => {
+                drop_path_count += 1;
+                if let Some(reason) = group.drop_reason {
+                    *drop_reason_counts
+                        .entry(reason.as_str().to_owned())
+                        .or_default() += 1;
+                }
+            }
+        }
+    }
     OccTraceEvent::new(
         "occ",
         "worker_handoff",
@@ -559,85 +510,11 @@ fn worker_handoff_event(
             "path_count": path_groups.len(),
             "publishable_change_count": publishable_change_count,
             "atomic": atomic,
-            "gated_path_count": route_count(path_groups, Route::Gated),
-            "direct_path_count": route_count(path_groups, Route::Direct),
-            "drop_path_count": route_count(path_groups, Route::Drop),
-            "drop_reason_counts": route_drop_reason_counts(path_groups),
+            "gated_path_count": gated_path_count,
+            "direct_path_count": direct_path_count,
+            "drop_path_count": drop_path_count,
+            "drop_reason_counts": drop_reason_counts,
         }),
-    )
-}
-
-fn route_count(path_groups: &[PublishDecision], route: Route) -> usize {
-    path_groups
-        .iter()
-        .filter(|group| group.route == route)
-        .count()
-}
-
-fn route_drop_reason_counts(path_groups: &[PublishDecision]) -> BTreeMap<String, usize> {
-    let mut counts = BTreeMap::new();
-    for group in path_groups
-        .iter()
-        .filter(|group| group.route == Route::Drop)
-    {
-        if let Some(reason) = group.drop_reason {
-            *counts.entry(reason.as_str().to_owned()).or_default() += 1;
-        }
-    }
-    counts
-}
-
-pub fn capture_route_stats_for_manifest_with_protected_drops(
-    root: &Path,
-    manifest: &Manifest,
-    changes: &[LayerChange],
-    protected_drops: &[ProtectedPathDrop],
-) -> Result<CaptureRouteStats, CommitError> {
-    let decisions = publish_decisions_for_manifest_with_policy_and_protected_drops(
-        root,
-        manifest,
-        changes,
-        protected_drops,
-        GitMetadataPolicy::UnsupportedDrop,
-    )?;
-    let mut stats = CaptureRouteStats::default();
-    for (index, decision) in decisions.iter().enumerate() {
-        match decision.route {
-            Route::Gated => stats.gated_path_count += 1,
-            Route::Direct => {
-                stats.direct_path_count += 1;
-                if let Some(change) = changes.get(index) {
-                    stats.direct_bytes = stats
-                        .direct_bytes
-                        .saturating_add(change.write_size().unwrap_or(0));
-                    stats.direct_spooled_bytes = stats
-                        .direct_spooled_bytes
-                        .saturating_add(change.spooled_write_size().unwrap_or(0));
-                }
-            }
-            Route::Drop => {
-                stats.drop_path_count += 1;
-                if let Some(reason) = decision.drop_reason {
-                    stats.record_route_drop_reason(reason);
-                }
-            }
-        }
-    }
-    Ok(stats)
-}
-
-pub(crate) fn publish_decisions_for_manifest_with_protected_drops(
-    root: &Path,
-    manifest: &Manifest,
-    changes: &[LayerChange],
-    protected_drops: &[ProtectedPathDrop],
-) -> Result<Vec<PublishDecision>, CommitError> {
-    publish_decisions_for_manifest_with_policy_and_protected_drops(
-        root,
-        manifest,
-        changes,
-        protected_drops,
-        GitMetadataPolicy::UnsupportedDrop,
     )
 }
 
@@ -647,21 +524,14 @@ pub(crate) fn publish_command_decisions_for_manifest_with_protected_drops(
     changes: &[LayerChange],
     protected_drops: &[ProtectedPathDrop],
 ) -> Result<Vec<PublishDecision>, CommitError> {
-    publish_decisions_for_manifest_with_policy_and_protected_drops(
-        root,
-        manifest,
-        changes,
-        protected_drops,
-        GitMetadataPolicy::CommandOccFloor,
-    )
+    publish_decisions_for_manifest_with_protected_drops(root, manifest, changes, protected_drops)
 }
 
-fn publish_decisions_for_manifest_with_policy_and_protected_drops(
+fn publish_decisions_for_manifest_with_protected_drops(
     root: &Path,
     manifest: &Manifest,
     changes: &[LayerChange],
     protected_drops: &[ProtectedPathDrop],
-    git_policy: GitMetadataPolicy,
 ) -> Result<Vec<PublishDecision>, CommitError> {
     let view = MergedView::new(root.to_path_buf());
     let source = ManifestIgnoreSource {
@@ -679,17 +549,16 @@ fn publish_decisions_for_manifest_with_policy_and_protected_drops(
                     manifest,
                     path,
                     OPAQUE_DIR_EXPANSION_LIMIT,
-                    git_policy,
                 )
             } else {
-                publish_decision_for_change(&source, &view, manifest, change, git_policy)
+                publish_decision_for_change(&source, &view, manifest, change)
             }
         })
         .collect::<std::result::Result<Vec<_>, CommitError>>()?;
     decisions.extend(
         protected_drops
             .iter()
-            .map(|drop| publish_decision_for_protected_drop(drop, git_policy)),
+            .map(publish_decision_for_protected_drop),
     );
     Ok(decisions)
 }
@@ -699,43 +568,24 @@ fn publish_decision_for_change(
     view: &MergedView,
     manifest: &Manifest,
     change: &LayerChange,
-    git_policy: GitMetadataPolicy,
 ) -> Result<PublishDecision, CommitError> {
     let path = change.path().clone();
     if is_git_metadata_path(&path) {
-        return Ok(match git_policy {
-            GitMetadataPolicy::UnsupportedDrop => publish_decision(
-                path,
-                Route::Drop,
-                None,
-                Some(RouteDropReason::GitMetadataUnsupported),
-            ),
-            GitMetadataPolicy::CommandOccFloor => {
-                command_git_metadata_decision(view, manifest, change)?
-            }
-        });
+        return command_git_metadata_decision(view, manifest, change);
     }
 
-    let route = route_for_path_from_source(source, &path)
+    let (route, drop_reason) = route_decision_for_path_from_source(source, &path)
         .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
     let base_hash = if route == Route::Gated {
         snapshot_base_hash(view, manifest, change)?
     } else {
         None
     };
-    Ok(publish_decision(
-        path,
-        route,
-        base_hash,
-        drop_reason_code(route, change.path()),
-    ))
+    Ok(publish_decision(path, route, base_hash, drop_reason))
 }
 
-fn publish_decision_for_protected_drop(
-    drop: &ProtectedPathDrop,
-    git_policy: GitMetadataPolicy,
-) -> PublishDecision {
-    if git_policy == GitMetadataPolicy::CommandOccFloor && is_git_metadata_path(&drop.path) {
+fn publish_decision_for_protected_drop(drop: &ProtectedPathDrop) -> PublishDecision {
+    if is_git_metadata_path(&drop.path) {
         return rejected_drop_decision(
             drop.path.clone(),
             command_git_protected_drop_reason(&drop.path),
@@ -785,20 +635,12 @@ fn publish_decision_for_opaque_dir(
     manifest: &Manifest,
     path: &LayerPath,
     expansion_limit: usize,
-    git_policy: GitMetadataPolicy,
 ) -> Result<PublishDecision, CommitError> {
     if is_git_metadata_path(path) {
-        return Ok(match git_policy {
-            GitMetadataPolicy::UnsupportedDrop => publish_decision(
-                path.clone(),
-                Route::Drop,
-                None,
-                Some(RouteDropReason::GitMetadataUnsupported),
-            ),
-            GitMetadataPolicy::CommandOccFloor => {
-                rejected_drop_decision(path.clone(), RouteDropReason::GitMetadataOpaqueReplace)
-            }
-        });
+        return Ok(rejected_drop_decision(
+            path.clone(),
+            RouteDropReason::GitMetadataOpaqueReplace,
+        ));
     }
 
     let hidden = match visible_paths_hidden_by_opaque_dir(root, manifest, path, expansion_limit)? {
@@ -812,10 +654,9 @@ fn publish_decision_for_opaque_dir(
     };
 
     if hidden.is_empty() {
-        let route = route_for_path_from_source(source, path)
+        let (route, drop_reason) = route_decision_for_path_from_source(source, path)
             .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
-        let mut decision =
-            publish_decision(path.clone(), route, None, drop_reason_code(route, path));
+        let mut decision = publish_decision(path.clone(), route, None, drop_reason);
         if route == Route::Gated {
             decision.validation_base_hashes = Some(Vec::new());
         }
@@ -883,23 +724,8 @@ fn command_git_metadata_decision(
             RouteDropReason::GitMetadataOpaqueReplace,
         ));
     }
-    if is_git_lock_path(&parts) {
-        return Ok(rejected_drop_decision(
-            path.clone(),
-            RouteDropReason::GitLockFile,
-        ));
-    }
-    if is_git_hook_path(&parts) {
-        return Ok(rejected_drop_decision(
-            path.clone(),
-            RouteDropReason::GitHookWrite,
-        ));
-    }
-    if is_incomplete_git_operation_path(&parts) {
-        return Ok(rejected_drop_decision(
-            path.clone(),
-            RouteDropReason::GitIncompleteOperation,
-        ));
+    if let Some(reason) = restricted_git_metadata_reason(&parts) {
+        return Ok(rejected_drop_decision(path.clone(), reason));
     }
 
     match change {
@@ -1019,16 +845,7 @@ fn command_git_protected_drop_reason(path: &LayerPath) -> RouteDropReason {
     let Some(parts) = git_metadata_relative_parts(path) else {
         return RouteDropReason::GitMetadataUnsupported;
     };
-    if is_git_lock_path(&parts) {
-        return RouteDropReason::GitLockFile;
-    }
-    if is_git_hook_path(&parts) {
-        return RouteDropReason::GitHookWrite;
-    }
-    if is_incomplete_git_operation_path(&parts) {
-        return RouteDropReason::GitIncompleteOperation;
-    }
-    RouteDropReason::GitMetadataUnsupported
+    restricted_git_metadata_reason(&parts).unwrap_or(RouteDropReason::GitMetadataUnsupported)
 }
 
 fn reflog_write_is_append_only(
@@ -1206,6 +1023,19 @@ fn is_git_hook_path(parts: &[&str]) -> bool {
     parts.first() == Some(&"hooks")
 }
 
+fn restricted_git_metadata_reason(parts: &[&str]) -> Option<RouteDropReason> {
+    if is_git_lock_path(parts) {
+        return Some(RouteDropReason::GitLockFile);
+    }
+    if is_git_hook_path(parts) {
+        return Some(RouteDropReason::GitHookWrite);
+    }
+    if is_incomplete_git_operation_path(parts) {
+        return Some(RouteDropReason::GitIncompleteOperation);
+    }
+    None
+}
+
 fn is_git_ref_path(parts: &[&str]) -> bool {
     parts.first() == Some(&"refs") || parts == ["packed-refs"]
 }
@@ -1238,39 +1068,32 @@ fn is_incomplete_git_operation_path(parts: &[&str]) -> bool {
     )
 }
 
-fn route_for_path(stack: &LayerStack, path: &LayerPath) -> Result<Route, LayerStackError> {
-    route_for_path_from_source(stack, path)
-}
-
 fn route_for_path_from_source(
     source: &impl IgnoreSource,
     path: &LayerPath,
 ) -> Result<Route, LayerStackError> {
-    if is_git_metadata_path(path) {
-        return Ok(Route::Drop);
-    }
-    if protected_path_drop_reason(path).is_some() {
-        return Ok(Route::Drop);
-    }
-    if path_is_ignored(source, path.as_str())? {
-        Ok(Route::Direct)
-    } else {
-        Ok(Route::Gated)
-    }
+    Ok(route_decision_for_path_from_source(source, path)?.0)
 }
 
-fn drop_reason_code(route: Route, path: &LayerPath) -> Option<RouteDropReason> {
-    if route != Route::Drop {
-        return None;
-    }
+fn route_decision_for_path_from_source(
+    source: &impl IgnoreSource,
+    path: &LayerPath,
+) -> Result<(Route, Option<RouteDropReason>), LayerStackError> {
     if is_git_metadata_path(path) {
-        return Some(RouteDropReason::GitMetadataUnsupported);
+        return Ok((Route::Drop, Some(RouteDropReason::GitMetadataUnsupported)));
     }
-    protected_path_drop_reason(path)
+    if let Some(reason) = protected_path_drop_reason(path) {
+        return Ok((Route::Drop, Some(reason)));
+    }
+    if path_is_ignored(source, path.as_str())? {
+        Ok((Route::Direct, None))
+    } else {
+        Ok((Route::Gated, None))
+    }
 }
 
 pub(crate) fn is_git_metadata_path(path: &LayerPath) -> bool {
-    path.as_str().split('/').any(|part| part == ".git")
+    git_metadata_relative_parts(path).is_some()
 }
 
 fn protected_path_drop_reason(path: &LayerPath) -> Option<RouteDropReason> {
@@ -1323,13 +1146,6 @@ fn is_command_scratch_path(path: &str) -> bool {
             ".eos-command" | ".eos-commands" | ".eos-scratch" | ".eos-spool" | ".eos-transcripts"
         )
     })
-}
-
-fn stack_base_hash(stack: &LayerStack, path: &LayerPath) -> Result<Option<String>, CommitError> {
-    let (bytes, exists) = stack
-        .read_bytes(path.as_str())
-        .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
-    Ok(hash_current(bytes.as_deref(), exists))
 }
 
 fn snapshot_base_hash(
@@ -1489,7 +1305,6 @@ fn visible_paths_hidden_by_opaque_dir(
             &blockers,
             &mut visible,
             &mut layer_blockers,
-            expansion_limit,
         )?;
         if visible.len() > expansion_limit {
             return Ok(OpaqueDirExpansion::LimitExceeded);
@@ -1505,7 +1320,6 @@ fn collect_opaque_hidden_paths_from_layer(
     older_blockers: &[String],
     visible: &mut BTreeSet<LayerPath>,
     layer_blockers: &mut Vec<String>,
-    expansion_limit: usize,
 ) -> Result<(), CommitError> {
     if path_is_blocked(opaque_path, older_blockers) {
         return Ok(());
@@ -1521,7 +1335,7 @@ fn collect_opaque_hidden_paths_from_layer(
         return Ok(());
     }
     if meta.file_type().is_symlink() || meta.is_file() {
-        insert_visible_hidden_path(visible, opaque_path, expansion_limit)?;
+        insert_visible_hidden_path(visible, opaque_path)?;
         layer_blockers.push(opaque_path.to_owned());
         return Ok(());
     }
@@ -1562,7 +1376,7 @@ fn collect_opaque_hidden_paths_from_layer(
                 continue;
             }
             if meta.file_type().is_symlink() || meta.is_file() {
-                insert_visible_hidden_path(visible, &rel, expansion_limit)?;
+                insert_visible_hidden_path(visible, &rel)?;
                 layer_blockers.push(rel);
             } else if meta.is_dir() {
                 stack.push(path);
@@ -1605,7 +1419,6 @@ fn read_sorted_dir(dir: &Path) -> Result<Vec<std::fs::DirEntry>, CommitError> {
 fn insert_visible_hidden_path(
     visible: &mut BTreeSet<LayerPath>,
     path: &str,
-    _expansion_limit: usize,
 ) -> Result<(), CommitError> {
     visible.insert(LayerPath::parse(path)?);
     Ok(())
@@ -1688,7 +1501,7 @@ fn has_xattr(path: &Path, name: &str) -> bool {
 }
 
 #[cfg(test)]
-pub fn base_hashes_for_snapshot(
+pub(crate) fn base_hashes_for_snapshot(
     root: &Path,
     manifest: &Manifest,
     changes: &[LayerChange],

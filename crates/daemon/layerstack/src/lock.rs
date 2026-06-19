@@ -17,7 +17,7 @@ pub(crate) struct StorageWriterLockLease {
 }
 
 impl StorageWriterLockLease {
-    pub fn acquire(storage_root: &Path) -> Result<Self, LayerStackError> {
+    pub(crate) fn acquire(storage_root: &Path) -> Result<Self, LayerStackError> {
         std::fs::create_dir_all(storage_root)?;
         let key = crate::fs::canonical_key(storage_root);
         let mut registry = lock_registry()?;
@@ -251,7 +251,3 @@ pub(crate) fn reset_storage_lock_registry_for_tests() {
         let _ = flock(&record.file, FlockOperation::Unlock);
     }
 }
-
-#[cfg(test)]
-#[path = "../tests/unit/storage_lock.rs"]
-mod tests;

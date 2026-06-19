@@ -82,12 +82,6 @@ pub(crate) struct HolderKillReport {
 }
 
 impl NamespaceRuntime {
-    pub(crate) fn from_env() -> Self {
-        Self {
-            stub: test_harness_enabled(),
-        }
-    }
-
     pub(crate) fn stubbed() -> Self {
         Self { stub: true }
     }

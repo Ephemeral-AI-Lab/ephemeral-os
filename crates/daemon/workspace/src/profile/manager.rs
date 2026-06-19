@@ -1,9 +1,8 @@
 //! Caller-keyed workspace profile manager.
 //!
 //! The manager owns admission policy, quotas, caller indexing, persistence, and
-//! profile-specific environment setup lives in `profile::host_compatible` and
-//! `profile::isolated`; shared holder, overlay, cgroup, teardown, and
-//! persistence lifecycle lives in `profile::common` and the lifecycle modules.
+//! the lifecycle modules own profile-specific setup, shared holder, overlay,
+//! cgroup, teardown, and persistence behavior.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -120,11 +119,6 @@ pub struct WorkspaceModeManager {
 }
 
 impl WorkspaceModeManager {
-    #[must_use]
-    pub fn with_scratch_root(caps: ResourceCaps, scratch_root: PathBuf) -> Self {
-        Self::with_runtime(caps, scratch_root, NamespaceRuntime::from_env())
-    }
-
     #[must_use]
     pub fn stubbed(caps: ResourceCaps, scratch_root: PathBuf) -> Self {
         Self::with_runtime(caps, scratch_root, NamespaceRuntime::stubbed())

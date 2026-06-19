@@ -193,7 +193,3 @@ fn flush_unleased_run(
         },
     ));
 }
-
-#[cfg(test)]
-#[path = "../tests/unit/lease_aware.rs"]
-mod tests;

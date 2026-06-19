@@ -4,12 +4,14 @@ use std::time::Instant;
 
 use serde_json::{json, Value};
 
+use crate::model::WorkspaceProfile;
+use crate::namespace::HolderKillReport;
 use crate::overlay::tree::directory_file_bytes;
-use crate::profile::common::{record_phase_ms, teardown_workspace, WorkspaceProfileRuntime};
 use crate::profile::manager::IsolatedNetworkError;
+use crate::profile::resource_control;
 use crate::profile::{WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeManager};
 
-use super::monotonic_seconds;
+use super::{monotonic_seconds, record_phase_ms};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExitOutcome {
@@ -29,14 +31,24 @@ impl WorkspaceModeManager {
         handle: &WorkspaceModeHandle,
         grace_s: f64,
     ) -> (Value, HashMap<String, f64>) {
-        let mut profile = WorkspaceProfileRuntime::for_profile(
-            handle.profile,
-            &mut self.network,
-            &self.caps.fallback_dns,
-            self.caps.setup_timeout_s,
-        );
-        let teardown = teardown_workspace(&self.runtime, handle, &mut profile, grace_s);
-        let phases_ms = teardown.phases_ms;
+        let mut phases_ms = HashMap::new();
+        let phase_start = Instant::now();
+        let (holder_kill_report, holder_kill_error) = if handle.holder_pid > 0 {
+            match self.runtime.kill_holder(handle.holder_pid, grace_s) {
+                Ok(report) => (report, None),
+                Err(err) => (HolderKillReport::default(), Some(err.to_string())),
+            }
+        } else {
+            (HolderKillReport::default(), None)
+        };
+        record_phase_ms(&mut phases_ms, "kill_holder", phase_start);
+        close_handle_fds(handle);
+        self.teardown_isolated_network(handle, &mut phases_ms);
+        let _ = resource_control::remove_cgroup(handle, &mut phases_ms);
+        let phase_start = Instant::now();
+        let _ = std::fs::remove_dir_all(&handle.dirs.run_dir);
+        record_phase_ms(&mut phases_ms, "rmtree_scratch", phase_start);
+
         let cgroup_exists_after = handle.cgroup_path.as_ref().map(|path| path.exists());
         let inspection = json!({
             "handle_registered_after": self.handles.contains_key(&handle.workspace_id),
@@ -44,11 +56,11 @@ impl WorkspaceModeManager {
             "open_handle_count_after": self.handles.len(),
             "open_agent_count_after": self.by_caller.len(),
             "holder_pid": handle.holder_pid,
-            "holder_was_alive": teardown.holder_kill_report.holder_was_alive,
-            "holder_exit_status": teardown.holder_kill_report.exit_status,
-            "holder_signal": teardown.holder_kill_report.signal,
-            "holder_status_raw": teardown.holder_kill_report.status_raw,
-            "holder_kill_error": teardown.holder_kill_error,
+            "holder_was_alive": holder_kill_report.holder_was_alive,
+            "holder_exit_status": holder_kill_report.exit_status,
+            "holder_signal": holder_kill_report.signal,
+            "holder_status_raw": holder_kill_report.status_raw,
+            "holder_kill_error": holder_kill_error,
             "ns_fd_count": handle.ns_fds.len(),
             "readiness_fd_was_open": handle.readiness_fd >= 0,
             "control_fd_was_open": handle.control_fd >= 0,
@@ -70,6 +82,25 @@ impl WorkspaceModeManager {
             ]),
         });
         (inspection, phases_ms)
+    }
+
+    fn teardown_isolated_network(
+        &mut self,
+        handle: &WorkspaceModeHandle,
+        phases_ms: &mut HashMap<String, f64>,
+    ) {
+        if handle.profile != WorkspaceProfile::Isolated {
+            return;
+        }
+        let phase_start = Instant::now();
+        if let Some(veth) = handle.veth.as_ref() {
+            if self.runtime.stub {
+                self.network.release_stub_veth(veth);
+            } else {
+                self.network.teardown_veth(veth);
+            }
+        }
+        record_phase_ms(phases_ms, "teardown_veth", phase_start);
     }
 
     pub fn exit(
@@ -109,6 +140,20 @@ impl WorkspaceModeManager {
             phases_ms,
             inspection,
         })
+    }
+}
+
+fn close_handle_fds(handle: &WorkspaceModeHandle) {
+    for fd in handle.ns_fds.values().copied() {
+        close_fd(fd);
+    }
+    close_fd(handle.readiness_fd);
+    close_fd(handle.control_fd);
+}
+
+fn close_fd(fd: i32) {
+    if fd >= 0 {
+        let _ = nix::unistd::close(fd);
     }
 }
 

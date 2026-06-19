@@ -6,11 +6,11 @@ use crate::error::LayerStackError;
 use crate::fs::{allocate_layer_dirs, check_layer_path, fsync_dir, resolve_layer_path};
 use crate::{MergedView, LAYERS_DIR};
 
-pub const CHECKPOINT_ID_PREFIX: char = 'B';
+pub(crate) const CHECKPOINT_ID_PREFIX: char = 'B';
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CheckpointSegment {
-    pub layers: Vec<LayerRef>,
+pub(crate) struct CheckpointSegment {
+    pub(crate) layers: Vec<LayerRef>,
 }
 
 impl CheckpointSegment {
@@ -25,16 +25,16 @@ impl CheckpointSegment {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SquashPlanEntry {
+pub(crate) enum SquashPlanEntry {
     Keep(LayerRef),
     Segment(CheckpointSegment),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SquashPlan {
-    pub active_version: i64,
-    pub active_layers: Vec<LayerRef>,
-    pub entries: Vec<SquashPlanEntry>,
+pub(crate) struct SquashPlan {
+    pub(crate) active_version: i64,
+    pub(crate) active_layers: Vec<LayerRef>,
+    pub(crate) entries: Vec<SquashPlanEntry>,
 }
 
 impl SquashPlan {
@@ -69,7 +69,7 @@ impl SquashPlan {
     }
 
     #[must_use]
-    pub fn checkpoint_segments(&self) -> Vec<&CheckpointSegment> {
+    pub(crate) fn checkpoint_segments(&self) -> Vec<&CheckpointSegment> {
         self.entries
             .iter()
             .filter_map(|e| match e {
@@ -106,21 +106,21 @@ pub(crate) struct SquashPlanDecision {
 }
 
 #[derive(Debug)]
-pub struct LayerCheckpointSquasher {
+pub(crate) struct LayerCheckpointSquasher {
     storage_root: PathBuf,
     view: MergedView,
 }
 
 impl LayerCheckpointSquasher {
     #[must_use]
-    pub fn new(storage_root: PathBuf) -> Self {
+    pub(crate) fn new(storage_root: PathBuf) -> Self {
         Self {
             view: MergedView::new(storage_root.clone()),
             storage_root,
         }
     }
 
-    pub fn plan(
+    pub(crate) fn plan(
         &self,
         active_manifest: &Manifest,
         max_depth: usize,
@@ -315,7 +315,3 @@ fn flush_run(
     run.clear();
     Ok(())
 }
-
-#[cfg(test)]
-#[path = "../tests/unit/squash.rs"]
-mod tests;

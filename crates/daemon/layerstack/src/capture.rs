@@ -15,7 +15,7 @@ use thiserror::Error;
 use crate::{CasError, LayerChange, LayerPath};
 
 const WHITEOUT_PREFIX: &str = ".wh.";
-const OPAQUE_MARKER: &str = ".wh..wh..opq";
+pub(crate) const OPAQUE_MARKER: &str = ".wh..wh..opq";
 pub(crate) const MAX_CAPTURE_FILE_BYTES: usize = 8 * 1024 * 1024;
 
 /// Failures raised while capturing layer changes from an overlay upperdir.
@@ -82,13 +82,6 @@ pub enum ProtectedPathDropReason {
 pub struct ProtectedPathDrop {
     pub path: LayerPath,
     pub reason: ProtectedPathDropReason,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct CapturedUpperdir {
-    pub(crate) changes: Vec<LayerChange>,
-    pub(crate) protected_drops: Vec<ProtectedPathDrop>,
-    pub(crate) stats: CaptureStats,
 }
 
 #[derive(Debug)]
@@ -214,38 +207,6 @@ impl RegularFileCaptureMeta {
     }
 }
 
-/// Walk the overlay `upperdir` and capture the full write set.
-///
-/// Walks ONLY the upperdir (never the lower layers): capture + publish is one
-/// atomic unit, so the returned set is the complete delta for this op. Overlay
-/// whiteouts -> `Delete`, opaque markers -> `OpaqueDir`, symlinks -> `Symlink`,
-/// regular files -> `Write`.
-///
-/// # Errors
-///
-/// Returns [`CaptureError`] when upperdir traversal, path normalization, xattr
-/// probing, or content/link-target reads fail.
-pub(crate) fn capture_upperdir(upperdir: &Path) -> Result<Vec<LayerChange>> {
-    Ok(capture_upperdir_with_stats(upperdir)?.changes)
-}
-
-/// Walk the overlay `upperdir` once, returning both the captured write set and
-/// resource stats counted during that capture walk.
-///
-/// # Errors
-///
-/// Returns [`CaptureError`] when upperdir traversal, path normalization, xattr
-/// probing, or content/link-target reads fail.
-pub(crate) fn capture_upperdir_with_stats(upperdir: &Path) -> Result<CapturedUpperdir> {
-    let metadata = capture_upperdir_metadata(upperdir)?;
-    let changes = materialize_entries_in_memory(&metadata.entries, MAX_CAPTURE_FILE_BYTES)?;
-    Ok(CapturedUpperdir {
-        changes,
-        protected_drops: metadata.protected_drops,
-        stats: metadata.stats,
-    })
-}
-
 pub(crate) fn capture_layer_dir_unbounded(layer_dir: &Path) -> Result<Vec<LayerChange>> {
     let metadata = capture_upperdir_metadata(layer_dir)?;
     if let Some(drop) = metadata.protected_drops.first() {
@@ -340,30 +301,7 @@ fn walk_upperdir(
     Ok(())
 }
 
-#[cfg(test)]
-fn capture_file_entry(
-    root: &Path,
-    entry: &Path,
-    meta: &std::fs::Metadata,
-    emitted_opaque_dirs: &mut HashSet<String>,
-    changes: &mut Vec<LayerChange>,
-    protected_drops: &mut Vec<ProtectedPathDrop>,
-    max_file_bytes: usize,
-) -> Result<()> {
-    let mut entries = Vec::new();
-    capture_file_entry_metadata(
-        root,
-        entry,
-        meta,
-        emitted_opaque_dirs,
-        &mut entries,
-        protected_drops,
-    )?;
-    changes.extend(materialize_entries_in_memory(&entries, max_file_bytes)?);
-    Ok(())
-}
-
-fn capture_file_entry_metadata(
+pub(crate) fn capture_file_entry_metadata(
     root: &Path,
     entry: &Path,
     meta: &std::fs::Metadata,
@@ -439,24 +377,7 @@ fn push_opaque_dir(
     }
 }
 
-#[cfg(test)]
-fn write_change_limited(
-    path: LayerPath,
-    entry: &Path,
-    meta: &std::fs::Metadata,
-    max_bytes: usize,
-) -> Result<LayerChange> {
-    Ok(LayerChange::Write {
-        path,
-        content: read_regular_file(
-            entry,
-            &RegularFileCaptureMeta::from_metadata(meta),
-            max_bytes,
-        )?,
-    })
-}
-
-fn read_regular_file(
+pub(crate) fn read_regular_file(
     entry: &Path,
     expected_meta: &RegularFileCaptureMeta,
     max_bytes: usize,
@@ -590,7 +511,7 @@ fn symlink_entry(path: LayerPath, entry: &Path) -> Result<CapturedUpperdirEntry>
     })
 }
 
-fn materialize_entries_in_memory(
+pub(crate) fn materialize_entries_in_memory(
     entries: &[CapturedUpperdirEntry],
     max_bytes: usize,
 ) -> Result<Vec<LayerChange>> {
@@ -651,7 +572,7 @@ fn hex_bytes(bytes: &[u8]) -> String {
     out
 }
 
-fn relative_to_string(path: &Path) -> Result<String> {
+pub(crate) fn relative_to_string(path: &Path) -> Result<String> {
     let mut parts = Vec::new();
     for component in path.components() {
         parts.push(path_component_string(component.as_os_str())?);
@@ -739,7 +660,3 @@ fn xattr_value(path: &Path, name: &str) -> Result<Option<Vec<u8>>> {
 const fn xattr_value(_path: &Path, _name: &str) -> Result<Option<Vec<u8>>> {
     Ok(None)
 }
-
-#[cfg(test)]
-#[path = "../tests/unit/capture.rs"]
-mod tests;

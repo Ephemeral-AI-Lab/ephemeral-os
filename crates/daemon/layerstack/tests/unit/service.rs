@@ -3,9 +3,7 @@ use std::path::Path;
 use crate::commit::CommitWriter;
 use crate::model::LayerChange;
 use crate::test_fixture::{lp, unique_suffix, Fixture, TestResult};
-use crate::{
-    hash_current, reset_process_state_for_tests, service, CommitOptions, LayerStack, MergedView,
-};
+use crate::{reset_process_state_for_tests, service, CommitOptions, LayerStack, MergedView};
 
 use super::{
     normalize_root_key, snapshot_manifest, snapshot_manifest_preserving_layer_ids, RootService,
@@ -66,17 +64,23 @@ fn snapshot_manifest_rejects_absolute_layer_paths_outside_root() {
 #[test]
 fn commit_direct_trace_events_include_worker_handoff_and_batch_facts() -> TestResult {
     let fixture = Fixture::new("worker_handoff_trace")?;
-    let base_hash =
-        hash_current(Some(b"# README\n"), true).ok_or_else(|| "missing base hash".to_owned())?;
+    let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
+    let layer_paths = manifest
+        .layers
+        .iter()
+        .map(|layer| fixture.root.join(&layer.path))
+        .collect::<Vec<_>>();
 
-    let result = service::commit_direct(
+    let result = service::publish_command_capture_lane_aware(
         &fixture.root,
-        Some(1),
+        manifest.version,
+        &layer_paths,
         &[LayerChange::Write {
             path: lp("README.md")?,
             content: b"# updated\n".to_vec(),
         }],
-        &[(lp("README.md")?, Some(base_hash))],
+        &[],
+        CommitOptions::default(),
     )?;
 
     assert!(result.success());
@@ -114,16 +118,22 @@ fn process_state_reset_clears_service_cache_and_lease_registry() -> TestResult {
         assert_eq!(stack.active_lease_count(), 1, "lease registry has snapshot");
     }
 
-    let base_hash =
-        hash_current(Some(b"# README\n"), true).ok_or_else(|| "missing base hash".to_owned())?;
-    let result = service::commit_direct(
+    let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
+    let layer_paths = manifest
+        .layers
+        .iter()
+        .map(|layer| fixture.root.join(&layer.path))
+        .collect::<Vec<_>>();
+    let result = service::publish_command_capture_lane_aware(
         &fixture.root,
-        Some(1),
+        manifest.version,
+        &layer_paths,
         &[LayerChange::Write {
             path: lp("README.md")?,
             content: b"# reset\n".to_vec(),
         }],
-        &[(lp("README.md")?, Some(base_hash))],
+        &[],
+        CommitOptions::default(),
     )?;
     assert!(result.success(), "commit creates a cached per-root writer");
     assert!(service::service_cache_contains_root_for_tests(

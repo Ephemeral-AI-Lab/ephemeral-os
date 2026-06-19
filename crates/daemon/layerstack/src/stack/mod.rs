@@ -173,30 +173,7 @@ impl LayerStack {
                 "compaction checkpoint requires at least one layer".to_owned(),
             ));
         }
-        let next_version = manifest.version.saturating_add(1);
-        let (layer_id, staging_dir, layer_dir) =
-            allocate_layer_dirs(&self.storage_root, 'B', next_version)?;
-        if let Err(err) = self.view.project(&staging_dir, manifest) {
-            let _ = std::fs::remove_dir_all(&staging_dir);
-            return Err(err);
-        }
-        if let Some(parent) = layer_dir.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-        if let Err(err) = std::fs::rename(&staging_dir, &layer_dir) {
-            let _ = std::fs::remove_dir_all(&staging_dir);
-            return Err(err.into());
-        }
-        fsync_tree_files(&layer_dir)?;
-        if let Some(parent) = layer_dir.parent() {
-            fsync_dir(parent)?;
-        }
-        write_layer_digest(&self.storage_root, &layer_id, &manifest_root_hash(manifest))?;
-        let layer = LayerRef {
-            layer_id: layer_id.clone(),
-            path: format!("{LAYERS_DIR}/{layer_id}"),
-        };
-        Ok(layer)
+        self.build_projected_checkpoint(manifest)
     }
 
     pub fn can_squash(&self, max_depth: usize) -> Result<bool, LayerStackError> {
@@ -719,6 +696,10 @@ impl LayerStack {
         &self,
         manifest: &Manifest,
     ) -> Result<LayerRef, LayerStackError> {
+        self.build_projected_checkpoint(manifest)
+    }
+
+    fn build_projected_checkpoint(&self, manifest: &Manifest) -> Result<LayerRef, LayerStackError> {
         let next_version = manifest.version.saturating_add(1);
         let (layer_id, staging_dir, layer_dir) =
             allocate_layer_dirs(&self.storage_root, 'B', next_version)?;

@@ -1,9 +1,28 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use super::*;
 
 type TestResult<T = ()> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
+#[derive(Debug)]
+struct CapturedForTest {
+    changes: Vec<LayerChange>,
+    protected_drops: Vec<ProtectedPathDrop>,
+}
+
+fn capture_changes_for_test(upperdir: &Path) -> Result<Vec<LayerChange>> {
+    Ok(capture_for_test(upperdir)?.changes)
+}
+
+fn capture_for_test(upperdir: &Path) -> Result<CapturedForTest> {
+    let metadata = capture_upperdir_metadata(upperdir)?;
+    let changes = materialize_entries_in_memory(&metadata.entries, MAX_CAPTURE_FILE_BYTES)?;
+    Ok(CapturedForTest {
+        changes,
+        protected_drops: metadata.protected_drops,
+    })
+}
 
 #[test]
 fn captures_upperdir_files_whiteouts_symlinks_and_opaque_markers() -> TestResult {
@@ -14,7 +33,7 @@ fn captures_upperdir_files_whiteouts_symlinks_and_opaque_markers() -> TestResult
     std::fs::write(fixture.base.join("dir").join(OPAQUE_MARKER), b"")?;
     std::os::unix::fs::symlink("../target", fixture.base.join("link"))?;
 
-    let changes = capture_upperdir(&fixture.base)?;
+    let changes = capture_changes_for_test(&fixture.base)?;
 
     assert!(changes.contains(&LayerChange::Write {
         path: LayerPath::parse("dir/file.txt")?,
@@ -44,7 +63,7 @@ fn captures_unsupported_special_files_as_protected_drops() -> TestResult {
     assert!(status.success(), "mkfifo failed with status {status}");
     std::fs::write(fixture.base.join("file.txt"), b"regular")?;
 
-    let captured = capture_upperdir_with_stats(&fixture.base)?;
+    let captured = capture_for_test(&fixture.base)?;
 
     assert!(captured.changes.contains(&LayerChange::Write {
         path: LayerPath::parse("file.txt")?,
@@ -78,7 +97,7 @@ fn captures_non_utf8_layer_paths_as_invalid_layer_path_drops() -> TestResult {
     std::fs::write(fixture.base.join(bad_name), b"invalid")?;
     std::fs::write(fixture.base.join("file.txt"), b"regular")?;
 
-    let captured = capture_upperdir_with_stats(&fixture.base)?;
+    let captured = capture_for_test(&fixture.base)?;
 
     assert_eq!(
         captured.changes,
@@ -109,7 +128,7 @@ fn captures_invalid_whiteout_target_as_invalid_layer_path_drop() -> TestResult {
     let fixture = Fixture::new("capture_invalid_whiteout_target")?;
     std::fs::write(fixture.base.join(".wh..."), b"")?;
 
-    let captured = capture_upperdir_with_stats(&fixture.base)?;
+    let captured = capture_for_test(&fixture.base)?;
 
     assert!(captured.changes.is_empty());
     assert_eq!(
@@ -199,8 +218,8 @@ fn capture_rejects_non_utf8_symlink_target() -> TestResult {
     let bad_target = PathBuf::from(OsString::from_vec(vec![b't', 0xff, b'g']));
     std::os::unix::fs::symlink(bad_target, fixture.base.join("link"))?;
 
-    let error = capture_upperdir_with_stats(&fixture.base)
-        .expect_err("non-UTF-8 symlink targets are rejected");
+    let error =
+        capture_for_test(&fixture.base).expect_err("non-UTF-8 symlink targets are rejected");
 
     assert!(matches!(error, CaptureError::InvalidPathChange(_)));
     assert!(error.to_string().contains("not valid UTF-8"), "{error}");

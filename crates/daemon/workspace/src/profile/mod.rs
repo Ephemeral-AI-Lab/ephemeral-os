@@ -1,13 +1,9 @@
 //! Workspace isolation profiles and shared profile lifecycle.
 //!
-//! Profile-specific modules describe what differs about the workspace
-//! environment. Shared holder, namespace, overlay, handle, and teardown
-//! mechanics live in `common` and `handle`.
+//! Profile-specific behavior is selected directly by the workspace lifecycle.
+//! Shared handle and resource-control types live here.
 
-pub(crate) mod common;
 pub mod handle;
-pub mod host_compatible;
-pub(crate) mod isolated;
 pub mod manager;
 pub(crate) mod resource_control;
 

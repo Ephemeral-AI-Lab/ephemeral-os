@@ -7,10 +7,9 @@ use crate::{service, CommitOptions, CommitStatus, LayerStack};
 use crate::{ProtectedPathDrop, ProtectedPathDropReason};
 
 use super::{
-    capture_route_stats_for_manifest_with_protected_drops,
     publish_command_decisions_for_manifest_with_protected_drops, publish_decision_for_opaque_dir,
-    publish_decisions_for_manifest_with_protected_drops, route_for_path, GitMetadataPolicy,
-    ManifestIgnoreSource, Route, COMMAND_SCRATCH_PATH_DROP_REASON, DAEMON_CONTROL_PATH_DROP_REASON,
+    route_decision_for_path_from_source, ManifestIgnoreSource, Route,
+    COMMAND_SCRATCH_PATH_DROP_REASON, DAEMON_CONTROL_PATH_DROP_REASON,
     GIT_HOOK_WRITE_REJECT_REASON, GIT_INCOMPLETE_OPERATION_REJECT_REASON,
     GIT_INDEX_STAGED_STATE_REJECT_REASON, GIT_INDEX_STAT_REFRESH_DROP_REASON,
     GIT_LOCK_FILE_REJECT_REASON, GIT_METADATA_DELETE_REJECT_REASON,
@@ -86,7 +85,7 @@ fn bounded_capture_drops_oversized_ignored_before_payload_read_and_keeps_source(
         "limit-dropped ignored payloads are not spooled"
     );
 
-    service::publish_capture_with_options_and_protected_drops(
+    service::publish_command_capture_lane_aware(
         &fixture.root,
         snapshot.manifest_version,
         &snapshot.layer_paths,
@@ -142,7 +141,7 @@ fn bounded_capture_spools_accepted_ignored_payloads() -> TestResult {
         "accepted large ignored payload should be spooled"
     );
 
-    service::publish_capture_with_options_and_protected_drops(
+    service::publish_command_capture_lane_aware(
         &fixture.root,
         snapshot.manifest_version,
         &snapshot.layer_paths,
@@ -202,7 +201,7 @@ fn bounded_capture_spools_multiple_accepted_ignored_payloads_by_aggregate_size()
         "aggregate-spooled ignored payloads should be stored in command spool"
     );
 
-    service::publish_capture_with_options_and_protected_drops(
+    service::publish_command_capture_lane_aware(
         &fixture.root,
         snapshot.manifest_version,
         &snapshot.layer_paths,
@@ -399,7 +398,45 @@ fn is_ignored(fixture: &Fixture, path: &str) -> TestResult<bool> {
 
 fn route_of(fixture: &Fixture, path: &str) -> TestResult<Route> {
     let stack = LayerStack::open(fixture.root.clone())?;
-    Ok(route_for_path(&stack, &lp(path)?)?)
+    Ok(route_decision_for_path_from_source(&stack, &lp(path)?)?.0)
+}
+
+fn capture_route_stats_for_manifest_with_protected_drops(
+    root: &Path,
+    manifest: &crate::Manifest,
+    changes: &[LayerChange],
+    protected_drops: &[ProtectedPathDrop],
+) -> Result<crate::CaptureRouteStats, crate::CommitError> {
+    let decisions = publish_command_decisions_for_manifest_with_protected_drops(
+        root,
+        manifest,
+        changes,
+        protected_drops,
+    )?;
+    let mut stats = crate::CaptureRouteStats::default();
+    for (index, decision) in decisions.iter().enumerate() {
+        match decision.route {
+            Route::Gated => stats.gated_path_count += 1,
+            Route::Direct => {
+                stats.direct_path_count += 1;
+                if let Some(change) = changes.get(index) {
+                    stats.direct_bytes = stats
+                        .direct_bytes
+                        .saturating_add(change.write_size().unwrap_or(0));
+                    stats.direct_spooled_bytes = stats
+                        .direct_spooled_bytes
+                        .saturating_add(change.spooled_write_size().unwrap_or(0));
+                }
+            }
+            Route::Drop => {
+                stats.drop_path_count += 1;
+                if let Some(reason) = decision.drop_reason {
+                    stats.record_drop_reason(reason.as_str());
+                }
+            }
+        }
+    }
+    Ok(stats)
 }
 
 fn file_status(result: &crate::ChangesetResult, path: &str) -> TestResult<CommitStatus> {
@@ -475,7 +512,7 @@ fn protected_paths_drop_before_source_or_ignore_routing() -> TestResult {
 fn git_metadata_drop_decisions_use_stable_reason_code() -> TestResult {
     let fixture = Fixture::new_with_gitignore("git_drop_reason", ".git/\n")?;
     let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
-    let decisions = publish_decisions_for_manifest_with_protected_drops(
+    let decisions = publish_command_decisions_for_manifest_with_protected_drops(
         &fixture.root,
         &manifest,
         &[
@@ -498,7 +535,7 @@ fn git_metadata_drop_decisions_use_stable_reason_code() -> TestResult {
     assert_eq!(decisions[0].route, Route::Drop);
     assert_eq!(
         decisions[0].drop_reason.map(|reason| reason.as_str()),
-        Some(GIT_METADATA_UNSUPPORTED_DROP_REASON)
+        Some(GIT_METADATA_OPAQUE_REPLACE_REJECT_REASON)
     );
     assert_eq!(decisions[1].route, Route::Drop);
     assert_eq!(
@@ -1117,7 +1154,7 @@ fn command_gitignore_cannot_route_git_metadata_direct_or_source() -> TestResult 
 fn protected_path_drop_decisions_use_stable_reason_codes() -> TestResult {
     let fixture = Fixture::new_with_gitignore("protected_drop_reasons", "*\n")?;
     let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
-    let decisions = publish_decisions_for_manifest_with_protected_drops(
+    let decisions = publish_command_decisions_for_manifest_with_protected_drops(
         &fixture.root,
         &manifest,
         &[
@@ -1234,9 +1271,10 @@ fn capture_route_stats_counts_git_drop_reasons() -> TestResult {
     assert_eq!(stats.direct_path_count, 0);
     assert_eq!(stats.drop_path_count, 2);
     assert_eq!(
-        stats.drop_reason_count(GIT_METADATA_UNSUPPORTED_DROP_REASON),
-        2
+        stats.drop_reason_count(GIT_METADATA_OPAQUE_REPLACE_REJECT_REASON),
+        1
     );
+    assert_eq!(stats.drop_reason_count(GIT_HOOK_WRITE_REJECT_REASON), 1);
     Ok(())
 }
 
@@ -1322,7 +1360,7 @@ fn publish_capture_uses_supplied_manifest_snapshot_for_routes() -> TestResult {
         },
     ])?;
 
-    let result = service::publish_capture(
+    let result = service::publish_command_capture_lane_aware(
         &fixture.root,
         snapshot.manifest_version,
         &snapshot.layer_paths,
@@ -1330,6 +1368,8 @@ fn publish_capture_uses_supplied_manifest_snapshot_for_routes() -> TestResult {
             path: lp("later/cache.txt")?,
             content: b"mine".to_vec(),
         }],
+        &[],
+        CommitOptions::default(),
     )?;
     service::release_lease(&fixture.root, &snapshot.lease_id)?;
 
@@ -1486,7 +1526,7 @@ fn publish_capture_surfaces_git_drop_reason_counts() -> TestResult {
     let fixture = Fixture::new_with_gitignore("publish_git_drop_reason", "target/\n")?;
     let snapshot = service::acquire_snapshot(&fixture.root, "git-drop-reason-test")?;
 
-    let result = service::publish_capture(
+    let result = service::publish_command_capture_lane_aware(
         &fixture.root,
         snapshot.manifest_version,
         &snapshot.layer_paths,
@@ -1500,6 +1540,8 @@ fn publish_capture_surfaces_git_drop_reason_counts() -> TestResult {
                 content: b"ignored".to_vec(),
             },
         ],
+        &[],
+        CommitOptions::default(),
     )?;
     service::release_lease(&fixture.root, &snapshot.lease_id)?;
 
@@ -1508,7 +1550,7 @@ fn publish_capture_surfaces_git_drop_reason_counts() -> TestResult {
         .iter()
         .find(|file| file.path == lp(".git/config").expect("valid git path"))
         .expect("git file result");
-    assert_eq!(git_result.status, CommitStatus::Dropped);
+    assert_eq!(git_result.status, CommitStatus::Failed);
     assert_eq!(git_result.message, GIT_METADATA_UNSUPPORTED_DROP_REASON);
     let handoff = result
         .events
@@ -1528,7 +1570,7 @@ fn publish_capture_surfaces_protected_drop_reason_counts() -> TestResult {
     let fixture = Fixture::new_with_gitignore("publish_protected_drop_reason", "target/\n")?;
     let snapshot = service::acquire_snapshot(&fixture.root, "protected-drop-reason-test")?;
 
-    let result = service::publish_capture_with_options_and_protected_drops(
+    let result = service::publish_command_capture_lane_aware(
         &fixture.root,
         snapshot.manifest_version,
         &snapshot.layer_paths,
@@ -1590,7 +1632,7 @@ fn publish_capture_surfaces_route_protected_drop_reason_counts() -> TestResult {
     let fixture = Fixture::new_with_gitignore("publish_route_protected_drop_reason", "*\n")?;
     let snapshot = service::acquire_snapshot(&fixture.root, "route-protected-drop-reason-test")?;
 
-    let result = service::publish_capture(
+    let result = service::publish_command_capture_lane_aware(
         &fixture.root,
         snapshot.manifest_version,
         &snapshot.layer_paths,
@@ -1608,6 +1650,8 @@ fn publish_capture_surfaces_route_protected_drop_reason_counts() -> TestResult {
                 content: b"ignored".to_vec(),
             },
         ],
+        &[],
+        CommitOptions::default(),
     )?;
     service::release_lease(&fixture.root, &snapshot.lease_id)?;
 
@@ -1657,11 +1701,13 @@ fn opaque_dir_with_all_ignored_descendants_routes_direct() -> TestResult {
     }])?;
     let snapshot = service::acquire_snapshot(&fixture.root, "opaque-all-ignored")?;
 
-    let result = service::publish_capture(
+    let result = service::publish_command_capture_lane_aware(
         &fixture.root,
         snapshot.manifest_version,
         &snapshot.layer_paths,
         &[LayerChange::OpaqueDir { path: lp("cache")? }],
+        &[],
+        CommitOptions::default(),
     )?;
     service::release_lease(&fixture.root, &snapshot.lease_id)?;
 
@@ -1696,11 +1742,13 @@ fn opaque_dir_with_source_descendants_validates_hidden_paths() -> TestResult {
         content: b"theirs".to_vec(),
     }])?;
 
-    let result = service::publish_capture(
+    let result = service::publish_command_capture_lane_aware(
         &fixture.root,
         snapshot.manifest_version,
         &snapshot.layer_paths,
         &[LayerChange::OpaqueDir { path: lp("src")? }],
+        &[],
+        CommitOptions::default(),
     )?;
     service::release_lease(&fixture.root, &snapshot.lease_id)?;
 
@@ -1731,11 +1779,13 @@ fn opaque_dir_with_mixed_descendant_routes_rejects_publish() -> TestResult {
     ])?;
     let snapshot = service::acquire_snapshot(&fixture.root, "opaque-mixed-routes")?;
 
-    let result = service::publish_capture(
+    let result = service::publish_command_capture_lane_aware(
         &fixture.root,
         snapshot.manifest_version,
         &snapshot.layer_paths,
         &[LayerChange::OpaqueDir { path: lp("tree")? }],
+        &[],
+        CommitOptions::default(),
     )?;
     service::release_lease(&fixture.root, &snapshot.lease_id)?;
 
@@ -1767,11 +1817,13 @@ fn opaque_dir_with_git_descendant_rejects_as_protected() -> TestResult {
     }])?;
     let snapshot = service::acquire_snapshot(&fixture.root, "opaque-protected-descendant")?;
 
-    let result = service::publish_capture(
+    let result = service::publish_command_capture_lane_aware(
         &fixture.root,
         snapshot.manifest_version,
         &snapshot.layer_paths,
         &[LayerChange::OpaqueDir { path: lp("tree")? }],
+        &[],
+        CommitOptions::default(),
     )?;
     service::release_lease(&fixture.root, &snapshot.lease_id)?;
 
@@ -1806,11 +1858,13 @@ fn opaque_dir_with_non_git_protected_descendant_rejects_as_protected() -> TestRe
     }])?;
     let snapshot = service::acquire_snapshot(&fixture.root, "opaque-non-git-protected")?;
 
-    let result = service::publish_capture(
+    let result = service::publish_command_capture_lane_aware(
         &fixture.root,
         snapshot.manifest_version,
         &snapshot.layer_paths,
         &[LayerChange::OpaqueDir { path: lp("tree")? }],
+        &[],
+        CommitOptions::default(),
     )?;
     service::release_lease(&fixture.root, &snapshot.lease_id)?;
 
@@ -1860,15 +1914,8 @@ fn opaque_dir_expansion_limit_rejects_publish() -> TestResult {
         manifest: &manifest,
     };
 
-    let decision = publish_decision_for_opaque_dir(
-        &fixture.root,
-        &source,
-        &view,
-        &manifest,
-        &lp("big")?,
-        2,
-        GitMetadataPolicy::UnsupportedDrop,
-    )?;
+    let decision =
+        publish_decision_for_opaque_dir(&fixture.root, &source, &view, &manifest, &lp("big")?, 2)?;
 
     assert_eq!(decision.route, Route::Drop);
     assert!(decision.reject_publish);

@@ -96,7 +96,7 @@ impl Manifest {
     }
 }
 
-fn push_json_ascii_escaped(out: &mut String, s: &str) {
+pub(crate) fn push_json_ascii_escaped(out: &mut String, s: &str) {
     for ch in s.chars() {
         match ch {
             '"' => out.push_str("\\\""),
@@ -134,7 +134,7 @@ fn push_u_escape(out: &mut String, value: u32) {
     out.push(hex_char(value & 0x0f));
 }
 
-fn manifest_layers_json(layers: &[LayerRef]) -> String {
+pub(crate) fn manifest_layers_json(layers: &[LayerRef]) -> String {
     let mut out = String::from("{\"layers\":[");
     for (i, layer) in layers.iter().enumerate() {
         if i > 0 {
@@ -285,7 +285,3 @@ fn hex_char(nibble: u32) -> char {
     let index = usize::from((nibble & 0x0f) as u8);
     char::from(LOWER_HEX[index])
 }
-
-#[cfg(test)]
-#[path = "../tests/unit/model.rs"]
-mod tests;

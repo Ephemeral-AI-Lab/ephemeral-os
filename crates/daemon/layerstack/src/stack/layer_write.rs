@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::error::LayerStackError;
 use crate::fs::{join_layer_path, remove_path};
@@ -13,11 +13,7 @@ pub(super) fn write_layer_changes(
     for change in aggregate_layer_changes(changes) {
         match change {
             LayerChange::Write { path, content } => {
-                let target = join_layer_path(layer_dir, path.as_str());
-                if let Some(parent) = target.parent() {
-                    std::fs::create_dir_all(parent)?;
-                }
-                remove_path(&target)?;
+                let target = prepare_layer_target(layer_dir, path.as_str())?;
                 std::fs::write(target, content)?;
             }
             LayerChange::WriteFile {
@@ -25,11 +21,7 @@ pub(super) fn write_layer_changes(
                 source_path,
                 size,
             } => {
-                let target = join_layer_path(layer_dir, path.as_str());
-                if let Some(parent) = target.parent() {
-                    std::fs::create_dir_all(parent)?;
-                }
-                remove_path(&target)?;
+                let target = prepare_layer_target(layer_dir, path.as_str())?;
                 let source_meta = std::fs::metadata(&source_path)?;
                 if !source_meta.is_file() || source_meta.len() != size {
                     return Err(LayerStackError::Storage(format!(
@@ -47,19 +39,11 @@ pub(super) fn write_layer_changes(
                 }
             }
             LayerChange::Delete { path } => {
-                let target = join_layer_path(layer_dir, path.as_str());
-                if let Some(parent) = target.parent() {
-                    std::fs::create_dir_all(parent)?;
-                }
-                remove_path(&target)?;
+                let target = prepare_layer_target(layer_dir, path.as_str())?;
                 write_kernel_whiteout(&target)?;
             }
             LayerChange::Symlink { path, source_path } => {
-                let target = join_layer_path(layer_dir, path.as_str());
-                if let Some(parent) = target.parent() {
-                    std::fs::create_dir_all(parent)?;
-                }
-                remove_path(&target)?;
+                let target = prepare_layer_target(layer_dir, path.as_str())?;
                 std::os::unix::fs::symlink(source_path, target)?;
             }
             LayerChange::OpaqueDir { path } => {
@@ -72,4 +56,13 @@ pub(super) fn write_layer_changes(
         }
     }
     Ok(())
+}
+
+fn prepare_layer_target(layer_dir: &Path, path: &str) -> Result<PathBuf, LayerStackError> {
+    let target = join_layer_path(layer_dir, path);
+    if let Some(parent) = target.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    remove_path(&target)?;
+    Ok(target)
 }
