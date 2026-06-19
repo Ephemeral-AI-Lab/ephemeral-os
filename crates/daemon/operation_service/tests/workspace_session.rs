@@ -543,6 +543,65 @@ fn workspace_session_blocked_remount_reason_is_retained() {
 }
 
 #[test]
+fn workspace_session_capture_rejects_pending_remount_before_raw_capture() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
+    let manager = manager_with(&fake);
+    let handler = manager
+        .create_workspace_session(create_request("caller-1"))
+        .expect("test operation succeeds");
+    manager
+        .begin_remount(handler.workspace_session_id.clone())
+        .expect("begin remount succeeds");
+
+    let error = manager
+        .capture_session_changes(
+            &handler,
+            CaptureChangesRequest {
+                bounds: layerstack::service::BoundedCaptureOptions {
+                    materialize_payloads: false,
+                    ..layerstack::service::BoundedCaptureOptions::default()
+                },
+                include_stats: false,
+            },
+        )
+        .expect_err("capture rejects pending remount");
+
+    assert!(matches!(
+        error,
+        WorkspaceSessionError::RemountAlreadyPending { workspace_session_id }
+            if workspace_session_id == WorkspaceId("workspace-1".to_owned())
+    ));
+    assert!(fake.capture_calls().is_empty());
+    assert!(manager.is_remount_pending(&WorkspaceId("workspace-1".to_owned())));
+}
+
+#[test]
+fn workspace_session_destroy_rejects_pending_remount_before_raw_destroy() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
+    let manager = manager_with(&fake);
+    let handler = manager
+        .create_workspace_session(create_request("caller-1"))
+        .expect("test operation succeeds");
+    manager
+        .begin_remount(handler.workspace_session_id.clone())
+        .expect("begin remount succeeds");
+
+    let error = manager
+        .destroy_session(handler, DestroyWorkspaceRequest::default())
+        .expect_err("destroy rejects pending remount");
+
+    assert!(matches!(
+        error,
+        WorkspaceSessionError::RemountAlreadyPending { workspace_session_id }
+            if workspace_session_id == WorkspaceId("workspace-1".to_owned())
+    ));
+    assert!(fake.destroy_calls().is_empty());
+    assert!(manager.is_remount_pending(&WorkspaceId("workspace-1".to_owned())));
+}
+
+#[test]
 fn workspace_session_apply_remount_refreshes_canonical_handle() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let handle = workspace_handle("workspace-1", "caller-1", "lease-1");

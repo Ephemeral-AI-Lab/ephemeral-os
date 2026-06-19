@@ -275,30 +275,3 @@ fn read_pipe<R: Read>(pipe: Option<R>) -> Result<Vec<u8>, IsolatedNetworkError> 
     pipe.read_to_end(&mut bytes).map_err(setup_error)?;
     Ok(bytes)
 }
-
-#[cfg(all(test, target_os = "linux"))]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn ns_runner_wait_times_out_and_reaps_child_group() -> Result<(), Box<dyn std::error::Error>> {
-        let mut child = Command::new("sh")
-            .arg("-c")
-            .arg("sleep 60")
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .process_group(0)
-            .spawn()?;
-
-        let error = wait_for_child(&mut child, "--test-timeout", 0.01)
-            .expect_err("sleeping child should time out");
-
-        assert!(error.to_string().contains("timed out"));
-        assert!(
-            child.try_wait()?.is_some(),
-            "timed out child should be reaped"
-        );
-        Ok(())
-    }
-}

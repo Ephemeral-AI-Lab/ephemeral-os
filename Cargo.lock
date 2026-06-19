@@ -1773,7 +1773,6 @@ dependencies = [
  "namespace-process",
  "netlink-sys",
  "nix 0.29.0",
- "overlay",
  "rtnetlink",
  "serde",
  "serde_json",

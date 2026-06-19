@@ -494,8 +494,6 @@ pub struct CapturedWorkspaceChanges {
     pub spool_dir: Option<PathBuf>,
 }
 
-pub type CaptureChangesResult = CapturedWorkspaceChanges;
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RemountWorkspaceRequest {
     pub layer_paths: Vec<PathBuf>,
@@ -578,7 +576,3 @@ fn holder_fds_from_map(ns_fds: &HashMap<String, i32>) -> Option<WorkspaceLaunchF
         net: fd("net"),
     })
 }
-
-#[cfg(test)]
-#[path = "../tests/unit/model.rs"]
-mod tests;

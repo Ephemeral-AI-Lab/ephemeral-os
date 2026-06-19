@@ -1,11 +1,18 @@
 use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 
-use crate::overlay::dirs::OverlayDirs;
-use crate::overlay::tree::TreeResourceStats;
-use crate::profile::{DnsConfiguration, WorkspaceModeId, WorkspaceRemountState};
-
-use super::*;
+use workspace::model::{
+    BaseRevision, CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, ChangedPathKind,
+    CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
+    LayerStackSnapshotRef, LeaseId, ProtectedPathDrop, ProtectedPathDropReason,
+    ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceEntry,
+    WorkspaceEntryFds, WorkspaceHandle, WorkspaceId, WorkspaceProfile,
+};
+use workspace::overlay::dirs::OverlayDirs;
+use workspace::overlay::tree::TreeResourceStats;
+use workspace::profile::{
+    DnsConfiguration, WorkspaceModeHandle, WorkspaceModeId, WorkspaceRemountState,
+};
 
 fn workspace_mode_handle() -> WorkspaceModeHandle {
     WorkspaceModeHandle {
@@ -102,97 +109,55 @@ fn public_handle_debug_does_not_expose_internal_storage_or_namespace_fields() {
 }
 
 #[test]
-fn launch_context_debug_does_not_expose_internal_paths_or_fd_numbers() {
+fn public_handle_debug_marks_launch_available_without_exposing_internals() {
     let public = WorkspaceHandle::from(&workspace_mode_handle());
-    let launch = public.launch.expect("launch context is projected");
+    let debug = format!("{public:?}");
 
-    let context_debug = format!("{launch:?}");
-    let holder_debug = format!(
-        "{:?}",
-        launch.holder_fds.expect("holder fd context is projected")
-    );
-
-    assert_no_internal_fields(&context_debug);
-    assert_no_internal_fields(&holder_debug);
-    for forbidden in [
-        "/tmp/eos/upper",
-        "/tmp/eos/work",
-        "/sys/fs/cgroup/eos",
-        "mnt: Some(11)",
-        "pid: Some(12)",
-    ] {
-        assert!(
-            !context_debug.contains(forbidden),
-            "launch context debug output exposed {forbidden}: {context_debug}"
-        );
-        assert!(
-            !holder_debug.contains(forbidden),
-            "holder fd debug output exposed {forbidden}: {holder_debug}"
-        );
-    }
+    assert!(debug.contains("launch"));
+    assert!(debug.contains("<available>"));
+    assert_no_internal_fields(&debug);
 }
 
 #[test]
 fn host_compatible_entry_uses_holder_launch_without_network_fd() {
-    let launch = WorkspaceLaunchContext {
-        profile: WorkspaceProfile::HostCompatible,
-        workspace_root: "/workspace".into(),
+    let snapshot = LayerStackSnapshotRef {
+        lease_id: LeaseId("lease-1".to_owned()),
+        manifest_version: 1,
+        root_hash: "root".to_owned(),
         layer_paths: vec!["/lower/one".into()],
-        upperdir: "/upper/host".into(),
-        workdir: "/work/host".into(),
-        holder_fds: Some(WorkspaceLaunchFds {
-            user: Some(20),
-            mnt: Some(21),
-            pid: Some(22),
-            net: None,
-        }),
-        cgroup_path: Some("/sys/fs/cgroup/eos-host".into()),
     };
+    let handle = WorkspaceHandle::holder_backed_for_test(
+        WorkspaceId("host-handle".to_owned()),
+        CallerId("caller".to_owned()),
+        "/workspace".into(),
+        WorkspaceProfile::HostCompatible,
+        snapshot,
+        "/upper/host".into(),
+        "/work/host".into(),
+        Some("/sys/fs/cgroup/eos-host".into()),
+    );
 
-    let entry = launch
-        .entry()
-        .expect("host-compatible holder launch is valid");
+    let entry = handle.entry().expect("host-compatible launch is valid");
 
-    assert_eq!(entry.ns_fds.user, 20);
-    assert_eq!(entry.ns_fds.mnt, 21);
-    assert_eq!(entry.ns_fds.pid, 22);
+    assert_eq!(entry.ns_fds.user, 10);
+    assert_eq!(entry.ns_fds.mnt, 11);
+    assert_eq!(entry.ns_fds.pid, 12);
     assert_eq!(entry.ns_fds.net, None);
     assert_eq!(entry.cgroup_path, Some("/sys/fs/cgroup/eos-host".into()));
 }
 
 #[test]
 fn entry_rejects_incomplete_holder_launch() {
-    for (profile, holder_fds) in [
-        (
-            WorkspaceProfile::HostCompatible,
-            WorkspaceLaunchFds {
-                user: Some(10),
-                mnt: None,
-                pid: Some(12),
-                net: None,
-            },
-        ),
-        (
-            WorkspaceProfile::Isolated,
-            WorkspaceLaunchFds {
-                user: Some(10),
-                mnt: Some(11),
-                pid: Some(12),
-                net: None,
-            },
-        ),
-    ] {
-        let launch = WorkspaceLaunchContext {
-            profile,
-            workspace_root: "/workspace".into(),
-            layer_paths: vec!["/lower/one".into()],
-            upperdir: "/upper".into(),
-            workdir: "/work".into(),
-            holder_fds: Some(holder_fds),
-            cgroup_path: None,
-        };
+    let mut missing_mount = workspace_mode_handle();
+    missing_mount.profile = WorkspaceProfile::HostCompatible;
+    missing_mount.ns_fds.remove("mnt");
 
-        let error = launch
+    let mut missing_net = workspace_mode_handle();
+    missing_net.ns_fds.remove("net");
+
+    for handle in [missing_mount, missing_net] {
+        let public = WorkspaceHandle::from(&handle);
+        let error = public
             .entry()
             .expect_err("incomplete holder launch is rejected");
 
@@ -219,20 +184,18 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
         ),
         format!(
             "{:?}",
-            WorkspaceHandle {
-                id: WorkspaceId("workspace".to_owned()),
-                owner: CallerId("caller".to_owned()),
-                workspace_root: "/workspace".into(),
-                profile: WorkspaceProfile::HostCompatible,
-                base_revision: base_revision.clone(),
-                snapshot: LayerStackSnapshotRef {
+            WorkspaceHandle::without_launch_for_test(
+                WorkspaceId("workspace".to_owned()),
+                CallerId("caller".to_owned()),
+                "/workspace".into(),
+                WorkspaceProfile::HostCompatible,
+                LayerStackSnapshotRef {
                     lease_id: LeaseId("lease".to_owned()),
                     manifest_version: 1,
                     root_hash: "root".to_owned(),
                     layer_paths: vec!["/lower/one".into()],
                 },
-                launch: None,
-            }
+            )
         ),
         format!(
             "{:?}",
@@ -262,7 +225,7 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
         ),
         format!(
             "{:?}",
-            CaptureChangesResult {
+            CapturedWorkspaceChanges {
                 workspace_id: WorkspaceId("workspace".to_owned()),
                 base_revision,
                 changed_paths: Vec::new(),
@@ -285,24 +248,18 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
         format!(
             "{:?}",
             RemountWorkspaceResult {
-                handle: WorkspaceHandle {
-                    id: WorkspaceId("workspace".to_owned()),
-                    owner: CallerId("caller".to_owned()),
-                    workspace_root: "/workspace".into(),
-                    profile: WorkspaceProfile::HostCompatible,
-                    base_revision: BaseRevision {
-                        version: 1,
-                        root_hash: "root".to_owned(),
-                        layer_count: 1,
-                    },
-                    snapshot: LayerStackSnapshotRef {
+                handle: WorkspaceHandle::without_launch_for_test(
+                    WorkspaceId("workspace".to_owned()),
+                    CallerId("caller".to_owned()),
+                    "/workspace".into(),
+                    WorkspaceProfile::HostCompatible,
+                    LayerStackSnapshotRef {
                         lease_id: LeaseId("lease".to_owned()),
                         manifest_version: 1,
                         root_hash: "root".to_owned(),
                         layer_paths: vec!["/lower/one".into()],
                     },
-                    launch: None,
-                },
+                ),
             }
         ),
         format!(
@@ -377,20 +334,18 @@ fn public_dtos_construct_clone_and_compare() {
         layer_stack_root: "/layers".into(),
         profile: WorkspaceProfile::HostCompatible,
     };
-    let handle = WorkspaceHandle {
-        id: WorkspaceId("workspace".to_owned()),
-        owner: CallerId("caller".to_owned()),
-        workspace_root: "/workspace".into(),
-        profile: WorkspaceProfile::HostCompatible,
-        base_revision: base_revision.clone(),
-        snapshot: LayerStackSnapshotRef {
+    let handle = WorkspaceHandle::without_launch_for_test(
+        WorkspaceId("workspace".to_owned()),
+        CallerId("caller".to_owned()),
+        "/workspace".into(),
+        WorkspaceProfile::HostCompatible,
+        LayerStackSnapshotRef {
             lease_id: LeaseId("lease".to_owned()),
             manifest_version: 1,
             root_hash: "root".to_owned(),
             layer_paths: vec!["/lower/one".into()],
         },
-        launch: None,
-    };
+    );
     let entry = WorkspaceEntry {
         workspace_root: "/workspace".into(),
         layer_paths: vec!["/lower/one".into()],
@@ -408,7 +363,7 @@ fn public_dtos_construct_clone_and_compare() {
         bounds: layerstack::service::BoundedCaptureOptions::default(),
         include_stats: true,
     };
-    let capture = CaptureChangesResult {
+    let capture = CapturedWorkspaceChanges {
         workspace_id: WorkspaceId("workspace".to_owned()),
         base_revision: base_revision.clone(),
         changed_paths: vec!["src/main.rs".to_owned()],

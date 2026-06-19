@@ -1,66 +1,29 @@
-use std::path::PathBuf;
-
 use crate::lifecycle::leases::monotonic_seconds;
-use crate::profile::IsolatedNetworkError;
-use crate::profile::WorkspaceModeManager;
+use crate::profile::{IsolatedNetworkError, WorkspaceModeHandle, WorkspaceModeManager};
 
-use super::{RemountProbe, RemountedWorkspace, WorkspaceRemountState};
+use super::{RemountPlan, WorkspaceRemountState};
 
 impl WorkspaceModeManager {
-    pub fn mark_remount_pending(&mut self, caller_id: &str) -> Result<(), IsolatedNetworkError> {
-        self.set_remount_state(caller_id, WorkspaceRemountState::Pending)
-    }
-
-    pub fn clear_remount_pending(&mut self, caller_id: &str) -> Result<(), IsolatedNetworkError> {
-        self.set_remount_state(caller_id, WorkspaceRemountState::Active)
-    }
-
-    fn set_remount_state(
+    pub fn apply_prepared_remount(
         &mut self,
-        caller_id: &str,
-        remount_state: WorkspaceRemountState,
-    ) -> Result<(), IsolatedNetworkError> {
-        if caller_id.trim().is_empty() {
-            return Err(IsolatedNetworkError::InvalidArgument(
-                "caller_id is required".to_owned(),
-            ));
+        plan: RemountPlan,
+    ) -> Result<WorkspaceModeHandle, IsolatedNetworkError> {
+        let caller_id = plan.caller_id().to_owned();
+        let result = self.apply_remount_plan(plan);
+        if result.is_err() {
+            let _ = self.block_remount(&caller_id);
         }
+        result
+    }
+
+    fn apply_remount_plan(
+        &mut self,
+        plan: RemountPlan,
+    ) -> Result<WorkspaceModeHandle, IsolatedNetworkError> {
+        let (caller_id, layer_paths, probe) = plan.into_parts();
         let workspace_id = self
             .by_caller
-            .get(caller_id)
-            .cloned()
-            .ok_or(IsolatedNetworkError::NotOpen)?;
-        let handle = self
-            .handles
-            .get_mut(&workspace_id)
-            .ok_or(IsolatedNetworkError::NotOpen)?;
-        if handle.remount_state == remount_state {
-            return Ok(());
-        }
-        handle.remount_state = remount_state;
-        handle.last_activity = monotonic_seconds();
-        self.persist_handles()
-    }
-
-    pub fn remount_with_layers(
-        &mut self,
-        caller_id: &str,
-        layer_paths: Vec<PathBuf>,
-        probe: &RemountProbe,
-    ) -> Result<RemountedWorkspace, IsolatedNetworkError> {
-        if caller_id.trim().is_empty() {
-            return Err(IsolatedNetworkError::InvalidArgument(
-                "caller_id is required".to_owned(),
-            ));
-        }
-        if layer_paths.is_empty() {
-            return Err(IsolatedNetworkError::InvalidArgument(
-                "layer_paths must not be empty".to_owned(),
-            ));
-        }
-        let workspace_id = self
-            .by_caller
-            .get(caller_id)
+            .get(&caller_id)
             .cloned()
             .ok_or(IsolatedNetworkError::NotOpen)?;
         let handle = self
@@ -71,7 +34,7 @@ impl WorkspaceModeManager {
         let remount = self.runtime.remount_overlay(
             &handle,
             &layer_paths,
-            probe,
+            &probe,
             self.caps.setup_timeout_s,
         )?;
         if !remount.mount_verified {
@@ -87,12 +50,10 @@ impl WorkspaceModeManager {
             .get_mut(&workspace_id)
             .ok_or(IsolatedNetworkError::NotOpen)?;
         updated.layer_paths = layer_paths;
+        updated.remount_state = WorkspaceRemountState::Active;
         updated.last_activity = monotonic_seconds();
         let updated = updated.clone();
         self.persist_handles()?;
-        Ok(RemountedWorkspace {
-            handle: updated,
-            remount,
-        })
+        Ok(updated)
     }
 }

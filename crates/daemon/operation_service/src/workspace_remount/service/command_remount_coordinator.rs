@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::command::CommandOperationService;
 use crate::command::{CancellationState, CommandLifecycleState};
 use crate::workspace_crate::WorkspaceId;
-use crate::workspace_remount::command_quiesce::merge_report;
+use crate::workspace_remount::command_quiesce::{merge_report, RemountBlockReason};
 use crate::workspace_remount::{
     CommandRemountCoordinator, CommandRemountInspection, CommandRemountQuiesce,
     RemountCancellationToken, RemountSwitchState,
@@ -41,8 +41,7 @@ impl CommandRemountCoordinator for CommandOperationService {
             let Some(active) = self.process_store().active(&command_id) else {
                 quiesce
                     .inspection
-                    .blocked_reason
-                    .get_or_insert_with(|| "active_command_missing".to_owned());
+                    .block_if_clear(RemountBlockReason::ActiveCommandMissing);
                 continue;
             };
             let process = Arc::clone(&active.process);
@@ -52,8 +51,7 @@ impl CommandRemountCoordinator for CommandOperationService {
             let Some(pgid) = process.process_group_id() else {
                 quiesce
                     .inspection
-                    .blocked_reason
-                    .get_or_insert_with(|| "process_group_unavailable".to_owned());
+                    .block_if_clear(RemountBlockReason::ProcessGroupUnavailable);
                 continue;
             };
             quiesce.inspection.process_group_ids.push(pgid);
@@ -71,8 +69,7 @@ impl CommandRemountCoordinator for CommandOperationService {
             {
                 quiesce
                     .inspection
-                    .blocked_reason
-                    .get_or_insert_with(|| "active_command_missing".to_owned());
+                    .block_if_clear(RemountBlockReason::ActiveCommandMissing);
                 continue;
             }
             let command_report = quiesce

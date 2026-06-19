@@ -1,7 +1,5 @@
 use netlink_sys::{Socket as NlSocket, SocketAddr as NlSocketAddr};
 
-use std::net::Ipv4Addr;
-
 use crate::isolated_setup::network_error_at;
 use crate::profile::IsolatedNetworkError;
 
@@ -214,42 +212,14 @@ fn append_attr(buffer: &mut Vec<u8>, kind: u16, value: &[u8]) {
     buffer.resize(buffer.len() + align4(length) - length, 0);
 }
 
-pub(super) fn parse_ipv4_cidr(cidr: &str) -> Result<(Ipv4Addr, u8), IsolatedNetworkError> {
-    let Some((addr, prefix_len)) = cidr.split_once('/') else {
-        return Err(IsolatedNetworkError::NetworkUnavailable(format!(
-            "invalid IPv4 CIDR {cidr}"
-        )));
-    };
-    let addr = parse_ipv4_addr(addr)?;
-    let prefix_len = prefix_len.parse::<u8>().map_err(|err| {
-        IsolatedNetworkError::NetworkUnavailable(format!("invalid IPv4 CIDR prefix {cidr}: {err}"))
-    })?;
-    if prefix_len > 32 {
-        return Err(IsolatedNetworkError::NetworkUnavailable(format!(
-            "invalid IPv4 CIDR prefix {cidr}"
-        )));
-    }
-    Ok((addr, prefix_len))
-}
-
-pub(super) fn parse_ipv4_addr(addr: &str) -> Result<Ipv4Addr, IsolatedNetworkError> {
-    addr.parse::<Ipv4Addr>().map_err(|err| {
-        IsolatedNetworkError::NetworkUnavailable(format!("invalid IPv4 address {addr}: {err}"))
-    })
-}
-
-pub(super) fn ipv4_mask(prefix_len: u8) -> Result<[u8; 4], IsolatedNetworkError> {
-    if prefix_len > 32 {
-        return Err(IsolatedNetworkError::NetworkUnavailable(format!(
-            "invalid IPv4 prefix length {prefix_len}"
-        )));
-    }
+pub(super) fn ipv4_mask(prefix_len: u8) -> [u8; 4] {
+    debug_assert!(prefix_len <= 32);
     let mask = if prefix_len == 0 {
         0
     } else {
         u32::MAX << (32 - prefix_len)
     };
-    Ok(mask.to_be_bytes())
+    mask.to_be_bytes()
 }
 
 fn nft_msg_type(message_type: u16) -> Result<u16, IsolatedNetworkError> {

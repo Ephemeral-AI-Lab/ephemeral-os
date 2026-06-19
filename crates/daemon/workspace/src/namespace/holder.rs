@@ -27,7 +27,7 @@ use crate::profile::WorkspaceModeHandle;
 
 #[cfg(target_os = "linux")]
 use super::fds::{clear_cloexec, expect_line, set_nonblocking};
-#[cfg(any(target_os = "linux", test))]
+#[cfg(target_os = "linux")]
 use super::setup_error;
 use super::{HolderKillReport, NamespacePlan, NamespaceRuntime};
 
@@ -39,16 +39,8 @@ impl NamespaceRuntime {
         plan: NamespacePlan,
     ) -> Result<i32, IsolatedNetworkError> {
         if self.stub {
-            #[cfg(test)]
-            {
-                let _ = (handle, setup_timeout_s, plan);
-                return Ok(self.stub_holder_pid);
-            }
-            #[cfg(not(test))]
-            {
-                let _ = plan;
-                return Ok(0);
-            }
+            let _ = (handle, setup_timeout_s, plan);
+            return Ok(0);
         }
         #[cfg(not(target_os = "linux"))]
         {
@@ -108,15 +100,6 @@ impl NamespaceRuntime {
         grace_s: f64,
     ) -> Result<HolderKillReport, IsolatedNetworkError> {
         if self.stub || holder_pid <= 0 {
-            #[cfg(test)]
-            if self.stub && holder_pid > 0 {
-                if let Some(killed_holders) = self.killed_holders.as_ref() {
-                    killed_holders
-                        .lock()
-                        .map_err(|_| setup_error("stub holder kill log lock poisoned"))?
-                        .push(holder_pid);
-                }
-            }
             return Ok(HolderKillReport::default());
         }
         #[cfg(not(target_os = "linux"))]

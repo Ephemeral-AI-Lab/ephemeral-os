@@ -7,10 +7,10 @@ mod exprs;
 mod wire;
 
 use exprs::{
-    nft_bridge_peer_isolation_rule_exprs, nft_imds_drop_rule_exprs, nft_masquerade_rule_exprs,
-    nft_peer_isolation_rule_exprs, nft_rfc1918_drop_rule_exprs, NFTA_CHAIN_HOOK, NFTA_CHAIN_NAME,
-    NFTA_CHAIN_TABLE, NFTA_CHAIN_TYPE, NFTA_HOOK_HOOKNUM, NFTA_HOOK_PRIORITY, NFTA_LIST_ELEM,
-    NFTA_RULE_CHAIN, NFTA_RULE_EXPRESSIONS, NFTA_RULE_TABLE, NFTA_TABLE_FLAGS, NFTA_TABLE_NAME,
+    nft_imds_drop_rule_exprs, nft_masquerade_rule_exprs, nft_peer_isolation_rule_exprs,
+    nft_rfc1918_drop_rule_exprs, IpHeader, NFTA_CHAIN_HOOK, NFTA_CHAIN_NAME, NFTA_CHAIN_TABLE,
+    NFTA_CHAIN_TYPE, NFTA_HOOK_HOOKNUM, NFTA_HOOK_PRIORITY, NFTA_LIST_ELEM, NFTA_RULE_CHAIN,
+    NFTA_RULE_EXPRESSIONS, NFTA_RULE_TABLE, NFTA_TABLE_FLAGS, NFTA_TABLE_NAME,
 };
 use wire::{
     append_be_i32_attr, append_be_u32_attr, append_cstr_attr, append_nested_attr,
@@ -60,16 +60,16 @@ pub(super) fn install_static_rules(
         inet_family,
         NFT_FILTER_TABLE,
         "forward",
-        nft_peer_isolation_rule_exprs()?,
+        nft_peer_isolation_rule_exprs(IpHeader::Inet)?,
     )?;
     install_bridge_peer_isolation_rule()?;
     if rfc1918_egress == Rfc1918Egress::Deny {
-        for cidr in RFC1918_NETS {
+        for (network, prefix_len) in RFC1918_NETS {
             add_nft_rule(
                 inet_family,
                 NFT_FILTER_TABLE,
                 "forward",
-                nft_rfc1918_drop_rule_exprs(cidr)?,
+                nft_rfc1918_drop_rule_exprs(network, prefix_len)?,
             )?;
         }
     }
@@ -91,7 +91,7 @@ fn install_bridge_peer_isolation_rule() -> Result<(), IsolatedNetworkError> {
         family,
         NFT_BRIDGE_FILTER_TABLE,
         "forward",
-        nft_bridge_peer_isolation_rule_exprs()?,
+        nft_peer_isolation_rule_exprs(IpHeader::Bridge)?,
     )
 }
 

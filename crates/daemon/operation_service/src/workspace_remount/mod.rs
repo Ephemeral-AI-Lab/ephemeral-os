@@ -5,8 +5,6 @@ pub mod command_quiesce;
 #[path = "service/command_remount_coordinator.rs"]
 pub mod command_remount_coordinator;
 pub mod error;
-#[path = "service/remount_workspace_session.rs"]
-pub mod remount_workspace_session;
 pub mod service;
 #[path = "service/workspace_port.rs"]
 pub mod workspace_port;

@@ -11,13 +11,10 @@ pub(crate) mod isolated;
 pub mod manager;
 pub(crate) mod resource_control;
 
-pub use handle::{
-    DnsConfiguration, WorkspaceModeContext, WorkspaceModeHandle, WorkspaceModeId,
-    WorkspaceModeSnapshot,
-};
+pub use handle::{DnsConfiguration, WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeSnapshot};
 pub(crate) use handle::{CGROUP_ROOT, HANDLE_PREFIX};
 pub(crate) use manager::PERSISTED_HANDLES_SCHEMA_VERSION;
 pub use manager::{
     ExitOutcome, IsolatedNetworkError, OrphanCleanupReport, RemountOverlayReport, RemountProbe,
-    RemountedWorkspace, ResourceCaps, Rfc1918Egress, WorkspaceModeManager, WorkspaceRemountState,
+    ResourceCaps, Rfc1918Egress, WorkspaceModeManager, WorkspaceRemountState,
 };

@@ -32,7 +32,7 @@ impl WorkspaceRuntimeService {
             )
             .map_err(|error| workspace_error_from_mode_error(Some(&handle.owner), error))?;
         Ok(RemountWorkspaceResult {
-            handle: WorkspaceHandle::from(&remounted.handle),
+            handle: WorkspaceHandle::from(&remounted),
         })
     }
 }

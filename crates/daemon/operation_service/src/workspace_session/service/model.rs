@@ -94,13 +94,24 @@ impl WorkspaceSession {
         }
     }
 
+    pub(crate) fn ensure_remount_not_pending(&self) -> Result<(), WorkspaceSessionError> {
+        if matches!(self.remount_state, WorkspaceRemountState::RemountPending) {
+            return Err(WorkspaceSessionError::RemountAlreadyPending {
+                workspace_session_id: self.workspace_session_id.clone(),
+            });
+        }
+        Ok(())
+    }
+
     pub(crate) fn active_handle(&self) -> Result<WorkspaceHandle, WorkspaceSessionError> {
         self.ensure_active()?;
+        self.ensure_remount_not_pending()?;
         Ok(self.handle.clone())
     }
 
     pub(crate) fn mark_closing(&mut self) -> Result<WorkspaceHandle, WorkspaceSessionError> {
         self.ensure_active()?;
+        self.ensure_remount_not_pending()?;
         self.lifecycle_state = WorkspaceLifecycleState::Closing;
         self.last_activity = SystemTime::now();
         Ok(self.handle.clone())

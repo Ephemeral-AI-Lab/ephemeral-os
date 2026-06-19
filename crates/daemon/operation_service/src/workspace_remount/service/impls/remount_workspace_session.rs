@@ -1,4 +1,5 @@
 use crate::workspace_crate::{RemountWorkspaceRequest, WorkspaceId};
+use crate::workspace_remount::command_quiesce::RemountBlockReason;
 use crate::workspace_remount::{
     RemountSwitchState, WorkspaceRemountError, WorkspaceRemountReport, WorkspaceRemountService,
 };
@@ -29,7 +30,7 @@ impl WorkspaceRemountService {
         }
 
         if quiesce.cancellation_requested() {
-            let reason = "remount_cancelled_before_switch".to_owned();
+            let reason = RemountBlockReason::RemountCancelledBeforeSwitch.to_string();
             self.workspace()
                 .finish_or_block_remount(workspace_session_id.clone(), Some(reason.clone()))?;
             let inspection = quiesce.finish();
@@ -46,13 +47,11 @@ impl WorkspaceRemountService {
         let request = RemountWorkspaceRequest {
             layer_paths: handler.layer_paths.clone(),
         };
-        let remount_result = self.workspace().apply_remount(&handler, request);
+        let remount_result = self.workspace().apply_and_finish_remount(&handler, request);
         quiesce.set_switch_state(RemountSwitchState::Resuming);
 
         match remount_result {
             Ok(updated_handler) => {
-                self.workspace()
-                    .finish_remount(workspace_session_id.clone())?;
                 let inspection = quiesce.finish();
                 Ok(WorkspaceRemountReport {
                     workspace_session_id,
@@ -63,11 +62,6 @@ impl WorkspaceRemountService {
                 })
             }
             Err(error) => {
-                let reason = error.to_string();
-                if self.workspace().is_remount_pending(&workspace_session_id) {
-                    self.workspace()
-                        .finish_or_block_remount(workspace_session_id.clone(), Some(reason))?;
-                }
                 let _inspection = quiesce.finish();
                 Err(WorkspaceRemountError::WorkspaceSession(error))
             }

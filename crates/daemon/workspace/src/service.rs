@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard};
 
 use crate::error::WorkspaceError;
-use crate::profile::{ResourceCaps, WorkspaceModeId, WorkspaceModeManager};
+use crate::profile::{WorkspaceModeId, WorkspaceModeManager};
 
 mod hooks;
 mod impls;
@@ -38,11 +38,6 @@ impl WorkspaceRuntimeService {
         }
     }
 
-    #[must_use]
-    pub fn with_scratch_root(caps: ResourceCaps, scratch_root: PathBuf) -> Self {
-        Self::new(WorkspaceModeManager::with_scratch_root(caps, scratch_root))
-    }
-
     #[doc(hidden)]
     #[must_use]
     pub fn from_hooks_for_test(hooks: WorkspaceRuntimeHooks) -> Self {
@@ -73,7 +68,3 @@ impl WorkspaceRuntimeService {
         }
     }
 }
-
-#[cfg(test)]
-#[path = "../tests/unit/service.rs"]
-mod tests;

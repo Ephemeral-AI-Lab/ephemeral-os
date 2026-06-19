@@ -3,12 +3,12 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde_json::json;
 
-use crate::model::{
+use workspace::model::{
     CallerId, CreateWorkspaceRequest, DestroyWorkspaceRequest, LatestSnapshotRequest,
     WorkspaceProfile,
 };
-use crate::profile::{ResourceCaps, WorkspaceModeManager};
-use crate::WorkspaceRuntimeService;
+use workspace::profile::{ResourceCaps, WorkspaceModeManager};
+use workspace::WorkspaceRuntimeService;
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 

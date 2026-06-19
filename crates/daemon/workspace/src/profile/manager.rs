@@ -15,13 +15,10 @@ use crate::isolated_setup::IsolatedNetwork;
 use crate::lifecycle::monotonic_seconds;
 use crate::namespace::NamespaceRuntime;
 pub use crate::profile::{
-    DnsConfiguration, WorkspaceModeContext, WorkspaceModeHandle, WorkspaceModeId,
-    WorkspaceModeSnapshot,
+    DnsConfiguration, WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeSnapshot,
 };
 
-pub use crate::lifecycle::remount::{
-    RemountOverlayReport, RemountProbe, RemountedWorkspace, WorkspaceRemountState,
-};
+pub use crate::lifecycle::remount::{RemountOverlayReport, RemountProbe, WorkspaceRemountState};
 pub use crate::lifecycle::ExitOutcome;
 
 pub(crate) const PERSISTED_HANDLES_SCHEMA_VERSION: u32 = 1;

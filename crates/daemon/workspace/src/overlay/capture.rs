@@ -41,26 +41,6 @@ impl std::fmt::Display for CaptureError {
 
 impl std::error::Error for CaptureError {}
 
-/// Capture an upperdir delta and resource stats.
-///
-/// # Errors
-///
-/// Returns [`CaptureError`] when the upperdir walk fails.
-pub fn capture_upperdir(upperdir: &Path) -> Result<CapturedChanges, CaptureError> {
-    let start = std::time::Instant::now();
-    let captured =
-        layerstack::capture_upperdir_with_stats(upperdir).map_err(|error| CaptureError {
-            failing_path: error.failing_path().map(|path| path.display().to_string()),
-            reason: error.to_string(),
-        })?;
-    Ok(CapturedChanges {
-        changes: captured.changes,
-        protected_drops: captured.protected_drops,
-        stats: TreeResourceStats::from(captured.stats),
-        capture_s: start.elapsed().as_secs_f64(),
-    })
-}
-
 /// Capture a host command upperdir using explicit bounded-capture options.
 ///
 /// # Errors

@@ -13,6 +13,16 @@ pub trait RemountWorkspaceSession: Send + Sync {
         request: RemountWorkspaceRequest,
     ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError>;
 
+    fn apply_and_finish_remount(
+        &self,
+        handler: &WorkspaceSessionHandler,
+        request: RemountWorkspaceRequest,
+    ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {
+        let updated = self.apply_remount(handler, request)?;
+        self.finish_remount(handler.workspace_session_id.clone())?;
+        Ok(updated)
+    }
+
     fn finish_remount(
         &self,
         workspace_session_id: WorkspaceId,

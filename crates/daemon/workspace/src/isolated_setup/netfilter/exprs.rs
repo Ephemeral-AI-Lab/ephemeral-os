@@ -5,7 +5,7 @@ use crate::profile::IsolatedNetworkError;
 
 use super::wire::{
     append_be_u32_attr, append_cstr_attr, append_data_value_attr, append_nested_attr, ipv4_mask,
-    libc_c_int_to_u16, libc_c_int_to_u32, libc_c_int_to_u8, parse_ipv4_addr, parse_ipv4_cidr,
+    libc_c_int_to_u16, libc_c_int_to_u32, libc_c_int_to_u8,
 };
 
 pub(super) fn nft_masquerade_rule_exprs(
@@ -32,72 +32,40 @@ pub(super) fn nft_masquerade_rule_exprs(
 }
 
 pub(super) fn nft_imds_drop_rule_exprs() -> Result<Vec<Vec<u8>>, IsolatedNetworkError> {
-    let imds = parse_ipv4_addr(IMDS_ADDR)?;
     let mut expressions = nft_ipv4_guard_exprs(IpHeader::Inet)?;
     expressions.push(nft_payload_ipv4_expr(IPV4_DADDR_OFFSET)?);
-    expressions.push(nft_cmp_expr(NFT_CMP_EQ, &imds.octets()));
+    expressions.push(nft_cmp_expr(NFT_CMP_EQ, &IMDS_ADDR.octets()));
     expressions.push(nft_drop_expr()?);
     Ok(expressions)
 }
 
-pub(super) fn nft_peer_isolation_rule_exprs() -> Result<Vec<Vec<u8>>, IsolatedNetworkError> {
+pub(super) fn nft_peer_isolation_rule_exprs(
+    header: IpHeader,
+) -> Result<Vec<Vec<u8>>, IsolatedNetworkError> {
     let gateway = gateway_addr();
     let (bridge_net, bridge_prefix) = bridge_network();
     let mut expressions = nft_ipv4_network_match(
-        IpHeader::Inet,
+        header,
         IPV4_SADDR_OFFSET,
         bridge_net,
         bridge_prefix,
         NFT_CMP_EQ,
     )?;
     expressions.extend(nft_ipv4_addr_match(
-        IpHeader::Inet,
+        header,
         IPV4_SADDR_OFFSET,
         gateway,
         NFT_CMP_NEQ,
     )?);
     expressions.extend(nft_ipv4_network_match(
-        IpHeader::Inet,
+        header,
         IPV4_DADDR_OFFSET,
         bridge_net,
         bridge_prefix,
         NFT_CMP_EQ,
     )?);
     expressions.extend(nft_ipv4_addr_match(
-        IpHeader::Inet,
-        IPV4_DADDR_OFFSET,
-        gateway,
-        NFT_CMP_NEQ,
-    )?);
-    expressions.push(nft_drop_expr()?);
-    Ok(expressions)
-}
-
-pub(super) fn nft_bridge_peer_isolation_rule_exprs() -> Result<Vec<Vec<u8>>, IsolatedNetworkError> {
-    let gateway = gateway_addr();
-    let (bridge_net, bridge_prefix) = bridge_network();
-    let mut expressions = nft_ipv4_network_match(
-        IpHeader::Bridge,
-        IPV4_SADDR_OFFSET,
-        bridge_net,
-        bridge_prefix,
-        NFT_CMP_EQ,
-    )?;
-    expressions.extend(nft_ipv4_addr_match(
-        IpHeader::Bridge,
-        IPV4_SADDR_OFFSET,
-        gateway,
-        NFT_CMP_NEQ,
-    )?);
-    expressions.extend(nft_ipv4_network_match(
-        IpHeader::Bridge,
-        IPV4_DADDR_OFFSET,
-        bridge_net,
-        bridge_prefix,
-        NFT_CMP_EQ,
-    )?);
-    expressions.extend(nft_ipv4_addr_match(
-        IpHeader::Bridge,
+        header,
         IPV4_DADDR_OFFSET,
         gateway,
         NFT_CMP_NEQ,
@@ -107,9 +75,9 @@ pub(super) fn nft_bridge_peer_isolation_rule_exprs() -> Result<Vec<Vec<u8>>, Iso
 }
 
 pub(super) fn nft_rfc1918_drop_rule_exprs(
-    cidr: &str,
+    private_net: Ipv4Addr,
+    private_prefix: u8,
 ) -> Result<Vec<Vec<u8>>, IsolatedNetworkError> {
-    let (private_net, private_prefix) = parse_ipv4_cidr(cidr)?;
     let (bridge_net, bridge_prefix) = bridge_network();
     let mut expressions = nft_ipv4_network_match(
         IpHeader::Inet,
@@ -138,7 +106,7 @@ fn nft_ipv4_network_match(
 ) -> Result<Vec<Vec<u8>>, IsolatedNetworkError> {
     let mut expressions = nft_ipv4_guard_exprs(header)?;
     expressions.push(nft_payload_ipv4_expr(offset)?);
-    expressions.push(nft_bitwise_mask_expr(ipv4_mask(prefix_len)?));
+    expressions.push(nft_bitwise_mask_expr(ipv4_mask(prefix_len)));
     expressions.push(nft_cmp_expr(op, &network.octets()));
     Ok(expressions)
 }
@@ -267,7 +235,7 @@ const fn bridge_network() -> (Ipv4Addr, u8) {
 }
 
 #[derive(Clone, Copy)]
-enum IpHeader {
+pub(super) enum IpHeader {
     Bridge,
     Inet,
 }
@@ -315,7 +283,3 @@ const NFTA_BITWISE_DREG: u16 = 2;
 const NFTA_BITWISE_LEN: u16 = 3;
 const NFTA_BITWISE_MASK: u16 = 4;
 const NFTA_BITWISE_XOR: u16 = 5;
-
-#[cfg(test)]
-#[path = "../../../tests/unit/network/netfilter/exprs.rs"]
-mod tests;

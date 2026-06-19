@@ -26,9 +26,13 @@ pub const NFT_NAT_TABLE: &str = "eos_iws_nat";
 #[cfg(target_os = "linux")]
 pub const NFT_FILTER_TABLE: &str = "eos_iws_filter";
 #[cfg(target_os = "linux")]
-pub const IMDS_ADDR: &str = "169.254.169.254";
+pub const IMDS_ADDR: Ipv4Addr = Ipv4Addr::new(169, 254, 169, 254);
 #[cfg(target_os = "linux")]
-pub const RFC1918_NETS: [&str; 3] = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"];
+pub const RFC1918_NETS: [(Ipv4Addr, u8); 3] = [
+    (Ipv4Addr::new(10, 0, 0, 0), 8),
+    (Ipv4Addr::new(172, 16, 0, 0), 12),
+    (Ipv4Addr::new(192, 168, 0, 0), 16),
+];
 pub(crate) const VETH_PREFIX: &str = HANDLE_PREFIX;
 
 #[cfg(target_os = "linux")]

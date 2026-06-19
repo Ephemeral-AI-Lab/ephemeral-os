@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::error::WorkspaceError;
-use crate::model::{CallerId, LayerStackSnapshotRef, WorkspaceHandle, WorkspaceId};
+use crate::model::{CallerId, LayerStackSnapshotRef, WorkspaceHandle};
 use crate::profile::{
     IsolatedNetworkError, WorkspaceModeId, WorkspaceModeManager, WorkspaceModeSnapshot,
 };
@@ -120,8 +120,4 @@ pub(crate) fn mode_snapshot_from_layerstack(
         manifest_root_hash: snapshot.root_hash,
         layer_paths: snapshot.layer_paths,
     }
-}
-
-pub(crate) fn workspace_id_from_mode_id(mode_id: &WorkspaceModeId) -> WorkspaceId {
-    WorkspaceId(mode_id.0.clone())
 }

@@ -26,11 +26,10 @@ pub mod service;
 
 pub use error::WorkspaceError;
 pub use model::{
-    BaseRevision, CallerId, CaptureChangesRequest, CaptureChangesResult, CapturedWorkspaceChanges,
-    ChangedPathKind, CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult,
-    LatestSnapshotRequest, LayerStackSnapshotRef, LeaseId, ProtectedPathDrop,
-    ProtectedPathDropReason, ReadonlySnapshotHandle, RemountWorkspaceRequest,
-    RemountWorkspaceResult, WorkspaceEntry, WorkspaceEntryError, WorkspaceEntryFds,
-    WorkspaceHandle, WorkspaceId, WorkspaceProfile,
+    BaseRevision, CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, ChangedPathKind,
+    CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
+    LayerStackSnapshotRef, LeaseId, ProtectedPathDrop, ProtectedPathDropReason,
+    ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceEntry,
+    WorkspaceEntryError, WorkspaceEntryFds, WorkspaceHandle, WorkspaceId, WorkspaceProfile,
 };
 pub use service::{WorkspaceRuntimeHooks, WorkspaceRuntimeService};

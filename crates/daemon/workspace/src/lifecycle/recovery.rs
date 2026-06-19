@@ -298,12 +298,10 @@ fn persisted_ipv4(row: &Value, key: &str) -> Option<Ipv4Addr> {
     persisted_string(row, key)?.parse().ok()
 }
 
-fn persisted_path(row: &Value, key: &str) -> Option<PathBuf> {
-    persisted_string(row, key).map(PathBuf::from)
-}
-
 fn persisted_existing_path(row: &Value, key: &str) -> Option<PathBuf> {
-    persisted_path(row, key).filter(|path| path.exists())
+    persisted_string(row, key)
+        .map(PathBuf::from)
+        .filter(|path| path.exists())
 }
 
 fn record_cleanup_error(target: &mut Option<String>, error: Option<String>) {

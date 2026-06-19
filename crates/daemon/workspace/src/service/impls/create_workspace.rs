@@ -1,9 +1,9 @@
 use crate::error::WorkspaceError;
-use crate::model::{CreateWorkspaceRequest, WorkspaceHandle};
+use crate::model::{CreateWorkspaceRequest, WorkspaceHandle, WorkspaceId};
 use crate::profile::WorkspaceModeId;
 use crate::service::support::{
     ensure_absolute, ensure_configured_workspace_root, ensure_non_empty,
-    mode_snapshot_from_layerstack, workspace_error_from_mode_error, workspace_id_from_mode_id,
+    mode_snapshot_from_layerstack, workspace_error_from_mode_error,
 };
 use crate::service::WorkspaceRuntimeService;
 
@@ -25,7 +25,7 @@ impl WorkspaceRuntimeService {
         if let Some(existing_id) = state.manager.by_caller.get(&request.caller_id.0) {
             return Err(WorkspaceError::AlreadyOpen {
                 owner: request.caller_id,
-                workspace_id: workspace_id_from_mode_id(existing_id),
+                workspace_id: WorkspaceId(existing_id.0.clone()),
             });
         }
 

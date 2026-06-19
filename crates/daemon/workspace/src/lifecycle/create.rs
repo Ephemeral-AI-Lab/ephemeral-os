@@ -43,14 +43,6 @@ impl WorkspaceModeManager {
         let _ = teardown_workspace(&self.runtime, handle, &mut profile, 1.0);
     }
 
-    pub fn enter(
-        &mut self,
-        caller_id: &str,
-        snapshot: WorkspaceModeSnapshot,
-    ) -> Result<WorkspaceModeHandle, IsolatedNetworkError> {
-        self.enter_with_profile(caller_id, snapshot, WorkspaceProfile::Isolated)
-    }
-
     pub fn enter_with_profile(
         &mut self,
         caller_id: &str,

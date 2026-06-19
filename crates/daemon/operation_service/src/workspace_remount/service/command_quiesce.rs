@@ -35,12 +35,89 @@ pub struct CommandRemountInspection {
     pub detail: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum RemountBlockReason {
+    ActiveCommandMissing,
+    #[cfg(target_os = "linux")]
+    CwdPinnedWorkspace,
+    #[cfg(target_os = "linux")]
+    CwdUnavailable,
+    #[cfg(target_os = "linux")]
+    FdPinnedWorkspace,
+    #[cfg(target_os = "linux")]
+    FreezeFailed,
+    #[cfg(target_os = "linux")]
+    FreezeTimeout,
+    #[cfg(target_os = "linux")]
+    MappedFilePinnedWorkspace,
+    #[cfg(target_os = "linux")]
+    MappedFileUnavailable,
+    #[cfg(target_os = "linux")]
+    MountinfoMismatch,
+    #[cfg(target_os = "linux")]
+    MountinfoUnavailable,
+    ProcessGroupUnavailable,
+    #[cfg(target_os = "linux")]
+    ProcessMembershipChanged,
+    RemountCancelledBeforeSwitch,
+    RemountInspectionBlocked,
+    #[cfg(target_os = "linux")]
+    RootPinnedWorkspace,
+    #[cfg(target_os = "linux")]
+    RootUnavailable,
+    #[cfg(not(target_os = "linux"))]
+    UnsupportedPlatform,
+}
+
+impl RemountBlockReason {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::ActiveCommandMissing => "active_command_missing",
+            #[cfg(target_os = "linux")]
+            Self::CwdPinnedWorkspace => "cwd_pinned_workspace",
+            #[cfg(target_os = "linux")]
+            Self::CwdUnavailable => "cwd_unavailable",
+            #[cfg(target_os = "linux")]
+            Self::FdPinnedWorkspace => "fd_pinned_workspace",
+            #[cfg(target_os = "linux")]
+            Self::FreezeFailed => "freeze_failed",
+            #[cfg(target_os = "linux")]
+            Self::FreezeTimeout => "freeze_timeout",
+            #[cfg(target_os = "linux")]
+            Self::MappedFilePinnedWorkspace => "mapped_file_pinned_workspace",
+            #[cfg(target_os = "linux")]
+            Self::MappedFileUnavailable => "mapped_file_unavailable",
+            #[cfg(target_os = "linux")]
+            Self::MountinfoMismatch => "mountinfo_mismatch",
+            #[cfg(target_os = "linux")]
+            Self::MountinfoUnavailable => "mountinfo_unavailable",
+            Self::ProcessGroupUnavailable => "process_group_unavailable",
+            #[cfg(target_os = "linux")]
+            Self::ProcessMembershipChanged => "process_membership_changed",
+            Self::RemountCancelledBeforeSwitch => "remount_cancelled_before_switch",
+            Self::RemountInspectionBlocked => "remount_inspection_blocked",
+            #[cfg(target_os = "linux")]
+            Self::RootPinnedWorkspace => "root_pinned_workspace",
+            #[cfg(target_os = "linux")]
+            Self::RootUnavailable => "root_unavailable",
+            #[cfg(not(target_os = "linux"))]
+            Self::UnsupportedPlatform => "unsupported_platform",
+        }
+    }
+}
+
+impl std::fmt::Display for RemountBlockReason {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 impl CommandRemountInspection {
     #[must_use]
     pub fn reason_or_default(&self) -> &str {
         self.blocked_reason
             .as_deref()
-            .unwrap_or("remount_inspection_blocked")
+            .unwrap_or(RemountBlockReason::RemountInspectionBlocked.as_str())
     }
 
     #[must_use]
@@ -50,6 +127,16 @@ impl CommandRemountInspection {
             && self.inspected
             && self.quiesce_attempted
             && self.quiesced_process_count == self.process_count
+    }
+
+    #[cfg(target_os = "linux")]
+    pub(crate) fn block(&mut self, reason: RemountBlockReason) {
+        self.blocked_reason = Some(reason.to_string());
+    }
+
+    pub(crate) fn block_if_clear(&mut self, reason: RemountBlockReason) {
+        self.blocked_reason
+            .get_or_insert_with(|| reason.to_string());
     }
 }
 
@@ -256,7 +343,7 @@ fn inspect_isolated_command_process_group(
         let _ = (pgid, workspace_root);
         CommandRemountInspection {
             active_commands: 1,
-            blocked_reason: Some("unsupported_platform".to_owned()),
+            blocked_reason: Some(RemountBlockReason::UnsupportedPlatform.to_string()),
             detail: Some("live remount inspection requires Linux /proc".to_owned()),
             ..CommandRemountInspection::default()
         }
@@ -286,19 +373,19 @@ fn inspect_isolated_command_process_group_linux(
     let before = process_group_snapshot(pgid);
     report.process_count = before.pids.len();
     if before.pids.is_empty() {
-        report.blocked_reason = Some("process_membership_changed".to_owned());
+        report.block(RemountBlockReason::ProcessMembershipChanged);
         report.detail = Some(format!("process group {pgid} had no live members"));
         return report;
     }
 
     if let Err(error) = killpg(Pid::from_raw(pgid), Signal::SIGSTOP) {
-        report.blocked_reason = Some("freeze_failed".to_owned());
+        report.block(RemountBlockReason::FreezeFailed);
         report.detail = Some(error.to_string());
         return report;
     }
 
     let Some(stopped) = wait_for_group_stopped(pgid, &before.pids) else {
-        report.blocked_reason = Some("freeze_timeout".to_owned());
+        report.block(RemountBlockReason::FreezeTimeout);
         resume_process_group(&mut report, pgid);
         return report;
     };
@@ -306,7 +393,7 @@ fn inspect_isolated_command_process_group_linux(
     let after = process_group_snapshot(pgid);
     report.process_count = after.pids.len();
     if after.pids != before.pids {
-        report.blocked_reason = Some("process_membership_changed".to_owned());
+        report.block(RemountBlockReason::ProcessMembershipChanged);
         report.detail = Some(format!("before={:?} after={:?}", before.pids, after.pids));
         resume_process_group(&mut report, pgid);
         return report;
@@ -401,15 +488,11 @@ fn inspect_pinned_paths(
         match proc_link_points_inside(*pid, "cwd", workspace_root) {
             Some(true) => {
                 report.pinned_cwd_count += 1;
-                report
-                    .blocked_reason
-                    .get_or_insert_with(|| "cwd_pinned_workspace".to_owned());
+                report.block_if_clear(RemountBlockReason::CwdPinnedWorkspace);
             }
             Some(false) => {}
             None => {
-                report
-                    .blocked_reason
-                    .get_or_insert_with(|| "cwd_unavailable".to_owned());
+                report.block_if_clear(RemountBlockReason::CwdUnavailable);
                 report
                     .detail
                     .get_or_insert_with(|| format!("failed to inspect cwd for pid {pid}"));
@@ -418,15 +501,11 @@ fn inspect_pinned_paths(
         match proc_link_points_inside(*pid, "root", workspace_root) {
             Some(true) => {
                 report.pinned_root_count += 1;
-                report
-                    .blocked_reason
-                    .get_or_insert_with(|| "root_pinned_workspace".to_owned());
+                report.block_if_clear(RemountBlockReason::RootPinnedWorkspace);
             }
             Some(false) => {}
             None => {
-                report
-                    .blocked_reason
-                    .get_or_insert_with(|| "root_unavailable".to_owned());
+                report.block_if_clear(RemountBlockReason::RootUnavailable);
                 report
                     .detail
                     .get_or_insert_with(|| format!("failed to inspect root for pid {pid}"));
@@ -436,15 +515,11 @@ fn inspect_pinned_paths(
             Some(count) => {
                 report.pinned_fd_count += count;
                 if count > 0 {
-                    report
-                        .blocked_reason
-                        .get_or_insert_with(|| "fd_pinned_workspace".to_owned());
+                    report.block_if_clear(RemountBlockReason::FdPinnedWorkspace);
                 }
             }
             None => {
-                report
-                    .blocked_reason
-                    .get_or_insert_with(|| "fd_pinned_workspace".to_owned());
+                report.block_if_clear(RemountBlockReason::FdPinnedWorkspace);
                 report.detail.get_or_insert_with(|| {
                     format!("failed to inspect file descriptors for pid {pid}")
                 });
@@ -453,14 +528,10 @@ fn inspect_pinned_paths(
         if let Some(count) = inspect_proc_maps(*pid, workspace_root) {
             report.pinned_mapped_file_count += count;
             if count > 0 {
-                report
-                    .blocked_reason
-                    .get_or_insert_with(|| "mapped_file_pinned_workspace".to_owned());
+                report.block_if_clear(RemountBlockReason::MappedFilePinnedWorkspace);
             }
         } else {
-            report
-                .blocked_reason
-                .get_or_insert_with(|| "mapped_file_unavailable".to_owned());
+            report.block_if_clear(RemountBlockReason::MappedFileUnavailable);
             report
                 .detail
                 .get_or_insert_with(|| format!("failed to inspect mapped files for pid {pid}"));
@@ -469,14 +540,10 @@ fn inspect_pinned_paths(
             Some(true) => report.mountinfo_checked_count += 1,
             Some(false) => {
                 report.mountinfo_checked_count += 1;
-                report
-                    .blocked_reason
-                    .get_or_insert_with(|| "mountinfo_mismatch".to_owned());
+                report.block_if_clear(RemountBlockReason::MountinfoMismatch);
             }
             None => {
-                report
-                    .blocked_reason
-                    .get_or_insert_with(|| "mountinfo_unavailable".to_owned());
+                report.block_if_clear(RemountBlockReason::MountinfoUnavailable);
                 report
                     .detail
                     .get_or_insert_with(|| format!("failed to read mountinfo for pid {pid}"));
