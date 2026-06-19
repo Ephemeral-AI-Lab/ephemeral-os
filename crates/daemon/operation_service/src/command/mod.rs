@@ -1,7 +1,3 @@
-#[path = "service/command_quiesce.rs"]
-pub(crate) mod command_quiesce;
-#[path = "service/command_remount_coordinator.rs"]
-mod command_remount_coordinator;
 #[path = "service/contract.rs"]
 pub mod contract;
 pub mod error;
@@ -11,6 +7,8 @@ mod launch;
 pub mod process_store;
 #[path = "service/registry.rs"]
 pub mod registry;
+#[path = "service/remount/mod.rs"]
+pub(crate) mod remount;
 pub mod service;
 #[path = "service/transcript.rs"]
 mod transcript;
@@ -18,10 +16,6 @@ mod transcript;
 #[path = "service/finalize.rs"]
 pub(crate) mod finalize;
 
-pub use command_quiesce::{
-    CommandRemountInspection, CommandRemountQuiesce, ProcessGroupController,
-    RemountCancellationToken, RemountSwitchState,
-};
 pub use contract::{
     CancelCommandInput, CommandCallContext, CommandFinalizationOutcome, CommandFinalizedMetadata,
     CommandFinalizedPolicy, CommandId, CommandLinesOutput, CommandOutputSnapshot,
@@ -38,4 +32,8 @@ pub use process_store::{
     FinalizationState, RetainedCommandTranscript, DEFAULT_MAX_ACTIVE_COMMANDS,
 };
 pub use registry::CommandRegistry;
+pub use remount::{
+    CommandRemountInspection, CommandRemountQuiesce, ProcessGroupController,
+    RemountCancellationToken, RemountSwitchState,
+};
 pub use service::{CommandFinalizationOptions, CommandOperationService};

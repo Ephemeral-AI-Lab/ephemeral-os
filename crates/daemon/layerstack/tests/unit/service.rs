@@ -3,7 +3,10 @@ use std::path::Path;
 use crate::commit::CommitWriter;
 use crate::model::LayerChange;
 use crate::test_fixture::{lp, unique_suffix, Fixture, TestResult};
-use crate::{reset_process_state_for_tests, service, CommitOptions, LayerStack, MergedView};
+use crate::{
+    process_state_test_lock, reset_process_state_for_tests, service, CommitOptions, LayerStack,
+    MergedView,
+};
 
 use super::{
     normalize_root_key, services, snapshot_manifest, snapshot_manifest_preserving_layer_ids,
@@ -121,6 +124,7 @@ fn commit_direct_trace_events_include_worker_handoff_and_batch_facts() -> TestRe
 
 #[test]
 fn process_state_reset_clears_service_cache_and_lease_registry() -> TestResult {
+    let _state_guard = process_state_test_lock();
     reset_process_state_for_tests();
     let fixture = Fixture::new("process_state_reset")?;
     let _snapshot = service::acquire_snapshot(&fixture.root, "reset-test")?;
@@ -159,6 +163,7 @@ fn process_state_reset_clears_service_cache_and_lease_registry() -> TestResult {
 
 #[test]
 fn compact_snapshot_for_remount_retargets_active_lease_to_one_layer() -> TestResult {
+    let _state_guard = process_state_test_lock();
     reset_process_state_for_tests();
     let fixture = Fixture::new("compact_snapshot_retarget")?;
     for index in 0..4 {
@@ -201,6 +206,7 @@ fn compact_snapshot_for_remount_retargets_active_lease_to_one_layer() -> TestRes
 
 #[test]
 fn acquire_bounded_snapshot_for_command_normalizes_before_lease() -> TestResult {
+    let _state_guard = process_state_test_lock();
     reset_process_state_for_tests();
     let fixture = Fixture::new("bounded_command_snapshot")?;
     for index in 0..5 {

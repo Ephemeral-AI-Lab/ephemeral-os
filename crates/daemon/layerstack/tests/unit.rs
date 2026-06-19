@@ -57,6 +57,13 @@ pub fn reset_process_state_for_tests() {
     lock::reset_storage_lock_registry_for_tests();
 }
 
+pub(crate) fn process_state_test_lock() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: std::sync::OnceLock<std::sync::Mutex<()>> = std::sync::OnceLock::new();
+    LOCK.get_or_init(|| std::sync::Mutex::new(()))
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
 pub(crate) use capture::*;
 pub(crate) use commit::worker::auto_squash::*;
 pub(crate) use commit::worker::queue::*;

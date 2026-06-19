@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
-use crate::command::command_quiesce::{merge_report, RemountBlockReason};
-use crate::command::{
-    CancellationState, CommandLifecycleState, CommandOperationService, CommandRemountInspection,
-    CommandRemountQuiesce, RemountCancellationToken, RemountSwitchState,
+use super::quiesce::merge_report;
+use super::{
+    CommandRemountInspection, CommandRemountQuiesce, RemountBlockReason, RemountCancellationToken,
+    RemountSwitchState,
 };
+use crate::command::{CancellationState, CommandLifecycleState, CommandOperationService};
 use crate::workspace_crate::WorkspaceId;
 use crate::workspace_remount::CommandRemountCoordinator;
 

@@ -4,7 +4,7 @@ use std::sync::mpsc;
 use std::time::Duration;
 
 use super::StorageWriterLockLease;
-use crate::reset_process_state_for_tests;
+use crate::{process_state_test_lock, reset_process_state_for_tests};
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
@@ -82,6 +82,7 @@ fn exclusive_guard_is_reentrant_and_blocks_shared() -> TestResult {
 
 #[test]
 fn process_state_reset_does_not_close_active_storage_writer_leases() -> TestResult {
+    let _state_guard = process_state_test_lock();
     let fixture = Fixture::new("reset-active")?;
     let lease = StorageWriterLockLease::acquire(&fixture.root)?;
     reset_process_state_for_tests();
