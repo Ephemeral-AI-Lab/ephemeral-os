@@ -27,8 +27,7 @@ mod workspace;
 
 pub use capture::{CaptureError, CaptureStats, ProtectedPathDrop, ProtectedPathDropReason};
 pub(crate) use commit::{
-    hash_current, CaptureRouteStats, ChangesetResult, CommitError, CommitOptions, CommitStatus,
-    FileResult, OccTraceEvent,
+    CaptureRouteStats, ChangesetResult, CommitError, CommitOptions, CommitStatus,
 };
 pub use error::LayerStackError;
 pub(crate) use lease_aware::{

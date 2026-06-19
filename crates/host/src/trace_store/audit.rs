@@ -8,7 +8,7 @@ use super::now_ms;
 
 pub(super) const AUDIT_SCHEMA: &str = "eos.trace.v1.AuditEntry";
 pub(super) const REQUEST_START_SCHEMA: &str = "eos.trace.v1.RequestStart";
-pub(super) const RESPONSE_PERSISTED_SCHEMA: &str = "eos.trace.v1.ResponsePersisted";
+pub(crate) const RESPONSE_PERSISTED_SCHEMA: &str = "eos.trace.v1.ResponsePersisted";
 pub(super) const TRACE_BATCH_SCHEMA: &str = "eos.trace.v1.TraceBatch";
 
 const SPOOL_OVERFLOW_TRACE_ID: &str = "_spool_overflow";

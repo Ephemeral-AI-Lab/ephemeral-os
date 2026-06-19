@@ -3,7 +3,6 @@ use std::fs;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-#[cfg(any(test, feature = "test-support"))]
 use std::sync::{Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -17,18 +16,15 @@ const DAEMON_AUTH_TOKEN_ENV: &str = "EOS_DAEMON_AUTH_TOKEN";
 const DAEMON_FORWARD_AUTH_TOKEN_ENV: &str = "EOS_DAEMON_FORWARD_AUTH_TOKEN";
 const DAEMON_CONFIG_YAML_ENV: &str = "EOS_DAEMON_CONFIG_YAML";
 
-#[cfg(any(test, feature = "test-support"))]
 static DOCKER_COMMAND_OVERRIDE: OnceLock<Mutex<Option<PathBuf>>> = OnceLock::new();
-#[cfg(any(test, feature = "test-support"))]
 static DOCKER_COMMAND_OVERRIDE_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
-#[cfg(any(test, feature = "test-support"))]
+#[allow(dead_code)]
 pub(crate) struct DockerCommandOverrideGuard {
     previous: Option<PathBuf>,
     _lock: std::sync::MutexGuard<'static, ()>,
 }
 
-#[cfg(any(test, feature = "test-support"))]
 impl Drop for DockerCommandOverrideGuard {
     fn drop(&mut self) {
         let override_slot = DOCKER_COMMAND_OVERRIDE.get_or_init(|| Mutex::new(None));
@@ -36,7 +32,7 @@ impl Drop for DockerCommandOverrideGuard {
     }
 }
 
-#[cfg(any(test, feature = "test-support"))]
+#[allow(dead_code)]
 pub(crate) fn override_docker_command_for_tests(path: PathBuf) -> DockerCommandOverrideGuard {
     let lock = DOCKER_COMMAND_OVERRIDE_LOCK
         .get_or_init(|| Mutex::new(()))
@@ -343,7 +339,7 @@ impl DaemonContainer {
     }
 }
 
-fn docker_run_args(container: &ContainerSpec, daemon_tcp_port: u16) -> Vec<String> {
+pub(crate) fn docker_run_args(container: &ContainerSpec, daemon_tcp_port: u16) -> Vec<String> {
     let keep = container.lifetime == ContainerLifetime::Keep;
     let mut run = vec![
         "run".to_owned(),
@@ -394,7 +390,7 @@ fn docker_run_args(container: &ContainerSpec, daemon_tcp_port: u16) -> Vec<Strin
     run
 }
 
-fn daemon_spawn_args(
+pub(crate) fn daemon_spawn_args(
     remote_eosd_path: &str,
     daemon_dir: &str,
     remote_config_path: &str,
@@ -466,7 +462,7 @@ fn await_ready(client: &ProtocolClient, budget: Duration) -> Result<()> {
     }
 }
 
-fn docker_exec_args(container: &str, argv: &[&str]) -> Vec<String> {
+pub(crate) fn docker_exec_args(container: &str, argv: &[&str]) -> Vec<String> {
     let mut rebuilt: Vec<String> = vec!["exec".to_owned()];
     let mut index = 0;
     while let Some(token) = argv.get(index) {
@@ -524,7 +520,7 @@ where
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_owned())
 }
 
-fn docker_display(args: &[std::ffi::OsString]) -> String {
+pub(crate) fn docker_display(args: &[std::ffi::OsString]) -> String {
     args.iter()
         .map(|arg| redact_docker_display_arg(&arg.to_string_lossy()))
         .collect::<Vec<_>>()
@@ -542,7 +538,7 @@ fn redact_docker_display_arg(arg: &str) -> String {
     arg.to_owned()
 }
 
-fn redact_docker_error_text(text: &str) -> String {
+pub(crate) fn redact_docker_error_text(text: &str) -> String {
     [DAEMON_AUTH_TOKEN_ENV, DAEMON_FORWARD_AUTH_TOKEN_ENV]
         .into_iter()
         .fold(text.to_owned(), |value, key| {
@@ -568,7 +564,6 @@ fn redact_key_assignments(text: &str, key: &str) -> String {
     output
 }
 
-#[cfg(any(test, feature = "test-support"))]
 fn docker_command() -> Command {
     let path = DOCKER_COMMAND_OVERRIDE
         .get_or_init(|| Mutex::new(None))
@@ -579,10 +574,6 @@ fn docker_command() -> Command {
     Command::new(path)
 }
 
-#[cfg(not(any(test, feature = "test-support")))]
-fn docker_command() -> Command {
-    Command::new("docker")
-}
 pub fn running_container_ids<S: AsRef<str>>(label_filters: &[S]) -> Vec<String> {
     let mut args = vec!["ps".to_owned(), "-q".to_owned()];
     for filter in label_filters {
@@ -693,14 +684,14 @@ fn copy_path_into(
     Ok(())
 }
 
-fn validate_remote_name(remote_name: &str) -> Result<()> {
+pub(crate) fn validate_remote_name(remote_name: &str) -> Result<()> {
     if remote_name.is_empty() || remote_name.contains('/') || remote_name == ".." {
         bail!("invalid remote file name {remote_name:?}");
     }
     Ok(())
 }
 
-fn container_copy_target(container: &str, dest_dir: &str, remote_name: &str) -> String {
+pub(crate) fn container_copy_target(container: &str, dest_dir: &str, remote_name: &str) -> String {
     format!("{container}:{}", remote_path(dest_dir, remote_name))
 }
 
@@ -764,7 +755,7 @@ fn wait_for_published_addr(container: &str, container_port: u16) -> Result<Socke
     }
 }
 
-fn parse_published_addr(output: &str) -> Option<SocketAddr> {
+pub(crate) fn parse_published_addr(output: &str) -> Option<SocketAddr> {
     for line in output.lines() {
         let mapping = line.trim();
         let port = mapping.rsplit(':').next()?.trim();
@@ -809,7 +800,3 @@ pub fn container_ids_by_ancestor(image: &str) -> Result<Vec<String>> {
     let out = docker(["ps", "-aq", "--filter", &format!("ancestor={image}")])?;
     Ok(out.split_whitespace().map(str::to_owned).collect())
 }
-
-#[cfg(any(test, feature = "test-support"))]
-#[path = "../tests/unit/runtime.rs"]
-mod tests;

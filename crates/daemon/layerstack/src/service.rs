@@ -196,6 +196,7 @@ pub fn acquire_snapshot(root: &Path, request_id: &str) -> Result<Snapshot, Layer
     Ok(snapshot_from_lease(lease))
 }
 
+#[allow(dead_code)]
 pub(crate) fn acquire_bounded_snapshot_for_command(
     root: &Path,
     request_id: &str,
@@ -223,6 +224,7 @@ pub fn release_lease(root: &Path, lease_id: &str) -> Result<bool, LayerStackErro
     LayerStack::open(root.to_path_buf())?.release_lease(lease_id)
 }
 
+#[allow(dead_code)]
 pub(crate) fn compact_snapshot_for_remount(
     root: &Path,
     snapshot_manifest_version: i64,
@@ -496,6 +498,7 @@ pub(crate) fn snapshot_manifest(
     snapshot_manifest_with_layer_ids(root, version, layer_paths, false)
 }
 
+#[allow(dead_code)]
 pub(crate) fn snapshot_manifest_preserving_layer_ids(
     root: &Path,
     version: i64,

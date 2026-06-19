@@ -27,7 +27,7 @@ pub(crate) struct SandboxRecord {
 }
 
 impl SandboxRecord {
-    #[cfg(any(test, feature = "test-support"))]
+    #[allow(dead_code)]
     pub(crate) fn new(
         sandbox_id: String,
         container: String,

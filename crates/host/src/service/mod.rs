@@ -19,8 +19,8 @@ use crate::trace_store::{
 };
 use trace::{RequestId, TraceId};
 
-mod forward;
-mod registry;
+pub(crate) mod forward;
+pub(crate) mod registry;
 
 pub use forward::ForwardError;
 
@@ -144,10 +144,10 @@ struct ManagedSandboxStart {
 }
 
 pub struct SandboxHost {
-    config: HostConfig,
-    config_yaml: String,
-    registry: Arc<SandboxRegistry>,
-    trace_store: Arc<TraceStore>,
+    pub(crate) config: HostConfig,
+    pub(crate) config_yaml: String,
+    pub(crate) registry: Arc<SandboxRegistry>,
+    pub(crate) trace_store: Arc<TraceStore>,
 }
 
 impl SandboxHost {
@@ -1088,7 +1088,7 @@ fn optional_string_arg<'a>(args: &'a Value, name: &str) -> Option<&'a str> {
     }
 }
 
-fn workspace_root_from_args(args: &Value) -> Result<PathBuf> {
+pub(crate) fn workspace_root_from_args(args: &Value) -> Result<PathBuf> {
     let raw = optional_string_arg(args, "workspace_root").unwrap_or(DEFAULT_WORKSPACE_ROOT);
     let path = PathBuf::from(raw);
     if !path.is_absolute() {
@@ -1160,7 +1160,3 @@ struct HostContainerTarget {
     sandbox_id: Option<String>,
     container: String,
 }
-
-#[cfg(any(test, feature = "test-support"))]
-#[path = "../../tests/unit/host.rs"]
-mod tests;

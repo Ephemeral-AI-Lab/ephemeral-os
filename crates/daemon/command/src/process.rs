@@ -258,11 +258,6 @@ impl CommandProcess {
         self.runtime.process.process_group_id()
     }
 
-    #[must_use]
-    pub(crate) const fn started_at(&self) -> Instant {
-        self.started_at
-    }
-
     pub fn write_process_stdin(&self, chars: &str) -> Result<(), CommandError> {
         self.runtime.process.write_stdin(chars.as_bytes())?;
         Ok(())

@@ -2,13 +2,11 @@
 //! functions operate on a borrowed `Connection` and are delegated to by the
 //! public read methods on `TraceStore` so callers keep a single type.
 
-#[cfg(any(test, feature = "e2e-support"))]
 use rusqlite::OptionalExtension;
 use rusqlite::{params, Connection};
 
 use super::TraceStoreError;
 
-#[cfg(any(test, feature = "e2e-support"))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SqlitePosture {
     pub journal_mode: String,
@@ -124,7 +122,6 @@ args_digest, workspace_route, status, error_kind, sent_at_ms, received_at_ms,
 host_rtt_ms, duration_us, daemon_boot_id, host_boot_id, modules_touched,
 response_digest, response_len, response_summary";
 
-#[cfg(any(test, feature = "e2e-support"))]
 pub(super) fn events_for_trace(
     conn: &Connection,
     trace_id: &str,
@@ -156,7 +153,6 @@ pub(super) fn events_for_trace_limited(
     Ok(rows)
 }
 
-#[cfg(any(test, feature = "e2e-support"))]
 pub(super) fn request_by_id(
     conn: &Connection,
     request_id: &str,
@@ -207,7 +203,6 @@ pub(super) fn requests_for_trace_limited(
     Ok(rows)
 }
 
-#[cfg(any(test, feature = "e2e-support"))]
 pub(super) fn spans_for_trace(
     conn: &Connection,
     trace_id: &str,
@@ -248,7 +243,6 @@ pub(super) fn spans_for_trace_limited(
     Ok(rows)
 }
 
-#[cfg(any(test, feature = "e2e-support"))]
 pub(super) fn resources_for_trace(
     conn: &Connection,
     trace_id: &str,
@@ -284,7 +278,6 @@ pub(super) fn resources_for_trace_limited(
     Ok(rows)
 }
 
-#[cfg(any(test, feature = "e2e-support"))]
 pub(super) fn links_for_trace(
     conn: &Connection,
     trace_id: &str,
@@ -411,7 +404,6 @@ pub(super) fn projection_gaps(
     Ok(rows)
 }
 
-#[cfg(any(test, feature = "e2e-support"))]
 pub(super) fn trace_ids_for_link(
     conn: &Connection,
     link_kind: &str,
@@ -426,7 +418,6 @@ pub(super) fn trace_ids_for_link(
     Ok(rows)
 }
 
-#[cfg(any(test, feature = "e2e-support"))]
 pub(super) fn query_plan_for(conn: &Connection, sql: &str) -> Result<Vec<String>, TraceStoreError> {
     let mut stmt = conn.prepare(&format!("EXPLAIN QUERY PLAN {sql}"))?;
     let rows = stmt
@@ -435,7 +426,6 @@ pub(super) fn query_plan_for(conn: &Connection, sql: &str) -> Result<Vec<String>
     Ok(rows)
 }
 
-#[cfg(any(test, feature = "test-support"))]
 pub(super) fn resource_span_ids_for_request(
     conn: &Connection,
     request_id: &str,
@@ -449,7 +439,6 @@ pub(super) fn resource_span_ids_for_request(
     Ok(rows)
 }
 
-#[cfg(any(test, feature = "e2e-support"))]
 pub(super) fn sqlite_posture(conn: &Connection) -> Result<SqlitePosture, TraceStoreError> {
     let journal_mode: String = conn.pragma_query_value(None, "journal_mode", |row| row.get(0))?;
     let synchronous: i64 = conn.pragma_query_value(None, "synchronous", |row| row.get(0))?;

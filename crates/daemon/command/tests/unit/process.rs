@@ -32,7 +32,7 @@ fn process_exposes_identity_and_expiry() {
     assert_eq!(process.id(), "cmd_1");
     assert_eq!(process.caller_id(), "caller");
     assert_eq!(process.command(), "echo ok");
-    assert!(process.is_past_deadline(process.started_at() + Duration::from_millis(2), 3600));
+    assert!(process.is_past_deadline(std::time::Instant::now() + Duration::from_millis(2), 3600));
 }
 
 #[test]

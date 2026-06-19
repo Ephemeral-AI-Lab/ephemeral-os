@@ -327,14 +327,8 @@ fn retry_attempt_index() -> u32 {
     u32::try_from(connect_retry_delays_s().len()).unwrap_or(u32::MAX)
 }
 
-#[cfg(not(any(test, feature = "test-support")))]
 fn connect_retry_delays_s() -> &'static [f64] {
     &crate::daemon_wire::CONNECT_RETRY_DELAYS_S
-}
-
-#[cfg(any(test, feature = "test-support"))]
-fn connect_retry_delays_s() -> &'static [f64] {
-    &[0.0, 0.0]
 }
 
 fn elapsed_us(started: Instant) -> u64 {
