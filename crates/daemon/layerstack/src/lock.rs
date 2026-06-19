@@ -55,7 +55,7 @@ impl StorageWriterLockLease {
         Ok(Self { key })
     }
 
-    pub fn shared(&self) -> Result<SharedGuard<'_>, LayerStackError> {
+    pub(crate) fn shared(&self) -> Result<SharedGuard<'_>, LayerStackError> {
         let lock = self.lock()?;
         lock.read()?;
         Ok(SharedGuard {
@@ -64,7 +64,7 @@ impl StorageWriterLockLease {
         })
     }
 
-    pub fn exclusive(&self) -> Result<ExclusiveGuard<'_>, LayerStackError> {
+    pub(crate) fn exclusive(&self) -> Result<ExclusiveGuard<'_>, LayerStackError> {
         let lock = self.lock()?;
         lock.write()?;
         Ok(ExclusiveGuard {
@@ -101,7 +101,7 @@ impl Drop for StorageWriterLockLease {
 }
 
 #[derive(Debug)]
-pub struct SharedGuard<'lease> {
+pub(crate) struct SharedGuard<'lease> {
     lock: Arc<ReentrantRwLock>,
     _lease: PhantomData<&'lease StorageWriterLockLease>,
 }
@@ -113,7 +113,7 @@ impl Drop for SharedGuard<'_> {
 }
 
 #[derive(Debug)]
-pub struct ExclusiveGuard<'lease> {
+pub(crate) struct ExclusiveGuard<'lease> {
     lock: Arc<ReentrantRwLock>,
     _lease: PhantomData<&'lease StorageWriterLockLease>,
 }

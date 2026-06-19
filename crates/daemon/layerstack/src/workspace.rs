@@ -17,7 +17,7 @@ use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, STAGING_DIR};
 
 pub const WORKSPACE_BINDING_FILE: &str = "workspace.json";
 
-pub const WORKSPACE_BASE_LAYER_ID: &str = "B000001-base";
+const WORKSPACE_BASE_LAYER_ID: &str = "B000001-base";
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct WorkspaceBinding {

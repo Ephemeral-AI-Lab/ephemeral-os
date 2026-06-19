@@ -59,7 +59,7 @@ impl CaptureError {
 }
 
 /// Crate result alias for upperdir capture.
-pub type Result<T> = std::result::Result<T, CaptureError>;
+type Result<T> = std::result::Result<T, CaptureError>;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CaptureStats {
@@ -85,10 +85,10 @@ pub struct ProtectedPathDrop {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct CapturedUpperdir {
-    pub changes: Vec<LayerChange>,
-    pub protected_drops: Vec<ProtectedPathDrop>,
-    pub stats: CaptureStats,
+pub(crate) struct CapturedUpperdir {
+    pub(crate) changes: Vec<LayerChange>,
+    pub(crate) protected_drops: Vec<ProtectedPathDrop>,
+    pub(crate) stats: CaptureStats,
 }
 
 #[derive(Debug)]
@@ -225,7 +225,7 @@ impl RegularFileCaptureMeta {
 ///
 /// Returns [`CaptureError`] when upperdir traversal, path normalization, xattr
 /// probing, or content/link-target reads fail.
-pub fn capture_upperdir(upperdir: &Path) -> Result<Vec<LayerChange>> {
+pub(crate) fn capture_upperdir(upperdir: &Path) -> Result<Vec<LayerChange>> {
     Ok(capture_upperdir_with_stats(upperdir)?.changes)
 }
 
@@ -236,7 +236,7 @@ pub fn capture_upperdir(upperdir: &Path) -> Result<Vec<LayerChange>> {
 ///
 /// Returns [`CaptureError`] when upperdir traversal, path normalization, xattr
 /// probing, or content/link-target reads fail.
-pub fn capture_upperdir_with_stats(upperdir: &Path) -> Result<CapturedUpperdir> {
+pub(crate) fn capture_upperdir_with_stats(upperdir: &Path) -> Result<CapturedUpperdir> {
     let metadata = capture_upperdir_metadata(upperdir)?;
     let changes = materialize_entries_in_memory(&metadata.entries, MAX_CAPTURE_FILE_BYTES)?;
     Ok(CapturedUpperdir {

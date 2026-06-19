@@ -15,28 +15,30 @@ use crate::fs::resolve_layer_path;
 use crate::model::{hex_lower, CasError, LayerChange, LayerPath};
 use crate::{LayerStack, LayerStackError, Manifest, MergedView};
 
+pub(crate) mod git_metadata;
 mod worker;
 
+use git_metadata::{is_canonical_loose_object_path, relative_parts as git_metadata_relative_parts};
 use worker::{CommitQueue, CommitTransaction, PreparedChangeset};
 
-pub const GIT_METADATA_UNSUPPORTED_DROP_REASON: &str = "git_metadata_unsupported";
-pub const GIT_INDEX_STAT_REFRESH_DROP_REASON: &str = "git_index_stat_refresh";
-pub const GIT_INDEX_STAGED_STATE_REJECT_REASON: &str = "git_index_staged_state";
-pub const GIT_LOCK_FILE_REJECT_REASON: &str = "git_lock_file";
-pub const GIT_INCOMPLETE_OPERATION_REJECT_REASON: &str = "git_incomplete_operation";
-pub const GIT_HOOK_WRITE_REJECT_REASON: &str = "git_hook_write";
-pub const GIT_METADATA_DELETE_REJECT_REASON: &str = "git_metadata_delete";
-pub const GIT_METADATA_OPAQUE_REPLACE_REJECT_REASON: &str = "git_metadata_opaque_replace";
-pub const GIT_REF_WRITE_REJECT_REASON: &str = "git_ref_write";
-pub const GIT_OBJECT_REWRITE_REJECT_REASON: &str = "git_object_rewrite";
-pub const GIT_REFLOG_REWRITE_REJECT_REASON: &str = "git_reflog_rewrite";
-pub const DAEMON_CONTROL_PATH_DROP_REASON: &str = "daemon_control_path";
-pub const COMMAND_SCRATCH_PATH_DROP_REASON: &str = "command_scratch_path";
-pub const UNSUPPORTED_SPECIAL_FILE_DROP_REASON: &str = "unsupported_special_file";
-pub const INVALID_LAYER_PATH_DROP_REASON: &str = "invalid_layer_path";
-pub const OPAQUE_DIR_PROTECTED_DESCENDANT_DROP_REASON: &str = "opaque_dir_protected_descendant";
-pub const OPAQUE_DIR_MIXED_ROUTES_DROP_REASON: &str = "opaque_dir_mixed_routes";
-pub const OPAQUE_DIR_EXPANSION_LIMIT_DROP_REASON: &str = "opaque_dir_expansion_limit";
+const GIT_METADATA_UNSUPPORTED_DROP_REASON: &str = "git_metadata_unsupported";
+const GIT_INDEX_STAT_REFRESH_DROP_REASON: &str = "git_index_stat_refresh";
+const GIT_INDEX_STAGED_STATE_REJECT_REASON: &str = "git_index_staged_state";
+const GIT_LOCK_FILE_REJECT_REASON: &str = "git_lock_file";
+const GIT_INCOMPLETE_OPERATION_REJECT_REASON: &str = "git_incomplete_operation";
+const GIT_HOOK_WRITE_REJECT_REASON: &str = "git_hook_write";
+const GIT_METADATA_DELETE_REJECT_REASON: &str = "git_metadata_delete";
+const GIT_METADATA_OPAQUE_REPLACE_REJECT_REASON: &str = "git_metadata_opaque_replace";
+const GIT_REF_WRITE_REJECT_REASON: &str = "git_ref_write";
+const GIT_OBJECT_REWRITE_REJECT_REASON: &str = "git_object_rewrite";
+const GIT_REFLOG_REWRITE_REJECT_REASON: &str = "git_reflog_rewrite";
+const DAEMON_CONTROL_PATH_DROP_REASON: &str = "daemon_control_path";
+const COMMAND_SCRATCH_PATH_DROP_REASON: &str = "command_scratch_path";
+const UNSUPPORTED_SPECIAL_FILE_DROP_REASON: &str = "unsupported_special_file";
+const INVALID_LAYER_PATH_DROP_REASON: &str = "invalid_layer_path";
+const OPAQUE_DIR_PROTECTED_DESCENDANT_DROP_REASON: &str = "opaque_dir_protected_descendant";
+const OPAQUE_DIR_MIXED_ROUTES_DROP_REASON: &str = "opaque_dir_mixed_routes";
+const OPAQUE_DIR_EXPANSION_LIMIT_DROP_REASON: &str = "opaque_dir_expansion_limit";
 
 const OPAQUE_DIR_EXPANSION_LIMIT: usize = 4096;
 const LOGICAL_WHITEOUT_PREFIX: &str = ".wh.";
@@ -1196,19 +1198,6 @@ fn read_be_u16(bytes: &[u8]) -> Option<u16> {
     Some(u16::from_be_bytes(bytes.try_into().ok()?))
 }
 
-fn git_metadata_relative_parts(path: &LayerPath) -> Option<Vec<&str>> {
-    let mut parts = Vec::new();
-    let mut found_git = false;
-    for part in path.as_str().split('/') {
-        if found_git {
-            parts.push(part);
-        } else if part == ".git" {
-            found_git = true;
-        }
-    }
-    found_git.then_some(parts)
-}
-
 fn is_git_lock_path(parts: &[&str]) -> bool {
     parts.last().is_some_and(|part| part.ends_with(".lock"))
 }
@@ -1223,17 +1212,6 @@ fn is_git_ref_path(parts: &[&str]) -> bool {
 
 fn is_git_operation_message_path(parts: &[&str]) -> bool {
     matches!(parts, ["COMMIT_EDITMSG"] | ["MERGE_MSG"] | ["SQUASH_MSG"])
-}
-
-fn is_canonical_loose_object_path(parts: &[&str]) -> bool {
-    matches!(parts, ["objects", dir, file] if is_lower_hex_len(dir, 2) && is_lower_hex_len(file, 38))
-}
-
-fn is_lower_hex_len(value: &str, len: usize) -> bool {
-    value.len() == len
-        && value
-            .bytes()
-            .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f'))
 }
 
 fn is_incomplete_git_operation_path(parts: &[&str]) -> bool {

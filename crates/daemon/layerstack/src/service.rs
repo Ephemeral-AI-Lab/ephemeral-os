@@ -4,14 +4,13 @@ use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 use std::time::{Duration, Instant};
 
 use crate::model::{LayerChange, LayerPath, LayerRef, Manifest, MANIFEST_SCHEMA_VERSION};
-use serde_json::{json, Value};
 
 use crate::capture::{
     capture_upperdir_metadata, CaptureStats, CapturedUpperdirEntry, ProtectedPathDrop,
     MAX_CAPTURE_FILE_BYTES,
 };
 use crate::commit::{
-    capture_route_stats_for_manifest_with_protected_drops,
+    git_metadata::{is_canonical_loose_object_path, relative_parts as git_metadata_relative_parts},
     publish_command_decisions_for_manifest_with_protected_drops,
     publish_decisions_for_manifest_with_protected_drops, CaptureRouteStats, ChangesetResult,
     CommitError, CommitOptions, CommitWriter, PublishDecision, Route, RouteDropReason,
@@ -359,11 +358,7 @@ pub fn compact_snapshot_for_remount(
     })
 }
 
-pub fn active_manifest(root: &Path) -> Result<Manifest, LayerStackError> {
-    LayerStack::open(root.to_path_buf())?.read_active_manifest()
-}
-
-pub fn commit_direct(
+pub(crate) fn commit_direct(
     root: &Path,
     snapshot_version: Option<u64>,
     changes: &[LayerChange],
@@ -378,7 +373,7 @@ pub fn commit_direct(
     )
 }
 
-pub fn commit_direct_with_options(
+pub(crate) fn commit_direct_with_options(
     root: &Path,
     snapshot_version: Option<u64>,
     changes: &[LayerChange],
@@ -393,7 +388,7 @@ pub fn commit_direct_with_options(
     )
 }
 
-pub fn publish_capture(
+pub(crate) fn publish_capture(
     root: &Path,
     snapshot_manifest_version: i64,
     snapshot_layer_paths: &[PathBuf],
@@ -409,7 +404,7 @@ pub fn publish_capture(
     )
 }
 
-pub fn publish_capture_with_options_and_protected_drops(
+pub(crate) fn publish_capture_with_options_and_protected_drops(
     root: &Path,
     snapshot_manifest_version: i64,
     snapshot_layer_paths: &[PathBuf],
@@ -533,41 +528,6 @@ fn command_git_metadata_probe_needs_payload(path: &LayerPath) -> bool {
     parts == ["index"]
         || parts.first().is_some_and(|part| matches!(*part, "logs"))
         || is_canonical_loose_object_path(&parts)
-}
-
-fn git_metadata_relative_parts(path: &LayerPath) -> Option<Vec<&str>> {
-    let mut parts = Vec::new();
-    let mut found_git = false;
-    for part in path.as_str().split('/') {
-        if found_git {
-            parts.push(part);
-        } else if part == ".git" {
-            found_git = true;
-        }
-    }
-    found_git.then_some(parts)
-}
-
-fn is_canonical_loose_object_path(parts: &[&str]) -> bool {
-    matches!(parts, ["objects", dir, file] if is_lower_hex_len(dir, 2) && is_lower_hex_len(file, 38))
-}
-
-fn is_lower_hex_len(value: &str, len: usize) -> bool {
-    value.len() == len
-        && value
-            .bytes()
-            .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f'))
-}
-
-pub fn capture_route_stats_for_snapshot_with_protected_drops(
-    root: &Path,
-    snapshot_manifest_version: i64,
-    snapshot_layer_paths: &[PathBuf],
-    changes: &[LayerChange],
-    protected_drops: &[ProtectedPathDrop],
-) -> Result<CaptureRouteStats, CommitError> {
-    let manifest = snapshot_manifest(root, snapshot_manifest_version, snapshot_layer_paths)?;
-    capture_route_stats_for_manifest_with_protected_drops(root, &manifest, changes, protected_drops)
 }
 
 fn capture_route_stats_from_metadata(
@@ -784,38 +744,9 @@ fn snapshot_from_lease(lease: crate::Lease) -> Snapshot {
     }
 }
 
-pub fn manifest_version_u64(version: i64) -> Result<u64, LayerStackError> {
+fn manifest_version_u64(version: i64) -> Result<u64, LayerStackError> {
     u64::try_from(version).map_err(|_| {
         LayerStackError::Manifest(format!("manifest version must be non-negative: {version}"))
-    })
-}
-
-#[must_use]
-pub fn cache_snapshot() -> Value {
-    let lock_start = Instant::now();
-    let mut cache = match lock_services() {
-        Ok(cache) => cache,
-        Err(err) => {
-            return json!({
-                "capacity": SERVICE_CACHE_MAX,
-                "size": 0,
-                "poisoned": true,
-                "error": err.to_string(),
-            });
-        }
-    };
-    let lock_wait_s = lock_start.elapsed().as_secs_f64();
-    cache.record_lock_wait(lock_wait_s);
-    json!({
-        "capacity": SERVICE_CACHE_MAX,
-        "size": cache.entries.len(),
-        "hits_total": cache.stats.hits_total,
-        "misses_total": cache.stats.misses_total,
-        "creates_total": cache.stats.creates_total,
-        "evictions_total": cache.stats.evictions_total,
-        "lock_wait_s_total": cache.stats.lock_wait_s_total,
-        "lock_wait_s_max": cache.stats.lock_wait_s_max,
-        "last_lock_wait_s": lock_wait_s,
     })
 }
 

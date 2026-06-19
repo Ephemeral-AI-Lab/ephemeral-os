@@ -20,10 +20,7 @@ pub use model::{
     LayerRef, Manifest, MANIFEST_SCHEMA_VERSION,
 };
 
-pub use capture::{
-    capture_upperdir, capture_upperdir_with_stats, CaptureError, CaptureStats, CapturedUpperdir,
-    ProtectedPathDrop, ProtectedPathDropReason,
-};
+pub use capture::{CaptureError, CaptureStats, ProtectedPathDrop, ProtectedPathDropReason};
 pub use commit::{
     hash_current, CaptureRouteStats, ChangesetResult, CommitError, CommitOptions, CommitStatus,
     FileResult, OccTraceEvent,
