@@ -91,7 +91,7 @@ fn workspace_runtime_enter_rebinds_idle_state_to_new_layer_stack_root() -> TestR
     seed_workspace_base(&stack_a, &workspace_a)?;
     seed_workspace_base(&stack_b, &workspace_b)?;
 
-    runtime.enter_with_report_legacy_layer_stack_root("caller-root-a", &stack_a)?;
+    runtime.enter_with_report("caller-root-a", &workspace_a)?;
     assert_eq!(
         layerstack::LayerStack::open(stack_a.clone())?.active_lease_count(),
         1,
@@ -104,7 +104,7 @@ fn workspace_runtime_enter_rebinds_idle_state_to_new_layer_stack_root() -> TestR
     );
     runtime.exit("caller-root-a", None)?;
 
-    runtime.enter_with_report_legacy_layer_stack_root("caller-root-b", &stack_b)?;
+    runtime.enter_with_report("caller-root-b", &workspace_b)?;
     assert_eq!(
         layerstack::LayerStack::open(stack_a.clone())?.active_lease_count(),
         0,
@@ -250,7 +250,7 @@ fn workspace_runtime_command_route_rejects_when_no_active_workspace() -> TestRes
         error,
         workspace::WorkspaceError::InvalidRequest { field, ref message }
             if field == "workspace_id"
-                && message.contains("legacy layer_stack_root fallback is removed")
+                && message.contains("layer_stack_root command fallback is removed")
     ));
     let _ = std::fs::remove_dir_all(&root);
     Ok(())
@@ -450,23 +450,6 @@ fn workspace_runtime_resolve_workspace_root_rejects_ambiguous_bindings_after_sta
     assert!(error.to_string().contains("ambiguous workspace_root"));
     runtime.exit("caller-bound", None)?;
     let _ = runtime.test_reset();
-    let _ = std::fs::remove_dir_all(&root);
-    Ok(())
-}
-
-#[test]
-fn workspace_runtime_resolve_legacy_layer_stack_root_reads_compatibility_binding() -> TestResult {
-    let root = test_root("resolve-legacy-root");
-    let scratch = root.join("scratch");
-    let stack_root = root.join("stack");
-    let workspace_root = root.join("workspace");
-    seed_workspace_base(&stack_root, &workspace_root)?;
-    let runtime = isolated_runtime(&scratch, Path::new("/configured-fallback"));
-
-    let resolved = runtime.resolve_legacy_layer_stack_root(&stack_root)?;
-
-    assert_eq!(resolved.workspace_root, workspace_root.canonicalize()?);
-    assert_eq!(resolved.layer_stack_root, stack_root.canonicalize()?);
     let _ = std::fs::remove_dir_all(&root);
     Ok(())
 }

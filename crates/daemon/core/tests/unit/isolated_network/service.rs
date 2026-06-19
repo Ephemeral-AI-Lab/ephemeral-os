@@ -3,6 +3,7 @@
 //! daemon's `phase2_read_paths` integration tests.
 
 use std::collections::HashMap;
+use std::path::Path;
 
 use workspace::overlay::dirs::OverlayDirs;
 use workspace::profile::{
@@ -30,11 +31,7 @@ fn enter_trace_events_include_holder_and_dns_configuration() {
     let context = DispatchContext::empty().with_trace_events(sink.clone());
     let handle = test_handle();
 
-    record_enter_started(
-        &context,
-        "caller-isolated",
-        &WorkspaceRootInput::WorkspaceRoot("/workspace".into()),
-    );
+    record_enter_started(&context, "caller-isolated", Path::new("/workspace"));
     record_entered(
         &context,
         &handle,

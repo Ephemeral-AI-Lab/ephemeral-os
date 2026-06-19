@@ -625,18 +625,6 @@ impl WorkspaceRuntime {
         self.enter_resolved_locked(caller_id, &resolved)
     }
 
-    pub(crate) fn enter_with_report_legacy_layer_stack_root(
-        &self,
-        caller_id: &str,
-        layer_stack_root: &Path,
-    ) -> Result<WorkspaceEnterOutcome, WorkspaceEnterError> {
-        let _mode_guard = self.lock_mode_gate();
-        self.reject_disabled()?;
-        self.reject_active_commands(caller_id)?;
-        let resolved = self.resolve_legacy_layer_stack_root(layer_stack_root)?;
-        self.enter_resolved_locked(caller_id, &resolved)
-    }
-
     fn enter_resolved_locked(
         &self,
         caller_id: &str,
@@ -738,23 +726,6 @@ impl WorkspaceRuntime {
         }
     }
 
-    pub(crate) fn resolve_legacy_layer_stack_root(
-        &self,
-        layer_stack_root: &Path,
-    ) -> Result<ResolvedWorkspaceRoot, WorkspaceError> {
-        let requested_root = validate_legacy_layer_stack_root(layer_stack_root)?;
-        let binding = read_workspace_binding(&requested_root)
-            .map_err(workspace_setup_error)?
-            .ok_or_else(|| WorkspaceError::InvalidRequest {
-                field: "layer_stack_root",
-                message: format!(
-                    "workspace binding is missing: {}",
-                    requested_root.join(WORKSPACE_BINDING_FILE).display()
-                ),
-            })?;
-        resolved_workspace_binding_at(&requested_root, binding)
-    }
-
     pub(crate) fn route_command_context<'a>(
         &'a self,
         caller_id: &str,
@@ -776,7 +747,7 @@ impl WorkspaceRuntime {
 
         let message = match layer_stack_root {
             Some(root) => format!(
-                "no active command workspace for caller {caller_id}; legacy layer_stack_root fallback is removed ({})",
+                "no active command workspace for caller {caller_id}; layer_stack_root command fallback is removed ({})",
                 root.display()
             ),
             None => format!(
@@ -877,25 +848,6 @@ impl WorkspaceRuntime {
         let _mode_guard = self.lock_mode_gate();
         let resolved = self
             .resolve_workspace_root(workspace_root)
-            .map_err(workspace_error_as_isolated_network_error)?;
-        self.compact_remount_open_workspace_for_test_resolved_locked(
-            caller_id,
-            &resolved,
-            probe,
-            test_force_block_reason,
-        )
-    }
-
-    pub(crate) fn compact_remount_open_workspace_for_test_legacy_layer_stack_root(
-        &self,
-        caller_id: &str,
-        layer_stack_root: &Path,
-        probe: RemountProbe,
-        test_force_block_reason: Option<IsolationTestRemountFault>,
-    ) -> Result<WorkspaceRemountCompactionAttempt, IsolatedNetworkError> {
-        let _mode_guard = self.lock_mode_gate();
-        let resolved = self
-            .resolve_legacy_layer_stack_root(layer_stack_root)
             .map_err(workspace_error_as_isolated_network_error)?;
         self.compact_remount_open_workspace_for_test_resolved_locked(
             caller_id,
@@ -1270,10 +1222,6 @@ fn workspace_mode_context_from(
 
 fn validate_caller_workspace_root(workspace_root: &Path) -> Result<PathBuf, WorkspaceError> {
     validate_absolute_root("workspace_root", workspace_root)
-}
-
-fn validate_legacy_layer_stack_root(layer_stack_root: &Path) -> Result<PathBuf, WorkspaceError> {
-    validate_absolute_root("layer_stack_root", layer_stack_root)
 }
 
 fn validate_absolute_root(field: &'static str, root: &Path) -> Result<PathBuf, WorkspaceError> {

@@ -1,10 +1,12 @@
 //! Isolated-network op adapters behind `sandbox.isolation.*`: wire arg
 //! parsing and response/error shaping over [`crate::WorkspaceRuntime`].
 
+use std::path::Path;
+
 use operation::isolation::contract::{
     IsolationEnterInput, IsolationEnterOutput, IsolationExitInput, IsolationExitOutput,
     IsolationStatusInput, IsolationStatusOutput, IsolationTestCompactRemountInput, ListOpenOutput,
-    TestCompactRemountOutput, TestResetOutput, WorkspaceRootInput,
+    TestCompactRemountOutput, TestResetOutput,
 };
 use serde_json::{json, Value};
 use workspace::profile::{IsolatedNetworkError, RemountProbe, WorkspaceModeHandle};
@@ -32,16 +34,9 @@ pub(crate) fn op_enter(
             "reason": "isolation_enter_lifecycle",
         }),
     );
-    record_enter_started(&context, &caller_id, &input.root);
+    record_enter_started(&context, &caller_id, &input.workspace_root);
     let workspace = &context.require_services()?.workspace;
-    let entered = match &input.root {
-        WorkspaceRootInput::WorkspaceRoot(workspace_root) => {
-            workspace.enter_with_report(&caller_id, workspace_root)
-        }
-        WorkspaceRootInput::LegacyLayerStackRoot(layer_stack_root) => {
-            workspace.enter_with_report_legacy_layer_stack_root(&caller_id, layer_stack_root)
-        }
-    };
+    let entered = workspace.enter_with_report(&caller_id, &input.workspace_root);
     match entered {
         Ok(outcome) => {
             if outcome.recovery.attempted {
@@ -169,22 +164,12 @@ pub(crate) fn op_test_compact_remount(
         path: input.probe_path,
         expected_content: input.probe_content,
     };
-    let compacted = match &input.root {
-        WorkspaceRootInput::WorkspaceRoot(workspace_root) => workspace
-            .compact_remount_open_workspace_for_test(
-                &caller_id,
-                workspace_root,
-                probe,
-                input.test_force_block_reason,
-            ),
-        WorkspaceRootInput::LegacyLayerStackRoot(layer_stack_root) => workspace
-            .compact_remount_open_workspace_for_test_legacy_layer_stack_root(
-                &caller_id,
-                layer_stack_root,
-                probe,
-                input.test_force_block_reason,
-            ),
-    };
+    let compacted = workspace.compact_remount_open_workspace_for_test(
+        &caller_id,
+        &input.workspace_root,
+        probe,
+        input.test_force_block_reason,
+    );
     match compacted {
         Ok(WorkspaceRemountCompactionAttempt::Compacted(report)) => {
             context.record_trace_event(
@@ -448,23 +433,13 @@ pub(crate) fn exit_response(exit: ExitOutcome) -> Value {
     })
 }
 
-fn record_enter_started(context: &DispatchContext<'_>, caller_id: &str, root: &WorkspaceRootInput) {
+fn record_enter_started(context: &DispatchContext<'_>, caller_id: &str, workspace_root: &Path) {
     let mut details = json!({"caller_id": caller_id});
     if let Some(object) = details.as_object_mut() {
-        match root {
-            WorkspaceRootInput::WorkspaceRoot(workspace_root) => {
-                object.insert(
-                    "workspace_root".to_owned(),
-                    json!(workspace_root.display().to_string()),
-                );
-            }
-            WorkspaceRootInput::LegacyLayerStackRoot(layer_stack_root) => {
-                object.insert(
-                    "legacy_layer_stack_root".to_owned(),
-                    json!(layer_stack_root.display().to_string()),
-                );
-            }
-        }
+        object.insert(
+            "workspace_root".to_owned(),
+            json!(workspace_root.display().to_string()),
+        );
     }
     context.record_trace_event("isolated_network", "enter_started", details);
 }
