@@ -8,6 +8,7 @@ use std::sync::{mpsc, Mutex, MutexGuard, PoisonError};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use namespace_process::runner::protocol::NamespaceCommandRequest;
 use nix::sys::signal::{killpg, Signal};
 use nix::unistd::Pid;
 use rustix::event::{poll, PollFd, PollFlags};
@@ -309,7 +310,7 @@ impl PendingPtyProcess {
 
 pub(crate) fn spawn_current_exe_ns_runner(
     request_path: &Path,
-    command_request: &Value,
+    command_request: &NamespaceCommandRequest,
     output_path: &Path,
     transcript_path: PathBuf,
     transcript_timestamp_timezone: &str,
@@ -416,7 +417,7 @@ fn spawn_command_output_reader(
     done_rx
 }
 
-fn write_command_request(path: &Path, request: &Value) -> io::Result<()> {
+fn write_command_request(path: &Path, request: &NamespaceCommandRequest) -> io::Result<()> {
     let bytes = serde_json::to_vec(request).map_err(|error| {
         io::Error::new(
             io::ErrorKind::InvalidData,

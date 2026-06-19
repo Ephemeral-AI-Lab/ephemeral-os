@@ -255,7 +255,7 @@ fn command_exec_spawn_failure_keeps_session_workspace_alive() {
 }
 
 #[test]
-fn command_exec_passes_launch_material_to_command_request_and_spawn_paths() {
+fn command_exec_passes_workspace_entry_to_spawn_paths() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let workspace_root = PathBuf::from("/workspace/one-shot");
     fake.push_create_result(Ok(workspace_handle(
@@ -282,6 +282,12 @@ fn command_exec_passes_launch_material_to_command_request_and_spawn_paths() {
     let observation = &observations[0];
     assert_eq!(observation.spec_id, "cmd_1");
     assert_eq!(observation.spec_caller_id, "caller-1");
+    assert_eq!(observation.spec_command, "printf ok");
+    assert_eq!(
+        observation.spec_cwd,
+        Some(PathBuf::from("/workspace/one-shot/src"))
+    );
+    assert_eq!(observation.spec_timeout_seconds, Some(2.5));
     assert_eq!(
         observation.request_path,
         env.command
@@ -322,18 +328,22 @@ fn command_exec_passes_launch_material_to_command_request_and_spawn_paths() {
         observation.output_drain_grace_ms,
         env.command.config().output_drain_grace_ms
     );
-
-    let request = &observation.command_request;
-    assert!(request.get("mode").is_none());
-    assert_eq!(request["invocation_id"], "cmd_1");
-    assert_eq!(request["caller_id"], "caller-1");
-    assert_eq!(request["args"]["command"], "printf ok");
-    assert_eq!(request["args"]["cwd"], "/workspace/one-shot/src");
+    let entry = &observation.workspace_entry;
+    assert_eq!(&entry.workspace_root, &workspace_root);
+    assert_eq!(entry.layer_paths.as_slice(), &[PathBuf::from("/lower/one")]);
     assert_eq!(
-        request["workspace_root"].as_str(),
-        Some(workspace_root.to_string_lossy().as_ref())
+        entry.upperdir.file_name().and_then(|name| name.to_str()),
+        Some("upper")
     );
-    assert_eq!(request["timeout_seconds"], 2.5);
+    assert_eq!(
+        entry.workdir.file_name().and_then(|name| name.to_str()),
+        Some("work")
+    );
+    assert_eq!(entry.ns_fds.user, 10);
+    assert_eq!(entry.ns_fds.mnt, 11);
+    assert_eq!(entry.ns_fds.pid, 12);
+    assert_eq!(entry.ns_fds.net, Some(13));
+    assert!(entry.cgroup_path.is_none());
 }
 
 #[test]
@@ -361,7 +371,7 @@ fn command_exec_missing_launch_material_destroys_one_shot_without_spawn() {
     assert!(matches!(
         error,
         CommandServiceError::InvalidCommand { message }
-            if message.contains("lacks command launch material")
+            if message.contains("lacks workspace entry material")
     ));
     assert!(launch_driver.spawn_observations().is_empty());
     assert_eq!(
@@ -399,7 +409,7 @@ fn command_exec_unavailable_workspace_launch_destroys_one_shot_without_spawn() {
     assert!(matches!(
         error,
         CommandServiceError::InvalidCommand { message }
-            if message.contains("workspace launch context is incomplete")
+            if message.contains("workspace entry context is incomplete")
     ));
     assert!(launch_driver.spawn_observations().is_empty());
     assert_eq!(

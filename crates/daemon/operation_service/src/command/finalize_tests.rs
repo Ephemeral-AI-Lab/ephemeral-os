@@ -24,7 +24,7 @@ use workspace::{
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
     LayerStackSnapshotRef, LeaseId, ProtectedPathDrop, ReadonlySnapshotHandle,
     RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceError, WorkspaceHandle, WorkspaceId,
-    WorkspaceProfile, WorkspaceService,
+    WorkspaceProfile, WorkspaceRuntimeHooks, WorkspaceRuntimeService,
 };
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
@@ -99,7 +99,7 @@ impl FakeWorkspaceService {
     }
 }
 
-impl WorkspaceService for FakeWorkspaceService {
+impl FakeWorkspaceService {
     fn create_workspace(
         &self,
         _request: CreateWorkspaceRequest,
@@ -173,6 +173,30 @@ impl WorkspaceService for FakeWorkspaceService {
             source: "latest snapshot not configured".to_owned(),
         })
     }
+}
+
+fn fake_workspace_runtime(fake: Arc<FakeWorkspaceService>) -> Arc<WorkspaceRuntimeService> {
+    Arc::new(WorkspaceRuntimeService::from_hooks_for_test(
+        WorkspaceRuntimeHooks {
+            create_workspace: Box::new({
+                let fake = Arc::clone(&fake);
+                move |request| fake.create_workspace(request)
+            }),
+            capture_changes: Box::new({
+                let fake = Arc::clone(&fake);
+                move |handle, request| fake.capture_changes(handle, request)
+            }),
+            remount_workspace: Box::new({
+                let fake = Arc::clone(&fake);
+                move |handle, request| fake.remount_workspace(handle, request)
+            }),
+            destroy_workspace: Box::new({
+                let fake = Arc::clone(&fake);
+                move |handle, request| fake.destroy_workspace(handle, request)
+            }),
+            latest_snapshot: Box::new(move |request| fake.latest_snapshot(request)),
+        },
+    ))
 }
 
 #[derive(Debug, Default)]
@@ -250,7 +274,7 @@ fn unique_suffix() -> String {
 }
 
 fn build_env(fake: Arc<FakeWorkspaceService>) -> TestEnv {
-    let workspace = Arc::new(WorkspaceSessionService::new(fake));
+    let workspace = Arc::new(WorkspaceSessionService::new(fake_workspace_runtime(fake)));
     let command = Arc::new(crate::CommandOperationService::with_launch_driver_for_test(
         Arc::clone(&workspace),
         test_command_config(),

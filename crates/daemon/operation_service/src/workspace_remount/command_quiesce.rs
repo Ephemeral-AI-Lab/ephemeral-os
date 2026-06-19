@@ -574,67 +574,14 @@ mod tests {
         CommandTranscriptStore, FinalizationState, RealCommandLaunchDriver,
     };
     use crate::workspace_crate::{
-        CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
-        DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
-        ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceError,
-        WorkspaceHandle, WorkspaceId, WorkspaceService,
+        CallerId, CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest,
+        LatestSnapshotRequest, RemountWorkspaceRequest, WorkspaceError, WorkspaceHandle,
+        WorkspaceId, WorkspaceRuntimeHooks, WorkspaceRuntimeService,
     };
     use crate::workspace_remount::CommandRemountCoordinator;
     use crate::workspace_session::WorkspaceSessionService;
 
     use super::*;
-
-    struct NoopWorkspaceService;
-
-    impl WorkspaceService for NoopWorkspaceService {
-        fn create_workspace(
-            &self,
-            _request: CreateWorkspaceRequest,
-        ) -> Result<WorkspaceHandle, WorkspaceError> {
-            Err(WorkspaceError::Setup {
-                step: "not configured".to_owned(),
-            })
-        }
-
-        fn capture_changes(
-            &self,
-            _handle: &WorkspaceHandle,
-            _request: CaptureChangesRequest,
-        ) -> Result<CapturedWorkspaceChanges, WorkspaceError> {
-            Err(WorkspaceError::Capture {
-                message: "not configured".to_owned(),
-            })
-        }
-
-        fn remount_workspace(
-            &self,
-            _handle: &WorkspaceHandle,
-            _request: RemountWorkspaceRequest,
-        ) -> Result<RemountWorkspaceResult, WorkspaceError> {
-            Err(WorkspaceError::Setup {
-                step: "not configured".to_owned(),
-            })
-        }
-
-        fn destroy_workspace(
-            &self,
-            _handle: WorkspaceHandle,
-            _request: DestroyWorkspaceRequest,
-        ) -> Result<DestroyWorkspaceResult, WorkspaceError> {
-            Err(WorkspaceError::Setup {
-                step: "not configured".to_owned(),
-            })
-        }
-
-        fn latest_snapshot(
-            &self,
-            _request: LatestSnapshotRequest,
-        ) -> Result<ReadonlySnapshotHandle, WorkspaceError> {
-            Err(WorkspaceError::SnapshotAcquire {
-                source: "not configured".to_owned(),
-            })
-        }
-    }
 
     #[derive(Default)]
     struct FakeProcessGroupController {
@@ -642,6 +589,44 @@ mod tests {
         resumed: Mutex<Vec<i32>>,
         cancel_during_inspection: Mutex<Option<(Arc<CommandOperationService>, CommandId)>>,
         observed_lifecycle_after_cancel: Mutex<Option<CommandLifecycleState>>,
+    }
+
+    fn noop_workspace_runtime() -> Arc<WorkspaceRuntimeService> {
+        Arc::new(WorkspaceRuntimeService::from_hooks_for_test(
+            WorkspaceRuntimeHooks {
+                create_workspace: Box::new(|_request: CreateWorkspaceRequest| {
+                    Err(WorkspaceError::Setup {
+                        step: "not configured".to_owned(),
+                    })
+                }),
+                capture_changes: Box::new(
+                    |_handle: &WorkspaceHandle, _request: CaptureChangesRequest| {
+                        Err(WorkspaceError::Capture {
+                            message: "not configured".to_owned(),
+                        })
+                    },
+                ),
+                remount_workspace: Box::new(
+                    |_handle: &WorkspaceHandle, _request: RemountWorkspaceRequest| {
+                        Err(WorkspaceError::Setup {
+                            step: "not configured".to_owned(),
+                        })
+                    },
+                ),
+                destroy_workspace: Box::new(
+                    |_handle: WorkspaceHandle, _request: DestroyWorkspaceRequest| {
+                        Err(WorkspaceError::Setup {
+                            step: "not configured".to_owned(),
+                        })
+                    },
+                ),
+                latest_snapshot: Box::new(|_request: LatestSnapshotRequest| {
+                    Err(WorkspaceError::SnapshotAcquire {
+                        source: "not configured".to_owned(),
+                    })
+                }),
+            },
+        ))
     }
 
     impl FakeProcessGroupController {
@@ -739,7 +724,7 @@ mod tests {
     }
 
     fn command_service() -> CommandOperationService {
-        let workspace = Arc::new(WorkspaceSessionService::new(Arc::new(NoopWorkspaceService)));
+        let workspace = Arc::new(WorkspaceSessionService::new(noop_workspace_runtime()));
         CommandOperationService::with_process_store_for_test(
             workspace,
             command::CommandConfig::default(),
@@ -750,7 +735,7 @@ mod tests {
     fn command_service_with_controller(
         controller: Arc<dyn ProcessGroupController>,
     ) -> CommandOperationService {
-        let workspace = Arc::new(WorkspaceSessionService::new(Arc::new(NoopWorkspaceService)));
+        let workspace = Arc::new(WorkspaceSessionService::new(noop_workspace_runtime()));
         CommandOperationService::with_launch_driver_and_remount_controller_for_test(
             workspace,
             command::CommandConfig::default(),
@@ -782,6 +767,7 @@ mod tests {
             id: command_id.0.clone(),
             caller_id: caller_id.0.clone(),
             command: "cat".to_owned(),
+            cwd: None,
             timeout_seconds: None,
         };
         let process = match pgid {

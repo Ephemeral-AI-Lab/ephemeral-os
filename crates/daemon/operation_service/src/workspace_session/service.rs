@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use crate::workspace_crate::{WorkspaceId, WorkspaceService};
+use crate::workspace_crate::{WorkspaceId, WorkspaceRuntimeService};
 use crate::workspace_session::model::WorkspaceRemountState;
 use crate::workspace_session::session_store::WorkspaceSessionStore;
 use crate::workspace_session::WorkspaceSessionError;
@@ -9,12 +9,12 @@ mod impls;
 
 pub struct WorkspaceSessionService {
     sessions: Mutex<WorkspaceSessionStore>,
-    workspace: Arc<dyn WorkspaceService>,
+    workspace: Arc<WorkspaceRuntimeService>,
 }
 
 impl WorkspaceSessionService {
     #[must_use]
-    pub fn new(workspace: Arc<dyn WorkspaceService>) -> Self {
+    pub fn new(workspace: Arc<WorkspaceRuntimeService>) -> Self {
         Self {
             sessions: Mutex::new(WorkspaceSessionStore::default()),
             workspace,
@@ -22,7 +22,7 @@ impl WorkspaceSessionService {
     }
 
     #[must_use]
-    pub(crate) fn workspace(&self) -> &Arc<dyn WorkspaceService> {
+    pub(crate) fn workspace(&self) -> &Arc<WorkspaceRuntimeService> {
         &self.workspace
     }
 

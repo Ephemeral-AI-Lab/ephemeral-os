@@ -65,30 +65,19 @@ fn assert_handle_projection(public: &WorkspaceHandle) {
             layer_paths: vec!["/lower/one".into(), "/lower/two".into()],
         }
     );
-    let launch = public.launch.as_ref().expect("launch context is projected");
-    let request = launch
-        .command_request(WorkspaceCommandRequest {
-            command_id: "cmd-1".to_owned(),
-            caller_id: "caller-1".to_owned(),
-            command: "pwd".to_owned(),
-            cwd: Some("/workspace/src".into()),
-            timeout_seconds: Some(2.0),
-        })
-        .expect("launch context produces command request");
-    assert_eq!(request["invocation_id"], "cmd-1");
-    assert_eq!(request["caller_id"], "caller-1");
-    assert_eq!(request["args"]["command"], "pwd");
-    assert_eq!(request["args"]["cwd"], "/workspace/src");
-    assert_eq!(request["workspace_root"], "/workspace");
-    assert_eq!(request["layer_paths"][0], "/lower/one");
-    assert_eq!(request["upperdir"], "/tmp/eos/upper");
-    assert_eq!(request["workdir"], "/tmp/eos/work");
-    assert_eq!(request["ns_fds"]["user"], 10);
-    assert_eq!(request["ns_fds"]["mnt"], 11);
-    assert_eq!(request["ns_fds"]["pid"], 12);
-    assert_eq!(request["ns_fds"]["net"], 13);
-    assert_eq!(request["cgroup_path"], "/sys/fs/cgroup/eos");
-    assert_eq!(request["timeout_seconds"], 2.0);
+    let entry = public.entry().expect("handle produces workspace entry");
+    assert_eq!(entry.workspace_root, PathBuf::from("/workspace"));
+    assert_eq!(
+        entry.layer_paths,
+        vec![PathBuf::from("/lower/one"), PathBuf::from("/lower/two")]
+    );
+    assert_eq!(entry.upperdir, PathBuf::from("/tmp/eos/upper"));
+    assert_eq!(entry.workdir, PathBuf::from("/tmp/eos/work"));
+    assert_eq!(entry.ns_fds.user, 10);
+    assert_eq!(entry.ns_fds.mnt, 11);
+    assert_eq!(entry.ns_fds.pid, 12);
+    assert_eq!(entry.ns_fds.net, Some(13));
+    assert_eq!(entry.cgroup_path, Some(PathBuf::from("/sys/fs/cgroup/eos")));
 }
 
 #[test]
@@ -138,7 +127,7 @@ fn launch_context_debug_does_not_expose_internal_paths_or_fd_numbers() {
 }
 
 #[test]
-fn host_compatible_command_request_uses_holder_launch_without_network_fd() {
+fn host_compatible_entry_uses_holder_launch_without_network_fd() {
     let launch = WorkspaceLaunchContext {
         profile: WorkspaceProfile::HostCompatible,
         workspace_root: "/workspace".into(),
@@ -154,25 +143,19 @@ fn host_compatible_command_request_uses_holder_launch_without_network_fd() {
         cgroup_path: Some("/sys/fs/cgroup/eos-host".into()),
     };
 
-    let request = launch
-        .command_request(WorkspaceCommandRequest {
-            command_id: "cmd-1".to_owned(),
-            caller_id: "caller-1".to_owned(),
-            command: "pwd".to_owned(),
-            cwd: None,
-            timeout_seconds: None,
-        })
+    let entry = launch
+        .entry()
         .expect("host-compatible holder launch is valid");
 
-    assert_eq!(request["ns_fds"]["user"], 20);
-    assert_eq!(request["ns_fds"]["mnt"], 21);
-    assert_eq!(request["ns_fds"]["pid"], 22);
-    assert!(request["ns_fds"]["net"].is_null());
-    assert_eq!(request["cgroup_path"], "/sys/fs/cgroup/eos-host");
+    assert_eq!(entry.ns_fds.user, 20);
+    assert_eq!(entry.ns_fds.mnt, 21);
+    assert_eq!(entry.ns_fds.pid, 22);
+    assert_eq!(entry.ns_fds.net, None);
+    assert_eq!(entry.cgroup_path, Some("/sys/fs/cgroup/eos-host".into()));
 }
 
 #[test]
-fn command_request_rejects_incomplete_holder_launch() {
+fn entry_rejects_incomplete_holder_launch() {
     for (profile, holder_fds) in [
         (
             WorkspaceProfile::HostCompatible,
@@ -204,16 +187,10 @@ fn command_request_rejects_incomplete_holder_launch() {
         };
 
         let error = launch
-            .command_request(WorkspaceCommandRequest {
-                command_id: "cmd-1".to_owned(),
-                caller_id: "caller-1".to_owned(),
-                command: "pwd".to_owned(),
-                cwd: None,
-                timeout_seconds: None,
-            })
+            .entry()
             .expect_err("incomplete holder launch is rejected");
 
-        assert_eq!(error.to_string(), "workspace launch context is incomplete");
+        assert_eq!(error.to_string(), "workspace entry context is incomplete");
     }
 }
 
@@ -249,6 +226,22 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
                     layer_paths: vec!["/lower/one".into()],
                 },
                 launch: None,
+            }
+        ),
+        format!(
+            "{:?}",
+            WorkspaceEntry {
+                workspace_root: "/workspace".into(),
+                layer_paths: vec!["/lower/one".into()],
+                upperdir: "/tmp/eos/upper".into(),
+                workdir: "/tmp/eos/work".into(),
+                ns_fds: WorkspaceEntryFds {
+                    user: 10,
+                    mnt: 11,
+                    pid: 12,
+                    net: Some(13),
+                },
+                cgroup_path: Some("/sys/fs/cgroup/eos".into()),
             }
         ),
         format!(
@@ -392,6 +385,19 @@ fn public_dtos_construct_clone_and_compare() {
         },
         launch: None,
     };
+    let entry = WorkspaceEntry {
+        workspace_root: "/workspace".into(),
+        layer_paths: vec!["/lower/one".into()],
+        upperdir: "/tmp/eos/upper".into(),
+        workdir: "/tmp/eos/work".into(),
+        ns_fds: WorkspaceEntryFds {
+            user: 10,
+            mnt: 11,
+            pid: 12,
+            net: Some(13),
+        },
+        cgroup_path: Some("/sys/fs/cgroup/eos".into()),
+    };
     let capture_request = CaptureChangesRequest {
         bounds: layerstack::service::BoundedCaptureOptions::default(),
         include_stats: true,
@@ -448,6 +454,7 @@ fn public_dtos_construct_clone_and_compare() {
 
     assert_eq!(create.clone(), create);
     assert_eq!(handle.clone(), handle);
+    assert_eq!(entry.clone(), entry);
     assert_eq!(capture_request.clone(), capture_request);
     assert_eq!(capture.clone(), capture);
     assert_eq!(destroy_request.clone(), destroy_request);

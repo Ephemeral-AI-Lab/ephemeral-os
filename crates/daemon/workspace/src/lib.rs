@@ -30,7 +30,7 @@ pub use model::{
     ChangedPathKind, CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult,
     LatestSnapshotRequest, LayerStackSnapshotRef, LeaseId, ProtectedPathDrop,
     ProtectedPathDropReason, ReadonlySnapshotHandle, RemountWorkspaceRequest,
-    RemountWorkspaceResult, WorkspaceCommandRequest, WorkspaceHandle, WorkspaceId,
-    WorkspaceLaunchError, WorkspaceProfile,
+    RemountWorkspaceResult, WorkspaceEntry, WorkspaceEntryError, WorkspaceEntryFds,
+    WorkspaceHandle, WorkspaceId, WorkspaceProfile,
 };
-pub use service::WorkspaceService;
+pub use service::{WorkspaceRuntimeHooks, WorkspaceRuntimeService};

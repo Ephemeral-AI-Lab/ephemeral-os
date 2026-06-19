@@ -6,12 +6,14 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+namespace-process.workspace = true
 nix = { workspace = true, features = ["process", "signal"] }
 rustix = { workspace = true, features = ["pty", "event", "pipe"] }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 time.workspace = true
+workspace.workspace = true
 
 [lints]
 workspace = true

@@ -1174,6 +1174,118 @@ Rules:
     `WorkspaceProfile`/`profile` carrier surface and must preserve lower-level
     network namespace vocabulary for actual network mechanics.
 
+## Milestone 6.8: Minimal Command Launch
+
+- Status: Complete.
+- Spec:
+  `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_milestone_6_8_minimal_command_launch_SPEC.md`
+- Protocol type placement:
+  - Chose the narrow option for this milestone. `NamespaceCommandRequest` stays
+    in `namespace-process::runner::protocol`; `command` depends on that protocol
+    module to construct the user-command runner request.
+  - A separate `namespace-runner-protocol` crate is still a reasonable follow-up
+    if setup/remount/DNS request DTOs and command request DTOs need to be shared
+    without depending on `namespace-process`.
+- Files changed:
+  - `Cargo.lock`
+  - `crates/daemon/workspace/src/model.rs`
+  - `crates/daemon/workspace/src/lib.rs`
+  - `crates/daemon/workspace/tests/unit/model.rs`
+  - `crates/daemon/command/Cargo.toml`
+  - `crates/daemon/command/src/process.rs`
+  - `crates/daemon/command/src/pty.rs`
+  - `crates/daemon/command/tests/unit/process.rs`
+  - `crates/daemon/operation_service/src/command/finalize_tests.rs`
+  - `crates/daemon/operation_service/src/command/process_store.rs`
+  - `crates/daemon/operation_service/src/command/service.rs`
+  - `crates/daemon/operation_service/src/command/service/impls/exec_command.rs`
+  - `crates/daemon/operation_service/src/workspace_remount/command_quiesce.rs`
+  - `crates/daemon/operation_service/src/workspace_session/service.rs`
+  - `crates/daemon/operation_service/tests/command_exec.rs`
+  - `crates/daemon/operation_service/tests/command_process_store.rs`
+  - `crates/daemon/operation_service/tests/command_remount.rs`
+  - `crates/daemon/operation_service/tests/service_graph.rs`
+  - `crates/daemon/operation_service/tests/support/mod.rs`
+  - `crates/daemon/operation_service/tests/workspace_remount.rs`
+  - `crates/daemon/operation_service/tests/workspace_session.rs`
+  - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
+- Verification:
+  - `CARGO_TARGET_DIR=/tmp/eos-minimal-command-launch-target cargo test -p workspace model`:
+    passed, 7 matching unit tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-minimal-command-launch-target cargo test -p command`:
+    passed, 17 unit tests and 0 doc tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-minimal-command-launch-target cargo test -p operation_service command_exec`:
+    passed, 7 matching unit tests and 12 matching integration tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-minimal-command-launch-target cargo test -p operation_service command_remount`:
+    passed, 7 matching unit tests and 6 matching integration tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-minimal-command-launch-target cargo test -p operation_service workspace_remount`:
+    passed, 7 matching unit tests, 1 matching service-graph test, and 6
+    matching integration tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-minimal-command-launch-target cargo test -p operation_service command_transcript_rows`:
+    passed, 9 matching integration tests.
+  - Static scan:
+    `rg -n "WorkspaceCommandRequest|\\.command_request\\(" crates/daemon/workspace/src crates/daemon/operation_service/src/command`
+    returned no matches.
+  - Static scan:
+    `rg -n "NamespaceCommandRequest" crates/daemon/operation_service/src/command`
+    returned no matches.
+  - Static scan:
+    `rg -n "command_request: serde_json::Value|command_request: Value" crates/daemon/command/src`
+    returned no matches.
+  - Static scan:
+    `rg -n "fn command_request|pub fn command_request" crates/daemon/workspace/src`
+    returned no matches.
+  - `cargo fmt --check`: passed.
+  - `git diff --check`: passed.
+- Deviations:
+  - No `namespace-runner-protocol` crate was added in this milestone; the narrow
+    protocol-placement option kept the patch focused.
+  - `WorkspaceLaunchContext` remains as a private storage/holder context, but it
+    now exposes only `entry()` internally and no command-shaped request builder.
+  - The current checkout already uses `WorkspaceRuntimeService` and
+    `WorkspaceRuntimeHooks` for workspace service test seams; operation-service
+    test fakes were kept on that current seam while updating command launch
+    observations.
+- Unresolved issues:
+  - The protocol-only crate split remains deferred.
+- Handoff notes:
+  - `operation_service::command::exec_command` now obtains a
+    `WorkspaceEntry` from the resolved handle and passes it with command spec and
+    artifact paths to the launch driver.
+  - The command crate owns `NamespaceCommandRequest` construction, artifact
+    serialization through the existing `command-request.json` side channel, PTY
+    spawn, transcript, stdin, cancellation, timeout, and process finalization.
+  - Workspace-owned setup/remount/DNS helper request builders remain in
+    `workspace` and were not routed through the command launch path.
+
+### Post-Milestone 6.8 Cleanup Review
+
+- Status: Complete.
+- Files changed:
+  - `crates/daemon/workspace/src/service.rs`
+  - `docs/daemon/workspace_migration/phase-operation_service_workspace_session/phase_2_implementation_record.md`
+- Cleanup notes:
+  - `cargo machete --with-metadata` found no unused dependencies, so no
+    dependency pruning was justified.
+  - Static scans for removed command-launch APIs found no code matches for
+    `WorkspaceCommandRequest`, `WorkspaceLaunchError`,
+    `command_request: serde_json::Value`, `parts.command_request`, or
+    workspace `command_request` builders.
+  - The only compiler-backed cleanup target was the workspace runtime hook test
+    seam: clippy flagged complex callback field types in
+    `WorkspaceRuntimeHooks`. Those function signatures are now factored into
+    named hook aliases instead of suppressing the lint.
+  - Host-compatible profile names remain because they describe current profile
+    behavior, not dead compatibility code.
+- Verification:
+  - `cargo machete --with-metadata`: passed; no unused dependencies found.
+  - `CARGO_TARGET_DIR=/tmp/eos-cleanup-minimal-command-launch-target cargo clippy -p command -p workspace -p operation_service --all-targets --no-deps -- -D warnings`:
+    passed.
+  - `CARGO_TARGET_DIR=/tmp/eos-cleanup-minimal-command-launch-target cargo test -p workspace service`:
+    passed, 2 matching unit tests.
+  - `CARGO_TARGET_DIR=/tmp/eos-cleanup-minimal-command-launch-target cargo test -p operation_service command_exec`:
+    passed, 7 matching unit tests and 12 matching integration tests.
+
 ## Milestone 7: Daemon Dispatch Migration Away From WorkspaceRuntime
 
 - Status: Not started

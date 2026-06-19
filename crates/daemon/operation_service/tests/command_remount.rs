@@ -25,7 +25,8 @@ use workspace::{
     CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef,
     LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult,
-    WorkspaceError, WorkspaceHandle, WorkspaceId, WorkspaceProfile, WorkspaceService,
+    WorkspaceError, WorkspaceHandle, WorkspaceId, WorkspaceProfile, WorkspaceRuntimeHooks,
+    WorkspaceRuntimeService,
 };
 
 struct TestServices {
@@ -64,7 +65,7 @@ impl PendingGuardWorkspaceService {
     }
 }
 
-impl WorkspaceService for PendingGuardWorkspaceService {
+impl PendingGuardWorkspaceService {
     fn create_workspace(
         &self,
         _request: CreateWorkspaceRequest,
@@ -138,6 +139,30 @@ impl WorkspaceService for PendingGuardWorkspaceService {
     }
 }
 
+fn fake_workspace_runtime(fake: Arc<PendingGuardWorkspaceService>) -> Arc<WorkspaceRuntimeService> {
+    Arc::new(WorkspaceRuntimeService::from_hooks_for_test(
+        WorkspaceRuntimeHooks {
+            create_workspace: Box::new({
+                let fake = Arc::clone(&fake);
+                move |request| fake.create_workspace(request)
+            }),
+            capture_changes: Box::new({
+                let fake = Arc::clone(&fake);
+                move |handle, request| fake.capture_changes(handle, request)
+            }),
+            remount_workspace: Box::new({
+                let fake = Arc::clone(&fake);
+                move |handle, request| fake.remount_workspace(handle, request)
+            }),
+            destroy_workspace: Box::new({
+                let fake = Arc::clone(&fake);
+                move |handle, request| fake.destroy_workspace(handle, request)
+            }),
+            latest_snapshot: Box::new(move |request| fake.latest_snapshot(request)),
+        },
+    ))
+}
+
 struct PendingGuardLaunchDriver;
 
 impl CommandLaunchDriver for PendingGuardLaunchDriver {
@@ -208,7 +233,7 @@ impl CommandLaunchDriver for BlockingLaunchDriver {
 }
 
 fn build_services(fake: Arc<PendingGuardWorkspaceService>) -> TestServices {
-    let workspace = Arc::new(WorkspaceSessionService::new(fake));
+    let workspace = Arc::new(WorkspaceSessionService::new(fake_workspace_runtime(fake)));
     let command = Arc::new(CommandOperationService::with_launch_driver_for_test(
         Arc::clone(&workspace),
         command_config(),
@@ -233,7 +258,7 @@ fn build_services_with_launch_driver(
     fake: Arc<PendingGuardWorkspaceService>,
     launch_driver: Arc<dyn CommandLaunchDriver>,
 ) -> TestServices {
-    let workspace = Arc::new(WorkspaceSessionService::new(fake));
+    let workspace = Arc::new(WorkspaceSessionService::new(fake_workspace_runtime(fake)));
     let command = Arc::new(CommandOperationService::with_launch_driver_for_test(
         Arc::clone(&workspace),
         command_config(),

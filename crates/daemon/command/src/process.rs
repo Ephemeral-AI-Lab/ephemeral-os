@@ -6,8 +6,10 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 
+use namespace_process::runner::protocol::{NamespaceCommandRequest, WorkspaceRoot};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{json, Value};
+use workspace::WorkspaceEntry;
 
 pub use crate::pty::KillReason;
 
@@ -39,11 +41,12 @@ pub struct CommandProcessSpec {
     pub id: String,
     pub caller_id: String,
     pub command: String,
+    pub cwd: Option<PathBuf>,
     pub timeout_seconds: Option<f64>,
 }
 
 pub struct CommandProcessSpawn<'a> {
-    pub command_request: Value,
+    pub workspace_entry: WorkspaceEntry,
     pub request_path: PathBuf,
     pub output_path: PathBuf,
     pub final_path: PathBuf,
@@ -200,9 +203,10 @@ impl CommandProcess {
         spec: CommandProcessSpec,
         parts: CommandProcessSpawn<'_>,
     ) -> Result<Self, CommandError> {
+        let command_request = build_namespace_command_request(&spec, parts.workspace_entry);
         let process = spawn_current_exe_ns_runner(
             &parts.request_path,
-            &parts.command_request,
+            &command_request,
             &parts.output_path,
             parts.transcript_path.clone(),
             parts.transcript_timestamp_timezone,
@@ -360,6 +364,33 @@ impl CommandProcess {
 
     fn final_stdout(&self) -> String {
         read_full_transcript_stdout(&self.runtime.transcript_path)
+    }
+}
+
+fn build_namespace_command_request(
+    spec: &CommandProcessSpec,
+    entry: WorkspaceEntry,
+) -> NamespaceCommandRequest {
+    let cwd = spec
+        .cwd
+        .as_deref()
+        .unwrap_or_else(|| Path::new("."))
+        .to_string_lossy()
+        .into_owned();
+    NamespaceCommandRequest {
+        invocation_id: spec.id.clone(),
+        caller_id: spec.caller_id.clone(),
+        args: json!({
+            "command": spec.command.clone(),
+            "cwd": cwd,
+        }),
+        workspace_root: WorkspaceRoot(entry.workspace_root),
+        layer_paths: entry.layer_paths,
+        upperdir: Some(entry.upperdir),
+        workdir: Some(entry.workdir),
+        ns_fds: Some(entry.ns_fds.into()),
+        cgroup_path: entry.cgroup_path,
+        timeout_seconds: spec.timeout_seconds,
     }
 }
 

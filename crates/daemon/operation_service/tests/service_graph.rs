@@ -12,66 +12,51 @@ use operation_service::workspace_remount::{
 use operation_service::workspace_session::WorkspaceSessionService;
 use operation_service::OperationServices;
 use workspace::{
-    CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
-    DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, ReadonlySnapshotHandle,
-    RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceError, WorkspaceHandle, WorkspaceId,
-    WorkspaceService,
+    CallerId, CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest,
+    LatestSnapshotRequest, RemountWorkspaceRequest, WorkspaceError, WorkspaceHandle, WorkspaceId,
+    WorkspaceRuntimeHooks, WorkspaceRuntimeService,
 };
 
-struct NoopWorkspaceService;
-
-impl WorkspaceService for NoopWorkspaceService {
-    fn create_workspace(
-        &self,
-        _request: CreateWorkspaceRequest,
-    ) -> Result<WorkspaceHandle, WorkspaceError> {
-        Err(WorkspaceError::Setup {
-            step: "not configured".to_owned(),
-        })
-    }
-
-    fn capture_changes(
-        &self,
-        _handle: &WorkspaceHandle,
-        _request: CaptureChangesRequest,
-    ) -> Result<CapturedWorkspaceChanges, WorkspaceError> {
-        Err(WorkspaceError::Capture {
-            message: "not configured".to_owned(),
-        })
-    }
-
-    fn remount_workspace(
-        &self,
-        _handle: &WorkspaceHandle,
-        _request: RemountWorkspaceRequest,
-    ) -> Result<RemountWorkspaceResult, WorkspaceError> {
-        Err(WorkspaceError::Setup {
-            step: "not configured".to_owned(),
-        })
-    }
-
-    fn destroy_workspace(
-        &self,
-        _handle: WorkspaceHandle,
-        _request: DestroyWorkspaceRequest,
-    ) -> Result<DestroyWorkspaceResult, WorkspaceError> {
-        Err(WorkspaceError::Setup {
-            step: "not configured".to_owned(),
-        })
-    }
-
-    fn latest_snapshot(
-        &self,
-        _request: LatestSnapshotRequest,
-    ) -> Result<ReadonlySnapshotHandle, WorkspaceError> {
-        Err(WorkspaceError::SnapshotAcquire {
-            source: "not configured".to_owned(),
-        })
-    }
+fn workspace_session() -> Arc<WorkspaceSessionService> {
+    Arc::new(WorkspaceSessionService::new(noop_workspace_runtime()))
 }
 
-fn workspace_session() -> Arc<WorkspaceSessionService> {
-    Arc::new(WorkspaceSessionService::new(Arc::new(NoopWorkspaceService)))
+fn noop_workspace_runtime() -> Arc<WorkspaceRuntimeService> {
+    Arc::new(WorkspaceRuntimeService::from_hooks_for_test(
+        WorkspaceRuntimeHooks {
+            create_workspace: Box::new(|_request: CreateWorkspaceRequest| {
+                Err(WorkspaceError::Setup {
+                    step: "not configured".to_owned(),
+                })
+            }),
+            capture_changes: Box::new(
+                |_handle: &WorkspaceHandle, _request: CaptureChangesRequest| {
+                    Err(WorkspaceError::Capture {
+                        message: "not configured".to_owned(),
+                    })
+                },
+            ),
+            remount_workspace: Box::new(
+                |_handle: &WorkspaceHandle, _request: RemountWorkspaceRequest| {
+                    Err(WorkspaceError::Setup {
+                        step: "not configured".to_owned(),
+                    })
+                },
+            ),
+            destroy_workspace: Box::new(
+                |_handle: WorkspaceHandle, _request: DestroyWorkspaceRequest| {
+                    Err(WorkspaceError::Setup {
+                        step: "not configured".to_owned(),
+                    })
+                },
+            ),
+            latest_snapshot: Box::new(|_request: LatestSnapshotRequest| {
+                Err(WorkspaceError::SnapshotAcquire {
+                    source: "not configured".to_owned(),
+                })
+            }),
+        },
+    ))
 }
 
 #[test]

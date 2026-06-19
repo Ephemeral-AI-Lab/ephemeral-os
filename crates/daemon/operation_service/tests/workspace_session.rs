@@ -11,7 +11,7 @@ use workspace::{
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
     LayerStackSnapshotRef, LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest,
     RemountWorkspaceResult, WorkspaceError, WorkspaceHandle, WorkspaceId, WorkspaceProfile,
-    WorkspaceService,
+    WorkspaceRuntimeHooks, WorkspaceRuntimeService,
 };
 
 struct FakeWorkspaceService {
@@ -87,7 +87,7 @@ impl FakeWorkspaceService {
     }
 }
 
-impl WorkspaceService for FakeWorkspaceService {
+impl FakeWorkspaceService {
     fn create_workspace(
         &self,
         _request: CreateWorkspaceRequest,
@@ -170,7 +170,34 @@ impl WorkspaceService for FakeWorkspaceService {
 }
 
 fn manager_with(fake: &Arc<FakeWorkspaceService>) -> WorkspaceSessionService {
-    WorkspaceSessionService::new(fake.clone())
+    WorkspaceSessionService::new(fake_workspace_runtime(fake))
+}
+
+fn fake_workspace_runtime(fake: &Arc<FakeWorkspaceService>) -> Arc<WorkspaceRuntimeService> {
+    Arc::new(WorkspaceRuntimeService::from_hooks_for_test(
+        WorkspaceRuntimeHooks {
+            create_workspace: Box::new({
+                let fake = Arc::clone(fake);
+                move |request| fake.create_workspace(request)
+            }),
+            capture_changes: Box::new({
+                let fake = Arc::clone(fake);
+                move |handle, request| fake.capture_changes(handle, request)
+            }),
+            remount_workspace: Box::new({
+                let fake = Arc::clone(fake);
+                move |handle, request| fake.remount_workspace(handle, request)
+            }),
+            destroy_workspace: Box::new({
+                let fake = Arc::clone(fake);
+                move |handle, request| fake.destroy_workspace(handle, request)
+            }),
+            latest_snapshot: Box::new({
+                let fake = Arc::clone(fake);
+                move |request| fake.latest_snapshot(request)
+            }),
+        },
+    ))
 }
 
 fn create_request(caller_id: &str) -> CreateWorkspaceRequest {

@@ -22,7 +22,8 @@ use workspace::{
     CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef,
     LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult,
-    WorkspaceError, WorkspaceHandle, WorkspaceId, WorkspaceProfile, WorkspaceService,
+    WorkspaceError, WorkspaceHandle, WorkspaceId, WorkspaceProfile, WorkspaceRuntimeHooks,
+    WorkspaceRuntimeService,
 };
 
 struct TestServices {
@@ -69,7 +70,7 @@ impl RemountWorkspaceServiceFake {
     }
 }
 
-impl WorkspaceService for RemountWorkspaceServiceFake {
+impl RemountWorkspaceServiceFake {
     fn create_workspace(
         &self,
         _request: CreateWorkspaceRequest,
@@ -147,6 +148,30 @@ impl WorkspaceService for RemountWorkspaceServiceFake {
             source: "latest snapshot not configured".to_owned(),
         })
     }
+}
+
+fn fake_workspace_runtime(fake: Arc<RemountWorkspaceServiceFake>) -> Arc<WorkspaceRuntimeService> {
+    Arc::new(WorkspaceRuntimeService::from_hooks_for_test(
+        WorkspaceRuntimeHooks {
+            create_workspace: Box::new({
+                let fake = Arc::clone(&fake);
+                move |request| fake.create_workspace(request)
+            }),
+            capture_changes: Box::new({
+                let fake = Arc::clone(&fake);
+                move |handle, request| fake.capture_changes(handle, request)
+            }),
+            remount_workspace: Box::new({
+                let fake = Arc::clone(&fake);
+                move |handle, request| fake.remount_workspace(handle, request)
+            }),
+            destroy_workspace: Box::new({
+                let fake = Arc::clone(&fake);
+                move |handle, request| fake.destroy_workspace(handle, request)
+            }),
+            latest_snapshot: Box::new(move |request| fake.latest_snapshot(request)),
+        },
+    ))
 }
 
 struct InactiveLaunchDriver {
@@ -245,7 +270,7 @@ impl ProcessGroupController for FakeProcessGroupController {
 }
 
 fn build_services(fake: Arc<RemountWorkspaceServiceFake>) -> TestServices {
-    let workspace = Arc::new(WorkspaceSessionService::new(fake));
+    let workspace = Arc::new(WorkspaceSessionService::new(fake_workspace_runtime(fake)));
     let command = Arc::new(CommandOperationService::with_launch_driver_for_test(
         Arc::clone(&workspace),
         command_config(),
@@ -273,7 +298,7 @@ fn build_services_with_process_group_controller(
     controller: Arc<dyn ProcessGroupController>,
     process_group_id: i32,
 ) -> TestServices {
-    let workspace = Arc::new(WorkspaceSessionService::new(fake));
+    let workspace = Arc::new(WorkspaceSessionService::new(fake_workspace_runtime(fake)));
     let command = Arc::new(
         CommandOperationService::with_launch_driver_and_remount_controller_for_test(
             Arc::clone(&workspace),

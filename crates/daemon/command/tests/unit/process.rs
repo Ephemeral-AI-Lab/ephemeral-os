@@ -1,6 +1,23 @@
 use super::*;
 
 use serde_json::json;
+use workspace::{WorkspaceEntry, WorkspaceEntryFds};
+
+fn workspace_entry() -> WorkspaceEntry {
+    WorkspaceEntry {
+        workspace_root: "/workspace".into(),
+        layer_paths: vec!["/lower/one".into(), "/lower/two".into()],
+        upperdir: "/tmp/eos/upper".into(),
+        workdir: "/tmp/eos/work".into(),
+        ns_fds: WorkspaceEntryFds {
+            user: 10,
+            mnt: 11,
+            pid: 12,
+            net: Some(13),
+        },
+        cgroup_path: Some("/sys/fs/cgroup/eos".into()),
+    }
+}
 
 #[test]
 fn process_exposes_identity_and_expiry() {
@@ -8,6 +25,7 @@ fn process_exposes_identity_and_expiry() {
         id: "cmd_1".to_owned(),
         caller_id: "caller".to_owned(),
         command: "echo ok".to_owned(),
+        cwd: None,
         timeout_seconds: Some(0.001),
     });
 
@@ -40,6 +58,7 @@ fn take_exit_reads_transcript_and_persist_removes_it() -> Result<(), Box<dyn std
             id: "cmd_1".to_owned(),
             caller_id: "caller".to_owned(),
             command: "echo ok".to_owned(),
+            cwd: None,
             timeout_seconds: None,
         },
         CommandProcessRuntime::new(
@@ -107,10 +126,11 @@ fn spawn_reports_command_request_artifact_write_failure() -> Result<(), Box<dyn 
             id: "cmd_1".to_owned(),
             caller_id: "caller".to_owned(),
             command: "echo ok".to_owned(),
+            cwd: None,
             timeout_seconds: None,
         },
         CommandProcessSpawn {
-            command_request: json!({"invocation_id": "cmd_1"}),
+            workspace_entry: workspace_entry(),
             request_path: request_path.clone(),
             output_path: root.join("runner-result.json"),
             final_path: root.join("final.json"),
@@ -137,6 +157,41 @@ fn spawn_reports_command_request_artifact_write_failure() -> Result<(), Box<dyn 
     }
 
     let _ = std::fs::remove_dir_all(root);
+    Ok(())
+}
+
+#[test]
+fn builds_namespace_runner_request_from_command_spec_and_workspace_entry(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let request = build_namespace_command_request(
+        &CommandProcessSpec {
+            id: "cmd_1".to_owned(),
+            caller_id: "caller".to_owned(),
+            command: "printf ok".to_owned(),
+            cwd: Some("/workspace/src".into()),
+            timeout_seconds: Some(2.5),
+        },
+        workspace_entry(),
+    );
+
+    let request = serde_json::to_value(request)?;
+    assert!(request.get("mode").is_none());
+    assert_eq!(request["invocation_id"], "cmd_1");
+    assert_eq!(request["caller_id"], "caller");
+    assert_eq!(request["args"]["command"], "printf ok");
+    assert_eq!(request["args"]["cwd"], "/workspace/src");
+    assert_eq!(request["workspace_root"], "/workspace");
+    assert_eq!(request["layer_paths"][0], "/lower/one");
+    assert_eq!(request["layer_paths"][1], "/lower/two");
+    assert_eq!(request["upperdir"], "/tmp/eos/upper");
+    assert_eq!(request["workdir"], "/tmp/eos/work");
+    assert_eq!(request["ns_fds"]["user"], 10);
+    assert_eq!(request["ns_fds"]["mnt"], 11);
+    assert_eq!(request["ns_fds"]["pid"], 12);
+    assert_eq!(request["ns_fds"]["net"], 13);
+    assert_eq!(request["cgroup_path"], "/sys/fs/cgroup/eos");
+    assert_eq!(request["timeout_seconds"], 2.5);
+
     Ok(())
 }
 
@@ -185,6 +240,7 @@ fn persist_final_reports_final_and_transcript_failures() -> Result<(), Box<dyn s
             id: "cmd_1".to_owned(),
             caller_id: "caller".to_owned(),
             command: "echo ok".to_owned(),
+            cwd: None,
             timeout_seconds: None,
         },
         CommandProcessRuntime::new(

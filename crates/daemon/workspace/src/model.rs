@@ -1,11 +1,10 @@
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use layerstack::service::BoundedCaptureOptions;
 use layerstack::CaptureRouteStats;
-use namespace_process::runner::protocol::{Fd, NamespaceCommandRequest, NsFds, WorkspaceRoot};
-use serde_json::{json, Value};
+use namespace_process::runner::protocol::{Fd, NsFds};
 
 use crate::overlay::tree::TreeResourceStats;
 use crate::profile::WorkspaceModeHandle;
@@ -109,17 +108,15 @@ impl fmt::Debug for WorkspaceHandle {
 }
 
 impl WorkspaceHandle {
-    pub fn command_request(
-        &self,
-        request: WorkspaceCommandRequest,
-    ) -> Result<Value, WorkspaceLaunchError> {
+    pub fn entry(&self) -> Result<WorkspaceEntry, WorkspaceEntryError> {
         self.launch
             .as_ref()
-            .ok_or_else(WorkspaceLaunchError::missing_launch_material)?
-            .command_request(request)
+            .ok_or_else(WorkspaceEntryError::missing_launch_material)?
+            .entry()
     }
 
     #[must_use]
+    #[allow(clippy::too_many_arguments)]
     pub fn holder_backed_for_test(
         id: WorkspaceId,
         owner: CallerId,
@@ -148,6 +145,7 @@ impl WorkspaceHandle {
     }
 
     #[must_use]
+    #[allow(clippy::too_many_arguments)]
     pub fn unavailable_for_test(
         id: WorkspaceId,
         owner: CallerId,
@@ -276,85 +274,113 @@ impl WorkspaceLaunchContext {
         }
     }
 
-    pub fn command_request(
-        &self,
-        request: WorkspaceCommandRequest,
-    ) -> Result<Value, WorkspaceLaunchError> {
-        let cwd = request
-            .cwd
-            .as_deref()
-            .unwrap_or_else(|| Path::new("."))
-            .to_string_lossy()
-            .into_owned();
-        let command_request = NamespaceCommandRequest {
-            invocation_id: request.command_id,
-            caller_id: request.caller_id,
-            args: json!({
-                "command": request.command,
-                "cwd": cwd,
-            }),
-            workspace_root: WorkspaceRoot(self.workspace_root.clone()),
+    pub fn entry(&self) -> Result<WorkspaceEntry, WorkspaceEntryError> {
+        Ok(WorkspaceEntry {
+            workspace_root: self.workspace_root.clone(),
             layer_paths: self.layer_paths.clone(),
-            upperdir: Some(self.upperdir.clone()),
-            workdir: Some(self.workdir.clone()),
-            ns_fds: Some(self.required_holder_fds()?),
+            upperdir: self.upperdir.clone(),
+            workdir: self.workdir.clone(),
+            ns_fds: self.required_holder_fds()?,
             cgroup_path: self.cgroup_path.clone(),
-            timeout_seconds: request.timeout_seconds,
-        };
-        serde_json::to_value(command_request).map_err(|error| WorkspaceLaunchError {
-            message: format!("serialize workspace command launch request: {error}"),
         })
     }
 
-    fn required_holder_fds(&self) -> Result<NsFds, WorkspaceLaunchError> {
+    fn required_holder_fds(&self) -> Result<WorkspaceEntryFds, WorkspaceEntryError> {
         let Some(fds) = self.holder_fds else {
-            return Err(WorkspaceLaunchError::incomplete());
+            return Err(WorkspaceEntryError::incomplete());
         };
-        if fds.user.is_none() || fds.mnt.is_none() || fds.pid.is_none() {
-            return Err(WorkspaceLaunchError::incomplete());
-        }
+        let (Some(user), Some(mnt), Some(pid)) = (fds.user, fds.mnt, fds.pid) else {
+            return Err(WorkspaceEntryError::incomplete());
+        };
         if self.profile == WorkspaceProfile::Isolated && fds.net.is_none() {
-            return Err(WorkspaceLaunchError::incomplete());
+            return Err(WorkspaceEntryError::incomplete());
         }
-        Ok(fds.into())
+        Ok(WorkspaceEntryFds {
+            user,
+            mnt,
+            pid,
+            net: fds.net,
+        })
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct WorkspaceCommandRequest {
-    pub command_id: String,
-    pub caller_id: String,
-    pub command: String,
-    pub cwd: Option<PathBuf>,
-    pub timeout_seconds: Option<f64>,
+#[derive(Clone, PartialEq, Eq)]
+pub struct WorkspaceEntry {
+    pub workspace_root: PathBuf,
+    pub layer_paths: Vec<PathBuf>,
+    pub upperdir: PathBuf,
+    pub workdir: PathBuf,
+    pub ns_fds: WorkspaceEntryFds,
+    pub cgroup_path: Option<PathBuf>,
+}
+
+impl fmt::Debug for WorkspaceEntry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("WorkspaceEntry")
+            .field("storage", &"<hidden>")
+            .field("holder_context", &self.ns_fds)
+            .field("cgroup", &self.cgroup_path.as_ref().map(|_| "<available>"))
+            .finish()
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct WorkspaceEntryFds {
+    pub user: i32,
+    pub mnt: i32,
+    pub pid: i32,
+    pub net: Option<i32>,
+}
+
+impl fmt::Debug for WorkspaceEntryFds {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let available = |fd: Option<i32>| fd.map(|_| "<available>");
+        f.debug_struct("WorkspaceEntryFds")
+            .field("user", &"<available>")
+            .field("mnt", &"<available>")
+            .field("pid", &"<available>")
+            .field("net", &available(self.net))
+            .finish()
+    }
+}
+
+impl From<WorkspaceEntryFds> for NsFds {
+    fn from(fds: WorkspaceEntryFds) -> Self {
+        Self {
+            user: Some(Fd(fds.user)),
+            mnt: Some(Fd(fds.mnt)),
+            pid: Some(Fd(fds.pid)),
+            net: fds.net.map(Fd),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WorkspaceLaunchError {
+pub struct WorkspaceEntryError {
     message: String,
 }
 
-impl WorkspaceLaunchError {
+impl WorkspaceEntryError {
     fn missing_launch_material() -> Self {
         Self {
-            message: "resolved workspace lacks command launch material".to_owned(),
+            message: "resolved workspace lacks workspace entry material".to_owned(),
         }
     }
 
     fn incomplete() -> Self {
         Self {
-            message: "workspace launch context is incomplete".to_owned(),
+            message: "workspace entry context is incomplete".to_owned(),
         }
     }
 }
 
-impl fmt::Display for WorkspaceLaunchError {
+impl fmt::Display for WorkspaceEntryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.message)
     }
 }
 
-impl std::error::Error for WorkspaceLaunchError {}
+impl std::error::Error for WorkspaceEntryError {}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct WorkspaceLaunchFds {
@@ -373,18 +399,6 @@ impl fmt::Debug for WorkspaceLaunchFds {
             .field("pid", &available(self.pid))
             .field("net", &available(self.net))
             .finish()
-    }
-}
-
-impl From<WorkspaceLaunchFds> for NsFds {
-    fn from(fds: WorkspaceLaunchFds) -> Self {
-        let fd = |raw: Option<i32>| raw.map(Fd);
-        Self {
-            user: fd(fds.user),
-            mnt: fd(fds.mnt),
-            pid: fd(fds.pid),
-            net: fd(fds.net),
-        }
     }
 }
 

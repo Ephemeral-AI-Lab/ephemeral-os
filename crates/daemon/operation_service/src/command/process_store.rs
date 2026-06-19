@@ -389,6 +389,7 @@ mod tests {
             id: command_id.0.clone(),
             caller_id: caller_id.0.clone(),
             command: "echo ok".to_owned(),
+            cwd: None,
             timeout_seconds: None,
         })
     }

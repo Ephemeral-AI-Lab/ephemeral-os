@@ -15,7 +15,8 @@ use workspace::{
     CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef,
     LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult,
-    WorkspaceError, WorkspaceHandle, WorkspaceId, WorkspaceProfile, WorkspaceService,
+    WorkspaceEntry, WorkspaceError, WorkspaceHandle, WorkspaceId, WorkspaceProfile,
+    WorkspaceRuntimeHooks, WorkspaceRuntimeService,
 };
 
 pub struct TestServices {
@@ -42,7 +43,10 @@ pub struct FakeLaunchDriver {
 pub struct SpawnObservation {
     pub spec_id: String,
     pub spec_caller_id: String,
-    pub command_request: serde_json::Value,
+    pub spec_command: String,
+    pub spec_cwd: Option<PathBuf>,
+    pub spec_timeout_seconds: Option<f64>,
+    pub workspace_entry: WorkspaceEntry,
     pub request_path: PathBuf,
     pub output_path: PathBuf,
     pub final_path: PathBuf,
@@ -98,7 +102,10 @@ impl CommandLaunchDriver for FakeLaunchDriver {
             .push(SpawnObservation {
                 spec_id: spec.id.clone(),
                 spec_caller_id: spec.caller_id.clone(),
-                command_request: parts.command_request.clone(),
+                spec_command: spec.command.clone(),
+                spec_cwd: spec.cwd.clone(),
+                spec_timeout_seconds: spec.timeout_seconds,
+                workspace_entry: parts.workspace_entry.clone(),
                 request_path: parts.request_path.clone(),
                 output_path: parts.output_path.clone(),
                 final_path: parts.final_path.clone(),
@@ -151,7 +158,7 @@ impl FakeWorkspaceService {
     }
 }
 
-impl WorkspaceService for FakeWorkspaceService {
+impl FakeWorkspaceService {
     fn create_workspace(
         &self,
         request: CreateWorkspaceRequest,
@@ -217,6 +224,30 @@ impl WorkspaceService for FakeWorkspaceService {
     }
 }
 
+pub fn fake_workspace_runtime(fake: Arc<FakeWorkspaceService>) -> Arc<WorkspaceRuntimeService> {
+    Arc::new(WorkspaceRuntimeService::from_hooks_for_test(
+        WorkspaceRuntimeHooks {
+            create_workspace: Box::new({
+                let fake = Arc::clone(&fake);
+                move |request| fake.create_workspace(request)
+            }),
+            capture_changes: Box::new({
+                let fake = Arc::clone(&fake);
+                move |handle, request| fake.capture_changes(handle, request)
+            }),
+            remount_workspace: Box::new({
+                let fake = Arc::clone(&fake);
+                move |handle, request| fake.remount_workspace(handle, request)
+            }),
+            destroy_workspace: Box::new({
+                let fake = Arc::clone(&fake);
+                move |handle, request| fake.destroy_workspace(handle, request)
+            }),
+            latest_snapshot: Box::new(move |request| fake.latest_snapshot(request)),
+        },
+    ))
+}
+
 pub fn build_services(fake: Arc<FakeWorkspaceService>) -> TestServices {
     build_services_with_launch_driver(fake, Arc::new(FakeLaunchDriver::new()))
 }
@@ -225,7 +256,7 @@ pub fn build_services_with_launch_driver(
     fake: Arc<FakeWorkspaceService>,
     launch_driver: Arc<dyn CommandLaunchDriver>,
 ) -> TestServices {
-    let workspace = Arc::new(WorkspaceSessionService::new(fake));
+    let workspace = Arc::new(WorkspaceSessionService::new(fake_workspace_runtime(fake)));
     let command = Arc::new(CommandOperationService::with_launch_driver_for_test(
         Arc::clone(&workspace),
         test_command_config(),
