@@ -8,6 +8,7 @@ use layerstack::{LayerChange, LayerPath, LayerRef, LayerStack, Manifest, MANIFES
 type Result<T = ()> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 const PAYLOAD_UNIT_BYTES: usize = 1 << 20;
+const LARGE_PAYLOAD_BYTES: usize = 16 << 20;
 
 #[derive(Debug, Clone)]
 struct Snapshot {
@@ -55,6 +56,11 @@ fn main() -> Result {
         single_protected_l4_gap(&base)?,
         mounted_l4_prefix_gap(&base)?,
         mounted_l4_prefix_normalized_gap(&base)?,
+        mounted_l4_large_prefix_gap(&base)?,
+        mounted_l4_large_prefix_normalized_gap(&base)?,
+        multi_lease_pinned_prefix_gap(&base)?,
+        multi_lease_pinned_prefix_normalized_gap(&base)?,
+        many_lease_deep_pinned_top_gap(&base)?,
         delete_above_protected_skip(&base)?,
         delete_above_protected_delta(&base)?,
         opaque_above_protected_delta(&base)?,
@@ -221,6 +227,272 @@ fn mounted_l4_prefix_normalized_gap(base: &Path) -> Result<ReclaimRow<'static>> 
         outcome.planned_reclaiming_interval_count,
         success,
         "real_storage;live_lease_parent_prefix_normalized;6S_to_3S_then_1S",
+        "M6",
+    ))
+}
+
+fn mounted_l4_large_prefix_gap(base: &Path) -> Result<ReclaimRow<'static>> {
+    let root = case_root(base, "mounted-l4-large-prefix");
+    let mut stack = LayerStack::open(root.clone())?;
+    for index in 1..=4 {
+        publish_blob_bytes(&mut stack, "blob.bin", LARGE_PAYLOAD_BYTES, index)?;
+    }
+    let lease = stack.acquire_snapshot("mounted-l4-large-prefix")?;
+    let protected = lease.manifest.layers.clone();
+    for index in 5..=6 {
+        publish_blob_bytes(&mut stack, "blob.bin", LARGE_PAYLOAD_BYTES, index)?;
+    }
+
+    let before = snapshot(&stack, &root)?;
+    let start = Instant::now();
+    let outcome = stack.reclaim_lease_aware_view_checkpoints(2)?;
+    let duration_s = start.elapsed().as_secs_f64();
+    let after = snapshot(&stack, &root)?;
+    let bytes_added = new_layer_payload(&root, &before.manifest, outcome.manifest.as_ref())?;
+    let pinned_bytes = layer_payload_sum(&root, &protected)?;
+
+    stack.release_lease(&lease.lease_id)?;
+    stack.squash(1)?;
+    let after_release = snapshot(&stack, &root)?;
+
+    let unit = LARGE_PAYLOAD_BYTES as u64;
+    let success = outcome.view_checkpoint_count == 1
+        && outcome.removed_layer_count == 2
+        && before.payload_bytes == 6 * unit
+        && after.payload_bytes == 5 * unit
+        && after_release.payload_bytes == unit;
+
+    Ok(row_from_snapshots(
+        "mounted_l4_prefix_large_file_view_reclaim",
+        before,
+        after,
+        after_release.payload_bytes,
+        bytes_added,
+        pinned_bytes,
+        duration_s,
+        outcome.protected_layer_count,
+        outcome.planned_reclaiming_interval_count,
+        success,
+        "real_storage;mounted_l4_prefix;large_16MiB;6S_to_5S_then_1S",
+        "M2",
+    ))
+}
+
+fn mounted_l4_large_prefix_normalized_gap(base: &Path) -> Result<ReclaimRow<'static>> {
+    let root = case_root(base, "mounted-l4-large-prefix-normalized");
+    let mut stack = LayerStack::open(root.clone())?;
+    for index in 1..=4 {
+        publish_blob_bytes(&mut stack, "blob.bin", LARGE_PAYLOAD_BYTES, index)?;
+    }
+    let lease = stack.acquire_snapshot("mounted-l4-large-prefix-normalized")?;
+    for index in 5..=6 {
+        publish_blob_bytes(&mut stack, "blob.bin", LARGE_PAYLOAD_BYTES, index)?;
+    }
+
+    let before = snapshot(&stack, &root)?;
+    let start = Instant::now();
+    let normalized = stack.compact_leased_parent_for_remount(&lease.lease_id, 2)?;
+    let outcome = stack.reclaim_lease_aware_view_checkpoints(2)?;
+    let duration_s = start.elapsed().as_secs_f64();
+    let after = snapshot(&stack, &root)?;
+    let bytes_added = new_layer_payload(&root, &before.manifest, outcome.manifest.as_ref())?;
+    let lease_manifest = normalized
+        .lease_manifest
+        .as_ref()
+        .ok_or_else(|| std::io::Error::other("large lease parent prefix was not normalized"))?;
+    let pinned_bytes = layer_payload_sum(&root, &lease_manifest.layers)?;
+
+    stack.release_lease(&lease.lease_id)?;
+    stack.squash(1)?;
+    let after_release = snapshot(&stack, &root)?;
+
+    let unit = LARGE_PAYLOAD_BYTES as u64;
+    let success = normalized.compacted_parent_layer_count == 3
+        && normalized.removed_layer_count == 3
+        && outcome.view_checkpoint_count == 1
+        && outcome.removed_layer_count == 2
+        && before.payload_bytes == 6 * unit
+        && after.payload_bytes == 3 * unit
+        && after_release.payload_bytes == unit;
+
+    Ok(row_from_snapshots(
+        "mounted_l4_prefix_normalized_large_file_reclaim",
+        before,
+        after,
+        after_release.payload_bytes,
+        bytes_added,
+        pinned_bytes,
+        duration_s,
+        lease_manifest.layers.len(),
+        outcome.planned_reclaiming_interval_count,
+        success,
+        "real_storage;live_lease_parent_prefix_normalized;large_16MiB;6S_to_3S_then_1S",
+        "M6",
+    ))
+}
+
+fn multi_lease_pinned_prefix_gap(base: &Path) -> Result<ReclaimRow<'static>> {
+    let root = case_root(base, "multi-lease-pinned-prefix");
+    let mut stack = LayerStack::open(root.clone())?;
+    for index in 1..=4 {
+        publish_blob(&mut stack, "blob.bin", index)?;
+    }
+    let old_lease = stack.acquire_snapshot("old-running-command")?;
+    for index in 5..=8 {
+        publish_blob(&mut stack, "blob.bin", index)?;
+    }
+    let mid_lease = stack.acquire_snapshot("mid-running-command")?;
+    for index in 9..=12 {
+        publish_blob(&mut stack, "blob.bin", index)?;
+    }
+    let protected = stack.leased_layers();
+
+    let before = snapshot(&stack, &root)?;
+    let start = Instant::now();
+    let outcome = stack.reclaim_lease_aware_view_checkpoints(2)?;
+    let duration_s = start.elapsed().as_secs_f64();
+    let after = snapshot(&stack, &root)?;
+    let bytes_added = new_layer_payload(&root, &before.manifest, outcome.manifest.as_ref())?;
+    let pinned_bytes = layer_payload_sum(&root, &protected)?;
+
+    stack.release_lease(&mid_lease.lease_id)?;
+    stack.release_lease(&old_lease.lease_id)?;
+    stack.squash(1)?;
+    let after_release = snapshot(&stack, &root)?;
+
+    let success = outcome.view_checkpoint_count == 1
+        && outcome.removed_layer_count == 4
+        && before.payload_bytes == 12 * PAYLOAD_UNIT_BYTES as u64
+        && after.payload_bytes == 9 * PAYLOAD_UNIT_BYTES as u64
+        && after_release.payload_bytes == PAYLOAD_UNIT_BYTES as u64;
+
+    Ok(row_from_snapshots_with_leases(
+        "multi_lease_pinned_prefix_view_reclaim",
+        before,
+        after,
+        after_release.payload_bytes,
+        bytes_added,
+        pinned_bytes,
+        duration_s,
+        outcome.protected_layer_count,
+        2,
+        outcome.planned_reclaiming_interval_count,
+        success,
+        "real_storage;two_leases;old_lease_pins_mid_parent;12S_to_9S_then_1S",
+        "M6",
+    ))
+}
+
+fn multi_lease_pinned_prefix_normalized_gap(base: &Path) -> Result<ReclaimRow<'static>> {
+    let root = case_root(base, "multi-lease-pinned-prefix-normalized");
+    let mut stack = LayerStack::open(root.clone())?;
+    for index in 1..=4 {
+        publish_blob(&mut stack, "blob.bin", index)?;
+    }
+    let old_lease = stack.acquire_snapshot("old-running-command")?;
+    for index in 5..=8 {
+        publish_blob(&mut stack, "blob.bin", index)?;
+    }
+    let mid_lease = stack.acquire_snapshot("mid-running-command")?;
+    for index in 9..=12 {
+        publish_blob(&mut stack, "blob.bin", index)?;
+    }
+
+    let before = snapshot(&stack, &root)?;
+    let start = Instant::now();
+    let normalized = stack.compact_leased_parent_for_remount(&mid_lease.lease_id, 2)?;
+    let outcome = stack.reclaim_lease_aware_view_checkpoints(2)?;
+    let duration_s = start.elapsed().as_secs_f64();
+    let after = snapshot(&stack, &root)?;
+    let bytes_added = new_layer_payload(&root, &before.manifest, outcome.manifest.as_ref())?;
+    let pinned_layers = stack.leased_layers();
+    let pinned_bytes = layer_payload_sum(&root, &pinned_layers)?;
+
+    stack.release_lease(&mid_lease.lease_id)?;
+    stack.release_lease(&old_lease.lease_id)?;
+    stack.squash(1)?;
+    let after_release = snapshot(&stack, &root)?;
+
+    let success = normalized.compacted_parent_layer_count == 7
+        && normalized.removed_layer_count == 3
+        && outcome.view_checkpoint_count == 1
+        && outcome.removed_layer_count == 4
+        && before.payload_bytes == 12 * PAYLOAD_UNIT_BYTES as u64
+        && after.payload_bytes == 7 * PAYLOAD_UNIT_BYTES as u64
+        && pinned_layers.len() == 6
+        && after_release.payload_bytes == PAYLOAD_UNIT_BYTES as u64;
+
+    Ok(row_from_snapshots_with_leases(
+        "multi_lease_pinned_prefix_normalized_reclaim",
+        before,
+        after,
+        after_release.payload_bytes,
+        bytes_added,
+        pinned_bytes,
+        duration_s,
+        pinned_layers.len(),
+        2,
+        outcome.planned_reclaiming_interval_count,
+        success,
+        "real_storage;two_leases;normalize_mid_parent_but_old_lease_pins_4S;12S_to_7S_then_1S",
+        "M6",
+    ))
+}
+
+fn many_lease_deep_pinned_top_gap(base: &Path) -> Result<ReclaimRow<'static>> {
+    let root = case_root(base, "many-lease-deep-pinned-top-gap");
+    let mut stack = LayerStack::open(root.clone())?;
+    for index in 1..=4 {
+        publish_blob(&mut stack, "blob.bin", index)?;
+    }
+    let lease_4 = stack.acquire_snapshot("historical-command-v4")?;
+    for index in 5..=8 {
+        publish_blob(&mut stack, "blob.bin", index)?;
+    }
+    let lease_8 = stack.acquire_snapshot("historical-command-v8")?;
+    for index in 9..=12 {
+        publish_blob(&mut stack, "blob.bin", index)?;
+    }
+    let lease_12 = stack.acquire_snapshot("historical-command-v12")?;
+    for index in 13..=20 {
+        publish_blob(&mut stack, "blob.bin", index)?;
+    }
+    let protected = stack.leased_layers();
+
+    let before = snapshot(&stack, &root)?;
+    let start = Instant::now();
+    let outcome = stack.reclaim_lease_aware_view_checkpoints(2)?;
+    let duration_s = start.elapsed().as_secs_f64();
+    let after = snapshot(&stack, &root)?;
+    let bytes_added = new_layer_payload(&root, &before.manifest, outcome.manifest.as_ref())?;
+    let pinned_bytes = layer_payload_sum(&root, &protected)?;
+
+    stack.release_lease(&lease_12.lease_id)?;
+    stack.release_lease(&lease_8.lease_id)?;
+    stack.release_lease(&lease_4.lease_id)?;
+    stack.squash(1)?;
+    let after_release = snapshot(&stack, &root)?;
+
+    let success = outcome.view_checkpoint_count == 1
+        && outcome.removed_layer_count == 8
+        && outcome.protected_layer_count == 12
+        && before.payload_bytes == 20 * PAYLOAD_UNIT_BYTES as u64
+        && after.payload_bytes == 13 * PAYLOAD_UNIT_BYTES as u64
+        && after_release.payload_bytes == PAYLOAD_UNIT_BYTES as u64;
+
+    Ok(row_from_snapshots_with_leases(
+        "many_lease_deep_pinned_top_gap_reclaim",
+        before,
+        after,
+        after_release.payload_bytes,
+        bytes_added,
+        pinned_bytes,
+        duration_s,
+        outcome.protected_layer_count,
+        3,
+        outcome.planned_reclaiming_interval_count,
+        success,
+        "real_storage;three_leases;12_pinned_layers;20S_to_13S_then_1S",
         "M6",
     ))
 }
@@ -457,6 +729,38 @@ fn row_from_snapshots(
     notes: &'static str,
     milestone: &'static str,
 ) -> ReclaimRow<'static> {
+    row_from_snapshots_with_leases(
+        case,
+        before,
+        after,
+        bytes_after_release,
+        bytes_added,
+        pinned_bytes,
+        duration_s,
+        protected_layers,
+        usize::from(protected_layers > 0),
+        unleased_intervals,
+        success,
+        notes,
+        milestone,
+    )
+}
+
+fn row_from_snapshots_with_leases(
+    case: &'static str,
+    before: Snapshot,
+    after: Snapshot,
+    bytes_after_release: u64,
+    bytes_added: u64,
+    pinned_bytes: u64,
+    duration_s: f64,
+    protected_layers: usize,
+    lease_count: usize,
+    unleased_intervals: usize,
+    success: bool,
+    notes: &'static str,
+    milestone: &'static str,
+) -> ReclaimRow<'static> {
     let bytes_removed = before
         .payload_bytes
         .saturating_add(bytes_added)
@@ -466,7 +770,7 @@ fn row_from_snapshots(
         case,
         layers: before.manifest.layers.len(),
         protected_layers,
-        lease_count: usize::from(protected_layers > 0),
+        lease_count,
         unleased_intervals,
         bytes_before: before.payload_bytes,
         bytes_after: after.payload_bytes,
@@ -483,9 +787,13 @@ fn row_from_snapshots(
 }
 
 fn publish_blob(stack: &mut LayerStack, path: &str, seed: u8) -> Result {
+    publish_blob_bytes(stack, path, PAYLOAD_UNIT_BYTES, seed)
+}
+
+fn publish_blob_bytes(stack: &mut LayerStack, path: &str, bytes: usize, seed: u8) -> Result {
     stack.publish_layer(&[LayerChange::Write {
         path: LayerPath::parse(path)?,
-        content: vec![seed; PAYLOAD_UNIT_BYTES],
+        content: vec![seed; bytes],
     }])?;
     Ok(())
 }

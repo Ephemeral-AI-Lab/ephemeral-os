@@ -5,7 +5,9 @@
 use std::path::{Path, PathBuf};
 
 use config::configs::isolated_workspace::IsolatedWorkspaceConfig;
-use layerstack::{CommitOptions, LayerChange, LayerPath, LayerStack};
+use layerstack::{
+    service::BoundedCaptureOptions, CommitOptions, LayerChange, LayerPath, LayerStack,
+};
 use serde_json::{json, Value};
 
 use super::WorkspaceRuntime;
@@ -204,10 +206,13 @@ fn isolated_runtime_with_max_depth(
             workspace_root: workspace_root.to_path_buf(),
             ..IsolatedWorkspaceConfig::default()
         },
-        std::sync::Arc::new(operation::command::CommandOps::with_commit_options(
-            command::CommandConfig::default(),
-            CommitOptions::new(auto_squash_max_depth),
-        )),
+        std::sync::Arc::new(
+            operation::command::CommandOps::with_commit_options_and_capture_options(
+                command::CommandConfig::default(),
+                CommitOptions::new(auto_squash_max_depth),
+                BoundedCaptureOptions::default(),
+            ),
+        ),
     )
 }
 
