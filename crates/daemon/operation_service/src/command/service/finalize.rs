@@ -90,9 +90,9 @@ impl CommandOperationService {
             )?;
             let protected_drops = layerstack_protected_drops(&captured.protected_drops);
             let publish_result = layerstack::service::publish_command_capture_lane_aware(
-                handler.publish_root(),
-                handler.snapshot.manifest_version,
-                &handler.snapshot.layer_paths,
+                &handler.layer_stack_root,
+                handler.handle.snapshot.manifest_version,
+                &handler.handle.snapshot.layer_paths,
                 &captured.changes,
                 &protected_drops,
                 self.finalization_options().one_shot_publish,

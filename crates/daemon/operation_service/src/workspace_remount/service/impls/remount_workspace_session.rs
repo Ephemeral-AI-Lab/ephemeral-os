@@ -45,7 +45,7 @@ impl WorkspaceRemountService {
 
         quiesce.set_switch_state(RemountSwitchState::CriticalSwitch);
         let request = RemountWorkspaceRequest {
-            layer_paths: handler.layer_paths.clone(),
+            layer_paths: handler.handle.snapshot.layer_paths.clone(),
         };
         let remount_result = self.workspace().apply_and_finish_remount(&handler, request);
         quiesce.set_switch_state(RemountSwitchState::Resuming);

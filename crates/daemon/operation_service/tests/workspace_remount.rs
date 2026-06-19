@@ -510,6 +510,7 @@ fn workspace_remount_no_active_command_path_succeeds_and_clears_pending() {
         report
             .updated_handler
             .expect("updated handler is returned")
+            .handle
             .snapshot
             .manifest_version,
         2

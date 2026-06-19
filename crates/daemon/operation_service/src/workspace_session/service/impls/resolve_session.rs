@@ -15,10 +15,10 @@ impl WorkspaceSessionService {
                 workspace_session_id: workspace_session_id.clone(),
             })?;
 
-        if session.caller_id != caller_id {
+        if session.handle.owner != caller_id {
             return Err(WorkspaceSessionError::CallerMismatch {
                 workspace_session_id,
-                expected: session.caller_id.clone(),
+                expected: session.handle.owner.clone(),
                 actual: caller_id,
             });
         }

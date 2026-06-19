@@ -3,9 +3,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use operation_service::workspace_remount::RemountWorkspaceSession;
-use operation_service::workspace_session::{
-    WorkspaceRemountState, WorkspaceSessionError, WorkspaceSessionService,
-};
+use operation_service::workspace_session::{WorkspaceSessionError, WorkspaceSessionService};
 use workspace::{
     BaseRevision, CallerId, CaptureChangesRequest, CapturedWorkspaceChanges,
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
@@ -470,9 +468,7 @@ fn workspace_session_capture_updates_handler_snapshot_consistently() {
             CallerId("caller-1".to_owned()),
         )
         .expect("test operation succeeds");
-    assert_eq!(resolved.snapshot.manifest_version, 2);
     assert_eq!(resolved.handle.snapshot.manifest_version, 2);
-    assert_eq!(resolved.snapshot.root_hash, "root-2");
     assert_eq!(resolved.handle.snapshot.root_hash, "root-2");
 }
 
@@ -485,11 +481,10 @@ fn workspace_session_begin_remount_marks_pending_and_rejects_duplicate_begin() {
         .create_workspace_session(create_request("caller-1"))
         .expect("test operation succeeds");
 
-    let handler = manager
+    manager
         .begin_remount(WorkspaceId("workspace-1".to_owned()))
         .expect("begin remount succeeds");
 
-    assert_eq!(handler.remount_state, WorkspaceRemountState::RemountPending);
     assert!(manager.is_remount_pending(&WorkspaceId("workspace-1".to_owned())));
     let duplicate = manager
         .begin_remount(WorkspaceId("workspace-1".to_owned()))
@@ -631,9 +626,15 @@ fn workspace_session_apply_remount_refreshes_canonical_handle() {
         )
         .expect("apply remount succeeds");
 
-    assert_eq!(updated.lease_id, LeaseId("lease-2".to_owned()));
-    assert_eq!(updated.snapshot.manifest_version, 2);
-    assert_eq!(updated.layer_paths, vec![PathBuf::from("/lower/two")]);
+    assert_eq!(
+        updated.handle.snapshot.lease_id,
+        LeaseId("lease-2".to_owned())
+    );
+    assert_eq!(updated.handle.snapshot.manifest_version, 2);
+    assert_eq!(
+        updated.handle.snapshot.layer_paths,
+        vec![PathBuf::from("/lower/two")]
+    );
     assert_eq!(
         fake.remount_calls(),
         vec![WorkspaceId("workspace-1".to_owned())]

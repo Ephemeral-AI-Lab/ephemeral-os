@@ -1,9 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::SystemTime;
 
-use crate::workspace_crate::{
-    BaseRevision, CallerId, LayerStackSnapshotRef, LeaseId, WorkspaceHandle, WorkspaceId,
-};
+use crate::workspace_crate::{BaseRevision, WorkspaceHandle, WorkspaceId};
 use crate::workspace_session::WorkspaceSessionError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -27,28 +25,13 @@ pub struct WorkspaceSessionHandler {
     pub workspace_session_id: WorkspaceId,
     pub handle: WorkspaceHandle,
     pub layer_stack_root: PathBuf,
-    pub lease_id: LeaseId,
-    pub snapshot: LayerStackSnapshotRef,
-    pub layer_paths: Vec<PathBuf>,
-    pub remount_state: WorkspaceRemountState,
-}
-
-impl WorkspaceSessionHandler {
-    #[must_use]
-    pub fn publish_root(&self) -> &Path {
-        &self.layer_stack_root
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct WorkspaceSession {
     pub workspace_session_id: WorkspaceId,
-    pub caller_id: CallerId,
     pub handle: WorkspaceHandle,
     pub layer_stack_root: PathBuf,
-    pub lease_id: LeaseId,
-    pub snapshot: LayerStackSnapshotRef,
-    pub layer_paths: Vec<PathBuf>,
     pub lifecycle_state: WorkspaceLifecycleState,
     pub remount_state: WorkspaceRemountState,
     pub created_at: SystemTime,
@@ -60,11 +43,7 @@ impl WorkspaceSession {
         let now = SystemTime::now();
         Self {
             workspace_session_id: handle.id.clone(),
-            caller_id: handle.owner.clone(),
             layer_stack_root,
-            lease_id: handle.snapshot.lease_id.clone(),
-            layer_paths: handle.snapshot.layer_paths.clone(),
-            snapshot: handle.snapshot.clone(),
             handle,
             lifecycle_state: WorkspaceLifecycleState::Active,
             remount_state: WorkspaceRemountState::Active,
@@ -78,10 +57,6 @@ impl WorkspaceSession {
             workspace_session_id: self.workspace_session_id.clone(),
             handle: self.handle.clone(),
             layer_stack_root: self.layer_stack_root.clone(),
-            lease_id: self.lease_id.clone(),
-            snapshot: self.snapshot.clone(),
-            layer_paths: self.layer_paths.clone(),
-            remount_state: self.remount_state.clone(),
         }
     }
 
@@ -167,9 +142,6 @@ impl WorkspaceSession {
         self.handle.base_revision = base_revision;
         self.handle.snapshot.manifest_version = self.handle.base_revision.version;
         self.handle.snapshot.root_hash = self.handle.base_revision.root_hash.clone();
-        self.snapshot = self.handle.snapshot.clone();
-        self.lease_id = self.snapshot.lease_id.clone();
-        self.layer_paths = self.snapshot.layer_paths.clone();
         self.last_activity = SystemTime::now();
     }
 
@@ -184,10 +156,6 @@ impl WorkspaceSession {
             });
         }
 
-        self.caller_id = handle.owner.clone();
-        self.lease_id = handle.snapshot.lease_id.clone();
-        self.layer_paths = handle.snapshot.layer_paths.clone();
-        self.snapshot = handle.snapshot.clone();
         self.handle = handle;
         self.last_activity = SystemTime::now();
         Ok(())

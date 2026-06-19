@@ -27,26 +27,6 @@ pub(crate) struct SandboxRecord {
 }
 
 impl SandboxRecord {
-    #[allow(dead_code)]
-    pub(crate) fn new(
-        sandbox_id: String,
-        container: String,
-        token: String,
-        tcp_port: u16,
-        created_by: String,
-        endpoint: Option<SocketAddr>,
-    ) -> Self {
-        Self::new_with_forward_token(
-            sandbox_id,
-            container,
-            token.clone(),
-            token,
-            tcp_port,
-            created_by,
-            endpoint,
-        )
-    }
-
     pub(crate) fn new_with_forward_token(
         sandbox_id: String,
         container: String,

@@ -19,7 +19,7 @@ fn load_prd_reads_committed_baseline() {
 
 #[test]
 fn merge_recurses_objects_replaces_scalars_and_replaces_arrays() {
-    let mut baseline = ConfigDocument::from_yaml_str(
+    let mut baseline = parse_doc(
         r#"
 daemon:
   commands:
@@ -31,9 +31,8 @@ runner:
   env:
     inherit_keys: [PATH, HOME]
 "#,
-    )
-    .expect("baseline parses");
-    let override_doc = ConfigDocument::from_yaml_str(
+    );
+    let override_doc = parse_doc(
         r#"
 daemon:
   commands:
@@ -42,26 +41,27 @@ runner:
   env:
     inherit_keys: [TZ]
 "#,
-    )
-    .expect("override parses");
+    );
 
     baseline.merge(override_doc).expect("merge succeeds");
 
-    let merged = baseline.into_value();
+    let daemon = baseline
+        .section::<Value>("daemon")
+        .expect("daemon section deserializes");
+    let runner = baseline
+        .section::<Value>("runner")
+        .expect("runner section deserializes");
     assert_eq!(
-        merged["daemon"]["commands"]["default_yield_time_ms"],
+        daemon["commands"]["default_yield_time_ms"],
         Value::Number(1000.into())
     );
+    assert_eq!(daemon["commands"]["max_command_s"], Value::Number(2.into()));
     assert_eq!(
-        merged["daemon"]["commands"]["max_command_s"],
-        Value::Number(2.into())
-    );
-    assert_eq!(
-        merged["daemon"]["layer_stack"]["auto_squash_max_depth"],
+        daemon["layer_stack"]["auto_squash_max_depth"],
         Value::Number(100.into())
     );
     assert_eq!(
-        merged["runner"]["env"]["inherit_keys"],
+        runner["env"]["inherit_keys"],
         Value::Sequence(vec![Value::String("TZ".to_owned())])
     );
 }
@@ -75,14 +75,13 @@ fn section_reports_unknown_field_errors() {
         _expected: u64,
     }
 
-    let doc = ConfigDocument::from_yaml_str(
+    let doc = parse_doc(
         r#"
 daemon:
   expected: 1
   unexpected: true
 "#,
-    )
-    .expect("document parses");
+    );
 
     let err = doc
         .section::<StrictSection>("daemon")
@@ -102,13 +101,12 @@ fn section_reports_wrong_type_errors() {
         _expected: u64,
     }
 
-    let doc = ConfigDocument::from_yaml_str(
+    let doc = parse_doc(
         r#"
 daemon:
   expected: wrong
 "#,
-    )
-    .expect("document parses");
+    );
 
     let err = doc
         .section::<StrictSection>("daemon")
@@ -220,4 +218,8 @@ fn unique_suffix() -> u128 {
         .duration_since(UNIX_EPOCH)
         .expect("system clock is after unix epoch")
         .as_nanos()
+}
+
+fn parse_doc(text: &str) -> ConfigDocument {
+    ConfigDocument::parse(Path::new("<test>"), text).expect("document parses")
 }

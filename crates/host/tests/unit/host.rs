@@ -50,7 +50,7 @@ fn registry_round_trips_records_and_tokens() -> Result<()> {
     let dir = std::env::temp_dir().join(format!("eos-host-registry-{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     let registry = SandboxRegistry::open(dir.clone())?;
-    let record = SandboxRecord::new(
+    let record = sandbox_record(
         "sb-1".into(),
         "sb-1".into(),
         "tok".into(),
@@ -78,7 +78,7 @@ fn registry_round_trips_records_and_tokens() -> Result<()> {
 
 #[test]
 fn sandbox_lifecycle_respawn_waits_for_active_forward() -> Result<()> {
-    let record = Arc::new(SandboxRecord::new(
+    let record = Arc::new(sandbox_record(
         "sb-lifecycle".to_owned(),
         "sb-lifecycle".to_owned(),
         "token".to_owned(),
@@ -110,7 +110,7 @@ fn sandbox_lifecycle_respawn_waits_for_active_forward() -> Result<()> {
 
 #[test]
 fn sandbox_lifecycle_forward_waits_for_active_respawn() -> Result<()> {
-    let record = Arc::new(SandboxRecord::new(
+    let record = Arc::new(sandbox_record(
         "sb-lifecycle-respawn".to_owned(),
         "sb-lifecycle-respawn".to_owned(),
         "token".to_owned(),
@@ -292,7 +292,7 @@ fn forward_request_persists_transport_events_and_strips_sidecar() -> Result<()> 
         created_by: "test".to_owned(),
         state_dir: dir.clone(),
     };
-    let record = Arc::new(SandboxRecord::new(
+    let record = Arc::new(sandbox_record(
         "sb-forward".to_owned(),
         "sb-forward".to_owned(),
         "token".to_owned(),
@@ -433,7 +433,7 @@ fn malformed_sidecar_is_stripped_and_recorded_as_host_event() -> Result<()> {
         created_by: "test".to_owned(),
         state_dir: dir.clone(),
     };
-    let record = SandboxRecord::new(
+    let record = sandbox_record(
         "sb-malformed-sidecar".to_owned(),
         "sb-malformed-sidecar".to_owned(),
         "token".to_owned(),
@@ -510,7 +510,7 @@ fn decoded_sidecar_ingest_failures_are_spooled_and_recovered() -> Result<()> {
         created_by: "test".to_owned(),
         state_dir: dir.clone(),
     };
-    let record = SandboxRecord::new(
+    let record = sandbox_record(
         "sb-pending-sidecar".to_owned(),
         "sb-pending-sidecar".to_owned(),
         "token".to_owned(),
@@ -703,7 +703,7 @@ fn mutating_response_persistence_failure_does_not_return_success() -> Result<()>
         created_by: "test".to_owned(),
         state_dir: dir.clone(),
     };
-    let record = SandboxRecord::new(
+    let record = sandbox_record(
         "sb-response-persist-failure".to_owned(),
         "sb-response-persist-failure".to_owned(),
         "token".to_owned(),
@@ -745,7 +745,7 @@ fn mutating_response_persistence_failure_does_not_return_success() -> Result<()>
 fn host_lifecycle_response_persistence_failure_does_not_return_success() -> Result<()> {
     let dir = temp_host_dir("host-lifecycle-response-persist-failure");
     let registry = Arc::new(SandboxRegistry::open(dir.clone())?);
-    registry.insert(SandboxRecord::new(
+    registry.insert(sandbox_record(
         "sb-lifecycle-persist-failure".to_owned(),
         "sb-lifecycle-persist-failure".to_owned(),
         "token".to_owned(),
@@ -807,7 +807,7 @@ fn release_keeps_registry_entry_when_container_removal_fails() -> Result<()> {
 
     let dir = temp_host_dir("release-removal-failure");
     let registry = Arc::new(SandboxRegistry::open(dir.clone())?);
-    registry.insert(SandboxRecord::new(
+    registry.insert(sandbox_record(
         "sb-release-failure".to_owned(),
         "sb-release-failure".to_owned(),
         "token".to_owned(),
@@ -1034,7 +1034,7 @@ fn host_transport_records_retry_endpoint_refresh_write_and_connect_timeout_facts
         created_by: "test".to_owned(),
         state_dir: dir.clone(),
     };
-    let record = SandboxRecord::new(
+    let record = sandbox_record(
         "sb-transport-edges".to_owned(),
         "sb-transport-edges".to_owned(),
         "token".to_owned(),
@@ -1117,7 +1117,7 @@ fn run_tcp_once_failure(
         created_by: "test".to_owned(),
         state_dir: dir,
     };
-    let record = SandboxRecord::new(
+    let record = sandbox_record(
         format!("sb-{name}"),
         format!("sb-{name}"),
         "token".to_owned(),
@@ -1161,6 +1161,25 @@ fn temp_host_dir(name: &str) -> PathBuf {
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).expect("create temp host dir");
     dir
+}
+
+fn sandbox_record(
+    sandbox_id: String,
+    container: String,
+    token: String,
+    tcp_port: u16,
+    created_by: String,
+    endpoint: Option<std::net::SocketAddr>,
+) -> SandboxRecord {
+    SandboxRecord::new_with_forward_token(
+        sandbox_id,
+        container,
+        token.clone(),
+        token,
+        tcp_port,
+        created_by,
+        endpoint,
+    )
 }
 
 fn assert_ordered_events(actual: &[(&str, &str)], expected: &[(&str, &str)]) {

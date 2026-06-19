@@ -31,11 +31,6 @@ impl ConfigDocument {
         Ok(Self { value })
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn from_yaml_str(text: &str) -> Result<Self, ConfigError> {
-        Self::parse(Path::new("<test>"), text)
-    }
-
     pub(crate) fn merge(&mut self, override_doc: Self) -> Result<(), ConfigError> {
         merge::ensure_mapping_root(&self.value)?;
         merge::merge_values(&mut self.value, override_doc.value)?;
@@ -52,11 +47,6 @@ impl ConfigDocument {
     /// Returns an error if the in-memory YAML value cannot be serialized.
     pub fn to_yaml_string(&self) -> Result<String, ConfigError> {
         yaml::to_string(&self.value).map_err(|source| ConfigError::Serialize { source })
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn into_value(self) -> Value {
-        self.value
     }
 
     /// Deserialize a top-level section into its owner crate's typed schema.
