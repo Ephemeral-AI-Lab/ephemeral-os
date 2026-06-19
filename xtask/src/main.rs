@@ -21,6 +21,7 @@ const ARM64_TARGET: &str = "aarch64-unknown-linux-musl";
 const DEFAULT_PACKAGE_PROFILE: &str = "package-fast";
 const FAST_PACKAGE_PROFILE: &str = "package-fast";
 const MAX_MOD_OR_LIB_LINES: usize = 300;
+const MAX_CRATE_SRC_LINES: usize = 1_000;
 
 fn main() -> Result<()> {
     let mut args = env::args_os();
@@ -33,6 +34,9 @@ fn main() -> Result<()> {
         Some("package") => package(&PackageArgs::parse(args)?),
         Some("check-mod-lib-size") => {
             check_mod_lib_size_policy(&ModLibSizePolicyArgs::parse(args)?)
+        }
+        Some("check-crate-source-size") => {
+            check_crate_source_size_policy(&CrateSourceSizePolicyArgs::parse(args)?)
         }
         Some("check-inline-cfg-test" | "check-inline-tests") => {
             check_inline_test_policy(&InlineTestPolicyArgs::parse(args)?)
@@ -52,6 +56,12 @@ struct InlineTestPolicyArgs {
 
 #[derive(Debug)]
 struct ModLibSizePolicyArgs {
+    roots: Vec<PathBuf>,
+    max_lines: usize,
+}
+
+#[derive(Debug)]
+struct CrateSourceSizePolicyArgs {
     roots: Vec<PathBuf>,
     max_lines: usize,
 }
@@ -197,6 +207,42 @@ impl ModLibSizePolicyArgs {
         }
         if roots.is_empty() {
             roots.extend([PathBuf::from("crates"), PathBuf::from("xtask")]);
+        }
+        Ok(Self { roots, max_lines })
+    }
+}
+
+impl CrateSourceSizePolicyArgs {
+    fn parse<I>(args: I) -> Result<Self>
+    where
+        I: IntoIterator<Item = OsString>,
+    {
+        let mut roots = Vec::new();
+        let mut max_lines = MAX_CRATE_SRC_LINES;
+        let mut iter = args.into_iter();
+        while let Some(arg) = iter.next() {
+            let arg = arg
+                .into_string()
+                .map_err(|_| anyhow::anyhow!("xtask arguments must be valid UTF-8"))?;
+            match arg.as_str() {
+                "--root" => roots.push(PathBuf::from(next_string(&mut iter, "--root")?)),
+                "--max-lines" => {
+                    max_lines = next_string(&mut iter, "--max-lines")?
+                        .parse()
+                        .context("--max-lines must be a positive integer")?;
+                    if max_lines == 0 {
+                        bail!("--max-lines must be positive");
+                    }
+                }
+                "--help" | "-h" => {
+                    print_help();
+                    std::process::exit(0);
+                }
+                other => bail!("unknown check-crate-source-size option {other:?}"),
+            }
+        }
+        if roots.is_empty() {
+            roots.push(PathBuf::from("crates"));
         }
         Ok(Self { roots, max_lines })
     }
@@ -377,6 +423,55 @@ into focused sibling modules and keep facades small.",
     bail!("found {} oversized mod.rs/lib.rs files", violations.len())
 }
 
+fn check_crate_source_size_policy(args: &CrateSourceSizePolicyArgs) -> Result<()> {
+    let root = workspace_root()?;
+    let mut violations = Vec::new();
+    for scan_root in &args.roots {
+        let scan_root = absolutize(&root, scan_root);
+        for entry in WalkBuilder::new(&scan_root).build() {
+            let entry = entry.with_context(|| format!("walk {}", scan_root.display()))?;
+            let path = entry.path();
+            if !entry
+                .file_type()
+                .is_some_and(|file_type| file_type.is_file())
+                || !is_rust_source(path)
+                || !is_under_crate_src(path)
+            {
+                continue;
+            }
+            let line_count = count_lines(path)?;
+            if line_count > args.max_lines {
+                violations.push(ModLibSizePolicyViolation {
+                    path: path.to_path_buf(),
+                    line_count,
+                });
+            }
+        }
+    }
+
+    if violations.is_empty() {
+        println!(
+            "all crate src Rust files are within {max_lines} lines",
+            max_lines = args.max_lines
+        );
+        return Ok(());
+    }
+
+    eprintln!(
+        "Rust files under crate src/ directories must be at most {} lines; split large \
+implementation files into focused sibling modules.",
+        args.max_lines
+    );
+    for violation in &violations {
+        eprintln!(
+            "{}: {} lines",
+            relative_to(&root, &violation.path).display(),
+            violation.line_count
+        );
+    }
+    bail!("found {} oversized crate source files", violations.len())
+}
+
 fn collect_inline_test_policy_violations(
     root: &Path,
     path: &Path,
@@ -530,6 +625,15 @@ fn is_mod_or_lib_source(path: &Path) -> bool {
     path.file_name()
         .and_then(|name| name.to_str())
         .is_some_and(|name| matches!(name, "mod.rs" | "lib.rs"))
+}
+
+fn is_under_crate_src(path: &Path) -> bool {
+    path.ancestors().any(|ancestor| {
+        ancestor.file_name().is_some_and(|name| name == "src")
+            && ancestor
+                .parent()
+                .is_some_and(|parent| parent.join("Cargo.toml").is_file())
+    })
 }
 
 fn count_lines(path: &Path) -> Result<usize> {
@@ -816,6 +920,8 @@ fn print_help() {
     println!(
         "\
 xtask commands:
+  check-crate-source-size [--root <path> ...] [--max-lines <n>]
+          fail if any Rust file under a crate src/ directory exceeds 1000 lines by default
   check-mod-lib-size [--root <path> ...] [--max-lines <n>]
           fail if any mod.rs or lib.rs file exceeds 300 lines by default
   check-inline-tests [--root <path> ...]

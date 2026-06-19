@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 
+use trace::sha256_hex;
+
 use super::audit::{compute_entry_hash, EntryHashInput};
 use super::types::verify_scope;
 use super::{
-    query, sha256_hex, TraceAuditEntryRow, TraceEventRow, TraceLinkRow, TraceRequestRow,
-    TraceResourceRow, TraceSpanRow, TraceStore, TraceStoreError, TraceVerifyReport,
+    query, TraceAuditEntryRow, TraceEventRow, TraceLinkRow, TraceRequestRow, TraceResourceRow,
+    TraceSpanRow, TraceStore, TraceStoreError, TraceVerifyReport,
 };
 
 impl TraceStore {
