@@ -1,10 +1,9 @@
 //! Caller-keyed workspace profile manager.
 //!
 //! The manager owns admission policy, quotas, caller indexing, persistence, and
-//! orphan cleanup. Profile-specific environment setup lives in
-//! `profile::host_compatible` and `profile::isolated`; shared holder, overlay,
-//! cgroup, teardown, and recovery lifecycle lives in `profile::common` and the
-//! lifecycle modules.
+//! profile-specific environment setup lives in `profile::host_compatible` and
+//! `profile::isolated`; shared holder, overlay, cgroup, teardown, and
+//! persistence lifecycle lives in `profile::common` and the lifecycle modules.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -12,7 +11,6 @@ use std::path::PathBuf;
 use serde::Deserialize;
 
 use crate::isolated_setup::IsolatedNetwork;
-use crate::lifecycle::monotonic_seconds;
 use crate::namespace::NamespaceRuntime;
 pub use crate::profile::{
     DnsConfiguration, WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeSnapshot,
@@ -121,12 +119,6 @@ pub struct WorkspaceModeManager {
     pub(crate) by_caller: HashMap<String, WorkspaceModeId>,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct OrphanCleanupReport {
-    pub orphan_lease_ids: Vec<String>,
-    pub cleanup_error: Option<String>,
-}
-
 impl WorkspaceModeManager {
     #[must_use]
     pub fn with_scratch_root(caps: ResourceCaps, scratch_root: PathBuf) -> Self {
@@ -160,32 +152,6 @@ impl WorkspaceModeManager {
             self.caps.upperdir_bytes,
             host_capacity_budget_bytes(self.caps.memavail_fraction),
         )
-    }
-
-    pub fn initialize_report(&mut self) -> Result<OrphanCleanupReport, IsolatedNetworkError> {
-        if !self.caps.enabled {
-            return Err(IsolatedNetworkError::FeatureDisabled);
-        }
-        std::fs::create_dir_all(&self.scratch_root).map_err(|err| {
-            IsolatedNetworkError::SetupFailed {
-                step: format!("scratch_root: {err}"),
-            }
-        })?;
-        self.reap_persisted_orphans()
-    }
-
-    pub fn touch(&mut self, caller_id: &str) {
-        if let Some(handle) = self
-            .by_caller
-            .get(caller_id)
-            .and_then(|workspace_id| self.handles.get_mut(workspace_id))
-        {
-            handle.last_activity = monotonic_seconds();
-        }
-    }
-
-    pub fn reap_orphan_resources(&mut self) -> Option<String> {
-        self.reap_named_orphans()
     }
 
     pub(crate) fn owned_scratch_root(&self) -> PathBuf {

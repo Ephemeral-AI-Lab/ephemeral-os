@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::Path;
 use std::time::Instant;
 
@@ -109,24 +109,6 @@ impl WorkspaceModeManager {
             phases_ms,
             inspection,
         })
-    }
-
-    pub fn evict_idle_workspaces(&mut self, active_callers: &HashSet<String>) -> Vec<ExitOutcome> {
-        if self.caps.ttl_s <= 0.0 {
-            return Vec::new();
-        }
-        let now = monotonic_seconds();
-        let stale = self
-            .handles
-            .values()
-            .filter(|handle| now - handle.last_activity > self.caps.ttl_s)
-            .filter(|handle| !active_callers.contains(&handle.caller_id))
-            .map(|handle| handle.caller_id.clone())
-            .collect::<Vec<_>>();
-        stale
-            .into_iter()
-            .filter_map(|caller_id| self.exit(&caller_id, None).ok())
-            .collect()
     }
 }
 

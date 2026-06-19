@@ -4,7 +4,7 @@ use crate::profile::{IsolatedNetworkError, WorkspaceModeManager};
 use super::{RemountPlan, RemountProbe, WorkspaceRemountState};
 
 impl WorkspaceModeManager {
-    pub fn prepare_remount(
+    fn prepare_remount(
         &mut self,
         caller_id: &str,
         layer_paths: Vec<std::path::PathBuf>,
@@ -23,11 +23,11 @@ impl WorkspaceModeManager {
         Ok(plan)
     }
 
-    pub fn block_remount(&mut self, caller_id: &str) -> Result<(), IsolatedNetworkError> {
+    pub(crate) fn block_remount(&mut self, caller_id: &str) -> Result<(), IsolatedNetworkError> {
         self.set_remount_state(caller_id, WorkspaceRemountState::Active)
     }
 
-    pub fn remount_with_layers(
+    pub(crate) fn remount_with_layers(
         &mut self,
         caller_id: &str,
         layer_paths: Vec<std::path::PathBuf>,

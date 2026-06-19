@@ -1,7 +1,7 @@
 mod create;
 mod destroy;
 pub(crate) mod leases;
-pub(crate) mod recovery;
+mod persistence;
 pub(crate) mod remount;
 
 pub use destroy::ExitOutcome;

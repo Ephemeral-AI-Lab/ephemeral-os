@@ -60,7 +60,6 @@ pub(crate) enum RemountBlockReason {
     #[cfg(target_os = "linux")]
     ProcessMembershipChanged,
     RemountCancelledBeforeSwitch,
-    RemountInspectionBlocked,
     #[cfg(target_os = "linux")]
     RootPinnedWorkspace,
     #[cfg(target_os = "linux")]
@@ -95,7 +94,6 @@ impl RemountBlockReason {
             #[cfg(target_os = "linux")]
             Self::ProcessMembershipChanged => "process_membership_changed",
             Self::RemountCancelledBeforeSwitch => "remount_cancelled_before_switch",
-            Self::RemountInspectionBlocked => "remount_inspection_blocked",
             #[cfg(target_os = "linux")]
             Self::RootPinnedWorkspace => "root_pinned_workspace",
             #[cfg(target_os = "linux")]
@@ -113,13 +111,6 @@ impl std::fmt::Display for RemountBlockReason {
 }
 
 impl CommandRemountInspection {
-    #[must_use]
-    pub fn reason_or_default(&self) -> &str {
-        self.blocked_reason
-            .as_deref()
-            .unwrap_or(RemountBlockReason::RemountInspectionBlocked.as_str())
-    }
-
     #[must_use]
     pub fn can_live_remount(&self) -> bool {
         self.active_commands > 0

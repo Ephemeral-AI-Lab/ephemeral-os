@@ -18,7 +18,6 @@ use rtnl::{ensure_bridge, ignore_not_found, install_veth_pair, link_index, run_n
 
 #[cfg(target_os = "linux")]
 pub const BRIDGE_NAME: &str = "eos-shared0";
-pub(crate) const BRIDGE_CIDR: &str = "10.244.0.0/24";
 #[cfg(target_os = "linux")]
 pub const GATEWAY: &str = "10.244.0.1";
 #[cfg(target_os = "linux")]
@@ -62,16 +61,6 @@ pub(crate) struct BridgeAddressPool {
 }
 
 impl BridgeAddressPool {
-    pub fn reserve(&mut self, ip: Ipv4Addr) -> Result<(), IsolatedNetworkError> {
-        if !is_pool_ip(ip) {
-            return Err(IsolatedNetworkError::NetworkUnavailable(format!(
-                "isolated network IP {ip} is outside {BRIDGE_CIDR}"
-            )));
-        }
-        self.allocated.insert(ip);
-        Ok(())
-    }
-
     pub fn allocate(&mut self) -> Result<Ipv4Addr, IsolatedNetworkError> {
         for host in POOL_FIRST_HOST..=POOL_LAST_HOST {
             let ip = Ipv4Addr::new(10, 244, 0, host);
@@ -205,10 +194,6 @@ impl IsolatedNetwork {
             }
         }
     }
-
-    pub fn reserve_persisted_ip(&mut self, ip: Ipv4Addr) -> Result<(), IsolatedNetworkError> {
-        self.pool.reserve(ip)
-    }
 }
 
 #[cfg(target_os = "linux")]
@@ -217,12 +202,4 @@ pub(crate) fn network_error_at(
     error: impl std::fmt::Display,
 ) -> IsolatedNetworkError {
     IsolatedNetworkError::NetworkUnavailable(format!("{}: {error}", step.into()))
-}
-
-fn is_pool_ip(ip: Ipv4Addr) -> bool {
-    let octets = ip.octets();
-    octets[0] == 10
-        && octets[1] == 244
-        && octets[2] == 0
-        && (POOL_FIRST_HOST..=POOL_LAST_HOST).contains(&octets[3])
 }

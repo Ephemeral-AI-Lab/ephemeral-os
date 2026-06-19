@@ -4,7 +4,7 @@ use crate::profile::{IsolatedNetworkError, WorkspaceModeHandle, WorkspaceModeMan
 use super::{RemountPlan, WorkspaceRemountState};
 
 impl WorkspaceModeManager {
-    pub fn apply_prepared_remount(
+    pub(super) fn apply_prepared_remount(
         &mut self,
         plan: RemountPlan,
     ) -> Result<WorkspaceModeHandle, IsolatedNetworkError> {

@@ -5,14 +5,14 @@ use crate::profile::IsolatedNetworkError;
 use super::RemountProbe;
 
 #[derive(Debug, Clone)]
-pub struct RemountPlan {
+pub(super) struct RemountPlan {
     caller_id: String,
     layer_paths: Vec<PathBuf>,
     probe: RemountProbe,
 }
 
 impl RemountPlan {
-    pub fn new(
+    pub(super) fn new(
         caller_id: String,
         layer_paths: Vec<PathBuf>,
         probe: RemountProbe,
@@ -35,11 +35,11 @@ impl RemountPlan {
     }
 
     #[must_use]
-    pub fn caller_id(&self) -> &str {
+    pub(super) fn caller_id(&self) -> &str {
         &self.caller_id
     }
 
-    pub fn into_parts(self) -> (String, Vec<PathBuf>, RemountProbe) {
+    pub(super) fn into_parts(self) -> (String, Vec<PathBuf>, RemountProbe) {
         (self.caller_id, self.layer_paths, self.probe)
     }
 }

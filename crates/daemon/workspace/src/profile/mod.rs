@@ -13,8 +13,7 @@ pub(crate) mod resource_control;
 
 pub use handle::{DnsConfiguration, WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeSnapshot};
 pub(crate) use handle::{CGROUP_ROOT, HANDLE_PREFIX};
-pub(crate) use manager::PERSISTED_HANDLES_SCHEMA_VERSION;
 pub use manager::{
-    ExitOutcome, IsolatedNetworkError, OrphanCleanupReport, RemountOverlayReport, RemountProbe,
-    ResourceCaps, Rfc1918Egress, WorkspaceModeManager, WorkspaceRemountState,
+    ExitOutcome, IsolatedNetworkError, RemountOverlayReport, RemountProbe, ResourceCaps,
+    Rfc1918Egress, WorkspaceModeManager, WorkspaceRemountState,
 };
