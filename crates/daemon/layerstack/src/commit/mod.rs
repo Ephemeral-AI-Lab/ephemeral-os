@@ -218,31 +218,6 @@ pub struct CommitOptions {
     pub auto_squash_max_depth: usize,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct CaptureRouteStats {
-    pub gated_path_count: usize,
-    pub direct_path_count: usize,
-    pub drop_path_count: usize,
-    pub direct_bytes: u64,
-    pub direct_spooled_bytes: u64,
-    pub ignored_limit_drop_reason: Option<String>,
-    pub drop_reason_counts: BTreeMap<String, usize>,
-}
-
-impl CaptureRouteStats {
-    #[must_use]
-    pub fn drop_reason_count(&self, reason: &str) -> usize {
-        self.drop_reason_counts.get(reason).copied().unwrap_or(0)
-    }
-
-    pub fn record_drop_reason(&mut self, reason: &str) {
-        *self
-            .drop_reason_counts
-            .entry(reason.to_owned())
-            .or_default() += 1;
-    }
-}
-
 impl Default for CommitOptions {
     fn default() -> Self {
         Self {

@@ -62,9 +62,7 @@ impl WorkspaceRuntimeService {
             protected_drops: captured.protected_drops,
             stats: request.include_stats.then_some(captured.stats),
             changes: captured.changes,
-            route_stats: layerstack::CaptureRouteStats::default(),
             metadata_path_count,
-            spool_dir: None,
         })
     }
 }

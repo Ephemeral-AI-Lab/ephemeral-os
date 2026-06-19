@@ -1,6 +1,7 @@
-use crate::model::LayerChange;
+use std::collections::BTreeMap;
 use std::path::Path;
 
+use crate::model::LayerChange;
 use crate::test_fixture::{lp, Fixture, TestResult};
 use crate::{service, CommitOptions, CommitStatus, LayerStack};
 
@@ -112,13 +113,35 @@ fn publish_changes_to_layerstack_with_options(
     })
 }
 
-fn capture_route_stats_for_manifest(
+#[derive(Debug, Default, PartialEq, Eq)]
+struct PublishRouteStats {
+    gated_path_count: usize,
+    direct_path_count: usize,
+    drop_path_count: usize,
+    direct_bytes: u64,
+    drop_reason_counts: BTreeMap<String, usize>,
+}
+
+impl PublishRouteStats {
+    fn drop_reason_count(&self, reason: &str) -> usize {
+        self.drop_reason_counts.get(reason).copied().unwrap_or(0)
+    }
+
+    fn record_drop_reason(&mut self, reason: &str) {
+        *self
+            .drop_reason_counts
+            .entry(reason.to_owned())
+            .or_default() += 1;
+    }
+}
+
+fn publish_route_stats_for_manifest(
     root: &Path,
     manifest: &crate::Manifest,
     changes: &[LayerChange],
-) -> Result<crate::CaptureRouteStats, crate::CommitError> {
+) -> Result<PublishRouteStats, crate::CommitError> {
     let decisions = publish_decisions_for_manifest(root, manifest, changes)?;
-    let mut stats = crate::CaptureRouteStats::default();
+    let mut stats = PublishRouteStats::default();
     for (index, decision) in decisions.iter().enumerate() {
         match decision.route {
             Route::Gated => stats.gated_path_count += 1,
@@ -128,9 +151,6 @@ fn capture_route_stats_for_manifest(
                     stats.direct_bytes = stats
                         .direct_bytes
                         .saturating_add(change.write_size().unwrap_or(0));
-                    stats.direct_spooled_bytes = stats
-                        .direct_spooled_bytes
-                        .saturating_add(change.spooled_write_size().unwrap_or(0));
                 }
             }
             Route::Drop => {
@@ -735,7 +755,7 @@ fn protected_path_drop_decisions_use_stable_reason_codes() -> TestResult {
 }
 
 #[test]
-fn capture_route_stats_use_supplied_manifest_snapshot() -> TestResult {
+fn publish_route_stats_use_supplied_manifest_snapshot() -> TestResult {
     let fixture = Fixture::new_with_gitignore("route_stats_snapshot", "ignored/\n")?;
     let mut stack = LayerStack::open(fixture.root.clone())?;
     let route_manifest = stack.read_active_manifest()?;
@@ -744,7 +764,7 @@ fn capture_route_stats_use_supplied_manifest_snapshot() -> TestResult {
         content: b"later/\n".to_vec(),
     }])?;
 
-    let stats = capture_route_stats_for_manifest(
+    let stats = publish_route_stats_for_manifest(
         &fixture.root,
         &route_manifest,
         &[
@@ -779,10 +799,10 @@ fn capture_route_stats_use_supplied_manifest_snapshot() -> TestResult {
 }
 
 #[test]
-fn capture_route_stats_counts_git_drop_reasons() -> TestResult {
+fn publish_route_stats_counts_git_drop_reasons() -> TestResult {
     let fixture = Fixture::new_with_gitignore("route_stats_git_drop_reasons", ".git/\n")?;
     let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
-    let stats = capture_route_stats_for_manifest(
+    let stats = publish_route_stats_for_manifest(
         &fixture.root,
         &manifest,
         &[
@@ -813,10 +833,10 @@ fn capture_route_stats_counts_git_drop_reasons() -> TestResult {
 }
 
 #[test]
-fn capture_route_stats_counts_route_protected_drop_reasons() -> TestResult {
+fn publish_route_stats_counts_route_protected_drop_reasons() -> TestResult {
     let fixture = Fixture::new_with_gitignore("route_stats_route_protected", "*\n")?;
     let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
-    let stats = capture_route_stats_for_manifest(
+    let stats = publish_route_stats_for_manifest(
         &fixture.root,
         &manifest,
         &[
@@ -844,7 +864,7 @@ fn capture_route_stats_counts_route_protected_drop_reasons() -> TestResult {
 }
 
 #[test]
-fn publish_capture_uses_supplied_manifest_snapshot_for_routes() -> TestResult {
+fn publish_changes_uses_supplied_manifest_snapshot_for_routes() -> TestResult {
     let fixture = Fixture::new_with_gitignore("publish_route_snapshot", "ignored/\n")?;
     let snapshot = service::acquire_snapshot_with_lease(&fixture.root, "route-snapshot-test")?;
     LayerStack::open(fixture.root.clone())?.publish_layer(&[
@@ -1011,7 +1031,7 @@ fn lane_aware_publish_source_and_ignored_success_advances_one_manifest() -> Test
 }
 
 #[test]
-fn publish_capture_surfaces_git_drop_reason_counts() -> TestResult {
+fn publish_changes_surfaces_git_drop_reason_counts() -> TestResult {
     let fixture = Fixture::new_with_gitignore("publish_git_drop_reason", "target/\n")?;
     let snapshot = service::acquire_snapshot_with_lease(&fixture.root, "git-drop-reason-test")?;
 
@@ -1053,7 +1073,7 @@ fn publish_capture_surfaces_git_drop_reason_counts() -> TestResult {
 }
 
 #[test]
-fn publish_capture_surfaces_route_protected_drop_reason_counts() -> TestResult {
+fn publish_changes_surfaces_route_protected_drop_reason_counts() -> TestResult {
     let fixture = Fixture::new_with_gitignore("publish_route_protected_drop_reason", "*\n")?;
     let snapshot =
         service::acquire_snapshot_with_lease(&fixture.root, "route-protected-drop-reason-test")?;

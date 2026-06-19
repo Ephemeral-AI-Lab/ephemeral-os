@@ -23,9 +23,7 @@ mod whiteout;
 #[path = "../src/workspace.rs"]
 mod workspace;
 
-pub(crate) use commit::{
-    CaptureRouteStats, ChangesetResult, CommitError, CommitOptions, CommitStatus,
-};
+pub(crate) use commit::{ChangesetResult, CommitError, CommitOptions, CommitStatus};
 pub use error::LayerStackError;
 pub(crate) use lease_aware::{
     plan_lease_aware_gaps, LeaseAwareCheckpointMode, LeaseAwarePlan, LeaseAwarePlanEntry,

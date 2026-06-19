@@ -2,7 +2,6 @@ use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::path::PathBuf;
 
-use layerstack::CaptureRouteStats;
 use namespace_process::runner::protocol::{Fd, NsFds};
 
 use crate::overlay::tree::TreeResourceStats;
@@ -469,9 +468,7 @@ pub struct CapturedWorkspaceChanges {
     pub protected_drops: Vec<ProtectedPathDrop>,
     pub stats: Option<TreeResourceStats>,
     pub changes: Vec<layerstack::LayerChange>,
-    pub route_stats: CaptureRouteStats,
     pub metadata_path_count: usize,
-    pub spool_dir: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

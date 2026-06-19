@@ -33,7 +33,7 @@ mod leases;
 mod view;
 mod workspace_commit;
 
-use layer_read::capture_layer_dir_unbounded;
+use layer_read::read_layer_dir;
 use layer_write::write_layer_changes;
 use lease_cleanup::{
     release_lease_locked, remove_unreferenced_layer_candidates_locked, retarget_lease_locked,
@@ -441,9 +441,9 @@ impl LayerStack {
         let mut by_path = BTreeMap::new();
         for layer in interval.layers.iter().rev() {
             let layer_dir = resolve_layer_path(&self.storage_root, &layer.path);
-            let changes = capture_layer_dir_unbounded(&layer_dir).map_err(|err| {
+            let changes = read_layer_dir(&layer_dir).map_err(|err| {
                 LayerStackError::Storage(format!(
-                    "failed to capture stored layer {} for delta checkpoint: {err}",
+                    "failed to read stored layer {} for delta checkpoint: {err}",
                     layer.layer_id
                 ))
             })?;

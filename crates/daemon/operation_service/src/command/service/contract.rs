@@ -71,9 +71,7 @@ pub struct CommandFinalizedMetadata {
     pub changed_path_kinds: BTreeMap<String, ChangedPathKind>,
     pub protected_drop_count: usize,
     pub captured_change_count: usize,
-    pub route_stats: layerstack::CaptureRouteStats,
     pub metadata_path_count: usize,
-    pub spool_dir_cleaned: bool,
     pub published_manifest_version: Option<u64>,
     pub destroy: Option<CommandWorkspaceDestroyMetadata>,
 }
@@ -87,9 +85,7 @@ impl Default for CommandFinalizedMetadata {
             changed_path_kinds: BTreeMap::new(),
             protected_drop_count: 0,
             captured_change_count: 0,
-            route_stats: layerstack::CaptureRouteStats::default(),
             metadata_path_count: 0,
-            spool_dir_cleaned: false,
             published_manifest_version: None,
             destroy: None,
         }

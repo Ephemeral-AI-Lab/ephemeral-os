@@ -23,7 +23,6 @@ pub struct CapturedChanges {
     pub changes: Vec<LayerChange>,
     pub protected_drops: Vec<ProtectedPathDrop>,
     pub stats: TreeResourceStats,
-    pub capture_s: f64,
 }
 
 /// Error raised while capturing an overlay upperdir.
@@ -54,14 +53,6 @@ impl CaptureError {
         Self::Capture {
             path: path.into(),
             source,
-        }
-    }
-
-    #[must_use]
-    pub fn failing_path(&self) -> Option<&Path> {
-        match self {
-            Self::Capture { path, .. } => Some(path.as_path()),
-            _ => None,
         }
     }
 }
@@ -143,14 +134,12 @@ impl RegularFileCaptureMeta {
 /// Returns [`CaptureError`] when metadata capture or selected payload
 /// materialization fails.
 pub fn capture_upperdir(upperdir: &Path) -> Result<CapturedChanges> {
-    let start = std::time::Instant::now();
     let metadata = capture_upperdir_metadata(upperdir)?;
     let changes = materialize_entries_in_memory(&metadata.entries, MAX_CAPTURE_FILE_BYTES)?;
     Ok(CapturedChanges {
         changes,
         protected_drops: metadata.protected_drops,
         stats: metadata.stats,
-        capture_s: start.elapsed().as_secs_f64(),
     })
 }
 

@@ -1,4 +1,3 @@
-use std::path::Path;
 use std::time::Instant;
 
 use crate::command::{
@@ -96,14 +95,13 @@ impl CommandOperationService {
                     options: self.finalization_options().one_shot_publish,
                 },
             );
-            let spool_dir_cleaned = cleanup_spool_dir(captured.spool_dir.as_deref());
             let publish_result =
                 publish_result.map_err(|error| CommandServiceError::CommandFinalizationFailed {
                     command_id: record.command_id.clone(),
                     error: format!("publish captured one-shot changes: {error}"),
                     finalized: None,
                 })?;
-            finalized = metadata_from_capture(captured, publish_result, spool_dir_cleaned);
+            finalized = metadata_from_capture(captured, publish_result);
         }
 
         self.mark_active_finalization(
@@ -256,7 +254,6 @@ fn process_exit_succeeded(process_exit: &::command::process::CommandProcessExit)
 fn metadata_from_capture(
     captured: CapturedWorkspaceChanges,
     publish_result: layerstack::ChangesetResult,
-    spool_dir_cleaned: bool,
 ) -> CommandFinalizedMetadata {
     CommandFinalizedMetadata {
         policy: CommandFinalizedPolicy::OneShotPublishThenDestroy,
@@ -265,9 +262,7 @@ fn metadata_from_capture(
         changed_path_kinds: captured.changed_path_kinds,
         protected_drop_count: captured.protected_drops.len(),
         captured_change_count: captured.changes.len(),
-        route_stats: captured.route_stats,
         metadata_path_count: captured.metadata_path_count,
-        spool_dir_cleaned,
         published_manifest_version: publish_result.published_manifest_version,
         destroy: None,
     }
@@ -279,13 +274,6 @@ fn destroy_metadata(result: DestroyWorkspaceResult) -> CommandWorkspaceDestroyMe
         lease_released: result.lease_released,
         lease_release_error: result.lease_release_error,
         active_leases_after: result.active_leases_after,
-    }
-}
-
-fn cleanup_spool_dir(spool_dir: Option<&Path>) -> bool {
-    match spool_dir {
-        Some(path) => std::fs::remove_dir_all(path).is_ok() || !path.exists(),
-        None => false,
     }
 }
 

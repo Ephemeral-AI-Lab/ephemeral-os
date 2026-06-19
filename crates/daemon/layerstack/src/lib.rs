@@ -18,8 +18,7 @@ pub use model::{
 };
 
 pub use commit::{
-    CaptureRouteStats, ChangesetResult, CommitError, CommitOptions, CommitStatus, FileResult,
-    OccTraceEvent,
+    ChangesetResult, CommitError, CommitOptions, CommitStatus, FileResult, OccTraceEvent,
 };
 pub use error::LayerStackError;
 pub use lease_aware::{

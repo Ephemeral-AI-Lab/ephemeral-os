@@ -14,13 +14,13 @@ use thiserror::Error;
 use crate::whiteout::{LOGICAL_WHITEOUT_PREFIX, OPAQUE_MARKER};
 use crate::{CasError, LayerChange, LayerPath};
 
-/// Failures raised while capturing layer changes from an overlay upperdir.
+/// Failures raised while reading stored layer directories.
 #[derive(Debug, Error)]
 #[non_exhaustive]
-pub enum CaptureError {
-    /// An upper-dir walk / capture I/O error.
-    #[error("upperdir capture failed at {path}: {source}")]
-    Capture {
+pub(crate) enum LayerReadError {
+    /// A stored-layer walk/read I/O error.
+    #[error("stored layer read failed at {path}: {source}")]
+    Io {
         /// Path whose metadata, directory entries, xattrs, content, or link
         /// target could not be read.
         path: PathBuf,
@@ -28,51 +28,51 @@ pub enum CaptureError {
         source: io::Error,
     },
 
-    /// A captured overlay path did not normalize to a valid relative layer path.
+    /// A stored layer path did not normalize to a valid relative layer path.
     #[error(transparent)]
     Path(#[from] CasError),
 
-    /// A captured overlay path could not be expressed as a layer path.
-    #[error("invalid overlay path change: {0}")]
+    /// A stored layer path could not be expressed as a layer path.
+    #[error("invalid stored layer path change: {0}")]
     InvalidPathChange(String),
 }
 
-impl CaptureError {
-    fn capture(path: impl Into<PathBuf>, source: io::Error) -> Self {
-        Self::Capture {
+impl LayerReadError {
+    fn io(path: impl Into<PathBuf>, source: io::Error) -> Self {
+        Self::Io {
             path: path.into(),
             source,
         }
     }
 }
 
-/// Crate result alias for upperdir capture.
-type Result<T> = std::result::Result<T, CaptureError>;
+/// Crate result alias for stored layer reads.
+type Result<T> = std::result::Result<T, LayerReadError>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ProtectedPathDropReason {
+enum LayerReadDropReason {
     UnsupportedSpecialFile,
     InvalidLayerPath,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ProtectedPathDrop {
-    pub path: LayerPath,
-    pub reason: ProtectedPathDropReason,
+struct LayerReadDrop {
+    path: LayerPath,
+    reason: LayerReadDropReason,
 }
 
 #[derive(Debug)]
-pub(crate) struct CapturedUpperdirMetadata {
-    pub(crate) entries: Vec<CapturedUpperdirEntry>,
-    pub(crate) protected_drops: Vec<ProtectedPathDrop>,
+struct LayerDirRead {
+    entries: Vec<LayerDirEntry>,
+    drops: Vec<LayerReadDrop>,
 }
 
 #[derive(Debug)]
-pub(crate) enum CapturedUpperdirEntry {
+enum LayerDirEntry {
     Write {
         path: LayerPath,
         source_path: PathBuf,
-        meta: RegularFileCaptureMeta,
+        meta: RegularFileReadMeta,
     },
     Delete {
         path: LayerPath,
@@ -86,8 +86,8 @@ pub(crate) enum CapturedUpperdirEntry {
     },
 }
 
-impl CapturedUpperdirEntry {
-    pub(crate) fn materialize_in_memory(&self, max_bytes: usize) -> Result<LayerChange> {
+impl LayerDirEntry {
+    fn materialize_in_memory(&self, max_bytes: usize) -> Result<LayerChange> {
         match self {
             Self::Write {
                 path,
@@ -108,7 +108,7 @@ impl CapturedUpperdirEntry {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct RegularFileCaptureMeta {
+struct RegularFileReadMeta {
     len: u64,
     #[cfg(unix)]
     dev: u64,
@@ -116,8 +116,8 @@ pub(crate) struct RegularFileCaptureMeta {
     ino: u64,
 }
 
-impl RegularFileCaptureMeta {
-    pub(crate) fn from_metadata(meta: &std::fs::Metadata) -> Self {
+impl RegularFileReadMeta {
+    fn from_metadata(meta: &std::fs::Metadata) -> Self {
         Self {
             len: meta.len(),
             #[cfg(unix)]
@@ -128,10 +128,10 @@ impl RegularFileCaptureMeta {
     }
 }
 
-pub(crate) fn capture_layer_dir_unbounded(layer_dir: &Path) -> Result<Vec<LayerChange>> {
-    let metadata = capture_upperdir_metadata(layer_dir)?;
-    if let Some(drop) = metadata.protected_drops.first() {
-        return Err(CaptureError::InvalidPathChange(format!(
+pub(crate) fn read_layer_dir(layer_dir: &Path) -> Result<Vec<LayerChange>> {
+    let metadata = read_layer_dir_metadata(layer_dir)?;
+    if let Some(drop) = metadata.drops.first() {
+        return Err(LayerReadError::InvalidPathChange(format!(
             "stored layer contains unsupported protected path {:?}: {:?}",
             drop.path, drop.reason
         )));
@@ -139,35 +139,32 @@ pub(crate) fn capture_layer_dir_unbounded(layer_dir: &Path) -> Result<Vec<LayerC
     materialize_entries_in_memory(&metadata.entries, usize::MAX)
 }
 
-pub(crate) fn capture_upperdir_metadata(upperdir: &Path) -> Result<CapturedUpperdirMetadata> {
-    std::fs::create_dir_all(upperdir).map_err(|err| CaptureError::capture(upperdir, err))?;
+fn read_layer_dir_metadata(layer_dir: &Path) -> Result<LayerDirRead> {
+    std::fs::create_dir_all(layer_dir).map_err(|err| LayerReadError::io(layer_dir, err))?;
     let mut emitted_opaque_dirs = HashSet::new();
     let mut entries = Vec::new();
-    let mut protected_drops = Vec::new();
-    walk_upperdir(
-        upperdir,
-        upperdir,
+    let mut drops = Vec::new();
+    walk_layer_dir(
+        layer_dir,
+        layer_dir,
         &mut emitted_opaque_dirs,
         &mut entries,
-        &mut protected_drops,
+        &mut drops,
     )?;
-    Ok(CapturedUpperdirMetadata {
-        entries,
-        protected_drops,
-    })
+    Ok(LayerDirRead { entries, drops })
 }
 
-fn walk_upperdir(
+fn walk_layer_dir(
     root: &Path,
     dir: &Path,
     emitted_opaque_dirs: &mut HashSet<String>,
-    entries: &mut Vec<CapturedUpperdirEntry>,
-    protected_drops: &mut Vec<ProtectedPathDrop>,
+    entries: &mut Vec<LayerDirEntry>,
+    drops: &mut Vec<LayerReadDrop>,
 ) -> Result<()> {
     let mut dir_entries = std::fs::read_dir(dir)
-        .map_err(|err| CaptureError::capture(dir, err))?
+        .map_err(|err| LayerReadError::io(dir, err))?
         .collect::<std::result::Result<Vec<_>, _>>()
-        .map_err(|err| CaptureError::capture(dir, err))?;
+        .map_err(|err| LayerReadError::io(dir, err))?;
     dir_entries.sort_by_key(std::fs::DirEntry::file_name);
 
     let mut dirs = Vec::new();
@@ -175,7 +172,7 @@ fn walk_upperdir(
     for entry in dir_entries {
         let path = entry.path();
         let meta =
-            std::fs::symlink_metadata(&path).map_err(|err| CaptureError::capture(&path, err))?;
+            std::fs::symlink_metadata(&path).map_err(|err| LayerReadError::io(&path, err))?;
         let file_type = meta.file_type();
         if file_type.is_dir() {
             dirs.push(path);
@@ -185,34 +182,27 @@ fn walk_upperdir(
     }
 
     for (entry, meta) in files {
-        capture_file_entry_metadata(
-            root,
-            &entry,
-            &meta,
-            emitted_opaque_dirs,
-            entries,
-            protected_drops,
-        )?;
+        read_layer_file_entry(root, &entry, &meta, emitted_opaque_dirs, entries, drops)?;
     }
     for entry in dirs {
         if has_overlay_opaque_xattr(&entry) {
             let rel = relative_path(root, &entry)?;
-            if let Some(opaque_path) = layer_path_from_relative_or_drop(&rel, protected_drops) {
+            if let Some(opaque_path) = layer_path_from_relative_or_drop(&rel, drops) {
                 push_opaque_dir(opaque_path, emitted_opaque_dirs, entries);
             }
         }
-        walk_upperdir(root, &entry, emitted_opaque_dirs, entries, protected_drops)?;
+        walk_layer_dir(root, &entry, emitted_opaque_dirs, entries, drops)?;
     }
     Ok(())
 }
 
-pub(crate) fn capture_file_entry_metadata(
+fn read_layer_file_entry(
     root: &Path,
     entry: &Path,
     meta: &std::fs::Metadata,
     emitted_opaque_dirs: &mut HashSet<String>,
-    entries: &mut Vec<CapturedUpperdirEntry>,
-    protected_drops: &mut Vec<ProtectedPathDrop>,
+    entries: &mut Vec<LayerDirEntry>,
+    drops: &mut Vec<LayerReadDrop>,
 ) -> Result<()> {
     let rel = relative_path(root, entry)?;
     let name = entry
@@ -221,42 +211,42 @@ pub(crate) fn capture_file_entry_metadata(
         .unwrap_or_default();
     if name == OPAQUE_MARKER {
         let Some(parent) = rel.parent().filter(|parent| !parent.as_os_str().is_empty()) else {
-            push_invalid_layer_path_drop(&rel, protected_drops);
+            push_invalid_layer_path_drop(&rel, drops);
             return Ok(());
         };
-        if let Some(opaque_path) = layer_path_from_relative_or_drop(parent, protected_drops) {
+        if let Some(opaque_path) = layer_path_from_relative_or_drop(parent, drops) {
             push_opaque_dir(opaque_path, emitted_opaque_dirs, entries);
         }
         return Ok(());
     }
     if is_whiteout_marker(name) {
         let target = whiteout_target(&rel);
-        if let Some(path) = layer_path_from_relative_or_drop(&target, protected_drops) {
-            entries.push(CapturedUpperdirEntry::Delete { path });
+        if let Some(path) = layer_path_from_relative_or_drop(&target, drops) {
+            entries.push(LayerDirEntry::Delete { path });
         }
         return Ok(());
     }
     if is_overlay_whiteout(entry, meta)? {
-        if let Some(path) = layer_path_from_relative_or_drop(&rel, protected_drops) {
-            entries.push(CapturedUpperdirEntry::Delete { path });
+        if let Some(path) = layer_path_from_relative_or_drop(&rel, drops) {
+            entries.push(LayerDirEntry::Delete { path });
         }
         return Ok(());
     }
-    let Some(path) = layer_path_from_relative_or_drop(&rel, protected_drops) else {
+    let Some(path) = layer_path_from_relative_or_drop(&rel, drops) else {
         return Ok(());
     };
     if meta.file_type().is_symlink() {
         entries.push(symlink_entry(path, entry)?);
     } else if meta.is_file() {
-        entries.push(CapturedUpperdirEntry::Write {
+        entries.push(LayerDirEntry::Write {
             path,
             source_path: entry.to_path_buf(),
-            meta: RegularFileCaptureMeta::from_metadata(meta),
+            meta: RegularFileReadMeta::from_metadata(meta),
         });
     } else {
-        protected_drops.push(ProtectedPathDrop {
+        drops.push(LayerReadDrop {
             path,
-            reason: ProtectedPathDropReason::UnsupportedSpecialFile,
+            reason: LayerReadDropReason::UnsupportedSpecialFile,
         });
     }
     Ok(())
@@ -265,28 +255,27 @@ pub(crate) fn capture_file_entry_metadata(
 fn push_opaque_dir(
     path: LayerPath,
     emitted_opaque_dirs: &mut HashSet<String>,
-    entries: &mut Vec<CapturedUpperdirEntry>,
+    entries: &mut Vec<LayerDirEntry>,
 ) {
     if emitted_opaque_dirs.insert(path.as_str().to_owned()) {
-        entries.push(CapturedUpperdirEntry::OpaqueDir { path });
+        entries.push(LayerDirEntry::OpaqueDir { path });
     }
 }
 
-pub(crate) fn read_regular_file(
+fn read_regular_file(
     entry: &Path,
-    expected_meta: &RegularFileCaptureMeta,
+    expected_meta: &RegularFileReadMeta,
     max_bytes: usize,
 ) -> Result<Vec<u8>> {
-    ensure_capture_file_size(entry, expected_meta.len, max_bytes)?;
-    let file =
-        open_regular_file_no_follow(entry).map_err(|err| CaptureError::capture(entry, err))?;
+    ensure_layer_file_size(entry, expected_meta.len, max_bytes)?;
+    let file = open_regular_file_no_follow(entry).map_err(|err| LayerReadError::io(entry, err))?;
     let actual_meta = file
         .metadata()
-        .map_err(|err| CaptureError::capture(entry, err))?;
+        .map_err(|err| LayerReadError::io(entry, err))?;
     if !actual_meta.is_file() || !same_file(expected_meta, &actual_meta) {
-        return Err(changed_during_capture(entry));
+        return Err(changed_during_read(entry));
     }
-    ensure_capture_file_size(entry, actual_meta.len(), max_bytes)?;
+    ensure_layer_file_size(entry, actual_meta.len(), max_bytes)?;
 
     let mut content = Vec::new();
     let limit = u64::try_from(max_bytes)
@@ -294,9 +283,9 @@ pub(crate) fn read_regular_file(
         .saturating_add(1);
     file.take(limit)
         .read_to_end(&mut content)
-        .map_err(|err| CaptureError::capture(entry, err))?;
+        .map_err(|err| LayerReadError::io(entry, err))?;
     if content.len() > max_bytes {
-        return Err(capture_file_too_large(
+        return Err(layer_file_too_large(
             entry,
             u64::try_from(content.len()).unwrap_or(u64::MAX),
             max_bytes,
@@ -305,10 +294,10 @@ pub(crate) fn read_regular_file(
     Ok(content)
 }
 
-fn ensure_capture_file_size(entry: &Path, size: u64, max_bytes: usize) -> Result<()> {
+fn ensure_layer_file_size(entry: &Path, size: u64, max_bytes: usize) -> Result<()> {
     let max = u64::try_from(max_bytes).unwrap_or(u64::MAX);
     if size > max {
-        return Err(capture_file_too_large(entry, size, max_bytes));
+        return Err(layer_file_too_large(entry, size, max_bytes));
     }
     Ok(())
 }
@@ -332,46 +321,46 @@ fn open_regular_file_no_follow(entry: &Path) -> io::Result<std::fs::File> {
 }
 
 #[cfg(unix)]
-fn same_file(left: &RegularFileCaptureMeta, right: &std::fs::Metadata) -> bool {
+fn same_file(left: &RegularFileReadMeta, right: &std::fs::Metadata) -> bool {
     left.dev == right.dev() && left.ino == right.ino()
 }
 
 #[cfg(not(unix))]
-fn same_file(_left: &RegularFileCaptureMeta, _right: &std::fs::Metadata) -> bool {
+fn same_file(_left: &RegularFileReadMeta, _right: &std::fs::Metadata) -> bool {
     true
 }
 
-fn changed_during_capture(entry: &Path) -> CaptureError {
-    CaptureError::capture(
+fn changed_during_read(entry: &Path) -> LayerReadError {
+    LayerReadError::io(
         entry,
         io::Error::new(
             io::ErrorKind::InvalidData,
-            "overlay regular file changed during capture",
+            "stored layer regular file changed while being read",
         ),
     )
 }
 
-fn capture_file_too_large(entry: &Path, size: u64, max_bytes: usize) -> CaptureError {
-    CaptureError::capture(
+fn layer_file_too_large(entry: &Path, size: u64, max_bytes: usize) -> LayerReadError {
+    LayerReadError::io(
         entry,
         io::Error::new(
             io::ErrorKind::InvalidData,
-            format!("overlay regular file too large: {size} > {max_bytes} bytes"),
+            format!("stored layer regular file too large: {size} > {max_bytes} bytes"),
         ),
     )
 }
 
-fn symlink_entry(path: LayerPath, entry: &Path) -> Result<CapturedUpperdirEntry> {
-    Ok(CapturedUpperdirEntry::Symlink {
+fn symlink_entry(path: LayerPath, entry: &Path) -> Result<LayerDirEntry> {
+    Ok(LayerDirEntry::Symlink {
         path,
         source_path: path_string(
-            &std::fs::read_link(entry).map_err(|err| CaptureError::capture(entry, err))?,
+            &std::fs::read_link(entry).map_err(|err| LayerReadError::io(entry, err))?,
         )?,
     })
 }
 
-pub(crate) fn materialize_entries_in_memory(
-    entries: &[CapturedUpperdirEntry],
+fn materialize_entries_in_memory(
+    entries: &[LayerDirEntry],
     max_bytes: usize,
 ) -> Result<Vec<LayerChange>> {
     entries
@@ -381,33 +370,33 @@ pub(crate) fn materialize_entries_in_memory(
 }
 
 fn layer_path(path: &str) -> Result<LayerPath> {
-    LayerPath::parse(path).map_err(CaptureError::Path)
+    LayerPath::parse(path).map_err(LayerReadError::Path)
 }
 
 fn relative_path(root: &Path, entry: &Path) -> Result<PathBuf> {
     entry
         .strip_prefix(root)
         .map(Path::to_path_buf)
-        .map_err(|err| CaptureError::InvalidPathChange(err.to_string()))
+        .map_err(|err| LayerReadError::InvalidPathChange(err.to_string()))
 }
 
 fn layer_path_from_relative_or_drop(
     path: &Path,
-    protected_drops: &mut Vec<ProtectedPathDrop>,
+    drops: &mut Vec<LayerReadDrop>,
 ) -> Option<LayerPath> {
     match relative_to_string(path).and_then(|path| layer_path(&path)) {
         Ok(path) => Some(path),
         Err(_) => {
-            push_invalid_layer_path_drop(path, protected_drops);
+            push_invalid_layer_path_drop(path, drops);
             None
         }
     }
 }
 
-fn push_invalid_layer_path_drop(path: &Path, protected_drops: &mut Vec<ProtectedPathDrop>) {
-    protected_drops.push(ProtectedPathDrop {
+fn push_invalid_layer_path_drop(path: &Path, drops: &mut Vec<LayerReadDrop>) {
+    drops.push(LayerReadDrop {
         path: invalid_layer_path_placeholder(path),
-        reason: ProtectedPathDropReason::InvalidLayerPath,
+        reason: LayerReadDropReason::InvalidLayerPath,
     });
 }
 
@@ -441,8 +430,8 @@ pub(crate) fn relative_to_string(path: &Path) -> Result<String> {
 
 fn path_string(path: &Path) -> Result<String> {
     path.to_str().map(str::to_owned).ok_or_else(|| {
-        CaptureError::InvalidPathChange(format!(
-            "overlay path is not valid UTF-8: {}",
+        LayerReadError::InvalidPathChange(format!(
+            "stored layer path is not valid UTF-8: {}",
             path.display()
         ))
     })
@@ -451,8 +440,8 @@ fn path_string(path: &Path) -> Result<String> {
 fn path_component_string(component: &std::ffi::OsStr) -> Result<String> {
     component.to_str().map(str::to_owned).ok_or_else(|| {
         let bytes = component.as_encoded_bytes();
-        CaptureError::InvalidPathChange(format!(
-            "overlay path component is not valid UTF-8: {bytes:?}"
+        LayerReadError::InvalidPathChange(format!(
+            "stored layer path component is not valid UTF-8: {bytes:?}"
         ))
     })
 }
@@ -506,7 +495,7 @@ fn xattr_value(path: &Path, name: &str) -> Result<Option<Vec<u8>>> {
             }
             Err(Errno::RANGE) => buffer.resize(buffer.len() * 2, 0),
             Err(Errno::NODATA | Errno::OPNOTSUPP) => return Ok(None),
-            Err(err) => return Err(CaptureError::capture(path, std::io::Error::from(err))),
+            Err(err) => return Err(LayerReadError::io(path, std::io::Error::from(err))),
         }
     }
 }

@@ -256,9 +256,7 @@ fn capture_result(
         protected_drops: Vec::new(),
         stats: None,
         changes: Vec::new(),
-        route_stats: layerstack::CaptureRouteStats::default(),
         metadata_path_count: 0,
-        spool_dir: None,
     }
 }
 
