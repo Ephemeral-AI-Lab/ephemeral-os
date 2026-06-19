@@ -20,7 +20,6 @@ mod isolated_network_setup;
 mod lifecycle;
 pub mod model;
 mod namespace;
-pub mod network_mode;
 pub mod overlay;
 pub mod profile;
 pub mod service;

@@ -5,8 +5,8 @@ use linux_namespace_subprocess::protocol::{
 };
 use serde_json::{json, Value};
 use workspace::overlay::dirs::OverlayDirs;
-use workspace::profile::host_compatible::WorkspaceNamespaceFds;
 use workspace::profile::WorkspaceModeContext;
+use workspace::WorkspaceLaunchNamespaceFds;
 
 use super::outcome::WorkspaceApiError;
 use super::trace::CommandTraceEvent;
@@ -45,7 +45,8 @@ pub(crate) fn prepare_host(
     layer_paths: &[PathBuf],
     dirs: &OverlayDirs,
     scratch_run_dir: &Path,
-    ns_fds: Option<WorkspaceNamespaceFds>,
+    ns_fds: Option<WorkspaceLaunchNamespaceFds>,
+    cgroup_path: Option<PathBuf>,
 ) -> Result<PreparedCommand, CommandPrepareError> {
     let ns_fds = require_workspace_ns_fds(ns_fds.map(ns_fds_from_workspace), "host", false)?;
     let tool_call = tool_call(&inputs);
@@ -57,7 +58,7 @@ pub(crate) fn prepare_host(
         upperdir: Some(dirs.upperdir.clone()),
         workdir: Some(dirs.workdir.clone()),
         ns_fds: Some(ns_fds),
-        cgroup_path: None,
+        cgroup_path,
         timeout_seconds: inputs.timeout_seconds,
     };
     finish_prepare(
@@ -168,13 +169,13 @@ fn ns_fds_from_map(map: &std::collections::HashMap<String, i32>) -> Option<NsFds
     })
 }
 
-fn ns_fds_from_workspace(ns_fds: WorkspaceNamespaceFds) -> NsFds {
+fn ns_fds_from_workspace(ns_fds: WorkspaceLaunchNamespaceFds) -> NsFds {
     let fd = |raw: Option<i32>| raw.map(linux_namespace_subprocess::protocol::Fd);
     NsFds {
-        user: fd(ns_fds.user()),
-        mnt: fd(ns_fds.mnt()),
-        pid: fd(ns_fds.pid()),
-        net: fd(ns_fds.net()),
+        user: fd(ns_fds.user),
+        mnt: fd(ns_fds.mnt),
+        pid: fd(ns_fds.pid),
+        net: fd(ns_fds.net),
     }
 }
 

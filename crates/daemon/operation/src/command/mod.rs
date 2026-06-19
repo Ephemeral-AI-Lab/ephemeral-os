@@ -3,6 +3,7 @@
 pub mod contract;
 
 mod finalize;
+mod command_workspace;
 mod outcome;
 mod prepare;
 mod registry;
@@ -16,6 +17,7 @@ pub use outcome::{ChangedPathKinds, WorkspaceConflict, WorkspaceTimings};
 pub use service::{
     CommandExecError, CommandExecOutcome, CommandOps, CommandProgressTraceFacts,
     CommandReadProgressOutcome, CommandRemountInspection, CommandRemountQuiesce,
-    CommandStdinTraceFacts, CommandWriteStdinOutcome, ExecTarget, HostCommandWorkspace,
+    CommandStdinTraceFacts, CommandWriteStdinOutcome, ExecTarget,
 };
 pub use trace::CommandTraceEvent;
+pub use command_workspace::{CommandWorkspace, HostCommandWorkspace};

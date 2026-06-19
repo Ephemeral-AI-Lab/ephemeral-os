@@ -11,9 +11,9 @@ use workspace::overlay::capture::{
     capture_upperdir, capture_upperdir_for_snapshot_with_options, RoutedCapturedChanges,
 };
 use workspace::overlay::tree::TreeResourceStats;
-use workspace::profile::host_compatible::HostWorkspace;
 use workspace::profile::WorkspaceModeContext;
 
+use crate::command::command_workspace::CommandWorkspace;
 use super::contract::{
     u64_to_f64_saturating, CommandMetadata, CommandResponse, IgnoredPublishLaneMetadata,
     PublishLanesMetadata, SourcePublishLaneMetadata, PUBLISH_LANES_METADATA_KEY,
@@ -29,7 +29,7 @@ use crate::{CommandId, MutationCore};
 pub(crate) fn finalize_host_command_with_capture_options(
     root: &Path,
     snapshot: &Snapshot,
-    workspace: &HostWorkspace,
+    workspace: &CommandWorkspace,
     commit_options: CommitOptions,
     mut capture_options: BoundedCaptureOptions,
     request: FinalizeCommandRequest,
@@ -913,7 +913,7 @@ mod tests {
     fn finalize_host_command_with_default_capture_options(
         root: &Path,
         snapshot: &Snapshot,
-        workspace: &HostWorkspace,
+        workspace: &CommandWorkspace,
         commit_options: CommitOptions,
         request: FinalizeCommandRequest,
     ) -> Result<CommandResponse, WorkspaceApiError> {

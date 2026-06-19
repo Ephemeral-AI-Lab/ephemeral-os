@@ -10,16 +10,16 @@ use std::path::PathBuf;
 use command::process::CommandProcess;
 use command::{CollectCompleted, StartCommand};
 use layerstack::service::{LeaseReleaseHandle, Snapshot};
-use workspace::profile::host_compatible::HostWorkspace;
 use workspace::profile::WorkspaceModeContext;
 
 use super::contract::{CollectCompletedOutput, CommandCompletion, CommandResponse};
+use super::command_workspace::CommandWorkspace;
 pub(crate) struct HostRun {
     pub(crate) process: CommandProcess,
     pub(crate) trace_origin: CommandTraceOrigin,
     pub(crate) root: PathBuf,
     pub(crate) snapshot: Snapshot,
-    pub(crate) workspace: HostWorkspace,
+    pub(crate) workspace: CommandWorkspace,
     pub(crate) lease: LeaseReleaseHandle,
 }
 

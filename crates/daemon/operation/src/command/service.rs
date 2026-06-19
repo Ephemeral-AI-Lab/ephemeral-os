@@ -4,13 +4,9 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Instant;
 
 use command::{CommandConfig, CommandError};
-use layerstack::service::{
-    BoundedCaptureOptions, LeaseReleaseHandle, Snapshot, SnapshotNormalization,
-};
+use layerstack::service::BoundedCaptureOptions;
 use layerstack::CommitOptions;
 use trace::TraceRecord;
-use workspace::profile::host_compatible::HostWorkspace;
-use workspace::profile::host_compatible::WorkspaceNamespaceFds;
 use workspace::profile::WorkspaceModeContext;
 
 #[cfg(test)]
@@ -37,6 +33,7 @@ use super::trace::{
     command_process_wait_host_resource_stats_event, command_process_wait_resource_stats_event,
     command_process_wait_tree_resource_stats_events, CommandFinalizeTraceFacts,
 };
+use super::command_workspace::HostCommandWorkspace;
 
 mod exec;
 mod io;
@@ -53,82 +50,6 @@ pub enum ExecTarget {
     IsolatedNetwork {
         context: Box<WorkspaceModeContext>,
     },
-}
-
-#[derive(Debug)]
-pub struct HostCommandWorkspace {
-    layer_stack_root: PathBuf,
-    workspace_root: PathBuf,
-    snapshot: Snapshot,
-    normalization: SnapshotNormalization,
-    workspace: HostWorkspace,
-    ns_fds: Option<WorkspaceNamespaceFds>,
-    lease: LeaseReleaseHandle,
-}
-
-impl HostCommandWorkspace {
-    #[must_use]
-    pub fn new(
-        layer_stack_root: PathBuf,
-        workspace_root: PathBuf,
-        snapshot: Snapshot,
-        normalization: SnapshotNormalization,
-        workspace: HostWorkspace,
-        lease: LeaseReleaseHandle,
-    ) -> Self {
-        let ns_fds = workspace.namespace_fds();
-        Self::from_parts(
-            layer_stack_root,
-            workspace_root,
-            snapshot,
-            normalization,
-            workspace,
-            ns_fds,
-            lease,
-        )
-    }
-
-    #[cfg(test)]
-    #[must_use]
-    pub(crate) fn new_for_test(
-        layer_stack_root: PathBuf,
-        workspace_root: PathBuf,
-        snapshot: Snapshot,
-        normalization: SnapshotNormalization,
-        workspace: HostWorkspace,
-        ns_fds: Option<WorkspaceNamespaceFds>,
-        lease: LeaseReleaseHandle,
-    ) -> Self {
-        Self::from_parts(
-            layer_stack_root,
-            workspace_root,
-            snapshot,
-            normalization,
-            workspace,
-            ns_fds,
-            lease,
-        )
-    }
-
-    fn from_parts(
-        layer_stack_root: PathBuf,
-        workspace_root: PathBuf,
-        snapshot: Snapshot,
-        normalization: SnapshotNormalization,
-        workspace: HostWorkspace,
-        ns_fds: Option<WorkspaceNamespaceFds>,
-        lease: LeaseReleaseHandle,
-    ) -> Self {
-        Self {
-            layer_stack_root,
-            workspace_root,
-            snapshot,
-            normalization,
-            workspace,
-            ns_fds,
-            lease,
-        }
-    }
 }
 
 pub struct CommandOps {

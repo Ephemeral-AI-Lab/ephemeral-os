@@ -1,15 +1,6 @@
+use crate::model::NetworkMode;
 use crate::namespace::NamespacePlan;
 use crate::profile::common::ProfileHooks;
-
-use crate::model::NetworkMode;
-
-// Temporary compatibility exports for legacy WorkspaceRuntime and
-// operation::command host paths. Removal criteria: Milestone 7 daemon dispatch
-// migration routes callers through profile-neutral workspace/session handles.
-#[doc(hidden)]
-pub use crate::profile::host_workspace::{
-    HostNamespaceWorkspaceRequest, HostWorkspace, HostWorkspaceError, WorkspaceNamespaceFds,
-};
 
 #[derive(Debug, Default)]
 pub(crate) struct HostCompatibleProfile;

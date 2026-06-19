@@ -21,7 +21,7 @@ use workspace::{
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
     LayerStackSnapshotRef, LeaseId, NetworkMode, ProtectedPathDrop, ReadonlySnapshotHandle,
     RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceError, WorkspaceHandle, WorkspaceId,
-    WorkspaceLaunchContext, WorkspaceService,
+    WorkspaceLaunchContext, WorkspaceLaunchNamespaceFds, WorkspaceService,
 };
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
@@ -303,7 +303,12 @@ fn test_launch_context(fixture: &LayerFixture) -> WorkspaceLaunchContext {
     WorkspaceLaunchContext {
         upperdir: fixture.base.join("upper"),
         workdir: fixture.base.join("work"),
-        namespace_fds: None,
+        namespace_fds: Some(WorkspaceLaunchNamespaceFds {
+            user: Some(10),
+            mnt: Some(11),
+            pid: Some(12),
+            net: None,
+        }),
         cgroup_path: None,
     }
 }

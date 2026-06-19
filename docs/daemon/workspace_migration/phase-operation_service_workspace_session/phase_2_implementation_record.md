@@ -908,12 +908,14 @@ Rules:
   - `crates/daemon/workspace/src/lib.rs`
   - `crates/daemon/workspace/src/lifecycle/create.rs`
   - `crates/daemon/workspace/src/lifecycle/destroy.rs`
+  - `crates/daemon/workspace/src/namespace/cgroup.rs`
   - `crates/daemon/workspace/src/profile/common.rs`
   - `crates/daemon/workspace/src/profile/host_compatible.rs`
   - `crates/daemon/workspace/src/profile/isolated.rs`
   - `crates/daemon/workspace/src/profile/manager.rs`
   - `crates/daemon/workspace/tests/unit/isolated_network_sessions.rs`
   - `crates/daemon/operation_service/src/command/exec.rs`
+  - `crates/daemon/operation_service/src/command/finalize_tests.rs`
   - `crates/daemon/operation_service/tests/command_exec.rs`
   - `crates/daemon/operation_service/tests/command_remount.rs`
   - `crates/daemon/operation_service/tests/support/mod.rs`
@@ -927,18 +929,18 @@ Rules:
 - Verification:
   - Required static scan:
     `rg -n "HostWorkspace|HostNamespaceWorkspaceRequest|WorkspaceModeContext|WorkspaceModeManager|ExecTarget::Host|ExecTarget::IsolatedNetwork|IsolatedNetworkError|network_mode" crates/daemon/workspace/src crates/daemon/operation/src crates/daemon/operation_service/src crates/daemon/core/src`
-    returned 363 matches. Classification: target workspace profile/manager
+    returned 364 matches. Classification: target workspace profile/manager
     names and errors; temporary `HostWorkspace` compatibility exports and
     legacy callers in `WorkspaceRuntime`/old `operation::command`; compatibility
     `network_mode` module exports; daemon file routing through `WorkspaceRuntime`
     left for Milestone 7/M8.
   - Required static scan:
     `rg -n "one.shot|one_shot|publish|published|remountable|cgroup|ResourcePolicy" crates/daemon/workspace/src/profile crates/daemon/operation/src/command crates/daemon/operation_service/src/command`
-    returned 455 matches. Classification: operation-service command
+    returned 457 matches. Classification: operation-service command
     publish/one-shot policy is the intended owner; old `operation::command`
     publish/remountable matches are legacy; workspace profile cgroup matches now
-    live in `profile::common` and `profile::resource_control`, with no
-    `IsolatedProfile` cgroup ownership remaining.
+    live in `profile::common`, `profile::resource_control`, and namespace
+    cgroup helpers, with no `IsolatedProfile` cgroup ownership remaining.
   - Required static scan:
     `rg -n "FreshNs|namespace_fds: None|NetworkMode::Host" crates/daemon/command/src crates/daemon/operation_service/src crates/daemon/core/src`
     returned 9 matches. Classification: `command::launch` still supports
@@ -948,24 +950,39 @@ Rules:
     production holder-backed launch now rejects missing FDs before spawn.
   - Focused cgroup ownership scan:
     `rg -n "resource_control|create_cgroup|remove_cgroup|cgroup" crates/daemon/workspace/src/profile/isolated.rs crates/daemon/workspace/src/profile/common.rs crates/daemon/workspace/src/profile/resource_control.rs`:
-    cgroup create/remove matches only in common lifecycle and resource-control
-    helper files.
+    cgroup create, holder join, and remove matches only in common lifecycle,
+    resource-control, and namespace cgroup helper files.
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p workspace`:
     passed.
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p workspace`:
-    passed, 26 tests.
+    passed, 28 tests.
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p operation_service`:
     passed.
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_exec`:
-    passed, 7 matching unit tests and 13 matching integration tests.
+    passed, 7 matching unit tests and 14 matching integration tests.
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service command_remount`:
-    passed, 7 matching unit tests and 5 matching integration tests.
+    passed, 7 matching unit tests and 6 matching integration tests.
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service workspace_remount`:
-    passed, 1 matching service-graph test and 5 matching integration tests.
+    passed, 1 matching service-graph test and 6 matching integration tests.
   - `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo check -p daemon`:
     passed.
+  - Supplemental post-review verification:
+    `CARGO_TARGET_DIR=/tmp/eos-phase2-command-service-target cargo test -p operation_service`:
+    passed, including 40 unit tests and all operation-service integration suites.
   - `cargo fmt --check`: passed.
   - `git diff --check`: passed.
+- Post-review fixes:
+  - Added common holder cgroup join after common cgroup creation and before
+    handle publication; command processes still join the same cgroup through the
+    existing setns runner request path.
+  - Removed global isolated-network initialization from manager recovery/startup;
+    isolated network setup remains owned by `IsolatedProfile`.
+  - Added command launch validation for partial namespace FD sets: host-compatible
+    holder-backed commands require user/mount/pid FDs, and isolated
+    holder-backed commands additionally require the net FD.
+  - Added focused tests for holder cgroup join, cgroup recovery cleanup,
+    host/isolated remount symmetry, partial namespace FD rejection, and updated
+    finalize fixtures to carry host-compatible launch FDs.
 - Deviations:
   - `HostWorkspace` remains as a hidden temporary compatibility export because
     legacy `WorkspaceRuntime` and old `operation::command` callers are explicitly
@@ -974,8 +991,9 @@ Rules:
     profile handle path.
   - The lower-level `command` crate still supports `FreshNs` for policy-free
     non-workspace launch DTO construction. Operation-service holder-backed
-    workspace launch now rejects missing namespace FDs before calling that
-    helper, so workspace-session commands no longer silently fall back.
+    workspace launch now rejects missing or partial required namespace FDs before
+    calling that helper, so workspace-session commands no longer silently fall
+    back.
   - Stubbed `NamespaceRuntime` now causes isolated profile veth setup/teardown to
     use synthetic allocation/release instead of privileged netlink calls. This
     keeps workspace unit tests local while preserving live isolated behavior for

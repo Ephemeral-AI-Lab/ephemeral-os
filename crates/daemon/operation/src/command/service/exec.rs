@@ -94,6 +94,7 @@ impl CommandOps {
             normalization,
             workspace,
             ns_fds,
+            cgroup_path,
             lease,
         } = *workspace;
         let result = {
@@ -114,6 +115,7 @@ impl CommandOps {
                 workspace.dirs(),
                 &workspace.dirs().run_dir,
                 ns_fds,
+                cgroup_path,
             )
             .map_err(command_prepare_error)?;
             let mut trace_events = prepared.trace_events.clone();
