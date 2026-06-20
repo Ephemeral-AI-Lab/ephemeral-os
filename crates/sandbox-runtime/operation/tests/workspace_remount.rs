@@ -5,15 +5,15 @@ use std::sync::{Arc, Mutex};
 
 use command::process::{CommandProcess, CommandProcessExit, CommandProcessSpec};
 use command::yield_wait_loop::WaitOutcome;
-use daemon_operation::command::{
+use sandbox_runtime::command::{
     CancelCommandInput, CommandLaunchDriver, CommandOperationService, CommandServiceError,
     ExecCommandInput,
 };
-use daemon_operation::workspace_remount::{
+use sandbox_runtime::workspace_remount::{
     CommandRemountCoordinator, ProcessGroupController, ProcessGroupInspection,
     RemountWorkspaceSession, WorkspaceRemountError, WorkspaceRemountService,
 };
-use daemon_operation::workspace_session::WorkspaceSessionService;
+use sandbox_runtime::workspace_session::WorkspaceSessionService;
 use workspace::{
     CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef,
@@ -648,7 +648,7 @@ fn workspace_remount_resource_failure_blocks_state_after_cleanup() {
     assert!(matches!(
         error,
         WorkspaceRemountError::WorkspaceSession(
-            daemon_operation::workspace_session::WorkspaceSessionError::Workspace(
+            sandbox_runtime::workspace_session::WorkspaceSessionError::Workspace(
                 WorkspaceError::Setup { .. }
             )
         )

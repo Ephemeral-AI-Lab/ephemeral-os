@@ -1,5 +1,5 @@
 [package]
-name = "daemon_operation"
+name = "sandbox-runtime"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

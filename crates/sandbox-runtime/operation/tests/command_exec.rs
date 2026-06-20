@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use command::yield_wait_loop::WaitOutcome;
-use daemon_operation::command::{
+use sandbox_runtime::command::{
     CommandServiceError, CommandSessionId, CommandStatus, ExecCommandInput, PollCommandInput,
 };
 use workspace::{WorkspaceProfile, WorkspaceSessionId};

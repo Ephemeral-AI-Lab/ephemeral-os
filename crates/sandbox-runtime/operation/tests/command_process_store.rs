@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
-use daemon_operation::command::{
+use sandbox_runtime::command::{
     ActiveCommandProcess, CancellationState, CommandCompletionStore, CommandFinalizedMetadata,
     CommandLifecycleState, CommandProcessStore, CommandServiceError, CommandSessionId,
     CommandStatus, CommandTerminalResult, CommandTranscriptStore, CompletedCommandRecord,

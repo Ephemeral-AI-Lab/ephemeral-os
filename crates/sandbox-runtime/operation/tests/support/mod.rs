@@ -7,10 +7,8 @@ use command::process::{
     CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec,
 };
 use command::yield_wait_loop::WaitOutcome;
-use daemon_operation::command::{
-    CommandLaunchDriver, CommandOperationService, CommandServiceError,
-};
-use daemon_operation::workspace_session::WorkspaceSessionService;
+use sandbox_runtime::command::{CommandLaunchDriver, CommandOperationService, CommandServiceError};
+use sandbox_runtime::workspace_session::WorkspaceSessionService;
 use workspace::{
     CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef,
@@ -97,9 +95,7 @@ impl CommandLaunchDriver for FakeLaunchDriver {
         let parts =
             CommandProcessSpawn::prepare(&spec.id, workspace_entry, config).map_err(|error| {
                 CommandServiceError::CommandIo {
-                    command_session_id: daemon_operation::command::CommandSessionId(
-                        spec.id.clone(),
-                    ),
+                    command_session_id: sandbox_runtime::command::CommandSessionId(spec.id.clone()),
                     error: error.to_string(),
                 }
             })?;

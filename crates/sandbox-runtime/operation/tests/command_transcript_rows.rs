@@ -8,7 +8,7 @@ use command::process::{
     CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec,
 };
 use command::yield_wait_loop::WaitOutcome;
-use daemon_operation::command::{
+use sandbox_runtime::command::{
     CommandLaunchDriver, CommandServiceError, CommandSessionId, CommandStatus, CommandStream,
     CommandTranscriptRow, ExecCommandInput, PollCommandInput, ReadCommandLinesInput,
 };

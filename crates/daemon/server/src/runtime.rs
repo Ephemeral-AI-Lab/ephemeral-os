@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use daemon_operation::DaemonOperations;
 pub(crate) use sandbox_protocol::{MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};
+use sandbox_runtime::SandboxDaemonOperations;
 use serde_json::{json, Value};
 use tokio_util::sync::CancellationToken;
 
@@ -24,14 +24,14 @@ pub struct ServerConfig {
 /// The running daemon: request dispatch state and shutdown token.
 pub struct DaemonServer {
     pub(crate) config: ServerConfig,
-    pub(crate) operations: Arc<DaemonOperations>,
+    pub(crate) operations: Arc<SandboxDaemonOperations>,
     pub(crate) shutdown: CancellationToken,
 }
 
 impl DaemonServer {
     /// Assemble a daemon over `config`, wiring the shutdown token.
     #[must_use]
-    pub fn new(config: ServerConfig, operations: Arc<DaemonOperations>) -> Self {
+    pub fn new(config: ServerConfig, operations: Arc<SandboxDaemonOperations>) -> Self {
         Self {
             config,
             operations,

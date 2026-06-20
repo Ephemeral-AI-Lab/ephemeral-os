@@ -25,15 +25,15 @@ workspace / command / layerstack / namespace-process / overlay
 | `layerstack` | lib | content hashes, manifest/layer types, storage, leases, compaction | own command execution |
 
 **Boundary law:** daemon transport vocabulary lives in
-`crates/daemon/rpc_protocol`; daemon request dispatch lives in
-`crates/daemon/server`; operation specs live in `crates/daemon/operation`; CAS
-fixtures live with `layerstack`.
+`crates/sandbox-protocol`; daemon request dispatch lives in
+`crates/daemon/server`; daemon operation dispatch and concrete operation specs
+live in `crates/daemon/operation`; CAS fixtures live with `layerstack`.
 
 ## The pieces
 
 - `crates/daemon/layerstack/tests/fixtures/` - daemon-owned CAS fixtures.
 - `crates/` - the workspace: `daemon/eosd`, `daemon/server`,
-  `daemon/rpc_protocol`, `daemon/layerstack`, `daemon/overlay`,
+  `sandbox-protocol`, `daemon/layerstack`, `daemon/overlay`,
   `daemon/namespace-process`, `daemon/command`, `daemon/operation`,
   `daemon/workspace`, and `daemon/config`.
 - `config/prd.yml` — the single daemon config baseline (see `config/README.md`).
@@ -55,5 +55,5 @@ cargo test -p daemon
 
 ## Contract owners
 
-The shared daemon JSON-line RPC protocol is owned by `crates/daemon/rpc_protocol`.
+The shared daemon JSON-line RPC protocol is owned by `crates/sandbox-protocol`.
 LayerStack manifest schema and CAS fixtures are owned by `crates/daemon/layerstack`.

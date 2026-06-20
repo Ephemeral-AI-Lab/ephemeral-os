@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use daemon_operation::workspace_session::{WorkspaceSessionError, WorkspaceSessionService};
+use sandbox_runtime::workspace_session::{WorkspaceSessionError, WorkspaceSessionService};
 use workspace::{
     BaseRevision, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef,

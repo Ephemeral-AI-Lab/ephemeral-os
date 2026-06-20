@@ -8,14 +8,14 @@ use std::time::Duration;
 
 use command::process::{CommandProcess, CommandProcessExit, CommandProcessSpec};
 use command::yield_wait_loop::WaitOutcome;
-use daemon_operation::command::{
+use sandbox_runtime::command::{
     CommandLaunchDriver, CommandOperationService, CommandServiceError, ExecCommandInput,
     PollCommandInput, ReadCommandLinesInput, WriteCommandStdinInput,
 };
-use daemon_operation::workspace_remount::{
+use sandbox_runtime::workspace_remount::{
     CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountService,
 };
-use daemon_operation::workspace_session::WorkspaceSessionService;
+use sandbox_runtime::workspace_session::WorkspaceSessionService;
 use workspace::{
     CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef,
@@ -332,7 +332,7 @@ fn workspace_handle_with_profile(
 fn create_session_and_command() -> (
     TestServices,
     WorkspaceSessionId,
-    daemon_operation::command::CommandSessionId,
+    sandbox_runtime::command::CommandSessionId,
 ) {
     let fake = Arc::new(PendingGuardWorkspaceService::default());
     let services = build_services(Arc::clone(&fake));
@@ -550,10 +550,10 @@ fn command_remount_read_lines_and_poll_remain_allowed_while_pending() {
 
     assert_eq!(
         rows.status,
-        daemon_operation::command::CommandStatus::Running
+        sandbox_runtime::command::CommandStatus::Running
     );
     assert_eq!(
         poll.status,
-        daemon_operation::command::CommandStatus::Running
+        sandbox_runtime::command::CommandStatus::Running
     );
 }

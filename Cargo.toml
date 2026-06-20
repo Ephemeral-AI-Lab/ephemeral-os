@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/daemon/operation",
+    "crates/sandbox-runtime/operation",
     "crates/daemon/command",
     "crates/daemon/config",
     "crates/daemon/eosd",
@@ -53,7 +53,7 @@ netlink-sys = "0.8"
 command = { path = "crates/daemon/command" }
 config = { path = "crates/daemon/config" }
 layerstack = { path = "crates/daemon/layerstack" }
-daemon_operation = { path = "crates/daemon/operation" }
+sandbox-runtime = { path = "crates/sandbox-runtime/operation" }
 sandbox-protocol = { path = "crates/sandbox-protocol" }
 overlay = { path = "crates/daemon/overlay" }
 namespace-process = { path = "crates/daemon/namespace-process" }

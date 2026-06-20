@@ -1,16 +1,14 @@
 pub mod command;
-pub mod protocol;
 
-use crate::internal::services::DaemonOperations;
-use crate::operation::OperationSpec;
-use protocol::{OperationRequest, OperationResponse};
+use crate::internal::services::SandboxDaemonOperations;
+use crate::operation::{OperationRequest, OperationResponse, OperationSpec};
 
 pub(crate) fn operation_specs() -> &'static [&'static OperationSpec] {
     command::operation_specs()
 }
 
 pub(crate) fn dispatch_operation(
-    operations: &DaemonOperations,
+    operations: &SandboxDaemonOperations,
     request: OperationRequest<'_>,
 ) -> OperationResponse {
     command::operation_entries()

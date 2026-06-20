@@ -8,7 +8,7 @@ use crate::operation::{
     ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationRequest, OperationResponse,
     OperationSpec,
 };
-use crate::DaemonOperations;
+use crate::SandboxDaemonOperations;
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "poll_command",
@@ -47,7 +47,7 @@ const POLL_CLI: CliSpec = CliSpec {
 };
 
 pub(crate) fn dispatch(
-    operations: &DaemonOperations,
+    operations: &SandboxDaemonOperations,
     request: OperationRequest<'_>,
 ) -> OperationResponse {
     let input = match parse_input(&request) {

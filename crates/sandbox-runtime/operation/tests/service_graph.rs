@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
-use daemon_operation::command::{CommandOperationService, ExecCommandInput};
-use daemon_operation::workspace_remount::{
+use sandbox_protocol::OperationAuthority;
+use sandbox_runtime::command::{CommandOperationService, ExecCommandInput};
+use sandbox_runtime::workspace_remount::{
     CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountService,
 };
-use daemon_operation::workspace_session::WorkspaceSessionService;
-use daemon_operation::DaemonOperations;
+use sandbox_runtime::workspace_session::WorkspaceSessionService;
+use sandbox_runtime::SandboxDaemonOperations;
 use workspace::{
     CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest, LatestSnapshotRequest,
     RemountWorkspaceRequest, WorkspaceError, WorkspaceHandle, WorkspaceRuntimeHooks,
@@ -55,7 +56,7 @@ fn noop_workspace_runtime() -> Arc<WorkspaceRuntimeService> {
 }
 
 #[test]
-fn daemon_operations_exposes_only_command_as_external_lane() {
+fn runtime_operations_exposes_only_command_as_external_lane() {
     let workspace = workspace_session();
     let command = Arc::new(CommandOperationService::new(
         Arc::clone(&workspace),
@@ -69,7 +70,7 @@ fn daemon_operations_exposes_only_command_as_external_lane() {
     ));
 
     let _ = remount;
-    let operations = DaemonOperations::new(Arc::clone(&command));
+    let operations = SandboxDaemonOperations::new(Arc::clone(&command));
 
     assert!(Arc::ptr_eq(&operations.command, &command));
 }
@@ -86,5 +87,27 @@ fn command_contract_keeps_session_selector_in_exec_input() {
     assert_eq!(
         input.workspace_session_id,
         WorkspaceSessionId("workspace-1".to_owned())
+    );
+}
+
+#[test]
+fn operation_catalog_exports_daemon_command_operations() {
+    let catalog = sandbox_runtime::operation_catalog();
+    let names = catalog
+        .operations
+        .iter()
+        .map(|spec| spec.name)
+        .collect::<Vec<_>>();
+
+    assert_eq!(catalog.authority, OperationAuthority::SandboxDaemon);
+    assert_eq!(
+        names,
+        [
+            "exec_command",
+            "write_command_stdin",
+            "poll_command",
+            "read_command_lines",
+            "cancel_command"
+        ]
     );
 }

@@ -19,7 +19,7 @@ use crate::workspace_crate::{WorkspaceEntry, WorkspaceSessionId};
 use crate::workspace_session::WorkspaceSessionHandler;
 
 use crate::command::service::CommandOperationService;
-use crate::DaemonOperations;
+use crate::SandboxDaemonOperations;
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "exec_command",
@@ -77,7 +77,7 @@ const EXEC_COMMAND_CLI: CliSpec = CliSpec {
 };
 
 pub(crate) fn dispatch(
-    operations: &DaemonOperations,
+    operations: &SandboxDaemonOperations,
     request: OperationRequest<'_>,
 ) -> OperationResponse {
     let input = match parse_input(&request) {

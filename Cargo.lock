@@ -159,23 +159,12 @@ dependencies = [
 name = "daemon"
 version = "0.1.0"
 dependencies = [
- "daemon_operation",
  "sandbox-protocol",
+ "sandbox-runtime",
  "serde_json",
  "thiserror 2.0.18",
  "tokio",
  "tokio-util",
-]
-
-[[package]]
-name = "daemon_operation"
-version = "0.1.0"
-dependencies = [
- "command",
- "sandbox-protocol",
- "serde_json",
- "thiserror 2.0.18",
- "workspace",
 ]
 
 [[package]]
@@ -205,8 +194,8 @@ dependencies = [
  "command",
  "config",
  "daemon",
- "daemon_operation",
  "namespace-process",
+ "sandbox-runtime",
  "serde_json",
  "tokio",
  "workspace",
@@ -884,6 +873,17 @@ name = "sandbox-protocol"
 version = "0.1.0"
 dependencies = [
  "serde_json",
+]
+
+[[package]]
+name = "sandbox-runtime"
+version = "0.1.0"
+dependencies = [
+ "command",
+ "sandbox-protocol",
+ "serde_json",
+ "thiserror 2.0.18",
+ "workspace",
 ]
 
 [[package]]

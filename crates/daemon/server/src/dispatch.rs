@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use super::DaemonServer;
 use crate::error::DaemonError;
-use daemon_operation::OperationRequest;
 use sandbox_protocol::{decode_request_object, error_kind, ArgsPresence, DAEMON_AUTH_FIELD};
+use sandbox_runtime::OperationRequest;
 use serde_json::{Map, Value};
 
 impl DaemonServer {
@@ -47,7 +47,7 @@ impl DaemonServer {
         let op_for_error = op.clone();
         let operations = Arc::clone(&self.operations);
         let task = tokio::task::spawn_blocking(move || {
-            daemon_operation::dispatch_operation(
+            sandbox_runtime::dispatch_operation(
                 &operations,
                 OperationRequest::new(&op, &request_id, &args),
             )

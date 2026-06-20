@@ -57,7 +57,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     runtime.block_on(async move {
         let server = daemon::DaemonServer::new(
             server_config,
-            Arc::new(build_daemon_operations(&runtime_config)),
+            Arc::new(build_runtime_operations(&runtime_config)),
         );
         server.serve().await
     })?;
@@ -69,7 +69,9 @@ struct DaemonRuntimeConfig {
     isolated: IsolatedNetworkConfig,
 }
 
-fn build_daemon_operations(config: &DaemonRuntimeConfig) -> daemon_operation::DaemonOperations {
+fn build_runtime_operations(
+    config: &DaemonRuntimeConfig,
+) -> sandbox_runtime::SandboxDaemonOperations {
     let caps = workspace_resource_caps(&config.isolated);
     let workspace_runtime = Arc::new(workspace::WorkspaceRuntimeService::new(
         workspace::profile::WorkspaceModeManager::stubbed(
@@ -78,13 +80,13 @@ fn build_daemon_operations(config: &DaemonRuntimeConfig) -> daemon_operation::Da
         ),
     ));
     let workspace_session = Arc::new(
-        daemon_operation::workspace_session::WorkspaceSessionService::new(workspace_runtime),
+        sandbox_runtime::workspace_session::WorkspaceSessionService::new(workspace_runtime),
     );
-    let command = Arc::new(daemon_operation::CommandOperationService::new(
+    let command = Arc::new(sandbox_runtime::CommandOperationService::new(
         workspace_session,
         command_config(&config.daemon.commands),
     ));
-    daemon_operation::DaemonOperations::new(command)
+    sandbox_runtime::SandboxDaemonOperations::new(command)
 }
 
 fn workspace_resource_caps(config: &IsolatedNetworkConfig) -> workspace::profile::ResourceCaps {

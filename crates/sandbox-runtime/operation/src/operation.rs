@@ -1,11 +1,15 @@
-use crate::internal::services::DaemonOperations;
+use crate::internal::services::SandboxDaemonOperations;
 
-pub use sandbox_protocol::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationSpec};
+pub use sandbox_protocol::{
+    ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationAuthority, OperationCatalog, OperationFamily,
+    OperationSpec,
+};
 
 pub type OperationRequest<'a> = sandbox_protocol::Request<'a>;
 pub type OperationResponse = sandbox_protocol::Response;
 
-pub type OperationDispatch = fn(&DaemonOperations, OperationRequest<'_>) -> OperationResponse;
+pub type OperationDispatch =
+    fn(&SandboxDaemonOperations, OperationRequest<'_>) -> OperationResponse;
 
 #[derive(Clone, Copy)]
 pub struct OperationEntry {

@@ -275,6 +275,12 @@ Exit criteria:
 
 ## Phase 3: Create `sandbox-daemon`
 
+Prompt:
+
+```text
+docs/refactoring/sandbox-phase-3-daemon-prompt.md
+```
+
 Goal:
 
 - Rename the in-sandbox server process and fold the `eosd` adapter into it.
