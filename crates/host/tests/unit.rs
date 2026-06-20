@@ -8,13 +8,14 @@ mod daemon_wire;
 #[path = "../src/service/mod.rs"]
 mod service;
 
-#[allow(unused_imports)]
 pub(crate) use container::{
     container_copy_target, daemon_spawn_args, docker_display, docker_exec_args, docker_run_args,
     parse_published_addr, redact_docker_error_text, validate_remote_name, ContainerLifetime,
     ContainerSpec,
 };
 pub(crate) use service::workspace_root_from_args;
+
+const _: usize = std::mem::size_of::<service::ForwardError>();
 
 pub(crate) mod runtime_tests {
     include!(concat!(

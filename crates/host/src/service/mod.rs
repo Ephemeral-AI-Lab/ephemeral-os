@@ -10,7 +10,6 @@ mod lifecycle;
 mod types;
 mod utils;
 
-#[allow(unused_imports)]
 pub use forward::ForwardError;
 pub use types::{HostConfig, HostForwardRequest, SandboxHost, SandboxStatus};
 

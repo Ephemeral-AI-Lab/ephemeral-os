@@ -13,7 +13,7 @@ e2e-support = []
 anyhow.workspace = true
 # preserve_order is load-bearing: request args must cross the wire in
 # insertion order so host-encoded requests stay byte-compatible with the
-# frozen request fixtures in crates/shared/protocol/fixtures/wire_messages/.
+# frozen request fixtures in crates/protocol/fixtures/wire_messages/.
 serde_json = { workspace = true, features = ["preserve_order"] }
 sha2.workspace = true
 thiserror.workspace = true

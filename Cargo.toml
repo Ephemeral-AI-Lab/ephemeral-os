@@ -1,8 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/shared/protocol",
-    "crates/daemon/operation_service",
+    "crates/protocol",
+    "crates/daemon/daemon_operation",
     "crates/daemon/command",
     "crates/daemon/config",
     "crates/daemon/eosd",
@@ -55,10 +55,10 @@ netlink-sys = "0.8"
 command = { path = "crates/daemon/command" }
 config = { path = "crates/daemon/config" }
 layerstack = { path = "crates/daemon/layerstack" }
-operation_service = { path = "crates/daemon/operation_service" }
+daemon_operation = { path = "crates/daemon/daemon_operation" }
 overlay = { path = "crates/daemon/overlay" }
 namespace-process = { path = "crates/daemon/namespace-process" }
-protocol = { path = "crates/shared/protocol" }
+protocol = { path = "crates/protocol" }
 daemon = { path = "crates/daemon/core" }
 eosd = { path = "crates/daemon/eosd" }
 gateway = { path = "crates/gateway" }

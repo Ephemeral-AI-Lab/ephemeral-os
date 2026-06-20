@@ -12,7 +12,7 @@ use host::e2e_support::{
 };
 
 const HEARTBEAT_FIXTURE: &[u8] =
-    include_bytes!("../../shared/protocol/fixtures/wire_messages/heartbeat_request.json");
+    include_bytes!("../../protocol/fixtures/wire_messages/heartbeat_request.json");
 fn fixture_line(raw: &[u8]) -> Vec<u8> {
     let mut line = raw.to_vec();
     while line.last() == Some(&b'\n') {

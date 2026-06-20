@@ -1,11 +1,11 @@
 #[path = "service/cache.rs"]
-mod cache;
+pub(crate) mod cache;
 #[path = "service/impls/mod.rs"]
 mod impls;
 #[path = "service/model.rs"]
 mod model;
 #[path = "service/support.rs"]
-mod support;
+pub(crate) mod support;
 
 pub use impls::{
     acquire_snapshot_with_lease, compact_snapshot_layers, get_snapshot,
@@ -18,12 +18,3 @@ pub use model::{
 
 #[doc(hidden)]
 pub(crate) use cache::reset_service_cache_for_tests;
-#[cfg(test)]
-#[allow(unused_imports)]
-pub(crate) use cache::{
-    normalize_root_key, services, RootService, ServiceCache, SERVICE_CACHE_MAX,
-};
-#[doc(hidden)]
-#[cfg(test)]
-#[allow(unused_imports)]
-pub(crate) use support::{snapshot_manifest, snapshot_manifest_preserving_layer_ids};

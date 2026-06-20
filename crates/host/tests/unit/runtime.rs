@@ -106,8 +106,6 @@ fn daemon_spawn_args_pass_remote_config_path_to_eosd() {
             "/eos/runtime/runtime.sock",
             "--pid-file",
             "/eos/runtime/runtime.pid",
-            "--log-file",
-            "/eos/runtime/runtime.log",
             "--tcp-host",
             "0.0.0.0",
             "--tcp-port",

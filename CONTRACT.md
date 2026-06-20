@@ -3,8 +3,8 @@
 The sandbox system pins several version surfaces that must move deliberately.
 A careless bump silently breaks the thin-client handshake, the response
 envelope, or the on-disk manifest read path. The binding host<->box artifacts
-are `crates/shared/protocol/PROTOCOL.md` and the owner-local fixtures under
-`crates/shared/protocol/fixtures/` and
+are `crates/protocol/PROTOCOL.md` and the owner-local fixtures under
+`crates/protocol/fixtures/` and
 `crates/daemon/layerstack/tests/fixtures/`; no daemon implementation code
 crosses into host/gateway.
 
@@ -91,7 +91,7 @@ When any version must change:
 2. The golden fixtures are **immutable ground truth** captured from the
    original Python runtime, which has been removed — they can no longer be
    regenerated. Never edit a fixture to match code. Wire fixtures live under
-   `crates/shared/protocol/fixtures/wire_messages/`; CAS fixtures live under
+   `crates/protocol/fixtures/wire_messages/`; CAS fixtures live under
    `crates/daemon/layerstack/tests/fixtures/cas/`. Two deliberate exceptions,
    each a contract change made on purpose and recorded here:
    - **2026-06 — legacy `api.*` aliases retired.** The `op` field of the three

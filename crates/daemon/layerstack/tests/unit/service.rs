@@ -7,10 +7,10 @@ use crate::{
     process_state_test_lock, reset_process_state_for_tests, service, LayerStack, MergedView,
 };
 
-use super::{
-    normalize_root_key, services, snapshot_manifest, snapshot_manifest_preserving_layer_ids,
-    RootService, ServiceCache, SERVICE_CACHE_MAX,
+use crate::service::cache::{
+    normalize_root_key, services, RootService, ServiceCache, SERVICE_CACHE_MAX,
 };
+use crate::service::support::{snapshot_manifest, snapshot_manifest_preserving_layer_ids};
 
 fn root_service(root: &Path) -> TestResult<RootService> {
     Ok(std::sync::Arc::new(CommitWriter::new(root.to_path_buf())?))

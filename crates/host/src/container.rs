@@ -89,7 +89,6 @@ pub struct DaemonSpec {
 pub struct DaemonContainer {
     name: String,
     client: ProtocolClient,
-    daemon_log_path: String,
     token: String,
     forward_token: String,
     keep: bool,
@@ -130,9 +129,8 @@ impl DaemonContainer {
                 Ok(handle)
             }
             Err(err) => {
-                let log = handle.daemon_log().unwrap_or_default();
                 drop(handle);
-                Err(err.context(format!("daemon bringup failed; log tail:\n{log}")))
+                Err(err.context("daemon bringup failed"))
             }
         }
     }
@@ -192,11 +190,6 @@ impl DaemonContainer {
                 Some(forward_auth_token.clone()),
                 daemon.request_timeout,
             ),
-            daemon_log_path: daemon
-                .remote_daemon_dir
-                .join("runtime.log")
-                .to_string_lossy()
-                .into_owned(),
             token: auth_token,
             forward_token: forward_auth_token,
             keep,
@@ -279,11 +272,6 @@ impl DaemonContainer {
         docker(docker_exec_args(&self.name, argv))
     }
 
-    #[cfg(feature = "e2e-support")]
-    pub fn copy_daemon_log_to(&self, host_dest: &Path) -> Result<()> {
-        copy_path_from_container(&self.name, &self.daemon_log_path, host_dest)
-    }
-
     pub fn restart_daemon(&self, daemon: &DaemonSpec) -> Result<()> {
         let daemon_dir = path_str(&daemon.remote_daemon_dir)?;
         let remote_eosd_path = path_str(&daemon.remote_eosd_path)?;
@@ -324,18 +312,6 @@ impl DaemonContainer {
         );
         let arg_refs = args.iter().map(String::as_str).collect::<Vec<_>>();
         self.exec(&arg_refs)
-    }
-
-    fn daemon_log(&self) -> Option<String> {
-        docker([
-            "exec",
-            self.name.as_str(),
-            "tail",
-            "-n",
-            "40",
-            self.daemon_log_path.as_str(),
-        ])
-        .ok()
     }
 }
 
@@ -422,8 +398,6 @@ pub(crate) fn daemon_spawn_args(
         format!("{daemon_dir}/runtime.sock"),
         "--pid-file".to_owned(),
         format!("{daemon_dir}/runtime.pid"),
-        "--log-file".to_owned(),
-        format!("{daemon_dir}/runtime.log"),
         "--tcp-host".to_owned(),
         "0.0.0.0".to_owned(),
         "--tcp-port".to_owned(),

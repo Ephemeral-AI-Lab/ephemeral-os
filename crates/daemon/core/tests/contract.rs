@@ -15,7 +15,7 @@ macro_rules! fixture {
     ($name:literal) => {
         include_bytes!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../shared/protocol/fixtures/wire_messages/",
+            "/../../protocol/fixtures/wire_messages/",
             $name
         ))
     };

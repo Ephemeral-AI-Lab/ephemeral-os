@@ -56,7 +56,6 @@ pub(crate) fn process_state_test_lock() -> std::sync::MutexGuard<'static, ()> {
 
 pub(crate) use lock::*;
 pub(crate) use model::*;
-pub(crate) use service::*;
 pub(crate) use stack::squash::*;
 
 #[path = "unit/test_fixture.rs"]

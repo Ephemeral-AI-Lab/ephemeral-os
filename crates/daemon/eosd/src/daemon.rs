@@ -5,7 +5,6 @@ use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{anyhow, Context, Result};
 use config::configs::{
@@ -22,8 +21,8 @@ const DAEMON_CONFIG_YAML_ENV: &str = "EOS_DAEMON_CONFIG_YAML";
 ///
 /// Modes:
 /// - `eosd daemon --socket PATH --pid-file PATH ...` runs the foreground server.
-/// - `eosd daemon --spawn --socket PATH --pid-file PATH --log-file PATH ...`
-///   starts a detached foreground child and returns.
+/// - `eosd daemon --spawn --socket PATH --pid-file PATH ...` starts a
+///   detached foreground child and returns.
 /// - `eosd daemon --client SOCKET JSON` is the Rust replacement for
 ///   `thin_client.py`, preserving exit codes 97/98.
 pub(crate) fn run(args: std::env::Args) -> Result<()> {
@@ -39,18 +38,6 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
         return spawn_daemon(&config);
     }
     set_runner_config_env(&config.config_yaml_path);
-    emit_boot_event(
-        "config_loaded",
-        serde_json::json!({
-            "socket_path": config.socket_path.display().to_string(),
-            "pid_path": config.pid_path.display().to_string(),
-            "tcp_host": config.tcp_host.clone(),
-            "tcp_port": config.tcp_port,
-            "config_yaml": config.config_yaml_path.display().to_string(),
-            "auth_token_present": config.auth_token.as_ref().is_some_and(|token| !token.is_empty()),
-            "forward_auth_token_present": config.forward_auth_token.as_ref().is_some_and(|token| !token.is_empty()),
-        }),
-    );
     let server_config = daemon::ServerConfig {
         socket_path: config.socket_path,
         pid_path: config.pid_path,
@@ -111,7 +98,6 @@ pub(crate) struct DaemonCliConfig {
     pub(crate) config_yaml_path: PathBuf,
     socket_path: PathBuf,
     pid_path: PathBuf,
-    log_path: Option<PathBuf>,
     tcp_host: Option<String>,
     tcp_port: Option<u16>,
     pub(crate) auth_token: Option<String>,
@@ -132,7 +118,6 @@ impl DaemonCliConfig {
         };
         let mut socket_path = server_defaults.socket_path.clone();
         let mut pid_path = server_defaults.pid_path.clone();
-        let mut log_path = None;
         let mut tcp_host = None;
         let mut tcp_port = None;
         let mut auth_token = None;
@@ -147,9 +132,6 @@ impl DaemonCliConfig {
                 }
                 "--socket" => socket_path = PathBuf::from(required_arg(&mut args, "--socket")?),
                 "--pid-file" => pid_path = PathBuf::from(required_arg(&mut args, "--pid-file")?),
-                "--log-file" => {
-                    log_path = Some(PathBuf::from(required_arg(&mut args, "--log-file")?));
-                }
                 "--tcp-host" => tcp_host = Some(required_arg(&mut args, "--tcp-host")?),
                 "--tcp-port" => {
                     tcp_port = Some(
@@ -170,7 +152,7 @@ impl DaemonCliConfig {
                 }
                 "--help" | "-h" => {
                     println!(
-                        "usage: eosd daemon [--spawn] [--config-yaml PATH] [--socket PATH] [--pid-file PATH] [--log-file PATH] [--tcp-host HOST --tcp-port PORT --auth-token TOKEN --forward-auth-token TOKEN] | eosd daemon --client SOCKET JSON"
+                        "usage: eosd daemon [--spawn] [--config-yaml PATH] [--socket PATH] [--pid-file PATH] [--tcp-host HOST --tcp-port PORT --auth-token TOKEN --forward-auth-token TOKEN] | eosd daemon --client SOCKET JSON"
                     );
                     std::process::exit(0);
                 }
@@ -181,7 +163,6 @@ impl DaemonCliConfig {
             config_yaml_path,
             socket_path,
             pid_path,
-            log_path,
             tcp_host,
             tcp_port,
             auth_token: auth_token.or_else(|| std::env::var(DAEMON_AUTH_TOKEN_ENV).ok()),
@@ -296,49 +277,14 @@ fn spawn_daemon(config: &DaemonCliConfig) -> Result<()> {
         command.env(DAEMON_FORWARD_AUTH_TOKEN_ENV, token);
     }
     command.stdin(Stdio::null());
-    if let Some(path) = &config.log_path {
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)
-                .with_context(|| format!("failed to create log dir {}", parent.display()))?;
-        }
-        let log = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(path)
-            .with_context(|| format!("failed to open daemon log {}", path.display()))?;
-        command.stdout(Stdio::from(log.try_clone()?));
-        command.stderr(Stdio::from(log));
-    } else {
-        command.stdout(Stdio::null());
-        command.stderr(Stdio::null());
-    }
+    command.stdout(Stdio::null());
+    command.stderr(Stdio::null());
     command.spawn().context("failed to spawn eosd daemon")?;
     Ok(())
 }
 
 fn set_runner_config_env(config_yaml_path: &Path) {
     std::env::set_var(DAEMON_CONFIG_YAML_ENV, config_yaml_path);
-}
-
-fn emit_boot_event(event: &str, details: serde_json::Value) {
-    eprintln!(
-        "{}",
-        serde_json::json!({
-            "ts_ms": unix_ms(),
-            "level": "info",
-            "module": "daemon.boot",
-            "event": event,
-            "details": details,
-        })
-    );
-}
-
-fn unix_ms() -> u64 {
-    let millis = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis();
-    u64::try_from(millis).unwrap_or(u64::MAX)
 }
 
 fn daemon_already_running(pid_path: &Path, socket_path: &Path) -> bool {

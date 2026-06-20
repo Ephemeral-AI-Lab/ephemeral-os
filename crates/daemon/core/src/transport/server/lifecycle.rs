@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use protocol::ProtocolErrorKind;
 use tokio::io::{AsyncWrite, AsyncWriteExt};
 use tokio::net::{TcpListener, UnixListener};
 use tokio::sync::Semaphore;
@@ -48,13 +47,6 @@ impl DaemonServer {
         }
         let _ = tokio::fs::remove_file(&server.config.socket_path).await;
         let unix_listener = UnixListener::bind(&server.config.socket_path)?;
-        emit_boot_event(
-            "listen_bound",
-            serde_json::json!({
-                "listener_kind": "unix",
-                "socket_path": server.config.socket_path.display().to_string(),
-            }),
-        );
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -76,7 +68,7 @@ impl DaemonServer {
                         accepted = unix_listener.accept() => {
                             let (stream, _) = accepted?;
                             let Ok(permit) = Arc::clone(&connection_permits).try_acquire_owned() else {
-                                tokio::spawn(reject_overloaded_connection(stream, "unix"));
+                                tokio::spawn(reject_overloaded_connection(stream));
                                 continue;
                             };
                             let server = Arc::clone(&server);
@@ -94,14 +86,6 @@ impl DaemonServer {
         let mut tcp_server = match (&server.config.tcp_host, server.config.tcp_port) {
             (Some(host), Some(port)) => {
                 let listener = TcpListener::bind((host.as_str(), port)).await?;
-                emit_boot_event(
-                    "listen_bound",
-                    serde_json::json!({
-                        "listener_kind": "tcp",
-                        "host": host,
-                        "port": port,
-                    }),
-                );
                 let server = Arc::clone(&server);
                 let connection_permits = Arc::clone(&connection_permits);
                 Some(tokio::spawn(async move {
@@ -111,7 +95,7 @@ impl DaemonServer {
                             accepted = listener.accept() => {
                                 let (stream, peer_addr) = accepted?;
                                 let Ok(permit) = Arc::clone(&connection_permits).try_acquire_owned() else {
-                                    tokio::spawn(reject_overloaded_connection(stream, "tcp"));
+                                    tokio::spawn(reject_overloaded_connection(stream));
                                     continue;
                                 };
                                 let local_addr = stream.local_addr().ok();
@@ -169,18 +153,10 @@ impl DaemonServer {
     }
 }
 
-async fn reject_overloaded_connection<S>(mut stream: S, listener_kind: &'static str)
+async fn reject_overloaded_connection<S>(mut stream: S)
 where
     S: AsyncWrite + Unpin,
 {
-    emit_boot_event(
-        "connection_rejected",
-        serde_json::json!({
-            "listener_kind": listener_kind,
-            "error_kind": ProtocolErrorKind::ServerBusy.as_str(),
-            "max_concurrent_connections": MAX_CONCURRENT_CONNECTIONS,
-        }),
-    );
     let response = crate::dispatcher::error_response(
         crate::wire::ErrorKind::ServerBusy,
         "daemon is at connection capacity",
@@ -198,25 +174,4 @@ async fn cleanup_active_runs_on_shutdown(server: &Arc<DaemonServer>) {
 
 async fn signal_shutdown() {
     let _ = tokio::signal::ctrl_c().await;
-}
-
-fn emit_boot_event(event: &str, details: serde_json::Value) {
-    eprintln!(
-        "{}",
-        serde_json::json!({
-            "ts_ms": unix_ms(),
-            "level": "info",
-            "module": "daemon.boot",
-            "event": event,
-            "details": details,
-        })
-    );
-}
-
-fn unix_ms() -> u64 {
-    let millis = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis();
-    u64::try_from(millis).unwrap_or(u64::MAX)
 }

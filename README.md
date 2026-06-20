@@ -25,21 +25,21 @@ eosd / daemon  (bin+lib, in-container)   executes in-box commands and
 | `gateway` | bin | decode requests, enforce visibility, route by local table, return response | contain fleet logic |
 | `host` | lib | host engine, protocol client, Docker runtime | depend on daemon implementation crates |
 | `eosd` / `daemon` | bin+lib | dispatch in-box daemon requests | know about Docker, sandbox_ids, or the fleet |
-| `crates/shared/protocol/` | shared contract | envelope/fault vocabulary, wire protocol prose and fixtures | depend on host/gateway/daemon implementation crates |
+| `crates/protocol/` | cross-boundary contract | envelope/fault vocabulary, wire protocol prose and fixtures | depend on host/gateway/daemon implementation crates |
 | `layerstack` | lib (in-box) | the two frozen content hashes + manifest/layer types, storage, leases, and compaction | be depended on by host-side crates |
 
 **Boundary law:** host/gateway crates do not depend on daemon implementation
 crates, and daemon crates do not depend on host/gateway crates. Cross-boundary
-schemas live in `crates/shared/protocol`. Wire and
+schemas live in `crates/protocol`. Wire and
 CAS fixtures live with their owning crates. `cargo run -p xtask -- check-contract`
 is the drift gate.
 
 ## The pieces
 
-- `crates/shared/protocol/PROTOCOL.md` — framing/auth/errors/canonicalization
-  plus immutable wire fixtures in `crates/shared/protocol/fixtures/`.
+- `crates/protocol/PROTOCOL.md` — framing/auth/errors/canonicalization
+  plus immutable wire fixtures in `crates/protocol/fixtures/`.
 - `crates/daemon/layerstack/tests/fixtures/` — daemon-owned CAS fixtures.
-- `crates/` — the workspace. Shared: `shared/protocol`.
+- `crates/` — the workspace. Contract: `protocol`.
   Gateway: `gateway`. Host: `host`. Daemon side:
   `daemon/eosd`, `daemon/core`, `daemon/layerstack`, `daemon/overlay`,
   `daemon/namespace`, `daemon/command`, `daemon/operation_service`,
@@ -63,25 +63,27 @@ cargo run -p xtask -- package --profile release
 # optional: set a shared custom socket once instead of passing --listen/--socket
 # export EOS_GATEWAY_SOCKET=/tmp/eos-sandbox.sock
 
-# install the CLI binary once
+# repo-local gateway CLI; equivalent to `cargo run -p gateway -- ...`
+bin/sandbox-gateway --help
+
+# optional: install the CLI binary once for global `sandbox-gateway ...`
 cargo install --path crates/gateway --locked
 
 # serve the sandbox gateway (one client socket + one operator socket beside it)
-sandbox-gateway host serve
+bin/sandbox-gateway host serve
 
 # inspect through the gateway client mode
-sandbox-gateway host images profiles
-sandbox-gateway host images list
-sandbox-gateway host containers list
-sandbox-gateway host sandboxes list
-sandbox-gateway host containers start <docker-image>
+bin/sandbox-gateway host images profiles
+bin/sandbox-gateway host images list
+bin/sandbox-gateway host containers list
+bin/sandbox-gateway host sandboxes list
+bin/sandbox-gateway host containers start <docker-image>
 
 # acquire a sandbox, then operate inside its daemon
-SID=$(sandbox-gateway host sandboxes acquire | jq -r .sandbox_id)
-sandbox-gateway host sandboxes setup --sandbox-id "$SID" --workspace-root /testbed
-sandbox-gateway daemon --sandbox-id "$SID" ping
-sandbox-gateway daemon --sandbox-id "$SID" commands exec -- pwd
-sandbox-gateway host sandboxes release "$SID"
+SID=$(bin/sandbox-gateway host sandboxes acquire | jq -r .sandbox_id)
+bin/sandbox-gateway daemon --sandbox-id "$SID" ping
+bin/sandbox-gateway daemon --sandbox-id "$SID" commands exec -- pwd
+bin/sandbox-gateway host sandboxes release "$SID"
 ```
 
 ## Version pins
