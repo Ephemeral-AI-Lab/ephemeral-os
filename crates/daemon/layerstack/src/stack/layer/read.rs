@@ -46,9 +46,6 @@ impl LayerReadError {
     }
 }
 
-/// Crate result alias for stored layer reads.
-type Result<T> = std::result::Result<T, LayerReadError>;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum LayerReadDropReason {
     UnsupportedSpecialFile,
@@ -87,7 +84,10 @@ enum LayerDirEntry {
 }
 
 impl LayerDirEntry {
-    fn materialize_in_memory(&self, max_bytes: usize) -> Result<LayerChange> {
+    fn materialize_in_memory(
+        &self,
+        max_bytes: usize,
+    ) -> std::result::Result<LayerChange, LayerReadError> {
         match self {
             Self::Write {
                 path,
@@ -128,7 +128,9 @@ impl RegularFileReadMeta {
     }
 }
 
-pub(crate) fn read_layer_dir(layer_dir: &Path) -> Result<Vec<LayerChange>> {
+pub(crate) fn read_layer_dir(
+    layer_dir: &Path,
+) -> std::result::Result<Vec<LayerChange>, LayerReadError> {
     let metadata = read_layer_dir_metadata(layer_dir)?;
     if let Some(drop) = metadata.drops.first() {
         return Err(LayerReadError::InvalidPathChange(format!(
@@ -139,7 +141,7 @@ pub(crate) fn read_layer_dir(layer_dir: &Path) -> Result<Vec<LayerChange>> {
     materialize_entries_in_memory(&metadata.entries, usize::MAX)
 }
 
-fn read_layer_dir_metadata(layer_dir: &Path) -> Result<LayerDirRead> {
+fn read_layer_dir_metadata(layer_dir: &Path) -> std::result::Result<LayerDirRead, LayerReadError> {
     std::fs::create_dir_all(layer_dir).map_err(|err| LayerReadError::io(layer_dir, err))?;
     let mut emitted_opaque_dirs = HashSet::new();
     let mut entries = Vec::new();
@@ -160,7 +162,7 @@ fn walk_layer_dir(
     emitted_opaque_dirs: &mut HashSet<String>,
     entries: &mut Vec<LayerDirEntry>,
     drops: &mut Vec<LayerReadDrop>,
-) -> Result<()> {
+) -> std::result::Result<(), LayerReadError> {
     let mut dir_entries = std::fs::read_dir(dir)
         .map_err(|err| LayerReadError::io(dir, err))?
         .collect::<std::result::Result<Vec<_>, _>>()
@@ -203,7 +205,7 @@ fn read_layer_file_entry(
     emitted_opaque_dirs: &mut HashSet<String>,
     entries: &mut Vec<LayerDirEntry>,
     drops: &mut Vec<LayerReadDrop>,
-) -> Result<()> {
+) -> std::result::Result<(), LayerReadError> {
     let rel = relative_path(root, entry)?;
     let name = entry
         .file_name()
@@ -266,7 +268,7 @@ fn read_regular_file(
     entry: &Path,
     expected_meta: &RegularFileReadMeta,
     max_bytes: usize,
-) -> Result<Vec<u8>> {
+) -> std::result::Result<Vec<u8>, LayerReadError> {
     ensure_layer_file_size(entry, expected_meta.len, max_bytes)?;
     let file = open_regular_file_no_follow(entry).map_err(|err| LayerReadError::io(entry, err))?;
     let actual_meta = file
@@ -294,7 +296,11 @@ fn read_regular_file(
     Ok(content)
 }
 
-fn ensure_layer_file_size(entry: &Path, size: u64, max_bytes: usize) -> Result<()> {
+fn ensure_layer_file_size(
+    entry: &Path,
+    size: u64,
+    max_bytes: usize,
+) -> std::result::Result<(), LayerReadError> {
     let max = u64::try_from(max_bytes).unwrap_or(u64::MAX);
     if size > max {
         return Err(layer_file_too_large(entry, size, max_bytes));
@@ -350,7 +356,10 @@ fn layer_file_too_large(entry: &Path, size: u64, max_bytes: usize) -> LayerReadE
     )
 }
 
-fn symlink_entry(path: LayerPath, entry: &Path) -> Result<LayerDirEntry> {
+fn symlink_entry(
+    path: LayerPath,
+    entry: &Path,
+) -> std::result::Result<LayerDirEntry, LayerReadError> {
     Ok(LayerDirEntry::Symlink {
         path,
         source_path: path_string(
@@ -362,18 +371,18 @@ fn symlink_entry(path: LayerPath, entry: &Path) -> Result<LayerDirEntry> {
 fn materialize_entries_in_memory(
     entries: &[LayerDirEntry],
     max_bytes: usize,
-) -> Result<Vec<LayerChange>> {
+) -> std::result::Result<Vec<LayerChange>, LayerReadError> {
     entries
         .iter()
         .map(|entry| entry.materialize_in_memory(max_bytes))
         .collect()
 }
 
-fn layer_path(path: &str) -> Result<LayerPath> {
+fn layer_path(path: &str) -> std::result::Result<LayerPath, LayerReadError> {
     LayerPath::parse(path).map_err(LayerReadError::Path)
 }
 
-fn relative_path(root: &Path, entry: &Path) -> Result<PathBuf> {
+fn relative_path(root: &Path, entry: &Path) -> std::result::Result<PathBuf, LayerReadError> {
     entry
         .strip_prefix(root)
         .map(Path::to_path_buf)
@@ -420,7 +429,7 @@ fn hex_bytes(bytes: &[u8]) -> String {
     out
 }
 
-pub(crate) fn relative_to_string(path: &Path) -> Result<String> {
+pub(crate) fn relative_to_string(path: &Path) -> std::result::Result<String, LayerReadError> {
     let mut parts = Vec::new();
     for component in path.components() {
         parts.push(path_component_string(component.as_os_str())?);
@@ -428,7 +437,7 @@ pub(crate) fn relative_to_string(path: &Path) -> Result<String> {
     Ok(parts.join("/"))
 }
 
-fn path_string(path: &Path) -> Result<String> {
+fn path_string(path: &Path) -> std::result::Result<String, LayerReadError> {
     path.to_str().map(str::to_owned).ok_or_else(|| {
         LayerReadError::InvalidPathChange(format!(
             "stored layer path is not valid UTF-8: {}",
@@ -437,7 +446,9 @@ fn path_string(path: &Path) -> Result<String> {
     })
 }
 
-fn path_component_string(component: &std::ffi::OsStr) -> Result<String> {
+fn path_component_string(
+    component: &std::ffi::OsStr,
+) -> std::result::Result<String, LayerReadError> {
     component.to_str().map(str::to_owned).ok_or_else(|| {
         let bytes = component.as_encoded_bytes();
         LayerReadError::InvalidPathChange(format!(
@@ -466,7 +477,10 @@ fn whiteout_target(rel: &Path) -> PathBuf {
         )
 }
 
-fn is_overlay_whiteout(entry: &Path, meta: &std::fs::Metadata) -> Result<bool> {
+fn is_overlay_whiteout(
+    entry: &Path,
+    meta: &std::fs::Metadata,
+) -> std::result::Result<bool, LayerReadError> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::{FileTypeExt, MetadataExt};
@@ -483,7 +497,7 @@ fn has_overlay_opaque_xattr(entry: &Path) -> bool {
 }
 
 #[cfg(target_os = "linux")]
-fn xattr_value(path: &Path, name: &str) -> Result<Option<Vec<u8>>> {
+fn xattr_value(path: &Path, name: &str) -> std::result::Result<Option<Vec<u8>>, LayerReadError> {
     use rustix::io::Errno;
 
     let mut buffer = vec![0_u8; 64];
@@ -507,6 +521,9 @@ fn xattr_value(path: &Path, name: &str) -> Result<Option<Vec<u8>>> {
     clippy::unnecessary_wraps,
     reason = "non-Linux parity keeps the Linux fallible helper signature"
 )]
-const fn xattr_value(_path: &Path, _name: &str) -> Result<Option<Vec<u8>>> {
+const fn xattr_value(
+    _path: &Path,
+    _name: &str,
+) -> std::result::Result<Option<Vec<u8>>, LayerReadError> {
     Ok(None)
 }

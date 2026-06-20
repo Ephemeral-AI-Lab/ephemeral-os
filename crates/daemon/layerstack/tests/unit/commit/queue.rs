@@ -8,9 +8,10 @@ use crate::commit::worker::PreparedChangeset;
 use crate::commit::CommitStatus;
 use crate::model::LayerPath;
 
-type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
-
-fn prepared(path: &str, atomic: bool) -> TestResult<PreparedChangeset> {
+fn prepared(
+    path: &str,
+    atomic: bool,
+) -> Result<PreparedChangeset, Box<dyn std::error::Error + Send + Sync>> {
     let path = LayerPath::parse(path)?;
     let changes = vec![crate::model::LayerChange::Write {
         path: path.clone(),
@@ -23,7 +24,7 @@ fn prepared(path: &str, atomic: bool) -> TestResult<PreparedChangeset> {
     )?)
 }
 
-fn item(path: &str, atomic: bool) -> TestResult<WorkItem> {
+fn item(path: &str, atomic: bool) -> Result<WorkItem, Box<dyn std::error::Error + Send + Sync>> {
     let (reply, _) = mpsc::channel();
     Ok(WorkItem {
         prepared: prepared(path, atomic)?,
@@ -32,7 +33,8 @@ fn item(path: &str, atomic: bool) -> TestResult<WorkItem> {
 }
 
 #[test]
-fn batches_disjoint_non_atomic_changesets() -> TestResult {
+fn batches_disjoint_non_atomic_changesets() -> Result<(), Box<dyn std::error::Error + Send + Sync>>
+{
     let batches = disjoint_batches(vec![item("a.txt", false)?, item("b.txt", false)?]);
     assert_eq!(batches.len(), 1);
     assert_eq!(batches[0].len(), 2);
@@ -40,7 +42,7 @@ fn batches_disjoint_non_atomic_changesets() -> TestResult {
 }
 
 #[test]
-fn atomic_changesets_are_not_batched() -> TestResult {
+fn atomic_changesets_are_not_batched() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let batches = disjoint_batches(vec![item("a.txt", true)?, item("b.txt", true)?]);
     assert_eq!(batches.len(), 2);
     assert_eq!(batches[0].len(), 1);
@@ -49,7 +51,8 @@ fn atomic_changesets_are_not_batched() -> TestResult {
 }
 
 #[test]
-fn overlapping_non_atomic_changesets_are_not_batched() -> TestResult {
+fn overlapping_non_atomic_changesets_are_not_batched(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let batches = disjoint_batches(vec![item("a.txt", false)?, item("a.txt", false)?]);
     assert_eq!(batches.len(), 2);
     assert_eq!(batches[0].len(), 1);
@@ -58,7 +61,8 @@ fn overlapping_non_atomic_changesets_are_not_batched() -> TestResult {
 }
 
 #[test]
-fn cas_retry_exhaustion_surfaces_aborted_version() -> TestResult {
+fn cas_retry_exhaustion_surfaces_aborted_version(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let prepared = prepared("a.txt", true)?;
     let result = cas_exhaustion_result(
         &prepared,

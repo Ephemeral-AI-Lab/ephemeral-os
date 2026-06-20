@@ -2,12 +2,12 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use sandbox_manager::{
-    ManagerError, ManagerResult, ManagerServices, SandboxDaemonClient, SandboxDaemonEndpoint,
+    ManagerError, ManagerServices, SandboxDaemonClient, SandboxDaemonEndpoint,
     SandboxDaemonInstaller, SandboxId, SandboxRecord, SandboxRuntime, SandboxState, SandboxStore,
 };
 use sandbox_protocol::{
-    ArgKind, OperationAuthority, OperationCatalog, OperationFamily, OperationSpec, Request,
-    SandboxResponse,
+    ArgKind, OperationCatalog, OperationExecutionSpace, OperationFamily, OperationRequest,
+    OperationResponse, OperationSpec,
 };
 use serde_json::{json, Value};
 
@@ -28,7 +28,7 @@ struct FakeRuntime {
 }
 
 impl SandboxRuntime for FakeRuntime {
-    fn create_sandbox(&self, id: &SandboxId) -> ManagerResult<()> {
+    fn create_sandbox(&self, id: &SandboxId) -> Result<(), ManagerError> {
         self.created
             .lock()
             .expect("created lock")
@@ -36,7 +36,7 @@ impl SandboxRuntime for FakeRuntime {
         Ok(())
     }
 
-    fn destroy_sandbox(&self, record: &SandboxRecord) -> ManagerResult<()> {
+    fn destroy_sandbox(&self, record: &SandboxRecord) -> Result<(), ManagerError> {
         self.destroyed
             .lock()
             .expect("destroyed lock")
@@ -52,7 +52,7 @@ struct FakeInstaller {
 }
 
 impl SandboxDaemonInstaller for FakeInstaller {
-    fn start_daemon(&self, record: &SandboxRecord) -> ManagerResult<SandboxDaemonEndpoint> {
+    fn start_daemon(&self, record: &SandboxRecord) -> Result<SandboxDaemonEndpoint, ManagerError> {
         self.started
             .lock()
             .expect("started lock")
@@ -63,7 +63,7 @@ impl SandboxDaemonInstaller for FakeInstaller {
         ))
     }
 
-    fn stop_daemon(&self, record: &SandboxRecord) -> ManagerResult<()> {
+    fn stop_daemon(&self, record: &SandboxRecord) -> Result<(), ManagerError> {
         self.stopped
             .lock()
             .expect("stopped lock")
@@ -81,13 +81,13 @@ impl SandboxDaemonClient for FakeClient {
     fn describe_operations(
         &self,
         endpoint: &SandboxDaemonEndpoint,
-    ) -> ManagerResult<OperationCatalog> {
+    ) -> Result<OperationCatalog, ManagerError> {
         self.described
             .lock()
             .expect("described lock")
             .push(endpoint.socket_path.clone());
         Ok(OperationCatalog::new(
-            OperationAuthority::SandboxDaemon,
+            OperationExecutionSpace::Runtime,
             TEST_DAEMON_SPECS,
         ))
     }
@@ -96,9 +96,9 @@ impl SandboxDaemonClient for FakeClient {
         &self,
         _endpoint: &SandboxDaemonEndpoint,
         request: sandbox_protocol::SandboxRequest,
-    ) -> ManagerResult<SandboxResponse> {
-        let request = request.as_request();
-        Ok(SandboxResponse::ok(
+    ) -> Result<OperationResponse, ManagerError> {
+        let request = request.as_operation_request();
+        Ok(OperationResponse::ok(
             &request,
             json!({"forwarded_request_id": request.request_id}),
         ))
@@ -125,7 +125,7 @@ fn services() -> (
 }
 
 fn dispatch(services: &ManagerServices, op: &str, args: Value) -> Value {
-    sandbox_manager::dispatch_operation(services, Request::new(op, "req-1", &args))
+    sandbox_manager::dispatch_operation(services, OperationRequest::new(op, "req-1", &args))
         .into_json_value()
 }
 
@@ -142,7 +142,7 @@ fn operation_catalog_contains_only_manager_operations() {
         .map(|spec| spec.name)
         .collect::<Vec<_>>();
 
-    assert_eq!(catalog.authority, OperationAuthority::SandboxManager);
+    assert_eq!(catalog.operation_space, OperationExecutionSpace::Manager);
     assert_eq!(
         names,
         [
@@ -253,7 +253,7 @@ fn describe_daemon_operations_uses_daemon_client_trait() {
         "describe_daemon_operations",
         json!({"sandbox_id": "sbox-1"}),
     );
-    assert_eq!(catalog["authority"], "sandbox_daemon");
+    assert_eq!(catalog["operation_space"], "runtime");
     assert_eq!(catalog["operations"][0]["name"], "daemon_test_operation");
     assert_eq!(
         client.described.lock().expect("described lock").as_slice(),

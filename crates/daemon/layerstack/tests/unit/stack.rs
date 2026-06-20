@@ -7,10 +7,9 @@ use super::*;
 use crate::fs::{remove_path, write_manifest};
 use crate::workspace_base::build_workspace_base;
 
-type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
-
 #[test]
-fn active_manifest_reads_wait_for_exclusive_storage_replacement() -> TestResult {
+fn active_manifest_reads_wait_for_exclusive_storage_replacement(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = CommitFixture::new("read-blocks-replace")?;
     std::fs::write(fixture.workspace.join("tracked.txt"), "base\n")?;
     build_workspace_base(&fixture.root, &fixture.workspace, false)?;
@@ -20,11 +19,13 @@ fn active_manifest_reads_wait_for_exclusive_storage_replacement() -> TestResult 
 
     let (version_tx, version_rx) = mpsc::channel();
     let root = fixture.root.clone();
-    let reader = std::thread::spawn(move || -> TestResult {
-        let version = LayerStack::open(root)?.read_active_manifest()?.version;
-        version_tx.send(version)?;
-        Ok(())
-    });
+    let reader = std::thread::spawn(
+        move || -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+            let version = LayerStack::open(root)?.read_active_manifest()?.version;
+            version_tx.send(version)?;
+            Ok(())
+        },
+    );
 
     assert!(
         version_rx.recv_timeout(Duration::from_millis(50)).is_err(),
@@ -47,7 +48,7 @@ struct CommitFixture {
 }
 
 impl CommitFixture {
-    fn new(label: &str) -> TestResult<Self> {
+    fn new(label: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let base = std::env::temp_dir().join(format!(
             "layerstack-commit-{label}-{}-{}",
             std::process::id(),

@@ -57,8 +57,6 @@ impl CaptureError {
     }
 }
 
-type Result<T> = std::result::Result<T, CaptureError>;
-
 #[derive(Debug)]
 enum PendingChange {
     Write {
@@ -79,7 +77,10 @@ enum PendingChange {
 }
 
 impl PendingChange {
-    fn materialize_in_memory(self, max_bytes: usize) -> Result<LayerChange> {
+    fn materialize_in_memory(
+        self,
+        max_bytes: usize,
+    ) -> std::result::Result<LayerChange, CaptureError> {
         match self {
             Self::Write {
                 path,
@@ -102,7 +103,7 @@ impl PendingChange {
 ///
 /// Returns [`CaptureError`] when metadata capture or selected payload
 /// materialization fails.
-pub fn capture_upperdir(upperdir: &Path) -> Result<CapturedChanges> {
+pub fn capture_upperdir(upperdir: &Path) -> std::result::Result<CapturedChanges, CaptureError> {
     std::fs::create_dir_all(upperdir).map_err(|err| CaptureError::capture(upperdir, err))?;
     let mut emitted_opaque_dirs = HashSet::new();
     let mut entries = Vec::new();
@@ -122,7 +123,7 @@ pub fn capture_upperdir(upperdir: &Path) -> Result<CapturedChanges> {
     let changes = entries
         .into_iter()
         .map(|entry| entry.materialize_in_memory(MAX_CAPTURE_FILE_BYTES))
-        .collect::<Result<Vec<_>>>()?;
+        .collect::<std::result::Result<Vec<_>, CaptureError>>()?;
     Ok(CapturedChanges {
         changes,
         protected_drops,
@@ -137,7 +138,7 @@ fn walk_upperdir(
     entries: &mut Vec<PendingChange>,
     protected_drops: &mut Vec<ProtectedPathDrop>,
     stats: &mut TreeResourceStats,
-) -> Result<()> {
+) -> std::result::Result<(), CaptureError> {
     let mut dir_entries = std::fs::read_dir(dir)
         .map_err(|err| CaptureError::capture(dir, err))?
         .collect::<std::result::Result<Vec<_>, _>>()
@@ -196,7 +197,7 @@ fn capture_file_entry_metadata(
     emitted_opaque_dirs: &mut HashSet<String>,
     entries: &mut Vec<PendingChange>,
     protected_drops: &mut Vec<ProtectedPathDrop>,
-) -> Result<()> {
+) -> std::result::Result<(), CaptureError> {
     let rel = relative_path(root, entry)?;
     let name = entry
         .file_name()
@@ -269,7 +270,7 @@ fn read_regular_file(
     entry: &Path,
     expected_meta: &std::fs::Metadata,
     max_bytes: usize,
-) -> Result<Vec<u8>> {
+) -> std::result::Result<Vec<u8>, CaptureError> {
     ensure_capture_file_size(entry, expected_meta.len(), max_bytes)?;
     let file =
         open_regular_file_no_follow(entry).map_err(|err| CaptureError::capture(entry, err))?;
@@ -298,7 +299,11 @@ fn read_regular_file(
     Ok(content)
 }
 
-fn ensure_capture_file_size(entry: &Path, size: u64, max_bytes: usize) -> Result<()> {
+fn ensure_capture_file_size(
+    entry: &Path,
+    size: u64,
+    max_bytes: usize,
+) -> std::result::Result<(), CaptureError> {
     let max = u64::try_from(max_bytes).unwrap_or(u64::MAX);
     if size > max {
         return Err(capture_file_too_large(entry, size, max_bytes));
@@ -354,7 +359,10 @@ fn capture_file_too_large(entry: &Path, size: u64, max_bytes: usize) -> CaptureE
     )
 }
 
-fn symlink_entry(path: LayerPath, entry: &Path) -> Result<PendingChange> {
+fn symlink_entry(
+    path: LayerPath,
+    entry: &Path,
+) -> std::result::Result<PendingChange, CaptureError> {
     Ok(PendingChange::Symlink {
         path,
         source_path: path_string(
@@ -363,11 +371,11 @@ fn symlink_entry(path: LayerPath, entry: &Path) -> Result<PendingChange> {
     })
 }
 
-fn layer_path(path: &str) -> Result<LayerPath> {
+fn layer_path(path: &str) -> std::result::Result<LayerPath, CaptureError> {
     LayerPath::parse(path).map_err(CaptureError::Path)
 }
 
-fn relative_path(root: &Path, entry: &Path) -> Result<PathBuf> {
+fn relative_path(root: &Path, entry: &Path) -> std::result::Result<PathBuf, CaptureError> {
     entry
         .strip_prefix(root)
         .map(Path::to_path_buf)
@@ -413,7 +421,7 @@ fn hex_bytes(bytes: &[u8]) -> String {
     out
 }
 
-fn relative_to_string(path: &Path) -> Result<String> {
+fn relative_to_string(path: &Path) -> std::result::Result<String, CaptureError> {
     let mut parts = Vec::new();
     for component in path.components() {
         parts.push(path_component_string(component.as_os_str())?);
@@ -421,7 +429,7 @@ fn relative_to_string(path: &Path) -> Result<String> {
     Ok(parts.join("/"))
 }
 
-fn path_string(path: &Path) -> Result<String> {
+fn path_string(path: &Path) -> std::result::Result<String, CaptureError> {
     path.to_str().map(str::to_owned).ok_or_else(|| {
         CaptureError::InvalidPathChange(format!(
             "overlay path is not valid UTF-8: {}",
@@ -430,7 +438,7 @@ fn path_string(path: &Path) -> Result<String> {
     })
 }
 
-fn path_component_string(component: &std::ffi::OsStr) -> Result<String> {
+fn path_component_string(component: &std::ffi::OsStr) -> std::result::Result<String, CaptureError> {
     component.to_str().map(str::to_owned).ok_or_else(|| {
         let bytes = component.as_encoded_bytes();
         CaptureError::InvalidPathChange(format!(
@@ -459,7 +467,10 @@ fn whiteout_target(rel: &Path) -> PathBuf {
         )
 }
 
-fn is_overlay_whiteout(entry: &Path, meta: &std::fs::Metadata) -> Result<bool> {
+fn is_overlay_whiteout(
+    entry: &Path,
+    meta: &std::fs::Metadata,
+) -> std::result::Result<bool, CaptureError> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::{FileTypeExt, MetadataExt};
@@ -476,7 +487,7 @@ fn has_overlay_opaque_xattr(entry: &Path) -> bool {
 }
 
 #[cfg(target_os = "linux")]
-fn xattr_value(path: &Path, name: &str) -> Result<Option<Vec<u8>>> {
+fn xattr_value(path: &Path, name: &str) -> std::result::Result<Option<Vec<u8>>, CaptureError> {
     use rustix::io::Errno;
 
     let mut buffer = vec![0_u8; 64];
@@ -500,6 +511,9 @@ fn xattr_value(path: &Path, name: &str) -> Result<Option<Vec<u8>>> {
     clippy::unnecessary_wraps,
     reason = "non-Linux parity keeps the Linux fallible helper signature"
 )]
-const fn xattr_value(_path: &Path, _name: &str) -> Result<Option<Vec<u8>>> {
+const fn xattr_value(
+    _path: &Path,
+    _name: &str,
+) -> std::result::Result<Option<Vec<u8>>, CaptureError> {
     Ok(None)
 }

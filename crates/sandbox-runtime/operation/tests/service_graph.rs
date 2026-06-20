@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use sandbox_protocol::OperationAuthority;
+use sandbox_protocol::OperationExecutionSpace;
 use sandbox_runtime::command::{CommandOperationService, ExecCommandInput};
 use sandbox_runtime::workspace_remount::{
     CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountService,
 };
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
-use sandbox_runtime::SandboxDaemonOperations;
+use sandbox_runtime::SandboxRuntimeOperations;
 use workspace::{
     CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest, LatestSnapshotRequest,
     RemountWorkspaceRequest, WorkspaceError, WorkspaceHandle, WorkspaceRuntimeHooks,
@@ -70,7 +70,7 @@ fn runtime_operations_exposes_only_command_as_external_lane() {
     ));
 
     let _ = remount;
-    let operations = SandboxDaemonOperations::new(Arc::clone(&command));
+    let operations = SandboxRuntimeOperations::new(Arc::clone(&command));
 
     assert!(Arc::ptr_eq(&operations.command, &command));
 }
@@ -99,7 +99,7 @@ fn operation_catalog_exports_daemon_command_operations() {
         .map(|spec| spec.name)
         .collect::<Vec<_>>();
 
-    assert_eq!(catalog.authority, OperationAuthority::SandboxDaemon);
+    assert_eq!(catalog.operation_space, OperationExecutionSpace::Runtime);
     assert_eq!(
         names,
         [

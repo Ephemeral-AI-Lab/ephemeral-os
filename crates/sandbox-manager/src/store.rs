@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard};
 
-use crate::{
-    ManagerError, ManagerResult, SandboxDaemonEndpoint, SandboxId, SandboxRecord, SandboxState,
-};
+use crate::{ManagerError, SandboxDaemonEndpoint, SandboxId, SandboxRecord, SandboxState};
 
 #[derive(Debug, Default)]
 pub struct SandboxStore {
@@ -16,7 +14,7 @@ impl SandboxStore {
         Self::default()
     }
 
-    pub fn create(&self, id: SandboxId) -> ManagerResult<SandboxRecord> {
+    pub fn create(&self, id: SandboxId) -> Result<SandboxRecord, ManagerError> {
         let mut records = self.records()?;
         if records.contains_key(&id) {
             return Err(ManagerError::DuplicateSandbox { id });
@@ -26,7 +24,7 @@ impl SandboxStore {
         Ok(record)
     }
 
-    pub fn insert(&self, record: SandboxRecord) -> ManagerResult<SandboxRecord> {
+    pub fn insert(&self, record: SandboxRecord) -> Result<SandboxRecord, ManagerError> {
         let mut records = self.records()?;
         if records.contains_key(&record.id) {
             return Err(ManagerError::DuplicateSandbox {
@@ -37,7 +35,7 @@ impl SandboxStore {
         Ok(record)
     }
 
-    pub fn update(&self, record: SandboxRecord) -> ManagerResult<SandboxRecord> {
+    pub fn update(&self, record: SandboxRecord) -> Result<SandboxRecord, ManagerError> {
         let mut records = self.records()?;
         if !records.contains_key(&record.id) {
             return Err(ManagerError::MissingSandbox {
@@ -48,20 +46,20 @@ impl SandboxStore {
         Ok(record)
     }
 
-    pub fn list(&self) -> ManagerResult<Vec<SandboxRecord>> {
+    pub fn list(&self) -> Result<Vec<SandboxRecord>, ManagerError> {
         let mut records = self.records()?.values().cloned().collect::<Vec<_>>();
         records.sort_by(|left, right| left.id.cmp(&right.id));
         Ok(records)
     }
 
-    pub fn inspect(&self, id: &SandboxId) -> ManagerResult<SandboxRecord> {
+    pub fn inspect(&self, id: &SandboxId) -> Result<SandboxRecord, ManagerError> {
         self.records()?
             .get(id)
             .cloned()
             .ok_or_else(|| ManagerError::MissingSandbox { id: id.clone() })
     }
 
-    pub fn remove(&self, id: &SandboxId) -> ManagerResult<SandboxRecord> {
+    pub fn remove(&self, id: &SandboxId) -> Result<SandboxRecord, ManagerError> {
         self.records()?
             .remove(id)
             .ok_or_else(|| ManagerError::MissingSandbox { id: id.clone() })
@@ -72,7 +70,7 @@ impl SandboxStore {
         id: &SandboxId,
         from: SandboxState,
         to: SandboxState,
-    ) -> ManagerResult<SandboxRecord> {
+    ) -> Result<SandboxRecord, ManagerError> {
         let mut records = self.records()?;
         let record = records
             .get_mut(id)
@@ -88,7 +86,11 @@ impl SandboxStore {
         Ok(record.clone())
     }
 
-    pub fn set_state(&self, id: &SandboxId, state: SandboxState) -> ManagerResult<SandboxRecord> {
+    pub fn set_state(
+        &self,
+        id: &SandboxId,
+        state: SandboxState,
+    ) -> Result<SandboxRecord, ManagerError> {
         let mut records = self.records()?;
         let record = records
             .get_mut(id)
@@ -101,7 +103,7 @@ impl SandboxStore {
         &self,
         id: &SandboxId,
         endpoint: Option<SandboxDaemonEndpoint>,
-    ) -> ManagerResult<SandboxRecord> {
+    ) -> Result<SandboxRecord, ManagerError> {
         let mut records = self.records()?;
         let record = records
             .get_mut(id)
@@ -110,7 +112,7 @@ impl SandboxStore {
         Ok(record.clone())
     }
 
-    fn records(&self) -> ManagerResult<MutexGuard<'_, HashMap<SandboxId, SandboxRecord>>> {
+    fn records(&self) -> Result<MutexGuard<'_, HashMap<SandboxId, SandboxRecord>>, ManagerError> {
         self.records.lock().map_err(|_| ManagerError::StorePoisoned)
     }
 }

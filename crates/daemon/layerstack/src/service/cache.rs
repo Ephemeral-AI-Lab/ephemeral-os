@@ -4,24 +4,26 @@ use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 
 use crate::commit::{CommitError, CommitWriter};
 
-pub(crate) type RootService = Arc<CommitWriter>;
-
 pub(crate) const SERVICE_CACHE_MAX: usize = 256;
 
 #[derive(Default)]
 pub(crate) struct ServiceCache {
-    pub(crate) entries: HashMap<String, RootService>,
+    pub(crate) entries: HashMap<String, Arc<CommitWriter>>,
     lru: VecDeque<String>,
 }
 
 impl ServiceCache {
-    fn get(&mut self, key: &str) -> Option<RootService> {
+    fn get(&mut self, key: &str) -> Option<Arc<CommitWriter>> {
         let service = self.entries.get(key)?.clone();
         self.touch(key);
         Some(service)
     }
 
-    pub(crate) fn insert_or_get(&mut self, key: String, service: RootService) -> RootService {
+    pub(crate) fn insert_or_get(
+        &mut self,
+        key: String,
+        service: Arc<CommitWriter>,
+    ) -> Arc<CommitWriter> {
         if let Some(existing) = self.entries.get(&key).cloned() {
             self.touch(&key);
             return existing;
@@ -67,7 +69,7 @@ pub(crate) fn reset_service_cache_for_tests() {
     *cache = ServiceCache::default();
 }
 
-pub(crate) fn service_for_root(root: &Path) -> Result<RootService, CommitError> {
+pub(crate) fn service_for_root(root: &Path) -> Result<Arc<CommitWriter>, CommitError> {
     let key = service_cache_key(root);
     {
         let mut cache = lock_services()?;

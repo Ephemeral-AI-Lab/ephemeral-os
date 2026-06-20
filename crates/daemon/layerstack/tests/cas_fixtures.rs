@@ -10,8 +10,6 @@ use serde_json::Value;
 use sha2 as _;
 use thiserror as _;
 
-type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
-
 const CASES: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/tests/fixtures/cas/cases.json"
@@ -21,25 +19,34 @@ fn test_error(message: impl Into<String>) -> Box<dyn std::error::Error + Send + 
     std::io::Error::other(message.into()).into()
 }
 
-fn field<'a>(value: &'a Value, name: &str) -> TestResult<&'a Value> {
+fn field<'a>(
+    value: &'a Value,
+    name: &str,
+) -> Result<&'a Value, Box<dyn std::error::Error + Send + Sync>> {
     value
         .get(name)
         .ok_or_else(|| test_error(format!("missing fixture field `{name}`")))
 }
 
-fn str_field<'a>(value: &'a Value, name: &str) -> TestResult<&'a str> {
+fn str_field<'a>(
+    value: &'a Value,
+    name: &str,
+) -> Result<&'a str, Box<dyn std::error::Error + Send + Sync>> {
     field(value, name)?
         .as_str()
         .ok_or_else(|| test_error(format!("fixture field `{name}` must be a string")))
 }
 
-fn array_field<'a>(value: &'a Value, name: &str) -> TestResult<&'a Vec<Value>> {
+fn array_field<'a>(
+    value: &'a Value,
+    name: &str,
+) -> Result<&'a Vec<Value>, Box<dyn std::error::Error + Send + Sync>> {
     field(value, name)?
         .as_array()
         .ok_or_else(|| test_error(format!("fixture field `{name}` must be an array")))
 }
 
-fn build_layer_change(c: &Value) -> TestResult<LayerChange> {
+fn build_layer_change(c: &Value) -> Result<LayerChange, Box<dyn std::error::Error + Send + Sync>> {
     let kind = str_field(c, "kind")?;
     let path = LayerPath::parse(str_field(c, "path")?)?;
     match kind {
@@ -59,7 +66,7 @@ fn build_layer_change(c: &Value) -> TestResult<LayerChange> {
 }
 
 #[test]
-fn all_cas_fixtures_match() -> TestResult {
+fn all_cas_fixtures_match() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let cases: Vec<Value> = serde_json::from_str(CASES)?;
     assert_eq!(cases.len(), 18, "expected 18 golden cases");
 
@@ -79,7 +86,7 @@ fn all_cas_fixtures_match() -> TestResult {
                             path: str_field(layer, "path")?.to_owned(),
                         })
                     })
-                    .collect::<TestResult<_>>()?;
+                    .collect::<Result<_, Box<dyn std::error::Error + Send + Sync>>>()?;
                 let version = i64::try_from(layers.len())?;
                 let manifest = Manifest::new(version, layers, 1)?;
                 manifest_root_hash(&manifest)
@@ -88,7 +95,7 @@ fn all_cas_fixtures_match() -> TestResult {
                 let changes: Vec<LayerChange> = array_field(field(case, "input")?, "changes")?
                     .iter()
                     .map(build_layer_change)
-                    .collect::<TestResult<_>>()?;
+                    .collect::<Result<_, Box<dyn std::error::Error + Send + Sync>>>()?;
                 // Cross-check the documented aggregate ordering too.
                 if let Some(order) = case["aggregated_order"].as_array() {
                     let agg = layerstack::aggregate_layer_changes(&changes);
@@ -100,7 +107,7 @@ fn all_cas_fixtures_match() -> TestResult {
                                 test_error("aggregated_order entries must be strings")
                             })
                         })
-                        .collect::<TestResult<_>>()?;
+                        .collect::<Result<_, Box<dyn std::error::Error + Send + Sync>>>()?;
                     assert_eq!(agg_paths, expected_order, "aggregate order for {name}");
                 }
                 layer_digest(&changes)

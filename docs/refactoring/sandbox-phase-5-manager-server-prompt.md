@@ -27,7 +27,7 @@ Required starting state:
 - `crates/sandbox-protocol/src/scope.rs` exists.
 - `sandbox_protocol::SandboxRequest` exists.
 - `sandbox_protocol::OperationScope` exists.
-- `sandbox_protocol::SandboxResponse` exists.
+- `sandbox_protocol::OperationResponse` exists.
 - `crates/sandbox-runtime/operation` exists.
 - `crates/sandbox-daemon` exists.
 - `crates/sandbox-manager` exists.
@@ -102,7 +102,7 @@ Implementation steps:
    test -d crates/sandbox-manager
    test ! -d crates/sandbox-manager/src/server
    test ! -f crates/sandbox-manager/src/operation/impls/invoke_sandbox_daemon.rs
-   rg -n "SandboxRequest|OperationScope|SandboxResponse" crates/sandbox-protocol/src
+   rg -n "SandboxRequest|OperationScope|OperationResponse" crates/sandbox-protocol/src
    rg -n "invoke_sandbox_daemon" crates/sandbox-manager/src/operation
    ```
 
@@ -253,8 +253,7 @@ Implementation steps:
 
     - If `SandboxRequest` needs to be sent over a socket by a real client, add
       `Serialize` / `Deserialize` derives in `sandbox-protocol`.
-    - Do not reintroduce compatibility aliases such as `OwnedRequest`,
-      `RpcRequest`, or `Response`.
+    - Keep protocol names explicit.
     - Preserve existing protocol tests.
 
 15. Add tests.
@@ -315,7 +314,7 @@ test -f crates/sandbox-manager/src/server/forward.rs
 test ! -f crates/sandbox-manager/src/operation/impls/invoke_sandbox_daemon.rs
 rg -n "invoke_sandbox_daemon" crates/sandbox-manager/src/operation
 rg -n "RoutedRequest|ManagerRequest|OperationTarget" crates/sandbox-manager/src
-rg -n "pub type (OwnedRequest|RpcRequest|Response)" crates/sandbox-protocol/src
+rg -n '^\s*(pub\s+)?type\s+' crates/sandbox-protocol/src
 rg -n "sandbox_runtime::|sandbox_daemon::|sandbox_gateway_cli::|command::|workspace::|layerstack::|overlay::|namespace_process::" crates/sandbox-manager/src
 cargo fmt --check -p sandbox-protocol -p sandbox-manager
 cargo check -p sandbox-protocol -p sandbox-manager --tests

@@ -6,10 +6,8 @@ use crate::workspace_session::WorkspaceSessionError;
 
 use super::model::WorkspaceSession;
 
-pub(crate) type WorkspaceSessions = HashMap<WorkspaceSessionId, WorkspaceSession>;
-
 pub struct WorkspaceSessionService {
-    sessions: Mutex<WorkspaceSessions>,
+    sessions: Mutex<HashMap<WorkspaceSessionId, WorkspaceSession>>,
     workspace: Arc<WorkspaceRuntimeService>,
 }
 
@@ -29,7 +27,8 @@ impl WorkspaceSessionService {
 
     pub(crate) fn lock_sessions(
         &self,
-    ) -> Result<MutexGuard<'_, WorkspaceSessions>, WorkspaceSessionError> {
+    ) -> Result<MutexGuard<'_, HashMap<WorkspaceSessionId, WorkspaceSession>>, WorkspaceSessionError>
+    {
         self.sessions
             .lock()
             .map_err(|_| WorkspaceSessionError::LockPoisoned)

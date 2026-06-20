@@ -9,10 +9,9 @@ use workspace::model::{
 use workspace::profile::{ResourceCaps, WorkspaceModeManager};
 use workspace::WorkspaceRuntimeService;
 
-type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
-
 #[test]
-fn latest_snapshot_returns_readonly_handle_without_lease() -> TestResult {
+fn latest_snapshot_returns_readonly_handle_without_lease(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("latest-snapshot")?;
     let service = fixture.service();
 
@@ -37,7 +36,8 @@ fn latest_snapshot_returns_readonly_handle_without_lease() -> TestResult {
     target_os = "linux",
     ignore = "requires real Linux namespace, cgroup, mount, and network privileges"
 )]
-fn runtime_service_create_and_destroy_are_backed_by_impl_files() -> TestResult {
+fn runtime_service_create_and_destroy_are_backed_by_impl_files(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("create-destroy")?;
     let service = fixture.service();
 
@@ -71,7 +71,7 @@ struct Fixture {
 }
 
 impl Fixture {
-    fn new(label: &str) -> TestResult<Self> {
+    fn new(label: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let base =
             std::env::temp_dir().join(format!("workspace-service-{label}-{}", unique_suffix()));
         let _ = std::fs::remove_dir_all(&base);

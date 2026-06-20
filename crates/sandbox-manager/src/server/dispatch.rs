@@ -12,7 +12,7 @@ impl SandboxManagerServer {
         match (&request.scope, manager_owned) {
             (OperationScope::System, true) => self.dispatch_manager_request(request).await,
             (OperationScope::System, false) => {
-                sandbox_protocol::SandboxResponse::unknown_op(&request.as_request())
+                sandbox_protocol::OperationResponse::unknown_op(&request.as_operation_request())
                     .into_json_value()
             }
             (OperationScope::Sandbox { .. }, true) => super::error::error_response(
@@ -28,7 +28,7 @@ impl SandboxManagerServer {
         let services = Arc::clone(&self.services);
         let op = request.op.clone();
         match tokio::task::spawn_blocking(move || {
-            crate::dispatch_operation(&services, request.as_request()).into_json_value()
+            crate::dispatch_operation(&services, request.as_operation_request()).into_json_value()
         })
         .await
         {
@@ -46,7 +46,7 @@ impl SandboxManagerServer {
         let op = request.op.clone();
         match tokio::task::spawn_blocking(move || {
             forward_sandbox_request(&services, request)
-                .map(sandbox_protocol::SandboxResponse::into_json_value)
+                .map(sandbox_protocol::OperationResponse::into_json_value)
         })
         .await
         {

@@ -19,11 +19,9 @@ pub(in crate::stack) struct LeaseRegistry {
     refcounts: BTreeMap<LayerRef, usize>,
 }
 
-pub(in crate::stack) type SharedLeaseRegistry = Arc<Mutex<LeaseRegistry>>;
-
 pub(in crate::stack) fn shared_registry_for_root(
     storage_root: &Path,
-) -> Result<SharedLeaseRegistry, LayerStackError> {
+) -> Result<Arc<Mutex<LeaseRegistry>>, LayerStackError> {
     let key = canonical_key(storage_root);
     let mut registries = shared_registries()
         .lock()
@@ -35,7 +33,7 @@ pub(in crate::stack) fn shared_registry_for_root(
 }
 
 pub(in crate::stack) fn lock_shared_registry(
-    registry: &SharedLeaseRegistry,
+    registry: &Arc<Mutex<LeaseRegistry>>,
 ) -> Result<MutexGuard<'_, LeaseRegistry>, LayerStackError> {
     registry
         .lock()
@@ -43,7 +41,7 @@ pub(in crate::stack) fn lock_shared_registry(
 }
 
 pub(in crate::stack) fn lock_shared_registry_recover(
-    registry: &SharedLeaseRegistry,
+    registry: &Arc<Mutex<LeaseRegistry>>,
 ) -> MutexGuard<'_, LeaseRegistry> {
     registry
         .lock()
@@ -144,8 +142,9 @@ fn new_lease_id() -> String {
     format!("{nanos:032x}{:016x}", next_unique())
 }
 
-fn shared_registries() -> &'static Mutex<HashMap<String, SharedLeaseRegistry>> {
-    static REGISTRIES: OnceLock<Mutex<HashMap<String, SharedLeaseRegistry>>> = OnceLock::new();
+fn shared_registries() -> &'static Mutex<HashMap<String, Arc<Mutex<LeaseRegistry>>>> {
+    static REGISTRIES: OnceLock<Mutex<HashMap<String, Arc<Mutex<LeaseRegistry>>>>> =
+        OnceLock::new();
     REGISTRIES.get_or_init(|| Mutex::new(HashMap::new()))
 }
 

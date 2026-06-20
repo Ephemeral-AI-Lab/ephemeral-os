@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 use crate::error::LayerStackError;
 use crate::fs::{count_dirs, read_manifest, resolve_layer_path, storage_bytes};
@@ -15,8 +16,7 @@ pub(crate) mod squash;
 
 pub(crate) use lease::reset_shared_registries_for_tests;
 use lease::{
-    lock_shared_registry, lock_shared_registry_recover, shared_registry_for_root,
-    SharedLeaseRegistry,
+    lock_shared_registry, lock_shared_registry_recover, shared_registry_for_root, LeaseRegistry,
 };
 use lease::{release_lease_locked, retarget_lease_locked};
 
@@ -48,7 +48,7 @@ pub struct LayerStackStorageMetrics {
 pub struct LayerStack {
     pub(in crate::stack) storage_root: PathBuf,
     pub(crate) writer_lock: StorageWriterLockLease,
-    pub(in crate::stack) leases: SharedLeaseRegistry,
+    pub(in crate::stack) leases: Arc<Mutex<LeaseRegistry>>,
     pub(in crate::stack) view: MergedView,
 }
 

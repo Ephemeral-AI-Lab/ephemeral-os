@@ -225,7 +225,7 @@ Implementation steps:
           &self,
           endpoint: &SandboxDaemonEndpoint,
           request: sandbox_protocol::SandboxRequest,
-      ) -> Result<sandbox_protocol::SandboxResponse, ManagerError>;
+      ) -> Result<sandbox_protocol::OperationResponse, ManagerError>;
       ```
 
     - Use test doubles only. Do not implement real socket transport in this
@@ -257,12 +257,12 @@ Implementation steps:
     example:
 
     ```rust
-    pub type ManagerOperationDispatch =
-        fn(&ManagerServices, sandbox_protocol::Request<'_>) -> sandbox_protocol::SandboxResponse;
-
     pub struct ManagerOperationEntry {
         pub spec: &'static sandbox_protocol::OperationSpec,
-        pub dispatch: ManagerOperationDispatch,
+        pub dispatch: fn(
+            &ManagerServices,
+            sandbox_protocol::OperationRequest<'_>,
+        ) -> sandbox_protocol::OperationResponse,
     }
     ```
 

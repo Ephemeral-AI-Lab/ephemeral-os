@@ -2,20 +2,23 @@ use std::sync::Arc;
 
 use crate::{SandboxDaemonClient, SandboxDaemonInstaller, SandboxRuntime, SandboxStore};
 
-pub type ManagerOperationDispatch =
-    fn(&ManagerServices, sandbox_protocol::Request<'_>) -> sandbox_protocol::SandboxResponse;
-
 #[derive(Clone, Copy)]
 pub struct ManagerOperationEntry {
     pub spec: &'static sandbox_protocol::OperationSpec,
-    pub dispatch: ManagerOperationDispatch,
+    pub dispatch: fn(
+        &ManagerServices,
+        sandbox_protocol::OperationRequest<'_>,
+    ) -> sandbox_protocol::OperationResponse,
 }
 
 impl ManagerOperationEntry {
     #[must_use]
     pub const fn new(
         spec: &'static sandbox_protocol::OperationSpec,
-        dispatch: ManagerOperationDispatch,
+        dispatch: fn(
+            &ManagerServices,
+            sandbox_protocol::OperationRequest<'_>,
+        ) -> sandbox_protocol::OperationResponse,
     ) -> Self {
         Self { spec, dispatch }
     }
@@ -48,13 +51,13 @@ impl ManagerServices {
 #[must_use]
 pub fn dispatch_operation(
     services: &ManagerServices,
-    request: sandbox_protocol::Request<'_>,
-) -> sandbox_protocol::SandboxResponse {
+    request: sandbox_protocol::OperationRequest<'_>,
+) -> sandbox_protocol::OperationResponse {
     super::impls::operation_entries()
         .iter()
         .find(|entry| entry.spec.name == request.name)
         .map_or_else(
-            || sandbox_protocol::SandboxResponse::unknown_op(&request),
+            || sandbox_protocol::OperationResponse::unknown_op(&request),
             |entry| (entry.dispatch)(services, request),
         )
 }

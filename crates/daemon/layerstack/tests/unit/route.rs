@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use crate::model::LayerChange;
-use crate::test_fixture::{lp, Fixture, TestResult};
+use crate::test_fixture::{lp, Fixture};
 use crate::{service, CommitStatus, LayerStack};
 
 use crate::commit::route::model::{
@@ -21,7 +21,8 @@ use crate::commit::route::{
 };
 
 #[test]
-fn spool_backed_write_publishes_layer_content() -> TestResult {
+fn spool_backed_write_publishes_layer_content(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("spool_backed_write")?;
     let payload = fixture.base.join("payload.bin");
     std::fs::write(&payload, b"spooled ignored payload")?;
@@ -75,11 +76,17 @@ fn git_empty_index() -> Vec<u8> {
     bytes
 }
 
-fn is_ignored(fixture: &Fixture, path: &str) -> TestResult<bool> {
+fn is_ignored(
+    fixture: &Fixture,
+    path: &str,
+) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
     Ok(route_of(fixture, path)? == Route::Direct)
 }
 
-fn route_of(fixture: &Fixture, path: &str) -> TestResult<Route> {
+fn route_of(
+    fixture: &Fixture,
+    path: &str,
+) -> Result<Route, Box<dyn std::error::Error + Send + Sync>> {
     let stack = LayerStack::open(fixture.root.clone())?;
     Ok(route_decision_for_path_from_source(&stack, &lp(path)?)?.0)
 }
@@ -156,7 +163,10 @@ fn publish_route_stats_for_manifest(
     Ok(stats)
 }
 
-fn file_status(result: &crate::ChangesetResult, path: &str) -> TestResult<CommitStatus> {
+fn file_status(
+    result: &crate::ChangesetResult,
+    path: &str,
+) -> Result<CommitStatus, Box<dyn std::error::Error + Send + Sync>> {
     Ok(result
         .files
         .iter()
@@ -165,7 +175,10 @@ fn file_status(result: &crate::ChangesetResult, path: &str) -> TestResult<Commit
         .status)
 }
 
-fn file_message(result: &crate::ChangesetResult, path: &str) -> TestResult<String> {
+fn file_message(
+    result: &crate::ChangesetResult,
+    path: &str,
+) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     Ok(result
         .files
         .iter()
@@ -176,7 +189,8 @@ fn file_message(result: &crate::ChangesetResult, path: &str) -> TestResult<Strin
 }
 
 #[test]
-fn root_gitignore_routes_target_as_direct() -> TestResult {
+fn root_gitignore_routes_target_as_direct() -> Result<(), Box<dyn std::error::Error + Send + Sync>>
+{
     let fixture = Fixture::new_with_gitignore("gitignore_direct", "target/\n*.pyc\n")?;
 
     assert!(is_ignored(&fixture, "target/out.txt")?);
@@ -186,7 +200,8 @@ fn root_gitignore_routes_target_as_direct() -> TestResult {
 }
 
 #[test]
-fn routes_tracked_ignored_and_git_paths_distinctly() -> TestResult {
+fn routes_tracked_ignored_and_git_paths_distinctly(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignore("route_kinds", "target/\n*.pyc\n")?;
 
     assert_eq!(route_of(&fixture, "src/main.rs")?, Route::Gated);
@@ -198,7 +213,8 @@ fn routes_tracked_ignored_and_git_paths_distinctly() -> TestResult {
 }
 
 #[test]
-fn protected_paths_drop_before_source_or_ignore_routing() -> TestResult {
+fn protected_paths_drop_before_source_or_ignore_routing(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignore("route_protected_paths", "*\n")?;
 
     for path in [
@@ -226,7 +242,8 @@ fn protected_paths_drop_before_source_or_ignore_routing() -> TestResult {
 }
 
 #[test]
-fn git_metadata_drop_decisions_use_stable_reason_code() -> TestResult {
+fn git_metadata_drop_decisions_use_stable_reason_code(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignore("git_drop_reason", ".git/\n")?;
     let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
     let decisions = publish_decisions_for_manifest(
@@ -264,7 +281,8 @@ fn git_metadata_drop_decisions_use_stable_reason_code() -> TestResult {
 }
 
 #[test]
-fn command_git_index_stat_refresh_is_dropped_without_conflict_or_publish() -> TestResult {
+fn command_git_index_stat_refresh_is_dropped_without_conflict_or_publish(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("command_git_index_stat_refresh")?;
     let base_index = git_index_with_entry("src/main.rs", 1, 10);
     LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
@@ -299,7 +317,8 @@ fn command_git_index_stat_refresh_is_dropped_without_conflict_or_publish() -> Te
 }
 
 #[test]
-fn command_git_empty_index_creation_is_dropped_as_noop() -> TestResult {
+fn command_git_empty_index_creation_is_dropped_as_noop(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("command_git_empty_index")?;
     let snapshot = service::acquire_snapshot_with_lease(&fixture.root, "git-empty-index")?;
 
@@ -325,7 +344,8 @@ fn command_git_empty_index_creation_is_dropped_as_noop() -> TestResult {
 }
 
 #[test]
-fn command_git_staged_index_rejects_whole_publish() -> TestResult {
+fn command_git_staged_index_rejects_whole_publish(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignore("command_git_staged_index", "cache/\n")?;
     let base_index = git_index_with_entry("src/main.rs", 1, 10);
     LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
@@ -372,7 +392,8 @@ fn command_git_staged_index_rejects_whole_publish() -> TestResult {
 }
 
 #[test]
-fn command_git_rejects_locks_markers_hooks_and_ref_writes() -> TestResult {
+fn command_git_rejects_locks_markers_hooks_and_ref_writes(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("command_git_reject_control_paths")?;
     let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
     let decisions = publish_decisions_for_manifest(
@@ -418,7 +439,8 @@ fn command_git_rejects_locks_markers_hooks_and_ref_writes() -> TestResult {
 }
 
 #[test]
-fn command_git_extended_incomplete_operation_markers_reject() -> TestResult {
+fn command_git_extended_incomplete_operation_markers_reject(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("command_git_extended_incomplete_markers")?;
     let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
     let mut changes = Vec::new();
@@ -456,7 +478,8 @@ fn command_git_extended_incomplete_operation_markers_reject() -> TestResult {
 }
 
 #[test]
-fn command_git_deletions_and_opaque_root_reject() -> TestResult {
+fn command_git_deletions_and_opaque_root_reject(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("command_git_delete_reject")?;
     let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
     let decisions = publish_decisions_for_manifest(
@@ -499,7 +522,8 @@ fn command_git_deletions_and_opaque_root_reject() -> TestResult {
 }
 
 #[test]
-fn command_git_reflog_append_is_gated_and_rewrite_rejects() -> TestResult {
+fn command_git_reflog_append_is_gated_and_rewrite_rejects(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("command_git_reflog_append")?;
     LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
         path: lp(".git/logs/HEAD")?,
@@ -559,7 +583,8 @@ fn command_git_reflog_append_is_gated_and_rewrite_rejects() -> TestResult {
 }
 
 #[test]
-fn command_git_reflog_prefix_extension_of_partial_record_rejects() -> TestResult {
+fn command_git_reflog_prefix_extension_of_partial_record_rejects(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("command_git_reflog_partial_prefix")?;
     LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
         path: lp(".git/logs/HEAD")?,
@@ -592,7 +617,8 @@ fn command_git_reflog_prefix_extension_of_partial_record_rejects() -> TestResult
 }
 
 #[test]
-fn command_git_objects_are_gated_and_rewrites_reject() -> TestResult {
+fn command_git_objects_are_gated_and_rewrites_reject(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("command_git_object_rules")?;
     let new_object_path = format!(".git/objects/cc/{}", "d".repeat(38));
     LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
@@ -662,7 +688,8 @@ fn command_git_objects_are_gated_and_rewrites_reject() -> TestResult {
 }
 
 #[test]
-fn command_gitignore_cannot_route_git_metadata_direct_or_source() -> TestResult {
+fn command_gitignore_cannot_route_git_metadata_direct_or_source(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignore("command_git_ignore_bypass", ".git/\n*\n")?;
     LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
         path: lp(".git/logs/HEAD")?,
@@ -697,7 +724,8 @@ fn command_gitignore_cannot_route_git_metadata_direct_or_source() -> TestResult 
 }
 
 #[test]
-fn protected_path_drop_decisions_use_stable_reason_codes() -> TestResult {
+fn protected_path_drop_decisions_use_stable_reason_codes(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignore("protected_drop_reasons", "*\n")?;
     let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
     let decisions = publish_decisions_for_manifest(
@@ -744,7 +772,8 @@ fn protected_path_drop_decisions_use_stable_reason_codes() -> TestResult {
 }
 
 #[test]
-fn publish_route_stats_use_supplied_manifest_snapshot() -> TestResult {
+fn publish_route_stats_use_supplied_manifest_snapshot(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignore("route_stats_snapshot", "ignored/\n")?;
     let mut stack = LayerStack::open(fixture.root.clone())?;
     let route_manifest = stack.read_active_manifest()?;
@@ -788,7 +817,8 @@ fn publish_route_stats_use_supplied_manifest_snapshot() -> TestResult {
 }
 
 #[test]
-fn publish_route_stats_counts_git_drop_reasons() -> TestResult {
+fn publish_route_stats_counts_git_drop_reasons(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignore("route_stats_git_drop_reasons", ".git/\n")?;
     let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
     let stats = publish_route_stats_for_manifest(
@@ -822,7 +852,8 @@ fn publish_route_stats_counts_git_drop_reasons() -> TestResult {
 }
 
 #[test]
-fn publish_route_stats_counts_route_protected_drop_reasons() -> TestResult {
+fn publish_route_stats_counts_route_protected_drop_reasons(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignore("route_stats_route_protected", "*\n")?;
     let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
     let stats = publish_route_stats_for_manifest(
@@ -853,7 +884,8 @@ fn publish_route_stats_counts_route_protected_drop_reasons() -> TestResult {
 }
 
 #[test]
-fn publish_changes_uses_supplied_manifest_snapshot_for_routes() -> TestResult {
+fn publish_changes_uses_supplied_manifest_snapshot_for_routes(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignore("publish_route_snapshot", "ignored/\n")?;
     let snapshot = service::acquire_snapshot_with_lease(&fixture.root, "route-snapshot-test")?;
     LayerStack::open(fixture.root.clone())?.publish_layer(&[
@@ -893,7 +925,8 @@ fn publish_changes_uses_supplied_manifest_snapshot_for_routes() -> TestResult {
 }
 
 #[test]
-fn lane_aware_publish_drops_ignored_when_source_conflicts() -> TestResult {
+fn lane_aware_publish_drops_ignored_when_source_conflicts(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignore("lane_aware_source_conflict", "ignored/\n")?;
     let snapshot =
         service::acquire_snapshot_with_lease(&fixture.root, "lane-aware-source-conflict")?;
@@ -939,7 +972,8 @@ fn lane_aware_publish_drops_ignored_when_source_conflicts() -> TestResult {
 }
 
 #[test]
-fn lane_aware_publish_ignored_only_uses_direct_lww() -> TestResult {
+fn lane_aware_publish_ignored_only_uses_direct_lww(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignore("lane_aware_ignored_lww", "ignored/\n")?;
     let snapshot = service::acquire_snapshot_with_lease(&fixture.root, "lane-aware-ignored-lww")?;
 
@@ -974,7 +1008,8 @@ fn lane_aware_publish_ignored_only_uses_direct_lww() -> TestResult {
 }
 
 #[test]
-fn lane_aware_publish_source_and_ignored_success_advances_one_manifest() -> TestResult {
+fn lane_aware_publish_source_and_ignored_success_advances_one_manifest(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignore("lane_aware_mixed_success", "ignored/\n")?;
     let snapshot = service::acquire_snapshot_with_lease(&fixture.root, "lane-aware-mixed-success")?;
     let before = LayerStack::open(fixture.root.clone())?
@@ -1021,7 +1056,8 @@ fn lane_aware_publish_source_and_ignored_success_advances_one_manifest() -> Test
 }
 
 #[test]
-fn publish_changes_surfaces_git_drop_reason_counts() -> TestResult {
+fn publish_changes_surfaces_git_drop_reason_counts(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignore("publish_git_drop_reason", "target/\n")?;
     let snapshot = service::acquire_snapshot_with_lease(&fixture.root, "git-drop-reason-test")?;
 
@@ -1053,7 +1089,8 @@ fn publish_changes_surfaces_git_drop_reason_counts() -> TestResult {
 }
 
 #[test]
-fn publish_changes_surfaces_route_protected_drop_reason_counts() -> TestResult {
+fn publish_changes_surfaces_route_protected_drop_reason_counts(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignore("publish_route_protected_drop_reason", "*\n")?;
     let snapshot =
         service::acquire_snapshot_with_lease(&fixture.root, "route-protected-drop-reason-test")?;
@@ -1102,7 +1139,8 @@ fn publish_changes_surfaces_route_protected_drop_reason_counts() -> TestResult {
 }
 
 #[test]
-fn opaque_dir_with_all_ignored_descendants_routes_direct() -> TestResult {
+fn opaque_dir_with_all_ignored_descendants_routes_direct(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignore("opaque_all_ignored", "cache/\n")?;
     let mut stack = LayerStack::open(fixture.root.clone())?;
     stack.publish_layer(&[LayerChange::Write {
@@ -1130,7 +1168,8 @@ fn opaque_dir_with_all_ignored_descendants_routes_direct() -> TestResult {
 }
 
 #[test]
-fn opaque_dir_with_source_descendants_validates_hidden_paths() -> TestResult {
+fn opaque_dir_with_source_descendants_validates_hidden_paths(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("opaque_source_validation")?;
     let mut stack = LayerStack::open(fixture.root.clone())?;
     stack.publish_layer(&[LayerChange::Write {
@@ -1163,7 +1202,8 @@ fn opaque_dir_with_source_descendants_validates_hidden_paths() -> TestResult {
 }
 
 #[test]
-fn opaque_dir_with_mixed_descendant_routes_rejects_publish() -> TestResult {
+fn opaque_dir_with_mixed_descendant_routes_rejects_publish(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignore("opaque_mixed_routes", "cache/\n")?;
     let mut stack = LayerStack::open(fixture.root.clone())?;
     stack.publish_layer(&[
@@ -1195,7 +1235,8 @@ fn opaque_dir_with_mixed_descendant_routes_rejects_publish() -> TestResult {
 }
 
 #[test]
-fn opaque_dir_with_git_descendant_rejects_as_protected() -> TestResult {
+fn opaque_dir_with_git_descendant_rejects_as_protected(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("opaque_protected_descendant")?;
     let mut stack = LayerStack::open(fixture.root.clone())?;
     stack.publish_layer(&[LayerChange::Write {
@@ -1226,7 +1267,8 @@ fn opaque_dir_with_git_descendant_rejects_as_protected() -> TestResult {
 }
 
 #[test]
-fn opaque_dir_with_non_git_protected_descendant_rejects_as_protected() -> TestResult {
+fn opaque_dir_with_non_git_protected_descendant_rejects_as_protected(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("opaque_non_git_protected_descendant")?;
     let mut stack = LayerStack::open(fixture.root.clone())?;
     stack.publish_layer(&[LayerChange::Write {
@@ -1256,7 +1298,8 @@ fn opaque_dir_with_non_git_protected_descendant_rejects_as_protected() -> TestRe
 }
 
 #[test]
-fn opaque_dir_expansion_limit_rejects_publish() -> TestResult {
+fn opaque_dir_expansion_limit_rejects_publish(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("opaque_expansion_limit")?;
     let mut stack = LayerStack::open(fixture.root.clone())?;
     stack.publish_layer(&[
@@ -1296,7 +1339,7 @@ fn opaque_dir_expansion_limit_rejects_publish() -> TestResult {
 // file under `frontend/node_modules/` routes DIRECT — the most common
 // misroute the old root-anchored prefix check produced.
 #[test]
-fn dir_only_pattern_matches_at_any_depth() -> TestResult {
+fn dir_only_pattern_matches_at_any_depth() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignore("n2_dir_only", "node_modules/\n")?;
     assert!(is_ignored(&fixture, "frontend/node_modules/index.js")?);
     assert!(is_ignored(&fixture, "node_modules/index.js")?);
@@ -1308,7 +1351,7 @@ fn dir_only_pattern_matches_at_any_depth() -> TestResult {
 // `logs/sub/x.log`, so it routes GATED (base-hash validated) — not
 // DIRECT-then-silently-clobber as the old `wildcard_match` allowed.
 #[test]
-fn star_does_not_cross_slash() -> TestResult {
+fn star_does_not_cross_slash() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignore("n3_star_slash", "logs/*.log\n")?;
     assert!(is_ignored(&fixture, "logs/app.log")?);
     assert!(!is_ignored(&fixture, "logs/sub/x.log")?);
@@ -1317,7 +1360,8 @@ fn star_does_not_cross_slash() -> TestResult {
 
 // Nested `.gitignore` is scoped to its own subtree.
 #[test]
-fn nested_gitignore_is_scoped_to_its_subtree() -> TestResult {
+fn nested_gitignore_is_scoped_to_its_subtree(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignores("nested", &[("frontend", "dist/\n")])?;
     assert!(is_ignored(&fixture, "frontend/dist/bundle.js")?);
     assert!(!is_ignored(&fixture, "dist/bundle.js")?);
@@ -1326,7 +1370,7 @@ fn nested_gitignore_is_scoped_to_its_subtree() -> TestResult {
 
 // `**` matches across path segments.
 #[test]
-fn double_star_matches_across_segments() -> TestResult {
+fn double_star_matches_across_segments() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignore("double_star", "**/build/\n")?;
     assert!(is_ignored(&fixture, "a/b/build/out.o")?);
     assert!(is_ignored(&fixture, "build/out.o")?);
@@ -1336,7 +1380,7 @@ fn double_star_matches_across_segments() -> TestResult {
 
 // `!` re-includes within a non-sealed directory.
 #[test]
-fn bang_re_includes_in_unsealed_dir() -> TestResult {
+fn bang_re_includes_in_unsealed_dir() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignore("bang", "*.log\n!keep.log\n")?;
     assert!(is_ignored(&fixture, "other.log")?);
     assert!(!is_ignored(&fixture, "keep.log")?);
@@ -1346,7 +1390,8 @@ fn bang_re_includes_in_unsealed_dir() -> TestResult {
 // Directory seal: an excluded ancestor dir seals its subtree — a deeper `!`
 // cannot rescue contents under it (Git semantics).
 #[test]
-fn excluded_dir_seals_against_deeper_reinclude() -> TestResult {
+fn excluded_dir_seals_against_deeper_reinclude(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture =
         Fixture::new_with_gitignores("seal", &[("", "build/\n"), ("build", "!keep.txt\n")])?;
     assert!(is_ignored(&fixture, "build/keep.txt")?);
@@ -1356,7 +1401,8 @@ fn excluded_dir_seals_against_deeper_reinclude() -> TestResult {
 // Composite ruleset: the N2/N3/nested/seal behaviors above hold together on
 // one fixture, including the `.git` drop.
 #[test]
-fn composite_ruleset_routes_each_path_as_expected() -> TestResult {
+fn composite_ruleset_routes_each_path_as_expected(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignores(
         "composite_routes",
         &[
@@ -1383,7 +1429,8 @@ fn composite_ruleset_routes_each_path_as_expected() -> TestResult {
 // mount projects. Proves the oracle reads `.gitignore` via `read_bytes`/
 // `MergedView` across layers, not just from a single seeded layer.
 #[test]
-fn gitignore_resolves_through_published_upper_layer() -> TestResult {
+fn gitignore_resolves_through_published_upper_layer(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("cross_layer")?;
     LayerStack::open(fixture.root.clone())?.publish_layer(&[
         LayerChange::Write {
@@ -1410,7 +1457,8 @@ fn gitignore_resolves_through_published_upper_layer() -> TestResult {
 // `D` a SECOND time (raw byte prefix), turning `a/x` into `x` and matching an
 // anchored `/x`. Ground truth below is `git check-ignore --no-index`.
 #[test]
-fn nested_anchored_pattern_not_double_stripped_on_prefix_replay() -> TestResult {
+fn nested_anchored_pattern_not_double_stripped_on_prefix_replay(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new_with_gitignores(
         "prefix_replay",
         &[("a", "/x\n/b\n"), ("build", "/build/x\n")],

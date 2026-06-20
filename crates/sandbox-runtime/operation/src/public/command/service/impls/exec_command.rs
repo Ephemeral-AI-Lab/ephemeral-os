@@ -6,20 +6,17 @@ use command::process::{CommandProcess, CommandProcessExit, CommandProcessSpec};
 use command::yield_wait_loop::WaitOutcome;
 
 use super::command_yield_response;
+use crate::command::service::CommandOperationService;
 use crate::command::{
     ActiveCommandProcess, CancellationState, CommandLifecycleState, CommandOutputSnapshot,
     CommandServiceError, CommandSessionId, CommandTranscriptStore, CommandYield, ExecCommandInput,
     FinalizationState,
 };
-use crate::operation::{
-    ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationRequest, OperationResponse,
-    OperationSpec,
-};
+use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationSpec};
 use crate::workspace_crate::{WorkspaceEntry, WorkspaceSessionId};
 use crate::workspace_session::WorkspaceSessionHandler;
-
-use crate::command::service::CommandOperationService;
-use crate::SandboxDaemonOperations;
+use crate::SandboxRuntimeOperations;
+use sandbox_protocol::{OperationRequest, OperationResponse};
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "exec_command",
@@ -77,7 +74,7 @@ const EXEC_COMMAND_CLI: CliSpec = CliSpec {
 };
 
 pub(crate) fn dispatch(
-    operations: &SandboxDaemonOperations,
+    operations: &SandboxRuntimeOperations,
     request: OperationRequest<'_>,
 ) -> OperationResponse {
     let input = match parse_input(&request) {

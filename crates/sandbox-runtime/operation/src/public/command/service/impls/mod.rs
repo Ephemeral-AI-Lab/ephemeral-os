@@ -10,7 +10,8 @@ use crate::command::{
     CommandFinalizedMetadata, CommandLinesOutput, CommandPollOutput, CommandServiceError,
     CommandStatus, CommandStream, CommandTranscriptRow, CommandYield,
 };
-use crate::operation::{OperationEntry, OperationRequest, OperationResponse, OperationSpec};
+use crate::operation::{OperationEntry, OperationSpec};
+use sandbox_protocol::{OperationRequest, OperationResponse};
 
 pub(crate) const OPERATIONS: &[OperationEntry] = &[
     OperationEntry::new(&exec_command::SPEC, exec_command::dispatch),

@@ -1,14 +1,14 @@
-use crate::{ManagerResult, SandboxDaemonEndpoint};
+use crate::{ManagerError, SandboxDaemonEndpoint};
 
 pub trait SandboxDaemonClient: Send + Sync {
     fn describe_operations(
         &self,
         endpoint: &SandboxDaemonEndpoint,
-    ) -> ManagerResult<sandbox_protocol::OperationCatalog>;
+    ) -> Result<sandbox_protocol::OperationCatalog, ManagerError>;
 
     fn invoke(
         &self,
         endpoint: &SandboxDaemonEndpoint,
         request: sandbox_protocol::SandboxRequest,
-    ) -> ManagerResult<sandbox_protocol::SandboxResponse>;
+    ) -> Result<sandbox_protocol::OperationResponse, ManagerError>;
 }

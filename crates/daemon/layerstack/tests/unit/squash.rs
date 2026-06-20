@@ -2,8 +2,6 @@ use std::path::PathBuf;
 
 use super::*;
 
-type TestResult<T = ()> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
-
 fn layer(id: &str) -> LayerRef {
     LayerRef {
         layer_id: id.to_owned(),
@@ -35,7 +33,7 @@ fn folded_ids(plan: &SquashPlan) -> Vec<Vec<&str>> {
 }
 
 #[test]
-fn squash_segments_around_lease_heads() -> TestResult {
+fn squash_segments_around_lease_heads() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let layers: Vec<LayerRef> = (0..9).map(|index| layer(&format!("L{index}"))).collect();
     let manifest = Manifest::new(9, layers.clone(), MANIFEST_SCHEMA_VERSION)?;
     let squasher = LayerCheckpointSquasher::new(PathBuf::from("/squash-plan-only"));

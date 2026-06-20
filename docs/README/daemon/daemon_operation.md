@@ -15,7 +15,7 @@ tool-call surface.
 
 ```text
 external RPC/tool caller
-  -> DaemonOperations.command / CommandOperationService
+  -> SandboxRuntimeOperations.command / CommandOperationService
     -> internal WorkspaceSessionService
     -> internal WorkspaceRemountService
       -> workspace::WorkspaceRuntimeService
@@ -133,12 +133,12 @@ is marked blocked and the outcome contains `remounted: false`.
 The daemon-facing aggregate is intentionally small:
 
 ```rust
-pub struct DaemonOperations {
+pub struct SandboxRuntimeOperations {
     pub command: Arc<CommandOperationService>,
 }
 ```
 
-External dispatch code should receive `DaemonOperations.command` or an even
+External dispatch code should receive `SandboxRuntimeOperations.command` or an even
 narrower command wrapper. It should not receive workspace session or workspace
 remount services as peer external operations.
 
@@ -149,7 +149,7 @@ WorkspaceRuntimeService
   -> WorkspaceSessionService
   -> CommandOperationService
   -> WorkspaceRemountService
-  -> DaemonOperations { command }
+  -> SandboxRuntimeOperations { command }
 ```
 
 ## Placement Rules

@@ -4,11 +4,9 @@ use crate::command::{
     CommandOutputSnapshot, CommandPollOutput, CommandServiceError, CommandSessionId, CommandStatus,
     PollCommandInput,
 };
-use crate::operation::{
-    ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationRequest, OperationResponse,
-    OperationSpec,
-};
-use crate::SandboxDaemonOperations;
+use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationSpec};
+use crate::SandboxRuntimeOperations;
+use sandbox_protocol::{OperationRequest, OperationResponse};
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "poll_command",
@@ -47,7 +45,7 @@ const POLL_CLI: CliSpec = CliSpec {
 };
 
 pub(crate) fn dispatch(
-    operations: &SandboxDaemonOperations,
+    operations: &SandboxRuntimeOperations,
     request: OperationRequest<'_>,
 ) -> OperationResponse {
     let input = match parse_input(&request) {

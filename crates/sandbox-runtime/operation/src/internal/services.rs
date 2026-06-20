@@ -3,11 +3,11 @@ use std::sync::Arc;
 use crate::command::CommandOperationService;
 
 #[derive(Clone)]
-pub struct SandboxDaemonOperations {
+pub struct SandboxRuntimeOperations {
     pub command: Arc<CommandOperationService>,
 }
 
-impl SandboxDaemonOperations {
+impl SandboxRuntimeOperations {
     #[must_use]
     pub fn new(command: Arc<CommandOperationService>) -> Self {
         Self { command }

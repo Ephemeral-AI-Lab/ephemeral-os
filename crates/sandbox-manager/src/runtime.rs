@@ -1,7 +1,7 @@
-use crate::{ManagerResult, SandboxId, SandboxRecord};
+use crate::{ManagerError, SandboxId, SandboxRecord};
 
 pub trait SandboxRuntime: Send + Sync {
-    fn create_sandbox(&self, id: &SandboxId) -> ManagerResult<()>;
+    fn create_sandbox(&self, id: &SandboxId) -> Result<(), ManagerError>;
 
-    fn destroy_sandbox(&self, record: &SandboxRecord) -> ManagerResult<()>;
+    fn destroy_sandbox(&self, record: &SandboxRecord) -> Result<(), ManagerError>;
 }

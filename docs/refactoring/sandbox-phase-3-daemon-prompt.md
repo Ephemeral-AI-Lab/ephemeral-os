@@ -68,7 +68,7 @@ Keep in `sandbox-daemon`:
 - Unix/TCP listener lifecycle.
 - Request framing at the server edge.
 - Dispatching decoded requests to `sandbox-runtime`.
-- Runtime wiring that builds `SandboxDaemonOperations`.
+- Runtime wiring that builds `SandboxRuntimeOperations`.
 - Temporary `eosd` compatibility entrypoint.
 
 Keep out of `sandbox-daemon`:

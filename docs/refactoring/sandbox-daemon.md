@@ -22,7 +22,7 @@ transport, server lifecycle, and low-level helper subcommand adapters.
 - Request framing at the server edge.
 - Dispatching decoded `sandbox_protocol::SandboxRequest` values to
   `sandbox-runtime`.
-- Runtime wiring that builds `SandboxDaemonOperations`.
+- Runtime wiring that builds `SandboxRuntimeOperations`.
 - Packaged `eosd ns-runner` / `eosd ns-holder` helper entrypoints.
 
 ## Must Not Own

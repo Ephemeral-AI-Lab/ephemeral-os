@@ -5,10 +5,8 @@ use super::Handshake;
 use crate::holder::namespace::HeldNamespaces;
 use crate::holder::{NamespaceNetwork, NsHolderError, NS_UP, READY};
 
-type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
-
 #[test]
-fn signal_ns_up_writes_readiness_token() -> TestResult {
+fn signal_ns_up_writes_readiness_token() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let (readiness_read, readiness_write) = nix::unistd::pipe()?;
     let (_control_read, control_write) = nix::unistd::pipe()?;
     let mut handshake = Handshake::new(
@@ -27,7 +25,7 @@ fn signal_ns_up_writes_readiness_token() -> TestResult {
 }
 
 #[test]
-fn await_net_ready_accepts_prefixed_line() -> TestResult {
+fn await_net_ready_accepts_prefixed_line() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let (_readiness_read, readiness_write) = nix::unistd::pipe()?;
     let (control_read, control_write) = nix::unistd::pipe()?;
     nix::unistd::write(&control_write, b"net-ready extra\n")?;
@@ -44,7 +42,7 @@ fn await_net_ready_accepts_prefixed_line() -> TestResult {
 }
 
 #[test]
-fn await_net_ready_rejects_wrong_token() -> TestResult {
+fn await_net_ready_rejects_wrong_token() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let (_readiness_read, readiness_write) = nix::unistd::pipe()?;
     let (control_read, control_write) = nix::unistd::pipe()?;
     nix::unistd::write(&control_write, b"wrong\n")?;
@@ -65,7 +63,7 @@ fn await_net_ready_rejects_wrong_token() -> TestResult {
 }
 
 #[test]
-fn finish_ready_writes_ready_token() -> TestResult {
+fn finish_ready_writes_ready_token() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let (readiness_read, readiness_write) = nix::unistd::pipe()?;
     let (_control_read, control_write) = nix::unistd::pipe()?;
     let handshake = Handshake::new(
@@ -85,7 +83,7 @@ fn finish_ready_writes_ready_token() -> TestResult {
 
 #[cfg(target_os = "linux")]
 #[test]
-fn finish_ready_does_not_signal_ready_when_required_veth_is_missing() -> TestResult {
+fn finish_ready_does_not_signal_ready_when_required_veth_is_missing() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let (_readiness_read, readiness_write) = nix::unistd::pipe()?;
     let (control_read, control_write) = nix::unistd::pipe()?;
     nix::unistd::write(

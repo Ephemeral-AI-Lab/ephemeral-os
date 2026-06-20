@@ -12,10 +12,10 @@ data-plane components:
   catalog vocabulary used by all three.
 
 This split is required because future agents will choose between two operation
-surfaces: manager operations and runtime operations. Runtime operations are
-served by the sandbox daemon, but the agent-facing/manual surface should be
-`runtime`, not `daemon`. That authority boundary must be structural, not
-inferred from a loose operation family tag.
+spaces: manager operations and runtime operations. Runtime operations are served
+by the sandbox daemon, but the agent-facing/manual operation space should be
+`runtime`, not `daemon`. That boundary must be structural, not inferred from a
+loose operation family tag.
 
 ## Target Workspace Shape
 
@@ -87,11 +87,11 @@ docs/refactoring/sandbox-implementation-guide.md
 Package names should use hyphens. Rust crate imports use underscores:
 
 ```rust
-use sandbox_protocol::{Request, SandboxResponse};
+use sandbox_protocol::{OperationRequest, OperationResponse};
 use sandbox_runtime::operation_specs;
 ```
 
-## Authority Boundary
+## Operation Space Boundary
 
 The manager and sandbox runtime expose separate operation catalogs.
 
@@ -101,30 +101,20 @@ sandbox_runtime::operation_specs()
 ```
 
 Do not merge these into one catalog with a `Manager`, `Runtime`, or `Daemon`
-family. An agent should select an external operation surface first, then select
-an operation from that surface's catalog.
+family. An agent should select an operation space first, then select an
+operation from that space's catalog.
 
 ```rust
-pub enum OperationSurface {
+pub enum OperationExecutionSpace {
     Manager,
     Runtime,
 }
 ```
 
-`OperationSurface` is for manuals, CLI routing, and agent tool selection.
-`OperationAuthority` remains implementation metadata:
-
-```rust
-pub enum OperationAuthority {
-    SandboxManager,
-    SandboxDaemon,
-}
-```
-
 `OperationFamily` may still group operations inside a catalog for documentation
-or manual rendering. It is not the routing authority. `SandboxDaemon` should not
-be exposed as the main manual/agent surface when `Runtime` describes the user's
-intent more directly.
+or manual rendering. It is not the manager-vs-runtime routing selector.
+`SandboxDaemon` should not be exposed as the main manual/agent operation space
+when `Runtime` describes the user's intent more directly.
 
 The public request DTO uses resource scope, not implementation target:
 
@@ -142,25 +132,24 @@ pub enum OperationScope {
 }
 ```
 
-`scope` says what resource the operation applies to. `OperationAuthority` says
-which component owns the implementation. `OperationSurface` says how a human or
-agent should choose a tool group. The protocol must not expose a
-`Manager`/`Runtime`/`Daemon` target enum because that would make implementation
-placement part of the public request API.
+`scope` says what resource the operation applies to. `OperationExecutionSpace`
+says how a human or agent should choose a tool group. The protocol must not
+expose a `Manager`/`Runtime`/`Daemon` target enum in the request because that
+would make implementation placement part of the public request API.
 
 ## Shared Protocol Boundary
 
 `sandbox-protocol` owns protocol-neutral types:
 
 ```text
-request.rs          SandboxRequest, Request, args helpers
+request.rs          SandboxRequest, OperationRequest, args helpers
 scope.rs            OperationScope and scope validation helpers
-response.rs         SandboxResponse, status/error helpers
+response.rs         OperationResponse, status/error helpers
 framing.rs          JSON-line framing helpers
 auth.rs             auth field constants
 limits.rs           request size and timeout limits
 operation_spec.rs   OperationSpec, ArgSpec, ArgKind, CliSpec
-catalog.rs          OperationCatalog, OperationSurface, OperationAuthority
+catalog.rs          OperationCatalog, OperationExecutionSpace
 manual.rs           manual/help rendering from OperationSpec
 ```
 
@@ -322,7 +311,7 @@ sandbox runtime --sandbox-id sbox-1 poll_command --command-session-id cmd-1
 
 The CLI can render manuals by combining manager and runtime catalogs. The
 runtime catalog may be fetched through a daemon-backed manager operation, but
-the displayed surface should be runtime:
+the displayed execution space should be runtime:
 
 ```text
 Sandbox Manager Operations
@@ -368,16 +357,17 @@ Sandbox-scoped operations use the same DTO:
 
 There is no public `RoutedRequest`, `ManagerRequest`, `OperationTarget`, or
 request envelope. The manager receives `SandboxRequest` and routes it by
-combining resource scope with catalog authority:
+checking which operation-space catalog contains the operation:
 
 ```rust
-match catalog.lookup(&request.op)?.authority {
-    OperationAuthority::SandboxManager => manager_dispatch(request).await,
-    OperationAuthority::SandboxDaemon => {
-        let sandbox_id = request.scope.required_sandbox_id()?;
-        let endpoint = store.daemon_endpoint(sandbox_id)?;
-        daemon_client.invoke(&endpoint, request).await
-    }
+if manager_catalog.contains(&request.op) {
+    manager_dispatch(request).await
+} else if runtime_catalog.contains(&request.op) {
+    let sandbox_id = request.scope.required_sandbox_id()?;
+    let endpoint = store.daemon_endpoint(sandbox_id)?;
+    daemon_client.invoke(&endpoint, request).await
+} else {
+    unknown_operation(request)
 }
 ```
 
@@ -416,7 +406,7 @@ Module order:
    - `CliSpec`
    - `OperationSpec`
    - `OperationFamily` or a renamed `OperationGroup`
-5. Add `OperationSurface`, `OperationAuthority`, and `OperationCatalog`.
+5. Add `OperationExecutionSpace` and `OperationCatalog`.
 6. Keep implementation-specific `OperationEntry` in operation crates.
 
 Verification:
@@ -439,8 +429,9 @@ Module order:
    - `internal/workspace_session`
    - `internal/workspace_remount`
 5. Rename aggregate types only when the crate compiles:
-   - `DaemonOperations` -> `SandboxDaemonOperations`
-   - `OperationRequest` remains a facade name pointing at `sandbox_protocol`.
+   - Runtime aggregate type is `SandboxRuntimeOperations`.
+   - Use `sandbox_protocol::OperationRequest` and `sandbox_protocol::OperationResponse`
+     directly instead of facade aliases.
 6. Export daemon operation catalog:
    - `sandbox_runtime::operation_specs()`
    - `sandbox_runtime::operation_catalog()`
@@ -552,8 +543,8 @@ Module order:
 
 1. `config.rs`: manager socket/config discovery.
 2. `client.rs`: sends `sandbox-protocol` requests to manager.
-3. `manual.rs`: renders manager and runtime operation surfaces separately.
-4. `request_builder.rs`: turns CLI argv into `Request`.
+3. `manual.rs`: renders manager and runtime execution spaces separately.
+4. `request_builder.rs`: turns CLI argv into `SandboxRequest`.
 5. `output.rs`: stdout for data, stderr for errors.
 6. `main.rs`: command dispatch and exit-code mapping.
 
@@ -577,31 +568,31 @@ cargo test -p sandbox-gateway-cli
 
 ### 7. Agent-Facing Catalog Contract
 
-Add a catalog endpoint or manager operation that returns both surfaces:
+Add a catalog endpoint or manager operation that returns both operation spaces:
 
 ```text
 describe_manager_operations
 describe_daemon_operations
 ```
 
-The returned data should preserve the external surface and implementation
-authority:
+The returned data should expose the operation space directly and should not
+expose a separate implementation-owner field:
 
 ```json
 {
   "manager": {
-    "authority": "sandbox_manager",
+    "operation_space": "manager",
     "operations": ["create_sandbox", "list_sandboxes"]
   },
   "runtime": {
-    "authority": "sandbox_daemon",
+    "operation_space": "runtime",
     "operations": ["exec_command", "poll_command", "cancel_command"]
   }
 }
 ```
 
-Agents should not infer authority from operation name prefixes alone. The
-manager surface and runtime surface are separate tool spaces.
+Agents should not infer operation space from operation name prefixes alone. The
+manager operation space and runtime operation space are separate tool spaces.
 
 Verification:
 
@@ -638,7 +629,7 @@ Only after all new names work:
 - Do not rename all runtime support crates in the first split.
 - Do not move command execution semantics into `sandbox-manager`.
 - Do not make `sandbox-gateway-cli` own sandbox lifecycle.
-- Do not make `OperationFamily` the manager-vs-daemon routing authority.
+- Do not make `OperationFamily` the manager-vs-runtime routing selector.
 - Do not remove `command-request.json` until there is a replacement transport
   for the namespace runner side channel.
 
@@ -646,8 +637,8 @@ Only after all new names work:
 
 - `sandbox-manager` and `sandbox-runtime` have separate operation catalogs.
 - `sandbox-runtime` owns the runtime catalog exposed by `sandbox-daemon`.
-- `sandbox-gateway-cli` can generate/manual-render manager and runtime surfaces
-  separately.
+- `sandbox-gateway-cli` can generate/manual-render manager and runtime
+  operation spaces separately.
 - `sandbox-manager` can route a daemon operation to a selected sandbox daemon.
 - `sandbox-daemon` can execute existing command operations unchanged in meaning.
 - `sandbox-protocol` has no dependency on manager, daemon, command, workspace,

@@ -9,7 +9,7 @@ pub use impls::{
 };
 pub use model::{
     CompactSnapshotLayersRequest, CompactSnapshotLayersResult, LeasedSnapshot,
-    PublishChangesRequest, PublishChangesResult, Snapshot,
+    PublishChangesRequest, Snapshot,
 };
 
 #[doc(hidden)]

@@ -32,7 +32,7 @@ use rustix::mount::{
     FsMountFlags, FsOpenFlags, MountAttrFlags, MountFlags, MoveMountFlags, UnmountFlags,
 };
 
-use crate::{OverlayError, Result};
+use crate::OverlayError;
 
 #[cfg(target_os = "linux")]
 const MAX_UNMOUNT_PEELS: usize = 64;
@@ -77,7 +77,7 @@ impl OverlayMount {
     /// Returns [`OverlayError::MountSyscall`] when the mountpoint cannot be
     /// detached, or [`OverlayError::Unsupported`] on non-Linux targets.
     #[cfg(target_os = "linux")]
-    pub fn unmount(mut self) -> Result<()> {
+    pub fn unmount(mut self) -> std::result::Result<(), OverlayError> {
         if let Some(workspace_root) = self.workspace_root.take() {
             peel_unmounts(&workspace_root, true)?;
         }
@@ -91,7 +91,7 @@ impl OverlayMount {
     ///
     /// Always returns [`OverlayError::Unsupported`].
     #[cfg(not(target_os = "linux"))]
-    pub fn unmount(self) -> Result<()> {
+    pub fn unmount(self) -> std::result::Result<(), OverlayError> {
         Err(OverlayError::Unsupported)
     }
 }
@@ -122,7 +122,10 @@ impl Drop for OverlayMount {
 /// Returns [`OverlayError`] when mount inputs are invalid or a kernel mount
 /// syscall fails.
 #[cfg(target_os = "linux")]
-pub fn mount_overlay(workspace_root: &Path, handle: &OverlayHandle) -> Result<OverlayMount> {
+pub fn mount_overlay(
+    workspace_root: &Path,
+    handle: &OverlayHandle,
+) -> std::result::Result<OverlayMount, OverlayError> {
     let inputs = ValidatedMountInputs::open(workspace_root, handle)?;
     let fsfd =
         fsopen("overlay", FsOpenFlags::FSOPEN_CLOEXEC).map_mount_syscall("fsopen overlay")?;
@@ -166,7 +169,10 @@ pub fn mount_overlay(workspace_root: &Path, handle: &OverlayHandle) -> Result<Ov
 /// Returns [`OverlayError`] when mount inputs are invalid or the legacy mount
 /// syscall fails.
 #[cfg(target_os = "linux")]
-pub fn mount_overlay_legacy(workspace_root: &Path, handle: &OverlayHandle) -> Result<OverlayMount> {
+pub fn mount_overlay_legacy(
+    workspace_root: &Path,
+    handle: &OverlayHandle,
+) -> std::result::Result<OverlayMount, OverlayError> {
     let inputs = ValidatedMountInputs::open(workspace_root, handle)?;
     let data = legacy_overlay_options(&inputs, handle)?;
     mount(
@@ -194,7 +200,7 @@ pub fn mount_overlay_legacy(workspace_root: &Path, handle: &OverlayHandle) -> Re
 /// Returns [`OverlayError::MountSyscall`] when the mountpoint cannot be
 /// detached.
 #[cfg(target_os = "linux")]
-pub fn unmount_overlay(workspace_root: &Path) -> Result<()> {
+pub fn unmount_overlay(workspace_root: &Path) -> std::result::Result<(), OverlayError> {
     peel_unmounts(workspace_root, true)
 }
 
@@ -209,7 +215,7 @@ pub fn unmount_overlay(workspace_root: &Path) -> Result<()> {
 /// Returns [`OverlayError::MountSyscall`] when the kernel refuses the mount
 /// move.
 #[cfg(target_os = "linux")]
-pub fn move_mountpoint(source: &Path, target: &Path) -> Result<()> {
+pub fn move_mountpoint(source: &Path, target: &Path) -> std::result::Result<(), OverlayError> {
     move_mount(
         rustix::fs::CWD,
         source,
@@ -226,7 +232,10 @@ pub fn move_mountpoint(source: &Path, target: &Path) -> Result<()> {
 ///
 /// Always returns [`OverlayError::Unsupported`].
 #[cfg(not(target_os = "linux"))]
-pub const fn move_mountpoint(_source: &Path, _target: &Path) -> Result<()> {
+pub const fn move_mountpoint(
+    _source: &Path,
+    _target: &Path,
+) -> std::result::Result<(), OverlayError> {
     Err(OverlayError::Unsupported)
 }
 
@@ -236,7 +245,7 @@ pub const fn move_mountpoint(_source: &Path, _target: &Path) -> Result<()> {
 ///
 /// Always returns [`OverlayError::Unsupported`].
 #[cfg(not(target_os = "linux"))]
-pub const fn unmount_overlay(_workspace_root: &Path) -> Result<()> {
+pub const fn unmount_overlay(_workspace_root: &Path) -> std::result::Result<(), OverlayError> {
     Err(OverlayError::Unsupported)
 }
 
@@ -249,7 +258,7 @@ pub const fn unmount_overlay(_workspace_root: &Path) -> Result<()> {
 pub const fn mount_overlay(
     _workspace_root: &Path,
     _handle: &OverlayHandle,
-) -> Result<OverlayMount> {
+) -> std::result::Result<OverlayMount, OverlayError> {
     Err(OverlayError::Unsupported)
 }
 
@@ -262,7 +271,7 @@ pub const fn mount_overlay(
 pub const fn mount_overlay_legacy(
     _workspace_root: &Path,
     _handle: &OverlayHandle,
-) -> Result<OverlayMount> {
+) -> std::result::Result<OverlayMount, OverlayError> {
     Err(OverlayError::Unsupported)
 }
 
@@ -277,7 +286,10 @@ pub(crate) struct ValidatedMountInputs {
 
 #[cfg(target_os = "linux")]
 impl ValidatedMountInputs {
-    pub(crate) fn open(workspace_root: &Path, handle: &OverlayHandle) -> Result<Self> {
+    pub(crate) fn open(
+        workspace_root: &Path,
+        handle: &OverlayHandle,
+    ) -> std::result::Result<Self, OverlayError> {
         if handle.layer_paths.is_empty() {
             return Err(OverlayError::InvalidMountInput(
                 "layer_paths must not be empty".to_owned(),
@@ -334,7 +346,7 @@ impl ValidatedMountInputs {
 }
 
 #[cfg(target_os = "linux")]
-fn require_existing_dir(path: &Path, label: &str) -> Result<()> {
+fn require_existing_dir(path: &Path, label: &str) -> std::result::Result<(), OverlayError> {
     if path
         .symlink_metadata()
         .is_ok_and(|meta| meta.file_type().is_symlink())
@@ -354,7 +366,7 @@ fn require_existing_dir(path: &Path, label: &str) -> Result<()> {
 }
 
 #[cfg(target_os = "linux")]
-fn open_dir_no_follow(path: &Path) -> Result<File> {
+fn open_dir_no_follow(path: &Path) -> std::result::Result<File, OverlayError> {
     rustix::fs::open(
         path,
         OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC,
@@ -373,7 +385,7 @@ fn fd_path(file: &File) -> PathBuf {
 fn legacy_overlay_options(
     inputs: &ValidatedMountInputs,
     handle: &OverlayHandle,
-) -> Result<CString> {
+) -> std::result::Result<CString, OverlayError> {
     let mut data = Vec::new();
     data.extend_from_slice(b"lowerdir=");
     // The legacy mount API cannot use the fd-backed lower paths used by the
@@ -394,7 +406,10 @@ fn legacy_overlay_options(
 }
 
 #[cfg(target_os = "linux")]
-fn peel_unmounts(workspace_root: &Path, allow_lazy_fallback: bool) -> Result<()> {
+fn peel_unmounts(
+    workspace_root: &Path,
+    allow_lazy_fallback: bool,
+) -> std::result::Result<(), OverlayError> {
     for _ in 0..MAX_UNMOUNT_PEELS {
         match unmount(workspace_root, UnmountFlags::empty()) {
             Ok(()) => {}
@@ -423,7 +438,7 @@ fn peel_unmounts(workspace_root: &Path, allow_lazy_fallback: bool) -> Result<()>
 }
 
 #[cfg(target_os = "linux")]
-fn reject_forbidden_chars(path: &Path) -> Result<()> {
+fn reject_forbidden_chars(path: &Path) -> std::result::Result<(), OverlayError> {
     let text = path.as_os_str().to_string_lossy();
     for bad in [",", ":", "\\", "\n", "\r", "\t", "\0"] {
         if text.contains(bad) {
@@ -437,12 +452,12 @@ fn reject_forbidden_chars(path: &Path) -> Result<()> {
 
 #[cfg(target_os = "linux")]
 trait MountIo<T> {
-    fn map_mount_syscall(self, context: &'static str) -> Result<T>;
+    fn map_mount_syscall(self, context: &'static str) -> std::result::Result<T, OverlayError>;
 }
 
 #[cfg(target_os = "linux")]
 impl<T> MountIo<T> for rustix::io::Result<T> {
-    fn map_mount_syscall(self, context: &'static str) -> Result<T> {
+    fn map_mount_syscall(self, context: &'static str) -> std::result::Result<T, OverlayError> {
         self.map_err(|err| OverlayError::MountSyscall {
             context,
             source: std::io::Error::from(err),

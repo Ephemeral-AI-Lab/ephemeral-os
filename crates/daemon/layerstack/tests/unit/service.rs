@@ -2,17 +2,17 @@ use std::path::Path;
 
 use crate::commit::CommitWriter;
 use crate::model::LayerChange;
-use crate::test_fixture::{lp, unique_suffix, Fixture, TestResult};
+use crate::test_fixture::{lp, unique_suffix, Fixture};
 use crate::{
     process_state_test_lock, reset_process_state_for_tests, service, LayerStack, MergedView,
 };
 
-use crate::service::cache::{
-    normalize_root_key, services, RootService, ServiceCache, SERVICE_CACHE_MAX,
-};
+use crate::service::cache::{normalize_root_key, services, ServiceCache, SERVICE_CACHE_MAX};
 use crate::service::support::{snapshot_manifest, snapshot_manifest_preserving_layer_ids};
 
-fn root_service(root: &Path) -> TestResult<RootService> {
+fn root_service(
+    root: &Path,
+) -> Result<std::sync::Arc<CommitWriter>, Box<dyn std::error::Error + Send + Sync>> {
     Ok(std::sync::Arc::new(CommitWriter::new(root.to_path_buf())?))
 }
 
@@ -28,7 +28,8 @@ fn service_cache_contains_root_for_tests(root: &Path) -> bool {
 }
 
 #[test]
-fn snapshot_manifest_converts_absolute_layer_paths_to_relative() -> TestResult {
+fn snapshot_manifest_converts_absolute_layer_paths_to_relative(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let root = std::path::PathBuf::from("/stack");
     let manifest = snapshot_manifest(&root, 7, &[root.join("layers/a"), root.join("layers/b")])?;
 
@@ -39,7 +40,8 @@ fn snapshot_manifest_converts_absolute_layer_paths_to_relative() -> TestResult {
 }
 
 #[test]
-fn snapshot_manifest_preserving_layer_ids_uses_layer_dir_names() -> TestResult {
+fn snapshot_manifest_preserving_layer_ids_uses_layer_dir_names(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let root = std::path::PathBuf::from("/stack");
     let manifest = snapshot_manifest_preserving_layer_ids(
         &root,
@@ -72,7 +74,8 @@ fn snapshot_manifest_rejects_absolute_layer_paths_outside_root() {
 }
 
 #[test]
-fn process_state_reset_clears_service_cache_and_lease_registry() -> TestResult {
+fn process_state_reset_clears_service_cache_and_lease_registry(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let _state_guard = process_state_test_lock();
     reset_process_state_for_tests();
     let fixture = Fixture::new("process_state_reset")?;
@@ -109,7 +112,8 @@ fn process_state_reset_clears_service_cache_and_lease_registry() -> TestResult {
 }
 
 #[test]
-fn compact_snapshot_for_remount_retargets_active_lease_to_one_layer() -> TestResult {
+fn compact_snapshot_for_remount_retargets_active_lease_to_one_layer(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let _state_guard = process_state_test_lock();
     reset_process_state_for_tests();
     let fixture = Fixture::new("compact_snapshot_retarget")?;
@@ -152,7 +156,7 @@ fn compact_snapshot_for_remount_retargets_active_lease_to_one_layer() -> TestRes
 }
 
 #[test]
-fn service_cache_is_bounded_lru() -> TestResult {
+fn service_cache_is_bounded_lru() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut cache = ServiceCache::default();
     let base = std::env::temp_dir().join(format!("eos-service-cache-{}", unique_suffix()));
     let _ = std::fs::remove_dir_all(&base);

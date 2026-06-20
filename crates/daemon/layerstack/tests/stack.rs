@@ -9,10 +9,9 @@ use layerstack::{
 };
 use serde_json::json;
 
-type TestResult<T = ()> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
-
 #[test]
-fn squash_coalesces_layers_and_preserves_merged_reads() -> TestResult {
+fn squash_coalesces_layers_and_preserves_merged_reads(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("squash_basic");
     let mut stack = LayerStack::open(fixture.root.clone())?;
     publish_text(&mut stack, "a.txt", "one\n")?;
@@ -33,7 +32,8 @@ fn squash_coalesces_layers_and_preserves_merged_reads() -> TestResult {
 }
 
 #[test]
-fn release_lease_gcs_squashed_layers_after_retaining_lease_drops() -> TestResult {
+fn release_lease_gcs_squashed_layers_after_retaining_lease_drops(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("squash_gc");
     let mut stack = LayerStack::open(fixture.root.clone())?;
     publish_text(&mut stack, "a.txt", "one\n")?;
@@ -59,7 +59,8 @@ fn release_lease_gcs_squashed_layers_after_retaining_lease_drops() -> TestResult
 }
 
 #[test]
-fn cross_instance_lease_retains_squashed_layers_until_reopened_release() -> TestResult {
+fn cross_instance_lease_retains_squashed_layers_until_reopened_release(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("squash_gc_cross_instance");
     let mut stack = LayerStack::open(fixture.root.clone())?;
     publish_text(&mut stack, "a.txt", "one\n")?;
@@ -98,7 +99,7 @@ fn cross_instance_lease_retains_squashed_layers_until_reopened_release() -> Test
 
 #[test]
 fn reclaim_unpinned_layers_view_reclaim_compacts_same_file_gap_around_single_protected_layer(
-) -> TestResult {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("reclaim_unpinned_layers_view_reclaim_l4");
     let mut stack = LayerStack::open(fixture.root.clone())?;
     for index in 1..=6 {
@@ -156,7 +157,7 @@ fn reclaim_unpinned_layers_view_reclaim_compacts_same_file_gap_around_single_pro
 
 #[test]
 fn reclaim_unpinned_layers_parent_prefix_compaction_keeps_live_l4_lease_but_reclaims_prefix(
-) -> TestResult {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("reclaim_unpinned_layers_live_l4_parent_prefix");
     let mut stack = LayerStack::open(fixture.root.clone())?;
     for index in 1..=4 {
@@ -223,7 +224,7 @@ fn reclaim_unpinned_layers_parent_prefix_compaction_keeps_live_l4_lease_but_recl
 
 #[test]
 fn reclaim_unpinned_layers_large_parent_prefix_compaction_preserves_large_file_integrity(
-) -> TestResult {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("reclaim_unpinned_layers_large_l4_parent_prefix");
     let mut stack = LayerStack::open(fixture.root.clone())?;
     let large_file_bytes = 4 << 20;
@@ -286,7 +287,7 @@ fn reclaim_unpinned_layers_large_parent_prefix_compaction_preserves_large_file_i
 
 #[test]
 fn reclaim_unpinned_layers_multi_lease_parent_normalization_reclaims_only_unpinned_layers(
-) -> TestResult {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("reclaim_unpinned_layers_multi_lease_parent_prefix");
     let mut stack = LayerStack::open(fixture.root.clone())?;
     for index in 1..=4 {
@@ -368,7 +369,7 @@ fn reclaim_unpinned_layers_multi_lease_parent_normalization_reclaims_only_unpinn
 
 #[test]
 fn reclaim_unpinned_layers_many_historical_leases_reclaim_top_gap_and_preserve_snapshots(
-) -> TestResult {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("reclaim_unpinned_layers_many_historical_leases");
     let mut stack = LayerStack::open(fixture.root.clone())?;
     for index in 1..=4 {
@@ -427,7 +428,8 @@ fn reclaim_unpinned_layers_many_historical_leases_reclaim_top_gap_and_preserve_s
 }
 
 #[test]
-fn reclaim_unpinned_layers_view_reclaim_skips_delete_gap_until_delta_checkpoint() -> TestResult {
+fn reclaim_unpinned_layers_view_reclaim_skips_delete_gap_until_delta_checkpoint(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("reclaim_unpinned_layers_view_reclaim_delete_skip");
     let mut stack = LayerStack::open(fixture.root.clone())?;
     publish_blob(&mut stack, "a.txt", 1 << 20, 1)?;
@@ -454,8 +456,8 @@ fn reclaim_unpinned_layers_view_reclaim_skips_delete_gap_until_delta_checkpoint(
 }
 
 #[test]
-fn reclaim_unpinned_layers_delta_reclaim_preserves_delete_above_protected_lower_file() -> TestResult
-{
+fn reclaim_unpinned_layers_delta_reclaim_preserves_delete_above_protected_lower_file(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("reclaim_unpinned_layers_delta_delete");
     let mut stack = LayerStack::open(fixture.root.clone())?;
     publish_blob(&mut stack, "a.txt", 1 << 20, 1)?;
@@ -486,7 +488,7 @@ fn reclaim_unpinned_layers_delta_reclaim_preserves_delete_above_protected_lower_
 
 #[test]
 fn reclaim_unpinned_layers_delta_reclaim_preserves_opaque_dir_above_protected_lower_entries(
-) -> TestResult {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("reclaim_unpinned_layers_delta_opaque");
     let mut stack = LayerStack::open(fixture.root.clone())?;
     publish_blob(&mut stack, "dir/protected.txt", 1 << 20, 1)?;
@@ -536,7 +538,7 @@ fn reclaim_unpinned_layers_delta_reclaim_preserves_opaque_dir_above_protected_lo
 
 #[test]
 fn reclaim_unpinned_layers_copy_through_reports_pinned_bytes_without_reclaiming_protected_layers(
-) -> TestResult {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("reclaim_unpinned_layers_copy_through");
     let mut stack = LayerStack::open(fixture.root.clone())?;
     for index in 1..=6 {
@@ -572,7 +574,8 @@ fn reclaim_unpinned_layers_copy_through_reports_pinned_bytes_without_reclaiming_
 }
 
 #[test]
-fn delete_layer_hides_files_in_reads_and_projection() -> TestResult {
+fn delete_layer_hides_files_in_reads_and_projection(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("delete_hides");
     let mut stack = LayerStack::open(fixture.root.clone())?;
     publish_text(&mut stack, "dir/a.txt", "one\n")?;
@@ -600,7 +603,8 @@ fn delete_layer_hides_files_in_reads_and_projection() -> TestResult {
 }
 
 #[test]
-fn read_bytes_limited_rejects_oversized_file() -> TestResult {
+fn read_bytes_limited_rejects_oversized_file(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("read_bytes_limited");
     let mut stack = LayerStack::open(fixture.root.clone())?;
     publish_text(&mut stack, "large.txt", "abcdef")?;
@@ -617,7 +621,8 @@ fn read_bytes_limited_rejects_oversized_file() -> TestResult {
 }
 
 #[test]
-fn ensure_workspace_base_rejects_too_new_manifest_schema() -> TestResult {
+fn ensure_workspace_base_rejects_too_new_manifest_schema(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("workspace_base_new_schema");
     write_bound_manifest(
         &fixture,
@@ -639,7 +644,8 @@ fn ensure_workspace_base_rejects_too_new_manifest_schema() -> TestResult {
 }
 
 #[test]
-fn ensure_workspace_base_rejects_invalid_manifest_layer_paths() -> TestResult {
+fn ensure_workspace_base_rejects_invalid_manifest_layer_paths(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let cases = [
         ("workspace_base_empty_layer_path", ""),
         ("workspace_base_parent_layer_path", "../outside"),
@@ -669,7 +675,8 @@ fn ensure_workspace_base_rejects_invalid_manifest_layer_paths() -> TestResult {
 }
 
 #[test]
-fn build_workspace_base_writes_manifest_with_canonical_atomic_path() -> TestResult {
+fn build_workspace_base_writes_manifest_with_canonical_atomic_path(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("workspace_base_manifest_atomic");
     std::fs::create_dir_all(&fixture.workspace)?;
     std::fs::write(fixture.workspace.join("tracked.txt"), "base\n")?;
@@ -698,7 +705,11 @@ fn build_workspace_base_writes_manifest_with_canonical_atomic_path() -> TestResu
     Ok(())
 }
 
-fn publish_text(stack: &mut LayerStack, path: &str, content: &str) -> TestResult {
+fn publish_text(
+    stack: &mut LayerStack,
+    path: &str,
+    content: &str,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     stack.publish_layer(&[LayerChange::Write {
         path: LayerPath::parse(path)?,
         content: content.as_bytes().to_vec(),
@@ -706,7 +717,12 @@ fn publish_text(stack: &mut LayerStack, path: &str, content: &str) -> TestResult
     Ok(())
 }
 
-fn publish_blob(stack: &mut LayerStack, path: &str, size: usize, seed: u8) -> TestResult {
+fn publish_blob(
+    stack: &mut LayerStack,
+    path: &str,
+    size: usize,
+    seed: u8,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     stack.publish_layer(&[LayerChange::Write {
         path: LayerPath::parse(path)?,
         content: vec![seed; size],
@@ -731,7 +747,10 @@ fn payload_bytes(path: &std::path::Path) -> std::io::Result<u64> {
     Ok(total)
 }
 
-fn write_bound_manifest(fixture: &Fixture, manifest: serde_json::Value) -> TestResult {
+fn write_bound_manifest(
+    fixture: &Fixture,
+    manifest: serde_json::Value,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     std::fs::create_dir_all(&fixture.root)?;
     std::fs::create_dir_all(&fixture.workspace)?;
     let binding = WorkspaceBinding {

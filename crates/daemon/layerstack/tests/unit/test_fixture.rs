@@ -7,8 +7,6 @@ use serde_json::json;
 
 use crate::LayerStack;
 
-pub(crate) type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
-
 pub(crate) fn unique_suffix() -> String {
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     format!(
@@ -18,7 +16,9 @@ pub(crate) fn unique_suffix() -> String {
     )
 }
 
-pub(crate) fn lp(path: &str) -> TestResult<crate::model::LayerPath> {
+pub(crate) fn lp(
+    path: &str,
+) -> Result<crate::model::LayerPath, Box<dyn std::error::Error + Send + Sync>> {
     Ok(crate::model::LayerPath::parse(path)?)
 }
 
@@ -28,11 +28,14 @@ pub(crate) struct Fixture {
 }
 
 impl Fixture {
-    pub(crate) fn new(label: &str) -> TestResult<Self> {
+    pub(crate) fn new(label: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         Self::new_with_gitignores(label, &[])
     }
 
-    pub(crate) fn new_with_gitignore(label: &str, gitignore: &str) -> TestResult<Self> {
+    pub(crate) fn new_with_gitignore(
+        label: &str,
+        gitignore: &str,
+    ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let seeds = if gitignore.is_empty() {
             Vec::new()
         } else {
@@ -46,7 +49,7 @@ impl Fixture {
     pub(crate) fn new_with_gitignores(
         label: &str,
         gitignores: &[(&str, &str)],
-    ) -> TestResult<Self> {
+    ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let base = std::env::temp_dir().join(format!("layerstack-{label}-{}", unique_suffix()));
         let _ = std::fs::remove_dir_all(&base);
         let root = base.join("layer-stack");
@@ -76,7 +79,10 @@ impl Fixture {
         Ok(Self { base, root })
     }
 
-    pub(crate) fn read_text(&self, path: &str) -> TestResult<String> {
+    pub(crate) fn read_text(
+        &self,
+        path: &str,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         Ok(LayerStack::open(self.root.clone())?.read_text(path)?.0)
     }
 }

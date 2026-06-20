@@ -11,11 +11,10 @@ pub mod store;
 
 pub use daemon_client::SandboxDaemonClient;
 pub use daemon_install::SandboxDaemonInstaller;
-pub use error::{ManagerError, ManagerResult};
+pub use error::ManagerError;
 pub use model::{SandboxDaemonEndpoint, SandboxId, SandboxRecord, SandboxState};
 pub use operation::{
-    dispatch_operation, operation_catalog, operation_specs, ManagerOperationDispatch,
-    ManagerOperationEntry, ManagerServices,
+    dispatch_operation, operation_catalog, operation_specs, ManagerOperationEntry, ManagerServices,
 };
 pub use runtime::SandboxRuntime;
 pub use server::{SandboxManagerServer, ServerConfig, ServerError};

@@ -2,8 +2,6 @@ use thiserror::Error;
 
 use crate::model::{SandboxId, SandboxState};
 
-pub type ManagerResult<T> = Result<T, ManagerError>;
-
 #[derive(Debug, Error)]
 pub enum ManagerError {
     #[error("invalid sandbox id: {value}")]
@@ -55,7 +53,7 @@ impl ManagerError {
     }
 
     #[must_use]
-    pub fn into_response(self) -> sandbox_protocol::SandboxResponse {
-        sandbox_protocol::SandboxResponse::fault(self.protocol_kind(), self.to_string())
+    pub fn into_response(self) -> sandbox_protocol::OperationResponse {
+        sandbox_protocol::OperationResponse::fault(self.protocol_kind(), self.to_string())
     }
 }

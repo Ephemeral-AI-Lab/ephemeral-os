@@ -1,13 +1,13 @@
 use std::fmt;
 use std::path::PathBuf;
 
-use crate::{ManagerError, ManagerResult};
+use crate::ManagerError;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct SandboxId(String);
 
 impl SandboxId {
-    pub fn new(value: impl Into<String>) -> ManagerResult<Self> {
+    pub fn new(value: impl Into<String>) -> Result<Self, ManagerError> {
         let value = value.into();
         if value.trim().is_empty() {
             return Err(ManagerError::InvalidSandboxId { value });

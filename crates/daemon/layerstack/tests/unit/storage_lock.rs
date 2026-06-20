@@ -6,12 +6,11 @@ use std::time::Duration;
 use super::StorageWriterLockLease;
 use crate::{process_state_test_lock, reset_process_state_for_tests};
 
-type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
-
 static NEXT_TMP: AtomicU64 = AtomicU64::new(0);
 
 #[test]
-fn shared_guards_overlap_and_block_exclusive() -> TestResult {
+fn shared_guards_overlap_and_block_exclusive(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("shared-overlap")?;
     let lease = StorageWriterLockLease::acquire(&fixture.root)?;
     let shared = lease.shared()?;
@@ -19,25 +18,29 @@ fn shared_guards_overlap_and_block_exclusive() -> TestResult {
     let (shared_tx, shared_rx) = mpsc::channel();
     let (release_tx, release_rx) = mpsc::channel();
     let root = fixture.root.clone();
-    let shared_thread = std::thread::spawn(move || -> TestResult {
-        let lease = StorageWriterLockLease::acquire(&root)?;
-        let _shared = lease.shared()?;
-        shared_tx.send(())?;
-        release_rx.recv()?;
-        Ok(())
-    });
+    let shared_thread = std::thread::spawn(
+        move || -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+            let lease = StorageWriterLockLease::acquire(&root)?;
+            let _shared = lease.shared()?;
+            shared_tx.send(())?;
+            release_rx.recv()?;
+            Ok(())
+        },
+    );
     shared_rx.recv_timeout(Duration::from_secs(1))?;
     release_tx.send(())?;
     join_test_thread(shared_thread)?;
 
     let (exclusive_tx, exclusive_rx) = mpsc::channel();
     let root = fixture.root.clone();
-    let exclusive_thread = std::thread::spawn(move || -> TestResult {
-        let lease = StorageWriterLockLease::acquire(&root)?;
-        let _exclusive = lease.exclusive()?;
-        exclusive_tx.send(())?;
-        Ok(())
-    });
+    let exclusive_thread = std::thread::spawn(
+        move || -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+            let lease = StorageWriterLockLease::acquire(&root)?;
+            let _exclusive = lease.exclusive()?;
+            exclusive_tx.send(())?;
+            Ok(())
+        },
+    );
     assert!(
         exclusive_rx
             .recv_timeout(Duration::from_millis(50))
@@ -51,7 +54,8 @@ fn shared_guards_overlap_and_block_exclusive() -> TestResult {
 }
 
 #[test]
-fn exclusive_guard_is_reentrant_and_blocks_shared() -> TestResult {
+fn exclusive_guard_is_reentrant_and_blocks_shared(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("exclusive-reentrant")?;
     let lease = StorageWriterLockLease::acquire(&fixture.root)?;
     let exclusive = lease.exclusive()?;
@@ -59,12 +63,14 @@ fn exclusive_guard_is_reentrant_and_blocks_shared() -> TestResult {
 
     let (shared_tx, shared_rx) = mpsc::channel();
     let root = fixture.root.clone();
-    let shared_thread = std::thread::spawn(move || -> TestResult {
-        let lease = StorageWriterLockLease::acquire(&root)?;
-        let _shared = lease.shared()?;
-        shared_tx.send(())?;
-        Ok(())
-    });
+    let shared_thread = std::thread::spawn(
+        move || -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+            let lease = StorageWriterLockLease::acquire(&root)?;
+            let _shared = lease.shared()?;
+            shared_tx.send(())?;
+            Ok(())
+        },
+    );
     assert!(
         shared_rx.recv_timeout(Duration::from_millis(50)).is_err(),
         "shared guard acquired while the outer exclusive guard was held"
@@ -81,7 +87,8 @@ fn exclusive_guard_is_reentrant_and_blocks_shared() -> TestResult {
 }
 
 #[test]
-fn process_state_reset_does_not_close_active_storage_writer_leases() -> TestResult {
+fn process_state_reset_does_not_close_active_storage_writer_leases(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let _state_guard = process_state_test_lock();
     let fixture = Fixture::new("reset-active")?;
     let lease = StorageWriterLockLease::acquire(&fixture.root)?;
@@ -91,7 +98,9 @@ fn process_state_reset_does_not_close_active_storage_writer_leases() -> TestResu
     Ok(())
 }
 
-fn join_test_thread(handle: std::thread::JoinHandle<TestResult>) -> TestResult {
+fn join_test_thread(
+    handle: std::thread::JoinHandle<Result<(), Box<dyn std::error::Error + Send + Sync>>>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     handle
         .join()
         .map_err(|_| std::io::Error::other("test thread panicked"))?
@@ -102,7 +111,7 @@ struct Fixture {
 }
 
 impl Fixture {
-    fn new(label: &str) -> TestResult<Self> {
+    fn new(label: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let root = std::env::temp_dir().join(format!(
             "layerstack-storage-lock-{label}-{}-{}",
             std::process::id(),

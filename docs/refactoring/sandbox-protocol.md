@@ -27,8 +27,7 @@ Import:  sandbox_protocol
   - `ArgCliSpec`
   - `CliSpec`
   - `OperationCatalog`
-  - `OperationSurface`
-  - `OperationAuthority`
+  - `OperationExecutionSpace`
 - Manual/help rendering helpers that operate only on `OperationSpec`.
 
 ## Must Not Own
@@ -77,7 +76,7 @@ pub enum OperationScope {
     Sandbox { sandbox_id: String },
 }
 
-pub struct SandboxResponse {
+pub struct OperationResponse {
     pub request_id: String,
     pub scope: OperationScope,
     pub op: String,
@@ -105,8 +104,7 @@ pub struct ResponseMeta {
 }
 ```
 
-Do not add compatibility aliases such as `OwnedRequest`, `RpcRequest`, or
-`Response`. New code should use the explicit names.
+Use explicit protocol DTO names in new code.
 
 Example manager-scoped request:
 
@@ -159,11 +157,10 @@ Example response:
 }
 ```
 
-`scope` identifies the resource the operation applies to. It is not the
-implementation authority or agent-facing tool surface. `OperationSurface`
-belongs in catalog/manual metadata only, for example `manager` vs `runtime`.
-`OperationAuthority` remains catalog metadata that describes which component
-owns the operation implementation.
+`scope` identifies the resource the operation applies to. It is not an
+implementation target and it is not the operation-space selector.
+`OperationExecutionSpace` belongs in catalog/manual metadata only, for example
+`manager` vs `runtime`.
 
 ## Dependency Rules
 

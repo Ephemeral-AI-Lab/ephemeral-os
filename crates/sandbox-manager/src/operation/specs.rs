@@ -1,8 +1,8 @@
 use serde_json::{json, Value};
 
 use sandbox_protocol::{
-    ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationAuthority, OperationCatalog, OperationFamily,
-    OperationSpec,
+    ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationCatalog, OperationExecutionSpace,
+    OperationFamily, OperationSpec,
 };
 
 pub(crate) const CREATE_SANDBOX: OperationSpec = OperationSpec {
@@ -129,13 +129,13 @@ pub const fn operation_specs() -> &'static [&'static OperationSpec] {
 
 #[must_use]
 pub const fn operation_catalog() -> OperationCatalog {
-    OperationCatalog::new(OperationAuthority::SandboxManager, operation_specs())
+    OperationCatalog::new(OperationExecutionSpace::Manager, operation_specs())
 }
 
 #[must_use]
 pub(crate) fn catalog_value(catalog: OperationCatalog) -> Value {
     json!({
-        "authority": authority_name(catalog.authority),
+        "operation_space": operation_space_name(catalog.operation_space),
         "operations": catalog
             .operations
             .iter()
@@ -163,10 +163,10 @@ fn arg_spec_value(spec: &ArgSpec) -> Value {
     })
 }
 
-fn authority_name(authority: OperationAuthority) -> &'static str {
-    match authority {
-        OperationAuthority::SandboxManager => "sandbox_manager",
-        OperationAuthority::SandboxDaemon => "sandbox_daemon",
+fn operation_space_name(operation_space: OperationExecutionSpace) -> &'static str {
+    match operation_space {
+        OperationExecutionSpace::Manager => "manager",
+        OperationExecutionSpace::Runtime => "runtime",
     }
 }
 

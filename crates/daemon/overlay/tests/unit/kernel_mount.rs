@@ -1,10 +1,9 @@
 use super::{OverlayHandle, ValidatedMountInputs};
 use std::path::PathBuf;
 
-type TestResult<T = ()> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
-
 #[test]
-fn mount_inputs_pin_only_lowerdirs_with_fd_paths() -> TestResult {
+fn mount_inputs_pin_only_lowerdirs_with_fd_paths(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let root = test_dir("workspace-root")?;
     let lower = test_dir("lower")?;
     let upperdir = test_dir("upper")?;
@@ -24,7 +23,7 @@ fn mount_inputs_pin_only_lowerdirs_with_fd_paths() -> TestResult {
     Ok(())
 }
 
-fn test_dir(name: &str) -> TestResult<PathBuf> {
+fn test_dir(name: &str) -> Result<PathBuf, Box<dyn std::error::Error + Send + Sync>> {
     let path = std::env::temp_dir().join(format!(
         "overlay-kernel-mount-{name}-{}",
         std::process::id()

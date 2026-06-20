@@ -4,7 +4,7 @@ use crate::commit::route::{hash_current, PublishDecision, Route};
 use crate::commit::worker::{CommitTransaction, PreparedChangeset};
 use crate::commit::CommitStatus;
 use crate::model::LayerChange;
-use crate::test_fixture::{lp, Fixture, TestResult};
+use crate::test_fixture::{lp, Fixture};
 use crate::{LayerPath, LayerStack, LayerStackError, Manifest, MergedView};
 
 fn transaction(fixture: &Fixture) -> CommitTransaction {
@@ -34,7 +34,7 @@ impl Drop for EnvVarGuard {
     }
 }
 
-fn readme_base_hash() -> TestResult<String> {
+fn readme_base_hash() -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     hash_current(Some(b"# README\n"), true).ok_or_else(|| "missing readme hash".into())
 }
 
@@ -63,7 +63,7 @@ fn publish_decision(
     path: &str,
     route: Route,
     base_hash: Option<String>,
-) -> TestResult<PublishDecision> {
+) -> Result<PublishDecision, Box<dyn std::error::Error + Send + Sync>> {
     let path = lp(path)?;
     Ok(match route {
         Route::Gated => PublishDecision::gated(path, base_hash),
@@ -73,7 +73,8 @@ fn publish_decision(
 }
 
 #[test]
-fn publish_failpoint_marker_is_inert_without_test_opt_in() -> TestResult {
+fn publish_failpoint_marker_is_inert_without_test_opt_in(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let _guard = EnvVarGuard::unset("EOS_LAYERSTACK_ENABLE_TEST_FAILPOINTS");
     let fixture = Fixture::new("publish_failpoint_inert")?;
     let marker = fixture
@@ -98,7 +99,8 @@ fn publish_failpoint_marker_is_inert_without_test_opt_in() -> TestResult {
 }
 
 #[test]
-fn base_hashes_accept_opaque_dir_over_existing_directory() -> TestResult {
+fn base_hashes_accept_opaque_dir_over_existing_directory(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("opaque_base_hash")?;
     std::fs::create_dir_all(fixture.root.join("layers/B000001-base/opaque_dir"))?;
     std::fs::write(
@@ -120,7 +122,8 @@ fn base_hashes_accept_opaque_dir_over_existing_directory() -> TestResult {
 }
 
 #[test]
-fn gated_stale_base_aborts_without_publish() -> TestResult {
+fn gated_stale_base_aborts_without_publish() -> Result<(), Box<dyn std::error::Error + Send + Sync>>
+{
     let fixture = Fixture::new("gated_stale")?;
     let old_hash = readme_base_hash()?;
     LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
@@ -159,7 +162,8 @@ fn gated_stale_base_aborts_without_publish() -> TestResult {
 }
 
 #[test]
-fn direct_route_ignores_stale_base_and_publishes() -> TestResult {
+fn direct_route_ignores_stale_base_and_publishes(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("direct_stale")?;
     LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
         path: lp("target/out.txt")?,
@@ -195,7 +199,7 @@ fn direct_route_ignores_stale_base_and_publishes() -> TestResult {
 }
 
 #[test]
-fn publish_does_not_squash_deep_stack() -> TestResult {
+fn publish_does_not_squash_deep_stack() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("publish_without_post_publish_squash")?;
     let mut stack = LayerStack::open(fixture.root.clone())?;
     for index in 0..3 {
@@ -228,7 +232,8 @@ fn publish_does_not_squash_deep_stack() -> TestResult {
 }
 
 #[test]
-fn gated_symlink_change_validates_and_publishes() -> TestResult {
+fn gated_symlink_change_validates_and_publishes(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("gated_symlink")?;
     let result = transaction(&fixture)
         .revalidate_and_publish(&PreparedChangeset {
@@ -254,7 +259,8 @@ fn gated_symlink_change_validates_and_publishes() -> TestResult {
 }
 
 #[test]
-fn atomic_mixed_validation_failure_drops_accepted_paths() -> TestResult {
+fn atomic_mixed_validation_failure_drops_accepted_paths(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("atomic_mixed")?;
     let old_hash = readme_base_hash()?;
     LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {

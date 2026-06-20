@@ -61,7 +61,7 @@ struct DaemonRuntimeConfig {
 
 fn build_runtime_operations(
     config: &DaemonRuntimeConfig,
-) -> sandbox_runtime::SandboxDaemonOperations {
+) -> sandbox_runtime::SandboxRuntimeOperations {
     let caps = workspace_resource_caps(&config.isolated);
     let workspace_runtime = Arc::new(workspace::WorkspaceRuntimeService::new(
         workspace::profile::WorkspaceModeManager::new(caps, config.isolated.scratch_root.clone()),
@@ -73,7 +73,7 @@ fn build_runtime_operations(
         workspace_session,
         command_config(&config.daemon.commands),
     ));
-    sandbox_runtime::SandboxDaemonOperations::new(command)
+    sandbox_runtime::SandboxRuntimeOperations::new(command)
 }
 
 fn workspace_resource_caps(config: &IsolatedNetworkConfig) -> workspace::profile::ResourceCaps {

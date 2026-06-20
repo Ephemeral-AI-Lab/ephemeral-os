@@ -9,9 +9,7 @@ pub(crate) mod stop_sandbox_daemon;
 
 use serde_json::{json, Value};
 
-use crate::{
-    ManagerError, ManagerResult, SandboxDaemonEndpoint, SandboxId, SandboxRecord, SandboxState,
-};
+use crate::{ManagerError, SandboxDaemonEndpoint, SandboxId, SandboxRecord, SandboxState};
 
 use self::start_sandbox_daemon as start_daemon_impl;
 use self::stop_sandbox_daemon as stop_daemon_impl;
@@ -40,8 +38,8 @@ pub(crate) const fn operation_entries() -> &'static [ManagerOperationEntry] {
 }
 
 pub(crate) fn sandbox_id(
-    request: &sandbox_protocol::Request<'_>,
-) -> Result<SandboxId, sandbox_protocol::SandboxResponse> {
+    request: &sandbox_protocol::OperationRequest<'_>,
+) -> Result<SandboxId, sandbox_protocol::OperationResponse> {
     request
         .required_string("sandbox_id")
         .and_then(|value| SandboxId::new(value).map_err(ManagerError::into_response))
@@ -50,7 +48,7 @@ pub(crate) fn sandbox_id(
 pub(crate) fn ready_record(
     services: &super::dispatch::ManagerServices,
     id: &SandboxId,
-) -> ManagerResult<SandboxRecord> {
+) -> Result<SandboxRecord, ManagerError> {
     let record = services.store.inspect(id)?;
     if record.state != SandboxState::Ready {
         return Err(ManagerError::InvalidStateTransition {
@@ -65,7 +63,7 @@ pub(crate) fn ready_record(
 pub(crate) fn endpoint(
     services: &super::dispatch::ManagerServices,
     id: &SandboxId,
-) -> ManagerResult<SandboxDaemonEndpoint> {
+) -> Result<SandboxDaemonEndpoint, ManagerError> {
     let record = ready_record(services, id)?;
     record
         .daemon

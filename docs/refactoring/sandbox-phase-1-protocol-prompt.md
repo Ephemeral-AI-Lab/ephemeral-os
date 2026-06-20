@@ -26,7 +26,7 @@ Phase goal:
 - Move protocol-neutral operation metadata types from `daemon_operation` into
   `sandbox-protocol`.
 - Make the public protocol DTO explicit and unified:
-  `SandboxRequest`, `OperationScope`, and `SandboxResponse`.
+  `SandboxRequest`, `OperationScope`, and `OperationResponse`.
 - Keep behavior unchanged for the existing daemon, eosd, and command
   operations.
 
@@ -40,13 +40,13 @@ Current source facts:
   `name = "daemon_rpc_protocol"`.
 - `crates/daemon/operation/src/operation.rs` currently defines:
   `OperationFamily`, `ArgKind`, `ArgCliSpec`, `ArgSpec`, `CliSpec`,
-  `OperationSpec`, `OperationDispatch`, and `OperationEntry`.
+  `OperationSpec`, dispatch function pointers, and `OperationEntry`.
 
 Move to `sandbox-protocol`:
 
 - `SandboxRequest`.
 - `OperationScope`.
-- `SandboxResponse`.
+- `OperationResponse`.
 - `ResponseStatus`.
 - `ResponseError`.
 - `ResponseMeta`.
@@ -56,21 +56,18 @@ Move to `sandbox-protocol`:
 - `ArgSpec`.
 - `CliSpec`.
 - `OperationSpec`.
-- New `OperationSurface`.
-- New `OperationAuthority`.
+- New `OperationExecutionSpace`.
 - New `OperationCatalog`.
 
 Keep in `daemon_operation`:
 
-- `OperationRequest` alias, updated to `sandbox_protocol::Request`.
-- `OperationResponse` alias, updated to `sandbox_protocol::SandboxResponse`.
-- `OperationDispatch`.
+- Direct use of `sandbox_protocol::OperationRequest` and
+  `sandbox_protocol::OperationResponse`.
 - `OperationEntry`.
 - Concrete operation specs and dispatch functions.
-- `DaemonOperations`.
+- `SandboxRuntimeOperations`.
 
-Do not add compatibility aliases such as `OwnedRequest`, `RpcRequest`, or
-`Response`. Use the explicit DTO names throughout active code.
+Use the explicit protocol DTO names throughout active code.
 
 Implementation steps:
 
@@ -155,7 +152,7 @@ Implementation steps:
        Sandbox { sandbox_id: String },
    }
 
-   pub struct SandboxResponse {
+   pub struct OperationResponse {
        pub request_id: String,
        pub scope: OperationScope,
        pub op: String,
@@ -174,7 +171,7 @@ Implementation steps:
 
 11. Update `crates/daemon/operation/src/operation.rs` so it imports or
     re-exports protocol metadata types from `sandbox_protocol`, while keeping
-    `OperationDispatch` and `OperationEntry` local.
+    dispatch function pointers and `OperationEntry` local.
 
 12. Update `crates/daemon/operation/src/public/protocol.rs` to re-export from
     `sandbox_protocol`.
@@ -182,7 +179,7 @@ Implementation steps:
 13. Keep `OperationEntry` out of `sandbox-protocol`. Verify with:
 
     ```sh
-    rg -n "OperationEntry|OperationDispatch|DaemonOperations" crates/sandbox-protocol
+    rg -n "OperationEntry|SandboxRuntimeOperations" crates/sandbox-protocol
     ```
 
     This should have no hits.
@@ -206,7 +203,7 @@ Acceptance checks:
 test -d crates/sandbox-protocol
 test ! -d crates/daemon/rpc_protocol
 rg -n "daemon_rpc_protocol" Cargo.toml crates --glob '!target/**'
-rg -n "OperationEntry|OperationDispatch|DaemonOperations" crates/sandbox-protocol
+rg -n "OperationEntry|SandboxRuntimeOperations" crates/sandbox-protocol
 cargo fmt --check -p sandbox-protocol -p daemon_operation -p daemon
 cargo check -p sandbox-protocol -p daemon_operation -p daemon
 cargo test -p sandbox-protocol -p daemon_operation

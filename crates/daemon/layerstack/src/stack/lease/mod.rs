@@ -6,6 +6,5 @@ pub(in crate::stack) use cleanup::{
 };
 pub(crate) use registry::reset_shared_registries_for_tests;
 pub(in crate::stack) use registry::{
-    lock_shared_registry, lock_shared_registry_recover, shared_registry_for_root,
-    SharedLeaseRegistry,
+    lock_shared_registry, lock_shared_registry_recover, shared_registry_for_root, LeaseRegistry,
 };

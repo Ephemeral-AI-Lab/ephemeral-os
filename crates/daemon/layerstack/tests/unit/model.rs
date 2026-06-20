@@ -1,8 +1,6 @@
 use super::*;
 use proptest::prelude::*;
 
-type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
-
 fn lp(s: &str) -> Result<LayerPath, CasError> {
     LayerPath::parse(s)
 }
@@ -40,7 +38,7 @@ fn escaper_short_escapes_and_control_chars() {
 }
 
 #[test]
-fn normalize_layer_path_rules() -> TestResult {
+fn normalize_layer_path_rules() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     assert_eq!(lp("a/b/c")?.as_str(), "a/b/c");
     assert_eq!(lp(" a//b/./c ")?.as_str(), "a/b/c");
     assert_eq!(lp("a\\b")?.as_str(), "a/b");
@@ -59,7 +57,8 @@ fn manifest_new_rejects_bad_schema() {
 }
 
 #[test]
-fn aggregate_is_idempotent_and_order_insensitive() -> TestResult {
+fn aggregate_is_idempotent_and_order_insensitive(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let changes = vec![
         LayerChange::Write {
             path: lp("z.txt")?,
@@ -85,7 +84,7 @@ fn aggregate_is_idempotent_and_order_insensitive() -> TestResult {
 }
 
 #[test]
-fn aggregate_last_write_wins() -> TestResult {
+fn aggregate_last_write_wins() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let changes = vec![
         LayerChange::Write {
             path: lp("x")?,

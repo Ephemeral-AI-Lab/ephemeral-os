@@ -132,8 +132,7 @@ Implementation steps:
    - `OperationSpec`
    - `OperationFamily` or `OperationGroup`
 5. Add protocol catalog types:
-   - `OperationSurface`
-   - `OperationAuthority`
+   - `OperationExecutionSpace`
    - `OperationCatalog`
 6. Keep implementation-bound dispatch entries in `daemon_operation`.
 
@@ -212,7 +211,7 @@ Implementation steps:
 3. Rename imports from `daemon_operation` to `sandbox_runtime`.
 4. Keep the current operation module shape.
 5. Rename aggregate types after the package compiles:
-   - `DaemonOperations` -> `SandboxDaemonOperations`
+   - Runtime aggregate type is `SandboxRuntimeOperations`.
 6. Export:
    - `sandbox_runtime::operation_specs()`
    - `sandbox_runtime::operation_catalog()`
@@ -457,8 +456,8 @@ cargo test -p sandbox-manager
 
 Exit criteria:
 
-- Manager surface and runtime surface are separate.
-- The runtime surface is served by the sandbox daemon, but it should be
+- Manager operation space and runtime operation space are separate.
+- The runtime operation space is served by the sandbox daemon, but it should be
   presented to agents and CLI users as runtime.
 - Manager may route sandbox-scoped daemon requests but does not implement daemon
   operations.
@@ -565,7 +564,7 @@ Implementation steps:
 1. Add manager socket/config discovery.
 2. Add manager client connection.
 3. Add `SandboxRequest` construction from CLI argv and `OperationSpec`.
-4. Add manual/help rendering from manager and runtime operation surfaces.
+4. Add manual/help rendering from manager and runtime execution spaces.
 5. Add stdout/stderr and exit-code behavior.
 6. Add the installed binary name `sandbox`.
 
@@ -602,7 +601,7 @@ cargo test -p sandbox-gateway-cli
 Exit criteria:
 
 - Default route is gateway -> manager.
-- Canonical command surfaces are `sandbox manager ...` and
+- Canonical execution spaces are `sandbox manager ...` and
   `sandbox runtime --sandbox-id ID ...`.
 - Manager operations populate `OperationScope::System`.
 - Runtime operations populate `OperationScope::Sandbox`; requests without a
@@ -613,7 +612,7 @@ Exit criteria:
 
 Goal:
 
-- Make manager and runtime operation surfaces discoverable by agents and CLI
+- Make manager and runtime execution spaces discoverable by agents and CLI
   help.
 
 Packages changed:
@@ -626,15 +625,15 @@ sandbox-gateway-cli
 
 Implementation steps:
 
-1. Stabilize `OperationCatalog` and `OperationAuthority`.
-2. Ensure the manager surface returns manager operations only.
-3. Ensure the runtime surface returns runtime operations only.
+1. Stabilize `OperationCatalog` and `OperationExecutionSpace`.
+2. Ensure the manager operation space returns manager operations only.
+3. Ensure the runtime operation space returns runtime operations only.
 4. Add or verify:
    - `describe_manager_operations`
    - `describe_daemon_operations`
 5. Render CLI/manual output from `OperationSpec`, not duplicated strings.
-6. Preserve implementation authority in catalog output, but display the
-   agent-facing surface as `runtime` instead of `daemon`.
+6. Expose one catalog selector, `operation_space`, and do not include a separate
+   implementation-owner field in catalog output.
 
 Resulting folder structure:
 
@@ -670,9 +669,9 @@ cargo test -p sandbox-gateway-cli manual
 
 Exit criteria:
 
-- Agents choose authority first, then operation.
+- Agents choose operation space first, then operation.
 - `OperationFamily` or `OperationGroup` is documentation grouping only, not the
-  manager-vs-daemon routing authority.
+  manager-vs-runtime routing selector.
 
 ## Phase 8: Rename Runtime Support Packages
 

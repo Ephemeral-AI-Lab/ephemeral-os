@@ -4,11 +4,9 @@ use crate::command::service::CommandOperationService;
 use crate::command::{
     CommandLinesOutput, CommandServiceError, CommandSessionId, CommandStatus, ReadCommandLinesInput,
 };
-use crate::operation::{
-    ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationRequest, OperationResponse,
-    OperationSpec,
-};
-use crate::SandboxDaemonOperations;
+use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationSpec};
+use crate::SandboxRuntimeOperations;
+use sandbox_protocol::{OperationRequest, OperationResponse};
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "read_command_lines",
@@ -57,7 +55,7 @@ const READ_LINES_CLI: CliSpec = CliSpec {
 };
 
 pub(crate) fn dispatch(
-    operations: &SandboxDaemonOperations,
+    operations: &SandboxRuntimeOperations,
     request: OperationRequest<'_>,
 ) -> OperationResponse {
     let input = match parse_input(&request) {

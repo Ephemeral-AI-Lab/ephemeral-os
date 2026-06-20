@@ -3,11 +3,9 @@ use std::sync::Arc;
 use super::command_yield_response;
 use crate::command::service::CommandOperationService;
 use crate::command::{CommandServiceError, CommandSessionId, CommandYield, WriteCommandStdinInput};
-use crate::operation::{
-    ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationRequest, OperationResponse,
-    OperationSpec,
-};
-use crate::SandboxDaemonOperations;
+use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationSpec};
+use crate::SandboxRuntimeOperations;
+use sandbox_protocol::{OperationRequest, OperationResponse};
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "write_command_stdin",
@@ -55,7 +53,7 @@ const WRITE_STDIN_CLI: CliSpec = CliSpec {
 };
 
 pub(crate) fn dispatch(
-    operations: &SandboxDaemonOperations,
+    operations: &SandboxRuntimeOperations,
     request: OperationRequest<'_>,
 ) -> OperationResponse {
     let input = match parse_input(&request) {

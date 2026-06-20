@@ -18,7 +18,7 @@ requests, sends them to `sandbox-manager`, and renders responses.
 - CLI config discovery and precedence.
 - Manager client connection setup.
 - Request construction from `OperationSpec` and CLI argv.
-- Manual/help rendering for manager and runtime operation surfaces.
+- Manual/help rendering for manager and runtime execution spaces.
 - Output formatting and exit-code behavior.
 
 ## Must Not Own
@@ -47,7 +47,7 @@ src/
 - Errors go to stderr.
 - Machine-readable responses go to stdout.
 - Default route is gateway -> manager.
-- Canonical command surfaces are `sandbox manager ...` and
+- Canonical execution spaces are `sandbox manager ...` and
   `sandbox runtime --sandbox-id ID ...`.
 - Manager operations use `request.scope = system`.
 - Runtime operations require `--sandbox-id SANDBOX_ID` unless config provides a

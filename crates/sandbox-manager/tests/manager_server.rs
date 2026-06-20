@@ -3,13 +3,13 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use sandbox_manager::{
-    ManagerResult, ManagerServices, SandboxDaemonClient, SandboxDaemonEndpoint,
+    ManagerError, ManagerServices, SandboxDaemonClient, SandboxDaemonEndpoint,
     SandboxDaemonInstaller, SandboxId, SandboxManagerServer, SandboxRecord, SandboxRuntime,
     SandboxState, SandboxStore, ServerConfig,
 };
 use sandbox_protocol::{
-    error_kind, OperationAuthority, OperationCatalog, OperationScope, OperationSpec,
-    SandboxRequest, SandboxResponse, MAX_REQUEST_BYTES,
+    error_kind, OperationCatalog, OperationExecutionSpace, OperationResponse, OperationScope,
+    OperationSpec, SandboxRequest, MAX_REQUEST_BYTES,
 };
 use serde_json::{json, Value};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -21,11 +21,11 @@ static TEST_DAEMON_SPECS: &[&OperationSpec] = &[];
 struct FakeRuntime;
 
 impl SandboxRuntime for FakeRuntime {
-    fn create_sandbox(&self, _id: &SandboxId) -> ManagerResult<()> {
+    fn create_sandbox(&self, _id: &SandboxId) -> Result<(), ManagerError> {
         Ok(())
     }
 
-    fn destroy_sandbox(&self, _record: &SandboxRecord) -> ManagerResult<()> {
+    fn destroy_sandbox(&self, _record: &SandboxRecord) -> Result<(), ManagerError> {
         Ok(())
     }
 }
@@ -34,14 +34,14 @@ impl SandboxRuntime for FakeRuntime {
 struct FakeInstaller;
 
 impl SandboxDaemonInstaller for FakeInstaller {
-    fn start_daemon(&self, record: &SandboxRecord) -> ManagerResult<SandboxDaemonEndpoint> {
+    fn start_daemon(&self, record: &SandboxRecord) -> Result<SandboxDaemonEndpoint, ManagerError> {
         Ok(SandboxDaemonEndpoint::new(
             PathBuf::from(format!("/tmp/{}.sock", record.id.as_str())),
             None,
         ))
     }
 
-    fn stop_daemon(&self, _record: &SandboxRecord) -> ManagerResult<()> {
+    fn stop_daemon(&self, _record: &SandboxRecord) -> Result<(), ManagerError> {
         Ok(())
     }
 }
@@ -55,9 +55,9 @@ impl SandboxDaemonClient for RecordingDaemonClient {
     fn describe_operations(
         &self,
         _endpoint: &SandboxDaemonEndpoint,
-    ) -> ManagerResult<OperationCatalog> {
+    ) -> Result<OperationCatalog, ManagerError> {
         Ok(OperationCatalog::new(
-            OperationAuthority::SandboxDaemon,
+            OperationExecutionSpace::Runtime,
             TEST_DAEMON_SPECS,
         ))
     }
@@ -66,14 +66,14 @@ impl SandboxDaemonClient for RecordingDaemonClient {
         &self,
         endpoint: &SandboxDaemonEndpoint,
         request: SandboxRequest,
-    ) -> ManagerResult<SandboxResponse> {
+    ) -> Result<OperationResponse, ManagerError> {
         self.invocations.lock().expect("invocations lock").push((
             endpoint.socket_path.clone(),
             request.op.clone(),
             request.scope.clone(),
         ));
-        Ok(SandboxResponse::ok(
-            &request.as_request(),
+        Ok(OperationResponse::ok(
+            &request.as_operation_request(),
             json!({
                 "forwarded_op": request.op,
                 "endpoint": endpoint.socket_path,

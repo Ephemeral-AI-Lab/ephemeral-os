@@ -27,7 +27,7 @@ Required starting state:
 - `crates/sandbox-protocol` exists.
 - `sandbox_protocol::SandboxRequest` exists.
 - `sandbox_protocol::OperationScope` exists.
-- `sandbox_protocol::SandboxResponse` exists.
+- `sandbox_protocol::OperationResponse` exists.
 - `crates/sandbox-manager` exists.
 - `crates/sandbox-manager/src/server` exists.
 - `crates/sandbox-daemon` exists.
@@ -51,7 +51,7 @@ Phase goal:
 - Add manager socket/config discovery.
 - Add manager client connection over the phase 5 manager protocol.
 - Build unified `SandboxRequest` values from CLI argv and `OperationSpec`.
-- Expose canonical `manager` and `runtime` command surfaces.
+- Expose canonical `manager` and `runtime` execution spaces.
 - Map `sandbox runtime --sandbox-id SANDBOX_ID ...` to
   `OperationScope::Sandbox`.
 - Use `OperationScope::System` for `sandbox manager ...` operations.
@@ -108,7 +108,7 @@ Implementation steps:
    test -d crates/sandbox-runtime/operation
    test ! -d crates/sandbox-gateway-cli
    test ! -f crates/sandbox-manager/src/operation/impls/invoke_sandbox_daemon.rs
-   rg -n "SandboxRequest|OperationScope|SandboxResponse" crates/sandbox-protocol/src
+   rg -n "SandboxRequest|OperationScope|OperationResponse" crates/sandbox-protocol/src
    rg -n "invoke_sandbox_daemon" crates/sandbox-manager/src/operation
    rg -n "RoutedRequest|ManagerRequest|OperationTarget" crates/sandbox-manager/src crates/sandbox-protocol/src
    ```
@@ -245,9 +245,10 @@ Implementation steps:
      ```
 
    - Manager operations that take a sandbox id as data must keep using their
-     operation arg, such as `--sandbox-id`. In the `manager` surface this is a
-     normal operation argument. In the `runtime` surface `--sandbox-id` is the
-     scope selector and must not be included in `request.args`.
+     operation arg, such as `--sandbox-id`. In the `manager` execution space
+     this is a normal operation argument. In the `runtime` execution space
+     `--sandbox-id` is the scope selector and must not be included in
+     `request.args`.
    - Command continuation operations must use the explicit
      `--command-session-id` CLI flag and map it to the protocol arg
      `command_session_id`. Do not introduce `command_id` or `--command-id`.
@@ -267,7 +268,8 @@ Implementation steps:
       catalog operation and runtime operations can be described through
       `describe_daemon_operations --sandbox-id ID` or a default sandbox.
       The operation name may remain daemon-oriented during this phase, but the
-      rendered manual section and agent-facing surface should say runtime.
+      rendered manual section and agent-facing execution space should say
+      runtime.
     - Do not require a direct dependency on `sandbox-manager` or
       `sandbox-runtime` to render manuals.
 
@@ -311,7 +313,7 @@ Implementation steps:
     - `runtime_operation_requires_sandbox_without_default`.
     - `runtime_operation_uses_default_sandbox_when_configured`.
     - `runtime_sandbox_id_populates_sandbox_scope`.
-    - `manager_surface_uses_system_scope_even_with_sandbox_id_arg`.
+    - `manager_execution_space_uses_system_scope_even_with_sandbox_id_arg`.
     - `manager_sandbox_id_arg_remains_regular_arg`.
     - `exec_command_maps_workspace_session_id_and_command`.
     - `poll_command_maps_command_session_id_flag_and_last_n_lines`.

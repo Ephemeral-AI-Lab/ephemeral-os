@@ -1,19 +1,17 @@
 use sandbox_protocol::{OperationScope, SandboxRequest};
 
-use crate::{
-    ManagerError, ManagerResult, ManagerServices, SandboxDaemonEndpoint, SandboxId, SandboxState,
-};
+use crate::{ManagerError, ManagerServices, SandboxDaemonEndpoint, SandboxId, SandboxState};
 
 pub(super) fn forward_sandbox_request(
     services: &ManagerServices,
     request: SandboxRequest,
-) -> ManagerResult<sandbox_protocol::SandboxResponse> {
+) -> Result<sandbox_protocol::OperationResponse, ManagerError> {
     let id = sandbox_id(&request.scope)?;
     let endpoint = daemon_endpoint(services, &id)?;
     services.daemon_client.invoke(&endpoint, request)
 }
 
-fn sandbox_id(scope: &OperationScope) -> ManagerResult<SandboxId> {
+fn sandbox_id(scope: &OperationScope) -> Result<SandboxId, ManagerError> {
     match scope {
         OperationScope::Sandbox { sandbox_id } => SandboxId::new(sandbox_id.clone()),
         OperationScope::System => Err(ManagerError::InvalidSandboxId {
@@ -25,7 +23,7 @@ fn sandbox_id(scope: &OperationScope) -> ManagerResult<SandboxId> {
 fn daemon_endpoint(
     services: &ManagerServices,
     id: &SandboxId,
-) -> ManagerResult<SandboxDaemonEndpoint> {
+) -> Result<SandboxDaemonEndpoint, ManagerError> {
     let record = services.store.inspect(id)?;
     if record.state != SandboxState::Ready {
         return Err(ManagerError::InvalidStateTransition {

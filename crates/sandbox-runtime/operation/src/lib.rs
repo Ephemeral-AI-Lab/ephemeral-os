@@ -8,13 +8,13 @@ mod public;
 
 pub use internal::{workspace_remount, workspace_session};
 pub use operation::{
-    ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationAuthority, OperationCatalog, OperationEntry,
-    OperationFamily, OperationRequest, OperationResponse, OperationSpec,
+    ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationCatalog, OperationEntry,
+    OperationExecutionSpace, OperationFamily, OperationSpec,
 };
 pub use public::command;
 
 pub use command::CommandOperationService;
-pub use internal::services::SandboxDaemonOperations;
+pub use internal::services::SandboxRuntimeOperations;
 
 #[must_use]
 pub fn operation_specs() -> &'static [&'static OperationSpec] {
@@ -23,13 +23,13 @@ pub fn operation_specs() -> &'static [&'static OperationSpec] {
 
 #[must_use]
 pub fn operation_catalog() -> OperationCatalog {
-    OperationCatalog::new(OperationAuthority::SandboxDaemon, operation_specs())
+    OperationCatalog::new(OperationExecutionSpace::Runtime, operation_specs())
 }
 
 #[must_use]
 pub fn dispatch_operation(
-    operations: &SandboxDaemonOperations,
-    request: OperationRequest<'_>,
-) -> OperationResponse {
+    operations: &SandboxRuntimeOperations,
+    request: sandbox_protocol::OperationRequest<'_>,
+) -> sandbox_protocol::OperationResponse {
     public::dispatch_operation(operations, request)
 }

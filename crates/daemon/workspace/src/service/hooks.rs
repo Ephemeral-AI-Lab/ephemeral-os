@@ -5,25 +5,38 @@ use crate::model::{
     RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceHandle,
 };
 
-type CreateWorkspaceHook =
-    dyn Fn(CreateWorkspaceRequest) -> Result<WorkspaceHandle, WorkspaceError> + Send + Sync;
-type CaptureChangesHook = dyn Fn(&WorkspaceHandle, CaptureChangesRequest) -> Result<CapturedWorkspaceChanges, WorkspaceError>
-    + Send
-    + Sync;
-type RemountWorkspaceHook = dyn Fn(&WorkspaceHandle, RemountWorkspaceRequest) -> Result<RemountWorkspaceResult, WorkspaceError>
-    + Send
-    + Sync;
-type DestroyWorkspaceHook = dyn Fn(WorkspaceHandle, DestroyWorkspaceRequest) -> Result<DestroyWorkspaceResult, WorkspaceError>
-    + Send
-    + Sync;
-type LatestSnapshotHook =
-    dyn Fn(LatestSnapshotRequest) -> Result<ReadonlySnapshotHandle, WorkspaceError> + Send + Sync;
-
 #[doc(hidden)]
 pub struct WorkspaceRuntimeHooks {
-    pub create_workspace: Box<CreateWorkspaceHook>,
-    pub capture_changes: Box<CaptureChangesHook>,
-    pub remount_workspace: Box<RemountWorkspaceHook>,
-    pub destroy_workspace: Box<DestroyWorkspaceHook>,
-    pub latest_snapshot: Box<LatestSnapshotHook>,
+    pub create_workspace: Box<
+        dyn Fn(CreateWorkspaceRequest) -> Result<WorkspaceHandle, WorkspaceError> + Send + Sync,
+    >,
+    pub capture_changes: Box<
+        dyn Fn(
+                &WorkspaceHandle,
+                CaptureChangesRequest,
+            ) -> Result<CapturedWorkspaceChanges, WorkspaceError>
+            + Send
+            + Sync,
+    >,
+    pub remount_workspace: Box<
+        dyn Fn(
+                &WorkspaceHandle,
+                RemountWorkspaceRequest,
+            ) -> Result<RemountWorkspaceResult, WorkspaceError>
+            + Send
+            + Sync,
+    >,
+    pub destroy_workspace: Box<
+        dyn Fn(
+                WorkspaceHandle,
+                DestroyWorkspaceRequest,
+            ) -> Result<DestroyWorkspaceResult, WorkspaceError>
+            + Send
+            + Sync,
+    >,
+    pub latest_snapshot: Box<
+        dyn Fn(LatestSnapshotRequest) -> Result<ReadonlySnapshotHandle, WorkspaceError>
+            + Send
+            + Sync,
+    >,
 }

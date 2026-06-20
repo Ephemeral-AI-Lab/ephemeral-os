@@ -80,9 +80,6 @@ impl OverlayError {
     }
 }
 
-/// Crate result alias.
-pub type Result<T> = std::result::Result<T, OverlayError>;
-
 /// Per-overlay writable directories created beside each other under one run dir.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OverlayWritableDirs {
@@ -98,7 +95,7 @@ pub struct OverlayWritableDirs {
 ///
 /// Returns [`OverlayError::Capture`] when directory creation fails.
 #[cfg(feature = "test-root-override")]
-pub fn overlay_writable_root() -> Result<PathBuf> {
+pub fn overlay_writable_root() -> std::result::Result<PathBuf, OverlayError> {
     let root = std::env::var_os("EOS_OVERLAY_WRITABLE_ROOT")
         .map(PathBuf::from)
         .unwrap_or_else(|| {
@@ -117,7 +114,7 @@ pub fn overlay_writable_root() -> Result<PathBuf> {
 /// [`OverlayError::WritableRootUnavailable`] when the canonical root is not a
 /// directory.
 #[cfg(not(feature = "test-root-override"))]
-pub fn overlay_writable_root() -> Result<PathBuf> {
+pub fn overlay_writable_root() -> std::result::Result<PathBuf, OverlayError> {
     let root = PathBuf::from("/eos/scratch/overlay");
     if root.parent().is_some_and(Path::is_dir) {
         std::fs::create_dir_all(&root).map_err(|err| OverlayError::capture(&root, err))?;
@@ -137,7 +134,9 @@ pub fn overlay_writable_root() -> Result<PathBuf> {
 ///
 /// Returns [`OverlayError::Capture`] when either writable directory cannot be
 /// created.
-pub fn allocate_overlay_writable_dirs(run_dir: &Path) -> Result<OverlayWritableDirs> {
+pub fn allocate_overlay_writable_dirs(
+    run_dir: &Path,
+) -> std::result::Result<OverlayWritableDirs, OverlayError> {
     let upperdir = run_dir.join("upper");
     let workdir = run_dir.join("work");
     std::fs::create_dir_all(&upperdir).map_err(|err| OverlayError::capture(&upperdir, err))?;

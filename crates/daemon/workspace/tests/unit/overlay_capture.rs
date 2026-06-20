@@ -5,11 +5,10 @@ use layerstack::{LayerChange, LayerPath};
 use workspace::overlay::capture::capture_upperdir;
 use workspace::{ProtectedPathDrop, ProtectedPathDropReason};
 
-type TestResult<T = ()> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
-
 #[cfg(unix)]
 #[test]
-fn captures_upperdir_files_whiteouts_symlinks_and_opaque_markers() -> TestResult {
+fn captures_upperdir_files_whiteouts_symlinks_and_opaque_markers(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("capture_upperdir")?;
     std::fs::create_dir_all(fixture.base.join("dir"))?;
     std::fs::write(fixture.base.join("dir/file.txt"), b"hello")?;
@@ -38,7 +37,8 @@ fn captures_upperdir_files_whiteouts_symlinks_and_opaque_markers() -> TestResult
 
 #[cfg(unix)]
 #[test]
-fn captures_unsupported_special_files_as_workspace_protected_drops() -> TestResult {
+fn captures_unsupported_special_files_as_workspace_protected_drops(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("capture_unsupported_special_file")?;
     let fifo_path = fixture.base.join("run.fifo");
     let status = std::process::Command::new("mkfifo")
@@ -72,7 +72,8 @@ fn captures_unsupported_special_files_as_workspace_protected_drops() -> TestResu
 
 #[cfg(target_os = "linux")]
 #[test]
-fn captures_non_utf8_layer_paths_as_invalid_layer_path_drops() -> TestResult {
+fn captures_non_utf8_layer_paths_as_invalid_layer_path_drops(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     use std::ffi::OsString;
     use std::os::unix::ffi::OsStringExt;
 
@@ -110,7 +111,7 @@ struct Fixture {
 }
 
 impl Fixture {
-    fn new(label: &str) -> TestResult<Self> {
+    fn new(label: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let base = std::env::temp_dir().join(format!(
             "workspace-{label}-{}-{}",

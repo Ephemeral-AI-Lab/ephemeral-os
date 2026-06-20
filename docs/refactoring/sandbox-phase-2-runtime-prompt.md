@@ -55,14 +55,12 @@ Import:  sandbox_runtime
 
 Keep in `sandbox-runtime`:
 
-- `OperationRequest` alias to `sandbox_protocol::Request`.
-- `OperationResponse` alias to `sandbox_protocol::SandboxResponse`.
-- `OperationDispatch`.
+- Direct use of `sandbox_protocol::OperationRequest` and
+  `sandbox_protocol::OperationResponse`.
 - `OperationEntry`.
 - Command operation specs and dispatch functions.
 - Workspace session and workspace remount orchestration.
-- `DaemonOperations`, renamed to `SandboxDaemonOperations` after the package
-  rename compiles.
+- `SandboxRuntimeOperations`.
 
 Keep out of `sandbox-runtime`:
 
@@ -173,21 +171,8 @@ Implementation steps:
        workspace_remount/
    ```
 
-10. After the package rename compiles, rename the aggregate type:
-
-    ```text
-    DaemonOperations -> SandboxDaemonOperations
-    ```
-
-    If a compatibility alias is needed to avoid a huge diff, keep it local and
-    temporary:
-
-    ```rust
-    pub type DaemonOperations = SandboxDaemonOperations;
-    ```
-
-    Prefer removing the alias before completing phase 2 if the diff stays
-    manageable.
+10. Use `SandboxRuntimeOperations` as the runtime aggregate type and do not
+    leave an old aggregate compatibility alias behind.
 
 11. Export the daemon operation catalog:
 
@@ -196,9 +181,9 @@ Implementation steps:
     pub fn operation_catalog() -> OperationCatalog;
     ```
 
-    Use the `OperationCatalog` and `OperationAuthority` shape produced in phase
-    1. Do not redesign `sandbox-protocol` in this phase unless a small compile
-    fix is required.
+    Use the `OperationCatalog` and `OperationExecutionSpace` shape produced in
+    phase 1. Do not redesign `sandbox-protocol` in this phase unless a small
+    compile fix is required.
 
 12. Ensure operation names remain unchanged:
 
@@ -237,14 +222,14 @@ test ! -d crates/daemon/operation
 rg -n "daemon_operation" Cargo.toml crates --glob '!target/**'
 rg -n "crates/daemon/operation" Cargo.toml crates --glob '!target/**'
 rg -n "sandbox-runtime-operation|sandbox_runtime_operation" Cargo.toml crates --glob '!target/**'
-rg -n "operation_catalog|SandboxDaemonOperations" crates/sandbox-runtime/operation
+rg -n "operation_catalog|SandboxRuntimeOperations" crates/sandbox-runtime/operation
 cargo fmt --check -p sandbox-runtime -p daemon -p eosd
 cargo check -p sandbox-runtime -p daemon -p eosd
 cargo test -p sandbox-runtime -p daemon
 ```
 
 The first three `rg` acceptance scans should return no matches. The
-`operation_catalog|SandboxDaemonOperations` scan should show the new runtime
+`operation_catalog|SandboxRuntimeOperations` scan should show the new runtime
 facade exports.
 
 Final response requirements:
@@ -253,6 +238,6 @@ Final response requirements:
 - State whether phase 1 starting-state checks passed.
 - State whether baseline checks had pre-existing failures.
 - State final verification commands and results.
-- Call out any temporary compatibility alias left in place.
+- Confirm no compatibility aliases were left in place.
 - Do not claim phase 3 work was done.
 ```

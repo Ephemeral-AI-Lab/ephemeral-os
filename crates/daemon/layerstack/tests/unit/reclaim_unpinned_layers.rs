@@ -1,8 +1,6 @@
 use super::*;
 use crate::model::{LayerRef, Manifest, MANIFEST_SCHEMA_VERSION};
 
-type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
-
 fn layer(id: &str) -> LayerRef {
     LayerRef {
         layer_id: id.to_owned(),
@@ -62,7 +60,8 @@ fn checkpoint_modes(plan: &ReclaimUnpinnedLayersPlan) -> Vec<ReclaimUnpinnedLaye
 }
 
 #[test]
-fn fully_leased_stack_has_no_reclaiming_intervals() -> TestResult {
+fn fully_leased_stack_has_no_reclaiming_intervals(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let ids = (1..=50)
         .rev()
         .map(|index| format!("P{index}"))
@@ -83,7 +82,8 @@ fn fully_leased_stack_has_no_reclaiming_intervals() -> TestResult {
 }
 
 #[test]
-fn unleased_prefix_compacts_above_protected_suffix() -> TestResult {
+fn unleased_prefix_compacts_above_protected_suffix(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut ids = (1..=10)
         .rev()
         .map(|index| format!("N{index}"))
@@ -117,7 +117,8 @@ fn unleased_prefix_compacts_above_protected_suffix() -> TestResult {
 }
 
 #[test]
-fn same_file_gap_plans_around_single_protected_layer() -> TestResult {
+fn same_file_gap_plans_around_single_protected_layer(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let manifest = manifest(&["n6", "n5", "l4", "n3", "n2", "n1"])?;
     let protected = vec![layer("l4")];
 
@@ -144,7 +145,8 @@ fn same_file_gap_plans_around_single_protected_layer() -> TestResult {
 }
 
 #[test]
-fn mounted_l4_lease_keeps_lower_prefix_until_normalized_or_released() -> TestResult {
+fn mounted_l4_lease_keeps_lower_prefix_until_normalized_or_released(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let manifest = manifest(&["n6", "n5", "l4", "n3", "n2", "n1"])?;
     let protected = ["l4", "n3", "n2", "n1"]
         .iter()
@@ -163,7 +165,8 @@ fn mounted_l4_lease_keeps_lower_prefix_until_normalized_or_released() -> TestRes
 }
 
 #[test]
-fn mounted_l4_lease_after_parent_normalization_keeps_compact_parent() -> TestResult {
+fn mounted_l4_lease_after_parent_normalization_keeps_compact_parent(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let manifest = manifest(&["n6", "n5", "l4", "c_n3_n1"])?;
     let protected = ["l4", "c_n3_n1"]
         .iter()
@@ -182,7 +185,8 @@ fn mounted_l4_lease_after_parent_normalization_keeps_compact_parent() -> TestRes
 }
 
 #[test]
-fn alternating_single_unleased_layers_are_kept_by_minimum_interval() -> TestResult {
+fn alternating_single_unleased_layers_are_kept_by_minimum_interval(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let manifest = manifest(&["n6", "p5", "n4", "p3", "n2", "p1"])?;
     let protected = ["p5", "p3", "p1"]
         .iter()

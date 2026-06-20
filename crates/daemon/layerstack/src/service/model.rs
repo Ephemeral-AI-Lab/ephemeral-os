@@ -1,6 +1,5 @@
 use std::path::{Path, PathBuf};
 
-use crate::commit::ChangesetResult;
 use crate::model::{LayerChange, Manifest};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -25,8 +24,6 @@ pub struct PublishChangesRequest<'a> {
     pub snapshot_layer_paths: &'a [PathBuf],
     pub changes: &'a [LayerChange],
 }
-
-pub type PublishChangesResult = ChangesetResult;
 
 #[derive(Debug, Clone, Copy)]
 pub struct CompactSnapshotLayersRequest<'a> {
