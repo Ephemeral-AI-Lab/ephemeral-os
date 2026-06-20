@@ -343,7 +343,7 @@ fn rejects_macro_use_in_source() {
         src.join("lib.rs"),
         r#"
 #[macro_use]
-extern crate legacy;
+extern crate sample_macros;
 "#,
     )
     .expect("write source file");
