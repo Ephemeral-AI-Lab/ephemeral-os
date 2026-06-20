@@ -1,7 +1,7 @@
 use tokio::io::AsyncReadExt as _;
 
 use crate::error::DaemonError;
-use crate::transport::server::MAX_REQUEST_BYTES;
+use crate::server::MAX_REQUEST_BYTES;
 
 #[tokio::test]
 async fn read_request_line_rejects_oversized_payloads() {

@@ -4,8 +4,6 @@
 #![forbid(unsafe_code)]
 
 pub(crate) mod error;
-pub(crate) mod transport;
-
-pub(crate) use transport::server;
+pub(crate) mod server;
 
 pub use server::{DaemonServer, ServerConfig};
