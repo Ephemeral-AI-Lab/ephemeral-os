@@ -7,80 +7,15 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use trace::{SpanStatus, SpanSubsystem, WorkspaceRoute};
-
 use crate::fault::OperationFault;
 
 /// Wire schema version stamped on every response `meta`.
 pub const ENVELOPE_VERSION: u8 = 2;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct TraceRef {
-    pub trace_id: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub request_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub root_span_id: Option<u64>,
-    /// Storage backend that owns the persisted trace when this reference is populated.
-    pub store: String,
-    pub event_count: u64,
-    pub degraded: bool,
-}
-
-impl TraceRef {
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.trace_id.is_empty()
-            && self.request_id.is_none()
-            && self.root_span_id.is_none()
-            && self.store.is_empty()
-            && self.event_count == 0
-            && !self.degraded
-    }
-}
-
-impl Default for TraceRef {
-    fn default() -> Self {
-        Self {
-            trace_id: String::new(),
-            request_id: None,
-            root_span_id: None,
-            store: String::new(),
-            event_count: 0,
-            degraded: false,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OperationWarning {
     pub kind: String,
     pub message: String,
-}
-
-/// The recorded `workspace.route` decision: `{ kind, reason? }`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct WorkspaceRouteRef {
-    pub kind: WorkspaceRoute,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub reason: Option<String>,
-}
-
-impl Default for WorkspaceRouteRef {
-    fn default() -> Self {
-        Self {
-            kind: WorkspaceRoute::None,
-            reason: None,
-        }
-    }
-}
-
-/// One direct child span of the request root: `{ kind, duration_us, status }`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct StepSummary {
-    pub kind: String,
-    pub duration_us: u64,
-    pub status: SpanStatus,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
@@ -89,21 +24,15 @@ pub struct ResourceSummary {
     pub fields: Map<String, Value>,
 }
 
-/// Cross-cutting response metadata, rendered from the request's trace record —
-/// never hand-inserted beside it.
+/// Cross-cutting response metadata shared by daemon, host, and gateway envelopes.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ResponseMeta {
     pub envelope_version: u8,
     pub op: String,
     pub request_id: String,
-    #[serde(default, skip_serializing_if = "TraceRef::is_empty")]
-    pub trace: TraceRef,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub caller_id: Option<String>,
-    pub workspace_route: WorkspaceRouteRef,
     pub duration_ms: f64,
-    pub modules_touched: Vec<SpanSubsystem>,
-    pub steps: Vec<StepSummary>,
     pub resource_summary: ResourceSummary,
     pub warnings: Vec<OperationWarning>,
 }
@@ -114,12 +43,8 @@ impl Default for ResponseMeta {
             envelope_version: ENVELOPE_VERSION,
             op: String::new(),
             request_id: String::new(),
-            trace: TraceRef::default(),
             caller_id: None,
-            workspace_route: WorkspaceRouteRef::default(),
             duration_ms: 0.0,
-            modules_touched: Vec::new(),
-            steps: Vec::new(),
             resource_summary: ResourceSummary::default(),
             warnings: Vec::new(),
         }

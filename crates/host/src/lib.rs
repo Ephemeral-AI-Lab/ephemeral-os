@@ -3,12 +3,9 @@
 mod container;
 mod daemon_wire;
 mod service;
-mod trace_store;
 
 pub use daemon_wire::{MAX_REQUEST_BYTES, MAX_RESPONSE_BYTES};
-pub use service::{
-    ForwardError, ForwardTraceContext, HostConfig, HostForwardRequest, SandboxHost, SandboxStatus,
-};
+pub use service::{ForwardError, HostConfig, HostForwardRequest, SandboxHost, SandboxStatus};
 
 #[cfg(feature = "e2e-support")]
 pub mod e2e_support {
@@ -23,5 +20,4 @@ pub mod e2e_support {
         CONNECT_RETRY_DELAYS_S, DAEMON_AUTH_FIELD, DAEMON_FORWARD_AUTH_FIELD,
         DAEMON_PROTOCOL_FIELD, DAEMON_PROTOCOL_VERSION, MAX_REQUEST_BYTES, MAX_RESPONSE_BYTES,
     };
-    pub use crate::trace_store::{TraceStore, TraceVerifyFailure, TraceVerifyReport};
 }

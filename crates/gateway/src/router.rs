@@ -1,10 +1,8 @@
-use std::time::Instant;
-
 use protocol::{HostGatewayErrorKind, ProtocolErrorKind};
 use serde_json::{json, Value};
 
 use crate::engine::Engine;
-use crate::wire::{elapsed_us, error_response_for, ok_response, ClientRequest};
+use crate::wire::{error_response_for, ok_response, ClientRequest};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Surface {
@@ -12,22 +10,13 @@ pub(crate) enum Surface {
     Operator,
 }
 
-impl Surface {
-    pub(crate) const fn label(self) -> &'static str {
-        match self {
-            Self::Client => "client",
-            Self::Operator => "operator",
-        }
-    }
-}
-
 pub(crate) fn handle(engine: &dyn Engine, surface: Surface, request: &ClientRequest) -> Value {
     match request.op.as_str() {
-        "host.sandbox.acquire" => match engine.acquire(&request.trace, &request.args) {
+        "host.sandbox.acquire" => match engine.acquire(&request.args) {
             Ok(sandbox_id) => ok_response(request, json!({"sandbox_id": sandbox_id})),
             Err(err) => error_response_for(
                 request,
-                HostGatewayErrorKind::TraceUnavailable.as_str(),
+                HostGatewayErrorKind::HostOperationFailed.as_str(),
                 &format!("acquire failed: {err:#}"),
             ),
         },
@@ -40,12 +29,12 @@ pub(crate) fn handle(engine: &dyn Engine, surface: Surface, request: &ClientRequ
                     "sandbox_id is required for this op",
                 );
             };
-            match engine.release(sandbox_id, &request.trace, &request.args) {
+            match engine.release(sandbox_id, &request.args) {
                 Ok(true) => ok_response(request, json!({"sandbox_id": sandbox_id})),
                 Ok(false) => unknown_sandbox(request, sandbox_id),
                 Err(err) => error_response_for(
                     request,
-                    HostGatewayErrorKind::TraceUnavailable.as_str(),
+                    HostGatewayErrorKind::HostOperationFailed.as_str(),
                     &format!("release failed: {err:#}"),
                 ),
             }
@@ -63,60 +52,30 @@ pub(crate) fn handle(engine: &dyn Engine, surface: Surface, request: &ClientRequ
                 None => unknown_sandbox(request, sandbox_id),
             }
         }
-        "host.image_profiles.list" => host_value_response(
-            request,
-            engine.image_profiles_list(&request.trace, &request.args),
-        ),
-        "host.trace.requests" => {
-            operator_host_value(surface, engine, request, |engine, trace, args| {
-                engine.trace_requests(trace, args)
-            })
+        "host.image_profiles.list" => {
+            host_value_response(request, engine.image_profiles_list(&request.args))
         }
-        "host.trace.show" => {
-            operator_host_value(surface, engine, request, |engine, trace, args| {
-                engine.trace_show(trace, args)
-            })
-        }
-        "host.trace.verify" => {
-            operator_host_value(surface, engine, request, |engine, trace, args| {
-                engine.trace_verify(trace, args)
-            })
-        }
-        "host.image.list" => {
-            operator_host_value(surface, engine, request, |engine, trace, args| {
-                engine.image_list(trace, args)
-            })
-        }
-        "host.image.pull" => {
-            operator_host_value(surface, engine, request, |engine, trace, args| {
-                engine.image_pull(trace, args)
-            })
-        }
-        "host.container.list" => {
-            operator_host_value(surface, engine, request, |engine, trace, args| {
-                engine.container_list(trace, args)
-            })
-        }
-        "host.container.start" => {
-            operator_host_value(surface, engine, request, |engine, trace, args| {
-                engine.container_start(trace, args)
-            })
-        }
-        "host.container.adopt" => {
-            operator_host_value(surface, engine, request, |engine, trace, args| {
-                engine.container_adopt(trace, args)
-            })
-        }
-        "host.container.stop" => {
-            operator_host_value(surface, engine, request, |engine, trace, args| {
-                engine.container_stop(trace, args)
-            })
-        }
-        "host.container.remove" => {
-            operator_host_value(surface, engine, request, |engine, trace, args| {
-                engine.container_remove(trace, args)
-            })
-        }
+        "host.image.list" => operator_host_value(surface, engine, request, |engine, args| {
+            engine.image_list(args)
+        }),
+        "host.image.pull" => operator_host_value(surface, engine, request, |engine, args| {
+            engine.image_pull(args)
+        }),
+        "host.container.list" => operator_host_value(surface, engine, request, |engine, args| {
+            engine.container_list(args)
+        }),
+        "host.container.start" => operator_host_value(surface, engine, request, |engine, args| {
+            engine.container_start(args)
+        }),
+        "host.container.adopt" => operator_host_value(surface, engine, request, |engine, args| {
+            engine.container_adopt(args)
+        }),
+        "host.container.stop" => operator_host_value(surface, engine, request, |engine, args| {
+            engine.container_stop(args)
+        }),
+        "host.container.remove" => operator_host_value(surface, engine, request, |engine, args| {
+            engine.container_remove(args)
+        }),
         "sandbox.call.heartbeat"
         | "sandbox.call.cancel"
         | "sandbox.command.exec"
@@ -128,12 +87,12 @@ pub(crate) fn handle(engine: &dyn Engine, surface: Surface, request: &ClientRequ
         "sandbox.call.count" | "sandbox.command.count" => forward(engine, request, false),
         "sandbox.run.cancel_all" => {
             if surface != Surface::Operator {
-                return forbidden_socket(engine, surface, request);
+                return forbidden_socket(request);
             }
             forward(engine, request, true)
         }
-        "sandbox.runtime.ready" => forbidden_socket(engine, surface, request),
-        _ => unknown_op(engine, surface, request),
+        "sandbox.runtime.ready" => forbidden_socket(request),
+        _ => unknown_op(request),
     }
 }
 
@@ -141,12 +100,12 @@ fn operator_host_value(
     surface: Surface,
     engine: &dyn Engine,
     request: &ClientRequest,
-    call: impl FnOnce(&dyn Engine, &host::ForwardTraceContext, &Value) -> anyhow::Result<Value>,
+    call: impl FnOnce(&dyn Engine, &Value) -> anyhow::Result<Value>,
 ) -> Value {
     if surface != Surface::Operator {
-        return forbidden_socket(engine, surface, request);
+        return forbidden_socket(request);
     }
-    host_value_response(request, call(engine, &request.trace, &request.args))
+    host_value_response(request, call(engine, &request.args))
 }
 
 fn forward(engine: &dyn Engine, request: &ClientRequest, mutates_state: bool) -> Value {
@@ -157,56 +116,16 @@ fn forward(engine: &dyn Engine, request: &ClientRequest, mutates_state: bool) ->
             "sandbox_id is required for this op",
         );
     };
-    let mut trace = request.trace.clone();
-    trace.push_gateway_event(
-        "gateway.route",
-        "route_selected",
-        json!({
-            "op": request.op,
-            "sandbox_id": sandbox_id,
-            "route": "daemon",
-            "mutates_state": mutates_state,
-        }),
-    );
-    trace.push_gateway_event(
-        "gateway.route",
-        "engine_forward_started",
-        json!({
-            "op": request.op,
-            "sandbox_id": sandbox_id,
-            "mutates_state": mutates_state,
-        }),
-    );
-    let trace_for_result = trace.clone();
-    let started = Instant::now();
     match engine.forward(host::HostForwardRequest {
         sandbox_id,
         mutates_state,
         op: &request.op,
         invocation_id: &request.invocation_id,
         args: &request.args,
-        trace,
     }) {
-        Some(Ok(response)) => {
-            engine.record_trace_event(
-                sandbox_id,
-                &trace_for_result,
-                "gateway.route",
-                "engine_forward_finished",
-                json!({
-                    "op": request.op,
-                    "sandbox_id": sandbox_id,
-                    "duration_us": elapsed_us(started),
-                }),
-            );
-            response
-        }
+        Some(Ok(response)) => response,
         Some(Err(err)) => {
             let (kind, message) = match err {
-                host::ForwardError::TraceUnavailable(e) => (
-                    HostGatewayErrorKind::TraceUnavailable.as_str(),
-                    e.to_string(),
-                ),
                 host::ForwardError::UncertainOutcome(m) => {
                     (HostGatewayErrorKind::UncertainOutcome.as_str(), m)
                 }
@@ -214,13 +133,6 @@ fn forward(engine: &dyn Engine, request: &ClientRequest, mutates_state: bool) ->
                     (HostGatewayErrorKind::SandboxUnavailable.as_str(), m)
                 }
             };
-            engine.record_trace_event(
-                sandbox_id,
-                &trace_for_result,
-                "gateway.route",
-                "engine_forward_failed",
-                json!({"op": request.op, "sandbox_id": sandbox_id, "error_kind": kind, "duration_us": elapsed_us(started)}),
-            );
             error_response_for(request, kind, &message)
         }
         None => unknown_sandbox(request, sandbox_id),
@@ -243,13 +155,7 @@ fn host_error_kind(err: &anyhow::Error) -> &'static str {
     }
 }
 
-fn forbidden_socket(engine: &dyn Engine, surface: Surface, request: &ClientRequest) -> Value {
-    record_route_rejection(
-        engine,
-        surface,
-        request,
-        ProtocolErrorKind::Forbidden.as_str(),
-    );
+fn forbidden_socket(request: &ClientRequest) -> Value {
     error_response_for(
         request,
         ProtocolErrorKind::Forbidden.as_str(),
@@ -257,40 +163,12 @@ fn forbidden_socket(engine: &dyn Engine, surface: Surface, request: &ClientReque
     )
 }
 
-fn unknown_op(engine: &dyn Engine, surface: Surface, request: &ClientRequest) -> Value {
-    record_route_rejection(
-        engine,
-        surface,
-        request,
-        ProtocolErrorKind::UnknownOp.as_str(),
-    );
+fn unknown_op(request: &ClientRequest) -> Value {
     error_response_for(
         request,
         ProtocolErrorKind::UnknownOp.as_str(),
         &format!("unknown op: {}", request.op),
     )
-}
-
-fn record_route_rejection(
-    engine: &dyn Engine,
-    surface: Surface,
-    request: &ClientRequest,
-    error_kind: &str,
-) {
-    if let Some(sandbox_id) = request.sandbox_id.as_deref() {
-        engine.record_trace_event(
-            sandbox_id,
-            &request.trace,
-            "gateway.route",
-            "route_rejected",
-            json!({
-                "op": request.op,
-                "route": "rejected",
-                "surface": surface.label(),
-                "error_kind": error_kind,
-            }),
-        );
-    }
 }
 
 fn unknown_sandbox(request: &ClientRequest, sandbox_id: &str) -> Value {

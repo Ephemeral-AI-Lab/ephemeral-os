@@ -100,18 +100,6 @@ struct InlineTestPolicyException {
 
 const INLINE_TEST_POLICY_EXCEPTIONS: &[InlineTestPolicyException] = &[
     InlineTestPolicyException {
-        path: "crates/daemon/core/src/trace/mod.rs",
-        kind: InlineTestPolicyViolationKind::BroadAllowAttribute,
-    },
-    InlineTestPolicyException {
-        path: "crates/daemon/core/src/trace/sidecar/build.rs",
-        kind: InlineTestPolicyViolationKind::BroadAllowAttribute,
-    },
-    InlineTestPolicyException {
-        path: "crates/daemon/core/src/trace/spool.rs",
-        kind: InlineTestPolicyViolationKind::BroadAllowAttribute,
-    },
-    InlineTestPolicyException {
         path: "crates/daemon/layerstack/src/service.rs",
         kind: InlineTestPolicyViolationKind::BroadAllowAttribute,
     },
@@ -141,10 +129,6 @@ const INLINE_TEST_POLICY_EXCEPTIONS: &[InlineTestPolicyException] = &[
     },
     InlineTestPolicyException {
         path: "crates/host/src/daemon_wire.rs",
-        kind: InlineTestPolicyViolationKind::BroadAllowAttribute,
-    },
-    InlineTestPolicyException {
-        path: "crates/host/src/trace_store/mod.rs",
         kind: InlineTestPolicyViolationKind::BroadAllowAttribute,
     },
 ];

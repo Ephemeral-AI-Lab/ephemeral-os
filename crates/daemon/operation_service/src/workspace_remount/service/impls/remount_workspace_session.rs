@@ -9,30 +9,18 @@ impl WorkspaceRemountService {
         &self,
         workspace_session_id: WorkspaceId,
     ) -> Result<WorkspaceRemountReport, WorkspaceRemountError> {
-        let handler = self
-            .workspace()
-            .begin_remount(workspace_session_id.clone())?;
+        let handler = self.workspace.begin_remount(workspace_session_id.clone())?;
         let mut quiesce = self
-            .command()
+            .command
             .begin_workspace_remount_quiesce(&workspace_session_id);
 
-        if let Some(reason) = quiesce.inspection().blocked_reason.clone() {
-            self.workspace()
-                .block_remount(workspace_session_id.clone())?;
-            let inspection = quiesce.finish();
-            return Ok(WorkspaceRemountReport {
-                workspace_session_id,
-                remounted: false,
-                blocked_reason: Some(reason),
-                command_inspection: inspection,
-                updated_handler: None,
-            });
-        }
-
-        if quiesce.cancellation_requested() {
-            let reason = RemountBlockReason::RemountCancelledBeforeSwitch.to_string();
-            self.workspace()
-                .block_remount(workspace_session_id.clone())?;
+        let blocked_reason = quiesce.inspection().blocked_reason.clone().or_else(|| {
+            quiesce
+                .cancellation_requested()
+                .then(|| RemountBlockReason::RemountCancelledBeforeSwitch.to_string())
+        });
+        if let Some(reason) = blocked_reason {
+            self.workspace.block_remount(workspace_session_id.clone())?;
             let inspection = quiesce.finish();
             return Ok(WorkspaceRemountReport {
                 workspace_session_id,
@@ -47,7 +35,7 @@ impl WorkspaceRemountService {
         let request = RemountWorkspaceRequest {
             layer_paths: handler.handle.snapshot.layer_paths.clone(),
         };
-        let remount_result = self.workspace().apply_and_finish_remount(&handler, request);
+        let remount_result = self.workspace.apply_and_finish_remount(&handler, request);
         quiesce.set_switch_state(RemountSwitchState::Resuming);
 
         match remount_result {
@@ -62,7 +50,7 @@ impl WorkspaceRemountService {
                 })
             }
             Err(error) => {
-                let _inspection = quiesce.finish();
+                let _ = quiesce.finish();
                 Err(WorkspaceRemountError::WorkspaceSession(error))
             }
         }

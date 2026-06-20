@@ -363,7 +363,7 @@ reclaim storage that active historical leases still reference.
 
 ### Live Namespace Remount Timing
 
-Live E2E traces include request dispatch, command quiesce/inspection, staged
+Live E2E runs include request dispatch, command quiesce/inspection, staged
 overlay switch, mountinfo verification, lease retarget, active cleanup, and
 process resume.
 

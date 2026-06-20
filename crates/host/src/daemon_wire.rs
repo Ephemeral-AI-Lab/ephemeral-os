@@ -3,6 +3,7 @@ use std::net::{SocketAddr, TcpStream};
 use std::time::Duration;
 
 use serde_json::{json, Map, Value};
+use sha2::{Digest, Sha256};
 
 pub const DAEMON_AUTH_FIELD: &str = "_eos_daemon_auth_token";
 pub const DAEMON_FORWARD_AUTH_FIELD: &str = "_eos_daemon_forward_auth_token";
@@ -144,7 +145,7 @@ impl ProtocolClient {
         let value =
             serde_json::from_str(response.trim_end()).map_err(|source| ClientError::Decode {
                 raw_len: response.len(),
-                raw_sha256: trace::sha256_hex(response.as_bytes()),
+                raw_sha256: sha256_hex(response.as_bytes()),
                 source,
             })?;
         Ok(ProtocolResponse {
@@ -298,6 +299,7 @@ pub fn response_domain_status(response: &Value) -> Option<&str> {
         .and_then(Value::as_str)
 }
 
+#[allow(dead_code)]
 pub fn response_status(response: &Value) -> &str {
     response_envelope_status(response)
 }
@@ -309,6 +311,7 @@ fn valid_response_status(status: &str) -> bool {
     )
 }
 
+#[allow(dead_code)]
 pub fn response_fault_kind(response: &Value) -> Option<&str> {
     response
         .get("error")
@@ -321,4 +324,14 @@ pub fn response_fault_kind(response: &Value) -> Option<&str> {
 
 pub fn response_is_accepted(response: &Value) -> bool {
     matches!(response_envelope_status(response), "ok" | "running")
+}
+
+pub(crate) fn sha256_hex(bytes: &[u8]) -> String {
+    let digest = Sha256::digest(bytes);
+    let mut output = String::with_capacity(digest.len() * 2);
+    for byte in digest {
+        use std::fmt::Write;
+        let _ = write!(&mut output, "{byte:02x}");
+    }
+    output
 }

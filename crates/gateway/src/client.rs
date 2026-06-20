@@ -45,9 +45,6 @@ usage:
   sandbox-gateway host sandboxes list
   sandbox-gateway host sandboxes status SANDBOX_ID
   sandbox-gateway host sandboxes release SANDBOX_ID
-  sandbox-gateway host traces list [--sandbox-id SANDBOX_ID] [--limit N]
-  sandbox-gateway host traces show TRACE_ID [--limit N]
-  sandbox-gateway host traces verify [TRACE_ID]
   sandbox-gateway host op OP [ARGS_JSON] [--sandbox-id SANDBOX_ID] [--operator]
 
   sandbox-gateway daemon --sandbox-id SANDBOX_ID ping
@@ -125,17 +122,16 @@ pub(crate) fn request_from_host(
     options: &ClientOptions,
 ) -> Result<GatewayRequest> {
     let Some(group) = shift(&mut args) else {
-        bail!("missing host command; expected images | containers | sandboxes | traces | op")
+        bail!("missing host command; expected images | containers | sandboxes | op")
     };
     match group.as_str() {
         "images" => request_from_host_images(args),
         "containers" => request_from_host_containers(args, options),
         "sandboxes" => request_from_host_sandboxes(args, options),
-        "traces" => request_from_host_traces(args, options),
         "op" => request_from_op(args, options.sandbox_id.clone(), false),
-        other => bail!(
-            "unknown host command {other:?}; expected images | containers | sandboxes | traces | op"
-        ),
+        other => {
+            bail!("unknown host command {other:?}; expected images | containers | sandboxes | op")
+        }
     }
 }
 
@@ -305,47 +301,6 @@ fn request_from_host_sandboxes(
         other => bail!(
             "unknown host sandboxes subcommand {other:?}; expected acquire | list | status | release"
         ),
-    }
-}
-
-fn request_from_host_traces(
-    mut args: Vec<String>,
-    options: &ClientOptions,
-) -> Result<GatewayRequest> {
-    let Some(subcommand) = shift(&mut args) else {
-        bail!("missing host traces subcommand; expected list | show | verify")
-    };
-    match subcommand.as_str() {
-        "list" => {
-            let limit = take_optional_u64(&mut args, "--limit")?;
-            expect_no_args(&args)?;
-            let mut body = json!({});
-            insert_optional(&mut body, "sandbox_id", options.sandbox_id.clone());
-            if let Some(limit) = limit {
-                body["limit"] = json!(limit);
-            }
-            Ok(host_request("host.trace.requests", body, true))
-        }
-        "show" => {
-            let limit = take_optional_u64(&mut args, "--limit")?;
-            let Some(trace_id) = shift(&mut args) else {
-                bail!("host traces show requires TRACE_ID")
-            };
-            expect_no_args(&args)?;
-            let mut body = json!({ "trace_id": trace_id });
-            if let Some(limit) = limit {
-                body["limit"] = json!(limit);
-            }
-            Ok(host_request("host.trace.show", body, true))
-        }
-        "verify" => {
-            let trace_id = shift(&mut args);
-            expect_no_args(&args)?;
-            let mut body = json!({});
-            insert_optional(&mut body, "trace_id", trace_id);
-            Ok(host_request("host.trace.verify", body, true))
-        }
-        other => bail!("unknown host traces subcommand {other:?}; expected list | show | verify"),
     }
 }
 

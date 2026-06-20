@@ -603,7 +603,7 @@ Workspace command execution must use holder-created namespaces plus `setns`.
 ### Phase 4: Centralize Routing
 
 - Move command/file route decisions from op adapters into `WorkspaceRuntime`.
-- Adapters parse wire args and preserve route trace metadata, but do not choose host
+- Adapters parse wire args and preserve route metadata, but do not choose host
   vs isolated behavior directly.
 
 ### Phase 5: Add Explicit `capture_changes`
@@ -654,7 +654,7 @@ crates/daemon/core/tests/unit/workspace_runtime/
   mode_gate.rs                             ~150 LOC
   cancel.rs                                ~180 LOC
   remount.rs                               ~180 LOC
-  trace.rs                                 ~220 LOC
+  routing_metadata.rs                      ~220 LOC
 
 crates/daemon/core/tests/
   workspace_read_paths.rs                ~1,050 LOC

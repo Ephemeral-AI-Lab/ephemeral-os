@@ -56,9 +56,6 @@ impl ProtocolErrorKind {
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum HostGatewayErrorKind {
-    /// Host trace/audit persistence was unavailable before a response could be
-    /// made durable.
-    TraceUnavailable,
     /// A host-owned operation failed outside a request-shape problem.
     HostOperationFailed,
     /// The requested sandbox id is not in the host registry.
@@ -74,7 +71,6 @@ impl HostGatewayErrorKind {
     #[must_use]
     pub const fn as_str(&self) -> &'static str {
         match self {
-            Self::TraceUnavailable => "trace_unavailable",
             Self::HostOperationFailed => "host_operation_failed",
             Self::UnknownSandbox => "unknown_sandbox",
             Self::SandboxUnavailable => "sandbox_unavailable",

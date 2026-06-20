@@ -30,7 +30,7 @@ eosd / daemon  (bin+lib, in-container)   executes in-box commands and
 
 **Boundary law:** host/gateway crates do not depend on daemon implementation
 crates, and daemon crates do not depend on host/gateway crates. Cross-boundary
-schemas live in `crates/shared/protocol` and `crates/shared/trace`. Wire and
+schemas live in `crates/shared/protocol`. Wire and
 CAS fixtures live with their owning crates. `cargo run -p xtask -- check-contract`
 is the drift gate.
 
@@ -39,12 +39,12 @@ is the drift gate.
 - `crates/shared/protocol/PROTOCOL.md` — framing/auth/errors/canonicalization
   plus immutable wire fixtures in `crates/shared/protocol/fixtures/`.
 - `crates/daemon/layerstack/tests/fixtures/` — daemon-owned CAS fixtures.
-- `crates/` — the workspace. Shared: `shared/protocol`, `shared/trace`.
+- `crates/` — the workspace. Shared: `shared/protocol`.
   Gateway: `gateway`. Host: `host`. Daemon side:
   `daemon/eosd`, `daemon/core`, `daemon/layerstack`, `daemon/overlay`,
   `daemon/namespace`, `daemon/command`, `daemon/operation_service`,
   `daemon/workspace`, and `daemon/config`.
-- `docs/contract/` — the frozen historical wire/CAS/audit contracts.
+- `docs/contract/` — the frozen historical wire/CAS contracts.
 - `config/prd.yml` — the single daemon config baseline (see `config/README.md`).
 - `dist/` — packaged static `eosd` binaries uploaded into sandbox containers.
 

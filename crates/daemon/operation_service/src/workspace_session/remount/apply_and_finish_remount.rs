@@ -1,5 +1,4 @@
 use crate::workspace_crate::{RemountWorkspaceRequest, WorkspaceHandle, WorkspaceId};
-use crate::workspace_remount::RemountWorkspaceSession;
 use crate::workspace_session::{
     WorkspaceSessionError, WorkspaceSessionHandler, WorkspaceSessionService,
 };
@@ -57,18 +56,6 @@ impl WorkspaceSessionService {
         Ok(())
     }
 
-    pub fn begin_remount(
-        &self,
-        workspace_session_id: WorkspaceId,
-    ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {
-        let mut sessions = self.lock_sessions()?;
-        let session = sessions
-            .get_mut(&workspace_session_id)
-            .ok_or_else(|| WorkspaceSessionError::not_found(&workspace_session_id))?;
-
-        session.begin_remount()
-    }
-
     pub fn apply_and_finish_remount(
         &self,
         handler: &WorkspaceSessionHandler,
@@ -83,45 +70,5 @@ impl WorkspaceSessionService {
             }
         };
         self.commit_remount_result(handler, result.handle)
-    }
-
-    pub fn block_remount(
-        &self,
-        workspace_session_id: WorkspaceId,
-    ) -> Result<(), WorkspaceSessionError> {
-        let mut sessions = self.lock_sessions()?;
-        let session = sessions
-            .get_mut(&workspace_session_id)
-            .ok_or_else(|| WorkspaceSessionError::not_found(&workspace_session_id))?;
-
-        session.block_remount()
-    }
-}
-
-impl RemountWorkspaceSession for WorkspaceSessionService {
-    fn begin_remount(
-        &self,
-        workspace_session_id: WorkspaceId,
-    ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {
-        WorkspaceSessionService::begin_remount(self, workspace_session_id)
-    }
-
-    fn apply_and_finish_remount(
-        &self,
-        handler: &WorkspaceSessionHandler,
-        request: RemountWorkspaceRequest,
-    ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {
-        WorkspaceSessionService::apply_and_finish_remount(self, handler, request)
-    }
-
-    fn block_remount(
-        &self,
-        workspace_session_id: WorkspaceId,
-    ) -> Result<(), WorkspaceSessionError> {
-        WorkspaceSessionService::block_remount(self, workspace_session_id)
-    }
-
-    fn is_remount_pending(&self, workspace_session_id: &WorkspaceId) -> bool {
-        WorkspaceSessionService::is_remount_pending(self, workspace_session_id)
     }
 }

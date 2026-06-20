@@ -27,11 +27,11 @@ normative subset both sides build against.
 |---|---|---|
 | `op` | yes | canonical `host.*` or `sandbox.*` operation name |
 | `sandbox_id` | for daemon-bound ops; for host ops only when targeting an existing managed sandbox record | absent on host fleet-list/profile ops |
-| `invocation_id` | yes | uuid4 hex; canonical request identity; echoed back as `meta.request_id` / `meta.trace.request_id` |
+| `invocation_id` | yes | uuid4 hex; canonical request identity; echoed back as `meta.request_id` |
 | `args` | yes (may be `{}`) | op-specific |
 
 Top-level `request_id` is not a request field; clients send `invocation_id` and
-read `request_id` only from response metadata or trace/audit APIs.
+read `request_id` only from response metadata.
 
 - **Response:** for forwarded ops, the daemon's operation envelope verbatim;
   for host ops, a host-built operation envelope with the same
@@ -104,7 +104,7 @@ at `result.status`. Branch the envelope `status` first, then `result.status`.
 Error envelope (both hops):
 
 ```json
-{"status":"error","error":{"kind":"…","message":"…","details":{}},"meta":{"envelope_version":2,"op":"…","request_id":"…","workspace_route":{"kind":"none"},"duration_ms":0.0,"modules_touched":[],"steps":[],"resource_summary":{"fields":{}},"warnings":[]}}
+{"status":"error","error":{"kind":"…","message":"…","details":{}},"meta":{"envelope_version":2,"op":"…","request_id":"…","duration_ms":0.0,"resource_summary":{"fields":{}},"warnings":[]}}
 ```
 
 Daemon error kinds: `invalid_request`, `bad_json`, `request_too_large`,

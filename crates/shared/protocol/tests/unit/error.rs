@@ -12,8 +12,8 @@ fn protocol_error_kind_wire_names_are_stable() {
 #[test]
 fn host_gateway_error_kind_wire_names_are_stable() {
     assert_eq!(
-        HostGatewayErrorKind::TraceUnavailable.as_str(),
-        "trace_unavailable"
+        HostGatewayErrorKind::HostOperationFailed.as_str(),
+        "host_operation_failed"
     );
     assert_eq!(
         HostGatewayErrorKind::UncertainOutcome.as_str(),

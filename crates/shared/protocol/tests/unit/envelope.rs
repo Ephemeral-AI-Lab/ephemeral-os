@@ -93,39 +93,11 @@ fn meta_serializes_required_spec_fields() {
         "envelope_version",
         "op",
         "request_id",
-        "workspace_route",
         "duration_ms",
-        "modules_touched",
-        "steps",
         "resource_summary",
         "warnings",
     ] {
         assert!(meta.get(field).is_some(), "meta.{field} is always present");
     }
     assert_eq!(meta["envelope_version"], 2);
-    assert_eq!(meta["workspace_route"]["kind"], "none");
-    assert!(meta.get("trace").is_none());
-}
-
-#[test]
-fn meta_serializes_populated_trace_reference() {
-    let value = serde_json::to_value(OperationEnvelope::ok(
-        json!({}),
-        ResponseMeta {
-            trace: TraceRef {
-                trace_id: "trace-1".to_owned(),
-                request_id: Some("req-1".to_owned()),
-                store: "local_sqlite".to_owned(),
-                event_count: 3,
-                degraded: false,
-                root_span_id: None,
-            },
-            ..meta()
-        },
-    ))
-    .expect("envelope serializes");
-    let meta = value.get("meta").expect("meta object");
-    assert_eq!(meta["trace"]["trace_id"], "trace-1");
-    assert_eq!(meta["trace"]["request_id"], "req-1");
-    assert_eq!(meta["trace"]["store"], "local_sqlite");
 }

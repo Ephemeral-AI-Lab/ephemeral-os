@@ -1,17 +1,12 @@
-use std::time::Instant;
-
-use protocol::HostGatewayErrorKind;
-use serde_json::{json, Value};
+use serde_json::Value;
 
 use crate::container::DaemonContainer;
 use crate::daemon_wire::{
     encode_request_with_forward_metadata, response_is_accepted, ProtocolClient, HEARTBEAT_OP,
 };
 
-use super::audit::{persist_response_or_mark_degraded, record_event, record_missing};
 use super::{
-    client_error_kind, elapsed_us, retry_attempt_index, tcp_once, tcp_with_connect_backoff,
-    ForwardAttempt, ForwardError,
+    retry_attempt_index, tcp_once, tcp_with_connect_backoff, ForwardAttempt, ForwardError,
 };
 use crate::service::registry::resolve_endpoint;
 
@@ -26,48 +21,21 @@ pub(super) fn run_recovery(attempt: &ForwardAttempt<'_>) -> Result<Value, Forwar
     let endpoint = match crate::service::registry::cached_or_resolve_endpoint(attempt.record) {
         Ok(addr) => addr,
         Err(err) => {
-            record_event(
-                attempt,
-                "host.transport",
-                "endpoint_refresh_failed",
-                json!({"reason": "resolve endpoint", "error": err.to_string()}),
-            );
             return fallback_chain(attempt, &unavailable("resolve endpoint", &err));
         }
     };
     match tcp_with_connect_backoff(attempt, endpoint) {
         Ok(value) => Ok(value),
         Err(err) if err.is_connect_failure() => match resolve_endpoint(attempt.record) {
-            Ok(addr) => {
-                super::record_endpoint_refreshed(attempt, endpoint, addr);
-                match tcp_once(attempt, addr, retry_attempt_index()) {
-                    Ok(value) => Ok(value),
-                    Err(err) => {
-                        fallback_chain(attempt, &unavailable("retry after re-resolve", &err))
-                    }
-                }
-            }
+            Ok(addr) => match tcp_once(attempt, addr, retry_attempt_index()) {
+                Ok(value) => Ok(value),
+                Err(err) => fallback_chain(attempt, &unavailable("retry after re-resolve", &err)),
+            },
             Err(err) => fallback_chain(attempt, &unavailable("re-resolve endpoint", &err)),
         },
         Err(err) => {
             if attempt.mutates_state {
                 restore_if_unreachable(attempt);
-                record_missing(
-                    attempt,
-                    "uncertain",
-                    HostGatewayErrorKind::UncertainOutcome.as_str(),
-                    &format!("delivery-ambiguous daemon transport failure: {err}"),
-                );
-                record_event(
-                    attempt,
-                    "host.protocol",
-                    "uncertain_outcome",
-                    json!({
-                        "error_kind": HostGatewayErrorKind::UncertainOutcome.as_str(),
-                        "transport_error_kind": client_error_kind(&err),
-                        "message": err.to_string()
-                    }),
-                );
                 return Err(ForwardError::UncertainOutcome(format!(
                     "{}: {err}",
                     attempt.record.sandbox_id
@@ -94,39 +62,21 @@ fn restore_if_unreachable(attempt: &ForwardAttempt<'_>) {
     if probe.is_some_and(|resp| response_is_accepted(&resp)) {
         return;
     }
-    let _ = respawn_and_gate_traced(attempt);
+    let _ = respawn_and_gate(attempt);
 }
 
 fn fallback_chain(
     attempt: &ForwardAttempt<'_>,
     failure: &ForwardError,
 ) -> Result<Value, ForwardError> {
-    record_event(
-        attempt,
-        "host.transport",
-        "fallback_chain_started",
-        json!({"sandbox_id": attempt.record.sandbox_id, "reason": failure.to_string()}),
-    );
     if let Ok(value) = exec_thin_client(attempt) {
         return Ok(value);
     }
-    respawn_and_gate_traced(attempt).map_err(|err| {
+    respawn_and_gate(attempt).map_err(|err| {
         let message = format!("{failure}; respawn failed: {err:#}");
-        record_missing(
-            attempt,
-            "error",
-            HostGatewayErrorKind::SandboxUnavailable.as_str(),
-            &message,
-        );
         ForwardError::SandboxUnavailable(message)
     })?;
     if attempt.mutates_state {
-        record_missing(
-            attempt,
-            "uncertain",
-            HostGatewayErrorKind::UncertainOutcome.as_str(),
-            "daemon respawned after a delivery-ambiguous failure",
-        );
         return Err(ForwardError::UncertainOutcome(format!(
             "{}: daemon respawned after a delivery-ambiguous failure; the original outcome is unknowable",
             attempt.record.sandbox_id
@@ -137,7 +87,6 @@ fn fallback_chain(
     })?;
     tcp_once(attempt, endpoint, retry_attempt_index()).map_err(|err| {
         let message = format!("replay after respawn: {err}");
-        record_missing(attempt, "error", client_error_kind(&err), &message);
         ForwardError::SandboxUnavailable(message)
     })
 }
@@ -162,86 +111,14 @@ fn exec_thin_client(attempt: &ForwardAttempt<'_>) -> anyhow::Result<Value> {
         attempt.args,
         None,
     ))?;
-    record_event(
-        attempt,
-        "host.transport",
-        "exec_client_started",
-        json!({
-            "sandbox_id": attempt.record.sandbox_id,
-            "container": attempt.record.container,
-            "remote_socket_path": socket,
-            "mutates_state": attempt.mutates_state,
-        }),
-    );
-    let started = Instant::now();
-    let stdout = match container.exec(&[&eosd, "daemon", "--client", &socket, &payload]) {
-        Ok(stdout) => stdout,
-        Err(err) => {
-            record_event(
-                attempt,
-                "host.transport",
-                "exec_client_failed",
-                json!({"duration_us": elapsed_us(started), "error_kind": "exec_failed", "message": err.to_string()}),
-            );
-            return Err(err);
-        }
-    };
-    let mut value = serde_json::from_str(stdout.trim())?;
-    record_event(
-        attempt,
-        "host.transport",
-        "exec_client_finished",
-        json!({
-            "duration_us": elapsed_us(started),
-        }),
-    );
-    if let Err(err) = persist_response_or_mark_degraded(
-        attempt,
-        &mut value,
-        stdout.as_bytes(),
-        elapsed_us(started) / 1000,
-    ) {
-        return Err(anyhow::anyhow!(err));
-    }
-    Ok(value)
+    let stdout = container.exec(&[&eosd, "daemon", "--client", &socket, &payload])?;
+    Ok(serde_json::from_str(stdout.trim())?)
 }
 
-fn respawn_and_gate_traced(attempt: &ForwardAttempt<'_>) -> anyhow::Result<()> {
+fn respawn_and_gate(attempt: &ForwardAttempt<'_>) -> anyhow::Result<()> {
     let daemon = attempt.config.daemon_spec(attempt.record.tcp_port);
-    record_event(
-        attempt,
-        "host.transport",
-        "daemon_respawn_wait_started",
-        json!({"sandbox_id": attempt.record.sandbox_id, "container": attempt.record.container}),
-    );
     let _respawn_guard = attempt.record.begin_respawn();
-    record_event(
-        attempt,
-        "host.transport",
-        "daemon_respawn_started",
-        json!({"sandbox_id": attempt.record.sandbox_id, "container": attempt.record.container}),
-    );
-    let started = Instant::now();
-    match handle(attempt).restart_daemon(&daemon) {
-        Ok(()) => {
-            record_event(
-                attempt,
-                "host.transport",
-                "daemon_respawn_finished",
-                json!({"duration_us": elapsed_us(started)}),
-            );
-            Ok(())
-        }
-        Err(err) => {
-            record_event(
-                attempt,
-                "host.transport",
-                "daemon_respawn_failed",
-                json!({"duration_us": elapsed_us(started), "error_kind": "respawn_failed", "message": err.to_string()}),
-            );
-            Err(err)
-        }
-    }
+    handle(attempt).restart_daemon(&daemon)
 }
 
 fn handle(attempt: &ForwardAttempt<'_>) -> DaemonContainer {

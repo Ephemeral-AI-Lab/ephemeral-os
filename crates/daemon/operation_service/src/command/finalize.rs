@@ -6,10 +6,8 @@ use crate::command::{
     CommandTerminalResult, CommandTranscriptStore, CommandWorkspaceDestroyMetadata,
     CompletedCommandRecord, FinalizationState, RetainedCommandTranscript,
 };
-use crate::workspace_crate::{
-    CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, DestroyWorkspaceRequest,
-    DestroyWorkspaceResult, WorkspaceId,
-};
+use crate::workspace_crate::{CallerId, DestroyWorkspaceResult, WorkspaceId};
+use crate::workspace_session::{OneShotSessionFinalization, PublishedSessionChanges};
 
 use super::service::CommandOperationService;
 
@@ -73,35 +71,10 @@ impl CommandOperationService {
             record.workspace_session_id.clone(),
             record.caller_id.clone(),
         )?;
-        let mut finalized = CommandFinalizedMetadata {
-            policy: CommandFinalizedPolicy::OneShotPublishThenDestroy,
-            outcome: CommandFinalizationOutcome::Discarded,
-            ..CommandFinalizedMetadata::default()
-        };
-
-        if process_exit_succeeded(process_exit) {
-            let captured = self.workspace().capture_session_changes(
-                &handler,
-                CaptureChangesRequest {
-                    include_stats: true,
-                },
-            )?;
-            let publish_result = layerstack::service::publish_changes_to_layerstack(
-                layerstack::service::PublishChangesRequest {
-                    root: &handler.layer_stack_root,
-                    snapshot_manifest_version: handler.handle.snapshot.manifest_version,
-                    snapshot_layer_paths: &handler.handle.snapshot.layer_paths,
-                    changes: &captured.changes,
-                },
-            );
-            let publish_result =
-                publish_result.map_err(|error| CommandServiceError::CommandFinalizationFailed {
-                    command_id: record.command_id.clone(),
-                    error: format!("publish captured one-shot changes: {error}"),
-                    finalized: None,
-                })?;
-            finalized = metadata_from_capture(captured, publish_result);
-        }
+        let finalized = metadata_from_one_shot_finalization(
+            self.workspace()
+                .finalize_one_shot_session(handler, process_exit_succeeded(process_exit))?,
+        );
 
         self.mark_active_finalization(
             &record.command_id,
@@ -117,11 +90,6 @@ impl CommandOperationService {
                 finalized: finalized.clone(),
             },
         )?;
-        let destroy = self
-            .workspace()
-            .destroy_session(handler, DestroyWorkspaceRequest::default())?;
-        finalized.destroy = Some(destroy_metadata(destroy));
-
         Ok(finalized)
     }
     fn begin_finalization(
@@ -234,19 +202,31 @@ fn process_exit_succeeded(process_exit: &::command::process::CommandProcessExit)
     process_exit.kill.is_none() && process_exit.exit_code == 0
 }
 
-fn metadata_from_capture(
-    captured: CapturedWorkspaceChanges,
-    publish_result: layerstack::ChangesetResult,
+fn metadata_from_one_shot_finalization(
+    finalization: OneShotSessionFinalization,
 ) -> CommandFinalizedMetadata {
+    let mut finalized = match finalization.published {
+        Some(published) => metadata_from_published_session(published),
+        None => CommandFinalizedMetadata {
+            policy: CommandFinalizedPolicy::OneShotPublishThenDestroy,
+            outcome: CommandFinalizationOutcome::Discarded,
+            ..CommandFinalizedMetadata::default()
+        },
+    };
+    finalized.destroy = Some(destroy_metadata(finalization.destroy));
+    finalized
+}
+
+fn metadata_from_published_session(published: PublishedSessionChanges) -> CommandFinalizedMetadata {
     CommandFinalizedMetadata {
         policy: CommandFinalizedPolicy::OneShotPublishThenDestroy,
         outcome: CommandFinalizationOutcome::Published,
-        changed_paths: captured.changed_paths,
-        changed_path_kinds: captured.changed_path_kinds,
-        protected_drop_count: captured.protected_drops.len(),
-        captured_change_count: captured.changes.len(),
-        metadata_path_count: captured.metadata_path_count,
-        published_manifest_version: publish_result.published_manifest_version,
+        changed_paths: published.changed_paths,
+        changed_path_kinds: published.changed_path_kinds,
+        protected_drop_count: published.protected_drop_count,
+        captured_change_count: published.captured_change_count,
+        metadata_path_count: published.metadata_path_count,
+        published_manifest_version: published.published_manifest_version,
         destroy: None,
     }
 }

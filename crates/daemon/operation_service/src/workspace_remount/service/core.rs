@@ -1,32 +1,15 @@
 use std::sync::Arc;
 
 use crate::command::{CommandRemountInspection, CommandRemountQuiesce};
-use crate::workspace_crate::{RemountWorkspaceRequest, WorkspaceId};
-use crate::workspace_session::{WorkspaceSessionError, WorkspaceSessionHandler};
+use crate::workspace_crate::WorkspaceId;
+use crate::workspace_session::remount::RemountWorkspaceSession;
+use crate::workspace_session::WorkspaceSessionHandler;
 
 pub trait CommandRemountCoordinator: Send + Sync {
     fn begin_workspace_remount_quiesce(
         &self,
         workspace_session_id: &WorkspaceId,
     ) -> CommandRemountQuiesce;
-}
-
-pub trait RemountWorkspaceSession: Send + Sync {
-    fn begin_remount(
-        &self,
-        workspace_session_id: WorkspaceId,
-    ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError>;
-
-    fn apply_and_finish_remount(
-        &self,
-        handler: &WorkspaceSessionHandler,
-        request: RemountWorkspaceRequest,
-    ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError>;
-
-    fn block_remount(&self, workspace_session_id: WorkspaceId)
-        -> Result<(), WorkspaceSessionError>;
-
-    fn is_remount_pending(&self, workspace_session_id: &WorkspaceId) -> bool;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,8 +22,8 @@ pub struct WorkspaceRemountReport {
 }
 
 pub struct WorkspaceRemountService {
-    workspace: Arc<dyn RemountWorkspaceSession>,
-    command: Arc<dyn CommandRemountCoordinator>,
+    pub(super) workspace: Arc<dyn RemountWorkspaceSession>,
+    pub(super) command: Arc<dyn CommandRemountCoordinator>,
 }
 
 impl WorkspaceRemountService {
@@ -50,15 +33,5 @@ impl WorkspaceRemountService {
         command: Arc<dyn CommandRemountCoordinator>,
     ) -> Self {
         Self { workspace, command }
-    }
-
-    #[must_use]
-    pub(crate) fn workspace(&self) -> &Arc<dyn RemountWorkspaceSession> {
-        &self.workspace
-    }
-
-    #[must_use]
-    pub(crate) fn command(&self) -> &Arc<dyn CommandRemountCoordinator> {
-        &self.command
     }
 }

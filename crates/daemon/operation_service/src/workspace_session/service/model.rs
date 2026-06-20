@@ -1,6 +1,9 @@
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use crate::workspace_crate::{BaseRevision, WorkspaceHandle, WorkspaceId};
+use crate::workspace_crate::{
+    BaseRevision, ChangedPathKind, DestroyWorkspaceResult, WorkspaceHandle, WorkspaceId,
+};
 use crate::workspace_session::WorkspaceSessionError;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -22,6 +25,22 @@ pub struct WorkspaceSessionHandler {
     pub workspace_session_id: WorkspaceId,
     pub handle: WorkspaceHandle,
     pub layer_stack_root: PathBuf,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct PublishedSessionChanges {
+    pub changed_paths: Vec<String>,
+    pub changed_path_kinds: BTreeMap<String, ChangedPathKind>,
+    pub protected_drop_count: usize,
+    pub captured_change_count: usize,
+    pub metadata_path_count: usize,
+    pub published_manifest_version: Option<u64>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct OneShotSessionFinalization {
+    pub published: Option<PublishedSessionChanges>,
+    pub destroy: DestroyWorkspaceResult,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

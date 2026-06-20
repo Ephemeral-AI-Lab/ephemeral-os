@@ -3,21 +3,18 @@ use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use anyhow::Result;
 use serde_json::{json, Value};
-use trace::{RequestId, TraceId};
 
 use crate::container::override_docker_command_for_tests;
 use crate::daemon_wire::{encode_request_with_metadata, ClientError};
 use crate::service::forward::{
-    forward_request, record_client_error, record_endpoint_refreshed, tcp_once,
-    tcp_with_connect_backoff, ForwardAttempt, ForwardRequestInput,
+    forward_request, tcp_once, ForwardAttempt, ForwardRequestInput,
 };
 use crate::service::registry::{SandboxRecord, SandboxRegistry};
-use crate::service::{ForwardTraceContext, HostConfig, SandboxHost};
-use crate::trace_store::{TraceEventInput, TraceEventRow, TraceStore};
+use crate::service::{HostConfig, SandboxHost};
 
 #[test]
 fn acquire_workspace_root_defaults_to_testbed_and_allows_absolute_override() -> Result<()> {
@@ -132,7 +129,7 @@ fn sandbox_lifecycle_forward_waits_for_active_respawn() -> Result<()> {
 }
 
 #[test]
-fn forward_request_persists_transport_events_without_daemon_trace() -> Result<()> {
+fn forward_request_sends_daemon_protocol_metadata_only() -> Result<()> {
     let listener = TcpListener::bind("127.0.0.1:0")?;
     let endpoint = listener.local_addr()?;
     let server = std::thread::spawn(move || -> Result<()> {
@@ -140,10 +137,8 @@ fn forward_request_persists_transport_events_without_daemon_trace() -> Result<()
         let mut line = String::new();
         BufReader::new(stream.try_clone()?).read_line(&mut line)?;
         let request: serde_json::Value = serde_json::from_str(line.trim_end())?;
-        assert!(
-            request.get("trace").is_none(),
-            "host must not send daemon trace metadata"
-        );
+        assert_eq!(request["op"], json!("sandbox.runtime.ready"));
+        assert_eq!(request["invocation_id"], json!("request-forward"));
         assert_eq!(
             request["args"]["_eos_daemon_protocol_version"],
             json!(crate::daemon_wire::DAEMON_PROTOCOL_VERSION)
@@ -154,12 +149,8 @@ fn forward_request_persists_transport_events_without_daemon_trace() -> Result<()
             "meta": {
                 "envelope_version": 2,
                 "op": "sandbox.runtime.ready",
-                "request_id": "",
-                "trace": {"event_count": 0},
-                "workspace_route": {"kind": "none"},
+                "request_id": "request-forward",
                 "duration_ms": 0.0,
-                "modules_touched": [],
-                "steps": [],
                 "resource_summary": {"fields": {}},
                 "warnings": []
             }
@@ -168,23 +159,8 @@ fn forward_request_persists_transport_events_without_daemon_trace() -> Result<()
         Ok(())
     });
 
-    let dir = temp_host_dir("forward-trace");
-    let store = Arc::new(TraceStore::open(&dir)?);
-    let config = HostConfig {
-        image: "test-image".to_owned(),
-        platform: None,
-        docker_privileged: true,
-        eosd_path: dir.join("eosd"),
-        config_yaml_path: dir.join("config.yml"),
-        remote_daemon_dir: PathBuf::from("/eos/runtime"),
-        remote_eosd_path: PathBuf::from("/eos/eosd"),
-        remote_config_path: PathBuf::from("/eos/config.yml"),
-        tcp_port: endpoint.port(),
-        ready_timeout: Duration::from_secs(1),
-        request_timeout: Duration::from_secs(2),
-        created_by: "test".to_owned(),
-        state_dir: dir.clone(),
-    };
+    let dir = temp_host_dir("forward-metadata");
+    let config = host_config(&dir, endpoint.port());
     let record = Arc::new(sandbox_record(
         "sb-forward".to_owned(),
         "sb-forward".to_owned(),
@@ -194,107 +170,16 @@ fn forward_request_persists_transport_events_without_daemon_trace() -> Result<()
         Some(endpoint),
     ));
 
-    let mut trace = ForwardTraceContext::new("request-forward");
-    trace.push_gateway_event(
-        "gateway.transport",
-        "accepted",
-        json!({"surface": "client"}),
-    );
-    trace.push_gateway_event(
-        "gateway.transport",
-        "request_read",
-        json!({"surface": "client", "request_bytes": 81}),
-    );
-    trace.push_gateway_event(
-        "gateway.route",
-        "route_selected",
-        json!({"op": "sandbox.runtime.ready", "route": "daemon"}),
-    );
-
     let response = forward_request(ForwardRequestInput {
-        record: Arc::clone(&record),
+        record,
         config: &config,
-        trace_store: &store,
-        trace_context: trace,
         mutates_state: false,
         op: "sandbox.runtime.ready",
         invocation_id: "request-forward",
         args: &json!({"caller_id": "caller-1"}),
     })?;
-    assert!(response.get("_trace_events").is_none());
     assert_eq!(response["result"]["ready"], json!(true));
     assert_eq!(response["meta"]["request_id"], json!("request-forward"));
-    assert_eq!(
-        response["meta"]["trace"]["request_id"],
-        json!("request-forward")
-    );
-    assert_eq!(response["meta"]["trace"]["store"], json!("local_sqlite"));
-
-    let request = store
-        .request_by_id("request-forward")?
-        .expect("request row");
-    assert_eq!(
-        response["meta"]["trace"]["event_count"],
-        json!(store.event_count_for_trace(&request.trace_id)?)
-    );
-    assert_eq!(request.status.as_deref(), Some("ok"));
-    let replay_trace_id = TraceId::parse(request.trace_id.clone())?;
-    let replay_request_id = RequestId::parse(request.request_id.clone())?;
-    store.append_trace_event(TraceEventInput {
-        sandbox_id: &request.sandbox_id,
-        trace_id: &replay_trace_id,
-        request_id: Some(&replay_request_id),
-        span_id: None,
-        module: "gateway.transport",
-        event: "response_written",
-        details: json!({"response_bytes": 32}),
-    })?;
-    let events = store.events_for_trace(&request.trace_id)?;
-    let event_names: Vec<_> = events
-        .iter()
-        .map(|event| (event.module.as_str(), event.event.as_str()))
-        .collect();
-    assert!(
-        event_names.contains(&("host.transport", "connect_started")),
-        "{event_names:?}"
-    );
-    assert!(
-        event_names.contains(&("gateway.transport", "request_read")),
-        "{event_names:?}"
-    );
-    assert!(
-        event_names.contains(&("gateway.route", "route_selected")),
-        "{event_names:?}"
-    );
-    assert!(
-        event_names.contains(&("host.transport", "request_written")),
-        "{event_names:?}"
-    );
-    assert!(
-        event_names.contains(&("host.transport", "response_read")),
-        "{event_names:?}"
-    );
-    assert!(
-        event_names
-            .iter()
-            .all(|(module, _)| !module.starts_with("daemon.") && *module != "workspace.route"),
-        "{event_names:?}"
-    );
-    assert_ordered_events(
-        &event_names,
-        &[
-            ("gateway.transport", "accepted"),
-            ("gateway.transport", "request_read"),
-            ("gateway.route", "route_selected"),
-            ("host.protocol", "forward_started"),
-            ("host.transport", "connect_started"),
-            ("host.transport", "connect_finished"),
-            ("host.transport", "request_written"),
-            ("host.transport", "response_read"),
-            ("host.protocol", "forward_finished"),
-            ("gateway.transport", "response_written"),
-        ],
-    );
 
     server.join().expect("server thread")?;
     let _ = fs::remove_dir_all(dir);
@@ -307,7 +192,7 @@ fn decode_client_errors_do_not_format_raw_response_body() {
     let source = serde_json::from_str::<Value>(raw).expect_err("invalid json");
     let error = ClientError::Decode {
         raw_len: raw.len(),
-        raw_sha256: trace::sha256_hex(raw.as_bytes()),
+        raw_sha256: crate::daemon_wire::sha256_hex(raw.as_bytes()),
         source,
     };
     let message = error.to_string();
@@ -323,33 +208,37 @@ fn decode_client_errors_do_not_format_raw_response_body() {
 }
 
 #[test]
-fn tcp_once_records_transport_failure_events() -> Result<()> {
-    let cases = [
+fn tcp_once_returns_transport_errors_without_event_store() -> Result<()> {
+    let cases: [(
+        &str,
+        Box<dyn FnOnce(std::net::TcpStream) + Send>,
+        fn(&ClientError) -> bool,
+    ); 3] = [
         (
             "empty-response",
-            "empty_response",
             Box::new(|stream: std::net::TcpStream| {
                 let _ = stream.shutdown(std::net::Shutdown::Write);
                 std::thread::sleep(Duration::from_millis(50));
             }) as Box<dyn FnOnce(std::net::TcpStream) + Send>,
+            |error: &ClientError| matches!(error, ClientError::EmptyResponse),
         ),
         (
             "decode-failed",
-            "decode_failed",
             Box::new(|mut stream: std::net::TcpStream| {
                 let _ = writeln!(stream, "not json");
             }),
+            |error: &ClientError| matches!(error, ClientError::Decode { .. }),
         ),
         (
             "read-timeout",
-            "read_failed",
             Box::new(|_stream: std::net::TcpStream| {
                 std::thread::sleep(Duration::from_millis(250));
             }),
+            |error: &ClientError| matches!(error, ClientError::Read(_)),
         ),
     ];
 
-    for (name, expected_event, handler) in cases {
+    for (name, handler, matches_error) in cases {
         let listener = TcpListener::bind("127.0.0.1:0")?;
         let endpoint = listener.local_addr()?;
         std::thread::spawn(move || {
@@ -357,160 +246,13 @@ fn tcp_once_records_transport_failure_events() -> Result<()> {
                 handler(stream);
             }
         });
-        let (store, trace_id) = run_tcp_once_failure(name, endpoint)?;
-        let events = store.events_for_trace(trace_id.as_str())?;
-        assert!(
-            events
-                .iter()
-                .any(|event| event.module == "host.transport" && event.event == expected_event),
-            "{name}: {events:?}"
-        );
+        let error = run_tcp_once_failure(name, endpoint)?;
+        assert!(matches_error(&error), "{name}: {error:?}");
     }
 
     let endpoint = "127.0.0.1:9".parse().expect("discard port");
-    let (store, trace_id) = run_tcp_once_failure("connect-refused", endpoint)?;
-    let events = store.events_for_trace(trace_id.as_str())?;
-    assert!(
-        events
-            .iter()
-            .any(|event| event.module == "host.transport" && event.event == "connect_failed"),
-        "{events:?}"
-    );
-    Ok(())
-}
-
-#[test]
-fn mutating_response_persistence_failure_does_not_return_success() -> Result<()> {
-    let listener = TcpListener::bind("127.0.0.1:0")?;
-    let endpoint = listener.local_addr()?;
-    let server = std::thread::spawn(move || -> Result<()> {
-        let (mut stream, _) = listener.accept()?;
-        let mut line = String::new();
-        BufReader::new(stream.try_clone()?).read_line(&mut line)?;
-        writeln!(
-            stream,
-            "{}",
-            serde_json::to_string(&json!({
-                "status": "ok",
-                "result": {"written": true},
-                "meta": {"trace": {"event_count": 0}},
-            }))?
-        )?;
-        Ok(())
-    });
-
-    let dir = temp_host_dir("response-persist-failure");
-    let store = TraceStore::open(&dir)?;
-    store.fail_next_response_persisted_for_tests();
-    let config = HostConfig {
-        image: "test-image".to_owned(),
-        platform: None,
-        docker_privileged: true,
-        eosd_path: dir.join("eosd"),
-        config_yaml_path: dir.join("config.yml"),
-        remote_daemon_dir: PathBuf::from("/eos/runtime"),
-        remote_eosd_path: PathBuf::from("/eos/eosd"),
-        remote_config_path: PathBuf::from("/eos/config.yml"),
-        tcp_port: endpoint.port(),
-        ready_timeout: Duration::from_millis(100),
-        request_timeout: Duration::from_millis(100),
-        created_by: "test".to_owned(),
-        state_dir: dir.clone(),
-    };
-    let record = sandbox_record(
-        "sb-response-persist-failure".to_owned(),
-        "sb-response-persist-failure".to_owned(),
-        "token".to_owned(),
-        endpoint.port(),
-        "test".to_owned(),
-        Some(endpoint),
-    );
-    let trace_id = TraceId::parse("trace-response-persist-failure")?;
-    let request_id = RequestId::parse("request-response-persist-failure")?;
-    let args = json!({});
-    let mut tcp_line =
-        encode_request_with_metadata("sandbox.command.exec", request_id.as_str(), &args, None);
-    tcp_line.push(b'\n');
-    let attempt = ForwardAttempt {
-        record: &record,
-        config: &config,
-        trace_store: &store,
-        trace_id,
-        request_id,
-        mutates_state: true,
-        tcp_line,
-        op: "sandbox.command.exec",
-        invocation_id: "response-persist-failure",
-        args: &args,
-    };
-
-    let error = tcp_once(&attempt, endpoint, 0).expect_err("must not return ordinary success");
-    assert!(
-        matches!(error, ClientError::Io(_)),
-        "expected trace persistence failure as client error, got {error:?}"
-    );
-
-    server.join().expect("server thread")?;
-    let _ = fs::remove_dir_all(dir);
-    Ok(())
-}
-
-#[test]
-fn host_lifecycle_response_persistence_failure_does_not_return_success() -> Result<()> {
-    let dir = temp_host_dir("host-lifecycle-response-persist-failure");
-    let registry = Arc::new(SandboxRegistry::open(dir.clone())?);
-    registry.insert(sandbox_record(
-        "sb-lifecycle-persist-failure".to_owned(),
-        "sb-lifecycle-persist-failure".to_owned(),
-        "token".to_owned(),
-        37_657,
-        "test".to_owned(),
-        None,
-    ))?;
-    let trace_store = Arc::new(TraceStore::open(&dir)?);
-    trace_store.fail_next_response_persisted_for_tests();
-    let host = SandboxHost {
-        config: HostConfig {
-            image: "test-image".to_owned(),
-            platform: None,
-            docker_privileged: true,
-            eosd_path: dir.join("eosd"),
-            config_yaml_path: dir.join("config.yml"),
-            remote_daemon_dir: PathBuf::from("/eos/runtime"),
-            remote_eosd_path: PathBuf::from("/eos/eosd"),
-            remote_config_path: PathBuf::from("/eos/config.yml"),
-            tcp_port: 37_657,
-            ready_timeout: Duration::from_millis(100),
-            request_timeout: Duration::from_millis(100),
-            created_by: "test".to_owned(),
-            state_dir: dir.clone(),
-        },
-        config_yaml: String::new(),
-        registry,
-        trace_store: Arc::clone(&trace_store),
-    };
-    let trace = ForwardTraceContext::new("lifecycle-persist-failure");
-
-    let error = host
-        .release_with_trace("sb-lifecycle-persist-failure", &trace, &json!({}))
-        .expect_err("release must not return ordinary success after trace persistence fails");
-    assert!(
-        error
-            .to_string()
-            .contains("host response persistence failed after lifecycle result"),
-        "unexpected lifecycle persistence error: {error:#}"
-    );
-
-    let request = trace_store
-        .request_by_id(trace.request_id.as_str())?
-        .expect("release request row remains queryable");
-    assert_eq!(request.status.as_deref(), Some("uncertain"));
-    assert_eq!(
-        request.error_kind.as_deref(),
-        Some("trace_response_persist_failed")
-    );
-
-    let _ = fs::remove_dir_all(dir);
+    let error = run_tcp_once_failure("connect-refused", endpoint)?;
+    assert!(matches!(error, ClientError::Connect { .. }), "{error:?}");
     Ok(())
 }
 
@@ -529,26 +271,10 @@ fn release_keeps_registry_entry_when_container_removal_fails() -> Result<()> {
         "test".to_owned(),
         None,
     ))?;
-    let trace_store = Arc::new(TraceStore::open(&dir)?);
     let host = SandboxHost {
-        config: HostConfig {
-            image: "test-image".to_owned(),
-            platform: None,
-            docker_privileged: true,
-            eosd_path: dir.join("eosd"),
-            config_yaml_path: dir.join("config.yml"),
-            remote_daemon_dir: PathBuf::from("/eos/runtime"),
-            remote_eosd_path: PathBuf::from("/eos/eosd"),
-            remote_config_path: PathBuf::from("/eos/config.yml"),
-            tcp_port: 37_657,
-            ready_timeout: Duration::from_millis(100),
-            request_timeout: Duration::from_millis(100),
-            created_by: "test".to_owned(),
-            state_dir: dir.clone(),
-        },
+        config: host_config(&dir, 37_657),
         config_yaml: String::new(),
         registry: Arc::clone(&registry),
-        trace_store: Arc::clone(&trace_store),
     };
     let docker = dir.join("docker");
     fs::write(
@@ -559,10 +285,9 @@ fn release_keeps_registry_entry_when_container_removal_fails() -> Result<()> {
     permissions.set_mode(0o755);
     fs::set_permissions(&docker, permissions)?;
     let _docker = override_docker_command_for_tests(docker);
-    let trace = ForwardTraceContext::new("release-removal-failure");
 
     let error = host
-        .release_with_trace("sb-release-failure", &trace, &json!({}))
+        .release_with_args("sb-release-failure", &json!({}))
         .expect_err("container removal failure must be reported");
     assert!(
         error
@@ -575,226 +300,14 @@ fn release_keeps_registry_entry_when_container_removal_fails() -> Result<()> {
         "registry entry must remain retryable after cleanup failure"
     );
     assert_eq!(registry.load_token("sb-release-failure")?, "token");
-    let request = trace_store
-        .request_by_id(trace.request_id.as_str())?
-        .expect("release request row remains queryable");
-    assert_eq!(request.status.as_deref(), Some("error"));
-    assert_eq!(request.error_kind.as_deref(), Some("sandbox_unavailable"));
 
     let _ = fs::remove_dir_all(dir);
     Ok(())
 }
 
-#[test]
-fn operator_trace_queries_are_audit_events_even_without_sandbox_id() -> Result<()> {
-    let dir = temp_host_dir("operator-trace-read-audit");
-    let trace_store = Arc::new(TraceStore::open(&dir)?);
-    let host = SandboxHost {
-        config: HostConfig {
-            image: "test-image".to_owned(),
-            platform: None,
-            docker_privileged: true,
-            eosd_path: dir.join("eosd"),
-            config_yaml_path: dir.join("config.yml"),
-            remote_daemon_dir: PathBuf::from("/eos/runtime"),
-            remote_eosd_path: PathBuf::from("/eos/eosd"),
-            remote_config_path: PathBuf::from("/eos/config.yml"),
-            tcp_port: 37_657,
-            ready_timeout: Duration::from_millis(100),
-            request_timeout: Duration::from_millis(100),
-            created_by: "test".to_owned(),
-            state_dir: dir.clone(),
-        },
-        config_yaml: String::new(),
-        registry: Arc::new(SandboxRegistry::open(dir.clone())?),
-        trace_store: Arc::clone(&trace_store),
-    };
-    let trace = ForwardTraceContext::new("operator-trace-read");
-
-    let response = host.trace_requests(&trace, &json!({"limit": 5}))?;
-    assert_eq!(response["requests"], json!([]));
-
-    let events = trace_store.events_for_trace(trace.trace_id.as_str())?;
-    let event = events
-        .iter()
-        .find(|event| event.module == "host.trace_query" && event.event == "operator_read")
-        .expect("operator trace read is audit-backed");
-    let details: Value = serde_json::from_str(&event.details_json)?;
-    assert_eq!(details["op"], json!("host.trace.requests"));
-    assert_eq!(details["outcome"]["status"], json!("ok"));
-    assert_eq!(details["outcome"]["result_count"], json!(0));
-
-    let _ = fs::remove_dir_all(dir);
-    Ok(())
-}
-
-#[test]
-fn trace_show_applies_section_limit_and_reports_truncation() -> Result<()> {
-    let dir = temp_host_dir("trace-show-limit");
-    let trace_store = Arc::new(TraceStore::open(&dir)?);
-    let host = SandboxHost {
-        config: HostConfig {
-            image: "test-image".to_owned(),
-            platform: None,
-            docker_privileged: true,
-            eosd_path: dir.join("eosd"),
-            config_yaml_path: dir.join("config.yml"),
-            remote_daemon_dir: PathBuf::from("/eos/runtime"),
-            remote_eosd_path: PathBuf::from("/eos/eosd"),
-            remote_config_path: PathBuf::from("/eos/config.yml"),
-            tcp_port: 37_657,
-            ready_timeout: Duration::from_millis(100),
-            request_timeout: Duration::from_millis(100),
-            created_by: "test".to_owned(),
-            state_dir: dir.clone(),
-        },
-        config_yaml: String::new(),
-        registry: Arc::new(SandboxRegistry::open(dir.clone())?),
-        trace_store: Arc::clone(&trace_store),
-    };
-    let shown_trace = TraceId::parse("trace-show-limit")?;
-    for index in 0..3 {
-        trace_store.append_trace_event_or_loss(TraceEventInput {
-            sandbox_id: "sb-trace-show-limit",
-            trace_id: &shown_trace,
-            request_id: None,
-            span_id: None,
-            module: "trace.show.test",
-            event: "row",
-            details: json!({"index": index}),
-        })?;
-    }
-
-    let operator_trace = ForwardTraceContext::new("operator-trace-show-limit");
-    let response = host.trace_show(
-        &operator_trace,
-        &json!({"trace_id": shown_trace.as_str(), "limit": 2}),
-    )?;
-
-    assert_eq!(response["limits"]["per_section"], json!(2));
-    assert_eq!(response["counts"]["events"], json!(2));
-    assert_eq!(response["events"].as_array().map_or(0, Vec::len), 2);
-    assert_eq!(response["truncated"]["events"], json!(true));
-    assert_eq!(response["audit_entries"].as_array().map_or(0, Vec::len), 2);
-    assert_eq!(response["truncated"]["audit_entries"], json!(true));
-
-    let events = trace_store.events_for_trace(operator_trace.trace_id.as_str())?;
-    let event = events
-        .iter()
-        .find(|event| event.module == "host.trace_query" && event.event == "operator_read")
-        .expect("trace show read is audit-backed");
-    let details: Value = serde_json::from_str(&event.details_json)?;
-    assert_eq!(details["outcome"]["limit"], json!(2));
-    assert_eq!(details["outcome"]["truncated"]["events"], json!(true));
-
-    let _ = fs::remove_dir_all(dir);
-    Ok(())
-}
-
-#[test]
-fn host_transport_records_retry_endpoint_refresh_write_and_connect_timeout_facts() -> Result<()> {
-    let dir = temp_host_dir("transport-edge-facts");
-    let store = TraceStore::open(&dir)?;
-    let endpoint: std::net::SocketAddr = "127.0.0.1:9".parse().expect("discard port");
-    let refreshed_endpoint: std::net::SocketAddr = "127.0.0.1:10".parse().expect("refresh port");
-    let config = HostConfig {
-        image: "test-image".to_owned(),
-        platform: None,
-        docker_privileged: true,
-        eosd_path: dir.join("eosd"),
-        config_yaml_path: dir.join("config.yml"),
-        remote_daemon_dir: PathBuf::from("/eos/runtime"),
-        remote_eosd_path: PathBuf::from("/eos/eosd"),
-        remote_config_path: PathBuf::from("/eos/config.yml"),
-        tcp_port: endpoint.port(),
-        ready_timeout: Duration::from_millis(100),
-        request_timeout: Duration::from_millis(100),
-        created_by: "test".to_owned(),
-        state_dir: dir.clone(),
-    };
-    let record = sandbox_record(
-        "sb-transport-edges".to_owned(),
-        "sb-transport-edges".to_owned(),
-        "token".to_owned(),
-        endpoint.port(),
-        "test".to_owned(),
-        Some(endpoint),
-    );
-    let trace_id = TraceId::parse("trace-transport-edges")?;
-    let request_id = RequestId::parse("request-transport-edges")?;
-    let args = json!({});
-    let mut tcp_line =
-        encode_request_with_metadata("sandbox.runtime.ready", request_id.as_str(), &args, None);
-    tcp_line.push(b'\n');
-    let attempt = ForwardAttempt {
-        record: &record,
-        config: &config,
-        trace_store: &store,
-        trace_id: trace_id.clone(),
-        request_id,
-        mutates_state: false,
-        tcp_line,
-        op: "sandbox.runtime.ready",
-        invocation_id: "transport-edge-test",
-        args: &args,
-    };
-
-    let write_failure = ClientError::Write(std::io::Error::new(
-        std::io::ErrorKind::BrokenPipe,
-        "closed",
-    ));
-    record_client_error(&attempt, endpoint, 0, Instant::now(), &write_failure);
-    let connect_timeout = ClientError::Connect {
-        addr: endpoint,
-        source: std::io::Error::new(std::io::ErrorKind::TimedOut, "connect timed out"),
-    };
-    record_client_error(&attempt, endpoint, 1, Instant::now(), &connect_timeout);
-    record_endpoint_refreshed(&attempt, endpoint, refreshed_endpoint);
-    let _ = tcp_with_connect_backoff(&attempt, endpoint);
-
-    let events = store.events_for_trace(trace_id.as_str())?;
-    assert_event(&events, "host.transport", "write_failed");
-    assert_event(&events, "host.transport", "connect_timeout");
-    assert_event(&events, "host.transport", "endpoint_refreshed");
-    assert_event(&events, "host.transport", "retry_scheduled");
-    assert!(
-        events.iter().any(|event| {
-            if event.module != "host.transport" || event.event != "connect_timeout" {
-                return false;
-            }
-            serde_json::from_str::<serde_json::Value>(&event.details_json)
-                .ok()
-                .and_then(|details| details.get("error_kind").cloned())
-                == Some(json!("connect_timeout"))
-        }),
-        "connect_timeout details missing: {events:?}"
-    );
-
-    let _ = fs::remove_dir_all(dir);
-    Ok(())
-}
-
-fn run_tcp_once_failure(
-    name: &str,
-    endpoint: std::net::SocketAddr,
-) -> Result<(TraceStore, TraceId)> {
+fn run_tcp_once_failure(name: &str, endpoint: std::net::SocketAddr) -> Result<ClientError> {
     let dir = temp_host_dir(name);
-    let store = TraceStore::open(&dir)?;
-    let config = HostConfig {
-        image: "test-image".to_owned(),
-        platform: None,
-        docker_privileged: true,
-        eosd_path: dir.join("eosd"),
-        config_yaml_path: dir.join("config.yml"),
-        remote_daemon_dir: PathBuf::from("/eos/runtime"),
-        remote_eosd_path: PathBuf::from("/eos/eosd"),
-        remote_config_path: PathBuf::from("/eos/config.yml"),
-        tcp_port: endpoint.port(),
-        ready_timeout: Duration::from_millis(100),
-        request_timeout: Duration::from_millis(100),
-        created_by: "test".to_owned(),
-        state_dir: dir,
-    };
+    let config = host_config(&dir, endpoint.port());
     let record = sandbox_record(
         format!("sb-{name}"),
         format!("sb-{name}"),
@@ -803,35 +316,39 @@ fn run_tcp_once_failure(
         "test".to_owned(),
         Some(endpoint),
     );
-    let trace_id = TraceId::parse(format!("trace-{name}")).expect("trace id");
-    let request_id = RequestId::parse(format!("request-{name}")).expect("request id");
     let args = json!({});
-    let mut tcp_line =
-        encode_request_with_metadata("sandbox.runtime.ready", request_id.as_str(), &args, None);
+    let mut tcp_line = encode_request_with_metadata("sandbox.runtime.ready", name, &args, None);
     tcp_line.push(b'\n');
     let attempt = ForwardAttempt {
         record: &record,
         config: &config,
-        trace_store: &store,
-        trace_id: trace_id.clone(),
-        request_id,
         mutates_state: false,
         tcp_line,
         op: "sandbox.runtime.ready",
-        invocation_id: "failure-test",
+        invocation_id: name,
         args: &args,
     };
-    let _ = tcp_once(&attempt, endpoint, 0);
-    Ok((store, trace_id))
+    let error = tcp_once(&attempt, endpoint, 0).expect_err("tcp_once should fail in this test");
+    let _ = fs::remove_dir_all(dir);
+    Ok(error)
 }
 
-fn assert_event(events: &[TraceEventRow], module: &str, event: &str) {
-    assert!(
-        events
-            .iter()
-            .any(|row| row.module == module && row.event == event),
-        "missing {module}/{event}: {events:?}"
-    );
+fn host_config(dir: &std::path::Path, tcp_port: u16) -> HostConfig {
+    HostConfig {
+        image: "test-image".to_owned(),
+        platform: None,
+        docker_privileged: true,
+        eosd_path: dir.join("eosd"),
+        config_yaml_path: dir.join("config.yml"),
+        remote_daemon_dir: PathBuf::from("/eos/runtime"),
+        remote_eosd_path: PathBuf::from("/eos/eosd"),
+        remote_config_path: PathBuf::from("/eos/config.yml"),
+        tcp_port,
+        ready_timeout: Duration::from_millis(100),
+        request_timeout: Duration::from_millis(100),
+        created_by: "test".to_owned(),
+        state_dir: dir.to_path_buf(),
+    }
 }
 
 fn temp_host_dir(name: &str) -> PathBuf {
@@ -858,19 +375,4 @@ fn sandbox_record(
         created_by,
         endpoint,
     )
-}
-
-fn assert_ordered_events(actual: &[(&str, &str)], expected: &[(&str, &str)]) {
-    let mut next = 0;
-    for event in actual {
-        if expected.get(next) == Some(event) {
-            next += 1;
-        }
-    }
-    assert_eq!(
-        next,
-        expected.len(),
-        "missing ordered replay suffix starting at {:?}; actual events: {actual:?}",
-        expected.get(next)
-    );
 }

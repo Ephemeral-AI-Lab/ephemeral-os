@@ -663,12 +663,38 @@ fn workspace_session_apply_remount_failure_blocks_and_keeps_session_available() 
 #[test]
 fn workspace_session_files_do_not_import_command_service() {
     let core = include_str!("../src/workspace_session/service/core.rs");
-    let operations = include_str!("../src/workspace_session/service/operations.rs");
-    let remount_port = include_str!("../src/workspace_session/service/remount_port.rs");
+    let capture_session_changes =
+        include_str!("../src/workspace_session/service/impls/capture_session_changes.rs");
+    let create_workspace_session =
+        include_str!("../src/workspace_session/service/impls/create_workspace_session.rs");
+    let destroy_session = include_str!("../src/workspace_session/service/impls/destroy_session.rs");
+    let finalize_one_shot_session =
+        include_str!("../src/workspace_session/service/impls/finalize_one_shot_session.rs");
+    let resolve_session = include_str!("../src/workspace_session/service/impls/resolve_session.rs");
+    let remount_apply_and_finish =
+        include_str!("../src/workspace_session/remount/apply_and_finish_remount.rs");
+    let remount_begin = include_str!("../src/workspace_session/remount/begin_remount.rs");
+    let remount_block = include_str!("../src/workspace_session/remount/block_remount.rs");
+    let remount_contract = include_str!("../src/workspace_session/remount/contract.rs");
+    let remount_mod = include_str!("../src/workspace_session/remount/mod.rs");
     let service = include_str!("../src/workspace_session/service.rs");
     let error = include_str!("../src/workspace_session/error.rs");
 
-    for source in [core, operations, remount_port, service, error] {
+    for source in [
+        core,
+        capture_session_changes,
+        create_workspace_session,
+        destroy_session,
+        finalize_one_shot_session,
+        resolve_session,
+        remount_apply_and_finish,
+        remount_begin,
+        remount_block,
+        remount_contract,
+        remount_mod,
+        service,
+        error,
+    ] {
         assert!(!source.contains("crate::command"));
         assert!(!source.contains("CommandOperationService"));
         assert!(!source.contains("CommandRemount"));

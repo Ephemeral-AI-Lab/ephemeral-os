@@ -9,7 +9,7 @@ pub mod fault;
 
 pub use envelope::{
     OperationEnvelope, OperationStatus, OperationWarning, ResourceSummary, ResponseMeta,
-    StepSummary, TraceRef, WorkspaceRouteRef, ENVELOPE_VERSION,
+    ENVELOPE_VERSION,
 };
 pub use error::{HostGatewayErrorKind, ProtocolErrorKind};
 pub use fault::{FaultDetails, OperationFault, SourceError};

@@ -9,7 +9,6 @@ use crate::{LayerStack, MergedView};
 use super::super::model::{ChangesetResult, CommitStatus, FileResult};
 use super::super::route::{hash_current, PublishDecision, Route};
 use super::queue::{PreparedChangeset, PublishConflict};
-use trace::usize_to_f64_saturating;
 
 #[derive(Clone)]
 pub(crate) struct CommitTransaction {
@@ -384,4 +383,8 @@ pub(crate) fn commit_timings(
 
 fn manifest_version_u64_optional(version: i64) -> Option<u64> {
     u64::try_from(version).ok()
+}
+
+fn usize_to_f64_saturating(value: usize) -> f64 {
+    u32::try_from(value).map_or(f64::from(u32::MAX), f64::from)
 }

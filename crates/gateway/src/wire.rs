@@ -1,10 +1,8 @@
 use std::io::{BufRead, BufReader, Read};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use protocol::ProtocolErrorKind;
 use serde_json::{json, Map, Value};
-
-use host::ForwardTraceContext;
 
 pub(crate) const REQUEST_READ_TIMEOUT: Duration = Duration::from_secs(30);
 const MAX_REQUEST_BYTES: usize = host::MAX_REQUEST_BYTES;
@@ -15,7 +13,6 @@ pub(crate) struct ClientRequest {
     pub(crate) sandbox_id: Option<String>,
     pub(crate) invocation_id: String,
     pub(crate) args: Value,
-    pub(crate) trace: ForwardTraceContext,
 }
 
 #[derive(Debug)]
@@ -108,7 +105,6 @@ pub(crate) fn parse_request(line: &[u8]) -> Result<ClientRequest, WireError> {
     Ok(ClientRequest {
         op,
         sandbox_id,
-        trace: ForwardTraceContext::new(&invocation_id),
         invocation_id,
         args,
     })
@@ -166,15 +162,9 @@ fn envelope_base(status: &str, meta: Value) -> Value {
 }
 
 fn request_meta(request: &ClientRequest) -> Value {
-    let request_id = request.trace.request_id.as_str().to_owned();
     let meta = protocol::ResponseMeta {
         op: request.op.clone(),
-        request_id: request_id.clone(),
-        trace: protocol::TraceRef {
-            trace_id: request.trace.trace_id.as_str().to_owned(),
-            request_id: Some(request_id),
-            ..protocol::TraceRef::default()
-        },
+        request_id: request.invocation_id.clone(),
         ..protocol::ResponseMeta::default()
     };
     serde_json::to_value(meta).expect("ResponseMeta serializes")
@@ -182,14 +172,6 @@ fn request_meta(request: &ClientRequest) -> Value {
 
 fn bare_meta() -> Value {
     serde_json::to_value(protocol::ResponseMeta::default()).expect("ResponseMeta serializes")
-}
-
-pub(crate) fn bare_trace_context() -> ForwardTraceContext {
-    ForwardTraceContext::new("")
-}
-
-pub(crate) fn elapsed_us(started: Instant) -> u64 {
-    u64::try_from(started.elapsed().as_micros()).unwrap_or(u64::MAX)
 }
 
 pub(crate) fn response_line(response: &Value) -> Vec<u8> {

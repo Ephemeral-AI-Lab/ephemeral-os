@@ -24,21 +24,18 @@ These move independently: the response envelope can gain fields (bumping
 - `DAEMON_PROTOCOL_VERSION = 1`
 - Carried as the `_eos_daemon_protocol_version` field **inside `args`** on every
   request. The daemon requires it before request dispatch and rejects missing,
-  non-integer, or unsupported versions with `invalid_request`. The accepted
-  value is also captured into the request trace record (`transport/server.rs`).
+  non-integer, or unsupported versions with `invalid_request`.
 - Pinned in the daemon wire module and the host-side daemon wire encoder, with
   fixture conformance tests covering request framing and host stamping.
 
 ## 2. Envelope metadata version
 
 - `meta.envelope_version = 2`
-- Stamped into every response envelope's `meta` block, daemon-side by
-  `crates/daemon/core/src/trace/envelope_meta.rs` and host-side by
-  `crates/gateway/src/gateway.rs` (`request_meta` / `bare_meta`).
+- Stamped into every response envelope's `meta` block by the shared
+  `protocol::ResponseMeta` contract and the gateway's request metadata helper.
 - It is **independent** of the wire version above. It is `2` because the
-  envelope `meta` shape (trace ref, workspace route, step summaries, resource
-  summary) is the second iteration of the response contract; the wire framing it
-  rides on is still version `1`.
+  envelope `meta` shape is the second iteration of the response contract; the
+  wire framing it rides on is still version `1`.
 - The field is named `envelope_version` precisely so it cannot be confused with
   the wire `protocol_version`. (It was renamed from `protocol_version`; see the
   bump procedure's exception note.)
@@ -100,12 +97,15 @@ When any version must change:
    - **2026-06 — legacy `api.*` aliases retired.** The `op` field of the three
      request fixtures was rewritten to the canonical `sandbox.*` spellings.
    - **Envelope `protocol_version` → `envelope_version` rename.** The response
-    envelope `meta` field was renamed to disambiguate it from the wire
-     `protocol_version` (§1 vs §2). The five response fixtures that carry
+     envelope `meta` field was renamed to disambiguate it from the wire
+     `protocol_version` (§1 vs §2). The four response fixtures that carry
      `meta.envelope_version` (`heartbeat_response`, `readiness_response`,
      `error_unknown_op`, `error_request_too_large`) had
      that single key renamed; the value (`2`) and every other byte are
      unchanged.
+   - **2026-06 — diagnostic metadata removed.** The response fixtures dropped
+     the removed diagnostic fields from `meta` when the project removed the
+     storage and reporting layer that produced them.
 
    Every other byte — args, response bodies, timing keys — remains the original
    capture.
