@@ -19,7 +19,7 @@ daemon placement, daemon endpoint tracking, and manager operation dispatch.
 - Installing, starting, stopping, and health-checking `sandbox-daemon`.
 - Mapping `SandboxId` to `SandboxDaemonEndpoint`.
 - Manager operation catalog and dispatch.
-- Forwarding daemon requests to a selected sandbox daemon.
+- Routing sandbox-scoped daemon requests to the selected sandbox daemon.
 
 ## Must Not Own
 
@@ -58,7 +58,6 @@ src/
       stop_sandbox_daemon.rs
       describe_manager_operations.rs
       describe_daemon_operations.rs
-      invoke_sandbox_daemon.rs
 
   server/
     mod.rs
@@ -107,11 +106,31 @@ start_sandbox_daemon
 stop_sandbox_daemon
 describe_manager_operations
 describe_daemon_operations
-invoke_sandbox_daemon
 ```
 
 `OperationSpec` comes from `sandbox-protocol`. Dispatch entries are local to
 `sandbox-manager`.
+
+## Request Routing
+
+The manager accepts the unified `sandbox_protocol::SandboxRequest` DTO.
+
+```rust
+pub struct SandboxRequest {
+    pub request_id: String,
+    pub scope: OperationScope,
+    pub op: String,
+    pub args: serde_json::Value,
+}
+```
+
+Manager operations are dispatched locally. Daemon-owned operations are routed
+through `SandboxDaemonEndpoint` when the request has
+`OperationScope::Sandbox { sandbox_id }`.
+
+There is no public `invoke_sandbox_daemon` operation and no separate
+`RoutedRequest` wrapper. Forwarding is an implementation detail of the manager
+server.
 
 ## Dependency Rules
 

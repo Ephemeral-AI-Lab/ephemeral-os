@@ -94,7 +94,7 @@ Owns:
 - Internal workspace session orchestration.
 - Internal workspace remount orchestration.
 - Request argument parsing into typed operation inputs.
-- Response projection from runtime outputs into protocol responses.
+- Response projection from runtime outputs into `SandboxResponse` values.
 
 Must not own:
 

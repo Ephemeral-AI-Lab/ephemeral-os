@@ -25,6 +25,8 @@ Phase goal:
 - Rename Rust imports from `daemon_rpc_protocol` to `sandbox_protocol`.
 - Move protocol-neutral operation metadata types from `daemon_operation` into
   `sandbox-protocol`.
+- Make the public protocol DTO explicit and unified:
+  `SandboxRequest`, `OperationScope`, and `SandboxResponse`.
 - Keep behavior unchanged for the existing daemon, eosd, and command
   operations.
 
@@ -42,6 +44,12 @@ Current source facts:
 
 Move to `sandbox-protocol`:
 
+- `SandboxRequest`.
+- `OperationScope`.
+- `SandboxResponse`.
+- `ResponseStatus`.
+- `ResponseError`.
+- `ResponseMeta`.
 - `OperationFamily` or a renamed `OperationGroup`.
 - `ArgKind`.
 - `ArgCliSpec`.
@@ -54,11 +62,20 @@ Move to `sandbox-protocol`:
 Keep in `daemon_operation`:
 
 - `OperationRequest` alias, updated to `sandbox_protocol::Request`.
-- `OperationResponse` alias, updated to `sandbox_protocol::Response`.
+- `OperationResponse` alias, updated to `sandbox_protocol::SandboxResponse`.
 - `OperationDispatch`.
 - `OperationEntry`.
 - Concrete operation specs and dispatch functions.
 - `DaemonOperations`.
+
+Compatibility aliases may remain in `sandbox-protocol` while downstream crates
+are being migrated:
+
+```rust
+pub type OwnedRequest = SandboxRequest;
+pub type RpcRequest = SandboxRequest;
+pub type Response = SandboxResponse;
+```
 
 Implementation steps:
 
@@ -119,6 +136,7 @@ Implementation steps:
 8. Add protocol metadata modules under `crates/sandbox-protocol/src/`:
 
    ```text
+   scope.rs
    operation_spec.rs
    catalog.rs
    manual.rs
@@ -127,16 +145,46 @@ Implementation steps:
    Keep these modules protocol-only. They must not know about command,
    workspace, daemon dispatch, manager dispatch, sockets, or runtime services.
 
-9. Export the protocol metadata types from `sandbox-protocol/src/lib.rs`.
+9. Add the unified DTO fields:
 
-10. Update `crates/daemon/operation/src/operation.rs` so it imports or
+   ```rust
+   pub struct SandboxRequest {
+       pub request_id: String,
+       pub scope: OperationScope,
+       pub op: String,
+       pub args: serde_json::Value,
+   }
+
+   pub enum OperationScope {
+       System,
+       Sandbox { sandbox_id: String },
+   }
+
+   pub struct SandboxResponse {
+       pub request_id: String,
+       pub scope: OperationScope,
+       pub op: String,
+       pub status: ResponseStatus,
+       pub result: Option<serde_json::Value>,
+       pub error: Option<ResponseError>,
+       pub meta: ResponseMeta,
+   }
+   ```
+
+   Do not add `envelope_version`, an envelope object, `RoutedRequest`,
+   `ManagerRequest`, or `OperationTarget`.
+
+10. Export the protocol metadata and DTO types from
+    `sandbox-protocol/src/lib.rs`.
+
+11. Update `crates/daemon/operation/src/operation.rs` so it imports or
     re-exports protocol metadata types from `sandbox_protocol`, while keeping
     `OperationDispatch` and `OperationEntry` local.
 
-11. Update `crates/daemon/operation/src/public/protocol.rs` to re-export from
+12. Update `crates/daemon/operation/src/public/protocol.rs` to re-export from
     `sandbox_protocol`.
 
-12. Keep `OperationEntry` out of `sandbox-protocol`. Verify with:
+13. Keep `OperationEntry` out of `sandbox-protocol`. Verify with:
 
     ```sh
     rg -n "OperationEntry|OperationDispatch|DaemonOperations" crates/sandbox-protocol

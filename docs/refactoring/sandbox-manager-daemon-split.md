@@ -84,7 +84,7 @@ docs/refactoring/sandbox-implementation-guide.md
 Package names should use hyphens. Rust crate imports use underscores:
 
 ```rust
-use sandbox_protocol::{Request, Response};
+use sandbox_protocol::{Request, SandboxResponse};
 use sandbox_runtime::operation_specs;
 ```
 
@@ -106,23 +106,40 @@ pub enum OperationAuthority {
     SandboxManager,
     SandboxDaemon,
 }
-
-pub enum OperationTarget {
-    Manager,
-    Daemon { sandbox_id: SandboxId },
-}
 ```
 
 `OperationFamily` may still group operations inside a catalog for documentation
 or manual rendering. It is not the routing authority.
+
+The public request DTO uses resource scope, not implementation target:
+
+```rust
+pub struct SandboxRequest {
+    pub request_id: String,
+    pub scope: OperationScope,
+    pub op: String,
+    pub args: serde_json::Value,
+}
+
+pub enum OperationScope {
+    System,
+    Sandbox { sandbox_id: String },
+}
+```
+
+`scope` says what resource the operation applies to. `OperationAuthority` says
+which component owns the implementation. The protocol must not expose a
+`Manager`/`Daemon` target enum because that would make implementation placement
+part of the public API.
 
 ## Shared Protocol Boundary
 
 `sandbox-protocol` owns protocol-neutral types:
 
 ```text
-request.rs          Request, OwnedRequest, args helpers
-response.rs         Response, status/error helpers
+request.rs          SandboxRequest, Request, compatibility aliases, args helpers
+scope.rs            OperationScope and scope validation helpers
+response.rs         SandboxResponse, status/error helpers
 framing.rs          JSON-line framing helpers
 auth.rs             auth field constants
 limits.rs           request size and timeout limits
@@ -195,11 +212,11 @@ start_sandbox_daemon
 stop_sandbox_daemon
 describe_manager_operations
 describe_daemon_operations
-invoke_sandbox_daemon
 ```
 
 The manager may forward daemon requests, but it must not implement daemon
-operation semantics. Forwarding is transport and lifecycle coordination only.
+operation semantics. Forwarding is internal request routing, not a public
+manager operation.
 
 ## Daemon Responsibilities
 
@@ -303,11 +320,26 @@ Sandbox Daemon Operations
 
 ## Request Routing Model
 
-The protocol request does not need to embed the sandbox target:
+The protocol request includes resource scope directly:
 
 ```json
 {
-  "id": "req-1",
+  "request_id": "req-1",
+  "scope": { "kind": "system" },
+  "op": "list_sandboxes",
+  "args": {}
+}
+```
+
+Sandbox-scoped operations use the same DTO:
+
+```json
+{
+  "request_id": "req-2",
+  "scope": {
+    "kind": "sandbox",
+    "sandbox_id": "sbox-1"
+  },
   "op": "exec_command",
   "args": {
     "workspace_session_id": "ws-1",
@@ -316,18 +348,25 @@ The protocol request does not need to embed the sandbox target:
 }
 ```
 
-Targeting is a manager/gateway concern:
+There is no public `RoutedRequest`, `ManagerRequest`, `OperationTarget`, or
+request envelope. The manager receives `SandboxRequest` and routes it by
+combining resource scope with catalog authority:
 
 ```rust
-pub struct RoutedRequest {
-    pub target: OperationTarget,
-    pub request: sandbox_protocol::OwnedRequest,
+match catalog.lookup(&request.op)?.authority {
+    OperationAuthority::SandboxManager => manager_dispatch(request).await,
+    OperationAuthority::SandboxDaemon => {
+        let sandbox_id = request.scope.required_sandbox_id()?;
+        let endpoint = store.daemon_endpoint(sandbox_id)?;
+        daemon_client.invoke(&endpoint, request).await
+    }
 }
 ```
 
-For daemon operations, the gateway sends the target sandbox id to the manager.
-The manager resolves `sandbox_id -> SandboxDaemonEndpoint` and forwards the
-inner protocol request to the daemon.
+For daemon operations, the gateway sets `scope.kind = "sandbox"` and includes
+the sandbox id. The manager resolves `sandbox_id -> SandboxDaemonEndpoint` and
+forwards the same `SandboxRequest` to the daemon. The daemon sees the same
+request shape as the manager; it must not learn about manager routing internals.
 
 ## Implementation Order
 

@@ -14,6 +14,8 @@ Import:  sandbox_protocol
 ## Owns
 
 - Generic request and response structs.
+- Unified request scope vocabulary:
+  - `OperationScope`
 - JSON-line framing helpers.
 - Auth field constants.
 - Request size and timeout limits.
@@ -42,6 +44,7 @@ Import:  sandbox_protocol
 ```text
 src/
   lib.rs
+  scope.rs
   request.rs
   response.rs
   framing.rs
@@ -53,10 +56,123 @@ src/
   manual.rs
 ```
 
+## Public DTO Contract
+
+The public protocol has one request DTO and one response DTO. It does not use a
+separate routing envelope and it does not expose a `Manager` or `Daemon` target
+field.
+
+```rust
+pub struct SandboxRequest {
+    pub request_id: String,
+    pub scope: OperationScope,
+    pub op: String,
+    pub args: serde_json::Value,
+}
+
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum OperationScope {
+    System,
+    Sandbox { sandbox_id: String },
+}
+
+pub struct SandboxResponse {
+    pub request_id: String,
+    pub scope: OperationScope,
+    pub op: String,
+    pub status: ResponseStatus,
+    pub result: Option<serde_json::Value>,
+    pub error: Option<ResponseError>,
+    pub meta: ResponseMeta,
+}
+
+pub enum ResponseStatus {
+    Ok,
+    Running,
+    Error,
+}
+
+pub struct ResponseError {
+    pub kind: String,
+    pub message: String,
+    pub details: serde_json::Value,
+}
+
+pub struct ResponseMeta {
+    pub duration_ms: Option<f64>,
+    pub warnings: Vec<String>,
+}
+```
+
+Compatibility aliases may exist during the migration, but new code should use
+the explicit names:
+
+```rust
+pub type OwnedRequest = SandboxRequest;
+pub type RpcRequest = SandboxRequest;
+pub type Response = SandboxResponse;
+```
+
+Example manager-scoped request:
+
+```json
+{
+  "request_id": "req-1",
+  "scope": { "kind": "system" },
+  "op": "list_sandboxes",
+  "args": {}
+}
+```
+
+Example sandbox-scoped request:
+
+```json
+{
+  "request_id": "req-2",
+  "scope": {
+    "kind": "sandbox",
+    "sandbox_id": "sbox-1"
+  },
+  "op": "exec_command",
+  "args": {
+    "workspace_session_id": "ws-1",
+    "cmd": "pwd"
+  }
+}
+```
+
+Example response:
+
+```json
+{
+  "request_id": "req-2",
+  "scope": {
+    "kind": "sandbox",
+    "sandbox_id": "sbox-1"
+  },
+  "op": "exec_command",
+  "status": "running",
+  "result": {
+    "command_id": "cmd-1",
+    "state": "running"
+  },
+  "error": null,
+  "meta": {
+    "duration_ms": 3.0,
+    "warnings": []
+  }
+}
+```
+
+`scope` identifies the resource the operation applies to. It is not the
+implementation authority. `OperationAuthority` remains catalog metadata that
+describes which component owns the operation implementation.
+
 ## Dependency Rules
 
 Allowed:
 
+- `serde`
 - `serde_json`
 - small serialization/error crates if needed
 

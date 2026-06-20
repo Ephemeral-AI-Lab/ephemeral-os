@@ -859,6 +859,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "sandbox-manager"
+version = "0.1.0"
+dependencies = [
+ "sandbox-protocol",
+ "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "sandbox-protocol"
 version = "0.1.0"
 dependencies = [

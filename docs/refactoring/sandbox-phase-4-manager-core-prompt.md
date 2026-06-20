@@ -43,7 +43,8 @@ Phase goal:
 - Model sandbox identity, lifecycle state, daemon endpoint state, and the
   registry/store.
 - Add traits for host sandbox runtime and daemon install/start/stop behavior.
-- Add a daemon-client abstraction for forwarding protocol requests.
+- Add a daemon-client abstraction for later sandbox-scoped forwarding and
+  daemon catalog discovery.
 - Add manager operation specs and dispatch.
 - Use test doubles or local stubs only.
 
@@ -66,7 +67,7 @@ Keep in `sandbox-manager`:
 - Daemon install/start/stop abstraction.
 - Daemon client abstraction.
 - Manager operation catalog and dispatch.
-- Forwarding abstraction for daemon requests.
+- Forwarding abstraction for sandbox-scoped daemon requests.
 
 Keep out of `sandbox-manager`:
 
@@ -210,8 +211,8 @@ Implementation steps:
 
 12. Add `src/daemon_client.rs`:
 
-    - Define a trait for forwarding `sandbox-protocol` requests to a daemon
-      endpoint.
+    - Define a trait for daemon catalog discovery and later forwarding of
+      unified `sandbox-protocol` requests to a daemon endpoint.
     - The trait may expose methods such as:
 
       ```rust
@@ -223,8 +224,8 @@ Implementation steps:
       fn invoke(
           &self,
           endpoint: &SandboxDaemonEndpoint,
-          request: sandbox_protocol::OwnedRequest,
-      ) -> Result<sandbox_protocol::Response, ManagerError>;
+          request: sandbox_protocol::SandboxRequest,
+      ) -> Result<sandbox_protocol::SandboxResponse, ManagerError>;
       ```
 
     - Use test doubles only. Do not implement real socket transport in this
@@ -247,7 +248,6 @@ Implementation steps:
         stop_sandbox_daemon.rs
         describe_manager_operations.rs
         describe_daemon_operations.rs
-        invoke_sandbox_daemon.rs
     ```
 
 14. Add a local manager operation entry type.
@@ -258,7 +258,7 @@ Implementation steps:
 
     ```rust
     pub type ManagerOperationDispatch =
-        fn(&ManagerServices, sandbox_protocol::Request<'_>) -> sandbox_protocol::Response;
+        fn(&ManagerServices, sandbox_protocol::Request<'_>) -> sandbox_protocol::SandboxResponse;
 
     pub struct ManagerOperationEntry {
         pub spec: &'static sandbox_protocol::OperationSpec,
@@ -294,7 +294,6 @@ Implementation steps:
     stop_sandbox_daemon
     describe_manager_operations
     describe_daemon_operations
-    invoke_sandbox_daemon
     ```
 
     `OperationSpec` comes from `sandbox-protocol`. Do not add daemon operation
@@ -312,8 +311,6 @@ Implementation steps:
     - `describe_manager_operations`: return the manager catalog.
     - `describe_daemon_operations`: use daemon client abstraction; do not
       depend on `sandbox-runtime`.
-    - `invoke_sandbox_daemon`: use daemon client abstraction; do not implement
-      daemon operation semantics.
 
 18. Add tests with fakes:
 
@@ -321,7 +318,6 @@ Implementation steps:
     - `create_list_inspect_destroy_sandbox_with_fake_runtime`.
     - `start_stop_daemon_updates_endpoint_with_fake_installer`.
     - `describe_daemon_operations_uses_daemon_client_trait`.
-    - `invoke_sandbox_daemon_forwards_request_via_daemon_client_trait`.
     - Store duplicate/missing sandbox error cases.
 
 Non-goals:

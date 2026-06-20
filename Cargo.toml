@@ -5,6 +5,7 @@ members = [
     "crates/daemon/command",
     "crates/daemon/config",
     "crates/sandbox-daemon",
+    "crates/sandbox-manager",
     "crates/sandbox-protocol",
     "crates/daemon/workspace",
     "crates/daemon/namespace-process",
@@ -53,6 +54,7 @@ command = { path = "crates/daemon/command" }
 config = { path = "crates/daemon/config" }
 layerstack = { path = "crates/daemon/layerstack" }
 sandbox-runtime = { path = "crates/sandbox-runtime/operation" }
+sandbox-manager = { path = "crates/sandbox-manager" }
 sandbox-protocol = { path = "crates/sandbox-protocol" }
 overlay = { path = "crates/daemon/overlay" }
 namespace-process = { path = "crates/daemon/namespace-process" }

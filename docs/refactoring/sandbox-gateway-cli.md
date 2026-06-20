@@ -49,6 +49,8 @@ src/
 - Default route is gateway -> manager.
 - Daemon operations require `--sandbox SANDBOX_ID` unless config provides a
   default sandbox.
+- `--sandbox SANDBOX_ID` sets `request.scope = sandbox`; requests without a
+  sandbox use `request.scope = system`.
 - Help/manual text is generated from `OperationSpec`, not duplicated by hand.
 
 ## Example Commands
@@ -74,6 +76,38 @@ Forbidden:
 - direct sandbox runtime libraries
 
 The CLI talks to `sandbox-manager`; it does not become a hidden manager.
+
+## Request Construction
+
+The gateway builds `sandbox_protocol::SandboxRequest` directly:
+
+```json
+{
+  "request_id": "req-1",
+  "scope": { "kind": "system" },
+  "op": "list_sandboxes",
+  "args": {}
+}
+```
+
+For daemon operations:
+
+```json
+{
+  "request_id": "req-2",
+  "scope": {
+    "kind": "sandbox",
+    "sandbox_id": "sbox-1"
+  },
+  "op": "exec_command",
+  "args": {
+    "cmd": "pwd"
+  }
+}
+```
+
+The gateway does not construct `ManagerRequest`, `RoutedRequest`, or any
+manager/daemon target envelope.
 
 ## Verification
 

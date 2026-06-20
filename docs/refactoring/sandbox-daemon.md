@@ -20,7 +20,8 @@ transport, server lifecycle, and low-level helper subcommand adapters.
 - `serve`, `ns-runner`, and `ns-holder` subcommand routing.
 - Unix/TCP listener lifecycle for daemon requests.
 - Request framing at the server edge.
-- Dispatching decoded requests to `sandbox-runtime`.
+- Dispatching decoded `sandbox_protocol::SandboxRequest` values to
+  `sandbox-runtime`.
 - Runtime wiring that builds `SandboxDaemonOperations`.
 - Temporary `eosd` compatibility entrypoint.
 
@@ -73,6 +74,24 @@ eosd ns-holder
 
 `eosd daemon` may remain as a compatibility alias for `sandbox-daemon serve`
 until packaging and scripts have moved.
+
+## Protocol Contract
+
+The daemon receives the same `SandboxRequest` DTO as the manager:
+
+```rust
+pub struct SandboxRequest {
+    pub request_id: String,
+    pub scope: OperationScope,
+    pub op: String,
+    pub args: serde_json::Value,
+}
+```
+
+The daemon must only execute sandbox-scoped daemon operations. A request with
+`OperationScope::System` is invalid at the daemon boundary. The sandbox id is
+primarily for correlation and validation; the daemon process still executes
+inside one sandbox selected by the manager.
 
 ## Dependency Rules
 

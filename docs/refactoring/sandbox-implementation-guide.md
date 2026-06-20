@@ -144,6 +144,7 @@ crates/
     Cargo.toml
     src/
       lib.rs
+      scope.rs
       request.rs
       response.rs
       framing.rs
@@ -397,7 +398,8 @@ Implementation steps:
 2. Add an in-memory store.
 3. Add host runtime traits.
 4. Add daemon install/start traits.
-5. Add a daemon client abstraction for forwarding protocol requests.
+5. Add a daemon client abstraction for later sandbox-scoped forwarding and
+   daemon catalog discovery.
 6. Add manager operation specs and dispatch.
 
 Resulting folder structure:
@@ -433,7 +435,6 @@ crates/
           stop_sandbox_daemon.rs
           describe_manager_operations.rs
           describe_daemon_operations.rs
-          invoke_sandbox_daemon.rs
     tests/
 
   daemon/
@@ -456,7 +457,8 @@ cargo test -p sandbox-manager
 Exit criteria:
 
 - Manager catalog and daemon catalog are separate.
-- Manager may forward daemon requests but does not implement daemon operations.
+- Manager may route sandbox-scoped daemon requests but does not implement daemon
+  operations.
 - Tests can use stub runtimes and stub daemon endpoints.
 
 ## Phase 5: Add Manager Server And Forwarding
@@ -464,7 +466,7 @@ Exit criteria:
 Goal:
 
 - Make `sandbox-manager` a process endpoint.
-- Route selected daemon operations to a sandbox daemon endpoint.
+- Route sandbox-scoped daemon operations to a sandbox daemon endpoint.
 
 Package changed:
 
@@ -477,8 +479,10 @@ Implementation steps:
 1. Add server config.
 2. Add listener lifecycle and shutdown handling.
 3. Add one framed request per connection.
-4. Dispatch manager operations locally.
-5. Forward daemon operations through `SandboxDaemonEndpoint`.
+4. Decode one unified `SandboxRequest` DTO.
+5. Dispatch manager-owned operations locally.
+6. Forward daemon-owned sandbox-scoped operations through
+   `SandboxDaemonEndpoint`.
 
 Resulting folder structure:
 
@@ -525,8 +529,8 @@ cargo test -p sandbox-manager
 Exit criteria:
 
 - Manager can resolve `SandboxId` to `SandboxDaemonEndpoint`.
-- Manager forwarding is protocol forwarding, not a crate dependency on daemon
-  runtime implementation.
+- Manager forwarding uses the same `SandboxRequest` DTO; it does not create a
+  separate route wrapper and does not depend on daemon runtime implementation.
 
 ## Phase 6: Add `sandbox-gateway-cli`
 
@@ -545,7 +549,7 @@ Implementation steps:
 
 1. Add manager socket/config discovery.
 2. Add manager client connection.
-3. Add request construction from CLI argv and `OperationSpec`.
+3. Add `SandboxRequest` construction from CLI argv and `OperationSpec`.
 4. Add manual/help rendering from manager and daemon catalogs.
 5. Add stdout/stderr and exit-code behavior.
 6. Add the installed binary name `sandbox`.
@@ -585,6 +589,8 @@ Exit criteria:
 - Default route is gateway -> manager.
 - Daemon operations require `--sandbox SANDBOX_ID` unless config supplies a
   default.
+- `--sandbox` populates `OperationScope::Sandbox`; requests without a sandbox
+  use `OperationScope::System`.
 - Errors go to stderr and machine-readable responses go to stdout.
 
 ## Phase 7: Stabilize Catalog And Manual Contract

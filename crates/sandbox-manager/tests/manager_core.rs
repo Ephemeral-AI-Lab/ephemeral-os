@@ -1,0 +1,315 @@
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
+
+use sandbox_manager::{
+    ManagerError, ManagerResult, ManagerServices, SandboxDaemonClient, SandboxDaemonEndpoint,
+    SandboxDaemonInstaller, SandboxId, SandboxRecord, SandboxRuntime, SandboxState, SandboxStore,
+};
+use sandbox_protocol::{
+    ArgKind, OperationAuthority, OperationCatalog, OperationFamily, OperationSpec, Request,
+    Response,
+};
+use serde_json::{json, Value};
+
+static TEST_DAEMON_SPEC: OperationSpec = OperationSpec {
+    name: "daemon_test_operation",
+    family: OperationFamily::Health,
+    summary: "Test daemon operation.",
+    args: &[],
+    cli: None,
+};
+
+static TEST_DAEMON_SPECS: &[&OperationSpec] = &[&TEST_DAEMON_SPEC];
+
+#[derive(Default)]
+struct FakeRuntime {
+    created: Mutex<Vec<String>>,
+    destroyed: Mutex<Vec<String>>,
+}
+
+impl SandboxRuntime for FakeRuntime {
+    fn create_sandbox(&self, id: &SandboxId) -> ManagerResult<()> {
+        self.created
+            .lock()
+            .expect("created lock")
+            .push(id.as_str().to_owned());
+        Ok(())
+    }
+
+    fn destroy_sandbox(&self, record: &SandboxRecord) -> ManagerResult<()> {
+        self.destroyed
+            .lock()
+            .expect("destroyed lock")
+            .push(record.id.as_str().to_owned());
+        Ok(())
+    }
+}
+
+#[derive(Default)]
+struct FakeInstaller {
+    started: Mutex<Vec<String>>,
+    stopped: Mutex<Vec<String>>,
+}
+
+impl SandboxDaemonInstaller for FakeInstaller {
+    fn start_daemon(&self, record: &SandboxRecord) -> ManagerResult<SandboxDaemonEndpoint> {
+        self.started
+            .lock()
+            .expect("started lock")
+            .push(record.id.as_str().to_owned());
+        Ok(SandboxDaemonEndpoint::new(
+            PathBuf::from(format!("/tmp/{}.sock", record.id.as_str())),
+            Some("token".to_owned()),
+        ))
+    }
+
+    fn stop_daemon(&self, record: &SandboxRecord) -> ManagerResult<()> {
+        self.stopped
+            .lock()
+            .expect("stopped lock")
+            .push(record.id.as_str().to_owned());
+        Ok(())
+    }
+}
+
+#[derive(Default)]
+struct FakeClient {
+    described: Mutex<Vec<PathBuf>>,
+    invoked: Mutex<Vec<String>>,
+}
+
+impl SandboxDaemonClient for FakeClient {
+    fn describe_operations(
+        &self,
+        endpoint: &SandboxDaemonEndpoint,
+    ) -> ManagerResult<OperationCatalog> {
+        self.described
+            .lock()
+            .expect("described lock")
+            .push(endpoint.socket_path.clone());
+        Ok(OperationCatalog::new(
+            OperationAuthority::SandboxDaemon,
+            TEST_DAEMON_SPECS,
+        ))
+    }
+
+    fn invoke(
+        &self,
+        _endpoint: &SandboxDaemonEndpoint,
+        request: sandbox_protocol::OwnedRequest,
+    ) -> ManagerResult<Response> {
+        let request = request.as_request();
+        self.invoked
+            .lock()
+            .expect("invoked lock")
+            .push(request.name.to_owned());
+        Ok(Response::ok(
+            &request,
+            json!({"forwarded_request_id": request.request_id}),
+        ))
+    }
+}
+
+fn services() -> (
+    ManagerServices,
+    Arc<FakeRuntime>,
+    Arc<FakeInstaller>,
+    Arc<FakeClient>,
+) {
+    let store = Arc::new(SandboxStore::new());
+    let runtime = Arc::new(FakeRuntime::default());
+    let installer = Arc::new(FakeInstaller::default());
+    let client = Arc::new(FakeClient::default());
+    let services = ManagerServices::new(
+        Arc::clone(&store),
+        runtime.clone(),
+        installer.clone(),
+        client.clone(),
+    );
+    (services, runtime, installer, client)
+}
+
+fn dispatch(services: &ManagerServices, op: &str, args: Value) -> Value {
+    sandbox_manager::dispatch_operation(services, Request::new(op, "req-1", &args))
+        .into_json_value()
+}
+
+fn id(value: &str) -> SandboxId {
+    SandboxId::new(value).expect("valid sandbox id")
+}
+
+#[test]
+fn operation_catalog_contains_only_manager_operations() {
+    let catalog = sandbox_manager::operation_catalog();
+    let names = catalog
+        .operations
+        .iter()
+        .map(|spec| spec.name)
+        .collect::<Vec<_>>();
+
+    assert_eq!(catalog.authority, OperationAuthority::SandboxManager);
+    assert_eq!(
+        names,
+        [
+            "create_sandbox",
+            "destroy_sandbox",
+            "list_sandboxes",
+            "inspect_sandbox",
+            "start_sandbox_daemon",
+            "stop_sandbox_daemon",
+            "describe_manager_operations",
+            "describe_daemon_operations",
+            "invoke_sandbox_daemon",
+        ]
+    );
+    assert!(catalog.operations.iter().all(|spec| !matches!(
+        spec.name,
+        "exec_command" | "poll_command" | "cancel_command"
+    )));
+    assert!(catalog.operations.iter().any(|spec| spec
+        .args
+        .iter()
+        .any(|arg| arg.name == "sandbox_id" && arg.kind == ArgKind::String)));
+}
+
+#[test]
+fn create_list_inspect_destroy_sandbox_with_fake_runtime() {
+    let (services, runtime, _installer, _client) = services();
+
+    let created = dispatch(&services, "create_sandbox", json!({"sandbox_id": "sbox-1"}));
+    assert_eq!(created["id"], "sbox-1");
+    assert_eq!(created["state"], "ready");
+
+    let listed = dispatch(&services, "list_sandboxes", json!({}));
+    assert_eq!(listed["sandboxes"][0]["id"], "sbox-1");
+
+    let inspected = dispatch(
+        &services,
+        "inspect_sandbox",
+        json!({"sandbox_id": "sbox-1"}),
+    );
+    assert_eq!(inspected["id"], "sbox-1");
+
+    let destroyed = dispatch(
+        &services,
+        "destroy_sandbox",
+        json!({"sandbox_id": "sbox-1"}),
+    );
+    assert_eq!(destroyed["state"], "stopped");
+
+    let listed = dispatch(&services, "list_sandboxes", json!({}));
+    assert_eq!(
+        listed["sandboxes"]
+            .as_array()
+            .expect("sandboxes array")
+            .len(),
+        0
+    );
+    assert_eq!(
+        runtime.created.lock().expect("created lock").as_slice(),
+        ["sbox-1"]
+    );
+    assert_eq!(
+        runtime.destroyed.lock().expect("destroyed lock").as_slice(),
+        ["sbox-1"]
+    );
+}
+
+#[test]
+fn start_stop_daemon_updates_endpoint_with_fake_installer() {
+    let (services, _runtime, installer, _client) = services();
+    let _ = dispatch(&services, "create_sandbox", json!({"sandbox_id": "sbox-1"}));
+
+    let started = dispatch(
+        &services,
+        "start_sandbox_daemon",
+        json!({"sandbox_id": "sbox-1"}),
+    );
+    assert_eq!(started["daemon"]["socket_path"], "/tmp/sbox-1.sock");
+    assert_eq!(started["daemon"]["auth_token_configured"], true);
+
+    let stopped = dispatch(
+        &services,
+        "stop_sandbox_daemon",
+        json!({"sandbox_id": "sbox-1"}),
+    );
+    assert!(stopped["daemon"].is_null());
+    assert_eq!(
+        installer.started.lock().expect("started lock").as_slice(),
+        ["sbox-1"]
+    );
+    assert_eq!(
+        installer.stopped.lock().expect("stopped lock").as_slice(),
+        ["sbox-1"]
+    );
+}
+
+#[test]
+fn describe_daemon_operations_uses_daemon_client_trait() {
+    let (services, _runtime, _installer, client) = services();
+    let _ = dispatch(&services, "create_sandbox", json!({"sandbox_id": "sbox-1"}));
+    let _ = dispatch(
+        &services,
+        "start_sandbox_daemon",
+        json!({"sandbox_id": "sbox-1"}),
+    );
+
+    let catalog = dispatch(
+        &services,
+        "describe_daemon_operations",
+        json!({"sandbox_id": "sbox-1"}),
+    );
+    assert_eq!(catalog["authority"], "sandbox_daemon");
+    assert_eq!(catalog["operations"][0]["name"], "daemon_test_operation");
+    assert_eq!(
+        client.described.lock().expect("described lock").as_slice(),
+        [PathBuf::from("/tmp/sbox-1.sock")]
+    );
+}
+
+#[test]
+fn invoke_sandbox_daemon_forwards_request_via_daemon_client_trait() {
+    let (services, _runtime, _installer, client) = services();
+    let _ = dispatch(&services, "create_sandbox", json!({"sandbox_id": "sbox-1"}));
+    let _ = dispatch(
+        &services,
+        "start_sandbox_daemon",
+        json!({"sandbox_id": "sbox-1"}),
+    );
+
+    let response = dispatch(
+        &services,
+        "invoke_sandbox_daemon",
+        json!({
+            "sandbox_id": "sbox-1",
+            "request": {
+                "op": "daemon_test_operation",
+                "request_id": "daemon-req-1",
+                "args": {}
+            }
+        }),
+    );
+    assert_eq!(response["forwarded_request_id"], "daemon-req-1");
+    assert_eq!(
+        client.invoked.lock().expect("invoked lock").as_slice(),
+        ["daemon_test_operation"]
+    );
+}
+
+#[test]
+fn store_duplicate_and_missing_sandbox_error_cases() {
+    let store = SandboxStore::new();
+    store
+        .insert(SandboxRecord::new(id("sbox-1"), SandboxState::Ready))
+        .expect("insert sandbox");
+
+    let duplicate = store
+        .create(id("sbox-1"))
+        .expect_err("duplicate should fail");
+    assert!(matches!(duplicate, ManagerError::DuplicateSandbox { .. }));
+
+    let missing = store
+        .inspect(&id("missing"))
+        .expect_err("missing should fail");
+    assert!(matches!(missing, ManagerError::MissingSandbox { .. }));
+}

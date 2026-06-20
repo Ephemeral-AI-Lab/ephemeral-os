@@ -56,7 +56,7 @@ Import:  sandbox_runtime
 Keep in `sandbox-runtime`:
 
 - `OperationRequest` alias to `sandbox_protocol::Request`.
-- `OperationResponse` alias to `sandbox_protocol::Response`.
+- `OperationResponse` alias to `sandbox_protocol::SandboxResponse`.
 - `OperationDispatch`.
 - `OperationEntry`.
 - Command operation specs and dispatch functions.
