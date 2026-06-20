@@ -83,9 +83,7 @@ impl CommandOperationService {
         input: WriteCommandStdinInput,
     ) -> Result<CommandYield, CommandServiceError> {
         let command_session_id = input.command_session_id;
-        let yield_time_ms = input
-            .yield_time_ms
-            .unwrap_or(self.config().default_yield_time_ms);
+        let yield_time_ms = input.yield_time_ms.unwrap_or(1000);
         let (process, workspace_session_id) = {
             let active = self.active_command(&command_session_id)?;
             (

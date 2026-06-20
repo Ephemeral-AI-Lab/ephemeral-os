@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
 
-use time::{OffsetDateTime, UtcOffset};
+use time::OffsetDateTime;
 
 use crate::contract::tail_lines;
 
@@ -10,51 +10,15 @@ pub(crate) const MAX_TRANSCRIPT_READ_BYTES: u64 = 1024 * 1024;
 pub(crate) const TRANSCRIPT_TRUNCATED_NOTICE: &str =
     "[eos: transcript truncated to last 1048576 bytes]\n";
 
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct TranscriptTimestampTimezone {
-    offset: UtcOffset,
-}
-
-impl TranscriptTimestampTimezone {
-    pub(crate) fn parse(value: &str) -> Result<Self, String> {
-        let value = value.trim();
-        if value.eq_ignore_ascii_case("UTC") || value == "Z" {
-            return Ok(Self {
-                offset: UtcOffset::UTC,
-            });
-        }
-        parse_fixed_offset(value)
-            .map(|offset| Self { offset })
-            .ok_or_else(|| "timezone must be UTC, Z, or a fixed offset like +08:00".to_owned())
-    }
-
-    pub(crate) fn format_prefix_at(self, now: OffsetDateTime) -> String {
-        let now = now.to_offset(self.offset);
-        format!(
-            "[{year:04}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}.{millisecond:03}{offset}] ",
-            year = now.year(),
-            month = now.month() as u8,
-            day = now.day(),
-            hour = now.hour(),
-            minute = now.minute(),
-            second = now.second(),
-            millisecond = now.millisecond(),
-            offset = offset_suffix(self.offset),
-        )
-    }
-}
-
 pub(crate) struct TranscriptTimestampPrefixer {
-    timezone: TranscriptTimestampTimezone,
     at_line_start: bool,
 }
 
 impl TranscriptTimestampPrefixer {
-    pub(crate) fn new(timezone: &str) -> Result<Self, String> {
-        Ok(Self {
-            timezone: TranscriptTimestampTimezone::parse(timezone)?,
+    pub(crate) const fn new() -> Self {
+        Self {
             at_line_start: true,
-        })
+        }
     }
 
     pub(crate) fn prefix(&mut self, bytes: &[u8]) -> Vec<u8> {
@@ -65,7 +29,7 @@ impl TranscriptTimestampPrefixer {
         let mut out = Vec::with_capacity(bytes.len());
         for byte in bytes {
             if self.at_line_start {
-                out.extend_from_slice(self.timezone.format_prefix_at(now).as_bytes());
+                out.extend_from_slice(format_timestamp_prefix_at(now).as_bytes());
                 self.at_line_start = false;
             }
             out.push(*byte);
@@ -75,6 +39,19 @@ impl TranscriptTimestampPrefixer {
         }
         out
     }
+}
+
+pub(crate) fn format_timestamp_prefix_at(now: OffsetDateTime) -> String {
+    format!(
+        "[{year:04}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}.{millisecond:03}Z] ",
+        year = now.year(),
+        month = now.month() as u8,
+        day = now.day(),
+        hour = now.hour(),
+        minute = now.minute(),
+        second = now.second(),
+        millisecond = now.millisecond(),
+    )
 }
 
 pub(crate) fn read_transcript_stdout(path: &Path) -> String {
@@ -121,30 +98,4 @@ fn read_full_transcript_bytes(path: &Path) -> Option<String> {
     let mut bytes = Vec::new();
     File::open(path).ok()?.read_to_end(&mut bytes).ok()?;
     Some(String::from_utf8_lossy(&bytes).into_owned())
-}
-
-fn parse_fixed_offset(value: &str) -> Option<UtcOffset> {
-    let bytes = value.as_bytes();
-    if bytes.len() != 6 || !matches!(bytes[0], b'+' | b'-') || bytes[3] != b':' {
-        return None;
-    }
-    let hour = value[1..3].parse::<i32>().ok()?;
-    let minute = value[4..6].parse::<i32>().ok()?;
-    if hour > 23 || minute > 59 {
-        return None;
-    }
-    let sign = if bytes[0] == b'-' { -1 } else { 1 };
-    UtcOffset::from_whole_seconds(sign * ((hour * 60 * 60) + (minute * 60))).ok()
-}
-
-fn offset_suffix(offset: UtcOffset) -> String {
-    let seconds = offset.whole_seconds();
-    if seconds == 0 {
-        return "Z".to_owned();
-    }
-    let sign = if seconds < 0 { '-' } else { '+' };
-    let abs = seconds.unsigned_abs();
-    let hours = abs / 3600;
-    let minutes = (abs % 3600) / 60;
-    format!("{sign}{hours:02}:{minutes:02}")
 }

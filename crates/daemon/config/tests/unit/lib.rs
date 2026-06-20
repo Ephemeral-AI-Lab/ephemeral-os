@@ -23,8 +23,7 @@ fn merge_recurses_objects_replaces_scalars_and_replaces_arrays() {
         r#"
 daemon:
   commands:
-    default_yield_time_ms: 1000
-    max_command_s: 21600
+    scratch_root: /eos/scratch/commands
 runner:
   env:
     inherit_keys: [PATH, HOME]
@@ -34,7 +33,7 @@ runner:
         r#"
 daemon:
   commands:
-    max_command_s: 2
+    scratch_root: /tmp/eos/commands
 runner:
   env:
     inherit_keys: [TZ]
@@ -50,10 +49,9 @@ runner:
         .section::<Value>("runner")
         .expect("runner section deserializes");
     assert_eq!(
-        daemon["commands"]["default_yield_time_ms"],
-        Value::Number(1000.into())
+        daemon["commands"]["scratch_root"],
+        Value::String("/tmp/eos/commands".to_owned())
     );
-    assert_eq!(daemon["commands"]["max_command_s"], Value::Number(2.into()));
     assert_eq!(
         runner["env"]["inherit_keys"],
         Value::Sequence(vec![Value::String("TZ".to_owned())])

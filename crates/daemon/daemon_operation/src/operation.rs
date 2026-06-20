@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
-use protocol::{FaultDetails, OperationEnvelope, OperationFault, ProtocolErrorKind, ResponseMeta};
-use serde_json::{Map, Value};
+use serde_json::{json, Map, Value};
 
 use crate::internal::services::DaemonOperations;
 
@@ -209,10 +208,7 @@ impl<'a> OperationRequest<'a> {
     }
 
     pub fn invalid_argument(&self, message: impl Into<String>) -> OperationResponse {
-        OperationResponse::fault(
-            self,
-            OperationFault::new(ProtocolErrorKind::InvalidRequest.as_str(), message),
-        )
+        OperationResponse::fault("invalid_request", message)
     }
 }
 
@@ -223,63 +219,46 @@ pub struct OperationResponse {
 
 impl OperationResponse {
     #[must_use]
-    pub fn ok(request: &OperationRequest<'_>, result: Value) -> Self {
-        Self::envelope(OperationEnvelope::ok(result, meta(request)))
+    pub fn ok(_request: &OperationRequest<'_>, result: Value) -> Self {
+        Self { value: result }
     }
 
     #[must_use]
-    pub fn running(request: &OperationRequest<'_>, result: Value) -> Self {
-        Self::envelope(OperationEnvelope::running(result, meta(request)))
+    pub fn running(_request: &OperationRequest<'_>, result: Value) -> Self {
+        Self { value: result }
     }
 
     #[must_use]
-    pub fn service_error(request: &OperationRequest<'_>, error: impl std::fmt::Display) -> Self {
-        Self::fault(
-            request,
-            OperationFault::new("operation_failed", error.to_string())
-                .with_details(FaultDetails::default()),
-        )
+    pub fn service_error(_request: &OperationRequest<'_>, error: impl std::fmt::Display) -> Self {
+        Self::fault("operation_failed", error.to_string())
     }
 
     #[must_use]
     pub fn unknown_op(request: &OperationRequest<'_>) -> Self {
-        Self::fault(
-            request,
-            OperationFault::new(
-                ProtocolErrorKind::UnknownOp.as_str(),
-                format!("unknown op: {}", request.name),
-            ),
-        )
+        Self::fault("unknown_op", format!("unknown op: {}", request.name))
     }
 
     #[must_use]
-    pub fn fault(request: &OperationRequest<'_>, fault: OperationFault) -> Self {
-        Self::envelope(OperationEnvelope::<Value>::error(fault, meta(request)))
-    }
-
-    #[must_use]
-    pub fn into_wire_value(self) -> Value {
-        self.value
-    }
-
-    fn envelope(envelope: OperationEnvelope<Value>) -> Self {
+    pub fn fault(kind: &'static str, message: impl Into<String>) -> Self {
         Self {
-            value: serde_json::to_value(envelope)
-                .expect("operation response envelope serializes to JSON"),
+            value: json!({
+                "error": {
+                    "kind": kind,
+                    "message": message.into(),
+                    "details": {},
+                },
+            }),
         }
+    }
+
+    #[must_use]
+    pub fn into_json_value(self) -> Value {
+        self.value
     }
 }
 
 impl From<OperationResponse> for Value {
     fn from(response: OperationResponse) -> Self {
-        response.into_wire_value()
-    }
-}
-
-fn meta(request: &OperationRequest<'_>) -> ResponseMeta {
-    ResponseMeta {
-        op: request.name.to_owned(),
-        request_id: request.request_id.to_owned(),
-        ..ResponseMeta::default()
+        response.into_json_value()
     }
 }

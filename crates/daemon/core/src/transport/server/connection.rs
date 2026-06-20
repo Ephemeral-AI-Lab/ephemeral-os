@@ -4,9 +4,8 @@ use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::time::timeout;
 
-use super::{DaemonServer, MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};
+use super::{error_response, DaemonServer, MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};
 use crate::error::DaemonError;
-use crate::wire::{encode, WireMessage};
 
 impl DaemonServer {
     /// Handle one accepted connection: read one capped, timed request line, pop
@@ -26,18 +25,14 @@ impl DaemonServer {
         let bytes = read_request_line(&mut reader).await;
         let response = match bytes {
             Ok(bytes) => self.dispatch_bytes(bytes, is_tcp).await,
-            Err(err @ DaemonError::RequestTooLarge { .. }) => crate::dispatcher::error_response(
-                err.wire_kind(),
+            Err(err @ DaemonError::RequestTooLarge { .. }) => error_response(
+                err.response_kind(),
                 format!("daemon request exceeds {MAX_REQUEST_BYTES} byte limit"),
                 serde_json::json!({"limit": MAX_REQUEST_BYTES}),
             ),
-            Err(err) => crate::dispatcher::error_response(
-                err.wire_kind(),
-                err.to_string(),
-                serde_json::json!({}),
-            ),
+            Err(err) => error_response(err.response_kind(), err.to_string(), serde_json::json!({})),
         };
-        let framed = encode(&WireMessage::Response(response.clone()))?;
+        let framed = encode_response(&response);
         if let Err(err) = writer.write_all(&framed).await {
             return Err(DaemonError::Io(err));
         }
@@ -46,6 +41,12 @@ impl DaemonServer {
         }
         Ok(())
     }
+}
+
+fn encode_response(response: &serde_json::Value) -> Vec<u8> {
+    let mut framed = serde_json::to_vec(response).expect("daemon response serializes");
+    framed.push(b'\n');
+    framed
 }
 
 async fn read_request_line<R>(reader: &mut R) -> Result<Vec<u8>, DaemonError>

@@ -84,15 +84,12 @@ pub(crate) enum PtyProcessExit {
 }
 
 /// Why the substrate killed a command process group. The owning run
-/// maps this to the final status — `Cancelled` → "cancelled"/130, `TimedOut` →
-/// "timed_out"/124 — and either reason DISCARDS the overlay (a killed command
-/// never OCC-merges).
+/// maps this to the final status. A killed command DISCARDS the overlay and
+/// never OCC-merges.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KillReason {
     /// A caller asked to cancel (Ctrl-C/Ctrl-D, the cancel op, or run teardown).
     Cancelled,
-    /// The command exceeded its deadline and was terminated by the deadline backstop.
-    TimedOut,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -120,10 +117,6 @@ impl CommandCompletionStatus {
             Some(KillReason::Cancelled) => {
                 status = "cancelled".to_owned();
                 exit_code = 130;
-            }
-            Some(KillReason::TimedOut) => {
-                status = "timed_out".to_owned();
-                exit_code = 124;
             }
             None => {}
         }
@@ -313,7 +306,6 @@ pub(crate) fn spawn_current_exe_ns_runner(
     command_request: &NamespaceCommandRequest,
     output_path: &Path,
     transcript_path: PathBuf,
-    transcript_timestamp_timezone: &str,
 ) -> Result<PendingPtyProcess, CommandError> {
     write_command_request(request_path, command_request)
         .map_err(|error| CommandError::artifact_write("command_request", request_path, error))?;
@@ -345,13 +337,7 @@ pub(crate) fn spawn_current_exe_ns_runner(
         )
     })?;
     let writer = master.try_clone()?;
-    let transcript_prefixer = TranscriptTimestampPrefixer::new(transcript_timestamp_timezone)
-        .map_err(|error| {
-            io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!("invalid transcript timestamp timezone: {error}"),
-            )
-        })?;
+    let transcript_prefixer = TranscriptTimestampPrefixer::new();
     let reader_done = spawn_command_output_reader(master, transcript_path, transcript_prefixer);
 
     Ok(PendingPtyProcess {

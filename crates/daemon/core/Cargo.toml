@@ -6,22 +6,13 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
-config.workspace = true
 daemon_operation.workspace = true
-layerstack.workspace = true
-protocol.workspace = true
-workspace.workspace = true
-# preserve_order is contract-load-bearing: request `args` keys must cross
-# the wire in insertion order for byte-stable wire-message round-trips.
+# preserve_order keeps incoming operation arguments in caller order while this
+# crate still accepts raw JSON requests.
 serde_json = { workspace = true, features = ["preserve_order"] }
-serde.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
 thiserror.workspace = true
-
-[dev-dependencies]
-# Property tests for the absorbed wire response round-trip.
-proptest.workspace = true
 
 [lints]
 workspace = true

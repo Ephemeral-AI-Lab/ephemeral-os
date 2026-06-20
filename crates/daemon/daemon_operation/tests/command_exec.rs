@@ -196,14 +196,6 @@ fn command_exec_passes_workspace_entry_to_spawn_paths() {
             .join("cmd_1")
             .join("transcript.log")
     );
-    assert_eq!(
-        observation.transcript_timestamp_timezone,
-        env.command.config().transcript_timestamp_timezone
-    );
-    assert_eq!(
-        observation.output_drain_grace_ms,
-        env.command.config().output_drain_grace_ms
-    );
     let entry = &observation.workspace_entry;
     assert_eq!(&entry.workspace_root, &workspace_root);
     assert_eq!(entry.layer_paths.as_slice(), &[PathBuf::from("/lower/one")]);

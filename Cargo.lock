@@ -160,17 +160,11 @@ dependencies = [
 name = "daemon"
 version = "0.1.0"
 dependencies = [
- "config",
  "daemon_operation",
- "layerstack",
- "proptest",
- "protocol",
- "serde",
  "serde_json",
  "thiserror 2.0.18",
  "tokio",
  "tokio-util",
- "workspace",
 ]
 
 [[package]]
@@ -178,7 +172,6 @@ name = "daemon_operation"
 version = "0.1.0"
 dependencies = [
  "command",
- "protocol",
  "serde_json",
  "thiserror 2.0.18",
  "workspace",
@@ -347,7 +340,6 @@ dependencies = [
  "anyhow",
  "config",
  "host",
- "protocol",
  "serde_json",
 ]
 
@@ -742,15 +734,6 @@ dependencies = [
  "rusty-fork",
  "tempfile",
  "unarray",
-]
-
-[[package]]
-name = "protocol"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "uuid",
 ]
 
 [[package]]

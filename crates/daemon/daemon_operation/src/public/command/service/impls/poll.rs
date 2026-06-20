@@ -42,8 +42,7 @@ const POLL_ARGS: &[ArgSpec] = &[
 
 const POLL_CLI: CliSpec = CliSpec {
     path: &["daemon", "commands", "poll"],
-    usage:
-        "ephai-sandbox-gateway daemon --sandbox-id SID commands poll [--last-n-lines N] COMMAND_SESSION_ID",
+    usage: "ephai-sandbox-gateway daemon --sandbox-id SID commands poll [--last-n-lines N] COMMAND_SESSION_ID",
     examples: &[
         "ephai-sandbox-gateway daemon --sandbox-id sb-1 commands poll --last-n-lines 50 cmd-1",
     ],

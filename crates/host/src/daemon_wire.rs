@@ -7,8 +7,6 @@ use sha2::{Digest, Sha256};
 
 pub const DAEMON_AUTH_FIELD: &str = "_eos_daemon_auth_token";
 pub const DAEMON_FORWARD_AUTH_FIELD: &str = "_eos_daemon_forward_auth_token";
-pub const DAEMON_PROTOCOL_FIELD: &str = "_eos_daemon_protocol_version";
-pub const DAEMON_PROTOCOL_VERSION: i64 = 1;
 pub const MAX_REQUEST_BYTES: usize = 16 * 1024 * 1024;
 pub const MAX_RESPONSE_BYTES: usize = 16 * 1024 * 1024;
 pub const CONNECT_RETRY_DELAYS_S: [f64; 4] = [0.25, 0.5, 1.0, 2.0];
@@ -220,10 +218,6 @@ fn stamped_args(args: &Value, request_id: &str) -> Map<String, Value> {
         Value::Object(map) => map.clone(),
         _ => Map::new(),
     };
-    args_obj.insert(
-        DAEMON_PROTOCOL_FIELD.to_owned(),
-        json!(DAEMON_PROTOCOL_VERSION),
-    );
     args_obj
         .entry("request_id".to_owned())
         .or_insert_with(|| json!(request_id));

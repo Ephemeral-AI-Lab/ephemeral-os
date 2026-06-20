@@ -22,6 +22,8 @@ use crate::transcript::{read_full_transcript_stdout, read_transcript_since, read
 use crate::yield_wait_loop::CommandWaitTarget;
 use crate::{CommandConfig, CommandError};
 
+const OUTPUT_DRAIN_GRACE: Duration = Duration::from_millis(500);
+
 /// PTY/process substrate for one command. It owns the child process, transcript,
 /// and cancel flag, but no workspace policy: the run that owns this process
 /// decides publish-vs-discard.
@@ -29,7 +31,6 @@ pub struct CommandProcess {
     id: String,
     command: String,
     started_at: Instant,
-    timeout: Option<Duration>,
     runtime: CommandProcessRuntime,
 }
 
@@ -41,14 +42,12 @@ pub struct CommandProcessSpec {
 }
 
 #[derive(Clone)]
-pub struct CommandProcessSpawn<'a> {
+pub struct CommandProcessSpawn {
     pub workspace_entry: WorkspaceEntry,
     pub request_path: PathBuf,
     pub output_path: PathBuf,
     pub final_path: PathBuf,
     pub transcript_path: PathBuf,
-    pub transcript_timestamp_timezone: &'a str,
-    pub output_drain_grace_ms: u64,
 }
 
 pub const PROCESS_METADATA_FILE: &str = "process.json";
@@ -122,11 +121,8 @@ pub(crate) struct CommandProcessRuntime {
     output_path: PathBuf,
     final_path: PathBuf,
     transcript_path: PathBuf,
-    /// Why this process was killed, if it has been. Set once by `cancel_process`
-    /// (user cancel) or `time_out_process` (deadline backstop); a user cancel
-    /// wins, so a cancelled command is never relabeled as timed-out.
+    /// Why this process was killed, if it has been. Set once by `cancel_process`.
     kill: Mutex<Option<KillReason>>,
-    output_drain_grace_ms: u64,
     /// Exit-taken guard so two pollers can't both finalize the same child.
     exit_taken: Mutex<bool>,
 }
@@ -137,7 +133,6 @@ impl CommandProcessRuntime {
         output_path: PathBuf,
         final_path: PathBuf,
         transcript_path: PathBuf,
-        output_drain_grace_ms: u64,
     ) -> Self {
         Self {
             process,
@@ -145,7 +140,6 @@ impl CommandProcessRuntime {
             final_path,
             transcript_path,
             kill: Mutex::new(None),
-            output_drain_grace_ms,
             exit_taken: Mutex::new(false),
         }
     }
@@ -170,7 +164,6 @@ impl CommandProcessRuntime {
             PathBuf::new(),
             PathBuf::new(),
             PathBuf::new(),
-            0,
         )
     }
 }
@@ -197,7 +190,6 @@ impl CommandProcess {
                 PathBuf::new(),
                 PathBuf::new(),
                 PathBuf::new(),
-                0,
             ),
         )
     }
@@ -222,14 +214,13 @@ impl CommandProcess {
                 output_path,
                 final_path,
                 transcript_path,
-                0,
             ),
         )
     }
 
     pub fn spawn(
         spec: CommandProcessSpec,
-        parts: CommandProcessSpawn<'_>,
+        parts: CommandProcessSpawn,
     ) -> Result<Self, CommandError> {
         let command_request = build_namespace_command_request(&spec, parts.workspace_entry);
         let process = spawn_current_exe_ns_runner(
@@ -237,7 +228,6 @@ impl CommandProcess {
             &command_request,
             &parts.output_path,
             parts.transcript_path.clone(),
-            parts.transcript_timestamp_timezone,
         )?;
         let process_path = process_metadata_path(&parts.final_path)?;
         if let Err(error) = write_process_metadata(&process_path, process.process_group_id()) {
@@ -254,7 +244,6 @@ impl CommandProcess {
                 parts.output_path,
                 parts.final_path,
                 parts.transcript_path,
-                parts.output_drain_grace_ms,
             ),
         ))
     }
@@ -264,7 +253,6 @@ impl CommandProcess {
             id: spec.id,
             command: spec.command,
             started_at: Instant::now(),
-            timeout: spec.timeout_seconds.and_then(duration_from_secs_f64),
             runtime,
         }
     }
@@ -309,23 +297,9 @@ impl CommandProcess {
     }
 
     /// Cancel at a caller's request (Ctrl-C/Ctrl-D, the cancel op, or run
-    /// teardown): record the reason and kill the process group. A cancel always
-    /// wins over a later timeout mark.
+    /// teardown): record the reason and kill the process group.
     pub fn cancel_process(&self) {
         *lock(&self.runtime.kill) = Some(KillReason::Cancelled);
-        self.runtime.process.terminate();
-    }
-
-    /// Kill a command that exceeded its deadline (the deadline backstop). Records
-    /// `TimedOut` only if no kill reason is set yet, so a prior user cancel keeps
-    /// its `Cancelled` label; either way the process group is killed.
-    pub fn time_out_process(&self) {
-        {
-            let mut kill = lock(&self.runtime.kill);
-            if kill.is_none() {
-                *kill = Some(KillReason::TimedOut);
-            }
-        }
         self.runtime.process.terminate();
     }
 
@@ -342,14 +316,6 @@ impl CommandProcess {
     #[must_use]
     pub fn transcript_len(&self) -> u64 {
         transcript_len(&self.runtime.transcript_path)
-    }
-
-    #[must_use]
-    pub fn is_past_deadline(&self, now: Instant, max_command_s: u64) -> bool {
-        let timeout = self
-            .timeout
-            .unwrap_or_else(|| Duration::from_secs(max_command_s));
-        now.duration_since(self.started_at) >= timeout
     }
 
     /// Take the child exit if it has completed, returning the raw command
@@ -370,7 +336,7 @@ impl CommandProcess {
         self.runtime.process.terminate();
         self.runtime
             .process
-            .wait_for_reader_done(Duration::from_millis(self.runtime.output_drain_grace_ms));
+            .wait_for_reader_done(OUTPUT_DRAIN_GRACE);
         let runner = CommandRunnerResult::read_from_path(&self.runtime.output_path);
         let kill = *lock(&self.runtime.kill);
         let completion =
@@ -402,11 +368,11 @@ impl CommandProcess {
     }
 }
 
-impl<'a> CommandProcessSpawn<'a> {
+impl CommandProcessSpawn {
     pub fn prepare(
         command_session_id: &str,
         workspace_entry: WorkspaceEntry,
-        config: &'a CommandConfig,
+        config: &CommandConfig,
     ) -> Result<Self, CommandError> {
         let command_dir = config.scratch_root.join(command_session_id);
         fs::create_dir_all(&command_dir).map_err(|error| {
@@ -418,8 +384,6 @@ impl<'a> CommandProcessSpawn<'a> {
             output_path: command_dir.join("runner-result.json"),
             final_path: command_dir.join("final.json"),
             transcript_path: command_dir.join("transcript.log"),
-            transcript_timestamp_timezone: &config.transcript_timestamp_timezone,
-            output_drain_grace_ms: config.output_drain_grace_ms,
         })
     }
 
@@ -473,14 +437,6 @@ impl CommandWaitTarget<CommandProcessExit> for CommandProcess {
 
     fn read_output_since(&self, start_offset: u64) -> String {
         Self::read_output_since(self, start_offset)
-    }
-}
-
-fn duration_from_secs_f64(seconds: f64) -> Option<Duration> {
-    if seconds.is_finite() && seconds > 0.0 {
-        Some(Duration::from_secs_f64(seconds))
-    } else {
-        None
     }
 }
 

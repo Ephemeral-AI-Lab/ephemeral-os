@@ -172,7 +172,6 @@ impl CommandLaunchDriver for PendingGuardLaunchDriver {
     fn wait_for_initial_yield(
         &self,
         _process: &CommandProcess,
-        _config: &command::CommandConfig,
         _yield_time_ms: u64,
         _start_offset: u64,
     ) -> WaitOutcome<CommandProcessExit> {
@@ -220,7 +219,6 @@ impl CommandLaunchDriver for BlockingLaunchDriver {
     fn wait_for_initial_yield(
         &self,
         _process: &CommandProcess,
-        _config: &command::CommandConfig,
         _yield_time_ms: u64,
         _start_offset: u64,
     ) -> WaitOutcome<CommandProcessExit> {

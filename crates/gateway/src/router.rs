@@ -1,8 +1,7 @@
-use protocol::{HostGatewayErrorKind, ProtocolErrorKind};
 use serde_json::{json, Value};
 
 use crate::engine::Engine;
-use crate::wire::{error_response_for, ok_response, ClientRequest};
+use crate::wire::{error_kind, error_response_for, ok_response, ClientRequest};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Surface {
@@ -16,7 +15,7 @@ pub(crate) fn handle(engine: &dyn Engine, surface: Surface, request: &ClientRequ
             Ok(sandbox_id) => ok_response(request, json!({"sandbox_id": sandbox_id})),
             Err(err) => error_response_for(
                 request,
-                HostGatewayErrorKind::HostOperationFailed.as_str(),
+                error_kind::HOST_OPERATION_FAILED,
                 &format!("acquire failed: {err:#}"),
             ),
         },
@@ -25,7 +24,7 @@ pub(crate) fn handle(engine: &dyn Engine, surface: Surface, request: &ClientRequ
             let Some(sandbox_id) = request.sandbox_id.as_deref() else {
                 return error_response_for(
                     request,
-                    ProtocolErrorKind::InvalidRequest.as_str(),
+                    error_kind::INVALID_REQUEST,
                     "sandbox_id is required for this op",
                 );
             };
@@ -34,7 +33,7 @@ pub(crate) fn handle(engine: &dyn Engine, surface: Surface, request: &ClientRequ
                 Ok(false) => unknown_sandbox(request, sandbox_id),
                 Err(err) => error_response_for(
                     request,
-                    HostGatewayErrorKind::HostOperationFailed.as_str(),
+                    error_kind::HOST_OPERATION_FAILED,
                     &format!("release failed: {err:#}"),
                 ),
             }
@@ -43,7 +42,7 @@ pub(crate) fn handle(engine: &dyn Engine, surface: Surface, request: &ClientRequ
             let Some(sandbox_id) = request.sandbox_id.as_deref() else {
                 return error_response_for(
                     request,
-                    ProtocolErrorKind::InvalidRequest.as_str(),
+                    error_kind::INVALID_REQUEST,
                     "sandbox_id is required for this op",
                 );
             };
@@ -110,7 +109,7 @@ fn forward(engine: &dyn Engine, request: &ClientRequest) -> Value {
     let Some(sandbox_id) = request.sandbox_id.as_deref() else {
         return error_response_for(
             request,
-            ProtocolErrorKind::InvalidRequest.as_str(),
+            error_kind::INVALID_REQUEST,
             "sandbox_id is required for this op",
         );
     };
@@ -123,12 +122,8 @@ fn forward(engine: &dyn Engine, request: &ClientRequest) -> Value {
         Some(Ok(response)) => response,
         Some(Err(err)) => {
             let (kind, message) = match err {
-                host::ForwardError::UncertainOutcome(m) => {
-                    (HostGatewayErrorKind::UncertainOutcome.as_str(), m)
-                }
-                host::ForwardError::SandboxUnavailable(m) => {
-                    (HostGatewayErrorKind::SandboxUnavailable.as_str(), m)
-                }
+                host::ForwardError::UncertainOutcome(m) => (error_kind::UNCERTAIN_OUTCOME, m),
+                host::ForwardError::SandboxUnavailable(m) => (error_kind::SANDBOX_UNAVAILABLE, m),
             };
             error_response_for(request, kind, &message)
         }
@@ -146,16 +141,16 @@ fn host_value_response(request: &ClientRequest, result: anyhow::Result<Value>) -
 fn host_error_kind(err: &anyhow::Error) -> &'static str {
     let message = err.to_string();
     if message.ends_with(" is required") || message.ends_with(" must be a non-empty string") {
-        ProtocolErrorKind::InvalidRequest.as_str()
+        error_kind::INVALID_REQUEST
     } else {
-        HostGatewayErrorKind::HostOperationFailed.as_str()
+        error_kind::HOST_OPERATION_FAILED
     }
 }
 
 fn forbidden_socket(request: &ClientRequest) -> Value {
     error_response_for(
         request,
-        ProtocolErrorKind::Forbidden.as_str(),
+        error_kind::FORBIDDEN,
         &format!("op {} is not served on this socket", request.op),
     )
 }
@@ -163,7 +158,7 @@ fn forbidden_socket(request: &ClientRequest) -> Value {
 fn unknown_op(request: &ClientRequest) -> Value {
     error_response_for(
         request,
-        ProtocolErrorKind::UnknownOp.as_str(),
+        error_kind::UNKNOWN_OP,
         &format!("unknown op: {}", request.op),
     )
 }
@@ -171,7 +166,7 @@ fn unknown_op(request: &ClientRequest) -> Value {
 fn unknown_sandbox(request: &ClientRequest, sandbox_id: &str) -> Value {
     error_response_for(
         request,
-        HostGatewayErrorKind::UnknownSandbox.as_str(),
+        error_kind::UNKNOWN_SANDBOX,
         &format!("unknown sandbox: {sandbox_id}"),
     )
 }

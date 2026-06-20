@@ -50,8 +50,6 @@ pub struct SpawnObservation {
     pub output_path: PathBuf,
     pub final_path: PathBuf,
     pub transcript_path: PathBuf,
-    pub transcript_timestamp_timezone: String,
-    pub output_drain_grace_ms: u64,
 }
 
 impl FakeLaunchDriver {
@@ -118,8 +116,6 @@ impl CommandLaunchDriver for FakeLaunchDriver {
                 output_path: parts.output_path.clone(),
                 final_path: parts.final_path.clone(),
                 transcript_path: parts.transcript_path.clone(),
-                transcript_timestamp_timezone: parts.transcript_timestamp_timezone.to_owned(),
-                output_drain_grace_ms: parts.output_drain_grace_ms,
             });
         Ok(CommandProcess::inactive_with_artifacts_for_test(
             spec,
@@ -132,7 +128,6 @@ impl CommandLaunchDriver for FakeLaunchDriver {
     fn wait_for_initial_yield(
         &self,
         _process: &CommandProcess,
-        _config: &command::CommandConfig,
         _yield_time_ms: u64,
         _start_offset: u64,
     ) -> WaitOutcome<CommandProcessExit> {

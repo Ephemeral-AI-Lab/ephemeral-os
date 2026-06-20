@@ -1,5 +1,5 @@
 //! Async RPC server: `AF_UNIX` plus optional loopback TCP, one framed request per
-//! connection, dispatch through the daemon dispatcher, and token-driven
+//! connection, dispatch through daemon operations, and token-driven
 //! shutdown. Connection handlers keep mutex guards out of await points.
 
 pub(crate) mod connection;
@@ -9,14 +9,12 @@ mod lifecycle;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use config::configs::daemon::DaemonConfig;
 use daemon_operation::DaemonOperations;
+use serde_json::{json, Value};
 use tokio_util::sync::CancellationToken;
 
-use crate::request_registry::InFlightRegistry;
-
-const MAX_REQUEST_BYTES: usize = crate::wire::MAX_REQUEST_BYTES;
-const REQUEST_READ_TIMEOUT_S: f64 = crate::wire::REQUEST_READ_TIMEOUT_S;
+pub(crate) const MAX_REQUEST_BYTES: usize = 16 * 1024 * 1024;
+pub(crate) const REQUEST_READ_TIMEOUT_S: f64 = 30.0;
 
 /// Where the daemon binds + writes its pid, plus the optional TCP listener.
 #[derive(Debug, Clone)]
@@ -35,53 +33,53 @@ pub struct ServerConfig {
     pub forward_auth_token: Option<String>,
 }
 
-/// The running daemon: request dispatch state, request registry, and
-/// shutdown token.
+/// The running daemon: request dispatch state and shutdown token.
 pub struct DaemonServer {
     config: ServerConfig,
     operations: Arc<DaemonOperations>,
-    request_registry: Arc<InFlightRegistry>,
     shutdown: CancellationToken,
 }
 
 impl DaemonServer {
-    /// Assemble a daemon over `config`, wiring the request registry and
-    /// shutdown token.
+    /// Assemble a daemon over `config`, wiring the shutdown token.
     #[must_use]
     pub fn new(config: ServerConfig, operations: Arc<DaemonOperations>) -> Self {
         Self {
             config,
             operations,
-            request_registry: Arc::new(InFlightRegistry::new(
-                crate::DEFAULT_TTL_S,
-                crate::DEFAULT_REAPER_INTERVAL_S,
-            )),
             shutdown: CancellationToken::new(),
         }
     }
+}
 
-    /// Assemble a daemon using the typed `daemon` config section loaded from
-    /// `eos-sandbox/config/prd.yml`.
-    #[must_use]
-    pub fn with_daemon_config(
-        config: ServerConfig,
-        daemon_config: &DaemonConfig,
-        _isolated_config: &config::configs::isolated::IsolatedNetworkConfig,
-        operations: Arc<DaemonOperations>,
-    ) -> Self {
-        Self {
-            config,
-            operations,
-            request_registry: Arc::new(InFlightRegistry::new(
-                daemon_config.inflight.ttl_s,
-                daemon_config.inflight.reaper_interval_s,
-            )),
-            shutdown: CancellationToken::new(),
-        }
-    }
+pub(super) fn error_response(
+    kind: &'static str,
+    message: impl Into<String>,
+    details: Value,
+) -> Value {
+    json!({
+        "status": "error",
+        "error": {
+            "kind": kind,
+            "message": message.into(),
+            "details": fault_details(details),
+        },
+        "meta": {
+            "envelope_version": 2,
+            "op": "",
+            "request_id": "",
+            "duration_ms": 0.0,
+            "resource_summary": { "fields": {} },
+            "warnings": [],
+        },
+    })
+}
 
-    /// The shutdown token; cancel it to drain + tear down the serve loops.
-    pub fn shutdown_token(&self) -> CancellationToken {
-        self.shutdown.clone()
+fn fault_details(details: Value) -> Value {
+    match details {
+        Value::Null => json!({}),
+        Value::Object(fields) if fields.is_empty() => json!({}),
+        Value::Object(fields) => json!({ "fields": fields }),
+        value => json!({ "fields": { "value": value } }),
     }
 }

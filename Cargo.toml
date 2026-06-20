@@ -1,7 +1,6 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/protocol",
     "crates/daemon/daemon_operation",
     "crates/daemon/command",
     "crates/daemon/config",
@@ -58,7 +57,6 @@ layerstack = { path = "crates/daemon/layerstack" }
 daemon_operation = { path = "crates/daemon/daemon_operation" }
 overlay = { path = "crates/daemon/overlay" }
 namespace-process = { path = "crates/daemon/namespace-process" }
-protocol = { path = "crates/protocol" }
 daemon = { path = "crates/daemon/core" }
 eosd = { path = "crates/daemon/eosd" }
 gateway = { path = "crates/gateway" }

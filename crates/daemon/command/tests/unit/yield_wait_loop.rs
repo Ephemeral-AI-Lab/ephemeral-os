@@ -35,12 +35,7 @@ fn wait_returns_running_after_quiet_output() {
         output: Mutex::new("ready\n".to_owned()),
         offsets: Mutex::new(vec![1, 1, 0]),
     };
-    let config = CommandConfig {
-        quiet_ms: 1,
-        ..CommandConfig::default()
-    };
-
-    let result = wait_for_yield(&target, &config, 100, 0);
+    let result = wait_for_yield(&target, 100, 0);
 
     assert_eq!(result, WaitOutcome::Running("ready\n".to_owned()));
 }
@@ -51,12 +46,7 @@ fn wait_reports_first_output_and_quiet_reason() {
         output: Mutex::new("ready\n".to_owned()),
         offsets: Mutex::new(vec![1, 1, 0]),
     };
-    let config = CommandConfig {
-        quiet_ms: 1,
-        ..CommandConfig::default()
-    };
-
-    let report = wait_for_yield_with_timing(&target, &config, 100, 0);
+    let report = wait_for_yield_with_timing(&target, 100, 0);
 
     assert_eq!(report.outcome, WaitOutcome::Running("ready\n".to_owned()));
     assert_eq!(report.timing.reason, WaitYieldReason::OutputQuiet);

@@ -1,6 +1,5 @@
 #![forbid(unsafe_code)]
 
-pub(crate) use std::time::Duration;
 pub(crate) use time::OffsetDateTime;
 
 #[path = "../src/config.rs"]

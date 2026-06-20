@@ -17,6 +17,8 @@ use config::ConfigPath;
 const DAEMON_AUTH_TOKEN_ENV: &str = "EOS_DAEMON_AUTH_TOKEN";
 const DAEMON_FORWARD_AUTH_TOKEN_ENV: &str = "EOS_DAEMON_FORWARD_AUTH_TOKEN";
 const DAEMON_CONFIG_YAML_ENV: &str = "EOS_DAEMON_CONFIG_YAML";
+const CONNECT_FAILED: i32 = 97;
+const IO_FAILED: i32 = 98;
 
 /// Start, spawn, or call the async RPC server.
 ///
@@ -55,10 +57,8 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
         .build()
         .context("failed to build daemon tokio runtime")?;
     runtime.block_on(async move {
-        let server = daemon::DaemonServer::with_daemon_config(
+        let server = daemon::DaemonServer::new(
             server_config,
-            &runtime_config.daemon,
-            &runtime_config.isolated,
             Arc::new(build_daemon_operations(&runtime_config)),
         );
         server.serve().await
@@ -113,13 +113,6 @@ fn workspace_resource_caps(config: &IsolatedNetworkConfig) -> workspace::profile
 fn command_config(config: &config::configs::daemon::CommandConfig) -> command::CommandConfig {
     command::CommandConfig {
         scratch_root: config.scratch_root.clone(),
-        default_yield_time_ms: config.default_yield_time_ms,
-        default_timeout_s: config.default_timeout_s,
-        quiet_ms: config.quiet_ms,
-        cancel_wait_ms: config.cancel_wait_ms,
-        output_drain_grace_ms: config.output_drain_grace_ms,
-        max_command_s: config.max_command_s,
-        transcript_timestamp_timezone: config.transcript_timestamp_timezone.clone(),
     }
 }
 
@@ -273,7 +266,7 @@ fn run_daemon_client(socket_path: &PathBuf, payload: &str) -> Result<()> {
         Ok(stream) => stream,
         Err(err) => {
             eprintln!("EOS_DAEMON_CONNECT_FAILED:{}", io_error_name(&err));
-            std::process::exit(daemon::wire::CONNECT_FAILED);
+            std::process::exit(CONNECT_FAILED);
         }
     };
     if let Err(err) = stream
@@ -281,16 +274,16 @@ fn run_daemon_client(socket_path: &PathBuf, payload: &str) -> Result<()> {
         .and_then(|()| stream.write_all(b"\n"))
     {
         eprintln!("EOS_DAEMON_IO_FAILED:{}", io_error_name(&err));
-        std::process::exit(daemon::wire::IO_FAILED);
+        std::process::exit(IO_FAILED);
     }
     if let Err(err) = stream.shutdown(std::net::Shutdown::Write) {
         eprintln!("EOS_DAEMON_IO_FAILED:{}", io_error_name(&err));
-        std::process::exit(daemon::wire::IO_FAILED);
+        std::process::exit(IO_FAILED);
     }
     let mut response = Vec::new();
     if let Err(err) = stream.read_to_end(&mut response) {
         eprintln!("EOS_DAEMON_IO_FAILED:{}", io_error_name(&err));
-        std::process::exit(daemon::wire::IO_FAILED);
+        std::process::exit(IO_FAILED);
     }
     std::io::stdout()
         .lock()
@@ -302,7 +295,7 @@ fn run_daemon_client(socket_path: &PathBuf, payload: &str) -> Result<()> {
 #[cfg(not(unix))]
 fn run_daemon_client(_socket_path: &PathBuf, _payload: &str) -> Result<()> {
     eprintln!("EOS_DAEMON_CONNECT_FAILED:UnsupportedPlatform");
-    std::process::exit(daemon::wire::CONNECT_FAILED);
+    std::process::exit(CONNECT_FAILED);
 }
 
 fn spawn_daemon(config: &DaemonCliConfig) -> Result<()> {

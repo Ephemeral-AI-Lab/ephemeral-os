@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use std::time::Duration;
 
 use tokio::io::{AsyncWrite, AsyncWriteExt};
 use tokio::net::{TcpListener, UnixListener};
@@ -14,8 +13,8 @@ impl DaemonServer {
     /// Bind the `AF_UNIX` (and optional TCP) listeners, write the pid file, install
     /// the SIGTERM/SIGINT handlers, and serve until the shutdown token fires.
     ///
-    /// On shutdown: cancel active workspace runs, cancel the serve tasks, remove
-    /// the pid file, and unlink the socket.
+    /// On shutdown: cancel the serve tasks, remove the pid file, and unlink the
+    /// socket.
     ///
     /// # Errors
     ///
@@ -25,20 +24,6 @@ impl DaemonServer {
         let shutdown = self.shutdown.clone();
         let server = Arc::new(self);
         let connection_permits = Arc::new(Semaphore::new(MAX_CONCURRENT_CONNECTIONS));
-        let _reaper_task = {
-            let registry = Arc::clone(&server.request_registry);
-            let shutdown = server.shutdown.clone();
-            tokio::spawn(async move {
-                loop {
-                    tokio::select! {
-                        () = shutdown.cancelled() => break,
-                        () = tokio::time::sleep(Duration::from_secs_f64(registry.reaper_interval_s())) => {
-                            registry.ttl_sweep();
-                        }
-                    }
-                }
-            })
-        };
         if let Some(parent) = server.config.socket_path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
@@ -146,7 +131,6 @@ impl DaemonServer {
         if let Some(task) = tcp_server {
             task.abort();
         }
-        cleanup_active_runs_on_shutdown(&server).await;
         let _ = tokio::fs::remove_file(&server.config.pid_path).await;
         let _ = tokio::fs::remove_file(&server.config.socket_path).await;
         Ok(())
@@ -157,19 +141,15 @@ async fn reject_overloaded_connection<S>(mut stream: S)
 where
     S: AsyncWrite + Unpin,
 {
-    let response = crate::dispatcher::error_response(
-        crate::wire::ErrorKind::ServerBusy,
+    let response = super::error_response(
+        "server_busy",
         "daemon is at connection capacity",
         serde_json::json!({"max_concurrent_connections": MAX_CONCURRENT_CONNECTIONS}),
     );
-    if let Ok(framed) = crate::wire::encode(&crate::wire::WireMessage::Response(response)) {
-        let _ = stream.write_all(&framed).await;
-    }
+    let mut framed = serde_json::to_vec(&response).expect("daemon overload response serializes");
+    framed.push(b'\n');
+    let _ = stream.write_all(&framed).await;
     let _ = stream.shutdown().await;
-}
-
-async fn cleanup_active_runs_on_shutdown(server: &Arc<DaemonServer>) {
-    let _ = server;
 }
 
 async fn signal_shutdown() {

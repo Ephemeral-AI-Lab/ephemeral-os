@@ -32,14 +32,4 @@ fn kill_reason_maps_to_terminal_status() {
         (cancelled.status(), cancelled.exit_code()),
         ("cancelled", 130)
     );
-
-    let timed_out = CommandCompletionStatus::from_process_and_runner(
-        exit,
-        runner.as_ref(),
-        Some(KillReason::TimedOut),
-    );
-    assert_eq!(
-        (timed_out.status(), timed_out.exit_code()),
-        ("timed_out", 124)
-    );
 }

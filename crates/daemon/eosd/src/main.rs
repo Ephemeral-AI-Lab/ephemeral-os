@@ -30,7 +30,7 @@
 //!   `namespace_process::holder::NsHolderError::{CONTROL_CLOSED_EXIT,
 //!   UNEXPECTED_TOKEN_EXIT, TEST_CRASH_EXIT}`.
 //! - thin-client / daemon connect path: `97` (`CONNECT_FAILED`), `98`
-//!   (`IO_FAILED`) — `daemon::wire::{CONNECT_FAILED, IO_FAILED}`.
+//!   (`IO_FAILED`) — defined by the `eosd daemon` adapter.
 #![forbid(unsafe_code)]
 
 mod daemon;

@@ -1,8 +1,6 @@
 use std::thread;
 use std::time::{Duration, Instant};
 
-use crate::CommandConfig;
-
 pub trait CommandWaitTarget<T> {
     fn take_exit(&self) -> Option<T>;
     fn transcript_len(&self) -> u64;
@@ -48,21 +46,17 @@ pub struct WaitReport<T> {
     pub timing: WaitTiming,
 }
 
-pub fn wait_for_yield<T, S>(
-    command: &S,
-    config: &CommandConfig,
-    yield_time_ms: u64,
-    start_offset: u64,
-) -> WaitOutcome<T>
+const QUIET_MS: u64 = 50;
+
+pub fn wait_for_yield<T, S>(command: &S, yield_time_ms: u64, start_offset: u64) -> WaitOutcome<T>
 where
     S: CommandWaitTarget<T> + ?Sized,
 {
-    wait_for_yield_with_timing(command, config, yield_time_ms, start_offset).outcome
+    wait_for_yield_with_timing(command, yield_time_ms, start_offset).outcome
 }
 
 pub fn wait_for_yield_with_timing<T, S>(
     command: &S,
-    config: &CommandConfig,
     yield_time_ms: u64,
     start_offset: u64,
 ) -> WaitReport<T>
@@ -94,8 +88,7 @@ where
                 first_output = Some(now);
             }
         }
-        if off > start_offset
-            && now.duration_since(last_change) >= Duration::from_millis(config.quiet_ms)
+        if off > start_offset && now.duration_since(last_change) >= Duration::from_millis(QUIET_MS)
         {
             return WaitReport {
                 outcome: WaitOutcome::Running(command.read_output_since(start_offset)),

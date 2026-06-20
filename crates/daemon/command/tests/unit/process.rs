@@ -20,7 +20,7 @@ fn workspace_entry() -> WorkspaceEntry {
 }
 
 #[test]
-fn process_exposes_identity_and_expiry() {
+fn process_exposes_identity() {
     let process = CommandProcess::inactive_for_test(CommandProcessSpec {
         id: "cmd_1".to_owned(),
         command: "echo ok".to_owned(),
@@ -30,7 +30,6 @@ fn process_exposes_identity_and_expiry() {
 
     assert_eq!(process.id(), "cmd_1");
     assert_eq!(process.command(), "echo ok");
-    assert!(process.is_past_deadline(std::time::Instant::now() + Duration::from_millis(2), 3600));
 }
 
 #[test]
@@ -63,7 +62,6 @@ fn take_exit_reads_transcript_and_persist_removes_it() -> Result<(), Box<dyn std
             root.join("runner-result.json"),
             final_path.clone(),
             transcript_path.clone(),
-            0,
         ),
     );
 
@@ -131,8 +129,6 @@ fn spawn_reports_command_request_artifact_write_failure() -> Result<(), Box<dyn 
             output_path: root.join("runner-result.json"),
             final_path: root.join("final.json"),
             transcript_path: root.join("transcript.log"),
-            transcript_timestamp_timezone: "UTC",
-            output_drain_grace_ms: 0,
         },
     ) {
         Ok(_) => panic!("spawn should fail before opening a PTY"),
@@ -167,9 +163,6 @@ fn process_spawn_prepare_owns_command_artifact_layout() -> Result<(), Box<dyn st
     ));
     let config = CommandConfig {
         scratch_root: root.clone(),
-        transcript_timestamp_timezone: "Asia/Shanghai".to_owned(),
-        output_drain_grace_ms: 123,
-        ..CommandConfig::default()
     };
 
     let spawn = CommandProcessSpawn::prepare("cmd_7", workspace_entry(), &config)?;
@@ -190,9 +183,6 @@ fn process_spawn_prepare_owns_command_artifact_layout() -> Result<(), Box<dyn st
         spawn.transcript_path,
         root.join("cmd_7").join("transcript.log")
     );
-    assert_eq!(spawn.transcript_timestamp_timezone, "Asia/Shanghai");
-    assert_eq!(spawn.output_drain_grace_ms, 123);
-
     let _ = std::fs::remove_dir_all(root);
     Ok(())
 }
@@ -305,7 +295,6 @@ fn persist_final_reports_final_and_transcript_failures() -> Result<(), Box<dyn s
             root.join("runner-result.json"),
             final_path.clone(),
             transcript_path.clone(),
-            0,
         ),
     );
 

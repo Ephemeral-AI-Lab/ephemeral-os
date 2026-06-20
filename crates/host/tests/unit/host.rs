@@ -127,7 +127,7 @@ fn sandbox_lifecycle_forward_waits_for_active_respawn() -> Result<()> {
 }
 
 #[test]
-fn forward_request_sends_daemon_protocol_metadata_only() -> Result<()> {
+fn forward_request_sends_daemon_request_metadata_only() -> Result<()> {
     let listener = TcpListener::bind("127.0.0.1:0")?;
     let endpoint = listener.local_addr()?;
     let server = std::thread::spawn(move || -> Result<()> {
@@ -137,10 +137,7 @@ fn forward_request_sends_daemon_protocol_metadata_only() -> Result<()> {
         let request: serde_json::Value = serde_json::from_str(line.trim_end())?;
         assert_eq!(request["op"], json!("sandbox.runtime.ready"));
         assert_eq!(request["request_id"], json!("request-forward"));
-        assert_eq!(
-            request["args"]["_eos_daemon_protocol_version"],
-            json!(crate::daemon_wire::DAEMON_PROTOCOL_VERSION)
-        );
+        assert_eq!(request["args"]["request_id"], json!("request-forward"));
         let response = json!({
             "status": "ok",
             "result": {"ready": true},

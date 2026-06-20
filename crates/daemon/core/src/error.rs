@@ -1,19 +1,12 @@
-//! Daemon error algebra and wire-kind mapping.
+//! Daemon error algebra and response-kind mapping.
 
 use thiserror::Error;
-use workspace::profile::IsolatedNetworkError;
 
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum DaemonError {
-    #[error(transparent)]
-    Protocol(#[from] crate::wire::ProtocolError),
-
     #[error("daemon io error: {0}")]
     Io(#[from] std::io::Error),
-
-    #[error("invalid request: {0}")]
-    InvalidRequest(String),
 
     #[error("request exceeds {limit} byte limit")]
     RequestTooLarge { limit: usize },
@@ -23,54 +16,17 @@ pub enum DaemonError {
 
     #[error("forbidden: {0}")]
     Forbidden(String),
-
-    #[error("daemon state lock poisoned: {0}")]
-    StateLockPoisoned(&'static str),
-
-    #[error("daemon services are not available in this dispatch context")]
-    ServicesUnavailable,
-
-    #[error(transparent)]
-    LayerStack(#[from] layerstack::LayerStackError),
-
-    #[error(transparent)]
-    Commit(#[from] layerstack::CommitError),
-
-    #[error("overlay pipeline failure: {0}")]
-    OverlayPipeline(String),
-
-    #[error(transparent)]
-    Isolated(#[from] IsolatedNetworkError),
 }
 
 impl DaemonError {
-    /// Map this error onto the wire error `kind`.
+    /// Map this error onto the JSON error `kind`.
     #[must_use]
-    pub fn wire_kind(&self) -> crate::wire::ErrorKind {
-        use crate::wire::ErrorKind;
+    pub const fn response_kind(&self) -> &'static str {
         match self {
-            Self::Protocol(_) => ErrorKind::BadJson,
-            Self::InvalidRequest(_) => ErrorKind::InvalidRequest,
-            Self::RequestTooLarge { .. } => ErrorKind::RequestTooLarge,
-            Self::Unauthorized => ErrorKind::Unauthorized,
-            Self::Forbidden(_) => ErrorKind::Forbidden,
-            Self::LayerStack(error) if layer_stack_lifecycle_in_progress(error) => {
-                ErrorKind::LifecycleInProgress
-            }
-            Self::Commit(layerstack::CommitError::Storage(error))
-                if layer_stack_lifecycle_in_progress(error) =>
-            {
-                ErrorKind::LifecycleInProgress
-            }
-            _ => ErrorKind::InternalError,
+            Self::RequestTooLarge { .. } => "request_too_large",
+            Self::Unauthorized => "unauthorized",
+            Self::Forbidden(_) => "forbidden",
+            _ => "internal_error",
         }
     }
-}
-
-fn layer_stack_lifecycle_in_progress(error: &layerstack::LayerStackError) -> bool {
-    matches!(
-        error,
-        layerstack::LayerStackError::Storage(message)
-            if message.contains("blocked by active leases")
-    )
 }

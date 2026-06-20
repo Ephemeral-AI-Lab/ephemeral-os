@@ -11,27 +11,8 @@ daemon:
     pid_path: /eos/runtime/daemon/runtime.pid
     max_worker_threads: 4
 
-  inflight:
-    ttl_s: 300
-    reaper_interval_s: 30
-
   commands:
     scratch_root: /eos/scratch/commands
-    default_yield_time_ms: 1000
-    default_timeout_s: 600
-    quiet_ms: 50
-    cancel_wait_ms: 500
-    output_drain_grace_ms: 500
-    max_command_s: 21600
-    transcript_timestamp_timezone: UTC
-    ignored_capture:
-      # Bounded ignored-lane command capture. Large accepted ignored payloads
-      # above the spool threshold are copied through command-owned spool files.
-      max_files: 4096
-      max_bytes: 67108864
-      max_file_bytes: 16777216
-      spool_threshold_bytes: 1048576
-      max_metadata_capture_duration_ms: 30000
   idle_workspace_eviction:
     interval_ms: 500
 

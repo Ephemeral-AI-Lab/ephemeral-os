@@ -212,19 +212,16 @@ impl CommandOperationService {
         command_session_id: CommandSessionId,
         yield_time_ms: Option<u64>,
     ) -> Result<CommandYield, CommandServiceError> {
-        let wait_ms = yield_time_ms.unwrap_or(self.config().default_yield_time_ms);
+        let wait_ms = yield_time_ms.unwrap_or(1000);
         let process = self
             .process_store()
             .active_process(&command_session_id)
             .ok_or_else(|| CommandServiceError::CommandNotFound {
                 command_session_id: command_session_id.clone(),
             })?;
-        let outcome = self.launch_driver().wait_for_initial_yield(
-            process.as_ref(),
-            self.config(),
-            wait_ms,
-            0,
-        );
+        let outcome = self
+            .launch_driver()
+            .wait_for_initial_yield(process.as_ref(), wait_ms, 0);
 
         match outcome {
             WaitOutcome::Running(stdout) => {

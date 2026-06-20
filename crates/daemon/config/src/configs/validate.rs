@@ -44,22 +44,6 @@ pub fn require_non_empty(value: &str, field: &'static str) -> Result<(), ConfigF
     }
 }
 
-/// Require `UTC`, `Z`, or a fixed timestamp offset like `+08:00`.
-pub fn require_timestamp_timezone(
-    value: &str,
-    field: &'static str,
-) -> Result<(), ConfigFieldError> {
-    let value = value.trim();
-    if value.eq_ignore_ascii_case("UTC") || value == "Z" || parse_fixed_offset(value) {
-        Ok(())
-    } else {
-        Err(ConfigFieldError::new(
-            field,
-            "must be UTC, Z, or a fixed offset like +08:00",
-        ))
-    }
-}
-
 /// Require that no list item is blank.
 pub fn require_non_empty_items(
     values: &[String],
@@ -175,18 +159,4 @@ pub fn require_ratio(value: f64, field: &'static str) -> Result<(), ConfigFieldE
             "must be greater than 0.0 and at most 1.0",
         ))
     }
-}
-
-fn parse_fixed_offset(value: &str) -> bool {
-    let bytes = value.as_bytes();
-    if bytes.len() != 6 || !matches!(bytes[0], b'+' | b'-') || bytes[3] != b':' {
-        return false;
-    }
-    let Ok(hour) = value[1..3].parse::<u8>() else {
-        return false;
-    };
-    let Ok(minute) = value[4..6].parse::<u8>() else {
-        return false;
-    };
-    hour <= 23 && minute <= 59
 }

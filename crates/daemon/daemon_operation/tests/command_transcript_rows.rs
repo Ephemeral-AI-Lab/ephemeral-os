@@ -101,7 +101,6 @@ impl CommandLaunchDriver for TranscriptLaunchDriver {
     fn wait_for_initial_yield(
         &self,
         _process: &CommandProcess,
-        _config: &command::CommandConfig,
         _yield_time_ms: u64,
         _start_offset: u64,
     ) -> WaitOutcome<CommandProcessExit> {
@@ -138,7 +137,6 @@ impl CommandLaunchDriver for MissingTranscriptLaunchDriver {
     fn wait_for_initial_yield(
         &self,
         _process: &CommandProcess,
-        _config: &command::CommandConfig,
         _yield_time_ms: u64,
         _start_offset: u64,
     ) -> WaitOutcome<CommandProcessExit> {

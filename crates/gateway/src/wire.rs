@@ -1,11 +1,24 @@
 use std::io::{BufRead, BufReader, Read};
 use std::time::Duration;
 
-use protocol::ProtocolErrorKind;
 use serde_json::{json, Map, Value};
 
 pub(crate) const REQUEST_READ_TIMEOUT: Duration = Duration::from_secs(30);
 const MAX_REQUEST_BYTES: usize = host::MAX_REQUEST_BYTES;
+const ENVELOPE_VERSION: u8 = 2;
+
+pub(crate) mod error_kind {
+    pub(crate) const BAD_JSON: &str = "bad_json";
+    pub(crate) const FORBIDDEN: &str = "forbidden";
+    pub(crate) const HOST_OPERATION_FAILED: &str = "host_operation_failed";
+    pub(crate) const INVALID_REQUEST: &str = "invalid_request";
+    pub(crate) const REQUEST_TOO_LARGE: &str = "request_too_large";
+    pub(crate) const SANDBOX_UNAVAILABLE: &str = "sandbox_unavailable";
+    pub(crate) const SERVER_BUSY: &str = "server_busy";
+    pub(crate) const UNCERTAIN_OUTCOME: &str = "uncertain_outcome";
+    pub(crate) const UNKNOWN_OP: &str = "unknown_op";
+    pub(crate) const UNKNOWN_SANDBOX: &str = "unknown_sandbox";
+}
 
 #[derive(Debug)]
 pub(crate) struct ClientRequest {
@@ -41,20 +54,17 @@ pub(crate) fn read_request_line(stream: impl Read) -> Result<Vec<u8>, WireError>
     let mut reader = BufReader::new(stream.take(MAX_REQUEST_BYTES as u64 + 1));
     let mut line = Vec::new();
     reader.read_until(b'\n', &mut line).map_err(|err| {
-        WireError::new(
-            ProtocolErrorKind::InvalidRequest.as_str(),
-            format!("read request: {err}"),
-        )
+        WireError::new(error_kind::INVALID_REQUEST, format!("read request: {err}"))
     })?;
     if line.is_empty() {
         return Err(WireError::new(
-            ProtocolErrorKind::InvalidRequest.as_str(),
+            error_kind::INVALID_REQUEST,
             "connection closed before a request line",
         ));
     }
     if line.len() > MAX_REQUEST_BYTES {
         return Err(WireError::new(
-            ProtocolErrorKind::RequestTooLarge.as_str(),
+            error_kind::REQUEST_TOO_LARGE,
             format!("request exceeds {MAX_REQUEST_BYTES} bytes"),
         ));
     }
@@ -64,13 +74,13 @@ pub(crate) fn read_request_line(stream: impl Read) -> Result<Vec<u8>, WireError>
 pub(crate) fn parse_request(line: &[u8]) -> Result<ClientRequest, WireError> {
     let value: Value = serde_json::from_slice(line).map_err(|err| {
         WireError::new(
-            ProtocolErrorKind::BadJson.as_str(),
+            error_kind::BAD_JSON,
             format!("request is not valid JSON: {err}"),
         )
     })?;
     let Value::Object(mut object) = value else {
         return Err(WireError::new(
-            ProtocolErrorKind::InvalidRequest.as_str(),
+            error_kind::INVALID_REQUEST,
             "request must be a JSON object",
         ));
     };
@@ -79,7 +89,7 @@ pub(crate) fn parse_request(line: &[u8]) -> Result<ClientRequest, WireError> {
         Some(Value::String(id)) => Some(id),
         Some(_) => {
             return Err(WireError::new(
-                ProtocolErrorKind::InvalidRequest.as_str(),
+                error_kind::INVALID_REQUEST,
                 "sandbox_id must be a string",
             ))
         }
@@ -88,7 +98,7 @@ pub(crate) fn parse_request(line: &[u8]) -> Result<ClientRequest, WireError> {
         take_string(&mut object, "op").map_err(|err| err.with_sandbox(sandbox_id.as_deref()))?;
     if op.trim().is_empty() {
         return Err(
-            WireError::new(ProtocolErrorKind::InvalidRequest.as_str(), "op is required")
+            WireError::new(error_kind::INVALID_REQUEST, "op is required")
                 .with_sandbox(sandbox_id.as_deref()),
         );
     }
@@ -96,11 +106,10 @@ pub(crate) fn parse_request(line: &[u8]) -> Result<ClientRequest, WireError> {
         .map_err(|err| err.with_sandbox(sandbox_id.as_deref()))?;
     let args = object.remove("args").unwrap_or_else(|| json!({}));
     if !args.is_object() {
-        return Err(WireError::new(
-            ProtocolErrorKind::InvalidRequest.as_str(),
-            "args must be an object",
-        )
-        .with_sandbox(sandbox_id.as_deref()));
+        return Err(
+            WireError::new(error_kind::INVALID_REQUEST, "args must be an object")
+                .with_sandbox(sandbox_id.as_deref()),
+        );
     }
     Ok(ClientRequest {
         op,
@@ -114,7 +123,7 @@ fn take_string(object: &mut Map<String, Value>, field: &str) -> Result<String, W
     match object.remove(field) {
         Some(Value::String(value)) => Ok(value),
         _ => Err(WireError::new(
-            ProtocolErrorKind::InvalidRequest.as_str(),
+            error_kind::INVALID_REQUEST,
             format!("{field} is required and must be a string"),
         )),
     }
@@ -135,10 +144,7 @@ pub(crate) fn error_response(kind: &str, message: &str) -> Value {
 }
 
 pub(crate) fn server_busy_response(max_concurrent_connections: usize) -> Value {
-    let mut response = error_response(
-        ProtocolErrorKind::ServerBusy.as_str(),
-        "gateway is at connection capacity",
-    );
+    let mut response = error_response(error_kind::SERVER_BUSY, "gateway is at connection capacity");
     response["error"]["details"] =
         json!({"max_concurrent_connections": max_concurrent_connections});
     response
@@ -162,16 +168,22 @@ fn envelope_base(status: &str, meta: Value) -> Value {
 }
 
 fn request_meta(request: &ClientRequest) -> Value {
-    let meta = protocol::ResponseMeta {
-        op: request.op.clone(),
-        request_id: request.request_id.clone(),
-        ..protocol::ResponseMeta::default()
-    };
-    serde_json::to_value(meta).expect("ResponseMeta serializes")
+    response_meta(&request.op, &request.request_id)
 }
 
 fn bare_meta() -> Value {
-    serde_json::to_value(protocol::ResponseMeta::default()).expect("ResponseMeta serializes")
+    response_meta("", "")
+}
+
+fn response_meta(op: &str, request_id: &str) -> Value {
+    json!({
+        "envelope_version": ENVELOPE_VERSION,
+        "op": op,
+        "request_id": request_id,
+        "duration_ms": 0.0,
+        "resource_summary": {"fields": {}},
+        "warnings": [],
+    })
 }
 
 pub(crate) fn response_line(response: &Value) -> Vec<u8> {
