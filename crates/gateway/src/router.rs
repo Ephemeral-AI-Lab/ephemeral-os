@@ -187,7 +187,7 @@ fn forward(engine: &dyn Engine, request: &ClientRequest, mutates_state: bool) ->
         args: &request.args,
         trace,
     }) {
-        Some(Ok(mut response)) => {
+        Some(Ok(response)) => {
             engine.record_trace_event(
                 sandbox_id,
                 &trace_for_result,
@@ -199,7 +199,6 @@ fn forward(engine: &dyn Engine, request: &ClientRequest, mutates_state: bool) ->
                     "duration_us": elapsed_us(started),
                 }),
             );
-            host::strip_trace_sidecar(&mut response);
             response
         }
         Some(Err(err)) => {

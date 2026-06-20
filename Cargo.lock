@@ -182,7 +182,6 @@ dependencies = [
 name = "daemon"
 version = "0.1.0"
 dependencies = [
- "base64",
  "config",
  "layerstack",
  "proptest",
@@ -192,7 +191,6 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "tokio-util",
- "trace",
  "workspace",
 ]
 

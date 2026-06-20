@@ -9,8 +9,6 @@ pub(crate) mod error;
 pub(crate) mod invocation_registry;
 #[path = "../src/response.rs"]
 pub(crate) mod response;
-#[path = "../src/trace/mod.rs"]
-pub(crate) mod trace;
 #[path = "../src/transport/mod.rs"]
 pub(crate) mod transport;
 #[path = "../src/wire/mod.rs"]
@@ -21,7 +19,6 @@ pub(crate) use invocation_registry::{
     InFlightRegistry, InvocationCancelResult, DEFAULT_REAPER_INTERVAL_S, DEFAULT_TTL_S,
 };
 pub(crate) use serde_json::Value;
-pub(crate) use trace::sidecar::build;
 pub(crate) use transport::server;
 pub(crate) use wire::{decode, encode, ErrorKind, Request, WireMessage};
 
@@ -48,12 +45,5 @@ mod transport_dispatch_tests {
     include!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/unit/transport/server/dispatch.rs"
-    ));
-}
-
-mod trace_sidecar_tests {
-    include!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/tests/unit/trace/sidecar.rs"
     ));
 }

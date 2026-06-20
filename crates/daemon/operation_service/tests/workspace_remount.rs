@@ -10,7 +10,7 @@ use operation_service::command::{
     CommandServiceError, ExecCommandInput,
 };
 use operation_service::workspace_remount::{
-    CommandRemountCoordinator, CommandRemountInspection, ProcessGroupController,
+    CommandRemountCoordinator, ProcessGroupController, ProcessGroupInspection,
     RemountWorkspaceSession, WorkspaceRemountError, WorkspaceRemountService,
 };
 use operation_service::workspace_session::WorkspaceSessionService;
@@ -236,14 +236,13 @@ impl ProcessGroupController for FakeProcessGroupController {
         &self,
         _pgid: i32,
         _workspace_root: &Path,
-    ) -> CommandRemountInspection {
-        CommandRemountInspection {
-            active_commands: 1,
+    ) -> ProcessGroupInspection {
+        ProcessGroupInspection {
             process_count: 1,
             quiesced_process_count: 1,
             inspected: true,
             quiesce_attempted: true,
-            ..CommandRemountInspection::default()
+            ..ProcessGroupInspection::default()
         }
     }
 

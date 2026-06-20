@@ -8,16 +8,13 @@ use serde_json::{json, Value};
 mod audit;
 mod recovery;
 mod response_meta;
-mod trace_ingest;
 
 use audit::{persist_response_or_mark_degraded, record_event};
 use recovery::run_recovery;
 use response_meta::refresh_response_trace_receipt;
-pub(crate) use trace_ingest::ingest_and_strip_sidecar;
 
 use crate::daemon_wire::{
-    encode_request_with_trace_metadata, response_status, ClientError, ProtocolClient,
-    TraceWireContext, TransportAuth,
+    encode_request_with_forward_metadata, response_status, ClientError, ProtocolClient,
 };
 use crate::service::registry::SandboxRecord;
 use crate::service::{ForwardTraceContext, HostConfig};
@@ -57,19 +54,11 @@ pub(crate) fn forward_request(input: ForwardRequestInput<'_>) -> Result<Value, F
         args,
     } = input;
     let record_ref = record.as_ref();
-    let trace = TraceWireContext {
-        trace_id: trace_context.trace_id.to_string(),
-        request_id: trace_context.request_id.to_string(),
-        parent_span_id: trace_context.parent_span_id,
-        link_hints: Vec::new(),
-        capture_budget_version: 1,
-    };
-    let mut tcp_line = encode_request_with_trace_metadata(
+    let mut tcp_line = encode_request_with_forward_metadata(
         op,
         invocation_id,
         args,
-        TransportAuth::Forward(Some(&record_ref.forward_token)),
-        &trace,
+        Some(&record_ref.forward_token),
     );
     tcp_line.push(b'\n');
     let caller_id = args.get("caller_id").and_then(Value::as_str);
@@ -226,7 +215,6 @@ pub(crate) fn tcp_once(
             "write_duration_us": elapsed,
         }),
     );
-    let sidecar = ingest_and_strip_sidecar(attempt, &mut response.value);
     record_event(
         attempt,
         "host.transport",
@@ -235,9 +223,6 @@ pub(crate) fn tcp_once(
             "response_bytes": response.raw_bytes.len(),
             "read_duration_us": elapsed,
             "response_digest": sha256_hex(&response.raw_bytes),
-            "sidecar_present": sidecar.present,
-            "sidecar_ingested": sidecar.ingested,
-            "sidecar_degraded": sidecar.degraded,
         }),
     );
     persist_response_or_mark_degraded(

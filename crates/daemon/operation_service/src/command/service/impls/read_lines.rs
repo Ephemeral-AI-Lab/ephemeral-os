@@ -1,4 +1,5 @@
 use crate::command::service::CommandOperationService;
+use crate::command::transcript::CommandTranscriptWindowExt;
 use crate::command::{
     CommandCallContext, CommandLinesOutput, CommandServiceError, CommandStatus,
     ReadCommandLinesInput,

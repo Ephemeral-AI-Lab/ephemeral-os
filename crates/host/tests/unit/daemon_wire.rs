@@ -1,8 +1,6 @@
 use crate::daemon_wire::{
-    decode_trace_sidecar_base64, read_response_line_with_limit, response_domain_status,
-    response_envelope_status, response_fault_kind, response_is_accepted, response_status,
-    take_trace_sidecar_checked, ClientError, TraceSidecarError, DAEMON_TRACE_SIDECAR_ENCODING,
-    DAEMON_TRACE_SIDECAR_SCHEMA,
+    read_response_line_with_limit, response_domain_status, response_envelope_status,
+    response_fault_kind, response_is_accepted, response_status, ClientError,
 };
 use std::io::BufReader;
 
@@ -95,15 +93,6 @@ fn reads_operation_envelope_statuses() {
 }
 
 #[test]
-fn decodes_trace_sidecar_base64() {
-    assert_eq!(
-        decode_trace_sidecar_base64("AQID").as_deref(),
-        Some(&[1, 2, 3][..])
-    );
-    assert!(decode_trace_sidecar_base64("not base64").is_none());
-}
-
-#[test]
 fn daemon_response_reads_are_bounded() {
     let mut reader = BufReader::new(&b"01234567890\n"[..]);
     let err = read_response_line_with_limit(&mut reader, 10)
@@ -113,59 +102,4 @@ fn daemon_response_reads_are_bounded() {
         matches!(err, ClientError::ResponseTooLarge { limit: 10 }),
         "{err:?}"
     );
-}
-
-#[test]
-fn checked_sidecar_decoder_strips_and_reports_malformed_values() {
-    let mut wrapped = json!({
-        "_trace_events": {
-            "schema": DAEMON_TRACE_SIDECAR_SCHEMA,
-            "encoding": DAEMON_TRACE_SIDECAR_ENCODING,
-            "data": "AQID",
-        },
-    });
-    assert_eq!(
-        take_trace_sidecar_checked(&mut wrapped)
-            .expect("wrapped sidecar decodes")
-            .as_deref(),
-        Some(&[1, 2, 3][..])
-    );
-    assert!(wrapped.get("_trace_events").is_none());
-
-    let mut bare_string = json!({"_trace_events": "AQID"});
-    assert_eq!(
-        take_trace_sidecar_checked(&mut bare_string),
-        Err(TraceSidecarError::NonString)
-    );
-    assert!(bare_string.get("_trace_events").is_none());
-
-    let mut invalid_base64 = json!({
-        "_trace_events": {
-            "schema": DAEMON_TRACE_SIDECAR_SCHEMA,
-            "encoding": DAEMON_TRACE_SIDECAR_ENCODING,
-            "data": "not base64",
-        },
-    });
-    assert_eq!(
-        take_trace_sidecar_checked(&mut invalid_base64),
-        Err(TraceSidecarError::InvalidBase64)
-    );
-    assert!(invalid_base64.get("_trace_events").is_none());
-
-    let mut invalid_envelope = json!({"_trace_events": {"batch": "AQID"}});
-    assert_eq!(
-        take_trace_sidecar_checked(&mut invalid_envelope),
-        Err(TraceSidecarError::InvalidEnvelope)
-    );
-    assert!(invalid_envelope.get("_trace_events").is_none());
-
-    let mut non_string = json!({"_trace_events": 42});
-    assert_eq!(
-        take_trace_sidecar_checked(&mut non_string),
-        Err(TraceSidecarError::NonString)
-    );
-    assert!(non_string.get("_trace_events").is_none());
-
-    let mut absent = json!({"success": true});
-    assert_eq!(take_trace_sidecar_checked(&mut absent), Ok(None));
 }

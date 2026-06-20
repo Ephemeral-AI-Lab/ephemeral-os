@@ -21,10 +21,22 @@ pub struct TraceRef {
     pub request_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub root_span_id: Option<u64>,
-    /// `pending_host_ingest` daemon-side, `local_sqlite` after host ingest.
+    /// Storage backend that owns the persisted trace when this reference is populated.
     pub store: String,
     pub event_count: u64,
     pub degraded: bool,
+}
+
+impl TraceRef {
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.trace_id.is_empty()
+            && self.request_id.is_none()
+            && self.root_span_id.is_none()
+            && self.store.is_empty()
+            && self.event_count == 0
+            && !self.degraded
+    }
 }
 
 impl Default for TraceRef {
@@ -33,7 +45,7 @@ impl Default for TraceRef {
             trace_id: String::new(),
             request_id: None,
             root_span_id: None,
-            store: "pending_host_ingest".to_owned(),
+            store: String::new(),
             event_count: 0,
             degraded: false,
         }
@@ -84,6 +96,7 @@ pub struct ResponseMeta {
     pub envelope_version: u8,
     pub op: String,
     pub request_id: String,
+    #[serde(default, skip_serializing_if = "TraceRef::is_empty")]
     pub trace: TraceRef,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub caller_id: Option<String>,

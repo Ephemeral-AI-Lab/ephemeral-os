@@ -7,7 +7,6 @@ pub(crate) mod dispatch;
 pub(crate) mod error;
 pub(crate) mod invocation_registry;
 pub(crate) mod response;
-pub(crate) mod trace;
 pub(crate) mod transport;
 pub mod wire;
 

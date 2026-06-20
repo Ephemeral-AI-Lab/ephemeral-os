@@ -6,27 +6,18 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use anyhow::Result;
-use base64::Engine as _;
 use serde_json::{json, Value};
-use trace::{
-    encode_trace_batch, EventRecord, RequestId, SpanKind, SpanRecord, SpanUid, TraceBatch, TraceId,
-    TraceRecord,
-};
+use trace::{RequestId, TraceId};
 
 use crate::container::override_docker_command_for_tests;
-use crate::daemon_wire::{
-    encode_request_with_metadata, ClientError, DAEMON_TRACE_SIDECAR_ENCODING,
-    DAEMON_TRACE_SIDECAR_FIELD, DAEMON_TRACE_SIDECAR_SCHEMA,
-};
+use crate::daemon_wire::{encode_request_with_metadata, ClientError};
 use crate::service::forward::{
-    forward_request, ingest_and_strip_sidecar, record_client_error, record_endpoint_refreshed,
-    tcp_once, tcp_with_connect_backoff, ForwardAttempt, ForwardRequestInput,
+    forward_request, record_client_error, record_endpoint_refreshed, tcp_once,
+    tcp_with_connect_backoff, ForwardAttempt, ForwardRequestInput,
 };
 use crate::service::registry::{SandboxRecord, SandboxRegistry};
 use crate::service::{ForwardTraceContext, HostConfig, SandboxHost};
-use crate::trace_store::{
-    PendingSidecarInput, RequestStartInput, TraceEventInput, TraceEventRow, TraceStore,
-};
+use crate::trace_store::{TraceEventInput, TraceEventRow, TraceStore};
 
 #[test]
 fn acquire_workspace_root_defaults_to_testbed_and_allows_absolute_override() -> Result<()> {
@@ -141,7 +132,7 @@ fn sandbox_lifecycle_forward_waits_for_active_respawn() -> Result<()> {
 }
 
 #[test]
-fn forward_request_persists_transport_events_and_strips_sidecar() -> Result<()> {
+fn forward_request_persists_transport_events_without_daemon_trace() -> Result<()> {
     let listener = TcpListener::bind("127.0.0.1:0")?;
     let endpoint = listener.local_addr()?;
     let server = std::thread::spawn(move || -> Result<()> {
@@ -149,127 +140,29 @@ fn forward_request_persists_transport_events_and_strips_sidecar() -> Result<()> 
         let mut line = String::new();
         BufReader::new(stream.try_clone()?).read_line(&mut line)?;
         let request: serde_json::Value = serde_json::from_str(line.trim_end())?;
-        let trace = request
-            .get("trace")
-            .and_then(serde_json::Value::as_object)
-            .expect("host sends trace context");
-        assert_eq!(trace["request_id"], json!("request-forward"));
-
-        let trace_id = TraceId::parse(trace["trace_id"].as_str().expect("trace id"))?;
-        let request_id = RequestId::parse(trace["request_id"].as_str().expect("request id"))?;
-        let mut record = TraceRecord::new(trace_id, SpanUid::ROOT);
-        record.request_id = Some(request_id);
-        record.spans.push(SpanRecord::new(
-            SpanUid::ROOT,
-            None,
-            "op_request",
-            SpanKind::OpRequest,
-            json!({"op": "sandbox.runtime.ready"}),
-        ));
-        record.spans.push(SpanRecord::new(
-            SpanUid::new(2),
-            Some(SpanUid::ROOT),
-            "daemon.transport",
-            SpanKind::DaemonTransport,
-            json!({"listener_kind": "tcp"}),
-        ));
-        record.spans.push(SpanRecord::new(
-            SpanUid::new(3),
-            Some(SpanUid::ROOT),
-            "dispatch",
-            SpanKind::Dispatch,
-            json!({"op": "sandbox.runtime.ready"}),
-        ));
-        record.spans.push(SpanRecord::new(
-            SpanUid::new(4),
-            Some(SpanUid::new(3)),
-            "op.runtime.ready",
-            SpanKind::Operation,
-            json!({"op": "sandbox.runtime.ready"}),
-        ));
-        record.events.push(EventRecord::new(
-            SpanUid::new(2),
-            "accepted",
-            "daemon.transport",
-            json!({"listener_kind": "tcp", "request_bytes": line.len()}),
-        ));
-        record.events.push(EventRecord::new(
-            SpanUid::new(2),
-            "read_finished",
-            "daemon.transport",
-            json!({"request_bytes": line.len()}),
-        ));
-        record.events.push(EventRecord::new(
-            SpanUid::new(2),
-            "auth_checked",
-            "daemon.transport",
-            json!({"auth_required": true, "auth_ok": true}),
-        ));
-        record.events.push(EventRecord::new(
-            SpanUid::new(2),
-            "decoded",
-            "daemon.transport",
-            json!({"protocol_version": 1}),
-        ));
-        record.events.push(EventRecord::new(
-            SpanUid::new(3),
-            "dispatch_started",
-            "daemon.dispatch",
-            json!({"op": "sandbox.runtime.ready"}),
-        ));
-        record.events.push(EventRecord::new(
-            SpanUid::new(3),
-            "op_resolved",
-            "daemon.dispatch",
-            json!({"op": "sandbox.runtime.ready"}),
-        ));
-        record.events.push(EventRecord::new(
-            SpanUid::new(4),
-            "route_selected",
-            "workspace.route",
-            json!({"kind": "none"}),
-        ));
-        record.events.push(EventRecord::new(
-            SpanUid::new(4),
-            "ready_checked",
-            "sandbox.runtime",
-            json!({"ready": true}),
-        ));
-        record.events.push(EventRecord::new(
-            SpanUid::new(2),
-            "response_write_finished",
-            "daemon.transport",
-            json!({"response_bytes": 64}),
-        ));
-        let sidecar = base64::engine::general_purpose::STANDARD
-            .encode(encode_trace_batch(&TraceBatch::single(record)));
-        let mut response = json!({
+        assert!(
+            request.get("trace").is_none(),
+            "host must not send daemon trace metadata"
+        );
+        assert_eq!(
+            request["args"]["_eos_daemon_protocol_version"],
+            json!(crate::daemon_wire::DAEMON_PROTOCOL_VERSION)
+        );
+        let response = json!({
             "status": "ok",
             "result": {"ready": true},
             "meta": {
                 "envelope_version": 2,
                 "op": "sandbox.runtime.ready",
-                "request_id": "pending",
-                "trace": {
-                    "trace_id": "pending",
-                    "request_id": "pending",
-                    "root_span_id": 1,
-                    "store": "pending_host_ingest",
-                    "event_count": 9,
-                    "degraded": false
-                },
+                "request_id": "",
+                "trace": {"event_count": 0},
                 "workspace_route": {"kind": "none"},
                 "duration_ms": 0.0,
                 "modules_touched": [],
                 "steps": [],
                 "resource_summary": {"fields": {}},
                 "warnings": []
-            },
-        });
-        response[DAEMON_TRACE_SIDECAR_FIELD] = json!({
-            "schema": DAEMON_TRACE_SIDECAR_SCHEMA,
-            "encoding": DAEMON_TRACE_SIDECAR_ENCODING,
-            "data": sidecar,
+            }
         });
         writeln!(stream, "{}", serde_json::to_string(&response)?)?;
         Ok(())
@@ -328,7 +221,7 @@ fn forward_request_persists_transport_events_and_strips_sidecar() -> Result<()> 
         invocation_id: "request-forward",
         args: &json!({"caller_id": "caller-1"}),
     })?;
-    assert_eq!(response["_trace_events"], serde_json::Value::Null);
+    assert!(response.get("_trace_events").is_none());
     assert_eq!(response["result"]["ready"], json!(true));
     assert_eq!(response["meta"]["request_id"], json!("request-forward"));
     assert_eq!(
@@ -409,180 +302,6 @@ fn forward_request_persists_transport_events_and_strips_sidecar() -> Result<()> 
     );
 
     server.join().expect("server thread")?;
-    let _ = fs::remove_dir_all(dir);
-    Ok(())
-}
-
-#[test]
-fn malformed_sidecar_is_stripped_and_recorded_as_host_event() -> Result<()> {
-    let dir = temp_host_dir("malformed-sidecar");
-    let store = TraceStore::open(&dir)?;
-    let endpoint = "127.0.0.1:9".parse().expect("discard port");
-    let config = HostConfig {
-        image: "test-image".to_owned(),
-        platform: None,
-        docker_privileged: true,
-        eosd_path: dir.join("eosd"),
-        config_yaml_path: dir.join("config.yml"),
-        remote_daemon_dir: PathBuf::from("/eos/runtime"),
-        remote_eosd_path: PathBuf::from("/eos/eosd"),
-        remote_config_path: PathBuf::from("/eos/config.yml"),
-        tcp_port: 9,
-        ready_timeout: Duration::from_millis(100),
-        request_timeout: Duration::from_millis(100),
-        created_by: "test".to_owned(),
-        state_dir: dir.clone(),
-    };
-    let record = sandbox_record(
-        "sb-malformed-sidecar".to_owned(),
-        "sb-malformed-sidecar".to_owned(),
-        "token".to_owned(),
-        9,
-        "test".to_owned(),
-        Some(endpoint),
-    );
-    let trace_id = TraceId::parse("trace-malformed-sidecar")?;
-    let request_id = RequestId::parse("request-malformed-sidecar")?;
-    let args = json!({});
-    let mut tcp_line =
-        encode_request_with_metadata("sandbox.runtime.ready", request_id.as_str(), &args, None);
-    tcp_line.push(b'\n');
-    let attempt = ForwardAttempt {
-        record: &record,
-        config: &config,
-        trace_store: &store,
-        trace_id: trace_id.clone(),
-        request_id,
-        mutates_state: false,
-        tcp_line,
-        op: "sandbox.runtime.ready",
-        invocation_id: "malformed-sidecar",
-        args: &args,
-    };
-    let mut response = json!({
-        "success": true,
-        "_trace_events": {
-            "schema": DAEMON_TRACE_SIDECAR_SCHEMA,
-            "encoding": DAEMON_TRACE_SIDECAR_ENCODING,
-            "data": "not base64",
-        },
-    });
-
-    let sidecar = ingest_and_strip_sidecar(&attempt, &mut response);
-
-    assert!(sidecar.present);
-    assert!(!sidecar.ingested);
-    assert!(response.get("_trace_events").is_none());
-    let events = store.events_for_trace(trace_id.as_str())?;
-    assert_event(&events, "host.transport", "sidecar_decode_failed");
-    assert!(
-        events.iter().any(|event| {
-            event.event == "sidecar_decode_failed"
-                && serde_json::from_str::<serde_json::Value>(&event.details_json)
-                    .ok()
-                    .and_then(|details| details.get("error_kind").cloned())
-                    == Some(json!("invalid_base64"))
-        }),
-        "sidecar_decode_failed details missing: {events:?}"
-    );
-
-    let _ = fs::remove_dir_all(dir);
-    Ok(())
-}
-
-#[test]
-fn decoded_sidecar_ingest_failures_are_spooled_and_recovered() -> Result<()> {
-    let dir = temp_host_dir("pending-sidecar-recovery");
-    let store = TraceStore::open(&dir)?;
-    let endpoint = "127.0.0.1:9".parse().expect("discard port");
-    let config = HostConfig {
-        image: "test-image".to_owned(),
-        platform: None,
-        docker_privileged: true,
-        eosd_path: dir.join("eosd"),
-        config_yaml_path: dir.join("config.yml"),
-        remote_daemon_dir: PathBuf::from("/eos/runtime"),
-        remote_eosd_path: PathBuf::from("/eos/eosd"),
-        remote_config_path: PathBuf::from("/eos/config.yml"),
-        tcp_port: 9,
-        ready_timeout: Duration::from_millis(100),
-        request_timeout: Duration::from_millis(100),
-        created_by: "test".to_owned(),
-        state_dir: dir.clone(),
-    };
-    let record = sandbox_record(
-        "sb-pending-sidecar".to_owned(),
-        "sb-pending-sidecar".to_owned(),
-        "token".to_owned(),
-        9,
-        "test".to_owned(),
-        Some(endpoint),
-    );
-    let trace_id = TraceId::parse("trace-pending-sidecar")?;
-    let request_id = RequestId::parse("request-pending-sidecar")?;
-    store.append_request_start(RequestStartInput {
-        sandbox_id: &record.sandbox_id,
-        trace_id: trace_id.clone(),
-        request_id: request_id.clone(),
-        op: "sandbox.runtime.ready",
-        caller_id: Some("caller-1"),
-        mutates_state: false,
-        args: json!({"caller_id": "caller-1"}),
-    })?;
-
-    let args = json!({});
-    let mut tcp_line =
-        encode_request_with_metadata("sandbox.runtime.ready", request_id.as_str(), &args, None);
-    tcp_line.push(b'\n');
-    let attempt = ForwardAttempt {
-        record: &record,
-        config: &config,
-        trace_store: &store,
-        trace_id: trace_id.clone(),
-        request_id: request_id.clone(),
-        mutates_state: false,
-        tcp_line,
-        op: "sandbox.runtime.ready",
-        invocation_id: "pending-sidecar",
-        args: &args,
-    };
-
-    let mut trace_record = TraceRecord::new(trace_id.clone(), SpanUid::ROOT);
-    trace_record.request_id = Some(request_id);
-    trace_record.events.push(EventRecord::new(
-        SpanUid::ROOT,
-        "ready_checked",
-        "sandbox.runtime",
-        json!({"ready": true}),
-    ));
-    let sidecar = base64::engine::general_purpose::STANDARD
-        .encode(encode_trace_batch(&TraceBatch::single(trace_record)));
-    let mut response = json!({
-        "status": "ok",
-        "result": {"ready": true},
-        "meta": {"trace": {"event_count": 0}},
-        "_trace_events": {
-            "schema": DAEMON_TRACE_SIDECAR_SCHEMA,
-            "encoding": DAEMON_TRACE_SIDECAR_ENCODING,
-            "data": sidecar,
-        },
-    });
-
-    store.fail_next_trace_batch_ingest_for_tests();
-    let sidecar = ingest_and_strip_sidecar(&attempt, &mut response);
-
-    assert!(sidecar.present);
-    assert!(!sidecar.ingested);
-    assert!(sidecar.degraded);
-    assert_eq!(store.pending_sidecar_count_for_tests()?, 1);
-    assert_eq!(store.recover_pending_sidecars()?, 1);
-    assert_eq!(store.pending_sidecar_count_for_tests()?, 0);
-    assert_event(
-        &store.events_for_trace(trace_id.as_str())?,
-        "sandbox.runtime",
-        "ready_checked",
-    );
-
     let _ = fs::remove_dir_all(dir);
     Ok(())
 }
@@ -972,42 +691,6 @@ fn trace_show_applies_section_limit_and_reports_truncation() -> Result<()> {
     let details: Value = serde_json::from_str(&event.details_json)?;
     assert_eq!(details["outcome"]["limit"], json!(2));
     assert_eq!(details["outcome"]["truncated"]["events"], json!(true));
-
-    let _ = fs::remove_dir_all(dir);
-    Ok(())
-}
-
-#[test]
-fn startup_pending_sidecar_recovery_is_bounded() -> Result<()> {
-    let dir = temp_host_dir("startup-pending-sidecar-limit");
-    let store = TraceStore::open(&dir)?;
-    let limit = TraceStore::startup_pending_sidecar_recovery_limit_for_tests();
-    for index in 0..(limit + 1) {
-        let trace_id = TraceId::parse(format!("trace-pending-startup-{index}"))?;
-        let request_id = RequestId::parse(format!("request-pending-startup-{index}"))?;
-        let mut record = TraceRecord::new(trace_id.clone(), SpanUid::ROOT);
-        record.request_id = Some(request_id.clone());
-        record.events.push(EventRecord::new(
-            SpanUid::ROOT,
-            "pending_recovered",
-            "trace.startup.test",
-            json!({"index": index}),
-        ));
-        let batch = encode_trace_batch(&TraceBatch::single(record));
-        store.record_pending_sidecar(PendingSidecarInput {
-            sandbox_id: "sb-pending-startup-limit",
-            trace_id: &trace_id,
-            request_id: &request_id,
-            batch_bytes: &batch,
-            error: "seeded pending sidecar",
-        })?;
-    }
-    drop(store);
-
-    let reopened = TraceStore::open(&dir)?;
-    assert_eq!(reopened.pending_sidecar_count_for_tests()?, 1);
-    assert_eq!(reopened.recover_pending_sidecars()?, 1);
-    assert_eq!(reopened.pending_sidecar_count_for_tests()?, 0);
 
     let _ = fs::remove_dir_all(dir);
     Ok(())

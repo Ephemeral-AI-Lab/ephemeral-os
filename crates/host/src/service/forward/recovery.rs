@@ -5,12 +5,10 @@ use serde_json::{json, Value};
 
 use crate::container::DaemonContainer;
 use crate::daemon_wire::{
-    encode_request_with_forward_metadata, encode_request_with_trace_metadata, response_is_accepted,
-    ProtocolClient, TraceWireContext, TransportAuth, HEARTBEAT_OP,
+    encode_request_with_forward_metadata, response_is_accepted, ProtocolClient, HEARTBEAT_OP,
 };
 
 use super::audit::{persist_response_or_mark_degraded, record_event, record_missing};
-use super::trace_ingest::ingest_and_strip_sidecar;
 use super::{
     client_error_kind, elapsed_us, retry_attempt_index, tcp_once, tcp_with_connect_backoff,
     ForwardAttempt, ForwardError,
@@ -158,19 +156,11 @@ fn exec_thin_client(attempt: &ForwardAttempt<'_>) -> anyhow::Result<Value> {
         .remote_eosd_path
         .to_string_lossy()
         .into_owned();
-    let trace = TraceWireContext {
-        trace_id: attempt.trace_id.to_string(),
-        request_id: attempt.request_id.to_string(),
-        parent_span_id: None,
-        link_hints: Vec::new(),
-        capture_budget_version: 1,
-    };
-    let payload = String::from_utf8(encode_request_with_trace_metadata(
+    let payload = String::from_utf8(encode_request_with_forward_metadata(
         attempt.op,
         attempt.invocation_id,
         attempt.args,
-        TransportAuth::None,
-        &trace,
+        None,
     ))?;
     record_event(
         attempt,
@@ -197,16 +187,12 @@ fn exec_thin_client(attempt: &ForwardAttempt<'_>) -> anyhow::Result<Value> {
         }
     };
     let mut value = serde_json::from_str(stdout.trim())?;
-    let sidecar = ingest_and_strip_sidecar(attempt, &mut value);
     record_event(
         attempt,
         "host.transport",
         "exec_client_finished",
         json!({
             "duration_us": elapsed_us(started),
-            "sidecar_present": sidecar.present,
-            "sidecar_ingested": sidecar.ingested,
-            "sidecar_degraded": sidecar.degraded,
         }),
     );
     if let Err(err) = persist_response_or_mark_degraded(

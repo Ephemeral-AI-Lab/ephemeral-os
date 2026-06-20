@@ -9,9 +9,7 @@ license.workspace = true
 config.workspace = true
 layerstack.workspace = true
 protocol.workspace = true
-trace.workspace = true
 workspace.workspace = true
-base64.workspace = true
 # preserve_order is contract-load-bearing: request `args` keys must cross
 # the wire in insertion order for byte-stable wire-message round-trips.
 serde_json = { workspace = true, features = ["preserve_order"] }

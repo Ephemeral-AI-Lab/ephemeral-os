@@ -13,7 +13,6 @@ use trace::BootId;
 pub(crate) mod audit;
 mod error;
 mod events;
-mod ingest;
 mod payload;
 mod projection;
 mod query;
@@ -21,7 +20,6 @@ mod read;
 mod request;
 mod response;
 mod schema;
-mod sidecar;
 mod types;
 
 pub use error::TraceStoreError;
@@ -34,8 +32,8 @@ pub use query::{
 #[cfg(feature = "e2e-support")]
 pub use types::TraceVerifyFailure;
 pub use types::{
-    ForwardTraceDecision, PendingSidecarInput, RequestStartInput, ResponseMissingInput,
-    ResponsePersistedInput, TraceEventInput, TraceIngestFailedInput, TraceVerifyReport,
+    ForwardTraceDecision, RequestStartInput, ResponseMissingInput, ResponsePersistedInput,
+    TraceEventInput, TraceVerifyReport,
 };
 
 const HOST_SANDBOX_ID: &str = "_host";
@@ -47,7 +45,6 @@ pub struct TraceStore {
     host_boot_id: BootId,
     fail_next_request_start: AtomicBool,
     fail_next_response_persisted: AtomicBool,
-    fail_next_trace_batch_ingest: AtomicBool,
     fail_next_trace_event: AtomicBool,
 }
 
@@ -83,19 +80,11 @@ impl TraceStore {
             host_boot_id: BootId::new(),
             fail_next_request_start: AtomicBool::new(false),
             fail_next_response_persisted: AtomicBool::new(false),
-            fail_next_trace_batch_ingest: AtomicBool::new(false),
             fail_next_trace_event: AtomicBool::new(false),
         };
         store.record_host_boot()?;
         store.reconcile_startup_orphans()?;
-        store.recover_startup_pending_sidecars()?;
         Ok(store)
-    }
-
-    #[must_use]
-    #[cfg(any(test, feature = "e2e-support"))]
-    pub fn startup_pending_sidecar_recovery_limit_for_tests() -> usize {
-        sidecar::MAX_STARTUP_PENDING_SIDECAR_RECOVERY
     }
 
     #[must_use]
@@ -116,24 +105,8 @@ impl TraceStore {
     }
 
     #[cfg(any(test, feature = "e2e-support"))]
-    pub fn fail_next_trace_batch_ingest_for_tests(&self) {
-        self.fail_next_trace_batch_ingest
-            .store(true, Ordering::SeqCst);
-    }
-
-    #[cfg(any(test, feature = "e2e-support"))]
     pub fn fail_next_trace_event_for_tests(&self) {
         self.fail_next_trace_event.store(true, Ordering::SeqCst);
-    }
-
-    #[cfg(any(test, feature = "e2e-support"))]
-    pub fn pending_sidecar_count_for_tests(&self) -> Result<usize, TraceStoreError> {
-        let count: i64 =
-            self.lock()
-                .query_row("SELECT COUNT(*) FROM pending_trace_sidecars", [], |row| {
-                    row.get(0)
-                })?;
-        Ok(usize::try_from(count).unwrap_or(usize::MAX))
     }
 
     pub(crate) fn lock(&self) -> std::sync::MutexGuard<'_, Connection> {

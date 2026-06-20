@@ -16,13 +16,16 @@
 mod config;
 mod contract;
 pub mod process;
+pub mod process_group;
 mod pty;
 mod transcript;
+mod transcript_rows;
 pub mod yield_wait_loop;
 
 pub use config::CommandConfig;
-pub use contract::{
-    tail_lines, CancelCommand, CollectCompleted, CommandError, ReadCommandProgress, StartCommand,
-    WriteStdin,
-};
+pub use contract::{tail_lines, CommandError};
 pub use process::{CommandProcess, CommandProcessSpec};
+pub use transcript_rows::{
+    required_transcript_window, transcript_window, CommandStream, CommandTranscriptRow,
+    CommandTranscriptWindow,
+};

@@ -45,43 +45,6 @@ impl CommandError {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct StartCommand {
-    pub invocation_id: String,
-    pub caller_id: String,
-    pub cmd: String,
-    pub trace_id: Option<String>,
-    pub request_id: Option<String>,
-    pub timeout_seconds: Option<f64>,
-    pub yield_time_ms: u64,
-    pub cwd: Option<PathBuf>,
-    pub remountable: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WriteStdin {
-    pub command_id: String,
-    pub chars: String,
-    pub yield_time_ms: u64,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ReadCommandProgress {
-    pub command_id: String,
-    pub last_n_lines: usize,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CancelCommand {
-    pub command_id: String,
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct CollectCompleted {
-    pub command_ids: Option<Vec<String>>,
-    pub caller_id: Option<String>,
-}
-
 /// Last `last_n_lines` lines of `text`, also used by the transcript reader
 /// for progress tails.
 #[must_use]

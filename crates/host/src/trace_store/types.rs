@@ -57,22 +57,6 @@ pub struct ResponseMissingInput<'a> {
     pub message: &'a str,
 }
 
-pub struct TraceIngestFailedInput<'a> {
-    pub sandbox_id: &'a str,
-    pub trace_id: &'a TraceId,
-    pub request_id: &'a RequestId,
-    pub error_kind: &'a str,
-    pub message: &'a str,
-}
-
-pub struct PendingSidecarInput<'a> {
-    pub sandbox_id: &'a str,
-    pub trace_id: &'a TraceId,
-    pub request_id: &'a RequestId,
-    pub batch_bytes: &'a [u8],
-    pub error: &'a str,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ForwardTraceDecision {
     pub trace_id: TraceId,

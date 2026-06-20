@@ -5,7 +5,6 @@
 pub(crate) mod connection;
 pub(crate) mod dispatch;
 mod lifecycle;
-mod trace_context;
 
 use std::path::PathBuf;
 use std::sync::Arc;

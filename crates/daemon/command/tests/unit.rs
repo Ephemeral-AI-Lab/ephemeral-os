@@ -17,10 +17,7 @@ mod transcript;
 pub mod yield_wait_loop;
 
 pub use config::CommandConfig;
-pub use contract::{
-    tail_lines, CancelCommand, CollectCompleted, CommandError, ReadCommandProgress, StartCommand,
-    WriteStdin,
-};
+pub use contract::{tail_lines, CommandError};
 pub use process::{CommandProcess, CommandProcessSpec};
 
 pub(crate) use process::*;

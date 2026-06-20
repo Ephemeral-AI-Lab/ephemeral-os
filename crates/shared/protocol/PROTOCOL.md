@@ -104,7 +104,7 @@ at `result.status`. Branch the envelope `status` first, then `result.status`.
 Error envelope (both hops):
 
 ```json
-{"status":"error","error":{"kind":"…","message":"…","details":{}},"meta":{"envelope_version":2,"op":"…","request_id":"…","trace":{"trace_id":"…","store":"pending_host_ingest","event_count":0,"degraded":false},"workspace_route":{"kind":"none"},"duration_ms":0.0,"modules_touched":[],"steps":[],"resource_summary":{"fields":{}},"warnings":[]}}
+{"status":"error","error":{"kind":"…","message":"…","details":{}},"meta":{"envelope_version":2,"op":"…","request_id":"…","workspace_route":{"kind":"none"},"duration_ms":0.0,"modules_touched":[],"steps":[],"resource_summary":{"fields":{}},"warnings":[]}}
 ```
 
 Daemon error kinds: `invalid_request`, `bad_json`, `request_too_large`,

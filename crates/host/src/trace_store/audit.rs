@@ -9,9 +9,6 @@ use super::now_ms;
 pub(super) const AUDIT_SCHEMA: &str = "eos.trace.v1.AuditEntry";
 pub(super) const REQUEST_START_SCHEMA: &str = "eos.trace.v1.RequestStart";
 pub(crate) const RESPONSE_PERSISTED_SCHEMA: &str = "eos.trace.v1.ResponsePersisted";
-pub(super) const TRACE_BATCH_SCHEMA: &str = "eos.trace.v1.TraceBatch";
-
-const SPOOL_OVERFLOW_TRACE_ID: &str = "_spool_overflow";
 
 pub(super) struct AuditAppend<'a> {
     pub(super) sandbox_id: &'a str,
@@ -64,51 +61,6 @@ pub(super) fn append_loss_tx(
             sandbox_id,
             trace_id,
             request_id: Some(request_id),
-            entry_kind: "loss",
-            schema_name: AUDIT_SCHEMA,
-            schema_version: 1,
-            received_at_ms: now_ms(),
-            payload: &payload,
-        },
-    )?;
-    Ok(())
-}
-
-/// Durable loss entry for daemon spool overflow. The daemon reports a cumulative
-/// counter, so callers must pass the newly observed delta and the total that
-/// produced it.
-pub(super) fn append_dropped_traces_loss_tx(
-    tx: &Transaction<'_>,
-    sandbox_id: &str,
-    dropped_traces_delta: u64,
-    dropped_traces_total: u64,
-    daemon_boot_id: Option<&str>,
-) -> Result<(), rusqlite::Error> {
-    let payload = proto::AuditEntry {
-        entry_id: uuid::Uuid::new_v4().simple().to_string(),
-        trace_id: SPOOL_OVERFLOW_TRACE_ID.to_owned(),
-        seq: 0,
-        payload: json!({
-            "reason": "spool_overflow",
-            "dropped_traces": dropped_traces_delta,
-            "dropped_traces_delta": dropped_traces_delta,
-            "dropped_traces_total": dropped_traces_total,
-            "daemon_boot_id": daemon_boot_id,
-        })
-        .to_string()
-        .into_bytes(),
-        previous_hash: Vec::new(),
-        entry_hash: Vec::new(),
-        schema_version: "1".to_owned(),
-        written_at_unix_ms: now_ms(),
-    }
-    .encode_to_vec();
-    append_audit_entry_tx(
-        tx,
-        AuditAppend {
-            sandbox_id,
-            trace_id: SPOOL_OVERFLOW_TRACE_ID,
-            request_id: None,
             entry_kind: "loss",
             schema_name: AUDIT_SCHEMA,
             schema_version: 1,

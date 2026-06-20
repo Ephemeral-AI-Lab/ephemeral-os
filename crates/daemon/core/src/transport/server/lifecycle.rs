@@ -6,7 +6,6 @@ use tokio::io::{AsyncWrite, AsyncWriteExt};
 use tokio::net::{TcpListener, UnixListener};
 use tokio::sync::Semaphore;
 
-use super::trace_context::unix_ms;
 use super::DaemonServer;
 use crate::error::DaemonError;
 
@@ -212,4 +211,12 @@ fn emit_boot_event(event: &str, details: serde_json::Value) {
             "details": details,
         })
     );
+}
+
+fn unix_ms() -> u64 {
+    let millis = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
+    u64::try_from(millis).unwrap_or(u64::MAX)
 }

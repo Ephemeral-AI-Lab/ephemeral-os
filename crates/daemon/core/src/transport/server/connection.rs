@@ -1,10 +1,9 @@
 use std::net::SocketAddr;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::time::timeout;
 
-use super::trace_context::{elapsed_us, trace_facts, unix_ms, TransportTraceContext};
 use super::{DaemonServer, MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};
 use crate::error::DaemonError;
 use crate::wire::{encode, WireMessage};
@@ -17,66 +16,26 @@ impl DaemonServer {
         &self,
         stream: S,
         is_tcp: bool,
-        peer_addr: Option<SocketAddr>,
-        local_addr: Option<SocketAddr>,
+        _peer_addr: Option<SocketAddr>,
+        _local_addr: Option<SocketAddr>,
     ) -> Result<(), DaemonError>
     where
         S: AsyncRead + AsyncWrite + Unpin,
     {
         let (mut reader, mut writer) = tokio::io::split(stream);
-        let connection_id = crate::trace::next_connection_id();
-        let accepted_at_unix_ms = unix_ms();
-        let read_start = Instant::now();
         let bytes = read_request_line(&mut reader).await;
-        let read_duration_us = elapsed_us(read_start);
-        let transport_context = TransportTraceContext {
-            connection_id,
-            is_tcp,
-            read_duration_us,
-            accepted_at_unix_ms,
-            peer_addr,
-            local_addr,
-        };
         let response = match bytes {
-            Ok(bytes) => self.dispatch_bytes(bytes, transport_context).await,
-            Err(err @ DaemonError::RequestTooLarge { .. }) => {
-                let facts = trace_facts(
-                    &transport_context,
-                    MAX_REQUEST_BYTES.saturating_add(1),
-                    self.tcp_auth_required(transport_context.is_tcp),
-                    false,
-                    None,
-                );
-                crate::trace::attach_request_sidecar(
-                    crate::dispatcher::error_response(
-                        err.wire_kind(),
-                        format!("daemon request exceeds {MAX_REQUEST_BYTES} byte limit"),
-                        serde_json::json!({"limit": MAX_REQUEST_BYTES}),
-                    ),
-                    None,
-                    "daemon.transport.read",
-                    &facts,
-                )
-            }
-            Err(err) => {
-                let facts = trace_facts(
-                    &transport_context,
-                    0,
-                    self.tcp_auth_required(transport_context.is_tcp),
-                    false,
-                    None,
-                );
-                crate::trace::attach_request_sidecar(
-                    crate::dispatcher::error_response(
-                        err.wire_kind(),
-                        err.to_string(),
-                        serde_json::json!({}),
-                    ),
-                    None,
-                    "daemon.transport.read",
-                    &facts,
-                )
-            }
+            Ok(bytes) => self.dispatch_bytes(bytes, is_tcp).await,
+            Err(err @ DaemonError::RequestTooLarge { .. }) => crate::dispatcher::error_response(
+                err.wire_kind(),
+                format!("daemon request exceeds {MAX_REQUEST_BYTES} byte limit"),
+                serde_json::json!({"limit": MAX_REQUEST_BYTES}),
+            ),
+            Err(err) => crate::dispatcher::error_response(
+                err.wire_kind(),
+                err.to_string(),
+                serde_json::json!({}),
+            ),
         };
         let framed = encode(&WireMessage::Response(response.clone()))?;
         if let Err(err) = writer.write_all(&framed).await {

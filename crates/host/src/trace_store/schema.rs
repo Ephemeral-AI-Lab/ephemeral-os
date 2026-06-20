@@ -29,70 +29,8 @@ fn apply_pragmas(conn: &Connection) -> Result<(), rusqlite::Error> {
     Ok(())
 }
 
-fn apply_migrations(conn: &Connection, version: u32) -> Result<(), rusqlite::Error> {
-    if version < 2 {
-        migrate_to_v2(conn)?;
-    }
+fn apply_migrations(_conn: &Connection, _version: u32) -> Result<(), rusqlite::Error> {
     Ok(())
-}
-
-fn migrate_to_v2(conn: &Connection) -> Result<(), rusqlite::Error> {
-    conn.execute_batch(
-        r#"
-        CREATE TABLE IF NOT EXISTS trace_spool_drop_cursors (
-          sandbox_id            TEXT NOT NULL,
-          daemon_boot_id        TEXT NOT NULL,
-          dropped_traces_total  INTEGER NOT NULL,
-          updated_at_ms         INTEGER NOT NULL,
-          PRIMARY KEY (sandbox_id, daemon_boot_id)
-        );
-        "#,
-    )?;
-    ensure_column(
-        conn,
-        "trace_spool_drop_cursors",
-        "daemon_boot_id",
-        "TEXT NOT NULL DEFAULT '_unknown'",
-    )?;
-    ensure_column(
-        conn,
-        "trace_spool_drop_cursors",
-        "dropped_traces_total",
-        "INTEGER NOT NULL DEFAULT 0",
-    )?;
-    ensure_column(
-        conn,
-        "trace_spool_drop_cursors",
-        "updated_at_ms",
-        "INTEGER NOT NULL DEFAULT 0",
-    )
-}
-
-fn ensure_column(
-    conn: &Connection,
-    table: &str,
-    column: &str,
-    definition: &str,
-) -> Result<(), rusqlite::Error> {
-    if table_has_column(conn, table, column)? {
-        return Ok(());
-    }
-    conn.execute(
-        &format!("ALTER TABLE {table} ADD COLUMN {column} {definition}"),
-        [],
-    )?;
-    Ok(())
-}
-
-fn table_has_column(conn: &Connection, table: &str, column: &str) -> Result<bool, rusqlite::Error> {
-    let mut stmt = conn.prepare(&format!("PRAGMA table_info({table})"))?;
-    let rows = stmt.query_map([], |row| row.get::<_, String>(1))?;
-    for name in rows {
-        if name? == column {
-            return Ok(true);
-        }
-    }
-    Ok(false)
 }
 
 const DDL: &str = r#"
@@ -170,25 +108,6 @@ CREATE TABLE IF NOT EXISTS trace_links (
   request_id TEXT NOT NULL DEFAULT '',
   PRIMARY KEY (trace_id, link_kind, link_id, request_id)
 );
-CREATE TABLE IF NOT EXISTS pending_trace_sidecars (
-  id              INTEGER PRIMARY KEY AUTOINCREMENT,
-  sandbox_id      TEXT NOT NULL,
-  trace_id        TEXT NOT NULL,
-  request_id      TEXT NOT NULL,
-  batch           BLOB NOT NULL,
-  first_error     TEXT NOT NULL,
-  last_error      TEXT NOT NULL,
-  retry_count     INTEGER NOT NULL DEFAULT 0,
-  created_at_ms   INTEGER NOT NULL,
-  updated_at_ms   INTEGER NOT NULL
-);
-CREATE TABLE IF NOT EXISTS trace_spool_drop_cursors (
-  sandbox_id            TEXT NOT NULL,
-  daemon_boot_id        TEXT NOT NULL,
-  dropped_traces_total  INTEGER NOT NULL,
-  updated_at_ms         INTEGER NOT NULL,
-  PRIMARY KEY (sandbox_id, daemon_boot_id)
-);
 CREATE INDEX IF NOT EXISTS idx_audit_trace     ON audit_entries(trace_id, audit_seq);
 CREATE INDEX IF NOT EXISTS idx_audit_sandbox   ON audit_entries(sandbox_id, audit_seq);
 CREATE INDEX IF NOT EXISTS idx_audit_request   ON audit_entries(request_id);
@@ -203,5 +122,4 @@ CREATE INDEX IF NOT EXISTS idx_resources_request_span_kind ON trace_resources(re
 CREATE INDEX IF NOT EXISTS idx_links_id       ON trace_links(link_kind, link_id);
 CREATE INDEX IF NOT EXISTS idx_events_span    ON trace_events(trace_id, span_id);
 CREATE INDEX IF NOT EXISTS idx_events_event   ON trace_events(event);
-CREATE INDEX IF NOT EXISTS idx_pending_sidecar_request ON pending_trace_sidecars(request_id);
 "#;

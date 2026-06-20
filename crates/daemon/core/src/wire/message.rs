@@ -6,8 +6,8 @@
 //! the canonical bar (see [`super::canonical`]).
 //!
 //! The wire protocol field `_eos_daemon_protocol_version` lives INSIDE `args`
-//! (value `1`). The transport records it in the request trace sidecar and
-//! rejects explicitly unsupported values before a request reaches op dispatch.
+//! (value `1`). The transport rejects explicitly unsupported values before a
+//! request reaches op dispatch.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -35,23 +35,6 @@ pub struct Request {
     pub op: String,
     pub invocation_id: String,
     pub args: Value,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct RequestTraceContext {
-    pub trace_id: String,
-    pub request_id: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub parent_span_id: Option<u64>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub link_hints: Vec<TraceLinkHint>,
-    pub capture_budget_version: u32,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct TraceLinkHint {
-    pub kind: String,
-    pub value: String,
 }
 
 /// Verified daemon error `kind` values, serialized `snake_case` on the wire.

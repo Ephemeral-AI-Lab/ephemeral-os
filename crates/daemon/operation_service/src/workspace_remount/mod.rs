@@ -5,6 +5,7 @@ pub use crate::command::{
     CommandRemountInspection, CommandRemountQuiesce, ProcessGroupController,
     RemountCancellationToken, RemountSwitchState,
 };
+pub use ::command::process_group::ProcessGroupInspection;
 pub use error::WorkspaceRemountError;
 pub use service::{
     CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountReport,

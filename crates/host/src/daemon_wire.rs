@@ -2,16 +2,11 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::time::Duration;
 
-use base64::Engine as _;
 use serde_json::{json, Map, Value};
 
 pub const DAEMON_AUTH_FIELD: &str = "_eos_daemon_auth_token";
 pub const DAEMON_FORWARD_AUTH_FIELD: &str = "_eos_daemon_forward_auth_token";
 pub const DAEMON_PROTOCOL_FIELD: &str = "_eos_daemon_protocol_version";
-const DAEMON_TRACE_FIELD: &str = "trace";
-pub const DAEMON_TRACE_SIDECAR_FIELD: &str = trace::TRACE_SIDECAR_FIELD;
-pub const DAEMON_TRACE_SIDECAR_SCHEMA: &str = trace::TRACE_SIDECAR_SCHEMA;
-pub const DAEMON_TRACE_SIDECAR_ENCODING: &str = trace::TRACE_SIDECAR_ENCODING;
 pub const DAEMON_PROTOCOL_VERSION: i64 = 1;
 pub const MAX_REQUEST_BYTES: usize = 16 * 1024 * 1024;
 pub const MAX_RESPONSE_BYTES: usize = 16 * 1024 * 1024;
@@ -118,25 +113,6 @@ impl ProtocolClient {
         self.request_raw(&line)
     }
 
-    #[cfg(feature = "e2e-support")]
-    pub fn request_with_trace(
-        &self,
-        op: &str,
-        invocation_id: &str,
-        args: &Value,
-        trace: &TraceWireContext,
-    ) -> Result<Value, ClientError> {
-        let mut line = encode_request_with_trace_metadata(
-            op,
-            invocation_id,
-            args,
-            self.transport_auth(),
-            trace,
-        );
-        line.push(b'\n');
-        self.request_raw(&line)
-    }
-
     pub fn request_raw(&self, line: &[u8]) -> Result<Value, ClientError> {
         self.request_raw_observed(line)
             .map(|response| response.value)
@@ -211,123 +187,6 @@ pub(crate) struct ProtocolResponse {
     pub raw_bytes: Vec<u8>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TraceWireContext {
-    pub trace_id: String,
-    pub request_id: String,
-    pub parent_span_id: Option<u64>,
-    pub link_hints: Vec<TraceWireLinkHint>,
-    pub capture_budget_version: u32,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TraceWireLinkHint {
-    pub kind: String,
-    pub value: String,
-}
-
-pub(crate) fn encode_request_with_trace_metadata(
-    op: &str,
-    invocation_id: &str,
-    args: &Value,
-    auth: TransportAuth<'_>,
-    trace: &TraceWireContext,
-) -> Vec<u8> {
-    let stamped_args = stamped_args(args, invocation_id);
-    let mut request = request_object(op, invocation_id, &Value::Object(stamped_args), auth);
-    request.insert(
-        DAEMON_TRACE_FIELD.to_owned(),
-        json!({
-            "trace_id": trace.trace_id,
-            "request_id": trace.request_id,
-            "parent_span_id": trace.parent_span_id,
-            "link_hints": trace.link_hints.iter().map(|hint| {
-                json!({"kind": hint.kind, "value": hint.value})
-            }).collect::<Vec<_>>(),
-            "capture_budget_version": trace.capture_budget_version,
-        }),
-    );
-    serde_json::to_vec(&Value::Object(request)).unwrap_or_default()
-}
-
-#[allow(dead_code)]
-pub fn take_trace_sidecar_checked(
-    response: &mut Value,
-) -> Result<Option<Vec<u8>>, TraceSidecarError> {
-    let present = response
-        .as_object()
-        .is_some_and(|object| object.contains_key(DAEMON_TRACE_SIDECAR_FIELD));
-    let batch = decode_trace_sidecar_checked(response);
-    if present {
-        strip_trace_sidecar(response);
-    }
-    batch
-}
-
-pub fn decode_trace_sidecar_checked(
-    response: &Value,
-) -> Result<Option<Vec<u8>>, TraceSidecarError> {
-    let Some(object) = response.as_object() else {
-        return Ok(None);
-    };
-    let Some(sidecar) = object.get(DAEMON_TRACE_SIDECAR_FIELD) else {
-        return Ok(None);
-    };
-    let encoded = trace_sidecar_payload(sidecar)?.to_owned();
-    decode_trace_sidecar_base64(&encoded)
-        .ok_or(TraceSidecarError::InvalidBase64)
-        .map(Some)
-}
-
-fn trace_sidecar_payload(sidecar: &Value) -> Result<&str, TraceSidecarError> {
-    match sidecar {
-        Value::Object(object) => {
-            if object.get("schema").and_then(Value::as_str) != Some(DAEMON_TRACE_SIDECAR_SCHEMA) {
-                return Err(TraceSidecarError::InvalidEnvelope);
-            }
-            if object.get("encoding").and_then(Value::as_str) != Some(DAEMON_TRACE_SIDECAR_ENCODING)
-            {
-                return Err(TraceSidecarError::InvalidEnvelope);
-            }
-            object
-                .get("data")
-                .and_then(Value::as_str)
-                .ok_or(TraceSidecarError::InvalidEnvelope)
-        }
-        _ => Err(TraceSidecarError::NonString),
-    }
-}
-
-pub fn decode_trace_sidecar_base64(encoded: &str) -> Option<Vec<u8>> {
-    base64::engine::general_purpose::STANDARD
-        .decode(encoded)
-        .ok()
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TraceSidecarError {
-    NonString,
-    InvalidBase64,
-    InvalidEnvelope,
-}
-
-impl TraceSidecarError {
-    #[must_use]
-    pub const fn kind(self) -> &'static str {
-        match self {
-            Self::NonString => "non_string_sidecar",
-            Self::InvalidBase64 => "invalid_base64",
-            Self::InvalidEnvelope => "invalid_sidecar_envelope",
-        }
-    }
-}
-
-pub fn strip_trace_sidecar(response: &mut Value) {
-    if let Some(object) = response.as_object_mut() {
-        object.remove(DAEMON_TRACE_SIDECAR_FIELD);
-    }
-}
-
 #[allow(dead_code)]
 pub fn encode_request_with_metadata(
     op: &str,
@@ -396,7 +255,6 @@ fn request_object(
     request.insert("invocation_id".to_owned(), json!(invocation_id));
     request.insert("args".to_owned(), args.clone());
     match auth {
-        TransportAuth::None => {}
         TransportAuth::Raw(Some(token)) => {
             request.insert(DAEMON_AUTH_FIELD.to_owned(), json!(token));
         }
@@ -410,7 +268,6 @@ fn request_object(
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum TransportAuth<'a> {
-    None,
     Raw(Option<&'a str>),
     Forward(Option<&'a str>),
 }
