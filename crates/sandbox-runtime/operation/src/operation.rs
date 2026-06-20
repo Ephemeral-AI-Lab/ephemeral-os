@@ -9,7 +9,7 @@ pub use sandbox_protocol::{
 pub struct OperationEntry {
     pub spec: &'static OperationSpec,
     pub dispatch:
-        fn(&SandboxRuntimeOperations, sandbox_protocol::Request<'_>) -> sandbox_protocol::Response,
+        fn(&SandboxRuntimeOperations, &sandbox_protocol::Request) -> sandbox_protocol::Response,
 }
 
 impl OperationEntry {
@@ -18,7 +18,7 @@ impl OperationEntry {
         spec: &'static OperationSpec,
         dispatch: fn(
             &SandboxRuntimeOperations,
-            sandbox_protocol::Request<'_>,
+            &sandbox_protocol::Request,
         ) -> sandbox_protocol::Response,
     ) -> Self {
         Self { spec, dispatch }

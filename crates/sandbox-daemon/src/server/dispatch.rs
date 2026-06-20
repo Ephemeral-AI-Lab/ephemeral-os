@@ -3,7 +3,7 @@ use std::sync::Arc;
 use super::SandboxDaemonServer;
 use crate::server::error::SandboxDaemonError;
 use sandbox_protocol::{
-    decode_request_object, error_kind, ArgsPresence, Request, DAEMON_AUTH_FIELD,
+    decode_request_value, error_kind, ArgsPresence, Request, DAEMON_AUTH_FIELD,
 };
 use serde_json::{Map, Value};
 
@@ -33,35 +33,28 @@ impl SandboxDaemonServer {
         } else {
             value
         };
-        match parse_request(value) {
-            Ok((op, request_id, args)) => self.dispatch_request(op, request_id, args).await,
+        match decode_request(value) {
+            Ok(request) => self.dispatch_request(request).await,
             Err(response) => response,
         }
     }
 
-    async fn dispatch_request(
-        &self,
-        op: String,
-        request_id: String,
-        args: serde_json::Value,
-    ) -> serde_json::Value {
-        let op_for_error = op.clone();
+    async fn dispatch_request(&self, request: Request) -> serde_json::Value {
         let operations = Arc::clone(&self.operations);
         let task = tokio::task::spawn_blocking(move || {
-            sandbox_runtime::dispatch_operation(&operations, Request::new(&op, &request_id, &args))
-                .into_json_value()
+            sandbox_runtime::dispatch_operation(&operations, &request).into_json_value()
         });
         let response = match task.await {
             Ok(response) => response,
             Err(err) if err.is_cancelled() => super::error_response(
                 error_kind::INTERNAL_ERROR,
                 "daemon request cancelled",
-                serde_json::json!({"op": op_for_error}),
+                serde_json::json!({}),
             ),
             Err(err) => super::error_response(
                 error_kind::INTERNAL_ERROR,
                 format!("daemon request failed: {err}"),
-                serde_json::json!({"op": op_for_error}),
+                serde_json::json!({}),
             ),
         };
         response
@@ -108,19 +101,7 @@ fn configured_token(token: Option<&str>) -> Option<&str> {
     token.filter(|token| !token.is_empty())
 }
 
-pub(crate) fn parse_request(value: Value) -> Result<(String, String, Value), Value> {
-    let Value::Object(object) = value else {
-        return Err(super::error_response(
-            error_kind::BAD_JSON,
-            "request message must be a json object",
-            serde_json::json!({}),
-        ));
-    };
-    let request = decode_request_object(object, ArgsPresence::Required)
-        .map_err(|err| invalid_request(err.message()))?;
-    Ok((request.op, request.request_id, request.args))
-}
-
-fn invalid_request(message: impl Into<String>) -> serde_json::Value {
-    super::error_response(error_kind::INVALID_REQUEST, message, serde_json::json!({}))
+pub(crate) fn decode_request(value: Value) -> Result<Request, Value> {
+    decode_request_value(value, ArgsPresence::Required)
+        .map_err(|err| super::error_response(err.kind(), err.message(), serde_json::json!({})))
 }

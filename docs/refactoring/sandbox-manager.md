@@ -113,10 +113,10 @@ describe_daemon_operations
 
 ## Request Routing
 
-The manager accepts the unified `sandbox_protocol::SandboxRequest` DTO.
+The manager accepts the unified `sandbox_protocol::Request` DTO.
 
 ```rust
-pub struct SandboxRequest {
+pub struct Request {
     pub request_id: String,
     pub scope: OperationScope,
     pub op: String,

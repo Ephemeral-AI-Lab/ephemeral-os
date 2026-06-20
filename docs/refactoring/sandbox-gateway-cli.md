@@ -80,7 +80,7 @@ The CLI talks to `sandbox-manager`; it does not become a hidden manager.
 
 ## Request Construction
 
-The gateway builds `sandbox_protocol::SandboxRequest` directly:
+The gateway builds `sandbox_protocol::Request` directly:
 
 ```json
 {

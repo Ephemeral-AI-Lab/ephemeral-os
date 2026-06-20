@@ -11,7 +11,7 @@ Task:
 
 Implement phase 6 only: add the human-facing `sandbox-gateway-cli` package and
 the installed `sandbox` binary. The gateway parses CLI arguments, builds
-`sandbox_protocol::SandboxRequest` values, sends them to `sandbox-manager`, and
+`sandbox_protocol::Request` values, sends them to `sandbox-manager`, and
 renders responses.
 
 Before editing, read:
@@ -25,7 +25,7 @@ Before editing, read:
 Required starting state:
 
 - `crates/sandbox-protocol` exists.
-- `sandbox_protocol::SandboxRequest` exists.
+- `sandbox_protocol::Request` exists.
 - `sandbox_protocol::OperationScope` exists.
 - `sandbox_protocol::Response` exists.
 - `crates/sandbox-manager` exists.
@@ -50,7 +50,7 @@ Phase goal:
 - Add binary `sandbox`.
 - Add manager socket/config discovery.
 - Add manager client connection over the phase 5 manager protocol.
-- Build unified `SandboxRequest` values from CLI argv and `OperationSpec`.
+- Build unified `Request` values from CLI argv and `OperationSpec`.
 - Expose canonical `manager` and `runtime` execution spaces.
 - Map `sandbox runtime --sandbox-id SANDBOX_ID ...` to
   `OperationScope::Sandbox`.
@@ -108,7 +108,7 @@ Implementation steps:
    test -d crates/sandbox-runtime/operation
    test ! -d crates/sandbox-gateway-cli
    test ! -f crates/sandbox-manager/src/operation/impls/invoke_sandbox_daemon.rs
-   rg -n "SandboxRequest|OperationScope|Response" crates/sandbox-protocol/src
+   rg -n "Request|OperationScope|Response" crates/sandbox-protocol/src
    rg -n "invoke_sandbox_daemon" crates/sandbox-manager/src/operation
    rg -n "RoutedRequest|ManagerRequest|OperationTarget" crates/sandbox-manager/src crates/sandbox-protocol/src
    ```
@@ -217,7 +217,7 @@ Implementation steps:
 8. Add `src/client.rs`:
 
    - Connect to the manager Unix socket from `GatewayConfig`.
-   - Send exactly one newline-delimited JSON `SandboxRequest`.
+   - Send exactly one newline-delimited JSON `Request`.
    - Read exactly one newline-delimited JSON response.
    - Enforce a response size cap if practical.
    - Keep transport errors distinct from protocol errors.
@@ -225,7 +225,7 @@ Implementation steps:
 
 9. Add `src/request_builder.rs`:
 
-   - Build `sandbox_protocol::SandboxRequest`.
+   - Build `sandbox_protocol::Request`.
    - Generate `request_id` values locally.
    - Use `OperationSpec.args` and `ArgCliSpec` to map CLI flags and
      positionals into `args`.

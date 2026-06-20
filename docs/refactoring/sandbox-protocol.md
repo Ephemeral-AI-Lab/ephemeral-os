@@ -63,7 +63,7 @@ separate routing envelope and it does not expose a `Manager` or `Daemon` target
 field.
 
 ```rust
-pub struct SandboxRequest {
+pub struct Request {
     pub request_id: String,
     pub scope: OperationScope,
     pub op: String,

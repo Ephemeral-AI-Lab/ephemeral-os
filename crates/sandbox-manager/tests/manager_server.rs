@@ -8,8 +8,8 @@ use sandbox_manager::{
     SandboxState, SandboxStore, ServerConfig,
 };
 use sandbox_protocol::{
-    error_kind, OperationCatalog, OperationExecutionSpace, OperationScope, OperationSpec, Response,
-    SandboxRequest, MAX_REQUEST_BYTES,
+    error_kind, OperationCatalog, OperationExecutionSpace, OperationScope, OperationSpec, Request,
+    Response, MAX_REQUEST_BYTES,
 };
 use serde_json::{json, Value};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -65,20 +65,14 @@ impl SandboxDaemonClient for RecordingDaemonClient {
     fn invoke(
         &self,
         endpoint: &SandboxDaemonEndpoint,
-        request: SandboxRequest,
+        request: Request,
     ) -> Result<Response, ManagerError> {
         self.invocations.lock().expect("invocations lock").push((
             endpoint.socket_path.clone(),
             request.op.clone(),
             request.scope.clone(),
         ));
-        Ok(Response::ok(
-            &request.as_request(),
-            json!({
-                "forwarded_op": request.op,
-                "endpoint": endpoint.socket_path,
-            }),
-        ))
+        Ok(Response::ok(json!({"forwarded": true})))
     }
 }
 
@@ -227,8 +221,7 @@ async fn manager_server_forwards_sandbox_scoped_unknown_to_daemon_client() {
     )
     .await;
 
-    assert_eq!(response["forwarded_op"], "exec_command");
-    assert_eq!(response["endpoint"], "/tmp/sbox-1.sock");
+    assert_eq!(response["forwarded"], true);
     let invocations = daemon_client.invocations.lock().expect("invocations lock");
     assert_eq!(invocations.len(), 1);
     assert_eq!(invocations[0].0, PathBuf::from("/tmp/sbox-1.sock"));

@@ -21,9 +21,6 @@ pub use auth::DAEMON_AUTH_FIELD;
 pub use catalog::{OperationCatalog, OperationExecutionSpace};
 pub use limits::{MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};
 pub use operation_spec::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationSpec};
-pub use request::{decode_request_object, ArgsPresence, Request, SandboxRequest};
-pub use response::{
-    error_response_with_details, response_line, Response, ResponseError, ResponseMeta,
-    ResponseStatus,
-};
+pub use request::{decode_request_object, decode_request_value, ArgsPresence, Request};
+pub use response::{error_response_with_details, response_line, Response};
 pub use scope::OperationScope;

@@ -1,10 +1,10 @@
-use sandbox_protocol::{OperationScope, SandboxRequest};
+use sandbox_protocol::{OperationScope, Request};
 
 use crate::{ManagerError, ManagerServices, SandboxDaemonEndpoint, SandboxId, SandboxState};
 
 pub(super) fn forward_sandbox_request(
     services: &ManagerServices,
-    request: SandboxRequest,
+    request: Request,
 ) -> Result<sandbox_protocol::Response, ManagerError> {
     let id = sandbox_id(&request.scope)?;
     let endpoint = daemon_endpoint(services, &id)?;

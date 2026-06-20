@@ -6,14 +6,14 @@ use crate::response::Response;
 use crate::scope::OperationScope;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct SandboxRequest {
+pub struct Request {
     pub op: String,
     pub request_id: String,
     pub scope: OperationScope,
     pub args: Value,
 }
 
-impl SandboxRequest {
+impl Request {
     #[must_use]
     pub fn new(
         op: impl Into<String>,
@@ -25,29 +25,6 @@ impl SandboxRequest {
             op: op.into(),
             request_id: request_id.into(),
             scope,
-            args,
-        }
-    }
-
-    #[must_use]
-    pub fn as_request(&self) -> Request<'_> {
-        Request::new(&self.op, &self.request_id, &self.args)
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct Request<'a> {
-    pub name: &'a str,
-    pub request_id: &'a str,
-    pub args: &'a Value,
-}
-
-impl<'a> Request<'a> {
-    #[must_use]
-    pub const fn new(name: &'a str, request_id: &'a str, args: &'a Value) -> Self {
-        Self {
-            name,
-            request_id,
             args,
         }
     }
@@ -124,7 +101,7 @@ impl<'a> Request<'a> {
     fn field(&self, field: &str) -> Result<&Value, Response> {
         self.args_object()?
             .get(field)
-            .ok_or_else(|| self.invalid_argument(format!("{field} is required for {}", self.name)))
+            .ok_or_else(|| self.invalid_argument(format!("{field} is required for {}", self.op)))
     }
 
     fn optional_field(&self, field: &str) -> Result<Option<&Value>, Response> {
@@ -169,7 +146,7 @@ impl RequestDecodeError {
 pub fn decode_request_object(
     mut object: Map<String, Value>,
     args_presence: ArgsPresence,
-) -> Result<SandboxRequest, RequestDecodeError> {
+) -> Result<Request, RequestDecodeError> {
     let op = remove_request_string(&mut object, "op")?;
     let request_id = remove_request_string(&mut object, "request_id")?;
     let scope = match object.remove("scope") {
@@ -193,12 +170,25 @@ pub fn decode_request_object(
     if !args.is_object() {
         return Err(invalid_request("args must be an object"));
     }
-    Ok(SandboxRequest {
+    Ok(Request {
         op,
         request_id,
         scope,
         args,
     })
+}
+
+pub fn decode_request_value(
+    value: Value,
+    args_presence: ArgsPresence,
+) -> Result<Request, RequestDecodeError> {
+    let Value::Object(object) = value else {
+        return Err(request_decode_error(
+            error_kind::BAD_JSON,
+            "request message must be a json object",
+        ));
+    };
+    decode_request_object(object, args_presence)
 }
 
 fn remove_request_string(
@@ -214,8 +204,12 @@ fn remove_request_string(
 }
 
 fn invalid_request(message: impl Into<String>) -> RequestDecodeError {
+    request_decode_error(error_kind::INVALID_REQUEST, message)
+}
+
+fn request_decode_error(kind: &'static str, message: impl Into<String>) -> RequestDecodeError {
     RequestDecodeError {
-        kind: error_kind::INVALID_REQUEST,
+        kind,
         message: message.into(),
     }
 }

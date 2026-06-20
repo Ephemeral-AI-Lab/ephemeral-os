@@ -13,7 +13,7 @@ use sandbox_protocol::{Request, Response};
 pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "cancel_command",
     family: OperationFamily::Command,
-    summary: "Request cancellation of a running command.",
+    summary: "Cancel a running command.",
     args: CANCEL_ARGS,
     cli: Some(CANCEL_CLI),
 };
@@ -34,15 +34,15 @@ const CANCEL_CLI: CliSpec = CliSpec {
     examples: &["cancel_command {\"command_session_id\":\"cmd-1\"}"],
 };
 
-pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: Request<'_>) -> Response {
-    let input = match parse_input(&request) {
+pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: &Request) -> Response {
+    let input = match parse_input(request) {
         Ok(input) => input,
         Err(response) => return response,
     };
-    command_yield_response(&request, operations.command.cancel(input))
+    command_yield_response(operations.command.cancel(input))
 }
 
-fn parse_input(request: &Request<'_>) -> Result<CancelCommandInput, Response> {
+fn parse_input(request: &Request) -> Result<CancelCommandInput, Response> {
     Ok(CancelCommandInput {
         command_session_id: CommandSessionId(request.required_string("command_session_id")?),
     })

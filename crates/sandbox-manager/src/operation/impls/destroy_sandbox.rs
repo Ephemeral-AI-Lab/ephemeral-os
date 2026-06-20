@@ -4,9 +4,9 @@ use super::{record_value, sandbox_id};
 
 pub(crate) fn dispatch(
     services: &crate::operation::ManagerServices,
-    request: sandbox_protocol::Request<'_>,
+    request: &sandbox_protocol::Request,
 ) -> sandbox_protocol::Response {
-    let id = match sandbox_id(&request) {
+    let id = match sandbox_id(request) {
         Ok(id) => id,
         Err(response) => return response,
     };
@@ -42,7 +42,7 @@ pub(crate) fn dispatch(
                 return error.into_response();
             }
             match services.store.remove(&stopping.id) {
-                Ok(record) => sandbox_protocol::Response::ok(&request, record_value(record)),
+                Ok(record) => sandbox_protocol::Response::ok(record_value(record)),
                 Err(error) => error.into_response(),
             }
         }

@@ -38,7 +38,7 @@ pub(crate) const fn operation_entries() -> &'static [ManagerOperationEntry] {
 }
 
 pub(crate) fn sandbox_id(
-    request: &sandbox_protocol::Request<'_>,
+    request: &sandbox_protocol::Request,
 ) -> Result<SandboxId, sandbox_protocol::Response> {
     request
         .required_string("sandbox_id")

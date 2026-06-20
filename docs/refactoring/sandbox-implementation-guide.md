@@ -482,7 +482,7 @@ Implementation steps:
 1. Add server config.
 2. Add listener lifecycle and shutdown handling.
 3. Add one framed request per connection.
-4. Decode one unified `SandboxRequest` DTO.
+4. Decode one unified `Request` DTO.
 5. Dispatch manager-owned operations locally.
 6. Forward daemon-owned sandbox-scoped operations through
    `SandboxDaemonEndpoint`.
@@ -532,7 +532,7 @@ cargo test -p sandbox-manager
 Exit criteria:
 
 - Manager can resolve `SandboxId` to `SandboxDaemonEndpoint`.
-- Manager forwarding uses the same `SandboxRequest` DTO; it does not create a
+- Manager forwarding uses the same `Request` DTO; it does not create a
   separate route wrapper and does not depend on daemon runtime implementation.
 
 ## Phase 6: Add `sandbox-gateway-cli`
@@ -558,7 +558,7 @@ Implementation steps:
 
 1. Add manager socket/config discovery.
 2. Add manager client connection.
-3. Add `SandboxRequest` construction from CLI argv and `OperationSpec`.
+3. Add `Request` construction from CLI argv and `OperationSpec`.
 4. Add manual/help rendering from manager and runtime execution spaces.
 5. Add stdout/stderr and exit-code behavior.
 6. Add the installed binary name `sandbox`.

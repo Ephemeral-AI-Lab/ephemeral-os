@@ -118,7 +118,7 @@ when `Runtime` describes the user's intent more directly.
 The public request DTO uses resource scope, not implementation target:
 
 ```rust
-pub struct SandboxRequest {
+pub struct Request {
     pub request_id: String,
     pub scope: OperationScope,
     pub op: String,
@@ -141,7 +141,7 @@ would make implementation placement part of the public request API.
 `sandbox-protocol` owns protocol-neutral types:
 
 ```text
-request.rs          SandboxRequest, Request, args helpers
+request.rs          Request, Request, args helpers
 scope.rs            OperationScope and scope validation helpers
 response.rs         Response, status/error helpers
 framing.rs          JSON-line framing helpers
@@ -355,7 +355,7 @@ Sandbox-scoped operations use the same DTO:
 ```
 
 There is no public `RoutedRequest`, `ManagerRequest`, `OperationTarget`, or
-request envelope. The manager receives `SandboxRequest` and routes it by
+request envelope. The manager receives `Request` and routes it by
 checking which operation-space catalog contains the operation:
 
 ```rust
@@ -372,7 +372,7 @@ if manager_catalog.contains(&request.op) {
 
 For runtime operations, the gateway sets `scope.kind = "sandbox"` and includes
 the sandbox id. The manager resolves `sandbox_id -> SandboxDaemonEndpoint` and
-forwards the same `SandboxRequest` to the daemon. The daemon sees the same
+forwards the same `Request` to the daemon. The daemon sees the same
 request shape as the manager; it must not learn about manager routing internals.
 
 ## Implementation Order
@@ -430,7 +430,7 @@ Module order:
 5. Rename aggregate types only when the crate compiles:
    - Runtime aggregate type is `SandboxRuntimeOperations`.
    - Use `sandbox_protocol::Request` and `sandbox_protocol::Response`
-     directly instead of facade aliases.
+     directly.
 6. Export daemon operation catalog:
    - `sandbox_runtime::operation_specs()`
    - `sandbox_runtime::operation_catalog()`
@@ -539,7 +539,7 @@ Module order:
 1. `config.rs`: manager socket/config discovery.
 2. `client.rs`: sends `sandbox-protocol` requests to manager.
 3. `manual.rs`: renders manager and runtime execution spaces separately.
-4. `request_builder.rs`: turns CLI argv into `SandboxRequest`.
+4. `request_builder.rs`: turns CLI argv into `Request`.
 5. `output.rs`: stdout for data, stderr for errors.
 6. `main.rs`: command dispatch and exit-code mapping.
 

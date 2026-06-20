@@ -26,7 +26,7 @@ Phase goal:
 - Move protocol-neutral operation metadata types from `daemon_operation` into
   `sandbox-protocol`.
 - Make the public protocol DTO explicit and unified:
-  `SandboxRequest`, `OperationScope`, and `Response`.
+  `Request`, `OperationScope`, and `Response`.
 - Keep behavior unchanged for the existing daemon, sandbox-daemon, and command
   operations.
 
@@ -44,7 +44,7 @@ Current source facts:
 
 Move to `sandbox-protocol`:
 
-- `SandboxRequest`.
+- `Request`.
 - `OperationScope`.
 - `Response`.
 - `OperationFamily` or a renamed `OperationGroup`.
@@ -137,7 +137,7 @@ Implementation steps:
 9. Add the unified DTO fields:
 
    ```rust
-   pub struct SandboxRequest {
+   pub struct Request {
        pub request_id: String,
        pub scope: OperationScope,
        pub op: String,

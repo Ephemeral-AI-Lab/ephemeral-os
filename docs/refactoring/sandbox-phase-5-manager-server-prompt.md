@@ -10,7 +10,7 @@ You are working in:
 Task:
 
 Implement phase 5 only: add the `sandbox-manager` server endpoint and route
-unified `SandboxRequest` messages. Manager-owned operations dispatch locally.
+unified `Request` messages. Manager-owned operations dispatch locally.
 Sandbox-scoped daemon operations are forwarded through the existing
 `SandboxDaemonClient` abstraction.
 
@@ -25,7 +25,7 @@ Required starting state:
 
 - `crates/sandbox-protocol` exists.
 - `crates/sandbox-protocol/src/scope.rs` exists.
-- `sandbox_protocol::SandboxRequest` exists.
+- `sandbox_protocol::Request` exists.
 - `sandbox_protocol::OperationScope` exists.
 - `sandbox_protocol::Response` exists.
 - `crates/sandbox-runtime/operation` exists.
@@ -47,7 +47,7 @@ Phase goal:
 - Make `sandbox-manager` usable as a process endpoint.
 - Add server config, listener lifecycle, connection handling, and request
   routing modules.
-- Decode exactly one JSON-line `SandboxRequest` per connection.
+- Decode exactly one JSON-line `Request` per connection.
 - Dispatch manager operations locally.
 - Forward daemon-owned sandbox-scoped operations through `SandboxDaemonClient`.
 - Preserve separation from `sandbox-runtime`, `sandbox-daemon`, and
@@ -67,7 +67,7 @@ Keep in `sandbox-manager`:
 - Manager listener lifecycle.
 - Manager connection handling.
 - Request decoding at the server edge.
-- Scope-based routing for `SandboxRequest`.
+- Scope-based routing for `Request`.
 - Forwarding through `SandboxDaemonClient`.
 - Tests using fake daemon clients and in-memory streams.
 
@@ -102,7 +102,7 @@ Implementation steps:
    test -d crates/sandbox-manager
    test ! -d crates/sandbox-manager/src/server
    test ! -f crates/sandbox-manager/src/operation/impls/invoke_sandbox_daemon.rs
-   rg -n "SandboxRequest|OperationScope|Response" crates/sandbox-protocol/src
+   rg -n "Request|OperationScope|Response" crates/sandbox-protocol/src
    rg -n "invoke_sandbox_daemon" crates/sandbox-manager/src/operation
    ```
 
@@ -210,7 +210,7 @@ Implementation steps:
     - Read one newline-delimited JSON request.
     - Enforce `sandbox_protocol::MAX_REQUEST_BYTES`.
     - Enforce `sandbox_protocol::REQUEST_READ_TIMEOUT_S`.
-    - Decode the request into `sandbox_protocol::SandboxRequest`.
+    - Decode the request into `sandbox_protocol::Request`.
     - Write one newline-delimited response using
       `sandbox_protocol::response_line`.
     - Shutdown the writer after the response.
@@ -240,7 +240,7 @@ Implementation steps:
     - Validate the sandbox id from `OperationScope::Sandbox`.
     - Resolve `sandbox_id -> SandboxDaemonEndpoint` through `SandboxStore`.
     - Require the sandbox record to be ready and daemon endpoint to be present.
-    - Forward the same `SandboxRequest` to:
+    - Forward the same `Request` to:
 
       ```rust
       services.daemon_client.invoke(&endpoint, request)
@@ -251,7 +251,7 @@ Implementation steps:
 
 14. Update protocol serialization only if needed for forwarding tests:
 
-    - If `SandboxRequest` needs to be sent over a socket by a real client, add
+    - If `Request` needs to be sent over a socket by a real client, add
       `Serialize` / `Deserialize` derives in `sandbox-protocol`.
     - Keep protocol names explicit.
     - Preserve existing protocol tests.

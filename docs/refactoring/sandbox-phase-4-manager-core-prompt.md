@@ -222,7 +222,7 @@ Implementation steps:
       fn invoke(
           &self,
           endpoint: &SandboxDaemonEndpoint,
-          request: sandbox_protocol::SandboxRequest,
+          request: sandbox_protocol::Request,
       ) -> Result<sandbox_protocol::Response, ManagerError>;
       ```
 
@@ -259,7 +259,7 @@ Implementation steps:
         pub spec: &'static sandbox_protocol::OperationSpec,
         pub dispatch: fn(
             &ManagerServices,
-            sandbox_protocol::Request<'_>,
+            &sandbox_protocol::Request,
         ) -> sandbox_protocol::Response,
     }
     ```

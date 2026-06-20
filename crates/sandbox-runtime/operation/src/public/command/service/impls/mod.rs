@@ -11,7 +11,7 @@ use crate::command::{
     CommandStatus, CommandStream, CommandTranscriptRow, CommandYield,
 };
 use crate::operation::{OperationEntry, OperationSpec};
-use sandbox_protocol::{Request, Response};
+use sandbox_protocol::Response;
 
 pub(crate) const OPERATIONS: &[OperationEntry] = &[
     OperationEntry::new(&exec_command::SPEC, exec_command::dispatch),
@@ -30,41 +30,38 @@ pub(crate) const SPECS: &[&OperationSpec] = &[
 ];
 
 pub(super) fn command_yield_response(
-    request: &Request<'_>,
     result: Result<CommandYield, CommandServiceError>,
 ) -> Response {
     match result {
         Ok(output) if output.status == CommandStatus::Running => {
-            Response::running(request, command_yield_value(output))
+            Response::running(command_yield_value(output))
         }
-        Ok(output) => Response::ok(request, command_yield_value(output)),
-        Err(error) => Response::service_error(request, error),
+        Ok(output) => Response::ok(command_yield_value(output)),
+        Err(error) => Response::service_error(error),
     }
 }
 
 pub(super) fn command_poll_response(
-    request: &Request<'_>,
     result: Result<CommandPollOutput, CommandServiceError>,
 ) -> Response {
     match result {
         Ok(output) if output.status == CommandStatus::Running => {
-            Response::running(request, command_poll_value(output))
+            Response::running(command_poll_value(output))
         }
-        Ok(output) => Response::ok(request, command_poll_value(output)),
-        Err(error) => Response::service_error(request, error),
+        Ok(output) => Response::ok(command_poll_value(output)),
+        Err(error) => Response::service_error(error),
     }
 }
 
 pub(super) fn command_lines_response(
-    request: &Request<'_>,
     result: Result<CommandLinesOutput, CommandServiceError>,
 ) -> Response {
     match result {
         Ok(output) if output.status == CommandStatus::Running => {
-            Response::running(request, command_lines_value(output))
+            Response::running(command_lines_value(output))
         }
-        Ok(output) => Response::ok(request, command_lines_value(output)),
-        Err(error) => Response::service_error(request, error),
+        Ok(output) => Response::ok(command_lines_value(output)),
+        Err(error) => Response::service_error(error),
     }
 }
 

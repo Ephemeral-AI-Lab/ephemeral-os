@@ -54,15 +54,15 @@ const READ_LINES_CLI: CliSpec = CliSpec {
     ],
 };
 
-pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: Request<'_>) -> Response {
-    let input = match parse_input(&request) {
+pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: &Request) -> Response {
+    let input = match parse_input(request) {
         Ok(input) => input,
         Err(response) => return response,
     };
-    command_lines_response(&request, operations.command.read_command_lines(input))
+    command_lines_response(operations.command.read_command_lines(input))
 }
 
-fn parse_input(request: &Request<'_>) -> Result<ReadCommandLinesInput, Response> {
+fn parse_input(request: &Request) -> Result<ReadCommandLinesInput, Response> {
     Ok(ReadCommandLinesInput {
         command_session_id: CommandSessionId(request.required_string("command_session_id")?),
         start_offset: request.required_u64("start_offset")?,

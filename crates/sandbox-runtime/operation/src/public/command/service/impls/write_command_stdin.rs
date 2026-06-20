@@ -52,15 +52,15 @@ const WRITE_STDIN_CLI: CliSpec = CliSpec {
     examples: &["write_command_stdin {\"command_session_id\":\"cmd-1\",\"stdin\":\"hello\"}"],
 };
 
-pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: Request<'_>) -> Response {
-    let input = match parse_input(&request) {
+pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: &Request) -> Response {
+    let input = match parse_input(request) {
         Ok(input) => input,
         Err(response) => return response,
     };
-    command_yield_response(&request, operations.command.write_command_stdin(input))
+    command_yield_response(operations.command.write_command_stdin(input))
 }
 
-fn parse_input(request: &Request<'_>) -> Result<WriteCommandStdinInput, Response> {
+fn parse_input(request: &Request) -> Result<WriteCommandStdinInput, Response> {
     Ok(WriteCommandStdinInput {
         command_session_id: CommandSessionId(request.required_string("command_session_id")?),
         stdin: request.required_string("stdin")?,

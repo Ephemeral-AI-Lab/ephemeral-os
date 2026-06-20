@@ -44,15 +44,15 @@ const POLL_CLI: CliSpec = CliSpec {
     examples: &["poll_command {\"command_session_id\":\"cmd-1\",\"last_n_lines\":50}"],
 };
 
-pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: Request<'_>) -> Response {
-    let input = match parse_input(&request) {
+pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: &Request) -> Response {
+    let input = match parse_input(request) {
         Ok(input) => input,
         Err(response) => return response,
     };
-    command_poll_response(&request, operations.command.poll(input))
+    command_poll_response(operations.command.poll(input))
 }
 
-fn parse_input(request: &Request<'_>) -> Result<PollCommandInput, Response> {
+fn parse_input(request: &Request) -> Result<PollCommandInput, Response> {
     Ok(PollCommandInput {
         command_session_id: CommandSessionId(request.required_string("command_session_id")?),
         last_n_lines: request.optional_usize("last_n_lines")?,

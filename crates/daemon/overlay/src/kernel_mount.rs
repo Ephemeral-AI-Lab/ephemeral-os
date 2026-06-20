@@ -157,24 +157,23 @@ pub fn mount_overlay(
     })
 }
 
-/// Mount an overlay using the legacy `mount(2)` data string.
+/// Mount an overlay with options that remain visible in mountinfo.
 ///
-/// This is kept as a narrow compatibility path for remount helpers that enter
-/// an already-running namespace where the new mount API may report `ENOSYS`.
-/// Normal overlay creation should use [`mount_overlay`] so it keeps the
-/// stronger new-mount API ordering and fd validation behavior.
+/// Remount verification needs `lowerdir=` in mountinfo before retargeting a
+/// live workspace lease. Normal overlay creation should use [`mount_overlay`]
+/// so it keeps the stronger new-mount API ordering and fd validation behavior.
 ///
 /// # Errors
 ///
-/// Returns [`OverlayError`] when mount inputs are invalid or the legacy mount
-/// syscall fails.
+/// Returns [`OverlayError`] when mount inputs are invalid or the mount syscall
+/// fails.
 #[cfg(target_os = "linux")]
-pub fn mount_overlay_legacy(
+pub fn mount_overlay_with_visible_options(
     workspace_root: &Path,
     handle: &OverlayHandle,
 ) -> std::result::Result<OverlayMount, OverlayError> {
     let inputs = ValidatedMountInputs::open(workspace_root, handle)?;
-    let data = legacy_overlay_options(&inputs, handle)?;
+    let data = mountinfo_visible_overlay_options(&inputs, handle)?;
     mount(
         "overlay",
         &inputs.workspace_root,
@@ -182,7 +181,7 @@ pub fn mount_overlay_legacy(
         MountFlags::empty(),
         data.as_c_str(),
     )
-    .map_mount_syscall("legacy mount overlay")?;
+    .map_mount_syscall("mount overlay with visible options")?;
     Ok(OverlayMount {
         workspace_root: Some(inputs.workspace_root),
     })
@@ -268,7 +267,7 @@ pub const fn mount_overlay(
 ///
 /// Always returns [`OverlayError::Unsupported`].
 #[cfg(not(target_os = "linux"))]
-pub const fn mount_overlay_legacy(
+pub const fn mount_overlay_with_visible_options(
     _workspace_root: &Path,
     _handle: &OverlayHandle,
 ) -> std::result::Result<OverlayMount, OverlayError> {
@@ -382,14 +381,15 @@ fn fd_path(file: &File) -> PathBuf {
 }
 
 #[cfg(target_os = "linux")]
-fn legacy_overlay_options(
+fn mountinfo_visible_overlay_options(
     inputs: &ValidatedMountInputs,
     handle: &OverlayHandle,
 ) -> std::result::Result<CString, OverlayError> {
     let mut data = Vec::new();
     data.extend_from_slice(b"lowerdir=");
-    // The legacy mount API cannot use the fd-backed lower paths used by the
-    // new mount API. These original paths were already validated/opened above.
+    // mountinfo-visible options cannot use the fd-backed lower paths used by
+    // the new mount API. These original paths were already validated/opened
+    // above.
     for (index, layer) in handle.layer_paths.iter().enumerate() {
         if index > 0 {
             data.push(b':');
@@ -401,7 +401,7 @@ fn legacy_overlay_options(
     data.extend_from_slice(b",workdir=");
     data.extend_from_slice(inputs.workdir.as_os_str().as_bytes());
     CString::new(data).map_err(|err| {
-        OverlayError::InvalidMountInput(format!("legacy overlay mount data contains nul: {err}"))
+        OverlayError::InvalidMountInput(format!("overlay mount data contains nul: {err}"))
     })
 }
 

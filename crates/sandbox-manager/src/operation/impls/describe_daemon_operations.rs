@@ -2,9 +2,9 @@ use super::{endpoint, sandbox_id};
 
 pub(crate) fn dispatch(
     services: &crate::operation::ManagerServices,
-    request: sandbox_protocol::Request<'_>,
+    request: &sandbox_protocol::Request,
 ) -> sandbox_protocol::Response {
-    let id = match sandbox_id(&request) {
+    let id = match sandbox_id(request) {
         Ok(id) => id,
         Err(response) => return response,
     };
@@ -13,10 +13,9 @@ pub(crate) fn dispatch(
         Err(error) => return error.into_response(),
     };
     match services.daemon_client.describe_operations(&endpoint) {
-        Ok(catalog) => sandbox_protocol::Response::ok(
-            &request,
-            crate::operation::specs::catalog_value(catalog),
-        ),
+        Ok(catalog) => {
+            sandbox_protocol::Response::ok(crate::operation::specs::catalog_value(catalog))
+        }
         Err(error) => error.into_response(),
     }
 }

@@ -73,15 +73,15 @@ const EXEC_COMMAND_CLI: CliSpec = CliSpec {
     examples: &["exec_command {\"workspace_session_id\":\"ws-1\",\"cmd\":\"pwd\"}"],
 };
 
-pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: Request<'_>) -> Response {
-    let input = match parse_input(&request) {
+pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: &Request) -> Response {
+    let input = match parse_input(request) {
         Ok(input) => input,
         Err(response) => return response,
     };
-    command_yield_response(&request, operations.command.exec_command(input))
+    command_yield_response(operations.command.exec_command(input))
 }
 
-fn parse_input(request: &Request<'_>) -> Result<ExecCommandInput, Response> {
+fn parse_input(request: &Request) -> Result<ExecCommandInput, Response> {
     Ok(ExecCommandInput {
         workspace_session_id: WorkspaceSessionId(request.required_string("workspace_session_id")?),
         cmd: request.required_string("cmd")?,

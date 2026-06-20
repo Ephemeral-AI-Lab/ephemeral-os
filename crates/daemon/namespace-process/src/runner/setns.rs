@@ -288,10 +288,10 @@ fn mount_overlay_for_verified_remount(
     // The new mount API validates lowerdirs well but can hide the lowerdir list
     // from mountinfo on common kernels. Live remount must prove the target
     // mount uses the requested compact lower stack before lease retarget, so
-    // this narrow remount path uses the validated legacy mount data string: it
-    // still opens/checks every input in overlay::mount_overlay_legacy, and the
-    // resulting mountinfo includes lowerdir= for exact verification.
-    Ok(overlay::mount_overlay_legacy(mountpoint, handle)?)
+    // this path uses validated mount options that remain visible in mountinfo.
+    Ok(overlay::mount_overlay_with_visible_options(
+        mountpoint, handle,
+    )?)
 }
 
 #[cfg(target_os = "linux")]

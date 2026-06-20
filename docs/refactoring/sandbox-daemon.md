@@ -19,7 +19,7 @@ transport, server lifecycle, and low-level helper subcommand adapters.
 - `serve`, `ns-runner`, and `ns-holder` subcommand routing.
 - Unix/TCP listener lifecycle for daemon requests.
 - Request framing at the server edge.
-- Dispatching decoded `sandbox_protocol::SandboxRequest` values to
+- Dispatching decoded `sandbox_protocol::Request` values to
   `sandbox-runtime`.
 - Runtime wiring that builds `SandboxRuntimeOperations`.
 
@@ -64,10 +64,10 @@ sandbox-daemon ns-holder
 
 ## Protocol Contract
 
-The daemon receives the same `SandboxRequest` DTO as the manager:
+The daemon receives the same `Request` DTO as the manager:
 
 ```rust
-pub struct SandboxRequest {
+pub struct Request {
     pub request_id: String,
     pub scope: OperationScope,
     pub op: String,

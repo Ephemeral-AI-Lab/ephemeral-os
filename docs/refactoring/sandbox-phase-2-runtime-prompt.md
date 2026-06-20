@@ -169,7 +169,7 @@ Implementation steps:
    ```
 
 10. Use `SandboxRuntimeOperations` as the runtime aggregate type and do not
-    leave an old aggregate compatibility alias behind.
+    leave an old aggregate re-export behind.
 
 11. Export the daemon operation catalog:
 
@@ -235,6 +235,6 @@ Final response requirements:
 - State whether phase 1 starting-state checks passed.
 - State whether baseline checks had pre-existing failures.
 - State final verification commands and results.
-- Confirm no compatibility aliases were left in place.
+- Confirm no old aggregate re-exports were left in place.
 - Do not claim phase 3 work was done.
 ```
