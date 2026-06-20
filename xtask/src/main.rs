@@ -100,10 +100,6 @@ struct InlineTestPolicyException {
 
 const INLINE_TEST_POLICY_EXCEPTIONS: &[InlineTestPolicyException] = &[
     InlineTestPolicyException {
-        path: "crates/daemon/layerstack/src/service.rs",
-        kind: InlineTestPolicyViolationKind::PathAttribute,
-    },
-    InlineTestPolicyException {
         path: "crates/daemon/operation/src/public/command/mod.rs",
         kind: InlineTestPolicyViolationKind::PathAttribute,
     },

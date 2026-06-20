@@ -1,10 +1,6 @@
-#[path = "service/cache.rs"]
 pub(crate) mod cache;
-#[path = "service/impls/mod.rs"]
 mod impls;
-#[path = "service/model.rs"]
 mod model;
-#[path = "service/support.rs"]
 pub(crate) mod support;
 
 pub use impls::{
