@@ -16,7 +16,7 @@ pub use model::{
 };
 
 pub use commit::model::FileResult;
-pub use commit::{ChangesetResult, CommitError, CommitStatus, OccTraceEvent};
+pub use commit::{ChangesetResult, CommitError, CommitStatus};
 pub use error::LayerStackError;
 pub use stack::reclaim_unpinned_layers::{
     LeaseParentCompactionOutcome, ReclaimUnpinnedLayersCopyThroughOutcome,

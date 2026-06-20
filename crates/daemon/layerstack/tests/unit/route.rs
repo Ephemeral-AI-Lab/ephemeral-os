@@ -6,7 +6,7 @@ use crate::test_fixture::{lp, Fixture, TestResult};
 use crate::{service, CommitStatus, LayerStack};
 
 use crate::commit::route::model::{
-    COMMAND_SCRATCH_PATH_DROP_REASON, DAEMON_CONTROL_PATH_DROP_REASON,
+    PublishDecision, COMMAND_SCRATCH_PATH_DROP_REASON, DAEMON_CONTROL_PATH_DROP_REASON,
     GIT_HOOK_WRITE_REJECT_REASON, GIT_INCOMPLETE_OPERATION_REJECT_REASON,
     GIT_INDEX_STAGED_STATE_REJECT_REASON, GIT_INDEX_STAT_REFRESH_DROP_REASON,
     GIT_LOCK_FILE_REJECT_REASON, GIT_METADATA_DELETE_REJECT_REASON,
@@ -120,6 +120,13 @@ impl PublishRouteStats {
     }
 }
 
+fn decision_drop_reason(decision: &PublishDecision) -> Option<String> {
+    decision
+        .drop_file_result_with_default("")
+        .map(|file| file.message)
+        .filter(|message| !message.is_empty())
+}
+
 fn publish_route_stats_for_manifest(
     root: &Path,
     manifest: &crate::Manifest,
@@ -140,8 +147,8 @@ fn publish_route_stats_for_manifest(
             }
             Route::Drop => {
                 stats.drop_path_count += 1;
-                if let Some(reason) = decision.drop_reason() {
-                    stats.record_drop_reason(reason.as_str());
+                if let Some(reason) = decision_drop_reason(decision) {
+                    stats.record_drop_reason(&reason);
                 }
             }
         }
@@ -243,16 +250,16 @@ fn git_metadata_drop_decisions_use_stable_reason_code() -> TestResult {
 
     assert_eq!(decisions[0].route(), Route::Drop);
     assert_eq!(
-        decisions[0].drop_reason().map(|reason| reason.as_str()),
+        decision_drop_reason(&decisions[0]).as_deref(),
         Some(GIT_METADATA_OPAQUE_REPLACE_REJECT_REASON)
     );
     assert_eq!(decisions[1].route(), Route::Drop);
     assert_eq!(
-        decisions[1].drop_reason().map(|reason| reason.as_str()),
+        decision_drop_reason(&decisions[1]).as_deref(),
         Some(GIT_METADATA_UNSUPPORTED_DROP_REASON)
     );
     assert_eq!(decisions[2].route(), Route::Gated);
-    assert_eq!(decisions[2].drop_reason(), None);
+    assert_eq!(decision_drop_reason(&decisions[2]), None);
     Ok(())
 }
 
@@ -405,10 +412,7 @@ fn command_git_rejects_locks_markers_hooks_and_ref_writes() -> TestResult {
     for (decision, reason) in decisions.iter().zip(expected) {
         assert_eq!(decision.route(), Route::Drop);
         assert!(decision.reject_publish());
-        assert_eq!(
-            decision.drop_reason().map(|reason| reason.as_str()),
-            Some(reason)
-        );
+        assert_eq!(decision_drop_reason(decision).as_deref(), Some(reason));
     }
     Ok(())
 }
@@ -444,7 +448,7 @@ fn command_git_extended_incomplete_operation_markers_reject() -> TestResult {
         assert_eq!(decision.route(), Route::Drop);
         assert!(decision.reject_publish());
         assert_eq!(
-            decision.drop_reason().map(|reason| reason.as_str()),
+            decision_drop_reason(&decision).as_deref(),
             Some(GIT_INCOMPLETE_OPERATION_REJECT_REASON)
         );
     }
@@ -482,12 +486,12 @@ fn command_git_deletions_and_opaque_root_reject() -> TestResult {
         assert_eq!(decision.route(), Route::Drop);
         assert!(decision.reject_publish());
         assert_eq!(
-            decision.drop_reason().map(|reason| reason.as_str()),
+            decision_drop_reason(decision).as_deref(),
             Some(GIT_METADATA_DELETE_REJECT_REASON)
         );
     }
     assert_eq!(
-        decisions[5].drop_reason().map(|reason| reason.as_str()),
+        decision_drop_reason(&decisions[5]).as_deref(),
         Some(GIT_METADATA_OPAQUE_REPLACE_REJECT_REASON)
     );
     assert!(decisions[5].reject_publish());
@@ -642,14 +646,14 @@ fn command_git_objects_are_gated_and_rewrites_reject() -> TestResult {
     assert_eq!(decisions[2].route(), Route::Drop);
     assert!(decisions[2].reject_publish());
     assert_eq!(
-        decisions[2].drop_reason().map(|reason| reason.as_str()),
+        decision_drop_reason(&decisions[2]).as_deref(),
         Some(GIT_OBJECT_REWRITE_REJECT_REASON)
     );
     for decision in decisions.iter().skip(3) {
         assert_eq!(decision.route(), Route::Drop);
         assert!(decision.reject_publish());
         assert_eq!(
-            decision.drop_reason().map(|reason| reason.as_str()),
+            decision_drop_reason(decision).as_deref(),
             Some(GIT_METADATA_UNSUPPORTED_DROP_REASON)
         );
     }
@@ -721,21 +725,21 @@ fn protected_path_drop_decisions_use_stable_reason_codes() -> TestResult {
 
     assert_eq!(decisions[0].route(), Route::Drop);
     assert_eq!(
-        decisions[0].drop_reason().map(|reason| reason.as_str()),
+        decision_drop_reason(&decisions[0]).as_deref(),
         Some(DAEMON_CONTROL_PATH_DROP_REASON)
     );
     assert_eq!(decisions[1].route(), Route::Drop);
     assert_eq!(
-        decisions[1].drop_reason().map(|reason| reason.as_str()),
+        decision_drop_reason(&decisions[1]).as_deref(),
         Some(DAEMON_CONTROL_PATH_DROP_REASON)
     );
     assert_eq!(decisions[2].route(), Route::Drop);
     assert_eq!(
-        decisions[2].drop_reason().map(|reason| reason.as_str()),
+        decision_drop_reason(&decisions[2]).as_deref(),
         Some(COMMAND_SCRATCH_PATH_DROP_REASON)
     );
     assert_eq!(decisions[3].route(), Route::Direct);
-    assert_eq!(decisions[3].drop_reason(), None);
+    assert_eq!(decision_drop_reason(&decisions[3]), None);
     Ok(())
 }
 
@@ -877,13 +881,14 @@ fn publish_changes_uses_supplied_manifest_snapshot_for_routes() -> TestResult {
     assert_eq!(result.published_manifest_version, None);
     assert_eq!(result.files[0].status, CommitStatus::AbortedVersion);
     assert_eq!(fixture.read_text("later/cache.txt")?, "theirs");
-    let handoff = result
-        .events
-        .iter()
-        .find(|event| event.module == "occ" && event.name == "worker_handoff")
-        .expect("worker handoff event");
-    assert_eq!(handoff.details["gated_path_count"], 1);
-    assert_eq!(handoff.details["direct_path_count"], 0);
+    assert_eq!(
+        result.timings.get("occ.commit.gated_path_count").copied(),
+        Some(1.0)
+    );
+    assert_eq!(
+        result.timings.get("occ.commit.direct_path_count").copied(),
+        Some(0.0)
+    );
     Ok(())
 }
 
@@ -1044,16 +1049,6 @@ fn publish_changes_surfaces_git_drop_reason_counts() -> TestResult {
         .expect("git file result");
     assert_eq!(git_result.status, CommitStatus::Failed);
     assert_eq!(git_result.message, GIT_METADATA_UNSUPPORTED_DROP_REASON);
-    let handoff = result
-        .events
-        .iter()
-        .find(|event| event.module == "occ" && event.name == "worker_handoff")
-        .expect("worker handoff event");
-    assert_eq!(handoff.details["drop_path_count"], 1);
-    assert_eq!(
-        handoff.details["drop_reason_counts"][GIT_METADATA_UNSUPPORTED_DROP_REASON],
-        1
-    );
     Ok(())
 }
 
@@ -1102,20 +1097,6 @@ fn publish_changes_surfaces_route_protected_drop_reason_counts() -> TestResult {
             .message,
         COMMAND_SCRATCH_PATH_DROP_REASON
     );
-    let handoff = result
-        .events
-        .iter()
-        .find(|event| event.module == "occ" && event.name == "worker_handoff")
-        .expect("worker handoff event");
-    assert_eq!(handoff.details["drop_path_count"], 2);
-    assert_eq!(
-        handoff.details["drop_reason_counts"][DAEMON_CONTROL_PATH_DROP_REASON],
-        1
-    );
-    assert_eq!(
-        handoff.details["drop_reason_counts"][COMMAND_SCRATCH_PATH_DROP_REASON],
-        1
-    );
     assert_eq!(fixture.read_text("ordinary.txt")?, "ignored");
     Ok(())
 }
@@ -1145,13 +1126,6 @@ fn opaque_dir_with_all_ignored_descendants_routes_direct() -> TestResult {
         !exists,
         "ignored opaque marker should hide ignored descendants"
     );
-    let handoff = result
-        .events
-        .iter()
-        .find(|event| event.module == "occ" && event.name == "worker_handoff")
-        .expect("worker handoff event");
-    assert_eq!(handoff.details["direct_path_count"], 1);
-    assert_eq!(handoff.details["drop_path_count"], 0);
     Ok(())
 }
 
@@ -1215,16 +1189,6 @@ fn opaque_dir_with_mixed_descendant_routes_rejects_publish() -> TestResult {
     assert_eq!(result.published_manifest_version, None);
     assert_eq!(result.files[0].status, CommitStatus::Failed);
     assert_eq!(result.files[0].message, OPAQUE_DIR_MIXED_ROUTES_DROP_REASON);
-    let handoff = result
-        .events
-        .iter()
-        .find(|event| event.module == "occ" && event.name == "worker_handoff")
-        .expect("worker handoff event");
-    assert_eq!(handoff.details["drop_path_count"], 1);
-    assert_eq!(
-        handoff.details["drop_reason_counts"][OPAQUE_DIR_MIXED_ROUTES_DROP_REASON],
-        1
-    );
     assert_eq!(fixture.read_text("tree/src.txt")?, "source");
     assert_eq!(fixture.read_text("tree/cache/out.txt")?, "ignored");
     Ok(())
@@ -1255,15 +1219,6 @@ fn opaque_dir_with_git_descendant_rejects_as_protected() -> TestResult {
         result.files[0].message,
         OPAQUE_DIR_PROTECTED_DESCENDANT_DROP_REASON
     );
-    let handoff = result
-        .events
-        .iter()
-        .find(|event| event.module == "occ" && event.name == "worker_handoff")
-        .expect("worker handoff event");
-    assert_eq!(
-        handoff.details["drop_reason_counts"][OPAQUE_DIR_PROTECTED_DESCENDANT_DROP_REASON],
-        1
-    );
     let (_bytes, exists) =
         LayerStack::open(fixture.root.clone())?.read_bytes("tree/.git/config")?;
     assert!(exists, "protected descendant must remain visible");
@@ -1293,15 +1248,6 @@ fn opaque_dir_with_non_git_protected_descendant_rejects_as_protected() -> TestRe
     assert_eq!(
         result.files[0].message,
         OPAQUE_DIR_PROTECTED_DESCENDANT_DROP_REASON
-    );
-    let handoff = result
-        .events
-        .iter()
-        .find(|event| event.module == "occ" && event.name == "worker_handoff")
-        .expect("worker handoff event");
-    assert_eq!(
-        handoff.details["drop_reason_counts"][OPAQUE_DIR_PROTECTED_DESCENDANT_DROP_REASON],
-        1
     );
     let (_bytes, exists) =
         LayerStack::open(fixture.root.clone())?.read_bytes("tree/.layer-metadata/state.json")?;
@@ -1340,7 +1286,7 @@ fn opaque_dir_expansion_limit_rejects_publish() -> TestResult {
     assert_eq!(decision.route(), Route::Drop);
     assert!(decision.reject_publish());
     assert_eq!(
-        decision.drop_reason().map(|reason| reason.as_str()),
+        decision_drop_reason(&decision).as_deref(),
         Some(OPAQUE_DIR_EXPANSION_LIMIT_DROP_REASON)
     );
     Ok(())

@@ -1,13 +1,10 @@
-use std::collections::BTreeMap;
 use std::path::PathBuf;
-
-use serde_json::json;
 
 use crate::model::LayerChange;
 
 use super::error::CommitError;
-use super::model::{ChangesetResult, OccTraceEvent};
-use super::route::{PublishDecision, Route};
+use super::model::ChangesetResult;
+use super::route::PublishDecision;
 use super::worker::{CommitQueue, CommitTransaction, PreparedChangeset};
 
 pub(crate) struct CommitWriter {
@@ -30,13 +27,10 @@ impl CommitWriter {
         decisions: Vec<PublishDecision>,
     ) -> Result<ChangesetResult, CommitError> {
         let prepared = PreparedChangeset::try_new(changes, decisions, atomic)?;
-        let handoff_event =
-            worker_handoff_event(&prepared.decisions, prepared.changes.len(), prepared.atomic);
         let receiver = self.commit_queue.submit(prepared)?;
         let mut result = receiver
             .recv()
             .map_err(|_| CommitError::ReplyDisconnected)??;
-        result.events.insert(0, handoff_event);
         if let (Some(published), Some(snapshot)) =
             (result.published_manifest_version, snapshot_version)
         {
@@ -62,42 +56,4 @@ impl Drop for CommitWriter {
     fn drop(&mut self) {
         let _ = self.commit_queue.close();
     }
-}
-
-fn worker_handoff_event(
-    decisions: &[PublishDecision],
-    publishable_change_count: usize,
-    atomic: bool,
-) -> OccTraceEvent {
-    let mut gated_path_count = 0;
-    let mut direct_path_count = 0;
-    let mut drop_path_count = 0;
-    let mut drop_reason_counts: BTreeMap<String, usize> = BTreeMap::new();
-    for decision in decisions {
-        match decision.route() {
-            Route::Gated => gated_path_count += 1,
-            Route::Direct => direct_path_count += 1,
-            Route::Drop => {
-                drop_path_count += 1;
-                if let Some(reason) = decision.drop_reason() {
-                    *drop_reason_counts
-                        .entry(reason.as_str().to_owned())
-                        .or_default() += 1;
-                }
-            }
-        }
-    }
-    OccTraceEvent::new(
-        "occ",
-        "worker_handoff",
-        json!({
-            "path_count": decisions.len(),
-            "publishable_change_count": publishable_change_count,
-            "atomic": atomic,
-            "gated_path_count": gated_path_count,
-            "direct_path_count": direct_path_count,
-            "drop_path_count": drop_path_count,
-            "drop_reason_counts": drop_reason_counts,
-        }),
-    )
 }

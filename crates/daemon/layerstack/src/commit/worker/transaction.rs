@@ -2,13 +2,11 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use serde_json::json;
-
 use crate::fs::resolve_layer_path;
 use crate::model::{LayerChange, LayerPath, Manifest};
 use crate::{LayerStack, MergedView};
 
-use super::super::model::{ChangesetResult, CommitStatus, FileResult, OccTraceEvent};
+use super::super::model::{ChangesetResult, CommitStatus, FileResult};
 use super::super::route::{hash_current, PublishDecision, Route};
 use super::queue::{PreparedChangeset, PublishConflict};
 use trace::usize_to_f64_saturating;
@@ -29,16 +27,13 @@ impl CommitTransaction {
             Err(err) => return Ok(failed_revalidate_result(combined, &err, total_start)),
         };
         let validate_start = Instant::now();
-        let snapshot = match stack.with_active_manifest(|active| {
-            let active_lease_count = stack.active_lease_count();
+        let validations = match stack.with_active_manifest(|active| {
             let view = MergedView::new(self.root.clone());
-            let validations = validate_prepared(&self.root, &view, active, combined);
-            Ok((active.clone(), active_lease_count, validations))
+            Ok(validate_prepared(&self.root, &view, active, combined))
         }) {
-            Ok(snapshot) => snapshot,
+            Ok(validations) => validations,
             Err(err) => return Ok(failed_revalidate_result(combined, &err, total_start)),
         };
-        let (active, active_lease_count, validations) = snapshot;
         let validate_s = validate_start.elapsed().as_secs_f64();
         if combined.atomic && validations.iter().any(|f| !f.status.is_non_conflicting()) {
             return Ok(atomic_validation_drop_result(
@@ -64,12 +59,7 @@ impl CommitTransaction {
                 Ok(committed_changeset_result(
                     combined,
                     validations,
-                    CommittedManifestContext {
-                        published_manifest_version: manifest_version_u64_optional(manifest.version),
-                        active_manifest: &active,
-                        active_lease_count,
-                        published_manifest: &manifest,
-                    },
+                    manifest_version_u64_optional(manifest.version),
                     validate_s,
                     publish_s,
                     total_start,
@@ -134,7 +124,6 @@ fn atomic_validation_drop_result(
             0.0,
             total_start.elapsed().as_secs_f64(),
         ),
-        events: Vec::new(),
     }
 }
 
@@ -170,21 +159,13 @@ fn no_publish_result(
             0.0,
             total_start.elapsed().as_secs_f64(),
         ),
-        events: Vec::new(),
     }
-}
-
-struct CommittedManifestContext<'a> {
-    published_manifest_version: Option<u64>,
-    active_manifest: &'a Manifest,
-    active_lease_count: usize,
-    published_manifest: &'a Manifest,
 }
 
 fn committed_changeset_result(
     combined: &PreparedChangeset,
     validations: Vec<FileResult>,
-    manifest_context: CommittedManifestContext<'_>,
+    published_manifest_version: Option<u64>,
     validate_s: f64,
     publish_s: f64,
     total_start: Instant,
@@ -195,34 +176,6 @@ fn committed_changeset_result(
         publish_s,
         total_start.elapsed().as_secs_f64(),
     );
-    let events = vec![
-        OccTraceEvent::new(
-            "layer_stack",
-            "manifest_validated",
-            json!({
-                "manifest_version": manifest_context.active_manifest.version,
-                "manifest_depth": manifest_context.active_manifest.depth(),
-                "manifest_path_count": manifest_context.active_manifest.layers.len(),
-                "active_lease_count": manifest_context.active_lease_count,
-            }),
-        ),
-        OccTraceEvent::new(
-            "layer_stack",
-            "publish_layer_finished",
-            json!({
-                "success": true,
-                "manifest_version_before": manifest_context.active_manifest.version,
-                "manifest_version_after": manifest_context.published_manifest.version,
-                "published_manifest_version": manifest_context.published_manifest_version,
-                "published_layer_count": manifest_context
-                    .published_manifest
-                    .layers
-                    .len()
-                    .saturating_sub(manifest_context.active_manifest.layers.len()),
-                "duration_s": publish_s,
-            }),
-        ),
-    ];
     ChangesetResult {
         files: validations
             .into_iter()
@@ -237,9 +190,8 @@ fn committed_changeset_result(
                 }
             })
             .collect(),
-        published_manifest_version: manifest_context.published_manifest_version,
+        published_manifest_version,
         timings,
-        events,
     }
 }
 
@@ -394,7 +346,6 @@ fn failed_changeset_with_timings(
             .collect(),
         published_manifest_version: None,
         timings,
-        events: Vec::new(),
     }
 }
 

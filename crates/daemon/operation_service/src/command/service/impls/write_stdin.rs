@@ -1,10 +1,7 @@
 use std::sync::Arc;
 
 use crate::command::service::CommandOperationService;
-use crate::command::{
-    CommandCallContext, CommandOutputSnapshot, CommandServiceError, CommandStatus, CommandYield,
-    WriteStdinInput,
-};
+use crate::command::{CommandCallContext, CommandServiceError, CommandYield, WriteStdinInput};
 
 impl CommandOperationService {
     pub fn write_stdin(
@@ -23,11 +20,7 @@ impl CommandOperationService {
                 active.workspace_session_id.clone(),
             )
         };
-        if self.workspace().is_remount_pending(&workspace_session_id) {
-            return Err(CommandServiceError::WorkspaceSessionRemountPending {
-                workspace_session_id,
-            });
-        }
+        self.ensure_workspace_session_not_remount_pending(&workspace_session_id)?;
         let output = {
             process.write_process_stdin(&input.chars).map_err(|error| {
                 CommandServiceError::CommandIo {
@@ -42,12 +35,6 @@ impl CommandOperationService {
             }
         };
 
-        Ok(CommandYield {
-            command_id: Some(command_id),
-            status: CommandStatus::Running,
-            exit_code: None,
-            output: CommandOutputSnapshot { stdout: output },
-            finalized: None,
-        })
+        Ok(Self::running_command_yield(command_id, output))
     }
 }

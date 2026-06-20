@@ -72,51 +72,6 @@ fn snapshot_manifest_rejects_absolute_layer_paths_outside_root() {
 }
 
 #[test]
-fn commit_direct_trace_events_include_worker_handoff_and_batch_facts() -> TestResult {
-    let fixture = Fixture::new("worker_handoff_trace")?;
-    let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
-    let layer_paths = manifest
-        .layers
-        .iter()
-        .map(|layer| fixture.root.join(&layer.path))
-        .collect::<Vec<_>>();
-
-    let result = service::publish_changes_to_layerstack(service::PublishChangesRequest {
-        root: &fixture.root,
-        snapshot_manifest_version: manifest.version,
-        snapshot_layer_paths: &layer_paths,
-        changes: &[LayerChange::Write {
-            path: lp("README.md")?,
-            content: b"# updated\n".to_vec(),
-        }],
-    })?;
-
-    assert!(result.success());
-    let events = result.trace_events();
-    let handoff = events
-        .iter()
-        .find(|event| event.module == "occ" && event.name == "worker_handoff")
-        .expect("worker handoff event");
-    assert_eq!(handoff.details["path_count"], 1);
-    assert_eq!(handoff.details["publishable_change_count"], 1);
-    assert_eq!(handoff.details["atomic"], true);
-    assert_eq!(handoff.details["gated_path_count"], 1);
-    assert_eq!(handoff.details["direct_path_count"], 0);
-    assert_eq!(handoff.details["drop_path_count"], 0);
-
-    let batch = events
-        .iter()
-        .find(|event| event.module == "occ" && event.name == "worker_batch_finished")
-        .expect("worker batch event");
-    assert_eq!(batch.details["batch_item_count"], 1);
-    assert_eq!(batch.details["combined_path_count"], 1);
-    assert_eq!(batch.details["combined_change_count"], 1);
-    assert_eq!(batch.details["atomic"], true);
-    assert_eq!(batch.details["cas_retry_count"], 0);
-    Ok(())
-}
-
-#[test]
 fn process_state_reset_clears_service_cache_and_lease_registry() -> TestResult {
     let _state_guard = process_state_test_lock();
     reset_process_state_for_tests();

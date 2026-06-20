@@ -3,7 +3,7 @@ use std::time::Instant;
 use crate::command::service::CommandOperationService;
 use crate::command::{
     CancelCommandInput, CancellationState, CommandCallContext, CommandLifecycleState,
-    CommandOutputSnapshot, CommandServiceError, CommandStatus, CommandYield,
+    CommandServiceError, CommandYield,
 };
 
 impl CommandOperationService {
@@ -32,12 +32,6 @@ impl CommandOperationService {
                 command_id: command_id.clone(),
             })?;
 
-        Ok(CommandYield {
-            command_id: Some(command_id),
-            status: CommandStatus::Running,
-            exit_code: None,
-            output: CommandOutputSnapshot { stdout: output },
-            finalized: None,
-        })
+        Ok(Self::running_command_yield(command_id, output))
     }
 }

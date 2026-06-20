@@ -20,7 +20,9 @@ pub trait CommandLaunchDriver: Send + Sync {
         config: &command::CommandConfig,
         yield_time_ms: u64,
         start_offset: u64,
-    ) -> WaitOutcome<CommandProcessExit>;
+    ) -> WaitOutcome<CommandProcessExit> {
+        wait_for_yield(process, config, yield_time_ms, start_offset)
+    }
 }
 
 #[derive(Debug, Default)]
@@ -57,15 +59,5 @@ impl CommandLaunchDriver for RealCommandLaunchDriver {
                 },
             }
         })
-    }
-
-    fn wait_for_initial_yield(
-        &self,
-        process: &CommandProcess,
-        config: &command::CommandConfig,
-        yield_time_ms: u64,
-        start_offset: u64,
-    ) -> WaitOutcome<CommandProcessExit> {
-        wait_for_yield(process, config, yield_time_ms, start_offset)
     }
 }

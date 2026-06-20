@@ -142,10 +142,6 @@ impl PublishDecision {
         !matches!(self.route, Route::Drop)
     }
 
-    pub(crate) const fn drop_reason(&self) -> Option<RouteDropReason> {
-        self.drop_reason
-    }
-
     pub(crate) const fn reject_publish(&self) -> bool {
         self.reject_publish
     }

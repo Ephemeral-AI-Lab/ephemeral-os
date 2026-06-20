@@ -17,11 +17,13 @@ pub use model::{
 };
 
 #[doc(hidden)]
+pub(crate) use cache::reset_service_cache_for_tests;
+#[cfg(test)]
 #[allow(unused_imports)]
 pub(crate) use cache::{
-    normalize_root_key, reset_service_cache_for_tests, services, RootService, ServiceCache,
-    SERVICE_CACHE_MAX,
+    normalize_root_key, services, RootService, ServiceCache, SERVICE_CACHE_MAX,
 };
 #[doc(hidden)]
+#[cfg(test)]
 #[allow(unused_imports)]
 pub(crate) use support::{snapshot_manifest, snapshot_manifest_preserving_layer_ids};

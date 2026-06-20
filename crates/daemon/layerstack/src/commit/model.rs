@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
 
 use crate::model::LayerPath;
 
@@ -63,29 +62,10 @@ impl FileResult {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct OccTraceEvent {
-    pub module: &'static str,
-    pub name: &'static str,
-    pub details: Value,
-}
-
-impl OccTraceEvent {
-    #[must_use]
-    pub fn new(module: &'static str, name: &'static str, details: Value) -> Self {
-        Self {
-            module,
-            name,
-            details,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub struct ChangesetResult {
     pub files: Vec<FileResult>,
     pub published_manifest_version: Option<u64>,
     pub timings: BTreeMap<String, f64>,
-    pub events: Vec<OccTraceEvent>,
 }
 
 impl ChangesetResult {
@@ -115,77 +95,6 @@ impl ChangesetResult {
         self.files
             .iter()
             .filter(|file| file.status.is_published())
-            .count()
-    }
-
-    #[must_use]
-    pub fn trace_events(&self) -> Vec<OccTraceEvent> {
-        let mut events = vec![OccTraceEvent::new(
-            "occ",
-            "commit_started",
-            json!({
-                "file_count": self.files.len(),
-                "gated_path_count": self.timings.get("occ.commit.gated_path_count").copied(),
-                "direct_path_count": self.timings.get("occ.commit.direct_path_count").copied(),
-            }),
-        )];
-        events.push(OccTraceEvent::new(
-            "occ",
-            "validate_groups_finished",
-            json!({
-                "file_count": self.files.len(),
-                "accepted_file_count": self.status_count(CommitStatus::Accepted),
-                "committed_file_count": self.status_count(CommitStatus::Committed),
-                "dropped_file_count": self.status_count(CommitStatus::Dropped),
-                "aborted_version_file_count": self.status_count(CommitStatus::AbortedVersion),
-                "failed_file_count": self.status_count(CommitStatus::Failed),
-                "duration_s": self.timings.get("occ.commit.validate_groups_s").copied(),
-            }),
-        ));
-        events.push(OccTraceEvent::new(
-            "occ",
-            "commit_finished",
-            json!({
-                "success": self.success(),
-                "published_manifest_version": self.published_manifest_version,
-                "file_count": self.files.len(),
-                "published_file_count": self.published_file_count(),
-                "accepted_file_count": self.status_count(CommitStatus::Accepted),
-                "committed_file_count": self.status_count(CommitStatus::Committed),
-                "dropped_file_count": self.status_count(CommitStatus::Dropped),
-                "aborted_version_file_count": self.status_count(CommitStatus::AbortedVersion),
-                "failed_file_count": self.status_count(CommitStatus::Failed),
-                "gated_path_count": self.timings.get("occ.commit.gated_path_count").copied(),
-                "direct_path_count": self.timings.get("occ.commit.direct_path_count").copied(),
-                "duration_s": self.timings.get("occ.commit.total_s").copied(),
-            }),
-        ));
-        events.extend(self.events.clone());
-        events.extend(
-            self.files
-                .iter()
-                .filter(|file| !file.status.is_non_conflicting())
-                .map(|file| {
-                    OccTraceEvent::new(
-                        "occ",
-                        "conflict_detected",
-                        json!({
-                            "path": file.path.as_str(),
-                            "reason": file.status.wire_str(),
-                            "message": file.conflict_message(file.status.wire_str()),
-                            "observed_version": file.observed_version,
-                            "observed_state": file.observed_state,
-                        }),
-                    )
-                }),
-        );
-        events
-    }
-
-    fn status_count(&self, status: CommitStatus) -> usize {
-        self.files
-            .iter()
-            .filter(|file| file.status == status)
             .count()
     }
 }

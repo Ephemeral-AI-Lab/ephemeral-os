@@ -2,9 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{mpsc, Mutex};
 use std::time::Duration;
 
-use serde_json::json;
-
-use super::super::model::{ChangesetResult, CommitStatus, FileResult, OccTraceEvent};
+use super::super::model::{ChangesetResult, CommitStatus, FileResult};
 use super::super::route::{PublishDecision, Route};
 use super::super::CommitError;
 use super::transaction::{commit_timings, CommitTransaction};
@@ -211,7 +209,7 @@ fn commit_batch(transaction: &CommitTransaction, batch: Vec<WorkItem>) {
         return;
     };
     let mut attempts = 0;
-    let mut result = loop {
+    let result = loop {
         match transaction.revalidate_and_publish(&combined) {
             Ok(result) => break result,
             Err(conflict) => {
@@ -222,20 +220,6 @@ fn commit_batch(transaction: &CommitTransaction, batch: Vec<WorkItem>) {
             }
         }
     };
-    result.events.insert(
-        0,
-        OccTraceEvent::new(
-            "occ",
-            "worker_batch_finished",
-            json!({
-                "batch_item_count": batch.len(),
-                "combined_path_count": combined.decisions.len(),
-                "combined_change_count": combined.changes.len(),
-                "atomic": combined.atomic,
-                "cas_retry_count": attempts,
-            }),
-        ),
-    );
     let files_by_path = result
         .files
         .iter()
@@ -247,7 +231,6 @@ fn commit_batch(transaction: &CommitTransaction, batch: Vec<WorkItem>) {
             files,
             published_manifest_version: result.published_manifest_version,
             timings: result.timings.clone(),
-            events: result.events.clone(),
         }));
     }
 }
@@ -366,6 +349,5 @@ pub(crate) fn cas_exhaustion_result(
         files,
         published_manifest_version: None,
         timings: commit_timings(prepared, 0.0, 0.0, 0.0),
-        events: Vec::new(),
     }
 }

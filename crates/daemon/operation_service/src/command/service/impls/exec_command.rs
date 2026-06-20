@@ -7,8 +7,8 @@ use command::yield_wait_loop::WaitOutcome;
 
 use crate::command::{
     ActiveCommandProcess, CancellationState, CommandCallContext, CommandFinalizePolicy, CommandId,
-    CommandLifecycleState, CommandOutputSnapshot, CommandServiceError, CommandStatus,
-    CommandTranscriptStore, CommandYield, ExecCommandInput, FinalizationState,
+    CommandLifecycleState, CommandOutputSnapshot, CommandServiceError, CommandTranscriptStore,
+    CommandYield, ExecCommandInput, FinalizationState,
 };
 use crate::workspace_crate::{
     CallerId, CreateWorkspaceRequest, DestroyWorkspaceRequest, WorkspaceEntry, WorkspaceId,
@@ -132,14 +132,8 @@ impl CommandOperationService {
         } else {
             None
         };
-        if workspace.is_session_command
-            && self
-                .workspace()
-                .is_remount_pending(&workspace.workspace_session_id)
-        {
-            return Err(CommandServiceError::WorkspaceSessionRemountPending {
-                workspace_session_id: workspace.workspace_session_id.clone(),
-            });
+        if workspace.is_session_command {
+            self.ensure_workspace_session_not_remount_pending(&workspace.workspace_session_id)?;
         }
         Ok(guard)
     }
@@ -184,13 +178,7 @@ impl CommandOperationService {
         );
 
         match outcome {
-            WaitOutcome::Running(stdout) => Ok(CommandYield {
-                command_id: Some(command_id),
-                status: CommandStatus::Running,
-                exit_code: None,
-                output: CommandOutputSnapshot { stdout },
-                finalized: None,
-            }),
+            WaitOutcome::Running(stdout) => Ok(Self::running_command_yield(command_id, stdout)),
             WaitOutcome::Completed(process_exit) => {
                 self.completed_initial_exec_yield(command_id, process_exit)
             }

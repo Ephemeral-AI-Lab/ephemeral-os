@@ -145,18 +145,15 @@ fn gated_stale_base_aborts_without_publish() -> TestResult {
         result.files[0].observed_state.as_deref(),
         Some("content_changed")
     );
-    let events = result.trace_events();
-    assert_eq!(events.len(), 4);
-    assert_eq!(events[2].module, "occ");
-    assert_eq!(events[2].name, "commit_finished");
-    assert_eq!(events[2].details["success"], false);
-    assert_eq!(events[2].details["aborted_version_file_count"], 1);
-    assert_eq!(events[3].module, "occ");
-    assert_eq!(events[3].name, "conflict_detected");
-    assert_eq!(events[3].details["path"], "README.md");
-    assert_eq!(events[3].details["reason"], "aborted_version");
-    assert_eq!(events[3].details["message"], "content changed");
-    assert_eq!(events[3].details["observed_state"], "content_changed");
+    assert_eq!(
+        result
+            .files
+            .iter()
+            .filter(|file| file.status == CommitStatus::AbortedVersion)
+            .count(),
+        1
+    );
+    assert_eq!(result.files[0].message, "content changed");
     assert_eq!(fixture.read_text("README.md")?, "# theirs\n");
     Ok(())
 }
@@ -186,24 +183,13 @@ fn direct_route_ignores_stale_base_and_publishes() -> TestResult {
 
     assert!(result.success());
     assert_eq!(result.files[0].status, CommitStatus::Committed);
-    let events = result.trace_events();
-    let manifest = events
-        .iter()
-        .find(|event| event.module == "layer_stack" && event.name == "manifest_validated")
-        .expect("manifest validation event");
-    assert_eq!(manifest.details["manifest_version"], 2);
-    assert_eq!(manifest.details["manifest_depth"], 2);
-    assert_eq!(manifest.details["manifest_path_count"], 2);
-    assert_eq!(manifest.details["active_lease_count"], 0);
-    let published = events
-        .iter()
-        .find(|event| event.module == "layer_stack" && event.name == "publish_layer_finished")
-        .expect("publish layer event");
-    assert_eq!(published.details["success"], true);
-    assert_eq!(published.details["manifest_version_before"], 2);
-    assert_eq!(published.details["manifest_version_after"], 3);
-    assert_eq!(published.details["published_manifest_version"], 3);
-    assert_eq!(published.details["published_layer_count"], 1);
+    assert_eq!(result.published_manifest_version, Some(3));
+    assert_eq!(
+        LayerStack::open(fixture.root.clone())?
+            .read_active_manifest()?
+            .version,
+        3
+    );
     assert_eq!(fixture.read_text("target/out.txt")?, "mine\n");
     Ok(())
 }
@@ -238,11 +224,6 @@ fn publish_does_not_squash_deep_stack() -> TestResult {
             .depth(),
         5
     );
-    assert!(!result
-        .trace_events()
-        .iter()
-        .any(|event| event.name.contains("squash")));
-
     Ok(())
 }
 
