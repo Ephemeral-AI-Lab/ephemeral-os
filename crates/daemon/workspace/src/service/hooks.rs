@@ -10,6 +10,10 @@ pub struct WorkspaceRuntimeHooks {
     pub create_workspace: Box<
         dyn Fn(CreateWorkspaceRequest) -> Result<WorkspaceHandle, WorkspaceError> + Send + Sync,
     >,
+    #[expect(
+        clippy::type_complexity,
+        reason = "hook signatures stay explicit by policy"
+    )]
     pub capture_changes: Box<
         dyn Fn(
                 &WorkspaceHandle,
@@ -18,6 +22,10 @@ pub struct WorkspaceRuntimeHooks {
             + Send
             + Sync,
     >,
+    #[expect(
+        clippy::type_complexity,
+        reason = "hook signatures stay explicit by policy"
+    )]
     pub remount_workspace: Box<
         dyn Fn(
                 &WorkspaceHandle,
