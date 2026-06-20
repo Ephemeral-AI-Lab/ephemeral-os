@@ -20,3 +20,11 @@ pub use service::{
     CommandWorkspaceDestroyMetadata, CommandYield, ExecCommandInput, PollCommandInput,
     ReadCommandLinesInput, WriteStdinInput,
 };
+
+pub(crate) fn operation_entries() -> &'static [crate::operation::OperationEntry] {
+    service::operation_entries()
+}
+
+pub(crate) fn operation_specs() -> &'static [&'static crate::operation::OperationSpec] {
+    service::operation_specs()
+}

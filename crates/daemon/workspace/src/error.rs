@@ -7,8 +7,6 @@ pub enum WorkspaceError {
         message: String,
     },
 
-    FeatureDisabled,
-
     AlreadyOpen {
         owner: CallerId,
         workspace_id: WorkspaceId,
@@ -63,7 +61,6 @@ impl std::fmt::Display for WorkspaceError {
             Self::InvalidRequest { field, message } => {
                 write!(formatter, "invalid request for {field}: {message}")
             }
-            Self::FeatureDisabled => write!(formatter, "workspace feature is disabled"),
             Self::AlreadyOpen { owner, .. } => {
                 write!(formatter, "workspace already open for {owner:?}")
             }

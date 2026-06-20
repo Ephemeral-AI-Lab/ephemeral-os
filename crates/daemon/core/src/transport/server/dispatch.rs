@@ -67,6 +67,7 @@ impl DaemonServer {
         let invocation_id = request.invocation_id.clone();
         let caller_id = trimmed_string(&request.args, "caller_id");
         let op = request.op.clone();
+        let operations = Arc::clone(&self.operations);
         let registry = Arc::clone(&self.invocation_registry);
         let (start_tx, start_rx) = std_mpsc::channel::<()>();
         let task_started = Arc::new(AtomicBool::new(false));
@@ -74,7 +75,7 @@ impl DaemonServer {
         let task = tokio::task::spawn_blocking(move || {
             let _ = start_rx.recv();
             task_started.store(true, Ordering::SeqCst);
-            crate::dispatcher::dispatch(&request)
+            crate::dispatch::operation::dispatch(&operations, &request)
         });
         registry.register_blocking(
             &invocation_id,

@@ -10,6 +10,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use config::configs::daemon::DaemonConfig;
+use daemon_operation::DaemonOperations;
 use tokio_util::sync::CancellationToken;
 
 use crate::invocation_registry::InFlightRegistry;
@@ -38,6 +39,7 @@ pub struct ServerConfig {
 /// shutdown token.
 pub struct DaemonServer {
     config: ServerConfig,
+    operations: Arc<DaemonOperations>,
     invocation_registry: Arc<InFlightRegistry>,
     shutdown: CancellationToken,
 }
@@ -46,9 +48,10 @@ impl DaemonServer {
     /// Assemble a daemon over `config`, wiring the invocation registry and
     /// shutdown token.
     #[must_use]
-    pub fn new(config: ServerConfig) -> Self {
+    pub fn new(config: ServerConfig, operations: Arc<DaemonOperations>) -> Self {
         Self {
             config,
+            operations,
             invocation_registry: Arc::new(InFlightRegistry::new(
                 crate::DEFAULT_TTL_S,
                 crate::DEFAULT_REAPER_INTERVAL_S,
@@ -64,9 +67,11 @@ impl DaemonServer {
         config: ServerConfig,
         daemon_config: &DaemonConfig,
         _isolated_config: &config::configs::isolated::IsolatedNetworkConfig,
+        operations: Arc<DaemonOperations>,
     ) -> Self {
         Self {
             config,
+            operations,
             invocation_registry: Arc::new(InFlightRegistry::new(
                 daemon_config.inflight.ttl_s,
                 daemon_config.inflight.reaper_interval_s,

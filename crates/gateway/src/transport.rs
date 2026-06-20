@@ -85,7 +85,7 @@ pub(crate) fn serve(listen: &Path, engine: Arc<dyn Engine>) -> Result<()> {
     }
     let client = bind(listen)?;
     eprintln!(
-        "sandbox-gateway: serving {} (operator: {})",
+        "ephai-sandbox-gateway: serving {} (operator: {})",
         listen.display(),
         operator_path.display()
     );

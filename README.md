@@ -64,26 +64,25 @@ cargo run -p xtask -- package --profile release
 # export EOS_GATEWAY_SOCKET=/tmp/eos-sandbox.sock
 
 # repo-local gateway CLI; equivalent to `cargo run -p gateway -- ...`
-bin/sandbox-gateway --help
+bin/ephai-sandbox-gateway --help
 
-# optional: install the CLI binary once for global `sandbox-gateway ...`
+# optional: install the CLI binary once for global `ephai-sandbox-gateway ...`
 cargo install --path crates/gateway --locked
 
 # serve the sandbox gateway (one client socket + one operator socket beside it)
-bin/sandbox-gateway host serve
+bin/ephai-sandbox-gateway host serve
 
 # inspect through the gateway client mode
-bin/sandbox-gateway host images profiles
-bin/sandbox-gateway host images list
-bin/sandbox-gateway host containers list
-bin/sandbox-gateway host sandboxes list
-bin/sandbox-gateway host containers start <docker-image>
+bin/ephai-sandbox-gateway host images profiles
+bin/ephai-sandbox-gateway host images list
+bin/ephai-sandbox-gateway host containers list
+bin/ephai-sandbox-gateway host sandboxes list
+bin/ephai-sandbox-gateway host containers start <docker-image>
 
 # acquire a sandbox, then operate inside its daemon
-SID=$(bin/sandbox-gateway host sandboxes acquire | jq -r .sandbox_id)
-bin/sandbox-gateway daemon --sandbox-id "$SID" ping
-bin/sandbox-gateway daemon --sandbox-id "$SID" commands exec -- pwd
-bin/sandbox-gateway host sandboxes release "$SID"
+SID=$(bin/ephai-sandbox-gateway host sandboxes acquire | jq -r .sandbox_id)
+bin/ephai-sandbox-gateway daemon --sandbox-id "$SID" commands exec --workspace-root /testbed -- pwd
+bin/ephai-sandbox-gateway host sandboxes release "$SID"
 ```
 
 ## Version pins

@@ -161,6 +161,7 @@ name = "daemon"
 version = "0.1.0"
 dependencies = [
  "config",
+ "daemon_operation",
  "layerstack",
  "proptest",
  "protocol",
@@ -178,6 +179,8 @@ version = "0.1.0"
 dependencies = [
  "command",
  "layerstack",
+ "protocol",
+ "serde_json",
  "thiserror 2.0.18",
  "workspace",
 ]
@@ -206,11 +209,14 @@ name = "eosd"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "command",
  "config",
  "daemon",
+ "daemon_operation",
  "namespace-process",
  "serde_json",
  "tokio",
+ "workspace",
 ]
 
 [[package]]

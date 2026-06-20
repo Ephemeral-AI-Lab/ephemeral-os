@@ -20,12 +20,12 @@ normative subset both sides build against.
 - **Request:**
 
 ```json
-{"op":"sandbox.command.exec","sandbox_id":"sb-...","invocation_id":"<uuid4hex>","args":{"command":"pwd"}}
+{"op":"exec_command","sandbox_id":"sb-...","invocation_id":"<uuid4hex>","args":{"workspace_root":"/testbed","cmd":"pwd"}}
 ```
 
 | Field | Required | Notes |
 |---|---|---|
-| `op` | yes | canonical `host.*` or `sandbox.*` operation name |
+| `op` | yes | canonical host or daemon operation name |
 | `sandbox_id` | for daemon-bound ops; for host ops only when targeting an existing managed sandbox record | absent on host fleet-list/profile ops |
 | `invocation_id` | yes | uuid4 hex; canonical request identity; echoed back as `meta.request_id` |
 | `args` | yes (may be `{}`) | op-specific |
@@ -88,17 +88,17 @@ must branch on them in order:
    `cancelled`/`timed_out` carry `result`; `rejected`/`error` carry `error`;
    `rejected` may also keep a partial `result`.
 2. **`result.status`** — the *domain* outcome, present for command ops:
-   - Command ops: `running | ok | cancelled | error | timed_out`.
+  - Command ops: `running | completed | failed`.
 
 Foot-gun: a running command and even `command_not_found` come back as
 envelope `status: "ok"` (the *transport* succeeded) with the real outcome nested
 at `result.status`. Branch the envelope `status` first, then `result.status`.
 
 ```jsonc
-// Command still running — envelope ok, domain running.
-{"status":"ok","result":{"status":"running","command_id":"cmd-7f3a","output":""},"meta":{"envelope_version":2,"op":"sandbox.command.exec","…":"…"}}
-// command_not_found — transport ok, domain error + exit_code 127.
-{"status":"ok","result":{"status":"error","exit_code":127,"output":"bash: nosuchcmd: command not found"},"meta":{"envelope_version":2,"op":"sandbox.command.exec","…":"…"}}
+// Command still running — envelope running, domain running.
+{"status":"running","result":{"status":"running","command_id":"cmd-7f3a","output":{"stdout":""}},"meta":{"envelope_version":2,"op":"exec_command","…":"…"}}
+// Completed command with a non-zero exit code — envelope ok, domain failed.
+{"status":"ok","result":{"status":"failed","exit_code":127,"output":{"stdout":"bash: nosuchcmd: command not found"}},"meta":{"envelope_version":2,"op":"exec_command","…":"…"}}
 ```
 
 Error envelope (both hops):

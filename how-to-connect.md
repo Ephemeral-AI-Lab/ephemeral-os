@@ -33,10 +33,9 @@ daemon-bound operations and for host operations that target an existing sandbox.
 ## Useful Commands
 
 ```sh
-bin/sandbox-gateway host serve
+bin/ephai-sandbox-gateway host serve
 
-SID=$(bin/sandbox-gateway host sandboxes acquire | jq -r .sandbox_id)
-bin/sandbox-gateway daemon --sandbox-id "$SID" ping
-bin/sandbox-gateway daemon --sandbox-id "$SID" commands exec -- pwd
-bin/sandbox-gateway host sandboxes release "$SID"
+SID=$(bin/ephai-sandbox-gateway host sandboxes acquire | jq -r .sandbox_id)
+bin/ephai-sandbox-gateway daemon --sandbox-id "$SID" commands exec --workspace-root /testbed -- pwd
+bin/ephai-sandbox-gateway host sandboxes release "$SID"
 ```

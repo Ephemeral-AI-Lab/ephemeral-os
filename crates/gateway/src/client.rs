@@ -9,8 +9,6 @@ use serde_json::{json, Value};
 use crate::serve;
 use crate::transport;
 
-const DEFAULT_LAYER_STACK_ROOT: &str = "/eos/layer-stack";
-
 pub(crate) fn run_host(argv: impl Iterator<Item = String>) -> Result<()> {
     let mut args = argv.collect::<Vec<_>>();
     let options = ClientOptions::parse(&mut args)?;
@@ -29,34 +27,32 @@ pub(crate) fn print_usage() {
     println!(
         "\
 usage:
-  sandbox-gateway host serve [--listen PATH] [--image IMAGE] [--platform PLATFORM]
+  ephai-sandbox-gateway host serve [--listen PATH] [--image IMAGE] [--platform PLATFORM]
 
-  sandbox-gateway host images profiles
-  sandbox-gateway host images list
-  sandbox-gateway host images pull IMAGE [--platform PLATFORM]
-  sandbox-gateway host containers list
-  sandbox-gateway host containers start IMAGE [--name NAME] [--platform PLATFORM]
-  sandbox-gateway host containers adopt CONTAINER [--sandbox-id SANDBOX_ID] [--tcp-port PORT] [--auth-token TOKEN]
-  sandbox-gateway host containers stop CONTAINER
-  sandbox-gateway host containers stop --sandbox-id SANDBOX_ID
-  sandbox-gateway host containers remove CONTAINER
-  sandbox-gateway host containers remove --sandbox-id SANDBOX_ID
-  sandbox-gateway host sandboxes acquire [--image-profile NAME] [--workspace-root PATH]
-  sandbox-gateway host sandboxes list
-  sandbox-gateway host sandboxes status SANDBOX_ID
-  sandbox-gateway host sandboxes release SANDBOX_ID
-  sandbox-gateway host op OP [ARGS_JSON] [--sandbox-id SANDBOX_ID] [--operator]
+  ephai-sandbox-gateway host images profiles
+  ephai-sandbox-gateway host images list
+  ephai-sandbox-gateway host images pull IMAGE [--platform PLATFORM]
+  ephai-sandbox-gateway host containers list
+  ephai-sandbox-gateway host containers start IMAGE [--name NAME] [--platform PLATFORM]
+  ephai-sandbox-gateway host containers adopt CONTAINER [--sandbox-id SANDBOX_ID] [--tcp-port PORT] [--auth-token TOKEN]
+  ephai-sandbox-gateway host containers stop CONTAINER
+  ephai-sandbox-gateway host containers stop --sandbox-id SANDBOX_ID
+  ephai-sandbox-gateway host containers remove CONTAINER
+  ephai-sandbox-gateway host containers remove --sandbox-id SANDBOX_ID
+  ephai-sandbox-gateway host sandboxes acquire [--image-profile NAME] [--workspace-root PATH]
+  ephai-sandbox-gateway host sandboxes list
+  ephai-sandbox-gateway host sandboxes status SANDBOX_ID
+  ephai-sandbox-gateway host sandboxes release SANDBOX_ID
+  ephai-sandbox-gateway host op OP [ARGS_JSON] [--sandbox-id SANDBOX_ID] [--operator]
 
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID ping
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID commands exec -- COMMAND
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID commands stdin COMMAND_ID TEXT
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID commands poll COMMAND_ID [--last-n-lines N]
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID commands cancel COMMAND_ID
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID commands collect [COMMAND_ID...]
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID commands count [--caller-id ID]
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID run end --caller-id ID [--grace-s SECONDS]
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID run cancel-all [--grace-s SECONDS]
-  sandbox-gateway daemon --sandbox-id SANDBOX_ID op OP [ARGS_JSON] [--operator]
+  ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID commands exec --workspace-root PATH -- COMMAND
+  ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID commands stdin COMMAND_ID TEXT
+  ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID commands poll COMMAND_ID [--last-n-lines N]
+  ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID commands read-lines COMMAND_ID --offset N --limit N
+  ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID commands cancel COMMAND_ID
+  ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID run end --caller-id ID [--grace-s SECONDS]
+  ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID run cancel-all [--grace-s SECONDS]
+  ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID op OP [ARGS_JSON] [--operator]
 
 common client flags:
   --socket PATH      gateway client socket; overrides EOS_GATEWAY_SOCKET/default
@@ -140,23 +136,14 @@ pub(crate) fn request_from_daemon(
     options: &ClientOptions,
 ) -> Result<GatewayRequest> {
     let Some(group) = shift(&mut args) else {
-        bail!("missing daemon command; expected ping | commands | run | op")
+        bail!("missing daemon command; expected commands | run | op")
     };
     let sandbox_id = require_sandbox_id(options)?;
     match group.as_str() {
-        "ping" => {
-            expect_no_args(&args)?;
-            Ok(daemon_request(
-                "sandbox.call.heartbeat",
-                json!({}),
-                sandbox_id,
-                false,
-            ))
-        }
         "commands" => request_from_daemon_commands(args, sandbox_id),
         "run" => request_from_daemon_run(args, sandbox_id),
         "op" => request_from_op(args, Some(sandbox_id), false),
-        other => bail!("unknown daemon command {other:?}; expected ping | commands | run | op"),
+        other => bail!("unknown daemon command {other:?}; expected commands | run | op"),
     }
 }
 
@@ -310,25 +297,31 @@ fn request_from_daemon_commands(
 ) -> Result<GatewayRequest> {
     let Some(subcommand) = shift(&mut args) else {
         bail!(
-            "missing daemon commands subcommand; expected exec | stdin | poll | cancel | collect | count"
+            "missing daemon commands subcommand; expected exec | stdin | poll | read-lines | cancel"
         )
     };
     match subcommand.as_str() {
         "exec" => {
             let caller_id = take_optional_flag(&mut args, "--caller-id")?;
-            let layer_stack_root = layer_stack_root_or_default(&mut args)?;
-            let timeout = take_optional_u64(&mut args, "--timeout")?;
+            let workspace_root =
+                take_required_flag_any(&mut args, &["--workspace-root", "--workspace_root"])?;
+            let workspace_session_id =
+                take_optional_flag_any(&mut args, &["--workspace-session-id", "--workspace_session_id"])?;
+            let cwd = take_optional_flag(&mut args, "--cwd")?;
+            let timeout_seconds = take_optional_f64(&mut args, "--timeout-seconds")?;
             let yield_time_ms = take_optional_u64(&mut args, "--yield-time-ms")?;
             let cmd = command_string(args)?;
-            let mut body = json!({ "cmd": cmd, "layer_stack_root": layer_stack_root });
+            let mut body = json!({ "cmd": cmd, "workspace_root": workspace_root });
             insert_optional(&mut body, "caller_id", caller_id);
-            if let Some(timeout) = timeout {
-                body["timeout"] = json!(timeout);
+            insert_optional(&mut body, "workspace_session_id", workspace_session_id);
+            insert_optional(&mut body, "cwd", cwd);
+            if let Some(timeout_seconds) = timeout_seconds {
+                body["timeout_seconds"] = json!(timeout_seconds);
             }
             if let Some(yield_time_ms) = yield_time_ms {
                 body["yield_time_ms"] = json!(yield_time_ms);
             }
-            Ok(daemon_request("sandbox.command.exec", body, sandbox_id, false))
+            Ok(daemon_request("exec_command", body, sandbox_id, false))
         }
         "stdin" => {
             let yield_time_ms = take_optional_u64(&mut args, "--yield-time-ms")?;
@@ -340,12 +333,7 @@ fn request_from_daemon_commands(
             if let Some(yield_time_ms) = yield_time_ms {
                 body["yield_time_ms"] = json!(yield_time_ms);
             }
-            Ok(daemon_request(
-                "sandbox.command.write_stdin",
-                body,
-                sandbox_id,
-                false,
-            ))
+            Ok(daemon_request("write_stdin", body, sandbox_id, false))
         }
         "poll" => {
             let last_n_lines = take_optional_u64(&mut args, "--last-n-lines")?;
@@ -357,9 +345,22 @@ fn request_from_daemon_commands(
             if let Some(last_n_lines) = last_n_lines {
                 body["last_n_lines"] = json!(last_n_lines);
             }
+            Ok(daemon_request("poll", body, sandbox_id, false))
+        }
+        "read-lines" | "read_lines" => {
+            let offset = take_required_u64(&mut args, "--offset")?;
+            let limit = take_required_u64(&mut args, "--limit")?;
+            let Some(command_id) = shift(&mut args) else {
+                bail!("daemon commands read-lines requires COMMAND_ID")
+            };
+            expect_no_args(&args)?;
             Ok(daemon_request(
-                "sandbox.command.poll",
-                body,
+                "read_lines",
+                json!({
+                    "command_id": command_id,
+                    "offset": offset,
+                    "limit": limit,
+                }),
                 sandbox_id,
                 false,
             ))
@@ -369,41 +370,10 @@ fn request_from_daemon_commands(
                 bail!("daemon commands cancel requires COMMAND_ID")
             };
             expect_no_args(&args)?;
-            Ok(daemon_request(
-                "sandbox.command.cancel",
-                json!({ "command_id": command_id }),
-                sandbox_id,
-                false,
-            ))
-        }
-        "collect" => {
-            let caller_id = take_optional_flag(&mut args, "--caller-id")?;
-            let mut body = json!({});
-            insert_optional(&mut body, "caller_id", caller_id);
-            if !args.is_empty() {
-                body["command_ids"] = json!(args);
-            }
-            Ok(daemon_request(
-                "sandbox.command.collect_completed",
-                body,
-                sandbox_id,
-                false,
-            ))
-        }
-        "count" => {
-            let caller_id = take_optional_flag(&mut args, "--caller-id")?;
-            expect_no_args(&args)?;
-            let mut body = json!({});
-            insert_optional(&mut body, "caller_id", caller_id);
-            Ok(daemon_request(
-                "sandbox.command.count",
-                body,
-                sandbox_id,
-                false,
-            ))
+            Ok(daemon_request("cancel", json!({ "command_id": command_id }), sandbox_id, false))
         }
         other => bail!(
-            "unknown daemon commands subcommand {other:?}; expected exec | stdin | poll | cancel | collect | count"
+            "unknown daemon commands subcommand {other:?}; expected exec | stdin | poll | read-lines | cancel"
         ),
     }
 }
@@ -628,17 +598,21 @@ fn take_required_flag(args: &mut Vec<String>, flag: &str) -> Result<String> {
     take_optional_flag(args, flag)?.with_context(|| format!("{flag} is required"))
 }
 
-fn layer_stack_root_or_default(args: &mut Vec<String>) -> Result<String> {
-    Ok(
-        take_optional_flag_any(args, &["--layer-stack-root", "--layer_stack_root"])?
-            .unwrap_or_else(|| DEFAULT_LAYER_STACK_ROOT.to_owned()),
-    )
+fn take_required_flag_any(args: &mut Vec<String>, flags: &[&str]) -> Result<String> {
+    take_optional_flag_any(args, flags)?.with_context(|| {
+        let joined = flags.join(" or ");
+        format!("{joined} is required")
+    })
 }
 
 fn take_optional_u64(args: &mut Vec<String>, flag: &str) -> Result<Option<u64>> {
     take_optional_flag(args, flag)?
         .map(|value| value.parse().with_context(|| format!("parse {flag}")))
         .transpose()
+}
+
+fn take_required_u64(args: &mut Vec<String>, flag: &str) -> Result<u64> {
+    take_optional_u64(args, flag)?.with_context(|| format!("{flag} is required"))
 }
 
 fn take_optional_f64(args: &mut Vec<String>, flag: &str) -> Result<Option<f64>> {

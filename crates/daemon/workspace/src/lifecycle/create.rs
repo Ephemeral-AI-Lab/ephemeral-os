@@ -107,9 +107,6 @@ impl WorkspaceModeManager {
         snapshot: WorkspaceModeSnapshot,
         profile: WorkspaceProfile,
     ) -> Result<WorkspaceModeHandle, IsolatedNetworkError> {
-        if !self.caps.enabled {
-            return Err(IsolatedNetworkError::FeatureDisabled);
-        }
         if caller_id.trim().is_empty() {
             return Err(IsolatedNetworkError::InvalidArgument(
                 "caller_id is required".to_owned(),

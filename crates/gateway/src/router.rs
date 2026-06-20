@@ -76,13 +76,12 @@ pub(crate) fn handle(engine: &dyn Engine, surface: Surface, request: &ClientRequ
         "host.container.remove" => operator_host_value(surface, engine, request, |engine, args| {
             engine.container_remove(args)
         }),
-        "sandbox.call.heartbeat"
+        "exec_command"
+        | "write_stdin"
+        | "poll"
+        | "read_lines"
+        | "cancel"
         | "sandbox.call.cancel"
-        | "sandbox.command.exec"
-        | "sandbox.command.write_stdin"
-        | "sandbox.command.poll"
-        | "sandbox.command.cancel"
-        | "sandbox.command.collect_completed"
         | "sandbox.run.end" => forward(engine, request, true),
         "sandbox.call.count" | "sandbox.command.count" => forward(engine, request, false),
         "sandbox.run.cancel_all" => {

@@ -7,7 +7,7 @@ license.workspace = true
 description = "Host-side sandbox gateway: receive, gate, route, return."
 
 [[bin]]
-name = "sandbox-gateway"
+name = "ephai-sandbox-gateway"
 path = "src/main.rs"
 
 [dependencies]

@@ -10,14 +10,14 @@ use tokio::task::JoinHandle;
 type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
 #[tokio::test]
-async fn cancel_heartbeat_and_count_track_invocation() -> TestResult {
+async fn cancel_touch_and_count_track_invocation() -> TestResult {
     let registry = InFlightRegistry::new(300.0, 30.0);
     let task = tokio::spawn(future::pending::<()>());
     registry.register("invocation-1", task.abort_handle(), "caller-a");
 
     assert_eq!(registry.count_by_caller("caller-a"), 1);
     assert_eq!(
-        registry.heartbeat(&["invocation-1".to_owned(), "missing".to_owned()]),
+        registry.touch_invocations(&["invocation-1".to_owned(), "missing".to_owned()]),
         1
     );
     assert!(registry.cancel("invocation-1"));
@@ -49,7 +49,7 @@ async fn control_paths_recover_poisoned_registry_lock() -> TestResult {
     registry.register("poisoned", task.abort_handle(), "caller-a");
 
     assert_eq!(registry.count_by_caller("caller-a"), 1);
-    assert_eq!(registry.heartbeat(&["poisoned".to_owned()]), 1);
+    assert_eq!(registry.touch_invocations(&["poisoned".to_owned()]), 1);
     registry.ttl_sweep();
     assert!(registry.cancel("poisoned"));
     assert_task_cancelled(task).await?;
@@ -113,7 +113,7 @@ async fn ttl_sweep_hides_started_blocking_invocation() -> TestResult {
     registry.ttl_sweep();
     assert!(registry.contains("blocking-ttl"));
     assert_eq!(registry.count_by_caller("caller-a"), 0);
-    assert_eq!(registry.heartbeat(&["blocking-ttl".to_owned()]), 0);
+    assert_eq!(registry.touch_invocations(&["blocking-ttl".to_owned()]), 0);
 
     task.abort();
     assert_task_cancelled(task).await?;

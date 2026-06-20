@@ -15,7 +15,6 @@ use crate::configs::validate::{
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct IsolatedNetworkConfig {
-    pub enabled: bool,
     pub scratch_root: PathBuf,
     pub ttl_s: f64,
     pub total_cap: u32,
@@ -37,11 +36,9 @@ pub enum Rfc1918Egress {
 }
 
 impl Default for IsolatedNetworkConfig {
-    /// Disabled-by-default fallbacks used when no `isolated` section
-    /// is injected (matches `eos-sandbox/config/prd.yml`).
+    /// Fallbacks used when no `isolated` section is injected.
     fn default() -> Self {
         Self {
-            enabled: false,
             scratch_root: PathBuf::from("/eos/scratch/isolated"),
             ttl_s: 1800.0,
             total_cap: 5,
@@ -65,9 +62,7 @@ impl IsolatedNetworkConfig {
     pub fn validate(&self) -> Result<(), ConfigFieldError> {
         require_absolute(&self.scratch_root, "isolated.scratch_root")?;
         require_f64_gt(self.ttl_s, 0.0, "isolated.ttl_s")?;
-        if self.enabled {
-            require_u32_at_least(self.total_cap, 1, "isolated.total_cap")?;
-        }
+        require_u32_at_least(self.total_cap, 1, "isolated.total_cap")?;
         require_u64_at_least(self.upperdir_bytes, 1, "isolated.upperdir_bytes")?;
         require_ratio(self.memavail_fraction, "isolated.memavail_fraction")?;
         require_f64_gt(self.setup_timeout_s, 0.0, "isolated.setup_timeout_s")?;

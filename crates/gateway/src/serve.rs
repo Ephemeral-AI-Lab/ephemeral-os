@@ -42,7 +42,7 @@ impl ServeArgs {
         let mut tcp_port = 37_657_u16;
         let mut ready_timeout_s = 60_u64;
         let mut request_timeout_s = 30_u64;
-        let mut created_by = "sandbox-gateway".to_owned();
+        let mut created_by = "ephai-sandbox-gateway".to_owned();
         while let Some(flag) = argv.next() {
             let mut value = || -> Result<String> {
                 argv.next()
@@ -141,7 +141,7 @@ fn default_runtime_dir() -> PathBuf {
     let suffix = std::env::var("UID")
         .or_else(|_| std::env::var("USER"))
         .unwrap_or_else(|_| std::process::id().to_string());
-    std::env::temp_dir().join(format!("eos-sandbox-gateway-{suffix}"))
+    std::env::temp_dir().join(format!("ephai-sandbox-gateway-{suffix}"))
 }
 
 pub(crate) fn default_listen_path() -> PathBuf {

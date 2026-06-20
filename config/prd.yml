@@ -36,7 +36,6 @@ daemon:
     interval_ms: 500
 
 isolated:
-  enabled: false
   scratch_root: /eos/scratch/isolated
   ttl_s: 1800
   total_cap: 5

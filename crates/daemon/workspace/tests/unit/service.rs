@@ -101,7 +101,6 @@ impl Fixture {
 
     fn service(&self) -> WorkspaceRuntimeService {
         let caps = ResourceCaps {
-            enabled: true,
             eos_workspace_root: self.workspace_root.to_string_lossy().into_owned(),
             ..ResourceCaps::default()
         };

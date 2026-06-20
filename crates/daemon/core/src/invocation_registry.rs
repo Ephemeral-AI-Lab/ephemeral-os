@@ -1,4 +1,4 @@
-//! In-flight invocation registry: invocation id -> task handle, heartbeat,
+//! In-flight invocation registry: invocation id -> task handle, touch-by-id,
 //! cancel-by-id, and TTL reaping.
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -23,7 +23,7 @@ pub(crate) struct InFlightInvocation {
     pub task: InvocationTaskHandle,
     /// Caller that owns this invocation (for per-caller counts).
     pub caller_id: String,
-    /// Monotonic seconds of the last heartbeat / registration.
+    /// Monotonic seconds of the last touch / registration.
     pub last_seen: f64,
     /// Set once the reaper has cancelled this entry (idempotent guard).
     pub ttl_reaped: bool,
@@ -93,7 +93,7 @@ impl InFlightRegistry {
     }
 
     // The registry is best-effort daemon control state. If another task panics
-    // while holding the mutex, keep cancellation/heartbeat cleanup available
+    // while holding the mutex, keep cancellation/touch cleanup available
     // instead of panicking future control operations.
     fn lock_state(&self) -> MutexGuard<'_, HashMap<String, InFlightInvocation>> {
         self.inner.lock().unwrap_or_else(PoisonError::into_inner)
@@ -181,8 +181,7 @@ impl InFlightRegistry {
     }
 
     /// Touch `last_seen` for every known id; returns how many were touched.
-    /// Backs `sandbox.call.heartbeat`.
-    pub fn heartbeat(&self, invocation_ids: &[String]) -> usize {
+    pub fn touch_invocations(&self, invocation_ids: &[String]) -> usize {
         let mut state = self.lock_state();
         let now = monotonic_seconds();
         let mut touched = 0;

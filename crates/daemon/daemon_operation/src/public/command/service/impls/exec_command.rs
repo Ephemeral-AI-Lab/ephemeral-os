@@ -5,10 +5,15 @@ use std::time::Instant;
 use command::process::{CommandProcess, CommandProcessExit, CommandProcessSpec};
 use command::yield_wait_loop::WaitOutcome;
 
+use super::command_yield_response;
 use crate::command::{
     ActiveCommandProcess, CancellationState, CommandCallContext, CommandFinalizePolicy, CommandId,
     CommandLifecycleState, CommandOutputSnapshot, CommandServiceError, CommandTranscriptStore,
     CommandYield, ExecCommandInput, FinalizationState,
+};
+use crate::operation::{
+    ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationRequest, OperationResponse,
+    OperationSpec,
 };
 use crate::workspace_crate::{
     CallerId, CreateWorkspaceRequest, DestroyWorkspaceRequest, WorkspaceEntry, WorkspaceId,
@@ -17,6 +22,124 @@ use crate::workspace_crate::{
 use crate::workspace_session::WorkspaceSessionHandler;
 
 use crate::command::service::CommandOperationService;
+use crate::DaemonOperations;
+
+pub(crate) const SPEC: OperationSpec = OperationSpec {
+    name: "exec_command",
+    family: OperationFamily::Command,
+    summary: "Start a command in a workspace.",
+    args: EXEC_COMMAND_ARGS,
+    cli: Some(EXEC_COMMAND_CLI),
+};
+
+const EXEC_COMMAND_ARGS: &[ArgSpec] = &[
+    ArgSpec::optional(
+        "caller_id",
+        ArgKind::String,
+        "Command owner used for follow-up command operations.",
+        Some(""),
+        Some(ArgCliSpec {
+            flag: Some("--caller-id"),
+            positional: None,
+        }),
+    ),
+    ArgSpec::required(
+        "workspace_root",
+        ArgKind::Path,
+        "Workspace root and layer-stack root for one-shot command workspace creation.",
+        Some(ArgCliSpec {
+            flag: Some("--workspace-root"),
+            positional: None,
+        }),
+    ),
+    ArgSpec::optional(
+        "workspace_session_id",
+        ArgKind::String,
+        "Existing workspace session id to run inside.",
+        None,
+        Some(ArgCliSpec {
+            flag: Some("--workspace-session-id"),
+            positional: None,
+        }),
+    ),
+    ArgSpec::required(
+        "cmd",
+        ArgKind::String,
+        "Shell command text.",
+        Some(ArgCliSpec {
+            flag: None,
+            positional: Some("COMMAND"),
+        }),
+    ),
+    ArgSpec::optional(
+        "cwd",
+        ArgKind::Path,
+        "Command working directory.",
+        None,
+        Some(ArgCliSpec {
+            flag: Some("--cwd"),
+            positional: None,
+        }),
+    ),
+    ArgSpec::optional(
+        "timeout_seconds",
+        ArgKind::Float,
+        "Command timeout in seconds.",
+        None,
+        Some(ArgCliSpec {
+            flag: Some("--timeout-seconds"),
+            positional: None,
+        }),
+    ),
+    ArgSpec::optional(
+        "yield_time_ms",
+        ArgKind::Integer,
+        "Initial output wait in milliseconds.",
+        None,
+        Some(ArgCliSpec {
+            flag: Some("--yield-time-ms"),
+            positional: None,
+        }),
+    ),
+];
+
+const EXEC_COMMAND_CLI: CliSpec = CliSpec {
+    path: &["daemon", "commands", "exec"],
+    usage: "ephai-sandbox-gateway daemon --sandbox-id SID commands exec --workspace-root PATH [--caller-id ID] [--workspace-session-id ID] [--cwd PATH] [--timeout-seconds S] [--yield-time-ms MS] -- COMMAND",
+    examples: &[
+        "ephai-sandbox-gateway daemon --sandbox-id sb-1 commands exec --workspace-root /testbed -- pwd",
+    ],
+};
+
+pub(crate) fn dispatch(
+    operations: &DaemonOperations,
+    request: OperationRequest<'_>,
+) -> OperationResponse {
+    let input = match parse_input(&request) {
+        Ok(input) => input,
+        Err(response) => return response,
+    };
+    let context = CommandCallContext {
+        caller_id: input.caller_id.clone(),
+    };
+    command_yield_response(&request, operations.command.exec_command(input, context))
+}
+
+fn parse_input(request: &OperationRequest<'_>) -> Result<ExecCommandInput, OperationResponse> {
+    let caller_id = request.optional_string("caller_id")?.unwrap_or_default();
+    let workspace_session_id = request
+        .optional_string("workspace_session_id")?
+        .map(WorkspaceId);
+    Ok(ExecCommandInput {
+        caller_id: CallerId(caller_id),
+        workspace_root: request.required_path("workspace_root")?,
+        workspace_session_id,
+        cmd: request.required_string("cmd")?,
+        cwd: request.optional_path("cwd")?,
+        timeout_seconds: request.optional_f64("timeout_seconds")?,
+        yield_time_ms: request.optional_u64("yield_time_ms")?,
+    })
+}
 
 impl CommandOperationService {
     pub fn exec_command(

@@ -34,7 +34,6 @@ pub enum Rfc1918Egress {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResourceCaps {
-    pub enabled: bool,
     pub ttl_s: f64,
     pub total_cap: u32,
     pub upperdir_bytes: u64,
@@ -49,7 +48,6 @@ pub struct ResourceCaps {
 impl Default for ResourceCaps {
     fn default() -> Self {
         Self {
-            enabled: false,
             ttl_s: 1800.0,
             total_cap: 5,
             upperdir_bytes: 1_073_741_824,
@@ -66,9 +64,6 @@ impl Default for ResourceCaps {
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum IsolatedNetworkError {
-    #[error("isolated networks are disabled")]
-    FeatureDisabled,
-
     #[error("invalid argument: {0}")]
     InvalidArgument(String),
 
@@ -98,7 +93,6 @@ impl IsolatedNetworkError {
     #[must_use]
     pub const fn kind(&self) -> &'static str {
         match self {
-            Self::FeatureDisabled => "feature_disabled",
             Self::InvalidArgument(_) => "invalid_argument",
             Self::AlreadyOpen { .. } => "already_open",
             Self::NotOpen => "not_open",

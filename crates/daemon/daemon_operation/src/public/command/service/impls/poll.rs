@@ -1,8 +1,82 @@
+use super::command_poll_response;
 use crate::command::service::CommandOperationService;
 use crate::command::{
-    CommandCallContext, CommandOutputSnapshot, CommandPollOutput, CommandServiceError,
+    CommandCallContext, CommandId, CommandOutputSnapshot, CommandPollOutput, CommandServiceError,
     CommandStatus, PollCommandInput,
 };
+use crate::operation::{
+    ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationRequest, OperationResponse,
+    OperationSpec,
+};
+use crate::workspace_crate::CallerId;
+use crate::DaemonOperations;
+
+pub(crate) const SPEC: OperationSpec = OperationSpec {
+    name: "poll",
+    family: OperationFamily::Command,
+    summary: "Poll a command status and recent output.",
+    args: POLL_ARGS,
+    cli: Some(POLL_CLI),
+};
+
+const POLL_ARGS: &[ArgSpec] = &[
+    ArgSpec::required(
+        "command_id",
+        ArgKind::String,
+        "Command id returned by exec_command.",
+        Some(ArgCliSpec {
+            flag: None,
+            positional: Some("COMMAND_ID"),
+        }),
+    ),
+    ArgSpec::optional(
+        "last_n_lines",
+        ArgKind::Integer,
+        "Limit output to the most recent line count.",
+        None,
+        Some(ArgCliSpec {
+            flag: Some("--last-n-lines"),
+            positional: None,
+        }),
+    ),
+];
+
+const POLL_CLI: CliSpec = CliSpec {
+    path: &["daemon", "commands", "poll"],
+    usage:
+        "ephai-sandbox-gateway daemon --sandbox-id SID commands poll [--last-n-lines N] COMMAND_ID",
+    examples: &[
+        "ephai-sandbox-gateway daemon --sandbox-id sb-1 commands poll --last-n-lines 50 cmd-1",
+    ],
+};
+
+pub(crate) fn dispatch(
+    operations: &DaemonOperations,
+    request: OperationRequest<'_>,
+) -> OperationResponse {
+    let input = match parse_input(&request) {
+        Ok(input) => input,
+        Err(response) => return response,
+    };
+    let context = match parse_context(&request) {
+        Ok(context) => context,
+        Err(response) => return response,
+    };
+    command_poll_response(&request, operations.command.poll(input, context))
+}
+
+fn parse_input(request: &OperationRequest<'_>) -> Result<PollCommandInput, OperationResponse> {
+    Ok(PollCommandInput {
+        command_id: CommandId(request.required_string("command_id")?),
+        last_n_lines: request.optional_usize("last_n_lines")?,
+    })
+}
+
+fn parse_context(request: &OperationRequest<'_>) -> Result<CommandCallContext, OperationResponse> {
+    Ok(CommandCallContext {
+        caller_id: CallerId(request.optional_string("caller_id")?.unwrap_or_default()),
+    })
+}
 
 impl CommandOperationService {
     pub fn poll(

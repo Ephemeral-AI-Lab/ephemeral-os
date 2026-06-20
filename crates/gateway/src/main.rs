@@ -19,7 +19,7 @@ fn main() -> Result<()> {
             Ok(())
         }
         Some("--version" | "-V") => {
-            println!("sandbox-gateway {}", env!("CARGO_PKG_VERSION"));
+            println!("ephai-sandbox-gateway {}", env!("CARGO_PKG_VERSION"));
             Ok(())
         }
         Some("host") => {

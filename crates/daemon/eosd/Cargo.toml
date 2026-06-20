@@ -10,12 +10,15 @@ name = "eosd"
 path = "src/main.rs"
 
 [dependencies]
+command.workspace = true
 config.workspace = true
 daemon.workspace = true
+daemon_operation.workspace = true
 namespace-process.workspace = true
 anyhow.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
+workspace.workspace = true
 
 [lints]
 workspace = true

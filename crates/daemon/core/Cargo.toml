@@ -7,6 +7,7 @@ license.workspace = true
 
 [dependencies]
 config.workspace = true
+daemon_operation.workspace = true
 layerstack.workspace = true
 protocol.workspace = true
 workspace.workspace = true

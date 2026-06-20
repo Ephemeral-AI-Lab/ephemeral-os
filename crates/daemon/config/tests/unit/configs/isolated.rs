@@ -6,9 +6,8 @@ fn config_prd_isolated_section_deserializes_and_validates() {
 }
 
 #[test]
-fn config_default_isolated_is_disabled_and_valid() {
+fn config_default_isolated_section_is_valid() {
     let config = IsolatedNetworkConfig::default();
-    assert!(!config.enabled);
     config.validate().expect("default config is valid");
 }
 
@@ -27,7 +26,6 @@ fn config_validation_rejects_invalid_isolated_values() {
     assert_invalid(cfg, "isolated.scratch_root");
 
     let mut cfg = prd_config();
-    cfg.enabled = true;
     cfg.total_cap = 0;
     assert_invalid(cfg, "isolated.total_cap");
 

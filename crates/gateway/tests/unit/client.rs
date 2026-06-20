@@ -69,21 +69,23 @@ fn host_sandbox_acquire_accepts_image_profile_and_workspace_root() -> Result<()>
 }
 
 #[test]
-fn daemon_command_exec_defaults_layer_stack_root() -> Result<()> {
+fn daemon_command_exec_uses_canonical_operation_name() -> Result<()> {
     let request = request_from_daemon(
         vec![
             "commands".to_owned(),
             "exec".to_owned(),
+            "--workspace-root".to_owned(),
+            "/testbed".to_owned(),
             "--".to_owned(),
             "pwd".to_owned(),
         ],
         &daemon_options(),
     )?;
 
-    assert_eq!(request.op, "sandbox.command.exec");
+    assert_eq!(request.op, "exec_command");
     assert_eq!(request.sandbox_id.as_deref(), Some("sb-1"));
     assert_eq!(request.args["cmd"], json!("pwd"));
-    assert_eq!(request.args["layer_stack_root"], json!("/eos/layer-stack"));
+    assert_eq!(request.args["workspace_root"], json!("/testbed"));
     assert!(!request.operator);
     Ok(())
 }

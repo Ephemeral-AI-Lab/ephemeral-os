@@ -51,7 +51,6 @@ pub(crate) fn workspace_error_from_mode_error(
     error: IsolatedNetworkError,
 ) -> WorkspaceError {
     match error {
-        IsolatedNetworkError::FeatureDisabled => WorkspaceError::FeatureDisabled,
         IsolatedNetworkError::InvalidArgument(message) => WorkspaceError::InvalidRequest {
             field: "workspace",
             message,

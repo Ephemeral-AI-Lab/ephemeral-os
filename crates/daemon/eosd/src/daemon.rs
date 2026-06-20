@@ -5,6 +5,7 @@ use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
 use config::configs::{
@@ -58,6 +59,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
             server_config,
             &runtime_config.daemon,
             &runtime_config.isolated,
+            Arc::new(build_daemon_operations(&runtime_config)),
         );
         server.serve().await
     })?;
@@ -67,6 +69,58 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
 struct DaemonRuntimeConfig {
     daemon: DaemonConfig,
     isolated: IsolatedNetworkConfig,
+}
+
+fn build_daemon_operations(config: &DaemonRuntimeConfig) -> daemon_operation::DaemonOperations {
+    let caps = workspace_resource_caps(&config.isolated);
+    let workspace_runtime = Arc::new(workspace::WorkspaceRuntimeService::new(
+        workspace::profile::WorkspaceModeManager::stubbed(
+            caps,
+            config.isolated.scratch_root.clone(),
+        ),
+    ));
+    let workspace_session = Arc::new(
+        daemon_operation::workspace_session::WorkspaceSessionService::new(workspace_runtime),
+    );
+    let command = Arc::new(daemon_operation::CommandOperationService::new(
+        workspace_session,
+        command_config(&config.daemon.commands),
+    ));
+    daemon_operation::DaemonOperations::new(command)
+}
+
+fn workspace_resource_caps(config: &IsolatedNetworkConfig) -> workspace::profile::ResourceCaps {
+    workspace::profile::ResourceCaps {
+        ttl_s: config.ttl_s,
+        total_cap: config.total_cap,
+        upperdir_bytes: config.upperdir_bytes,
+        memavail_fraction: config.memavail_fraction,
+        setup_timeout_s: config.setup_timeout_s,
+        exit_grace_s: config.exit_grace_s,
+        rfc1918_egress: match config.rfc1918_egress {
+            config::configs::isolated::Rfc1918Egress::Allow => {
+                workspace::profile::Rfc1918Egress::Allow
+            }
+            config::configs::isolated::Rfc1918Egress::Deny => {
+                workspace::profile::Rfc1918Egress::Deny
+            }
+        },
+        fallback_dns: config.fallback_dns.clone(),
+        eos_workspace_root: config.workspace_root.to_string_lossy().into_owned(),
+    }
+}
+
+fn command_config(config: &config::configs::daemon::CommandConfig) -> command::CommandConfig {
+    command::CommandConfig {
+        scratch_root: config.scratch_root.clone(),
+        default_yield_time_ms: config.default_yield_time_ms,
+        default_timeout_s: config.default_timeout_s,
+        quiet_ms: config.quiet_ms,
+        cancel_wait_ms: config.cancel_wait_ms,
+        output_drain_grace_ms: config.output_drain_grace_ms,
+        max_command_s: config.max_command_s,
+        transcript_timestamp_timezone: config.transcript_timestamp_timezone.clone(),
+    }
 }
 
 fn load_runtime_config(path: Option<&Path>) -> Result<DaemonRuntimeConfig> {
