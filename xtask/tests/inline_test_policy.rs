@@ -42,6 +42,28 @@ fn inline_test() {}
 }
 
 #[test]
+fn rejects_cfg_test_attribute_in_source() {
+    let root = temp_root("source-cfg-test-attribute");
+    let src = root.join("crate/src");
+    fs::create_dir_all(&src).expect("create source dir");
+    fs::write(
+        src.join("lib.rs"),
+        r#"
+#[cfg(test)]
+mod tests;
+"#,
+    )
+    .expect("write source file");
+
+    let output = run_check(&root);
+
+    fs::remove_dir_all(&root).expect("remove temp root");
+    assert!(!output.status.success(), "inline #[cfg(test)] should fail");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("inline cfg(test)"), "{stderr}");
+}
+
+#[test]
 fn rejects_src_tests_directory() {
     let root = temp_root("src-tests");
     let crate_root = root.join("crate");
@@ -164,6 +186,31 @@ fn helper() {}
 }
 
 #[test]
+fn rejects_test_or_feature_cfg_gate_in_source() {
+    let root = temp_root("source-test-or-feature-cfg-gate");
+    let src = root.join("crate/src");
+    fs::create_dir_all(&src).expect("create source dir");
+    fs::write(
+        src.join("lib.rs"),
+        r#"
+#[cfg(any(test, feature = "e2e-support"))]
+mod support;
+"#,
+    )
+    .expect("write source file");
+
+    let output = run_check(&root);
+
+    fs::remove_dir_all(&root).expect("remove temp root");
+    assert!(
+        !output.status.success(),
+        "test-or-feature cfg gates should fail"
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("inline cfg(test)"), "{stderr}");
+}
+
+#[test]
 fn rejects_recommended_broad_allow_lints_in_source() {
     for lint in [
         "unsafe_code",
@@ -209,6 +256,31 @@ fn helper() {{}}
         let stderr = String::from_utf8_lossy(&output.stderr);
         assert!(stderr.contains("broad lint suppression"), "{stderr}");
     }
+}
+
+#[test]
+fn rejects_cfg_attr_test_wrapped_allow_in_source() {
+    let root = temp_root("source-cfg-attr-test-allow");
+    let src = root.join("crate/src");
+    fs::create_dir_all(&src).expect("create source dir");
+    fs::write(
+        src.join("lib.rs"),
+        r#"
+#[cfg_attr(test, allow(clippy::missing_panics_doc))]
+fn helper() {}
+"#,
+    )
+    .expect("write source file");
+
+    let output = run_check(&root);
+
+    fs::remove_dir_all(&root).expect("remove temp root");
+    assert!(
+        !output.status.success(),
+        "cfg_attr(test, allow(...)) attrs should fail"
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("broad lint suppression"), "{stderr}");
 }
 
 #[test]
@@ -293,7 +365,7 @@ fn rejects_abi_linkage_attribute_in_source() {
         src.join("lib.rs"),
         r#"
 #[repr(C, packed)]
-struct Wire([u8; 4]);
+struct Packet([u8; 4]);
 "#,
     )
     .expect("write source file");

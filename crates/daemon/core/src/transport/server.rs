@@ -10,11 +10,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use daemon_operation::DaemonOperations;
+pub(crate) use daemon_rpc_protocol::{MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};
 use serde_json::{json, Value};
 use tokio_util::sync::CancellationToken;
-
-pub(crate) const MAX_REQUEST_BYTES: usize = 16 * 1024 * 1024;
-pub(crate) const REQUEST_READ_TIMEOUT_S: f64 = 30.0;
 
 /// Where the daemon binds + writes its pid, plus the optional TCP listener.
 #[derive(Debug, Clone)]
@@ -57,22 +55,11 @@ pub(super) fn error_response(
     message: impl Into<String>,
     details: Value,
 ) -> Value {
-    json!({
-        "status": "error",
-        "error": {
-            "kind": kind,
-            "message": message.into(),
-            "details": fault_details(details),
-        },
-        "meta": {
-            "envelope_version": 2,
-            "op": "",
-            "request_id": "",
-            "duration_ms": 0.0,
-            "resource_summary": { "fields": {} },
-            "warnings": [],
-        },
-    })
+    daemon_rpc_protocol::response::error_response_with_details(
+        kind,
+        message,
+        fault_details(details),
+    )
 }
 
 fn fault_details(details: Value) -> Value {

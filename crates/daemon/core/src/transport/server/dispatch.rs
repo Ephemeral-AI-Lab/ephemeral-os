@@ -3,10 +3,10 @@ use std::sync::Arc;
 use super::DaemonServer;
 use crate::error::DaemonError;
 use daemon_operation::OperationRequest;
+use daemon_rpc_protocol::{
+    decode_request_object, error_kind, ArgsPresence, DAEMON_AUTH_FIELD, DAEMON_FORWARD_AUTH_FIELD,
+};
 use serde_json::{Map, Value};
-
-const DAEMON_AUTH_FIELD: &str = "_eos_daemon_auth_token";
-const DAEMON_FORWARD_AUTH_FIELD: &str = "_eos_daemon_forward_auth_token";
 
 impl DaemonServer {
     pub(super) async fn dispatch_bytes(&self, bytes: Vec<u8>, is_tcp: bool) -> serde_json::Value {
@@ -14,7 +14,7 @@ impl DaemonServer {
             Ok(value) => value,
             Err(err) => {
                 return super::error_response(
-                    "bad_json",
+                    error_kind::BAD_JSON,
                     format!("bad json: {err}"),
                     serde_json::json!({}),
                 );
@@ -69,12 +69,12 @@ impl DaemonServer {
         let response = match task.await {
             Ok(response) => response,
             Err(err) if err.is_cancelled() => super::error_response(
-                "internal_error",
+                error_kind::INTERNAL_ERROR,
                 "daemon request cancelled",
                 serde_json::json!({"op": op_for_error}),
             ),
             Err(err) => super::error_response(
-                "internal_error",
+                error_kind::INTERNAL_ERROR,
                 format!("daemon request failed: {err}"),
                 serde_json::json!({"op": op_for_error}),
             ),
@@ -185,40 +185,20 @@ fn is_known_non_public_op(op: &str) -> bool {
 }
 
 fn parse_request(value: Value) -> Result<(String, String, Value), Value> {
-    let Value::Object(mut object) = value else {
+    let Value::Object(object) = value else {
         return Err(super::error_response(
-            "bad_json",
+            error_kind::BAD_JSON,
             "request message must be a json object",
             serde_json::json!({}),
         ));
     };
-    let op = remove_request_string(&mut object, "op")?;
-    let request_id = remove_request_string(&mut object, "request_id")?;
-    let Some(args) = object.remove("args") else {
-        return Err(invalid_request(
-            "request must include op, request_id, and args",
-        ));
-    };
-    if op.trim().is_empty() {
-        return Err(invalid_request("op is required"));
-    }
-    if !args.is_object() {
-        return Err(invalid_request("args must be an object"));
-    }
-    Ok((op, request_id, args))
+    let request = decode_request_object(object, ArgsPresence::Required)
+        .map_err(|err| invalid_request(err.message()))?;
+    Ok((request.op, request.request_id, request.args))
 }
 
-fn remove_request_string(object: &mut Map<String, Value>, field: &str) -> Result<String, Value> {
-    let Some(Value::String(value)) = object.remove(field) else {
-        return Err(invalid_request(
-            "request must include op, request_id, and args",
-        ));
-    };
-    Ok(value)
-}
-
-fn invalid_request(message: &'static str) -> serde_json::Value {
-    super::error_response("invalid_request", message, serde_json::json!({}))
+fn invalid_request(message: impl Into<String>) -> serde_json::Value {
+    super::error_response(error_kind::INVALID_REQUEST, message, serde_json::json!({}))
 }
 
 #[cfg(test)]

@@ -1,5 +1,6 @@
 //! Daemon error algebra and response-kind mapping.
 
+use daemon_rpc_protocol::error_kind;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -23,10 +24,10 @@ impl DaemonError {
     #[must_use]
     pub const fn response_kind(&self) -> &'static str {
         match self {
-            Self::RequestTooLarge { .. } => "request_too_large",
-            Self::Unauthorized => "unauthorized",
-            Self::Forbidden(_) => "forbidden",
-            _ => "internal_error",
+            Self::RequestTooLarge { .. } => error_kind::REQUEST_TOO_LARGE,
+            Self::Unauthorized => error_kind::UNAUTHORIZED,
+            Self::Forbidden(_) => error_kind::FORBIDDEN,
+            _ => error_kind::INTERNAL_ERROR,
         }
     }
 }

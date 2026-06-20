@@ -44,9 +44,7 @@ impl DaemonServer {
 }
 
 fn encode_response(response: &serde_json::Value) -> Vec<u8> {
-    let mut framed = serde_json::to_vec(response).expect("daemon response serializes");
-    framed.push(b'\n');
-    framed
+    daemon_rpc_protocol::response_line(response)
 }
 
 async fn read_request_line<R>(reader: &mut R) -> Result<Vec<u8>, DaemonError>

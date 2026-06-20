@@ -1,17 +1,16 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/daemon/daemon_operation",
+    "crates/daemon/operation",
     "crates/daemon/command",
     "crates/daemon/config",
     "crates/daemon/eosd",
     "crates/daemon/core",
+    "crates/daemon/rpc_protocol",
     "crates/daemon/workspace",
     "crates/daemon/namespace-process",
     "crates/daemon/layerstack",
     "crates/daemon/overlay",
-    "crates/host",
-    "crates/gateway",
     "xtask",
 ]
 
@@ -54,13 +53,12 @@ netlink-sys = "0.8"
 command = { path = "crates/daemon/command" }
 config = { path = "crates/daemon/config" }
 layerstack = { path = "crates/daemon/layerstack" }
-daemon_operation = { path = "crates/daemon/daemon_operation" }
+daemon_operation = { path = "crates/daemon/operation" }
+daemon_rpc_protocol = { path = "crates/daemon/rpc_protocol" }
 overlay = { path = "crates/daemon/overlay" }
 namespace-process = { path = "crates/daemon/namespace-process" }
 daemon = { path = "crates/daemon/core" }
 eosd = { path = "crates/daemon/eosd" }
-gateway = { path = "crates/gateway" }
-host = { path = "crates/host" }
 workspace = { path = "crates/daemon/workspace" }
 xtask = { path = "xtask" }
 

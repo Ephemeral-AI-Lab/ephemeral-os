@@ -4,8 +4,6 @@ pub mod daemon;
 
 pub mod validate;
 
-pub mod gateway;
-
 pub mod isolated;
 
 pub mod runner;

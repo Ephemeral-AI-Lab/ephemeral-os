@@ -161,6 +161,7 @@ name = "daemon"
 version = "0.1.0"
 dependencies = [
  "daemon_operation",
+ "daemon_rpc_protocol",
  "serde_json",
  "thiserror 2.0.18",
  "tokio",
@@ -172,9 +173,17 @@ name = "daemon_operation"
 version = "0.1.0"
 dependencies = [
  "command",
+ "daemon_rpc_protocol",
  "serde_json",
  "thiserror 2.0.18",
  "workspace",
+]
+
+[[package]]
+name = "daemon_rpc_protocol"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
 ]
 
 [[package]]
@@ -334,16 +343,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gateway"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "config",
- "host",
- "serde_json",
-]
-
-[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -411,17 +410,6 @@ name = "heck"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
-
-[[package]]
-name = "host"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "serde_json",
- "sha2",
- "thiserror 2.0.18",
- "uuid",
-]
 
 [[package]]
 name = "id-arena"
@@ -1176,15 +1164,6 @@ name = "unsafe-libyaml"
 version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "673aac59facbab8a9007c7f6108d11f63b603f7cabff99fabf650fea5c32b861"
-
-[[package]]
-name = "uuid"
-version = "1.23.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d258b83ceec21034727ecee8c382cfa6c3e133699b0742c64571814fb420c9f7"
-dependencies = [
- "getrandom 0.4.2",
-]
 
 [[package]]
 name = "version_check"

@@ -1,4 +1,4 @@
-//! Daemon↔namespace-runner wire DTOs.
+//! Daemon↔namespace-runner protocol DTOs.
 
 use std::os::unix::io::RawFd;
 use std::path::PathBuf;

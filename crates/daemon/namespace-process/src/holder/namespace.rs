@@ -239,6 +239,7 @@ fn wait_for_path(path: impl AsRef<Path>) -> Result<(), NsHolderError> {
 }
 
 impl HeldNamespaces {
+    #[cfg(test)]
     #[allow(dead_code)]
     pub(crate) fn for_test() -> std::io::Result<Self> {
         Ok(Self {
@@ -252,6 +253,7 @@ impl HeldNamespaces {
     }
 }
 
+#[cfg(test)]
 #[allow(dead_code)]
 fn dev_null_fd() -> std::io::Result<OwnedFd> {
     Ok(std::fs::File::open("/dev/null")?.into())

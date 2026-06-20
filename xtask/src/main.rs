@@ -112,20 +112,12 @@ const INLINE_TEST_POLICY_EXCEPTIONS: &[InlineTestPolicyException] = &[
         kind: InlineTestPolicyViolationKind::BroadAllowAttribute,
     },
     InlineTestPolicyException {
-        path: "crates/daemon/daemon_operation/src/public/command/mod.rs",
+        path: "crates/daemon/operation/src/public/command/mod.rs",
         kind: InlineTestPolicyViolationKind::PathAttribute,
     },
     InlineTestPolicyException {
-        path: "crates/daemon/daemon_operation/src/internal/workspace_session/mod.rs",
+        path: "crates/daemon/operation/src/internal/workspace_session/mod.rs",
         kind: InlineTestPolicyViolationKind::PathAttribute,
-    },
-    InlineTestPolicyException {
-        path: "crates/host/src/container.rs",
-        kind: InlineTestPolicyViolationKind::BroadAllowAttribute,
-    },
-    InlineTestPolicyException {
-        path: "crates/host/src/daemon_wire.rs",
-        kind: InlineTestPolicyViolationKind::BroadAllowAttribute,
     },
 ];
 
@@ -532,11 +524,19 @@ fn compact_attribute_text(line: &str) -> String {
 }
 
 fn compact_attribute_violation_kind(compact: &str) -> Option<InlineTestPolicyViolationKind> {
-    if compact.starts_with("#[cfg(test)]") || compact.starts_with("#![cfg(test)]") {
+    if is_forbidden_cfg_test_attribute(compact) {
         Some(InlineTestPolicyViolationKind::CfgTest)
     } else {
         attribute_violation_kind(compact)
     }
+}
+
+fn is_forbidden_cfg_test_attribute(compact: &str) -> bool {
+    let Some(attribute) = attribute_body(compact) else {
+        return false;
+    };
+    let (path, args) = attribute_path_and_args(attribute);
+    path == "cfg" && args.is_some_and(cfg_predicate_is_forbidden_test_gate)
 }
 
 fn attribute_violation_kind(compact_line: &str) -> Option<InlineTestPolicyViolationKind> {
@@ -610,6 +610,10 @@ fn is_broad_allow_attribute(path: &str, args: Option<&str>) -> bool {
 }
 
 fn cfg_attr_args_contain_forbidden_allow(args: &str) -> bool {
+    if cfg_attr_test_gate_contains_allow(args) {
+        return true;
+    }
+
     let mut rest = args;
     while let Some(index) = rest.find("allow(") {
         let allow_args = &rest[index + "allow(".len()..];
@@ -622,6 +626,72 @@ fn cfg_attr_args_contain_forbidden_allow(args: &str) -> bool {
         rest = &allow_args[end..];
     }
     false
+}
+
+fn cfg_attr_test_gate_contains_allow(args: &str) -> bool {
+    let Some(condition_end) = top_level_comma_index(args) else {
+        return false;
+    };
+    let condition = &args[..condition_end];
+    let attributes = &args[condition_end + 1..];
+    cfg_predicate_is_forbidden_test_gate(condition) && cfg_attr_attributes_contain_allow(attributes)
+}
+
+fn cfg_attr_attributes_contain_allow(attributes: &str) -> bool {
+    split_top_level_commas(attributes)
+        .map(attribute_path_and_args)
+        .any(|(path, _args)| path == "allow")
+}
+
+fn cfg_predicate_is_forbidden_test_gate(predicate: &str) -> bool {
+    predicate == "test" || cfg_predicate_is_test_or_feature_gate(predicate)
+}
+
+fn cfg_predicate_is_test_or_feature_gate(predicate: &str) -> bool {
+    let Some(args) = predicate
+        .strip_prefix("any(")
+        .and_then(|args| args.strip_suffix(')'))
+    else {
+        return false;
+    };
+
+    let mut has_test = false;
+    let mut has_feature = false;
+    for arg in split_top_level_commas(args) {
+        has_test |= arg == "test";
+        has_feature |= arg.starts_with("feature=");
+    }
+    has_test && has_feature
+}
+
+fn split_top_level_commas(mut args: &str) -> impl Iterator<Item = &str> {
+    std::iter::from_fn(move || {
+        if args.is_empty() {
+            return None;
+        }
+        if let Some(index) = top_level_comma_index(args) {
+            let arg = &args[..index];
+            args = &args[index + 1..];
+            Some(arg)
+        } else {
+            let arg = args;
+            args = "";
+            Some(arg)
+        }
+    })
+}
+
+fn top_level_comma_index(args: &str) -> Option<usize> {
+    let mut depth = 0_usize;
+    for (index, ch) in args.char_indices() {
+        match ch {
+            '(' => depth = depth.saturating_add(1),
+            ')' => depth = depth.saturating_sub(1),
+            ',' if depth == 0 => return Some(index),
+            _ => {}
+        }
+    }
+    None
 }
 
 fn matching_close_paren_index(args: &str) -> Option<usize> {

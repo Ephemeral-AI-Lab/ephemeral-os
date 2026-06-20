@@ -1,6 +1,6 @@
 # daemon_operation
 
-Crate path: `crates/daemon/daemon_operation`
+Crate path: `crates/daemon/operation`
 
 `daemon_operation` is the daemon operation boundary. It sits above the low-level
 daemon runtime crates and turns workspace/runtime primitives into daemon-level
@@ -10,11 +10,11 @@ workspace remount orchestration.
 
 ## Boundary Rule
 
-Only command operations are intended to be exposed to an external gateway or
-agent tool-call surface.
+Only command operations are intended to be exposed to an external RPC or agent
+tool-call surface.
 
 ```text
-external gateway
+external RPC/tool caller
   -> DaemonOperations.command / CommandOperationService
     -> internal WorkspaceSessionService
     -> internal WorkspaceRemountService
@@ -24,7 +24,7 @@ external gateway
 
 `workspace_session` and `workspace_remount` are daemon-internal orchestration
 surfaces. They are still available as Rust modules for daemon wiring and tests,
-but they should not become gateway/tool-call APIs.
+but they should not become external tool-call APIs.
 
 ## Public Command Lane
 
@@ -138,9 +138,9 @@ pub struct DaemonOperations {
 }
 ```
 
-Gateway code should receive `DaemonOperations.command` or an even narrower
-command wrapper. It should not receive workspace session or workspace remount
-services as peer external operations.
+External dispatch code should receive `DaemonOperations.command` or an even
+narrower command wrapper. It should not receive workspace session or workspace
+remount services as peer external operations.
 
 Internal daemon setup may still construct all services:
 
@@ -154,7 +154,7 @@ WorkspaceRuntimeService
 
 ## Placement Rules
 
-- Put gateway/tool-call behavior under `src/public/command`.
+- Put external tool-call behavior under `src/public/command`.
 - Put command process quiesce and process-group state under
   `src/internal/workspace_remount/service/command`.
 - Put workspace session lifecycle, capture, publish, destroy, and remount state

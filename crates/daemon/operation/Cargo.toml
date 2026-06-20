@@ -1,0 +1,16 @@
+[package]
+name = "daemon_operation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+command.workspace = true
+daemon_rpc_protocol.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+workspace.workspace = true
+
+[lints]
+workspace = true

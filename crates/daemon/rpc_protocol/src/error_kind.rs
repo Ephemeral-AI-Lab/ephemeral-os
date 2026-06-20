@@ -1,0 +1,12 @@
+pub const BAD_JSON: &str = "bad_json";
+pub const FORBIDDEN: &str = "forbidden";
+pub const HOST_OPERATION_FAILED: &str = "host_operation_failed";
+pub const INTERNAL_ERROR: &str = "internal_error";
+pub const INVALID_REQUEST: &str = "invalid_request";
+pub const REQUEST_TOO_LARGE: &str = "request_too_large";
+pub const SANDBOX_UNAVAILABLE: &str = "sandbox_unavailable";
+pub const SERVER_BUSY: &str = "server_busy";
+pub const UNAUTHORIZED: &str = "unauthorized";
+pub const UNCERTAIN_OUTCOME: &str = "uncertain_outcome";
+pub const UNKNOWN_OP: &str = "unknown_op";
+pub const UNKNOWN_SANDBOX: &str = "unknown_sandbox";
