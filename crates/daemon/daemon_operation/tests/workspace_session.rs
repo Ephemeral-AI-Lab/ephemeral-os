@@ -4,11 +4,11 @@ use std::sync::{Arc, Mutex};
 
 use daemon_operation::workspace_session::{WorkspaceSessionError, WorkspaceSessionService};
 use workspace::{
-    BaseRevision, CallerId, CaptureChangesRequest, CapturedWorkspaceChanges,
-    CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
-    LayerStackSnapshotRef, LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest,
-    RemountWorkspaceResult, WorkspaceError, WorkspaceHandle, WorkspaceProfile,
-    WorkspaceRuntimeHooks, WorkspaceRuntimeService, WorkspaceSessionId,
+    BaseRevision, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
+    DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef,
+    LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult,
+    WorkspaceError, WorkspaceHandle, WorkspaceProfile, WorkspaceRuntimeHooks,
+    WorkspaceRuntimeService, WorkspaceSessionId,
 };
 
 struct FakeWorkspaceService {
@@ -197,20 +197,15 @@ fn fake_workspace_runtime(fake: &Arc<FakeWorkspaceService>) -> Arc<WorkspaceRunt
     ))
 }
 
-fn create_request(caller_id: &str) -> CreateWorkspaceRequest {
+fn create_request() -> CreateWorkspaceRequest {
     CreateWorkspaceRequest {
-        caller_id: CallerId(caller_id.to_owned()),
         workspace_root: PathBuf::from("/workspace"),
         layer_stack_root: PathBuf::from("/layers"),
         profile: WorkspaceProfile::HostCompatible,
     }
 }
 
-fn workspace_handle(
-    workspace_session_id: &str,
-    caller_id: &str,
-    lease_id: &str,
-) -> WorkspaceHandle {
+fn workspace_handle(workspace_session_id: &str, lease_id: &str) -> WorkspaceHandle {
     let snapshot = LayerStackSnapshotRef {
         lease_id: LeaseId(lease_id.to_owned()),
         manifest_version: 1,
@@ -219,7 +214,6 @@ fn workspace_handle(
     };
     WorkspaceHandle::without_launch_for_test(
         WorkspaceSessionId(workspace_session_id.to_owned()),
-        CallerId(caller_id.to_owned()),
         PathBuf::from("/workspace"),
         WorkspaceProfile::HostCompatible,
         snapshot,
@@ -229,7 +223,6 @@ fn workspace_handle(
 fn destroy_result(handle: &WorkspaceHandle) -> DestroyWorkspaceResult {
     DestroyWorkspaceResult {
         workspace_session_id: handle.id.clone(),
-        owner: handle.owner.clone(),
         evicted_upperdir_bytes: 0,
         lifetime_s: 0.0,
         lease_released: Some(true),
@@ -260,32 +253,17 @@ fn capture_result(
 }
 
 #[test]
-fn workspace_session_resolve_validates_caller_ownership() {
+fn workspace_session_resolve_returns_session_by_id() {
     let fake = Arc::new(FakeWorkspaceService::new());
     fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
     let manager = manager_with(&fake);
 
     manager
-        .create_workspace_session(create_request("caller-1"))
+        .create_workspace_session(create_request())
         .expect("test operation succeeds");
 
-    let wrong_caller = manager
-        .resolve_session(
-            WorkspaceSessionId("workspace-1".to_owned()),
-            CallerId("caller-2".to_owned()),
-        )
-        .expect_err("test operation fails");
-    assert!(matches!(
-        wrong_caller,
-        WorkspaceSessionError::CallerMismatch { workspace_session_id, .. }
-            if workspace_session_id == WorkspaceSessionId("workspace-1".to_owned())
-    ));
-
     let handler = manager
-        .resolve_session(
-            WorkspaceSessionId("workspace-1".to_owned()),
-            CallerId("caller-1".to_owned()),
-        )
+        .resolve_session(WorkspaceSessionId("workspace-1".to_owned()))
         .expect("test operation succeeds");
     assert_eq!(
         handler.workspace_session_id,
@@ -301,10 +279,10 @@ fn workspace_session_create_rolls_back_raw_workspace_when_insert_fails() {
     let manager = manager_with(&fake);
 
     manager
-        .create_workspace_session(create_request("caller-1"))
+        .create_workspace_session(create_request())
         .expect("test operation succeeds");
     let error = manager
-        .create_workspace_session(create_request("caller-1"))
+        .create_workspace_session(create_request())
         .expect_err("test operation fails");
 
     assert!(matches!(
@@ -317,10 +295,7 @@ fn workspace_session_create_rolls_back_raw_workspace_when_insert_fails() {
         vec![WorkspaceSessionId("workspace-1".to_owned())]
     );
     assert!(manager
-        .resolve_session(
-            WorkspaceSessionId("workspace-1".to_owned()),
-            CallerId("caller-1".to_owned()),
-        )
+        .resolve_session(WorkspaceSessionId("workspace-1".to_owned()))
         .is_ok());
 }
 
@@ -333,7 +308,7 @@ fn workspace_session_destroy_failure_retains_session() {
     }));
     let manager = manager_with(&fake);
     let handler = manager
-        .create_workspace_session(create_request("caller-1"))
+        .create_workspace_session(create_request())
         .expect("test operation succeeds");
 
     let error = manager
@@ -345,10 +320,7 @@ fn workspace_session_destroy_failure_retains_session() {
         WorkspaceSessionError::Workspace(WorkspaceError::Setup { .. })
     ));
     assert!(manager
-        .resolve_session(
-            WorkspaceSessionId("workspace-1".to_owned()),
-            CallerId("caller-1".to_owned()),
-        )
+        .resolve_session(WorkspaceSessionId("workspace-1".to_owned()))
         .is_ok());
 }
 
@@ -358,7 +330,7 @@ fn workspace_session_successful_destroy_removes_session() {
     fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
     let manager = manager_with(&fake);
     let handler = manager
-        .create_workspace_session(create_request("caller-1"))
+        .create_workspace_session(create_request())
         .expect("test operation succeeds");
 
     manager
@@ -366,10 +338,7 @@ fn workspace_session_successful_destroy_removes_session() {
         .expect("test operation succeeds");
 
     let missing = manager
-        .resolve_session(
-            WorkspaceSessionId("workspace-1".to_owned()),
-            CallerId("caller-1".to_owned()),
-        )
+        .resolve_session(WorkspaceSessionId("workspace-1".to_owned()))
         .expect_err("test operation fails");
     assert!(matches!(missing, WorkspaceSessionError::NotFound { .. }));
 }
@@ -380,7 +349,7 @@ fn workspace_session_rejects_stale_handler_before_raw_capture() {
     fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
     let manager = manager_with(&fake);
     let handler = manager
-        .create_workspace_session(create_request("caller-1"))
+        .create_workspace_session(create_request())
         .expect("test operation succeeds");
 
     manager
@@ -408,7 +377,7 @@ fn workspace_session_uses_canonical_handle_for_capture() {
     fake.push_capture_result(Ok(capture_result(&handle, 2, "root-2")));
     let manager = manager_with(&fake);
     let mut handler = manager
-        .create_workspace_session(create_request("caller-1"))
+        .create_workspace_session(create_request())
         .expect("test operation succeeds");
     handler.handle.id = WorkspaceSessionId("fabricated".to_owned());
 
@@ -435,7 +404,7 @@ fn workspace_session_capture_updates_handler_snapshot_consistently() {
     fake.push_capture_result(Ok(capture_result(&handle, 2, "root-2")));
     let manager = manager_with(&fake);
     let handler = manager
-        .create_workspace_session(create_request("caller-1"))
+        .create_workspace_session(create_request())
         .expect("test operation succeeds");
 
     manager
@@ -448,10 +417,7 @@ fn workspace_session_capture_updates_handler_snapshot_consistently() {
         .expect("test operation succeeds");
 
     let resolved = manager
-        .resolve_session(
-            WorkspaceSessionId("workspace-1".to_owned()),
-            CallerId("caller-1".to_owned()),
-        )
+        .resolve_session(WorkspaceSessionId("workspace-1".to_owned()))
         .expect("test operation succeeds");
     assert_eq!(resolved.handle.snapshot.manifest_version, 2);
     assert_eq!(resolved.handle.snapshot.root_hash, "root-2");
@@ -463,7 +429,7 @@ fn workspace_session_begin_remount_marks_pending_and_rejects_duplicate_begin() {
     fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
     let manager = manager_with(&fake);
     manager
-        .create_workspace_session(create_request("caller-1"))
+        .create_workspace_session(create_request())
         .expect("test operation succeeds");
 
     manager
@@ -490,7 +456,7 @@ fn workspace_session_apply_and_finish_remount_returns_session_to_active() {
     fake.push_remount_result(Ok(RemountWorkspaceResult { handle }));
     let manager = manager_with(&fake);
     manager
-        .create_workspace_session(create_request("caller-1"))
+        .create_workspace_session(create_request())
         .expect("test operation succeeds");
     let handler = manager
         .begin_remount(WorkspaceSessionId("workspace-1".to_owned()))
@@ -509,7 +475,7 @@ fn workspace_session_block_remount_clears_pending() {
     fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
     let manager = manager_with(&fake);
     manager
-        .create_workspace_session(create_request("caller-1"))
+        .create_workspace_session(create_request())
         .expect("test operation succeeds");
     manager
         .begin_remount(WorkspaceSessionId("workspace-1".to_owned()))
@@ -528,7 +494,7 @@ fn workspace_session_capture_rejects_pending_remount_before_raw_capture() {
     fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
     let manager = manager_with(&fake);
     let handler = manager
-        .create_workspace_session(create_request("caller-1"))
+        .create_workspace_session(create_request())
         .expect("test operation succeeds");
     manager
         .begin_remount(handler.workspace_session_id.clone())
@@ -558,7 +524,7 @@ fn workspace_session_destroy_rejects_pending_remount_before_raw_destroy() {
     fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
     let manager = manager_with(&fake);
     let handler = manager
-        .create_workspace_session(create_request("caller-1"))
+        .create_workspace_session(create_request())
         .expect("test operation succeeds");
     manager
         .begin_remount(handler.workspace_session_id.clone())
@@ -592,7 +558,7 @@ fn workspace_session_apply_remount_refreshes_canonical_handle() {
     }));
     let manager = manager_with(&fake);
     manager
-        .create_workspace_session(create_request("caller-1"))
+        .create_workspace_session(create_request())
         .expect("test operation succeeds");
     let handler = manager
         .begin_remount(WorkspaceSessionId("workspace-1".to_owned()))
@@ -632,7 +598,7 @@ fn workspace_session_apply_remount_failure_blocks_and_keeps_session_available() 
     }));
     let manager = manager_with(&fake);
     manager
-        .create_workspace_session(create_request("caller-1"))
+        .create_workspace_session(create_request())
         .expect("test operation succeeds");
     let handler = manager
         .begin_remount(WorkspaceSessionId("workspace-1".to_owned()))
@@ -653,10 +619,7 @@ fn workspace_session_apply_remount_failure_blocks_and_keeps_session_available() 
     ));
     assert!(!manager.is_remount_pending(&WorkspaceSessionId("workspace-1".to_owned())));
     assert!(manager
-        .resolve_session(
-            WorkspaceSessionId("workspace-1".to_owned()),
-            CallerId("caller-1".to_owned()),
-        )
+        .resolve_session(WorkspaceSessionId("workspace-1".to_owned()))
         .is_ok());
 }
 
@@ -713,7 +676,7 @@ fn workspace_session_rejects_remount_workspace_session_id_mismatch() {
     }));
     let manager = manager_with(&fake);
     let handler = manager
-        .create_workspace_session(create_request("caller-1"))
+        .create_workspace_session(create_request())
         .expect("test operation succeeds");
     let handler = manager
         .begin_remount(handler.workspace_session_id)
@@ -740,10 +703,7 @@ fn workspace_session_rejects_remount_workspace_session_id_mismatch() {
     );
     assert!(!manager.is_remount_pending(&WorkspaceSessionId("workspace-1".to_owned())));
     assert!(manager
-        .resolve_session(
-            WorkspaceSessionId("workspace-1".to_owned()),
-            CallerId("caller-1".to_owned()),
-        )
+        .resolve_session(WorkspaceSessionId("workspace-1".to_owned()))
         .is_ok());
 }
 
@@ -753,7 +713,7 @@ fn workspace_session_duplicate_destroy_does_not_call_raw_destroy_twice() {
     fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
     let manager = manager_with(&fake);
     let handler = manager
-        .create_workspace_session(create_request("caller-1"))
+        .create_workspace_session(create_request())
         .expect("test operation succeeds");
 
     manager

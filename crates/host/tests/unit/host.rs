@@ -1,6 +1,6 @@
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
-use std::net::TcpListener;
+use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -10,9 +10,7 @@ use serde_json::{json, Value};
 
 use crate::container::override_docker_command_for_tests;
 use crate::daemon_wire::{encode_request_with_metadata, ClientError};
-use crate::service::forward::{
-    forward_request, tcp_once, ForwardAttempt, ForwardRequestInput,
-};
+use crate::service::forward::{forward_request, tcp_once, ForwardAttempt, ForwardRequestInput};
 use crate::service::registry::{SandboxRecord, SandboxRegistry};
 use crate::service::{HostConfig, SandboxHost};
 
@@ -208,29 +206,29 @@ fn decode_client_errors_do_not_format_raw_response_body() {
 
 #[test]
 fn tcp_once_returns_transport_errors_without_event_store() -> Result<()> {
-    let cases: [(
-        &str,
-        Box<dyn FnOnce(std::net::TcpStream) + Send>,
-        fn(&ClientError) -> bool,
-    ); 3] = [
+    type FailureHandler = Box<dyn FnOnce(TcpStream) + Send>;
+    type ErrorMatcher = fn(&ClientError) -> bool;
+    type FailureCase = (&'static str, FailureHandler, ErrorMatcher);
+
+    let cases: [FailureCase; 3] = [
         (
             "empty-response",
-            Box::new(|stream: std::net::TcpStream| {
+            Box::new(|stream: TcpStream| {
                 let _ = stream.shutdown(std::net::Shutdown::Write);
                 std::thread::sleep(Duration::from_millis(50));
-            }) as Box<dyn FnOnce(std::net::TcpStream) + Send>,
+            }) as FailureHandler,
             |error: &ClientError| matches!(error, ClientError::EmptyResponse),
         ),
         (
             "decode-failed",
-            Box::new(|mut stream: std::net::TcpStream| {
+            Box::new(|mut stream: TcpStream| {
                 let _ = writeln!(stream, "not json");
             }),
             |error: &ClientError| matches!(error, ClientError::Decode { .. }),
         ),
         (
             "read-timeout",
-            Box::new(|_stream: std::net::TcpStream| {
+            Box::new(|_stream: TcpStream| {
                 std::thread::sleep(Duration::from_millis(250));
             }),
             |error: &ClientError| matches!(error, ClientError::Read(_)),

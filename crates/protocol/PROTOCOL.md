@@ -20,7 +20,7 @@ normative subset both sides build against.
 - **Request:**
 
 ```json
-{"op":"exec_command","sandbox_id":"sb-...","request_id":"<uuid4hex>","args":{"workspace_root":"/testbed","cmd":"pwd"}}
+{"op":"exec_command","sandbox_id":"sb-...","request_id":"<uuid4hex>","args":{"workspace_session_id":"ws-...","cmd":"pwd"}}
 ```
 
 | Field | Required | Notes |

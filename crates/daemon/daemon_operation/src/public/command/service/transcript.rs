@@ -42,7 +42,7 @@ impl CommandTranscriptWindowExt for ::command::CommandTranscriptWindow {
         exit_code: Option<i64>,
     ) -> CommandLinesOutput {
         CommandLinesOutput {
-            command_session_id: command_session_id,
+            command_session_id,
             status,
             exit_code,
             start_offset: self.offset,

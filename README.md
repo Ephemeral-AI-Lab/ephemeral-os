@@ -81,7 +81,8 @@ bin/ephai-sandbox-gateway host containers start <docker-image>
 
 # acquire a sandbox, then operate inside its daemon
 SID=$(bin/ephai-sandbox-gateway host sandboxes acquire | jq -r .sandbox_id)
-bin/ephai-sandbox-gateway daemon --sandbox-id "$SID" commands exec --workspace-root /testbed -- pwd
+WSID=<workspace-session-id>
+bin/ephai-sandbox-gateway daemon --sandbox-id "$SID" commands exec --workspace-session-id "$WSID" -- pwd
 bin/ephai-sandbox-gateway host sandboxes release "$SID"
 ```
 

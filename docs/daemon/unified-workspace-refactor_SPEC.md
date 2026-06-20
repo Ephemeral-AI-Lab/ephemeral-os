@@ -236,7 +236,6 @@ after overlayfs or LayerStack internals.
 ```rust
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CreateWorkspaceRequest {
-    pub owner: CallerId,
     pub workspace_root: PathBuf,
     pub network: NetworkMode,
 }
@@ -250,7 +249,6 @@ pub enum NetworkMode {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkspaceHandle {
     pub id: WorkspaceSessionId,
-    pub owner: CallerId,
     pub workspace_root: PathBuf,
     pub network: NetworkMode,
     pub base_revision: BaseRevision,
@@ -258,9 +256,6 @@ pub struct WorkspaceHandle {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkspaceSessionId(pub String);
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CallerId(pub String);
 ```
 
 ### Run Command
@@ -328,7 +323,6 @@ pub struct DestroyWorkspaceRequest {
 #[derive(Debug, Clone, PartialEq)]
 pub struct DestroyWorkspaceResult {
     pub workspace_session_id: WorkspaceSessionId,
-    pub owner: CallerId,
     pub cancelled_commands: usize,
     pub evicted_upperdir_bytes: u64,
     pub lifetime_s: f64,
@@ -423,7 +417,6 @@ impl WorkspaceRuntime {
     pub(crate) fn acquire_base_revision(
         &self,
         root: &ResolvedWorkspaceRoot,
-        owner: &CallerId,
     ) -> Result<LeasedBaseRevision, WorkspaceError>;
 
     pub(crate) fn route_command_context(
@@ -498,14 +491,14 @@ pub enum WorkspaceError {
     #[error("workspace feature is disabled")]
     FeatureDisabled,
 
-    #[error("workspace already open for {owner:?}")]
-    AlreadyOpen { owner: CallerId, workspace_session_id: WorkspaceSessionId },
+    #[error("workspace already open: {workspace_session_id:?}")]
+    AlreadyOpen { workspace_session_id: WorkspaceSessionId },
 
-    #[error("workspace is not open for {owner:?}")]
-    NotOpen { owner: CallerId },
+    #[error("workspace is not open")]
+    NotOpen,
 
     #[error("cannot change workspace while commands are active")]
-    ActiveCommands { owner: CallerId, active_commands: usize },
+    ActiveCommands { active_commands: usize },
 
     #[error("workspace quota exceeded: {total_cap}")]
     QuotaExceeded { total_cap: u32 },

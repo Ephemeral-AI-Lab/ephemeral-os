@@ -1,16 +1,15 @@
-use std::path::PathBuf;
 use std::sync::Arc;
 
-use daemon_operation::command::{CommandCallContext, CommandOperationService, ExecCommandInput};
+use daemon_operation::command::{CommandOperationService, ExecCommandInput};
 use daemon_operation::workspace_remount::{
     CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountService,
 };
 use daemon_operation::workspace_session::WorkspaceSessionService;
 use daemon_operation::DaemonOperations;
 use workspace::{
-    CallerId, CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest,
-    LatestSnapshotRequest, RemountWorkspaceRequest, WorkspaceError, WorkspaceHandle,
-    WorkspaceRuntimeHooks, WorkspaceRuntimeService, WorkspaceSessionId,
+    CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest, LatestSnapshotRequest,
+    RemountWorkspaceRequest, WorkspaceError, WorkspaceHandle, WorkspaceRuntimeHooks,
+    WorkspaceRuntimeService, WorkspaceSessionId,
 };
 
 fn workspace_session() -> Arc<WorkspaceSessionService> {
@@ -76,24 +75,16 @@ fn daemon_operations_exposes_only_command_as_external_lane() {
 }
 
 #[test]
-fn command_contract_keeps_roots_and_call_context_separate() {
+fn command_contract_keeps_session_selector_in_exec_input() {
     let input = ExecCommandInput {
-        caller_id: CallerId("caller-1".to_owned()),
-        workspace_root: PathBuf::from("/workspace"),
-        workspace_session_id: Some(WorkspaceSessionId("workspace-1".to_owned())),
+        workspace_session_id: WorkspaceSessionId("workspace-1".to_owned()),
         cmd: "pwd".to_owned(),
-        cwd: None,
         timeout_seconds: None,
         yield_time_ms: Some(100),
     };
-    let context = CommandCallContext {
-        caller_id: input.caller_id.clone(),
-    };
 
-    assert_eq!(input.workspace_root, PathBuf::from("/workspace"));
     assert_eq!(
         input.workspace_session_id,
-        Some(WorkspaceSessionId("workspace-1".to_owned()))
+        WorkspaceSessionId("workspace-1".to_owned())
     );
-    assert_eq!(context.caller_id, CallerId("caller-1".to_owned()));
 }

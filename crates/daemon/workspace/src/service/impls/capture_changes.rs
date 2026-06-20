@@ -20,12 +20,11 @@ impl WorkspaceRuntimeService {
         let upperdir = {
             let state = self.lock_state()?;
             let mode_id = active_mode_id(&state, handle)?;
-            let mode_handle =
-                state
-                    .manager
-                    .handles
-                    .get(&mode_id)
-                    .ok_or(WorkspaceError::NotOpen)?;
+            let mode_handle = state
+                .manager
+                .handles
+                .get(&mode_id)
+                .ok_or(WorkspaceError::NotOpen)?;
             mode_handle.dirs.upperdir.clone()
         };
         let captured = crate::overlay::capture::capture_upperdir(&upperdir).map_err(|error| {

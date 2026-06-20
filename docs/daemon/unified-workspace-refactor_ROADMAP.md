@@ -66,7 +66,7 @@ Goal: add the unified public vocabulary beside existing workspace names.
 Tasks:
 
 - [x] Add `crates/daemon/workspace/src/model.rs`.
-- [x] Add `WorkspaceSessionId`, `CallerId`, `BaseRevision`, `WorkspaceHandle`, and `NetworkMode`.
+- [x] Add `WorkspaceSessionId`, `BaseRevision`, `WorkspaceHandle`, and `NetworkMode`.
 - [x] Add `CreateWorkspaceRequest`, `RunCommandRequest`, `RunCommandResult`, `CaptureChangesRequest`, `CaptureChangesResult`, `DestroyWorkspaceRequest`, and `DestroyWorkspaceResult`.
 - [x] Add `crates/daemon/workspace/src/error.rs` with `WorkspaceError`.
 - [x] Add `crates/daemon/workspace/src/service.rs` with the `WorkspaceService` trait shape.

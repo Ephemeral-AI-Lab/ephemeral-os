@@ -45,7 +45,7 @@ usage:
   ephai-sandbox-gateway host sandboxes release SANDBOX_ID
   ephai-sandbox-gateway host op OP [ARGS_JSON] [--sandbox-id SANDBOX_ID] [--operator]
 
-  ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID commands exec --workspace-root PATH -- COMMAND
+  ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID commands exec --workspace-session-id ID -- COMMAND
   ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID commands write-command-stdin COMMAND_SESSION_ID TEXT
   ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID commands poll COMMAND_SESSION_ID [--last-n-lines N]
   ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID commands read-command-lines COMMAND_SESSION_ID --start-offset N --limit N
@@ -302,17 +302,11 @@ fn request_from_daemon_commands(
     };
     match subcommand.as_str() {
         "exec" => {
-            let workspace_root =
-                take_required_flag_any(&mut args, &["--workspace-root", "--workspace_root"])?;
-            let workspace_session_id =
-                take_optional_flag_any(&mut args, &["--workspace-session-id", "--workspace_session_id"])?;
-            let cwd = take_optional_flag(&mut args, "--cwd")?;
+            let workspace_session_id = take_required_flag(&mut args, "--workspace-session-id")?;
             let timeout_seconds = take_optional_f64(&mut args, "--timeout-seconds")?;
             let yield_time_ms = take_optional_u64(&mut args, "--yield-time-ms")?;
             let cmd = command_string(args)?;
-            let mut body = json!({ "cmd": cmd, "workspace_root": workspace_root });
-            insert_optional(&mut body, "workspace_session_id", workspace_session_id);
-            insert_optional(&mut body, "cwd", cwd);
+            let mut body = json!({ "cmd": cmd, "workspace_session_id": workspace_session_id });
             if let Some(timeout_seconds) = timeout_seconds {
                 body["timeout_seconds"] = json!(timeout_seconds);
             }
@@ -582,6 +576,10 @@ fn take_optional_flag(args: &mut Vec<String>, flag: &str) -> Result<Option<Strin
     Ok(Some(take_flag_value(args, index, flag)?))
 }
 
+fn take_required_flag(args: &mut Vec<String>, flag: &str) -> Result<String> {
+    take_optional_flag(args, flag)?.with_context(|| format!("{flag} is required"))
+}
+
 fn take_optional_flag_any(args: &mut Vec<String>, flags: &[&str]) -> Result<Option<String>> {
     for flag in flags {
         if let Some(index) = args.iter().position(|arg| arg == flag) {
@@ -589,17 +587,6 @@ fn take_optional_flag_any(args: &mut Vec<String>, flags: &[&str]) -> Result<Opti
         }
     }
     Ok(None)
-}
-
-fn take_required_flag(args: &mut Vec<String>, flag: &str) -> Result<String> {
-    take_optional_flag(args, flag)?.with_context(|| format!("{flag} is required"))
-}
-
-fn take_required_flag_any(args: &mut Vec<String>, flags: &[&str]) -> Result<String> {
-    take_optional_flag_any(args, flags)?.with_context(|| {
-        let joined = flags.join(" or ");
-        format!("{joined} is required")
-    })
 }
 
 fn take_optional_u64(args: &mut Vec<String>, flag: &str) -> Result<Option<u64>> {

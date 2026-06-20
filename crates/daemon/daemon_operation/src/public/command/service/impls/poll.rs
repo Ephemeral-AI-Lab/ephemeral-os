@@ -81,7 +81,7 @@ impl CommandOperationService {
                         |last_n_lines| ::command::tail_lines(&result.stdout, last_n_lines),
                     );
                     return Ok(CommandPollOutput {
-                        command_session_id: command_session_id,
+                        command_session_id,
                         status: result.status,
                         exit_code: result.exit_code,
                         output: CommandOutputSnapshot { stdout },
@@ -93,7 +93,7 @@ impl CommandOperationService {
                 .process
                 .read_recent_output(input.last_n_lines.unwrap_or(200));
             return Ok(CommandPollOutput {
-                command_session_id: command_session_id,
+                command_session_id,
                 status: CommandStatus::Running,
                 exit_code: None,
                 output: CommandOutputSnapshot { stdout },
@@ -107,7 +107,7 @@ impl CommandOperationService {
             |last_n_lines| ::command::tail_lines(&completed.result.stdout, last_n_lines),
         );
         Ok(CommandPollOutput {
-            command_session_id: command_session_id,
+            command_session_id,
             status: completed.result.status,
             exit_code: completed.result.exit_code,
             output: CommandOutputSnapshot { stdout },

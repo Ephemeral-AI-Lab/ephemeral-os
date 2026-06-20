@@ -8,27 +8,19 @@ use daemon_operation::command::{
     CommandSessionId, CommandStatus, CommandTerminalResult, CommandTranscriptStore,
     CompletedCommandRecord, FinalizationState, RetainedCommandTranscript,
 };
-use workspace::{CallerId, WorkspaceSessionId};
+use workspace::WorkspaceSessionId;
 
 fn command_session_id(id: &str) -> CommandSessionId {
     CommandSessionId(id.to_owned())
-}
-
-fn caller_id(id: &str) -> CallerId {
-    CallerId(id.to_owned())
 }
 
 fn workspace_session_id(id: &str) -> WorkspaceSessionId {
     WorkspaceSessionId(id.to_owned())
 }
 
-fn inactive_process(
-    command_session_id: &CommandSessionId,
-    caller_id: &CallerId,
-) -> command::CommandProcess {
+fn inactive_process(command_session_id: &CommandSessionId) -> command::CommandProcess {
     command::CommandProcess::inactive_for_test(command::CommandProcessSpec {
         id: command_session_id.0.clone(),
-        caller_id: caller_id.0.clone(),
         command: "echo ok".to_owned(),
         cwd: None,
         timeout_seconds: None,
@@ -37,15 +29,13 @@ fn inactive_process(
 
 fn active_record(
     command_session_id: CommandSessionId,
-    caller_id: CallerId,
     workspace_session_id: WorkspaceSessionId,
 ) -> ActiveCommandProcess {
     ActiveCommandProcess {
         command_session_id: command_session_id.clone(),
-        caller_id: caller_id.clone(),
         workspace_session_id: workspace_session_id.clone(),
         workspace_root: PathBuf::from("/workspace"),
-        process: Arc::new(inactive_process(&command_session_id, &caller_id)),
+        process: Arc::new(inactive_process(&command_session_id)),
         transcript: CommandTranscriptStore {
             transcript_path: Some(PathBuf::from("/tmp/transcript.jsonl")),
         },
@@ -63,12 +53,10 @@ fn active_record(
 
 fn completed_record(
     command_session_id: CommandSessionId,
-    caller_id: CallerId,
     workspace_session_id: WorkspaceSessionId,
 ) -> CompletedCommandRecord {
     CompletedCommandRecord {
         command_session_id,
-        caller_id,
         workspace_session_id,
         result: CommandTerminalResult {
             status: CommandStatus::Completed,
@@ -126,15 +114,11 @@ fn command_process_store_reservation_drop_releases_admission_slot() {
 fn command_process_store_active_records_are_command_session_id_keyed() {
     let store = CommandProcessStore::with_max_active(1);
     let cmd_id = command_session_id("cmd_active");
-    let caller_id = caller_id("caller-1");
     let ws_id = workspace_session_id("workspace-1");
     let reservation = store.try_reserve().expect("reservation succeeds");
 
     store
-        .insert_active(
-            reservation,
-            active_record(cmd_id.clone(), caller_id.clone(), ws_id.clone()),
-        )
+        .insert_active(reservation, active_record(cmd_id.clone(), ws_id.clone()))
         .expect("active insert succeeds");
     let error = store
         .try_reserve()
@@ -147,7 +131,6 @@ fn command_process_store_active_records_are_command_session_id_keyed() {
     {
         let active = store.active(&cmd_id).expect("active command exists");
         assert_eq!(active.command_session_id, cmd_id);
-        assert_eq!(active.caller_id, caller_id);
         assert_eq!(active.workspace_session_id, ws_id);
         assert_eq!(
             active.finalize_policy,
@@ -160,7 +143,6 @@ fn command_process_store_active_records_are_command_session_id_keyed() {
     let removed = store
         .complete_active(completed_record(
             cmd_id.clone(),
-            caller_id.clone(),
             workspace_session_id("workspace-1"),
         ))
         .expect("active command completion succeeds")
@@ -183,7 +165,6 @@ fn command_process_store_rejects_duplicate_active_command_session_id() {
             reservation,
             active_record(
                 command_session_id.clone(),
-                caller_id("caller-1"),
                 workspace_session_id("workspace-1"),
             ),
         )
@@ -194,7 +175,6 @@ fn command_process_store_rejects_duplicate_active_command_session_id() {
             reservation,
             active_record(
                 command_session_id.clone(),
-                caller_id("caller-2"),
                 workspace_session_id("workspace-2"),
             ),
         )
@@ -222,7 +202,6 @@ fn command_process_store_rejects_reservation_from_different_store() {
             reservation,
             active_record(
                 command_session_id.clone(),
-                caller_id("caller-1"),
                 workspace_session_id("workspace-1"),
             ),
         )
@@ -239,27 +218,21 @@ fn command_process_store_rejects_reservation_from_different_store() {
 }
 
 #[test]
-fn command_process_store_completed_records_retain_caller_during_active_completion() {
+fn command_process_store_completed_records_retain_workspace_during_active_completion() {
     let store = CommandProcessStore::with_max_active(1);
     let command_session_id = command_session_id("cmd_completed");
-    let caller_id = caller_id("caller-owner");
     let workspace_session_id = workspace_session_id("workspace-1");
     let reservation = store.try_reserve().expect("reservation succeeds");
 
     store
         .insert_active(
             reservation,
-            active_record(
-                command_session_id.clone(),
-                caller_id.clone(),
-                workspace_session_id.clone(),
-            ),
+            active_record(command_session_id.clone(), workspace_session_id.clone()),
         )
         .expect("active insert succeeds");
     let removed = store
         .complete_active(completed_record(
             command_session_id.clone(),
-            caller_id.clone(),
             workspace_session_id.clone(),
         ))
         .expect("completed record retained")
@@ -270,7 +243,6 @@ fn command_process_store_completed_records_retain_caller_during_active_completio
     let completed = store
         .completed(&command_session_id)
         .expect("completed record remains available");
-    assert_eq!(completed.caller_id, caller_id);
     assert_eq!(completed.workspace_session_id, workspace_session_id);
     assert_eq!(completed.result.status, CommandStatus::Completed);
     store
@@ -279,49 +251,9 @@ fn command_process_store_completed_records_retain_caller_during_active_completio
 }
 
 #[test]
-fn command_process_store_rejects_completed_record_with_mismatched_owner() {
-    let store = CommandProcessStore::with_max_active(1);
-    let command_session_id = command_session_id("cmd_completed");
-    let owner = caller_id("caller-owner");
-    let workspace_session_id = workspace_session_id("workspace-1");
-    let reservation = store.try_reserve().expect("reservation succeeds");
-
-    store
-        .insert_active(
-            reservation,
-            active_record(
-                command_session_id.clone(),
-                owner.clone(),
-                workspace_session_id.clone(),
-            ),
-        )
-        .expect("active insert succeeds");
-
-    let error = match store.complete_active(completed_record(
-        command_session_id.clone(),
-        caller_id("caller-other"),
-        workspace_session_id,
-    )) {
-        Err(error) => error,
-        Ok(_) => panic!("completed record cannot rewrite caller ownership"),
-    };
-
-    assert!(matches!(
-        error,
-        CommandServiceError::CommandCallerMismatch { command_session_id: id, expected, actual }
-            if id == command_session_id
-                && expected == owner
-                && actual == caller_id("caller-other")
-    ));
-    assert!(store.active(&command_session_id).is_some());
-    assert!(store.completed(&command_session_id).is_none());
-}
-
-#[test]
 fn command_process_store_rejects_completed_record_with_mismatched_workspace() {
     let store = CommandProcessStore::with_max_active(1);
     let command_session_id = command_session_id("cmd_completed");
-    let caller_id = caller_id("caller-owner");
     let original_workspace_session_id = workspace_session_id("workspace-1");
     let reservation = store.try_reserve().expect("reservation succeeds");
 
@@ -330,7 +262,6 @@ fn command_process_store_rejects_completed_record_with_mismatched_workspace() {
             reservation,
             active_record(
                 command_session_id.clone(),
-                caller_id.clone(),
                 original_workspace_session_id.clone(),
             ),
         )
@@ -339,11 +270,10 @@ fn command_process_store_rejects_completed_record_with_mismatched_workspace() {
     let rewritten_workspace_session_id = workspace_session_id("workspace-other");
     let error = match store.complete_active(completed_record(
         command_session_id.clone(),
-        caller_id,
         rewritten_workspace_session_id.clone(),
     )) {
         Err(error) => error,
-        Ok(_) => panic!("completed record cannot rewrite workspace ownership"),
+        Ok(_) => panic!("completed record cannot rewrite workspace session"),
     };
 
     assert!(matches!(
@@ -365,14 +295,12 @@ fn command_process_store_completion_store_rejects_duplicate_command_session_id()
     completion_store
         .insert(completed_record(
             command_session_id.clone(),
-            caller_id("caller-1"),
             workspace_session_id("workspace-1"),
         ))
         .expect("first completed insert succeeds");
     let error = completion_store
         .insert(completed_record(
             command_session_id.clone(),
-            caller_id("caller-1"),
             workspace_session_id("workspace-1"),
         ))
         .expect_err("duplicate completed id is rejected");

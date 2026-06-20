@@ -42,9 +42,9 @@ The command lane owns the API that maps naturally to agent tool calls:
 tracking, transcript access, command launch, cancellation, and command
 finalization state.
 
-Command finalization does not own layerstack publish mechanics. For one-shot
-commands, it delegates workspace capture, publish, and destroy to the internal
-workspace session service through `finalize_one_shot_session`.
+Command execution targets an existing workspace session. Command finalization
+records the session command outcome and does not own layerstack publish
+mechanics.
 
 ## Internal Workspace Session Lane
 
@@ -62,10 +62,10 @@ It owns:
 - `finalize_one_shot_session`
 - remount state transitions through dedicated workspace-session service impls
 
-This layer is where command-facing workflows become workspace-runtime calls. It
-is the right place for one-shot workspace cleanup and publish behavior because
-that behavior depends on session state, workspace handles, captured changes,
-and layerstack roots.
+This layer is where command-facing workflows become workspace-runtime calls.
+Workspace capture, destroy, and remount behavior lives here because that
+behavior depends on session state, workspace handles, captured changes, and
+layerstack roots.
 
 ## Internal Workspace Remount Lane
 
@@ -111,18 +111,6 @@ CommandOperationService::exec_command
 
 The workspace session remains alive after the command completes.
 
-### One-Shot Command
-
-```text
-CommandOperationService::exec_command
-  -> WorkspaceSessionService::create_workspace_session
-  -> CommandLaunchDriver::spawn
-  -> WorkspaceSessionService::finalize_one_shot_session
-       -> capture_session_changes when the command succeeded
-       -> layerstack::service::publish_changes_to_layerstack when publishing
-       -> destroy_session
-  -> command finalization metadata records Published or Discarded
-```
 
 The command lane decides command status. The workspace session lane owns the
 workspace lifecycle and publish/destroy details.

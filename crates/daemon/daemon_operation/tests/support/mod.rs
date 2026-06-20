@@ -286,16 +286,6 @@ pub fn create_request(workspace_root: PathBuf) -> CreateWorkspaceRequest {
     }
 }
 
-pub fn assert_private_create_request(
-    request: &CreateWorkspaceRequest,
-    workspace_root: &PathBuf,
-    profile: WorkspaceProfile,
-) {
-    assert_eq!(&request.workspace_root, workspace_root);
-    assert_eq!(&request.layer_stack_root, workspace_root);
-    assert_eq!(request.profile, profile);
-}
-
 pub fn workspace_handle(
     workspace_session_id: &str,
     lease_id: &str,

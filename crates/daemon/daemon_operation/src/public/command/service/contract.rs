@@ -1,7 +1,5 @@
-use std::collections::BTreeMap;
-use std::path::PathBuf;
-
 use crate::workspace_crate::{ChangedPathKind, WorkspaceSessionId};
+use std::collections::BTreeMap;
 
 pub use command::{CommandStream, CommandTranscriptRow};
 
@@ -10,10 +8,8 @@ pub struct CommandSessionId(pub String);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExecCommandInput {
-    pub workspace_root: PathBuf,
-    pub workspace_session_id: Option<WorkspaceSessionId>,
+    pub workspace_session_id: WorkspaceSessionId,
     pub cmd: String,
-    pub cwd: Option<PathBuf>,
     pub timeout_seconds: Option<f64>,
     pub yield_time_ms: Option<u64>,
 }

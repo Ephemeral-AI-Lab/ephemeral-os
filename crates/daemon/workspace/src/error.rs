@@ -57,8 +57,13 @@ impl std::fmt::Display for WorkspaceError {
             Self::InvalidRequest { field, message } => {
                 write!(formatter, "invalid request for {field}: {message}")
             }
-            Self::AlreadyOpen { workspace_session_id } => {
-                write!(formatter, "workspace already open: {workspace_session_id:?}")
+            Self::AlreadyOpen {
+                workspace_session_id,
+            } => {
+                write!(
+                    formatter,
+                    "workspace already open: {workspace_session_id:?}"
+                )
             }
             Self::NotOpen => write!(formatter, "workspace is not open"),
             Self::ActiveCommands { .. } => {

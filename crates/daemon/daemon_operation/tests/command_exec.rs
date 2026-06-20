@@ -1,62 +1,65 @@
 mod support;
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use command::yield_wait_loop::WaitOutcome;
 use daemon_operation::command::{
-    CommandCallContext, CommandFinalizationOutcome, CommandFinalizedPolicy, CommandServiceError,
-    CommandSessionId, CommandStatus, ExecCommandInput, PollCommandInput,
+    CommandFinalizationOutcome, CommandFinalizedPolicy, CommandServiceError, CommandSessionId,
+    CommandStatus, ExecCommandInput, PollCommandInput,
 };
-use workspace::{CallerId, WorkspaceProfile, WorkspaceSessionId};
+use workspace::{WorkspaceProfile, WorkspaceSessionId};
 
 use support::{
-    assert_private_create_request, build_services, build_services_with_launch_driver,
-    create_request, success_exit, workspace_handle, workspace_handle_unavailable_launch,
-    workspace_handle_without_launch, FakeLaunchDriver, FakeWorkspaceService,
+    build_services, build_services_with_launch_driver, create_request, success_exit,
+    workspace_handle, workspace_handle_unavailable_launch, workspace_handle_without_launch,
+    FakeLaunchDriver, FakeWorkspaceService,
 };
 
-fn exec_input(
-    caller_id: &str,
-    workspace_root: PathBuf,
-    workspace_session_id: Option<WorkspaceSessionId>,
-) -> ExecCommandInput {
+fn exec_input(workspace_session_id: WorkspaceSessionId) -> ExecCommandInput {
     ExecCommandInput {
-        caller_id: CallerId(caller_id.to_owned()),
-        workspace_root,
         workspace_session_id,
         cmd: "printf ok".to_owned(),
-        cwd: None,
         timeout_seconds: None,
         yield_time_ms: Some(0),
     }
 }
 
-#[test]
-fn command_exec_some_uses_resolved_session_without_workspace_create_or_destroy() {
-    let fake = Arc::new(FakeWorkspaceService::new());
-    let workspace_root = PathBuf::from("/workspace/session");
+fn create_session(
+    fake: &Arc<FakeWorkspaceService>,
+    env: &support::TestServices,
+    workspace_session_id: &str,
+    workspace_root: PathBuf,
+    profile: WorkspaceProfile,
+) -> WorkspaceSessionId {
     fake.push_create_result(Ok(workspace_handle(
-        "workspace-session",
-        "caller-1",
+        workspace_session_id,
         "lease-1",
         workspace_root.clone(),
-        WorkspaceProfile::HostCompatible,
+        profile,
     )));
+    env.workspace
+        .create_workspace_session(create_request(workspace_root))
+        .expect("session create succeeds")
+        .workspace_session_id
+}
+
+#[test]
+fn command_exec_uses_resolved_session_without_workspace_create_or_destroy() {
+    let fake = Arc::new(FakeWorkspaceService::new());
     let env = build_services(Arc::clone(&fake));
-    let handler = env
-        .workspace
-        .create_workspace_session(create_request(workspace_root.clone()))
-        .expect("session create succeeds");
+    let workspace_session_id = create_session(
+        &fake,
+        &env,
+        "workspace-session",
+        PathBuf::from("/workspace/session"),
+        WorkspaceProfile::HostCompatible,
+    );
     let create_count_before_exec = fake.create_requests().len();
 
     let output = env
         .command
-        .exec_command(exec_input(
-            "caller-1",
-            workspace_root,
-            Some(handler.workspace_session_id.clone()),
-        ))
+        .exec_command(exec_input(workspace_session_id))
         .expect("session command exec succeeds");
 
     let command_session_id = output
@@ -71,160 +74,51 @@ fn command_exec_some_uses_resolved_session_without_workspace_create_or_destroy()
             command_session_id: command_session_id.clone(),
             last_n_lines: Some(10),
         })
-        .expect("owner can poll session command");
+        .expect("session command can be polled");
     assert_eq!(poll.command_session_id, command_session_id);
     assert_eq!(poll.status, CommandStatus::Running);
 }
 
 #[test]
-fn command_exec_none_creates_private_host_workspace_and_binds_it() {
+fn command_exec_rejects_empty_command_before_workspace_resolution() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    let workspace_root = PathBuf::from("/workspace/one-shot");
-    fake.push_create_result(Ok(workspace_handle(
-        "workspace-one-shot",
-        "caller-1",
-        "lease-1",
-        workspace_root.clone(),
-        WorkspaceProfile::HostCompatible,
-    )));
     let env = build_services(Arc::clone(&fake));
-
-    let output = env
-        .command
-        .exec_command(exec_input(workspace_root.clone(), None))
-        .expect("one-shot command exec succeeds");
-
-    let command_session_id = output
-        .command_session_id
-        .expect("running command session id is returned");
-    assert_eq!(output.status, CommandStatus::Running);
-    assert_eq!(output.exit_code, None);
-    let create_requests = fake.create_requests();
-    assert_eq!(create_requests.len(), 1);
-    assert_private_create_request(
-        &create_requests[0],
-        &workspace_root,
-        WorkspaceProfile::HostCompatible,
-    );
-    assert!(fake.destroy_calls().is_empty());
-    let poll = env
-        .command
-        .poll(PollCommandInput {
-            command_session_id: command_session_id.clone(),
-            last_n_lines: Some(10),
-        })
-        .expect("owner can poll one-shot command");
-    assert_eq!(poll.command_session_id, command_session_id);
-    assert_eq!(poll.status, CommandStatus::Running);
-}
-
-#[test]
-fn command_exec_rejects_context_caller_mismatch_before_workspace_create() {
-    let fake = Arc::new(FakeWorkspaceService::new());
-    let workspace_root = PathBuf::from("/workspace/one-shot");
-    let env = build_services(Arc::clone(&fake));
+    let mut input = exec_input(WorkspaceSessionId("workspace-session".to_owned()));
+    input.cmd = "   ".to_owned();
 
     let error = env
         .command
-        .exec_command(exec_input(workspace_root.clone(), None))
-        .expect_err("caller mismatch rejects before one-shot create");
+        .exec_command(input)
+        .expect_err("empty command rejects exec");
 
     assert!(matches!(
         error,
-        CommandServiceError::InvalidCommand { message }
-            if message.contains("exec caller must match command context")
+        CommandServiceError::InvalidCommand { message } if message == "cmd must be non-empty"
     ));
     assert!(fake.create_requests().is_empty());
-
-    fake.push_create_result(Ok(workspace_handle(
-        "workspace-one-shot",
-        "caller-1",
-        "lease-1",
-        workspace_root.clone(),
-        WorkspaceProfile::HostCompatible,
-    )));
-    let output = env
-        .command
-        .exec_command(exec_input(workspace_root, None))
-        .expect("subsequent valid exec succeeds");
-    assert_eq!(
-        output.command_session_id,
-        Some(CommandSessionId("cmd_1".to_owned()))
-    );
-}
-
-#[test]
-fn command_exec_spawn_failure_destroys_created_one_shot_workspace() {
-    let fake = Arc::new(FakeWorkspaceService::new());
-    let workspace_root = PathBuf::from("/workspace/one-shot");
-    fake.push_create_result(Ok(workspace_handle(
-        "workspace-one-shot",
-        "caller-1",
-        "lease-1",
-        workspace_root.clone(),
-        WorkspaceProfile::HostCompatible,
-    )));
-    let launch_driver = Arc::new(FakeLaunchDriver::new());
-    launch_driver.push_spawn_error(CommandServiceError::CommandIo {
-        command_session_id: CommandSessionId("cmd_1".to_owned()),
-        error: "spawn failed".to_owned(),
-    });
-    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
-
-    let error = env
-        .command
-        .exec_command(exec_input(workspace_root, None))
-        .expect_err("spawn failure rejects exec");
-
-    match error {
-        CommandServiceError::CommandIo {
-            command_session_id,
-            error,
-        } => {
-            assert_eq!(command_session_id, CommandSessionId("cmd_1".to_owned()));
-            assert_eq!(error, "spawn failed");
-        }
-        other => panic!("expected command io error, got {other:?}"),
-    }
-    assert_eq!(
-        fake.destroy_calls(),
-        vec![WorkspaceSessionId("workspace-one-shot".to_owned())]
-    );
-    assert!(
-        !env.command.config().scratch_root.join("cmd_1").exists(),
-        "spawn failure should clean up unretained command artifacts"
-    );
+    assert!(fake.destroy_calls().is_empty());
 }
 
 #[test]
 fn command_exec_spawn_failure_keeps_session_workspace_alive() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    let workspace_root = PathBuf::from("/workspace/session");
-    fake.push_create_result(Ok(workspace_handle(
-        "workspace-session",
-        "caller-1",
-        "lease-1",
-        workspace_root.clone(),
-        WorkspaceProfile::HostCompatible,
-    )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_spawn_error(CommandServiceError::CommandIo {
         command_session_id: CommandSessionId("cmd_1".to_owned()),
         error: "spawn failed".to_owned(),
     });
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
-    let handler = env
-        .workspace
-        .create_workspace_session(create_request(workspace_root.clone()))
-        .expect("session create succeeds");
+    let workspace_session_id = create_session(
+        &fake,
+        &env,
+        "workspace-session",
+        PathBuf::from("/workspace/session"),
+        WorkspaceProfile::HostCompatible,
+    );
 
     let error = env
         .command
-        .exec_command(exec_input(
-            "caller-1",
-            workspace_root,
-            Some(handler.workspace_session_id.clone()),
-        ))
+        .exec_command(exec_input(workspace_session_id))
         .expect_err("spawn failure rejects session exec");
 
     assert!(matches!(
@@ -242,24 +136,23 @@ fn command_exec_spawn_failure_keeps_session_workspace_alive() {
 #[test]
 fn command_exec_passes_workspace_entry_to_spawn_paths() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    let workspace_root = PathBuf::from("/workspace/one-shot");
-    fake.push_create_result(Ok(workspace_handle(
-        "workspace-one-shot",
-        "caller-1",
-        "lease-1",
-        workspace_root.clone(),
-        WorkspaceProfile::Isolated,
-    )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
-    let mut input = exec_input(workspace_root.clone(), None);
-    input.cwd = Some(PathBuf::from("/workspace/one-shot/src"));
+    let workspace_root = PathBuf::from("/workspace/session");
+    let workspace_session_id = create_session(
+        &fake,
+        &env,
+        "workspace-session",
+        workspace_root.clone(),
+        WorkspaceProfile::Isolated,
+    );
+    let mut input = exec_input(workspace_session_id);
     input.timeout_seconds = Some(2.5);
 
     let output = env
         .command
         .exec_command(input)
-        .expect("one-shot command exec succeeds");
+        .expect("session command exec succeeds");
 
     assert_eq!(
         output.command_session_id,
@@ -269,12 +162,8 @@ fn command_exec_passes_workspace_entry_to_spawn_paths() {
     assert_eq!(observations.len(), 1);
     let observation = &observations[0];
     assert_eq!(observation.spec_id, "cmd_1");
-    assert_eq!(observation.spec_caller_id, "caller-1");
     assert_eq!(observation.spec_command, "printf ok");
-    assert_eq!(
-        observation.spec_cwd,
-        Some(PathBuf::from("/workspace/one-shot/src"))
-    );
+    assert_eq!(observation.spec_cwd, None);
     assert_eq!(observation.spec_timeout_seconds, Some(2.5));
     assert_eq!(
         observation.request_path,
@@ -335,22 +224,26 @@ fn command_exec_passes_workspace_entry_to_spawn_paths() {
 }
 
 #[test]
-fn command_exec_missing_launch_material_destroys_one_shot_without_spawn() {
+fn command_exec_missing_launch_material_rejects_without_spawn() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    let workspace_root = PathBuf::from("/workspace/one-shot");
+    let workspace_root = PathBuf::from("/workspace/session");
     fake.push_create_result(Ok(workspace_handle_without_launch(
-        "workspace-one-shot",
-        "caller-1",
+        "workspace-session",
         "lease-1",
         workspace_root.clone(),
         WorkspaceProfile::HostCompatible,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
+    let workspace_session_id = env
+        .workspace
+        .create_workspace_session(create_request(workspace_root))
+        .expect("session create succeeds")
+        .workspace_session_id;
 
     let error = env
         .command
-        .exec_command(exec_input(workspace_root, None))
+        .exec_command(exec_input(workspace_session_id))
         .expect_err("missing launch material rejects exec");
 
     assert!(matches!(
@@ -359,33 +252,30 @@ fn command_exec_missing_launch_material_destroys_one_shot_without_spawn() {
             if message.contains("lacks workspace entry material")
     ));
     assert!(launch_driver.spawn_observations().is_empty());
-    assert_eq!(
-        fake.destroy_calls(),
-        vec![WorkspaceSessionId("workspace-one-shot".to_owned())]
-    );
-    assert!(
-        !env.command.config().scratch_root.join("cmd_1").exists(),
-        "missing launch material should not leave command artifacts"
-    );
+    assert!(fake.destroy_calls().is_empty());
 }
 
 #[test]
-fn command_exec_unavailable_workspace_launch_destroys_one_shot_without_spawn() {
+fn command_exec_unavailable_workspace_launch_rejects_without_spawn() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    let workspace_root = PathBuf::from("/workspace/one-shot");
+    let workspace_root = PathBuf::from("/workspace/session");
     fake.push_create_result(Ok(workspace_handle_unavailable_launch(
-        "workspace-one-shot",
-        "caller-1",
+        "workspace-session",
         "lease-1",
         workspace_root.clone(),
         WorkspaceProfile::HostCompatible,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
+    let workspace_session_id = env
+        .workspace
+        .create_workspace_session(create_request(workspace_root))
+        .expect("session create succeeds")
+        .workspace_session_id;
 
     let error = env
         .command
-        .exec_command(exec_input(workspace_root, None))
+        .exec_command(exec_input(workspace_session_id))
         .expect_err("unavailable workspace launch rejects exec");
 
     assert!(matches!(
@@ -394,29 +284,21 @@ fn command_exec_unavailable_workspace_launch_destroys_one_shot_without_spawn() {
             if message.contains("workspace entry context is incomplete")
     ));
     assert!(launch_driver.spawn_observations().is_empty());
-    assert_eq!(
-        fake.destroy_calls(),
-        vec![WorkspaceSessionId("workspace-one-shot".to_owned())]
-    );
-    assert!(
-        !env.command.config().scratch_root.join("cmd_1").exists(),
-        "unavailable workspace launch should not leave command artifacts"
-    );
+    assert!(fake.destroy_calls().is_empty());
 }
 
 #[test]
-fn command_exec_artifact_directory_failure_destroys_one_shot_without_spawn() {
+fn command_exec_artifact_directory_failure_keeps_session_workspace_alive() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    let workspace_root = PathBuf::from("/workspace/one-shot");
-    fake.push_create_result(Ok(workspace_handle(
-        "workspace-one-shot",
-        "caller-1",
-        "lease-1",
-        workspace_root.clone(),
-        WorkspaceProfile::HostCompatible,
-    )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
+    let workspace_session_id = create_session(
+        &fake,
+        &env,
+        "workspace-session",
+        PathBuf::from("/workspace/session"),
+        WorkspaceProfile::HostCompatible,
+    );
     std::fs::write(
         env.command.config().scratch_root.clone(),
         b"not a directory",
@@ -425,7 +307,7 @@ fn command_exec_artifact_directory_failure_destroys_one_shot_without_spawn() {
 
     let error = env
         .command
-        .exec_command(exec_input(workspace_root, None))
+        .exec_command(exec_input(workspace_session_id))
         .expect_err("artifact directory failure rejects exec");
 
     assert!(matches!(
@@ -435,30 +317,26 @@ fn command_exec_artifact_directory_failure_destroys_one_shot_without_spawn() {
                 && error.contains("command_artifact_directory")
     ));
     assert!(launch_driver.spawn_observations().is_empty());
-    assert_eq!(
-        fake.destroy_calls(),
-        vec![WorkspaceSessionId("workspace-one-shot".to_owned())]
-    );
+    assert!(fake.destroy_calls().is_empty());
 }
 
 #[test]
 fn command_exec_initial_running_yield_returns_wait_loop_output() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    let workspace_root = PathBuf::from("/workspace/one-shot");
-    fake.push_create_result(Ok(workspace_handle(
-        "workspace-one-shot",
-        "caller-1",
-        "lease-1",
-        workspace_root.clone(),
-        WorkspaceProfile::HostCompatible,
-    )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_outcome(WaitOutcome::Running("hello from wait\n".to_owned()));
-    let env = build_services_with_launch_driver(fake, launch_driver);
+    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
+    let workspace_session_id = create_session(
+        &fake,
+        &env,
+        "workspace-session",
+        PathBuf::from("/workspace/session"),
+        WorkspaceProfile::HostCompatible,
+    );
 
     let output = env
         .command
-        .exec_command(exec_input(workspace_root, None))
+        .exec_command(exec_input(workspace_session_id))
         .expect("exec returns initial running yield");
 
     assert_eq!(output.status, CommandStatus::Running);
@@ -468,29 +346,20 @@ fn command_exec_initial_running_yield_returns_wait_loop_output() {
 #[test]
 fn command_exec_initial_completed_session_returns_finalized_metadata() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    let workspace_root = PathBuf::from("/workspace/session");
-    fake.push_create_result(Ok(workspace_handle(
-        "workspace-session",
-        "caller-1",
-        "lease-1",
-        workspace_root.clone(),
-        WorkspaceProfile::HostCompatible,
-    )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_outcome(WaitOutcome::Completed(success_exit("session done\n")));
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
-    let handler = env
-        .workspace
-        .create_workspace_session(create_request(workspace_root.clone()))
-        .expect("session create succeeds");
+    let workspace_session_id = create_session(
+        &fake,
+        &env,
+        "workspace-session",
+        PathBuf::from("/workspace/session"),
+        WorkspaceProfile::HostCompatible,
+    );
 
     let output = env
         .command
-        .exec_command(exec_input(
-            "caller-1",
-            workspace_root,
-            Some(handler.workspace_session_id.clone()),
-        ))
+        .exec_command(exec_input(workspace_session_id))
         .expect("session command completes during initial yield");
 
     let command_session_id = output
@@ -513,62 +382,7 @@ fn command_exec_initial_completed_session_returns_finalized_metadata() {
             command_session_id: command_session_id.clone(),
             last_n_lines: None,
         })
-        .expect("owner can poll completed session command");
+        .expect("completed session command can be polled");
     assert_eq!(poll.command_session_id, command_session_id);
     assert_eq!(poll.status, CommandStatus::Completed);
-}
-
-#[test]
-fn command_exec_rejects_workspace_root_mismatch_before_command_allocation() {
-    let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle(
-        "workspace-session",
-        "caller-1",
-        "lease-1",
-        PathBuf::from("/workspace/session"),
-        WorkspaceProfile::HostCompatible,
-    )));
-    let env = build_services(Arc::clone(&fake));
-    let handler = env
-        .workspace
-        .create_workspace_session(create_request(
-            "caller-1",
-            PathBuf::from("/workspace/session"),
-        ))
-        .expect("session create succeeds");
-
-    let error = env
-        .command
-        .exec_command(exec_input(
-            "caller-1",
-            PathBuf::from("/workspace/other"),
-            Some(handler.workspace_session_id),
-        ))
-        .expect_err("root mismatch is rejected");
-
-    match error {
-        CommandServiceError::WorkspaceRootMismatch { expected, actual } => {
-            assert_eq!(expected.as_path(), Path::new("/workspace/session"));
-            assert_eq!(actual.as_path(), Path::new("/workspace/other"));
-        }
-        other => panic!("expected workspace root mismatch, got {other:?}"),
-    }
-    let output = env
-        .command
-        .exec_command(exec_input(
-            "caller-1",
-            PathBuf::from("/workspace/session"),
-            Some(WorkspaceSessionId("workspace-session".to_owned())),
-        ))
-        .expect("subsequent valid exec succeeds");
-    assert_eq!(
-        output.command_session_id,
-        Some(CommandSessionId("cmd_1".to_owned()))
-    );
-}
-
-fn context(caller_id: &str) -> CommandCallContext {
-    CommandCallContext {
-        caller_id: CallerId(caller_id.to_owned()),
-    }
 }

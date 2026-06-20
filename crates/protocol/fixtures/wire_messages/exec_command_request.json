@@ -1,1 +1,1 @@
-{"op":"exec_command","request_id":"00000000000000000000000000000001","args":{"workspace_root":"/testbed","cmd":"pwd","_eos_daemon_protocol_version":1,"request_id":"00000000000000000000000000000001"}}
+{"op":"exec_command","request_id":"00000000000000000000000000000001","args":{"workspace_session_id":"ws-1","cmd":"pwd","_eos_daemon_protocol_version":1,"request_id":"00000000000000000000000000000001"}}

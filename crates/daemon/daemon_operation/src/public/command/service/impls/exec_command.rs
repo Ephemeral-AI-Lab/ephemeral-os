@@ -15,10 +15,7 @@ use crate::operation::{
     ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationRequest, OperationResponse,
     OperationSpec,
 };
-use crate::workspace_crate::{
-    CreateWorkspaceRequest, DestroyWorkspaceRequest, WorkspaceEntry, WorkspaceProfile,
-    WorkspaceSessionId,
-};
+use crate::workspace_crate::{WorkspaceEntry, WorkspaceSessionId};
 use crate::workspace_session::WorkspaceSessionHandler;
 
 use crate::command::service::CommandOperationService;
@@ -34,19 +31,9 @@ pub(crate) const SPEC: OperationSpec = OperationSpec {
 
 const EXEC_COMMAND_ARGS: &[ArgSpec] = &[
     ArgSpec::required(
-        "workspace_root",
-        ArgKind::Path,
-        "Workspace root and layer-stack root for one-shot command workspace creation.",
-        Some(ArgCliSpec {
-            flag: Some("--workspace-root"),
-            positional: None,
-        }),
-    ),
-    ArgSpec::optional(
         "workspace_session_id",
         ArgKind::String,
-        "Existing workspace session id to run inside.",
-        None,
+        "Workspace session id to run inside.",
         Some(ArgCliSpec {
             flag: Some("--workspace-session-id"),
             positional: None,
@@ -59,16 +46,6 @@ const EXEC_COMMAND_ARGS: &[ArgSpec] = &[
         Some(ArgCliSpec {
             flag: None,
             positional: Some("COMMAND"),
-        }),
-    ),
-    ArgSpec::optional(
-        "cwd",
-        ArgKind::Path,
-        "Command working directory.",
-        None,
-        Some(ArgCliSpec {
-            flag: Some("--cwd"),
-            positional: None,
         }),
     ),
     ArgSpec::optional(
@@ -95,9 +72,9 @@ const EXEC_COMMAND_ARGS: &[ArgSpec] = &[
 
 const EXEC_COMMAND_CLI: CliSpec = CliSpec {
     path: &["daemon", "commands", "exec"],
-    usage: "ephai-sandbox-gateway daemon --sandbox-id SID commands exec --workspace-root PATH [--workspace-session-id ID] [--cwd PATH] [--timeout-seconds S] [--yield-time-ms MS] -- COMMAND",
+    usage: "ephai-sandbox-gateway daemon --sandbox-id SID commands exec --workspace-session-id ID [--timeout-seconds S] [--yield-time-ms MS] -- COMMAND",
     examples: &[
-        "ephai-sandbox-gateway daemon --sandbox-id sb-1 commands exec --workspace-root /testbed -- pwd",
+        "ephai-sandbox-gateway daemon --sandbox-id sb-1 commands exec --workspace-session-id ws-1 -- pwd",
     ],
 };
 
@@ -113,14 +90,9 @@ pub(crate) fn dispatch(
 }
 
 fn parse_input(request: &OperationRequest<'_>) -> Result<ExecCommandInput, OperationResponse> {
-    let workspace_session_id = request
-        .optional_string("workspace_session_id")?
-        .map(WorkspaceSessionId);
     Ok(ExecCommandInput {
-        workspace_root: request.required_path("workspace_root")?,
-        workspace_session_id,
+        workspace_session_id: WorkspaceSessionId(request.required_string("workspace_session_id")?),
         cmd: request.required_string("cmd")?,
-        cwd: request.optional_path("cwd")?,
         timeout_seconds: request.optional_f64("timeout_seconds")?,
         yield_time_ms: request.optional_u64("yield_time_ms")?,
     })
@@ -201,38 +173,19 @@ impl CommandOperationService {
         &self,
         input: &ExecCommandInput,
     ) -> Result<ResolvedExecWorkspace, CommandServiceError> {
-        match input.workspace_session_id.clone() {
-            Some(workspace_session_id) => {
-                let handler = self.workspace().resolve_session(workspace_session_id)?;
-                validate_workspace_root(input, &handler)?;
-                Ok(ResolvedExecWorkspace::new(handler, true))
-            }
-            None => {
-                let handler =
-                    self.workspace()
-                        .create_workspace_session(CreateWorkspaceRequest {
-                            layer_stack_root: input.workspace_root.clone(),
-                            workspace_root: input.workspace_root.clone(),
-                            profile: WorkspaceProfile::HostCompatible,
-                        })?;
-                Ok(ResolvedExecWorkspace::new(handler, false))
-            }
-        }
+        let handler = self
+            .workspace()
+            .resolve_session(input.workspace_session_id.clone())?;
+        Ok(ResolvedExecWorkspace::new(handler))
     }
 
     fn command_admission_guard(
         &self,
         workspace: &ResolvedExecWorkspace,
     ) -> Result<Option<MutexGuard<'_, ()>>, CommandServiceError> {
-        let guard = if workspace.is_session_command {
-            Some(self.lock_remount_admission())
-        } else {
-            None
-        };
-        if workspace.is_session_command {
-            self.ensure_workspace_session_not_remount_pending(&workspace.workspace_session_id)?;
-        }
-        Ok(guard)
+        let guard = self.lock_remount_admission();
+        self.ensure_workspace_session_not_remount_pending(&workspace.workspace_session_id)?;
+        Ok(Some(guard))
     }
 
     fn start_command_process(
@@ -245,7 +198,7 @@ impl CommandOperationService {
             CommandProcessSpec {
                 id: command_session_id.0.clone(),
                 command: input.cmd.clone(),
-                cwd: input.cwd.clone(),
+                cwd: None,
                 timeout_seconds: input.timeout_seconds,
             },
             workspace.entry()?,
@@ -316,55 +269,25 @@ impl CommandOperationService {
         } else {
             error
         };
-        self.cleanup_one_shot_workspace_after_start_failure(
-            command_session_id,
-            workspace.is_session_command,
-            workspace.handler,
-            error,
-        )
-    }
-
-    fn cleanup_one_shot_workspace_after_start_failure(
-        &self,
-        command_session_id: &CommandSessionId,
-        is_session_command: bool,
-        handler: WorkspaceSessionHandler,
-        error: CommandServiceError,
-    ) -> CommandServiceError {
-        if is_session_command {
-            return error;
-        }
-
-        match self
-            .workspace()
-            .destroy_session(handler, DestroyWorkspaceRequest::default())
-        {
-            Ok(_) => error,
-            Err(cleanup_error) => CommandServiceError::OneShotWorkspaceCleanupFailed {
-                command_session_id: command_session_id.clone(),
-                command_error: Box::new(error),
-                cleanup_error,
-            },
-        }
+        drop(workspace);
+        error
     }
 }
 
 struct ResolvedExecWorkspace {
     handler: WorkspaceSessionHandler,
-    is_session_command: bool,
     workspace_session_id: WorkspaceSessionId,
     workspace_root: PathBuf,
     finalize_policy: CommandFinalizePolicy,
 }
 
 impl ResolvedExecWorkspace {
-    fn new(handler: WorkspaceSessionHandler, is_session_command: bool) -> Self {
+    fn new(handler: WorkspaceSessionHandler) -> Self {
         let workspace_session_id = handler.workspace_session_id.clone();
         let workspace_root = handler.handle.workspace_root.clone();
-        let finalize_policy = finalize_policy(is_session_command, &workspace_session_id);
+        let finalize_policy = finalize_policy(&workspace_session_id);
         Self {
             handler,
-            is_session_command,
             workspace_session_id,
             workspace_root,
             finalize_policy,
@@ -422,20 +345,6 @@ impl StartedCommand {
     }
 }
 
-fn validate_workspace_root(
-    input: &ExecCommandInput,
-    handler: &WorkspaceSessionHandler,
-) -> Result<(), CommandServiceError> {
-    if handler.handle.workspace_root != input.workspace_root {
-        return Err(CommandServiceError::WorkspaceRootMismatch {
-            expected: handler.handle.workspace_root.clone(),
-            actual: input.workspace_root.clone(),
-        });
-    }
-
-    Ok(())
-}
-
 fn cleanup_process_artifacts_after_start_failure(
     command_session_id: &CommandSessionId,
     process: &CommandProcess,
@@ -452,17 +361,8 @@ fn cleanup_process_artifacts_after_start_failure(
     }
 }
 
-fn finalize_policy(
-    is_session_command: bool,
-    workspace_session_id: &WorkspaceSessionId,
-) -> CommandFinalizePolicy {
-    if is_session_command {
-        CommandFinalizePolicy::Session {
-            workspace_session_id: workspace_session_id.clone(),
-        }
-    } else {
-        CommandFinalizePolicy::OneShotPublishThenDestroy {
-            workspace_session_id: workspace_session_id.clone(),
-        }
+fn finalize_policy(workspace_session_id: &WorkspaceSessionId) -> CommandFinalizePolicy {
+    CommandFinalizePolicy::Session {
+        workspace_session_id: workspace_session_id.clone(),
     }
 }

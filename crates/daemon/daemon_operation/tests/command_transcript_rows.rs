@@ -9,10 +9,10 @@ use command::process::{
 };
 use command::yield_wait_loop::WaitOutcome;
 use daemon_operation::command::{
-    CommandCallContext, CommandLaunchDriver, CommandServiceError, CommandSessionId, CommandStatus,
-    CommandStream, CommandTranscriptRow, ExecCommandInput, PollCommandInput, ReadCommandLinesInput,
+    CommandLaunchDriver, CommandServiceError, CommandSessionId, CommandStatus, CommandStream,
+    CommandTranscriptRow, ExecCommandInput, PollCommandInput, ReadCommandLinesInput,
 };
-use workspace::{CallerId, WorkspaceEntry, WorkspaceProfile};
+use workspace::{WorkspaceEntry, WorkspaceProfile};
 
 use support::{
     build_services_with_launch_driver, create_request, success_exit, workspace_handle,
@@ -157,7 +157,6 @@ fn session_with_driver(
     let workspace_root = PathBuf::from("/workspace/session");
     fake.push_create_result(Ok(workspace_handle(
         "workspace-session",
-        "caller-owner",
         "lease-1",
         workspace_root.clone(),
         WorkspaceProfile::HostCompatible,
@@ -171,11 +170,8 @@ fn session_with_driver(
     let output = env
         .command
         .exec_command(ExecCommandInput {
-            caller_id: CallerId("caller-owner".to_owned()),
-            workspace_root,
-            workspace_session_id: Some(handler.workspace_session_id.clone()),
+            workspace_session_id: handler.workspace_session_id.clone(),
             cmd: "printf rows".to_owned(),
-            cwd: None,
             timeout_seconds: None,
             yield_time_ms: Some(0),
         })
@@ -187,12 +183,6 @@ fn session_with_driver(
             .command_session_id
             .expect("command session id is returned by exec"),
     )
-}
-
-fn context(caller_id: &str) -> CommandCallContext {
-    CommandCallContext {
-        caller_id: CallerId(caller_id.to_owned()),
-    }
 }
 
 #[test]
@@ -384,30 +374,7 @@ fn command_transcript_rows_error_when_completed_transcript_is_missing() {
 }
 
 #[test]
-fn command_transcript_rows_authorize_active_reads_by_caller() {
-    let (env, command_session_id) =
-        session_with_driver(TranscriptLaunchDriver::running("owner only\n"));
-
-    let error = env
-        .command
-        .read_command_lines(ReadCommandLinesInput {
-            command_session_id: command_session_id.clone(),
-            start_offset: 0,
-            limit: 1,
-        })
-        .expect_err("wrong caller cannot read active rows");
-
-    assert!(matches!(
-        error,
-        CommandServiceError::CommandCallerMismatch { command_session_id: id, expected, actual }
-            if id == command_session_id
-                && expected == CallerId("caller-owner".to_owned())
-                && actual == CallerId("caller-other".to_owned())
-    ));
-}
-
-#[test]
-fn command_transcript_rows_keep_completed_rows_and_authorization() {
+fn command_transcript_rows_keep_completed_rows() {
     let transcript = "completed one\ncompleted two\ncompleted three\n";
     let (env, command_session_id) = session_with_driver(TranscriptLaunchDriver::completed(
         transcript,
@@ -478,31 +445,14 @@ fn command_transcript_rows_keep_completed_rows_and_authorization() {
             text: "completed two".to_owned(),
         }]
     );
-
-    let error = env
-        .command
-        .read_command_lines(ReadCommandLinesInput {
-            command_session_id: command_session_id.clone(),
-            start_offset: 0,
-            limit: 1,
-        })
-        .expect_err("wrong caller cannot read completed rows");
-    assert!(matches!(
-        error,
-        CommandServiceError::CommandCallerMismatch { command_session_id: id, expected, actual }
-            if id == command_session_id
-                && expected == CallerId("caller-owner".to_owned())
-                && actual == CallerId("caller-other".to_owned())
-    ));
 }
 
 #[test]
-fn command_transcript_rows_report_running_status_for_one_shot_active_command() {
+fn command_transcript_rows_report_running_status_for_active_command() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    let workspace_root = PathBuf::from("/workspace/one-shot");
+    let workspace_root = PathBuf::from("/workspace/session");
     fake.push_create_result(Ok(workspace_handle(
-        "workspace-one-shot",
-        "caller-owner",
+        "workspace-session",
         "lease-1",
         workspace_root.clone(),
         WorkspaceProfile::HostCompatible,
@@ -511,18 +461,19 @@ fn command_transcript_rows_report_running_status_for_one_shot_active_command() {
         fake,
         Arc::new(TranscriptLaunchDriver::running("one-shot row\n")),
     );
+    let handler = env
+        .workspace
+        .create_workspace_session(create_request(workspace_root))
+        .expect("session create succeeds");
     let output = env
         .command
         .exec_command(ExecCommandInput {
-            caller_id: CallerId("caller-owner".to_owned()),
-            workspace_root,
-            workspace_session_id: None,
+            workspace_session_id: handler.workspace_session_id,
             cmd: "printf rows".to_owned(),
-            cwd: None,
             timeout_seconds: None,
             yield_time_ms: Some(0),
         })
-        .expect("one-shot command starts");
+        .expect("command starts");
     let command_session_id = output
         .command_session_id
         .expect("command session id is returned");
@@ -534,7 +485,7 @@ fn command_transcript_rows_report_running_status_for_one_shot_active_command() {
             start_offset: 0,
             limit: 1,
         })
-        .expect("owner can read active one-shot rows");
+        .expect("active rows can be read");
 
     assert_eq!(rows.status, CommandStatus::Running);
     assert_eq!(rows.exit_code, None);

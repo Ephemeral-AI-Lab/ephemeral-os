@@ -74,8 +74,8 @@ fn daemon_command_exec_uses_canonical_operation_name() -> Result<()> {
         vec![
             "commands".to_owned(),
             "exec".to_owned(),
-            "--workspace-root".to_owned(),
-            "/testbed".to_owned(),
+            "--workspace-session-id".to_owned(),
+            "ws-1".to_owned(),
             "--".to_owned(),
             "pwd".to_owned(),
         ],
@@ -85,7 +85,7 @@ fn daemon_command_exec_uses_canonical_operation_name() -> Result<()> {
     assert_eq!(request.op, "exec_command");
     assert_eq!(request.sandbox_id.as_deref(), Some("sb-1"));
     assert_eq!(request.args["cmd"], json!("pwd"));
-    assert_eq!(request.args["workspace_root"], json!("/testbed"));
+    assert_eq!(request.args["workspace_session_id"], json!("ws-1"));
     assert!(!request.operator);
     Ok(())
 }

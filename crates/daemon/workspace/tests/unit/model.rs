@@ -6,8 +6,8 @@ use workspace::model::{
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
     LayerStackSnapshotRef, LayerStackSnapshotView, LeaseId, ProtectedPathDrop,
     ProtectedPathDropReason, ReadonlySnapshotHandle, RemountWorkspaceRequest,
-    RemountWorkspaceResult, WorkspaceEntry, WorkspaceEntryFds, WorkspaceHandle, WorkspaceSessionId,
-    WorkspaceProfile,
+    RemountWorkspaceResult, WorkspaceEntry, WorkspaceEntryFds, WorkspaceHandle, WorkspaceProfile,
+    WorkspaceSessionId,
 };
 use workspace::overlay::dirs::OverlayDirs;
 use workspace::overlay::tree::TreeResourceStats;

@@ -30,6 +30,6 @@ pub use model::{
     LayerStackSnapshotRef, LayerStackSnapshotView, LeaseId, ProtectedPathDrop,
     ProtectedPathDropReason, ReadonlySnapshotHandle, RemountWorkspaceRequest,
     RemountWorkspaceResult, WorkspaceEntry, WorkspaceEntryError, WorkspaceEntryFds,
-    WorkspaceHandle, WorkspaceSessionId, WorkspaceProfile,
+    WorkspaceHandle, WorkspaceProfile, WorkspaceSessionId,
 };
 pub use service::{WorkspaceRuntimeHooks, WorkspaceRuntimeService};

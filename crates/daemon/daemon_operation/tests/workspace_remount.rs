@@ -6,8 +6,8 @@ use std::sync::{Arc, Mutex};
 use command::process::{CommandProcess, CommandProcessExit, CommandProcessSpec};
 use command::yield_wait_loop::WaitOutcome;
 use daemon_operation::command::{
-    CancelCommandInput, CommandCallContext, CommandLaunchDriver, CommandOperationService,
-    CommandServiceError, ExecCommandInput,
+    CancelCommandInput, CommandLaunchDriver, CommandOperationService, CommandServiceError,
+    ExecCommandInput,
 };
 use daemon_operation::workspace_remount::{
     CommandRemountCoordinator, ProcessGroupController, ProcessGroupInspection,
@@ -15,7 +15,7 @@ use daemon_operation::workspace_remount::{
 };
 use daemon_operation::workspace_session::WorkspaceSessionService;
 use workspace::{
-    CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
+    CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef,
     LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult,
     WorkspaceError, WorkspaceHandle, WorkspaceProfile, WorkspaceRuntimeHooks,
@@ -127,7 +127,6 @@ impl RemountWorkspaceServiceFake {
     ) -> Result<DestroyWorkspaceResult, WorkspaceError> {
         Ok(DestroyWorkspaceResult {
             workspace_session_id: handle.id,
-            owner: handle.owner,
             evicted_upperdir_bytes: 0,
             lifetime_s: 0.0,
             lease_released: Some(true),
@@ -316,53 +315,37 @@ fn build_services_with_process_group_controller(
     }
 }
 
-fn create_request(caller_id: &str, workspace_root: PathBuf) -> CreateWorkspaceRequest {
-    create_request_with_profile(caller_id, workspace_root, WorkspaceProfile::HostCompatible)
+fn create_request(workspace_root: PathBuf) -> CreateWorkspaceRequest {
+    create_request_with_profile(workspace_root, WorkspaceProfile::HostCompatible)
 }
 
 fn create_request_with_profile(
-    caller_id: &str,
     workspace_root: PathBuf,
     profile: WorkspaceProfile,
 ) -> CreateWorkspaceRequest {
     CreateWorkspaceRequest {
-        caller_id: CallerId(caller_id.to_owned()),
         workspace_root,
         layer_stack_root: PathBuf::from("/layers"),
         profile,
     }
 }
 
-fn exec_input(
-    workspace_session_id: WorkspaceSessionId,
-    workspace_root: PathBuf,
-) -> ExecCommandInput {
+fn exec_input(workspace_session_id: WorkspaceSessionId) -> ExecCommandInput {
     ExecCommandInput {
-        caller_id: CallerId("caller-1".to_owned()),
-        workspace_root,
-        workspace_session_id: Some(workspace_session_id),
+        workspace_session_id,
         cmd: "echo ok".to_owned(),
-        cwd: None,
         timeout_seconds: None,
         yield_time_ms: Some(0),
     }
 }
 
-fn command_context(caller_id: &str) -> CommandCallContext {
-    CommandCallContext {
-        caller_id: CallerId(caller_id.to_owned()),
-    }
-}
-
 fn workspace_handle(
     workspace_session_id: &str,
-    caller_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
 ) -> WorkspaceHandle {
     workspace_handle_with_profile(
         workspace_session_id,
-        caller_id,
         lease_id,
         workspace_root,
         WorkspaceProfile::HostCompatible,
@@ -371,7 +354,6 @@ fn workspace_handle(
 
 fn workspace_handle_with_profile(
     workspace_session_id: &str,
-    caller_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
     profile: WorkspaceProfile,
@@ -384,7 +366,6 @@ fn workspace_handle_with_profile(
     };
     WorkspaceHandle::holder_backed_for_test(
         WorkspaceSessionId(workspace_session_id.to_owned()),
-        CallerId(caller_id.to_owned()),
         workspace_root,
         profile,
         snapshot,
@@ -417,7 +398,6 @@ fn workspace_remount_isolated_no_active_command_path_succeeds_and_clears_pending
     let workspace_root = PathBuf::from("/workspace");
     let mut remounted = workspace_handle_with_profile(
         "workspace-1",
-        "caller-1",
         "lease-2",
         workspace_root.clone(),
         WorkspaceProfile::Isolated,
@@ -428,7 +408,6 @@ fn workspace_remount_isolated_no_active_command_path_succeeds_and_clears_pending
     remounted.base_revision = remounted.snapshot.base_revision();
     fake.push_create_result(Ok(workspace_handle_with_profile(
         "workspace-1",
-        "caller-1",
         "lease-1",
         workspace_root.clone(),
         WorkspaceProfile::Isolated,
@@ -439,7 +418,6 @@ fn workspace_remount_isolated_no_active_command_path_succeeds_and_clears_pending
     let handler = services
         .workspace
         .create_workspace_session(create_request_with_profile(
-            "caller-1",
             workspace_root,
             WorkspaceProfile::Isolated,
         ))
@@ -477,7 +455,6 @@ fn workspace_remount_no_active_command_path_succeeds_and_clears_pending() {
     remounted.base_revision = remounted.snapshot.base_revision();
     fake.push_create_result(Ok(workspace_handle(
         "workspace-1",
-        "caller-1",
         "lease-1",
         workspace_root.clone(),
     )));
@@ -529,7 +506,6 @@ fn workspace_remount_live_command_success_finishes_before_resume() {
     remounted.base_revision = remounted.snapshot.base_revision();
     fake.push_create_result(Ok(workspace_handle(
         "workspace-1",
-        "caller-1",
         "lease-1",
         workspace_root.clone(),
     )));
@@ -540,10 +516,7 @@ fn workspace_remount_live_command_success_finishes_before_resume() {
         .expect("create workspace session succeeds");
     services
         .command
-        .exec_command(exec_input(
-            handler.workspace_session_id.clone(),
-            workspace_root,
-        ))
+        .exec_command(exec_input(handler.workspace_session_id.clone()))
         .expect("exec command succeeds");
     controller.observe_state_on_resume(
         Arc::clone(&services.workspace),
@@ -578,7 +551,6 @@ fn workspace_remount_cancel_during_critical_switch_still_applies_and_resumes() {
     remounted.base_revision = remounted.snapshot.base_revision();
     fake.push_create_result(Ok(workspace_handle(
         "workspace-1",
-        "caller-1",
         "lease-1",
         workspace_root.clone(),
     )));
@@ -589,10 +561,7 @@ fn workspace_remount_cancel_during_critical_switch_still_applies_and_resumes() {
         .expect("create workspace session succeeds");
     let command_session_id = services
         .command
-        .exec_command(exec_input(
-            handler.workspace_session_id.clone(),
-            workspace_root,
-        ))
+        .exec_command(exec_input(handler.workspace_session_id.clone()))
         .expect("exec command succeeds")
         .command_session_id
         .expect("running command has id");
@@ -627,7 +596,6 @@ fn workspace_remount_blocked_inspection_marks_blocked_and_skips_resource_remount
     let workspace_root = PathBuf::from("/workspace");
     fake.push_create_result(Ok(workspace_handle(
         "workspace-1",
-        "caller-1",
         "lease-1",
         workspace_root.clone(),
     )));
@@ -637,10 +605,7 @@ fn workspace_remount_blocked_inspection_marks_blocked_and_skips_resource_remount
         .expect("create workspace session succeeds");
     services
         .command
-        .exec_command(exec_input(
-            handler.workspace_session_id.clone(),
-            workspace_root,
-        ))
+        .exec_command(exec_input(handler.workspace_session_id.clone()))
         .expect("exec command succeeds");
 
     let outcome = services
@@ -666,7 +631,6 @@ fn workspace_remount_resource_failure_blocks_state_after_cleanup() {
     let workspace_root = PathBuf::from("/workspace");
     fake.push_create_result(Ok(workspace_handle(
         "workspace-1",
-        "caller-1",
         "lease-1",
         workspace_root.clone(),
     )));

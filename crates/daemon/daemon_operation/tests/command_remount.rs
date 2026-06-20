@@ -9,15 +9,15 @@ use std::time::Duration;
 use command::process::{CommandProcess, CommandProcessExit, CommandProcessSpec};
 use command::yield_wait_loop::WaitOutcome;
 use daemon_operation::command::{
-    CommandCallContext, CommandLaunchDriver, CommandOperationService, CommandServiceError,
-    ExecCommandInput, PollCommandInput, ReadCommandLinesInput, WriteCommandStdinInput,
+    CommandLaunchDriver, CommandOperationService, CommandServiceError, ExecCommandInput,
+    PollCommandInput, ReadCommandLinesInput, WriteCommandStdinInput,
 };
 use daemon_operation::workspace_remount::{
     CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountService,
 };
 use daemon_operation::workspace_session::WorkspaceSessionService;
 use workspace::{
-    CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
+    CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef,
     LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult,
     WorkspaceError, WorkspaceHandle, WorkspaceProfile, WorkspaceRuntimeHooks,
@@ -115,7 +115,6 @@ impl PendingGuardWorkspaceService {
     ) -> Result<DestroyWorkspaceResult, WorkspaceError> {
         Ok(DestroyWorkspaceResult {
             workspace_session_id: handle.id,
-            owner: handle.owner,
             evicted_upperdir_bytes: 0,
             lifetime_s: 0.0,
             lease_released: Some(true),
@@ -272,53 +271,37 @@ fn build_services_with_launch_driver(
     }
 }
 
-fn create_request(caller_id: &str, workspace_root: PathBuf) -> CreateWorkspaceRequest {
-    create_request_with_profile(caller_id, workspace_root, WorkspaceProfile::HostCompatible)
+fn create_request(workspace_root: PathBuf) -> CreateWorkspaceRequest {
+    create_request_with_profile(workspace_root, WorkspaceProfile::HostCompatible)
 }
 
 fn create_request_with_profile(
-    caller_id: &str,
     workspace_root: PathBuf,
     profile: WorkspaceProfile,
 ) -> CreateWorkspaceRequest {
     CreateWorkspaceRequest {
-        caller_id: CallerId(caller_id.to_owned()),
         workspace_root,
         layer_stack_root: PathBuf::from("/layers"),
         profile,
     }
 }
 
-fn exec_input(
-    workspace_session_id: WorkspaceSessionId,
-    workspace_root: PathBuf,
-) -> ExecCommandInput {
+fn exec_input(workspace_session_id: WorkspaceSessionId) -> ExecCommandInput {
     ExecCommandInput {
-        caller_id: CallerId("caller-1".to_owned()),
-        workspace_root,
-        workspace_session_id: Some(workspace_session_id),
+        workspace_session_id,
         cmd: "echo ok".to_owned(),
-        cwd: None,
         timeout_seconds: None,
         yield_time_ms: Some(0),
     }
 }
 
-fn context(caller_id: &str) -> CommandCallContext {
-    CommandCallContext {
-        caller_id: CallerId(caller_id.to_owned()),
-    }
-}
-
 fn workspace_handle(
     workspace_session_id: &str,
-    caller_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
 ) -> WorkspaceHandle {
     workspace_handle_with_profile(
         workspace_session_id,
-        caller_id,
         lease_id,
         workspace_root,
         WorkspaceProfile::HostCompatible,
@@ -327,7 +310,6 @@ fn workspace_handle(
 
 fn workspace_handle_with_profile(
     workspace_session_id: &str,
-    caller_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
     profile: WorkspaceProfile,
@@ -340,7 +322,6 @@ fn workspace_handle_with_profile(
     };
     WorkspaceHandle::holder_backed_for_test(
         WorkspaceSessionId(workspace_session_id.to_owned()),
-        CallerId(caller_id.to_owned()),
         workspace_root,
         profile,
         snapshot,
@@ -360,7 +341,6 @@ fn create_session_and_command() -> (
     let workspace_root = PathBuf::from("/workspace");
     fake.push_create_result(Ok(workspace_handle(
         "workspace-1",
-        "caller-1",
         "lease-1",
         workspace_root.clone(),
     )));
@@ -370,10 +350,7 @@ fn create_session_and_command() -> (
         .expect("create workspace session succeeds");
     let output = services
         .command
-        .exec_command(exec_input(
-            handler.workspace_session_id.clone(),
-            workspace_root,
-        ))
+        .exec_command(exec_input(handler.workspace_session_id.clone()))
         .expect("exec command succeeds");
     (
         services,
@@ -405,7 +382,6 @@ fn command_remount_start_rejects_for_pending_isolated_workspace() {
     let workspace_root = PathBuf::from("/workspace");
     fake.push_create_result(Ok(workspace_handle_with_profile(
         "workspace-1",
-        "caller-1",
         "lease-1",
         workspace_root.clone(),
         WorkspaceProfile::Isolated,
@@ -413,7 +389,6 @@ fn command_remount_start_rejects_for_pending_isolated_workspace() {
     let handler = services
         .workspace
         .create_workspace_session(create_request_with_profile(
-            "caller-1",
             workspace_root.clone(),
             WorkspaceProfile::Isolated,
         ))
@@ -425,10 +400,7 @@ fn command_remount_start_rejects_for_pending_isolated_workspace() {
 
     let error = services
         .command
-        .exec_command(exec_input(
-            handler.workspace_session_id.clone(),
-            workspace_root,
-        ))
+        .exec_command(exec_input(handler.workspace_session_id.clone()))
         .expect_err("exec rejects pending isolated remount");
 
     assert!(matches!(
@@ -445,7 +417,6 @@ fn command_remount_start_rejects_for_pending_persistent_workspace() {
     let workspace_root = PathBuf::from("/workspace");
     fake.push_create_result(Ok(workspace_handle(
         "workspace-1",
-        "caller-1",
         "lease-1",
         workspace_root.clone(),
     )));
@@ -460,10 +431,7 @@ fn command_remount_start_rejects_for_pending_persistent_workspace() {
 
     let error = services
         .command
-        .exec_command(exec_input(
-            handler.workspace_session_id.clone(),
-            workspace_root,
-        ))
+        .exec_command(exec_input(handler.workspace_session_id.clone()))
         .expect_err("exec rejects pending remount");
 
     assert!(matches!(
@@ -490,7 +458,6 @@ fn command_remount_waits_for_in_flight_persistent_exec_admission() {
     let workspace_root = PathBuf::from("/workspace");
     fake.push_create_result(Ok(workspace_handle(
         "workspace-1",
-        "caller-1",
         "lease-1",
         workspace_root.clone(),
     )));
@@ -501,9 +468,8 @@ fn command_remount_waits_for_in_flight_persistent_exec_admission() {
 
     let exec_command = Arc::clone(&services.command);
     let exec_workspace_session_id = handler.workspace_session_id.clone();
-    let exec_thread = thread::spawn(move || {
-        exec_command.exec_command(exec_input(exec_workspace_session_id, workspace_root))
-    });
+    let exec_thread =
+        thread::spawn(move || exec_command.exec_command(exec_input(exec_workspace_session_id)));
     spawn_started_rx
         .recv_timeout(Duration::from_secs(1))
         .expect("exec reached blocked spawn");
@@ -549,7 +515,7 @@ fn command_remount_stdin_rejects_for_active_command_when_workspace_becomes_pendi
         .command
         .write_command_stdin(WriteCommandStdinInput {
             command_session_id: command_session_id.clone(),
-            chars: "input".to_owned(),
+            stdin: "input".to_owned(),
             yield_time_ms: Some(0),
         })
         .expect_err("stdin rejects pending remount");
@@ -593,30 +559,4 @@ fn command_remount_read_lines_and_poll_remain_allowed_while_pending() {
         poll.status,
         daemon_operation::command::CommandStatus::Running
     );
-}
-
-#[test]
-fn command_remount_wrong_caller_does_not_observe_pending_state() {
-    let (services, workspace_session_id, command_session_id) = create_session_and_command();
-    services
-        .workspace
-        .begin_remount(workspace_session_id)
-        .expect("begin remount succeeds");
-
-    let error = services
-        .command
-        .write_command_stdin(WriteCommandStdinInput {
-            command_session_id: command_session_id.clone(),
-            chars: "input".to_owned(),
-            yield_time_ms: Some(0),
-        })
-        .expect_err("wrong caller remains authorization failure");
-
-    assert!(matches!(
-        error,
-        CommandServiceError::CommandCallerMismatch { command_session_id: id, .. } if id == command_session_id
-    ));
-    assert!(services
-        .workspace
-        .is_remount_pending(&WorkspaceSessionId("workspace-1".to_owned())));
 }
