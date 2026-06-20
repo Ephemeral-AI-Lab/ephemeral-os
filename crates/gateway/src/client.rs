@@ -46,11 +46,11 @@ usage:
   ephai-sandbox-gateway host op OP [ARGS_JSON] [--sandbox-id SANDBOX_ID] [--operator]
 
   ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID commands exec --workspace-root PATH -- COMMAND
-  ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID commands stdin COMMAND_ID TEXT
-  ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID commands poll COMMAND_ID [--last-n-lines N]
-  ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID commands read-lines COMMAND_ID --offset N --limit N
-  ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID commands cancel COMMAND_ID
-  ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID run end --caller-id ID [--grace-s SECONDS]
+  ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID commands write-command-stdin COMMAND_SESSION_ID TEXT
+  ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID commands poll COMMAND_SESSION_ID [--last-n-lines N]
+  ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID commands read-command-lines COMMAND_SESSION_ID --start-offset N --limit N
+  ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID commands cancel COMMAND_SESSION_ID
+  ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID run end [--grace-s SECONDS]
   ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID run cancel-all [--grace-s SECONDS]
   ephai-sandbox-gateway daemon --sandbox-id SANDBOX_ID op OP [ARGS_JSON] [--operator]
 
@@ -297,12 +297,11 @@ fn request_from_daemon_commands(
 ) -> Result<GatewayRequest> {
     let Some(subcommand) = shift(&mut args) else {
         bail!(
-            "missing daemon commands subcommand; expected exec | stdin | poll | read-lines | cancel"
+            "missing daemon commands subcommand; expected exec | write-command-stdin | poll | read-command-lines | cancel"
         )
     };
     match subcommand.as_str() {
         "exec" => {
-            let caller_id = take_optional_flag(&mut args, "--caller-id")?;
             let workspace_root =
                 take_required_flag_any(&mut args, &["--workspace-root", "--workspace_root"])?;
             let workspace_session_id =
@@ -312,7 +311,6 @@ fn request_from_daemon_commands(
             let yield_time_ms = take_optional_u64(&mut args, "--yield-time-ms")?;
             let cmd = command_string(args)?;
             let mut body = json!({ "cmd": cmd, "workspace_root": workspace_root });
-            insert_optional(&mut body, "caller_id", caller_id);
             insert_optional(&mut body, "workspace_session_id", workspace_session_id);
             insert_optional(&mut body, "cwd", cwd);
             if let Some(timeout_seconds) = timeout_seconds {
@@ -323,42 +321,42 @@ fn request_from_daemon_commands(
             }
             Ok(daemon_request("exec_command", body, sandbox_id, false))
         }
-        "stdin" => {
+        "write-command-stdin" => {
             let yield_time_ms = take_optional_u64(&mut args, "--yield-time-ms")?;
-            let Some(command_id) = shift(&mut args) else {
-                bail!("daemon commands stdin requires COMMAND_ID")
+            let Some(command_session_id) = shift(&mut args) else {
+                bail!("daemon commands write-command-stdin requires COMMAND_SESSION_ID")
             };
-            let chars = command_string(args)?;
-            let mut body = json!({ "command_id": command_id, "chars": chars });
+            let stdin = command_string(args)?;
+            let mut body = json!({ "command_session_id": command_session_id, "stdin": stdin });
             if let Some(yield_time_ms) = yield_time_ms {
                 body["yield_time_ms"] = json!(yield_time_ms);
             }
-            Ok(daemon_request("write_stdin", body, sandbox_id, false))
+            Ok(daemon_request("write_command_stdin", body, sandbox_id, false))
         }
         "poll" => {
             let last_n_lines = take_optional_u64(&mut args, "--last-n-lines")?;
-            let Some(command_id) = shift(&mut args) else {
-                bail!("daemon commands poll requires COMMAND_ID")
+            let Some(command_session_id) = shift(&mut args) else {
+                bail!("daemon commands poll requires COMMAND_SESSION_ID")
             };
             expect_no_args(&args)?;
-            let mut body = json!({ "command_id": command_id });
+            let mut body = json!({ "command_session_id": command_session_id });
             if let Some(last_n_lines) = last_n_lines {
                 body["last_n_lines"] = json!(last_n_lines);
             }
             Ok(daemon_request("poll", body, sandbox_id, false))
         }
-        "read-lines" | "read_lines" => {
-            let offset = take_required_u64(&mut args, "--offset")?;
+        "read-command-lines" => {
+            let start_offset = take_required_u64(&mut args, "--start-offset")?;
             let limit = take_required_u64(&mut args, "--limit")?;
-            let Some(command_id) = shift(&mut args) else {
-                bail!("daemon commands read-lines requires COMMAND_ID")
+            let Some(command_session_id) = shift(&mut args) else {
+                bail!("daemon commands read-command-lines requires COMMAND_SESSION_ID")
             };
             expect_no_args(&args)?;
             Ok(daemon_request(
-                "read_lines",
+                "read_command_lines",
                 json!({
-                    "command_id": command_id,
-                    "offset": offset,
+                    "command_session_id": command_session_id,
+                    "start_offset": start_offset,
                     "limit": limit,
                 }),
                 sandbox_id,
@@ -366,14 +364,14 @@ fn request_from_daemon_commands(
             ))
         }
         "cancel" => {
-            let Some(command_id) = shift(&mut args) else {
-                bail!("daemon commands cancel requires COMMAND_ID")
+            let Some(command_session_id) = shift(&mut args) else {
+                bail!("daemon commands cancel requires COMMAND_SESSION_ID")
             };
             expect_no_args(&args)?;
-            Ok(daemon_request("cancel", json!({ "command_id": command_id }), sandbox_id, false))
+            Ok(daemon_request("cancel", json!({ "command_session_id": command_session_id }), sandbox_id, false))
         }
         other => bail!(
-            "unknown daemon commands subcommand {other:?}; expected exec | stdin | poll | read-lines | cancel"
+            "unknown daemon commands subcommand {other:?}; expected exec | write-command-stdin | poll | read-command-lines | cancel"
         ),
     }
 }
@@ -384,10 +382,9 @@ fn request_from_daemon_run(mut args: Vec<String>, sandbox_id: String) -> Result<
     };
     match subcommand.as_str() {
         "end" => {
-            let caller_id = take_required_flag(&mut args, "--caller-id")?;
             let grace_s = take_optional_f64(&mut args, "--grace-s")?;
             expect_no_args(&args)?;
-            let mut body = json!({ "caller_id": caller_id });
+            let mut body = json!({});
             if let Some(grace_s) = grace_s {
                 body["grace_s"] = json!(grace_s);
             }
@@ -481,7 +478,7 @@ fn send_and_print(request: GatewayRequest, options: &ClientOptions) -> Result<()
 fn send_request(socket: &Path, request: &GatewayRequest) -> Result<Value> {
     let mut payload = json!({
         "op": request.op,
-        "invocation_id": invocation_id(),
+        "request_id": request_id(),
         "args": request.args,
     });
     if let Some(sandbox_id) = &request.sandbox_id {
@@ -537,7 +534,7 @@ fn print_response(response: Value, envelope: bool) -> Result<()> {
     }
 }
 
-fn invocation_id() -> String {
+fn request_id() -> String {
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()

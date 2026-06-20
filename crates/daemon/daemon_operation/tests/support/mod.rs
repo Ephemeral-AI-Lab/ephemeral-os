@@ -12,11 +12,11 @@ use daemon_operation::command::{
 };
 use daemon_operation::workspace_session::WorkspaceSessionService;
 use workspace::{
-    CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
+    CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef,
     LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult,
-    WorkspaceEntry, WorkspaceError, WorkspaceHandle, WorkspaceId, WorkspaceProfile,
-    WorkspaceRuntimeHooks, WorkspaceRuntimeService,
+    WorkspaceEntry, WorkspaceError, WorkspaceHandle, WorkspaceProfile, WorkspaceRuntimeHooks,
+    WorkspaceRuntimeService, WorkspaceSessionId,
 };
 
 pub struct TestServices {
@@ -29,7 +29,7 @@ pub struct FakeWorkspaceService {
     create_results: Mutex<VecDeque<Result<WorkspaceHandle, WorkspaceError>>>,
     destroy_results: Mutex<VecDeque<Result<DestroyWorkspaceResult, WorkspaceError>>>,
     create_requests: Mutex<Vec<CreateWorkspaceRequest>>,
-    destroy_calls: Mutex<Vec<WorkspaceId>>,
+    destroy_calls: Mutex<Vec<WorkspaceSessionId>>,
 }
 
 #[derive(Debug, Default)]
@@ -42,7 +42,6 @@ pub struct FakeLaunchDriver {
 #[derive(Debug, Clone)]
 pub struct SpawnObservation {
     pub spec_id: String,
-    pub spec_caller_id: String,
     pub spec_command: String,
     pub spec_cwd: Option<PathBuf>,
     pub spec_timeout_seconds: Option<f64>,
@@ -100,7 +99,9 @@ impl CommandLaunchDriver for FakeLaunchDriver {
         let parts =
             CommandProcessSpawn::prepare(&spec.id, workspace_entry, config).map_err(|error| {
                 CommandServiceError::CommandIo {
-                    command_id: daemon_operation::command::CommandId(spec.id.clone()),
+                    command_session_id: daemon_operation::command::CommandSessionId(
+                        spec.id.clone(),
+                    ),
                     error: error.to_string(),
                 }
             })?;
@@ -109,7 +110,6 @@ impl CommandLaunchDriver for FakeLaunchDriver {
             .expect("test operation succeeds")
             .push(SpawnObservation {
                 spec_id: spec.id.clone(),
-                spec_caller_id: spec.caller_id.clone(),
                 spec_command: spec.command.clone(),
                 spec_cwd: spec.cwd.clone(),
                 spec_timeout_seconds: spec.timeout_seconds,
@@ -163,7 +163,7 @@ impl FakeWorkspaceService {
             .clone()
     }
 
-    pub fn destroy_calls(&self) -> Vec<WorkspaceId> {
+    pub fn destroy_calls(&self) -> Vec<WorkspaceSessionId> {
         self.destroy_calls
             .lock()
             .expect("test operation succeeds")
@@ -278,9 +278,8 @@ pub fn build_services_with_launch_driver(
     TestServices { workspace, command }
 }
 
-pub fn create_request(caller_id: &str, workspace_root: PathBuf) -> CreateWorkspaceRequest {
+pub fn create_request(workspace_root: PathBuf) -> CreateWorkspaceRequest {
     CreateWorkspaceRequest {
-        caller_id: CallerId(caller_id.to_owned()),
         workspace_root,
         layer_stack_root: PathBuf::from("/layers"),
         profile: WorkspaceProfile::HostCompatible,
@@ -289,11 +288,9 @@ pub fn create_request(caller_id: &str, workspace_root: PathBuf) -> CreateWorkspa
 
 pub fn assert_private_create_request(
     request: &CreateWorkspaceRequest,
-    caller_id: &str,
     workspace_root: &PathBuf,
     profile: WorkspaceProfile,
 ) {
-    assert_eq!(request.caller_id, CallerId(caller_id.to_owned()));
     assert_eq!(&request.workspace_root, workspace_root);
     assert_eq!(&request.layer_stack_root, workspace_root);
     assert_eq!(request.profile, profile);
@@ -301,15 +298,13 @@ pub fn assert_private_create_request(
 
 pub fn workspace_handle(
     workspace_session_id: &str,
-    caller_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
     profile: WorkspaceProfile,
 ) -> WorkspaceHandle {
     let base_dir = test_launch_base_dir();
     WorkspaceHandle::holder_backed_for_test(
-        WorkspaceId(workspace_session_id.to_owned()),
-        CallerId(caller_id.to_owned()),
+        WorkspaceSessionId(workspace_session_id.to_owned()),
         workspace_root,
         profile,
         test_snapshot(lease_id),
@@ -321,14 +316,12 @@ pub fn workspace_handle(
 
 pub fn workspace_handle_without_launch(
     workspace_session_id: &str,
-    caller_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
     profile: WorkspaceProfile,
 ) -> WorkspaceHandle {
     WorkspaceHandle::without_launch_for_test(
-        WorkspaceId(workspace_session_id.to_owned()),
-        CallerId(caller_id.to_owned()),
+        WorkspaceSessionId(workspace_session_id.to_owned()),
         workspace_root,
         profile,
         test_snapshot(lease_id),
@@ -337,15 +330,13 @@ pub fn workspace_handle_without_launch(
 
 pub fn workspace_handle_unavailable_launch(
     workspace_session_id: &str,
-    caller_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
     profile: WorkspaceProfile,
 ) -> WorkspaceHandle {
     let base_dir = test_launch_base_dir();
     WorkspaceHandle::unavailable_for_test(
-        WorkspaceId(workspace_session_id.to_owned()),
-        CallerId(caller_id.to_owned()),
+        WorkspaceSessionId(workspace_session_id.to_owned()),
         workspace_root,
         profile,
         test_snapshot(lease_id),
@@ -357,8 +348,7 @@ pub fn workspace_handle_unavailable_launch(
 
 pub fn destroy_result(handle: &WorkspaceHandle) -> DestroyWorkspaceResult {
     DestroyWorkspaceResult {
-        workspace_id: handle.id.clone(),
-        owner: handle.owner.clone(),
+        workspace_session_id: handle.id.clone(),
         evicted_upperdir_bytes: 0,
         lifetime_s: 0.0,
         lease_released: Some(true),

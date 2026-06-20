@@ -109,16 +109,16 @@ impl OperationEntry {
 #[derive(Debug, Clone, Copy)]
 pub struct OperationRequest<'a> {
     pub name: &'a str,
-    pub invocation_id: &'a str,
+    pub request_id: &'a str,
     pub args: &'a Value,
 }
 
 impl<'a> OperationRequest<'a> {
     #[must_use]
-    pub const fn new(name: &'a str, invocation_id: &'a str, args: &'a Value) -> Self {
+    pub const fn new(name: &'a str, request_id: &'a str, args: &'a Value) -> Self {
         Self {
             name,
-            invocation_id,
+            request_id,
             args,
         }
     }
@@ -279,17 +279,7 @@ impl From<OperationResponse> for Value {
 fn meta(request: &OperationRequest<'_>) -> ResponseMeta {
     ResponseMeta {
         op: request.name.to_owned(),
-        request_id: request.invocation_id.to_owned(),
-        caller_id: caller_id(request.args),
+        request_id: request.request_id.to_owned(),
         ..ResponseMeta::default()
-    }
-}
-
-fn caller_id(args: &Value) -> Option<String> {
-    let caller_id = args.get("caller_id")?.as_str()?.trim();
-    if caller_id.is_empty() {
-        None
-    } else {
-        Some(caller_id.to_owned())
     }
 }

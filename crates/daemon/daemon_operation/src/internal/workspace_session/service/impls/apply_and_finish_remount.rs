@@ -1,4 +1,4 @@
-use crate::workspace_crate::{RemountWorkspaceRequest, WorkspaceHandle, WorkspaceId};
+use crate::workspace_crate::{RemountWorkspaceRequest, WorkspaceHandle, WorkspaceSessionId};
 use crate::workspace_session::{
     WorkspaceSessionError, WorkspaceSessionHandler, WorkspaceSessionService,
 };
@@ -44,7 +44,7 @@ impl WorkspaceSessionService {
 
     fn block_remount_if_pending(
         &self,
-        workspace_session_id: &WorkspaceId,
+        workspace_session_id: &WorkspaceSessionId,
     ) -> Result<(), WorkspaceSessionError> {
         let mut sessions = self.lock_sessions()?;
         let session = sessions

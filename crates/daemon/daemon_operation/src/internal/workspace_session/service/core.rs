@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use crate::workspace_crate::{WorkspaceId, WorkspaceRuntimeService};
+use crate::workspace_crate::{WorkspaceRuntimeService, WorkspaceSessionId};
 use crate::workspace_session::WorkspaceSessionError;
 
 use super::model::WorkspaceSession;
 
-pub(crate) type WorkspaceSessions = HashMap<WorkspaceId, WorkspaceSession>;
+pub(crate) type WorkspaceSessions = HashMap<WorkspaceSessionId, WorkspaceSession>;
 
 pub struct WorkspaceSessionService {
     sessions: Mutex<WorkspaceSessions>,
@@ -36,7 +36,7 @@ impl WorkspaceSessionService {
     }
 
     #[must_use]
-    pub fn is_remount_pending(&self, workspace_session_id: &WorkspaceId) -> bool {
+    pub fn is_remount_pending(&self, workspace_session_id: &WorkspaceSessionId) -> bool {
         self.lock_sessions().is_ok_and(|sessions| {
             sessions
                 .get(workspace_session_id)

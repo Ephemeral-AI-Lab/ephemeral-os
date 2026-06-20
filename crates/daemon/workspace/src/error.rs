@@ -1,4 +1,4 @@
-use crate::model::{CallerId, WorkspaceId};
+use crate::model::WorkspaceSessionId;
 
 #[derive(Debug)]
 pub enum WorkspaceError {
@@ -8,16 +8,12 @@ pub enum WorkspaceError {
     },
 
     AlreadyOpen {
-        owner: CallerId,
-        workspace_id: WorkspaceId,
+        workspace_session_id: WorkspaceSessionId,
     },
 
-    NotOpen {
-        owner: CallerId,
-    },
+    NotOpen,
 
     ActiveCommands {
-        owner: CallerId,
         active_commands: usize,
     },
 
@@ -61,10 +57,10 @@ impl std::fmt::Display for WorkspaceError {
             Self::InvalidRequest { field, message } => {
                 write!(formatter, "invalid request for {field}: {message}")
             }
-            Self::AlreadyOpen { owner, .. } => {
-                write!(formatter, "workspace already open for {owner:?}")
+            Self::AlreadyOpen { workspace_session_id } => {
+                write!(formatter, "workspace already open: {workspace_session_id:?}")
             }
-            Self::NotOpen { owner } => write!(formatter, "workspace is not open for {owner:?}"),
+            Self::NotOpen => write!(formatter, "workspace is not open"),
             Self::ActiveCommands { .. } => {
                 write!(
                     formatter,

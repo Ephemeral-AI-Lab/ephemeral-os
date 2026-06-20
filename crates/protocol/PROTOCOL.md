@@ -20,18 +20,18 @@ normative subset both sides build against.
 - **Request:**
 
 ```json
-{"op":"exec_command","sandbox_id":"sb-...","invocation_id":"<uuid4hex>","args":{"workspace_root":"/testbed","cmd":"pwd"}}
+{"op":"exec_command","sandbox_id":"sb-...","request_id":"<uuid4hex>","args":{"workspace_root":"/testbed","cmd":"pwd"}}
 ```
 
 | Field | Required | Notes |
 |---|---|---|
 | `op` | yes | canonical host or daemon operation name |
 | `sandbox_id` | for daemon-bound ops; for host ops only when targeting an existing managed sandbox record | absent on host fleet-list/profile ops |
-| `invocation_id` | yes | uuid4 hex; canonical request identity; echoed back as `meta.request_id` |
+| `request_id` | yes | uuid4 hex; canonical request identity; echoed back as `meta.request_id` |
 | `args` | yes (may be `{}`) | op-specific |
 
-Top-level `request_id` is not a request field; clients send `invocation_id` and
-read `request_id` only from response metadata.
+Clients send top-level `request_id` on every request and read the same identity
+back from response `meta.request_id`.
 
 - **Response:** for forwarded ops, the daemon's operation envelope verbatim;
   for host ops, a host-built operation envelope with the same
@@ -96,7 +96,7 @@ at `result.status`. Branch the envelope `status` first, then `result.status`.
 
 ```jsonc
 // Command still running — envelope running, domain running.
-{"status":"running","result":{"status":"running","command_id":"cmd-7f3a","output":{"stdout":""}},"meta":{"envelope_version":2,"op":"exec_command","…":"…"}}
+{"status":"running","result":{"status":"running","command_session_id":"cmd-7f3a","output":{"stdout":""}},"meta":{"envelope_version":2,"op":"exec_command","…":"…"}}
 // Completed command with a non-zero exit code — envelope ok, domain failed.
 {"status":"ok","result":{"status":"failed","exit_code":127,"output":{"stdout":"bash: nosuchcmd: command not found"}},"meta":{"envelope_version":2,"op":"exec_command","…":"…"}}
 ```

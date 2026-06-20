@@ -23,14 +23,12 @@ fn workspace_entry() -> WorkspaceEntry {
 fn process_exposes_identity_and_expiry() {
     let process = CommandProcess::inactive_for_test(CommandProcessSpec {
         id: "cmd_1".to_owned(),
-        caller_id: "caller".to_owned(),
         command: "echo ok".to_owned(),
         cwd: None,
         timeout_seconds: Some(0.001),
     });
 
     assert_eq!(process.id(), "cmd_1");
-    assert_eq!(process.caller_id(), "caller");
     assert_eq!(process.command(), "echo ok");
     assert!(process.is_past_deadline(std::time::Instant::now() + Duration::from_millis(2), 3600));
 }
@@ -56,7 +54,6 @@ fn take_exit_reads_transcript_and_persist_removes_it() -> Result<(), Box<dyn std
     let process = CommandProcess::with_runtime(
         CommandProcessSpec {
             id: "cmd_1".to_owned(),
-            caller_id: "caller".to_owned(),
             command: "echo ok".to_owned(),
             cwd: None,
             timeout_seconds: None,
@@ -82,7 +79,7 @@ fn take_exit_reads_transcript_and_persist_removes_it() -> Result<(), Box<dyn std
             "stdout": exit.stdout,
             "stderr": "",
         },
-        "command_id": "cmd_1",
+        "command_session_id": "cmd_1",
         "workspace": "host",
     });
     let persistence = process.persist_final(&response);
@@ -124,7 +121,6 @@ fn spawn_reports_command_request_artifact_write_failure() -> Result<(), Box<dyn 
     let error = match CommandProcess::spawn(
         CommandProcessSpec {
             id: "cmd_1".to_owned(),
-            caller_id: "caller".to_owned(),
             command: "echo ok".to_owned(),
             cwd: None,
             timeout_seconds: None,
@@ -230,7 +226,6 @@ fn builds_namespace_runner_request_from_command_spec_and_workspace_entry(
     let request = build_namespace_command_request(
         &CommandProcessSpec {
             id: "cmd_1".to_owned(),
-            caller_id: "caller".to_owned(),
             command: "printf ok".to_owned(),
             cwd: Some("/workspace/src".into()),
             timeout_seconds: Some(2.5),
@@ -240,8 +235,7 @@ fn builds_namespace_runner_request_from_command_spec_and_workspace_entry(
 
     let request = serde_json::to_value(request)?;
     assert!(request.get("mode").is_none());
-    assert_eq!(request["invocation_id"], "cmd_1");
-    assert_eq!(request["caller_id"], "caller");
+    assert_eq!(request["request_id"], "cmd_1");
     assert_eq!(request["args"]["command"], "printf ok");
     assert_eq!(request["args"]["cwd"], "/workspace/src");
     assert_eq!(request["workspace_root"], "/workspace");
@@ -302,7 +296,6 @@ fn persist_final_reports_final_and_transcript_failures() -> Result<(), Box<dyn s
     let process = CommandProcess::with_runtime(
         CommandProcessSpec {
             id: "cmd_1".to_owned(),
-            caller_id: "caller".to_owned(),
             command: "echo ok".to_owned(),
             cwd: None,
             timeout_seconds: None,

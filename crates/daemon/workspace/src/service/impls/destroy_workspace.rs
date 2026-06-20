@@ -23,11 +23,11 @@ impl WorkspaceRuntimeService {
                     .ok_or_else(|| WorkspaceError::Setup {
                         step: format!("missing layer stack root for workspace {}", handle.id.0),
                     })?;
-            let outcome = match state.manager.exit(&handle.owner.0, request.grace_s) {
+            let outcome = match state.manager.exit(&mode_id, request.grace_s) {
                 Ok(outcome) => outcome,
                 Err(error) => {
                     state.layer_stack_roots.insert(mode_id, layer_stack_root);
-                    return Err(workspace_error_from_mode_error(Some(&handle.owner), error));
+                    return Err(workspace_error_from_mode_error(error));
                 }
             };
             (layer_stack_root, outcome)
@@ -53,8 +53,7 @@ impl WorkspaceRuntimeService {
         };
 
         Ok(DestroyWorkspaceResult {
-            workspace_id: handle.id,
-            owner: handle.owner,
+            workspace_session_id: handle.id,
             evicted_upperdir_bytes: outcome.evicted_upperdir_bytes,
             lifetime_s: outcome.lifetime_s,
             lease_released,

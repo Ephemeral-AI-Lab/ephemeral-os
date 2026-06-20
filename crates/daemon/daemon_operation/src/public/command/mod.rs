@@ -14,11 +14,11 @@ pub use service::{
     DEFAULT_MAX_ACTIVE_COMMANDS,
 };
 pub use service::{
-    CancelCommandInput, CommandCallContext, CommandFinalizationOutcome, CommandFinalizedMetadata,
-    CommandFinalizedPolicy, CommandId, CommandLinesOutput, CommandOperationService,
-    CommandOutputSnapshot, CommandPollOutput, CommandStatus, CommandStream, CommandTranscriptRow,
+    CancelCommandInput, CommandFinalizationOutcome, CommandFinalizedMetadata,
+    CommandFinalizedPolicy, CommandLinesOutput, CommandOperationService, CommandOutputSnapshot,
+    CommandPollOutput, CommandSessionId, CommandStatus, CommandStream, CommandTranscriptRow,
     CommandWorkspaceDestroyMetadata, CommandYield, ExecCommandInput, PollCommandInput,
-    ReadCommandLinesInput, WriteStdinInput,
+    ReadCommandLinesInput, WriteCommandStdinInput,
 };
 
 pub(crate) fn operation_entries() -> &'static [crate::operation::OperationEntry] {

@@ -1,4 +1,4 @@
-//! In-flight invocation registry: invocation id -> task handle, touch-by-id,
+//! In-flight request registry: request id -> task handle, touch-by-id,
 //! cancel-by-id, and TTL reaping.
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -10,19 +10,17 @@ use std::time::Instant;
 
 use tokio::task::AbortHandle;
 
-/// Default TTL before an idle invocation is reaped (seconds).
+/// Default TTL before an idle request is reaped (seconds).
 pub const DEFAULT_TTL_S: f64 = 300.0;
 
 /// Default reaper sweep interval (seconds).
 pub const DEFAULT_REAPER_INTERVAL_S: f64 = 30.0;
 
-/// One tracked daemon-side invocation.
+/// One tracked daemon-side request.
 #[derive(Debug)]
-pub(crate) struct InFlightInvocation {
+pub(crate) struct InFlightRequest {
     /// Handle to the running task.
-    pub task: InvocationTaskHandle,
-    /// Caller that owns this invocation (for per-caller counts).
-    pub caller_id: String,
+    pub task: RequestTaskHandle,
     /// Monotonic seconds of the last touch / registration.
     pub last_seen: f64,
     /// Set once the reaper has cancelled this entry (idempotent guard).
@@ -31,14 +29,14 @@ pub(crate) struct InFlightInvocation {
 
 /// Whether a cancel request reached a target and whether it can actually stop it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum InvocationCancelResult {
+pub(crate) enum RequestCancelResult {
     Cancelled,
     AlreadyDone,
     RunningUncancellable,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) enum InvocationTaskHandle {
+pub(crate) enum RequestTaskHandle {
     Async(AbortHandle),
     Blocking {
         abort: AbortHandle,
@@ -46,32 +44,26 @@ pub(crate) enum InvocationTaskHandle {
     },
 }
 
-impl InvocationTaskHandle {
-    fn cancel(&self) -> InvocationCancelResult {
+impl RequestTaskHandle {
+    fn cancel(&self) -> RequestCancelResult {
         match self {
             Self::Async(abort) => {
                 abort.abort();
-                InvocationCancelResult::Cancelled
+                RequestCancelResult::Cancelled
             }
             Self::Blocking { abort, started } if !started.load(Ordering::SeqCst) => {
                 abort.abort();
-                InvocationCancelResult::Cancelled
+                RequestCancelResult::Cancelled
             }
-            Self::Blocking { .. } => InvocationCancelResult::RunningUncancellable,
-        }
-    }
-
-    fn is_finished(&self) -> bool {
-        match self {
-            Self::Async(abort) | Self::Blocking { abort, .. } => abort.is_finished(),
+            Self::Blocking { .. } => RequestCancelResult::RunningUncancellable,
         }
     }
 }
 
-/// Tracks daemon-side tasks by invocation id for cancellation + TTL cleanup.
+/// Tracks daemon-side tasks by request id for cancellation + TTL cleanup.
 #[derive(Debug)]
 pub struct InFlightRegistry {
-    pub(crate) inner: Mutex<HashMap<String, InFlightInvocation>>,
+    pub(crate) inner: Mutex<HashMap<String, InFlightRequest>>,
     ttl_s: f64,
     reaper_interval_s: f64,
 }
@@ -95,21 +87,20 @@ impl InFlightRegistry {
     // The registry is best-effort daemon control state. If another task panics
     // while holding the mutex, keep cancellation/touch cleanup available
     // instead of panicking future control operations.
-    fn lock_state(&self) -> MutexGuard<'_, HashMap<String, InFlightInvocation>> {
+    fn lock_state(&self) -> MutexGuard<'_, HashMap<String, InFlightRequest>> {
         self.inner.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
-    /// Register a task under `invocation_id`. Empty ids are ignored.
-    pub fn register(&self, invocation_id: &str, abort: AbortHandle, caller_id: &str) {
-        if invocation_id.is_empty() {
+    /// Register a task under `request_id`. Empty ids are ignored.
+    pub fn register(&self, request_id: &str, abort: AbortHandle) {
+        if request_id.is_empty() {
             return;
         }
         let mut state = self.lock_state();
         state.insert(
-            invocation_id.to_owned(),
-            InFlightInvocation {
-                task: InvocationTaskHandle::Async(abort),
-                caller_id: caller_id.to_owned(),
+            request_id.to_owned(),
+            InFlightRequest {
+                task: RequestTaskHandle::Async(abort),
                 last_seen: monotonic_seconds(),
                 ttl_reaped: false,
             },
@@ -120,58 +111,56 @@ impl InFlightRegistry {
     /// its blocking closure; cancel reports that distinction instead.
     pub(crate) fn register_blocking(
         &self,
-        invocation_id: &str,
+        request_id: &str,
         abort: AbortHandle,
         started: Arc<AtomicBool>,
-        caller_id: &str,
     ) {
-        if invocation_id.is_empty() {
+        if request_id.is_empty() {
             return;
         }
         let mut state = self.lock_state();
         state.insert(
-            invocation_id.to_owned(),
-            InFlightInvocation {
-                task: InvocationTaskHandle::Blocking { abort, started },
-                caller_id: caller_id.to_owned(),
+            request_id.to_owned(),
+            InFlightRequest {
+                task: RequestTaskHandle::Blocking { abort, started },
                 last_seen: monotonic_seconds(),
                 ttl_reaped: false,
             },
         );
     }
 
-    /// Remove the entry for `invocation_id` (the dispatch `finally` path).
-    pub fn deregister(&self, invocation_id: &str) {
-        self.lock_state().remove(invocation_id);
+    /// Remove the entry for `request_id` (the dispatch `finally` path).
+    pub fn deregister(&self, request_id: &str) {
+        self.lock_state().remove(request_id);
     }
 
-    /// Return whether `invocation_id` is still tracked.
-    pub fn contains(&self, invocation_id: &str) -> bool {
-        self.lock_state().contains_key(invocation_id)
+    /// Return whether `request_id` is still tracked.
+    pub fn contains(&self, request_id: &str) -> bool {
+        self.lock_state().contains_key(request_id)
     }
 
-    /// Cancel the task for `invocation_id`; returns whether an entry existed.
-    pub fn cancel(&self, invocation_id: &str) -> bool {
+    /// Cancel the task for `request_id`; returns whether an entry existed.
+    pub fn cancel(&self, request_id: &str) -> bool {
         matches!(
-            self.cancel_invocation(invocation_id),
-            InvocationCancelResult::Cancelled
+            self.cancel_request(request_id),
+            RequestCancelResult::Cancelled
         )
     }
 
-    pub(crate) fn cancel_invocation(&self, invocation_id: &str) -> InvocationCancelResult {
+    pub(crate) fn cancel_request(&self, request_id: &str) -> RequestCancelResult {
         let Some(task) = ({
             let state = self.lock_state();
-            state.get(invocation_id).map(|entry| entry.task.clone())
+            state.get(request_id).map(|entry| entry.task.clone())
         }) else {
-            return InvocationCancelResult::AlreadyDone;
+            return RequestCancelResult::AlreadyDone;
         };
         task.cancel()
     }
 
-    /// Wait briefly for the dispatch finally path to deregister `invocation_id`.
-    pub fn wait_for_cleanup(&self, invocation_id: &str, timeout: Duration) -> bool {
+    /// Wait briefly for the dispatch finally path to deregister `request_id`.
+    pub fn wait_for_cleanup(&self, request_id: &str, timeout: Duration) -> bool {
         let deadline = Instant::now() + timeout;
-        while self.contains(invocation_id) {
+        while self.contains(request_id) {
             if Instant::now() >= deadline {
                 return false;
             }
@@ -181,15 +170,12 @@ impl InFlightRegistry {
     }
 
     /// Touch `last_seen` for every known id; returns how many were touched.
-    pub fn touch_invocations(&self, invocation_ids: &[String]) -> usize {
+    pub fn touch_requests(&self, request_ids: &[String]) -> usize {
         let mut state = self.lock_state();
         let now = monotonic_seconds();
         let mut touched = 0;
-        for invocation_id in invocation_ids {
-            if let Some(entry) = state
-                .get_mut(invocation_id)
-                .filter(|entry| !entry.ttl_reaped)
-            {
+        for request_id in request_ids {
+            if let Some(entry) = state.get_mut(request_id).filter(|entry| !entry.ttl_reaped) {
                 entry.last_seen = now;
                 touched += 1;
             }
@@ -197,17 +183,7 @@ impl InFlightRegistry {
         touched
     }
 
-    /// Count live invocations for `caller_id`. Backs `sandbox.call.count`.
-    pub fn count_by_caller(&self, caller_id: &str) -> usize {
-        self.lock_state()
-            .values()
-            .filter(|entry| {
-                entry.caller_id == caller_id && !entry.ttl_reaped && !entry.task.is_finished()
-            })
-            .count()
-    }
-
-    /// Count all tracked invocations, including foreground work.
+    /// Count all tracked requests, including foreground work.
     pub fn inflight_count(&self) -> usize {
         self.lock_state().len()
     }

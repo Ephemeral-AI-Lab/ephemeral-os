@@ -11,40 +11,11 @@ use host::e2e_support::{
     DAEMON_PROTOCOL_VERSION, MAX_REQUEST_BYTES,
 };
 
-const HEARTBEAT_FIXTURE: &[u8] =
-    include_bytes!("../../protocol/fixtures/wire_messages/heartbeat_request.json");
-fn fixture_line(raw: &[u8]) -> Vec<u8> {
-    let mut line = raw.to_vec();
-    while line.last() == Some(&b'\n') {
-        line.pop();
-    }
-    line
-}
-
-/// The heartbeat fixture: protocol version stamped by the host
-/// lands in caller insertion order, invocation id appended.
-#[test]
-fn stamped_encoder_reproduces_heartbeat_fixture() {
-    let invocation_id = "00000000000000000000000000000001";
-    let args = json!({
-        "layer_stack_root": "/eos/layer-stack",
-        DAEMON_PROTOCOL_FIELD: DAEMON_PROTOCOL_VERSION,
-        "invocation_ids": [invocation_id],
-    });
-    let encoded =
-        encode_request_with_metadata("sandbox.call.heartbeat", invocation_id, &args, None);
-    assert_eq!(
-        encoded,
-        fixture_line(HEARTBEAT_FIXTURE),
-        "host-encoded heartbeat request must be byte-identical to the fixture"
-    );
-}
-
 /// The auth token is a TOP-LEVEL request field, never inside args.
 #[test]
 fn auth_token_is_stamped_top_level() {
     let encoded =
-        encode_request_with_metadata("sandbox.call.heartbeat", "i1", &json!({}), Some("tok-1"));
+        encode_request_with_metadata("sandbox.runtime.ready", "i1", &json!({}), Some("tok-1"));
     let value: serde_json::Value = serde_json::from_slice(&encoded).expect("decode");
     assert_eq!(value[DAEMON_AUTH_FIELD], json!("tok-1"));
     assert!(value["args"].get(DAEMON_AUTH_FIELD).is_none());
@@ -54,7 +25,7 @@ fn auth_token_is_stamped_top_level() {
 #[test]
 fn stamped_encoder_overwrites_caller_protocol_version() {
     let encoded = encode_request_with_metadata(
-        "sandbox.call.heartbeat",
+        "sandbox.runtime.ready",
         "i1",
         &json!({ DAEMON_PROTOCOL_FIELD: 999 }),
         None,

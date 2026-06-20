@@ -30,8 +30,6 @@ pub struct ResponseMeta {
     pub envelope_version: u8,
     pub op: String,
     pub request_id: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub caller_id: Option<String>,
     pub duration_ms: f64,
     pub resource_summary: ResourceSummary,
     pub warnings: Vec<OperationWarning>,
@@ -43,7 +41,6 @@ impl Default for ResponseMeta {
             envelope_version: ENVELOPE_VERSION,
             op: String::new(),
             request_id: String::new(),
-            caller_id: None,
             duration_ms: 0.0,
             resource_summary: ResourceSummary::default(),
             warnings: Vec::new(),

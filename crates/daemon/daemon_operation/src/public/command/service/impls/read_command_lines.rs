@@ -2,18 +2,16 @@ use super::command_lines_response;
 use crate::command::service::transcript::CommandTranscriptWindowExt;
 use crate::command::service::CommandOperationService;
 use crate::command::{
-    CommandCallContext, CommandId, CommandLinesOutput, CommandServiceError, CommandStatus,
-    ReadCommandLinesInput,
+    CommandLinesOutput, CommandServiceError, CommandSessionId, CommandStatus, ReadCommandLinesInput,
 };
 use crate::operation::{
     ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationRequest, OperationResponse,
     OperationSpec,
 };
-use crate::workspace_crate::CallerId;
 use crate::DaemonOperations;
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
-    name: "read_lines",
+    name: "read_command_lines",
     family: OperationFamily::Command,
     summary: "Read a retained command transcript window by line offset.",
     args: READ_LINES_ARGS,
@@ -22,20 +20,20 @@ pub(crate) const SPEC: OperationSpec = OperationSpec {
 
 const READ_LINES_ARGS: &[ArgSpec] = &[
     ArgSpec::required(
-        "command_id",
+        "command_session_id",
         ArgKind::String,
-        "Command id returned by exec_command.",
+        "Command session id returned by exec_command.",
         Some(ArgCliSpec {
             flag: None,
-            positional: Some("COMMAND_ID"),
+            positional: Some("COMMAND_SESSION_ID"),
         }),
     ),
     ArgSpec::required(
-        "offset",
+        "start_offset",
         ArgKind::Integer,
         "First transcript line offset.",
         Some(ArgCliSpec {
-            flag: Some("--offset"),
+            flag: Some("--start-offset"),
             positional: None,
         }),
     ),
@@ -51,10 +49,10 @@ const READ_LINES_ARGS: &[ArgSpec] = &[
 ];
 
 const READ_LINES_CLI: CliSpec = CliSpec {
-    path: &["daemon", "commands", "read-lines"],
-    usage: "ephai-sandbox-gateway daemon --sandbox-id SID commands read-lines --offset N --limit N COMMAND_ID",
+    path: &["daemon", "commands", "read-command-lines"],
+    usage: "ephai-sandbox-gateway daemon --sandbox-id SID commands read-command-lines --start-offset N --limit N COMMAND_SESSION_ID",
     examples: &[
-        "ephai-sandbox-gateway daemon --sandbox-id sb-1 commands read-lines --offset 0 --limit 100 cmd-1",
+        "ephai-sandbox-gateway daemon --sandbox-id sb-1 commands read-command-lines --start-offset 0 --limit 100 cmd-1",
     ],
 };
 
@@ -66,50 +64,37 @@ pub(crate) fn dispatch(
         Ok(input) => input,
         Err(response) => return response,
     };
-    let context = match parse_context(&request) {
-        Ok(context) => context,
-        Err(response) => return response,
-    };
-    command_lines_response(&request, operations.command.read_lines(input, context))
+    command_lines_response(&request, operations.command.read_command_lines(input))
 }
 
 fn parse_input(request: &OperationRequest<'_>) -> Result<ReadCommandLinesInput, OperationResponse> {
     Ok(ReadCommandLinesInput {
-        command_id: CommandId(request.required_string("command_id")?),
-        offset: request.required_u64("offset")?,
+        command_session_id: CommandSessionId(request.required_string("command_session_id")?),
+        start_offset: request.required_u64("start_offset")?,
         limit: request.required_usize("limit")?,
     })
 }
 
-fn parse_context(request: &OperationRequest<'_>) -> Result<CommandCallContext, OperationResponse> {
-    Ok(CommandCallContext {
-        caller_id: CallerId(request.optional_string("caller_id")?.unwrap_or_default()),
-    })
-}
-
 impl CommandOperationService {
-    pub fn read_lines(
+    pub fn read_command_lines(
         &self,
         input: ReadCommandLinesInput,
-        context: CommandCallContext,
     ) -> Result<CommandLinesOutput, CommandServiceError> {
-        let command_id = input.command_id;
-        if let Some(active) = self.active_for_owner_or_none(&command_id, &context.caller_id)? {
+        let command_session_id = input.command_session_id;
+        if let Some(active) = self.active_command_or_none(&command_session_id)? {
             let transcript = active.transcript.clone();
             drop(active);
-            return Ok(transcript.window(input.offset, input.limit).into_output(
-                command_id,
-                CommandStatus::Running,
-                None,
-            ));
+            return Ok(transcript
+                .window(input.start_offset, input.limit)
+                .into_output(command_session_id, CommandStatus::Running, None));
         }
 
-        let completed = self.completed_for_owner(&command_id, &context.caller_id)?;
+        let completed = self.completed_command(&command_session_id)?;
         Ok(completed
             .transcript
-            .window(&command_id, input.offset, input.limit)?
+            .window(&command_session_id, input.start_offset, input.limit)?
             .into_output(
-                command_id,
+                command_session_id,
                 completed.result.status,
                 completed.result.exit_code,
             ))

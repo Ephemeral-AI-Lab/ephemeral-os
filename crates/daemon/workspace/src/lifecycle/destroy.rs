@@ -15,7 +15,6 @@ use super::{monotonic_seconds, record_phase_ms};
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExitOutcome {
     pub workspace_id: WorkspaceModeId,
-    pub caller_id: String,
     pub lease_id: String,
     pub evicted_upperdir_bytes: u64,
     pub lifetime_s: f64,
@@ -55,9 +54,7 @@ impl WorkspaceModeManager {
         let cgroup_exists_after = handle.cgroup_path.as_ref().map(|path| path.exists());
         let inspection = json!({
             "handle_registered_after": self.handles.contains_key(&handle.workspace_id),
-            "agent_registered_after": self.by_caller.contains_key(&handle.caller_id),
             "open_handle_count_after": self.handles.len(),
-            "open_agent_count_after": self.by_caller.len(),
             "holder_pid": handle.holder_pid,
             "holder_was_alive": holder_kill_report.holder_was_alive,
             "holder_exit_status": holder_kill_report.exit_status,
@@ -108,18 +105,10 @@ impl WorkspaceModeManager {
 
     pub fn exit(
         &mut self,
-        caller_id: &str,
+        workspace_id: &WorkspaceModeId,
         grace_s: Option<f64>,
     ) -> Result<ExitOutcome, IsolatedNetworkError> {
-        if caller_id.trim().is_empty() {
-            return Err(IsolatedNetworkError::InvalidArgument(
-                "caller_id is required".to_owned(),
-            ));
-        }
-        let Some(workspace_id) = self.by_caller.remove(caller_id) else {
-            return Err(IsolatedNetworkError::NotOpen);
-        };
-        let Some(handle) = self.handles.remove(&workspace_id) else {
+        let Some(handle) = self.handles.remove(workspace_id) else {
             return Err(IsolatedNetworkError::NotOpen);
         };
         let timer = Instant::now();
@@ -135,7 +124,6 @@ impl WorkspaceModeManager {
         let lifetime_s = (monotonic_seconds() - handle.created_at).max(0.0);
         Ok(ExitOutcome {
             workspace_id: handle.workspace_id,
-            caller_id: handle.caller_id,
             lease_id: handle.lease_id,
             evicted_upperdir_bytes: upperdir_bytes,
             lifetime_s,

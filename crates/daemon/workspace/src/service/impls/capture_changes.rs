@@ -25,9 +25,7 @@ impl WorkspaceRuntimeService {
                     .manager
                     .handles
                     .get(&mode_id)
-                    .ok_or_else(|| WorkspaceError::NotOpen {
-                        owner: handle.owner.clone(),
-                    })?;
+                    .ok_or(WorkspaceError::NotOpen)?;
             mode_handle.dirs.upperdir.clone()
         };
         let captured = crate::overlay::capture::capture_upperdir(&upperdir).map_err(|error| {
@@ -55,7 +53,7 @@ impl WorkspaceRuntimeService {
             .len()
             .saturating_add(captured.protected_drops.len());
         Ok(CapturedWorkspaceChanges {
-            workspace_id: handle.id.clone(),
+            workspace_session_id: handle.id.clone(),
             base_revision: handle.base_revision.clone(),
             changed_paths,
             changed_path_kinds,

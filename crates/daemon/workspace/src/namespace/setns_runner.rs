@@ -123,13 +123,12 @@ impl NamespaceRuntime {
 #[cfg(target_os = "linux")]
 pub(crate) fn ns_command_request(
     handle: &WorkspaceModeHandle,
-    invocation: &str,
+    request: &str,
     args: serde_json::Value,
     layer_paths: Vec<PathBuf>,
 ) -> NamespaceCommandRequest {
     NamespaceCommandRequest {
-        invocation_id: format!("isolated-{invocation}-{}", handle.workspace_id.0),
-        caller_id: handle.caller_id.clone(),
+        request_id: format!("isolated-{request}-{}", handle.workspace_id.0),
         args,
         workspace_root: WorkspaceRoot(PathBuf::from(&handle.workspace_root)),
         layer_paths,

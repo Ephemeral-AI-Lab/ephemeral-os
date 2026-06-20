@@ -4,28 +4,27 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
-use super::{InFlightRegistry, InvocationCancelResult};
+use super::{InFlightRegistry, RequestCancelResult};
 use tokio::task::JoinHandle;
 
 type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
 #[tokio::test]
-async fn cancel_touch_and_count_track_invocation() -> TestResult {
+async fn cancel_touch_and_track_request() -> TestResult {
     let registry = InFlightRegistry::new(300.0, 30.0);
     let task = tokio::spawn(future::pending::<()>());
-    registry.register("invocation-1", task.abort_handle(), "caller-a");
+    registry.register("request-1", task.abort_handle());
 
-    assert_eq!(registry.count_by_caller("caller-a"), 1);
+    assert_eq!(registry.inflight_count(), 1);
     assert_eq!(
-        registry.touch_invocations(&["invocation-1".to_owned(), "missing".to_owned()]),
+        registry.touch_requests(&["request-1".to_owned(), "missing".to_owned()]),
         1
     );
-    assert!(registry.cancel("invocation-1"));
+    assert!(registry.cancel("request-1"));
     assert_task_cancelled(task).await?;
-    assert_eq!(registry.count_by_caller("caller-a"), 0);
 
-    registry.deregister("invocation-1");
-    assert!(!registry.contains("invocation-1"));
+    registry.deregister("request-1");
+    assert!(!registry.contains("request-1"));
     Ok(())
 }
 
@@ -46,10 +45,10 @@ async fn control_paths_recover_poisoned_registry_lock() -> TestResult {
     }
 
     let task = tokio::spawn(future::pending::<()>());
-    registry.register("poisoned", task.abort_handle(), "caller-a");
+    registry.register("poisoned", task.abort_handle());
 
-    assert_eq!(registry.count_by_caller("caller-a"), 1);
-    assert_eq!(registry.touch_invocations(&["poisoned".to_owned()]), 1);
+    assert_eq!(registry.inflight_count(), 1);
+    assert_eq!(registry.touch_requests(&["poisoned".to_owned()]), 1);
     registry.ttl_sweep();
     assert!(registry.cancel("poisoned"));
     assert_task_cancelled(task).await?;
@@ -59,37 +58,34 @@ async fn control_paths_recover_poisoned_registry_lock() -> TestResult {
 }
 
 #[tokio::test]
-async fn ttl_sweep_reaps_idle_invocation() -> TestResult {
+async fn ttl_sweep_reaps_idle_request() -> TestResult {
     let registry = InFlightRegistry::new(0.001, 30.0);
     let task = tokio::spawn(future::pending::<()>());
-    registry.register("ttl", task.abort_handle(), "caller-a");
+    registry.register("ttl", task.abort_handle());
 
     thread::sleep(Duration::from_millis(3));
     registry.ttl_sweep();
     assert!(registry.contains("ttl"));
-    assert_eq!(registry.count_by_caller("caller-a"), 0);
 
     assert_task_cancelled(task).await?;
-    assert_eq!(registry.count_by_caller("caller-a"), 0);
     Ok(())
 }
 
 #[tokio::test]
-async fn started_blocking_invocation_reports_uncancellable() -> TestResult {
+async fn started_blocking_request_reports_uncancellable() -> TestResult {
     let registry = InFlightRegistry::new(300.0, 30.0);
     let task = tokio::spawn(future::pending::<()>());
     registry.register_blocking(
         "blocking-running",
         task.abort_handle(),
         Arc::new(AtomicBool::new(true)),
-        "caller-a",
     );
 
     assert_eq!(
-        registry.cancel_invocation("blocking-running"),
-        InvocationCancelResult::RunningUncancellable
+        registry.cancel_request("blocking-running"),
+        RequestCancelResult::RunningUncancellable
     );
-    assert_eq!(registry.count_by_caller("caller-a"), 1);
+    assert_eq!(registry.inflight_count(), 1);
 
     task.abort();
     assert_task_cancelled(task).await?;
@@ -98,22 +94,20 @@ async fn started_blocking_invocation_reports_uncancellable() -> TestResult {
 }
 
 #[tokio::test]
-async fn ttl_sweep_hides_started_blocking_invocation() -> TestResult {
+async fn ttl_sweep_hides_started_blocking_request() -> TestResult {
     let registry = InFlightRegistry::new(0.001, 30.0);
     let task = tokio::spawn(future::pending::<()>());
     registry.register_blocking(
         "blocking-ttl",
         task.abort_handle(),
         Arc::new(AtomicBool::new(true)),
-        "caller-a",
     );
 
-    assert_eq!(registry.count_by_caller("caller-a"), 1);
+    assert_eq!(registry.inflight_count(), 1);
     thread::sleep(Duration::from_millis(3));
     registry.ttl_sweep();
     assert!(registry.contains("blocking-ttl"));
-    assert_eq!(registry.count_by_caller("caller-a"), 0);
-    assert_eq!(registry.touch_invocations(&["blocking-ttl".to_owned()]), 0);
+    assert_eq!(registry.touch_requests(&["blocking-ttl".to_owned()]), 0);
 
     task.abort();
     assert_task_cancelled(task).await?;

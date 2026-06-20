@@ -1,52 +1,35 @@
 use super::core::CommandOperationService;
 
 use crate::command::{CommandServiceError, CompletedCommandRecord, FinalizationState};
-use crate::workspace_crate::CallerId;
 
 impl CommandOperationService {
-    pub(crate) fn active_for_owner<'a>(
+    pub(crate) fn active_command<'a>(
         &'a self,
-        command_id: &crate::command::CommandId,
-        caller_id: &CallerId,
+        command_session_id: &crate::command::CommandSessionId,
     ) -> Result<crate::command::ActiveCommandRef<'a>, CommandServiceError> {
-        match self.active_for_owner_or_none(command_id, caller_id)? {
+        match self.active_command_or_none(command_session_id)? {
             Some(active) => Ok(active),
-            None => match self.process_store().completed(command_id) {
-                Some(completed) if completed.caller_id == *caller_id => {
-                    Err(CommandServiceError::CommandAlreadyCompleted {
-                        command_id: command_id.clone(),
-                    })
-                }
-                Some(completed) => Err(CommandServiceError::CommandCallerMismatch {
-                    command_id: command_id.clone(),
-                    expected: completed.caller_id,
-                    actual: caller_id.clone(),
+            None => match self.process_store().completed(command_session_id) {
+                Some(_) => Err(CommandServiceError::CommandAlreadyCompleted {
+                    command_session_id: command_session_id.clone(),
                 }),
                 None => Err(CommandServiceError::CommandNotFound {
-                    command_id: command_id.clone(),
+                    command_session_id: command_session_id.clone(),
                 }),
             },
         }
     }
 
-    pub(crate) fn active_for_owner_or_none<'a>(
+    pub(crate) fn active_command_or_none<'a>(
         &'a self,
-        command_id: &crate::command::CommandId,
-        caller_id: &CallerId,
+        command_session_id: &crate::command::CommandSessionId,
     ) -> Result<Option<crate::command::ActiveCommandRef<'a>>, CommandServiceError> {
-        let Some(active) = self.process_store().active(command_id) else {
+        let Some(active) = self.process_store().active(command_session_id) else {
             return Ok(None);
         };
-        if active.caller_id != *caller_id {
-            return Err(CommandServiceError::CommandCallerMismatch {
-                command_id: command_id.clone(),
-                expected: active.caller_id.clone(),
-                actual: caller_id.clone(),
-            });
-        }
         if let FinalizationState::Failed { error, finalized } = &active.finalization {
             return Err(CommandServiceError::CommandFinalizationFailed {
-                command_id: command_id.clone(),
+                command_session_id: command_session_id.clone(),
                 error: error.clone(),
                 finalized: finalized.clone().map(Box::new),
             });
@@ -54,33 +37,22 @@ impl CommandOperationService {
         Ok(Some(active))
     }
 
-    pub(crate) fn completed_for_owner(
+    pub(crate) fn completed_command(
         &self,
-        command_id: &crate::command::CommandId,
-        caller_id: &CallerId,
+        command_session_id: &crate::command::CommandSessionId,
     ) -> Result<CompletedCommandRecord, CommandServiceError> {
-        let completed = self.process_store().completed(command_id).ok_or_else(|| {
-            CommandServiceError::CommandNotFound {
-                command_id: command_id.clone(),
-            }
-        })?;
-        if completed.caller_id == *caller_id {
-            Ok(completed)
-        } else {
-            Err(CommandServiceError::CommandCallerMismatch {
-                command_id: command_id.clone(),
-                expected: completed.caller_id,
-                actual: caller_id.clone(),
+        self.process_store()
+            .completed(command_session_id)
+            .ok_or_else(|| CommandServiceError::CommandNotFound {
+                command_session_id: command_session_id.clone(),
             })
-        }
     }
 
-    pub(crate) fn ensure_active_owner(
+    pub(crate) fn ensure_active_command(
         &self,
-        command_id: &crate::command::CommandId,
-        caller_id: &CallerId,
+        command_session_id: &crate::command::CommandSessionId,
     ) -> Result<(), CommandServiceError> {
-        drop(self.active_for_owner(command_id, caller_id)?);
+        drop(self.active_command(command_session_id)?);
         Ok(())
     }
 }

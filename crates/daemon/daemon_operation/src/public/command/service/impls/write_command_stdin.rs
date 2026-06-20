@@ -2,18 +2,15 @@ use std::sync::Arc;
 
 use super::command_yield_response;
 use crate::command::service::CommandOperationService;
-use crate::command::{
-    CommandCallContext, CommandId, CommandServiceError, CommandYield, WriteStdinInput,
-};
+use crate::command::{CommandServiceError, CommandSessionId, CommandYield, WriteCommandStdinInput};
 use crate::operation::{
     ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationRequest, OperationResponse,
     OperationSpec,
 };
-use crate::workspace_crate::CallerId;
 use crate::DaemonOperations;
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
-    name: "write_stdin",
+    name: "write_command_stdin",
     family: OperationFamily::Command,
     summary: "Write text to a running command stdin.",
     args: WRITE_STDIN_ARGS,
@@ -22,16 +19,16 @@ pub(crate) const SPEC: OperationSpec = OperationSpec {
 
 const WRITE_STDIN_ARGS: &[ArgSpec] = &[
     ArgSpec::required(
-        "command_id",
+        "command_session_id",
         ArgKind::String,
-        "Command id returned by exec_command.",
+        "Command session id returned by exec_command.",
         Some(ArgCliSpec {
             flag: None,
-            positional: Some("COMMAND_ID"),
+            positional: Some("COMMAND_SESSION_ID"),
         }),
     ),
     ArgSpec::required(
-        "chars",
+        "stdin",
         ArgKind::String,
         "Text to write to stdin.",
         Some(ArgCliSpec {
@@ -52,10 +49,10 @@ const WRITE_STDIN_ARGS: &[ArgSpec] = &[
 ];
 
 const WRITE_STDIN_CLI: CliSpec = CliSpec {
-    path: &["daemon", "commands", "stdin"],
-    usage: "ephai-sandbox-gateway daemon --sandbox-id SID commands stdin [--yield-time-ms MS] COMMAND_ID TEXT",
+    path: &["daemon", "commands", "write-command-stdin"],
+    usage: "ephai-sandbox-gateway daemon --sandbox-id SID commands write-command-stdin [--yield-time-ms MS] COMMAND_SESSION_ID TEXT",
     examples: &[
-        "ephai-sandbox-gateway daemon --sandbox-id sb-1 commands stdin cmd-1 'hello'",
+        "ephai-sandbox-gateway daemon --sandbox-id sb-1 commands write-command-stdin cmd-1 'hello'",
     ],
 };
 
@@ -67,39 +64,30 @@ pub(crate) fn dispatch(
         Ok(input) => input,
         Err(response) => return response,
     };
-    let context = match parse_context(&request) {
-        Ok(context) => context,
-        Err(response) => return response,
-    };
-    command_yield_response(&request, operations.command.write_stdin(input, context))
+    command_yield_response(&request, operations.command.write_command_stdin(input))
 }
 
-fn parse_input(request: &OperationRequest<'_>) -> Result<WriteStdinInput, OperationResponse> {
-    Ok(WriteStdinInput {
-        command_id: CommandId(request.required_string("command_id")?),
-        chars: request.required_string("chars")?,
+fn parse_input(
+    request: &OperationRequest<'_>,
+) -> Result<WriteCommandStdinInput, OperationResponse> {
+    Ok(WriteCommandStdinInput {
+        command_session_id: CommandSessionId(request.required_string("command_session_id")?),
+        stdin: request.required_string("stdin")?,
         yield_time_ms: request.optional_u64("yield_time_ms")?,
     })
 }
 
-fn parse_context(request: &OperationRequest<'_>) -> Result<CommandCallContext, OperationResponse> {
-    Ok(CommandCallContext {
-        caller_id: CallerId(request.optional_string("caller_id")?.unwrap_or_default()),
-    })
-}
-
 impl CommandOperationService {
-    pub fn write_stdin(
+    pub fn write_command_stdin(
         &self,
-        input: WriteStdinInput,
-        context: CommandCallContext,
+        input: WriteCommandStdinInput,
     ) -> Result<CommandYield, CommandServiceError> {
-        let command_id = input.command_id;
+        let command_session_id = input.command_session_id;
         let yield_time_ms = input
             .yield_time_ms
             .unwrap_or(self.config().default_yield_time_ms);
         let (process, workspace_session_id) = {
-            let active = self.active_for_owner(&command_id, &context.caller_id)?;
+            let active = self.active_command(&command_session_id)?;
             (
                 Arc::clone(&active.process),
                 active.workspace_session_id.clone(),
@@ -107,9 +95,9 @@ impl CommandOperationService {
         };
         self.ensure_workspace_session_not_remount_pending(&workspace_session_id)?;
         let output = {
-            process.write_process_stdin(&input.chars).map_err(|error| {
+            process.write_process_stdin(&input.stdin).map_err(|error| {
                 CommandServiceError::CommandIo {
-                    command_id: command_id.clone(),
+                    command_session_id: command_session_id.clone(),
                     error: error.to_string(),
                 }
             })?;
@@ -120,6 +108,6 @@ impl CommandOperationService {
             }
         };
 
-        Ok(Self::running_command_yield(command_id, output))
+        Ok(Self::running_command_yield(command_session_id, output))
     }
 }

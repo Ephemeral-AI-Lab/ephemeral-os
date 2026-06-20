@@ -63,7 +63,7 @@ cargo run -p xtask -- package --profile release
 # optional: set a shared custom socket once instead of passing --listen/--socket
 # export EOS_GATEWAY_SOCKET=/tmp/eos-sandbox.sock
 
-# repo-local gateway CLI; equivalent to `cargo run -p gateway -- ...`
+# repo-local gateway CLI
 bin/ephai-sandbox-gateway --help
 
 # optional: install the CLI binary once for global `ephai-sandbox-gateway ...`

@@ -22,15 +22,11 @@ impl WorkspaceRuntimeService {
         }
 
         let mut state = self.lock_state()?;
-        let _mode_id = active_mode_id(&state, handle)?;
+        let mode_id = active_mode_id(&state, handle)?;
         let remounted = state
             .manager
-            .remount_with_layers(
-                &handle.owner.0,
-                request.layer_paths,
-                &RemountProbe::default(),
-            )
-            .map_err(|error| workspace_error_from_mode_error(Some(&handle.owner), error))?;
+            .remount_with_layers(&mode_id, request.layer_paths, &RemountProbe::default())
+            .map_err(workspace_error_from_mode_error)?;
         Ok(RemountWorkspaceResult {
             handle: WorkspaceHandle::from(&remounted),
         })

@@ -23,7 +23,7 @@ pub(crate) fn dispatch(operations: &DaemonOperations, request: &Request) -> Valu
     }
     daemon_operation::dispatch_operation(
         operations,
-        OperationRequest::new(&request.op, &request.invocation_id, &request.args),
+        OperationRequest::new(&request.op, &request.request_id, &request.args),
     )
     .into_wire_value()
 }

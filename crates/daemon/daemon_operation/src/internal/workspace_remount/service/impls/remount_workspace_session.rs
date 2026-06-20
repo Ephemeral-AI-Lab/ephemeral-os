@@ -1,4 +1,4 @@
-use crate::workspace_crate::{RemountWorkspaceRequest, WorkspaceId};
+use crate::workspace_crate::{RemountWorkspaceRequest, WorkspaceSessionId};
 use crate::workspace_remount::{
     RemountBlockReason, RemountSwitchState, WorkspaceRemountError, WorkspaceRemountOutcome,
     WorkspaceRemountService,
@@ -7,7 +7,7 @@ use crate::workspace_remount::{
 impl WorkspaceRemountService {
     pub fn remount_workspace_session(
         &self,
-        workspace_session_id: WorkspaceId,
+        workspace_session_id: WorkspaceSessionId,
     ) -> Result<WorkspaceRemountOutcome, WorkspaceRemountError> {
         let handler = self.workspace.begin_remount(workspace_session_id.clone())?;
         let mut quiesce = self

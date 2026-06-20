@@ -2,11 +2,11 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use workspace::model::{
-    BaseRevision, CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, ChangedPathKind,
+    BaseRevision, CaptureChangesRequest, CapturedWorkspaceChanges, ChangedPathKind,
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
     LayerStackSnapshotRef, LayerStackSnapshotView, LeaseId, ProtectedPathDrop,
     ProtectedPathDropReason, ReadonlySnapshotHandle, RemountWorkspaceRequest,
-    RemountWorkspaceResult, WorkspaceEntry, WorkspaceEntryFds, WorkspaceHandle, WorkspaceId,
+    RemountWorkspaceResult, WorkspaceEntry, WorkspaceEntryFds, WorkspaceHandle, WorkspaceSessionId,
     WorkspaceProfile,
 };
 use workspace::overlay::dirs::OverlayDirs;
@@ -19,7 +19,6 @@ fn workspace_mode_handle() -> WorkspaceModeHandle {
     WorkspaceModeHandle {
         workspace_id: WorkspaceModeId("isolated-handle".to_owned()),
         profile: WorkspaceProfile::Isolated,
-        caller_id: "caller-1".to_owned(),
         lease_id: "lease-1".to_owned(),
         manifest_version: 42,
         manifest_root_hash: "root-hash".to_owned(),
@@ -52,8 +51,7 @@ fn workspace_mode_handle() -> WorkspaceModeHandle {
 }
 
 fn assert_handle_projection(public: &WorkspaceHandle) {
-    assert_eq!(public.id, WorkspaceId("isolated-handle".to_owned()));
-    assert_eq!(public.owner, CallerId("caller-1".to_owned()));
+    assert_eq!(public.id, WorkspaceSessionId("isolated-handle".to_owned()));
     assert_eq!(public.workspace_root, PathBuf::from("/workspace"));
     assert_eq!(public.profile, WorkspaceProfile::Isolated);
     assert_eq!(
@@ -128,8 +126,7 @@ fn host_compatible_entry_uses_holder_launch_without_network_fd() {
         layer_paths: vec!["/lower/one".into()],
     };
     let handle = WorkspaceHandle::holder_backed_for_test(
-        WorkspaceId("host-handle".to_owned()),
-        CallerId("caller".to_owned()),
+        WorkspaceSessionId("host-handle".to_owned()),
         "/workspace".into(),
         WorkspaceProfile::HostCompatible,
         snapshot,
@@ -177,7 +174,6 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
         format!(
             "{:?}",
             CreateWorkspaceRequest {
-                caller_id: CallerId("caller".to_owned()),
                 workspace_root: "/workspace".into(),
                 layer_stack_root: "/layers".into(),
                 profile: WorkspaceProfile::HostCompatible,
@@ -186,8 +182,7 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
         format!(
             "{:?}",
             WorkspaceHandle::without_launch_for_test(
-                WorkspaceId("workspace".to_owned()),
-                CallerId("caller".to_owned()),
+                WorkspaceSessionId("workspace".to_owned()),
                 "/workspace".into(),
                 WorkspaceProfile::HostCompatible,
                 LayerStackSnapshotRef {
@@ -223,7 +218,7 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
         format!(
             "{:?}",
             CapturedWorkspaceChanges {
-                workspace_id: WorkspaceId("workspace".to_owned()),
+                workspace_session_id: WorkspaceSessionId("workspace".to_owned()),
                 base_revision,
                 changed_paths: Vec::new(),
                 changed_path_kinds: BTreeMap::new(),
@@ -244,8 +239,7 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
             "{:?}",
             RemountWorkspaceResult {
                 handle: WorkspaceHandle::without_launch_for_test(
-                    WorkspaceId("workspace".to_owned()),
-                    CallerId("caller".to_owned()),
+                    WorkspaceSessionId("workspace".to_owned()),
                     "/workspace".into(),
                     WorkspaceProfile::HostCompatible,
                     LayerStackSnapshotRef {
@@ -279,8 +273,7 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
         format!(
             "{:?}",
             DestroyWorkspaceResult {
-                workspace_id: WorkspaceId("workspace".to_owned()),
-                owner: CallerId("caller".to_owned()),
+                workspace_session_id: WorkspaceSessionId("workspace".to_owned()),
                 evicted_upperdir_bytes: 0,
                 lifetime_s: 0.0,
                 lease_released: Some(true),
@@ -323,14 +316,12 @@ fn public_dtos_construct_clone_and_compare() {
         layer_count: 1,
     };
     let create = CreateWorkspaceRequest {
-        caller_id: CallerId("caller".to_owned()),
         workspace_root: "/workspace".into(),
         layer_stack_root: "/layers".into(),
         profile: WorkspaceProfile::HostCompatible,
     };
     let handle = WorkspaceHandle::without_launch_for_test(
-        WorkspaceId("workspace".to_owned()),
-        CallerId("caller".to_owned()),
+        WorkspaceSessionId("workspace".to_owned()),
         "/workspace".into(),
         WorkspaceProfile::HostCompatible,
         LayerStackSnapshotRef {
@@ -357,7 +348,7 @@ fn public_dtos_construct_clone_and_compare() {
         include_stats: true,
     };
     let capture = CapturedWorkspaceChanges {
-        workspace_id: WorkspaceId("workspace".to_owned()),
+        workspace_session_id: WorkspaceSessionId("workspace".to_owned()),
         base_revision: base_revision.clone(),
         changed_paths: vec!["src/main.rs".to_owned()],
         changed_path_kinds: BTreeMap::from([("src/main.rs".to_owned(), ChangedPathKind::Write)]),
@@ -396,8 +387,7 @@ fn public_dtos_construct_clone_and_compare() {
         },
     };
     let destroy = DestroyWorkspaceResult {
-        workspace_id: WorkspaceId("workspace".to_owned()),
-        owner: CallerId("caller".to_owned()),
+        workspace_session_id: WorkspaceSessionId("workspace".to_owned()),
         evicted_upperdir_bytes: 0,
         lifetime_s: 0.0,
         lease_released: Some(true),

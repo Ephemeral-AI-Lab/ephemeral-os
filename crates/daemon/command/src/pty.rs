@@ -24,7 +24,7 @@ use serde_json::Value;
 
 use crate::{transcript::TranscriptTimestampPrefixer, CommandError};
 
-/// Cap on how long a single `write_stdin` pushes bytes into the PTY before
+/// Cap on how long a single `write_command_stdin` pushes bytes into the PTY before
 /// returning a structured backpressure error. The master is non-blocking, so a
 /// consumer that never drains its stdin cannot wedge the writer past this bound.
 const STDIN_WRITE_DEADLINE: Duration = Duration::from_secs(2);
@@ -219,7 +219,7 @@ impl PtyProcess {
     /// `WouldBlock` and we wait for writability only up to `STDIN_WRITE_DEADLINE`
     /// before returning a structured backpressure error. Cancel/terminate is a
     /// separate (`killpg`) path, so the command stays controllable throughout.
-    pub(crate) fn write_stdin(&self, bytes: &[u8]) -> io::Result<()> {
+    pub(crate) fn write_command_stdin(&self, bytes: &[u8]) -> io::Result<()> {
         let mut writer = lock(&self.writer);
         let deadline = Instant::now() + STDIN_WRITE_DEADLINE;
         let mut offset = 0;

@@ -5,10 +5,10 @@ use std::sync::Arc;
 
 use command::yield_wait_loop::WaitOutcome;
 use daemon_operation::command::{
-    CommandCallContext, CommandFinalizationOutcome, CommandFinalizedPolicy, CommandId,
-    CommandServiceError, CommandStatus, ExecCommandInput, PollCommandInput,
+    CommandCallContext, CommandFinalizationOutcome, CommandFinalizedPolicy, CommandServiceError,
+    CommandSessionId, CommandStatus, ExecCommandInput, PollCommandInput,
 };
-use workspace::{CallerId, WorkspaceId, WorkspaceProfile};
+use workspace::{CallerId, WorkspaceProfile, WorkspaceSessionId};
 
 use support::{
     assert_private_create_request, build_services, build_services_with_launch_driver,
@@ -19,7 +19,7 @@ use support::{
 fn exec_input(
     caller_id: &str,
     workspace_root: PathBuf,
-    workspace_session_id: Option<WorkspaceId>,
+    workspace_session_id: Option<WorkspaceSessionId>,
 ) -> ExecCommandInput {
     ExecCommandInput {
         caller_id: CallerId(caller_id.to_owned()),
@@ -46,37 +46,33 @@ fn command_exec_some_uses_resolved_session_without_workspace_create_or_destroy()
     let env = build_services(Arc::clone(&fake));
     let handler = env
         .workspace
-        .create_workspace_session(create_request("caller-1", workspace_root.clone()))
+        .create_workspace_session(create_request(workspace_root.clone()))
         .expect("session create succeeds");
     let create_count_before_exec = fake.create_requests().len();
 
     let output = env
         .command
-        .exec_command(
-            exec_input(
-                "caller-1",
-                workspace_root,
-                Some(handler.workspace_session_id.clone()),
-            ),
-            context("caller-1"),
-        )
+        .exec_command(exec_input(
+            "caller-1",
+            workspace_root,
+            Some(handler.workspace_session_id.clone()),
+        ))
         .expect("session command exec succeeds");
 
-    let command_id = output.command_id.expect("running command id is returned");
+    let command_session_id = output
+        .command_session_id
+        .expect("running command session id is returned");
     assert_eq!(output.status, CommandStatus::Running);
     assert_eq!(fake.create_requests().len(), create_count_before_exec);
     assert!(fake.destroy_calls().is_empty());
     let poll = env
         .command
-        .poll(
-            PollCommandInput {
-                command_id: command_id.clone(),
-                last_n_lines: Some(10),
-            },
-            context("caller-1"),
-        )
+        .poll(PollCommandInput {
+            command_session_id: command_session_id.clone(),
+            last_n_lines: Some(10),
+        })
         .expect("owner can poll session command");
-    assert_eq!(poll.command_id, command_id);
+    assert_eq!(poll.command_session_id, command_session_id);
     assert_eq!(poll.status, CommandStatus::Running);
 }
 
@@ -95,35 +91,30 @@ fn command_exec_none_creates_private_host_workspace_and_binds_it() {
 
     let output = env
         .command
-        .exec_command(
-            exec_input("caller-1", workspace_root.clone(), None),
-            context("caller-1"),
-        )
+        .exec_command(exec_input(workspace_root.clone(), None))
         .expect("one-shot command exec succeeds");
 
-    let command_id = output.command_id.expect("running command id is returned");
+    let command_session_id = output
+        .command_session_id
+        .expect("running command session id is returned");
     assert_eq!(output.status, CommandStatus::Running);
     assert_eq!(output.exit_code, None);
     let create_requests = fake.create_requests();
     assert_eq!(create_requests.len(), 1);
     assert_private_create_request(
         &create_requests[0],
-        "caller-1",
         &workspace_root,
         WorkspaceProfile::HostCompatible,
     );
     assert!(fake.destroy_calls().is_empty());
     let poll = env
         .command
-        .poll(
-            PollCommandInput {
-                command_id: command_id.clone(),
-                last_n_lines: Some(10),
-            },
-            context("caller-1"),
-        )
+        .poll(PollCommandInput {
+            command_session_id: command_session_id.clone(),
+            last_n_lines: Some(10),
+        })
         .expect("owner can poll one-shot command");
-    assert_eq!(poll.command_id, command_id);
+    assert_eq!(poll.command_session_id, command_session_id);
     assert_eq!(poll.status, CommandStatus::Running);
 }
 
@@ -135,10 +126,7 @@ fn command_exec_rejects_context_caller_mismatch_before_workspace_create() {
 
     let error = env
         .command
-        .exec_command(
-            exec_input("caller-1", workspace_root.clone(), None),
-            context("caller-2"),
-        )
+        .exec_command(exec_input(workspace_root.clone(), None))
         .expect_err("caller mismatch rejects before one-shot create");
 
     assert!(matches!(
@@ -157,12 +145,12 @@ fn command_exec_rejects_context_caller_mismatch_before_workspace_create() {
     )));
     let output = env
         .command
-        .exec_command(
-            exec_input("caller-1", workspace_root, None),
-            context("caller-1"),
-        )
+        .exec_command(exec_input(workspace_root, None))
         .expect("subsequent valid exec succeeds");
-    assert_eq!(output.command_id, Some(CommandId("cmd_1".to_owned())));
+    assert_eq!(
+        output.command_session_id,
+        Some(CommandSessionId("cmd_1".to_owned()))
+    );
 }
 
 #[test]
@@ -178,29 +166,29 @@ fn command_exec_spawn_failure_destroys_created_one_shot_workspace() {
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_spawn_error(CommandServiceError::CommandIo {
-        command_id: CommandId("cmd_1".to_owned()),
+        command_session_id: CommandSessionId("cmd_1".to_owned()),
         error: "spawn failed".to_owned(),
     });
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
 
     let error = env
         .command
-        .exec_command(
-            exec_input("caller-1", workspace_root, None),
-            context("caller-1"),
-        )
+        .exec_command(exec_input(workspace_root, None))
         .expect_err("spawn failure rejects exec");
 
     match error {
-        CommandServiceError::CommandIo { command_id, error } => {
-            assert_eq!(command_id, CommandId("cmd_1".to_owned()));
+        CommandServiceError::CommandIo {
+            command_session_id,
+            error,
+        } => {
+            assert_eq!(command_session_id, CommandSessionId("cmd_1".to_owned()));
             assert_eq!(error, "spawn failed");
         }
         other => panic!("expected command io error, got {other:?}"),
     }
     assert_eq!(
         fake.destroy_calls(),
-        vec![WorkspaceId("workspace-one-shot".to_owned())]
+        vec![WorkspaceSessionId("workspace-one-shot".to_owned())]
     );
     assert!(
         !env.command.config().scratch_root.join("cmd_1").exists(),
@@ -221,31 +209,28 @@ fn command_exec_spawn_failure_keeps_session_workspace_alive() {
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_spawn_error(CommandServiceError::CommandIo {
-        command_id: CommandId("cmd_1".to_owned()),
+        command_session_id: CommandSessionId("cmd_1".to_owned()),
         error: "spawn failed".to_owned(),
     });
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
     let handler = env
         .workspace
-        .create_workspace_session(create_request("caller-1", workspace_root.clone()))
+        .create_workspace_session(create_request(workspace_root.clone()))
         .expect("session create succeeds");
 
     let error = env
         .command
-        .exec_command(
-            exec_input(
-                "caller-1",
-                workspace_root,
-                Some(handler.workspace_session_id.clone()),
-            ),
-            context("caller-1"),
-        )
+        .exec_command(exec_input(
+            "caller-1",
+            workspace_root,
+            Some(handler.workspace_session_id.clone()),
+        ))
         .expect_err("spawn failure rejects session exec");
 
     assert!(matches!(
         error,
-        CommandServiceError::CommandIo { command_id, error }
-            if command_id == CommandId("cmd_1".to_owned()) && error == "spawn failed"
+        CommandServiceError::CommandIo { command_session_id, error }
+            if command_session_id == CommandSessionId("cmd_1".to_owned()) && error == "spawn failed"
     ));
     assert!(fake.destroy_calls().is_empty());
     assert!(
@@ -267,16 +252,19 @@ fn command_exec_passes_workspace_entry_to_spawn_paths() {
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
-    let mut input = exec_input("caller-1", workspace_root.clone(), None);
+    let mut input = exec_input(workspace_root.clone(), None);
     input.cwd = Some(PathBuf::from("/workspace/one-shot/src"));
     input.timeout_seconds = Some(2.5);
 
     let output = env
         .command
-        .exec_command(input, context("caller-1"))
+        .exec_command(input)
         .expect("one-shot command exec succeeds");
 
-    assert_eq!(output.command_id, Some(CommandId("cmd_1".to_owned())));
+    assert_eq!(
+        output.command_session_id,
+        Some(CommandSessionId("cmd_1".to_owned()))
+    );
     let observations = launch_driver.spawn_observations();
     assert_eq!(observations.len(), 1);
     let observation = &observations[0];
@@ -362,10 +350,7 @@ fn command_exec_missing_launch_material_destroys_one_shot_without_spawn() {
 
     let error = env
         .command
-        .exec_command(
-            exec_input("caller-1", workspace_root, None),
-            context("caller-1"),
-        )
+        .exec_command(exec_input(workspace_root, None))
         .expect_err("missing launch material rejects exec");
 
     assert!(matches!(
@@ -376,7 +361,7 @@ fn command_exec_missing_launch_material_destroys_one_shot_without_spawn() {
     assert!(launch_driver.spawn_observations().is_empty());
     assert_eq!(
         fake.destroy_calls(),
-        vec![WorkspaceId("workspace-one-shot".to_owned())]
+        vec![WorkspaceSessionId("workspace-one-shot".to_owned())]
     );
     assert!(
         !env.command.config().scratch_root.join("cmd_1").exists(),
@@ -400,10 +385,7 @@ fn command_exec_unavailable_workspace_launch_destroys_one_shot_without_spawn() {
 
     let error = env
         .command
-        .exec_command(
-            exec_input("caller-1", workspace_root, None),
-            context("caller-1"),
-        )
+        .exec_command(exec_input(workspace_root, None))
         .expect_err("unavailable workspace launch rejects exec");
 
     assert!(matches!(
@@ -414,7 +396,7 @@ fn command_exec_unavailable_workspace_launch_destroys_one_shot_without_spawn() {
     assert!(launch_driver.spawn_observations().is_empty());
     assert_eq!(
         fake.destroy_calls(),
-        vec![WorkspaceId("workspace-one-shot".to_owned())]
+        vec![WorkspaceSessionId("workspace-one-shot".to_owned())]
     );
     assert!(
         !env.command.config().scratch_root.join("cmd_1").exists(),
@@ -443,22 +425,19 @@ fn command_exec_artifact_directory_failure_destroys_one_shot_without_spawn() {
 
     let error = env
         .command
-        .exec_command(
-            exec_input("caller-1", workspace_root, None),
-            context("caller-1"),
-        )
+        .exec_command(exec_input(workspace_root, None))
         .expect_err("artifact directory failure rejects exec");
 
     assert!(matches!(
         error,
-        CommandServiceError::CommandIo { command_id, error }
-            if command_id == CommandId("cmd_1".to_owned())
+        CommandServiceError::CommandIo { command_session_id, error }
+            if command_session_id == CommandSessionId("cmd_1".to_owned())
                 && error.contains("command_artifact_directory")
     ));
     assert!(launch_driver.spawn_observations().is_empty());
     assert_eq!(
         fake.destroy_calls(),
-        vec![WorkspaceId("workspace-one-shot".to_owned())]
+        vec![WorkspaceSessionId("workspace-one-shot".to_owned())]
     );
 }
 
@@ -479,10 +458,7 @@ fn command_exec_initial_running_yield_returns_wait_loop_output() {
 
     let output = env
         .command
-        .exec_command(
-            exec_input("caller-1", workspace_root, None),
-            context("caller-1"),
-        )
+        .exec_command(exec_input(workspace_root, None))
         .expect("exec returns initial running yield");
 
     assert_eq!(output.status, CommandStatus::Running);
@@ -505,22 +481,21 @@ fn command_exec_initial_completed_session_returns_finalized_metadata() {
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
     let handler = env
         .workspace
-        .create_workspace_session(create_request("caller-1", workspace_root.clone()))
+        .create_workspace_session(create_request(workspace_root.clone()))
         .expect("session create succeeds");
 
     let output = env
         .command
-        .exec_command(
-            exec_input(
-                "caller-1",
-                workspace_root,
-                Some(handler.workspace_session_id.clone()),
-            ),
-            context("caller-1"),
-        )
+        .exec_command(exec_input(
+            "caller-1",
+            workspace_root,
+            Some(handler.workspace_session_id.clone()),
+        ))
         .expect("session command completes during initial yield");
 
-    let command_id = output.command_id.expect("command id is returned");
+    let command_session_id = output
+        .command_session_id
+        .expect("command session id is returned");
     assert_eq!(output.status, CommandStatus::Completed);
     assert_eq!(output.exit_code, Some(0));
     assert_eq!(output.output.stdout, "session done\n");
@@ -534,15 +509,12 @@ fn command_exec_initial_completed_session_returns_finalized_metadata() {
 
     let poll = env
         .command
-        .poll(
-            PollCommandInput {
-                command_id: command_id.clone(),
-                last_n_lines: None,
-            },
-            context("caller-1"),
-        )
+        .poll(PollCommandInput {
+            command_session_id: command_session_id.clone(),
+            last_n_lines: None,
+        })
         .expect("owner can poll completed session command");
-    assert_eq!(poll.command_id, command_id);
+    assert_eq!(poll.command_session_id, command_session_id);
     assert_eq!(poll.status, CommandStatus::Completed);
 }
 
@@ -567,14 +539,11 @@ fn command_exec_rejects_workspace_root_mismatch_before_command_allocation() {
 
     let error = env
         .command
-        .exec_command(
-            exec_input(
-                "caller-1",
-                PathBuf::from("/workspace/other"),
-                Some(handler.workspace_session_id),
-            ),
-            context("caller-1"),
-        )
+        .exec_command(exec_input(
+            "caller-1",
+            PathBuf::from("/workspace/other"),
+            Some(handler.workspace_session_id),
+        ))
         .expect_err("root mismatch is rejected");
 
     match error {
@@ -586,16 +555,16 @@ fn command_exec_rejects_workspace_root_mismatch_before_command_allocation() {
     }
     let output = env
         .command
-        .exec_command(
-            exec_input(
-                "caller-1",
-                PathBuf::from("/workspace/session"),
-                Some(WorkspaceId("workspace-session".to_owned())),
-            ),
-            context("caller-1"),
-        )
+        .exec_command(exec_input(
+            "caller-1",
+            PathBuf::from("/workspace/session"),
+            Some(WorkspaceSessionId("workspace-session".to_owned())),
+        ))
         .expect("subsequent valid exec succeeds");
-    assert_eq!(output.command_id, Some(CommandId("cmd_1".to_owned())));
+    assert_eq!(
+        output.command_session_id,
+        Some(CommandSessionId("cmd_1".to_owned()))
+    );
 }
 
 fn context(caller_id: &str) -> CommandCallContext {

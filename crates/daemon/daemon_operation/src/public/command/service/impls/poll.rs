@@ -1,14 +1,13 @@
 use super::command_poll_response;
 use crate::command::service::CommandOperationService;
 use crate::command::{
-    CommandCallContext, CommandId, CommandOutputSnapshot, CommandPollOutput, CommandServiceError,
-    CommandStatus, PollCommandInput,
+    CommandOutputSnapshot, CommandPollOutput, CommandServiceError, CommandSessionId, CommandStatus,
+    PollCommandInput,
 };
 use crate::operation::{
     ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationRequest, OperationResponse,
     OperationSpec,
 };
-use crate::workspace_crate::CallerId;
 use crate::DaemonOperations;
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
@@ -21,12 +20,12 @@ pub(crate) const SPEC: OperationSpec = OperationSpec {
 
 const POLL_ARGS: &[ArgSpec] = &[
     ArgSpec::required(
-        "command_id",
+        "command_session_id",
         ArgKind::String,
-        "Command id returned by exec_command.",
+        "Command session id returned by exec_command.",
         Some(ArgCliSpec {
             flag: None,
-            positional: Some("COMMAND_ID"),
+            positional: Some("COMMAND_SESSION_ID"),
         }),
     ),
     ArgSpec::optional(
@@ -44,7 +43,7 @@ const POLL_ARGS: &[ArgSpec] = &[
 const POLL_CLI: CliSpec = CliSpec {
     path: &["daemon", "commands", "poll"],
     usage:
-        "ephai-sandbox-gateway daemon --sandbox-id SID commands poll [--last-n-lines N] COMMAND_ID",
+        "ephai-sandbox-gateway daemon --sandbox-id SID commands poll [--last-n-lines N] COMMAND_SESSION_ID",
     examples: &[
         "ephai-sandbox-gateway daemon --sandbox-id sb-1 commands poll --last-n-lines 50 cmd-1",
     ],
@@ -58,45 +57,31 @@ pub(crate) fn dispatch(
         Ok(input) => input,
         Err(response) => return response,
     };
-    let context = match parse_context(&request) {
-        Ok(context) => context,
-        Err(response) => return response,
-    };
-    command_poll_response(&request, operations.command.poll(input, context))
+    command_poll_response(&request, operations.command.poll(input))
 }
 
 fn parse_input(request: &OperationRequest<'_>) -> Result<PollCommandInput, OperationResponse> {
     Ok(PollCommandInput {
-        command_id: CommandId(request.required_string("command_id")?),
+        command_session_id: CommandSessionId(request.required_string("command_session_id")?),
         last_n_lines: request.optional_usize("last_n_lines")?,
     })
 }
 
-fn parse_context(request: &OperationRequest<'_>) -> Result<CommandCallContext, OperationResponse> {
-    Ok(CommandCallContext {
-        caller_id: CallerId(request.optional_string("caller_id")?.unwrap_or_default()),
-    })
-}
-
 impl CommandOperationService {
-    pub fn poll(
-        &self,
-        input: PollCommandInput,
-        context: CommandCallContext,
-    ) -> Result<CommandPollOutput, CommandServiceError> {
-        let command_id = input.command_id;
-        if let Some(active) = self.active_for_owner_or_none(&command_id, &context.caller_id)? {
+    pub fn poll(&self, input: PollCommandInput) -> Result<CommandPollOutput, CommandServiceError> {
+        let command_session_id = input.command_session_id;
+        if let Some(active) = self.active_command_or_none(&command_session_id)? {
             if active.process.process_group_id().is_some() {
                 if let Some(process_exit) = active.process.take_exit() {
                     drop(active);
-                    let result = self.finalize_command(command_id.clone(), process_exit)?;
-                    let completed = self.completed_for_owner(&command_id, &context.caller_id)?;
+                    let result = self.finalize_command(command_session_id.clone(), process_exit)?;
+                    let completed = self.completed_command(&command_session_id)?;
                     let stdout = input.last_n_lines.map_or_else(
                         || result.stdout.clone(),
                         |last_n_lines| ::command::tail_lines(&result.stdout, last_n_lines),
                     );
                     return Ok(CommandPollOutput {
-                        command_id,
+                        command_session_id: command_session_id,
                         status: result.status,
                         exit_code: result.exit_code,
                         output: CommandOutputSnapshot { stdout },
@@ -108,7 +93,7 @@ impl CommandOperationService {
                 .process
                 .read_recent_output(input.last_n_lines.unwrap_or(200));
             return Ok(CommandPollOutput {
-                command_id,
+                command_session_id: command_session_id,
                 status: CommandStatus::Running,
                 exit_code: None,
                 output: CommandOutputSnapshot { stdout },
@@ -116,13 +101,13 @@ impl CommandOperationService {
             });
         }
 
-        let completed = self.completed_for_owner(&command_id, &context.caller_id)?;
+        let completed = self.completed_command(&command_session_id)?;
         let stdout = input.last_n_lines.map_or_else(
             || completed.result.stdout.clone(),
             |last_n_lines| ::command::tail_lines(&completed.result.stdout, last_n_lines),
         );
         Ok(CommandPollOutput {
-            command_id,
+            command_session_id: command_session_id,
             status: completed.result.status,
             exit_code: completed.result.exit_code,
             output: CommandOutputSnapshot { stdout },

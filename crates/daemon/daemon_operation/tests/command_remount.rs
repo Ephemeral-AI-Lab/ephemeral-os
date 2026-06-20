@@ -10,7 +10,7 @@ use command::process::{CommandProcess, CommandProcessExit, CommandProcessSpec};
 use command::yield_wait_loop::WaitOutcome;
 use daemon_operation::command::{
     CommandCallContext, CommandLaunchDriver, CommandOperationService, CommandServiceError,
-    ExecCommandInput, PollCommandInput, ReadCommandLinesInput, WriteStdinInput,
+    ExecCommandInput, PollCommandInput, ReadCommandLinesInput, WriteCommandStdinInput,
 };
 use daemon_operation::workspace_remount::{
     CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountService,
@@ -20,8 +20,8 @@ use workspace::{
     CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef,
     LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult,
-    WorkspaceError, WorkspaceHandle, WorkspaceId, WorkspaceProfile, WorkspaceRuntimeHooks,
-    WorkspaceRuntimeService,
+    WorkspaceError, WorkspaceHandle, WorkspaceProfile, WorkspaceRuntimeHooks,
+    WorkspaceRuntimeService, WorkspaceSessionId,
 };
 
 struct TestServices {
@@ -33,7 +33,7 @@ struct TestServices {
 #[derive(Default)]
 struct PendingGuardWorkspaceService {
     create_results: Mutex<VecDeque<Result<WorkspaceHandle, WorkspaceError>>>,
-    remount_calls: Mutex<Vec<WorkspaceId>>,
+    remount_calls: Mutex<Vec<WorkspaceSessionId>>,
     remount_notifier: Mutex<Option<mpsc::Sender<()>>>,
 }
 
@@ -52,7 +52,7 @@ impl PendingGuardWorkspaceService {
             .expect("test operation succeeds") = Some(notifier);
     }
 
-    fn remount_calls(&self) -> Vec<WorkspaceId> {
+    fn remount_calls(&self) -> Vec<WorkspaceSessionId> {
         self.remount_calls
             .lock()
             .expect("test operation succeeds")
@@ -114,7 +114,7 @@ impl PendingGuardWorkspaceService {
         _request: DestroyWorkspaceRequest,
     ) -> Result<DestroyWorkspaceResult, WorkspaceError> {
         Ok(DestroyWorkspaceResult {
-            workspace_id: handle.id,
+            workspace_session_id: handle.id,
             owner: handle.owner,
             evicted_upperdir_bytes: 0,
             lifetime_s: 0.0,
@@ -289,7 +289,10 @@ fn create_request_with_profile(
     }
 }
 
-fn exec_input(workspace_session_id: WorkspaceId, workspace_root: PathBuf) -> ExecCommandInput {
+fn exec_input(
+    workspace_session_id: WorkspaceSessionId,
+    workspace_root: PathBuf,
+) -> ExecCommandInput {
     ExecCommandInput {
         caller_id: CallerId("caller-1".to_owned()),
         workspace_root,
@@ -336,7 +339,7 @@ fn workspace_handle_with_profile(
         layer_paths: vec![PathBuf::from("/lower/one")],
     };
     WorkspaceHandle::holder_backed_for_test(
-        WorkspaceId(workspace_session_id.to_owned()),
+        WorkspaceSessionId(workspace_session_id.to_owned()),
         CallerId(caller_id.to_owned()),
         workspace_root,
         profile,
@@ -349,8 +352,8 @@ fn workspace_handle_with_profile(
 
 fn create_session_and_command() -> (
     TestServices,
-    WorkspaceId,
-    daemon_operation::command::CommandId,
+    WorkspaceSessionId,
+    daemon_operation::command::CommandSessionId,
 ) {
     let fake = Arc::new(PendingGuardWorkspaceService::default());
     let services = build_services(Arc::clone(&fake));
@@ -363,19 +366,19 @@ fn create_session_and_command() -> (
     )));
     let handler = services
         .workspace
-        .create_workspace_session(create_request("caller-1", workspace_root.clone()))
+        .create_workspace_session(create_request(workspace_root.clone()))
         .expect("create workspace session succeeds");
     let output = services
         .command
-        .exec_command(
-            exec_input(handler.workspace_session_id.clone(), workspace_root),
-            context("caller-1"),
-        )
+        .exec_command(exec_input(
+            handler.workspace_session_id.clone(),
+            workspace_root,
+        ))
         .expect("exec command succeeds");
     (
         services,
         handler.workspace_session_id,
-        output.command_id.expect("running command has id"),
+        output.command_session_id.expect("running command has id"),
     )
 }
 
@@ -422,16 +425,16 @@ fn command_remount_start_rejects_for_pending_isolated_workspace() {
 
     let error = services
         .command
-        .exec_command(
-            exec_input(handler.workspace_session_id.clone(), workspace_root),
-            context("caller-1"),
-        )
+        .exec_command(exec_input(
+            handler.workspace_session_id.clone(),
+            workspace_root,
+        ))
         .expect_err("exec rejects pending isolated remount");
 
     assert!(matches!(
         error,
         CommandServiceError::WorkspaceSessionRemountPending { workspace_session_id }
-            if workspace_session_id == WorkspaceId("workspace-1".to_owned())
+            if workspace_session_id == WorkspaceSessionId("workspace-1".to_owned())
     ));
 }
 
@@ -448,7 +451,7 @@ fn command_remount_start_rejects_for_pending_persistent_workspace() {
     )));
     let handler = services
         .workspace
-        .create_workspace_session(create_request("caller-1", workspace_root.clone()))
+        .create_workspace_session(create_request(workspace_root.clone()))
         .expect("create workspace session succeeds");
     services
         .workspace
@@ -457,16 +460,16 @@ fn command_remount_start_rejects_for_pending_persistent_workspace() {
 
     let error = services
         .command
-        .exec_command(
-            exec_input(handler.workspace_session_id.clone(), workspace_root),
-            context("caller-1"),
-        )
+        .exec_command(exec_input(
+            handler.workspace_session_id.clone(),
+            workspace_root,
+        ))
         .expect_err("exec rejects pending remount");
 
     assert!(matches!(
         error,
         CommandServiceError::WorkspaceSessionRemountPending { workspace_session_id }
-            if workspace_session_id == WorkspaceId("workspace-1".to_owned())
+            if workspace_session_id == WorkspaceSessionId("workspace-1".to_owned())
     ));
 }
 
@@ -493,16 +496,13 @@ fn command_remount_waits_for_in_flight_persistent_exec_admission() {
     )));
     let handler = services
         .workspace
-        .create_workspace_session(create_request("caller-1", workspace_root.clone()))
+        .create_workspace_session(create_request(workspace_root.clone()))
         .expect("create workspace session succeeds");
 
     let exec_command = Arc::clone(&services.command);
     let exec_workspace_session_id = handler.workspace_session_id.clone();
     let exec_thread = thread::spawn(move || {
-        exec_command.exec_command(
-            exec_input(exec_workspace_session_id, workspace_root),
-            context("caller-1"),
-        )
+        exec_command.exec_command(exec_input(exec_workspace_session_id, workspace_root))
     });
     spawn_started_rx
         .recv_timeout(Duration::from_secs(1))
@@ -524,7 +524,7 @@ fn command_remount_waits_for_in_flight_persistent_exec_admission() {
         .join()
         .expect("exec thread does not panic")
         .expect("exec succeeds");
-    assert!(output.command_id.is_some());
+    assert!(output.command_session_id.is_some());
 
     let outcome = remount_thread
         .join()
@@ -539,7 +539,7 @@ fn command_remount_waits_for_in_flight_persistent_exec_admission() {
 
 #[test]
 fn command_remount_stdin_rejects_for_active_command_when_workspace_becomes_pending() {
-    let (services, workspace_session_id, command_id) = create_session_and_command();
+    let (services, workspace_session_id, command_session_id) = create_session_and_command();
     services
         .workspace
         .begin_remount(workspace_session_id.clone())
@@ -547,14 +547,11 @@ fn command_remount_stdin_rejects_for_active_command_when_workspace_becomes_pendi
 
     let error = services
         .command
-        .write_stdin(
-            WriteStdinInput {
-                command_id: command_id.clone(),
-                chars: "input".to_owned(),
-                yield_time_ms: Some(0),
-            },
-            context("caller-1"),
-        )
+        .write_command_stdin(WriteCommandStdinInput {
+            command_session_id: command_session_id.clone(),
+            chars: "input".to_owned(),
+            yield_time_ms: Some(0),
+        })
         .expect_err("stdin rejects pending remount");
 
     assert!(matches!(
@@ -566,7 +563,7 @@ fn command_remount_stdin_rejects_for_active_command_when_workspace_becomes_pendi
 
 #[test]
 fn command_remount_read_lines_and_poll_remain_allowed_while_pending() {
-    let (services, workspace_session_id, command_id) = create_session_and_command();
+    let (services, workspace_session_id, command_session_id) = create_session_and_command();
     services
         .workspace
         .begin_remount(workspace_session_id)
@@ -574,24 +571,18 @@ fn command_remount_read_lines_and_poll_remain_allowed_while_pending() {
 
     let rows = services
         .command
-        .read_lines(
-            ReadCommandLinesInput {
-                command_id: command_id.clone(),
-                offset: 0,
-                limit: 10,
-            },
-            context("caller-1"),
-        )
+        .read_command_lines(ReadCommandLinesInput {
+            command_session_id: command_session_id.clone(),
+            start_offset: 0,
+            limit: 10,
+        })
         .expect("read lines remains allowed");
     let poll = services
         .command
-        .poll(
-            PollCommandInput {
-                command_id,
-                last_n_lines: Some(5),
-            },
-            context("caller-1"),
-        )
+        .poll(PollCommandInput {
+            command_session_id,
+            last_n_lines: Some(5),
+        })
         .expect("poll remains allowed");
 
     assert_eq!(
@@ -606,7 +597,7 @@ fn command_remount_read_lines_and_poll_remain_allowed_while_pending() {
 
 #[test]
 fn command_remount_wrong_caller_does_not_observe_pending_state() {
-    let (services, workspace_session_id, command_id) = create_session_and_command();
+    let (services, workspace_session_id, command_session_id) = create_session_and_command();
     services
         .workspace
         .begin_remount(workspace_session_id)
@@ -614,21 +605,18 @@ fn command_remount_wrong_caller_does_not_observe_pending_state() {
 
     let error = services
         .command
-        .write_stdin(
-            WriteStdinInput {
-                command_id: command_id.clone(),
-                chars: "input".to_owned(),
-                yield_time_ms: Some(0),
-            },
-            context("caller-2"),
-        )
+        .write_command_stdin(WriteCommandStdinInput {
+            command_session_id: command_session_id.clone(),
+            chars: "input".to_owned(),
+            yield_time_ms: Some(0),
+        })
         .expect_err("wrong caller remains authorization failure");
 
     assert!(matches!(
         error,
-        CommandServiceError::CommandCallerMismatch { command_id: id, .. } if id == command_id
+        CommandServiceError::CommandCallerMismatch { command_session_id: id, .. } if id == command_session_id
     ));
     assert!(services
         .workspace
-        .is_remount_pending(&WorkspaceId("workspace-1".to_owned())));
+        .is_remount_pending(&WorkspaceSessionId("workspace-1".to_owned())));
 }

@@ -1,13 +1,13 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use crate::command::{CommandId, CommandLifecycleState, CommandProcessStore};
+use crate::command::{CommandLifecycleState, CommandProcessStore, CommandSessionId};
 use ::command::process_group::{ProcessGroupController, ProcessGroupInspection};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CommandRemountInspection {
     pub active_commands: usize,
-    pub command_ids: Vec<CommandId>,
+    pub command_session_ids: Vec<CommandSessionId>,
     pub process_group_ids: Vec<i32>,
     pub process_count: usize,
     pub quiesced_process_count: usize,
@@ -100,7 +100,7 @@ impl RemountCancellationToken {
 pub struct CommandRemountQuiesce {
     pub(crate) inspection: CommandRemountInspection,
     pub(crate) held_process_group_ids: Vec<i32>,
-    pub(crate) command_ids: Vec<CommandId>,
+    pub(crate) command_session_ids: Vec<CommandSessionId>,
     pub(crate) process_store: Arc<CommandProcessStore>,
     pub(crate) cancellation: RemountCancellationToken,
     pub(crate) switch_state: RemountSwitchState,
@@ -112,7 +112,7 @@ impl std::fmt::Debug for CommandRemountQuiesce {
         f.debug_struct("CommandRemountQuiesce")
             .field("inspection", &self.inspection)
             .field("held_process_group_ids", &self.held_process_group_ids)
-            .field("command_ids", &self.command_ids)
+            .field("command_session_ids", &self.command_session_ids)
             .field("cancellation", &self.cancellation)
             .field("switch_state", &self.switch_state)
             .finish_non_exhaustive()
@@ -137,17 +137,18 @@ impl CommandRemountQuiesce {
 
     pub fn set_switch_state(&mut self, state: RemountSwitchState) {
         self.switch_state = state;
-        for command_id in &self.command_ids {
+        for command_session_id in &self.command_session_ids {
             let cancellation = self.cancellation.clone();
-            self.process_store.update_active(command_id, |active| {
-                if active
-                    .remount_cancellation
-                    .as_ref()
-                    .is_some_and(|token| token.same_token(&cancellation))
-                {
-                    active.remount_switch_state = Some(state);
-                }
-            });
+            self.process_store
+                .update_active(command_session_id, |active| {
+                    if active
+                        .remount_cancellation
+                        .as_ref()
+                        .is_some_and(|token| token.same_token(&cancellation))
+                    {
+                        active.remount_switch_state = Some(state);
+                    }
+                });
         }
     }
 
@@ -178,25 +179,26 @@ impl CommandRemountQuiesce {
     }
 
     fn resume_command_records(&self) {
-        for command_id in &self.command_ids {
+        for command_session_id in &self.command_session_ids {
             let cancellation = self.cancellation.clone();
-            self.process_store.update_active(command_id, |active| {
-                if !active
-                    .remount_cancellation
-                    .as_ref()
-                    .is_some_and(|token| token.same_token(&cancellation))
-                {
-                    return;
-                }
-                active.remount_cancellation = None;
-                active.remount_switch_state = None;
-                if cancellation.is_cancelled() {
-                    active.process.cancel_process();
-                    active.lifecycle_state = CommandLifecycleState::Cancelled;
-                } else {
-                    active.lifecycle_state = CommandLifecycleState::Running;
-                }
-            });
+            self.process_store
+                .update_active(command_session_id, |active| {
+                    if !active
+                        .remount_cancellation
+                        .as_ref()
+                        .is_some_and(|token| token.same_token(&cancellation))
+                    {
+                        return;
+                    }
+                    active.remount_cancellation = None;
+                    active.remount_switch_state = None;
+                    if cancellation.is_cancelled() {
+                        active.process.cancel_process();
+                        active.lifecycle_state = CommandLifecycleState::Cancelled;
+                    } else {
+                        active.lifecycle_state = CommandLifecycleState::Running;
+                    }
+                });
         }
     }
 }

@@ -1,4 +1,4 @@
-use crate::workspace_crate::{RemountWorkspaceRequest, WorkspaceId};
+use crate::workspace_crate::{RemountWorkspaceRequest, WorkspaceSessionId};
 use crate::workspace_session::{
     WorkspaceSessionError, WorkspaceSessionHandler, WorkspaceSessionService,
 };
@@ -6,7 +6,7 @@ use crate::workspace_session::{
 pub trait RemountWorkspaceSession: Send + Sync {
     fn begin_remount(
         &self,
-        workspace_session_id: WorkspaceId,
+        workspace_session_id: WorkspaceSessionId,
     ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError>;
 
     fn apply_and_finish_remount(
@@ -15,14 +15,16 @@ pub trait RemountWorkspaceSession: Send + Sync {
         request: RemountWorkspaceRequest,
     ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError>;
 
-    fn block_remount(&self, workspace_session_id: WorkspaceId)
-        -> Result<(), WorkspaceSessionError>;
+    fn block_remount(
+        &self,
+        workspace_session_id: WorkspaceSessionId,
+    ) -> Result<(), WorkspaceSessionError>;
 }
 
 impl RemountWorkspaceSession for WorkspaceSessionService {
     fn begin_remount(
         &self,
-        workspace_session_id: WorkspaceId,
+        workspace_session_id: WorkspaceSessionId,
     ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {
         WorkspaceSessionService::begin_remount(self, workspace_session_id)
     }
@@ -37,7 +39,7 @@ impl RemountWorkspaceSession for WorkspaceSessionService {
 
     fn block_remount(
         &self,
-        workspace_session_id: WorkspaceId,
+        workspace_session_id: WorkspaceSessionId,
     ) -> Result<(), WorkspaceSessionError> {
         WorkspaceSessionService::block_remount(self, workspace_session_id)
     }

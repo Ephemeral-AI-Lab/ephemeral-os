@@ -9,8 +9,8 @@ use daemon_operation::workspace_session::WorkspaceSessionService;
 use daemon_operation::DaemonOperations;
 use workspace::{
     CallerId, CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest,
-    LatestSnapshotRequest, RemountWorkspaceRequest, WorkspaceError, WorkspaceHandle, WorkspaceId,
-    WorkspaceRuntimeHooks, WorkspaceRuntimeService,
+    LatestSnapshotRequest, RemountWorkspaceRequest, WorkspaceError, WorkspaceHandle,
+    WorkspaceRuntimeHooks, WorkspaceRuntimeService, WorkspaceSessionId,
 };
 
 fn workspace_session() -> Arc<WorkspaceSessionService> {
@@ -80,7 +80,7 @@ fn command_contract_keeps_roots_and_call_context_separate() {
     let input = ExecCommandInput {
         caller_id: CallerId("caller-1".to_owned()),
         workspace_root: PathBuf::from("/workspace"),
-        workspace_session_id: Some(WorkspaceId("workspace-1".to_owned())),
+        workspace_session_id: Some(WorkspaceSessionId("workspace-1".to_owned())),
         cmd: "pwd".to_owned(),
         cwd: None,
         timeout_seconds: None,
@@ -93,7 +93,7 @@ fn command_contract_keeps_roots_and_call_context_separate() {
     assert_eq!(input.workspace_root, PathBuf::from("/workspace"));
     assert_eq!(
         input.workspace_session_id,
-        Some(WorkspaceId("workspace-1".to_owned()))
+        Some(WorkspaceSessionId("workspace-1".to_owned()))
     );
     assert_eq!(context.caller_id, CallerId("caller-1".to_owned()));
 }

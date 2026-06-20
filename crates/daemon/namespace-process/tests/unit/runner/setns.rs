@@ -122,8 +122,7 @@ fn dns_fallback_applies_only_to_loopback_first_nameserver() {
 
 fn request(ns_fds: Option<NsFds>) -> NamespaceCommandRequest {
     NamespaceCommandRequest {
-        invocation_id: "test".to_owned(),
-        caller_id: "caller".to_owned(),
+        request_id: "test".to_owned(),
         args: serde_json::json!({"command": "true"}),
         workspace_root: WorkspaceRoot(Path::new("/workspace").to_path_buf()),
         layer_paths: vec![],

@@ -9,11 +9,11 @@ mod process_store;
 pub(crate) mod transcript;
 
 pub use contract::{
-    CancelCommandInput, CommandCallContext, CommandFinalizationOutcome, CommandFinalizedMetadata,
-    CommandFinalizedPolicy, CommandId, CommandLinesOutput, CommandOutputSnapshot,
-    CommandPollOutput, CommandStatus, CommandStream, CommandTranscriptRow,
+    CancelCommandInput, CommandFinalizationOutcome, CommandFinalizedMetadata,
+    CommandFinalizedPolicy, CommandLinesOutput, CommandOutputSnapshot, CommandPollOutput,
+    CommandSessionId, CommandStatus, CommandStream, CommandTranscriptRow,
     CommandWorkspaceDestroyMetadata, CommandYield, ExecCommandInput, PollCommandInput,
-    ReadCommandLinesInput, WriteStdinInput,
+    ReadCommandLinesInput, WriteCommandStdinInput,
 };
 pub use core::CommandOperationService;
 pub use launch::{CommandLaunchDriver, RealCommandLaunchDriver};

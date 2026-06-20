@@ -10,7 +10,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use anyhow::{bail, Context, Result};
 use serde_json::json;
 
-use crate::daemon_wire::{response_is_accepted, ProtocolClient, HEARTBEAT_OP};
+use crate::daemon_wire::{ProtocolClient, READY_OP};
 
 const DAEMON_AUTH_TOKEN_ENV: &str = "EOS_DAEMON_AUTH_TOKEN";
 const DAEMON_FORWARD_AUTH_TOKEN_ENV: &str = "EOS_DAEMON_FORWARD_AUTH_TOKEN";
@@ -423,9 +423,8 @@ fn await_ready(client: &ProtocolClient, budget: Duration) -> Result<()> {
     let deadline = Instant::now() + budget;
     let mut delay = Duration::from_millis(150);
     loop {
-        let observed = match client.request(HEARTBEAT_OP, "ready-probe", &json!({})) {
-            Ok(resp) if response_is_accepted(&resp) => return Ok(()),
-            Ok(resp) => format!("non-success heartbeat: {resp}"),
+        let observed = match client.request(READY_OP, "ready-probe", &json!({})) {
+            Ok(_) => return Ok(()),
             Err(err) => err.to_string(),
         };
         if Instant::now() >= deadline {

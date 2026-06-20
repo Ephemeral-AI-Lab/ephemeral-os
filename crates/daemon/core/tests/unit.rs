@@ -5,8 +5,8 @@
 pub(crate) mod dispatch;
 #[path = "../src/error.rs"]
 pub(crate) mod error;
-#[path = "../src/invocation_registry.rs"]
-pub(crate) mod invocation_registry;
+#[path = "../src/request_registry.rs"]
+pub(crate) mod request_registry;
 #[path = "../src/response.rs"]
 pub(crate) mod response;
 #[path = "../src/transport/mod.rs"]
@@ -15,8 +15,8 @@ pub(crate) mod transport;
 pub mod wire;
 
 pub(crate) use dispatch::dispatcher;
-pub(crate) use invocation_registry::{
-    InFlightRegistry, InvocationCancelResult, DEFAULT_REAPER_INTERVAL_S, DEFAULT_TTL_S,
+pub(crate) use request_registry::{
+    InFlightRegistry, RequestCancelResult, DEFAULT_REAPER_INTERVAL_S, DEFAULT_TTL_S,
 };
 pub(crate) use serde_json::Value;
 pub(crate) use transport::server;
@@ -27,8 +27,8 @@ pub use server::{DaemonServer, ServerConfig};
 
 #[path = "unit/dependency_guard.rs"]
 mod dependency_guard_tests;
-#[path = "unit/invocation_registry/mod.rs"]
-mod invocation_registry_tests;
+#[path = "unit/request_registry/mod.rs"]
+mod request_registry_tests;
 #[path = "unit/wire/message.rs"]
 mod wire_message_tests;
 

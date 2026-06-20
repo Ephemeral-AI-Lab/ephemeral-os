@@ -95,14 +95,16 @@ fn generic_daemon_op_accepts_json_args_and_sandbox() -> Result<()> {
     let request = request_from_daemon(
         vec![
             "op".to_owned(),
-            "sandbox.command.count".to_owned(),
-            r#"{"path":"README.md"}"#.to_owned(),
+            "read_command_lines".to_owned(),
+            r#"{"command_session_id":"cmd-1","start_offset":0,"limit":10}"#.to_owned(),
         ],
         &daemon_options(),
     )?;
 
-    assert_eq!(request.op, "sandbox.command.count");
+    assert_eq!(request.op, "read_command_lines");
     assert_eq!(request.sandbox_id.as_deref(), Some("sb-1"));
-    assert_eq!(request.args["path"], json!("README.md"));
+    assert_eq!(request.args["command_session_id"], json!("cmd-1"));
+    assert_eq!(request.args["start_offset"], json!(0));
+    assert_eq!(request.args["limit"], json!(10));
     Ok(())
 }

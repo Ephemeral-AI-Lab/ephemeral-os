@@ -31,7 +31,6 @@ pub struct DnsConfiguration {
 pub struct WorkspaceModeHandle {
     pub workspace_id: WorkspaceModeId,
     pub profile: WorkspaceProfile,
-    pub caller_id: String,
     pub lease_id: String,
     pub manifest_version: i64,
     pub manifest_root_hash: String,

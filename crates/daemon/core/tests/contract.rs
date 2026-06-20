@@ -24,7 +24,7 @@ macro_rules! fixture {
 /// Requests are byte-identity: decode -> encode == original.
 #[test]
 fn requests_byte_stable() -> TestResult {
-    let raws: &[&[u8]] = &[fixture!("heartbeat_request.json")];
+    let raws: &[&[u8]] = &[fixture!("exec_command_request.json")];
     for raw in raws {
         let env = decode(raw)?;
         match &env {
@@ -51,7 +51,6 @@ fn requests_byte_stable() -> TestResult {
 #[test]
 fn responses_canonical_stable() -> TestResult {
     let raws: &[&[u8]] = &[
-        fixture!("heartbeat_response.json"),
         fixture!("readiness_response.json"),
         fixture!("error_unknown_op.json"),
         fixture!("error_request_too_large.json"),
@@ -98,7 +97,7 @@ fn readiness_response_canonicalizes_dynamic_runtime_fields() -> TestResult {
 /// The required protocol-version field lives INSIDE args.
 #[test]
 fn protocol_version_field_inside_args() -> TestResult {
-    let raw = fixture!("heartbeat_request.json");
+    let raw = fixture!("exec_command_request.json");
     let value: Value = serde_json::from_slice(raw)?;
     assert!(value.get("_eos_daemon_protocol_version").is_none());
     assert_eq!(

@@ -4,8 +4,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use serde_json::json;
 
 use workspace::model::{
-    CallerId, CreateWorkspaceRequest, DestroyWorkspaceRequest, LatestSnapshotRequest,
-    WorkspaceProfile,
+    CreateWorkspaceRequest, DestroyWorkspaceRequest, LatestSnapshotRequest, WorkspaceProfile,
 };
 use workspace::profile::{ResourceCaps, WorkspaceModeManager};
 use workspace::WorkspaceRuntimeService;
@@ -39,13 +38,11 @@ fn runtime_service_create_and_destroy_are_backed_by_impl_files() -> TestResult {
     let service = fixture.service();
 
     let handle = service.create_workspace(CreateWorkspaceRequest {
-        caller_id: CallerId("caller-1".to_owned()),
         workspace_root: fixture.workspace_root.clone(),
         layer_stack_root: fixture.layer_stack_root.clone(),
         profile: WorkspaceProfile::HostCompatible,
     })?;
 
-    assert_eq!(handle.owner, CallerId("caller-1".to_owned()));
     assert_eq!(handle.workspace_root, fixture.workspace_root);
     assert_eq!(handle.profile, WorkspaceProfile::HostCompatible);
     assert_eq!(handle.snapshot.manifest_version, 1);
@@ -56,7 +53,6 @@ fn runtime_service_create_and_destroy_are_backed_by_impl_files() -> TestResult {
 
     let destroyed = service.destroy_workspace(handle, DestroyWorkspaceRequest::default())?;
 
-    assert_eq!(destroyed.owner, CallerId("caller-1".to_owned()));
     assert_eq!(destroyed.lease_released, Some(true));
     assert_eq!(destroyed.lease_release_error, None);
     assert_eq!(destroyed.active_leases_after, 0);

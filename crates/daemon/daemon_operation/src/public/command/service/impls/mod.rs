@@ -1,8 +1,8 @@
 mod cancel;
 mod exec_command;
 mod poll;
-mod read_lines;
-mod write_stdin;
+mod read_command_lines;
+mod write_command_stdin;
 
 use serde_json::{json, Map, Value};
 
@@ -15,17 +15,17 @@ use crate::operation::{OperationEntry, OperationRequest, OperationResponse, Oper
 
 pub(crate) const OPERATIONS: &[OperationEntry] = &[
     OperationEntry::new(&exec_command::SPEC, exec_command::dispatch),
-    OperationEntry::new(&write_stdin::SPEC, write_stdin::dispatch),
+    OperationEntry::new(&write_command_stdin::SPEC, write_command_stdin::dispatch),
     OperationEntry::new(&poll::SPEC, poll::dispatch),
-    OperationEntry::new(&read_lines::SPEC, read_lines::dispatch),
+    OperationEntry::new(&read_command_lines::SPEC, read_command_lines::dispatch),
     OperationEntry::new(&cancel::SPEC, cancel::dispatch),
 ];
 
 pub(crate) const SPECS: &[&OperationSpec] = &[
     &exec_command::SPEC,
-    &write_stdin::SPEC,
+    &write_command_stdin::SPEC,
     &poll::SPEC,
-    &read_lines::SPEC,
+    &read_command_lines::SPEC,
     &cancel::SPEC,
 ];
 
@@ -70,7 +70,7 @@ pub(super) fn command_lines_response(
 
 fn command_yield_value(output: CommandYield) -> Value {
     json!({
-        "command_id": output.command_id.map(|command_id| command_id.0),
+        "command_session_id": output.command_session_id.map(|command_session_id| command_session_id.0),
         "status": status_name(output.status),
         "exit_code": output.exit_code,
         "output": { "stdout": output.output.stdout },
@@ -80,7 +80,7 @@ fn command_yield_value(output: CommandYield) -> Value {
 
 fn command_poll_value(output: CommandPollOutput) -> Value {
     json!({
-        "command_id": output.command_id.0,
+        "command_session_id": output.command_session_id.0,
         "status": status_name(output.status),
         "exit_code": output.exit_code,
         "output": { "stdout": output.output.stdout },
@@ -90,11 +90,11 @@ fn command_poll_value(output: CommandPollOutput) -> Value {
 
 fn command_lines_value(output: CommandLinesOutput) -> Value {
     json!({
-        "command_id": output.command_id.0,
+        "command_session_id": output.command_session_id.0,
         "status": status_name(output.status),
         "exit_code": output.exit_code,
-        "offset": output.offset,
-        "next_offset": output.next_offset,
+        "start_offset": output.start_offset,
+        "end_offset": output.end_offset,
         "total_lines": output.total_lines,
         "truncated_before": output.truncated_before,
         "output_truncated": output.output_truncated,

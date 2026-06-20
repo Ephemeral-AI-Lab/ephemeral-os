@@ -77,18 +77,17 @@ pub(crate) fn handle(engine: &dyn Engine, surface: Surface, request: &ClientRequ
             engine.container_remove(args)
         }),
         "exec_command"
-        | "write_stdin"
+        | "write_command_stdin"
         | "poll"
-        | "read_lines"
+        | "read_command_lines"
         | "cancel"
         | "sandbox.call.cancel"
-        | "sandbox.run.end" => forward(engine, request, true),
-        "sandbox.call.count" | "sandbox.command.count" => forward(engine, request, false),
+        | "sandbox.run.end" => forward(engine, request),
         "sandbox.run.cancel_all" => {
             if surface != Surface::Operator {
                 return forbidden_socket(request);
             }
-            forward(engine, request, true)
+            forward(engine, request)
         }
         "sandbox.runtime.ready" => forbidden_socket(request),
         _ => unknown_op(request),
@@ -107,7 +106,7 @@ fn operator_host_value(
     host_value_response(request, call(engine, &request.args))
 }
 
-fn forward(engine: &dyn Engine, request: &ClientRequest, mutates_state: bool) -> Value {
+fn forward(engine: &dyn Engine, request: &ClientRequest) -> Value {
     let Some(sandbox_id) = request.sandbox_id.as_deref() else {
         return error_response_for(
             request,
@@ -117,9 +116,8 @@ fn forward(engine: &dyn Engine, request: &ClientRequest, mutates_state: bool) ->
     };
     match engine.forward(host::HostForwardRequest {
         sandbox_id,
-        mutates_state,
         op: &request.op,
-        invocation_id: &request.invocation_id,
+        request_id: &request.request_id,
         args: &request.args,
     }) {
         Some(Ok(response)) => response,

@@ -26,14 +26,14 @@ pub enum ProtocolError {
     NotAnObject,
 }
 
-/// Request message (host -> daemon): `{op, invocation_id, args}`.
+/// Request message (host -> daemon): `{op, request_id, args}`.
 ///
 /// Field order on the wire is exactly this; top-level keys are not sorted by the
 /// daemon.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Request {
     pub op: String,
-    pub invocation_id: String,
+    pub request_id: String,
     pub args: Value,
 }
 

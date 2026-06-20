@@ -1,9 +1,7 @@
 use serde_json::Value;
 
 use crate::container::DaemonContainer;
-use crate::daemon_wire::{
-    encode_request_with_forward_metadata, response_is_accepted, ProtocolClient, HEARTBEAT_OP,
-};
+use crate::daemon_wire::{encode_request_with_forward_metadata, ProtocolClient, READY_OP};
 
 use super::{
     retry_attempt_index, tcp_once, tcp_with_connect_backoff, ForwardAttempt, ForwardError,
@@ -34,14 +32,11 @@ pub(super) fn run_recovery(attempt: &ForwardAttempt<'_>) -> Result<Value, Forwar
             Err(err) => fallback_chain(attempt, &unavailable("re-resolve endpoint", &err)),
         },
         Err(err) => {
-            if attempt.mutates_state {
-                restore_if_unreachable(attempt);
-                return Err(ForwardError::UncertainOutcome(format!(
-                    "{}: {err}",
-                    attempt.record.sandbox_id
-                )));
-            }
-            fallback_chain(attempt, &unavailable("tcp request", &err))
+            restore_if_unreachable(attempt);
+            Err(ForwardError::UncertainOutcome(format!(
+                "{}: {err}",
+                attempt.record.sandbox_id
+            )))
         }
     }
 }
@@ -51,7 +46,7 @@ fn restore_if_unreachable(attempt: &ForwardAttempt<'_>) {
         let _forward_guard = attempt.record.begin_forward();
         let client = ProtocolClient::new(endpoint, None, std::time::Duration::from_secs(2));
         let mut line = encode_request_with_forward_metadata(
-            HEARTBEAT_OP,
+            READY_OP,
             "recovery-probe",
             &Value::Object(serde_json::Map::new()),
             Some(&attempt.record.forward_token),
@@ -59,7 +54,7 @@ fn restore_if_unreachable(attempt: &ForwardAttempt<'_>) {
         line.push(b'\n');
         client.request_raw(&line).ok()
     });
-    if probe.is_some_and(|resp| response_is_accepted(&resp)) {
+    if probe.is_some() {
         return;
     }
     let _ = respawn_and_gate(attempt);
@@ -76,19 +71,10 @@ fn fallback_chain(
         let message = format!("{failure}; respawn failed: {err:#}");
         ForwardError::SandboxUnavailable(message)
     })?;
-    if attempt.mutates_state {
-        return Err(ForwardError::UncertainOutcome(format!(
-            "{}: daemon respawned after a delivery-ambiguous failure; the original outcome is unknowable",
-            attempt.record.sandbox_id
-        )));
-    }
-    let endpoint = resolve_endpoint(attempt.record).map_err(|err| {
-        ForwardError::SandboxUnavailable(format!("resolve after respawn: {err:#}"))
-    })?;
-    tcp_once(attempt, endpoint, retry_attempt_index()).map_err(|err| {
-        let message = format!("replay after respawn: {err}");
-        ForwardError::SandboxUnavailable(message)
-    })
+    Err(ForwardError::UncertainOutcome(format!(
+        "{}: daemon respawned after a delivery-ambiguous failure; the original outcome is unknowable",
+        attempt.record.sandbox_id
+    )))
 }
 
 fn exec_thin_client(attempt: &ForwardAttempt<'_>) -> anyhow::Result<Value> {
@@ -107,7 +93,7 @@ fn exec_thin_client(attempt: &ForwardAttempt<'_>) -> anyhow::Result<Value> {
         .into_owned();
     let payload = String::from_utf8(encode_request_with_forward_metadata(
         attempt.op,
-        attempt.invocation_id,
+        attempt.request_id,
         attempt.args,
         None,
     ))?;

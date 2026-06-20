@@ -24,10 +24,10 @@ The caller never talks to the per-sandbox daemon directly.
 Each request is a compact JSON object followed by `\n`:
 
 ```json
-{"op":"sandbox.command.exec","sandbox_id":"sb-...","invocation_id":"00000000000000000000000000000001","args":{"command":"pwd"}}
+{"op":"exec_command","sandbox_id":"sb-...","request_id":"00000000000000000000000000000001","args":{"workspace_root":"/testbed","cmd":"pwd"}}
 ```
 
-`op`, `invocation_id`, and `args` are required. `sandbox_id` is required for
+`op`, `request_id`, and `args` are required. `sandbox_id` is required for
 daemon-bound operations and for host operations that target an existing sandbox.
 
 ## Useful Commands

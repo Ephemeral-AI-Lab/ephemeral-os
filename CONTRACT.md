@@ -61,7 +61,7 @@ is nested at `result.status`. A naive client that reads only the envelope
 ```jsonc
 // Command still running: envelope ok, domain running.
 { "status": "ok",
-  "result": { "status": "running", "command_id": "cmd-7f3a", "output": "" },
+  "result": { "status": "running", "command_session_id": "cmd-7f3a", "output": "" },
   "meta": { "envelope_version": 2, /* ... */ } }
 
 // command_not_found: transport still succeeded (envelope ok),
@@ -98,11 +98,14 @@ When any version must change:
      request fixtures was rewritten to the canonical `sandbox.*` spellings.
    - **Envelope `protocol_version` → `envelope_version` rename.** The response
      envelope `meta` field was renamed to disambiguate it from the wire
-     `protocol_version` (§1 vs §2). The four response fixtures that carry
-     `meta.envelope_version` (`heartbeat_response`, `readiness_response`,
-     `error_unknown_op`, `error_request_too_large`) had
+     `protocol_version` (§1 vs §2). The response fixtures that carry
+     `meta.envelope_version` (`readiness_response`, `error_unknown_op`,
+     `error_request_too_large`) had
      that single key renamed; the value (`2`) and every other byte are
      unchanged.
+   - **2026-06 — heartbeat op removed.** The legacy
+     `sandbox.call.heartbeat` request/response fixtures were removed when host
+     readiness and recovery probes switched to `sandbox.runtime.ready`.
    - **2026-06 — diagnostic metadata removed.** The response fixtures dropped
      the removed diagnostic fields from `meta` when the project removed the
      storage and reporting layer that produced them.

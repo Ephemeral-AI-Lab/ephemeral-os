@@ -8,10 +8,7 @@ use crate::overlay::tree::TreeResourceStats;
 use crate::profile::{WorkspaceModeFds, WorkspaceModeHandle};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct WorkspaceId(pub String);
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct CallerId(pub String);
+pub struct WorkspaceSessionId(pub String);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LeaseId(pub String);
@@ -120,8 +117,7 @@ impl WorkspaceProfile {
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct WorkspaceHandle {
-    pub id: WorkspaceId,
-    pub owner: CallerId,
+    pub id: WorkspaceSessionId,
     pub workspace_root: PathBuf,
     pub profile: WorkspaceProfile,
     pub base_revision: BaseRevision,
@@ -133,7 +129,6 @@ impl fmt::Debug for WorkspaceHandle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("WorkspaceHandle")
             .field("id", &self.id)
-            .field("owner", &self.owner)
             .field("workspace_root", &self.workspace_root)
             .field("profile", &self.profile)
             .field("base_revision", &self.base_revision)
@@ -154,8 +149,7 @@ impl WorkspaceHandle {
     #[must_use]
     #[allow(clippy::too_many_arguments)]
     pub fn holder_backed_for_test(
-        id: WorkspaceId,
-        owner: CallerId,
+        id: WorkspaceSessionId,
         workspace_root: PathBuf,
         profile: WorkspaceProfile,
         snapshot: LayerStackSnapshotRef,
@@ -165,7 +159,6 @@ impl WorkspaceHandle {
     ) -> Self {
         Self::with_launch_for_test(
             id,
-            owner,
             workspace_root.clone(),
             profile,
             snapshot.clone(),
@@ -189,8 +182,7 @@ impl WorkspaceHandle {
     #[must_use]
     #[allow(clippy::too_many_arguments)]
     pub fn unavailable_for_test(
-        id: WorkspaceId,
-        owner: CallerId,
+        id: WorkspaceSessionId,
         workspace_root: PathBuf,
         profile: WorkspaceProfile,
         snapshot: LayerStackSnapshotRef,
@@ -200,7 +192,6 @@ impl WorkspaceHandle {
     ) -> Self {
         Self::with_launch_for_test(
             id,
-            owner,
             workspace_root.clone(),
             profile,
             snapshot.clone(),
@@ -218,18 +209,16 @@ impl WorkspaceHandle {
 
     #[must_use]
     pub fn without_launch_for_test(
-        id: WorkspaceId,
-        owner: CallerId,
+        id: WorkspaceSessionId,
         workspace_root: PathBuf,
         profile: WorkspaceProfile,
         snapshot: LayerStackSnapshotRef,
     ) -> Self {
-        Self::with_launch_for_test(id, owner, workspace_root, profile, snapshot, None)
+        Self::with_launch_for_test(id, workspace_root, profile, snapshot, None)
     }
 
     fn with_launch_for_test(
-        id: WorkspaceId,
-        owner: CallerId,
+        id: WorkspaceSessionId,
         workspace_root: PathBuf,
         profile: WorkspaceProfile,
         snapshot: LayerStackSnapshotRef,
@@ -237,7 +226,6 @@ impl WorkspaceHandle {
     ) -> Self {
         Self {
             id,
-            owner,
             workspace_root,
             profile,
             base_revision: snapshot.base_revision(),
@@ -397,7 +385,6 @@ struct WorkspaceLaunchFds {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CreateWorkspaceRequest {
-    pub caller_id: CallerId,
     pub workspace_root: PathBuf,
     pub layer_stack_root: PathBuf,
     pub profile: WorkspaceProfile,
@@ -443,7 +430,7 @@ pub struct ProtectedPathDrop {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CapturedWorkspaceChanges {
-    pub workspace_id: WorkspaceId,
+    pub workspace_session_id: WorkspaceSessionId,
     pub base_revision: BaseRevision,
     pub changed_paths: Vec<String>,
     pub changed_path_kinds: BTreeMap<String, ChangedPathKind>,
@@ -483,8 +470,7 @@ pub struct DestroyWorkspaceRequest {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DestroyWorkspaceResult {
-    pub workspace_id: WorkspaceId,
-    pub owner: CallerId,
+    pub workspace_session_id: WorkspaceSessionId,
     pub evicted_upperdir_bytes: u64,
     pub lifetime_s: f64,
     pub lease_released: Option<bool>,
@@ -495,8 +481,7 @@ pub struct DestroyWorkspaceResult {
 impl From<&WorkspaceModeHandle> for WorkspaceHandle {
     fn from(handle: &WorkspaceModeHandle) -> Self {
         Self {
-            id: WorkspaceId(handle.workspace_id.0.clone()),
-            owner: CallerId(handle.caller_id.clone()),
+            id: WorkspaceSessionId(handle.workspace_id.0.clone()),
             workspace_root: PathBuf::from(&handle.workspace_root),
             profile: handle.profile,
             base_revision: BaseRevision {

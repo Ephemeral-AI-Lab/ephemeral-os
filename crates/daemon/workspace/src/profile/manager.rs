@@ -1,8 +1,8 @@
-//! Caller-keyed workspace profile manager.
+//! Workspace profile manager.
 //!
-//! The manager owns admission policy, quotas, caller indexing, persistence, and
-//! the lifecycle modules own profile-specific setup, shared holder, overlay,
-//! cgroup, teardown, and persistence behavior.
+//! The manager owns admission policy, quotas, persistence, and the lifecycle
+//! modules own profile-specific setup, shared holder, overlay, cgroup,
+//! teardown, and persistence behavior.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -109,7 +109,6 @@ pub struct WorkspaceModeManager {
     pub(crate) network: IsolatedNetwork,
     pub(crate) scratch_root: PathBuf,
     pub(crate) handles: HashMap<WorkspaceModeId, WorkspaceModeHandle>,
-    pub(crate) by_caller: HashMap<String, WorkspaceModeId>,
 }
 
 impl WorkspaceModeManager {
@@ -130,7 +129,6 @@ impl WorkspaceModeManager {
             network,
             scratch_root,
             handles: HashMap::new(),
-            by_caller: HashMap::new(),
         }
     }
 

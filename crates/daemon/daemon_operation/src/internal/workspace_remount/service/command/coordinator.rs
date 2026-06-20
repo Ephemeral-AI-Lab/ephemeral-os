@@ -6,39 +6,42 @@ use super::{
     RemountSwitchState,
 };
 use crate::command::{CancellationState, CommandLifecycleState, CommandOperationService};
-use crate::workspace_crate::WorkspaceId;
+use crate::workspace_crate::WorkspaceSessionId;
 use crate::workspace_remount::CommandRemountCoordinator;
 
 impl CommandRemountCoordinator for CommandOperationService {
     fn begin_workspace_remount_quiesce(
         &self,
-        workspace_session_id: &WorkspaceId,
+        workspace_session_id: &WorkspaceSessionId,
     ) -> CommandRemountQuiesce {
         let _admission_guard = self.lock_remount_admission();
-        let command_ids = self
+        let command_session_ids = self
             .process_store()
-            .active_command_ids_for_workspace_session(workspace_session_id);
+            .active_command_session_ids_for_workspace_session(workspace_session_id);
         let cancellation = RemountCancellationToken::new();
         let mut quiesce = CommandRemountQuiesce {
             inspection: CommandRemountInspection {
-                active_commands: command_ids.len(),
+                active_commands: command_session_ids.len(),
                 ..CommandRemountInspection::default()
             },
             held_process_group_ids: Vec::new(),
-            command_ids: Vec::new(),
+            command_session_ids: Vec::new(),
             process_store: Arc::clone(self.process_store()),
             cancellation,
             switch_state: RemountSwitchState::Quiescing,
             controller: self.remount_controller(),
         };
-        if command_ids.is_empty() {
+        if command_session_ids.is_empty() {
             quiesce.switch_state = RemountSwitchState::ReadyToSwitch;
             return quiesce;
         }
 
-        for command_id in command_ids {
-            quiesce.inspection.command_ids.push(command_id.clone());
-            let Some(active) = self.process_store().active(&command_id) else {
+        for command_session_id in command_session_ids {
+            quiesce
+                .inspection
+                .command_session_ids
+                .push(command_session_id.clone());
+            let Some(active) = self.process_store().active(&command_session_id) else {
                 quiesce
                     .inspection
                     .block_if_clear(RemountBlockReason::ActiveCommandMissing);
@@ -55,11 +58,11 @@ impl CommandRemountCoordinator for CommandOperationService {
                 continue;
             };
             quiesce.inspection.process_group_ids.push(pgid);
-            quiesce.command_ids.push(command_id.clone());
+            quiesce.command_session_ids.push(command_session_id.clone());
             let cancellation = quiesce.cancellation.clone();
             if self
                 .process_store()
-                .update_active(&command_id, |active| {
+                .update_active(&command_session_id, |active| {
                     active.lifecycle_state = CommandLifecycleState::QuiescedForRemount;
                     active.cancellation = CancellationState::None;
                     active.remount_cancellation = Some(cancellation);
@@ -82,8 +85,8 @@ impl CommandRemountCoordinator for CommandOperationService {
             }
         }
 
-        quiesce.inspection.command_ids.sort();
-        quiesce.inspection.command_ids.dedup();
+        quiesce.inspection.command_session_ids.sort();
+        quiesce.inspection.command_session_ids.dedup();
         quiesce.inspection.process_group_ids.sort_unstable();
         quiesce.inspection.process_group_ids.dedup();
         quiesce.set_switch_state(RemountSwitchState::ReadyToSwitch);

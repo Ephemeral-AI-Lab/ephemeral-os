@@ -62,8 +62,7 @@ fn normalizes_paths_without_touching_fs() {
 
 fn request(args: serde_json::Value) -> NamespaceCommandRequest {
     NamespaceCommandRequest {
-        invocation_id: "test".to_owned(),
-        caller_id: "caller".to_owned(),
+        request_id: "test".to_owned(),
         args,
         workspace_root: WorkspaceRoot(Path::new("/workspace").to_path_buf()),
         layer_paths: vec![],

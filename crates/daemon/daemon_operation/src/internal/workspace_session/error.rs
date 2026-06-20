@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::workspace_crate::{CallerId, WorkspaceError, WorkspaceId};
+use crate::workspace_crate::{WorkspaceError, WorkspaceSessionId};
 
 #[derive(Debug, Error)]
 pub enum WorkspaceSessionError {
@@ -11,37 +11,36 @@ pub enum WorkspaceSessionError {
     LockPoisoned,
 
     #[error("workspace session already exists: {workspace_session_id:?}")]
-    DuplicateWorkspaceSessionId { workspace_session_id: WorkspaceId },
+    DuplicateWorkspaceSessionId {
+        workspace_session_id: WorkspaceSessionId,
+    },
 
     #[error("workspace session not found: {workspace_session_id:?}")]
-    NotFound { workspace_session_id: WorkspaceId },
+    NotFound {
+        workspace_session_id: WorkspaceSessionId,
+    },
 
     #[error("workspace remount already pending: {workspace_session_id:?}")]
-    RemountAlreadyPending { workspace_session_id: WorkspaceId },
+    RemountAlreadyPending {
+        workspace_session_id: WorkspaceSessionId,
+    },
 
     #[error("workspace remount is not pending: {workspace_session_id:?}")]
-    RemountNotPending { workspace_session_id: WorkspaceId },
+    RemountNotPending {
+        workspace_session_id: WorkspaceSessionId,
+    },
 
     #[error("workspace remount returned mismatched workspace session id: expected {expected:?}, actual {actual:?}")]
     RemountWorkspaceSessionIdMismatch {
-        expected: WorkspaceId,
-        actual: WorkspaceId,
-    },
-
-    #[error(
-        "workspace session caller mismatch for {workspace_session_id:?}: expected {expected:?}, actual {actual:?}"
-    )]
-    CallerMismatch {
-        workspace_session_id: WorkspaceId,
-        expected: CallerId,
-        actual: CallerId,
+        expected: WorkspaceSessionId,
+        actual: WorkspaceSessionId,
     },
 
     #[error(
         "workspace session publish captured changes failed for {workspace_session_id:?}: {error}"
     )]
     PublishCapturedChanges {
-        workspace_session_id: WorkspaceId,
+        workspace_session_id: WorkspaceSessionId,
         error: String,
     },
 
@@ -49,14 +48,14 @@ pub enum WorkspaceSessionError {
         "workspace cleanup after create failure failed for {workspace_session_id:?}: {rollback_error}"
     )]
     CreateRollbackFailed {
-        workspace_session_id: WorkspaceId,
+        workspace_session_id: WorkspaceSessionId,
         insert_error: Box<WorkspaceSessionError>,
         rollback_error: WorkspaceError,
     },
 }
 
 impl WorkspaceSessionError {
-    pub(crate) fn not_found(workspace_session_id: &WorkspaceId) -> Self {
+    pub(crate) fn not_found(workspace_session_id: &WorkspaceSessionId) -> Self {
         Self::NotFound {
             workspace_session_id: workspace_session_id.clone(),
         }

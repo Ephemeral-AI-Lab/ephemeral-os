@@ -4,7 +4,7 @@ use command::process::{
 use command::yield_wait_loop::{wait_for_yield, WaitOutcome};
 use workspace::WorkspaceEntry;
 
-use crate::command::{CommandId, CommandServiceError};
+use crate::command::{CommandServiceError, CommandSessionId};
 
 pub trait CommandLaunchDriver: Send + Sync {
     fn spawn(
@@ -35,24 +35,24 @@ impl CommandLaunchDriver for RealCommandLaunchDriver {
         workspace_entry: WorkspaceEntry,
         config: &command::CommandConfig,
     ) -> Result<CommandProcess, CommandServiceError> {
-        let command_id = CommandId(spec.id.clone());
+        let command_session_id = CommandSessionId(spec.id.clone());
         let parts =
             CommandProcessSpawn::prepare(&spec.id, workspace_entry, config).map_err(|error| {
                 CommandServiceError::CommandIo {
-                    command_id: command_id.clone(),
+                    command_session_id: command_session_id.clone(),
                     error: error.to_string(),
                 }
             })?;
         let cleanup_parts = parts.clone();
         CommandProcess::spawn(spec, parts).map_err(|error| {
             let command_error = CommandServiceError::CommandIo {
-                command_id: command_id.clone(),
+                command_session_id: command_session_id.clone(),
                 error: error.to_string(),
             };
             match cleanup_parts.cleanup_artifacts_after_start_failure() {
                 Ok(()) => command_error,
                 Err(cleanup_error) => CommandServiceError::CommandArtifactCleanupFailed {
-                    command_id,
+                    command_session_id,
                     command_error: Box::new(command_error),
                     artifact_dir: cleanup_parts.artifact_dir(),
                     cleanup_error: cleanup_error.to_string(),

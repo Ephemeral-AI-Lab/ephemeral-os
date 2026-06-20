@@ -25,11 +25,11 @@ pub mod service;
 
 pub use error::WorkspaceError;
 pub use model::{
-    BaseRevision, CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, ChangedPathKind,
+    BaseRevision, CaptureChangesRequest, CapturedWorkspaceChanges, ChangedPathKind,
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
     LayerStackSnapshotRef, LayerStackSnapshotView, LeaseId, ProtectedPathDrop,
     ProtectedPathDropReason, ReadonlySnapshotHandle, RemountWorkspaceRequest,
     RemountWorkspaceResult, WorkspaceEntry, WorkspaceEntryError, WorkspaceEntryFds,
-    WorkspaceHandle, WorkspaceId, WorkspaceProfile,
+    WorkspaceHandle, WorkspaceSessionId, WorkspaceProfile,
 };
 pub use service::{WorkspaceRuntimeHooks, WorkspaceRuntimeService};

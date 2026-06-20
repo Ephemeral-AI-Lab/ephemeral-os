@@ -52,7 +52,7 @@ impl DaemonServer {
             Ok(WireMessage::Request(request)) => self.dispatch_request(request).await,
             Ok(_) => crate::dispatcher::error_response(
                 ErrorKind::InvalidRequest,
-                "request must include op, invocation_id, and args",
+                "request must include op, request_id, and args",
                 serde_json::json!({}),
             ),
             Err(err) => crate::dispatcher::error_response(
@@ -64,11 +64,10 @@ impl DaemonServer {
     }
 
     async fn dispatch_request(&self, request: Request) -> serde_json::Value {
-        let invocation_id = request.invocation_id.clone();
-        let caller_id = trimmed_string(&request.args, "caller_id");
+        let request_id = request.request_id.clone();
         let op = request.op.clone();
         let operations = Arc::clone(&self.operations);
-        let registry = Arc::clone(&self.invocation_registry);
+        let registry = Arc::clone(&self.request_registry);
         let (start_tx, start_rx) = std_mpsc::channel::<()>();
         let task_started = Arc::new(AtomicBool::new(false));
         let registered_started = Arc::clone(&task_started);
@@ -77,27 +76,22 @@ impl DaemonServer {
             task_started.store(true, Ordering::SeqCst);
             crate::dispatch::operation::dispatch(&operations, &request)
         });
-        registry.register_blocking(
-            &invocation_id,
-            task.abort_handle(),
-            registered_started,
-            &caller_id,
-        );
+        registry.register_blocking(&request_id, task.abort_handle(), registered_started);
         let _ = start_tx.send(());
         let response = match task.await {
             Ok(response) => response,
             Err(err) if err.is_cancelled() => crate::dispatcher::error_response(
                 ErrorKind::InternalError,
-                "daemon invocation cancelled",
+                "daemon request cancelled",
                 serde_json::json!({"op": op}),
             ),
             Err(err) => crate::dispatcher::error_response(
                 ErrorKind::InternalError,
-                format!("daemon invocation failed: {err}"),
+                format!("daemon request failed: {err}"),
                 serde_json::json!({"op": op}),
             ),
         };
-        registry.deregister(&invocation_id);
+        registry.deregister(&request_id);
         response
     }
 
@@ -183,16 +177,6 @@ fn enforce_tcp_visibility(
 
 fn is_known_non_public_op(op: &str) -> bool {
     matches!(op, "sandbox.runtime.ready" | "sandbox.run.cancel_all")
-}
-
-/// Transport-level caller extraction for in-flight registry keys; runs before
-/// any operation parse, so it deliberately applies no default-caller fallback.
-fn trimmed_string(args: &serde_json::Value, key: &str) -> String {
-    args.get(key)
-        .and_then(serde_json::Value::as_str)
-        .unwrap_or_default()
-        .trim()
-        .to_owned()
 }
 
 pub(crate) fn protocol_version_error(

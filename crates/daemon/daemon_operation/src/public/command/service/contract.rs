@@ -1,23 +1,17 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use crate::workspace_crate::{CallerId, ChangedPathKind, WorkspaceId};
+use crate::workspace_crate::{ChangedPathKind, WorkspaceSessionId};
 
 pub use command::{CommandStream, CommandTranscriptRow};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct CommandId(pub String);
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CommandCallContext {
-    pub caller_id: CallerId,
-}
+pub struct CommandSessionId(pub String);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExecCommandInput {
-    pub caller_id: CallerId,
     pub workspace_root: PathBuf,
-    pub workspace_session_id: Option<WorkspaceId>,
+    pub workspace_session_id: Option<WorkspaceSessionId>,
     pub cmd: String,
     pub cwd: Option<PathBuf>,
     pub timeout_seconds: Option<f64>,
@@ -25,28 +19,28 @@ pub struct ExecCommandInput {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WriteStdinInput {
-    pub command_id: CommandId,
-    pub chars: String,
+pub struct WriteCommandStdinInput {
+    pub command_session_id: CommandSessionId,
+    pub stdin: String,
     pub yield_time_ms: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReadCommandLinesInput {
-    pub command_id: CommandId,
-    pub offset: u64,
+    pub command_session_id: CommandSessionId,
+    pub start_offset: u64,
     pub limit: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PollCommandInput {
-    pub command_id: CommandId,
+    pub command_session_id: CommandSessionId,
     pub last_n_lines: Option<usize>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CancelCommandInput {
-    pub command_id: CommandId,
+    pub command_session_id: CommandSessionId,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -113,7 +107,7 @@ pub struct CommandWorkspaceDestroyMetadata {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandYield {
-    pub command_id: Option<CommandId>,
+    pub command_session_id: Option<CommandSessionId>,
     pub status: CommandStatus,
     pub exit_code: Option<i64>,
     pub output: CommandOutputSnapshot,
@@ -122,7 +116,7 @@ pub struct CommandYield {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandPollOutput {
-    pub command_id: CommandId,
+    pub command_session_id: CommandSessionId,
     pub status: CommandStatus,
     pub exit_code: Option<i64>,
     pub output: CommandOutputSnapshot,
@@ -131,11 +125,11 @@ pub struct CommandPollOutput {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandLinesOutput {
-    pub command_id: CommandId,
+    pub command_session_id: CommandSessionId,
     pub status: CommandStatus,
     pub exit_code: Option<i64>,
-    pub offset: u64,
-    pub next_offset: u64,
+    pub start_offset: u64,
+    pub end_offset: u64,
     pub total_lines: u64,
     pub truncated_before: u64,
     pub output_truncated: bool,

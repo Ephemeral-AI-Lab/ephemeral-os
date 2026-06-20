@@ -14,7 +14,7 @@ fn meta() -> ResponseMeta {
 fn six_envelopes() -> [OperationEnvelope<Value>; 6] {
     [
         OperationEnvelope::ok(json!({"ready": true}), meta()),
-        OperationEnvelope::running(json!({"command_id": "cmd-1"}), meta()),
+        OperationEnvelope::running(json!({"command_session_id": "cmd-1"}), meta()),
         OperationEnvelope::rejected_with_result(
             OperationFault::new("occ_conflict", "path contended"),
             json!({"exit_code": 0}),

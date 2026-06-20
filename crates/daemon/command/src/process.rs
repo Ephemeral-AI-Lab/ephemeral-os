@@ -27,7 +27,6 @@ use crate::{CommandConfig, CommandError};
 /// decides publish-vs-discard.
 pub struct CommandProcess {
     id: String,
-    caller_id: String,
     command: String,
     started_at: Instant,
     timeout: Option<Duration>,
@@ -36,7 +35,6 @@ pub struct CommandProcess {
 
 pub struct CommandProcessSpec {
     pub id: String,
-    pub caller_id: String,
     pub command: String,
     pub cwd: Option<PathBuf>,
     pub timeout_seconds: Option<f64>,
@@ -264,7 +262,6 @@ impl CommandProcess {
     pub(crate) fn with_runtime(spec: CommandProcessSpec, runtime: CommandProcessRuntime) -> Self {
         Self {
             id: spec.id,
-            caller_id: spec.caller_id,
             command: spec.command,
             started_at: Instant::now(),
             timeout: spec.timeout_seconds.and_then(duration_from_secs_f64),
@@ -275,11 +272,6 @@ impl CommandProcess {
     #[must_use]
     pub fn id(&self) -> &str {
         &self.id
-    }
-
-    #[must_use]
-    pub fn caller_id(&self) -> &str {
-        &self.caller_id
     }
 
     #[must_use]
@@ -312,7 +304,7 @@ impl CommandProcess {
     }
 
     pub fn write_process_stdin(&self, chars: &str) -> Result<(), CommandError> {
-        self.runtime.process.write_stdin(chars.as_bytes())?;
+        self.runtime.process.write_command_stdin(chars.as_bytes())?;
         Ok(())
     }
 
@@ -412,11 +404,11 @@ impl CommandProcess {
 
 impl<'a> CommandProcessSpawn<'a> {
     pub fn prepare(
-        command_id: &str,
+        command_session_id: &str,
         workspace_entry: WorkspaceEntry,
         config: &'a CommandConfig,
     ) -> Result<Self, CommandError> {
-        let command_dir = config.scratch_root.join(command_id);
+        let command_dir = config.scratch_root.join(command_session_id);
         fs::create_dir_all(&command_dir).map_err(|error| {
             CommandError::artifact_write("command_artifact_directory", &command_dir, error)
         })?;
@@ -455,8 +447,7 @@ pub(crate) fn build_namespace_command_request(
         .to_string_lossy()
         .into_owned();
     NamespaceCommandRequest {
-        invocation_id: spec.id.clone(),
-        caller_id: spec.caller_id.clone(),
+        request_id: spec.id.clone(),
         args: json!({
             "command": spec.command.clone(),
             "cwd": cwd,

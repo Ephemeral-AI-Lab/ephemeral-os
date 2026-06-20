@@ -11,7 +11,7 @@ const MAX_REQUEST_BYTES: usize = host::MAX_REQUEST_BYTES;
 pub(crate) struct ClientRequest {
     pub(crate) op: String,
     pub(crate) sandbox_id: Option<String>,
-    pub(crate) invocation_id: String,
+    pub(crate) request_id: String,
     pub(crate) args: Value,
 }
 
@@ -92,7 +92,7 @@ pub(crate) fn parse_request(line: &[u8]) -> Result<ClientRequest, WireError> {
                 .with_sandbox(sandbox_id.as_deref()),
         );
     }
-    let invocation_id = take_string(&mut object, "invocation_id")
+    let request_id = take_string(&mut object, "request_id")
         .map_err(|err| err.with_sandbox(sandbox_id.as_deref()))?;
     let args = object.remove("args").unwrap_or_else(|| json!({}));
     if !args.is_object() {
@@ -105,7 +105,7 @@ pub(crate) fn parse_request(line: &[u8]) -> Result<ClientRequest, WireError> {
     Ok(ClientRequest {
         op,
         sandbox_id,
-        invocation_id,
+        request_id,
         args,
     })
 }
@@ -164,7 +164,7 @@ fn envelope_base(status: &str, meta: Value) -> Value {
 fn request_meta(request: &ClientRequest) -> Value {
     let meta = protocol::ResponseMeta {
         op: request.op.clone(),
-        request_id: request.invocation_id.clone(),
+        request_id: request.request_id.clone(),
         ..protocol::ResponseMeta::default()
     };
     serde_json::to_value(meta).expect("ResponseMeta serializes")

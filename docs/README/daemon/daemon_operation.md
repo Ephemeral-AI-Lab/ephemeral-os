@@ -34,8 +34,8 @@ The command lane owns the API that maps naturally to agent tool calls:
 
 - `exec_command`
 - `poll`
-- `read_lines`
-- `write_stdin`
+- `read_command_lines`
+- `write_command_stdin`
 - `cancel`
 
 `CommandOperationService` owns command admission, active/completed command

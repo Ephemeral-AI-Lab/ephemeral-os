@@ -6,14 +6,16 @@ use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Instant;
 
-use crate::command::{CommandFinalizedMetadata, CommandId, CommandServiceError, CommandStatus};
-use crate::workspace_crate::{CallerId, WorkspaceId};
+use crate::command::{
+    CommandFinalizedMetadata, CommandServiceError, CommandSessionId, CommandStatus,
+};
+use crate::workspace_crate::WorkspaceSessionId;
 use crate::workspace_remount::{RemountCancellationToken, RemountSwitchState};
 
 pub const DEFAULT_MAX_ACTIVE_COMMANDS: usize = 256;
 
 pub struct CommandProcessStore {
-    active: Mutex<HashMap<CommandId, ActiveCommandProcess>>,
+    active: Mutex<HashMap<CommandSessionId, ActiveCommandProcess>>,
     completed: CommandCompletionStore,
     next_id: AtomicU64,
     active_count: AtomicUsize,
@@ -38,9 +40,9 @@ impl CommandProcessStore {
     }
 
     #[must_use]
-    pub fn allocate_command_id(&self) -> CommandId {
+    pub fn allocate_command_session_id(&self) -> CommandSessionId {
         let next_id = self.next_id.fetch_add(1, Ordering::Relaxed);
-        CommandId(format!("cmd_{next_id}"))
+        CommandSessionId(format!("cmd_{next_id}"))
     }
 
     pub fn try_reserve(&self) -> Result<CommandReservation<'_>, CommandServiceError> {
@@ -72,26 +74,26 @@ impl CommandProcessStore {
         record: ActiveCommandProcess,
     ) -> Result<(), CommandServiceError> {
         reservation.ensure_store(self)?;
-        let command_id = record.command_id.clone();
+        let command_session_id = record.command_session_id.clone();
         let mut active = lock(&self.active);
-        if active.contains_key(&command_id) {
-            return Err(CommandServiceError::DuplicateCommandId { command_id });
+        if active.contains_key(&command_session_id) {
+            return Err(CommandServiceError::DuplicateCommandSessionId { command_session_id });
         }
 
-        active.insert(command_id, record);
+        active.insert(command_session_id, record);
         reservation.activate();
         Ok(())
     }
 
     #[must_use]
-    pub fn active(&self, command_id: &CommandId) -> Option<ActiveCommandRef<'_>> {
+    pub fn active(&self, command_session_id: &CommandSessionId) -> Option<ActiveCommandRef<'_>> {
         let active = lock(&self.active);
-        if !active.contains_key(command_id) {
+        if !active.contains_key(command_session_id) {
             return None;
         }
 
         Some(ActiveCommandRef {
-            command_id: command_id.clone(),
+            command_session_id: command_session_id.clone(),
             active,
         })
     }
@@ -99,78 +101,74 @@ impl CommandProcessStore {
     #[must_use]
     pub(crate) fn active_process(
         &self,
-        command_id: &CommandId,
+        command_session_id: &CommandSessionId,
     ) -> Option<Arc<::command::CommandProcess>> {
         lock(&self.active)
-            .get(command_id)
+            .get(command_session_id)
             .map(|active| Arc::clone(&active.process))
     }
 
     #[must_use]
-    pub(crate) fn active_command_ids_for_workspace_session(
+    pub(crate) fn active_command_session_ids_for_workspace_session(
         &self,
-        workspace_session_id: &WorkspaceId,
-    ) -> Vec<CommandId> {
-        let mut command_ids = lock(&self.active)
+        workspace_session_id: &WorkspaceSessionId,
+    ) -> Vec<CommandSessionId> {
+        let mut command_session_ids = lock(&self.active)
             .iter()
             .filter(|(_, active)| &active.workspace_session_id == workspace_session_id)
-            .map(|(command_id, _)| command_id.clone())
+            .map(|(command_session_id, _)| command_session_id.clone())
             .collect::<Vec<_>>();
-        command_ids.sort();
-        command_ids
+        command_session_ids.sort();
+        command_session_ids
     }
 
     pub fn complete_active(
         &self,
         record: CompletedCommandRecord,
     ) -> Result<Option<ActiveCommandProcess>, CommandServiceError> {
-        let command_id = record.command_id.clone();
+        let command_session_id = record.command_session_id.clone();
         let mut active = lock(&self.active);
-        if !active.contains_key(&command_id) {
+        if !active.contains_key(&command_session_id) {
             return Ok(None);
         }
         let active_record = active
-            .get(&command_id)
+            .get(&command_session_id)
             .expect("active command exists after contains_key");
-        if active_record.caller_id != record.caller_id {
-            return Err(CommandServiceError::CommandCallerMismatch {
-                command_id,
-                expected: active_record.caller_id.clone(),
-                actual: record.caller_id,
-            });
-        }
         if active_record.workspace_session_id != record.workspace_session_id {
             return Err(CommandServiceError::CommandWorkspaceSessionMismatch {
-                command_id,
+                command_session_id,
                 expected: active_record.workspace_session_id.clone(),
                 actual: record.workspace_session_id,
             });
         }
 
         let mut completed = lock(&self.completed.completed);
-        if completed.contains_key(&command_id) {
-            return Err(CommandServiceError::DuplicateCommandId { command_id });
+        if completed.contains_key(&command_session_id) {
+            return Err(CommandServiceError::DuplicateCommandSessionId { command_session_id });
         }
 
         let removed = active
-            .remove(&record.command_id)
+            .remove(&record.command_session_id)
             .expect("active command exists after contains_key");
-        completed.insert(record.command_id.clone(), record);
+        completed.insert(record.command_session_id.clone(), record);
         decrement_slot(&self.active_count);
         Ok(Some(removed))
     }
 
     #[must_use]
-    pub fn completed(&self, command_id: &CommandId) -> Option<CompletedCommandRecord> {
-        self.completed.get(command_id)
+    pub fn completed(
+        &self,
+        command_session_id: &CommandSessionId,
+    ) -> Option<CompletedCommandRecord> {
+        self.completed.get(command_session_id)
     }
 
     pub(crate) fn update_active<R>(
         &self,
-        command_id: &CommandId,
+        command_session_id: &CommandSessionId,
         update: impl FnOnce(&mut ActiveCommandProcess) -> R,
     ) -> Option<R> {
-        lock(&self.active).get_mut(command_id).map(update)
+        lock(&self.active).get_mut(command_session_id).map(update)
     }
 }
 
@@ -221,8 +219,8 @@ impl Drop for CommandReservation<'_> {
 }
 
 pub struct ActiveCommandRef<'a> {
-    command_id: CommandId,
-    active: MutexGuard<'a, HashMap<CommandId, ActiveCommandProcess>>,
+    command_session_id: CommandSessionId,
+    active: MutexGuard<'a, HashMap<CommandSessionId, ActiveCommandProcess>>,
 }
 
 impl Deref for ActiveCommandRef<'_> {
@@ -230,15 +228,14 @@ impl Deref for ActiveCommandRef<'_> {
 
     fn deref(&self) -> &Self::Target {
         self.active
-            .get(&self.command_id)
+            .get(&self.command_session_id)
             .expect("active command disappeared while lock is held")
     }
 }
 
 pub struct ActiveCommandProcess {
-    pub command_id: CommandId,
-    pub caller_id: CallerId,
-    pub workspace_session_id: WorkspaceId,
+    pub command_session_id: CommandSessionId,
+    pub workspace_session_id: WorkspaceSessionId,
     pub workspace_root: PathBuf,
     pub process: Arc<::command::CommandProcess>,
     pub transcript: CommandTranscriptStore,
@@ -253,8 +250,12 @@ pub struct ActiveCommandProcess {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CommandFinalizePolicy {
-    Session { workspace_session_id: WorkspaceId },
-    OneShotPublishThenDestroy { workspace_session_id: WorkspaceId },
+    Session {
+        workspace_session_id: WorkspaceSessionId,
+    },
+    OneShotPublishThenDestroy {
+        workspace_session_id: WorkspaceSessionId,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -309,7 +310,7 @@ pub struct CommandTerminalResult {
 
 #[derive(Debug, Default)]
 pub struct CommandCompletionStore {
-    completed: Mutex<HashMap<CommandId, CompletedCommandRecord>>,
+    completed: Mutex<HashMap<CommandSessionId, CompletedCommandRecord>>,
 }
 
 impl CommandCompletionStore {
@@ -319,27 +320,26 @@ impl CommandCompletionStore {
     }
 
     pub fn insert(&self, record: CompletedCommandRecord) -> Result<(), CommandServiceError> {
-        let command_id = record.command_id.clone();
+        let command_session_id = record.command_session_id.clone();
         let mut completed = lock(&self.completed);
-        if completed.contains_key(&command_id) {
-            return Err(CommandServiceError::DuplicateCommandId { command_id });
+        if completed.contains_key(&command_session_id) {
+            return Err(CommandServiceError::DuplicateCommandSessionId { command_session_id });
         }
 
-        completed.insert(command_id, record);
+        completed.insert(command_session_id, record);
         Ok(())
     }
 
     #[must_use]
-    pub fn get(&self, command_id: &CommandId) -> Option<CompletedCommandRecord> {
-        lock(&self.completed).get(command_id).cloned()
+    pub fn get(&self, command_session_id: &CommandSessionId) -> Option<CompletedCommandRecord> {
+        lock(&self.completed).get(command_session_id).cloned()
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CompletedCommandRecord {
-    pub command_id: CommandId,
-    pub caller_id: CallerId,
-    pub workspace_session_id: WorkspaceId,
+    pub command_session_id: CommandSessionId,
+    pub workspace_session_id: WorkspaceSessionId,
     pub result: CommandTerminalResult,
     pub transcript: RetainedCommandTranscript,
     pub finalization: FinalizationState,

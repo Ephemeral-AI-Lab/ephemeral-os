@@ -249,7 +249,7 @@ pub enum NetworkMode {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkspaceHandle {
-    pub id: WorkspaceId,
+    pub id: WorkspaceSessionId,
     pub owner: CallerId,
     pub workspace_root: PathBuf,
     pub network: NetworkMode,
@@ -257,7 +257,7 @@ pub struct WorkspaceHandle {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WorkspaceId(pub String);
+pub struct WorkspaceSessionId(pub String);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CallerId(pub String);
@@ -268,7 +268,7 @@ pub struct CallerId(pub String);
 ```rust
 #[derive(Debug, Clone, PartialEq)]
 pub struct RunCommandRequest {
-    pub invocation_id: String,
+    pub request_id: String,
     pub cmd: String,
     pub cwd: Option<PathBuf>,
     pub timeout_seconds: Option<f64>,
@@ -279,7 +279,7 @@ pub struct RunCommandRequest {
 #[derive(Debug, Clone, PartialEq)]
 pub struct RunCommandResult {
     pub status: CommandStatus,
-    pub command_id: Option<String>,
+    pub command_session_id: Option<String>,
     pub exit_code: Option<i64>,
     pub stdout: String,
     pub stderr: String,
@@ -304,7 +304,7 @@ pub struct CaptureChangesRequest {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CaptureChangesResult {
-    pub workspace_id: WorkspaceId,
+    pub workspace_session_id: WorkspaceSessionId,
     pub base_revision: BaseRevision,
     pub changed_paths: Vec<String>,
     pub changed_path_kinds: BTreeMap<String, ChangedPathKind>,
@@ -327,7 +327,7 @@ pub struct DestroyWorkspaceRequest {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DestroyWorkspaceResult {
-    pub workspace_id: WorkspaceId,
+    pub workspace_session_id: WorkspaceSessionId,
     pub owner: CallerId,
     pub cancelled_commands: usize,
     pub evicted_upperdir_bytes: u64,
@@ -499,7 +499,7 @@ pub enum WorkspaceError {
     FeatureDisabled,
 
     #[error("workspace already open for {owner:?}")]
-    AlreadyOpen { owner: CallerId, workspace_id: WorkspaceId },
+    AlreadyOpen { owner: CallerId, workspace_session_id: WorkspaceSessionId },
 
     #[error("workspace is not open for {owner:?}")]
     NotOpen { owner: CallerId },

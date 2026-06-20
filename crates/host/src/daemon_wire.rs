@@ -12,7 +12,6 @@ pub const DAEMON_PROTOCOL_VERSION: i64 = 1;
 pub const MAX_REQUEST_BYTES: usize = 16 * 1024 * 1024;
 pub const MAX_RESPONSE_BYTES: usize = 16 * 1024 * 1024;
 pub const CONNECT_RETRY_DELAYS_S: [f64; 4] = [0.25, 0.5, 1.0, 2.0];
-pub(crate) const HEARTBEAT_OP: &str = "sandbox.call.heartbeat";
 pub(crate) const READY_OP: &str = "sandbox.runtime.ready";
 pub(crate) const DEFAULT_LAYER_STACK_ROOT: &str = "/eos/layer-stack";
 
@@ -103,13 +102,8 @@ impl ProtocolClient {
         self.addr
     }
 
-    pub fn request(
-        &self,
-        op: &str,
-        invocation_id: &str,
-        args: &Value,
-    ) -> Result<Value, ClientError> {
-        let mut line = encode_request_with_auth(op, invocation_id, args, self.transport_auth());
+    pub fn request(&self, op: &str, request_id: &str, args: &Value) -> Result<Value, ClientError> {
+        let mut line = encode_request_with_auth(op, request_id, args, self.transport_auth());
         line.push(b'\n');
         self.request_raw(&line)
     }
@@ -191,37 +185,37 @@ pub(crate) struct ProtocolResponse {
 #[allow(dead_code)]
 pub fn encode_request_with_metadata(
     op: &str,
-    invocation_id: &str,
+    request_id: &str,
     args: &Value,
     token: Option<&str>,
 ) -> Vec<u8> {
-    encode_request_with_auth(op, invocation_id, args, TransportAuth::Raw(token))
+    encode_request_with_auth(op, request_id, args, TransportAuth::Raw(token))
 }
 
 pub(crate) fn encode_request_with_forward_metadata(
     op: &str,
-    invocation_id: &str,
+    request_id: &str,
     args: &Value,
     token: Option<&str>,
 ) -> Vec<u8> {
-    encode_request_with_auth(op, invocation_id, args, TransportAuth::Forward(token))
+    encode_request_with_auth(op, request_id, args, TransportAuth::Forward(token))
 }
 
 fn encode_request_with_auth(
     op: &str,
-    invocation_id: &str,
+    request_id: &str,
     args: &Value,
     auth: TransportAuth<'_>,
 ) -> Vec<u8> {
     encode_request(
         op,
-        invocation_id,
-        &Value::Object(stamped_args(args, invocation_id)),
+        request_id,
+        &Value::Object(stamped_args(args, request_id)),
         auth,
     )
 }
 
-fn stamped_args(args: &Value, invocation_id: &str) -> Map<String, Value> {
+fn stamped_args(args: &Value, request_id: &str) -> Map<String, Value> {
     let mut args_obj = match args {
         Value::Object(map) => map.clone(),
         _ => Map::new(),
@@ -231,29 +225,24 @@ fn stamped_args(args: &Value, invocation_id: &str) -> Map<String, Value> {
         json!(DAEMON_PROTOCOL_VERSION),
     );
     args_obj
-        .entry("invocation_id".to_owned())
-        .or_insert_with(|| json!(invocation_id));
+        .entry("request_id".to_owned())
+        .or_insert_with(|| json!(request_id));
     args_obj
 }
-fn encode_request(op: &str, invocation_id: &str, args: &Value, auth: TransportAuth<'_>) -> Vec<u8> {
-    serde_json::to_vec(&Value::Object(request_object(
-        op,
-        invocation_id,
-        args,
-        auth,
-    )))
-    .unwrap_or_default()
+fn encode_request(op: &str, request_id: &str, args: &Value, auth: TransportAuth<'_>) -> Vec<u8> {
+    serde_json::to_vec(&Value::Object(request_object(op, request_id, args, auth)))
+        .unwrap_or_default()
 }
 
 fn request_object(
     op: &str,
-    invocation_id: &str,
+    request_id: &str,
     args: &Value,
     auth: TransportAuth<'_>,
 ) -> Map<String, Value> {
     let mut request = Map::new();
     request.insert("op".to_owned(), json!(op));
-    request.insert("invocation_id".to_owned(), json!(invocation_id));
+    request.insert("request_id".to_owned(), json!(request_id));
     request.insert("args".to_owned(), args.clone());
     match auth {
         TransportAuth::Raw(Some(token)) => {

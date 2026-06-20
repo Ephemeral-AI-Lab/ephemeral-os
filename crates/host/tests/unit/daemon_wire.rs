@@ -19,7 +19,7 @@ fn reads_operation_envelope_statuses() {
         ),
         (
             "domain result running",
-            json!({"status": "ok", "result": {"status": "running", "command_id": "cmd-1"}, "meta": {}}),
+            json!({"status": "ok", "result": {"status": "running", "command_session_id": "cmd-1"}, "meta": {}}),
             "ok",
             Some("running"),
             true,
@@ -27,7 +27,7 @@ fn reads_operation_envelope_statuses() {
         ),
         (
             "envelope running",
-            json!({"status": "running", "result": {"command_id": "cmd-1"}, "meta": {}}),
+            json!({"status": "running", "result": {"command_session_id": "cmd-1"}, "meta": {}}),
             "running",
             None,
             true,

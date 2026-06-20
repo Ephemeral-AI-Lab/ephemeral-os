@@ -53,9 +53,8 @@ pub struct SandboxStatus {
 
 pub struct HostForwardRequest<'a> {
     pub sandbox_id: &'a str,
-    pub mutates_state: bool,
     pub op: &'a str,
-    pub invocation_id: &'a str,
+    pub request_id: &'a str,
     pub args: &'a Value,
 }
 

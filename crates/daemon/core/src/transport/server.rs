@@ -13,7 +13,7 @@ use config::configs::daemon::DaemonConfig;
 use daemon_operation::DaemonOperations;
 use tokio_util::sync::CancellationToken;
 
-use crate::invocation_registry::InFlightRegistry;
+use crate::request_registry::InFlightRegistry;
 
 const MAX_REQUEST_BYTES: usize = crate::wire::MAX_REQUEST_BYTES;
 const REQUEST_READ_TIMEOUT_S: f64 = crate::wire::REQUEST_READ_TIMEOUT_S;
@@ -35,24 +35,24 @@ pub struct ServerConfig {
     pub forward_auth_token: Option<String>,
 }
 
-/// The running daemon: request dispatch state, invocation registry, and
+/// The running daemon: request dispatch state, request registry, and
 /// shutdown token.
 pub struct DaemonServer {
     config: ServerConfig,
     operations: Arc<DaemonOperations>,
-    invocation_registry: Arc<InFlightRegistry>,
+    request_registry: Arc<InFlightRegistry>,
     shutdown: CancellationToken,
 }
 
 impl DaemonServer {
-    /// Assemble a daemon over `config`, wiring the invocation registry and
+    /// Assemble a daemon over `config`, wiring the request registry and
     /// shutdown token.
     #[must_use]
     pub fn new(config: ServerConfig, operations: Arc<DaemonOperations>) -> Self {
         Self {
             config,
             operations,
-            invocation_registry: Arc::new(InFlightRegistry::new(
+            request_registry: Arc::new(InFlightRegistry::new(
                 crate::DEFAULT_TTL_S,
                 crate::DEFAULT_REAPER_INTERVAL_S,
             )),
@@ -72,7 +72,7 @@ impl DaemonServer {
         Self {
             config,
             operations,
-            invocation_registry: Arc::new(InFlightRegistry::new(
+            request_registry: Arc::new(InFlightRegistry::new(
                 daemon_config.inflight.ttl_s,
                 daemon_config.inflight.reaper_interval_s,
             )),

@@ -103,29 +103,10 @@ impl WorkspaceModeManager {
 
     pub fn enter_with_profile(
         &mut self,
-        caller_id: &str,
         snapshot: WorkspaceModeSnapshot,
         profile: WorkspaceProfile,
     ) -> Result<WorkspaceModeHandle, IsolatedNetworkError> {
-        if caller_id.trim().is_empty() {
-            return Err(IsolatedNetworkError::InvalidArgument(
-                "caller_id is required".to_owned(),
-            ));
-        }
         let workspace_root = self.validated_workspace_root()?;
-        if self.by_caller.contains_key(caller_id) {
-            let existing = self
-                .by_caller
-                .get(caller_id)
-                .and_then(|workspace_id| self.handles.get(workspace_id))
-                .ok_or_else(|| IsolatedNetworkError::SetupFailed {
-                    step: "agent handle index is inconsistent".to_owned(),
-                })?;
-            return Err(IsolatedNetworkError::AlreadyOpen {
-                created_at: existing.created_at,
-                last_activity: existing.last_activity,
-            });
-        }
         let total_cap = usize::try_from(self.caps.total_cap).unwrap_or(usize::MAX);
         if self.handles.len() >= total_cap {
             return Err(IsolatedNetworkError::QuotaExceeded {
@@ -145,7 +126,6 @@ impl WorkspaceModeManager {
         let mut handle = WorkspaceModeHandle {
             workspace_id: workspace_id.clone(),
             profile,
-            caller_id: caller_id.to_owned(),
             lease_id: snapshot.lease_id,
             manifest_version: snapshot.manifest_version,
             manifest_root_hash: snapshot.manifest_root_hash,
@@ -169,11 +149,8 @@ impl WorkspaceModeManager {
             return Err(err);
         }
 
-        self.by_caller
-            .insert(caller_id.to_owned(), workspace_id.clone());
         self.handles.insert(workspace_id.clone(), handle.clone());
         if let Err(err) = self.persist_handles() {
-            self.by_caller.remove(caller_id);
             self.handles.remove(&workspace_id);
             self.rollback_partial(&handle);
             return Err(err);

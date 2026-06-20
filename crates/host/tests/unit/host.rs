@@ -138,7 +138,7 @@ fn forward_request_sends_daemon_protocol_metadata_only() -> Result<()> {
         BufReader::new(stream.try_clone()?).read_line(&mut line)?;
         let request: serde_json::Value = serde_json::from_str(line.trim_end())?;
         assert_eq!(request["op"], json!("sandbox.runtime.ready"));
-        assert_eq!(request["invocation_id"], json!("request-forward"));
+        assert_eq!(request["request_id"], json!("request-forward"));
         assert_eq!(
             request["args"]["_eos_daemon_protocol_version"],
             json!(crate::daemon_wire::DAEMON_PROTOCOL_VERSION)
@@ -173,10 +173,9 @@ fn forward_request_sends_daemon_protocol_metadata_only() -> Result<()> {
     let response = forward_request(ForwardRequestInput {
         record,
         config: &config,
-        mutates_state: false,
         op: "sandbox.runtime.ready",
-        invocation_id: "request-forward",
-        args: &json!({"caller_id": "caller-1"}),
+        request_id: "request-forward",
+        args: &json!({"probe": "ready"}),
     })?;
     assert_eq!(response["result"]["ready"], json!(true));
     assert_eq!(response["meta"]["request_id"], json!("request-forward"));
@@ -322,10 +321,9 @@ fn run_tcp_once_failure(name: &str, endpoint: std::net::SocketAddr) -> Result<Cl
     let attempt = ForwardAttempt {
         record: &record,
         config: &config,
-        mutates_state: false,
         tcp_line,
         op: "sandbox.runtime.ready",
-        invocation_id: name,
+        request_id: name,
         args: &args,
     };
     let error = tcp_once(&attempt, endpoint, 0).expect_err("tcp_once should fail in this test");

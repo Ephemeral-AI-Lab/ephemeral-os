@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use crate::workspace_crate::{
-    BaseRevision, ChangedPathKind, DestroyWorkspaceResult, WorkspaceHandle, WorkspaceId,
+    BaseRevision, ChangedPathKind, DestroyWorkspaceResult, WorkspaceHandle, WorkspaceSessionId,
 };
 use crate::workspace_session::WorkspaceSessionError;
 
@@ -22,7 +22,7 @@ impl WorkspaceRemountState {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkspaceSessionHandler {
-    pub workspace_session_id: WorkspaceId,
+    pub workspace_session_id: WorkspaceSessionId,
     pub handle: WorkspaceHandle,
     pub layer_stack_root: PathBuf,
 }
@@ -45,7 +45,7 @@ pub(crate) struct OneShotSessionFinalization {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct WorkspaceSession {
-    pub workspace_session_id: WorkspaceId,
+    pub workspace_session_id: WorkspaceSessionId,
     pub handle: WorkspaceHandle,
     pub layer_stack_root: PathBuf,
     pub remount_state: WorkspaceRemountState,

@@ -1,4 +1,4 @@
-use crate::command::{CommandId, CommandLinesOutput, CommandServiceError, CommandStatus};
+use crate::command::{CommandLinesOutput, CommandServiceError, CommandSessionId, CommandStatus};
 
 use super::process_store::{CommandTranscriptStore, RetainedCommandTranscript};
 
@@ -12,13 +12,13 @@ impl CommandTranscriptStore {
 impl RetainedCommandTranscript {
     pub(crate) fn window(
         &self,
-        command_id: &CommandId,
+        command_session_id: &CommandSessionId,
         offset: u64,
         limit: usize,
     ) -> Result<::command::CommandTranscriptWindow, CommandServiceError> {
         ::command::required_transcript_window(self.transcript_path.as_deref(), offset, limit)
             .map_err(|error| CommandServiceError::CommandTranscriptUnavailable {
-                command_id: command_id.clone(),
+                command_session_id: command_session_id.clone(),
                 path: self.transcript_path.clone(),
                 error,
             })
@@ -28,7 +28,7 @@ impl RetainedCommandTranscript {
 pub(crate) trait CommandTranscriptWindowExt {
     fn into_output(
         self,
-        command_id: CommandId,
+        command_session_id: CommandSessionId,
         status: CommandStatus,
         exit_code: Option<i64>,
     ) -> CommandLinesOutput;
@@ -37,16 +37,16 @@ pub(crate) trait CommandTranscriptWindowExt {
 impl CommandTranscriptWindowExt for ::command::CommandTranscriptWindow {
     fn into_output(
         self,
-        command_id: CommandId,
+        command_session_id: CommandSessionId,
         status: CommandStatus,
         exit_code: Option<i64>,
     ) -> CommandLinesOutput {
         CommandLinesOutput {
-            command_id,
+            command_session_id: command_session_id,
             status,
             exit_code,
-            offset: self.offset,
-            next_offset: self.next_offset,
+            start_offset: self.offset,
+            end_offset: self.next_offset,
             total_lines: self.total_lines,
             truncated_before: self.truncated_before,
             output_truncated: self.output_truncated,

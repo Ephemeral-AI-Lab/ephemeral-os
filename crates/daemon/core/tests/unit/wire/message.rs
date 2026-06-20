@@ -30,11 +30,18 @@ fn encode_appends_single_newline() -> TestResult {
 
 #[test]
 fn request_args_order_preserved_roundtrip() -> TestResult {
-    let raw = b"{\"op\":\"x\",\"invocation_id\":\"i\",\"args\":{\"z\":1,\"a\":2,\"_eos_daemon_protocol_version\":1}}\n";
+    let raw = b"{\"op\":\"x\",\"request_id\":\"i\",\"args\":{\"z\":1,\"a\":2,\"_eos_daemon_protocol_version\":1}}\n";
     let env = decode(raw)?;
     assert!(matches!(env, WireMessage::Request(_)));
     assert_eq!(encode(&env)?, raw);
     Ok(())
+}
+
+#[test]
+fn request_decode_requires_request_id_without_legacy_alias() {
+    let raw = b"{\"op\":\"x\",\"invocation_id\":\"i\",\"args\":{}}\n";
+    let error = decode(raw).expect_err("legacy invocation_id must not decode");
+    assert!(error.to_string().contains("missing field `request_id`"));
 }
 
 // Build arbitrary JSON values with only finite numbers (NaN/Inf are not JSON).
@@ -58,7 +65,7 @@ proptest! {
     #[test]
     fn decode_encode_roundtrips_requests(op in "[a-z.]{1,12}", id in "[a-z0-9]{0,16}", args in arb_json()) {
         let args = if args.is_object() { args } else { serde_json::json!({"v": args}) };
-        let env = WireMessage::Request(Request { op, invocation_id: id, args });
+        let env = WireMessage::Request(Request { op, request_id: id, args });
         let bytes = encode(&env)
             .map_err(|error| TestCaseError::fail(error.to_string()))?;
         let back = decode(&bytes)

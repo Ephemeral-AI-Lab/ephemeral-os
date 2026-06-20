@@ -7,8 +7,8 @@ use workspace::{
     BaseRevision, CallerId, CaptureChangesRequest, CapturedWorkspaceChanges,
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
     LayerStackSnapshotRef, LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest,
-    RemountWorkspaceResult, WorkspaceError, WorkspaceHandle, WorkspaceId, WorkspaceProfile,
-    WorkspaceRuntimeHooks, WorkspaceRuntimeService,
+    RemountWorkspaceResult, WorkspaceError, WorkspaceHandle, WorkspaceProfile,
+    WorkspaceRuntimeHooks, WorkspaceRuntimeService, WorkspaceSessionId,
 };
 
 struct FakeWorkspaceService {
@@ -16,9 +16,9 @@ struct FakeWorkspaceService {
     capture_results: Mutex<VecDeque<Result<CapturedWorkspaceChanges, WorkspaceError>>>,
     remount_results: Mutex<VecDeque<Result<RemountWorkspaceResult, WorkspaceError>>>,
     destroy_results: Mutex<VecDeque<Result<DestroyWorkspaceResult, WorkspaceError>>>,
-    capture_calls: Mutex<Vec<WorkspaceId>>,
-    remount_calls: Mutex<Vec<WorkspaceId>>,
-    destroy_calls: Mutex<Vec<WorkspaceId>>,
+    capture_calls: Mutex<Vec<WorkspaceSessionId>>,
+    remount_calls: Mutex<Vec<WorkspaceSessionId>>,
+    destroy_calls: Mutex<Vec<WorkspaceSessionId>>,
 }
 
 impl FakeWorkspaceService {
@@ -62,21 +62,21 @@ impl FakeWorkspaceService {
             .push_back(result);
     }
 
-    fn capture_calls(&self) -> Vec<WorkspaceId> {
+    fn capture_calls(&self) -> Vec<WorkspaceSessionId> {
         self.capture_calls
             .lock()
             .expect("test operation succeeds")
             .clone()
     }
 
-    fn remount_calls(&self) -> Vec<WorkspaceId> {
+    fn remount_calls(&self) -> Vec<WorkspaceSessionId> {
         self.remount_calls
             .lock()
             .expect("test operation succeeds")
             .clone()
     }
 
-    fn destroy_calls(&self) -> Vec<WorkspaceId> {
+    fn destroy_calls(&self) -> Vec<WorkspaceSessionId> {
         self.destroy_calls
             .lock()
             .expect("test operation succeeds")
@@ -218,7 +218,7 @@ fn workspace_handle(
         layer_paths: vec![PathBuf::from("/lower/one")],
     };
     WorkspaceHandle::without_launch_for_test(
-        WorkspaceId(workspace_session_id.to_owned()),
+        WorkspaceSessionId(workspace_session_id.to_owned()),
         CallerId(caller_id.to_owned()),
         PathBuf::from("/workspace"),
         WorkspaceProfile::HostCompatible,
@@ -228,7 +228,7 @@ fn workspace_handle(
 
 fn destroy_result(handle: &WorkspaceHandle) -> DestroyWorkspaceResult {
     DestroyWorkspaceResult {
-        workspace_id: handle.id.clone(),
+        workspace_session_id: handle.id.clone(),
         owner: handle.owner.clone(),
         evicted_upperdir_bytes: 0,
         lifetime_s: 0.0,
@@ -244,7 +244,7 @@ fn capture_result(
     root_hash: &str,
 ) -> CapturedWorkspaceChanges {
     CapturedWorkspaceChanges {
-        workspace_id: handle.id.clone(),
+        workspace_session_id: handle.id.clone(),
         base_revision: BaseRevision {
             version,
             root_hash: root_hash.to_owned(),
@@ -262,7 +262,7 @@ fn capture_result(
 #[test]
 fn workspace_session_resolve_validates_caller_ownership() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
+    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
     let manager = manager_with(&fake);
 
     manager
@@ -271,33 +271,33 @@ fn workspace_session_resolve_validates_caller_ownership() {
 
     let wrong_caller = manager
         .resolve_session(
-            WorkspaceId("workspace-1".to_owned()),
+            WorkspaceSessionId("workspace-1".to_owned()),
             CallerId("caller-2".to_owned()),
         )
         .expect_err("test operation fails");
     assert!(matches!(
         wrong_caller,
         WorkspaceSessionError::CallerMismatch { workspace_session_id, .. }
-            if workspace_session_id == WorkspaceId("workspace-1".to_owned())
+            if workspace_session_id == WorkspaceSessionId("workspace-1".to_owned())
     ));
 
     let handler = manager
         .resolve_session(
-            WorkspaceId("workspace-1".to_owned()),
+            WorkspaceSessionId("workspace-1".to_owned()),
             CallerId("caller-1".to_owned()),
         )
         .expect("test operation succeeds");
     assert_eq!(
         handler.workspace_session_id,
-        WorkspaceId("workspace-1".to_owned())
+        WorkspaceSessionId("workspace-1".to_owned())
     );
 }
 
 #[test]
 fn workspace_session_create_rolls_back_raw_workspace_when_insert_fails() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
-    fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-2")));
+    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
+    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-2")));
     let manager = manager_with(&fake);
 
     manager
@@ -310,15 +310,15 @@ fn workspace_session_create_rolls_back_raw_workspace_when_insert_fails() {
     assert!(matches!(
         error,
         WorkspaceSessionError::DuplicateWorkspaceSessionId { workspace_session_id }
-            if workspace_session_id == WorkspaceId("workspace-1".to_owned())
+            if workspace_session_id == WorkspaceSessionId("workspace-1".to_owned())
     ));
     assert_eq!(
         fake.destroy_calls(),
-        vec![WorkspaceId("workspace-1".to_owned())]
+        vec![WorkspaceSessionId("workspace-1".to_owned())]
     );
     assert!(manager
         .resolve_session(
-            WorkspaceId("workspace-1".to_owned()),
+            WorkspaceSessionId("workspace-1".to_owned()),
             CallerId("caller-1".to_owned()),
         )
         .is_ok());
@@ -327,7 +327,7 @@ fn workspace_session_create_rolls_back_raw_workspace_when_insert_fails() {
 #[test]
 fn workspace_session_destroy_failure_retains_session() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
+    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
     fake.push_destroy_result(Err(WorkspaceError::Setup {
         step: "destroy failed".to_owned(),
     }));
@@ -346,7 +346,7 @@ fn workspace_session_destroy_failure_retains_session() {
     ));
     assert!(manager
         .resolve_session(
-            WorkspaceId("workspace-1".to_owned()),
+            WorkspaceSessionId("workspace-1".to_owned()),
             CallerId("caller-1".to_owned()),
         )
         .is_ok());
@@ -355,7 +355,7 @@ fn workspace_session_destroy_failure_retains_session() {
 #[test]
 fn workspace_session_successful_destroy_removes_session() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
+    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
     let manager = manager_with(&fake);
     let handler = manager
         .create_workspace_session(create_request("caller-1"))
@@ -367,7 +367,7 @@ fn workspace_session_successful_destroy_removes_session() {
 
     let missing = manager
         .resolve_session(
-            WorkspaceId("workspace-1".to_owned()),
+            WorkspaceSessionId("workspace-1".to_owned()),
             CallerId("caller-1".to_owned()),
         )
         .expect_err("test operation fails");
@@ -377,7 +377,7 @@ fn workspace_session_successful_destroy_removes_session() {
 #[test]
 fn workspace_session_rejects_stale_handler_before_raw_capture() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
+    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
     let manager = manager_with(&fake);
     let handler = manager
         .create_workspace_session(create_request("caller-1"))
@@ -403,14 +403,14 @@ fn workspace_session_rejects_stale_handler_before_raw_capture() {
 #[test]
 fn workspace_session_uses_canonical_handle_for_capture() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    let handle = workspace_handle("workspace-1", "caller-1", "lease-1");
+    let handle = workspace_handle("workspace-1", "lease-1");
     fake.push_create_result(Ok(handle.clone()));
     fake.push_capture_result(Ok(capture_result(&handle, 2, "root-2")));
     let manager = manager_with(&fake);
     let mut handler = manager
         .create_workspace_session(create_request("caller-1"))
         .expect("test operation succeeds");
-    handler.handle.id = WorkspaceId("fabricated".to_owned());
+    handler.handle.id = WorkspaceSessionId("fabricated".to_owned());
 
     manager
         .capture_session_changes(
@@ -423,14 +423,14 @@ fn workspace_session_uses_canonical_handle_for_capture() {
 
     assert_eq!(
         fake.capture_calls(),
-        vec![WorkspaceId("workspace-1".to_owned())]
+        vec![WorkspaceSessionId("workspace-1".to_owned())]
     );
 }
 
 #[test]
 fn workspace_session_capture_updates_handler_snapshot_consistently() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    let handle = workspace_handle("workspace-1", "caller-1", "lease-1");
+    let handle = workspace_handle("workspace-1", "lease-1");
     fake.push_create_result(Ok(handle.clone()));
     fake.push_capture_result(Ok(capture_result(&handle, 2, "root-2")));
     let manager = manager_with(&fake);
@@ -449,7 +449,7 @@ fn workspace_session_capture_updates_handler_snapshot_consistently() {
 
     let resolved = manager
         .resolve_session(
-            WorkspaceId("workspace-1".to_owned()),
+            WorkspaceSessionId("workspace-1".to_owned()),
             CallerId("caller-1".to_owned()),
         )
         .expect("test operation succeeds");
@@ -460,31 +460,31 @@ fn workspace_session_capture_updates_handler_snapshot_consistently() {
 #[test]
 fn workspace_session_begin_remount_marks_pending_and_rejects_duplicate_begin() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
+    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
     let manager = manager_with(&fake);
     manager
         .create_workspace_session(create_request("caller-1"))
         .expect("test operation succeeds");
 
     manager
-        .begin_remount(WorkspaceId("workspace-1".to_owned()))
+        .begin_remount(WorkspaceSessionId("workspace-1".to_owned()))
         .expect("begin remount succeeds");
 
-    assert!(manager.is_remount_pending(&WorkspaceId("workspace-1".to_owned())));
+    assert!(manager.is_remount_pending(&WorkspaceSessionId("workspace-1".to_owned())));
     let duplicate = manager
-        .begin_remount(WorkspaceId("workspace-1".to_owned()))
+        .begin_remount(WorkspaceSessionId("workspace-1".to_owned()))
         .expect_err("duplicate begin is rejected");
     assert!(matches!(
         duplicate,
         WorkspaceSessionError::RemountAlreadyPending { workspace_session_id }
-            if workspace_session_id == WorkspaceId("workspace-1".to_owned())
+            if workspace_session_id == WorkspaceSessionId("workspace-1".to_owned())
     ));
 }
 
 #[test]
 fn workspace_session_apply_and_finish_remount_returns_session_to_active() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    let handle = workspace_handle("workspace-1", "caller-1", "lease-1");
+    let handle = workspace_handle("workspace-1", "lease-1");
     let layer_paths = handle.snapshot.layer_paths.clone();
     fake.push_create_result(Ok(handle.clone()));
     fake.push_remount_result(Ok(RemountWorkspaceResult { handle }));
@@ -493,39 +493,39 @@ fn workspace_session_apply_and_finish_remount_returns_session_to_active() {
         .create_workspace_session(create_request("caller-1"))
         .expect("test operation succeeds");
     let handler = manager
-        .begin_remount(WorkspaceId("workspace-1".to_owned()))
+        .begin_remount(WorkspaceSessionId("workspace-1".to_owned()))
         .expect("begin remount succeeds");
 
     manager
         .apply_and_finish_remount(&handler, RemountWorkspaceRequest { layer_paths })
         .expect("apply and finish remount succeeds");
 
-    assert!(!manager.is_remount_pending(&WorkspaceId("workspace-1".to_owned())));
+    assert!(!manager.is_remount_pending(&WorkspaceSessionId("workspace-1".to_owned())));
 }
 
 #[test]
 fn workspace_session_block_remount_clears_pending() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
+    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
     let manager = manager_with(&fake);
     manager
         .create_workspace_session(create_request("caller-1"))
         .expect("test operation succeeds");
     manager
-        .begin_remount(WorkspaceId("workspace-1".to_owned()))
+        .begin_remount(WorkspaceSessionId("workspace-1".to_owned()))
         .expect("begin remount succeeds");
 
     manager
-        .block_remount(WorkspaceId("workspace-1".to_owned()))
+        .block_remount(WorkspaceSessionId("workspace-1".to_owned()))
         .expect("block remount succeeds");
 
-    assert!(!manager.is_remount_pending(&WorkspaceId("workspace-1".to_owned())));
+    assert!(!manager.is_remount_pending(&WorkspaceSessionId("workspace-1".to_owned())));
 }
 
 #[test]
 fn workspace_session_capture_rejects_pending_remount_before_raw_capture() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
+    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
     let manager = manager_with(&fake);
     let handler = manager
         .create_workspace_session(create_request("caller-1"))
@@ -546,16 +546,16 @@ fn workspace_session_capture_rejects_pending_remount_before_raw_capture() {
     assert!(matches!(
         error,
         WorkspaceSessionError::RemountAlreadyPending { workspace_session_id }
-            if workspace_session_id == WorkspaceId("workspace-1".to_owned())
+            if workspace_session_id == WorkspaceSessionId("workspace-1".to_owned())
     ));
     assert!(fake.capture_calls().is_empty());
-    assert!(manager.is_remount_pending(&WorkspaceId("workspace-1".to_owned())));
+    assert!(manager.is_remount_pending(&WorkspaceSessionId("workspace-1".to_owned())));
 }
 
 #[test]
 fn workspace_session_destroy_rejects_pending_remount_before_raw_destroy() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
+    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
     let manager = manager_with(&fake);
     let handler = manager
         .create_workspace_session(create_request("caller-1"))
@@ -571,17 +571,17 @@ fn workspace_session_destroy_rejects_pending_remount_before_raw_destroy() {
     assert!(matches!(
         error,
         WorkspaceSessionError::RemountAlreadyPending { workspace_session_id }
-            if workspace_session_id == WorkspaceId("workspace-1".to_owned())
+            if workspace_session_id == WorkspaceSessionId("workspace-1".to_owned())
     ));
     assert!(fake.destroy_calls().is_empty());
-    assert!(manager.is_remount_pending(&WorkspaceId("workspace-1".to_owned())));
+    assert!(manager.is_remount_pending(&WorkspaceSessionId("workspace-1".to_owned())));
 }
 
 #[test]
 fn workspace_session_apply_remount_refreshes_canonical_handle() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    let handle = workspace_handle("workspace-1", "caller-1", "lease-1");
-    let mut remounted = workspace_handle("workspace-1", "caller-1", "lease-2");
+    let handle = workspace_handle("workspace-1", "lease-1");
+    let mut remounted = workspace_handle("workspace-1", "lease-2");
     remounted.snapshot.manifest_version = 2;
     remounted.snapshot.root_hash = "root-2".to_owned();
     remounted.snapshot.layer_paths = vec![PathBuf::from("/lower/two")];
@@ -595,7 +595,7 @@ fn workspace_session_apply_remount_refreshes_canonical_handle() {
         .create_workspace_session(create_request("caller-1"))
         .expect("test operation succeeds");
     let handler = manager
-        .begin_remount(WorkspaceId("workspace-1".to_owned()))
+        .begin_remount(WorkspaceSessionId("workspace-1".to_owned()))
         .expect("begin remount succeeds");
 
     let updated = manager
@@ -618,15 +618,15 @@ fn workspace_session_apply_remount_refreshes_canonical_handle() {
     );
     assert_eq!(
         fake.remount_calls(),
-        vec![WorkspaceId("workspace-1".to_owned())]
+        vec![WorkspaceSessionId("workspace-1".to_owned())]
     );
-    assert!(!manager.is_remount_pending(&WorkspaceId("workspace-1".to_owned())));
+    assert!(!manager.is_remount_pending(&WorkspaceSessionId("workspace-1".to_owned())));
 }
 
 #[test]
 fn workspace_session_apply_remount_failure_blocks_and_keeps_session_available() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
+    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
     fake.push_remount_result(Err(WorkspaceError::Setup {
         step: "remount failed".to_owned(),
     }));
@@ -635,7 +635,7 @@ fn workspace_session_apply_remount_failure_blocks_and_keeps_session_available() 
         .create_workspace_session(create_request("caller-1"))
         .expect("test operation succeeds");
     let handler = manager
-        .begin_remount(WorkspaceId("workspace-1".to_owned()))
+        .begin_remount(WorkspaceSessionId("workspace-1".to_owned()))
         .expect("begin remount succeeds");
 
     let error = manager
@@ -651,10 +651,10 @@ fn workspace_session_apply_remount_failure_blocks_and_keeps_session_available() 
         error,
         WorkspaceSessionError::Workspace(WorkspaceError::Setup { .. })
     ));
-    assert!(!manager.is_remount_pending(&WorkspaceId("workspace-1".to_owned())));
+    assert!(!manager.is_remount_pending(&WorkspaceSessionId("workspace-1".to_owned())));
     assert!(manager
         .resolve_session(
-            WorkspaceId("workspace-1".to_owned()),
+            WorkspaceSessionId("workspace-1".to_owned()),
             CallerId("caller-1".to_owned()),
         )
         .is_ok());
@@ -707,9 +707,9 @@ fn workspace_session_files_do_not_import_command_service() {
 #[test]
 fn workspace_session_rejects_remount_workspace_session_id_mismatch() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
+    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
     fake.push_remount_result(Ok(RemountWorkspaceResult {
-        handle: workspace_handle("workspace-2", "caller-1", "lease-2"),
+        handle: workspace_handle("workspace-2", "lease-2"),
     }));
     let manager = manager_with(&fake);
     let handler = manager
@@ -731,17 +731,17 @@ fn workspace_session_rejects_remount_workspace_session_id_mismatch() {
     assert!(matches!(
         error,
         WorkspaceSessionError::RemountWorkspaceSessionIdMismatch { expected, actual }
-            if expected == WorkspaceId("workspace-1".to_owned())
-                && actual == WorkspaceId("workspace-2".to_owned())
+            if expected == WorkspaceSessionId("workspace-1".to_owned())
+                && actual == WorkspaceSessionId("workspace-2".to_owned())
     ));
     assert_eq!(
         fake.remount_calls(),
-        vec![WorkspaceId("workspace-1".to_owned())]
+        vec![WorkspaceSessionId("workspace-1".to_owned())]
     );
-    assert!(!manager.is_remount_pending(&WorkspaceId("workspace-1".to_owned())));
+    assert!(!manager.is_remount_pending(&WorkspaceSessionId("workspace-1".to_owned())));
     assert!(manager
         .resolve_session(
-            WorkspaceId("workspace-1".to_owned()),
+            WorkspaceSessionId("workspace-1".to_owned()),
             CallerId("caller-1".to_owned()),
         )
         .is_ok());
@@ -750,7 +750,7 @@ fn workspace_session_rejects_remount_workspace_session_id_mismatch() {
 #[test]
 fn workspace_session_duplicate_destroy_does_not_call_raw_destroy_twice() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
+    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
     let manager = manager_with(&fake);
     let handler = manager
         .create_workspace_session(create_request("caller-1"))
@@ -766,6 +766,6 @@ fn workspace_session_duplicate_destroy_does_not_call_raw_destroy_twice() {
     assert!(matches!(duplicate, WorkspaceSessionError::NotFound { .. }));
     assert_eq!(
         fake.destroy_calls(),
-        vec![WorkspaceId("workspace-1".to_owned())]
+        vec![WorkspaceSessionId("workspace-1".to_owned())]
     );
 }

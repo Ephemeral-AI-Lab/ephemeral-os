@@ -26,7 +26,7 @@ impl DaemonServer {
         let server = Arc::new(self);
         let connection_permits = Arc::new(Semaphore::new(MAX_CONCURRENT_CONNECTIONS));
         let _reaper_task = {
-            let registry = Arc::clone(&server.invocation_registry);
+            let registry = Arc::clone(&server.request_registry);
             let shutdown = server.shutdown.clone();
             tokio::spawn(async move {
                 loop {

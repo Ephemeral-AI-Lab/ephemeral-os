@@ -22,9 +22,8 @@ pub enum ForwardError {
 pub(crate) struct ForwardRequestInput<'a> {
     pub(crate) record: Arc<SandboxRecord>,
     pub(crate) config: &'a HostConfig,
-    pub(crate) mutates_state: bool,
     pub(crate) op: &'a str,
-    pub(crate) invocation_id: &'a str,
+    pub(crate) request_id: &'a str,
     pub(crate) args: &'a Value,
 }
 
@@ -32,26 +31,20 @@ pub(crate) fn forward_request(input: ForwardRequestInput<'_>) -> Result<Value, F
     let ForwardRequestInput {
         record,
         config,
-        mutates_state,
         op,
-        invocation_id,
+        request_id,
         args,
     } = input;
     let record_ref = record.as_ref();
-    let mut tcp_line = encode_request_with_forward_metadata(
-        op,
-        invocation_id,
-        args,
-        Some(&record_ref.forward_token),
-    );
+    let mut tcp_line =
+        encode_request_with_forward_metadata(op, request_id, args, Some(&record_ref.forward_token));
     tcp_line.push(b'\n');
     let attempt = ForwardAttempt {
         record: record_ref,
         config,
-        mutates_state,
         tcp_line,
         op,
-        invocation_id,
+        request_id,
         args,
     };
     run_recovery(&attempt)
@@ -60,10 +53,9 @@ pub(crate) fn forward_request(input: ForwardRequestInput<'_>) -> Result<Value, F
 pub(crate) struct ForwardAttempt<'a> {
     pub(crate) record: &'a SandboxRecord,
     pub(crate) config: &'a HostConfig,
-    pub(crate) mutates_state: bool,
     pub(crate) tcp_line: Vec<u8>,
     pub(crate) op: &'a str,
-    pub(crate) invocation_id: &'a str,
+    pub(crate) request_id: &'a str,
     pub(crate) args: &'a Value,
 }
 

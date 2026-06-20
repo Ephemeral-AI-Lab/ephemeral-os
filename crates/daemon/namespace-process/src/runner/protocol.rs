@@ -23,8 +23,7 @@ pub struct NsFds {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NamespaceCommandRequest {
-    pub invocation_id: String,
-    pub caller_id: String,
+    pub request_id: String,
     pub args: Value,
     pub workspace_root: WorkspaceRoot,
     #[serde(default)]

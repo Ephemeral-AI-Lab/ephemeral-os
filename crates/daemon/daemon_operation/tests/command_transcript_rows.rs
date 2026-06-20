@@ -9,7 +9,7 @@ use command::process::{
 };
 use command::yield_wait_loop::WaitOutcome;
 use daemon_operation::command::{
-    CommandCallContext, CommandId, CommandLaunchDriver, CommandServiceError, CommandStatus,
+    CommandCallContext, CommandLaunchDriver, CommandServiceError, CommandSessionId, CommandStatus,
     CommandStream, CommandTranscriptRow, ExecCommandInput, PollCommandInput, ReadCommandLinesInput,
 };
 use workspace::{CallerId, WorkspaceEntry, WorkspaceProfile};
@@ -74,19 +74,19 @@ impl CommandLaunchDriver for TranscriptLaunchDriver {
         let parts =
             CommandProcessSpawn::prepare(&spec.id, workspace_entry, config).map_err(|error| {
                 CommandServiceError::CommandIo {
-                    command_id: CommandId(spec.id.clone()),
+                    command_session_id: CommandSessionId(spec.id.clone()),
                     error: error.to_string(),
                 }
             })?;
         if let Some(parent) = parts.transcript_path.parent() {
             std::fs::create_dir_all(parent).map_err(|error| CommandServiceError::CommandIo {
-                command_id: CommandId(spec.id.clone()),
+                command_session_id: CommandSessionId(spec.id.clone()),
                 error: error.to_string(),
             })?;
         }
         std::fs::write(&parts.transcript_path, &self.transcript).map_err(|error| {
             CommandServiceError::CommandIo {
-                command_id: CommandId(spec.id.clone()),
+                command_session_id: CommandSessionId(spec.id.clone()),
                 error: error.to_string(),
             }
         })?;
@@ -123,7 +123,7 @@ impl CommandLaunchDriver for MissingTranscriptLaunchDriver {
         let parts =
             CommandProcessSpawn::prepare(&spec.id, workspace_entry, config).map_err(|error| {
                 CommandServiceError::CommandIo {
-                    command_id: CommandId(spec.id.clone()),
+                    command_session_id: CommandSessionId(spec.id.clone()),
                     error: error.to_string(),
                 }
             })?;
@@ -150,7 +150,9 @@ impl CommandLaunchDriver for MissingTranscriptLaunchDriver {
     }
 }
 
-fn session_with_driver(driver: impl CommandLaunchDriver + 'static) -> (TestServices, CommandId) {
+fn session_with_driver(
+    driver: impl CommandLaunchDriver + 'static,
+) -> (TestServices, CommandSessionId) {
     let fake = Arc::new(FakeWorkspaceService::new());
     let workspace_root = PathBuf::from("/workspace/session");
     fake.push_create_result(Ok(workspace_handle(
@@ -163,28 +165,27 @@ fn session_with_driver(driver: impl CommandLaunchDriver + 'static) -> (TestServi
     let env = build_services_with_launch_driver(Arc::clone(&fake), Arc::new(driver));
     let handler = env
         .workspace
-        .create_workspace_session(create_request("caller-owner", workspace_root.clone()))
+        .create_workspace_session(create_request(workspace_root.clone()))
         .expect("session create succeeds");
 
     let output = env
         .command
-        .exec_command(
-            ExecCommandInput {
-                caller_id: CallerId("caller-owner".to_owned()),
-                workspace_root,
-                workspace_session_id: Some(handler.workspace_session_id.clone()),
-                cmd: "printf rows".to_owned(),
-                cwd: None,
-                timeout_seconds: None,
-                yield_time_ms: Some(0),
-            },
-            context("caller-owner"),
-        )
+        .exec_command(ExecCommandInput {
+            caller_id: CallerId("caller-owner".to_owned()),
+            workspace_root,
+            workspace_session_id: Some(handler.workspace_session_id.clone()),
+            cmd: "printf rows".to_owned(),
+            cwd: None,
+            timeout_seconds: None,
+            yield_time_ms: Some(0),
+        })
         .expect("command exec succeeds");
 
     (
         env,
-        output.command_id.expect("command id is returned by exec"),
+        output
+            .command_session_id
+            .expect("command session id is returned by exec"),
     )
 }
 
@@ -201,25 +202,23 @@ fn command_transcript_rows_preserve_offsets_streams_and_window_metadata() {
         "{\"offset\":1,\"stream\":\"stderr\",\"text\":\"warning\"}\n",
         "{\"offset\":2,\"stream\":\"stdout\",\"text\":\"third\"}\n",
     );
-    let (env, command_id) = session_with_driver(TranscriptLaunchDriver::running(transcript));
+    let (env, command_session_id) =
+        session_with_driver(TranscriptLaunchDriver::running(transcript));
 
     let output = env
         .command
-        .read_lines(
-            ReadCommandLinesInput {
-                command_id: command_id.clone(),
-                offset: 1,
-                limit: 1,
-            },
-            context("caller-owner"),
-        )
+        .read_command_lines(ReadCommandLinesInput {
+            command_session_id: command_session_id.clone(),
+            start_offset: 1,
+            limit: 1,
+        })
         .expect("owner can read active command rows");
 
-    assert_eq!(output.command_id, command_id);
+    assert_eq!(output.command_session_id, command_session_id);
     assert_eq!(output.status, CommandStatus::Running);
     assert_eq!(output.exit_code, None);
-    assert_eq!(output.offset, 1);
-    assert_eq!(output.next_offset, 2);
+    assert_eq!(output.start_offset, 1);
+    assert_eq!(output.end_offset, 2);
     assert_eq!(output.total_lines, 3);
     assert_eq!(output.truncated_before, 0);
     assert!(output.output_truncated);
@@ -240,21 +239,19 @@ fn command_transcript_rows_parse_raw_pty_transcript_as_stdout_rows() {
         "[2026-06-18T09:02:03.004+08:00] second\n",
         "third\n",
     );
-    let (env, command_id) = session_with_driver(TranscriptLaunchDriver::running(transcript));
+    let (env, command_session_id) =
+        session_with_driver(TranscriptLaunchDriver::running(transcript));
 
     let output = env
         .command
-        .read_lines(
-            ReadCommandLinesInput {
-                command_id,
-                offset: 0,
-                limit: 10,
-            },
-            context("caller-owner"),
-        )
+        .read_command_lines(ReadCommandLinesInput {
+            command_session_id,
+            start_offset: 0,
+            limit: 10,
+        })
         .expect("owner can read raw transcript rows");
 
-    assert_eq!(output.next_offset, 3);
+    assert_eq!(output.end_offset, 3);
     assert_eq!(output.total_lines, 3);
     assert!(!output.output_truncated);
     assert_eq!(
@@ -280,24 +277,21 @@ fn command_transcript_rows_parse_raw_pty_transcript_as_stdout_rows() {
 }
 
 #[test]
-fn command_transcript_rows_keep_empty_window_next_offset_at_request() {
-    let (env, command_id) =
+fn command_transcript_rows_keep_empty_window_end_offset_at_request() {
+    let (env, command_session_id) =
         session_with_driver(TranscriptLaunchDriver::running("one\ntwo\nthree\n"));
 
     let output = env
         .command
-        .read_lines(
-            ReadCommandLinesInput {
-                command_id,
-                offset: 10,
-                limit: 5,
-            },
-            context("caller-owner"),
-        )
+        .read_command_lines(ReadCommandLinesInput {
+            command_session_id,
+            start_offset: 10,
+            limit: 5,
+        })
         .expect("owner can request beyond retained rows");
 
-    assert_eq!(output.offset, 10);
-    assert_eq!(output.next_offset, 10);
+    assert_eq!(output.start_offset, 10);
+    assert_eq!(output.end_offset, 10);
     assert_eq!(output.total_lines, 3);
     assert_eq!(output.truncated_before, 0);
     assert!(output.output.is_empty());
@@ -310,24 +304,22 @@ fn command_transcript_rows_report_bounded_window_truncation() {
     transcript.push_str(&"x".repeat(1024 * 1024 + 128));
     transcript.push('\n');
     transcript.push_str("kept-one\nkept-two\n");
-    let (env, command_id) = session_with_driver(TranscriptLaunchDriver::running(&transcript));
+    let (env, command_session_id) =
+        session_with_driver(TranscriptLaunchDriver::running(&transcript));
 
     let output = env
         .command
-        .read_lines(
-            ReadCommandLinesInput {
-                command_id,
-                offset: 0,
-                limit: 10,
-            },
-            context("caller-owner"),
-        )
+        .read_command_lines(ReadCommandLinesInput {
+            command_session_id,
+            start_offset: 0,
+            limit: 10,
+        })
         .expect("owner can read bounded row window");
 
-    assert_eq!(output.offset, 0);
+    assert_eq!(output.start_offset, 0);
     assert_eq!(output.truncated_before, 3);
     assert_eq!(output.total_lines, 5);
-    assert_eq!(output.next_offset, 5);
+    assert_eq!(output.end_offset, 5);
     assert!(output.output_truncated);
     assert_eq!(
         output.output,
@@ -348,23 +340,20 @@ fn command_transcript_rows_report_bounded_window_truncation() {
 
 #[test]
 fn command_transcript_rows_allow_active_missing_transcript_as_empty_pending_window() {
-    let (env, command_id) = session_with_driver(MissingTranscriptLaunchDriver::running());
+    let (env, command_session_id) = session_with_driver(MissingTranscriptLaunchDriver::running());
 
     let output = env
         .command
-        .read_lines(
-            ReadCommandLinesInput {
-                command_id,
-                offset: 0,
-                limit: 10,
-            },
-            context("caller-owner"),
-        )
+        .read_command_lines(ReadCommandLinesInput {
+            command_session_id,
+            start_offset: 0,
+            limit: 10,
+        })
         .expect("active command without output yet returns an empty pending window");
 
     assert_eq!(output.status, CommandStatus::Running);
     assert_eq!(output.exit_code, None);
-    assert_eq!(output.next_offset, 0);
+    assert_eq!(output.end_offset, 0);
     assert_eq!(output.total_lines, 0);
     assert!(!output.output_truncated);
     assert!(output.output.is_empty());
@@ -372,26 +361,23 @@ fn command_transcript_rows_allow_active_missing_transcript_as_empty_pending_wind
 
 #[test]
 fn command_transcript_rows_error_when_completed_transcript_is_missing() {
-    let (env, command_id) = session_with_driver(MissingTranscriptLaunchDriver::completed(
+    let (env, command_session_id) = session_with_driver(MissingTranscriptLaunchDriver::completed(
         "terminal stdout\n",
     ));
 
     let error = env
         .command
-        .read_lines(
-            ReadCommandLinesInput {
-                command_id: command_id.clone(),
-                offset: 0,
-                limit: 10,
-            },
-            context("caller-owner"),
-        )
+        .read_command_lines(ReadCommandLinesInput {
+            command_session_id: command_session_id.clone(),
+            start_offset: 0,
+            limit: 10,
+        })
         .expect_err("completed command with missing retained transcript is not empty output");
 
     assert!(matches!(
         error,
-        CommandServiceError::CommandTranscriptUnavailable { command_id: id, path: Some(path), error }
-            if id == command_id
+        CommandServiceError::CommandTranscriptUnavailable { command_session_id: id, path: Some(path), error }
+            if id == command_session_id
                 && path.ends_with("transcript.log")
                 && error.contains("open transcript")
     ));
@@ -399,24 +385,22 @@ fn command_transcript_rows_error_when_completed_transcript_is_missing() {
 
 #[test]
 fn command_transcript_rows_authorize_active_reads_by_caller() {
-    let (env, command_id) = session_with_driver(TranscriptLaunchDriver::running("owner only\n"));
+    let (env, command_session_id) =
+        session_with_driver(TranscriptLaunchDriver::running("owner only\n"));
 
     let error = env
         .command
-        .read_lines(
-            ReadCommandLinesInput {
-                command_id: command_id.clone(),
-                offset: 0,
-                limit: 1,
-            },
-            context("caller-other"),
-        )
+        .read_command_lines(ReadCommandLinesInput {
+            command_session_id: command_session_id.clone(),
+            start_offset: 0,
+            limit: 1,
+        })
         .expect_err("wrong caller cannot read active rows");
 
     assert!(matches!(
         error,
-        CommandServiceError::CommandCallerMismatch { command_id: id, expected, actual }
-            if id == command_id
+        CommandServiceError::CommandCallerMismatch { command_session_id: id, expected, actual }
+            if id == command_session_id
                 && expected == CallerId("caller-owner".to_owned())
                 && actual == CallerId("caller-other".to_owned())
     ));
@@ -425,31 +409,25 @@ fn command_transcript_rows_authorize_active_reads_by_caller() {
 #[test]
 fn command_transcript_rows_keep_completed_rows_and_authorization() {
     let transcript = "completed one\ncompleted two\ncompleted three\n";
-    let (env, command_id) = session_with_driver(TranscriptLaunchDriver::completed(
+    let (env, command_session_id) = session_with_driver(TranscriptLaunchDriver::completed(
         transcript,
         "terminal stdout\n",
     ));
 
     let lines = env
         .command
-        .read_lines(
-            ReadCommandLinesInput {
-                command_id: command_id.clone(),
-                offset: 0,
-                limit: 10,
-            },
-            context("caller-owner"),
-        )
+        .read_command_lines(ReadCommandLinesInput {
+            command_session_id: command_session_id.clone(),
+            start_offset: 0,
+            limit: 10,
+        })
         .expect("owner can read completed rows");
     let poll = env
         .command
-        .poll(
-            PollCommandInput {
-                command_id: command_id.clone(),
-                last_n_lines: Some(10),
-            },
-            context("caller-owner"),
-        )
+        .poll(PollCommandInput {
+            command_session_id: command_session_id.clone(),
+            last_n_lines: Some(10),
+        })
         .expect("owner can poll completed command");
 
     assert_eq!(lines.status, CommandStatus::Completed);
@@ -480,20 +458,17 @@ fn command_transcript_rows_keep_completed_rows_and_authorization() {
 
     let window = env
         .command
-        .read_lines(
-            ReadCommandLinesInput {
-                command_id: command_id.clone(),
-                offset: 1,
-                limit: 1,
-            },
-            context("caller-owner"),
-        )
+        .read_command_lines(ReadCommandLinesInput {
+            command_session_id: command_session_id.clone(),
+            start_offset: 1,
+            limit: 1,
+        })
         .expect("owner can read a completed command window");
     assert_eq!(window.status, CommandStatus::Completed);
     assert_eq!(window.exit_code, Some(0));
     assert_eq!(window.total_lines, 3);
     assert_eq!(window.truncated_before, 0);
-    assert_eq!(window.next_offset, 2);
+    assert_eq!(window.end_offset, 2);
     assert!(window.output_truncated);
     assert_eq!(
         window.output,
@@ -506,19 +481,16 @@ fn command_transcript_rows_keep_completed_rows_and_authorization() {
 
     let error = env
         .command
-        .read_lines(
-            ReadCommandLinesInput {
-                command_id: command_id.clone(),
-                offset: 0,
-                limit: 1,
-            },
-            context("caller-other"),
-        )
+        .read_command_lines(ReadCommandLinesInput {
+            command_session_id: command_session_id.clone(),
+            start_offset: 0,
+            limit: 1,
+        })
         .expect_err("wrong caller cannot read completed rows");
     assert!(matches!(
         error,
-        CommandServiceError::CommandCallerMismatch { command_id: id, expected, actual }
-            if id == command_id
+        CommandServiceError::CommandCallerMismatch { command_session_id: id, expected, actual }
+            if id == command_session_id
                 && expected == CallerId("caller-owner".to_owned())
                 && actual == CallerId("caller-other".to_owned())
     ));
@@ -541,31 +513,27 @@ fn command_transcript_rows_report_running_status_for_one_shot_active_command() {
     );
     let output = env
         .command
-        .exec_command(
-            ExecCommandInput {
-                caller_id: CallerId("caller-owner".to_owned()),
-                workspace_root,
-                workspace_session_id: None,
-                cmd: "printf rows".to_owned(),
-                cwd: None,
-                timeout_seconds: None,
-                yield_time_ms: Some(0),
-            },
-            context("caller-owner"),
-        )
+        .exec_command(ExecCommandInput {
+            caller_id: CallerId("caller-owner".to_owned()),
+            workspace_root,
+            workspace_session_id: None,
+            cmd: "printf rows".to_owned(),
+            cwd: None,
+            timeout_seconds: None,
+            yield_time_ms: Some(0),
+        })
         .expect("one-shot command starts");
-    let command_id = output.command_id.expect("command id is returned");
+    let command_session_id = output
+        .command_session_id
+        .expect("command session id is returned");
 
     let rows = env
         .command
-        .read_lines(
-            ReadCommandLinesInput {
-                command_id,
-                offset: 0,
-                limit: 1,
-            },
-            context("caller-owner"),
-        )
+        .read_command_lines(ReadCommandLinesInput {
+            command_session_id,
+            start_offset: 0,
+            limit: 1,
+        })
         .expect("owner can read active one-shot rows");
 
     assert_eq!(rows.status, CommandStatus::Running);
