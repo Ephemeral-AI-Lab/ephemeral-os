@@ -11,8 +11,6 @@ e2e-support = []
 
 [dependencies]
 anyhow.workspace = true
-protocol.workspace = true
-serde.workspace = true
 # preserve_order is load-bearing: request args must cross the wire in
 # insertion order so host-encoded requests stay byte-compatible with the
 # frozen request fixtures in crates/shared/protocol/fixtures/wire_messages/.
