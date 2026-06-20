@@ -76,31 +76,8 @@ pub enum OperationScope {
     Sandbox { sandbox_id: String },
 }
 
-pub struct OperationResponse {
-    pub request_id: String,
-    pub scope: OperationScope,
-    pub op: String,
-    pub status: ResponseStatus,
-    pub result: Option<serde_json::Value>,
-    pub error: Option<ResponseError>,
-    pub meta: ResponseMeta,
-}
-
-pub enum ResponseStatus {
-    Ok,
-    Running,
-    Error,
-}
-
-pub struct ResponseError {
-    pub kind: String,
-    pub message: String,
-    pub details: serde_json::Value,
-}
-
-pub struct ResponseMeta {
-    pub duration_ms: Option<f64>,
-    pub warnings: Vec<String>,
+pub struct Response {
+    // Opaque operation result/error JSON wrapper.
 }
 ```
 
@@ -138,22 +115,13 @@ Example response:
 
 ```json
 {
-  "request_id": "req-2",
-  "scope": {
-    "kind": "sandbox",
-    "sandbox_id": "sbox-1"
-  },
-  "op": "exec_command",
+  "command_session_id": "cmd-1",
   "status": "running",
-  "result": {
-    "command_session_id": "cmd-1",
-    "state": "running"
+  "exit_code": null,
+  "output": {
+    "stdout": ""
   },
-  "error": null,
-  "meta": {
-    "duration_ms": 3.0,
-    "warnings": []
-  }
+  "finalized": null
 }
 ```
 

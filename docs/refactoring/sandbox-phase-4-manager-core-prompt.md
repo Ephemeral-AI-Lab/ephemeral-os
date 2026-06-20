@@ -26,7 +26,6 @@ Required starting state:
 - `crates/sandbox-runtime/operation` exists.
 - `crates/sandbox-daemon` exists.
 - `crates/daemon/server` no longer exists.
-- `crates/daemon/eosd` no longer exists.
 - `crates/sandbox-manager` does not exist yet.
 - Root `Cargo.toml` has workspace dependency:
   `sandbox-daemon = { path = "crates/sandbox-daemon" }`.
@@ -96,7 +95,6 @@ Implementation steps:
    test -d crates/sandbox-runtime/operation
    test -d crates/sandbox-daemon
    test ! -d crates/daemon/server
-   test ! -d crates/daemon/eosd
    test ! -d crates/sandbox-manager
    rg -n "sandbox-daemon = \\{ path = \"crates/sandbox-daemon\" \\}" Cargo.toml
    ```
@@ -225,7 +223,7 @@ Implementation steps:
           &self,
           endpoint: &SandboxDaemonEndpoint,
           request: sandbox_protocol::SandboxRequest,
-      ) -> Result<sandbox_protocol::OperationResponse, ManagerError>;
+      ) -> Result<sandbox_protocol::Response, ManagerError>;
       ```
 
     - Use test doubles only. Do not implement real socket transport in this
@@ -261,8 +259,8 @@ Implementation steps:
         pub spec: &'static sandbox_protocol::OperationSpec,
         pub dispatch: fn(
             &ManagerServices,
-            sandbox_protocol::OperationRequest<'_>,
-        ) -> sandbox_protocol::OperationResponse,
+            sandbox_protocol::Request<'_>,
+        ) -> sandbox_protocol::Response,
     }
     ```
 

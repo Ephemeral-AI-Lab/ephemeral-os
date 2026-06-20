@@ -29,7 +29,7 @@ pub fn operation_catalog() -> OperationCatalog {
 #[must_use]
 pub fn dispatch_operation(
     operations: &SandboxRuntimeOperations,
-    request: sandbox_protocol::OperationRequest<'_>,
-) -> sandbox_protocol::OperationResponse {
+    request: sandbox_protocol::Request<'_>,
+) -> sandbox_protocol::Response {
     public::dispatch_operation(operations, request)
 }

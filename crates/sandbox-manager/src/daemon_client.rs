@@ -10,5 +10,5 @@ pub trait SandboxDaemonClient: Send + Sync {
         &self,
         endpoint: &SandboxDaemonEndpoint,
         request: sandbox_protocol::SandboxRequest,
-    ) -> Result<sandbox_protocol::OperationResponse, ManagerError>;
+    ) -> Result<sandbox_protocol::Response, ManagerError>;
 }

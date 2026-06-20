@@ -8,10 +8,8 @@ pub use sandbox_protocol::{
 #[derive(Clone, Copy)]
 pub struct OperationEntry {
     pub spec: &'static OperationSpec,
-    pub dispatch: fn(
-        &SandboxRuntimeOperations,
-        sandbox_protocol::OperationRequest<'_>,
-    ) -> sandbox_protocol::OperationResponse,
+    pub dispatch:
+        fn(&SandboxRuntimeOperations, sandbox_protocol::Request<'_>) -> sandbox_protocol::Response,
 }
 
 impl OperationEntry {
@@ -20,8 +18,8 @@ impl OperationEntry {
         spec: &'static OperationSpec,
         dispatch: fn(
             &SandboxRuntimeOperations,
-            sandbox_protocol::OperationRequest<'_>,
-        ) -> sandbox_protocol::OperationResponse,
+            sandbox_protocol::Request<'_>,
+        ) -> sandbox_protocol::Response,
     ) -> Self {
         Self { spec, dispatch }
     }

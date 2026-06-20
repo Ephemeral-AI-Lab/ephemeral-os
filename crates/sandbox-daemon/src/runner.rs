@@ -1,4 +1,4 @@
-//! `eosd ns-runner` subcommand adapter.
+//! `sandbox-daemon ns-runner` subcommand adapter.
 
 use std::fs::File;
 use std::io::{Read, Write};
@@ -130,7 +130,7 @@ impl RunnerCliConfig {
                 }
                 "--help" | "-h" => {
                     println!(
-                        "usage: eosd ns-runner [--mount-overlay | --remount-overlay | --configure-dns] [--request PATH] [--output PATH]"
+                        "usage: sandbox-daemon ns-runner [--mount-overlay | --remount-overlay | --configure-dns] [--request PATH] [--output PATH]"
                     );
                     std::process::exit(0);
                 }

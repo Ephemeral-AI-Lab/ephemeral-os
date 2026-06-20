@@ -10,7 +10,7 @@ You are working in:
 Task:
 
 Implement phase 3 only: create the `sandbox-daemon` package by moving the
-daemon server package and folding the `eosd` binary adapter into it.
+daemon server package and folding the namespace helper adapters into it.
 
 Before editing, read:
 
@@ -27,7 +27,6 @@ Required starting state:
 - Root `Cargo.toml` has workspace dependency:
   `sandbox-runtime = { path = "crates/sandbox-runtime/operation" }`.
 - `crates/daemon/server` still exists as package `daemon`.
-- `crates/daemon/eosd` still exists as package `eosd`.
 - `crates/daemon/command`, `workspace`, `namespace-process`, `layerstack`,
   `overlay`, and `config` still exist under `crates/daemon`.
 
@@ -38,8 +37,6 @@ Phase goal:
 
 - Move `crates/daemon/server` to `crates/sandbox-daemon`.
 - Rename package `daemon` to `sandbox-daemon`.
-- Merge `crates/daemon/eosd/src` into the `sandbox-daemon` package.
-- Preserve a compatibility binary named `eosd`.
 - Add the target binary name `sandbox-daemon`.
 - Keep daemon operation behavior unchanged.
 
@@ -47,7 +44,6 @@ Package move:
 
 ```text
 daemon -> sandbox-daemon
-eosd   -> compatibility binary inside sandbox-daemon
 ```
 
 Expected resulting path and package:
@@ -58,7 +54,6 @@ Package: sandbox-daemon
 Import:  sandbox_daemon
 Binaries:
   sandbox-daemon
-  eosd
 ```
 
 Keep in `sandbox-daemon`:
@@ -69,7 +64,6 @@ Keep in `sandbox-daemon`:
 - Request framing at the server edge.
 - Dispatching decoded requests to `sandbox-runtime`.
 - Runtime wiring that builds `SandboxRuntimeOperations`.
-- Temporary `eosd` compatibility entrypoint.
 
 Keep out of `sandbox-daemon`:
 
@@ -94,16 +88,15 @@ Implementation steps:
    test -d crates/sandbox-runtime/operation
    test ! -d crates/daemon/operation
    test -d crates/daemon/server
-   test -d crates/daemon/eosd
    rg -n "sandbox-runtime = \\{ path = \"crates/sandbox-runtime/operation\" \\}" Cargo.toml
    ```
 
 3. Run and record baseline results before file moves:
 
    ```sh
-   cargo fmt --check -p sandbox-protocol -p sandbox-runtime -p daemon -p eosd
-   cargo check -p sandbox-protocol -p sandbox-runtime -p daemon -p eosd
-   cargo test -p sandbox-runtime -p daemon -p eosd
+   cargo fmt --check -p sandbox-protocol -p sandbox-runtime -p daemon
+   cargo check -p sandbox-protocol -p sandbox-runtime -p daemon
+   cargo test -p sandbox-runtime -p daemon
    ```
 
    If any command fails, record that it was pre-existing and continue only if
@@ -115,13 +108,13 @@ Implementation steps:
    crates/daemon/server -> crates/sandbox-daemon
    ```
 
-5. Merge the `eosd` adapter source into `crates/sandbox-daemon/src`:
+5. Keep the namespace helper adapters in `crates/sandbox-daemon/src`:
 
    ```text
-   crates/daemon/eosd/src/main.rs   -> crates/sandbox-daemon/src/main.rs
-   crates/daemon/eosd/src/daemon.rs -> crates/sandbox-daemon/src/serve.rs
-   crates/daemon/eosd/src/runner.rs -> crates/sandbox-daemon/src/runner.rs
-   ns-holder adapter from main.rs   -> crates/sandbox-daemon/src/holder.rs
+   crates/sandbox-daemon/src/main.rs
+   crates/sandbox-daemon/src/serve.rs
+   crates/sandbox-daemon/src/runner.rs
+   crates/sandbox-daemon/src/holder.rs
    ```
 
 6. Move the server library modules under `src/server/`:
@@ -141,10 +134,8 @@ Implementation steps:
 
    - Replace workspace member `crates/daemon/server` with
      `crates/sandbox-daemon`.
-   - Remove workspace member `crates/daemon/eosd`.
    - Replace workspace dependency `daemon = { path = "crates/daemon/server" }`
      with `sandbox-daemon = { path = "crates/sandbox-daemon" }`.
-   - Remove workspace dependency `eosd = { path = "crates/daemon/eosd" }`.
 
 8. Update `crates/sandbox-daemon/Cargo.toml`:
 
@@ -155,14 +146,10 @@ Implementation steps:
    [[bin]]
    name = "sandbox-daemon"
    path = "src/main.rs"
-
-   [[bin]]
-   name = "eosd"
-   path = "src/main.rs"
    ```
 
-   The dependency set should be the union of the old `daemon` and `eosd`
-   packages, without depending on `daemon` or `eosd`:
+   The dependency set should come from the old daemon package and helper
+   adapters, without depending on `daemon`:
 
    ```toml
    command.workspace = true
@@ -206,22 +193,8 @@ Implementation steps:
     sandbox-daemon ns-holder
     ```
 
-    Temporary compatibility interface:
-
-    ```text
-    eosd daemon
-    eosd ns-runner
-    eosd ns-holder
-    ```
-
-    `eosd daemon` should call the same implementation as
-    `sandbox-daemon serve`. Do not require downstream scripts to switch to
-    `sandbox-daemon` in this phase.
-
 12. Preserve spawn behavior:
 
-    - If invoked as `eosd daemon --spawn`, spawned foreground args should keep
-      the compatibility subcommand `daemon`.
     - If invoked as `sandbox-daemon serve --spawn`, spawned foreground args
       should use `serve`.
     - Keep daemon client exit codes `97` and `98`.
@@ -236,7 +209,6 @@ Non-goals:
 
 - Do not create `sandbox-manager`.
 - Do not create `sandbox-gateway-cli`.
-- Do not remove the `eosd` compatibility binary.
 - Do not rename runtime support packages:
   - `command`
   - `workspace`
@@ -256,9 +228,8 @@ Acceptance checks:
 ```sh
 test -d crates/sandbox-daemon
 test ! -d crates/daemon/server
-test ! -d crates/daemon/eosd
-rg -n "crates/daemon/(server|eosd)|^daemon = \\{|^eosd = \\{" Cargo.toml crates --glob 'Cargo.toml'
-rg -n "^daemon\\.workspace|^eosd\\.workspace" crates --glob 'Cargo.toml'
+rg -n "crates/daemon/server|^daemon = \\{" Cargo.toml crates --glob 'Cargo.toml'
+rg -n "^daemon\\.workspace|^sandbox-daemon\\.workspace" crates --glob 'Cargo.toml'
 rg -n "^name = \"daemon\"$" crates --glob 'Cargo.toml'
 rg -n "\\b(DaemonServer|DaemonError)\\b" crates/sandbox-daemon --glob '*.rs'
 rg -n "\\b(SandboxDaemonServer|SandboxDaemonError)\\b" crates/sandbox-daemon --glob '*.rs'
@@ -269,18 +240,15 @@ cargo test -p sandbox-daemon -p sandbox-runtime
 ```
 
 The first three `rg` scans should return no matches. The
-`\\b(DaemonServer|DaemonError)\\b` scan should return no matches unless a temporary
-compatibility alias is explicitly documented in the final response. The
+`\\b(DaemonServer|DaemonError)\\b` scan should return no matches. The
 `\\b(SandboxDaemonServer|SandboxDaemonError)\\b` scan should show the renamed
 types.
 
 Final response requirements:
 
-- Summarize the package move and `eosd` merge.
+- Summarize the package move and `sandbox-daemon` merge.
 - State whether phase 2 starting-state checks passed.
 - State whether baseline checks had pre-existing failures.
 - State final verification commands and results.
-- Call out whether any compatibility aliases remain.
-- Call out that `eosd` remains as a compatibility binary.
 - Do not claim phase 4 work was done.
 ```

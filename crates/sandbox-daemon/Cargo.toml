@@ -9,10 +9,6 @@ license.workspace = true
 name = "sandbox-daemon"
 path = "src/main.rs"
 
-[[bin]]
-name = "eosd"
-path = "src/main.rs"
-
 [dependencies]
 command.workspace = true
 config.workspace = true

@@ -8,7 +8,6 @@ Package: sandbox-daemon
 Import:  sandbox_daemon
 Binaries:
   sandbox-daemon
-  eosd              # packaged namespace helper entrypoint
 ```
 
 `sandbox-daemon` is the in-sandbox process. It owns process startup, daemon
@@ -23,7 +22,6 @@ transport, server lifecycle, and low-level helper subcommand adapters.
 - Dispatching decoded `sandbox_protocol::SandboxRequest` values to
   `sandbox-runtime`.
 - Runtime wiring that builds `SandboxRuntimeOperations`.
-- Packaged `eosd ns-runner` / `eosd ns-holder` helper entrypoints.
 
 ## Must Not Own
 
@@ -62,8 +60,6 @@ Target:
 sandbox-daemon serve
 sandbox-daemon ns-runner
 sandbox-daemon ns-holder
-eosd ns-runner
-eosd ns-holder
 ```
 
 ## Protocol Contract

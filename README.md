@@ -37,7 +37,7 @@ live in `crates/sandbox-runtime/operation`; CAS fixtures live with `layerstack`.
   `daemon/namespace-process`, `daemon/command`, `daemon/workspace`, and
   `daemon/config`.
 - `config/prd.yml` — the single daemon config baseline (see `config/README.md`).
-- `dist/` — packaged static `eosd` binaries uploaded into sandbox containers.
+- `dist/` — packaged static `sandbox-daemon` binaries uploaded into sandbox containers.
 
 ## Common tasks
 

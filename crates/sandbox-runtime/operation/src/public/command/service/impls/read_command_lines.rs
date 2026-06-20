@@ -6,7 +6,7 @@ use crate::command::{
 };
 use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationSpec};
 use crate::SandboxRuntimeOperations;
-use sandbox_protocol::{OperationRequest, OperationResponse};
+use sandbox_protocol::{Request, Response};
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "read_command_lines",
@@ -54,10 +54,7 @@ const READ_LINES_CLI: CliSpec = CliSpec {
     ],
 };
 
-pub(crate) fn dispatch(
-    operations: &SandboxRuntimeOperations,
-    request: OperationRequest<'_>,
-) -> OperationResponse {
+pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: Request<'_>) -> Response {
     let input = match parse_input(&request) {
         Ok(input) => input,
         Err(response) => return response,
@@ -65,7 +62,7 @@ pub(crate) fn dispatch(
     command_lines_response(&request, operations.command.read_command_lines(input))
 }
 
-fn parse_input(request: &OperationRequest<'_>) -> Result<ReadCommandLinesInput, OperationResponse> {
+fn parse_input(request: &Request<'_>) -> Result<ReadCommandLinesInput, Response> {
     Ok(ReadCommandLinesInput {
         command_session_id: CommandSessionId(request.required_string("command_session_id")?),
         start_offset: request.required_u64("start_offset")?,

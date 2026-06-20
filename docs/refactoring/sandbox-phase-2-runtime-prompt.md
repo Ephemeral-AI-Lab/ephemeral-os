@@ -26,7 +26,7 @@ Required starting state:
 - Root `Cargo.toml` has workspace dependency:
   `sandbox-protocol = { path = "crates/sandbox-protocol" }`.
 - `daemon_operation` still exists at `crates/daemon/operation`.
-- `daemon` and `eosd` still exist under `crates/daemon`.
+- `daemon` and `sandbox-daemon` still exist under `crates/daemon`.
 
 If this starting state is not true, stop and report that phase 1 is not
 complete. Do not implement phase 2 against the old pre-phase-1 layout.
@@ -55,8 +55,8 @@ Import:  sandbox_runtime
 
 Keep in `sandbox-runtime`:
 
-- Direct use of `sandbox_protocol::OperationRequest` and
-  `sandbox_protocol::OperationResponse`.
+- Direct use of `sandbox_protocol::Request` and
+  `sandbox_protocol::Response`.
 - `OperationEntry`.
 - Command operation specs and dispatch functions.
 - Workspace session and workspace remount orchestration.
@@ -91,8 +91,8 @@ Implementation steps:
 3. Run and record baseline results before file moves:
 
    ```sh
-   cargo fmt --check -p sandbox-protocol -p daemon_operation -p daemon -p eosd
-   cargo check -p sandbox-protocol -p daemon_operation -p daemon -p eosd
+   cargo fmt --check -p sandbox-protocol -p daemon_operation -p daemon -p sandbox-daemon
+   cargo check -p sandbox-protocol -p daemon_operation -p daemon -p sandbox-daemon
    cargo test -p sandbox-protocol -p daemon_operation -p daemon
    ```
 
@@ -132,9 +132,6 @@ Implementation steps:
 7. Update consuming manifests:
 
    - In `crates/daemon/server/Cargo.toml`, replace
-     `daemon_operation.workspace = true` with
-     `sandbox-runtime.workspace = true`.
-   - In `crates/daemon/eosd/Cargo.toml`, replace
      `daemon_operation.workspace = true` with
      `sandbox-runtime.workspace = true`.
 
@@ -198,7 +195,7 @@ Implementation steps:
 Non-goals:
 
 - Do not rename `daemon` to `sandbox-daemon` in this phase.
-- Do not merge `eosd` into the daemon package in this phase.
+- Do not merge `sandbox-daemon` into the daemon package in this phase.
 - Do not create `sandbox-manager`.
 - Do not create `sandbox-gateway-cli`.
 - Do not rename runtime support packages:
@@ -223,8 +220,8 @@ rg -n "daemon_operation" Cargo.toml crates --glob '!target/**'
 rg -n "crates/daemon/operation" Cargo.toml crates --glob '!target/**'
 rg -n "sandbox-runtime-operation|sandbox_runtime_operation" Cargo.toml crates --glob '!target/**'
 rg -n "operation_catalog|SandboxRuntimeOperations" crates/sandbox-runtime/operation
-cargo fmt --check -p sandbox-runtime -p daemon -p eosd
-cargo check -p sandbox-runtime -p daemon -p eosd
+cargo fmt --check -p sandbox-runtime -p daemon -p sandbox-daemon
+cargo check -p sandbox-runtime -p daemon -p sandbox-daemon
 cargo test -p sandbox-runtime -p daemon
 ```
 

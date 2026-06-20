@@ -4,8 +4,8 @@ use super::{record_value, sandbox_id};
 
 pub(crate) fn dispatch(
     services: &crate::operation::ManagerServices,
-    request: sandbox_protocol::OperationRequest<'_>,
-) -> sandbox_protocol::OperationResponse {
+    request: sandbox_protocol::Request<'_>,
+) -> sandbox_protocol::Response {
     let id = match sandbox_id(&request) {
         Ok(id) => id,
         Err(response) => return response,
@@ -19,9 +19,7 @@ pub(crate) fn dispatch(
                 .store
                 .transition_state(&id, SandboxState::Creating, SandboxState::Ready)
             {
-                Ok(record) => {
-                    sandbox_protocol::OperationResponse::ok(&request, record_value(record))
-                }
+                Ok(record) => sandbox_protocol::Response::ok(&request, record_value(record)),
                 Err(error) => error.into_response(),
             }
         }

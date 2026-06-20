@@ -6,8 +6,8 @@ use sandbox_manager::{
     SandboxDaemonInstaller, SandboxId, SandboxRecord, SandboxRuntime, SandboxState, SandboxStore,
 };
 use sandbox_protocol::{
-    ArgKind, OperationCatalog, OperationExecutionSpace, OperationFamily, OperationRequest,
-    OperationResponse, OperationSpec,
+    ArgKind, OperationCatalog, OperationExecutionSpace, OperationFamily, OperationSpec, Request,
+    Response,
 };
 use serde_json::{json, Value};
 
@@ -96,9 +96,9 @@ impl SandboxDaemonClient for FakeClient {
         &self,
         _endpoint: &SandboxDaemonEndpoint,
         request: sandbox_protocol::SandboxRequest,
-    ) -> Result<OperationResponse, ManagerError> {
-        let request = request.as_operation_request();
-        Ok(OperationResponse::ok(
+    ) -> Result<Response, ManagerError> {
+        let request = request.as_request();
+        Ok(Response::ok(
             &request,
             json!({"forwarded_request_id": request.request_id}),
         ))
@@ -125,7 +125,7 @@ fn services() -> (
 }
 
 fn dispatch(services: &ManagerServices, op: &str, args: Value) -> Value {
-    sandbox_manager::dispatch_operation(services, OperationRequest::new(op, "req-1", &args))
+    sandbox_manager::dispatch_operation(services, Request::new(op, "req-1", &args))
         .into_json_value()
 }
 

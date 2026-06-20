@@ -3,7 +3,7 @@ use std::sync::Arc;
 use super::SandboxDaemonServer;
 use crate::server::error::SandboxDaemonError;
 use sandbox_protocol::{
-    decode_request_object, error_kind, ArgsPresence, OperationRequest, DAEMON_AUTH_FIELD,
+    decode_request_object, error_kind, ArgsPresence, Request, DAEMON_AUTH_FIELD,
 };
 use serde_json::{Map, Value};
 
@@ -48,11 +48,8 @@ impl SandboxDaemonServer {
         let op_for_error = op.clone();
         let operations = Arc::clone(&self.operations);
         let task = tokio::task::spawn_blocking(move || {
-            sandbox_runtime::dispatch_operation(
-                &operations,
-                OperationRequest::new(&op, &request_id, &args),
-            )
-            .into_json_value()
+            sandbox_runtime::dispatch_operation(&operations, Request::new(&op, &request_id, &args))
+                .into_json_value()
         });
         let response = match task.await {
             Ok(response) => response,

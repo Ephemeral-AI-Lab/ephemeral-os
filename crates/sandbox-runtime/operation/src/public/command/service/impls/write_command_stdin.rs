@@ -5,7 +5,7 @@ use crate::command::service::CommandOperationService;
 use crate::command::{CommandServiceError, CommandSessionId, CommandYield, WriteCommandStdinInput};
 use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationSpec};
 use crate::SandboxRuntimeOperations;
-use sandbox_protocol::{OperationRequest, OperationResponse};
+use sandbox_protocol::{Request, Response};
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "write_command_stdin",
@@ -52,10 +52,7 @@ const WRITE_STDIN_CLI: CliSpec = CliSpec {
     examples: &["write_command_stdin {\"command_session_id\":\"cmd-1\",\"stdin\":\"hello\"}"],
 };
 
-pub(crate) fn dispatch(
-    operations: &SandboxRuntimeOperations,
-    request: OperationRequest<'_>,
-) -> OperationResponse {
+pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: Request<'_>) -> Response {
     let input = match parse_input(&request) {
         Ok(input) => input,
         Err(response) => return response,
@@ -63,9 +60,7 @@ pub(crate) fn dispatch(
     command_yield_response(&request, operations.command.write_command_stdin(input))
 }
 
-fn parse_input(
-    request: &OperationRequest<'_>,
-) -> Result<WriteCommandStdinInput, OperationResponse> {
+fn parse_input(request: &Request<'_>) -> Result<WriteCommandStdinInput, Response> {
     Ok(WriteCommandStdinInput {
         command_session_id: CommandSessionId(request.required_string("command_session_id")?),
         stdin: request.required_string("stdin")?,

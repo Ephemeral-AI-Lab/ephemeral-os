@@ -53,7 +53,7 @@ impl ManagerError {
     }
 
     #[must_use]
-    pub fn into_response(self) -> sandbox_protocol::OperationResponse {
-        sandbox_protocol::OperationResponse::fault(self.protocol_kind(), self.to_string())
+    pub fn into_response(self) -> sandbox_protocol::Response {
+        sandbox_protocol::Response::fault(self.protocol_kind(), self.to_string())
     }
 }

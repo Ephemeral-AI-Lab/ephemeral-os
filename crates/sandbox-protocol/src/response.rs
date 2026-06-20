@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use crate::request::OperationRequest;
+use crate::request::Request;
 
 #[derive(Debug, Clone)]
-pub struct OperationResponse {
+pub struct Response {
     value: Value,
 }
 
@@ -29,24 +29,24 @@ pub struct ResponseMeta {
     pub warnings: Vec<String>,
 }
 
-impl OperationResponse {
+impl Response {
     #[must_use]
-    pub fn ok(_request: &OperationRequest<'_>, result: Value) -> Self {
+    pub fn ok(_request: &Request<'_>, result: Value) -> Self {
         Self { value: result }
     }
 
     #[must_use]
-    pub fn running(_request: &OperationRequest<'_>, result: Value) -> Self {
+    pub fn running(_request: &Request<'_>, result: Value) -> Self {
         Self { value: result }
     }
 
     #[must_use]
-    pub fn service_error(_request: &OperationRequest<'_>, error: impl std::fmt::Display) -> Self {
+    pub fn service_error(_request: &Request<'_>, error: impl std::fmt::Display) -> Self {
         Self::fault("operation_failed", error.to_string())
     }
 
     #[must_use]
-    pub fn unknown_op(request: &OperationRequest<'_>) -> Self {
+    pub fn unknown_op(request: &Request<'_>) -> Self {
         Self::fault("unknown_op", format!("unknown op: {}", request.name))
     }
 
@@ -69,8 +69,8 @@ impl OperationResponse {
     }
 }
 
-impl From<OperationResponse> for Value {
-    fn from(response: OperationResponse) -> Self {
+impl From<Response> for Value {
+    fn from(response: Response) -> Self {
         response.into_json_value()
     }
 }

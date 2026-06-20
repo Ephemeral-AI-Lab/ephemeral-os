@@ -8,7 +8,7 @@ use crate::command::{
 };
 use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationSpec};
 use crate::SandboxRuntimeOperations;
-use sandbox_protocol::{OperationRequest, OperationResponse};
+use sandbox_protocol::{Request, Response};
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "cancel_command",
@@ -34,10 +34,7 @@ const CANCEL_CLI: CliSpec = CliSpec {
     examples: &["cancel_command {\"command_session_id\":\"cmd-1\"}"],
 };
 
-pub(crate) fn dispatch(
-    operations: &SandboxRuntimeOperations,
-    request: OperationRequest<'_>,
-) -> OperationResponse {
+pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: Request<'_>) -> Response {
     let input = match parse_input(&request) {
         Ok(input) => input,
         Err(response) => return response,
@@ -45,7 +42,7 @@ pub(crate) fn dispatch(
     command_yield_response(&request, operations.command.cancel(input))
 }
 
-fn parse_input(request: &OperationRequest<'_>) -> Result<CancelCommandInput, OperationResponse> {
+fn parse_input(request: &Request<'_>) -> Result<CancelCommandInput, Response> {
     Ok(CancelCommandInput {
         command_session_id: CommandSessionId(request.required_string("command_session_id")?),
     })

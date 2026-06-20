@@ -5,7 +5,7 @@ use crate::{ManagerError, ManagerServices, SandboxDaemonEndpoint, SandboxId, San
 pub(super) fn forward_sandbox_request(
     services: &ManagerServices,
     request: SandboxRequest,
-) -> Result<sandbox_protocol::OperationResponse, ManagerError> {
+) -> Result<sandbox_protocol::Response, ManagerError> {
     let id = sandbox_id(&request.scope)?;
     let endpoint = daemon_endpoint(services, &id)?;
     services.daemon_client.invoke(&endpoint, request)

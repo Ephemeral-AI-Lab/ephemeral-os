@@ -1,7 +1,7 @@
 //! Typed schema for the daemon section of `eos-sandbox/config/prd.yml`.
 //!
-//! The `eosd` binary loads this section from the merged runtime YAML and injects
-//! it into daemon-owned subsystems during server startup.
+//! The `sandbox-daemon` binary loads this section from the merged runtime YAML
+//! and injects it into daemon-owned subsystems during server startup.
 
 use std::path::PathBuf;
 

@@ -1,5 +1,5 @@
-//! Single-threaded Linux namespace subprocess bodies for `eosd ns-holder` and
-//! `eosd ns-runner`.
+//! Single-threaded Linux namespace subprocess bodies for
+//! `sandbox-daemon ns-holder` and `sandbox-daemon ns-runner`.
 //!
 //! `unshare(CLONE_NEWUSER)` and `setns()` into a user namespace require a
 //! single-threaded caller. The daemon stays multithreaded and delegates those

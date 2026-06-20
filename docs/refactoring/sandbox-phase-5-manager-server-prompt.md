@@ -27,7 +27,7 @@ Required starting state:
 - `crates/sandbox-protocol/src/scope.rs` exists.
 - `sandbox_protocol::SandboxRequest` exists.
 - `sandbox_protocol::OperationScope` exists.
-- `sandbox_protocol::OperationResponse` exists.
+- `sandbox_protocol::Response` exists.
 - `crates/sandbox-runtime/operation` exists.
 - `crates/sandbox-daemon` exists.
 - `crates/sandbox-manager` exists.
@@ -102,7 +102,7 @@ Implementation steps:
    test -d crates/sandbox-manager
    test ! -d crates/sandbox-manager/src/server
    test ! -f crates/sandbox-manager/src/operation/impls/invoke_sandbox_daemon.rs
-   rg -n "SandboxRequest|OperationScope|OperationResponse" crates/sandbox-protocol/src
+   rg -n "SandboxRequest|OperationScope|Response" crates/sandbox-protocol/src
    rg -n "invoke_sandbox_daemon" crates/sandbox-manager/src/operation
    ```
 

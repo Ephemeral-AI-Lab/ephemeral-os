@@ -16,7 +16,7 @@ use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, O
 use crate::workspace_crate::{WorkspaceEntry, WorkspaceSessionId};
 use crate::workspace_session::WorkspaceSessionHandler;
 use crate::SandboxRuntimeOperations;
-use sandbox_protocol::{OperationRequest, OperationResponse};
+use sandbox_protocol::{Request, Response};
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "exec_command",
@@ -73,10 +73,7 @@ const EXEC_COMMAND_CLI: CliSpec = CliSpec {
     examples: &["exec_command {\"workspace_session_id\":\"ws-1\",\"cmd\":\"pwd\"}"],
 };
 
-pub(crate) fn dispatch(
-    operations: &SandboxRuntimeOperations,
-    request: OperationRequest<'_>,
-) -> OperationResponse {
+pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: Request<'_>) -> Response {
     let input = match parse_input(&request) {
         Ok(input) => input,
         Err(response) => return response,
@@ -84,7 +81,7 @@ pub(crate) fn dispatch(
     command_yield_response(&request, operations.command.exec_command(input))
 }
 
-fn parse_input(request: &OperationRequest<'_>) -> Result<ExecCommandInput, OperationResponse> {
+fn parse_input(request: &Request<'_>) -> Result<ExecCommandInput, Response> {
     Ok(ExecCommandInput {
         workspace_session_id: WorkspaceSessionId(request.required_string("workspace_session_id")?),
         cmd: request.required_string("cmd")?,

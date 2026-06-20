@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 
 use crate::error_kind;
-use crate::response::OperationResponse;
+use crate::response::Response;
 use crate::scope::OperationScope;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -30,19 +30,19 @@ impl SandboxRequest {
     }
 
     #[must_use]
-    pub fn as_operation_request(&self) -> OperationRequest<'_> {
-        OperationRequest::new(&self.op, &self.request_id, &self.args)
+    pub fn as_request(&self) -> Request<'_> {
+        Request::new(&self.op, &self.request_id, &self.args)
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct OperationRequest<'a> {
+pub struct Request<'a> {
     pub name: &'a str,
     pub request_id: &'a str,
     pub args: &'a Value,
 }
 
-impl<'a> OperationRequest<'a> {
+impl<'a> Request<'a> {
     #[must_use]
     pub const fn new(name: &'a str, request_id: &'a str, args: &'a Value) -> Self {
         Self {
@@ -52,7 +52,7 @@ impl<'a> OperationRequest<'a> {
         }
     }
 
-    pub fn required_string(&self, field: &str) -> Result<String, OperationResponse> {
+    pub fn required_string(&self, field: &str) -> Result<String, Response> {
         self.field(field).and_then(|value| match value.as_str() {
             Some(value) if !value.is_empty() => Ok(value.to_owned()),
             Some(_) => Err(self.invalid_argument(format!("{field} must be non-empty"))),
@@ -60,7 +60,7 @@ impl<'a> OperationRequest<'a> {
         })
     }
 
-    pub fn optional_string(&self, field: &str) -> Result<Option<String>, OperationResponse> {
+    pub fn optional_string(&self, field: &str) -> Result<Option<String>, Response> {
         match self.optional_field(field)? {
             Some(value) => match value.as_str() {
                 Some(value) => Ok(Some(value.to_owned())),
@@ -70,18 +70,15 @@ impl<'a> OperationRequest<'a> {
         }
     }
 
-    pub fn required_path(&self, field: &str) -> Result<std::path::PathBuf, OperationResponse> {
+    pub fn required_path(&self, field: &str) -> Result<std::path::PathBuf, Response> {
         Ok(std::path::PathBuf::from(self.required_string(field)?))
     }
 
-    pub fn optional_path(
-        &self,
-        field: &str,
-    ) -> Result<Option<std::path::PathBuf>, OperationResponse> {
+    pub fn optional_path(&self, field: &str) -> Result<Option<std::path::PathBuf>, Response> {
         Ok(self.optional_string(field)?.map(std::path::PathBuf::from))
     }
 
-    pub fn optional_u64(&self, field: &str) -> Result<Option<u64>, OperationResponse> {
+    pub fn optional_u64(&self, field: &str) -> Result<Option<u64>, Response> {
         match self.optional_field(field)? {
             Some(value) => value
                 .as_u64()
@@ -91,7 +88,7 @@ impl<'a> OperationRequest<'a> {
         }
     }
 
-    pub fn required_u64(&self, field: &str) -> Result<u64, OperationResponse> {
+    pub fn required_u64(&self, field: &str) -> Result<u64, Response> {
         self.field(field).and_then(|value| {
             value
                 .as_u64()
@@ -99,7 +96,7 @@ impl<'a> OperationRequest<'a> {
         })
     }
 
-    pub fn optional_usize(&self, field: &str) -> Result<Option<usize>, OperationResponse> {
+    pub fn optional_usize(&self, field: &str) -> Result<Option<usize>, Response> {
         self.optional_u64(field)?
             .map(|value| {
                 usize::try_from(value)
@@ -108,12 +105,12 @@ impl<'a> OperationRequest<'a> {
             .transpose()
     }
 
-    pub fn required_usize(&self, field: &str) -> Result<usize, OperationResponse> {
+    pub fn required_usize(&self, field: &str) -> Result<usize, Response> {
         usize::try_from(self.required_u64(field)?)
             .map_err(|_| self.invalid_argument(format!("{field} is too large")))
     }
 
-    pub fn optional_f64(&self, field: &str) -> Result<Option<f64>, OperationResponse> {
+    pub fn optional_f64(&self, field: &str) -> Result<Option<f64>, Response> {
         match self.optional_field(field)? {
             Some(value) => match value.as_f64() {
                 Some(value) if value.is_finite() => Ok(Some(value)),
@@ -124,24 +121,24 @@ impl<'a> OperationRequest<'a> {
         }
     }
 
-    fn field(&self, field: &str) -> Result<&Value, OperationResponse> {
+    fn field(&self, field: &str) -> Result<&Value, Response> {
         self.args_object()?
             .get(field)
             .ok_or_else(|| self.invalid_argument(format!("{field} is required for {}", self.name)))
     }
 
-    fn optional_field(&self, field: &str) -> Result<Option<&Value>, OperationResponse> {
+    fn optional_field(&self, field: &str) -> Result<Option<&Value>, Response> {
         Ok(self.args_object()?.get(field))
     }
 
-    fn args_object(&self) -> Result<&Map<String, Value>, OperationResponse> {
+    fn args_object(&self) -> Result<&Map<String, Value>, Response> {
         self.args
             .as_object()
             .ok_or_else(|| self.invalid_argument("args must be an object"))
     }
 
-    pub fn invalid_argument(&self, message: impl Into<String>) -> OperationResponse {
-        OperationResponse::fault(error_kind::INVALID_REQUEST, message)
+    pub fn invalid_argument(&self, message: impl Into<String>) -> Response {
+        Response::fault(error_kind::INVALID_REQUEST, message)
     }
 }
 

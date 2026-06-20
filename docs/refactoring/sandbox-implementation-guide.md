@@ -22,7 +22,7 @@ docs/refactoring/sandbox-gateway-cli.md
    daemon_rpc_protocol
    daemon_operation
    daemon
-   eosd
+   sandbox-daemon
 
 1. sandbox-protocol
 2. sandbox-runtime
@@ -50,7 +50,7 @@ Packages present:
 daemon_rpc_protocol
 daemon_operation
 daemon
-eosd
+sandbox-daemon
 command
 workspace
 namespace-process
@@ -77,7 +77,7 @@ crates/
       Cargo.toml
       src/
       tests/
-    eosd/                  # package: eosd
+    sandbox-daemon/                  # package: sandbox-daemon
       Cargo.toml
       src/
       tests/
@@ -92,8 +92,8 @@ crates/
 Verification:
 
 ```sh
-cargo fmt --check -p daemon_rpc_protocol -p daemon_operation -p daemon -p eosd
-cargo check -p daemon_rpc_protocol -p daemon_operation -p daemon -p eosd
+cargo fmt --check -p daemon_rpc_protocol -p daemon_operation -p daemon -p sandbox-daemon
+cargo check -p daemon_rpc_protocol -p daemon_operation -p daemon -p sandbox-daemon
 cargo test -p daemon_rpc_protocol -p daemon_operation -p daemon
 ```
 
@@ -162,7 +162,7 @@ crates/
       src/                 # OperationEntry stays here
       tests/
     server/                # package: daemon
-    eosd/                  # package: eosd
+    sandbox-daemon/                  # package: sandbox-daemon
     command/
     workspace/
     namespace-process/
@@ -250,7 +250,7 @@ crates/
 
   daemon/
     server/                # package: daemon
-    eosd/                  # package: eosd
+    sandbox-daemon/                  # package: sandbox-daemon
     command/
     workspace/
     namespace-process/
@@ -284,29 +284,24 @@ docs/refactoring/sandbox-phase-3-daemon-prompt.md
 
 Goal:
 
-- Rename the in-sandbox server process and fold the `eosd` adapter into it.
-- Keep `eosd` only as the packaged namespace helper entrypoint.
+- Rename the in-sandbox server process and route daemon/helper subcommands from
+  one `sandbox-daemon` binary.
 
 Package moves:
 
 ```text
 daemon -> sandbox-daemon
-eosd   -> packaged helper bin inside sandbox-daemon
 ```
 
 Implementation steps:
 
 1. Move `crates/daemon/server` to `crates/sandbox-daemon`.
-2. Merge `crates/daemon/eosd/src` behavior into `sandbox-daemon/src/main.rs`.
-3. Configure two binaries from the same package:
+2. Route `serve`, `ns-runner`, and `ns-holder` from `sandbox-daemon/src/main.rs`.
+3. Configure one binary from the package:
 
    ```toml
    [[bin]]
    name = "sandbox-daemon"
-   path = "src/main.rs"
-
-   [[bin]]
-   name = "eosd"
    path = "src/main.rs"
    ```
 
@@ -326,7 +321,7 @@ crates/
     operation/             # package: sandbox-runtime
 
   sandbox-daemon/          # package: sandbox-daemon
-    Cargo.toml             # bins: sandbox-daemon, eosd
+    Cargo.toml             # bin: sandbox-daemon
     src/
       main.rs
       lib.rs
@@ -784,8 +779,8 @@ Goal:
 Implementation steps:
 
 1. Update README and architecture docs.
-2. Update packaging from `eosd` to `sandbox-daemon`.
-3. Keep the packaged `eosd` helper binary only while packaging still uses that artifact name.
+2. Update packaging from `sandbox-daemon` to `sandbox-daemon`.
+3. Keep the packaged `sandbox-daemon` helper binary only while packaging still uses that artifact name.
 4. Remove old workspace dependency entries.
 5. Run stale-name scans.
 

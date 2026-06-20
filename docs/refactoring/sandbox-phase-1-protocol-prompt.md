@@ -26,8 +26,8 @@ Phase goal:
 - Move protocol-neutral operation metadata types from `daemon_operation` into
   `sandbox-protocol`.
 - Make the public protocol DTO explicit and unified:
-  `SandboxRequest`, `OperationScope`, and `OperationResponse`.
-- Keep behavior unchanged for the existing daemon, eosd, and command
+  `SandboxRequest`, `OperationScope`, and `Response`.
+- Keep behavior unchanged for the existing daemon, sandbox-daemon, and command
   operations.
 
 Current source facts:
@@ -46,10 +46,7 @@ Move to `sandbox-protocol`:
 
 - `SandboxRequest`.
 - `OperationScope`.
-- `OperationResponse`.
-- `ResponseStatus`.
-- `ResponseError`.
-- `ResponseMeta`.
+- `Response`.
 - `OperationFamily` or a renamed `OperationGroup`.
 - `ArgKind`.
 - `ArgCliSpec`.
@@ -61,8 +58,8 @@ Move to `sandbox-protocol`:
 
 Keep in `daemon_operation`:
 
-- Direct use of `sandbox_protocol::OperationRequest` and
-  `sandbox_protocol::OperationResponse`.
+- Direct use of `sandbox_protocol::Request` and
+  `sandbox_protocol::Response`.
 - `OperationEntry`.
 - Concrete operation specs and dispatch functions.
 - `SandboxRuntimeOperations`.
@@ -80,8 +77,8 @@ Implementation steps:
 2. Run and record baseline results before file moves:
 
    ```sh
-   cargo fmt --check -p daemon_rpc_protocol -p daemon_operation -p daemon -p eosd
-   cargo check -p daemon_rpc_protocol -p daemon_operation -p daemon -p eosd
+   cargo fmt --check -p daemon_rpc_protocol -p daemon_operation -p daemon -p sandbox-daemon
+   cargo check -p daemon_rpc_protocol -p daemon_operation -p daemon -p sandbox-daemon
    cargo test -p daemon_rpc_protocol -p daemon_operation -p daemon
    ```
 
@@ -152,14 +149,8 @@ Implementation steps:
        Sandbox { sandbox_id: String },
    }
 
-   pub struct OperationResponse {
-       pub request_id: String,
-       pub scope: OperationScope,
-       pub op: String,
-       pub status: ResponseStatus,
-       pub result: Option<serde_json::Value>,
-       pub error: Option<ResponseError>,
-       pub meta: ResponseMeta,
+   pub struct Response {
+       // Opaque operation result/error JSON wrapper.
    }
    ```
 
@@ -188,7 +179,7 @@ Non-goals:
 
 - Do not rename `daemon_operation` in this phase.
 - Do not create `sandbox-runtime` in this phase.
-- Do not rename `daemon` or `eosd` in this phase.
+- Do not rename `daemon` or `sandbox-daemon` in this phase.
 - Do not create `sandbox-manager` or `sandbox-gateway-cli`.
 - Do not rename runtime support crates.
 - Do not change command operation behavior.

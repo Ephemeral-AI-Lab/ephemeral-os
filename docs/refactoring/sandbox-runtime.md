@@ -94,7 +94,7 @@ Owns:
 - Internal workspace session orchestration.
 - Internal workspace remount orchestration.
 - Request argument parsing into typed operation inputs.
-- Response projection from runtime outputs into `OperationResponse` values.
+- Response projection from runtime outputs into `Response` values.
 
 Must not own:
 

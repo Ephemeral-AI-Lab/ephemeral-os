@@ -6,7 +6,7 @@ use crate::command::{
 };
 use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationSpec};
 use crate::SandboxRuntimeOperations;
-use sandbox_protocol::{OperationRequest, OperationResponse};
+use sandbox_protocol::{Request, Response};
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "poll_command",
@@ -44,10 +44,7 @@ const POLL_CLI: CliSpec = CliSpec {
     examples: &["poll_command {\"command_session_id\":\"cmd-1\",\"last_n_lines\":50}"],
 };
 
-pub(crate) fn dispatch(
-    operations: &SandboxRuntimeOperations,
-    request: OperationRequest<'_>,
-) -> OperationResponse {
+pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: Request<'_>) -> Response {
     let input = match parse_input(&request) {
         Ok(input) => input,
         Err(response) => return response,
@@ -55,7 +52,7 @@ pub(crate) fn dispatch(
     command_poll_response(&request, operations.command.poll(input))
 }
 
-fn parse_input(request: &OperationRequest<'_>) -> Result<PollCommandInput, OperationResponse> {
+fn parse_input(request: &Request<'_>) -> Result<PollCommandInput, Response> {
     Ok(PollCommandInput {
         command_session_id: CommandSessionId(request.required_string("command_session_id")?),
         last_n_lines: request.optional_usize("last_n_lines")?,

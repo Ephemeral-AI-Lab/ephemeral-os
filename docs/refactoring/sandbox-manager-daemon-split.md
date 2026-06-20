@@ -75,7 +75,6 @@ docs/refactoring/sandbox-implementation-guide.md
 | `daemon_rpc_protocol` | `sandbox-protocol` | Shared process contract, not daemon-owned behavior. |
 | `daemon_operation` | `sandbox-runtime` | Concrete daemon/runtime operation catalog and dispatch. |
 | `daemon` server crate | `sandbox-daemon` | In-sandbox RPC server and daemon binary entrypoint. |
-| `eosd` binary crate | part of `sandbox-daemon` | Packaged namespace helper entrypoint. |
 | `command` | `sandbox-runtime-command` | Command process, PTY, transcript, and lifecycle primitives. |
 | `workspace` | `sandbox-runtime-workspace` | Workspace lifecycle, handles, capture, destroy, remount. |
 | `namespace-process` | `sandbox-runtime-namespace-process` | `ns-holder` and `ns-runner` subprocess bodies. |
@@ -87,7 +86,7 @@ docs/refactoring/sandbox-implementation-guide.md
 Package names should use hyphens. Rust crate imports use underscores:
 
 ```rust
-use sandbox_protocol::{OperationRequest, OperationResponse};
+use sandbox_protocol::{Request, Response};
 use sandbox_runtime::operation_specs;
 ```
 
@@ -142,9 +141,9 @@ would make implementation placement part of the public request API.
 `sandbox-protocol` owns protocol-neutral types:
 
 ```text
-request.rs          SandboxRequest, OperationRequest, args helpers
+request.rs          SandboxRequest, Request, args helpers
 scope.rs            OperationScope and scope validation helpers
-response.rs         OperationResponse, status/error helpers
+response.rs         Response, status/error helpers
 framing.rs          JSON-line framing helpers
 auth.rs             auth field constants
 limits.rs           request size and timeout limits
@@ -237,7 +236,7 @@ sandbox-daemon/
   src/holder.rs
 ```
 
-The current `eosd` role moves here. The target binary interface is:
+The current `sandbox-daemon` role moves here. The target binary interface is:
 
 ```text
 sandbox-daemon serve
@@ -245,7 +244,7 @@ sandbox-daemon ns-runner
 sandbox-daemon ns-holder
 ```
 
-The packaged `eosd` entrypoint dispatches only namespace helper subcommands.
+The packaged `sandbox-daemon` entrypoint routes daemon and namespace helper subcommands.
 
 The `sandbox-runtime` package owns daemon operation semantics:
 
@@ -383,8 +382,8 @@ request shape as the manager; it must not learn about manager routing internals.
 Capture the current state before moving crates:
 
 ```sh
-cargo fmt --check -p daemon_rpc_protocol -p daemon_operation -p daemon -p eosd
-cargo check -p daemon_rpc_protocol -p daemon_operation -p daemon -p eosd
+cargo fmt --check -p daemon_rpc_protocol -p daemon_operation -p daemon -p sandbox-daemon
+cargo check -p daemon_rpc_protocol -p daemon_operation -p daemon -p sandbox-daemon
 cargo test -p daemon_rpc_protocol -p daemon_operation -p daemon
 ```
 
@@ -430,7 +429,7 @@ Module order:
    - `internal/workspace_remount`
 5. Rename aggregate types only when the crate compiles:
    - Runtime aggregate type is `SandboxRuntimeOperations`.
-   - Use `sandbox_protocol::OperationRequest` and `sandbox_protocol::OperationResponse`
+   - Use `sandbox_protocol::Request` and `sandbox_protocol::Response`
      directly instead of facade aliases.
 6. Export daemon operation catalog:
    - `sandbox_runtime::operation_specs()`
@@ -453,16 +452,12 @@ Module order:
 1. Rename `daemon` server package to `sandbox-daemon`.
 2. Move current server modules under `crates/sandbox-daemon/src/server` or keep
    the existing flat module shape if that is already the current tree.
-3. Merge the `eosd` binary adapter into `sandbox-daemon/src/main.rs`.
-4. Keep the packaged `eosd` helper binary:
+3. Route `serve`, `ns-runner`, and `ns-holder` from `sandbox-daemon/src/main.rs`.
+4. Keep one packaged `sandbox-daemon` binary:
 
    ```toml
    [[bin]]
    name = "sandbox-daemon"
-   path = "src/main.rs"
-
-   [[bin]]
-   name = "eosd"
    path = "src/main.rs"
    ```
 
@@ -601,22 +596,21 @@ cargo test -p sandbox-manager operation_catalog
 cargo test -p sandbox-gateway-cli manual
 ```
 
-### 8. Compatibility Cleanup
+### 8. Stale Name Cleanup
 
 Only after all new names work:
 
 1. Update README architecture.
-2. Update packaging from `eosd` to `sandbox-daemon`.
-3. Keep the packaged `eosd` helper binary only while packaging still uses that artifact name.
-4. Remove old workspace dependency entries.
-5. Run stale-name scans:
+2. Ensure packaging uploads `sandbox-daemon`.
+3. Remove old workspace dependency entries.
+4. Run stale-name scans:
 
    ```sh
    rg -n "daemon_rpc_protocol|daemon_operation|crates/daemon/server"
    rg -n "poll\\b|cancel\\b" crates docs README.md
    ```
 
-6. Run final focused checks:
+5. Run final focused checks:
 
    ```sh
    cargo fmt --check

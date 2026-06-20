@@ -8,8 +8,8 @@ use sandbox_manager::{
     SandboxState, SandboxStore, ServerConfig,
 };
 use sandbox_protocol::{
-    error_kind, OperationCatalog, OperationExecutionSpace, OperationResponse, OperationScope,
-    OperationSpec, SandboxRequest, MAX_REQUEST_BYTES,
+    error_kind, OperationCatalog, OperationExecutionSpace, OperationScope, OperationSpec, Response,
+    SandboxRequest, MAX_REQUEST_BYTES,
 };
 use serde_json::{json, Value};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -66,14 +66,14 @@ impl SandboxDaemonClient for RecordingDaemonClient {
         &self,
         endpoint: &SandboxDaemonEndpoint,
         request: SandboxRequest,
-    ) -> Result<OperationResponse, ManagerError> {
+    ) -> Result<Response, ManagerError> {
         self.invocations.lock().expect("invocations lock").push((
             endpoint.socket_path.clone(),
             request.op.clone(),
             request.scope.clone(),
         ));
-        Ok(OperationResponse::ok(
-            &request.as_operation_request(),
+        Ok(Response::ok(
+            &request.as_request(),
             json!({
                 "forwarded_op": request.op,
                 "endpoint": endpoint.socket_path,
