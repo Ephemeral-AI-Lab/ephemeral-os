@@ -92,23 +92,6 @@ enum InlineTestPolicyViolationKind {
     TestAttribute,
 }
 
-#[derive(Debug)]
-struct InlineTestPolicyException {
-    path: &'static str,
-    kind: InlineTestPolicyViolationKind,
-}
-
-const INLINE_TEST_POLICY_EXCEPTIONS: &[InlineTestPolicyException] = &[
-    InlineTestPolicyException {
-        path: "crates/daemon/operation/src/public/command/mod.rs",
-        kind: InlineTestPolicyViolationKind::PathAttribute,
-    },
-    InlineTestPolicyException {
-        path: "crates/daemon/operation/src/internal/workspace_session/mod.rs",
-        kind: InlineTestPolicyViolationKind::PathAttribute,
-    },
-];
-
 impl InlineTestPolicyArgs {
     fn parse<I>(args: I) -> Result<Self>
     where
@@ -305,7 +288,7 @@ fn check_inline_test_policy(args: &InlineTestPolicyArgs) -> Result<()> {
             {
                 continue;
             }
-            collect_inline_test_policy_violations(&root, path, &mut violations)?;
+            collect_inline_test_policy_violations(path, &mut violations)?;
         }
     }
 
@@ -316,7 +299,7 @@ fn check_inline_test_policy(args: &InlineTestPolicyArgs) -> Result<()> {
 
     eprintln!(
         "test, bench, broad lint-suppression, module path, macro_use, and ABI/linkage \
-attributes are forbidden in production Rust sources unless explicitly allowlisted."
+attributes are forbidden in production Rust sources."
     );
     for violation in &violations {
         eprintln!(
@@ -433,7 +416,6 @@ implementation files into focused sibling modules.",
 }
 
 fn collect_inline_test_policy_violations(
-    root: &Path,
     path: &Path,
     violations: &mut Vec<InlineTestPolicyViolation>,
 ) -> Result<()> {
@@ -446,7 +428,6 @@ fn collect_inline_test_policy_violations(
             compact_attribute.push_str(&compact_attribute_text(line));
             if compact_attribute.contains(']') {
                 push_inline_test_policy_violation(
-                    root,
                     path,
                     *start_line,
                     raw_attribute,
@@ -466,7 +447,6 @@ fn collect_inline_test_policy_violations(
         let compact_attribute = compact_attribute_text(trimmed);
         if compact_attribute.contains(']') {
             push_inline_test_policy_violation(
-                root,
                 path,
                 line_index + 1,
                 &raw_attribute,
@@ -481,7 +461,6 @@ fn collect_inline_test_policy_violations(
 }
 
 fn push_inline_test_policy_violation(
-    root: &Path,
     path: &Path,
     line_number: usize,
     raw_attribute: &str,
@@ -491,14 +470,12 @@ fn push_inline_test_policy_violation(
     let Some(kind) = compact_attribute_violation_kind(compact_attribute) else {
         return;
     };
-    if !inline_test_policy_exception_allowed(root, path, &kind) {
-        violations.push(InlineTestPolicyViolation {
-            path: path.to_path_buf(),
-            line_number,
-            line: raw_attribute.to_owned(),
-            kind,
-        });
-    }
+    violations.push(InlineTestPolicyViolation {
+        path: path.to_path_buf(),
+        line_number,
+        line: raw_attribute.to_owned(),
+        kind,
+    });
 }
 
 fn is_attribute_start(trimmed: &str) -> bool {
@@ -728,17 +705,6 @@ fn is_forbidden_allow_lint(lint: &str) -> bool {
 fn is_abi_linkage_attribute(path: &str, args: Option<&str>) -> bool {
     matches!(path, "no_mangle" | "export_name" | "link_section" | "naked")
         || (path == "repr" && args.is_some_and(|args| args.split(',').any(|arg| arg == "packed")))
-}
-
-fn inline_test_policy_exception_allowed(
-    root: &Path,
-    path: &Path,
-    kind: &InlineTestPolicyViolationKind,
-) -> bool {
-    let relative_path = relative_to(root, path);
-    INLINE_TEST_POLICY_EXCEPTIONS
-        .iter()
-        .any(|exception| relative_path == Path::new(exception.path) && exception.kind == *kind)
 }
 
 impl InlineTestPolicyViolationKind {

@@ -1,11 +1,3 @@
-//! Async RPC server: `AF_UNIX` plus optional loopback TCP, one framed request per
-//! connection, dispatch through daemon operations, and token-driven
-//! shutdown. Connection handlers keep mutex guards out of await points.
-
-pub(crate) mod connection;
-pub(crate) mod dispatch;
-mod lifecycle;
-
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -31,9 +23,9 @@ pub struct ServerConfig {
 
 /// The running daemon: request dispatch state and shutdown token.
 pub struct DaemonServer {
-    config: ServerConfig,
-    operations: Arc<DaemonOperations>,
-    shutdown: CancellationToken,
+    pub(crate) config: ServerConfig,
+    pub(crate) operations: Arc<DaemonOperations>,
+    pub(crate) shutdown: CancellationToken,
 }
 
 impl DaemonServer {
@@ -48,7 +40,7 @@ impl DaemonServer {
     }
 }
 
-pub(super) fn error_response(
+pub(crate) fn error_response(
     kind: &'static str,
     message: impl Into<String>,
     details: Value,
