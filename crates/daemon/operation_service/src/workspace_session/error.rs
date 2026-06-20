@@ -16,9 +16,6 @@ pub enum WorkspaceSessionError {
     #[error("workspace session not found: {workspace_session_id:?}")]
     NotFound { workspace_session_id: WorkspaceId },
 
-    #[error("workspace session is closing: {workspace_session_id:?}")]
-    Closing { workspace_session_id: WorkspaceId },
-
     #[error("workspace remount already pending: {workspace_session_id:?}")]
     RemountAlreadyPending { workspace_session_id: WorkspaceId },
 
@@ -48,4 +45,12 @@ pub enum WorkspaceSessionError {
         insert_error: Box<WorkspaceSessionError>,
         rollback_error: WorkspaceError,
     },
+}
+
+impl WorkspaceSessionError {
+    pub(crate) fn not_found(workspace_session_id: &WorkspaceId) -> Self {
+        Self::NotFound {
+            workspace_session_id: workspace_session_id.clone(),
+        }
+    }
 }

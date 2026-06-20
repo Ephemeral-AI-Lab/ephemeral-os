@@ -10,5 +10,4 @@ pub mod workspace_session;
 
 pub use command::CommandOperationService;
 pub use error::OperationServiceError;
-pub use services::OperationServices;
-pub use workspace_remount::WorkspaceRemountService;
+pub use services::DaemonOperations;

@@ -16,7 +16,6 @@ use operation_service::workspace_remount::{
     CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountService,
 };
 use operation_service::workspace_session::WorkspaceSessionService;
-use operation_service::OperationServices;
 use workspace::{
     CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef,
@@ -28,7 +27,7 @@ use workspace::{
 struct TestServices {
     workspace: Arc<WorkspaceSessionService>,
     command: Arc<CommandOperationService>,
-    services: OperationServices,
+    workspace_remount: Arc<WorkspaceRemountService>,
 }
 
 #[derive(Default)]
@@ -243,11 +242,10 @@ fn build_services(fake: Arc<PendingGuardWorkspaceService>) -> TestServices {
         remount_workspace,
         remount_command,
     ));
-    let services = OperationServices::new(Arc::clone(&workspace), Arc::clone(&command), remount);
     TestServices {
         workspace,
         command,
-        services,
+        workspace_remount: remount,
     }
 }
 
@@ -267,11 +265,10 @@ fn build_services_with_launch_driver(
         remount_workspace,
         remount_command,
     ));
-    let services = OperationServices::new(Arc::clone(&workspace), Arc::clone(&command), remount);
     TestServices {
         workspace,
         command,
-        services,
+        workspace_remount: remount,
     }
 }
 
@@ -511,7 +508,7 @@ fn command_remount_waits_for_in_flight_persistent_exec_admission() {
         .recv_timeout(Duration::from_secs(1))
         .expect("exec reached blocked spawn");
 
-    let remount = Arc::clone(&services.services.remount);
+    let remount = Arc::clone(&services.workspace_remount);
     let remount_workspace_session_id = handler.workspace_session_id.clone();
     let remount_thread =
         thread::spawn(move || remount.remount_workspace_session(remount_workspace_session_id));

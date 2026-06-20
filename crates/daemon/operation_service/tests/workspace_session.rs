@@ -2,7 +2,6 @@ use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use operation_service::workspace_remount::RemountWorkspaceSession;
 use operation_service::workspace_session::{WorkspaceSessionError, WorkspaceSessionService};
 use workspace::{
     BaseRevision, CallerId, CaptureChangesRequest, CapturedWorkspaceChanges,
@@ -483,26 +482,29 @@ fn workspace_session_begin_remount_marks_pending_and_rejects_duplicate_begin() {
 }
 
 #[test]
-fn workspace_session_finish_remount_returns_session_to_active() {
+fn workspace_session_apply_and_finish_remount_returns_session_to_active() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
+    let handle = workspace_handle("workspace-1", "caller-1", "lease-1");
+    let layer_paths = handle.snapshot.layer_paths.clone();
+    fake.push_create_result(Ok(handle.clone()));
+    fake.push_remount_result(Ok(RemountWorkspaceResult { handle }));
     let manager = manager_with(&fake);
     manager
         .create_workspace_session(create_request("caller-1"))
         .expect("test operation succeeds");
-    manager
+    let handler = manager
         .begin_remount(WorkspaceId("workspace-1".to_owned()))
         .expect("begin remount succeeds");
 
     manager
-        .finish_remount(WorkspaceId("workspace-1".to_owned()))
-        .expect("finish remount succeeds");
+        .apply_and_finish_remount(&handler, RemountWorkspaceRequest { layer_paths })
+        .expect("apply and finish remount succeeds");
 
     assert!(!manager.is_remount_pending(&WorkspaceId("workspace-1".to_owned())));
 }
 
 #[test]
-fn workspace_session_blocked_remount_reason_is_retained() {
+fn workspace_session_block_remount_clears_pending() {
     let fake = Arc::new(FakeWorkspaceService::new());
     fake.push_create_result(Ok(workspace_handle("workspace-1", "caller-1", "lease-1")));
     let manager = manager_with(&fake);
@@ -514,10 +516,7 @@ fn workspace_session_blocked_remount_reason_is_retained() {
         .expect("begin remount succeeds");
 
     manager
-        .finish_or_block_remount(
-            WorkspaceId("workspace-1".to_owned()),
-            Some("fd_pinned_workspace".to_owned()),
-        )
+        .block_remount(WorkspaceId("workspace-1".to_owned()))
         .expect("block remount succeeds");
 
     assert!(!manager.is_remount_pending(&WorkspaceId("workspace-1".to_owned())));
@@ -600,7 +599,7 @@ fn workspace_session_apply_remount_refreshes_canonical_handle() {
         .expect("begin remount succeeds");
 
     let updated = manager
-        .apply_remount(
+        .apply_and_finish_remount(
             &handler,
             RemountWorkspaceRequest {
                 layer_paths: vec![PathBuf::from("/lower/two")],
@@ -621,6 +620,7 @@ fn workspace_session_apply_remount_refreshes_canonical_handle() {
         fake.remount_calls(),
         vec![WorkspaceId("workspace-1".to_owned())]
     );
+    assert!(!manager.is_remount_pending(&WorkspaceId("workspace-1".to_owned())));
 }
 
 #[test]
@@ -639,7 +639,7 @@ fn workspace_session_apply_remount_failure_blocks_and_keeps_session_available() 
         .expect("begin remount succeeds");
 
     let error = manager
-        .apply_remount(
+        .apply_and_finish_remount(
             &handler,
             RemountWorkspaceRequest {
                 layer_paths: vec![PathBuf::from("/lower/two")],
@@ -662,11 +662,13 @@ fn workspace_session_apply_remount_failure_blocks_and_keeps_session_available() 
 
 #[test]
 fn workspace_session_files_do_not_import_command_service() {
+    let core = include_str!("../src/workspace_session/service/core.rs");
+    let operations = include_str!("../src/workspace_session/service/operations.rs");
+    let remount_port = include_str!("../src/workspace_session/service/remount_port.rs");
     let service = include_str!("../src/workspace_session/service.rs");
-    let session_store = include_str!("../src/workspace_session/service/session_store.rs");
     let error = include_str!("../src/workspace_session/error.rs");
 
-    for source in [service, session_store, error] {
+    for source in [core, operations, remount_port, service, error] {
         assert!(!source.contains("crate::command"));
         assert!(!source.contains("CommandOperationService"));
         assert!(!source.contains("CommandRemount"));
@@ -689,7 +691,7 @@ fn workspace_session_rejects_remount_workspace_session_id_mismatch() {
         .expect("test operation succeeds");
 
     let error = manager
-        .apply_remount(
+        .apply_and_finish_remount(
             &handler,
             RemountWorkspaceRequest {
                 layer_paths: vec![PathBuf::from("/lower/two")],

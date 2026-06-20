@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use crate::workspace_crate::{CallerId, ChangedPathKind, WorkspaceId};
 
-pub use ::command::{CommandStream, CommandTranscriptRow};
+pub use command::{CommandStream, CommandTranscriptRow};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct CommandId(pub String);

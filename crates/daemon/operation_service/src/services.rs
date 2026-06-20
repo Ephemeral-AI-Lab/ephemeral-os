@@ -5,23 +5,26 @@ use crate::workspace_remount::WorkspaceRemountService;
 use crate::workspace_session::WorkspaceSessionService;
 
 #[derive(Clone)]
-pub struct OperationServices {
-    pub workspace: Arc<WorkspaceSessionService>,
+pub struct DaemonOperations {
     pub command: Arc<CommandOperationService>,
-    pub remount: Arc<WorkspaceRemountService>,
+    // Kept private so gateways cannot treat internal orchestration as tool-call operations.
+    #[allow(dead_code)]
+    workspace_session: Arc<WorkspaceSessionService>,
+    #[allow(dead_code)]
+    workspace_remount: Arc<WorkspaceRemountService>,
 }
 
-impl OperationServices {
+impl DaemonOperations {
     #[must_use]
     pub fn new(
-        workspace: Arc<WorkspaceSessionService>,
+        workspace_session: Arc<WorkspaceSessionService>,
         command: Arc<CommandOperationService>,
-        remount: Arc<WorkspaceRemountService>,
+        workspace_remount: Arc<WorkspaceRemountService>,
     ) -> Self {
         Self {
-            workspace,
             command,
-            remount,
+            workspace_session,
+            workspace_remount,
         }
     }
 }

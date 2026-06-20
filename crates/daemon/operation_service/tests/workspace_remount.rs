@@ -14,7 +14,6 @@ use operation_service::workspace_remount::{
     RemountWorkspaceSession, WorkspaceRemountError, WorkspaceRemountService,
 };
 use operation_service::workspace_session::WorkspaceSessionService;
-use operation_service::OperationServices;
 use workspace::{
     CallerId, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef,
@@ -26,7 +25,7 @@ use workspace::{
 struct TestServices {
     workspace: Arc<WorkspaceSessionService>,
     command: Arc<CommandOperationService>,
-    services: OperationServices,
+    workspace_remount: Arc<WorkspaceRemountService>,
 }
 
 #[derive(Default)]
@@ -281,11 +280,10 @@ fn build_services(fake: Arc<RemountWorkspaceServiceFake>) -> TestServices {
         remount_workspace,
         remount_command,
     ));
-    let services = OperationServices::new(Arc::clone(&workspace), command, remount);
     TestServices {
         workspace,
-        command: Arc::clone(&services.command),
-        services,
+        command,
+        workspace_remount: remount,
     }
 }
 
@@ -311,11 +309,10 @@ fn build_services_with_process_group_controller(
         remount_workspace,
         remount_command,
     ));
-    let services = OperationServices::new(Arc::clone(&workspace), Arc::clone(&command), remount);
     TestServices {
         workspace,
         command,
-        services,
+        workspace_remount: remount,
     }
 }
 
@@ -446,8 +443,7 @@ fn workspace_remount_isolated_no_active_command_path_succeeds_and_clears_pending
         .expect("create isolated workspace session succeeds");
 
     let report = services
-        .services
-        .remount
+        .workspace_remount
         .remount_workspace_session(handler.workspace_session_id.clone())
         .expect("isolated remount succeeds");
 
@@ -492,8 +488,7 @@ fn workspace_remount_no_active_command_path_succeeds_and_clears_pending() {
         .expect("create workspace session succeeds");
 
     let report = services
-        .services
-        .remount
+        .workspace_remount
         .remount_workspace_session(handler.workspace_session_id.clone())
         .expect("remount succeeds");
 
@@ -555,8 +550,7 @@ fn workspace_remount_live_command_success_finishes_before_resume() {
     );
 
     let report = services
-        .services
-        .remount
+        .workspace_remount
         .remount_workspace_session(handler.workspace_session_id.clone())
         .expect("live remount succeeds");
 
@@ -619,8 +613,7 @@ fn workspace_remount_cancel_during_critical_switch_still_applies_and_resumes() {
     }));
 
     let report = services
-        .services
-        .remount
+        .workspace_remount
         .remount_workspace_session(handler.workspace_session_id.clone())
         .expect("live remount succeeds despite cancellation");
 
@@ -654,8 +647,7 @@ fn workspace_remount_blocked_inspection_marks_blocked_and_skips_resource_remount
         .expect("exec command succeeds");
 
     let report = services
-        .services
-        .remount
+        .workspace_remount
         .remount_workspace_session(handler.workspace_session_id.clone())
         .expect("blocked remount returns report");
 
@@ -690,8 +682,7 @@ fn workspace_remount_resource_failure_blocks_state_after_cleanup() {
         .expect("create workspace session succeeds");
 
     let error = services
-        .services
-        .remount
+        .workspace_remount
         .remount_workspace_session(handler.workspace_session_id.clone())
         .expect_err("resource remount failure is returned");
 

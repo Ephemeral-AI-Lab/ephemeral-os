@@ -5,8 +5,8 @@ use trace::sha256_hex;
 use super::audit::{compute_entry_hash, EntryHashInput};
 use super::types::verify_scope;
 use super::{
-    query, TraceAuditEntryRow, TraceEventRow, TraceLinkRow, TraceRequestRow, TraceResourceRow,
-    TraceSpanRow, TraceStore, TraceStoreError, TraceVerifyReport,
+    query, TraceAuditEntryRow, TraceEventRow, TraceRequestRow, TraceStore, TraceStoreError,
+    TraceVerifyReport,
 };
 
 impl TraceStore {
@@ -40,15 +40,6 @@ impl TraceStore {
         query::request_by_id(&self.lock(), request_id)
     }
 
-    #[cfg(any(test, feature = "e2e-support"))]
-    pub fn trace_ids_for_link(
-        &self,
-        link_kind: &str,
-        link_id: &str,
-    ) -> Result<Vec<String>, TraceStoreError> {
-        query::trace_ids_for_link(&self.lock(), link_kind, link_id)
-    }
-
     pub fn recent_requests(
         &self,
         sandbox_id: Option<&str>,
@@ -63,48 +54,6 @@ impl TraceStore {
         limit: usize,
     ) -> Result<Vec<TraceRequestRow>, TraceStoreError> {
         query::requests_for_trace_limited(&self.lock(), trace_id, limit)
-    }
-
-    #[cfg(any(test, feature = "e2e-support"))]
-    pub fn spans_for_trace(&self, trace_id: &str) -> Result<Vec<TraceSpanRow>, TraceStoreError> {
-        query::spans_for_trace(&self.lock(), trace_id)
-    }
-
-    pub fn spans_for_trace_limited(
-        &self,
-        trace_id: &str,
-        limit: usize,
-    ) -> Result<Vec<TraceSpanRow>, TraceStoreError> {
-        query::spans_for_trace_limited(&self.lock(), trace_id, limit)
-    }
-
-    #[cfg(any(test, feature = "e2e-support"))]
-    pub fn resources_for_trace(
-        &self,
-        trace_id: &str,
-    ) -> Result<Vec<TraceResourceRow>, TraceStoreError> {
-        query::resources_for_trace(&self.lock(), trace_id)
-    }
-
-    pub fn resources_for_trace_limited(
-        &self,
-        trace_id: &str,
-        limit: usize,
-    ) -> Result<Vec<TraceResourceRow>, TraceStoreError> {
-        query::resources_for_trace_limited(&self.lock(), trace_id, limit)
-    }
-
-    #[cfg(any(test, feature = "e2e-support"))]
-    pub fn links_for_trace(&self, trace_id: &str) -> Result<Vec<TraceLinkRow>, TraceStoreError> {
-        query::links_for_trace(&self.lock(), trace_id)
-    }
-
-    pub fn links_for_trace_limited(
-        &self,
-        trace_id: &str,
-        limit: usize,
-    ) -> Result<Vec<TraceLinkRow>, TraceStoreError> {
-        query::links_for_trace_limited(&self.lock(), trace_id, limit)
     }
 
     pub fn audit_entries_for_trace_limited(
@@ -208,19 +157,6 @@ impl TraceStore {
             checked_entries,
             first_error: None,
         })
-    }
-
-    #[cfg(any(test, feature = "e2e-support"))]
-    pub fn query_plan_for(&self, sql: &str) -> Result<Vec<String>, TraceStoreError> {
-        query::query_plan_for(&self.lock(), sql)
-    }
-
-    #[cfg(any(test, feature = "e2e-support"))]
-    pub fn resource_span_ids_for_request(
-        &self,
-        request_id: &str,
-    ) -> Result<Vec<Option<i64>>, TraceStoreError> {
-        query::resource_span_ids_for_request(&self.lock(), request_id)
     }
 
     #[cfg(any(test, feature = "e2e-support"))]

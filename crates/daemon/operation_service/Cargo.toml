@@ -8,8 +8,6 @@ license.workspace = true
 [dependencies]
 command.workspace = true
 layerstack.workspace = true
-nix = { workspace = true, features = ["process", "signal"] }
-serde_json.workspace = true
 thiserror.workspace = true
 workspace.workspace = true
 

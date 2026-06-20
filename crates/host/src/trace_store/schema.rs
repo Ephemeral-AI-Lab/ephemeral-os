@@ -57,33 +57,15 @@ CREATE TABLE IF NOT EXISTS trace_requests (
   caller_id        TEXT,
   args_summary     TEXT,
   args_digest      TEXT,
-  workspace_route  TEXT CHECK (workspace_route IN
-    ('host','isolated','fast_path','none') OR workspace_route IS NULL),
   status           TEXT,
   error_kind       TEXT,
   sent_at_ms       INTEGER NOT NULL,
   received_at_ms   INTEGER,
   host_rtt_ms      INTEGER,
-  duration_us      INTEGER,
-  daemon_boot_id   TEXT,
   host_boot_id     TEXT NOT NULL,
-  modules_touched  TEXT,
   response_digest  TEXT,
   response_len     INTEGER,
   response_summary TEXT
-);
-CREATE TABLE IF NOT EXISTS trace_spans (
-  trace_id        TEXT NOT NULL,
-  request_id      TEXT,
-  span_id         INTEGER NOT NULL,
-  parent_span_id  INTEGER,
-  kind            TEXT NOT NULL,
-  subsystem       TEXT NOT NULL,
-  status          TEXT NOT NULL DEFAULT 'ok',
-  started_us      INTEGER NOT NULL,
-  duration_us     INTEGER NOT NULL,
-  fields_json     TEXT,
-  PRIMARY KEY (trace_id, span_id)
 );
 CREATE TABLE IF NOT EXISTS trace_events (
   trace_id    TEXT NOT NULL,
@@ -97,29 +79,13 @@ CREATE TABLE IF NOT EXISTS trace_events (
   details_json TEXT,
   PRIMARY KEY (trace_id, seq)
 );
-CREATE TABLE IF NOT EXISTS trace_resources (
-  trace_id TEXT NOT NULL, request_id TEXT, span_id INTEGER,
-  ts_us INTEGER NOT NULL, kind TEXT NOT NULL, values_json TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS trace_links (
-  trace_id  TEXT NOT NULL,
-  link_kind TEXT NOT NULL,
-  link_id   TEXT NOT NULL,
-  request_id TEXT NOT NULL DEFAULT '',
-  PRIMARY KEY (trace_id, link_kind, link_id, request_id)
-);
 CREATE INDEX IF NOT EXISTS idx_audit_trace     ON audit_entries(trace_id, audit_seq);
 CREATE INDEX IF NOT EXISTS idx_audit_sandbox   ON audit_entries(sandbox_id, audit_seq);
 CREATE INDEX IF NOT EXISTS idx_audit_request   ON audit_entries(request_id);
 CREATE INDEX IF NOT EXISTS idx_requests_trace  ON trace_requests(trace_id);
 CREATE INDEX IF NOT EXISTS idx_requests_sent   ON trace_requests(sent_at_ms);
 CREATE INDEX IF NOT EXISTS idx_requests_status ON trace_requests(status);
-CREATE INDEX IF NOT EXISTS idx_spans_kind      ON trace_spans(kind);
-CREATE INDEX IF NOT EXISTS idx_spans_request   ON trace_spans(request_id);
 CREATE INDEX IF NOT EXISTS idx_events_request  ON trace_events(request_id);
-CREATE INDEX IF NOT EXISTS idx_resources_trace ON trace_resources(trace_id, ts_us);
-CREATE INDEX IF NOT EXISTS idx_resources_request_span_kind ON trace_resources(request_id, span_id, kind);
-CREATE INDEX IF NOT EXISTS idx_links_id       ON trace_links(link_kind, link_id);
 CREATE INDEX IF NOT EXISTS idx_events_span    ON trace_events(trace_id, span_id);
 CREATE INDEX IF NOT EXISTS idx_events_event   ON trace_events(event);
 "#;

@@ -25,10 +25,7 @@ mod types;
 pub use error::TraceStoreError;
 #[cfg(any(test, feature = "e2e-support"))]
 pub use query::SqlitePosture;
-pub use query::{
-    TraceAuditEntryRow, TraceEventRow, TraceLinkRow, TraceRequestRow, TraceResourceRow,
-    TraceSpanRow,
-};
+pub use query::{TraceAuditEntryRow, TraceEventRow, TraceRequestRow};
 #[cfg(feature = "e2e-support")]
 pub use types::TraceVerifyFailure;
 pub use types::{

@@ -3,20 +3,18 @@ use std::path::PathBuf;
 use crate::workspace_crate::{BaseRevision, WorkspaceHandle, WorkspaceId};
 use crate::workspace_session::WorkspaceSessionError;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum WorkspaceLifecycleState {
-    Active,
-    Closing,
-}
-
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub enum WorkspaceRemountState {
+pub(crate) enum WorkspaceRemountState {
     #[default]
     Active,
     RemountPending,
-    RemountBlocked {
-        reason: String,
-    },
+    RemountBlocked,
+}
+
+impl WorkspaceRemountState {
+    pub(crate) fn is_pending(&self) -> bool {
+        matches!(self, Self::RemountPending)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -31,7 +29,6 @@ pub(crate) struct WorkspaceSession {
     pub workspace_session_id: WorkspaceId,
     pub handle: WorkspaceHandle,
     pub layer_stack_root: PathBuf,
-    pub lifecycle_state: WorkspaceLifecycleState,
     pub remount_state: WorkspaceRemountState,
 }
 
@@ -41,7 +38,6 @@ impl WorkspaceSession {
             workspace_session_id: handle.id.clone(),
             layer_stack_root,
             handle,
-            lifecycle_state: WorkspaceLifecycleState::Active,
             remount_state: WorkspaceRemountState::Active,
         }
     }
@@ -54,17 +50,8 @@ impl WorkspaceSession {
         }
     }
 
-    pub(crate) fn ensure_active(&self) -> Result<(), WorkspaceSessionError> {
-        match self.lifecycle_state {
-            WorkspaceLifecycleState::Active => Ok(()),
-            WorkspaceLifecycleState::Closing => Err(WorkspaceSessionError::Closing {
-                workspace_session_id: self.workspace_session_id.clone(),
-            }),
-        }
-    }
-
     pub(crate) fn ensure_remount_not_pending(&self) -> Result<(), WorkspaceSessionError> {
-        if matches!(self.remount_state, WorkspaceRemountState::RemountPending) {
+        if self.remount_state.is_pending() {
             return Err(WorkspaceSessionError::RemountAlreadyPending {
                 workspace_session_id: self.workspace_session_id.clone(),
             });
@@ -73,27 +60,14 @@ impl WorkspaceSession {
     }
 
     pub(crate) fn active_handle(&self) -> Result<WorkspaceHandle, WorkspaceSessionError> {
-        self.ensure_active()?;
         self.ensure_remount_not_pending()?;
         Ok(self.handle.clone())
-    }
-
-    pub(crate) fn mark_closing(&mut self) -> Result<WorkspaceHandle, WorkspaceSessionError> {
-        self.ensure_active()?;
-        self.ensure_remount_not_pending()?;
-        self.lifecycle_state = WorkspaceLifecycleState::Closing;
-        Ok(self.handle.clone())
-    }
-
-    pub(crate) fn mark_active(&mut self) {
-        self.lifecycle_state = WorkspaceLifecycleState::Active;
     }
 
     pub(crate) fn begin_remount(
         &mut self,
     ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {
-        self.ensure_active()?;
-        if matches!(self.remount_state, WorkspaceRemountState::RemountPending) {
+        if self.remount_state.is_pending() {
             return Err(WorkspaceSessionError::RemountAlreadyPending {
                 workspace_session_id: self.workspace_session_id.clone(),
             });
@@ -103,11 +77,7 @@ impl WorkspaceSession {
     }
 
     pub(crate) fn finish_remount(&mut self) -> Result<(), WorkspaceSessionError> {
-        self.ensure_active()?;
-        if !matches!(
-            self.remount_state,
-            WorkspaceRemountState::RemountPending | WorkspaceRemountState::RemountBlocked { .. }
-        ) {
+        if !self.remount_state.is_pending() {
             return Err(WorkspaceSessionError::RemountNotPending {
                 workspace_session_id: self.workspace_session_id.clone(),
             });
@@ -116,14 +86,13 @@ impl WorkspaceSession {
         Ok(())
     }
 
-    pub(crate) fn block_remount(&mut self, reason: String) -> Result<(), WorkspaceSessionError> {
-        self.ensure_active()?;
-        if !matches!(self.remount_state, WorkspaceRemountState::RemountPending) {
+    pub(crate) fn block_remount(&mut self) -> Result<(), WorkspaceSessionError> {
+        if !self.remount_state.is_pending() {
             return Err(WorkspaceSessionError::RemountNotPending {
                 workspace_session_id: self.workspace_session_id.clone(),
             });
         }
-        self.remount_state = WorkspaceRemountState::RemountBlocked { reason };
+        self.remount_state = WorkspaceRemountState::RemountBlocked;
         Ok(())
     }
 

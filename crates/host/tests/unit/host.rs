@@ -275,7 +275,9 @@ fn forward_request_persists_transport_events_without_daemon_trace() -> Result<()
         "{event_names:?}"
     );
     assert!(
-        event_names.contains(&("daemon.transport", "accepted")),
+        event_names
+            .iter()
+            .all(|(module, _)| !module.starts_with("daemon.") && *module != "workspace.route"),
         "{event_names:?}"
     );
     assert_ordered_events(
@@ -286,17 +288,10 @@ fn forward_request_persists_transport_events_without_daemon_trace() -> Result<()
             ("gateway.route", "route_selected"),
             ("host.protocol", "forward_started"),
             ("host.transport", "connect_started"),
+            ("host.transport", "connect_finished"),
             ("host.transport", "request_written"),
-            ("daemon.transport", "accepted"),
-            ("daemon.transport", "read_finished"),
-            ("daemon.transport", "auth_checked"),
-            ("daemon.transport", "decoded"),
-            ("daemon.dispatch", "dispatch_started"),
-            ("daemon.dispatch", "op_resolved"),
-            ("workspace.route", "route_selected"),
-            ("sandbox.runtime", "ready_checked"),
-            ("daemon.transport", "response_write_finished"),
             ("host.transport", "response_read"),
+            ("host.protocol", "forward_finished"),
             ("gateway.transport", "response_written"),
         ],
     );

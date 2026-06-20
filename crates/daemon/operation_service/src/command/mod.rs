@@ -1,17 +1,11 @@
-#[path = "service/contract.rs"]
 pub mod contract;
 pub mod error;
-#[path = "service/launch.rs"]
+pub(crate) mod finalize;
 mod launch;
-#[path = "service/process_store.rs"]
 pub mod process_store;
 pub(crate) mod remount;
 pub mod service;
-#[path = "service/transcript.rs"]
 mod transcript;
-
-#[path = "service/finalize.rs"]
-pub(crate) mod finalize;
 
 pub use contract::{
     CancelCommandInput, CommandCallContext, CommandFinalizationOutcome, CommandFinalizedMetadata,

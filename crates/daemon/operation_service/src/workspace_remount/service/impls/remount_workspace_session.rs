@@ -18,7 +18,7 @@ impl WorkspaceRemountService {
 
         if let Some(reason) = quiesce.inspection().blocked_reason.clone() {
             self.workspace()
-                .finish_or_block_remount(workspace_session_id.clone(), Some(reason.clone()))?;
+                .block_remount(workspace_session_id.clone())?;
             let inspection = quiesce.finish();
             return Ok(WorkspaceRemountReport {
                 workspace_session_id,
@@ -32,7 +32,7 @@ impl WorkspaceRemountService {
         if quiesce.cancellation_requested() {
             let reason = RemountBlockReason::RemountCancelledBeforeSwitch.to_string();
             self.workspace()
-                .finish_or_block_remount(workspace_session_id.clone(), Some(reason.clone()))?;
+                .block_remount(workspace_session_id.clone())?;
             let inspection = quiesce.finish();
             return Ok(WorkspaceRemountReport {
                 workspace_session_id,

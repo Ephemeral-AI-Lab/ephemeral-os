@@ -69,7 +69,7 @@ impl CommandOperationService {
     }
 
     #[must_use]
-    pub fn workspace(&self) -> &Arc<WorkspaceSessionService> {
+    pub(crate) fn workspace(&self) -> &Arc<WorkspaceSessionService> {
         &self.workspace
     }
 

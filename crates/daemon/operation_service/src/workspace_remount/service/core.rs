@@ -17,32 +17,14 @@ pub trait RemountWorkspaceSession: Send + Sync {
         workspace_session_id: WorkspaceId,
     ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError>;
 
-    fn apply_remount(
+    fn apply_and_finish_remount(
         &self,
         handler: &WorkspaceSessionHandler,
         request: RemountWorkspaceRequest,
     ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError>;
 
-    fn apply_and_finish_remount(
-        &self,
-        handler: &WorkspaceSessionHandler,
-        request: RemountWorkspaceRequest,
-    ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {
-        let updated = self.apply_remount(handler, request)?;
-        self.finish_remount(handler.workspace_session_id.clone())?;
-        Ok(updated)
-    }
-
-    fn finish_remount(
-        &self,
-        workspace_session_id: WorkspaceId,
-    ) -> Result<(), WorkspaceSessionError>;
-
-    fn finish_or_block_remount(
-        &self,
-        workspace_session_id: WorkspaceId,
-        reason: Option<String>,
-    ) -> Result<(), WorkspaceSessionError>;
+    fn block_remount(&self, workspace_session_id: WorkspaceId)
+        -> Result<(), WorkspaceSessionError>;
 
     fn is_remount_pending(&self, workspace_session_id: &WorkspaceId) -> bool;
 }
@@ -71,12 +53,12 @@ impl WorkspaceRemountService {
     }
 
     #[must_use]
-    pub fn workspace(&self) -> &Arc<dyn RemountWorkspaceSession> {
+    pub(crate) fn workspace(&self) -> &Arc<dyn RemountWorkspaceSession> {
         &self.workspace
     }
 
     #[must_use]
-    pub fn command(&self) -> &Arc<dyn CommandRemountCoordinator> {
+    pub(crate) fn command(&self) -> &Arc<dyn CommandRemountCoordinator> {
         &self.command
     }
 }

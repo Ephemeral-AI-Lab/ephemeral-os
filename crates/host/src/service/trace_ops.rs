@@ -39,24 +39,9 @@ impl SandboxHost {
                     .requests_for_trace_limited(trace_id, query_limit)?,
                 section_limit,
             );
-            let (spans, spans_truncated) = trim_limited(
-                self.trace_store
-                    .spans_for_trace_limited(trace_id, query_limit)?,
-                section_limit,
-            );
             let (events, events_truncated) = trim_limited(
                 self.trace_store
                     .events_for_trace_limited(trace_id, query_limit)?,
-                section_limit,
-            );
-            let (resources, resources_truncated) = trim_limited(
-                self.trace_store
-                    .resources_for_trace_limited(trace_id, query_limit)?,
-                section_limit,
-            );
-            let (links, links_truncated) = trim_limited(
-                self.trace_store
-                    .links_for_trace_limited(trace_id, query_limit)?,
                 section_limit,
             );
             let (audit_entries, audit_entries_truncated) = trim_limited(
@@ -71,25 +56,16 @@ impl SandboxHost {
                 },
                 "counts": {
                     "requests": requests.len(),
-                    "spans": spans.len(),
                     "events": events.len(),
-                    "resources": resources.len(),
-                    "links": links.len(),
                     "audit_entries": audit_entries.len(),
                 },
                 "truncated": {
                     "requests": requests_truncated,
-                    "spans": spans_truncated,
                     "events": events_truncated,
-                    "resources": resources_truncated,
-                    "links": links_truncated,
                     "audit_entries": audit_entries_truncated,
                 },
                 "requests": requests,
-                "spans": spans,
                 "events": events,
-                "resources": resources,
-                "links": links,
                 "audit_entries": audit_entries,
             }))
         })();
@@ -102,7 +78,6 @@ impl SandboxHost {
                 Ok(value) => json!({
                     "status": "ok",
                     "request_count": value["requests"].as_array().map_or(0, Vec::len),
-                    "span_count": value["spans"].as_array().map_or(0, Vec::len),
                     "event_count": value["events"].as_array().map_or(0, Vec::len),
                     "audit_entry_count": value["audit_entries"].as_array().map_or(0, Vec::len),
                     "truncated": value["truncated"].clone(),

@@ -6,7 +6,7 @@ use operation_service::workspace_remount::{
     CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountService,
 };
 use operation_service::workspace_session::WorkspaceSessionService;
-use operation_service::OperationServices;
+use operation_service::DaemonOperations;
 use workspace::{
     CallerId, CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest,
     LatestSnapshotRequest, RemountWorkspaceRequest, WorkspaceError, WorkspaceHandle, WorkspaceId,
@@ -56,7 +56,7 @@ fn noop_workspace_runtime() -> Arc<WorkspaceRuntimeService> {
 }
 
 #[test]
-fn operation_services_wires_top_level_domains() {
+fn daemon_operations_exposes_only_command_as_external_lane() {
     let workspace = workspace_session();
     let command = Arc::new(CommandOperationService::new(
         Arc::clone(&workspace),
@@ -69,15 +69,9 @@ fn operation_services_wires_top_level_domains() {
         remount_command,
     ));
 
-    let services = OperationServices::new(
-        Arc::clone(&workspace),
-        Arc::clone(&command),
-        Arc::clone(&remount),
-    );
+    let operations = DaemonOperations::new(Arc::clone(&workspace), Arc::clone(&command), remount);
 
-    assert!(Arc::ptr_eq(&services.workspace, &workspace));
-    assert!(Arc::ptr_eq(&services.command, &command));
-    assert!(Arc::ptr_eq(&services.remount, &remount));
+    assert!(Arc::ptr_eq(&operations.command, &command));
 }
 
 #[test]

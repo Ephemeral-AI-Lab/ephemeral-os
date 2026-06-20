@@ -9,6 +9,10 @@ pub(super) fn refresh_response_trace_receipt(attempt: &ForwardAttempt<'_>, respo
     let Some(meta) = object.get_mut("meta").and_then(Value::as_object_mut) else {
         return;
     };
+    meta.insert(
+        "request_id".to_owned(),
+        Value::String(attempt.request_id.to_string()),
+    );
     let trace = meta
         .entry("trace".to_owned())
         .or_insert_with(|| json!({}))
