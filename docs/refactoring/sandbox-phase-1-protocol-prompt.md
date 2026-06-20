@@ -56,6 +56,7 @@ Move to `sandbox-protocol`:
 - `ArgSpec`.
 - `CliSpec`.
 - `OperationSpec`.
+- New `OperationSurface`.
 - New `OperationAuthority`.
 - New `OperationCatalog`.
 

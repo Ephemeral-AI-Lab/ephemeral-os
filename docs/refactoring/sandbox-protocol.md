@@ -27,6 +27,7 @@ Import:  sandbox_protocol
   - `ArgCliSpec`
   - `CliSpec`
   - `OperationCatalog`
+  - `OperationSurface`
   - `OperationAuthority`
 - Manual/help rendering helpers that operate only on `OperationSpec`.
 
@@ -147,7 +148,7 @@ Example response:
   "op": "exec_command",
   "status": "running",
   "result": {
-    "command_id": "cmd-1",
+    "command_session_id": "cmd-1",
     "state": "running"
   },
   "error": null,
@@ -159,8 +160,10 @@ Example response:
 ```
 
 `scope` identifies the resource the operation applies to. It is not the
-implementation authority. `OperationAuthority` remains catalog metadata that
-describes which component owns the operation implementation.
+implementation authority or agent-facing tool surface. `OperationSurface`
+belongs in catalog/manual metadata only, for example `manager` vs `runtime`.
+`OperationAuthority` remains catalog metadata that describes which component
+owns the operation implementation.
 
 ## Dependency Rules
 

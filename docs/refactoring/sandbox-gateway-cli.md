@@ -18,7 +18,7 @@ requests, sends them to `sandbox-manager`, and renders responses.
 - CLI config discovery and precedence.
 - Manager client connection setup.
 - Request construction from `OperationSpec` and CLI argv.
-- Manual/help rendering for manager and daemon catalogs.
+- Manual/help rendering for manager and runtime operation surfaces.
 - Output formatting and exit-code behavior.
 
 ## Must Not Own
@@ -47,19 +47,20 @@ src/
 - Errors go to stderr.
 - Machine-readable responses go to stdout.
 - Default route is gateway -> manager.
-- Daemon operations require `--sandbox SANDBOX_ID` unless config provides a
-  default sandbox.
-- `--sandbox SANDBOX_ID` sets `request.scope = sandbox`; requests without a
-  sandbox use `request.scope = system`.
+- Canonical command surfaces are `sandbox manager ...` and
+  `sandbox runtime --sandbox-id ID ...`.
+- Manager operations use `request.scope = system`.
+- Runtime operations require `--sandbox-id SANDBOX_ID` unless config provides a
+  default sandbox, and set `request.scope = sandbox`.
 - Help/manual text is generated from `OperationSpec`, not duplicated by hand.
 
 ## Example Commands
 
 ```text
-sandbox create_sandbox
-sandbox list_sandboxes
-sandbox exec_command --sandbox sbox-1 --cmd "pwd"
-sandbox poll_command --sandbox sbox-1 cmd-1
+sandbox manager create_sandbox --sandbox-id sbox-1
+sandbox manager list_sandboxes
+sandbox runtime --sandbox-id sbox-1 exec_command --workspace-session-id ws-1 "pwd"
+sandbox runtime --sandbox-id sbox-1 poll_command --command-session-id cmd-1
 ```
 
 ## Dependency Rules
@@ -90,7 +91,7 @@ The gateway builds `sandbox_protocol::SandboxRequest` directly:
 }
 ```
 
-For daemon operations:
+For runtime operations:
 
 ```json
 {
@@ -107,7 +108,7 @@ For daemon operations:
 ```
 
 The gateway does not construct `ManagerRequest`, `RoutedRequest`, or any
-manager/daemon target envelope.
+manager/runtime/daemon target envelope.
 
 ## Verification
 

@@ -1,8 +1,5 @@
 //! Daemon serve subcommand adapter.
 
-use std::io::{Read, Write};
-#[cfg(unix)]
-use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::Arc;
@@ -16,8 +13,6 @@ use config::ConfigPath;
 
 const DAEMON_AUTH_TOKEN_ENV: &str = "EOS_DAEMON_AUTH_TOKEN";
 const DAEMON_CONFIG_YAML_ENV: &str = "EOS_DAEMON_CONFIG_YAML";
-const CONNECT_FAILED: i32 = 97;
-const IO_FAILED: i32 = 98;
 
 /// Start, spawn, or call the async RPC server.
 ///
@@ -25,17 +20,12 @@ const IO_FAILED: i32 = 98;
 /// - `sandbox-daemon serve --socket PATH --pid-file PATH ...` runs the foreground server.
 /// - `sandbox-daemon serve --spawn --socket PATH --pid-file PATH ...` starts a
 ///   detached foreground child and returns.
-/// - `eosd daemon --client SOCKET JSON` remains the compatibility client for
-///   `thin_client.py`, preserving exit codes 97/98.
-pub(crate) fn run(args: std::env::Args, subcommand: ServeSubcommand) -> Result<()> {
+pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let args = args.collect::<Vec<_>>();
     let config_path = daemon_config_path_arg(&args)?;
     let runtime_config = load_runtime_config(config_path.as_deref())?;
     let daemon_config = &runtime_config.daemon;
-    let config = DaemonCliConfig::parse(args, &daemon_config.server, config_path, subcommand)?;
-    if let Some((socket_path, payload)) = config.client {
-        return run_client_request(&socket_path, &payload);
-    }
+    let config = DaemonCliConfig::parse(args, &daemon_config.server, config_path)?;
     if config.spawn {
         return spawn_daemon(&config);
     }
@@ -139,7 +129,6 @@ fn daemon_worker_threads(max_worker_threads: usize) -> usize {
 }
 
 pub(crate) struct DaemonCliConfig {
-    subcommand: ServeSubcommand,
     pub(crate) config_yaml_path: PathBuf,
     socket_path: PathBuf,
     pid_path: PathBuf,
@@ -147,7 +136,6 @@ pub(crate) struct DaemonCliConfig {
     tcp_port: Option<u16>,
     pub(crate) auth_token: Option<String>,
     spawn: bool,
-    client: Option<(PathBuf, String)>,
 }
 
 impl DaemonCliConfig {
@@ -155,7 +143,6 @@ impl DaemonCliConfig {
         args: impl IntoIterator<Item = String>,
         server_defaults: &DaemonServerConfig,
         explicit_config_path: Option<PathBuf>,
-        subcommand: ServeSubcommand,
     ) -> Result<Self> {
         let mut config_yaml_path = match explicit_config_path {
             Some(path) => path,
@@ -167,7 +154,6 @@ impl DaemonCliConfig {
         let mut tcp_port = None;
         let mut auth_token = None;
         let mut spawn = false;
-        let mut client = None;
         let mut args = args.into_iter();
         while let Some(arg) = args.next() {
             match arg.as_str() {
@@ -186,16 +172,9 @@ impl DaemonCliConfig {
                 }
                 "--auth-token" => auth_token = Some(required_arg(&mut args, "--auth-token")?),
                 "--spawn" => spawn = true,
-                "--client" => {
-                    let socket = PathBuf::from(required_arg(&mut args, "--client <socket>")?);
-                    let payload = required_arg(&mut args, "--client <socket> <payload>")?;
-                    client = Some((socket, payload));
-                }
                 "--help" | "-h" => {
                     println!(
-                        "usage: {} [--spawn] [--config-yaml PATH] [--socket PATH] [--pid-file PATH] [--tcp-host HOST --tcp-port PORT --auth-token TOKEN] | {} --client SOCKET JSON",
-                        subcommand.name(),
-                        subcommand.name()
+                        "usage: serve [--spawn] [--config-yaml PATH] [--socket PATH] [--pid-file PATH] [--tcp-host HOST --tcp-port PORT --auth-token TOKEN]"
                     );
                     std::process::exit(0);
                 }
@@ -203,7 +182,6 @@ impl DaemonCliConfig {
             }
         }
         Ok(Self {
-            subcommand,
             config_yaml_path,
             socket_path,
             pid_path,
@@ -211,13 +189,12 @@ impl DaemonCliConfig {
             tcp_port,
             auth_token: auth_token.or_else(|| std::env::var(DAEMON_AUTH_TOKEN_ENV).ok()),
             spawn,
-            client,
         })
     }
 
     pub(crate) fn foreground_args(&self) -> Vec<String> {
         let mut args = vec![
-            self.subcommand.name().to_owned(),
+            "serve".to_owned(),
             "--config-yaml".to_owned(),
             self.config_yaml_path.to_string_lossy().into_owned(),
             "--socket".to_owned(),
@@ -255,44 +232,6 @@ fn required_arg(args: &mut impl Iterator<Item = String>, flag: &str) -> Result<S
         .ok_or_else(|| anyhow!("{flag} requires a value"))
 }
 
-#[cfg(unix)]
-fn run_client_request(socket_path: &PathBuf, payload: &str) -> Result<()> {
-    let mut stream = match UnixStream::connect(socket_path) {
-        Ok(stream) => stream,
-        Err(err) => {
-            eprintln!("EOS_DAEMON_CONNECT_FAILED:{}", io_error_name(&err));
-            std::process::exit(CONNECT_FAILED);
-        }
-    };
-    if let Err(err) = stream
-        .write_all(payload.as_bytes())
-        .and_then(|()| stream.write_all(b"\n"))
-    {
-        eprintln!("EOS_DAEMON_IO_FAILED:{}", io_error_name(&err));
-        std::process::exit(IO_FAILED);
-    }
-    if let Err(err) = stream.shutdown(std::net::Shutdown::Write) {
-        eprintln!("EOS_DAEMON_IO_FAILED:{}", io_error_name(&err));
-        std::process::exit(IO_FAILED);
-    }
-    let mut response = Vec::new();
-    if let Err(err) = stream.read_to_end(&mut response) {
-        eprintln!("EOS_DAEMON_IO_FAILED:{}", io_error_name(&err));
-        std::process::exit(IO_FAILED);
-    }
-    std::io::stdout()
-        .lock()
-        .write_all(&response)
-        .context("failed to write daemon client response")?;
-    Ok(())
-}
-
-#[cfg(not(unix))]
-fn run_client_request(_socket_path: &PathBuf, _payload: &str) -> Result<()> {
-    eprintln!("EOS_DAEMON_CONNECT_FAILED:UnsupportedPlatform");
-    std::process::exit(CONNECT_FAILED);
-}
-
 fn spawn_daemon(config: &DaemonCliConfig) -> Result<()> {
     if daemon_already_running(&config.pid_path, &config.socket_path) {
         return Ok(());
@@ -322,21 +261,6 @@ fn spawn_daemon(config: &DaemonCliConfig) -> Result<()> {
     Ok(())
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum ServeSubcommand {
-    Serve,
-    Daemon,
-}
-
-impl ServeSubcommand {
-    pub(crate) const fn name(self) -> &'static str {
-        match self {
-            Self::Serve => "serve",
-            Self::Daemon => "daemon",
-        }
-    }
-}
-
 fn set_runner_config_env(config_yaml_path: &Path) {
     std::env::set_var(DAEMON_CONFIG_YAML_ENV, config_yaml_path);
 }
@@ -358,15 +282,5 @@ fn daemon_already_running(pid_path: &Path, socket_path: &Path) -> bool {
     #[cfg(not(target_os = "linux"))]
     {
         pid > 0
-    }
-}
-
-fn io_error_name(err: &std::io::Error) -> &'static str {
-    match err.kind() {
-        std::io::ErrorKind::NotFound => "FileNotFoundError",
-        std::io::ErrorKind::ConnectionRefused => "ConnectionRefusedError",
-        std::io::ErrorKind::TimedOut => "TimeoutError",
-        std::io::ErrorKind::BrokenPipe => "BrokenPipeError",
-        _ => "OSError",
     }
 }

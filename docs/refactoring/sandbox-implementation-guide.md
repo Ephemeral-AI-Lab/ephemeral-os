@@ -32,7 +32,7 @@ docs/refactoring/sandbox-gateway-cli.md
 6. sandbox-gateway-cli
 7. catalog/manual contract
 8. runtime support package rename wave
-9. compatibility cleanup
+9. stale-name cleanup
 ```
 
 Do not rename support packages while extracting the protocol, runtime facade,
@@ -132,6 +132,7 @@ Implementation steps:
    - `OperationSpec`
    - `OperationFamily` or `OperationGroup`
 5. Add protocol catalog types:
+   - `OperationSurface`
    - `OperationAuthority`
    - `OperationCatalog`
 6. Keep implementation-bound dispatch entries in `daemon_operation`.
@@ -285,13 +286,13 @@ docs/refactoring/sandbox-phase-3-daemon-prompt.md
 Goal:
 
 - Rename the in-sandbox server process and fold the `eosd` adapter into it.
-- Keep `eosd` as a temporary compatibility binary.
+- Keep `eosd` only as the packaged namespace helper entrypoint.
 
 Package moves:
 
 ```text
 daemon -> sandbox-daemon
-eosd   -> compatibility bin inside sandbox-daemon
+eosd   -> packaged helper bin inside sandbox-daemon
 ```
 
 Implementation steps:
@@ -314,8 +315,8 @@ Implementation steps:
    - `serve`
    - `ns-runner`
    - `ns-holder`
-5. Keep `eosd daemon` as a compatibility alias only while scripts still need
-   it.
+5. Do not keep an alternate daemon subcommand; `sandbox-daemon serve` is the
+   only server entrypoint.
 
 Resulting folder structure:
 
@@ -399,7 +400,7 @@ Implementation steps:
 3. Add host runtime traits.
 4. Add daemon install/start traits.
 5. Add a daemon client abstraction for later sandbox-scoped forwarding and
-   daemon catalog discovery.
+   runtime catalog discovery.
 6. Add manager operation specs and dispatch.
 
 Resulting folder structure:
@@ -456,7 +457,9 @@ cargo test -p sandbox-manager
 
 Exit criteria:
 
-- Manager catalog and daemon catalog are separate.
+- Manager surface and runtime surface are separate.
+- The runtime surface is served by the sandbox daemon, but it should be
+  presented to agents and CLI users as runtime.
 - Manager may route sandbox-scoped daemon requests but does not implement daemon
   operations.
 - Tests can use stub runtimes and stub daemon endpoints.
@@ -562,7 +565,7 @@ Implementation steps:
 1. Add manager socket/config discovery.
 2. Add manager client connection.
 3. Add `SandboxRequest` construction from CLI argv and `OperationSpec`.
-4. Add manual/help rendering from manager and daemon catalogs.
+4. Add manual/help rendering from manager and runtime operation surfaces.
 5. Add stdout/stderr and exit-code behavior.
 6. Add the installed binary name `sandbox`.
 
@@ -599,17 +602,19 @@ cargo test -p sandbox-gateway-cli
 Exit criteria:
 
 - Default route is gateway -> manager.
-- Daemon operations require `--sandbox SANDBOX_ID` unless config supplies a
-  default.
-- `--sandbox` populates `OperationScope::Sandbox`; requests without a sandbox
-  use `OperationScope::System`.
+- Canonical command surfaces are `sandbox manager ...` and
+  `sandbox runtime --sandbox-id ID ...`.
+- Manager operations populate `OperationScope::System`.
+- Runtime operations populate `OperationScope::Sandbox`; requests without a
+  sandbox id use a configured default or fail.
 - Errors go to stderr and machine-readable responses go to stdout.
 
 ## Phase 7: Stabilize Catalog And Manual Contract
 
 Goal:
 
-- Make manager and daemon catalogs discoverable by agents and CLI help.
+- Make manager and runtime operation surfaces discoverable by agents and CLI
+  help.
 
 Packages changed:
 
@@ -622,12 +627,14 @@ sandbox-gateway-cli
 Implementation steps:
 
 1. Stabilize `OperationCatalog` and `OperationAuthority`.
-2. Ensure manager catalog returns manager operations only.
-3. Ensure daemon catalog returns daemon operations only.
+2. Ensure the manager surface returns manager operations only.
+3. Ensure the runtime surface returns runtime operations only.
 4. Add or verify:
    - `describe_manager_operations`
    - `describe_daemon_operations`
 5. Render CLI/manual output from `OperationSpec`, not duplicated strings.
+6. Preserve implementation authority in catalog output, but display the
+   agent-facing surface as `runtime` instead of `daemon`.
 
 Resulting folder structure:
 
@@ -779,8 +786,8 @@ Implementation steps:
 
 1. Update README and architecture docs.
 2. Update packaging from `eosd` to `sandbox-daemon`.
-3. Decide whether to keep the `eosd` compatibility binary.
-4. Remove old workspace dependency aliases.
+3. Keep the packaged `eosd` helper binary only while packaging still uses that artifact name.
+4. Remove old workspace dependency entries.
 5. Run stale-name scans.
 
 Final folder structure:
@@ -819,8 +826,8 @@ cargo test -p sandbox-protocol -p sandbox-runtime -p sandbox-daemon -p sandbox-m
 
 Exit criteria:
 
-- `crates/daemon/` is gone or contains only explicitly documented temporary
-  compatibility material.
+- `crates/daemon/` is gone or contains only explicitly documented active
+  support crates until phase 8 moves them.
 - Old runtime-operation package/import names do not appear in active code or
   non-refactoring docs.
 - `poll` and `cancel` do not remain as operation or file names; use

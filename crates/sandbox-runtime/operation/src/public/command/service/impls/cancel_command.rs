@@ -25,8 +25,8 @@ const CANCEL_ARGS: &[ArgSpec] = &[ArgSpec::required(
     ArgKind::String,
     "Command session id returned by exec_command.",
     Some(ArgCliSpec {
-        flag: None,
-        positional: Some("COMMAND_SESSION_ID"),
+        flag: Some("--command-session-id"),
+        positional: None,
     }),
 )];
 

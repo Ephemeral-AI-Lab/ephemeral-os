@@ -12,8 +12,10 @@ data-plane components:
   catalog vocabulary used by all three.
 
 This split is required because future agents will choose between two operation
-surfaces: manager operations and daemon operations. That authority boundary must
-be structural, not inferred from a loose operation family tag.
+surfaces: manager operations and runtime operations. Runtime operations are
+served by the sandbox daemon, but the agent-facing/manual surface should be
+`runtime`, not `daemon`. That authority boundary must be structural, not
+inferred from a loose operation family tag.
 
 ## Target Workspace Shape
 
@@ -37,8 +39,9 @@ crates/
 ```
 
 The `sandbox-runtime/*` crates are runtime support crates for the in-sandbox
-daemon. They are grouped together because they implement daemon behavior, but
-only the `sandbox-runtime` package owns the daemon operation catalog.
+daemon. They are grouped together because they implement runtime behavior, and
+only the `sandbox-runtime` package owns the runtime operation catalog. The
+daemon hosts that catalog over the in-sandbox server process.
 
 Do not collapse the support crates into the `sandbox-runtime` facade package.
 Keep them as separate packages under the shared folder so dependency direction
@@ -72,7 +75,7 @@ docs/refactoring/sandbox-implementation-guide.md
 | `daemon_rpc_protocol` | `sandbox-protocol` | Shared process contract, not daemon-owned behavior. |
 | `daemon_operation` | `sandbox-runtime` | Concrete daemon/runtime operation catalog and dispatch. |
 | `daemon` server crate | `sandbox-daemon` | In-sandbox RPC server and daemon binary entrypoint. |
-| `eosd` binary crate | part of `sandbox-daemon` | Keep `eosd` as a compatibility bin during migration. |
+| `eosd` binary crate | part of `sandbox-daemon` | Packaged namespace helper entrypoint. |
 | `command` | `sandbox-runtime-command` | Command process, PTY, transcript, and lifecycle primitives. |
 | `workspace` | `sandbox-runtime-workspace` | Workspace lifecycle, handles, capture, destroy, remount. |
 | `namespace-process` | `sandbox-runtime-namespace-process` | `ns-holder` and `ns-runner` subprocess bodies. |
@@ -90,16 +93,26 @@ use sandbox_runtime::operation_specs;
 
 ## Authority Boundary
 
-The manager and daemon runtime expose separate operation catalogs.
+The manager and sandbox runtime expose separate operation catalogs.
 
 ```text
 sandbox_manager::operation_specs()
 sandbox_runtime::operation_specs()
 ```
 
-Do not merge these into one catalog with a `Manager` or `Daemon` family. An
-agent should select an authority first, then select an operation from that
-authority's catalog.
+Do not merge these into one catalog with a `Manager`, `Runtime`, or `Daemon`
+family. An agent should select an external operation surface first, then select
+an operation from that surface's catalog.
+
+```rust
+pub enum OperationSurface {
+    Manager,
+    Runtime,
+}
+```
+
+`OperationSurface` is for manuals, CLI routing, and agent tool selection.
+`OperationAuthority` remains implementation metadata:
 
 ```rust
 pub enum OperationAuthority {
@@ -109,7 +122,9 @@ pub enum OperationAuthority {
 ```
 
 `OperationFamily` may still group operations inside a catalog for documentation
-or manual rendering. It is not the routing authority.
+or manual rendering. It is not the routing authority. `SandboxDaemon` should not
+be exposed as the main manual/agent surface when `Runtime` describes the user's
+intent more directly.
 
 The public request DTO uses resource scope, not implementation target:
 
@@ -128,23 +143,24 @@ pub enum OperationScope {
 ```
 
 `scope` says what resource the operation applies to. `OperationAuthority` says
-which component owns the implementation. The protocol must not expose a
-`Manager`/`Daemon` target enum because that would make implementation placement
-part of the public API.
+which component owns the implementation. `OperationSurface` says how a human or
+agent should choose a tool group. The protocol must not expose a
+`Manager`/`Runtime`/`Daemon` target enum because that would make implementation
+placement part of the public request API.
 
 ## Shared Protocol Boundary
 
 `sandbox-protocol` owns protocol-neutral types:
 
 ```text
-request.rs          SandboxRequest, Request, compatibility aliases, args helpers
+request.rs          SandboxRequest, Request, args helpers
 scope.rs            OperationScope and scope validation helpers
 response.rs         SandboxResponse, status/error helpers
 framing.rs          JSON-line framing helpers
 auth.rs             auth field constants
 limits.rs           request size and timeout limits
 operation_spec.rs   OperationSpec, ArgSpec, ArgKind, CliSpec
-catalog.rs          OperationCatalog, OperationAuthority
+catalog.rs          OperationCatalog, OperationSurface, OperationAuthority
 manual.rs           manual/help rendering from OperationSpec
 ```
 
@@ -240,8 +256,7 @@ sandbox-daemon ns-runner
 sandbox-daemon ns-holder
 ```
 
-During migration, keep a compatibility binary named `eosd` that dispatches to
-the same implementation.
+The packaged `eosd` entrypoint dispatches only namespace helper subcommands.
 
 The `sandbox-runtime` package owns daemon operation semantics:
 
@@ -299,12 +314,15 @@ direct daemon endpoint knowledge for normal use.
 Example:
 
 ```text
-sandbox create_sandbox
-sandbox exec_command --sandbox sbox-1 --cmd "pwd"
-sandbox poll_command --sandbox sbox-1 cmd-1
+sandbox manager create_sandbox --sandbox-id sbox-1
+sandbox manager list_sandboxes
+sandbox runtime --sandbox-id sbox-1 exec_command --workspace-session-id ws-1 "pwd"
+sandbox runtime --sandbox-id sbox-1 poll_command --command-session-id cmd-1
 ```
 
-The CLI can render manuals by combining manager and daemon catalogs:
+The CLI can render manuals by combining manager and runtime catalogs. The
+runtime catalog may be fetched through a daemon-backed manager operation, but
+the displayed surface should be runtime:
 
 ```text
 Sandbox Manager Operations
@@ -312,7 +330,7 @@ Sandbox Manager Operations
   list_sandboxes
   destroy_sandbox
 
-Sandbox Daemon Operations
+Sandbox Runtime Operations
   exec_command
   poll_command
   cancel_command
@@ -363,7 +381,7 @@ match catalog.lookup(&request.op)?.authority {
 }
 ```
 
-For daemon operations, the gateway sets `scope.kind = "sandbox"` and includes
+For runtime operations, the gateway sets `scope.kind = "sandbox"` and includes
 the sandbox id. The manager resolves `sandbox_id -> SandboxDaemonEndpoint` and
 forwards the same `SandboxRequest` to the daemon. The daemon sees the same
 request shape as the manager; it must not learn about manager routing internals.
@@ -398,7 +416,7 @@ Module order:
    - `CliSpec`
    - `OperationSpec`
    - `OperationFamily` or a renamed `OperationGroup`
-5. Add `OperationAuthority` and `OperationCatalog`.
+5. Add `OperationSurface`, `OperationAuthority`, and `OperationCatalog`.
 6. Keep implementation-specific `OperationEntry` in operation crates.
 
 Verification:
@@ -422,7 +440,7 @@ Module order:
    - `internal/workspace_remount`
 5. Rename aggregate types only when the crate compiles:
    - `DaemonOperations` -> `SandboxDaemonOperations`
-   - `OperationRequest` aliases continue to point at `sandbox_protocol`.
+   - `OperationRequest` remains a facade name pointing at `sandbox_protocol`.
 6. Export daemon operation catalog:
    - `sandbox_runtime::operation_specs()`
    - `sandbox_runtime::operation_catalog()`
@@ -445,7 +463,7 @@ Module order:
 2. Move current server modules under `crates/sandbox-daemon/src/server` or keep
    the existing flat module shape if that is already the current tree.
 3. Merge the `eosd` binary adapter into `sandbox-daemon/src/main.rs`.
-4. Preserve the old `eosd` binary as a compatibility bin:
+4. Keep the packaged `eosd` helper binary:
 
    ```toml
    [[bin]]
@@ -465,8 +483,7 @@ Module order:
    - `serve`
    - `ns-runner`
    - `ns-holder`
-7. Keep `daemon` as a compatibility subcommand only if existing scripts require
-   `eosd daemon` during transition.
+7. Do not keep an alternate daemon subcommand; `serve` is the only server entrypoint.
 
 Verification:
 
@@ -535,7 +552,7 @@ Module order:
 
 1. `config.rs`: manager socket/config discovery.
 2. `client.rs`: sends `sandbox-protocol` requests to manager.
-3. `manual.rs`: renders manager and daemon operation catalogs separately.
+3. `manual.rs`: renders manager and runtime operation surfaces separately.
 4. `request_builder.rs`: turns CLI argv into `Request`.
 5. `output.rs`: stdout for data, stderr for errors.
 6. `main.rs`: command dispatch and exit-code mapping.
@@ -546,7 +563,9 @@ CLI rules:
 - Errors go to stderr.
 - Machine-readable responses go to stdout.
 - Default path is gateway -> manager, not gateway -> daemon.
-- Daemon commands require a `--sandbox` target unless a config default exists.
+- Manager commands use `OperationScope::System`.
+- Runtime commands use `OperationScope::Sandbox { sandbox_id }`.
+- Runtime commands require `--sandbox-id` unless a config default exists.
 
 Verification:
 
@@ -565,21 +584,24 @@ describe_manager_operations
 describe_daemon_operations
 ```
 
-The returned data should preserve authority:
+The returned data should preserve the external surface and implementation
+authority:
 
 ```json
 {
   "manager": {
+    "authority": "sandbox_manager",
     "operations": ["create_sandbox", "list_sandboxes"]
   },
-  "daemon": {
+  "runtime": {
+    "authority": "sandbox_daemon",
     "operations": ["exec_command", "poll_command", "cancel_command"]
   }
 }
 ```
 
 Agents should not infer authority from operation name prefixes alone. The
-manager catalog and daemon catalog are separate tool spaces.
+manager surface and runtime surface are separate tool spaces.
 
 Verification:
 
@@ -594,12 +616,12 @@ Only after all new names work:
 
 1. Update README architecture.
 2. Update packaging from `eosd` to `sandbox-daemon`.
-3. Keep or remove `eosd` compatibility based on downstream scripts.
-4. Remove old workspace dependency aliases.
+3. Keep the packaged `eosd` helper binary only while packaging still uses that artifact name.
+4. Remove old workspace dependency entries.
 5. Run stale-name scans:
 
    ```sh
-   rg -n "daemon_rpc_protocol|daemon_operation|eosd daemon|crates/daemon/server"
+   rg -n "daemon_rpc_protocol|daemon_operation|crates/daemon/server"
    rg -n "poll\\b|cancel\\b" crates docs README.md
    ```
 
@@ -622,9 +644,10 @@ Only after all new names work:
 
 ## Success Criteria
 
-- `sandbox-manager` and `sandbox-daemon` have separate operation catalogs.
-- `sandbox-runtime` owns the daemon catalog exposed by `sandbox-daemon`.
-- `sandbox-gateway-cli` can generate/manual-render both catalogs separately.
+- `sandbox-manager` and `sandbox-runtime` have separate operation catalogs.
+- `sandbox-runtime` owns the runtime catalog exposed by `sandbox-daemon`.
+- `sandbox-gateway-cli` can generate/manual-render manager and runtime surfaces
+  separately.
 - `sandbox-manager` can route a daemon operation to a selected sandbox daemon.
 - `sandbox-daemon` can execute existing command operations unchanged in meaning.
 - `sandbox-protocol` has no dependency on manager, daemon, command, workspace,

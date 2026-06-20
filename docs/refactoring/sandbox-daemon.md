@@ -8,7 +8,7 @@ Package: sandbox-daemon
 Import:  sandbox_daemon
 Binaries:
   sandbox-daemon
-  eosd              # temporary compatibility binary
+  eosd              # packaged namespace helper entrypoint
 ```
 
 `sandbox-daemon` is the in-sandbox process. It owns process startup, daemon
@@ -23,7 +23,7 @@ transport, server lifecycle, and low-level helper subcommand adapters.
 - Dispatching decoded `sandbox_protocol::SandboxRequest` values to
   `sandbox-runtime`.
 - Runtime wiring that builds `SandboxDaemonOperations`.
-- Temporary `eosd` compatibility entrypoint.
+- Packaged `eosd ns-runner` / `eosd ns-holder` helper entrypoints.
 
 ## Must Not Own
 
@@ -62,18 +62,9 @@ Target:
 sandbox-daemon serve
 sandbox-daemon ns-runner
 sandbox-daemon ns-holder
-```
-
-Temporary compatibility:
-
-```text
-eosd daemon
 eosd ns-runner
 eosd ns-holder
 ```
-
-`eosd daemon` may remain as a compatibility alias for `sandbox-daemon serve`
-until packaging and scripts have moved.
 
 ## Protocol Contract
 
@@ -110,17 +101,6 @@ Forbidden:
 
 The daemon can be launched by the manager, but it must not depend on the
 manager.
-
-## Migration Source
-
-Move from:
-
-```text
-crates/daemon/server
-crates/daemon/eosd
-```
-
-The current `eosd` adapter becomes the binary entrypoint for `sandbox-daemon`.
 
 ## Verification
 

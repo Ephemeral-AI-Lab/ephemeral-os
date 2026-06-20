@@ -51,8 +51,10 @@ Phase goal:
 - Add manager socket/config discovery.
 - Add manager client connection over the phase 5 manager protocol.
 - Build unified `SandboxRequest` values from CLI argv and `OperationSpec`.
-- Map `--sandbox SANDBOX_ID` to `OperationScope::Sandbox`.
-- Use `OperationScope::System` for manager operations.
+- Expose canonical `manager` and `runtime` command surfaces.
+- Map `sandbox runtime --sandbox-id SANDBOX_ID ...` to
+  `OperationScope::Sandbox`.
+- Use `OperationScope::System` for `sandbox manager ...` operations.
 - Render response data to stdout and errors to stderr.
 - Keep the gateway as a protocol client, not a hidden manager.
 
@@ -227,24 +229,28 @@ Implementation steps:
    - Generate `request_id` values locally.
    - Use `OperationSpec.args` and `ArgCliSpec` to map CLI flags and
      positionals into `args`.
-   - Gateway-owned scope flag:
+   - Gateway-owned runtime scope selector:
 
      ```text
-     --sandbox SANDBOX_ID
+     sandbox runtime --sandbox-id SANDBOX_ID ...
      ```
 
    - Scope rules:
 
      ```text
-     manager operation without --sandbox -> OperationScope::System
-     manager operation with --sandbox    -> reject
-     daemon operation with --sandbox     -> OperationScope::Sandbox
-     daemon operation without --sandbox  -> use default sandbox or reject
+     sandbox manager OP ...                       -> OperationScope::System
+     sandbox runtime --sandbox-id ID OP ...       -> OperationScope::Sandbox
+     sandbox runtime OP ... with default sandbox  -> OperationScope::Sandbox
+     sandbox runtime OP ... without sandbox       -> reject
      ```
 
    - Manager operations that take a sandbox id as data must keep using their
-     operation arg, such as `--sandbox-id`. Do not confuse `--sandbox-id` with
-     the gateway-owned `--sandbox` scope selector.
+     operation arg, such as `--sandbox-id`. In the `manager` surface this is a
+     normal operation argument. In the `runtime` surface `--sandbox-id` is the
+     scope selector and must not be included in `request.args`.
+   - Command continuation operations must use the explicit
+     `--command-session-id` CLI flag and map it to the protocol arg
+     `command_session_id`. Do not introduce `command_id` or `--command-id`.
 
 10. Add `src/manual.rs`:
 
@@ -254,12 +260,14 @@ Implementation steps:
 
       ```text
       Sandbox Manager Operations
-      Sandbox Daemon Operations
+      Sandbox Runtime Operations
       ```
 
     - For phase 6, manager operations can be described through the manager
-      catalog operation and daemon operations can be described through
+      catalog operation and runtime operations can be described through
       `describe_daemon_operations --sandbox-id ID` or a default sandbox.
+      The operation name may remain daemon-oriented during this phase, but the
+      rendered manual section and agent-facing surface should say runtime.
     - Do not require a direct dependency on `sandbox-manager` or
       `sandbox-runtime` to render manuals.
 
@@ -278,37 +286,35 @@ Implementation steps:
     - Support at least:
 
       ```text
-      sandbox create_sandbox --sandbox-id sbox-1
-      sandbox list_sandboxes
-      sandbox inspect_sandbox --sandbox-id sbox-1
-      sandbox start_sandbox_daemon --sandbox-id sbox-1
-      sandbox stop_sandbox_daemon --sandbox-id sbox-1
-      sandbox describe_manager_operations
-      sandbox describe_daemon_operations --sandbox-id sbox-1
-      sandbox exec_command --sandbox sbox-1 --workspace-session-id ws-1 "pwd"
-      sandbox poll_command --sandbox sbox-1 --last-n-lines 50 cmd-1
-      sandbox read_command_lines --sandbox sbox-1 --start-offset 0 --limit 100 cmd-1
-      sandbox write_command_stdin --sandbox sbox-1 cmd-1 "hello"
-      sandbox cancel_command --sandbox sbox-1 cmd-1
+      sandbox manager create_sandbox --sandbox-id sbox-1
+      sandbox manager list_sandboxes
+      sandbox manager inspect_sandbox --sandbox-id sbox-1
+      sandbox manager start_sandbox_daemon --sandbox-id sbox-1
+      sandbox manager stop_sandbox_daemon --sandbox-id sbox-1
+      sandbox manager describe_manager_operations
+      sandbox manager describe_daemon_operations --sandbox-id sbox-1
+      sandbox runtime --sandbox-id sbox-1 exec_command --workspace-session-id ws-1 "pwd"
+      sandbox runtime --sandbox-id sbox-1 poll_command --command-session-id cmd-1 --last-n-lines 50
+      sandbox runtime --sandbox-id sbox-1 read_command_lines --command-session-id cmd-1 --start-offset 0 --limit 100
+      sandbox runtime --sandbox-id sbox-1 write_command_stdin --command-session-id cmd-1 "hello"
+      sandbox runtime --sandbox-id sbox-1 cancel_command --command-session-id cmd-1
       ```
 
     - Prefer canonical operation names as the command names:
       `exec_command`, `poll_command`, `cancel_command`, etc.
-    - Ergonomic aliases can be added later, but they must not replace the
-      canonical operation names.
 
 13. Add tests.
 
     Include focused tests such as:
 
     - `manager_operation_uses_system_scope`.
-    - `daemon_operation_requires_sandbox_without_default`.
-    - `daemon_operation_uses_default_sandbox_when_configured`.
-    - `sandbox_flag_populates_sandbox_scope`.
-    - `manager_operation_rejects_sandbox_scope`.
+    - `runtime_operation_requires_sandbox_without_default`.
+    - `runtime_operation_uses_default_sandbox_when_configured`.
+    - `runtime_sandbox_id_populates_sandbox_scope`.
+    - `manager_surface_uses_system_scope_even_with_sandbox_id_arg`.
     - `manager_sandbox_id_arg_remains_regular_arg`.
     - `exec_command_maps_workspace_session_id_and_command`.
-    - `poll_command_maps_command_session_id_and_last_n_lines`.
+    - `poll_command_maps_command_session_id_flag_and_last_n_lines`.
     - `output_writes_success_to_stdout`.
     - `output_writes_errors_to_stderr`.
     - `config_precedence_cli_env_default`.
@@ -366,7 +372,8 @@ Final response requirements:
 - State whether phase 5 starting-state checks passed.
 - State whether baseline checks had pre-existing failures.
 - State final verification commands and results.
-- Call out how `--sandbox` maps to `OperationScope::Sandbox`.
+- Call out how `sandbox runtime --sandbox-id` maps to
+  `OperationScope::Sandbox`.
 - Call out that gateway talks only to `sandbox-manager`.
 - Do not claim phase 7 work was done.
 ```

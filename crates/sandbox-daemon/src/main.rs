@@ -10,10 +10,9 @@
 //!   namespace runner in `namespace_process::runner`.
 //! - `sandbox-daemon ns-holder` / `eosd ns-holder` -> the single-threaded
 //!   namespace holder in `namespace_process::holder`.
-//! - `eosd daemon` -> compatibility alias for `sandbox-daemon serve`.
 //!
 //! Three real processes, one static binary. This is the launcher chain:
-//! `daemon` owns the RPC server, `ns-runner` owns setns command execution,
+//! `serve` owns the RPC server, `ns-runner` owns setns command execution,
 //! and `ns-holder` owns the persistent isolated namespace holder lifecycle.
 //!
 //! `anyhow` is allowed here (binary crate); library crates keep `thiserror`. A
@@ -30,8 +29,6 @@
 //!   crash knob) —
 //!   `namespace_process::holder::NsHolderError::{CONTROL_CLOSED_EXIT,
 //!   UNEXPECTED_TOKEN_EXIT, TEST_CRASH_EXIT}`.
-//! - thin-client / daemon connect path: `97` (`CONNECT_FAILED`), `98`
-//!   (`IO_FAILED`) — defined by the daemon serve adapter.
 #![forbid(unsafe_code)]
 
 mod holder;
@@ -52,21 +49,16 @@ fn main() -> Result<()> {
             println!("{} {}", invocation.binary_name(), env!("CARGO_PKG_VERSION"));
             Ok(())
         }
-        Some("serve") if invocation == Invocation::SandboxDaemon => {
-            serve::run(args, serve::ServeSubcommand::Serve)
-        }
-        Some("daemon") if invocation == Invocation::Eosd => {
-            serve::run(args, serve::ServeSubcommand::Daemon)
-        }
+        Some("serve") if invocation == Invocation::SandboxDaemon => serve::run(args),
         Some("ns-runner") => runner::run(args),
         Some("ns-holder") => holder::run(args),
         Some(other) => Err(anyhow!(
-            "unknown subcommand {other:?}; expected {} | ns-runner | ns-holder | --version",
-            invocation.serve_subcommand()
+            "unknown subcommand {other:?}; expected {}",
+            invocation.expected_subcommands()
         )),
         None => Err(anyhow!(
-            "missing subcommand; expected {} | ns-runner | ns-holder | --version",
-            invocation.serve_subcommand()
+            "missing subcommand; expected {}",
+            invocation.expected_subcommands()
         )),
     }
 }
@@ -95,10 +87,10 @@ impl Invocation {
         }
     }
 
-    const fn serve_subcommand(self) -> &'static str {
+    const fn expected_subcommands(self) -> &'static str {
         match self {
-            Self::SandboxDaemon => "serve",
-            Self::Eosd => "daemon",
+            Self::SandboxDaemon => "serve | ns-runner | ns-holder | --version",
+            Self::Eosd => "ns-runner | ns-holder | --version",
         }
     }
 }
