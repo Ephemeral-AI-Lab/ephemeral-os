@@ -1,10 +1,10 @@
-#[cfg(unix)]
+#[cfg(target_os = "linux")]
 use std::fs::File;
 #[cfg(target_os = "linux")]
 use std::fs::OpenOptions;
 #[cfg(target_os = "linux")]
 use std::io::Write;
-#[cfg(unix)]
+#[cfg(target_os = "linux")]
 use std::os::fd::IntoRawFd;
 #[cfg(target_os = "linux")]
 use std::os::fd::{AsRawFd, RawFd};
@@ -26,7 +26,9 @@ use crate::profile::{IsolatedNetworkError, WorkspaceModeFds};
 
 #[cfg(target_os = "linux")]
 use super::setup_error;
-use super::{NamespaceFd, NamespacePlan, NamespaceRuntime};
+#[cfg(target_os = "linux")]
+use super::NamespaceFd;
+use super::{NamespacePlan, NamespaceRuntime};
 
 impl NamespaceRuntime {
     pub(crate) fn open_ns_fds(
@@ -34,9 +36,6 @@ impl NamespaceRuntime {
         holder_pid: i32,
         plan: NamespacePlan,
     ) -> Result<WorkspaceModeFds, IsolatedNetworkError> {
-        if self.bypasses_kernel_setup() {
-            return open_stub_ns_fds(plan);
-        }
         if holder_pid <= 0 {
             return Ok(WorkspaceModeFds::default());
         }
@@ -56,30 +55,6 @@ impl NamespaceRuntime {
     }
 }
 
-#[cfg(unix)]
-fn open_stub_ns_fds(plan: NamespacePlan) -> Result<WorkspaceModeFds, IsolatedNetworkError> {
-    let mut fds = WorkspaceModeFds::default();
-    for &fd in plan.fds() {
-        set_fd(&mut fds, fd, open_stub_ns_fd()?);
-    }
-    Ok(fds)
-}
-
-#[cfg(not(unix))]
-fn open_stub_ns_fds(_plan: NamespacePlan) -> Result<WorkspaceModeFds, IsolatedNetworkError> {
-    Ok(WorkspaceModeFds::default())
-}
-
-#[cfg(unix)]
-fn open_stub_ns_fd() -> Result<File, IsolatedNetworkError> {
-    let file = File::open("/dev/null").map_err(|error| IsolatedNetworkError::SetupFailed {
-        step: format!("open stub namespace fd: {error}"),
-    })?;
-    #[cfg(target_os = "linux")]
-    clear_cloexec(file.as_raw_fd())?;
-    Ok(file)
-}
-
 #[cfg(target_os = "linux")]
 fn open_inheritable_fd(path: impl AsRef<std::path::Path>) -> Result<File, IsolatedNetworkError> {
     let file = File::open(path.as_ref()).map_err(setup_error)?;
@@ -87,7 +62,7 @@ fn open_inheritable_fd(path: impl AsRef<std::path::Path>) -> Result<File, Isolat
     Ok(file)
 }
 
-#[cfg(unix)]
+#[cfg(target_os = "linux")]
 fn set_fd(fds: &mut WorkspaceModeFds, fd: NamespaceFd, file: File) {
     let raw_fd = file.into_raw_fd();
     match fd {

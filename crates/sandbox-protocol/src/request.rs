@@ -13,9 +13,6 @@ pub struct SandboxRequest {
     pub args: Value,
 }
 
-pub type OwnedRequest = SandboxRequest;
-pub type RpcRequest = SandboxRequest;
-
 impl SandboxRequest {
     #[must_use]
     pub fn new(

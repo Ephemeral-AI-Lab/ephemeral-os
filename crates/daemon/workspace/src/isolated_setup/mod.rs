@@ -1,7 +1,6 @@
 use std::collections::BTreeSet;
 use std::net::Ipv4Addr;
 
-use crate::namespace::test_harness_enabled;
 use crate::profile::IsolatedNetworkError;
 use crate::profile::{Rfc1918Egress, HANDLE_PREFIX};
 
@@ -100,10 +99,6 @@ impl IsolatedNetwork {
     }
 
     pub fn initialize(&mut self) -> Result<(), IsolatedNetworkError> {
-        if test_harness_enabled() {
-            self.initialized = true;
-            return Ok(());
-        }
         let rfc1918_egress = self.rfc1918_egress;
         #[cfg(target_os = "linux")]
         {
@@ -130,7 +125,7 @@ impl IsolatedNetwork {
             self.initialize()?;
         }
         let allocation = self.allocate_veth(workspace_handle_id)?;
-        if !test_harness_enabled() && holder_pid > 0 {
+        if holder_pid > 0 {
             #[cfg(target_os = "linux")]
             {
                 let host = allocation.host_name.clone();
@@ -151,14 +146,6 @@ impl IsolatedNetwork {
         Ok(allocation)
     }
 
-    pub(crate) fn install_stub_veth(
-        &mut self,
-        workspace_handle_id: &str,
-    ) -> Result<VethAllocation, IsolatedNetworkError> {
-        self.initialized = true;
-        self.allocate_veth(workspace_handle_id)
-    }
-
     fn allocate_veth(
         &mut self,
         workspace_handle_id: &str,
@@ -177,27 +164,18 @@ impl IsolatedNetwork {
         self.pool.free(allocation.ns_ip);
     }
 
-    pub(crate) fn release_stub_veth(&mut self, allocation: &VethAllocation) {
-        self.pool.free(allocation.ns_ip);
-    }
-
     pub fn teardown_host_veth(&mut self, host_name: &str) {
         #[cfg(not(target_os = "linux"))]
         let _ = host_name;
-        if !test_harness_enabled() {
-            #[cfg(target_os = "linux")]
-            {
-                let host_name = host_name.to_owned();
-                let _ = run_netlink(move |handle| async move {
-                    if let Some(index) = link_index(&handle, &host_name).await? {
-                        ignore_not_found(
-                            "delete host veth",
-                            handle.link().del(index).execute().await,
-                        )?;
-                    }
-                    Ok(())
-                });
-            }
+        #[cfg(target_os = "linux")]
+        {
+            let host_name = host_name.to_owned();
+            let _ = run_netlink(move |handle| async move {
+                if let Some(index) = link_index(&handle, &host_name).await? {
+                    ignore_not_found("delete host veth", handle.link().del(index).execute().await)?;
+                }
+                Ok(())
+            });
         }
     }
 }

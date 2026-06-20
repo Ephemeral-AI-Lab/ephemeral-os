@@ -10,16 +10,21 @@ impl NamespaceRuntime {
         &self,
         handle: &WorkspaceModeHandle,
     ) -> Result<PathBuf, IsolatedNetworkError> {
-        if self.bypasses_kernel_setup() {
-            return Ok(PathBuf::new());
+        #[cfg(not(target_os = "linux"))]
+        {
+            let _ = handle;
+            Ok(PathBuf::new())
         }
-        let path = PathBuf::from(crate::profile::CGROUP_ROOT).join(format!(
-            "{}{}",
-            crate::profile::HANDLE_PREFIX,
-            handle.workspace_id.0
-        ));
-        std::fs::create_dir_all(&path).map_err(setup_error)?;
-        Ok(path)
+        #[cfg(target_os = "linux")]
+        {
+            let path = PathBuf::from(crate::profile::CGROUP_ROOT).join(format!(
+                "{}{}",
+                crate::profile::HANDLE_PREFIX,
+                handle.workspace_id.0
+            ));
+            std::fs::create_dir_all(&path).map_err(setup_error)?;
+            Ok(path)
+        }
     }
 
     pub(crate) fn join_holder_cgroup(

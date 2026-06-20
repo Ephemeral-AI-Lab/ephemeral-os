@@ -94,11 +94,7 @@ impl WorkspaceModeManager {
         }
         let phase_start = Instant::now();
         if let Some(veth) = handle.veth.as_ref() {
-            if self.runtime.bypasses_kernel_setup() {
-                self.network.release_stub_veth(veth);
-            } else {
-                self.network.teardown_veth(veth);
-            }
+            self.network.teardown_veth(veth);
         }
         record_phase_ms(phases_ms, "teardown_veth", phase_start);
     }

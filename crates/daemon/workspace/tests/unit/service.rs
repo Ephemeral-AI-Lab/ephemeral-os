@@ -33,6 +33,10 @@ fn latest_snapshot_returns_readonly_handle_without_lease() -> TestResult {
 }
 
 #[test]
+#[cfg_attr(
+    target_os = "linux",
+    ignore = "requires real Linux namespace, cgroup, mount, and network privileges"
+)]
 fn runtime_service_create_and_destroy_are_backed_by_impl_files() -> TestResult {
     let fixture = Fixture::new("create-destroy")?;
     let service = fixture.service();
@@ -96,7 +100,6 @@ impl Fixture {
     }
 
     fn service(&self) -> WorkspaceRuntimeService {
-        std::env::set_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS", "1");
         let caps = ResourceCaps {
             eos_workspace_root: self.workspace_root.to_string_lossy().into_owned(),
             ..ResourceCaps::default()

@@ -38,10 +38,6 @@ impl NamespaceRuntime {
         setup_timeout_s: f64,
         plan: NamespacePlan,
     ) -> Result<i32, IsolatedNetworkError> {
-        if self.bypasses_kernel_setup() {
-            let _ = (handle, setup_timeout_s, plan);
-            return Ok(0);
-        }
         #[cfg(not(target_os = "linux"))]
         {
             let _ = (handle, setup_timeout_s, plan);
@@ -99,7 +95,7 @@ impl NamespaceRuntime {
         holder_pid: i32,
         grace_s: f64,
     ) -> Result<HolderKillReport, IsolatedNetworkError> {
-        if self.bypasses_kernel_setup() || holder_pid <= 0 {
+        if holder_pid <= 0 {
             return Ok(HolderKillReport::default());
         }
         #[cfg(not(target_os = "linux"))]

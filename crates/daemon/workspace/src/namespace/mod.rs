@@ -8,8 +8,6 @@ pub(crate) use setns_runner::{ns_command_request, run_child};
 
 use crate::profile::IsolatedNetworkError;
 
-pub(crate) const TEST_HARNESS_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_HARNESS";
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum NamespaceNetwork {
     Shared,
@@ -25,11 +23,13 @@ impl NamespaceNetwork {
         }
     }
 
+    #[cfg(target_os = "linux")]
     pub(crate) const fn requires_net_fd(self) -> bool {
         matches!(self, Self::IsolatedNetwork)
     }
 }
 
+#[cfg(target_os = "linux")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum NamespaceFd {
     User,
@@ -38,8 +38,8 @@ pub(crate) enum NamespaceFd {
     Net,
 }
 
+#[cfg(target_os = "linux")]
 impl NamespaceFd {
-    #[cfg(target_os = "linux")]
     pub(crate) fn proc_path(self, holder_pid: i32) -> String {
         match self {
             Self::User => format!("/proc/{holder_pid}/ns/user"),
@@ -68,6 +68,7 @@ impl NamespacePlan {
         }
     }
 
+    #[cfg(target_os = "linux")]
     pub(crate) const fn fds(self) -> &'static [NamespaceFd] {
         if self.network.requires_net_fd() {
             &[
@@ -88,14 +89,7 @@ pub(crate) fn setup_error(error: impl std::fmt::Display) -> IsolatedNetworkError
     }
 }
 
-pub(crate) fn test_harness_enabled() -> bool {
-    std::env::var(TEST_HARNESS_ENV)
-        .is_ok_and(|value| matches!(value.trim(), "1" | "true" | "TRUE" | "yes" | "YES"))
-}
-
-pub(crate) struct NamespaceRuntime {
-    bypass_kernel_setup: bool,
-}
+pub(crate) struct NamespaceRuntime;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct HolderKillReport {
@@ -107,12 +101,6 @@ pub(crate) struct HolderKillReport {
 
 impl NamespaceRuntime {
     pub(crate) fn new() -> Self {
-        Self {
-            bypass_kernel_setup: !cfg!(target_os = "linux") || test_harness_enabled(),
-        }
-    }
-
-    pub(crate) const fn bypasses_kernel_setup(&self) -> bool {
-        self.bypass_kernel_setup
+        Self
     }
 }
