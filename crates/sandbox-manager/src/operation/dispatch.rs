@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{SandboxDaemonClient, SandboxDaemonInstaller, SandboxRuntime, SandboxStore};
 
 pub type ManagerOperationDispatch =
-    fn(&ManagerServices, sandbox_protocol::Request<'_>) -> sandbox_protocol::Response;
+    fn(&ManagerServices, sandbox_protocol::Request<'_>) -> sandbox_protocol::SandboxResponse;
 
 #[derive(Clone, Copy)]
 pub struct ManagerOperationEntry {
@@ -49,12 +49,12 @@ impl ManagerServices {
 pub fn dispatch_operation(
     services: &ManagerServices,
     request: sandbox_protocol::Request<'_>,
-) -> sandbox_protocol::Response {
+) -> sandbox_protocol::SandboxResponse {
     super::impls::operation_entries()
         .iter()
         .find(|entry| entry.spec.name == request.name)
         .map_or_else(
-            || sandbox_protocol::Response::unknown_op(&request),
+            || sandbox_protocol::SandboxResponse::unknown_op(&request),
             |entry| (entry.dispatch)(services, request),
         )
 }

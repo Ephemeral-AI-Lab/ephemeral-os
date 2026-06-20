@@ -9,6 +9,6 @@ pub trait SandboxDaemonClient: Send + Sync {
     fn invoke(
         &self,
         endpoint: &SandboxDaemonEndpoint,
-        request: sandbox_protocol::OwnedRequest,
-    ) -> ManagerResult<sandbox_protocol::Response>;
+        request: sandbox_protocol::SandboxRequest,
+    ) -> ManagerResult<sandbox_protocol::SandboxResponse>;
 }

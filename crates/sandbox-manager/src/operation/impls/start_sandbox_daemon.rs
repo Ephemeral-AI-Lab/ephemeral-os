@@ -3,7 +3,7 @@ use super::{ready_record, record_value, sandbox_id};
 pub(crate) fn dispatch(
     services: &crate::operation::ManagerServices,
     request: sandbox_protocol::Request<'_>,
-) -> sandbox_protocol::Response {
+) -> sandbox_protocol::SandboxResponse {
     let id = match sandbox_id(&request) {
         Ok(id) => id,
         Err(response) => return response,
@@ -23,7 +23,7 @@ pub(crate) fn dispatch(
         return error.into_response();
     }
     match services.store.update_endpoint(&id, Some(endpoint)) {
-        Ok(record) => sandbox_protocol::Response::ok(&request, record_value(record)),
+        Ok(record) => sandbox_protocol::SandboxResponse::ok(&request, record_value(record)),
         Err(error) => error.into_response(),
     }
 }

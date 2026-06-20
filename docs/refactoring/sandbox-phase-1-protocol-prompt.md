@@ -68,14 +68,8 @@ Keep in `daemon_operation`:
 - Concrete operation specs and dispatch functions.
 - `DaemonOperations`.
 
-Compatibility aliases may remain in `sandbox-protocol` while downstream crates
-are being migrated:
-
-```rust
-pub type OwnedRequest = SandboxRequest;
-pub type RpcRequest = SandboxRequest;
-pub type Response = SandboxResponse;
-```
+Do not add compatibility aliases such as `OwnedRequest`, `RpcRequest`, or
+`Response`. Use the explicit DTO names throughout active code.
 
 Implementation steps:
 

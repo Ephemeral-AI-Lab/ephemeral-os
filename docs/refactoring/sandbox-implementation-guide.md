@@ -463,6 +463,12 @@ Exit criteria:
 
 ## Phase 5: Add Manager Server And Forwarding
 
+Prompt:
+
+```text
+docs/refactoring/sandbox-phase-5-manager-server-prompt.md
+```
+
 Goal:
 
 - Make `sandbox-manager` a process endpoint.

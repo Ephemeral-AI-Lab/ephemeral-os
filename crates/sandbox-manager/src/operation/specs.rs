@@ -101,20 +101,6 @@ pub(crate) const DESCRIBE_DAEMON_OPERATIONS: OperationSpec = OperationSpec {
     }),
 };
 
-pub(crate) const INVOKE_SANDBOX_DAEMON: OperationSpec = OperationSpec {
-    name: "invoke_sandbox_daemon",
-    family: OperationFamily::Run,
-    summary: "Forward a protocol request to a selected sandbox daemon.",
-    args: INVOKE_SANDBOX_DAEMON_ARGS,
-    cli: Some(CliSpec {
-        path: &["manager", "operations", "invoke-daemon"],
-        usage: "invoke_sandbox_daemon {\"sandbox_id\":\"ID\",\"request\":{...}}",
-        examples: &[
-            "invoke_sandbox_daemon {\"sandbox_id\":\"sbox-1\",\"request\":{\"op\":\"op\",\"request_id\":\"req-1\",\"args\":{}}}",
-        ],
-    }),
-};
-
 const SANDBOX_ID_ARGS: &[ArgSpec] = &[ArgSpec::required(
     "sandbox_id",
     ArgKind::String,
@@ -125,24 +111,6 @@ const SANDBOX_ID_ARGS: &[ArgSpec] = &[ArgSpec::required(
     }),
 )];
 
-const INVOKE_SANDBOX_DAEMON_ARGS: &[ArgSpec] = &[
-    ArgSpec::required(
-        "sandbox_id",
-        ArgKind::String,
-        "Sandbox id.",
-        Some(ArgCliSpec {
-            flag: Some("--sandbox-id"),
-            positional: None,
-        }),
-    ),
-    ArgSpec::required(
-        "request",
-        ArgKind::String,
-        "Nested protocol request object.",
-        None,
-    ),
-];
-
 const SPECS: &[&OperationSpec] = &[
     &CREATE_SANDBOX,
     &DESTROY_SANDBOX,
@@ -152,7 +120,6 @@ const SPECS: &[&OperationSpec] = &[
     &STOP_SANDBOX_DAEMON,
     &DESCRIBE_MANAGER_OPERATIONS,
     &DESCRIBE_DAEMON_OPERATIONS,
-    &INVOKE_SANDBOX_DAEMON,
 ];
 
 #[must_use]

@@ -6,7 +6,7 @@ pub use sandbox_protocol::{
 };
 
 pub type OperationRequest<'a> = sandbox_protocol::Request<'a>;
-pub type OperationResponse = sandbox_protocol::Response;
+pub type OperationResponse = sandbox_protocol::SandboxResponse;
 
 pub type OperationDispatch =
     fn(&SandboxDaemonOperations, OperationRequest<'_>) -> OperationResponse;

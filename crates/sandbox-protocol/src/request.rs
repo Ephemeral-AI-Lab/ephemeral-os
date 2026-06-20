@@ -1,18 +1,33 @@
 use serde_json::{json, Map, Value};
 
 use crate::error_kind;
-use crate::response::Response;
+use crate::response::SandboxResponse;
+use crate::scope::OperationScope;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct OwnedRequest {
+pub struct SandboxRequest {
     pub op: String,
     pub request_id: String,
+    pub scope: OperationScope,
     pub args: Value,
 }
 
-pub type RpcRequest = OwnedRequest;
+impl SandboxRequest {
+    #[must_use]
+    pub fn new(
+        op: impl Into<String>,
+        request_id: impl Into<String>,
+        scope: OperationScope,
+        args: Value,
+    ) -> Self {
+        Self {
+            op: op.into(),
+            request_id: request_id.into(),
+            scope,
+            args,
+        }
+    }
 
-impl OwnedRequest {
     #[must_use]
     pub fn as_request(&self) -> Request<'_> {
         Request::new(&self.op, &self.request_id, &self.args)
@@ -36,7 +51,7 @@ impl<'a> Request<'a> {
         }
     }
 
-    pub fn required_string(&self, field: &str) -> Result<String, Response> {
+    pub fn required_string(&self, field: &str) -> Result<String, SandboxResponse> {
         self.field(field).and_then(|value| match value.as_str() {
             Some(value) if !value.is_empty() => Ok(value.to_owned()),
             Some(_) => Err(self.invalid_argument(format!("{field} must be non-empty"))),
@@ -44,7 +59,7 @@ impl<'a> Request<'a> {
         })
     }
 
-    pub fn optional_string(&self, field: &str) -> Result<Option<String>, Response> {
+    pub fn optional_string(&self, field: &str) -> Result<Option<String>, SandboxResponse> {
         match self.optional_field(field)? {
             Some(value) => match value.as_str() {
                 Some(value) => Ok(Some(value.to_owned())),
@@ -54,15 +69,18 @@ impl<'a> Request<'a> {
         }
     }
 
-    pub fn required_path(&self, field: &str) -> Result<std::path::PathBuf, Response> {
+    pub fn required_path(&self, field: &str) -> Result<std::path::PathBuf, SandboxResponse> {
         Ok(std::path::PathBuf::from(self.required_string(field)?))
     }
 
-    pub fn optional_path(&self, field: &str) -> Result<Option<std::path::PathBuf>, Response> {
+    pub fn optional_path(
+        &self,
+        field: &str,
+    ) -> Result<Option<std::path::PathBuf>, SandboxResponse> {
         Ok(self.optional_string(field)?.map(std::path::PathBuf::from))
     }
 
-    pub fn optional_u64(&self, field: &str) -> Result<Option<u64>, Response> {
+    pub fn optional_u64(&self, field: &str) -> Result<Option<u64>, SandboxResponse> {
         match self.optional_field(field)? {
             Some(value) => value
                 .as_u64()
@@ -72,7 +90,7 @@ impl<'a> Request<'a> {
         }
     }
 
-    pub fn required_u64(&self, field: &str) -> Result<u64, Response> {
+    pub fn required_u64(&self, field: &str) -> Result<u64, SandboxResponse> {
         self.field(field).and_then(|value| {
             value
                 .as_u64()
@@ -80,7 +98,7 @@ impl<'a> Request<'a> {
         })
     }
 
-    pub fn optional_usize(&self, field: &str) -> Result<Option<usize>, Response> {
+    pub fn optional_usize(&self, field: &str) -> Result<Option<usize>, SandboxResponse> {
         self.optional_u64(field)?
             .map(|value| {
                 usize::try_from(value)
@@ -89,12 +107,12 @@ impl<'a> Request<'a> {
             .transpose()
     }
 
-    pub fn required_usize(&self, field: &str) -> Result<usize, Response> {
+    pub fn required_usize(&self, field: &str) -> Result<usize, SandboxResponse> {
         usize::try_from(self.required_u64(field)?)
             .map_err(|_| self.invalid_argument(format!("{field} is too large")))
     }
 
-    pub fn optional_f64(&self, field: &str) -> Result<Option<f64>, Response> {
+    pub fn optional_f64(&self, field: &str) -> Result<Option<f64>, SandboxResponse> {
         match self.optional_field(field)? {
             Some(value) => match value.as_f64() {
                 Some(value) if value.is_finite() => Ok(Some(value)),
@@ -105,24 +123,24 @@ impl<'a> Request<'a> {
         }
     }
 
-    fn field(&self, field: &str) -> Result<&Value, Response> {
+    fn field(&self, field: &str) -> Result<&Value, SandboxResponse> {
         self.args_object()?
             .get(field)
             .ok_or_else(|| self.invalid_argument(format!("{field} is required for {}", self.name)))
     }
 
-    fn optional_field(&self, field: &str) -> Result<Option<&Value>, Response> {
+    fn optional_field(&self, field: &str) -> Result<Option<&Value>, SandboxResponse> {
         Ok(self.args_object()?.get(field))
     }
 
-    fn args_object(&self) -> Result<&Map<String, Value>, Response> {
+    fn args_object(&self) -> Result<&Map<String, Value>, SandboxResponse> {
         self.args
             .as_object()
             .ok_or_else(|| self.invalid_argument("args must be an object"))
     }
 
-    pub fn invalid_argument(&self, message: impl Into<String>) -> Response {
-        Response::fault(error_kind::INVALID_REQUEST, message)
+    pub fn invalid_argument(&self, message: impl Into<String>) -> SandboxResponse {
+        SandboxResponse::fault(error_kind::INVALID_REQUEST, message)
     }
 }
 
@@ -153,9 +171,15 @@ impl RequestDecodeError {
 pub fn decode_request_object(
     mut object: Map<String, Value>,
     args_presence: ArgsPresence,
-) -> Result<OwnedRequest, RequestDecodeError> {
+) -> Result<SandboxRequest, RequestDecodeError> {
     let op = remove_request_string(&mut object, "op")?;
     let request_id = remove_request_string(&mut object, "request_id")?;
+    let scope = match object.remove("scope") {
+        Some(scope) => serde_json::from_value::<OperationScope>(scope)
+            .map_err(|error| invalid_request(format!("scope is invalid: {error}")))?,
+        None => OperationScope::default(),
+    };
+    scope.validate().map_err(invalid_request)?;
     let args = match object.remove("args") {
         Some(args) => args,
         None if args_presence == ArgsPresence::OptionalEmptyObject => json!({}),
@@ -171,9 +195,10 @@ pub fn decode_request_object(
     if !args.is_object() {
         return Err(invalid_request("args must be an object"));
     }
-    Ok(OwnedRequest {
+    Ok(SandboxRequest {
         op,
         request_id,
+        scope,
         args,
     })
 }

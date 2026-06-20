@@ -7,7 +7,7 @@ use sandbox_manager::{
 };
 use sandbox_protocol::{
     ArgKind, OperationAuthority, OperationCatalog, OperationFamily, OperationSpec, Request,
-    Response,
+    SandboxResponse,
 };
 use serde_json::{json, Value};
 
@@ -75,7 +75,6 @@ impl SandboxDaemonInstaller for FakeInstaller {
 #[derive(Default)]
 struct FakeClient {
     described: Mutex<Vec<PathBuf>>,
-    invoked: Mutex<Vec<String>>,
 }
 
 impl SandboxDaemonClient for FakeClient {
@@ -96,14 +95,10 @@ impl SandboxDaemonClient for FakeClient {
     fn invoke(
         &self,
         _endpoint: &SandboxDaemonEndpoint,
-        request: sandbox_protocol::OwnedRequest,
-    ) -> ManagerResult<Response> {
+        request: sandbox_protocol::SandboxRequest,
+    ) -> ManagerResult<SandboxResponse> {
         let request = request.as_request();
-        self.invoked
-            .lock()
-            .expect("invoked lock")
-            .push(request.name.to_owned());
-        Ok(Response::ok(
+        Ok(SandboxResponse::ok(
             &request,
             json!({"forwarded_request_id": request.request_id}),
         ))
@@ -159,7 +154,6 @@ fn operation_catalog_contains_only_manager_operations() {
             "stop_sandbox_daemon",
             "describe_manager_operations",
             "describe_daemon_operations",
-            "invoke_sandbox_daemon",
         ]
     );
     assert!(catalog.operations.iter().all(|spec| !matches!(
@@ -264,35 +258,6 @@ fn describe_daemon_operations_uses_daemon_client_trait() {
     assert_eq!(
         client.described.lock().expect("described lock").as_slice(),
         [PathBuf::from("/tmp/sbox-1.sock")]
-    );
-}
-
-#[test]
-fn invoke_sandbox_daemon_forwards_request_via_daemon_client_trait() {
-    let (services, _runtime, _installer, client) = services();
-    let _ = dispatch(&services, "create_sandbox", json!({"sandbox_id": "sbox-1"}));
-    let _ = dispatch(
-        &services,
-        "start_sandbox_daemon",
-        json!({"sandbox_id": "sbox-1"}),
-    );
-
-    let response = dispatch(
-        &services,
-        "invoke_sandbox_daemon",
-        json!({
-            "sandbox_id": "sbox-1",
-            "request": {
-                "op": "daemon_test_operation",
-                "request_id": "daemon-req-1",
-                "args": {}
-            }
-        }),
-    );
-    assert_eq!(response["forwarded_request_id"], "daemon-req-1");
-    assert_eq!(
-        client.invoked.lock().expect("invoked lock").as_slice(),
-        ["daemon_test_operation"]
     );
 }
 

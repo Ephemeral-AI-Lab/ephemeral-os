@@ -104,14 +104,8 @@ pub struct ResponseMeta {
 }
 ```
 
-Compatibility aliases may exist during the migration, but new code should use
-the explicit names:
-
-```rust
-pub type OwnedRequest = SandboxRequest;
-pub type RpcRequest = SandboxRequest;
-pub type Response = SandboxResponse;
-```
+Do not add compatibility aliases such as `OwnedRequest`, `RpcRequest`, or
+`Response`. New code should use the explicit names.
 
 Example manager-scoped request:
 

@@ -15,10 +15,15 @@ pub mod manual;
 pub mod operation_spec;
 pub mod request;
 pub mod response;
+pub mod scope;
 
 pub use auth::DAEMON_AUTH_FIELD;
 pub use catalog::{OperationAuthority, OperationCatalog};
 pub use limits::{MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};
 pub use operation_spec::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationSpec};
-pub use request::{decode_request_object, ArgsPresence, OwnedRequest, Request, RpcRequest};
-pub use response::{error_response_with_details, response_line, Response};
+pub use request::{decode_request_object, ArgsPresence, Request, SandboxRequest};
+pub use response::{
+    error_response_with_details, response_line, ResponseError, ResponseMeta, ResponseStatus,
+    SandboxResponse,
+};
+pub use scope::OperationScope;

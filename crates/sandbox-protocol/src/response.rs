@@ -1,13 +1,35 @@
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use crate::request::Request;
 
 #[derive(Debug, Clone)]
-pub struct Response {
+pub struct SandboxResponse {
     value: Value,
 }
 
-impl Response {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ResponseStatus {
+    Ok,
+    Running,
+    Error,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ResponseError {
+    pub kind: String,
+    pub message: String,
+    pub details: Value,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ResponseMeta {
+    pub duration_ms: Option<f64>,
+    pub warnings: Vec<String>,
+}
+
+impl SandboxResponse {
     #[must_use]
     pub fn ok(_request: &Request<'_>, result: Value) -> Self {
         Self { value: result }
@@ -47,8 +69,8 @@ impl Response {
     }
 }
 
-impl From<Response> for Value {
-    fn from(response: Response) -> Self {
+impl From<SandboxResponse> for Value {
+    fn from(response: SandboxResponse) -> Self {
         response.into_json_value()
     }
 }
