@@ -21,14 +21,14 @@ pub struct ServerConfig {
     pub auth_token: Option<String>,
 }
 
-/// The running daemon: request dispatch state and shutdown token.
-pub struct DaemonServer {
+/// The running sandbox daemon: request dispatch state and shutdown token.
+pub struct SandboxDaemonServer {
     pub(crate) config: ServerConfig,
     pub(crate) operations: Arc<SandboxDaemonOperations>,
     pub(crate) shutdown: CancellationToken,
 }
 
-impl DaemonServer {
+impl SandboxDaemonServer {
     /// Assemble a daemon over `config`, wiring the shutdown token.
     #[must_use]
     pub fn new(config: ServerConfig, operations: Arc<SandboxDaemonOperations>) -> Self {

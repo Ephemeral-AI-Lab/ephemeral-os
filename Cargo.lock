@@ -156,18 +156,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "daemon"
-version = "0.1.0"
-dependencies = [
- "sandbox-protocol",
- "sandbox-runtime",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tokio-util",
-]
-
-[[package]]
 name = "deranged"
 version = "0.5.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -184,21 +172,6 @@ checksum = "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292"
 dependencies = [
  "block-buffer",
  "crypto-common",
-]
-
-[[package]]
-name = "eosd"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "command",
- "config",
- "daemon",
- "namespace-process",
- "sandbox-runtime",
- "serde_json",
- "tokio",
- "workspace",
 ]
 
 [[package]]
@@ -866,6 +839,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
 dependencies = [
  "winapi-util",
+]
+
+[[package]]
+name = "sandbox-daemon"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "command",
+ "config",
+ "namespace-process",
+ "sandbox-protocol",
+ "sandbox-runtime",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-util",
+ "workspace",
 ]
 
 [[package]]

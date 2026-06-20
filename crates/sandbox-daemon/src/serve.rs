@@ -1,4 +1,4 @@
-//! `eosd daemon` subcommand adapter.
+//! Daemon serve subcommand adapter.
 
 use std::io::{Read, Write};
 #[cfg(unix)]
@@ -22,17 +22,17 @@ const IO_FAILED: i32 = 98;
 /// Start, spawn, or call the async RPC server.
 ///
 /// Modes:
-/// - `eosd daemon --socket PATH --pid-file PATH ...` runs the foreground server.
-/// - `eosd daemon --spawn --socket PATH --pid-file PATH ...` starts a
+/// - `sandbox-daemon serve --socket PATH --pid-file PATH ...` runs the foreground server.
+/// - `sandbox-daemon serve --spawn --socket PATH --pid-file PATH ...` starts a
 ///   detached foreground child and returns.
-/// - `eosd daemon --client SOCKET JSON` is the Rust replacement for
+/// - `eosd daemon --client SOCKET JSON` remains the compatibility client for
 ///   `thin_client.py`, preserving exit codes 97/98.
-pub(crate) fn run(args: std::env::Args) -> Result<()> {
+pub(crate) fn run(args: std::env::Args, subcommand: ServeSubcommand) -> Result<()> {
     let args = args.collect::<Vec<_>>();
     let config_path = daemon_config_path_arg(&args)?;
     let runtime_config = load_runtime_config(config_path.as_deref())?;
     let daemon_config = &runtime_config.daemon;
-    let config = DaemonCliConfig::parse(args, &daemon_config.server, config_path)?;
+    let config = DaemonCliConfig::parse(args, &daemon_config.server, config_path, subcommand)?;
     if let Some((socket_path, payload)) = config.client {
         return run_client_request(&socket_path, &payload);
     }
@@ -40,7 +40,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
         return spawn_daemon(&config);
     }
     set_runner_config_env(&config.config_yaml_path);
-    let server_config = daemon::ServerConfig {
+    let server_config = sandbox_daemon::ServerConfig {
         socket_path: config.socket_path,
         pid_path: config.pid_path,
         tcp_host: config.tcp_host,
@@ -55,7 +55,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
         .build()
         .context("failed to build daemon tokio runtime")?;
     runtime.block_on(async move {
-        let server = daemon::DaemonServer::new(
+        let server = sandbox_daemon::SandboxDaemonServer::new(
             server_config,
             Arc::new(build_runtime_operations(&runtime_config)),
         );
@@ -142,6 +142,7 @@ fn daemon_worker_threads(max_worker_threads: usize) -> usize {
 }
 
 pub(crate) struct DaemonCliConfig {
+    subcommand: ServeSubcommand,
     pub(crate) config_yaml_path: PathBuf,
     socket_path: PathBuf,
     pid_path: PathBuf,
@@ -157,6 +158,7 @@ impl DaemonCliConfig {
         args: impl IntoIterator<Item = String>,
         server_defaults: &DaemonServerConfig,
         explicit_config_path: Option<PathBuf>,
+        subcommand: ServeSubcommand,
     ) -> Result<Self> {
         let mut config_yaml_path = match explicit_config_path {
             Some(path) => path,
@@ -194,7 +196,9 @@ impl DaemonCliConfig {
                 }
                 "--help" | "-h" => {
                     println!(
-                        "usage: eosd daemon [--spawn] [--config-yaml PATH] [--socket PATH] [--pid-file PATH] [--tcp-host HOST --tcp-port PORT --auth-token TOKEN] | eosd daemon --client SOCKET JSON"
+                        "usage: {} [--spawn] [--config-yaml PATH] [--socket PATH] [--pid-file PATH] [--tcp-host HOST --tcp-port PORT --auth-token TOKEN] | {} --client SOCKET JSON",
+                        subcommand.name(),
+                        subcommand.name()
                     );
                     std::process::exit(0);
                 }
@@ -202,6 +206,7 @@ impl DaemonCliConfig {
             }
         }
         Ok(Self {
+            subcommand,
             config_yaml_path,
             socket_path,
             pid_path,
@@ -215,7 +220,7 @@ impl DaemonCliConfig {
 
     pub(crate) fn foreground_args(&self) -> Vec<String> {
         let mut args = vec![
-            "daemon".to_owned(),
+            self.subcommand.name().to_owned(),
             "--config-yaml".to_owned(),
             self.config_yaml_path.to_string_lossy().into_owned(),
             "--socket".to_owned(),
@@ -306,7 +311,7 @@ fn spawn_daemon(config: &DaemonCliConfig) -> Result<()> {
     let _ = std::fs::remove_file(&config.socket_path);
     let _ = std::fs::remove_file(&config.pid_path);
 
-    let executable = std::env::current_exe().context("failed to resolve eosd executable")?;
+    let executable = std::env::current_exe().context("failed to resolve daemon executable")?;
     let mut command = Command::new(executable);
     command.args(config.foreground_args());
     command.env(DAEMON_CONFIG_YAML_ENV, &config.config_yaml_path);
@@ -316,8 +321,23 @@ fn spawn_daemon(config: &DaemonCliConfig) -> Result<()> {
     command.stdin(Stdio::null());
     command.stdout(Stdio::null());
     command.stderr(Stdio::null());
-    command.spawn().context("failed to spawn eosd daemon")?;
+    command.spawn().context("failed to spawn daemon")?;
     Ok(())
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum ServeSubcommand {
+    Serve,
+    Daemon,
+}
+
+impl ServeSubcommand {
+    pub(crate) const fn name(self) -> &'static str {
+        match self {
+            Self::Serve => "serve",
+            Self::Daemon => "daemon",
+        }
+    }
 }
 
 fn set_runner_config_env(config_yaml_path: &Path) {

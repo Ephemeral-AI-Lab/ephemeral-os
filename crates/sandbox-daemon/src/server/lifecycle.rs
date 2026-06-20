@@ -4,12 +4,12 @@ use tokio::io::{AsyncWrite, AsyncWriteExt};
 use tokio::net::{TcpListener, UnixListener};
 use tokio::sync::Semaphore;
 
-use super::DaemonServer;
-use crate::error::DaemonError;
+use super::SandboxDaemonServer;
+use crate::server::error::SandboxDaemonError;
 
 const MAX_CONCURRENT_CONNECTIONS: usize = 256;
 
-impl DaemonServer {
+impl SandboxDaemonServer {
     /// Bind the `AF_UNIX` (and optional TCP) listeners, write the pid file, install
     /// the SIGTERM/SIGINT handlers, and serve until the shutdown token fires.
     ///
@@ -20,7 +20,7 @@ impl DaemonServer {
     ///
     /// Returns an error when listener binding, pid-file setup, signal handling,
     /// request dispatch, or shutdown cleanup fails.
-    pub async fn serve(self) -> Result<(), DaemonError> {
+    pub async fn serve(self) -> Result<(), SandboxDaemonError> {
         let shutdown = self.shutdown.clone();
         let server = Arc::new(self);
         let connection_permits = Arc::new(Semaphore::new(MAX_CONCURRENT_CONNECTIONS));
@@ -110,7 +110,7 @@ impl DaemonServer {
             () = signal_shutdown() => shutdown.cancel(),
             result = unix_server => {
                 if let Ok(Err(err)) = result {
-                    return Err(DaemonError::Io(err));
+                    return Err(SandboxDaemonError::Io(err));
                 }
             }
             result = async {
@@ -120,9 +120,9 @@ impl DaemonServer {
                 task.await
             } => match result {
                 Ok(Ok(())) => {}
-                Ok(Err(err)) => return Err(DaemonError::Io(err)),
+                Ok(Err(err)) => return Err(SandboxDaemonError::Io(err)),
                 Err(err) => {
-                    return Err(DaemonError::Io(std::io::Error::other(format!(
+                    return Err(SandboxDaemonError::Io(std::io::Error::other(format!(
                         "tcp listener task failed: {err}"
                     ))));
                 }

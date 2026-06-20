@@ -1,13 +1,26 @@
 [package]
-name = "daemon"
+name = "sandbox-daemon"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+[[bin]]
+name = "sandbox-daemon"
+path = "src/main.rs"
+
+[[bin]]
+name = "eosd"
+path = "src/main.rs"
+
 [dependencies]
-sandbox-runtime.workspace = true
+command.workspace = true
+config.workspace = true
+namespace-process.workspace = true
 sandbox-protocol.workspace = true
+sandbox-runtime.workspace = true
+workspace.workspace = true
+anyhow.workspace = true
 # preserve_order keeps incoming operation arguments in caller order while this
 # crate still accepts raw JSON requests.
 serde_json = { workspace = true, features = ["preserve_order"] }

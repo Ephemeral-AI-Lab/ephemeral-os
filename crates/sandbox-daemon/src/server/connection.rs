@@ -4,10 +4,10 @@ use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::time::timeout;
 
-use super::{error_response, DaemonServer, MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};
-use crate::error::DaemonError;
+use super::{error_response, SandboxDaemonServer, MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};
+use crate::server::error::SandboxDaemonError;
 
-impl DaemonServer {
+impl SandboxDaemonServer {
     /// Handle one accepted connection: read one capped, timed request line, pop
     /// the TCP-only auth token, decode the request, dispatch, write one framed
     /// response. Per-connection; never holds a lock across the await points.
@@ -17,7 +17,7 @@ impl DaemonServer {
         is_tcp: bool,
         _peer_addr: Option<SocketAddr>,
         _local_addr: Option<SocketAddr>,
-    ) -> Result<(), DaemonError>
+    ) -> Result<(), SandboxDaemonError>
     where
         S: AsyncRead + AsyncWrite + Unpin,
     {
@@ -25,7 +25,7 @@ impl DaemonServer {
         let bytes = read_request_line(&mut reader).await;
         let response = match bytes {
             Ok(bytes) => self.dispatch_bytes(bytes, is_tcp).await,
-            Err(err @ DaemonError::RequestTooLarge { .. }) => error_response(
+            Err(err @ SandboxDaemonError::RequestTooLarge { .. }) => error_response(
                 err.response_kind(),
                 format!("daemon request exceeds {MAX_REQUEST_BYTES} byte limit"),
                 serde_json::json!({"limit": MAX_REQUEST_BYTES}),
@@ -34,10 +34,10 @@ impl DaemonServer {
         };
         let framed = encode_response(&response);
         if let Err(err) = writer.write_all(&framed).await {
-            return Err(DaemonError::Io(err));
+            return Err(SandboxDaemonError::Io(err));
         }
         if let Err(err) = writer.shutdown().await {
-            return Err(DaemonError::Io(err));
+            return Err(SandboxDaemonError::Io(err));
         }
         Ok(())
     }
@@ -47,7 +47,7 @@ fn encode_response(response: &serde_json::Value) -> Vec<u8> {
     sandbox_protocol::response_line(response)
 }
 
-async fn read_request_line<R>(reader: &mut R) -> Result<Vec<u8>, DaemonError>
+async fn read_request_line<R>(reader: &mut R) -> Result<Vec<u8>, SandboxDaemonError>
 where
     R: AsyncRead + Unpin,
 {
@@ -57,7 +57,7 @@ where
 pub(crate) async fn read_request_line_with_timeout<R>(
     reader: &mut R,
     timeout_s: f64,
-) -> Result<Vec<u8>, DaemonError>
+) -> Result<Vec<u8>, SandboxDaemonError>
 where
     R: AsyncRead + Unpin,
 {
@@ -69,16 +69,16 @@ where
         let mut limited = BufReader::new(reader.take(limit));
         limited.read_until(b'\n', &mut buf).await?;
         if buf.len() > MAX_REQUEST_BYTES {
-            return Err(DaemonError::RequestTooLarge {
+            return Err(SandboxDaemonError::RequestTooLarge {
                 limit: MAX_REQUEST_BYTES,
             });
         }
-        Ok::<(), DaemonError>(())
+        Ok::<(), SandboxDaemonError>(())
     };
     timeout(Duration::from_secs_f64(timeout_s), read)
         .await
         .map_err(|_| {
-            DaemonError::Io(std::io::Error::new(
+            SandboxDaemonError::Io(std::io::Error::new(
                 std::io::ErrorKind::TimedOut,
                 "daemon request read timed out",
             ))

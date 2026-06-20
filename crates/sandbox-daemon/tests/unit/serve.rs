@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use config::configs::daemon::DaemonServerConfig;
 
-use crate::daemon_cli::{daemon_config_path_arg, DaemonCliConfig};
+use crate::serve_cli::{daemon_config_path_arg, DaemonCliConfig, ServeSubcommand};
 
 fn server_defaults() -> DaemonServerConfig {
     DaemonServerConfig {
@@ -27,6 +27,7 @@ fn config_yaml_flag_is_parsed_and_preserved_for_spawned_foreground() -> Result<(
         ],
         &server_defaults(),
         Some(PathBuf::from("/eos/custom/prd.yml")),
+        ServeSubcommand::Daemon,
     )?;
 
     assert_eq!(
@@ -37,6 +38,38 @@ fn config_yaml_flag_is_parsed_and_preserved_for_spawned_foreground() -> Result<(
         config.foreground_args(),
         vec![
             "daemon",
+            "--config-yaml",
+            "/eos/custom/prd.yml",
+            "--socket",
+            "/eos/runtime/runtime.sock",
+            "--pid-file",
+            "/eos/runtime/runtime.pid",
+        ]
+    );
+    Ok(())
+}
+
+#[test]
+fn sandbox_daemon_spawned_foreground_uses_serve_subcommand() -> Result<()> {
+    let config = DaemonCliConfig::parse(
+        vec![
+            "--spawn".to_owned(),
+            "--config-yaml".to_owned(),
+            "/eos/custom/prd.yml".to_owned(),
+            "--socket".to_owned(),
+            "/eos/runtime/runtime.sock".to_owned(),
+            "--pid-file".to_owned(),
+            "/eos/runtime/runtime.pid".to_owned(),
+        ],
+        &server_defaults(),
+        Some(PathBuf::from("/eos/custom/prd.yml")),
+        ServeSubcommand::Serve,
+    )?;
+
+    assert_eq!(
+        config.foreground_args(),
+        vec![
+            "serve",
             "--config-yaml",
             "/eos/custom/prd.yml",
             "--socket",
@@ -62,6 +95,7 @@ fn spawned_foreground_args_omit_auth_token() -> Result<()> {
         ],
         &server_defaults(),
         None,
+        ServeSubcommand::Daemon,
     )?;
 
     assert_eq!(config.auth_token.as_deref(), Some("token-1"));

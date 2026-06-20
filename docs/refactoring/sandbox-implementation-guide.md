@@ -369,6 +369,12 @@ Exit criteria:
 
 ## Phase 4: Add `sandbox-manager` Core
 
+Prompt:
+
+```text
+docs/refactoring/sandbox-phase-4-manager-core-prompt.md
+```
+
 Goal:
 
 - Add the host-side control plane model and manager operation catalog.

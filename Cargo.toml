@@ -4,8 +4,7 @@ members = [
     "crates/sandbox-runtime/operation",
     "crates/daemon/command",
     "crates/daemon/config",
-    "crates/daemon/eosd",
-    "crates/daemon/server",
+    "crates/sandbox-daemon",
     "crates/sandbox-protocol",
     "crates/daemon/workspace",
     "crates/daemon/namespace-process",
@@ -57,8 +56,7 @@ sandbox-runtime = { path = "crates/sandbox-runtime/operation" }
 sandbox-protocol = { path = "crates/sandbox-protocol" }
 overlay = { path = "crates/daemon/overlay" }
 namespace-process = { path = "crates/daemon/namespace-process" }
-daemon = { path = "crates/daemon/server" }
-eosd = { path = "crates/daemon/eosd" }
+sandbox-daemon = { path = "crates/sandbox-daemon" }
 workspace = { path = "crates/daemon/workspace" }
 xtask = { path = "xtask" }
 

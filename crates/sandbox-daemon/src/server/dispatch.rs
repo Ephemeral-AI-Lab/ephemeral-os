@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use super::DaemonServer;
-use crate::error::DaemonError;
+use super::SandboxDaemonServer;
+use crate::server::error::SandboxDaemonError;
 use sandbox_protocol::{decode_request_object, error_kind, ArgsPresence, DAEMON_AUTH_FIELD};
 use sandbox_runtime::OperationRequest;
 use serde_json::{Map, Value};
 
-impl DaemonServer {
+impl SandboxDaemonServer {
     pub(super) async fn dispatch_bytes(&self, bytes: Vec<u8>, is_tcp: bool) -> serde_json::Value {
         let value = match serde_json::from_slice::<serde_json::Value>(&bytes) {
             Ok(value) => value,
@@ -69,7 +69,7 @@ impl DaemonServer {
         response
     }
 
-    fn strip_tcp_auth(&self, mut value: serde_json::Value) -> Result<Value, DaemonError> {
+    fn strip_tcp_auth(&self, mut value: serde_json::Value) -> Result<Value, SandboxDaemonError> {
         let expected_raw = configured_token(self.config.auth_token.as_deref());
         if expected_raw.is_some() {
             let raw_token = match value.as_object_mut() {
@@ -77,7 +77,7 @@ impl DaemonServer {
                 None => TokenMatch::Missing,
             };
             if raw_token != TokenMatch::Matches {
-                return Err(DaemonError::Unauthorized);
+                return Err(SandboxDaemonError::Unauthorized);
             }
         }
         Ok(value)
