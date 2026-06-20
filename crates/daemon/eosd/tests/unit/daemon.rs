@@ -59,22 +59,16 @@ fn spawned_foreground_args_omit_auth_token() -> Result<()> {
             "37777".to_owned(),
             "--auth-token".to_owned(),
             "token-1".to_owned(),
-            "--forward-auth-token".to_owned(),
-            "forward-token-1".to_owned(),
         ],
         &server_defaults(),
         None,
     )?;
 
     assert_eq!(config.auth_token.as_deref(), Some("token-1"));
-    assert_eq!(
-        config.forward_auth_token.as_deref(),
-        Some("forward-token-1")
-    );
     assert!(
         !config.foreground_args().iter().any(|arg| matches!(
             arg.as_str(),
-            "--auth-token" | "token-1" | "--forward-auth-token" | "forward-token-1"
+            "--auth-token" | "token-1"
         )),
         "auth token must be passed through the child environment, not argv"
     );

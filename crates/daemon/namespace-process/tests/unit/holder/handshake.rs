@@ -1,4 +1,5 @@
 use std::os::fd::AsRawFd;
+use std::os::fd::OwnedFd;
 
 use super::Handshake;
 use crate::holder::namespace::HeldNamespaces;
@@ -14,7 +15,7 @@ fn signal_ns_up_writes_readiness_token() -> TestResult {
         readiness_write.as_raw_fd(),
         control_write.as_raw_fd(),
         NamespaceNetwork::Isolated,
-        HeldNamespaces::for_test()?,
+        held_namespaces_for_test()?,
     );
 
     handshake.signal_ns_up()?;
@@ -34,7 +35,7 @@ fn await_net_ready_accepts_prefixed_line() -> TestResult {
         readiness_write.as_raw_fd(),
         control_read.as_raw_fd(),
         NamespaceNetwork::Isolated,
-        HeldNamespaces::for_test()?,
+        held_namespaces_for_test()?,
     );
 
     handshake.await_net_ready()?;
@@ -51,7 +52,7 @@ fn await_net_ready_rejects_wrong_token() -> TestResult {
         readiness_write.as_raw_fd(),
         control_read.as_raw_fd(),
         NamespaceNetwork::Isolated,
-        HeldNamespaces::for_test()?,
+        held_namespaces_for_test()?,
     );
 
     let error = match handshake.await_net_ready() {
@@ -71,7 +72,7 @@ fn finish_ready_writes_ready_token() -> TestResult {
         readiness_write.as_raw_fd(),
         control_write.as_raw_fd(),
         NamespaceNetwork::Host,
-        HeldNamespaces::for_test()?,
+        held_namespaces_for_test()?,
     );
 
     handshake.finish_ready()?;
@@ -95,7 +96,7 @@ fn finish_ready_does_not_signal_ready_when_required_veth_is_missing() -> TestRes
         readiness_write.as_raw_fd(),
         control_read.as_raw_fd(),
         NamespaceNetwork::Isolated,
-        HeldNamespaces::for_test()?,
+        held_namespaces_for_test()?,
     );
     handshake.await_net_ready()?;
 
@@ -105,4 +106,19 @@ fn finish_ready_does_not_signal_ready_when_required_veth_is_missing() -> TestRes
 
     assert!(matches!(error, NsHolderError::NetworkSetup { .. }));
     Ok(())
+}
+
+fn held_namespaces_for_test() -> std::io::Result<HeldNamespaces> {
+    Ok(HeldNamespaces {
+        _user: dev_null_fd()?,
+        _mnt: dev_null_fd()?,
+        _pid: dev_null_fd()?,
+        _net: Some(dev_null_fd()?),
+        #[cfg(target_os = "linux")]
+        _pid_init: None,
+    })
+}
+
+fn dev_null_fd() -> std::io::Result<OwnedFd> {
+    Ok(std::fs::File::open("/dev/null")?.into())
 }

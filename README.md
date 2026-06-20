@@ -26,13 +26,13 @@ workspace / command / layerstack / namespace-process / overlay
 
 **Boundary law:** daemon transport vocabulary lives in
 `crates/daemon/rpc_protocol`; daemon request dispatch lives in
-`crates/daemon/core`; operation specs live in `crates/daemon/operation`; CAS
+`crates/daemon/server`; operation specs live in `crates/daemon/operation`; CAS
 fixtures live with `layerstack`.
 
 ## The pieces
 
 - `crates/daemon/layerstack/tests/fixtures/` - daemon-owned CAS fixtures.
-- `crates/` - the workspace: `daemon/eosd`, `daemon/core`,
+- `crates/` - the workspace: `daemon/eosd`, `daemon/server`,
   `daemon/rpc_protocol`, `daemon/layerstack`, `daemon/overlay`,
   `daemon/namespace-process`, `daemon/command`, `daemon/operation`,
   `daemon/workspace`, and `daemon/config`.

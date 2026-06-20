@@ -1,6 +1,5 @@
 use serde_json::{json, Map, Value};
 
-use crate::auth::{DaemonRpcAuth, DAEMON_AUTH_FIELD, DAEMON_FORWARD_AUTH_FIELD};
 use crate::error_kind;
 use crate::response::Response;
 
@@ -151,39 +150,6 @@ impl RequestDecodeError {
     }
 }
 
-pub fn encode_request(
-    op: &str,
-    request_id: &str,
-    args: &Value,
-    auth: DaemonRpcAuth<'_>,
-) -> Vec<u8> {
-    serde_json::to_vec(&Value::Object(request_object(op, request_id, args, auth)))
-        .unwrap_or_default()
-}
-
-#[must_use]
-pub fn request_object(
-    op: &str,
-    request_id: &str,
-    args: &Value,
-    auth: DaemonRpcAuth<'_>,
-) -> Map<String, Value> {
-    let mut request = Map::new();
-    request.insert("op".to_owned(), json!(op));
-    request.insert("request_id".to_owned(), json!(request_id));
-    request.insert("args".to_owned(), args.clone());
-    match auth {
-        DaemonRpcAuth::Raw(Some(token)) => {
-            request.insert(DAEMON_AUTH_FIELD.to_owned(), json!(token));
-        }
-        DaemonRpcAuth::Forward(Some(token)) => {
-            request.insert(DAEMON_FORWARD_AUTH_FIELD.to_owned(), json!(token));
-        }
-        DaemonRpcAuth::Raw(None) | DaemonRpcAuth::Forward(None) => {}
-    }
-    request
-}
-
 pub fn decode_request_object(
     mut object: Map<String, Value>,
     args_presence: ArgsPresence,
@@ -228,51 +194,5 @@ fn invalid_request(message: impl Into<String>) -> RequestDecodeError {
     RequestDecodeError {
         kind: error_kind::INVALID_REQUEST,
         message: message.into(),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use serde_json::json;
-
-    use crate::{DaemonRpcAuth, DAEMON_AUTH_FIELD, DAEMON_FORWARD_AUTH_FIELD};
-
-    use super::{decode_request_object, encode_request, ArgsPresence};
-
-    #[test]
-    fn encode_request_stamps_auth_at_top_level() {
-        let raw = encode_request(
-            "sandbox.runtime.ready",
-            "req-1",
-            &json!({}),
-            DaemonRpcAuth::Raw(Some("tok")),
-        );
-        let value: serde_json::Value = serde_json::from_slice(&raw).expect("request json");
-        assert_eq!(value[DAEMON_AUTH_FIELD], json!("tok"));
-        assert!(value["args"].get(DAEMON_AUTH_FIELD).is_none());
-
-        let forward = encode_request(
-            "sandbox.runtime.ready",
-            "req-1",
-            &json!({}),
-            DaemonRpcAuth::Forward(Some("forward")),
-        );
-        let value: serde_json::Value = serde_json::from_slice(&forward).expect("request json");
-        assert_eq!(value[DAEMON_FORWARD_AUTH_FIELD], json!("forward"));
-        assert!(value["args"].get(DAEMON_FORWARD_AUTH_FIELD).is_none());
-    }
-
-    #[test]
-    fn decode_request_requires_object_args_when_present() {
-        let value = json!({
-            "op": "exec_command",
-            "request_id": "req-1",
-            "args": "bad",
-        });
-        let object = value.as_object().expect("object").clone();
-        let err = decode_request_object(object, ArgsPresence::Required)
-            .expect_err("non-object args rejected");
-        assert_eq!(err.kind(), "invalid_request");
-        assert_eq!(err.message(), "args must be an object");
     }
 }

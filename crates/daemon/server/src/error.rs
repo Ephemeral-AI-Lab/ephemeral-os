@@ -14,9 +14,6 @@ pub enum DaemonError {
 
     #[error("daemon request authentication failed")]
     Unauthorized,
-
-    #[error("forbidden: {0}")]
-    Forbidden(String),
 }
 
 impl DaemonError {
@@ -26,7 +23,6 @@ impl DaemonError {
         match self {
             Self::RequestTooLarge { .. } => error_kind::REQUEST_TOO_LARGE,
             Self::Unauthorized => error_kind::UNAUTHORIZED,
-            Self::Forbidden(_) => error_kind::FORBIDDEN,
             _ => error_kind::INTERNAL_ERROR,
         }
     }

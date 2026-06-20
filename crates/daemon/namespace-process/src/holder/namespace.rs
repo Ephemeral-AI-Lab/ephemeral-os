@@ -20,17 +20,17 @@ use super::{NamespaceNetwork, NsHolderError};
 // FDs are pinned for RAII only; the daemon reads `/proc/{holder_pid}/ns/*`.
 #[derive(Debug)]
 pub(crate) struct HeldNamespaces {
-    _user: OwnedFd,
-    _mnt: OwnedFd,
-    _pid: OwnedFd,
-    _net: Option<OwnedFd>,
+    pub(crate) _user: OwnedFd,
+    pub(crate) _mnt: OwnedFd,
+    pub(crate) _pid: OwnedFd,
+    pub(crate) _net: Option<OwnedFd>,
     #[cfg(target_os = "linux")]
-    _pid_init: Option<PidNamespaceInit>,
+    pub(crate) _pid_init: Option<PidNamespaceInit>,
 }
 
 #[cfg(target_os = "linux")]
 #[derive(Debug)]
-struct PidNamespaceInit {
+pub(crate) struct PidNamespaceInit {
     pid: libc::pid_t,
 }
 
@@ -236,25 +236,4 @@ fn wait_for_path(path: impl AsRef<Path>) -> Result<(), NsHolderError> {
         thread::sleep(Duration::from_millis(10));
     }
     open_owned_fd(path).map(drop)
-}
-
-impl HeldNamespaces {
-    #[cfg(test)]
-    #[allow(dead_code)]
-    pub(crate) fn for_test() -> std::io::Result<Self> {
-        Ok(Self {
-            _user: dev_null_fd()?,
-            _mnt: dev_null_fd()?,
-            _pid: dev_null_fd()?,
-            _net: Some(dev_null_fd()?),
-            #[cfg(target_os = "linux")]
-            _pid_init: None,
-        })
-    }
-}
-
-#[cfg(test)]
-#[allow(dead_code)]
-fn dev_null_fd() -> std::io::Result<OwnedFd> {
-    Ok(std::fs::File::open("/dev/null")?.into())
 }

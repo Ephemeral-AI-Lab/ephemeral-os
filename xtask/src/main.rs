@@ -104,14 +104,6 @@ const INLINE_TEST_POLICY_EXCEPTIONS: &[InlineTestPolicyException] = &[
         kind: InlineTestPolicyViolationKind::PathAttribute,
     },
     InlineTestPolicyException {
-        path: "crates/daemon/namespace-process/src/holder/namespace.rs",
-        kind: InlineTestPolicyViolationKind::BroadAllowAttribute,
-    },
-    InlineTestPolicyException {
-        path: "crates/daemon/namespace-process/src/runner/setns.rs",
-        kind: InlineTestPolicyViolationKind::BroadAllowAttribute,
-    },
-    InlineTestPolicyException {
         path: "crates/daemon/operation/src/public/command/mod.rs",
         kind: InlineTestPolicyViolationKind::PathAttribute,
     },

@@ -20,3 +20,11 @@ mod transport_connection_tests {
         "/tests/unit/transport/server/connection.rs"
     ));
 }
+
+mod transport_dispatch_tests {
+    pub(crate) use crate::transport::server::dispatch::parse_request;
+    include!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/unit/transport/server/dispatch.rs"
+    ));
+}

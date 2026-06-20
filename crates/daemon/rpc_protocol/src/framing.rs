@@ -6,6 +6,6 @@ pub fn encode_json_line(value: &Value) -> Vec<u8> {
     line
 }
 
-pub fn push_json_line_delimiter(line: &mut Vec<u8>) {
+fn push_json_line_delimiter(line: &mut Vec<u8>) {
     line.push(b'\n');
 }

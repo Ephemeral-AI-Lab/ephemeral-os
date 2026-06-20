@@ -105,7 +105,6 @@ dependencies = [
 name = "config"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "serde",
  "serde_path_to_error",
  "serde_yaml_ng",

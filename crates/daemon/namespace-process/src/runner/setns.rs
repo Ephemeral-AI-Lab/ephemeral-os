@@ -8,7 +8,6 @@ use std::fs;
 use std::os::fd::RawFd;
 #[cfg(target_os = "linux")]
 use std::os::unix::ffi::OsStrExt;
-#[cfg(any(test, target_os = "linux"))]
 use std::path::PathBuf;
 #[cfg(target_os = "linux")]
 use std::path::{Component, Path};
@@ -19,9 +18,7 @@ use std::time::Instant;
 use overlay::OverlayHandle;
 
 use super::RunnerError;
-#[cfg(any(test, target_os = "linux"))]
-use crate::runner::protocol::NsFds;
-use crate::runner::protocol::{NamespaceCommandRequest, RunResult};
+use crate::runner::protocol::{NamespaceCommandRequest, NsFds, RunResult};
 
 #[cfg(target_os = "linux")]
 const RESOLV_CONF: &str = "/etc/resolv.conf";
@@ -577,9 +574,7 @@ pub const fn configure_dns(
     Err(RunnerError::Unsupported)
 }
 
-#[cfg(any(test, target_os = "linux"))]
-#[cfg_attr(test, allow(dead_code))]
-pub(crate) fn require_ns_fds(request: &NamespaceCommandRequest) -> Result<NsFds, RunnerError> {
+pub fn require_ns_fds(request: &NamespaceCommandRequest) -> Result<NsFds, RunnerError> {
     request
         .ns_fds
         .ok_or_else(|| RunnerError::InvalidRequest("setns mode requires ns_fds".to_owned()))
@@ -613,9 +608,7 @@ fn setns_user_mnt(request: &NamespaceCommandRequest, operation: &str) -> Result<
     setns_fd("mnt", mnt.0, libc::CLONE_NEWNS)
 }
 
-#[cfg(any(test, target_os = "linux"))]
-#[cfg_attr(test, allow(dead_code))]
-pub(crate) fn overlay_layer_paths(request: &NamespaceCommandRequest) -> Vec<PathBuf> {
+pub fn overlay_layer_paths(request: &NamespaceCommandRequest) -> Vec<PathBuf> {
     if request.layer_paths.is_empty() {
         vec![request.workspace_root.0.clone()]
     } else {
@@ -623,9 +616,7 @@ pub(crate) fn overlay_layer_paths(request: &NamespaceCommandRequest) -> Vec<Path
     }
 }
 
-#[cfg(any(test, target_os = "linux"))]
-#[cfg_attr(test, allow(dead_code))]
-pub(crate) fn first_nameserver(content: &str) -> Option<&str> {
+pub fn first_nameserver(content: &str) -> Option<&str> {
     content.lines().find_map(|line| {
         let stripped = line.trim();
         stripped
@@ -634,9 +625,7 @@ pub(crate) fn first_nameserver(content: &str) -> Option<&str> {
     })
 }
 
-#[cfg(any(test, target_os = "linux"))]
-#[cfg_attr(test, allow(dead_code))]
-pub(crate) fn needs_fallback_dns(addr: &str) -> bool {
+pub fn needs_fallback_dns(addr: &str) -> bool {
     addr.starts_with("127.")
 }
 

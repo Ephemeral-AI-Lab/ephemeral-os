@@ -27,8 +27,6 @@ pub struct ServerConfig {
     pub tcp_port: Option<u16>,
     /// TCP-only auth token; popped from each TCP request before dispatch.
     pub auth_token: Option<String>,
-    /// Host-forward TCP auth token; permits host-only and operator daemon ops.
-    pub forward_auth_token: Option<String>,
 }
 
 /// The running daemon: request dispatch state and shutdown token.

@@ -5,7 +5,7 @@ members = [
     "crates/daemon/command",
     "crates/daemon/config",
     "crates/daemon/eosd",
-    "crates/daemon/core",
+    "crates/daemon/server",
     "crates/daemon/rpc_protocol",
     "crates/daemon/workspace",
     "crates/daemon/namespace-process",
@@ -57,7 +57,7 @@ daemon_operation = { path = "crates/daemon/operation" }
 daemon_rpc_protocol = { path = "crates/daemon/rpc_protocol" }
 overlay = { path = "crates/daemon/overlay" }
 namespace-process = { path = "crates/daemon/namespace-process" }
-daemon = { path = "crates/daemon/core" }
+daemon = { path = "crates/daemon/server" }
 eosd = { path = "crates/daemon/eosd" }
 workspace = { path = "crates/daemon/workspace" }
 xtask = { path = "xtask" }

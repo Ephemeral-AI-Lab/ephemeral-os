@@ -1,6 +1,6 @@
-mod cancel;
+mod cancel_command;
 mod exec_command;
-mod poll;
+mod poll_command;
 mod read_command_lines;
 mod write_command_stdin;
 
@@ -15,17 +15,17 @@ use crate::operation::{OperationEntry, OperationRequest, OperationResponse, Oper
 pub(crate) const OPERATIONS: &[OperationEntry] = &[
     OperationEntry::new(&exec_command::SPEC, exec_command::dispatch),
     OperationEntry::new(&write_command_stdin::SPEC, write_command_stdin::dispatch),
-    OperationEntry::new(&poll::SPEC, poll::dispatch),
+    OperationEntry::new(&poll_command::SPEC, poll_command::dispatch),
     OperationEntry::new(&read_command_lines::SPEC, read_command_lines::dispatch),
-    OperationEntry::new(&cancel::SPEC, cancel::dispatch),
+    OperationEntry::new(&cancel_command::SPEC, cancel_command::dispatch),
 ];
 
 pub(crate) const SPECS: &[&OperationSpec] = &[
     &exec_command::SPEC,
     &write_command_stdin::SPEC,
-    &poll::SPEC,
+    &poll_command::SPEC,
     &read_command_lines::SPEC,
-    &cancel::SPEC,
+    &cancel_command::SPEC,
 ];
 
 pub(super) fn command_yield_response(

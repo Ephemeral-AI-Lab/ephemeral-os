@@ -15,7 +15,6 @@ use config::configs::{
 use config::ConfigPath;
 
 const DAEMON_AUTH_TOKEN_ENV: &str = "EOS_DAEMON_AUTH_TOKEN";
-const DAEMON_FORWARD_AUTH_TOKEN_ENV: &str = "EOS_DAEMON_FORWARD_AUTH_TOKEN";
 const DAEMON_CONFIG_YAML_ENV: &str = "EOS_DAEMON_CONFIG_YAML";
 const CONNECT_FAILED: i32 = 97;
 const IO_FAILED: i32 = 98;
@@ -35,7 +34,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let daemon_config = &runtime_config.daemon;
     let config = DaemonCliConfig::parse(args, &daemon_config.server, config_path)?;
     if let Some((socket_path, payload)) = config.client {
-        return run_daemon_client(&socket_path, &payload);
+        return run_client_request(&socket_path, &payload);
     }
     if config.spawn {
         return spawn_daemon(&config);
@@ -47,7 +46,6 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
         tcp_host: config.tcp_host,
         tcp_port: config.tcp_port,
         auth_token: config.auth_token,
-        forward_auth_token: config.forward_auth_token,
     };
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(daemon_worker_threads(
@@ -148,7 +146,6 @@ pub(crate) struct DaemonCliConfig {
     tcp_host: Option<String>,
     tcp_port: Option<u16>,
     pub(crate) auth_token: Option<String>,
-    pub(crate) forward_auth_token: Option<String>,
     spawn: bool,
     client: Option<(PathBuf, String)>,
 }
@@ -168,7 +165,6 @@ impl DaemonCliConfig {
         let mut tcp_host = None;
         let mut tcp_port = None;
         let mut auth_token = None;
-        let mut forward_auth_token = None;
         let mut spawn = false;
         let mut client = None;
         let mut args = args.into_iter();
@@ -188,9 +184,6 @@ impl DaemonCliConfig {
                     );
                 }
                 "--auth-token" => auth_token = Some(required_arg(&mut args, "--auth-token")?),
-                "--forward-auth-token" => {
-                    forward_auth_token = Some(required_arg(&mut args, "--forward-auth-token")?);
-                }
                 "--spawn" => spawn = true,
                 "--client" => {
                     let socket = PathBuf::from(required_arg(&mut args, "--client <socket>")?);
@@ -199,7 +192,7 @@ impl DaemonCliConfig {
                 }
                 "--help" | "-h" => {
                     println!(
-                        "usage: eosd daemon [--spawn] [--config-yaml PATH] [--socket PATH] [--pid-file PATH] [--tcp-host HOST --tcp-port PORT --auth-token TOKEN --forward-auth-token TOKEN] | eosd daemon --client SOCKET JSON"
+                        "usage: eosd daemon [--spawn] [--config-yaml PATH] [--socket PATH] [--pid-file PATH] [--tcp-host HOST --tcp-port PORT --auth-token TOKEN] | eosd daemon --client SOCKET JSON"
                     );
                     std::process::exit(0);
                 }
@@ -213,8 +206,6 @@ impl DaemonCliConfig {
             tcp_host,
             tcp_port,
             auth_token: auth_token.or_else(|| std::env::var(DAEMON_AUTH_TOKEN_ENV).ok()),
-            forward_auth_token: forward_auth_token
-                .or_else(|| std::env::var(DAEMON_FORWARD_AUTH_TOKEN_ENV).ok()),
             spawn,
             client,
         })
@@ -261,7 +252,7 @@ fn required_arg(args: &mut impl Iterator<Item = String>, flag: &str) -> Result<S
 }
 
 #[cfg(unix)]
-fn run_daemon_client(socket_path: &PathBuf, payload: &str) -> Result<()> {
+fn run_client_request(socket_path: &PathBuf, payload: &str) -> Result<()> {
     let mut stream = match UnixStream::connect(socket_path) {
         Ok(stream) => stream,
         Err(err) => {
@@ -293,7 +284,7 @@ fn run_daemon_client(socket_path: &PathBuf, payload: &str) -> Result<()> {
 }
 
 #[cfg(not(unix))]
-fn run_daemon_client(_socket_path: &PathBuf, _payload: &str) -> Result<()> {
+fn run_client_request(_socket_path: &PathBuf, _payload: &str) -> Result<()> {
     eprintln!("EOS_DAEMON_CONNECT_FAILED:UnsupportedPlatform");
     std::process::exit(CONNECT_FAILED);
 }
@@ -319,9 +310,6 @@ fn spawn_daemon(config: &DaemonCliConfig) -> Result<()> {
     command.env(DAEMON_CONFIG_YAML_ENV, &config.config_yaml_path);
     if let Some(token) = &config.auth_token {
         command.env(DAEMON_AUTH_TOKEN_ENV, token);
-    }
-    if let Some(token) = &config.forward_auth_token {
-        command.env(DAEMON_FORWARD_AUTH_TOKEN_ENV, token);
     }
     command.stdin(Stdio::null());
     command.stdout(Stdio::null());

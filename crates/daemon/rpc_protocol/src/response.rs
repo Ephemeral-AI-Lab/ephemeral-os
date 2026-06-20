@@ -54,7 +54,7 @@ impl From<Response> for Value {
 }
 
 #[must_use]
-pub fn response_meta(op: &str, request_id: &str) -> Value {
+fn response_meta(op: &str, request_id: &str) -> Value {
     json!({
         "op": op,
         "request_id": request_id,
@@ -62,11 +62,6 @@ pub fn response_meta(op: &str, request_id: &str) -> Value {
         "resource_summary": {"fields": {}},
         "warnings": [],
     })
-}
-
-#[must_use]
-pub fn error_response(kind: &str, message: impl Into<String>) -> Value {
-    error_response_with_meta(kind, message, json!({}), response_meta("", ""))
 }
 
 #[must_use]
@@ -78,8 +73,7 @@ pub fn error_response_with_details(
     error_response_with_meta(kind, message, details, response_meta("", ""))
 }
 
-#[must_use]
-pub fn error_response_with_meta(
+fn error_response_with_meta(
     kind: &str,
     message: impl Into<String>,
     details: Value,
@@ -97,60 +91,6 @@ pub fn error_response_with_meta(
 }
 
 #[must_use]
-pub fn ok_response(op: &str, request_id: &str, result: Value) -> Value {
-    let mut response = response_base("ok", response_meta(op, request_id));
-    response["result"] = result;
-    response
-}
-
-#[must_use]
 pub fn response_line(response: &Value) -> Vec<u8> {
     crate::framing::encode_json_line(response)
-}
-
-#[must_use]
-pub fn response_status(response: &Value) -> &str {
-    response
-        .get("status")
-        .and_then(Value::as_str)
-        .filter(|status| valid_response_status(status))
-        .unwrap_or("error")
-}
-
-#[must_use]
-pub fn response_result_status(response: &Value) -> Option<&str> {
-    response
-        .get("result")
-        .and_then(|result| result.get("status"))
-        .and_then(Value::as_str)
-}
-
-#[must_use]
-pub fn response_fault_kind(response: &Value) -> Option<&str> {
-    response
-        .get("error")
-        .and_then(|error| error.get("kind"))
-        .and_then(Value::as_str)
-        .or_else(|| {
-            (response.get("status").and_then(Value::as_str).is_none()).then_some("missing_status")
-        })
-}
-
-#[must_use]
-pub fn response_is_accepted(response: &Value) -> bool {
-    matches!(response_status(response), "ok" | "running")
-}
-
-fn response_base(status: &str, meta: Value) -> Value {
-    json!({
-        "status": status,
-        "meta": meta,
-    })
-}
-
-fn valid_response_status(status: &str) -> bool {
-    matches!(
-        status,
-        "ok" | "running" | "rejected" | "cancelled" | "timed_out" | "error"
-    )
 }

@@ -11,7 +11,7 @@ use crate::operation::{
 use crate::DaemonOperations;
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
-    name: "poll",
+    name: "poll_command",
     family: OperationFamily::Command,
     summary: "Poll a command status and recent output.",
     args: POLL_ARGS,
@@ -41,9 +41,9 @@ const POLL_ARGS: &[ArgSpec] = &[
 ];
 
 const POLL_CLI: CliSpec = CliSpec {
-    path: &["daemon", "commands", "poll"],
-    usage: "poll {\"command_session_id\":\"ID\",\"last_n_lines\":N}",
-    examples: &["poll {\"command_session_id\":\"cmd-1\",\"last_n_lines\":50}"],
+    path: &["daemon", "commands", "poll_command"],
+    usage: "poll_command {\"command_session_id\":\"ID\",\"last_n_lines\":N}",
+    examples: &["poll_command {\"command_session_id\":\"cmd-1\",\"last_n_lines\":50}"],
 };
 
 pub(crate) fn dispatch(

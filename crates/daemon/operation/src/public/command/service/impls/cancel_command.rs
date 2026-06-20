@@ -13,7 +13,7 @@ use crate::operation::{
 use crate::DaemonOperations;
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
-    name: "cancel",
+    name: "cancel_command",
     family: OperationFamily::Command,
     summary: "Request cancellation of a running command.",
     args: CANCEL_ARGS,
@@ -31,9 +31,9 @@ const CANCEL_ARGS: &[ArgSpec] = &[ArgSpec::required(
 )];
 
 const CANCEL_CLI: CliSpec = CliSpec {
-    path: &["daemon", "commands", "cancel"],
-    usage: "cancel {\"command_session_id\":\"ID\"}",
-    examples: &["cancel {\"command_session_id\":\"cmd-1\"}"],
+    path: &["daemon", "commands", "cancel_command"],
+    usage: "cancel_command {\"command_session_id\":\"ID\"}",
+    examples: &["cancel_command {\"command_session_id\":\"cmd-1\"}"],
 };
 
 pub(crate) fn dispatch(
