@@ -92,7 +92,6 @@ impl CommandOperationService {
                     snapshot_manifest_version: handler.handle.snapshot.manifest_version,
                     snapshot_layer_paths: &handler.handle.snapshot.layer_paths,
                     changes: &captured.changes,
-                    options: self.finalization_options().one_shot_publish,
                 },
             );
             let publish_result =

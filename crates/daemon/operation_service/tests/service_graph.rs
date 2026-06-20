@@ -1,9 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use operation_service::command::{
-    CommandCallContext, CommandFinalizationOptions, CommandOperationService, ExecCommandInput,
-};
+use operation_service::command::{CommandCallContext, CommandOperationService, ExecCommandInput};
 use operation_service::workspace_remount::{
     CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountService,
 };
@@ -103,23 +101,4 @@ fn command_contract_keeps_roots_and_call_context_separate() {
         Some(WorkspaceId("workspace-1".to_owned()))
     );
     assert_eq!(context.caller_id, CallerId("caller-1".to_owned()));
-}
-
-#[test]
-fn command_service_retains_one_shot_finalization_options() {
-    let workspace = workspace_session();
-    let config = command::CommandConfig::default();
-    let options = CommandFinalizationOptions {
-        one_shot_publish: layerstack::CommitOptions::new(3),
-    };
-
-    let command = CommandOperationService::with_finalization_options(
-        Arc::clone(&workspace),
-        config.clone(),
-        options,
-    );
-
-    assert!(Arc::ptr_eq(command.workspace(), &workspace));
-    assert_eq!(command.config(), &config);
-    assert_eq!(command.finalization_options(), &options);
 }

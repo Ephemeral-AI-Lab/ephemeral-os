@@ -6,9 +6,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
-use command::process::{
-    CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec,
-};
+use command::process::{CommandProcess, CommandProcessExit, CommandProcessSpec};
 use command::yield_wait_loop::WaitOutcome;
 use operation_service::command::{
     CommandCallContext, CommandLaunchDriver, CommandOperationService, CommandServiceError,
@@ -167,7 +165,8 @@ impl CommandLaunchDriver for PendingGuardLaunchDriver {
     fn spawn(
         &self,
         spec: CommandProcessSpec,
-        _parts: CommandProcessSpawn<'_>,
+        _workspace_entry: workspace::WorkspaceEntry,
+        _config: &command::CommandConfig,
     ) -> Result<CommandProcess, CommandServiceError> {
         Ok(CommandProcess::inactive_for_test(spec))
     }
@@ -201,7 +200,8 @@ impl CommandLaunchDriver for BlockingLaunchDriver {
     fn spawn(
         &self,
         spec: CommandProcessSpec,
-        _parts: CommandProcessSpawn<'_>,
+        _workspace_entry: workspace::WorkspaceEntry,
+        _config: &command::CommandConfig,
     ) -> Result<CommandProcess, CommandServiceError> {
         if let Some(sender) = self
             .spawn_started

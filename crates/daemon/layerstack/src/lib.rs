@@ -16,7 +16,7 @@ pub use model::{
 };
 
 pub use commit::model::FileResult;
-pub use commit::{ChangesetResult, CommitError, CommitOptions, CommitStatus, OccTraceEvent};
+pub use commit::{ChangesetResult, CommitError, CommitStatus, OccTraceEvent};
 pub use error::LayerStackError;
 pub use stack::reclaim_unpinned_layers::{
     LeaseParentCompactionOutcome, ReclaimUnpinnedLayersCopyThroughOutcome,
@@ -27,8 +27,6 @@ pub use workspace_base::{
     build_workspace_base, ensure_workspace_base, read_workspace_binding, require_workspace_binding,
     WorkspaceBinding, WORKSPACE_BINDING_FILE,
 };
-
-pub(crate) const AUTO_SQUASH_MAX_DEPTH: usize = 100;
 
 pub(crate) const LAYERS_DIR: &str = "layers";
 
@@ -41,9 +39,9 @@ pub(crate) const LAYER_METADATA_DIR: &str = ".layer-metadata";
 /// Reset process-wide layerstack registries for isolated tests.
 ///
 /// Layerstack intentionally keeps lease registries, per-root commit writers,
-/// storage-root locks, and auto-squash config process-wide so all daemon
-/// runtime instances in one process share the same single-writer and lease
-/// view. Call this only from tests when no layerstack operations are live.
+/// and storage-root locks process-wide so all daemon runtime instances in one
+/// process share the same single-writer and lease view. Call this only from
+/// tests when no layerstack operations are live.
 #[doc(hidden)]
 pub fn reset_process_state_for_tests() {
     service::reset_service_cache_for_tests();

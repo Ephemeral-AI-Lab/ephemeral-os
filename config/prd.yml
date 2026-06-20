@@ -35,9 +35,6 @@ daemon:
   idle_workspace_eviction:
     interval_ms: 500
 
-  layer_stack:
-    auto_squash_max_depth: 100
-
 isolated:
   enabled: false
   scratch_root: /eos/scratch/isolated

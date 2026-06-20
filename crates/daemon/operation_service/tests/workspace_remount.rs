@@ -3,9 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
-use command::process::{
-    CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec,
-};
+use command::process::{CommandProcess, CommandProcessExit, CommandProcessSpec};
 use command::yield_wait_loop::WaitOutcome;
 use operation_service::command::{
     CancelCommandInput, CommandCallContext, CommandLaunchDriver, CommandOperationService,
@@ -181,7 +179,8 @@ impl CommandLaunchDriver for InactiveLaunchDriver {
     fn spawn(
         &self,
         spec: CommandProcessSpec,
-        _parts: CommandProcessSpawn<'_>,
+        _workspace_entry: workspace::WorkspaceEntry,
+        _config: &command::CommandConfig,
     ) -> Result<CommandProcess, CommandServiceError> {
         Ok(match self.process_group_id {
             Some(pgid) => CommandProcess::inactive_with_process_group_for_test(spec, pgid),

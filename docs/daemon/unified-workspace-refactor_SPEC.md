@@ -603,7 +603,7 @@ Workspace command execution must use holder-created namespaces plus `setns`.
 ### Phase 4: Centralize Routing
 
 - Move command/file route decisions from op adapters into `WorkspaceRuntime`.
-- Adapters parse wire args and record trace events, but do not choose host
+- Adapters parse wire args and preserve route trace metadata, but do not choose host
   vs isolated behavior directly.
 
 ### Phase 5: Add Explicit `capture_changes`

@@ -86,7 +86,8 @@ impl CommandLaunchDriver for FakeLaunchDriver {
     fn spawn(
         &self,
         spec: CommandProcessSpec,
-        parts: CommandProcessSpawn<'_>,
+        workspace_entry: WorkspaceEntry,
+        config: &command::CommandConfig,
     ) -> Result<CommandProcess, CommandServiceError> {
         if let Some(error) = self
             .spawn_errors
@@ -96,6 +97,13 @@ impl CommandLaunchDriver for FakeLaunchDriver {
         {
             return Err(error);
         }
+        let parts =
+            CommandProcessSpawn::prepare(&spec.id, workspace_entry, config).map_err(|error| {
+                CommandServiceError::CommandIo {
+                    command_id: operation_service::command::CommandId(spec.id.clone()),
+                    error: error.to_string(),
+                }
+            })?;
         self.spawn_observations
             .lock()
             .expect("test operation succeeds")
@@ -113,7 +121,12 @@ impl CommandLaunchDriver for FakeLaunchDriver {
                 transcript_timestamp_timezone: parts.transcript_timestamp_timezone.to_owned(),
                 output_drain_grace_ms: parts.output_drain_grace_ms,
             });
-        Ok(CommandProcess::inactive_for_test(spec))
+        Ok(CommandProcess::inactive_with_artifacts_for_test(
+            spec,
+            parts.output_path,
+            parts.final_path,
+            parts.transcript_path,
+        ))
     }
 
     fn wait_for_initial_yield(

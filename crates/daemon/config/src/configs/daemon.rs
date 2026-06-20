@@ -19,7 +19,6 @@ pub struct DaemonConfig {
     pub inflight: InflightConfig,
     pub commands: CommandConfig,
     pub idle_workspace_eviction: IdleWorkspaceEvictionConfig,
-    pub layer_stack: LayerStackConfig,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -95,12 +94,6 @@ pub struct IdleWorkspaceEvictionConfig {
     pub interval_ms: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct LayerStackConfig {
-    pub auto_squash_max_depth: usize,
-}
-
 impl DaemonConfig {
     /// Validate semantic constraints that YAML deserialization cannot express.
     ///
@@ -157,11 +150,6 @@ impl DaemonConfig {
             self.idle_workspace_eviction.interval_ms,
             1,
             "daemon.idle_workspace_eviction.interval_ms",
-        )?;
-        require_usize_at_least(
-            self.layer_stack.auto_squash_max_depth,
-            1,
-            "daemon.layer_stack.auto_squash_max_depth",
         )?;
         Ok(())
     }

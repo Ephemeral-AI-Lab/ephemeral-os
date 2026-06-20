@@ -25,8 +25,6 @@ daemon:
   commands:
     default_yield_time_ms: 1000
     max_command_s: 21600
-  layer_stack:
-    auto_squash_max_depth: 100
 runner:
   env:
     inherit_keys: [PATH, HOME]
@@ -56,10 +54,6 @@ runner:
         Value::Number(1000.into())
     );
     assert_eq!(daemon["commands"]["max_command_s"], Value::Number(2.into()));
-    assert_eq!(
-        daemon["layer_stack"]["auto_squash_max_depth"],
-        Value::Number(100.into())
-    );
     assert_eq!(
         runner["env"]["inherit_keys"],
         Value::Sequence(vec![Value::String("TZ".to_owned())])

@@ -8,7 +8,6 @@ use crate::{MergedView, LAYERS_DIR};
 
 mod planning;
 
-pub(crate) use crate::stack::ops::{run_auto_squash, AutoSquashTrace};
 use planning::segment_around_lease_heads;
 
 pub(crate) const CHECKPOINT_ID_PREFIX: char = 'B';
@@ -85,31 +84,6 @@ impl SquashPlan {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum SquashPlanSkipReason {
-    TooShallow,
-    LeaseBlocked,
-    MinReductionUnmet,
-    MaxDepthStillExceeded,
-}
-
-impl SquashPlanSkipReason {
-    pub(crate) const fn as_str(self) -> &'static str {
-        match self {
-            Self::TooShallow => "too_shallow",
-            Self::LeaseBlocked => "lease_blocked",
-            Self::MinReductionUnmet => "min_reduction_unmet",
-            Self::MaxDepthStillExceeded => "max_depth_still_exceeded",
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct SquashPlanDecision {
-    pub(crate) plan: Option<SquashPlan>,
-    pub(crate) skip_reason: Option<SquashPlanSkipReason>,
-}
-
 #[derive(Debug)]
 pub(crate) struct LayerCheckpointSquasher {
     storage_root: PathBuf,
@@ -132,18 +106,6 @@ impl LayerCheckpointSquasher {
         lease_head_layers: &[LayerRef],
         min_reduction: usize,
     ) -> Result<Option<SquashPlan>, LayerStackError> {
-        Ok(self
-            .plan_decision(active_manifest, max_depth, lease_head_layers, min_reduction)?
-            .plan)
-    }
-
-    pub(crate) fn plan_decision(
-        &self,
-        active_manifest: &Manifest,
-        max_depth: usize,
-        lease_head_layers: &[LayerRef],
-        min_reduction: usize,
-    ) -> Result<SquashPlanDecision, LayerStackError> {
         if max_depth == 0 {
             return Err(LayerStackError::InvalidSquashPlan(
                 "max_depth must be positive".to_owned(),
@@ -155,28 +117,15 @@ impl LayerCheckpointSquasher {
             ));
         }
         if active_manifest.layers.len() <= max_depth {
-            return Ok(SquashPlanDecision {
-                plan: None,
-                skip_reason: Some(SquashPlanSkipReason::TooShallow),
-            });
+            return Ok(None);
         }
 
         let entries = segment_around_lease_heads(&active_manifest.layers, lease_head_layers)?;
         if entries.len() >= active_manifest.layers.len() {
-            return Ok(SquashPlanDecision {
-                plan: None,
-                skip_reason: Some(if lease_head_layers.is_empty() {
-                    SquashPlanSkipReason::MinReductionUnmet
-                } else {
-                    SquashPlanSkipReason::LeaseBlocked
-                }),
-            });
+            return Ok(None);
         }
         if active_manifest.layers.len() - entries.len() < min_reduction {
-            return Ok(SquashPlanDecision {
-                plan: None,
-                skip_reason: Some(SquashPlanSkipReason::MinReductionUnmet),
-            });
+            return Ok(None);
         }
         let plan = SquashPlan::new(
             active_manifest.version,
@@ -189,15 +138,9 @@ impl LayerCheckpointSquasher {
                 .iter()
                 .all(|segment| segment.layers.len() <= max_depth)
         {
-            return Ok(SquashPlanDecision {
-                plan: None,
-                skip_reason: Some(SquashPlanSkipReason::MaxDepthStillExceeded),
-            });
+            return Ok(None);
         }
-        Ok(SquashPlanDecision {
-            plan: Some(plan),
-            skip_reason: None,
-        })
+        Ok(Some(plan))
     }
 
     pub(crate) fn build_checkpoint(

@@ -10,6 +10,4 @@ mod spool;
 pub(crate) use sidecar::attach_request_sidecar;
 #[allow(unused_imports)]
 pub(crate) use spool::now_ms;
-#[allow(unused_imports)]
-pub(crate) use spool::RequestTraceEvent;
 pub(crate) use spool::{next_connection_id, RequestTraceFacts};

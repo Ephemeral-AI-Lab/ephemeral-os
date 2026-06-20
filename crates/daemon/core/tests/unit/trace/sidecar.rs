@@ -1,13 +1,12 @@
 use base64::Engine as _;
 use serde_json::{json, Value};
 use trace::{
-    decode_trace_batch, DetailBudget, ResourceStatsKind, SpanKind, SpanUid, TRACE_SIDECAR_ENCODING,
-    TRACE_SIDECAR_FIELD, TRACE_SIDECAR_SCHEMA,
+    decode_trace_batch, DetailBudget, SpanKind, TRACE_SIDECAR_ENCODING, TRACE_SIDECAR_FIELD,
+    TRACE_SIDECAR_SCHEMA,
 };
 
-use super::build::attach_request_sidecar_with_events;
-use super::events::{COMMAND_PROCESS_SPAWN_SPAN_ID, COMMAND_PROCESS_WAIT_SPAN_ID};
-use crate::trace::{now_ms, RequestTraceEvent, RequestTraceFacts};
+use super::build::attach_request_sidecar;
+use crate::trace::{now_ms, RequestTraceFacts};
 use crate::wire::RequestTraceContext;
 
 fn trace_sidecar_bytes(response: &Value) -> Option<Vec<u8>> {
@@ -29,135 +28,18 @@ fn trace_sidecar_bytes(response: &Value) -> Option<Vec<u8>> {
         .ok()
 }
 
-#[test]
-fn request_sidecar_drops_children_when_over_budget() {
-    let trace = RequestTraceContext {
-        trace_id: "trace-budget".to_owned(),
-        request_id: "request-budget".to_owned(),
-        parent_span_id: None,
-        link_hints: Vec::new(),
-        capture_budget_version: 1,
-    };
-    let facts = RequestTraceFacts {
-        connection_id: "daemon-conn-budget".to_owned(),
-        accepted_at_unix_ms: now_ms(),
-        listener_kind: "unix",
-        peer_addr: None,
-        local_addr: None,
-        is_tcp: false,
-        request_bytes: 64,
-        read_duration_us: 5,
-        auth_required: false,
-        auth_ok: true,
-        protocol_version: Some(1),
-    };
-    let oversize: Vec<RequestTraceEvent> = (0..200)
-        .map(|index| {
-            RequestTraceEvent::operation(
-                "command",
-                "stdin_written",
-                json!({"index": index, "padding": "x".repeat(500)}),
-            )
-        })
-        .collect();
-    let response = attach_request_sidecar_with_events(
-        json!({"success": true}),
-        Some(&trace),
-        "sandbox.command.exec",
-        &facts,
-        &oversize,
-    );
-    let batch = decode_trace_batch(&trace_sidecar_bytes(&response).expect("trace sidecar bytes"))
-        .expect("trace batch decodes");
-    let record = batch.records.first().expect("request trace record");
-    assert!(record.truncated, "oversize record is marked truncated");
-    assert!(
-        record.dropped_children > 0,
-        "dropped children are counted, not silent"
-    );
-    assert!(
-        trace::codec::encoded_trace_record_len(record) <= DetailBudget::SidecarRecord.bytes(),
-        "record fits the 64 KiB sidecar budget after enforcement"
-    );
-    assert!(
-        record
-            .events
-            .iter()
-            .any(|event| event.module == "daemon.transport"),
-        "transport frame events are never dropped"
-    );
-}
-
-#[test]
-fn request_sidecar_merges_subsystem_events() {
-    let trace = RequestTraceContext {
-        trace_id: "trace-command-events".to_owned(),
-        request_id: "request-command-events".to_owned(),
-        parent_span_id: None,
-        link_hints: Vec::new(),
-        capture_budget_version: 1,
-    };
-    let facts = RequestTraceFacts {
-        connection_id: "daemon-conn-command-events".to_owned(),
-        accepted_at_unix_ms: now_ms(),
-        listener_kind: "unix",
-        peer_addr: None,
-        local_addr: None,
-        is_tcp: false,
-        request_bytes: 128,
-        read_duration_us: 12,
-        auth_required: false,
-        auth_ok: true,
-        protocol_version: Some(1),
-    };
-    let response = attach_request_sidecar_with_events(
-        json!({"success": true}),
-        Some(&trace),
-        "sandbox.command.exec",
-        &facts,
-        &[
-            RequestTraceEvent::operation(
-                "command",
-                "prepared",
-                json!({"command_id": "cmd-trace", "workspace": "host"}),
-            ),
-            RequestTraceEvent::operation(
-                "workspace.route",
-                "route_selected",
-                json!({"kind": "fast_path", "reason": "unit"}),
-            ),
-        ],
-    );
-    let batch = decode_trace_batch(&trace_sidecar_bytes(&response).expect("trace sidecar bytes"))
-        .expect("trace batch decodes");
-    let record = batch.records.first().expect("request trace record");
-
-    assert!(
-        record.events.iter().any(|event| event.module == "command"
-            && event.name == "prepared"
-            && event.details.value["command_id"] == "cmd-trace"
-            && event.span_id == SpanUid::new(4)),
-        "command event merged into operation span"
-    );
-    let route_events: Vec<_> = record
-        .events
-        .iter()
-        .filter(|event| event.module == "workspace.route" && event.name == "route_selected")
-        .collect();
-    assert_eq!(route_events.len(), 1, "real route suppresses fallback");
-    assert_eq!(route_events[0].details.value["kind"], "fast_path");
-}
-
-#[test]
-fn request_sidecar_stamps_envelope_meta_from_trace_record() {
-    let trace = RequestTraceContext {
+fn request_trace_context() -> RequestTraceContext {
+    RequestTraceContext {
         trace_id: "trace-envelope-meta".to_owned(),
         request_id: "request-envelope-meta".to_owned(),
         parent_span_id: None,
         link_hints: Vec::new(),
         capture_budget_version: 1,
-    };
-    let facts = RequestTraceFacts {
+    }
+}
+
+fn request_trace_facts() -> RequestTraceFacts {
+    RequestTraceFacts {
         connection_id: "daemon-conn-envelope-meta".to_owned(),
         accepted_at_unix_ms: now_ms(),
         listener_kind: "tcp",
@@ -169,17 +51,18 @@ fn request_sidecar_stamps_envelope_meta_from_trace_record() {
         auth_required: true,
         auth_ok: true,
         protocol_version: Some(1),
-    };
-    let response = attach_request_sidecar_with_events(
+    }
+}
+
+#[test]
+fn request_sidecar_stamps_envelope_meta_from_fixed_record() {
+    let trace = request_trace_context();
+    let facts = request_trace_facts();
+    let response = attach_request_sidecar(
         json!({"status": "ok", "result": {"published": true}, "meta": {}}),
         Some(&trace),
         "sandbox.command.exec",
         &facts,
-        &[RequestTraceEvent::operation(
-            "workspace.route",
-            "route_selected",
-            json!({"kind": "fast_path", "reason": "unit"}),
-        )],
     );
 
     assert_eq!(response["status"], "ok");
@@ -191,14 +74,11 @@ fn request_sidecar_stamps_envelope_meta_from_trace_record() {
         "request-envelope-meta"
     );
     assert_eq!(response["meta"]["trace"]["store"], "pending_host_ingest");
-    assert!(
-        response["meta"]["trace"]["event_count"]
-            .as_u64()
-            .is_some_and(|count| count > 0),
-        "{response}"
+    assert_eq!(response["meta"]["workspace_route"]["kind"], "none");
+    assert_eq!(
+        response["meta"]["workspace_route"]["reason"],
+        "no_route_recorded"
     );
-    assert_eq!(response["meta"]["workspace_route"]["kind"], "fast_path");
-    assert_eq!(response["meta"]["workspace_route"]["reason"], "unit");
     assert_eq!(
         response[TRACE_SIDECAR_FIELD]["schema"],
         TRACE_SIDECAR_SCHEMA
@@ -213,174 +93,65 @@ fn request_sidecar_stamps_envelope_meta_from_trace_record() {
 }
 
 #[test]
-fn request_sidecar_promotes_resource_stats_events() {
-    let trace = RequestTraceContext {
-        trace_id: "trace-resource-events".to_owned(),
-        request_id: "request-resource-events".to_owned(),
-        parent_span_id: None,
-        link_hints: Vec::new(),
-        capture_budget_version: 1,
-    };
-    let facts = RequestTraceFacts {
-        connection_id: "daemon-conn-resource-events".to_owned(),
-        accepted_at_unix_ms: now_ms(),
-        listener_kind: "unix",
-        peer_addr: None,
-        local_addr: None,
-        is_tcp: false,
-        request_bytes: 96,
-        read_duration_us: 8,
-        auth_required: false,
-        auth_ok: true,
-        protocol_version: Some(1),
-    };
-    let response = attach_request_sidecar_with_events(
-        json!({"success": true}),
+fn request_sidecar_contains_only_fixed_request_spans() {
+    let trace = request_trace_context();
+    let facts = request_trace_facts();
+    let response = attach_request_sidecar(
+        json!({"status": "ok"}),
         Some(&trace),
         "sandbox.command.exec",
         &facts,
-        &[
-            RequestTraceEvent::operation(
-                "command",
-                "spawned",
-                json!({
-                    "command_id": "cmd-span",
-                    "success": true,
-                    "duration_ms": 3,
-                }),
-            ),
-            RequestTraceEvent::operation(
-                "command",
-                "wait_finished",
-                json!({
-                    "command_id": "cmd-span",
-                    "status": "ok",
-                    "completed": true,
-                    "yield_time_ms": 100,
-                    "duration_ms": 7,
-                }),
-            ),
-            RequestTraceEvent::operation(
-                "resource",
-                "resource_stats",
-                json!({
-                    "meta": {
-                        "stats_kind": "cgroup_process",
-                        "phase": "after",
-                        "source": "command.process.wait",
-                        "source_available": true,
-                        "sampler_duration_us": 17,
-                        "inflight_requests": 2,
-                    },
-                    "cgroup": {
-                        "source_available": true,
-                        "cpu": {"usage_usec": 42},
-                    },
-                    "process": {
-                        "source_available": true,
-                        "gauges": {"rss_bytes": 4096},
-                    },
-                }),
-            ),
-            RequestTraceEvent::operation(
-                "resource",
-                "resource_stats",
-                json!({
-                    "meta": {
-                        "stats_kind": "tree",
-                        "phase": "after",
-                        "source": "resource.command_exec.upperdir",
-                        "source_available": true,
-                        "sampler_duration_us": 0,
-                        "inflight_requests": 2,
-                    },
-                    "tree": {
-                        "bytes": 4096,
-                        "file_count": 1,
-                        "truncated": 1,
-                    },
-                }),
-            ),
-            RequestTraceEvent::operation(
-                "resource",
-                "resource_stats",
-                json!({
-                    "meta": {
-                        "stats_kind": "host",
-                        "phase": "after",
-                        "source": "daemon.process",
-                        "source_available": true,
-                        "sampler_duration_us": 0,
-                        "inflight_requests": 2,
-                    },
-                    "host": {
-                        "process": {
-                            "rss_bytes": 4096,
-                            "max_rss_bytes": 8192,
-                        },
-                    },
-                }),
-            ),
-        ],
     );
-
     let batch = decode_trace_batch(&trace_sidecar_bytes(&response).expect("trace sidecar bytes"))
         .expect("trace batch decodes");
     let record = batch.records.first().expect("request trace record");
-    let spawn_span = record
-        .spans
-        .iter()
-        .find(|span| span.kind == SpanKind::CommandProcessSpawn)
-        .expect("command process spawn span");
-    assert_eq!(spawn_span.span_id, COMMAND_PROCESS_SPAWN_SPAN_ID);
-    assert_eq!(spawn_span.duration_us, 3_000);
-    let wait_span = record
-        .spans
-        .iter()
-        .find(|span| span.kind == SpanKind::CommandProcessWait)
-        .expect("command process wait span");
-    assert_eq!(wait_span.span_id, COMMAND_PROCESS_WAIT_SPAN_ID);
-    assert_eq!(wait_span.duration_us, 7_000);
-    assert_eq!(record.resources.len(), 3);
-    let resource = record
-        .resources
-        .iter()
-        .find(|resource| resource.meta.stats_kind == ResourceStatsKind::CgroupProcess)
-        .expect("cgroup resource stats");
-    assert_eq!(resource.span_id, Some(COMMAND_PROCESS_WAIT_SPAN_ID));
-    assert_eq!(resource.meta.stats_kind, ResourceStatsKind::CgroupProcess);
-    assert_eq!(resource.meta.phase.as_deref(), Some("after"));
-    assert_eq!(resource.meta.source, "command.process.wait");
-    assert!(resource.meta.source_available);
-    assert_eq!(resource.meta.sampler_duration_us, 17);
-    assert_eq!(resource.meta.inflight_requests, 2);
-    assert_eq!(resource.payload.value["cgroup"]["cpu"]["usage_usec"], 42);
+
+    let span_kinds: Vec<_> = record.spans.iter().map(|span| span.kind).collect();
     assert_eq!(
-        resource.payload.value["process"]["gauges"]["rss_bytes"],
-        4096
+        span_kinds,
+        vec![
+            SpanKind::OpRequest,
+            SpanKind::DaemonTransport,
+            SpanKind::Dispatch,
+            SpanKind::Operation,
+        ]
     );
-    assert!(resource.payload.value.get("meta").is_none());
-    let tree = record
-        .resources
-        .iter()
-        .find(|resource| resource.meta.stats_kind == ResourceStatsKind::Tree)
-        .expect("tree resource stats");
-    assert_eq!(tree.span_id, Some(SpanUid::new(4)));
-    assert_eq!(tree.meta.source, "resource.command_exec.upperdir");
-    assert_eq!(tree.payload.value["tree"]["bytes"], 4096);
-    assert_eq!(tree.payload.value["tree"]["truncated"], 1);
-    let host = record
-        .resources
-        .iter()
-        .find(|resource| resource.meta.stats_kind == ResourceStatsKind::Host)
-        .expect("host resource stats");
-    assert_eq!(host.meta.source, "daemon.process");
-    assert_eq!(host.payload.value["host"]["process"]["rss_bytes"], 4096);
-    assert_eq!(host.payload.value["host"]["process"]["max_rss_bytes"], 8192);
+    assert!(record.resources.is_empty());
+    assert!(!record.truncated);
+    assert_eq!(record.dropped_children, 0);
     assert!(
-        record.events.iter().any(|event| event.module == "resource"
-            && event.name == "resource_stats"
-            && event.span_id == COMMAND_PROCESS_WAIT_SPAN_ID),
-        "resource_stats event remains queryable as an event"
+        trace::codec::encoded_trace_record_len(record) <= DetailBudget::SidecarRecord.bytes(),
+        "fixed request record fits the 64 KiB sidecar budget"
     );
+}
+
+#[test]
+fn request_sidecar_records_core_transport_dispatch_and_route_events() {
+    let trace = request_trace_context();
+    let facts = request_trace_facts();
+    let response = attach_request_sidecar(
+        json!({"status": "ok"}),
+        Some(&trace),
+        "sandbox.command.exec",
+        &facts,
+    );
+    let batch = decode_trace_batch(&trace_sidecar_bytes(&response).expect("trace sidecar bytes"))
+        .expect("trace batch decodes");
+    let record = batch.records.first().expect("request trace record");
+
+    assert!(record
+        .events
+        .iter()
+        .any(|event| event.module == "daemon.transport" && event.name == "accepted"));
+    assert!(record
+        .events
+        .iter()
+        .any(|event| event.module == "daemon.dispatch" && event.name == "dispatch_started"));
+    let route = record
+        .events
+        .iter()
+        .find(|event| event.module == "workspace.route" && event.name == "route_selected")
+        .expect("workspace route event");
+    assert_eq!(route.details.value["kind"], "none");
+    assert_eq!(route.details.value["reason"], "no_route_recorded");
 }

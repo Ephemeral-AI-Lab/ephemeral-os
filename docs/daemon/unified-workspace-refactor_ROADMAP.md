@@ -139,7 +139,7 @@ Tasks:
 - [x] Move command route decision logic from op adapters into `WorkspaceRuntime`.
 - [x] Move file route decision logic from op adapters into `WorkspaceRuntime`.
 - [x] Add route context types for host and isolated network modes.
-- [x] Keep op adapters responsible for wire parsing, trace recording, and response shaping.
+- [x] Keep op adapters responsible for wire parsing, route trace metadata, and response shaping.
 - [x] Keep operation crates responsible for concrete file/command behavior after route selection.
 - [x] Add tests for host routes, isolated routes, missing workspace, and active handle routing.
 
@@ -151,7 +151,7 @@ Exit criteria:
 
 Phase 4 is closed for central routing. `WorkspaceRuntime` now returns command
 and file route contexts with stable route trace facts. Command adapters parse
-wire args, record the returned route metadata, and call `CommandOps` with the
+wire args, preserve the returned route metadata, and call `CommandOps` with the
 returned execution target while the runtime-owned mode gate remains held during
 command start. File adapters parse wire args, record the returned route
 metadata, invoke the selected direct or isolated backend, and ask the runtime to
@@ -381,7 +381,7 @@ Lifecycle and routing:
 - [ ] Host skips only dedicated network namespace and isolated-network setup.
 - [ ] Isolated-network mode adds dedicated network namespace, veth, DNS, and netfilter setup.
 - [ ] Command and file route decisions are centralized in `WorkspaceRuntime`.
-- [ ] Adapters parse wire args and record trace events but do not choose host vs isolated behavior directly.
+- [ ] Adapters parse wire args and preserve route trace metadata but do not choose host vs isolated behavior directly.
 
 Namespace and runner:
 

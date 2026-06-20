@@ -16,8 +16,8 @@ codebase has three relevant mechanisms:
    squash the active stack, and resume the command.
 
 The live remount path is implemented and covered by E2E tests, but it is still
-exposed as an isolated-workspace test operation. It is not yet wired into the
-ordinary production auto-squash trigger that runs after every publish.
+exposed as an isolated-workspace test operation. It is not wired into the
+ordinary production publish/finalization path.
 
 ## Current Status
 
@@ -488,10 +488,10 @@ on publish/finalize:
             emit lease_remount_blocked pressure report
 ```
 
-Recommended thresholds:
+Recommended thresholds if production pressure-driven compaction is introduced:
 
-- Keep `auto_squash_max_depth`, but use a lower default than 100.
-- Add `auto_squash_max_unsquashed_bytes`.
+- Add a maximum active stack depth.
+- Add a maximum unsquashed-byte threshold.
 - Add a large-rewrite trigger for individual large layer payloads.
 - Track and report lease age, pinned bytes, and parent-prefix bytes.
 
@@ -506,7 +506,7 @@ Required production invariants:
 
 ## Remaining Risks
 
-- The production auto-squash path is not wired to live remount yet.
+- Production publish/finalization does not trigger live remount compaction yet.
 - Live remount currently depends on Linux `/proc`, process groups, and overlay
   mountinfo behavior.
 - The remount-safe contract is explicit opt-in. Commands not marked

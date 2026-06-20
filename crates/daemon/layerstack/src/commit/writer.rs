@@ -6,7 +6,7 @@ use serde_json::json;
 use crate::model::LayerChange;
 
 use super::error::CommitError;
-use super::model::{ChangesetResult, CommitOptions, OccTraceEvent};
+use super::model::{ChangesetResult, OccTraceEvent};
 use super::route::{PublishDecision, Route};
 use super::worker::{CommitQueue, CommitTransaction, PreparedChangeset};
 
@@ -15,12 +15,8 @@ pub(crate) struct CommitWriter {
 }
 
 impl CommitWriter {
-    pub(crate) fn with_options(root: PathBuf, options: CommitOptions) -> Result<Self, CommitError> {
-        let options = CommitOptions::new(options.auto_squash_max_depth);
-        let transaction = CommitTransaction {
-            root: root.clone(),
-            options,
-        };
+    pub(crate) fn new(root: PathBuf) -> Result<Self, CommitError> {
+        let transaction = CommitTransaction { root: root.clone() };
         let mut commit_queue = CommitQueue::new(transaction);
         commit_queue.start()?;
         Ok(Self { commit_queue })

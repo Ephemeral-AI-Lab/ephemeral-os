@@ -2,8 +2,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::OnceLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use serde_json::Value;
-use trace::{BootId, SpanUid};
+use trace::BootId;
 
 static CONNECTION_SEQ: AtomicU64 = AtomicU64::new(1);
 static DAEMON_BOOT_ID: OnceLock<BootId> = OnceLock::new();
@@ -25,30 +24,6 @@ pub(crate) struct RequestTraceFacts {
     pub auth_required: bool,
     pub auth_ok: bool,
     pub protocol_version: Option<i64>,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct RequestTraceEvent {
-    pub(crate) span_id: SpanUid,
-    pub(crate) name: String,
-    pub(crate) module: String,
-    pub(crate) details: Value,
-}
-
-impl RequestTraceEvent {
-    #[allow(dead_code)]
-    pub(crate) fn operation(
-        module: impl Into<String>,
-        name: impl Into<String>,
-        details: Value,
-    ) -> Self {
-        Self {
-            span_id: SpanUid::new(4),
-            name: name.into(),
-            module: module.into(),
-            details,
-        }
-    }
 }
 
 pub(crate) fn next_connection_id() -> String {

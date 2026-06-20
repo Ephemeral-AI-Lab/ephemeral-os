@@ -88,28 +88,6 @@ pub struct ChangesetResult {
     pub events: Vec<OccTraceEvent>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct CommitOptions {
-    pub auto_squash_max_depth: usize,
-}
-
-impl Default for CommitOptions {
-    fn default() -> Self {
-        Self {
-            auto_squash_max_depth: crate::AUTO_SQUASH_MAX_DEPTH,
-        }
-    }
-}
-
-impl CommitOptions {
-    #[must_use]
-    pub fn new(auto_squash_max_depth: usize) -> Self {
-        Self {
-            auto_squash_max_depth: auto_squash_max_depth.max(1),
-        }
-    }
-}
-
 impl ChangesetResult {
     #[must_use]
     pub fn success(&self) -> bool {

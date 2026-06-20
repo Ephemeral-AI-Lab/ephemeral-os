@@ -453,7 +453,7 @@ fn command_exec_artifact_directory_failure_destroys_one_shot_without_spawn() {
         error,
         CommandServiceError::CommandIo { command_id, error }
             if command_id == CommandId("cmd_1".to_owned())
-                && error.contains("prepare command artifact directory")
+                && error.contains("command_artifact_directory")
     ));
     assert!(launch_driver.spawn_observations().is_empty());
     assert_eq!(

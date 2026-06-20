@@ -2,6 +2,7 @@ use command::process::{
     CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec,
 };
 use command::yield_wait_loop::{wait_for_yield, WaitOutcome};
+use workspace::WorkspaceEntry;
 
 use crate::command::{CommandId, CommandServiceError};
 
@@ -9,7 +10,8 @@ pub trait CommandLaunchDriver: Send + Sync {
     fn spawn(
         &self,
         spec: CommandProcessSpec,
-        parts: CommandProcessSpawn<'_>,
+        workspace_entry: WorkspaceEntry,
+        config: &command::CommandConfig,
     ) -> Result<CommandProcess, CommandServiceError>;
 
     fn wait_for_initial_yield(
@@ -28,12 +30,32 @@ impl CommandLaunchDriver for RealCommandLaunchDriver {
     fn spawn(
         &self,
         spec: CommandProcessSpec,
-        parts: CommandProcessSpawn<'_>,
+        workspace_entry: WorkspaceEntry,
+        config: &command::CommandConfig,
     ) -> Result<CommandProcess, CommandServiceError> {
         let command_id = CommandId(spec.id.clone());
-        CommandProcess::spawn(spec, parts).map_err(|error| CommandServiceError::CommandIo {
-            command_id,
-            error: error.to_string(),
+        let parts =
+            CommandProcessSpawn::prepare(&spec.id, workspace_entry, config).map_err(|error| {
+                CommandServiceError::CommandIo {
+                    command_id: command_id.clone(),
+                    error: error.to_string(),
+                }
+            })?;
+        let cleanup_parts = parts.clone();
+        CommandProcess::spawn(spec, parts).map_err(|error| {
+            let command_error = CommandServiceError::CommandIo {
+                command_id: command_id.clone(),
+                error: error.to_string(),
+            };
+            match cleanup_parts.cleanup_artifacts_after_start_failure() {
+                Ok(()) => command_error,
+                Err(cleanup_error) => CommandServiceError::CommandArtifactCleanupFailed {
+                    command_id,
+                    command_error: Box::new(command_error),
+                    artifact_dir: cleanup_parts.artifact_dir(),
+                    cleanup_error: cleanup_error.to_string(),
+                },
+            }
         })
     }
 

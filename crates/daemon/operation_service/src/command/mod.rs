@@ -32,4 +32,4 @@ pub use remount::{
     CommandRemountInspection, CommandRemountQuiesce, ProcessGroupController,
     RemountCancellationToken, RemountSwitchState,
 };
-pub use service::{CommandFinalizationOptions, CommandOperationService};
+pub use service::CommandOperationService;

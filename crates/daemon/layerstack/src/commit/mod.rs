@@ -7,6 +7,6 @@ pub(crate) mod worker;
 mod writer;
 
 pub use error::CommitError;
-pub use model::{ChangesetResult, CommitOptions, CommitStatus, OccTraceEvent};
+pub use model::{ChangesetResult, CommitStatus, OccTraceEvent};
 
 pub(crate) use writer::CommitWriter;

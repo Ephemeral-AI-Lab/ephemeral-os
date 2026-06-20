@@ -6,11 +6,6 @@ use crate::command::{
 };
 use crate::workspace_session::WorkspaceSessionService;
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct CommandFinalizationOptions {
-    pub one_shot_publish: layerstack::CommitOptions,
-}
-
 pub struct CommandOperationService {
     workspace: Arc<WorkspaceSessionService>,
     config: ::command::CommandConfig,
@@ -18,27 +13,16 @@ pub struct CommandOperationService {
     launch_driver: Arc<dyn CommandLaunchDriver>,
     remount_controller: Arc<dyn ProcessGroupController>,
     remount_admission: Mutex<()>,
-    finalization_options: CommandFinalizationOptions,
 }
 
 impl CommandOperationService {
     #[must_use]
     pub fn new(workspace: Arc<WorkspaceSessionService>, config: ::command::CommandConfig) -> Self {
-        Self::with_finalization_options(workspace, config, CommandFinalizationOptions::default())
-    }
-
-    #[must_use]
-    pub fn with_finalization_options(
-        workspace: Arc<WorkspaceSessionService>,
-        config: ::command::CommandConfig,
-        finalization_options: CommandFinalizationOptions,
-    ) -> Self {
         Self::from_parts(
             workspace,
             config,
             Arc::new(RealCommandLaunchDriver),
             Arc::new(ProcProcessGroupController),
-            finalization_options,
         )
     }
 
@@ -54,7 +38,6 @@ impl CommandOperationService {
             config,
             launch_driver,
             Arc::new(ProcProcessGroupController),
-            CommandFinalizationOptions::default(),
         )
     }
 
@@ -66,13 +49,7 @@ impl CommandOperationService {
         launch_driver: Arc<dyn CommandLaunchDriver>,
         remount_controller: Arc<dyn ProcessGroupController>,
     ) -> Self {
-        Self::from_parts(
-            workspace,
-            config,
-            launch_driver,
-            remount_controller,
-            CommandFinalizationOptions::default(),
-        )
+        Self::from_parts(workspace, config, launch_driver, remount_controller)
     }
 
     fn from_parts(
@@ -80,7 +57,6 @@ impl CommandOperationService {
         config: ::command::CommandConfig,
         launch_driver: Arc<dyn CommandLaunchDriver>,
         remount_controller: Arc<dyn ProcessGroupController>,
-        finalization_options: CommandFinalizationOptions,
     ) -> Self {
         Self {
             workspace,
@@ -89,13 +65,7 @@ impl CommandOperationService {
             launch_driver,
             remount_controller,
             remount_admission: Mutex::new(()),
-            finalization_options,
         }
-    }
-
-    #[must_use]
-    pub fn finalization_options(&self) -> &CommandFinalizationOptions {
-        &self.finalization_options
     }
 
     #[must_use]

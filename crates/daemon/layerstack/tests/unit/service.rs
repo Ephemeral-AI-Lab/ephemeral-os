@@ -4,8 +4,7 @@ use crate::commit::CommitWriter;
 use crate::model::LayerChange;
 use crate::test_fixture::{lp, unique_suffix, Fixture, TestResult};
 use crate::{
-    process_state_test_lock, reset_process_state_for_tests, service, CommitOptions, LayerStack,
-    MergedView,
+    process_state_test_lock, reset_process_state_for_tests, service, LayerStack, MergedView,
 };
 
 use super::{
@@ -14,10 +13,7 @@ use super::{
 };
 
 fn root_service(root: &Path) -> TestResult<RootService> {
-    Ok(std::sync::Arc::new(CommitWriter::with_options(
-        root.to_path_buf(),
-        CommitOptions::default(),
-    )?))
+    Ok(std::sync::Arc::new(CommitWriter::new(root.to_path_buf())?))
 }
 
 fn service_cache_contains_root_for_tests(root: &Path) -> bool {
@@ -93,7 +89,6 @@ fn commit_direct_trace_events_include_worker_handoff_and_batch_facts() -> TestRe
             path: lp("README.md")?,
             content: b"# updated\n".to_vec(),
         }],
-        options: CommitOptions::default(),
     })?;
 
     assert!(result.success());
@@ -146,7 +141,6 @@ fn process_state_reset_clears_service_cache_and_lease_registry() -> TestResult {
             path: lp("README.md")?,
             content: b"# reset\n".to_vec(),
         }],
-        options: CommitOptions::default(),
     })?;
     assert!(result.success(), "commit creates a cached per-root writer");
     assert!(service_cache_contains_root_for_tests(&fixture.root));

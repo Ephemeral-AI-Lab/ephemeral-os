@@ -19,7 +19,7 @@ mod whiteout;
 #[path = "../src/workspace_base/mod.rs"]
 mod workspace_base;
 
-pub(crate) use commit::{ChangesetResult, CommitError, CommitOptions, CommitStatus};
+pub(crate) use commit::{ChangesetResult, CommitError, CommitStatus};
 pub use error::LayerStackError;
 pub use model::{
     aggregate_layer_changes, layer_digest, manifest_root_hash, CasError, LayerChange, LayerPath,
@@ -35,7 +35,6 @@ pub use workspace_base::{
     WorkspaceBinding, WORKSPACE_BINDING_FILE,
 };
 
-pub(crate) const AUTO_SQUASH_MAX_DEPTH: usize = 100;
 pub(crate) const LAYERS_DIR: &str = "layers";
 pub(crate) const STAGING_DIR: &str = "staging";
 pub const ACTIVE_MANIFEST_FILE: &str = "manifest.json";

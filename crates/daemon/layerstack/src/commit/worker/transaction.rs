@@ -6,18 +6,16 @@ use serde_json::json;
 
 use crate::fs::resolve_layer_path;
 use crate::model::{LayerChange, LayerPath, Manifest};
-use crate::{CommitOptions, LayerStack, MergedView};
+use crate::{LayerStack, MergedView};
 
 use super::super::model::{ChangesetResult, CommitStatus, FileResult, OccTraceEvent};
 use super::super::route::{hash_current, PublishDecision, Route};
 use super::queue::{PreparedChangeset, PublishConflict};
-use crate::stack::squash::{run_auto_squash, AutoSquashTrace};
 use trace::usize_to_f64_saturating;
 
 #[derive(Clone)]
 pub(crate) struct CommitTransaction {
     pub(crate) root: PathBuf,
-    pub(crate) options: CommitOptions,
 }
 
 impl CommitTransaction {
@@ -63,7 +61,6 @@ impl CommitTransaction {
         match stack.publish_layer(&publishable_changes) {
             Ok(manifest) => {
                 let publish_s = publish_start.elapsed().as_secs_f64();
-                let auto_squash = run_auto_squash(&mut stack, self.options.auto_squash_max_depth);
                 Ok(committed_changeset_result(
                     combined,
                     validations,
@@ -75,7 +72,6 @@ impl CommitTransaction {
                     },
                     validate_s,
                     publish_s,
-                    auto_squash,
                     total_start,
                 ))
             }
@@ -191,17 +187,15 @@ fn committed_changeset_result(
     manifest_context: CommittedManifestContext<'_>,
     validate_s: f64,
     publish_s: f64,
-    auto_squash: AutoSquashTrace,
     total_start: Instant,
 ) -> ChangesetResult {
-    let mut timings = commit_timings(
+    let timings = commit_timings(
         combined,
         validate_s,
         publish_s,
         total_start.elapsed().as_secs_f64(),
     );
-    timings.extend(auto_squash.timings);
-    let mut events = vec![
+    let events = vec![
         OccTraceEvent::new(
             "layer_stack",
             "manifest_validated",
@@ -229,7 +223,6 @@ fn committed_changeset_result(
             }),
         ),
     ];
-    events.extend(auto_squash.events);
     ChangesetResult {
         files: validations
             .into_iter()

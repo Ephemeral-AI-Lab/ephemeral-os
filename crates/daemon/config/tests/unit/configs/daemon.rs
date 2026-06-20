@@ -55,9 +55,6 @@ fn config_validation_rejects_invalid_daemon_values() {
         "daemon.commands.ignored_capture.max_metadata_capture_duration_ms",
     );
 
-    let mut cfg = prd_config();
-    cfg.layer_stack.auto_squash_max_depth = 0;
-    assert_invalid(cfg, "daemon.layer_stack.auto_squash_max_depth");
 }
 
 fn prd_config() -> DaemonConfig {

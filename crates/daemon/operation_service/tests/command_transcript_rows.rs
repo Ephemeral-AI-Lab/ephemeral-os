@@ -12,7 +12,7 @@ use operation_service::command::{
     CommandCallContext, CommandId, CommandLaunchDriver, CommandServiceError, CommandStatus,
     CommandStream, CommandTranscriptRow, ExecCommandInput, PollCommandInput, ReadCommandLinesInput,
 };
-use workspace::{CallerId, WorkspaceProfile};
+use workspace::{CallerId, WorkspaceEntry, WorkspaceProfile};
 
 use support::{
     build_services_with_launch_driver, create_request, success_exit, workspace_handle,
@@ -68,8 +68,16 @@ impl CommandLaunchDriver for TranscriptLaunchDriver {
     fn spawn(
         &self,
         spec: CommandProcessSpec,
-        parts: CommandProcessSpawn<'_>,
+        workspace_entry: WorkspaceEntry,
+        config: &command::CommandConfig,
     ) -> Result<CommandProcess, CommandServiceError> {
+        let parts =
+            CommandProcessSpawn::prepare(&spec.id, workspace_entry, config).map_err(|error| {
+                CommandServiceError::CommandIo {
+                    command_id: CommandId(spec.id.clone()),
+                    error: error.to_string(),
+                }
+            })?;
         if let Some(parent) = parts.transcript_path.parent() {
             std::fs::create_dir_all(parent).map_err(|error| CommandServiceError::CommandIo {
                 command_id: CommandId(spec.id.clone()),
@@ -82,7 +90,12 @@ impl CommandLaunchDriver for TranscriptLaunchDriver {
                 error: error.to_string(),
             }
         })?;
-        Ok(CommandProcess::inactive_for_test(spec))
+        Ok(CommandProcess::inactive_with_artifacts_for_test(
+            spec,
+            parts.output_path,
+            parts.final_path,
+            parts.transcript_path,
+        ))
     }
 
     fn wait_for_initial_yield(
@@ -104,9 +117,22 @@ impl CommandLaunchDriver for MissingTranscriptLaunchDriver {
     fn spawn(
         &self,
         spec: CommandProcessSpec,
-        _parts: CommandProcessSpawn<'_>,
+        workspace_entry: WorkspaceEntry,
+        config: &command::CommandConfig,
     ) -> Result<CommandProcess, CommandServiceError> {
-        Ok(CommandProcess::inactive_for_test(spec))
+        let parts =
+            CommandProcessSpawn::prepare(&spec.id, workspace_entry, config).map_err(|error| {
+                CommandServiceError::CommandIo {
+                    command_id: CommandId(spec.id.clone()),
+                    error: error.to_string(),
+                }
+            })?;
+        Ok(CommandProcess::inactive_with_artifacts_for_test(
+            spec,
+            parts.output_path,
+            parts.final_path,
+            parts.transcript_path,
+        ))
     }
 
     fn wait_for_initial_yield(

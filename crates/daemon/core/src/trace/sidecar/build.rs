@@ -6,14 +6,8 @@ use trace::{
 };
 
 use super::budget::enforce_sidecar_record_budget;
-use super::events::{
-    child_spans_from_request_events, op_span_name, op_verb, request_event_span_id,
-};
-use super::resources::resource_stats_from_event;
-use super::{
-    daemon_boot_id, now_ms, stamp_pending_envelope_meta, RequestTraceContext, RequestTraceEvent,
-    RequestTraceFacts,
-};
+use super::{daemon_boot_id, now_ms, stamp_pending_envelope_meta, RequestTraceContext};
+use crate::trace::RequestTraceFacts;
 
 pub(crate) fn attach_request_sidecar(
     response: Value,
@@ -21,18 +15,7 @@ pub(crate) fn attach_request_sidecar(
     op: &str,
     facts: &RequestTraceFacts,
 ) -> Value {
-    attach_request_sidecar_inner(response, trace, op, facts, &[])
-}
-
-#[allow(dead_code)]
-pub(crate) fn attach_request_sidecar_with_events(
-    response: Value,
-    trace: Option<&RequestTraceContext>,
-    op: &str,
-    facts: &RequestTraceFacts,
-    request_events: &[RequestTraceEvent],
-) -> Value {
-    attach_request_sidecar_inner(response, trace, op, facts, request_events)
+    attach_request_sidecar_inner(response, trace, op, facts)
 }
 
 fn attach_request_sidecar_inner(
@@ -40,7 +23,6 @@ fn attach_request_sidecar_inner(
     trace: Option<&RequestTraceContext>,
     op: &str,
     facts: &RequestTraceFacts,
-    request_events: &[RequestTraceEvent],
 ) -> Value {
     let response_bytes = serde_json::to_vec(&response).map_or(0, |bytes| bytes.len());
     let Some(object) = response.as_object_mut() else {
@@ -108,7 +90,6 @@ fn attach_request_sidecar_inner(
     );
     operation.started_at_unix_ms = now;
     operation.finished_at_unix_ms = now;
-    let child_spans = child_spans_from_request_events(request_events, now);
 
     let mut events = vec![
         EventRecord::new(
@@ -185,25 +166,12 @@ fn attach_request_sidecar_inner(
             }),
         ),
     ];
-    if !request_events
-        .iter()
-        .any(|event| event.module == "workspace.route" && event.name == "route_selected")
-    {
-        events.push(EventRecord::new(
-            SpanUid::new(4),
-            "route_selected",
-            "workspace.route",
-            json!({"kind": "none", "reason": "no_route_recorded"}),
-        ));
-    }
-    events.extend(request_events.iter().map(|event| {
-        EventRecord::new(
-            request_event_span_id(event),
-            event.name.clone(),
-            event.module.clone(),
-            event.details.clone(),
-        )
-    }));
+    events.push(EventRecord::new(
+        SpanUid::new(4),
+        "route_selected",
+        "workspace.route",
+        json!({"kind": "none", "reason": "no_route_recorded"}),
+    ));
     events.extend([
         EventRecord::new(
             SpanUid::new(3),
@@ -239,11 +207,6 @@ fn attach_request_sidecar_inner(
     record.started_at_unix_ms = started_at;
     record.finished_at_unix_ms = now;
     record.spans = vec![root, transport, dispatch, operation];
-    record.spans.extend(child_spans);
-    record.resources = request_events
-        .iter()
-        .filter_map(resource_stats_from_event)
-        .collect();
     record.events = events;
     enforce_sidecar_record_budget(&mut record);
     stamp_pending_envelope_meta(object, &record, op, duration_us);
@@ -260,4 +223,12 @@ fn attach_request_sidecar_inner(
         }),
     );
     response
+}
+
+fn op_verb(op: &str) -> &str {
+    op.rsplit('.').next().unwrap_or("unknown")
+}
+
+fn op_span_name(op: &str) -> String {
+    format!("op.{}", op_verb(op))
 }

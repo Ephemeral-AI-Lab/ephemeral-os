@@ -3,7 +3,7 @@ use std::path::Path;
 
 use crate::model::LayerChange;
 use crate::test_fixture::{lp, Fixture, TestResult};
-use crate::{service, CommitOptions, CommitStatus, LayerStack};
+use crate::{service, CommitStatus, LayerStack};
 
 use crate::commit::route::model::{
     COMMAND_SCRATCH_PATH_DROP_REASON, DAEMON_CONTROL_PATH_DROP_REASON,
@@ -90,28 +90,11 @@ fn publish_changes_to_layerstack(
     snapshot_layer_paths: &[std::path::PathBuf],
     changes: &[LayerChange],
 ) -> Result<crate::ChangesetResult, crate::CommitError> {
-    publish_changes_to_layerstack_with_options(
-        root,
-        snapshot_manifest_version,
-        snapshot_layer_paths,
-        changes,
-        CommitOptions::default(),
-    )
-}
-
-fn publish_changes_to_layerstack_with_options(
-    root: &Path,
-    snapshot_manifest_version: i64,
-    snapshot_layer_paths: &[std::path::PathBuf],
-    changes: &[LayerChange],
-    options: CommitOptions,
-) -> Result<crate::ChangesetResult, crate::CommitError> {
     service::publish_changes_to_layerstack(service::PublishChangesRequest {
         root,
         snapshot_manifest_version,
         snapshot_layer_paths,
         changes,
-        options,
     })
 }
 

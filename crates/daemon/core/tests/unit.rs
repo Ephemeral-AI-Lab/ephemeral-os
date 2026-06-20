@@ -21,7 +21,7 @@ pub(crate) use invocation_registry::{
     InFlightRegistry, InvocationCancelResult, DEFAULT_REAPER_INTERVAL_S, DEFAULT_TTL_S,
 };
 pub(crate) use serde_json::Value;
-pub(crate) use trace::sidecar::{build, events};
+pub(crate) use trace::sidecar::build;
 pub(crate) use transport::server;
 pub(crate) use wire::{decode, encode, ErrorKind, Request, WireMessage};
 

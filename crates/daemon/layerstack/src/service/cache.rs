@@ -2,7 +2,7 @@ use std::collections::{HashMap, VecDeque};
 use std::path::Path;
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 
-use crate::commit::{CommitError, CommitOptions, CommitWriter};
+use crate::commit::{CommitError, CommitWriter};
 
 pub(crate) type RootService = Arc<CommitWriter>;
 
@@ -67,19 +67,15 @@ pub(crate) fn reset_service_cache_for_tests() {
     *cache = ServiceCache::default();
 }
 
-pub(crate) fn service_for_root(
-    root: &Path,
-    options: CommitOptions,
-) -> Result<RootService, CommitError> {
-    let options = CommitOptions::new(options.auto_squash_max_depth);
-    let key = service_cache_key(root, options);
+pub(crate) fn service_for_root(root: &Path) -> Result<RootService, CommitError> {
+    let key = service_cache_key(root);
     {
         let mut cache = lock_services()?;
         if let Some(service) = cache.get(&key) {
             return Ok(service);
         }
     }
-    let service = Arc::new(CommitWriter::with_options(root.to_path_buf(), options)?);
+    let service = Arc::new(CommitWriter::new(root.to_path_buf())?);
     let mut cache = lock_services()?;
     Ok(cache.insert_or_get(key, service))
 }
@@ -88,10 +84,6 @@ pub(crate) fn normalize_root_key(root: &Path) -> String {
     crate::fs::canonical_key(root)
 }
 
-fn service_cache_key(root: &Path, options: CommitOptions) -> String {
-    format!(
-        "{}|auto_squash_max_depth={}",
-        normalize_root_key(root),
-        options.auto_squash_max_depth
-    )
+fn service_cache_key(root: &Path) -> String {
+    normalize_root_key(root)
 }

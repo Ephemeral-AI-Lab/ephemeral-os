@@ -1,11 +1,8 @@
-use std::fs;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, MutexGuard};
 use std::time::Instant;
 
-use command::process::{
-    CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec,
-};
+use command::process::{CommandProcess, CommandProcessExit, CommandProcessSpec};
 use command::yield_wait_loop::WaitOutcome;
 
 use crate::command::{
@@ -14,7 +11,8 @@ use crate::command::{
     CommandTranscriptStore, CommandYield, ExecCommandInput, FinalizationState,
 };
 use crate::workspace_crate::{
-    CreateWorkspaceRequest, DestroyWorkspaceRequest, WorkspaceEntry, WorkspaceId, WorkspaceProfile,
+    CallerId, CreateWorkspaceRequest, DestroyWorkspaceRequest, WorkspaceEntry, WorkspaceId,
+    WorkspaceProfile,
 };
 use crate::workspace_session::WorkspaceSessionHandler;
 
@@ -37,134 +35,59 @@ impl CommandOperationService {
             });
         }
 
-        let mode = match input.workspace_session_id.clone() {
-            Some(workspace_session_id) => {
-                let handler = self
-                    .workspace()
-                    .resolve_session(workspace_session_id, context.caller_id.clone())?;
-                validate_workspace_root(&input, &handler)?;
-                ExecCommandMode::Session {
-                    handler: Box::new(handler),
-                }
-            }
-            None => ExecCommandMode::OneShot,
-        };
-
-        self.exec_resolved_command(input, mode, context)
+        self.exec_validated_command(input, context)
     }
 
-    fn exec_resolved_command(
+    fn exec_validated_command(
         &self,
         input: ExecCommandInput,
-        mode: ExecCommandMode,
         context: CommandCallContext,
     ) -> Result<CommandYield, CommandServiceError> {
-        let is_session_command = mode.is_session();
-        let handler = match mode {
-            ExecCommandMode::Session { handler } => *handler,
-            ExecCommandMode::OneShot => {
-                self.workspace()
-                    .create_workspace_session(CreateWorkspaceRequest {
-                        caller_id: context.caller_id.clone(),
-                        layer_stack_root: input.workspace_root.clone(),
-                        workspace_root: input.workspace_root.clone(),
-                        profile: WorkspaceProfile::HostCompatible,
-                    })?
-            }
-        };
-        let admission_guard = if is_session_command {
-            Some(self.lock_remount_admission())
-        } else {
-            None
-        };
-        if is_session_command
-            && self
-                .workspace()
-                .is_remount_pending(&handler.workspace_session_id)
-        {
-            return Err(CommandServiceError::WorkspaceSessionRemountPending {
-                workspace_session_id: handler.workspace_session_id.clone(),
-            });
-        }
+        let workspace = self.resolve_exec_workspace(&input, &context)?;
+        let admission_guard = self.command_admission_guard(&workspace)?;
         let command_id = self.process_store().allocate_command_id();
         let reservation = match self.process_store().try_reserve() {
             Ok(reservation) => reservation,
             Err(error) => {
-                return Err(self.cleanup_start_failure(
+                return Err(self.cleanup_workspace_start_failure(
                     &command_id,
-                    is_session_command,
-                    handler,
+                    workspace,
                     None,
                     error,
                 ));
             }
         };
-        let workspace_session_id = handler.workspace_session_id.clone();
-        let workspace_root = handler.handle.workspace_root.clone();
-        let finalize_policy = finalize_policy(is_session_command, &workspace_session_id);
-        let launch = match self.prepare_launch_context(&handler, &command_id) {
-            Ok(launch) => launch,
+        let started = match self.start_command_process(&command_id, &input, &workspace) {
+            Ok(started) => started,
             Err(error) => {
-                return Err(self.cleanup_start_failure(
+                return Err(self.cleanup_workspace_start_failure(
                     &command_id,
-                    is_session_command,
-                    handler,
+                    workspace,
                     None,
-                    error,
-                ));
-            }
-        };
-        let process = match self.spawn_command_process(&command_id, &input, &launch) {
-            Ok(process) => process,
-            Err(error) => {
-                return Err(self.cleanup_start_failure(
-                    &command_id,
-                    is_session_command,
-                    handler,
-                    Some(&launch),
                     error,
                 ));
             }
         };
 
         if self.process_store().active(&command_id).is_some() {
-            process.cancel_process();
-            return Err(self.cleanup_start_failure(
+            started.process.cancel_process();
+            return Err(self.cleanup_workspace_start_failure(
                 &command_id,
-                is_session_command,
-                handler,
-                Some(&launch),
+                workspace,
+                Some(&started.process),
                 CommandServiceError::DuplicateCommandId {
                     command_id: command_id.clone(),
                 },
             ));
         }
-        let process = Arc::new(process);
-        let process_for_rollback = Arc::clone(&process);
-        let record = ActiveCommandProcess {
-            command_id: command_id.clone(),
-            caller_id: context.caller_id.clone(),
-            workspace_session_id,
-            workspace_root,
-            process,
-            transcript: CommandTranscriptStore {
-                transcript_path: Some(launch.transcript_path.clone()),
-            },
-            finalize_policy,
-            lifecycle_state: CommandLifecycleState::Running,
-            cancellation: CancellationState::None,
-            remount_cancellation: None,
-            remount_switch_state: None,
-            finalization: FinalizationState::NotStarted,
-            started_at: Instant::now(),
-        };
+        let (record, process_for_rollback) =
+            started.into_active_record(command_id.clone(), context.caller_id.clone(), &workspace);
         if let Err(error) = self.process_store().insert_active(reservation, record) {
             process_for_rollback.cancel_process();
-            return Err(self.cleanup_start_failure(
+            return Err(self.cleanup_workspace_start_failure(
                 &command_id,
-                is_session_command,
-                handler,
-                Some(&launch),
+                workspace,
+                Some(process_for_rollback.as_ref()),
                 error,
             ));
         }
@@ -173,33 +96,61 @@ impl CommandOperationService {
         self.initial_exec_yield(command_id, input.yield_time_ms)
     }
 
-    fn prepare_launch_context(
+    fn resolve_exec_workspace(
         &self,
-        handler: &WorkspaceSessionHandler,
-        command_id: &CommandId,
-    ) -> Result<PreparedCommandLaunch, CommandServiceError> {
-        let workspace_entry =
-            handler
-                .handle
-                .entry()
-                .map_err(|error| CommandServiceError::InvalidCommand {
-                    message: error.to_string(),
-                })?;
-        let command_dir = self.config().scratch_root.join(&command_id.0);
-        fs::create_dir_all(&command_dir).map_err(|error| CommandServiceError::CommandIo {
-            command_id: command_id.clone(),
-            error: format!("prepare command artifact directory: {error}"),
-        })?;
-        Ok(PreparedCommandLaunch::new(command_dir, workspace_entry))
+        input: &ExecCommandInput,
+        context: &CommandCallContext,
+    ) -> Result<ResolvedExecWorkspace, CommandServiceError> {
+        match input.workspace_session_id.clone() {
+            Some(workspace_session_id) => {
+                let handler = self
+                    .workspace()
+                    .resolve_session(workspace_session_id, context.caller_id.clone())?;
+                validate_workspace_root(input, &handler)?;
+                Ok(ResolvedExecWorkspace::new(handler, true))
+            }
+            None => {
+                let handler =
+                    self.workspace()
+                        .create_workspace_session(CreateWorkspaceRequest {
+                            caller_id: context.caller_id.clone(),
+                            layer_stack_root: input.workspace_root.clone(),
+                            workspace_root: input.workspace_root.clone(),
+                            profile: WorkspaceProfile::HostCompatible,
+                        })?;
+                Ok(ResolvedExecWorkspace::new(handler, false))
+            }
+        }
     }
 
-    fn spawn_command_process(
+    fn command_admission_guard(
+        &self,
+        workspace: &ResolvedExecWorkspace,
+    ) -> Result<Option<MutexGuard<'_, ()>>, CommandServiceError> {
+        let guard = if workspace.is_session_command {
+            Some(self.lock_remount_admission())
+        } else {
+            None
+        };
+        if workspace.is_session_command
+            && self
+                .workspace()
+                .is_remount_pending(&workspace.workspace_session_id)
+        {
+            return Err(CommandServiceError::WorkspaceSessionRemountPending {
+                workspace_session_id: workspace.workspace_session_id.clone(),
+            });
+        }
+        Ok(guard)
+    }
+
+    fn start_command_process(
         &self,
         command_id: &CommandId,
         input: &ExecCommandInput,
-        launch: &PreparedCommandLaunch,
-    ) -> Result<CommandProcess, CommandServiceError> {
-        self.launch_driver().spawn(
+        workspace: &ResolvedExecWorkspace,
+    ) -> Result<StartedCommand, CommandServiceError> {
+        let process = self.launch_driver().spawn(
             CommandProcessSpec {
                 id: command_id.0.clone(),
                 caller_id: input.caller_id.0.clone(),
@@ -207,16 +158,10 @@ impl CommandOperationService {
                 cwd: input.cwd.clone(),
                 timeout_seconds: input.timeout_seconds,
             },
-            CommandProcessSpawn {
-                workspace_entry: launch.workspace_entry.clone(),
-                request_path: launch.request_path.clone(),
-                output_path: launch.output_path.clone(),
-                final_path: launch.final_path.clone(),
-                transcript_path: launch.transcript_path.clone(),
-                transcript_timestamp_timezone: &self.config().transcript_timestamp_timezone,
-                output_drain_grace_ms: self.config().output_drain_grace_ms,
-            },
-        )
+            workspace.entry()?,
+            self.config(),
+        )?;
+        Ok(StartedCommand::new(process))
     }
 
     fn initial_exec_yield(
@@ -273,23 +218,22 @@ impl CommandOperationService {
         })
     }
 
-    fn cleanup_start_failure(
+    fn cleanup_workspace_start_failure(
         &self,
         command_id: &CommandId,
-        is_session_command: bool,
-        handler: WorkspaceSessionHandler,
-        launch: Option<&PreparedCommandLaunch>,
+        workspace: ResolvedExecWorkspace,
+        process: Option<&CommandProcess>,
         error: CommandServiceError,
     ) -> CommandServiceError {
-        let error = if let Some(launch) = launch {
-            launch.cleanup_artifacts_after_start_failure(command_id, error)
+        let error = if let Some(process) = process {
+            cleanup_process_artifacts_after_start_failure(command_id, process, error)
         } else {
             error
         };
         self.cleanup_one_shot_workspace_after_start_failure(
             command_id,
-            is_session_command,
-            handler,
+            workspace.is_session_command,
+            workspace.handler,
             error,
         )
     }
@@ -319,55 +263,78 @@ impl CommandOperationService {
     }
 }
 
-enum ExecCommandMode {
-    Session {
-        handler: Box<WorkspaceSessionHandler>,
-    },
-    OneShot,
+struct ResolvedExecWorkspace {
+    handler: WorkspaceSessionHandler,
+    is_session_command: bool,
+    workspace_session_id: WorkspaceId,
+    workspace_root: PathBuf,
+    finalize_policy: CommandFinalizePolicy,
 }
 
-impl ExecCommandMode {
-    fn is_session(&self) -> bool {
-        matches!(self, Self::Session { .. })
-    }
-}
-
-struct PreparedCommandLaunch {
-    command_dir: PathBuf,
-    workspace_entry: WorkspaceEntry,
-    request_path: PathBuf,
-    output_path: PathBuf,
-    final_path: PathBuf,
-    transcript_path: PathBuf,
-}
-
-impl PreparedCommandLaunch {
-    fn new(command_dir: PathBuf, workspace_entry: WorkspaceEntry) -> Self {
+impl ResolvedExecWorkspace {
+    fn new(handler: WorkspaceSessionHandler, is_session_command: bool) -> Self {
+        let workspace_session_id = handler.workspace_session_id.clone();
+        let workspace_root = handler.handle.workspace_root.clone();
+        let finalize_policy = finalize_policy(is_session_command, &workspace_session_id);
         Self {
-            command_dir: command_dir.clone(),
-            workspace_entry,
-            request_path: command_dir.join("command-request.json"),
-            output_path: command_dir.join("runner-result.json"),
-            final_path: command_dir.join("final.json"),
-            transcript_path: command_dir.join("transcript.log"),
+            handler,
+            is_session_command,
+            workspace_session_id,
+            workspace_root,
+            finalize_policy,
         }
     }
 
-    fn cleanup_artifacts_after_start_failure(
-        &self,
-        command_id: &CommandId,
-        error: CommandServiceError,
-    ) -> CommandServiceError {
-        match fs::remove_dir_all(&self.command_dir) {
-            Ok(()) => error,
-            Err(cleanup_error) if cleanup_error.kind() == std::io::ErrorKind::NotFound => error,
-            Err(cleanup_error) => CommandServiceError::CommandArtifactCleanupFailed {
-                command_id: command_id.clone(),
-                command_error: Box::new(error),
-                artifact_dir: self.command_dir.clone(),
-                cleanup_error: cleanup_error.to_string(),
-            },
+    fn entry(&self) -> Result<WorkspaceEntry, CommandServiceError> {
+        self.handler
+            .handle
+            .entry()
+            .map_err(|error| CommandServiceError::InvalidCommand {
+                message: error.to_string(),
+            })
+    }
+}
+
+struct StartedCommand {
+    process: CommandProcess,
+    transcript_path: Option<PathBuf>,
+}
+
+impl StartedCommand {
+    fn new(process: CommandProcess) -> Self {
+        let transcript_path = process.transcript_path().map(std::path::Path::to_path_buf);
+        Self {
+            process,
+            transcript_path,
         }
+    }
+
+    fn into_active_record(
+        self,
+        command_id: CommandId,
+        caller_id: CallerId,
+        workspace: &ResolvedExecWorkspace,
+    ) -> (ActiveCommandProcess, Arc<CommandProcess>) {
+        let process = Arc::new(self.process);
+        let process_for_rollback = Arc::clone(&process);
+        let record = ActiveCommandProcess {
+            command_id,
+            caller_id,
+            workspace_session_id: workspace.workspace_session_id.clone(),
+            workspace_root: workspace.workspace_root.clone(),
+            process,
+            transcript: CommandTranscriptStore {
+                transcript_path: self.transcript_path,
+            },
+            finalize_policy: workspace.finalize_policy.clone(),
+            lifecycle_state: CommandLifecycleState::Running,
+            cancellation: CancellationState::None,
+            remount_cancellation: None,
+            remount_switch_state: None,
+            finalization: FinalizationState::NotStarted,
+            started_at: Instant::now(),
+        };
+        (record, process_for_rollback)
     }
 }
 
@@ -383,6 +350,22 @@ fn validate_workspace_root(
     }
 
     Ok(())
+}
+
+fn cleanup_process_artifacts_after_start_failure(
+    command_id: &CommandId,
+    process: &CommandProcess,
+    error: CommandServiceError,
+) -> CommandServiceError {
+    match process.cleanup_artifacts_after_start_failure() {
+        Ok(()) => error,
+        Err(cleanup_error) => CommandServiceError::CommandArtifactCleanupFailed {
+            command_id: command_id.clone(),
+            command_error: Box::new(error),
+            artifact_dir: process.artifact_dir(),
+            cleanup_error: cleanup_error.to_string(),
+        },
+    }
 }
 
 fn finalize_policy(

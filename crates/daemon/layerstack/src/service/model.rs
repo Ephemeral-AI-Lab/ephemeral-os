@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use crate::commit::{ChangesetResult, CommitOptions};
+use crate::commit::ChangesetResult;
 use crate::model::{LayerChange, Manifest};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -24,7 +24,6 @@ pub struct PublishChangesRequest<'a> {
     pub snapshot_manifest_version: i64,
     pub snapshot_layer_paths: &'a [PathBuf],
     pub changes: &'a [LayerChange],
-    pub options: CommitOptions,
 }
 
 pub type PublishChangesResult = ChangesetResult;

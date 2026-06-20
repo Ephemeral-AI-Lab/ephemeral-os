@@ -1,7 +1,8 @@
 //! One command process: the child process, PTY transcript, kill/exit state,
 //! and final-response persistence.
 
-use std::io::Write;
+use std::fs;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
@@ -19,7 +20,7 @@ use crate::pty::{
 };
 use crate::transcript::{read_full_transcript_stdout, read_transcript_since, read_transcript_tail};
 use crate::yield_wait_loop::CommandWaitTarget;
-use crate::CommandError;
+use crate::{CommandConfig, CommandError};
 
 /// PTY/process substrate for one command. It owns the child process, transcript,
 /// and cancel flag, but no workspace policy: the run that owns this process
@@ -41,6 +42,7 @@ pub struct CommandProcessSpec {
     pub timeout_seconds: Option<f64>,
 }
 
+#[derive(Clone)]
 pub struct CommandProcessSpawn<'a> {
     pub workspace_entry: WorkspaceEntry,
     pub request_path: PathBuf,
@@ -150,6 +152,13 @@ impl CommandProcessRuntime {
         }
     }
 
+    fn artifact_dir(&self) -> PathBuf {
+        self.output_path
+            .parent()
+            .map(Path::to_path_buf)
+            .unwrap_or_default()
+    }
+
     /// `/dev/null`-backed runtime so scaffold processes can exist in tests
     /// without a live child.
     fn inactive() -> Self {
@@ -190,6 +199,31 @@ impl CommandProcess {
                 PathBuf::new(),
                 PathBuf::new(),
                 PathBuf::new(),
+                0,
+            ),
+        )
+    }
+
+    #[doc(hidden)]
+    #[must_use]
+    pub fn inactive_with_artifacts_for_test(
+        spec: CommandProcessSpec,
+        output_path: PathBuf,
+        final_path: PathBuf,
+        transcript_path: PathBuf,
+    ) -> Self {
+        let writer = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open("/dev/null")
+            .expect("open /dev/null for inactive command process");
+        Self::with_runtime(
+            spec,
+            CommandProcessRuntime::new(
+                PtyProcess::inactive(writer),
+                output_path,
+                final_path,
+                transcript_path,
                 0,
             ),
         )
@@ -256,6 +290,25 @@ impl CommandProcess {
     #[must_use]
     pub fn process_group_id(&self) -> Option<i32> {
         self.runtime.process.process_group_id()
+    }
+
+    #[must_use]
+    pub fn transcript_path(&self) -> Option<&Path> {
+        if self.runtime.transcript_path.as_os_str().is_empty() {
+            None
+        } else {
+            Some(&self.runtime.transcript_path)
+        }
+    }
+
+    #[must_use]
+    pub fn artifact_dir(&self) -> PathBuf {
+        self.runtime.artifact_dir()
+    }
+
+    pub fn cleanup_artifacts_after_start_failure(&self) -> io::Result<()> {
+        let artifact_dir = self.artifact_dir();
+        cleanup_artifacts_dir(&artifact_dir)
     }
 
     pub fn write_process_stdin(&self, chars: &str) -> Result<(), CommandError> {
@@ -357,6 +410,40 @@ impl CommandProcess {
     }
 }
 
+impl<'a> CommandProcessSpawn<'a> {
+    pub fn prepare(
+        command_id: &str,
+        workspace_entry: WorkspaceEntry,
+        config: &'a CommandConfig,
+    ) -> Result<Self, CommandError> {
+        let command_dir = config.scratch_root.join(command_id);
+        fs::create_dir_all(&command_dir).map_err(|error| {
+            CommandError::artifact_write("command_artifact_directory", &command_dir, error)
+        })?;
+        Ok(Self {
+            workspace_entry,
+            request_path: command_dir.join("command-request.json"),
+            output_path: command_dir.join("runner-result.json"),
+            final_path: command_dir.join("final.json"),
+            transcript_path: command_dir.join("transcript.log"),
+            transcript_timestamp_timezone: &config.transcript_timestamp_timezone,
+            output_drain_grace_ms: config.output_drain_grace_ms,
+        })
+    }
+
+    #[must_use]
+    pub fn artifact_dir(&self) -> PathBuf {
+        self.request_path
+            .parent()
+            .map(Path::to_path_buf)
+            .unwrap_or_default()
+    }
+
+    pub fn cleanup_artifacts_after_start_failure(&self) -> io::Result<()> {
+        cleanup_artifacts_dir(&self.artifact_dir())
+    }
+}
+
 pub(crate) fn build_namespace_command_request(
     spec: &CommandProcessSpec,
     entry: WorkspaceEntry,
@@ -443,6 +530,17 @@ fn remove_transcript_file(path: &Path) -> Option<CommandTranscriptPersistenceErr
             path: path.to_path_buf(),
             error: error.to_string(),
         }),
+    }
+}
+
+fn cleanup_artifacts_dir(path: &Path) -> io::Result<()> {
+    if path.as_os_str().is_empty() {
+        return Ok(());
+    }
+    match fs::remove_dir_all(path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error),
     }
 }
 

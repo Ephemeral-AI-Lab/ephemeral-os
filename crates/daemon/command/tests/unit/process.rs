@@ -161,6 +161,70 @@ fn spawn_reports_command_request_artifact_write_failure() -> Result<(), Box<dyn 
 }
 
 #[test]
+fn process_spawn_prepare_owns_command_artifact_layout() -> Result<(), Box<dyn std::error::Error>> {
+    let root = std::env::temp_dir().join(format!(
+        "command-spawn-prepare-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)?
+            .as_nanos()
+    ));
+    let config = CommandConfig {
+        scratch_root: root.clone(),
+        transcript_timestamp_timezone: "Asia/Shanghai".to_owned(),
+        output_drain_grace_ms: 123,
+        ..CommandConfig::default()
+    };
+
+    let spawn = CommandProcessSpawn::prepare("cmd_7", workspace_entry(), &config)?;
+
+    let command_dir = root.join("cmd_7");
+    assert!(command_dir.is_dir());
+    assert_eq!(spawn.artifact_dir(), command_dir);
+    assert_eq!(
+        spawn.request_path,
+        root.join("cmd_7").join("command-request.json")
+    );
+    assert_eq!(
+        spawn.output_path,
+        root.join("cmd_7").join("runner-result.json")
+    );
+    assert_eq!(spawn.final_path, root.join("cmd_7").join("final.json"));
+    assert_eq!(
+        spawn.transcript_path,
+        root.join("cmd_7").join("transcript.log")
+    );
+    assert_eq!(spawn.transcript_timestamp_timezone, "Asia/Shanghai");
+    assert_eq!(spawn.output_drain_grace_ms, 123);
+
+    let _ = std::fs::remove_dir_all(root);
+    Ok(())
+}
+
+#[test]
+fn process_spawn_cleanup_removes_prepared_artifacts() -> Result<(), Box<dyn std::error::Error>> {
+    let root = std::env::temp_dir().join(format!(
+        "command-spawn-cleanup-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)?
+            .as_nanos()
+    ));
+    let config = CommandConfig {
+        scratch_root: root.clone(),
+        ..CommandConfig::default()
+    };
+    let spawn = CommandProcessSpawn::prepare("cmd_8", workspace_entry(), &config)?;
+    std::fs::write(&spawn.transcript_path, b"partial output")?;
+
+    spawn.cleanup_artifacts_after_start_failure()?;
+
+    assert!(!root.join("cmd_8").exists());
+    let _ = std::fs::remove_dir_all(root);
+    Ok(())
+}
+
+#[test]
 fn builds_namespace_runner_request_from_command_spec_and_workspace_entry(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let request = build_namespace_command_request(
