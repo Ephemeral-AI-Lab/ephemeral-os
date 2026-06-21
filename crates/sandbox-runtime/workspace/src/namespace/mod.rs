@@ -3,7 +3,7 @@ mod fds;
 mod holder;
 mod setns_runner;
 
-use crate::profile::IsolatedNetworkError;
+use crate::profile::WorkspaceModeError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum NamespaceNetwork {
@@ -80,8 +80,8 @@ impl NamespacePlan {
     }
 }
 
-pub(crate) fn setup_error(error: impl std::fmt::Display) -> IsolatedNetworkError {
-    IsolatedNetworkError::SetupFailed {
+pub(crate) fn setup_error(error: impl std::fmt::Display) -> WorkspaceModeError {
+    WorkspaceModeError::SetupFailed {
         step: error.to_string(),
     }
 }

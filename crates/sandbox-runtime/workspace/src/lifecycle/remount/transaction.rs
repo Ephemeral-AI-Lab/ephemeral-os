@@ -1,6 +1,6 @@
 use crate::lifecycle::leases::monotonic_seconds;
 use crate::profile::{
-    IsolatedNetworkError, WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeManager,
+    WorkspaceModeError, WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeManager,
 };
 
 use super::{RemountProbe, WorkspaceRemountState};
@@ -11,14 +11,14 @@ impl WorkspaceModeManager {
         workspace_id: &WorkspaceModeId,
         layer_paths: Vec<std::path::PathBuf>,
         probe: &RemountProbe,
-    ) -> Result<WorkspaceModeHandle, IsolatedNetworkError> {
+    ) -> Result<WorkspaceModeHandle, WorkspaceModeError> {
         if layer_paths.is_empty() {
-            return Err(IsolatedNetworkError::InvalidArgument(
+            return Err(WorkspaceModeError::InvalidArgument(
                 "layer_paths must not be empty".to_owned(),
             ));
         }
         if !self.handles.contains_key(workspace_id) {
-            return Err(IsolatedNetworkError::NotOpen);
+            return Err(WorkspaceModeError::NotOpen);
         }
         self.set_remount_state(workspace_id, WorkspaceRemountState::Pending)?;
         let result = self.apply_remount(workspace_id, layer_paths, probe);
@@ -31,7 +31,7 @@ impl WorkspaceModeManager {
     pub(crate) fn block_remount(
         &mut self,
         workspace_id: &WorkspaceModeId,
-    ) -> Result<(), IsolatedNetworkError> {
+    ) -> Result<(), WorkspaceModeError> {
         self.set_remount_state(workspace_id, WorkspaceRemountState::Active)
     }
 
@@ -40,12 +40,12 @@ impl WorkspaceModeManager {
         workspace_id: &WorkspaceModeId,
         layer_paths: Vec<std::path::PathBuf>,
         probe: &RemountProbe,
-    ) -> Result<WorkspaceModeHandle, IsolatedNetworkError> {
+    ) -> Result<WorkspaceModeHandle, WorkspaceModeError> {
         let handle = self
             .handles
             .get(workspace_id)
             .cloned()
-            .ok_or(IsolatedNetworkError::NotOpen)?;
+            .ok_or(WorkspaceModeError::NotOpen)?;
         let remount = self.runtime.remount_overlay(
             &handle,
             &layer_paths,
@@ -53,7 +53,7 @@ impl WorkspaceModeManager {
             self.caps.setup_timeout_s,
         )?;
         if !remount.mount_verified {
-            return Err(IsolatedNetworkError::SetupFailed {
+            return Err(WorkspaceModeError::SetupFailed {
                 step: format!(
                     "remount overlay verification failed: {}",
                     remount.failure_summary()
@@ -63,7 +63,7 @@ impl WorkspaceModeManager {
         let updated = self
             .handles
             .get_mut(workspace_id)
-            .ok_or(IsolatedNetworkError::NotOpen)?;
+            .ok_or(WorkspaceModeError::NotOpen)?;
         updated.layer_paths = layer_paths;
         updated.remount_state = WorkspaceRemountState::Active;
         updated.last_activity = monotonic_seconds();
@@ -76,11 +76,11 @@ impl WorkspaceModeManager {
         &mut self,
         workspace_id: &WorkspaceModeId,
         remount_state: WorkspaceRemountState,
-    ) -> Result<(), IsolatedNetworkError> {
+    ) -> Result<(), WorkspaceModeError> {
         let handle = self
             .handles
             .get_mut(workspace_id)
-            .ok_or(IsolatedNetworkError::NotOpen)?;
+            .ok_or(WorkspaceModeError::NotOpen)?;
         if handle.remount_state == remount_state {
             return Ok(());
         }

@@ -196,7 +196,7 @@ fn fake_workspace_runtime(fake: &Arc<FakeWorkspaceService>) -> Arc<WorkspaceRunt
 
 fn create_request() -> CreateWorkspaceRequest {
     CreateWorkspaceRequest {
-        profile: WorkspaceProfile::SharedNetwork,
+        profile: WorkspaceProfile::HostCompatible,
     }
 }
 
@@ -223,7 +223,7 @@ fn workspace_handle(workspace_session_id: &str, lease_id: &str) -> WorkspaceHand
     WorkspaceHandle::without_launch_for_test(
         WorkspaceSessionId(workspace_session_id.to_owned()),
         PathBuf::from("/workspace"),
-        WorkspaceProfile::SharedNetwork,
+        WorkspaceProfile::HostCompatible,
         snapshot,
     )
 }
@@ -495,6 +495,35 @@ fn workspace_session_block_remount_clears_pending() {
         .expect("block remount succeeds");
 
     assert!(!manager.is_remount_pending(&WorkspaceSessionId("workspace-1".to_owned())));
+    assert!(manager.is_remount_blocked(&WorkspaceSessionId("workspace-1".to_owned())));
+
+    let handler = manager
+        .resolve_session(WorkspaceSessionId("workspace-1".to_owned()))
+        .expect("blocked session remains inspectable");
+    let capture_error = manager
+        .capture_session_changes(
+            &handler,
+            CaptureChangesRequest {
+                include_stats: false,
+            },
+        )
+        .expect_err("capture rejects blocked remount");
+    assert!(matches!(
+        capture_error,
+        WorkspaceSessionError::RemountBlocked { workspace_session_id }
+            if workspace_session_id == WorkspaceSessionId("workspace-1".to_owned())
+    ));
+
+    let destroy_error = manager
+        .destroy_session(handler, DestroyWorkspaceRequest::default())
+        .expect_err("destroy rejects blocked remount");
+    assert!(matches!(
+        destroy_error,
+        WorkspaceSessionError::RemountBlocked { workspace_session_id }
+            if workspace_session_id == WorkspaceSessionId("workspace-1".to_owned())
+    ));
+    assert!(fake.capture_calls().is_empty());
+    assert!(fake.destroy_calls().is_empty());
 }
 
 #[test]

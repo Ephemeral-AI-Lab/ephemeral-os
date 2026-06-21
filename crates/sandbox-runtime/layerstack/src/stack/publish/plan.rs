@@ -1,5 +1,6 @@
 use crate::error::LayerStackError;
 use crate::model::{manifest_root_hash, LayerChange, LayerPath};
+use crate::stack::projection::MergedEntry;
 use crate::stack::MergedView;
 
 use super::fingerprint::content_fingerprint;
@@ -66,7 +67,7 @@ pub(crate) fn plan_publish(
                     &mut route_summary,
                 )?;
             }
-            _ => match route_path(&oracle, change.path())? {
+            _ => match route_change(view, &oracle, request, change)? {
                 RouteKind::Source => {
                     source_validations.push(SourceValidation {
                         path: change.path().clone(),
@@ -114,16 +115,38 @@ fn validate_base_revision(request: &PublishValidatedChangesRequest) -> Result<()
     Ok(())
 }
 
+fn route_change(
+    view: &MergedView,
+    oracle: &GitignoreOracle<'_>,
+    request: &PublishValidatedChangesRequest,
+    change: &LayerChange,
+) -> Result<RouteKind, LayerStackError> {
+    let is_dir = match change {
+        LayerChange::Delete { path } => {
+            matches!(
+                view.read_entry(path.as_str(), &request.base.manifest)?,
+                MergedEntry::Directory
+            )
+        }
+        LayerChange::OpaqueDir { .. } => true,
+        LayerChange::Write { .. } | LayerChange::WriteFile { .. } | LayerChange::Symlink { .. } => {
+            false
+        }
+    };
+    route_path(oracle, change.path(), is_dir)
+}
+
 fn route_path(
     oracle: &GitignoreOracle<'_>,
     path: &LayerPath,
+    is_dir: bool,
 ) -> Result<RouteKind, LayerStackError> {
     if let Some((reason, _)) = forbidden_path(path) {
         return Err(LayerStackError::PublishRejected(Box::new(
             PublishReject::at_path(path.clone(), reason),
         )));
     }
-    Ok(if oracle.is_ignored(path)? {
+    Ok(if oracle.is_ignored(path, is_dir)? {
         RouteKind::Ignored
     } else {
         RouteKind::Source
@@ -157,7 +180,7 @@ fn plan_opaque_dir(
     }
 
     if descendants.is_empty() {
-        match route_path(oracle, path)? {
+        match route_path(oracle, path, true)? {
             RouteKind::Source => {
                 source_validations.push(SourceValidation {
                     path: path.clone(),
@@ -185,7 +208,11 @@ fn plan_opaque_dir(
                 PublishReject::at_path(descendant, reason),
             )));
         }
-        if oracle.is_ignored(&descendant)? {
+        let descendant_is_dir = matches!(
+            view.read_entry(descendant.as_str(), &request.base.manifest)?,
+            MergedEntry::Directory
+        );
+        if oracle.is_ignored(&descendant, descendant_is_dir)? {
             saw_ignored = true;
         } else {
             saw_source = true;

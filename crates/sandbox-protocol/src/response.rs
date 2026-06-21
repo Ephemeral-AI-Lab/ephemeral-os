@@ -28,12 +28,21 @@ impl Response {
 
     #[must_use]
     pub fn fault(kind: &'static str, message: impl Into<String>) -> Self {
+        Self::fault_with_details(kind, message, json!({}))
+    }
+
+    #[must_use]
+    pub fn fault_with_details(
+        kind: &'static str,
+        message: impl Into<String>,
+        details: Value,
+    ) -> Self {
         Self {
             value: json!({
                 "error": {
                     "kind": kind,
                     "message": message.into(),
-                    "details": {},
+                    "details": details,
                 },
             }),
         }

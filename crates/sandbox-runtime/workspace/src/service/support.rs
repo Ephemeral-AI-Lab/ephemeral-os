@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::error::WorkspaceError;
 use crate::model::WorkspaceHandle;
-use crate::profile::{IsolatedNetworkError, WorkspaceModeId, WorkspaceModeSnapshot};
+use crate::profile::{WorkspaceModeError, WorkspaceModeId, WorkspaceModeSnapshot};
 use crate::service::WorkspaceRuntimeState;
 
 pub(crate) fn ensure_absolute(path: &Path, field: &'static str) -> Result<(), WorkspaceError> {
@@ -15,29 +15,25 @@ pub(crate) fn ensure_absolute(path: &Path, field: &'static str) -> Result<(), Wo
     Ok(())
 }
 
-pub(crate) fn workspace_error_from_mode_error(error: IsolatedNetworkError) -> WorkspaceError {
+pub(crate) fn workspace_error_from_mode_error(error: WorkspaceModeError) -> WorkspaceError {
     match error {
-        IsolatedNetworkError::InvalidArgument(message) => WorkspaceError::InvalidRequest {
+        WorkspaceModeError::InvalidArgument(message) => WorkspaceError::InvalidRequest {
             field: "workspace",
             message,
         },
-        IsolatedNetworkError::AlreadyOpen { .. } => WorkspaceError::InvalidRequest {
-            field: "workspace",
-            message: "workspace already open".to_owned(),
-        },
-        IsolatedNetworkError::NotOpen => WorkspaceError::NotOpen,
-        IsolatedNetworkError::QuotaExceeded { total_cap } => {
+        WorkspaceModeError::NotOpen => WorkspaceError::NotOpen,
+        WorkspaceModeError::QuotaExceeded { total_cap } => {
             WorkspaceError::QuotaExceeded { total_cap }
         }
-        IsolatedNetworkError::HostRamPressure {
+        WorkspaceModeError::HostRamPressure {
             required_bytes,
             budget_bytes,
         } => WorkspaceError::ResourcePressure {
             required_bytes,
             budget_bytes,
         },
-        IsolatedNetworkError::SetupFailed { step } => WorkspaceError::Setup { step },
-        IsolatedNetworkError::NetworkUnavailable(message) => WorkspaceError::Network { message },
+        WorkspaceModeError::SetupFailed { step } => WorkspaceError::Setup { step },
+        WorkspaceModeError::NetworkUnavailable(message) => WorkspaceError::Network { message },
     }
 }
 

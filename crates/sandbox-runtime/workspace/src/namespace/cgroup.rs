@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::profile::IsolatedNetworkError;
+use crate::profile::WorkspaceModeError;
 use crate::profile::WorkspaceModeHandle;
 
 use super::{setup_error, NamespaceRuntime};
@@ -9,7 +9,7 @@ impl NamespaceRuntime {
     pub(crate) fn create_cgroup(
         &self,
         handle: &WorkspaceModeHandle,
-    ) -> Result<PathBuf, IsolatedNetworkError> {
+    ) -> Result<PathBuf, WorkspaceModeError> {
         #[cfg(not(target_os = "linux"))]
         {
             let _ = handle;
@@ -30,7 +30,7 @@ impl NamespaceRuntime {
     pub(crate) fn join_holder_cgroup(
         &self,
         handle: &WorkspaceModeHandle,
-    ) -> Result<(), IsolatedNetworkError> {
+    ) -> Result<(), WorkspaceModeError> {
         let Some(cgroup_path) = handle.cgroup_path.as_ref() else {
             return Ok(());
         };

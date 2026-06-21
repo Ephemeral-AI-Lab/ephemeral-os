@@ -42,4 +42,13 @@ impl WorkspaceSessionService {
                 .is_some_and(|session| session.remount_state.is_pending())
         })
     }
+
+    #[must_use]
+    pub fn is_remount_blocked(&self, workspace_session_id: &WorkspaceSessionId) -> bool {
+        self.lock_sessions().is_ok_and(|sessions| {
+            sessions
+                .get(workspace_session_id)
+                .is_some_and(|session| session.remount_state.is_blocked())
+        })
+    }
 }

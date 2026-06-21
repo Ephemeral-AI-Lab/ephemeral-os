@@ -153,7 +153,7 @@ fn session_with_driver(
         "workspace-session",
         "lease-1",
         workspace_root.clone(),
-        WorkspaceProfile::SharedNetwork,
+        WorkspaceProfile::HostCompatible,
     )));
     let env = build_services_with_launch_driver(Arc::clone(&fake), Arc::new(driver));
     let handler = env
@@ -449,7 +449,7 @@ fn command_transcript_rows_report_running_status_for_active_command() {
         "workspace-session",
         "lease-1",
         workspace_root.clone(),
-        WorkspaceProfile::SharedNetwork,
+        WorkspaceProfile::HostCompatible,
     )));
     let env = build_services_with_launch_driver(
         fake,

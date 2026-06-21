@@ -17,7 +17,11 @@ impl<'a> GitignoreOracle<'a> {
         Self { view, manifest }
     }
 
-    pub(crate) fn is_ignored(&self, path: &LayerPath) -> Result<bool, LayerStackError> {
+    pub(crate) fn is_ignored(
+        &self,
+        path: &LayerPath,
+        is_dir: bool,
+    ) -> Result<bool, LayerStackError> {
         let components = path.as_str().split('/').collect::<Vec<_>>();
         let mut ignored = false;
         for depth in 0..components.len() {
@@ -30,7 +34,7 @@ impl<'a> GitignoreOracle<'a> {
             if is_sealed_by_parent(&matcher, Path::new(&relative)) {
                 return Ok(true);
             }
-            let matched = matcher.matched(Path::new(&relative), false);
+            let matched = matcher.matched(Path::new(&relative), is_dir);
             if matched.is_ignore() {
                 ignored = true;
             } else if matched.is_whitelist() {

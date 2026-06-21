@@ -9,7 +9,7 @@ use crate::lifecycle::{
 use crate::model::WorkspaceProfile;
 use crate::namespace::NamespacePlan;
 use crate::overlay::dirs::create_overlay_dirs;
-use crate::profile::manager::IsolatedNetworkError;
+use crate::profile::manager::WorkspaceModeError;
 use crate::profile::{
     validate_workspace_root, WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeManager,
     WorkspaceModeSnapshot,
@@ -19,10 +19,10 @@ impl WorkspaceModeManager {
     pub(crate) fn initialize_handle(
         &mut self,
         handle: &mut WorkspaceModeHandle,
-    ) -> Result<HashMap<String, f64>, IsolatedNetworkError> {
+    ) -> Result<HashMap<String, f64>, WorkspaceModeError> {
         let layer_paths = handle.layer_paths.clone();
         let namespace_plan = match handle.profile {
-            WorkspaceProfile::SharedNetwork => NamespacePlan::shared_network(),
+            WorkspaceProfile::HostCompatible => NamespacePlan::shared_network(),
             WorkspaceProfile::Isolated => NamespacePlan::isolated(),
         };
         let mut phases_ms = HashMap::new();
@@ -72,7 +72,7 @@ impl WorkspaceModeManager {
         &mut self,
         handle: &mut WorkspaceModeHandle,
         phases_ms: &mut HashMap<String, f64>,
-    ) -> Result<(), IsolatedNetworkError> {
+    ) -> Result<(), WorkspaceModeError> {
         let phase_start = Instant::now();
         self.network.initialize()?;
         let veth = self
@@ -86,7 +86,7 @@ impl WorkspaceModeManager {
     fn setup_isolated_network_after_mount(
         &mut self,
         handle: &WorkspaceModeHandle,
-    ) -> Result<(), IsolatedNetworkError> {
+    ) -> Result<(), WorkspaceModeError> {
         self.runtime
             .signal_net_ready(handle, self.caps.setup_timeout_s)
     }
@@ -95,22 +95,23 @@ impl WorkspaceModeManager {
         &mut self,
         snapshot: WorkspaceModeSnapshot,
         profile: WorkspaceProfile,
-    ) -> Result<WorkspaceModeHandle, IsolatedNetworkError> {
+    ) -> Result<WorkspaceModeHandle, WorkspaceModeError> {
         let workspace_root = self.validated_workspace_root()?;
         let total_cap = usize::try_from(self.caps.total_cap).unwrap_or(usize::MAX);
         if self.handles.len() >= total_cap {
-            return Err(IsolatedNetworkError::QuotaExceeded {
+            return Err(WorkspaceModeError::QuotaExceeded {
                 total_cap: self.caps.total_cap,
             });
         }
         self.check_host_capacity()?;
 
         let workspace_id = WorkspaceModeId(next_handle_id());
-        let dirs = create_overlay_dirs(self.owned_scratch_root().join(&workspace_id.0)).map_err(
-            |err| IsolatedNetworkError::SetupFailed {
-                step: format!("create overlay scratch: {err}"),
-            },
-        )?;
+        let dirs =
+            create_overlay_dirs(self.workspace_session_root(&workspace_id)).map_err(|err| {
+                WorkspaceModeError::SetupFailed {
+                    step: format!("create overlay scratch: {err}"),
+                }
+            })?;
 
         let now = monotonic_seconds();
         let mut handle = WorkspaceModeHandle {
@@ -148,7 +149,7 @@ impl WorkspaceModeManager {
         Ok(handle)
     }
 
-    pub(crate) fn validated_workspace_root(&self) -> Result<String, IsolatedNetworkError> {
+    pub(crate) fn validated_workspace_root(&self) -> Result<String, WorkspaceModeError> {
         let workspace_root = self.workspace_root.trim();
         validate_workspace_root(workspace_root)?;
         Ok(workspace_root.to_owned())

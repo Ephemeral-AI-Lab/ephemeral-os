@@ -1,7 +1,10 @@
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use sandbox_protocol::OperationExecutionSpace;
 use sandbox_runtime::command::{CommandOperationService, ExecCommandInput};
+use sandbox_runtime::layerstack::LayerStackService;
 use sandbox_runtime::workspace_remount::{
     CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountService,
 };
@@ -15,6 +18,26 @@ use sandbox_runtime_workspace::{
 
 fn workspace_session() -> Arc<WorkspaceSessionService> {
     Arc::new(WorkspaceSessionService::new(noop_workspace_runtime()))
+}
+
+fn layerstack_service() -> Result<Arc<LayerStackService>, Box<dyn std::error::Error + Send + Sync>>
+{
+    let base = temp_root("service-graph-layerstack");
+    let root = base.join("layer-stack");
+    let workspace = base.join("workspace");
+    let _ = std::fs::remove_dir_all(&base);
+    std::fs::create_dir_all(&workspace)?;
+    sandbox_runtime_layerstack::build_workspace_base(&root, &workspace, false)?;
+    Ok(Arc::new(LayerStackService::new(root)?))
+}
+
+fn temp_root(label: &str) -> PathBuf {
+    static NEXT_TEST: AtomicU64 = AtomicU64::new(0);
+    std::env::temp_dir().join(format!(
+        "sandbox-runtime-{label}-{}-{}",
+        std::process::id(),
+        NEXT_TEST.fetch_add(1, Ordering::Relaxed)
+    ))
 }
 
 fn noop_workspace_runtime() -> Arc<WorkspaceRuntimeService> {
@@ -56,10 +79,13 @@ fn noop_workspace_runtime() -> Arc<WorkspaceRuntimeService> {
 }
 
 #[test]
-fn runtime_operations_exposes_only_command_as_external_lane() {
+fn runtime_operations_exposes_only_command_as_external_lane(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let workspace = workspace_session();
+    let layerstack = layerstack_service()?;
     let command = Arc::new(CommandOperationService::new(
         Arc::clone(&workspace),
+        Arc::clone(&layerstack),
         sandbox_runtime_command::CommandConfig::default(),
     ));
     let remount_workspace: Arc<dyn RemountWorkspaceSession> = workspace.clone();
@@ -70,9 +96,11 @@ fn runtime_operations_exposes_only_command_as_external_lane() {
     ));
 
     let _ = remount;
-    let operations = SandboxRuntimeOperations::new(Arc::clone(&command));
+    let operations = SandboxRuntimeOperations::new(Arc::clone(&command), Arc::clone(&layerstack));
 
     assert!(Arc::ptr_eq(&operations.command, &command));
+    assert!(Arc::ptr_eq(&operations.layerstack, &layerstack));
+    Ok(())
 }
 
 #[test]

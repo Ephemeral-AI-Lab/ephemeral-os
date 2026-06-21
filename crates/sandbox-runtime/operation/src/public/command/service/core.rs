@@ -8,6 +8,7 @@ use crate::workspace_session::WorkspaceSessionService;
 pub struct CommandOperationService {
     workspace: Arc<WorkspaceSessionService>,
     layerstack: Option<Arc<LayerStackService>>,
+    allow_missing_layerstack_for_test: bool,
     config: ::sandbox_runtime_command::CommandConfig,
     process_store: Arc<CommandProcessStore>,
     launch_driver: Arc<dyn CommandLaunchDriver>,
@@ -19,26 +20,13 @@ impl CommandOperationService {
     #[must_use]
     pub fn new(
         workspace: Arc<WorkspaceSessionService>,
-        config: ::sandbox_runtime_command::CommandConfig,
-    ) -> Self {
-        Self::from_parts(
-            workspace,
-            None,
-            config,
-            Arc::new(RealCommandLaunchDriver),
-            Arc::new(ProcProcessGroupController),
-        )
-    }
-
-    #[must_use]
-    pub fn new_with_layerstack(
-        workspace: Arc<WorkspaceSessionService>,
         layerstack: Arc<LayerStackService>,
         config: ::sandbox_runtime_command::CommandConfig,
     ) -> Self {
         Self::from_parts(
             workspace,
             Some(layerstack),
+            false,
             config,
             Arc::new(RealCommandLaunchDriver),
             Arc::new(ProcProcessGroupController),
@@ -55,6 +43,7 @@ impl CommandOperationService {
         Self::from_parts(
             workspace,
             None,
+            true,
             config,
             launch_driver,
             Arc::new(ProcProcessGroupController),
@@ -72,6 +61,7 @@ impl CommandOperationService {
         Self::from_parts(
             workspace,
             Some(layerstack),
+            false,
             config,
             launch_driver,
             Arc::new(ProcProcessGroupController),
@@ -86,12 +76,20 @@ impl CommandOperationService {
         launch_driver: Arc<dyn CommandLaunchDriver>,
         remount_controller: Arc<dyn ProcessGroupController>,
     ) -> Self {
-        Self::from_parts(workspace, None, config, launch_driver, remount_controller)
+        Self::from_parts(
+            workspace,
+            None,
+            true,
+            config,
+            launch_driver,
+            remount_controller,
+        )
     }
 
     fn from_parts(
         workspace: Arc<WorkspaceSessionService>,
         layerstack: Option<Arc<LayerStackService>>,
+        allow_missing_layerstack_for_test: bool,
         config: ::sandbox_runtime_command::CommandConfig,
         launch_driver: Arc<dyn CommandLaunchDriver>,
         remount_controller: Arc<dyn ProcessGroupController>,
@@ -99,6 +97,7 @@ impl CommandOperationService {
         Self {
             workspace,
             layerstack,
+            allow_missing_layerstack_for_test,
             config,
             process_store: Arc::new(CommandProcessStore::new()),
             launch_driver,
@@ -115,6 +114,11 @@ impl CommandOperationService {
     #[must_use]
     pub(crate) fn layerstack(&self) -> Option<&Arc<LayerStackService>> {
         self.layerstack.as_ref()
+    }
+
+    #[must_use]
+    pub(crate) const fn allow_missing_layerstack_for_test(&self) -> bool {
+        self.allow_missing_layerstack_for_test
     }
 
     #[must_use]

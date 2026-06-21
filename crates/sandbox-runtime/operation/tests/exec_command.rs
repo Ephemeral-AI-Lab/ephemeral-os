@@ -53,7 +53,7 @@ fn exec_command_uses_resolved_session_without_workspace_create_or_destroy() {
         &env,
         "workspace-session",
         PathBuf::from("/workspace/session"),
-        WorkspaceProfile::SharedNetwork,
+        WorkspaceProfile::HostCompatible,
     );
     let create_count_before_exec = fake.create_requests().len();
 
@@ -113,7 +113,7 @@ fn exec_command_spawn_failure_keeps_session_workspace_alive() {
         &env,
         "workspace-session",
         PathBuf::from("/workspace/session"),
-        WorkspaceProfile::SharedNetwork,
+        WorkspaceProfile::HostCompatible,
     );
 
     let error = env
@@ -199,7 +199,7 @@ fn exec_command_missing_launch_material_rejects_without_spawn() {
         "workspace-session",
         "lease-1",
         workspace_root.clone(),
-        WorkspaceProfile::SharedNetwork,
+        WorkspaceProfile::HostCompatible,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
@@ -231,7 +231,7 @@ fn exec_command_unavailable_workspace_launch_rejects_without_spawn() {
         "workspace-session",
         "lease-1",
         workspace_root.clone(),
-        WorkspaceProfile::SharedNetwork,
+        WorkspaceProfile::HostCompatible,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
@@ -265,7 +265,7 @@ fn exec_command_artifact_directory_failure_keeps_session_workspace_alive() {
         &env,
         "workspace-session",
         PathBuf::from("/workspace/session"),
-        WorkspaceProfile::SharedNetwork,
+        WorkspaceProfile::HostCompatible,
     );
     std::fs::write(
         env.command.config().scratch_root.clone(),
@@ -299,7 +299,7 @@ fn exec_command_initial_running_yield_returns_wait_loop_output() {
         &env,
         "workspace-session",
         PathBuf::from("/workspace/session"),
-        WorkspaceProfile::SharedNetwork,
+        WorkspaceProfile::HostCompatible,
     );
 
     let output = env
@@ -322,7 +322,7 @@ fn exec_command_initial_completed_session_returns_finalized_metadata() {
         &env,
         "workspace-session",
         PathBuf::from("/workspace/session"),
-        WorkspaceProfile::SharedNetwork,
+        WorkspaceProfile::HostCompatible,
     );
 
     let output = env
@@ -362,7 +362,7 @@ fn write_command_stdin_waits_for_output_after_write() {
         &env,
         "workspace-session",
         PathBuf::from("/workspace/session"),
-        WorkspaceProfile::SharedNetwork,
+        WorkspaceProfile::HostCompatible,
     );
     let command_session_id = env
         .command
@@ -396,7 +396,7 @@ fn write_command_stdin_finalizes_when_command_completes_after_write() {
         &env,
         "workspace-session",
         PathBuf::from("/workspace/session"),
-        WorkspaceProfile::SharedNetwork,
+        WorkspaceProfile::HostCompatible,
     );
     let command_session_id = env
         .command

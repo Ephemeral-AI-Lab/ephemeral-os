@@ -62,6 +62,130 @@ crates/sandbox-runtime/operation/src/public/cgroup_monitor/
     └── types.rs
 ```
 
+`mod.rs` owns the runtime family metadata for this lane:
+
+```rust
+pub(crate) const CGROUP_MONITOR_FAMILY: OperationFamilySpec = OperationFamilySpec {
+    id: "cgroup_monitor",
+    title: "Cgroup Monitor",
+    summary: "Inspect cgroup resource usage and retained samples.",
+    description:
+        "Inspect session and command cgroup CPU, memory, IO, pressure, PID, disk, and cleanup state.",
+};
+```
+
+`service/impls/mod.rs` owns the `SPECS` and `OPERATIONS` slices for the
+`cgroup_monitor` family. Each operation implementation module owns its local
+`SPEC` and dispatch function. `public/mod.rs` aggregates runtime family,
+operation, and dispatch slices from both `command` and `cgroup_monitor`.
+
+## Protocol And Help Metadata
+
+The cgroup monitor operations are runtime operations and must use the
+protocol-owned catalog metadata model:
+
+- `OperationCatalog.operation_execution_space`: `runtime`
+- family id: `cgroup_monitor`
+- family title: `Cgroup Monitor`
+- operation specs include `family`, `summary`, `description`, `args`, `cli`,
+  and `related`
+- catalog decoding must reject missing family references and missing related
+  operation references
+
+`inspect_cgroup_monitor` metadata:
+
+```rust
+OperationSpec {
+    name: "inspect_cgroup_monitor",
+    family: "cgroup_monitor",
+    summary: "Inspect the latest cgroup monitor state.",
+    description: "Inspect the latest retained cgroup monitor state for a workspace session or command session.",
+    args: INSPECT_CGROUP_MONITOR_ARGS,
+    cli: Some(INSPECT_CGROUP_MONITOR_CLI),
+    related: &["read_cgroup_monitor_samples"],
+}
+```
+
+Arguments:
+
+```text
+workspace_session_id  string  required  --workspace-session-id
+command_session_id    string  optional  --command-session-id
+```
+
+CLI metadata:
+
+```rust
+CliSpec {
+    path: &["runtime", "inspect_cgroup_monitor"],
+    usage: "sandbox-cli runtime inspect_cgroup_monitor --workspace-session-id ID [--command-session-id CMD]",
+    examples: &[
+        "sandbox-cli runtime inspect_cgroup_monitor --workspace-session-id ws-1",
+        "sandbox-cli runtime inspect_cgroup_monitor --workspace-session-id ws-1 --command-session-id cmd-1",
+    ],
+}
+```
+
+`read_cgroup_monitor_samples` metadata:
+
+```rust
+OperationSpec {
+    name: "read_cgroup_monitor_samples",
+    family: "cgroup_monitor",
+    summary: "Read retained cgroup monitor samples.",
+    description: "Read the retained cgroup monitor sample window for a workspace session or command session.",
+    args: READ_CGROUP_MONITOR_SAMPLES_ARGS,
+    cli: Some(READ_CGROUP_MONITOR_SAMPLES_CLI),
+    related: &["inspect_cgroup_monitor"],
+}
+```
+
+Arguments:
+
+```text
+workspace_session_id  string   required  --workspace-session-id
+command_session_id    string   optional  --command-session-id
+limit                 integer  optional  --limit
+```
+
+CLI metadata:
+
+```rust
+CliSpec {
+    path: &["runtime", "read_cgroup_monitor_samples"],
+    usage: "sandbox-cli runtime read_cgroup_monitor_samples --workspace-session-id ID [--command-session-id CMD] [--limit N]",
+    examples: &[
+        "sandbox-cli runtime read_cgroup_monitor_samples --workspace-session-id ws-1 --limit 100",
+        "sandbox-cli runtime read_cgroup_monitor_samples --workspace-session-id ws-1 --command-session-id cmd-1 --limit 50",
+    ],
+}
+```
+
+Runtime help output is generated from the runtime catalog. Usage and examples
+must start with `sandbox-cli runtime`, must not include `--sandbox-id`, and must
+not use daemon/manual wording.
+
+## Recent Review Findings To Preserve
+
+- The catalog is not flat. Runtime cgroup monitor operations must be represented
+  as a `Cgroup Monitor` family in the protocol-owned operation catalog.
+- Operation specs must carry protocol help metadata: `family`, `summary`,
+  `description`, `args`, `cli`, and `related`.
+- Runtime CLI help and examples must use `sandbox-cli runtime ...`; sandbox
+  selection is contextual and must not appear as `--sandbox-id` in operation
+  usage/examples.
+- `cgroup_monitor` is a peer runtime lane beside `command`, not a command
+  submodule and not a separate operation execution space.
+- Command child cgroup mechanics stay in `sandbox-runtime-command`, with a
+  dedicated `command/src/cgroup.rs` helper. Per-command CPU, memory, IO, and
+  cleanup data require command-owned child cgroup creation, final sampling, and
+  cleanup.
+- `namespace-process` only joins the cgroup path in
+  `NamespaceCommandRequest.cgroup_path` and reports join failures; it does not
+  own retained samples, monitor loops, directory creation, or cleanup.
+- Retention expiry, if implemented, is based on cgroup sample timestamps and
+  monitor configuration, not command process-store completion timestamps.
+
 ## Public Methods
 
 ### `inspect_cgroup_monitor`
@@ -343,9 +467,28 @@ Recommended ownership:
   the runtime aggregate.
 - `namespace-process` only joins the requested cgroup and reports join failures.
 
-The operation catalog no longer has grouping metadata. Add cgroup monitor
-operations under the appropriate execution space and expose
-cgroup-monitor-specific filtering only if a concrete caller needs it later.
+The operation catalog has first-class family metadata. Add `Cgroup Monitor` as a
+peer runtime family beside `Command`, not as another command operation group and
+not as a separate execution space. The runtime catalog should expose:
+
+```text
+operation_execution_space: runtime
+families:
+  command
+  cgroup_monitor
+operations:
+  exec_command
+  write_command_stdin
+  poll_command
+  read_command_lines
+  cancel_command
+  inspect_cgroup_monitor
+  read_cgroup_monitor_samples
+```
+
+Expose cgroup-monitor-specific filtering only if a concrete caller needs it
+later. The v1 catalog should rely on normal family grouping and related
+operation metadata.
 
 ## Command Cgroup Ownership
 
@@ -367,12 +510,28 @@ launch state. Instead, it should pass enough context for the command crate to
 derive the child cgroup from the session cgroup already carried by
 `WorkspaceEntry`.
 
-Recommended command-side shape:
+Required command-side shape for per-command monitoring:
 
 ```text
 crates/sandbox-runtime/command/src/cgroup.rs
 crates/sandbox-runtime/command/src/process.rs
 ```
+
+`cgroup.rs` is the expected home for command child cgroup lifecycle helpers:
+
+- derive `<session-cgroup>/commands/<command_session_id>/`;
+- create the command cgroup during command preparation;
+- expose the selected command cgroup path to `process.rs`;
+- build or carry the `command_final` sample before cleanup;
+- remove the command cgroup after the runner has exited and the cgroup is empty.
+
+Keeping these helpers in a separate command module prevents `process.rs` from
+absorbing cgroup v2 path, sampling, and cleanup mechanics while preserving the
+correct owner: the command process lifecycle. Inlining this code into
+`operation/public/command` would make operation dispatch own process resources;
+putting it in `workspace` would make session setup own per-command lifecycle;
+putting it in `namespace-process` would put retained state and cleanup in the
+short-lived runner after it has joined the target cgroup.
 
 `CommandProcessSpawn::prepare` should create:
 
@@ -524,19 +683,102 @@ The retention buffer should be per target:
 - one ring buffer for each command target
 
 This keeps `read_cgroup_monitor_samples` cheap and avoids pagination in v1.
+Retention expiry, if added, should be based on sample timestamps and cgroup
+monitor retention configuration. Do not couple expiry to command process-store
+record timestamps.
+
+## Impacted And Added File Shape
+
+Expected production shape:
+
+```text
+crates/sandbox-runtime/operation/src/
+├── lib.rs                                      # export cgroup monitor public types if needed
+├── operation.rs                                # existing OperationEntry wiring
+├── internal/
+│   └── services.rs                             # add Arc<CgroupMonitorOperationService>
+└── public/
+    ├── mod.rs                                  # aggregate command + cgroup_monitor families/specs/entries
+    ├── command/
+    │   └── service/
+    │       ├── finalize.rs                     # retain command_final samples during finalization
+    │       ├── process_store.rs                # store command cgroup monitor target/final samples if registry is not separate
+    │       └── impls/
+    │           ├── exec_command.rs             # pass command/session context and register command target
+    │           └── cancel_command.rs           # keep final sampling exit-driven
+    └── cgroup_monitor/
+        ├── mod.rs                              # owns CGROUP_MONITOR_FAMILY
+        ├── service.rs                          # public service facade
+        └── service/
+            ├── contract.rs                     # service trait/input contract
+            ├── core.rs                         # service construction/shared helpers
+            ├── error.rs                        # service error mapping
+            ├── types.rs                        # request/response/sample DTOs
+            └── impls/
+                ├── mod.rs                      # owns SPECS + OPERATIONS slices
+                ├── inspect_cgroup_monitor.rs   # SPEC + dispatch + implementation
+                └── read_cgroup_monitor_samples.rs
+
+crates/sandbox-runtime/workspace/src/
+├── model.rs                                    # session monitor target metadata
+├── lifecycle/
+│   ├── create.rs                               # register session monitor target
+│   └── destroy.rs                              # session_final + cleanup samples
+└── namespace/
+    ├── cgroup.rs                               # session-owned cgroup path construction
+    ├── cgroup_monitor.rs                       # cgroup v2 parsers/sample builder
+    └── mod.rs                                  # internal exports
+
+crates/sandbox-runtime/command/src/
+├── cgroup.rs                                   # command child cgroup helper/final sample/cleanup
+├── process.rs                                  # store command cgroup handle and pass request cgroup_path
+└── lib.rs                                      # exports needed by operation tests/callers
+
+crates/sandbox-runtime/namespace-process/src/runner/
+├── protocol.rs                                 # existing NamespaceCommandRequest.cgroup_path
+└── setns.rs                                    # runner joins requested cgroup path
+
+crates/sandbox-runtime/config/src/configs/
+└── daemon.rs                                   # cgroup_monitor config
+
+config/
+└── prd.yml                                     # production cgroup monitor defaults
+```
+
+Expected test shape:
+
+```text
+crates/sandbox-runtime/operation/tests/
+├── service_graph.rs                            # runtime catalog has Command + Cgroup Monitor families
+├── cgroup_monitor_operations.rs                # operation contracts/response shapes/help metadata
+└── support/
+    └── mod.rs
+
+crates/sandbox-runtime/workspace/tests/unit/
+└── cgroup_monitor.rs                           # parser, partial/malformed files, lifecycle cleanup
+
+crates/sandbox-runtime/command/tests/unit/
+└── process.rs                                  # child cgroup path, request wiring, final sample, cleanup
+
+crates/sandbox-runtime/namespace-process/tests/unit/runner/
+└── setns.rs                                    # keeps joining NamespaceCommandRequest.cgroup_path
+
+crates/sandbox-gateway/tests/
+└── gateway_cli.rs                              # runtime CLI maps cgroup monitor args without --sandbox-id
+```
 
 ## Change Map and LOC Estimate
 
-Production estimate: 1,010 to 1,820 added LOC.
+Production estimate: 1,055 to 1,900 added LOC.
 
-Test estimate: 700 to 1,270 added LOC.
+Test estimate: 760 to 1,340 added LOC.
 
-Total estimate: 1,710 to 3,090 added LOC.
+Total estimate: 1,815 to 3,240 added LOC.
 
 | Path | Change | LOC |
 | --- | --- | ---: |
-| `crates/sandbox-runtime/operation/src/public/cgroup_monitor/` | New public cgroup monitor operation service, contracts, types, operation impls. | +280 to +420 |
-| `crates/sandbox-runtime/operation/src/public/mod.rs` | Register cgroup monitor specs and dispatch entries beside command. | +15 to +30 |
+| `crates/sandbox-runtime/operation/src/public/cgroup_monitor/` | New public cgroup monitor runtime family, operation service, metadata, contracts, types, and operation impls. | +320 to +480 |
+| `crates/sandbox-runtime/operation/src/public/mod.rs` | Aggregate cgroup monitor family/spec/dispatch entries beside command. | +20 to +40 |
 | `crates/sandbox-runtime/operation/src/internal/services.rs` | Add `cgroup_monitor: Arc<CgroupMonitorOperationService>` and construction wiring. | +35 to +70 |
 | `crates/sandbox-runtime/operation/src/lib.rs` | Export cgroup monitor public module/types if needed by tests or callers. | +5 to +20 |
 | `crates/sandbox-runtime/workspace/src/namespace/cgroup.rs` | Replace stale workspace-id path construction with session-owned cgroup paths. | +120 to +200 |
@@ -554,12 +796,13 @@ Total estimate: 1,710 to 3,090 added LOC.
 | `crates/sandbox-runtime/namespace-process/src/runner/protocol.rs` | No shape change expected; `NamespaceCommandRequest.cgroup_path` already exists. | +0 to +10 |
 | `crates/sandbox-runtime/namespace-process/src/runner/setns.rs` | Existing join path should now receive the command cgroup; only error labeling/tests may change. | +0 to +15 |
 | `crates/sandbox-runtime/config/src/configs/daemon.rs` | Add cgroup monitor config. | +30 to +70 |
-| `crates/sandbox-runtime/config/prd.yml` | Add production cgroup monitor defaults. | +10 to +25 |
-| `crates/sandbox-runtime/operation/tests/service_graph.rs` | Update catalog assertions to include cgroup monitor operations. | +30 to +70 |
-| `crates/sandbox-runtime/operation/tests/cgroup_monitor_operations.rs` | New operation contract and response-shape tests. | +200 to +350 |
+| `config/prd.yml` | Add production cgroup monitor defaults. | +10 to +25 |
+| `crates/sandbox-runtime/operation/tests/service_graph.rs` | Update catalog assertions to include the `Cgroup Monitor` family, operation metadata, and runtime CLI constraints. | +40 to +90 |
+| `crates/sandbox-runtime/operation/tests/cgroup_monitor_operations.rs` | New operation contract, response-shape, related-operation, and help metadata tests. | +220 to +390 |
 | `crates/sandbox-runtime/workspace/tests/unit/cgroup_monitor.rs` | New parser, sample, lifecycle, and cleanup tests. | +250 to +450 |
 | `crates/sandbox-runtime/command/tests/` | Command child cgroup creation, namespace request path, cancel behavior, cleanup, and final sample coverage. | +180 to +320 |
 | `crates/sandbox-runtime/namespace-process/tests/` | Runner keeps joining `NamespaceCommandRequest.cgroup_path`. | +40 to +80 |
+| `crates/sandbox-gateway/tests/gateway_cli.rs` | Runtime CLI maps cgroup monitor flags through catalog metadata without `--sandbox-id` in operation usage. | +30 to +70 |
 | `docs/refactoring/sandbox-runtime-cgroup-monitor-design.md` | This spec. | +350 to +500 |
 
 The estimate is higher than a pure operation-service addition because command
@@ -578,6 +821,7 @@ cargo test -p sandbox-runtime service_graph
 cargo test -p sandbox-runtime-workspace cgroup
 cargo test -p sandbox-runtime-command process
 cargo test -p sandbox-runtime-namespace-process runner
+cargo test -p sandbox-gateway gateway_cli
 ```
 
 Formatting:
@@ -595,6 +839,14 @@ hosts cannot validate real `/sys/fs/cgroup` behavior directly.
   `read_cgroup_monitor_samples`.
 - Public schemas use `workspace_session_id`, not `workspace_id`.
 - Session and command cgroup paths are session-owned.
+- Runtime catalog includes both the `Command` and `Cgroup Monitor` families.
+- Cgroup monitor operation specs use family id `cgroup_monitor`.
+- Cgroup monitor operation specs include summaries, descriptions, CLI metadata,
+  and valid `related` operation references.
+- Runtime cgroup monitor CLI usage and examples start with
+  `sandbox-cli runtime` and do not include `--sandbox-id`.
+- Runtime help renders the cgroup monitor family and detailed pages for both
+  operations.
 - `read_cgroup_monitor_samples` has no offsets, cursors, or paging contract in
   v1.
 - Final samples are recorded for completed and canceled commands.
@@ -602,4 +854,5 @@ hosts cannot validate real `/sys/fs/cgroup` behavior directly.
 - Cgroup monitor samples never include command text, env, stdin, stdout, or stderr.
 - Unit tests cover cgroup parser behavior for missing, partial, and malformed
   cgroup files.
-- Operation catalog tests prove the new cgroup monitor operations are externally visible.
+- Operation catalog tests prove the new cgroup monitor operations are externally
+  visible under the runtime execution space.

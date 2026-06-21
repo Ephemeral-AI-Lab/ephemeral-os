@@ -67,6 +67,11 @@ impl CommandOperationService {
                 workspace_session_id: workspace_session_id.clone(),
             });
         }
+        if self.workspace().is_remount_blocked(workspace_session_id) {
+            return Err(CommandServiceError::WorkspaceSessionRemountBlocked {
+                workspace_session_id: workspace_session_id.clone(),
+            });
+        }
         Ok(())
     }
 }

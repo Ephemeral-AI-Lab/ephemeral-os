@@ -158,6 +158,43 @@ impl CommandProcessStore {
         Ok(Some(removed))
     }
 
+    pub(crate) fn fail_active(
+        &self,
+        command_session_id: &CommandSessionId,
+        error: String,
+        result: CommandTerminalResult,
+        finalized: Option<CommandFinalizedMetadata>,
+    ) -> Result<(), CommandServiceError> {
+        let mut active = lock(&self.active);
+        let Some(active_record) = active.remove(command_session_id) else {
+            return Ok(());
+        };
+        let mut completed = lock(&self.completed.completed);
+        if completed.contains_key(command_session_id) {
+            return Err(CommandServiceError::DuplicateCommandSessionId {
+                command_session_id: command_session_id.clone(),
+            });
+        }
+        completed.insert(
+            command_session_id.clone(),
+            CompletedCommandRecord {
+                command_session_id: command_session_id.clone(),
+                workspace_session_id: active_record.workspace_session_id,
+                result,
+                transcript: RetainedCommandTranscript {
+                    transcript_path: active_record.transcript.transcript_path,
+                },
+                finalization: FinalizationState::Failed {
+                    error,
+                    finalized: finalized.clone().map(Box::new),
+                },
+                finalized,
+            },
+        );
+        decrement_slot(&self.active_count);
+        Ok(())
+    }
+
     #[must_use]
     pub(crate) fn completed(
         &self,
@@ -255,7 +292,6 @@ pub(crate) enum CommandLifecycleState {
     QuiescedForRemount,
     Finalizing,
     Cancelled,
-    FinalizationFailed,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -317,7 +353,6 @@ pub(crate) struct CompletedCommandRecord {
     pub(crate) transcript: RetainedCommandTranscript,
     pub(crate) finalization: FinalizationState,
     pub(crate) finalized: Option<CommandFinalizedMetadata>,
-    pub(crate) completed_at: Instant,
 }
 
 fn decrement_slot(active_count: &AtomicUsize) {

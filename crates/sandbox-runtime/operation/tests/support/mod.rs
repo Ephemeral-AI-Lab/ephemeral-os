@@ -334,7 +334,7 @@ pub(crate) fn build_services_with_launch_driver_and_layerstack(
 
 pub(crate) fn create_request() -> CreateWorkspaceRequest {
     CreateWorkspaceRequest {
-        profile: WorkspaceProfile::SharedNetwork,
+        profile: WorkspaceProfile::HostCompatible,
     }
 }
 

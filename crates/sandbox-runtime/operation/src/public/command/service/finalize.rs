@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use crate::command::{
     CommandFinalizedMetadata, CommandLifecycleState, CommandPublishFinalization,
     CommandPublishStatus, CommandServiceError, CommandSessionId, CommandStatus,
@@ -35,13 +33,20 @@ impl CommandOperationService {
             Ok(finalized) => finalized,
             Err(error) => {
                 let retained = rejected_publish_metadata(&error);
-                return self.fail_finalization(&command_session_id, error.to_string(), retained);
+                return self.fail_finalization(
+                    &command_session_id,
+                    error.to_string(),
+                    result,
+                    retained,
+                );
             }
         };
 
         match self.complete_finalized_command(record, result.clone(), finalized) {
             Ok(()) => Ok(result),
-            Err(error) => self.fail_finalization(&command_session_id, error.to_string(), None),
+            Err(error) => {
+                self.fail_finalization(&command_session_id, error.to_string(), result, None)
+            }
         }
     }
 
@@ -61,6 +66,9 @@ impl CommandOperationService {
             });
         }
         let Some(layerstack) = self.layerstack() else {
+            if !self.allow_missing_layerstack_for_test() {
+                return Err(CommandServiceError::MissingLayerStackService);
+            }
             return Ok(CommandFinalizedMetadata {
                 publish: Some(CommandPublishFinalization {
                     status: CommandPublishStatus::Skipped,
@@ -95,6 +103,12 @@ impl CommandOperationService {
             changes: captured.changes,
         };
         let published = layerstack.publish_changes(request)?;
+        self.workspace().refresh_after_publish(
+            record.workspace_session_id.clone(),
+            base_revision_from_layerstack(&published.revision),
+            published.manifest.clone(),
+            published.layer_paths.clone(),
+        )?;
         let remount_handler = self
             .workspace()
             .begin_remount(record.workspace_session_id.clone())?;
@@ -104,6 +118,8 @@ impl CommandOperationService {
                 layer_paths: published.layer_paths.clone(),
             },
         )?;
+        // The remount result refreshes mount details from the workspace runtime; restore the
+        // published layerstack snapshot afterward so stale remount handles cannot roll it back.
         self.workspace().refresh_after_publish(
             record.workspace_session_id.clone(),
             base_revision_from_layerstack(&published.revision),
@@ -163,7 +179,6 @@ impl CommandOperationService {
             },
             finalization: FinalizationState::Complete,
             finalized: Some(finalized),
-            completed_at: Instant::now(),
         };
         let _ = self.process_store().complete_active(completed)?;
         Ok(())
@@ -189,25 +204,25 @@ impl CommandOperationService {
         &self,
         command_session_id: &CommandSessionId,
         error: String,
+        mut result: CommandTerminalResult,
         finalized_override: Option<CommandFinalizedMetadata>,
     ) -> Result<T, CommandServiceError> {
-        let finalized = self
-            .process_store()
-            .update_active(command_session_id, |active| {
-                let finalized = finalized_override
-                    .clone()
-                    .or_else(|| retained_finalized_metadata(&active.finalization));
-                active.lifecycle_state = CommandLifecycleState::FinalizationFailed;
-                active.finalization = FinalizationState::Failed {
-                    error: error.clone(),
-                    finalized: finalized.clone().map(Box::new),
-                };
-                finalized
-            });
+        result.status = CommandStatus::Failed;
+        let finalized = finalized_override.or_else(|| {
+            self.process_store()
+                .active(command_session_id)
+                .and_then(|active| retained_finalized_metadata(&active.finalization))
+        });
+        self.process_store().fail_active(
+            command_session_id,
+            error.clone(),
+            result,
+            finalized.clone(),
+        )?;
         Err(CommandServiceError::CommandFinalizationFailed {
             command_session_id: command_session_id.clone(),
             error,
-            finalized: finalized.flatten().map(Box::new),
+            finalized: finalized.map(Box::new),
         })
     }
 }
@@ -223,6 +238,9 @@ fn layer_protected_drop(
             }
             ProtectedPathDropReason::InvalidLayerPath => {
                 sandbox_runtime_layerstack::LayerProtectedDropReason::InvalidLayerPath
+            }
+            ProtectedPathDropReason::CommandScratchPath => {
+                sandbox_runtime_layerstack::LayerProtectedDropReason::CommandScratchPath
             }
         },
     }

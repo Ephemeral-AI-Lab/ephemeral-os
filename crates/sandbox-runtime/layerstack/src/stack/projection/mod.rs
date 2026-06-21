@@ -123,7 +123,8 @@ impl MergedView {
         let mut candidates = BTreeSet::new();
         for layer in &manifest.layers {
             let layer_dir = self.layer_dir(layer)?;
-            collect_candidate_descendants(&layer_dir, &layer_dir, &prefix, &mut candidates)?;
+            let start = join_layer_path(&layer_dir, dir.as_str());
+            collect_candidate_descendants(&layer_dir, &start, &prefix, limit, &mut candidates)?;
             if candidates.len() > limit {
                 break;
             }
@@ -131,12 +132,12 @@ impl MergedView {
 
         let mut visible = Vec::new();
         for path in candidates {
-            if visible.len() > limit {
-                break;
-            }
             match self.read_entry(path.as_str(), manifest)? {
                 MergedEntry::File { .. } | MergedEntry::Symlink { .. } | MergedEntry::Directory => {
                     visible.push(path);
+                    if visible.len() > limit {
+                        break;
+                    }
                 }
                 MergedEntry::Absent => {}
             }
@@ -195,14 +196,22 @@ fn collect_candidate_descendants(
     root: &Path,
     dir: &Path,
     prefix: &str,
+    limit: usize,
     candidates: &mut BTreeSet<LayerPath>,
 ) -> Result<(), LayerStackError> {
+    if candidates.len() > limit {
+        return Ok(());
+    }
     let entries = match std::fs::read_dir(dir) {
         Ok(entries) => entries,
         Err(err) if err.kind() == ErrorKind::NotFound => return Ok(()),
+        Err(err) if err.kind() == ErrorKind::NotADirectory => return Ok(()),
         Err(err) => return Err(err.into()),
     };
     for entry in entries {
+        if candidates.len() > limit {
+            return Ok(());
+        }
         let entry = entry?;
         let path = entry.path();
         let rel = path
@@ -213,7 +222,7 @@ fn collect_candidate_descendants(
         };
         let meta = std::fs::symlink_metadata(&path)?;
         if meta.is_dir() {
-            collect_candidate_descendants(root, &path, prefix, candidates)?;
+            collect_candidate_descendants(root, &path, prefix, limit, candidates)?;
             continue;
         }
         let name = path
@@ -226,6 +235,9 @@ fn collect_candidate_descendants(
         if rel.starts_with(prefix) {
             if let Ok(layer_path) = LayerPath::parse(rel) {
                 candidates.insert(layer_path);
+                if candidates.len() > limit {
+                    return Ok(());
+                }
             }
         }
     }

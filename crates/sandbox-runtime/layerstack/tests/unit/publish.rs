@@ -2,8 +2,8 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::stack::publish::model::{
-    ContentFingerprint, PublishBase, PublishBaseRevision, PublishRejectReason,
-    PublishValidatedChangesRequest,
+    ContentFingerprint, LayerProtectedDrop, LayerProtectedDropReason, PublishBase,
+    PublishBaseRevision, PublishRejectReason, PublishValidatedChangesRequest,
 };
 
 use super::*;
@@ -219,7 +219,10 @@ fn git_mutation_and_protected_paths_reject() -> Result<(), Box<dyn std::error::E
     let base = fixture.build_base()?;
 
     for (path, reason) in [
+        (".git/config", PublishRejectReason::GitMutationForbidden),
         ("pkg/.git/config", PublishRejectReason::GitMutationForbidden),
+        ("manifest.json", PublishRejectReason::ProtectedPath),
+        ("workspace.json", PublishRejectReason::ProtectedPath),
         ("layers", PublishRejectReason::ProtectedPath),
         ("staging", PublishRejectReason::ProtectedPath),
         (".layer-metadata", PublishRejectReason::ProtectedPath),
@@ -262,6 +265,39 @@ fn invalid_gitignore_does_not_panic_and_contributes_no_rules(
     ))?;
 
     assert_eq!(result.route_summary.source_count, 1);
+    Ok(())
+}
+
+#[test]
+fn protected_drop_rejects_before_publish() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("protected-drop")?;
+    std::fs::write(fixture.workspace.join("README.md"), "base\n")?;
+    let base = fixture.build_base()?;
+    let mut request = request(
+        base.clone(),
+        vec![LayerChange::Write {
+            path: lp("README.md"),
+            content: b"command\n".to_vec(),
+        }],
+    );
+    request.protected_drops.push(LayerProtectedDrop {
+        path: ".command-scratch/cmd-1".to_owned(),
+        reason: LayerProtectedDropReason::CommandScratchPath,
+    });
+
+    let error = fixture
+        .stack()?
+        .publish_validated_changes(request)
+        .expect_err("protected drop rejects publish");
+
+    assert!(matches!(
+        error,
+        LayerStackError::PublishRejected(rejection)
+            if rejection.reason == PublishRejectReason::ProtectedPath
+                && rejection.protected_drop.as_ref().map(|drop| drop.reason)
+                    == Some(LayerProtectedDropReason::CommandScratchPath)
+    ));
+    assert_eq!(fixture.stack()?.read_active_manifest()?, base);
     Ok(())
 }
 
@@ -331,5 +367,286 @@ fn opaque_dir_over_mixed_source_and_ignored_descendants_rejects(
         LayerStackError::PublishRejected(rejection)
             if rejection.reason == PublishRejectReason::OpaqueDirMixedRoutes
     ));
+    Ok(())
+}
+
+#[test]
+fn source_delete_conflicts_when_active_changed(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("source-delete-conflict")?;
+    std::fs::write(fixture.workspace.join("stale.txt"), "base\n")?;
+    let base = fixture.build_base()?;
+    let mut stack = fixture.stack()?;
+    let advanced = stack.publish_layer(&[LayerChange::Write {
+        path: lp("stale.txt"),
+        content: b"active\n".to_vec(),
+    }])?;
+
+    let error = stack
+        .publish_validated_changes(request(
+            base,
+            vec![LayerChange::Delete {
+                path: lp("stale.txt"),
+            }],
+        ))
+        .expect_err("delete of changed source path rejects");
+
+    match error {
+        LayerStackError::PublishRejected(rejection)
+            if rejection.reason == PublishRejectReason::SourceConflict =>
+        {
+            let conflict = rejection
+                .source_conflict
+                .expect("source conflict is included");
+            assert!(matches!(
+                conflict.expected,
+                ContentFingerprint::File { ref digest, .. } if !digest.is_empty()
+            ));
+            assert!(matches!(
+                conflict.actual,
+                ContentFingerprint::File { ref digest, .. } if !digest.is_empty()
+            ));
+        }
+        other => panic!("unexpected error: {other:?}"),
+    }
+    assert_eq!(fixture.stack()?.read_active_manifest()?, advanced);
+    Ok(())
+}
+
+#[test]
+fn directory_delete_uses_directory_gitignore_rules(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("directory-delete-gitignore")?;
+    std::fs::write(fixture.workspace.join(".gitignore"), "target/\n")?;
+    std::fs::create_dir_all(fixture.workspace.join("target"))?;
+    std::fs::write(fixture.workspace.join("target/file.txt"), "base\n")?;
+    let base = fixture.build_base()?;
+
+    let result = fixture.stack()?.publish_validated_changes(request(
+        base,
+        vec![LayerChange::Delete { path: lp("target") }],
+    ))?;
+
+    assert_eq!(result.route_summary.ignored_count, 1);
+    assert_eq!(result.route_summary.source_count, 0);
+    assert_eq!(
+        read_text(&fixture.root, &result.manifest, "target/file.txt")?,
+        None
+    );
+    Ok(())
+}
+
+#[test]
+fn gitignore_patterns_keep_directory_and_negation_semantics(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("gitignore-semantics")?;
+    std::fs::write(
+        fixture.workspace.join(".gitignore"),
+        "node_modules/\nlogs/*.log\n**/build/\n*.tmp\n!important.tmp\nsealed/\n!sealed/keep.tmp\n",
+    )?;
+    let base = fixture.build_base()?;
+
+    let result = fixture.stack()?.publish_validated_changes(request(
+        base,
+        vec![
+            LayerChange::Write {
+                path: lp("pkg/node_modules/a.js"),
+                content: b"ignored\n".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp("logs/root.log"),
+                content: b"ignored\n".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp("logs/sub/x.log"),
+                content: b"source\n".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp("src/build/out.js"),
+                content: b"ignored\n".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp("important.tmp"),
+                content: b"source\n".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp("sealed/keep.tmp"),
+                content: b"ignored\n".to_vec(),
+            },
+        ],
+    ))?;
+
+    assert_eq!(result.route_summary.ignored_count, 4);
+    assert_eq!(result.route_summary.source_count, 2);
+    Ok(())
+}
+
+#[test]
+fn opaque_dir_all_source_validates_hidden_descendant_conflicts(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("opaque-source-conflict")?;
+    std::fs::create_dir_all(fixture.workspace.join("target"))?;
+    std::fs::write(fixture.workspace.join("target/source.txt"), "base\n")?;
+    let base = fixture.build_base()?;
+    let mut stack = fixture.stack()?;
+    stack.publish_layer(&[LayerChange::Write {
+        path: lp("target/source.txt"),
+        content: b"active\n".to_vec(),
+    }])?;
+
+    let error = stack
+        .publish_validated_changes(request(
+            base,
+            vec![LayerChange::OpaqueDir { path: lp("target") }],
+        ))
+        .expect_err("opaque source descendant conflict rejects");
+
+    assert!(matches!(
+        error,
+        LayerStackError::PublishRejected(rejection)
+            if rejection.reason == PublishRejectReason::SourceConflict
+    ));
+    Ok(())
+}
+
+#[test]
+fn opaque_dir_all_ignored_descendants_routes_direct(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("opaque-ignored")?;
+    std::fs::write(fixture.workspace.join(".gitignore"), "target/\n")?;
+    std::fs::create_dir_all(fixture.workspace.join("target"))?;
+    std::fs::write(fixture.workspace.join("target/ignored.log"), "base\n")?;
+    let base = fixture.build_base()?;
+
+    let result = fixture.stack()?.publish_validated_changes(request(
+        base,
+        vec![LayerChange::OpaqueDir { path: lp("target") }],
+    ))?;
+
+    assert_eq!(result.route_summary.ignored_count, 1);
+    assert_eq!(result.route_summary.source_count, 0);
+    assert_eq!(
+        read_text(&fixture.root, &result.manifest, "target/ignored.log")?,
+        None
+    );
+    Ok(())
+}
+
+#[test]
+fn opaque_dir_over_protected_descendant_rejects(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("opaque-protected")?;
+    std::fs::create_dir_all(fixture.workspace.join("target/.layer-metadata"))?;
+    std::fs::write(
+        fixture.workspace.join("target/.layer-metadata/file"),
+        "protected\n",
+    )?;
+    let base = fixture.build_base()?;
+
+    let error = fixture
+        .stack()?
+        .publish_validated_changes(request(
+            base,
+            vec![LayerChange::OpaqueDir { path: lp("target") }],
+        ))
+        .expect_err("opaque over protected descendant rejects");
+
+    assert!(matches!(
+        error,
+        LayerStackError::PublishRejected(rejection)
+            if rejection.reason == PublishRejectReason::OpaqueDirProtectedDescendant
+    ));
+    Ok(())
+}
+
+#[test]
+fn opaque_dir_expansion_limit_bounds_traversal(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("opaque-limit")?;
+    let target = fixture.workspace.join("target");
+    std::fs::create_dir_all(&target)?;
+    for index in 0..=4096 {
+        std::fs::write(target.join(format!("{index:04}.txt")), "x\n")?;
+    }
+    let base = fixture.build_base()?;
+
+    let error = fixture
+        .stack()?
+        .publish_validated_changes(request(
+            base,
+            vec![LayerChange::OpaqueDir { path: lp("target") }],
+        ))
+        .expect_err("opaque expansion limit rejects");
+
+    assert!(matches!(
+        error,
+        LayerStackError::PublishRejected(rejection)
+            if rejection.reason == PublishRejectReason::OpaqueDirExpansionLimit
+    ));
+    Ok(())
+}
+
+#[test]
+fn mixed_source_and_ignored_changes_publish_in_one_layer(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("mixed-routes-success")?;
+    std::fs::write(fixture.workspace.join(".gitignore"), "ignored.log\n")?;
+    std::fs::write(fixture.workspace.join("README.md"), "base\n")?;
+    let base = fixture.build_base()?;
+    let base_layer_count = base.layers.len();
+
+    let result = fixture.stack()?.publish_validated_changes(request(
+        base,
+        vec![
+            LayerChange::Write {
+                path: lp("README.md"),
+                content: b"command\n".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp("ignored.log"),
+                content: b"ignored\n".to_vec(),
+            },
+        ],
+    ))?;
+
+    assert!(!result.no_op);
+    assert_eq!(result.route_summary.source_count, 1);
+    assert_eq!(result.route_summary.ignored_count, 1);
+    assert_eq!(result.manifest.layers.len(), base_layer_count + 1);
+    assert_eq!(
+        read_text(&fixture.root, &result.manifest, "README.md")?,
+        Some("command\n".to_owned())
+    );
+    assert_eq!(
+        read_text(&fixture.root, &result.manifest, "ignored.log")?,
+        Some("ignored\n".to_owned())
+    );
+    Ok(())
+}
+
+#[test]
+fn digest_deduped_publish_reports_no_op() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("dedupe-no-op")?;
+    std::fs::write(fixture.workspace.join("README.md"), "base\n")?;
+    let base = fixture.build_base()?;
+    let mut stack = fixture.stack()?;
+    let published = stack.publish_validated_changes(request(
+        base,
+        vec![LayerChange::Write {
+            path: lp("README.md"),
+            content: b"same\n".to_vec(),
+        }],
+    ))?;
+
+    let deduped = stack.publish_validated_changes(request(
+        published.manifest.clone(),
+        vec![LayerChange::Write {
+            path: lp("README.md"),
+            content: b"same\n".to_vec(),
+        }],
+    ))?;
+
+    assert!(deduped.no_op);
+    assert_eq!(deduped.manifest, published.manifest);
     Ok(())
 }

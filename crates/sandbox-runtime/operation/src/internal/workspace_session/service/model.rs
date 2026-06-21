@@ -15,6 +15,10 @@ impl WorkspaceRemountState {
     pub(crate) fn is_pending(&self) -> bool {
         matches!(self, Self::RemountPending)
     }
+
+    pub(crate) fn is_blocked(&self) -> bool {
+        matches!(self, Self::RemountBlocked)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -49,6 +53,11 @@ impl WorkspaceSession {
     pub(crate) fn ensure_remount_not_pending(&self) -> Result<(), WorkspaceSessionError> {
         if self.remount_state.is_pending() {
             return Err(WorkspaceSessionError::RemountAlreadyPending {
+                workspace_session_id: self.workspace_session_id.clone(),
+            });
+        }
+        if self.remount_state.is_blocked() {
+            return Err(WorkspaceSessionError::RemountBlocked {
                 workspace_session_id: self.workspace_session_id.clone(),
             });
         }

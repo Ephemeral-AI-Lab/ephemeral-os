@@ -3,15 +3,15 @@ use std::{future::Future, thread};
 use futures_util::stream::TryStreamExt;
 use rtnetlink::{new_connection, Handle, LinkBridge, LinkBridgePort, LinkUnspec, LinkVeth};
 
-use crate::profile::IsolatedNetworkError;
+use crate::profile::WorkspaceModeError;
 
 use super::{network_error_at, BRIDGE_NAME, BRIDGE_PREFIX_LEN, GATEWAY_ADDR};
 
-pub(super) fn run_netlink<T, F, Fut>(operation: F) -> Result<T, IsolatedNetworkError>
+pub(super) fn run_netlink<T, F, Fut>(operation: F) -> Result<T, WorkspaceModeError>
 where
     T: Send + 'static,
     F: FnOnce(Handle) -> Fut + Send + 'static,
-    Fut: Future<Output = Result<T, IsolatedNetworkError>> + Send + 'static,
+    Fut: Future<Output = Result<T, WorkspaceModeError>> + Send + 'static,
 {
     thread::spawn(move || {
         let runtime = tokio::runtime::Builder::new_current_thread()
@@ -26,10 +26,10 @@ where
         })
     })
     .join()
-    .map_err(|_| IsolatedNetworkError::NetworkUnavailable("netlink thread panicked".to_owned()))?
+    .map_err(|_| WorkspaceModeError::NetworkUnavailable("netlink thread panicked".to_owned()))?
 }
 
-pub(super) async fn ensure_bridge(handle: &Handle) -> Result<u32, IsolatedNetworkError> {
+pub(super) async fn ensure_bridge(handle: &Handle) -> Result<u32, WorkspaceModeError> {
     if link_index(handle, BRIDGE_NAME).await?.is_none() {
         ignore_exists(
             "create shared bridge",
@@ -65,7 +65,7 @@ pub(super) async fn install_veth_pair(
     host_name: &str,
     ns_name: &str,
     holder_pid: u32,
-) -> Result<(), IsolatedNetworkError> {
+) -> Result<(), WorkspaceModeError> {
     let bridge_index = require_link_index(handle, BRIDGE_NAME).await?;
     if link_index(handle, host_name).await?.is_none() {
         ignore_exists(
@@ -121,16 +121,16 @@ pub(super) async fn install_veth_pair(
     Ok(())
 }
 
-async fn require_link_index(handle: &Handle, name: &str) -> Result<u32, IsolatedNetworkError> {
+async fn require_link_index(handle: &Handle, name: &str) -> Result<u32, WorkspaceModeError> {
     link_index(handle, name)
         .await?
-        .ok_or_else(|| IsolatedNetworkError::NetworkUnavailable(format!("link {name} not found")))
+        .ok_or_else(|| WorkspaceModeError::NetworkUnavailable(format!("link {name} not found")))
 }
 
 pub(super) async fn link_index(
     handle: &Handle,
     name: &str,
-) -> Result<Option<u32>, IsolatedNetworkError> {
+) -> Result<Option<u32>, WorkspaceModeError> {
     let mut links = handle.link().get().match_name(name.to_owned()).execute();
     match links.try_next().await {
         Ok(link) => Ok(link.map(|link| link.header.index)),
@@ -142,21 +142,21 @@ pub(super) async fn link_index(
 fn ignore_exists(
     step: impl Into<String>,
     result: Result<(), rtnetlink::Error>,
-) -> Result<(), IsolatedNetworkError> {
+) -> Result<(), WorkspaceModeError> {
     ignore_matching(step, result, &["exists", "-17"])
 }
 
 pub(super) fn ignore_not_found(
     step: impl Into<String>,
     result: Result<(), rtnetlink::Error>,
-) -> Result<(), IsolatedNetworkError> {
+) -> Result<(), WorkspaceModeError> {
     ignore_matching(step, result, &["not found", "no such", "-19"])
 }
 
 fn ignore_unsupported(
     step: impl Into<String>,
     result: Result<(), rtnetlink::Error>,
-) -> Result<(), IsolatedNetworkError> {
+) -> Result<(), WorkspaceModeError> {
     ignore_matching(
         step,
         result,
@@ -173,7 +173,7 @@ fn ignore_matching(
     step: impl Into<String>,
     result: Result<(), rtnetlink::Error>,
     needles: &[&str],
-) -> Result<(), IsolatedNetworkError> {
+) -> Result<(), WorkspaceModeError> {
     let step = step.into();
     match result {
         Ok(()) => Ok(()),

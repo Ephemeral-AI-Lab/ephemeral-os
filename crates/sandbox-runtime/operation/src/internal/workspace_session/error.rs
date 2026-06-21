@@ -25,6 +25,11 @@ pub enum WorkspaceSessionError {
         workspace_session_id: WorkspaceSessionId,
     },
 
+    #[error("workspace remount blocked after failure: {workspace_session_id:?}")]
+    RemountBlocked {
+        workspace_session_id: WorkspaceSessionId,
+    },
+
     #[error("workspace remount is not pending: {workspace_session_id:?}")]
     RemountNotPending {
         workspace_session_id: WorkspaceSessionId,

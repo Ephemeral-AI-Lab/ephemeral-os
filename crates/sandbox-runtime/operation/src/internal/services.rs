@@ -8,26 +8,15 @@ use crate::workspace_session::WorkspaceSessionService;
 #[derive(Clone)]
 pub struct SandboxRuntimeOperations {
     pub command: Arc<CommandOperationService>,
-    pub layerstack: Option<Arc<LayerStackService>>,
+    pub layerstack: Arc<LayerStackService>,
 }
 
 impl SandboxRuntimeOperations {
     #[must_use]
-    pub fn new(command: Arc<CommandOperationService>) -> Self {
+    pub fn new(command: Arc<CommandOperationService>, layerstack: Arc<LayerStackService>) -> Self {
         Self {
             command,
-            layerstack: None,
-        }
-    }
-
-    #[must_use]
-    pub fn new_with_layerstack(
-        command: Arc<CommandOperationService>,
-        layerstack: Arc<LayerStackService>,
-    ) -> Self {
-        Self {
-            command,
-            layerstack: Some(layerstack),
+            layerstack,
         }
     }
 
@@ -51,12 +40,12 @@ impl SandboxRuntimeOperations {
             LayerStackService::new(layer_stack_root)
                 .expect("layerstack service initialization failed"),
         );
-        let command = Arc::new(CommandOperationService::new_with_layerstack(
+        let command = Arc::new(CommandOperationService::new(
             workspace_session,
             Arc::clone(&layerstack),
             config.command.into(),
         ));
-        Self::new_with_layerstack(command, layerstack)
+        Self::new(command, layerstack)
     }
 }
 

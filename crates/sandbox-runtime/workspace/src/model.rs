@@ -94,15 +94,15 @@ impl From<sandbox_runtime_layerstack::service::LeasedSnapshot> for LayerStackSna
 /// Workspace environment profile for a private mounted workspace.
 ///
 /// The selector reflects the current concrete split: whether the workspace
-/// uses the shared network path or adds a dedicated network boundary. It does
-/// not encode lifecycle length, publication behavior, or
-/// whether the caller is running a one-shot operation. Those decisions belong
-/// to the runtime or operation layer that owns the workspace handle.
+/// uses the host-compatible network path or adds a dedicated network boundary.
+/// It does not encode lifecycle length, publication behavior, or whether the
+/// caller is running a one-shot operation. Those decisions belong to the
+/// runtime or operation layer that owns the workspace handle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WorkspaceProfile {
-    /// Shared-network profile: private overlay and holder namespace stack with
-    /// shared network access.
-    SharedNetwork,
+    /// Host-compatible profile: private overlay and holder namespace stack
+    /// without a dedicated network boundary.
+    HostCompatible,
     /// Fully isolated profile: private overlay and holder namespace stack plus
     /// a dedicated network boundary.
     Isolated,
@@ -112,7 +112,7 @@ impl WorkspaceProfile {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
-            Self::SharedNetwork => "shared_network",
+            Self::HostCompatible => "host_compatible",
             Self::Isolated => "isolated",
         }
     }
@@ -420,6 +420,7 @@ impl From<&sandbox_runtime_layerstack::LayerChange> for ChangedPathKind {
 pub enum ProtectedPathDropReason {
     UnsupportedSpecialFile,
     InvalidLayerPath,
+    CommandScratchPath,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

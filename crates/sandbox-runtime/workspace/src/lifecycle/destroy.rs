@@ -7,7 +7,7 @@ use serde_json::{json, Value};
 use crate::model::WorkspaceProfile;
 use crate::namespace::HolderKillReport;
 use crate::overlay::tree::TreeResourceStats;
-use crate::profile::manager::IsolatedNetworkError;
+use crate::profile::manager::WorkspaceModeError;
 use crate::profile::{WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeManager};
 
 use super::{monotonic_seconds, record_phase_ms};
@@ -103,9 +103,9 @@ impl WorkspaceModeManager {
         &mut self,
         workspace_id: &WorkspaceModeId,
         grace_s: Option<f64>,
-    ) -> Result<ExitOutcome, IsolatedNetworkError> {
+    ) -> Result<ExitOutcome, WorkspaceModeError> {
         let Some(handle) = self.handles.remove(workspace_id) else {
-            return Err(IsolatedNetworkError::NotOpen);
+            return Err(WorkspaceModeError::NotOpen);
         };
         let timer = Instant::now();
         let upperdir_bytes = TreeResourceStats::collect(&handle.dirs.upperdir).bytes;

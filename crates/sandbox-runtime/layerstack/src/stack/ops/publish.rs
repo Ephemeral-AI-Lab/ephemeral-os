@@ -19,7 +19,7 @@ impl LayerStack {
     pub fn publish_layer(&mut self, changes: &[LayerChange]) -> Result<Manifest, LayerStackError> {
         let _guard = self.writer_lock.exclusive()?;
         let active = self.read_active_manifest_unlocked()?;
-        self.publish_layer_unlocked(&active, changes)
+        Ok(self.publish_layer_unlocked(&active, changes)?.manifest)
     }
 
     pub fn publish_validated_changes(
@@ -38,11 +38,11 @@ impl LayerStack {
                 no_op: true,
             });
         }
-        let manifest = self.publish_layer_unlocked(&active, changes)?;
+        let outcome = self.publish_layer_unlocked(&active, changes)?;
         Ok(PublishValidatedChangesResult {
-            manifest,
+            manifest: outcome.manifest,
             route_summary: plan.route_summary(),
-            no_op: false,
+            no_op: !outcome.created,
         })
     }
 
@@ -50,10 +50,13 @@ impl LayerStack {
         &self,
         active: &Manifest,
         changes: &[LayerChange],
-    ) -> Result<Manifest, LayerStackError> {
+    ) -> Result<PublishLayerOutcome, LayerStackError> {
         let digest = try_layer_digest(changes)?;
         if self.head_layer_digest(active)? == Some(digest.clone()) {
-            return Ok(active.clone());
+            return Ok(PublishLayerOutcome {
+                manifest: active.clone(),
+                created: false,
+            });
         }
 
         self.take_publish_failpoint_marker()?;
@@ -106,7 +109,10 @@ impl LayerStack {
             let _ = std::fs::remove_file(layer_digest_path(&self.storage_root, &layer_id));
             return Err(err);
         }
-        Ok(manifest)
+        Ok(PublishLayerOutcome {
+            manifest,
+            created: true,
+        })
     }
 
     fn head_layer_digest(&self, manifest: &Manifest) -> Result<Option<String>, LayerStackError> {
@@ -137,4 +143,9 @@ impl LayerStack {
             Err(err) => Err(err.into()),
         }
     }
+}
+
+pub(in crate::stack) struct PublishLayerOutcome {
+    pub(in crate::stack) manifest: Manifest,
+    pub(in crate::stack) created: bool,
 }

@@ -4,14 +4,14 @@ use std::path::Path;
 use serde_json::{json, Value};
 
 use crate::profile::manager::PERSISTED_HANDLES_SCHEMA_VERSION;
-use crate::profile::{IsolatedNetworkError, WorkspaceModeManager};
+use crate::profile::{WorkspaceModeError, WorkspaceModeManager};
 
 impl WorkspaceModeManager {
     fn persisted_handles_path(&self) -> std::path::PathBuf {
         self.scratch_root.join("manager.json")
     }
 
-    pub(crate) fn persist_handles(&self) -> Result<(), IsolatedNetworkError> {
+    pub(crate) fn persist_handles(&self) -> Result<(), WorkspaceModeError> {
         std::fs::create_dir_all(&self.scratch_root)
             .map_err(|err| manager_setup_error("manager_root", err))?;
         let handles: Vec<Value> = self
@@ -68,8 +68,8 @@ impl WorkspaceModeManager {
     }
 }
 
-fn manager_setup_error(step: &str, err: impl std::fmt::Display) -> IsolatedNetworkError {
-    IsolatedNetworkError::SetupFailed {
+fn manager_setup_error(step: &str, err: impl std::fmt::Display) -> WorkspaceModeError {
+    WorkspaceModeError::SetupFailed {
         step: format!("{step}: {err}"),
     }
 }

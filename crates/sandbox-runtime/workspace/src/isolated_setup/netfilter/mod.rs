@@ -1,8 +1,8 @@
 use std::io::Write;
 use std::process::{Command, Stdio};
 
-use crate::profile::IsolatedNetworkError;
 use crate::profile::Rfc1918Egress;
+use crate::profile::WorkspaceModeError;
 
 use super::{
     BRIDGE_NETWORK, BRIDGE_PREFIX_LEN, GATEWAY_ADDR, IMDS_ADDR, NFT_FILTER_TABLE, NFT_NAT_TABLE,
@@ -14,7 +14,7 @@ const NFT_BRIDGE_FILTER_TABLE: &str = "eos_iws_bridge_filter";
 pub(super) fn install_static_rules(
     rfc1918_egress: Rfc1918Egress,
     bridge_index: u32,
-) -> Result<(), IsolatedNetworkError> {
+) -> Result<(), WorkspaceModeError> {
     add_table("inet", NFT_NAT_TABLE)?;
     add_chain(
         "inet",
@@ -64,7 +64,7 @@ pub(super) fn install_static_rules(
     Ok(())
 }
 
-fn install_bridge_peer_isolation_rule() -> Result<(), IsolatedNetworkError> {
+fn install_bridge_peer_isolation_rule() -> Result<(), WorkspaceModeError> {
     add_table("bridge", NFT_BRIDGE_FILTER_TABLE)?;
     add_chain(
         "bridge",
@@ -86,16 +86,11 @@ fn peer_isolation_match(prefix: &str) -> String {
     )
 }
 
-fn add_table(family: &str, table: &str) -> Result<(), IsolatedNetworkError> {
+fn add_table(family: &str, table: &str) -> Result<(), WorkspaceModeError> {
     run_nft(format!("add table {family} {table}"), true)
 }
 
-fn add_chain(
-    family: &str,
-    table: &str,
-    chain: &str,
-    hook: &str,
-) -> Result<(), IsolatedNetworkError> {
+fn add_chain(family: &str, table: &str, chain: &str, hook: &str) -> Result<(), WorkspaceModeError> {
     run_nft(
         format!("add chain {family} {table} {chain} {{ {hook} }}"),
         true,
@@ -107,11 +102,11 @@ fn add_rule(
     table: &str,
     chain: &str,
     rule: impl std::fmt::Display,
-) -> Result<(), IsolatedNetworkError> {
+) -> Result<(), WorkspaceModeError> {
     run_nft(format!("add rule {family} {table} {chain} {rule}"), true)
 }
 
-fn run_nft(command: String, ignore_exists: bool) -> Result<(), IsolatedNetworkError> {
+fn run_nft(command: String, ignore_exists: bool) -> Result<(), WorkspaceModeError> {
     let mut child = Command::new("nft")
         .arg("-f")
         .arg("-")
@@ -141,6 +136,6 @@ fn run_nft(command: String, ignore_exists: bool) -> Result<(), IsolatedNetworkEr
     Err(nft_error(&command, stderr.trim()))
 }
 
-fn nft_error(command: &str, error: impl std::fmt::Display) -> IsolatedNetworkError {
-    IsolatedNetworkError::NetworkUnavailable(format!("nft `{command}`: {error}"))
+fn nft_error(command: &str, error: impl std::fmt::Display) -> WorkspaceModeError {
+    WorkspaceModeError::NetworkUnavailable(format!("nft `{command}`: {error}"))
 }

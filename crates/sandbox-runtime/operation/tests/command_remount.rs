@@ -267,7 +267,7 @@ fn build_services_with_launch_driver(
 }
 
 fn create_request() -> CreateWorkspaceRequest {
-    create_request_with_profile(WorkspaceProfile::SharedNetwork)
+    create_request_with_profile(WorkspaceProfile::HostCompatible)
 }
 
 fn create_request_with_profile(profile: WorkspaceProfile) -> CreateWorkspaceRequest {
@@ -292,7 +292,7 @@ fn workspace_handle(
         workspace_session_id,
         lease_id,
         workspace_root,
-        WorkspaceProfile::SharedNetwork,
+        WorkspaceProfile::HostCompatible,
     )
 }
 
@@ -434,6 +434,41 @@ fn command_remount_start_rejects_for_pending_persistent_workspace() {
     assert!(matches!(
         error,
         CommandServiceError::WorkspaceSessionRemountPending { workspace_session_id }
+            if workspace_session_id == WorkspaceSessionId("workspace-1".to_owned())
+    ));
+}
+
+#[test]
+fn command_remount_start_rejects_for_blocked_workspace() {
+    let fake = Arc::new(PendingGuardWorkspaceService::default());
+    let services = build_services(Arc::clone(&fake));
+    let workspace_root = PathBuf::from("/workspace");
+    fake.push_create_result(Ok(workspace_handle(
+        "workspace-1",
+        "lease-1",
+        workspace_root.clone(),
+    )));
+    let handler = services
+        .workspace
+        .create_workspace_session(create_request())
+        .expect("create workspace session succeeds");
+    services
+        .workspace
+        .begin_remount(handler.workspace_session_id.clone())
+        .expect("begin remount succeeds");
+    services
+        .workspace
+        .block_remount(handler.workspace_session_id.clone())
+        .expect("block remount succeeds");
+
+    let error = services
+        .command
+        .exec_command(exec_input(handler.workspace_session_id.clone()))
+        .expect_err("exec rejects blocked remount");
+
+    assert!(matches!(
+        error,
+        CommandServiceError::WorkspaceSessionRemountBlocked { workspace_session_id }
             if workspace_session_id == WorkspaceSessionId("workspace-1".to_owned())
     ));
 }

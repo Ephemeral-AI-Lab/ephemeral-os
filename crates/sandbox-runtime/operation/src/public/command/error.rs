@@ -35,6 +35,11 @@ pub enum CommandServiceError {
         workspace_session_id: WorkspaceSessionId,
     },
 
+    #[error("workspace session remount blocked: {workspace_session_id:?}")]
+    WorkspaceSessionRemountBlocked {
+        workspace_session_id: WorkspaceSessionId,
+    },
+
     #[error("command already completed: {command_session_id:?}")]
     CommandAlreadyCompleted {
         command_session_id: CommandSessionId,
@@ -45,6 +50,9 @@ pub enum CommandServiceError {
         command_session_id: CommandSessionId,
         error: String,
     },
+
+    #[error("command publish requires a layerstack service")]
+    MissingLayerStackService,
 
     #[error("command transcript unavailable for {command_session_id:?} at {path:?}: {error}")]
     CommandTranscriptUnavailable {

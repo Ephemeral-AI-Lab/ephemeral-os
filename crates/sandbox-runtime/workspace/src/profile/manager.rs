@@ -21,7 +21,6 @@ pub use crate::lifecycle::ExitOutcome;
 pub(crate) const PERSISTED_HANDLES_SCHEMA_VERSION: u32 = 1;
 const HOST_BUDGET_FALLBACK_BYTES: u64 = 1_u64 << 62;
 const KIB_BYTES: u64 = 1_024;
-const OWNED_SCRATCH_DIR: &str = "eos-isolated";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -57,20 +56,17 @@ impl Default for ResourceCaps {
 
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
-pub enum IsolatedNetworkError {
+pub enum WorkspaceModeError {
     #[error("invalid argument: {0}")]
     InvalidArgument(String),
 
-    #[error("agent already has an open isolated network")]
-    AlreadyOpen { created_at: f64, last_activity: f64 },
-
-    #[error("agent has no open isolated network")]
+    #[error("workspace session is not open")]
     NotOpen,
 
-    #[error("global isolated network cap reached")]
+    #[error("workspace session cap reached")]
     QuotaExceeded { total_cap: u32 },
 
-    #[error("host RAM gate refuses new isolated network")]
+    #[error("host RAM gate refuses new workspace session")]
     HostRamPressure {
         required_bytes: u64,
         budget_bytes: u64,
@@ -83,12 +79,11 @@ pub enum IsolatedNetworkError {
     NetworkUnavailable(String),
 }
 
-impl IsolatedNetworkError {
+impl WorkspaceModeError {
     #[must_use]
     pub const fn kind(&self) -> &'static str {
         match self {
             Self::InvalidArgument(_) => "invalid_argument",
-            Self::AlreadyOpen { .. } => "already_open",
             Self::NotOpen => "not_open",
             Self::QuotaExceeded { .. } => "quota_exceeded",
             Self::HostRamPressure { .. } => "host_ram_pressure",
@@ -133,7 +128,7 @@ impl WorkspaceModeManager {
         }
     }
 
-    pub(crate) fn check_host_capacity(&self) -> Result<(), IsolatedNetworkError> {
+    pub(crate) fn check_host_capacity(&self) -> Result<(), WorkspaceModeError> {
         check_host_capacity_against_budget(
             self.handles.len(),
             self.caps.upperdir_bytes,
@@ -141,20 +136,20 @@ impl WorkspaceModeManager {
         )
     }
 
-    pub(crate) fn owned_scratch_root(&self) -> PathBuf {
-        self.scratch_root.join(OWNED_SCRATCH_DIR)
+    pub(crate) fn workspace_session_root(&self, workspace_id: &WorkspaceModeId) -> PathBuf {
+        self.scratch_root.join("sessions").join(&workspace_id.0)
     }
 }
 
-pub(crate) fn validate_workspace_root(workspace_root: &str) -> Result<(), IsolatedNetworkError> {
+pub(crate) fn validate_workspace_root(workspace_root: &str) -> Result<(), WorkspaceModeError> {
     let workspace_root = workspace_root.trim();
     if workspace_root.is_empty() {
-        return Err(IsolatedNetworkError::InvalidArgument(
+        return Err(WorkspaceModeError::InvalidArgument(
             "workspace_root is required".to_owned(),
         ));
     }
     if !Path::new(workspace_root).is_absolute() {
-        return Err(IsolatedNetworkError::InvalidArgument(format!(
+        return Err(WorkspaceModeError::InvalidArgument(format!(
             "workspace_root must be absolute: {workspace_root}"
         )));
     }
@@ -165,10 +160,10 @@ fn check_host_capacity_against_budget(
     open_handles: usize,
     upperdir_bytes: u64,
     budget_bytes: u64,
-) -> Result<(), IsolatedNetworkError> {
+) -> Result<(), WorkspaceModeError> {
     let required_bytes = required_host_capacity_bytes(open_handles, upperdir_bytes);
     if required_bytes > budget_bytes {
-        return Err(IsolatedNetworkError::HostRamPressure {
+        return Err(WorkspaceModeError::HostRamPressure {
             required_bytes,
             budget_bytes,
         });

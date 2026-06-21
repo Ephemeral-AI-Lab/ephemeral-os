@@ -312,7 +312,7 @@ fn build_services_with_process_group_controller(
 }
 
 fn create_request() -> CreateWorkspaceRequest {
-    create_request_with_profile(WorkspaceProfile::SharedNetwork)
+    create_request_with_profile(WorkspaceProfile::HostCompatible)
 }
 
 fn create_request_with_profile(profile: WorkspaceProfile) -> CreateWorkspaceRequest {
@@ -337,7 +337,7 @@ fn workspace_handle(
         workspace_session_id,
         lease_id,
         workspace_root,
-        WorkspaceProfile::SharedNetwork,
+        WorkspaceProfile::HostCompatible,
     )
 }
 
