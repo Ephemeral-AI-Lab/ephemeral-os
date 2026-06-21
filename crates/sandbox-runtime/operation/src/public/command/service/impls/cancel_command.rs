@@ -30,8 +30,10 @@ const CANCEL_ARGS: &[ArgSpec] = &[ArgSpec::required(
 
 const CANCEL_CLI: CliSpec = CliSpec {
     path: &["runtime", "cancel_command"],
-    usage: "sandbox runtime --sandbox-id ID cancel_command --command-session-id ID",
-    examples: &["sandbox runtime --sandbox-id sbox-1 cancel_command --command-session-id cmd-1"],
+    usage: "sandbox-cli runtime --sandbox-id ID cancel_command --command-session-id ID",
+    examples: &[
+        "sandbox-cli runtime --sandbox-id sbox-1 cancel_command --command-session-id cmd-1",
+    ],
 };
 
 pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: &Request) -> Response {

@@ -8,8 +8,8 @@ requests.
 The current CLI command already presents the gateway as the user entrypoint:
 
 ```text
-sandbox manager ...
-sandbox runtime --sandbox-id ID ...
+sandbox-cli manager ...
+sandbox-cli runtime --sandbox-id ID ...
 ```
 
 The process topology should match that user model. External clients should
@@ -19,7 +19,7 @@ host-side control-plane domain library behind the gateway.
 ## Target Topology
 
 ```text
-sandbox CLI
+sandbox-cli
   -> /tmp/sandbox-gateway.sock
     -> sandbox-gateway server
       -> sandbox-manager control plane
@@ -37,22 +37,14 @@ There is not a public `/tmp/sandbox-manager.sock` in the target design.
 
 ## Package Shape
 
-Add a long-lived gateway package:
+Use one gateway package with two explicit binaries:
 
 ```text
 Path:    crates/sandbox-gateway
 Package: sandbox-gateway
 Import:  sandbox_gateway
 Binary:  sandbox-gateway
-```
-
-Keep the CLI package:
-
-```text
-Path:    crates/sandbox-gateway-cli
-Package: sandbox-gateway-cli
-Import:  sandbox_gateway_cli
-Binary:  sandbox
+Binary:  sandbox-cli
 ```
 
 Keep the manager package:
@@ -86,7 +78,7 @@ Must not own:
 - Runtime command/workspace/layerstack/overlay semantics.
 - Direct runtime operation dispatch.
 
-### `sandbox-gateway-cli`
+### `sandbox-gateway::cli`
 
 Owns:
 
@@ -269,16 +261,6 @@ Implementation notes:
 - Keep request construction behavior unchanged.
 - Keep CLI output behavior unchanged: data to stdout, errors to stderr.
 
-Compatibility aliases may be temporary if needed:
-
-```text
---manager-socket
-SANDBOX_MANAGER_SOCKET
-```
-
-If aliases are retained, document them as deprecated and keep
-`--gateway-socket` / `SANDBOX_GATEWAY_SOCKET` as the canonical surface.
-
 ## Manager Server Migration
 
 The current `sandbox-manager/src/server` listener should not remain the public
@@ -300,7 +282,6 @@ That would make the entrypoint ambiguous and split operational documentation.
 Allowed:
 
 ```text
-sandbox-gateway-cli -> sandbox-protocol
 sandbox-gateway     -> sandbox-protocol
 sandbox-gateway     -> sandbox-manager
 sandbox-manager     -> sandbox-protocol
@@ -312,16 +293,18 @@ sandbox-daemon      -> sandbox-runtime
 Forbidden:
 
 ```text
-sandbox-gateway-cli -> sandbox-manager
-sandbox-gateway-cli -> sandbox-daemon
-sandbox-gateway-cli -> sandbox-runtime-*
+sandbox-gateway::cli -> sandbox_manager::
+sandbox-gateway::cli -> sandbox_daemon::
+sandbox-gateway::cli -> sandbox_runtime*
 sandbox-gateway     -> sandbox-daemon runtime implementation
 sandbox-gateway     -> sandbox-runtime-*
 sandbox-manager     -> sandbox-runtime-*
 ```
 
 The gateway may call manager APIs. It must not become a runtime implementation
-or a hidden daemon.
+or a hidden daemon. Because the CLI now lives in the same package as the
+gateway server, the CLI boundary is enforced by source imports rather than by a
+separate Cargo package.
 
 ## Commands
 
@@ -334,15 +317,15 @@ cargo run -p sandbox-gateway -- serve
 Use the CLI through the gateway:
 
 ```sh
-cargo run -p sandbox-gateway-cli -- manager list_sandboxes
-cargo run -p sandbox-gateway-cli -- runtime --sandbox-id sbox-1 exec_command --workspace-session-id ws-1 pwd
+cargo run -p sandbox-gateway --bin sandbox-cli -- manager list_sandboxes
+cargo run -p sandbox-gateway --bin sandbox-cli -- runtime --sandbox-id sbox-1 exec_command --workspace-session-id ws-1 pwd
 ```
 
 Override the gateway socket:
 
 ```sh
 cargo run -p sandbox-gateway -- serve --gateway-socket /tmp/eos-gateway.sock
-cargo run -p sandbox-gateway-cli -- --gateway-socket /tmp/eos-gateway.sock manager list_sandboxes
+cargo run -p sandbox-gateway --bin sandbox-cli -- --gateway-socket /tmp/eos-gateway.sock manager list_sandboxes
 ```
 
 ## Tests
@@ -357,8 +340,6 @@ Add focused tests for:
 - Gateway dispatch calls the manager router for sandbox-scope runtime requests.
 - CLI config precedence uses `--gateway-socket` over `SANDBOX_GATEWAY_SOCKET`
   over the default.
-- Deprecated `--manager-socket` and `SANDBOX_MANAGER_SOCKET`, if retained, map
-  to the gateway socket with lower priority than the canonical names.
 - Runtime CLI requests still require `--sandbox-id` or `SANDBOX_DEFAULT_ID`.
 - No CLI tests depend on `sandbox-manager` internals.
 
@@ -367,17 +348,17 @@ Add focused tests for:
 Run the narrow checks while migrating:
 
 ```sh
-cargo fmt --check -p sandbox-protocol -p sandbox-manager -p sandbox-gateway -p sandbox-gateway-cli
-cargo check -p sandbox-protocol -p sandbox-manager -p sandbox-gateway -p sandbox-gateway-cli --tests
-cargo test -p sandbox-protocol -p sandbox-manager -p sandbox-gateway -p sandbox-gateway-cli
-cargo clippy -p sandbox-protocol -p sandbox-manager -p sandbox-gateway -p sandbox-gateway-cli --all-targets --no-deps -- -D warnings
+cargo fmt --check -p sandbox-protocol -p sandbox-manager -p sandbox-gateway
+cargo check -p sandbox-protocol -p sandbox-manager -p sandbox-gateway --tests
+cargo test -p sandbox-protocol -p sandbox-manager -p sandbox-gateway
+cargo clippy -p sandbox-protocol -p sandbox-manager -p sandbox-gateway --all-targets --no-deps -- -D warnings
 git diff --check
 ```
 
-Before closing the migration, run stale-name scans:
+Before closing the migration, run stale-name scans for retired public ingress
+socket names and obsolete manager-server exports:
 
 ```sh
-rg -n "manager_socket|manager-socket|SANDBOX_MANAGER_SOCKET|sandbox-manager\\.sock|/tmp/sandbox-manager\\.sock" crates docs README.md config
 rg -n "SandboxManagerServer|ServerConfig" crates/sandbox-manager crates/sandbox-gateway
 ```
 
@@ -388,8 +369,8 @@ socket names should use gateway terminology.
 ## Acceptance Criteria
 
 - External clients connect to `/tmp/sandbox-gateway.sock` by default.
-- The installed `sandbox` CLI exposes `--gateway-socket`, not
-  `--manager-socket`, as the canonical socket override.
+- The installed `sandbox-cli` CLI exposes `--gateway-socket` as the canonical
+  socket override.
 - `sandbox-gateway` is the only long-lived public host-side listener.
 - `sandbox-manager` owns lifecycle state and request routing decisions, but not
   the public listener process.
@@ -397,5 +378,5 @@ socket names should use gateway terminology.
 - Manager requests still route by `OperationScope::System`.
 - No new request DTO, target wrapper, or `invoke_sandbox_daemon` operation is
   introduced.
-- `sandbox-gateway-cli` remains a protocol client and has no dependency on
-  `sandbox-manager`, `sandbox-daemon`, or `sandbox-runtime-*`.
+- `sandbox-gateway::cli` remains a protocol client and has no source imports
+  from `sandbox-manager`, `sandbox-daemon`, or `sandbox-runtime-*`.

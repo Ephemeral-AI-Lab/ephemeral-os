@@ -206,8 +206,8 @@ async fn gateway_connection_decodes_request_and_writes_response() -> TestResult 
     let (services, _store, _daemon_client) = services();
     let server = server(
         services,
-        PathBuf::from("/tmp/unused-gateway.sock"),
-        PathBuf::from("/tmp/unused-gateway.pid"),
+        PathBuf::from("/tmp/test-gateway.sock"),
+        PathBuf::from("/tmp/test-gateway.pid"),
         8,
         CancellationToken::new(),
     );
@@ -227,8 +227,8 @@ async fn gateway_connection_rejects_oversized_request() -> TestResult {
     let (services, _store, _daemon_client) = services();
     let server = server(
         services,
-        PathBuf::from("/tmp/unused-gateway.sock"),
-        PathBuf::from("/tmp/unused-gateway.pid"),
+        PathBuf::from("/tmp/test-gateway.sock"),
+        PathBuf::from("/tmp/test-gateway.pid"),
         8,
         CancellationToken::new(),
     );
@@ -246,8 +246,8 @@ async fn gateway_connection_rejects_missing_newline() -> TestResult {
     let (services, _store, _daemon_client) = services();
     let server = server(
         services,
-        PathBuf::from("/tmp/unused-gateway.sock"),
-        PathBuf::from("/tmp/unused-gateway.pid"),
+        PathBuf::from("/tmp/test-gateway.sock"),
+        PathBuf::from("/tmp/test-gateway.pid"),
         8,
         CancellationToken::new(),
     );
@@ -298,8 +298,8 @@ async fn gateway_dispatches_sandbox_scope_through_manager_router() -> TestResult
         .expect("insert sandbox");
     let server = server(
         services,
-        PathBuf::from("/tmp/unused-gateway.sock"),
-        PathBuf::from("/tmp/unused-gateway.pid"),
+        PathBuf::from("/tmp/test-gateway.sock"),
+        PathBuf::from("/tmp/test-gateway.pid"),
         8,
         CancellationToken::new(),
     );

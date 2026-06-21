@@ -9,7 +9,7 @@ Top-level crate specs live in:
 ```text
 docs/refactoring/sandbox-protocol.md
 docs/refactoring/sandbox-manager.md
-docs/refactoring/sandbox-gateway-cli.md
+docs/refactoring/sandbox-cli.md
 docs/refactoring/sandbox-daemon.md
 ```
 
@@ -35,9 +35,9 @@ support packages into that facade crate.
 ## Dependency Direction
 
 ```text
-sandbox-gateway-cli
+sandbox-gateway
   -> sandbox-protocol
-  -> sandbox-manager endpoint over protocol
+  -> sandbox-manager
 
 sandbox-manager
   -> sandbox-protocol
@@ -147,7 +147,7 @@ Dependencies:
 
 - Allowed: `sandbox-protocol`, `sandbox-runtime-command`,
   `sandbox-runtime-workspace`, `serde_json`, `thiserror`.
-- Forbidden: `sandbox-manager`, `sandbox-gateway-cli`, `sandbox-daemon` server
+- Forbidden: `sandbox-manager`, `sandbox-gateway`, `sandbox-daemon` server
   internals.
 
 Verification:
@@ -206,7 +206,7 @@ Dependencies:
 - Allowed: `sandbox-runtime-namespace-process` for namespace runner protocol
   types, `sandbox-runtime-workspace` only for validated workspace entry types
   needed to launch a command, OS/process/PTY crates, `serde`, `serde_json`.
-- Forbidden: `sandbox-protocol`, `sandbox-manager`, `sandbox-gateway-cli`,
+- Forbidden: `sandbox-protocol`, `sandbox-manager`, `sandbox-gateway`,
   `sandbox-daemon`, `sandbox-runtime-layerstack`.
 
 Keep `command-request.json` until a replacement such as `--request-fd` exists.
@@ -294,7 +294,7 @@ Dependencies:
 - Allowed: `sandbox-runtime-layerstack`, `sandbox-runtime-namespace-process`,
   `sandbox-runtime-overlay` only through low-level mount interfaces where
   workspace lifecycle needs them, OS namespace/network crates.
-- Forbidden: `sandbox-protocol`, `sandbox-manager`, `sandbox-gateway-cli`,
+- Forbidden: `sandbox-protocol`, `sandbox-manager`, `sandbox-gateway`,
   `sandbox-daemon`, `sandbox-runtime-command`.
 
 Verification:
@@ -354,7 +354,7 @@ Dependencies:
 
 - Allowed: `sandbox-runtime-config`, `sandbox-runtime-overlay`, OS
   namespace/process crates, `serde`, `serde_json`.
-- Forbidden: `sandbox-protocol`, `sandbox-manager`, `sandbox-gateway-cli`,
+- Forbidden: `sandbox-protocol`, `sandbox-manager`, `sandbox-gateway`,
   `sandbox-daemon`, `sandbox-runtime`, `sandbox-runtime-workspace`.
 
 Verification:
@@ -411,7 +411,7 @@ src/
 Dependencies:
 
 - Allowed: hashing, filesystem, ignore/walk, serialization, and error crates.
-- Forbidden: `sandbox-protocol`, `sandbox-manager`, `sandbox-gateway-cli`,
+- Forbidden: `sandbox-protocol`, `sandbox-manager`, `sandbox-gateway`,
   `sandbox-daemon`, `sandbox-runtime-command`, `sandbox-runtime-workspace`,
   `sandbox-runtime-overlay`.
 
@@ -459,7 +459,7 @@ src/
 Dependencies:
 
 - Allowed: `rustix`, `thiserror`.
-- Forbidden: `sandbox-protocol`, `sandbox-manager`, `sandbox-gateway-cli`,
+- Forbidden: `sandbox-protocol`, `sandbox-manager`, `sandbox-gateway`,
   `sandbox-daemon`, `sandbox-runtime`, `sandbox-runtime-command`,
   `sandbox-runtime-workspace`, `sandbox-runtime-layerstack`.
 
@@ -522,7 +522,7 @@ src/
 Dependencies:
 
 - Allowed: `serde`, `serde_path_to_error`, YAML parser crate, `thiserror`.
-- Forbidden: `sandbox-protocol`, `sandbox-manager`, `sandbox-gateway-cli`,
+- Forbidden: `sandbox-protocol`, `sandbox-manager`, `sandbox-gateway`,
   `sandbox-daemon`, all runtime implementation crates.
 
 Verification:

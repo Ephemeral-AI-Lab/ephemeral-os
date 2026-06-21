@@ -93,7 +93,7 @@ Allowed:
 Forbidden:
 
 - `sandbox-manager`
-- `sandbox-gateway-cli`
+- `sandbox-gateway`
 
 The daemon can be launched by the manager, but it must not depend on the
 manager.

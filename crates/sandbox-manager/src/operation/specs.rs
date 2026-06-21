@@ -10,8 +10,8 @@ pub(crate) const CREATE_SANDBOX: OperationSpec = OperationSpec {
     args: SANDBOX_ID_ARGS,
     cli: Some(CliSpec {
         path: &["manager", "create_sandbox"],
-        usage: "sandbox manager create_sandbox --sandbox-id ID",
-        examples: &["sandbox manager create_sandbox --sandbox-id sbox-1"],
+        usage: "sandbox-cli manager create_sandbox --sandbox-id ID",
+        examples: &["sandbox-cli manager create_sandbox --sandbox-id sbox-1"],
     }),
 };
 
@@ -22,8 +22,8 @@ pub(crate) const DESTROY_SANDBOX: OperationSpec = OperationSpec {
     args: SANDBOX_ID_ARGS,
     cli: Some(CliSpec {
         path: &["manager", "destroy_sandbox"],
-        usage: "sandbox manager destroy_sandbox --sandbox-id ID",
-        examples: &["sandbox manager destroy_sandbox --sandbox-id sbox-1"],
+        usage: "sandbox-cli manager destroy_sandbox --sandbox-id ID",
+        examples: &["sandbox-cli manager destroy_sandbox --sandbox-id sbox-1"],
     }),
 };
 
@@ -34,8 +34,8 @@ pub(crate) const LIST_SANDBOXES: OperationSpec = OperationSpec {
     args: &[],
     cli: Some(CliSpec {
         path: &["manager", "list_sandboxes"],
-        usage: "sandbox manager list_sandboxes",
-        examples: &["sandbox manager list_sandboxes"],
+        usage: "sandbox-cli manager list_sandboxes",
+        examples: &["sandbox-cli manager list_sandboxes"],
     }),
 };
 
@@ -46,8 +46,8 @@ pub(crate) const INSPECT_SANDBOX: OperationSpec = OperationSpec {
     args: SANDBOX_ID_ARGS,
     cli: Some(CliSpec {
         path: &["manager", "inspect_sandbox"],
-        usage: "sandbox manager inspect_sandbox --sandbox-id ID",
-        examples: &["sandbox manager inspect_sandbox --sandbox-id sbox-1"],
+        usage: "sandbox-cli manager inspect_sandbox --sandbox-id ID",
+        examples: &["sandbox-cli manager inspect_sandbox --sandbox-id sbox-1"],
     }),
 };
 
@@ -58,8 +58,8 @@ pub(crate) const START_SANDBOX_DAEMON: OperationSpec = OperationSpec {
     args: SANDBOX_ID_ARGS,
     cli: Some(CliSpec {
         path: &["manager", "start_sandbox_daemon"],
-        usage: "sandbox manager start_sandbox_daemon --sandbox-id ID",
-        examples: &["sandbox manager start_sandbox_daemon --sandbox-id sbox-1"],
+        usage: "sandbox-cli manager start_sandbox_daemon --sandbox-id ID",
+        examples: &["sandbox-cli manager start_sandbox_daemon --sandbox-id sbox-1"],
     }),
 };
 
@@ -70,8 +70,8 @@ pub(crate) const STOP_SANDBOX_DAEMON: OperationSpec = OperationSpec {
     args: SANDBOX_ID_ARGS,
     cli: Some(CliSpec {
         path: &["manager", "stop_sandbox_daemon"],
-        usage: "sandbox manager stop_sandbox_daemon --sandbox-id ID",
-        examples: &["sandbox manager stop_sandbox_daemon --sandbox-id sbox-1"],
+        usage: "sandbox-cli manager stop_sandbox_daemon --sandbox-id ID",
+        examples: &["sandbox-cli manager stop_sandbox_daemon --sandbox-id sbox-1"],
     }),
 };
 
@@ -82,8 +82,8 @@ pub(crate) const DESCRIBE_MANAGER_OPERATIONS: OperationSpec = OperationSpec {
     args: &[],
     cli: Some(CliSpec {
         path: &["manager", "describe_manager_operations"],
-        usage: "sandbox manager describe_manager_operations",
-        examples: &["sandbox manager describe_manager_operations"],
+        usage: "sandbox-cli manager describe_manager_operations",
+        examples: &["sandbox-cli manager describe_manager_operations"],
     }),
 };
 
@@ -94,8 +94,8 @@ pub(crate) const DESCRIBE_DAEMON_OPERATIONS: OperationSpec = OperationSpec {
     args: SANDBOX_ID_ARGS,
     cli: Some(CliSpec {
         path: &["manager", "describe_daemon_operations"],
-        usage: "sandbox manager describe_daemon_operations --sandbox-id ID",
-        examples: &["sandbox manager describe_daemon_operations --sandbox-id sbox-1"],
+        usage: "sandbox-cli manager describe_daemon_operations --sandbox-id ID",
+        examples: &["sandbox-cli manager describe_daemon_operations --sandbox-id sbox-1"],
     }),
 };
 

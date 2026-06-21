@@ -5,7 +5,7 @@ use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::time::timeout;
 
-use crate::{GatewayError, SandboxGatewayServer};
+use super::{GatewayError, SandboxGatewayServer};
 
 impl SandboxGatewayServer {
     pub async fn handle_connection<S>(&self, stream: S) -> Result<(), GatewayError>

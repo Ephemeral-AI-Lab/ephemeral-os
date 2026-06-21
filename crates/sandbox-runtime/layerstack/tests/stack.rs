@@ -18,16 +18,15 @@ fn squash_coalesces_layers_and_preserves_merged_reads(
     publish_text(&mut stack, "b.txt", "two\n")?;
     publish_text(&mut stack, "a.txt", "three\n")?;
 
-    assert!(stack.can_squash(2)?);
     let squashed = stack
-        .squash(2)?
+        .squash()?
         .manifest
         .ok_or_else(|| std::io::Error::other("squash should produce a manifest"))?;
 
     assert_eq!(squashed.layers.len(), 1);
     assert_eq!(stack.read_text("a.txt")?.0, "three\n");
     assert_eq!(stack.read_text("b.txt")?.0, "two\n");
-    assert!(stack.squash(2)?.manifest.is_none());
+    assert!(stack.squash()?.manifest.is_none());
     Ok(())
 }
 
@@ -43,7 +42,7 @@ fn release_lease_gcs_squashed_layers_after_retaining_lease_drops(
     let lease = stack.acquire_snapshot("reader")?;
     let old_tail: Vec<LayerRef> = lease.manifest.layers[1..].to_vec();
     let squashed = stack
-        .squash(2)?
+        .squash()?
         .manifest
         .ok_or_else(|| std::io::Error::other("squash should produce a manifest"))?;
     assert_eq!(squashed.layers.len(), 2);
@@ -78,7 +77,7 @@ fn cross_instance_lease_retains_squashed_layers_until_reopened_release(
 
     let mut squash_stack = LayerStack::open(fixture.root.clone())?;
     let squashed = squash_stack
-        .squash(2)?
+        .squash()?
         .manifest
         .ok_or_else(|| std::io::Error::other("squash should produce a manifest"))?;
     assert_eq!(squashed.layers.len(), 2);
@@ -147,7 +146,7 @@ fn reclaim_unpinned_layers_view_reclaim_compacts_same_file_gap_around_single_pro
 
     assert!(stack.release_lease(&lease.lease_id)?);
     let after_release = stack
-        .squash(1)?
+        .squash()?
         .manifest
         .expect("final squash should collapse released l4 chain");
     assert_eq!(after_release.layers.len(), 1);
@@ -214,7 +213,7 @@ fn reclaim_unpinned_layers_parent_prefix_compaction_keeps_live_l4_lease_but_recl
 
     assert!(stack.release_lease(&lease.lease_id)?);
     let final_manifest = stack
-        .squash(1)?
+        .squash()?
         .manifest
         .expect("final squash should collapse normalized l4 chain");
     assert_eq!(final_manifest.layers.len(), 1);
@@ -274,7 +273,7 @@ fn reclaim_unpinned_layers_large_parent_prefix_compaction_preserves_large_file_i
 
     assert!(stack.release_lease(&lease.lease_id)?);
     let final_manifest = stack
-        .squash(1)?
+        .squash()?
         .manifest
         .expect("large final squash should collapse normalized chain");
     assert_eq!(final_manifest.layers.len(), 1);
@@ -356,7 +355,7 @@ fn reclaim_unpinned_layers_multi_lease_parent_normalization_reclaims_only_unpinn
 
     assert!(stack.release_lease(&mid_lease.lease_id)?);
     let squashed_with_old_lease = stack
-        .squash(1)?
+        .squash()?
         .manifest
         .expect("active chain should squash even while historical old lease remains");
     assert_eq!(squashed_with_old_lease.layers.len(), 1);
@@ -419,7 +418,7 @@ fn reclaim_unpinned_layers_many_historical_leases_reclaim_top_gap_and_preserve_s
     assert!(stack.release_lease(&lease_8.lease_id)?);
     assert!(stack.release_lease(&lease_4.lease_id)?);
     let final_manifest = stack
-        .squash(1)?
+        .squash()?
         .manifest
         .expect("final squash should collapse after all historical leases release");
     assert_eq!(final_manifest.layers.len(), 1);
@@ -480,7 +479,7 @@ fn reclaim_unpinned_layers_delta_reclaim_preserves_delete_above_protected_lower_
     assert_eq!(stack.read_text("a.txt")?, (String::new(), false));
 
     assert!(stack.release_lease(&lease.lease_id)?);
-    stack.squash(1)?;
+    stack.squash()?;
     assert_eq!(payload_bytes(&fixture.root.join("layers"))?, 0);
     assert_eq!(stack.read_text("a.txt")?, (String::new(), false));
     Ok(())
@@ -527,7 +526,7 @@ fn reclaim_unpinned_layers_delta_reclaim_preserves_opaque_dir_above_protected_lo
     );
 
     assert!(stack.release_lease(&lease.lease_id)?);
-    stack.squash(1)?;
+    stack.squash()?;
     assert_eq!(payload_bytes(&fixture.root.join("layers"))?, 0);
     assert_eq!(
         stack.read_text("dir/protected.txt")?,

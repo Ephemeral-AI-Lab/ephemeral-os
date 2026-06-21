@@ -23,8 +23,8 @@ static TEST_SPEC: OperationSpec = OperationSpec {
     args: TEST_ARGS,
     cli: Some(CliSpec {
         path: &["manager"],
-        usage: "sandbox manager create_sandbox --sandbox-id ID",
-        examples: &["sandbox manager create_sandbox --sandbox-id sbox-1"],
+        usage: "sandbox-cli manager create_sandbox --sandbox-id ID",
+        examples: &["sandbox-cli manager create_sandbox --sandbox-id sbox-1"],
     }),
 };
 
@@ -122,7 +122,7 @@ fn catalog_to_value_serializes_cli_metadata() {
     );
     assert_eq!(
         value["operations"][0]["cli"]["examples"][0],
-        "sandbox manager create_sandbox --sandbox-id sbox-1"
+        "sandbox-cli manager create_sandbox --sandbox-id sbox-1"
     );
 }
 
@@ -150,8 +150,8 @@ fn catalog_from_value_decodes_cli_metadata() {
                 ],
                 "cli": {
                     "path": ["runtime"],
-                    "usage": "sandbox runtime exec_command COMMAND",
-                    "examples": ["sandbox runtime exec_command pwd"]
+                    "usage": "sandbox-cli runtime exec_command COMMAND",
+                    "examples": ["sandbox-cli runtime exec_command pwd"]
                 }
             }
         ]

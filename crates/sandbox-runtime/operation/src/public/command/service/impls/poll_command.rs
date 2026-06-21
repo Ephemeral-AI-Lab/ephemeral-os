@@ -40,9 +40,9 @@ const POLL_ARGS: &[ArgSpec] = &[
 
 const POLL_CLI: CliSpec = CliSpec {
     path: &["runtime", "poll_command"],
-    usage: "sandbox runtime --sandbox-id ID poll_command --command-session-id ID --last-n-lines N",
+    usage: "sandbox-cli runtime --sandbox-id ID poll_command --command-session-id ID --last-n-lines N",
     examples: &[
-        "sandbox runtime --sandbox-id sbox-1 poll_command --command-session-id cmd-1 --last-n-lines 50",
+        "sandbox-cli runtime --sandbox-id sbox-1 poll_command --command-session-id cmd-1 --last-n-lines 50",
     ],
 };
 

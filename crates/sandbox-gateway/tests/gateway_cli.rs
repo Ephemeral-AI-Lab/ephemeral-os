@@ -2,14 +2,15 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use sandbox_gateway_cli::client::GatewayClient;
-use sandbox_gateway_cli::config::{
+use sandbox_gateway::cli::client::GatewayClient;
+use sandbox_gateway::cli::config::{
     GatewayConfig, GatewayConfigOverrides, DEFAULT_GATEWAY_SOCKET, SANDBOX_DEFAULT_ID_ENV,
     SANDBOX_GATEWAY_SOCKET_ENV,
 };
-use sandbox_gateway_cli::output::render_response;
-use sandbox_gateway_cli::request_builder::{
-    build_request_from_catalog_with_id, catalog_from_response, BuildRequestInput,
+use sandbox_gateway::cli::output::render_response;
+use sandbox_gateway::cli::request_builder::{
+    build_request_from_catalog_with_id, catalog_from_response, manager_catalog_request,
+    BuildRequestInput,
 };
 use sandbox_protocol::manual::render_catalog_manual;
 use sandbox_protocol::{
@@ -20,6 +21,16 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixListener;
 
 type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
+#[test]
+fn generated_request_ids_are_uuid_v4() -> TestResult {
+    let request = manager_catalog_request();
+    let parsed = uuid::Uuid::parse_str(&request.request_id)?;
+
+    assert_eq!(parsed.to_string(), request.request_id);
+    assert_eq!(parsed.get_version_num(), 4);
+    Ok(())
+}
 
 #[test]
 fn manager_operation_uses_system_scope() -> TestResult {
@@ -156,9 +167,9 @@ fn manual_renders_manager_and_runtime_sections_from_catalog_documents() -> TestR
 
     assert!(manual.contains("Sandbox Manager Operations"));
     assert!(manual.contains("Sandbox Runtime Operations"));
-    assert!(manual.contains("sandbox manager create_sandbox --sandbox-id sbox-1"));
+    assert!(manual.contains("sandbox-cli manager create_sandbox --sandbox-id sbox-1"));
     assert!(manual.contains(
-        "sandbox runtime --sandbox-id sbox-1 exec_command --workspace-session-id ws-1 pwd"
+        "sandbox-cli runtime --sandbox-id sbox-1 exec_command --workspace-session-id ws-1 pwd"
     ));
     assert!(!manual.contains("Sandbox Daemon Operations"));
     Ok(())
@@ -258,12 +269,28 @@ fn output_writes_errors_to_stderr() -> TestResult {
     Ok(())
 }
 
+#[test]
+fn cli_files_do_not_import_gateway_server_or_runtime_internals() {
+    let main = include_str!("../src/cli/main.rs");
+    let client = include_str!("../src/cli/client.rs");
+    let config = include_str!("../src/cli/config.rs");
+    let output = include_str!("../src/cli/output.rs");
+    let request_builder = include_str!("../src/cli/request_builder.rs");
+
+    for source in [main, client, config, output, request_builder] {
+        assert!(!source.contains("sandbox_manager::"));
+        assert!(!source.contains("sandbox_daemon::"));
+        assert!(!source.contains("sandbox_runtime"));
+        assert!(!source.contains("crate::gateway"));
+    }
+}
+
 #[tokio::test]
 async fn help_writes_stdout_and_exits_successfully() -> TestResult {
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
-    let exit = sandbox_gateway_cli::output::run_cli_with_writers(
-        ["sandbox", "--help"],
+    let exit = sandbox_gateway::cli::output::run_cli_with_writers(
+        ["sandbox-cli", "--help"],
         &mut stdout,
         &mut stderr,
     )
@@ -271,7 +298,7 @@ async fn help_writes_stdout_and_exits_successfully() -> TestResult {
 
     assert_eq!(exit, 0);
     let help = String::from_utf8(stdout)?;
-    assert!(help.contains("Usage: sandbox"));
+    assert!(help.contains("Usage: sandbox-cli"));
     assert!(help.contains("--gateway-socket"));
     assert!(stderr.is_empty());
     Ok(())
@@ -314,7 +341,7 @@ fn config_precedence_cli_env_default() -> TestResult {
 
 #[tokio::test]
 async fn gateway_client_sends_one_request_and_reads_one_response() -> TestResult {
-    let root = unique_temp_dir("sandbox-gateway-client-test")?;
+    let root = unique_temp_dir("sandbox-cli-client-test")?;
     std::fs::create_dir_all(&root)?;
     let socket_path = root.join("gateway.sock");
     let listener = UnixListener::bind(&socket_path)?;
@@ -401,8 +428,8 @@ fn manager_catalog() -> Result<OperationCatalogDocument, Box<dyn std::error::Err
                 "args": [],
                 "cli": {
                     "path": ["manager"],
-                    "usage": "sandbox manager list_sandboxes",
-                    "examples": ["sandbox manager list_sandboxes"]
+                    "usage": "sandbox-cli manager list_sandboxes",
+                    "examples": ["sandbox-cli manager list_sandboxes"]
                 }
             },
             {
@@ -424,8 +451,8 @@ fn manager_catalog() -> Result<OperationCatalogDocument, Box<dyn std::error::Err
                 ],
                 "cli": {
                     "path": ["manager"],
-                    "usage": "sandbox manager create_sandbox --sandbox-id ID",
-                    "examples": ["sandbox manager create_sandbox --sandbox-id sbox-1"]
+                    "usage": "sandbox-cli manager create_sandbox --sandbox-id ID",
+                    "examples": ["sandbox-cli manager create_sandbox --sandbox-id sbox-1"]
                 }
             }
         ]
@@ -466,8 +493,8 @@ fn runtime_catalog() -> Result<OperationCatalogDocument, Box<dyn std::error::Err
                 ],
                 "cli": {
                     "path": ["runtime"],
-                    "usage": "sandbox runtime --sandbox-id ID exec_command --workspace-session-id ID COMMAND",
-                    "examples": ["sandbox runtime --sandbox-id sbox-1 exec_command --workspace-session-id ws-1 pwd"]
+                    "usage": "sandbox-cli runtime --sandbox-id ID exec_command --workspace-session-id ID COMMAND",
+                    "examples": ["sandbox-cli runtime --sandbox-id sbox-1 exec_command --workspace-session-id ws-1 pwd"]
                 }
             },
             {
@@ -500,8 +527,8 @@ fn runtime_catalog() -> Result<OperationCatalogDocument, Box<dyn std::error::Err
                 ],
                 "cli": {
                     "path": ["runtime"],
-                    "usage": "sandbox runtime --sandbox-id ID poll_command --command-session-id ID --last-n-lines N",
-                    "examples": ["sandbox runtime --sandbox-id sbox-1 poll_command --command-session-id cmd-1 --last-n-lines 50"]
+                    "usage": "sandbox-cli runtime --sandbox-id ID poll_command --command-session-id ID --last-n-lines N",
+                    "examples": ["sandbox-cli runtime --sandbox-id sbox-1 poll_command --command-session-id cmd-1 --last-n-lines 50"]
                 }
             }
         ]

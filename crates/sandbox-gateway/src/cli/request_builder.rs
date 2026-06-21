@@ -1,15 +1,10 @@
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use sandbox_protocol::{
     catalog_from_value, ArgKind, OperationCatalogDocument, OperationExecutionSpace, OperationScope,
     OperationSpecDocument, Request,
 };
 use serde_json::{json, Map, Number, Value};
 
-use crate::config::GatewayConfig;
-
-static REQUEST_COUNTER: AtomicU64 = AtomicU64::new(1);
+use crate::cli::config::GatewayConfig;
 
 const DESCRIBE_MANAGER_OPERATIONS: &str = "describe_manager_operations";
 const DESCRIBE_DAEMON_OPERATIONS: &str = "describe_daemon_operations";
@@ -245,11 +240,7 @@ fn cli_arg_name(arg: &sandbox_protocol::ArgSpecDocument) -> &str {
 }
 
 fn next_request_id() -> String {
-    let counter = REQUEST_COUNTER.fetch_add(1, Ordering::Relaxed);
-    let millis = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |duration| duration.as_millis());
-    format!("sandbox-cli-{}-{millis}-{counter}", std::process::id())
+    uuid::Uuid::new_v4().to_string()
 }
 
 fn build_error(message: impl Into<String>) -> RequestBuildError {

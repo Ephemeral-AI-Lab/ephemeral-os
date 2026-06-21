@@ -7,8 +7,6 @@ pub mod runner;
 
 pub(crate) use holder::network::parse_network_config;
 pub(crate) use holder::Handshake;
-pub(crate) use runner::setns::{overlay_layer_paths, require_ns_fds};
-
 #[cfg(target_os = "linux")]
 pub(crate) use runner::setns::{
     mountinfo_lowerdir_count_matched, mountinfo_lowerdir_verified, namespace_fd_order_with_types,
@@ -32,6 +30,7 @@ mod holder_network_tests {
     ));
 }
 
+#[cfg(target_os = "linux")]
 mod runner_setns_tests {
     include!(concat!(
         env!("CARGO_MANIFEST_DIR"),

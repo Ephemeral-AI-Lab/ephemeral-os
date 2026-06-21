@@ -7,9 +7,9 @@ use clap::error::ErrorKind;
 use clap::{Args, Parser, Subcommand};
 use serde_json::{json, Value};
 
-use crate::client::GatewayClient;
-use crate::config::{GatewayConfig, GatewayConfigOverrides};
-use crate::request_builder::{
+use crate::cli::client::GatewayClient;
+use crate::cli::config::{GatewayConfig, GatewayConfigOverrides};
+use crate::cli::request_builder::{
     build_request_from_catalog, catalog_from_response, manager_catalog_request,
     resolve_runtime_sandbox_id, runtime_catalog_request, BuildRequestInput, RequestBuildError,
 };
@@ -22,7 +22,7 @@ const EXIT_FAILURE: u8 = 1;
 const EXIT_USAGE: u8 = 2;
 
 #[derive(Debug, Parser)]
-#[command(name = "sandbox", disable_help_subcommand = true)]
+#[command(name = "sandbox-cli", disable_help_subcommand = true)]
 struct Cli {
     #[arg(long = "gateway-socket", value_name = "PATH", global = true)]
     gateway_socket_path: Option<PathBuf>,

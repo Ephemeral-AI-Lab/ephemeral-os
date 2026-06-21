@@ -9,7 +9,7 @@ Import:  sandbox_protocol
 ```
 
 `sandbox-protocol` is the shared process contract used by
-`sandbox-gateway-cli`, `sandbox-manager`, and `sandbox-daemon`.
+`sandbox-gateway`, `sandbox-manager`, and `sandbox-daemon`.
 
 ## Owns
 

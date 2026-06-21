@@ -14,11 +14,13 @@ use std::time::Instant;
 use sandbox_runtime_overlay::OverlayHandle;
 
 use super::RunnerError;
-use crate::runner::protocol::{NamespaceCommandRequest, NsFds, RunResult};
+use crate::runner::protocol::{NamespaceCommandRequest, RunResult};
 
 #[cfg(target_os = "linux")]
 pub(crate) fn run_setns(request: &NamespaceCommandRequest) -> Result<RunResult, RunnerError> {
-    let ns_fds = require_ns_fds(request)?;
+    let ns_fds = request
+        .ns_fds
+        .ok_or_else(|| RunnerError::InvalidRequest("setns mode requires ns_fds".to_owned()))?;
     let mut timings = super::shell_exec::RunnerPhaseTimings::default();
     let cgroup_start = Instant::now();
     join_cgroup(request)?;
@@ -54,7 +56,13 @@ pub fn setns_overlay_mount(
         RunnerError::InvalidRequest("setns overlay mount requires workdir".to_owned())
     })?;
     let handle = OverlayHandle {
-        layer_paths: overlay_layer_paths(request)?,
+        layer_paths: if request.layer_paths.is_empty() {
+            return Err(RunnerError::InvalidRequest(
+                "setns overlay mount requires layer_paths".to_owned(),
+            ));
+        } else {
+            request.layer_paths.clone()
+        },
         upperdir: upperdir.clone(),
         workdir: workdir.clone(),
     };
@@ -527,12 +535,6 @@ fn validated_relative_probe_path(path: &str) -> Result<PathBuf, String> {
     Ok(normalized)
 }
 
-pub(crate) fn require_ns_fds(request: &NamespaceCommandRequest) -> Result<NsFds, RunnerError> {
-    request
-        .ns_fds
-        .ok_or_else(|| RunnerError::InvalidRequest("setns mode requires ns_fds".to_owned()))
-}
-
 #[cfg(target_os = "linux")]
 pub(crate) fn namespace_fd_order_with_types(
     ns_fds: &NsFds,
@@ -550,7 +552,9 @@ pub(crate) fn namespace_fd_order_with_types(
 
 #[cfg(target_os = "linux")]
 fn setns_user_mnt(request: &NamespaceCommandRequest, operation: &str) -> Result<(), RunnerError> {
-    let ns_fds = require_ns_fds(request)?;
+    let ns_fds = request
+        .ns_fds
+        .ok_or_else(|| RunnerError::InvalidRequest("setns mode requires ns_fds".to_owned()))?;
     let user = ns_fds
         .user
         .ok_or_else(|| RunnerError::InvalidRequest(format!("{operation} requires user ns fd")))?;
@@ -559,18 +563,6 @@ fn setns_user_mnt(request: &NamespaceCommandRequest, operation: &str) -> Result<
         .ok_or_else(|| RunnerError::InvalidRequest(format!("{operation} requires mnt ns fd")))?;
     setns_fd("user", user.0, libc::CLONE_NEWUSER)?;
     setns_fd("mnt", mnt.0, libc::CLONE_NEWNS)
-}
-
-pub(crate) fn overlay_layer_paths(
-    request: &NamespaceCommandRequest,
-) -> Result<Vec<PathBuf>, RunnerError> {
-    if request.layer_paths.is_empty() {
-        Err(RunnerError::InvalidRequest(
-            "setns overlay mount requires layer_paths".to_owned(),
-        ))
-    } else {
-        Ok(request.layer_paths.clone())
-    }
 }
 
 #[cfg(target_os = "linux")]

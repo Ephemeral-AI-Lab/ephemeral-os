@@ -172,7 +172,7 @@ fn operation_catalog_contains_only_manager_operations() {
             .map(|cli| {
                 cli.examples
                     .iter()
-                    .all(|example| example.starts_with("sandbox manager "))
+                    .all(|example| example.starts_with("sandbox-cli manager "))
             })
             .unwrap_or(true)
     }));
@@ -196,11 +196,11 @@ fn describe_manager_operations_serializes_cli_metadata() {
     );
     assert_eq!(
         catalog["operations"][0]["cli"]["usage"],
-        "sandbox manager create_sandbox --sandbox-id ID"
+        "sandbox-cli manager create_sandbox --sandbox-id ID"
     );
     assert_eq!(
         catalog["operations"][0]["cli"]["examples"][0],
-        "sandbox manager create_sandbox --sandbox-id sbox-1"
+        "sandbox-cli manager create_sandbox --sandbox-id sbox-1"
     );
 }
 

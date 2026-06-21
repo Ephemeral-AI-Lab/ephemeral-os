@@ -102,45 +102,17 @@ impl LayerCheckpointSquasher {
     pub(crate) fn plan(
         &self,
         active_manifest: &Manifest,
-        max_depth: usize,
         lease_head_layers: &[LayerRef],
-        min_reduction: usize,
     ) -> Result<Option<SquashPlan>, LayerStackError> {
-        if max_depth == 0 {
-            return Err(LayerStackError::InvalidSquashPlan(
-                "max_depth must be positive".to_owned(),
-            ));
-        }
-        if min_reduction == 0 {
-            return Err(LayerStackError::InvalidSquashPlan(
-                "min_reduction must be positive".to_owned(),
-            ));
-        }
-        if active_manifest.layers.len() <= max_depth {
-            return Ok(None);
-        }
-
         let entries = segment_around_lease_heads(&active_manifest.layers, lease_head_layers)?;
         if entries.len() >= active_manifest.layers.len() {
             return Ok(None);
         }
-        if active_manifest.layers.len() - entries.len() < min_reduction {
-            return Ok(None);
-        }
-        let plan = SquashPlan::new(
+        Ok(Some(SquashPlan::new(
             active_manifest.version,
             active_manifest.layers.clone(),
             entries,
-        )?;
-        if plan.entries.len() > max_depth
-            && plan
-                .checkpoint_segments()
-                .iter()
-                .all(|segment| segment.layers.len() <= max_depth)
-        {
-            return Ok(None);
-        }
-        Ok(Some(plan))
+        )?))
     }
 
     pub(crate) fn build_checkpoint(

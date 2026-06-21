@@ -1,17 +1,7 @@
-use super::{overlay_layer_paths, require_ns_fds};
 use crate::runner::protocol::{Fd, NamespaceCommandRequest, NsFds};
 use std::path::Path;
 #[cfg(target_os = "linux")]
 use std::path::PathBuf;
-
-#[test]
-fn require_ns_fds_rejects_missing_setns_payload() -> Result<(), Box<dyn std::error::Error>> {
-    let Err(error) = require_ns_fds(&request(None)) else {
-        return Err("ns_fds should be required".into());
-    };
-    assert!(error.to_string().contains("requires ns_fds"));
-    Ok(())
-}
 
 #[cfg(target_os = "linux")]
 #[test]
@@ -100,13 +90,6 @@ fn lowerdir_verification_reports_only_available_kernel_proof() {
         super::mountinfo_lowerdir_verified(Some(&mismatch), &expected),
         Some(false)
     );
-}
-
-#[test]
-fn overlay_layer_paths_rejects_empty_layers() {
-    let request = request(Some(default_ns_fds()));
-    let error = overlay_layer_paths(&request).expect_err("layer paths are required");
-    assert!(error.to_string().contains("requires layer_paths"));
 }
 
 fn request(ns_fds: Option<NsFds>) -> NamespaceCommandRequest {

@@ -48,9 +48,9 @@ const READ_LINES_ARGS: &[ArgSpec] = &[
 
 const READ_LINES_CLI: CliSpec = CliSpec {
     path: &["runtime", "read_command_lines"],
-    usage: "sandbox runtime --sandbox-id ID read_command_lines --command-session-id ID --start-offset N --limit N",
+    usage: "sandbox-cli runtime --sandbox-id ID read_command_lines --command-session-id ID --start-offset N --limit N",
     examples: &[
-        "sandbox runtime --sandbox-id sbox-1 read_command_lines --command-session-id cmd-1 --start-offset 0 --limit 100",
+        "sandbox-cli runtime --sandbox-id sbox-1 read_command_lines --command-session-id cmd-1 --start-offset 0 --limit 100",
     ],
 };
 

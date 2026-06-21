@@ -1,22 +1,22 @@
-# sandbox-gateway-cli Crate Spec
+# sandbox-gateway CLI Module Spec
 
 ## Identity
 
 ```text
-Path:    crates/sandbox-gateway-cli
-Package: sandbox-gateway-cli
-Import:  sandbox_gateway_cli
-Binary:  sandbox
+Path:    crates/sandbox-gateway/src/cli
+Package: sandbox-gateway
+Import:  sandbox_gateway::cli
+Binary:  sandbox-cli
 ```
 
-`sandbox-gateway-cli` is the human-facing command line. It builds protocol
-requests, sends them to `sandbox-manager`, and renders responses.
+`sandbox-gateway::cli` is the human-facing command line. It builds protocol
+requests, sends them to the gateway socket, and renders responses.
 
 ## Owns
 
 - CLI argument parsing.
 - CLI config discovery and precedence.
-- Manager client connection setup.
+- Gateway client connection setup.
 - Request construction from `OperationSpec` and CLI argv.
 - Manual/help rendering for manager and runtime execution spaces.
 - Output formatting and exit-code behavior.
@@ -32,38 +32,37 @@ requests, sends them to `sandbox-manager`, and renders responses.
 ## Target Modules
 
 ```text
-src/
+src/cli/
   main.rs
   config.rs
   client.rs
-  manual.rs
   request_builder.rs
   output.rs
 ```
 
 ## CLI Rules
 
-- Installed binary name is `sandbox`.
+- Installed binary name is `sandbox-cli`.
 - Errors go to stderr.
 - Machine-readable responses go to stdout.
 - Default route is gateway -> manager.
-- Canonical execution spaces are `sandbox manager ...` and
-  `sandbox runtime --sandbox-id ID ...`.
+- Canonical execution spaces are `sandbox-cli manager ...` and
+  `sandbox-cli runtime --sandbox-id ID ...`.
 - Manager operations use `request.scope = system`.
 - Runtime operations require `--sandbox-id SANDBOX_ID` unless config provides a
   default sandbox, and set `request.scope = sandbox`.
 - Help/manual text is generated from `OperationSpec`, not duplicated by hand.
 - Catalog responses are parsed with `sandbox-protocol` catalog document helpers.
-- Request construction validates that `sandbox manager ...` consumes a manager
-  catalog and `sandbox runtime ...` consumes a runtime catalog.
+- Request construction validates that `sandbox-cli manager ...` consumes a
+  manager catalog and `sandbox-cli runtime ...` consumes a runtime catalog.
 
 ## Example Commands
 
 ```text
-sandbox manager create_sandbox --sandbox-id sbox-1
-sandbox manager list_sandboxes
-sandbox runtime --sandbox-id sbox-1 exec_command --workspace-session-id ws-1 "pwd"
-sandbox runtime --sandbox-id sbox-1 poll_command --command-session-id cmd-1
+sandbox-cli manager create_sandbox --sandbox-id sbox-1
+sandbox-cli manager list_sandboxes
+sandbox-cli runtime --sandbox-id sbox-1 exec_command --workspace-session-id ws-1 "pwd"
+sandbox-cli runtime --sandbox-id sbox-1 poll_command --command-session-id cmd-1
 ```
 
 ## Dependency Rules
@@ -79,7 +78,7 @@ Forbidden:
 - `sandbox-runtime-*`
 - direct sandbox runtime libraries
 
-The CLI talks to `sandbox-manager`; it does not become a hidden manager.
+The CLI talks to the gateway socket; it does not become a hidden manager.
 
 ## Request Construction
 
@@ -127,7 +126,7 @@ specs through a daemon-backed operation internally.
 ## Verification
 
 ```sh
-cargo fmt --check -p sandbox-gateway-cli
-cargo check -p sandbox-gateway-cli --tests
-cargo test -p sandbox-gateway-cli
+cargo fmt --check -p sandbox-gateway
+cargo check -p sandbox-gateway --tests
+cargo test -p sandbox-gateway
 ```

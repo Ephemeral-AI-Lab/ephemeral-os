@@ -1,6 +1,6 @@
 use tokio_util::sync::CancellationToken;
 
-use crate::GatewayConfig;
+use super::GatewayConfig;
 
 pub struct SandboxGatewayServer {
     pub config: GatewayConfig,

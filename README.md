@@ -5,9 +5,9 @@ human-facing gateway CLI, in-sandbox daemon, and separated runtime packages.
 
 ```text
 operator or agent
-   | sandbox CLI or newline-delimited JSON protocol
+   | sandbox-cli or newline-delimited JSON protocol
    v
-sandbox-gateway-cli / sandbox-protocol
+sandbox-gateway / sandbox-protocol
    v
 sandbox-manager
    | forwards sandbox-scoped runtime requests
@@ -25,7 +25,7 @@ sandbox-runtime-overlay / sandbox-runtime-config
 
 | Component | Kind | Job | Must never |
 |---|---|---|---|
-| `sandbox-gateway-cli` | bin | build protocol requests and render manager/runtime help | own manager or runtime behavior |
+| `sandbox-gateway` | bin+lib | own the public gateway listener and the `sandbox-cli` protocol client | own manager or runtime behavior |
 | `sandbox-manager` | lib | own sandbox lifecycle, daemon endpoint tracking, and manager operations | implement runtime command/workspace semantics |
 | `sandbox-protocol` | lib | own request/response DTOs, framing, catalog, and manual metadata | depend on manager, daemon, or runtime implementation crates |
 | `sandbox-daemon` | bin+lib | bind daemon transport and dispatch runtime requests | know about Docker fleets |
@@ -48,7 +48,7 @@ live in `crates/sandbox-runtime/operation`; CAS fixtures live with
 - `crates/sandbox-runtime/layerstack/tests/fixtures/` - runtime-owned CAS
   fixtures.
 - `crates/` - the workspace: `sandbox-daemon`, `sandbox-protocol`,
-  `sandbox-manager`, `sandbox-gateway-cli`, `sandbox-runtime/operation`,
+  `sandbox-manager`, `sandbox-gateway`, `sandbox-runtime/operation`,
   `sandbox-runtime/command`, `sandbox-runtime/workspace`,
   `sandbox-runtime/namespace-process`, `sandbox-runtime/layerstack`,
   `sandbox-runtime/overlay`, and `sandbox-runtime/config`.

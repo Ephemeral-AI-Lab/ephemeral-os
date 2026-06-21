@@ -1,7 +1,7 @@
 # Sandbox Implementation Guide
 
 This guide describes the current sandbox architecture after the manager,
-daemon, gateway CLI, protocol, and runtime package split. It is the active
+daemon, gateway, protocol, and runtime package split. It is the active
 final-state guide; historical phase prompts remain separate records.
 
 Reference specs:
@@ -11,7 +11,7 @@ docs/refactoring/sandbox-protocol.md
 docs/refactoring/sandbox-runtime.md
 docs/refactoring/sandbox-daemon.md
 docs/refactoring/sandbox-manager.md
-docs/refactoring/sandbox-gateway-cli.md
+docs/refactoring/sandbox-cli.md
 ```
 
 ## Package Shape
@@ -20,7 +20,7 @@ docs/refactoring/sandbox-gateway-cli.md
 crates/
   sandbox-protocol/
   sandbox-manager/
-  sandbox-gateway-cli/
+  sandbox-gateway/
   sandbox-daemon/
   sandbox-runtime/
     operation/             # package: sandbox-runtime
@@ -95,7 +95,8 @@ sandbox runtime catalog. It is not a package name.
 ## Dependency Direction
 
 ```text
-sandbox-gateway-cli -> sandbox-protocol
+sandbox-gateway -> sandbox-protocol
+sandbox-gateway -> sandbox-manager
 sandbox-manager -> sandbox-protocol
 sandbox-daemon -> sandbox-protocol
 sandbox-daemon -> sandbox-runtime
@@ -110,9 +111,10 @@ sandbox-runtime-namespace-process -> sandbox-runtime-overlay
 sandbox-runtime-namespace-process -> sandbox-runtime-config
 ```
 
-The gateway is a protocol client. The manager is the host-side control plane.
-The daemon is the in-sandbox runtime endpoint. Runtime support packages remain
-separate from the `sandbox-runtime` operation facade.
+The gateway owns the public listener and the `sandbox-cli` protocol client. The
+manager is the host-side control plane. The daemon is the in-sandbox runtime
+endpoint. Runtime support packages remain separate from the `sandbox-runtime`
+operation facade.
 
 ## Runtime Boundaries
 
@@ -160,9 +162,9 @@ Run the narrow package checks after local changes:
 
 ```sh
 cargo fmt --check --all
-cargo check -p sandbox-protocol -p sandbox-runtime -p sandbox-daemon -p sandbox-manager -p sandbox-gateway-cli -p sandbox-runtime-command -p sandbox-runtime-workspace -p sandbox-runtime-namespace-process -p sandbox-runtime-layerstack -p sandbox-runtime-overlay -p sandbox-runtime-config -p xtask --tests
-cargo test -p sandbox-protocol -p sandbox-runtime -p sandbox-daemon -p sandbox-manager -p sandbox-gateway-cli -p sandbox-runtime-command -p sandbox-runtime-workspace -p sandbox-runtime-namespace-process -p sandbox-runtime-layerstack -p sandbox-runtime-overlay -p sandbox-runtime-config -p xtask
-cargo clippy -p sandbox-protocol -p sandbox-runtime -p sandbox-daemon -p sandbox-manager -p sandbox-gateway-cli -p sandbox-runtime-command -p sandbox-runtime-workspace -p sandbox-runtime-namespace-process -p sandbox-runtime-layerstack -p sandbox-runtime-overlay -p sandbox-runtime-config -p xtask --all-targets --no-deps -- -D warnings
+cargo check -p sandbox-protocol -p sandbox-runtime -p sandbox-daemon -p sandbox-manager -p sandbox-gateway -p sandbox-runtime-command -p sandbox-runtime-workspace -p sandbox-runtime-namespace-process -p sandbox-runtime-layerstack -p sandbox-runtime-overlay -p sandbox-runtime-config -p xtask --tests
+cargo test -p sandbox-protocol -p sandbox-runtime -p sandbox-daemon -p sandbox-manager -p sandbox-gateway -p sandbox-runtime-command -p sandbox-runtime-workspace -p sandbox-runtime-namespace-process -p sandbox-runtime-layerstack -p sandbox-runtime-overlay -p sandbox-runtime-config -p xtask
+cargo clippy -p sandbox-protocol -p sandbox-runtime -p sandbox-daemon -p sandbox-manager -p sandbox-gateway -p sandbox-runtime-command -p sandbox-runtime-workspace -p sandbox-runtime-namespace-process -p sandbox-runtime-layerstack -p sandbox-runtime-overlay -p sandbox-runtime-config -p xtask --all-targets --no-deps -- -D warnings
 cargo machete --with-metadata
 git diff --check
 ```

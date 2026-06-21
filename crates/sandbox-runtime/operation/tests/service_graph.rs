@@ -123,9 +123,11 @@ fn operation_catalog_cli_metadata_uses_runtime_space() {
         spec.cli
             .map(|cli| {
                 cli.path.first() == Some(&"runtime")
-                    && cli.usage.starts_with("sandbox runtime --sandbox-id ID ")
+                    && cli
+                        .usage
+                        .starts_with("sandbox-cli runtime --sandbox-id ID ")
                     && cli.examples.iter().all(|example| {
-                        example.starts_with("sandbox runtime --sandbox-id sbox-1 ")
+                        example.starts_with("sandbox-cli runtime --sandbox-id sbox-1 ")
                             && !example.contains("daemon")
                     })
             })

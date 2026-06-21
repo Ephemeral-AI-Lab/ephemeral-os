@@ -4,7 +4,7 @@ use tokio::io::{AsyncWrite, AsyncWriteExt};
 use tokio::net::UnixListener;
 use tokio::sync::Semaphore;
 
-use crate::{GatewayError, SandboxGatewayServer};
+use super::{error, GatewayError, SandboxGatewayServer};
 
 impl SandboxGatewayServer {
     pub async fn serve(self) -> Result<(), GatewayError> {
@@ -63,7 +63,7 @@ async fn reject_overloaded_connection<S>(mut stream: S, max_connections: usize)
 where
     S: AsyncWrite + Unpin,
 {
-    let response = crate::error::error_response(
+    let response = error::error_response(
         sandbox_protocol::error_kind::INTERNAL_ERROR,
         "gateway is at connection capacity",
         serde_json::json!({ "max_concurrent_connections": max_connections }),

@@ -21,16 +21,7 @@ impl LayerStack {
         self.build_projected_checkpoint(manifest)
     }
 
-    pub fn can_squash(&self, max_depth: usize) -> Result<bool, LayerStackError> {
-        let active = self.read_active_manifest()?;
-        let squasher = LayerCheckpointSquasher::new(self.storage_root.clone());
-        let lease_head_layers = lock_shared_registry(&self.leases)?.lease_head_layers();
-        Ok(squasher
-            .plan(&active, max_depth, &lease_head_layers, 2)?
-            .is_some())
-    }
-
-    pub fn squash(&mut self, max_depth: usize) -> Result<SquashOutcome, LayerStackError> {
+    pub fn squash(&mut self) -> Result<SquashOutcome, LayerStackError> {
         let _guard = self.writer_lock.exclusive()?;
         let active = self.read_active_manifest_unlocked()?;
         let squasher = LayerCheckpointSquasher::new(self.storage_root.clone());
@@ -38,7 +29,7 @@ impl LayerStack {
             let leases = lock_shared_registry(&self.leases)?;
             leases.lease_head_layers()
         };
-        let Some(plan) = squasher.plan(&active, max_depth, &lease_head_layers, 1)? else {
+        let Some(plan) = squasher.plan(&active, &lease_head_layers)? else {
             return Ok(SquashOutcome {
                 manifest: None,
                 lease_release_error: None,

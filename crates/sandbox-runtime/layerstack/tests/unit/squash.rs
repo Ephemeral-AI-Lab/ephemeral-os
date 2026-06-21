@@ -39,7 +39,7 @@ fn squash_segments_around_lease_heads() -> Result<(), Box<dyn std::error::Error 
     let squasher = LayerCheckpointSquasher::new(PathBuf::from("/squash-plan-only"));
 
     let leased = squasher
-        .plan(&manifest, 5, &[layers[3].clone(), layers[6].clone()], 1)?
+        .plan(&manifest, &[layers[3].clone(), layers[6].clone()])?
         .expect("plan");
     assert_eq!(leased.entries.len(), 5);
     assert_eq!(kept_ids(&leased.entries), ["L3", "L6"]);
@@ -48,13 +48,13 @@ fn squash_segments_around_lease_heads() -> Result<(), Box<dyn std::error::Error 
         vec![vec!["L0", "L1", "L2"], vec!["L4", "L5"], vec!["L7", "L8"]]
     );
 
-    let unleased = squasher.plan(&manifest, 5, &[], 1)?.expect("plan");
+    let unleased = squasher.plan(&manifest, &[])?.expect("plan");
     assert_eq!(unleased.entries.len(), 1);
     assert!(kept_ids(&unleased.entries).is_empty());
     assert_eq!(unleased.checkpoint_segments().len(), 1);
 
     let adjacent = squasher
-        .plan(&manifest, 5, &[layers[4].clone(), layers[5].clone()], 1)?
+        .plan(&manifest, &[layers[4].clone(), layers[5].clone()])?
         .expect("plan");
     assert_eq!(adjacent.entries.len(), 4);
     assert_eq!(kept_ids(&adjacent.entries), ["L4", "L5"]);
