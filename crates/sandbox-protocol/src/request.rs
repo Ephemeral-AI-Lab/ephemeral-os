@@ -137,9 +137,7 @@ impl RequestDecodeError {
     }
 }
 
-pub fn decode_request_object(
-    mut object: Map<String, Value>,
-) -> Result<Request, RequestDecodeError> {
+fn decode_request_object(mut object: Map<String, Value>) -> Result<Request, RequestDecodeError> {
     let op = remove_request_string(&mut object, "op")?;
     let request_id = remove_request_string(&mut object, "request_id")?;
     let scope = match object.remove("scope") {

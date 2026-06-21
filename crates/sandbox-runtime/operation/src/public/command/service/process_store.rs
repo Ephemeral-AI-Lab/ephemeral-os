@@ -12,9 +12,9 @@ use crate::command::{
 use crate::workspace_crate::WorkspaceSessionId;
 use crate::workspace_remount::{RemountCancellationToken, RemountSwitchState};
 
-pub const DEFAULT_MAX_ACTIVE_COMMANDS: usize = 256;
+const DEFAULT_MAX_ACTIVE_COMMANDS: usize = 256;
 
-pub struct CommandProcessStore {
+pub(crate) struct CommandProcessStore {
     active: Mutex<HashMap<CommandSessionId, ActiveCommandProcess>>,
     completed: CommandCompletionStore,
     next_id: AtomicU64,
@@ -24,12 +24,12 @@ pub struct CommandProcessStore {
 
 impl CommandProcessStore {
     #[must_use]
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self::with_max_active(DEFAULT_MAX_ACTIVE_COMMANDS)
     }
 
     #[must_use]
-    pub fn with_max_active(max_active: usize) -> Self {
+    fn with_max_active(max_active: usize) -> Self {
         Self {
             active: Mutex::new(HashMap::new()),
             completed: CommandCompletionStore::new(),
@@ -40,12 +40,12 @@ impl CommandProcessStore {
     }
 
     #[must_use]
-    pub fn allocate_command_session_id(&self) -> CommandSessionId {
+    pub(crate) fn allocate_command_session_id(&self) -> CommandSessionId {
         let next_id = self.next_id.fetch_add(1, Ordering::Relaxed);
         CommandSessionId(format!("cmd_{next_id}"))
     }
 
-    pub fn try_reserve(&self) -> Result<CommandReservation<'_>, CommandServiceError> {
+    pub(crate) fn try_reserve(&self) -> Result<CommandReservation<'_>, CommandServiceError> {
         loop {
             let active = self.active_count.load(Ordering::Acquire);
             if active >= self.max_active {
@@ -68,7 +68,7 @@ impl CommandProcessStore {
         }
     }
 
-    pub fn insert_active(
+    pub(crate) fn insert_active(
         &self,
         reservation: CommandReservation<'_>,
         record: ActiveCommandProcess,
@@ -86,7 +86,10 @@ impl CommandProcessStore {
     }
 
     #[must_use]
-    pub fn active(&self, command_session_id: &CommandSessionId) -> Option<ActiveCommandRef<'_>> {
+    pub(crate) fn active(
+        &self,
+        command_session_id: &CommandSessionId,
+    ) -> Option<ActiveCommandRef<'_>> {
         let active = lock(&self.active);
         if !active.contains_key(command_session_id) {
             return None;
@@ -122,7 +125,7 @@ impl CommandProcessStore {
         command_session_ids
     }
 
-    pub fn complete_active(
+    pub(crate) fn complete_active(
         &self,
         record: CompletedCommandRecord,
     ) -> Result<Option<ActiveCommandProcess>, CommandServiceError> {
@@ -156,7 +159,7 @@ impl CommandProcessStore {
     }
 
     #[must_use]
-    pub fn completed(
+    pub(crate) fn completed(
         &self,
         command_session_id: &CommandSessionId,
     ) -> Option<CompletedCommandRecord> {
@@ -218,7 +221,7 @@ impl Drop for CommandReservation<'_> {
     }
 }
 
-pub struct ActiveCommandRef<'a> {
+pub(crate) struct ActiveCommandRef<'a> {
     command_session_id: CommandSessionId,
     active: MutexGuard<'a, HashMap<CommandSessionId, ActiveCommandProcess>>,
 }
@@ -233,21 +236,21 @@ impl Deref for ActiveCommandRef<'_> {
     }
 }
 
-pub struct ActiveCommandProcess {
-    pub command_session_id: CommandSessionId,
-    pub workspace_session_id: WorkspaceSessionId,
-    pub workspace_root: PathBuf,
-    pub process: Arc<::sandbox_runtime_command::CommandProcess>,
-    pub transcript: CommandTranscriptStore,
-    pub lifecycle_state: CommandLifecycleState,
-    pub cancellation: CancellationState,
-    pub remount_cancellation: Option<RemountCancellationToken>,
-    pub remount_switch_state: Option<RemountSwitchState>,
-    pub finalization: FinalizationState,
+pub(crate) struct ActiveCommandProcess {
+    pub(crate) command_session_id: CommandSessionId,
+    pub(crate) workspace_session_id: WorkspaceSessionId,
+    pub(crate) workspace_root: PathBuf,
+    pub(crate) process: Arc<::sandbox_runtime_command::CommandProcess>,
+    pub(crate) transcript: CommandTranscriptStore,
+    pub(crate) lifecycle_state: CommandLifecycleState,
+    pub(crate) cancellation: CancellationState,
+    pub(crate) remount_cancellation: Option<RemountCancellationToken>,
+    pub(crate) remount_switch_state: Option<RemountSwitchState>,
+    pub(crate) finalization: FinalizationState,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum CommandLifecycleState {
+pub(crate) enum CommandLifecycleState {
     Running,
     QuiescedForRemount,
     Finalizing,
@@ -256,13 +259,13 @@ pub enum CommandLifecycleState {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum CancellationState {
+pub(crate) enum CancellationState {
     None,
     Requested { requested_at: Instant },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum FinalizationState {
+pub(crate) enum FinalizationState {
     NotStarted,
     InProgress,
     Complete,
@@ -273,20 +276,20 @@ pub enum FinalizationState {
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct CommandTranscriptStore {
-    pub transcript_path: Option<PathBuf>,
+pub(crate) struct CommandTranscriptStore {
+    pub(crate) transcript_path: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct RetainedCommandTranscript {
-    pub transcript_path: Option<PathBuf>,
+pub(crate) struct RetainedCommandTranscript {
+    pub(crate) transcript_path: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CommandTerminalResult {
-    pub status: CommandStatus,
-    pub exit_code: Option<i64>,
-    pub stdout: String,
+pub(crate) struct CommandTerminalResult {
+    pub(crate) status: CommandStatus,
+    pub(crate) exit_code: Option<i64>,
+    pub(crate) stdout: String,
 }
 
 #[derive(Debug, Default)]
@@ -296,25 +299,25 @@ struct CommandCompletionStore {
 
 impl CommandCompletionStore {
     #[must_use]
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self::default()
     }
 
     #[must_use]
-    pub fn get(&self, command_session_id: &CommandSessionId) -> Option<CompletedCommandRecord> {
+    fn get(&self, command_session_id: &CommandSessionId) -> Option<CompletedCommandRecord> {
         lock(&self.completed).get(command_session_id).cloned()
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CompletedCommandRecord {
-    pub command_session_id: CommandSessionId,
-    pub workspace_session_id: WorkspaceSessionId,
-    pub result: CommandTerminalResult,
-    pub transcript: RetainedCommandTranscript,
-    pub finalization: FinalizationState,
-    pub finalized: Option<CommandFinalizedMetadata>,
-    pub completed_at: Instant,
+pub(crate) struct CompletedCommandRecord {
+    pub(crate) command_session_id: CommandSessionId,
+    pub(crate) workspace_session_id: WorkspaceSessionId,
+    pub(crate) result: CommandTerminalResult,
+    pub(crate) transcript: RetainedCommandTranscript,
+    pub(crate) finalization: FinalizationState,
+    pub(crate) finalized: Option<CommandFinalizedMetadata>,
+    pub(crate) completed_at: Instant,
 }
 
 fn decrement_slot(active_count: &AtomicUsize) {
