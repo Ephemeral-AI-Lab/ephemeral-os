@@ -154,10 +154,6 @@ fn operation_catalog_contains_only_manager_operations() {
             "destroy_sandbox",
             "list_sandboxes",
             "inspect_sandbox",
-            "start_sandbox_daemon",
-            "stop_sandbox_daemon",
-            "describe_manager_operations",
-            "describe_daemon_operations",
         ]
     );
     assert!(catalog.operations.iter().all(|spec| !matches!(
@@ -184,50 +180,26 @@ fn operation_catalog_contains_only_manager_operations() {
 }
 
 #[test]
-fn describe_manager_operations_serializes_cli_metadata() {
-    let (services, _runtime, _installer, _client) = services();
-
-    let catalog = dispatch(&services, "describe_manager_operations", json!({}));
-
-    assert_eq!(catalog["operation_execution_space"], "manager");
-    assert_eq!(catalog["operations"][0]["name"], "create_sandbox");
-    assert_eq!(
-        catalog["operations"][0]["args"][0]["cli"]["flag"],
-        "--image"
-    );
-    assert_eq!(
-        catalog["operations"][0]["args"][0]["cli"]["positional"],
-        Value::Null
-    );
-    assert_eq!(
-        catalog["operations"][0]["cli"]["usage"],
-        "sandbox-cli manager create_sandbox --image IMAGE --workspace-root PATH"
-    );
-    assert_eq!(
-        catalog["operations"][0]["cli"]["examples"][0],
-        "sandbox-cli manager create_sandbox --image ubuntu:24.04 --workspace-root /testbed"
-    );
-    assert_eq!(
-        catalog["operations"][0]["args"][1]["cli"]["flag"],
-        "--workspace-root"
-    );
-}
-
-#[test]
 fn create_list_inspect_destroy_sandbox_with_fake_runtime() {
-    let (services, runtime, _installer, _client) = services();
+    let (services, runtime, installer, _client) = services();
 
     let created = dispatch(
         &services,
         "create_sandbox",
         json!({"image": "ubuntu:24.04", "workspace_root": "/testbed"}),
     );
-    assert_eq!(created["sandbox_id"], "container-1");
+    assert_eq!(created["id"], "container-1");
     assert_eq!(created["workspace_root"], "/testbed");
-    assert!(created.get("state").is_none());
+    assert_eq!(created["state"], "ready");
+    assert_eq!(created["daemon"]["socket_path"], "/tmp/container-1.sock");
+    assert_eq!(created["daemon"]["auth_token_configured"], true);
 
     let listed = dispatch(&services, "list_sandboxes", json!({}));
     assert_eq!(listed["sandboxes"][0]["id"], "container-1");
+    assert_eq!(
+        listed["sandboxes"][0]["daemon"]["socket_path"],
+        "/tmp/container-1.sock"
+    );
 
     let inspected = dispatch(
         &services,
@@ -259,31 +231,6 @@ fn create_list_inspect_destroy_sandbox_with_fake_runtime() {
         runtime.destroyed.lock().expect("destroyed lock").as_slice(),
         ["container-1"]
     );
-}
-
-#[test]
-fn start_stop_daemon_updates_endpoint_with_fake_installer() {
-    let (services, _runtime, installer, _client) = services();
-    let _ = dispatch(
-        &services,
-        "create_sandbox",
-        json!({"image": "ubuntu:24.04", "workspace_root": "/testbed"}),
-    );
-
-    let started = dispatch(
-        &services,
-        "start_sandbox_daemon",
-        json!({"sandbox_id": "container-1"}),
-    );
-    assert_eq!(started["daemon"]["socket_path"], "/tmp/container-1.sock");
-    assert_eq!(started["daemon"]["auth_token_configured"], true);
-
-    let stopped = dispatch(
-        &services,
-        "stop_sandbox_daemon",
-        json!({"sandbox_id": "container-1"}),
-    );
-    assert!(stopped["daemon"].is_null());
     assert_eq!(
         installer.started.lock().expect("started lock").as_slice(),
         ["container-1"]
@@ -291,41 +238,6 @@ fn start_stop_daemon_updates_endpoint_with_fake_installer() {
     assert_eq!(
         installer.stopped.lock().expect("stopped lock").as_slice(),
         ["container-1"]
-    );
-}
-
-#[test]
-fn describe_daemon_operations_uses_daemon_client_trait() {
-    let (services, _runtime, _installer, client) = services();
-    let _ = dispatch(
-        &services,
-        "create_sandbox",
-        json!({"image": "ubuntu:24.04", "workspace_root": "/testbed"}),
-    );
-    let _ = dispatch(
-        &services,
-        "start_sandbox_daemon",
-        json!({"sandbox_id": "container-1"}),
-    );
-
-    let catalog = dispatch(
-        &services,
-        "describe_daemon_operations",
-        json!({"sandbox_id": "container-1"}),
-    );
-    assert_eq!(catalog["operation_execution_space"], "runtime");
-    assert_eq!(catalog["operations"][0]["name"], "runtime_test_operation");
-    assert!(catalog["operations"]
-        .as_array()
-        .expect("operations array")
-        .iter()
-        .all(|spec| !matches!(
-            spec["name"].as_str(),
-            Some("create_sandbox" | "list_sandboxes" | "destroy_sandbox")
-        )));
-    assert_eq!(
-        client.described.lock().expect("described lock").as_slice(),
-        [PathBuf::from("/tmp/container-1.sock")]
     );
 }
 

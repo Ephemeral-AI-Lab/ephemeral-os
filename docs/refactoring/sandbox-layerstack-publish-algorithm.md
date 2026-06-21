@@ -131,6 +131,7 @@ pub struct LayerProtectedDrop {
 pub enum LayerProtectedDropReason {
     UnsupportedSpecialFile,
     InvalidLayerPath,
+    CommandScratchPath,
 }
 
 pub struct PublishValidatedChangesResult {
@@ -210,11 +211,23 @@ Initial protected set:
 ```text
 manifest.json
 workspace.json
+layers
 layers/**
+staging
 staging/**
+.layer-metadata
 .layer-metadata/**
+**/.layer-metadata
 **/.layer-metadata/**
 ```
+
+Implement this as a component predicate, not only as glob strings:
+
+- reject exact root paths `manifest.json`, `workspace.json`, `layers`,
+  `staging`, and `.layer-metadata`
+- reject any path whose first component is `layers`, `staging`, or
+  `.layer-metadata`
+- reject any path with a `.layer-metadata` component at any depth
 
 Command scratch/spool paths should also be represented in the layerstack DTO as
 protected drops when capture sees them. `LayerProtectedDrop.path` is a string
@@ -441,7 +454,15 @@ dedicated error that `LayerStackError` can carry.
 Required reject reasons:
 
 ```rust
-enum PublishRejectReason {
+pub struct PublishReject {
+    pub path: Option<LayerPath>,
+    pub reason: PublishRejectReason,
+    pub source_conflict: Option<SourceConflict>,
+    pub protected_drop: Option<LayerProtectedDrop>,
+    pub message: Option<String>,
+}
+
+pub enum PublishRejectReason {
     InvalidBaseRevision,
     GitMutationForbidden,
     ProtectedPath,
@@ -456,15 +477,20 @@ enum PublishRejectReason {
 A source conflict should report:
 
 ```rust
-struct SourceConflict {
-    path: LayerPath,
-    expected: ContentFingerprint,
-    actual: ContentFingerprint,
+pub struct SourceConflict {
+    pub path: LayerPath,
+    pub expected: ContentFingerprint,
+    pub actual: ContentFingerprint,
 }
 ```
 
 Command finalization should be able to return a structured reason to the caller,
 but layerstack should not depend on the command response schema.
+
+`LayerStackError` should carry the structured `PublishReject` value, for example
+`LayerStackError::PublishRejected(PublishReject)`. Do not collapse publish
+rejections to strings in the layerstack or operation service boundary; string
+messages are allowed only as display text derived from the structured value.
 
 ## Operation Integration
 
@@ -476,7 +502,8 @@ crates/sandbox-runtime/operation/src/internal/layerstack/service/impls/publish_c
 
 It should:
 
-1. Receive captured `LayerChange` values, protected drops, and base revision data.
+1. Receive captured `LayerChange` values, protected drops, base revision data,
+   and the exact base manifest.
 2. Construct a layerstack-native `PublishValidatedChangesRequest`.
 3. Call `LayerStack::publish_validated_changes`.
 4. Convert the resulting manifest into operation `LayerStackRevision` and
@@ -486,21 +513,27 @@ It should:
 The operation wrapper must not call raw `LayerStack::publish_layer` for command
 publication.
 
-## Current Data Gap
+## Required Base Manifest Handoff
 
 Current workspace capture exposes `base_revision`, but not the base `Manifest`.
 The publish algorithm requires the exact base manifest.
 
-Acceptable fixes:
+Required fix:
 
-1. Extend the leased snapshot/service model to carry the base `Manifest` through
-   `WorkspaceHandle` and `CapturedWorkspaceChanges`.
-2. Add a layerstack lease lookup API that returns the manifest for the active
-   workspace lease during finalization.
+1. Extend the layerstack service model so `LeasedSnapshot` includes the leased
+   base `Manifest`.
+2. Extend `LayerStackSnapshotRef` and `WorkspaceHandle` so the command session
+   keeps that immutable base manifest alongside `manifest_version`,
+   `root_hash`, and `layer_paths`.
+3. Extend `CapturedWorkspaceChanges` so capture returns the same base manifest
+   with the captured changes.
+4. Build `PublishValidatedChangesRequest.base.manifest` from
+   `CapturedWorkspaceChanges.base_manifest`.
 
-Prefer option 1 if it keeps the base manifest immutable and explicit in the
-command session. Avoid reconstructing a base manifest from only layer path
-strings in the operation crate.
+Do not reconstruct a base manifest from layer path strings in the operation
+crate. Do not reread the active manifest during finalization to stand in for the
+command's base manifest; active may have advanced, and the algorithm must still
+evaluate the command-base `.gitignore` view and command-base fingerprints.
 
 ## Tests
 
@@ -517,9 +550,14 @@ Layerstack unit tests:
 - `.gitignore` matching `*` does not bypass `.git` rejection
 - root `.gitignore` direct routes ignored output
 - nested `.gitignore` is scoped to its subtree
+- nested anchored `.gitignore` patterns do not double-strip repeated prefixes
 - published upper-layer `.gitignore` affects later base snapshots
+- command-base `.gitignore` still routes the command when active `.gitignore`
+  differs at finalization
 - invalid `.gitignore` does not panic and contributes no rules
 - protected layerstack path rejects the whole publish
+- exact protected directories `layers`, `staging`, `.layer-metadata`, and nested
+  `.layer-metadata` reject the whole publish
 - opaque directory over all source validates hidden descendants
 - opaque directory over all ignored publishes direct
 - opaque directory over mixed source/ignored rejects
@@ -529,6 +567,7 @@ Layerstack unit tests:
 Operation tests:
 
 - successful command finalization calls publish
+- command finalization passes the captured base manifest into publish
 - failed, killed, timed-out, or cancelled command does not publish
 - publish conflict marks finalization failed with structured metadata
 - successful publish refreshes/remounts session from the publish result

@@ -33,6 +33,11 @@ pub(crate) fn dispatch(
             Ok(record) => record,
             Err(error) => return error.into_response(),
         };
+    if stopping.daemon.is_some() {
+        if let Err(error) = services.daemon_installer.stop_daemon(&stopping) {
+            return error.into_response();
+        }
+    }
     match services.runtime.destroy_sandbox(&stopping) {
         Ok(()) => {
             if let Err(error) = services

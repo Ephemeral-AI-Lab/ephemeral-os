@@ -147,6 +147,18 @@ come from the command's leased base snapshot. `base_manifest` is needed so
 layerstack can evaluate base-snapshot `.gitignore` rules and compute source path
 fingerprints even when the active manifest has advanced.
 
+The command session must carry this manifest explicitly:
+
+1. `sandbox-runtime-layerstack::service::LeasedSnapshot` includes the leased
+   `Manifest`.
+2. `LayerStackSnapshotRef` and `WorkspaceHandle` retain that manifest for the
+   lifetime of the workspace session.
+3. `CapturedWorkspaceChanges` returns the same `base_manifest` alongside
+   `base_revision`, protected drops, and changes.
+
+Do not rebuild `base_manifest` from layer paths in the operation crate, and do
+not substitute the active manifest during finalization.
+
 ## Publish Changes
 
 `publish_changes` commits captured workspace changes into the sandbox layer
@@ -227,7 +239,7 @@ pub enum LayerStackServiceError {
         base: LayerStackRevision,
     },
     PublishRejected {
-        reason: String,
+        rejection: sandbox_runtime_layerstack::PublishReject,
     },
     LayerStack {
         operation: &'static str,
@@ -238,6 +250,33 @@ pub enum LayerStackServiceError {
 
 Use `thiserror::Error`. Keep errors internal to the operation crate unless a
 public runtime operation exposes layerstack maintenance directly later.
+
+`PublishRejected` must preserve the structured layerstack rejection. The display
+string can be derived from that value, but command finalization must be able to
+report the reject reason, path, and conflict fingerprints without parsing text.
+
+Command finalization metadata should grow a publish section before this service
+is wired into command completion, for example:
+
+```rust
+pub struct CommandFinalizedMetadata {
+    pub publish: Option<CommandPublishFinalization>,
+}
+
+pub struct CommandPublishFinalization {
+    pub status: CommandPublishStatus,
+    pub rejection: Option<sandbox_runtime_layerstack::PublishReject>,
+    pub revision: Option<LayerStackRevision>,
+    pub layer_paths: Vec<PathBuf>,
+}
+
+pub enum CommandPublishStatus {
+    Published,
+    NoOp,
+    Rejected,
+    Skipped,
+}
+```
 
 ## Integration
 
@@ -262,7 +301,7 @@ if exit was killed or failed:
   do not publish
 if exit succeeded:
   capture workspace changes
-  publish captured changes with captured base revision
+  publish captured changes with captured base revision and base manifest
   refresh workspace session snapshot from publish result
 complete command record
 ```
@@ -295,12 +334,15 @@ Layerstack service tests should cover:
 - `publish_changes` writes a new layer and returns updated layer paths.
 - `publish_changes` reports layerstack source conflicts.
 - `publish_changes` reports layerstack `.git` mutation rejection.
+- `publish_changes` preserves structured layerstack rejection data.
 - `publish_changes` publishes ignored-only changes through the layerstack
   validated publish API.
 - `squash` returns no-op for a single-layer stack.
 - `squash` compacts multiple unleased layers.
 - `squash` respects active lease-head boundaries.
 - command finalization publishes only after successful command exit.
+- command finalization carries the leased base manifest from workspace handle to
+  captured changes to publish request.
 - cancelled or killed commands do not publish captured changes.
 
 Focused verification:

@@ -1,6 +1,6 @@
 use crate::{CreateSandboxRequest, ManagerError, SandboxState};
 
-use super::{image, workspace_root};
+use super::{image, record_value, workspace_root};
 
 pub(crate) fn dispatch(
     services: &crate::operation::ManagerServices,
@@ -24,14 +24,26 @@ pub(crate) fn dispatch(
             if let Err(error) = services.store.create(id.clone(), workspace_root.clone()) {
                 return error.into_response();
             }
-            match services
-                .store
-                .transition_state(&id, SandboxState::Creating, SandboxState::Ready)
-            {
-                Ok(record) => sandbox_protocol::Response::ok(serde_json::json!({
-                    "sandbox_id": record.id.as_str(),
-                    "workspace_root": record.workspace_root.to_string_lossy(),
-                })),
+            let record = match services.store.transition_state(
+                &id,
+                SandboxState::Creating,
+                SandboxState::Ready,
+            ) {
+                Ok(record) => record,
+                Err(error) => return error.into_response(),
+            };
+            if let Err(error) = services.daemon_installer.install_daemon(&record) {
+                return error.into_response();
+            }
+            let endpoint = match services.daemon_installer.start_daemon(&record) {
+                Ok(endpoint) => endpoint,
+                Err(error) => return error.into_response(),
+            };
+            if let Err(error) = services.daemon_installer.check_daemon(&endpoint) {
+                return error.into_response();
+            }
+            match services.store.update_endpoint(&id, Some(endpoint)) {
+                Ok(record) => sandbox_protocol::Response::ok(record_value(record)),
                 Err(error) => error.into_response(),
             }
         }

@@ -57,14 +57,9 @@ of operations inside one execution space.
 Current manager families:
 
 ```text
-Sandbox Lifecycle
-  Manage host-side sandbox records and their lifecycle.
-
-Sandbox Daemon Control
-  Start and stop sandbox daemons.
-
-Catalog Discovery
-  Inspect supported operation catalogs.
+Management
+  Create, destroy, list, and inspect sandbox records. Daemons are managed as part
+  of sandbox lifecycle behavior, not as standalone manager operations.
 ```
 
 Current runtime families:
@@ -94,28 +89,18 @@ Target manager layout:
 ```text
 crates/sandbox-manager/src/operation/impls/
   mod.rs
-  sandbox_lifecycle/
+  management/
     mod.rs
     create_sandbox.rs
     destroy_sandbox.rs
     list_sandboxes.rs
     inspect_sandbox.rs
-  daemon_control/
-    mod.rs
-    start_sandbox_daemon.rs
-    stop_sandbox_daemon.rs
-  catalog_discovery/
-    mod.rs
-    describe_manager_operations.rs
-    describe_daemon_operations.rs
 ```
 
-The folder names should map directly to operation family ids:
+The folder name should map directly to the operation family id:
 
 ```text
-sandbox_lifecycle  -> Sandbox Lifecycle
-daemon_control     -> Sandbox Daemon Control
-catalog_discovery  -> Catalog Discovery
+management -> Management
 ```
 
 `crates/sandbox-manager/src/operation/impls/mod.rs` should become a thin family
@@ -238,8 +223,12 @@ sandbox-cli runtime OPERATION [ARGS...]
 
 Implementation detail:
 
-- `manager help` loads `describe_manager_operations`.
-- `runtime help` loads `describe_daemon_operations` through the default sandbox.
+- `manager help` must not add a public catalog-discovery manager operation.
+  It should render from the manager catalog metadata already available to the
+  gateway/CLI process.
+- `runtime help` must not add a public manager operation solely for catalog
+  discovery. It should load the runtime catalog through the selected/default
+  sandbox daemon using an internal gateway/manager path.
 - operation dispatch still validates that the selected catalog execution space
   matches the scoped command.
 - `help` is reserved and cannot be used as an operation name.
@@ -338,8 +327,8 @@ Manager overview example:
 ```text
 Sandbox Manager Help
 
-Sandbox Lifecycle
-  Manage host-side sandbox records and their lifecycle.
+Management
+  Create, destroy, list, and inspect sandbox records.
 
   create_sandbox
     Create a host-side sandbox record and runtime sandbox.
@@ -352,24 +341,6 @@ Sandbox Lifecycle
 
   inspect_sandbox
     Inspect one sandbox record.
-
-Sandbox Daemon Control
-  Start and stop sandbox daemons.
-
-  start_sandbox_daemon
-    Install and start the selected sandbox daemon.
-
-  stop_sandbox_daemon
-    Stop the selected sandbox daemon and clear its endpoint.
-
-Catalog Discovery
-  Inspect supported operation catalogs.
-
-  describe_manager_operations
-    Describe manager operation specs.
-
-  describe_daemon_operations
-    Describe runtime operation specs for a selected sandbox.
 
 Use:
   sandbox-cli manager help OPERATION
@@ -422,19 +393,11 @@ operation lookup and suggestion behavior are already complete.
 Manager operation family assignments:
 
 ```text
-Sandbox Lifecycle
+Management
   create_sandbox
   destroy_sandbox
   list_sandboxes
   inspect_sandbox
-
-Sandbox Daemon Control
-  start_sandbox_daemon
-  stop_sandbox_daemon
-
-Catalog Discovery
-  describe_manager_operations
-  describe_daemon_operations
 ```
 
 Runtime operation family assignments:
@@ -454,7 +417,6 @@ Initial related operation assignments:
 create_sandbox
   list_sandboxes
   inspect_sandbox
-  start_sandbox_daemon
   destroy_sandbox
 
 destroy_sandbox
@@ -467,24 +429,6 @@ list_sandboxes
 
 inspect_sandbox
   list_sandboxes
-  start_sandbox_daemon
-  stop_sandbox_daemon
-
-start_sandbox_daemon
-  inspect_sandbox
-  describe_daemon_operations
-  stop_sandbox_daemon
-
-stop_sandbox_daemon
-  inspect_sandbox
-  start_sandbox_daemon
-
-describe_manager_operations
-  describe_daemon_operations
-
-describe_daemon_operations
-  describe_manager_operations
-  start_sandbox_daemon
 
 exec_command
   poll_command
@@ -529,9 +473,7 @@ Manager catalog:
 ```text
 crates/sandbox-manager/src/operation/specs.rs
 crates/sandbox-manager/src/operation/impls/mod.rs
-crates/sandbox-manager/src/operation/impls/sandbox_lifecycle/*.rs
-crates/sandbox-manager/src/operation/impls/daemon_control/*.rs
-crates/sandbox-manager/src/operation/impls/catalog_discovery/*.rs
+crates/sandbox-manager/src/operation/impls/management/*.rs
 crates/sandbox-manager/tests/manager_core.rs
 ```
 
@@ -564,9 +506,9 @@ docs/README/sandbox-runtime.md
    document types.
 2. Rename protocol manual renderer vocabulary to help.
 3. Update catalog JSON conversion/parsing and validation.
-4. Add manager operation family constants and attach each manager operation to
-   one family.
-5. Move manager operation implementations under family folders in
+4. Add a manager `Management` family and attach every current manager operation
+   to that family.
+5. Move manager operation implementations under the `management` folder in
    `crates/sandbox-manager/src/operation/impls`.
 6. Add one runtime `Command` family and attach every current runtime operation
    to it.
@@ -595,6 +537,8 @@ docs/README/sandbox-runtime.md
 - Manager operation implementation files are grouped under family directories
   below `crates/sandbox-manager/src/operation/impls`.
 - Manager `impls/mod.rs` is only a family aggregator, not a flat operation list.
+- Manager exposes only `create_sandbox`, `destroy_sandbox`, `list_sandboxes`,
+  and `inspect_sandbox` as manager operations.
 - Manager catalog still contains only manager operations.
 - Runtime catalog still contains only runtime operations.
 

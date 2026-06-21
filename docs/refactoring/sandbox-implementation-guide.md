@@ -83,14 +83,11 @@ create_sandbox
 destroy_sandbox
 list_sandboxes
 inspect_sandbox
-start_sandbox_daemon
-stop_sandbox_daemon
-describe_manager_operations
-describe_daemon_operations
 ```
 
-`describe_daemon_operations` is a manager operation that fetches the selected
-sandbox runtime catalog. It is not a package name.
+Daemon lifecycle belongs to sandbox management. Do not expose separate manager
+operations for starting or stopping the daemon. Catalog/help discovery must not
+reintroduce public manager operations outside the management surface.
 
 ## Dependency Direction
 

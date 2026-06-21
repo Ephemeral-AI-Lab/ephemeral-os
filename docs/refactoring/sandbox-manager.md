@@ -50,14 +50,13 @@ src/
     specs.rs
     dispatch.rs
     impls/
-      create_sandbox.rs
-      destroy_sandbox.rs
-      list_sandboxes.rs
-      inspect_sandbox.rs
-      start_sandbox_daemon.rs
-      stop_sandbox_daemon.rs
-      describe_manager_operations.rs
-      describe_daemon_operations.rs
+      mod.rs
+      management/
+        mod.rs
+        create_sandbox.rs
+        destroy_sandbox.rs
+        list_sandboxes.rs
+        inspect_sandbox.rs
 
   server/
     mod.rs
@@ -102,22 +101,16 @@ create_sandbox
 destroy_sandbox
 list_sandboxes
 inspect_sandbox
-start_sandbox_daemon
-stop_sandbox_daemon
-describe_manager_operations
-describe_daemon_operations
 ```
 
 `OperationSpec` comes from `sandbox-protocol`. Dispatch entries are local to
 `sandbox-manager`.
 
-`describe_manager_operations` returns the manager catalog serialized through
-`sandbox-protocol` catalog helpers with
-`operation_execution_space = "manager"`. `describe_daemon_operations` returns
-the selected sandbox runtime catalog serialized through the same protocol
-helpers with `operation_execution_space = "runtime"`. The manager catalog must
-not include runtime operations, and the runtime catalog must not include manager
-operations.
+The manager operation implementation tree groups the current manager surface
+under `operation/impls/management`. Daemon start/stop is not exposed as a
+standalone manager operation; daemon lifecycle is part of sandbox management.
+Catalog/help discovery must not reintroduce public manager operations outside
+the management family.
 
 ## Request Routing
 

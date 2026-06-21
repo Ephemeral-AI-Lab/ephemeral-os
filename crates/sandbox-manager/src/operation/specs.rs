@@ -48,50 +48,6 @@ pub(crate) const INSPECT_SANDBOX: OperationSpec = OperationSpec {
     }),
 };
 
-pub(crate) const START_SANDBOX_DAEMON: OperationSpec = OperationSpec {
-    name: "start_sandbox_daemon",
-    summary: "Install and start the selected sandbox daemon.",
-    args: SANDBOX_ID_ARGS,
-    cli: Some(CliSpec {
-        path: &["manager", "start_sandbox_daemon"],
-        usage: "sandbox-cli manager start_sandbox_daemon --sandbox-id ID",
-        examples: &["sandbox-cli manager start_sandbox_daemon --sandbox-id sbox-1"],
-    }),
-};
-
-pub(crate) const STOP_SANDBOX_DAEMON: OperationSpec = OperationSpec {
-    name: "stop_sandbox_daemon",
-    summary: "Stop the selected sandbox daemon and clear its endpoint.",
-    args: SANDBOX_ID_ARGS,
-    cli: Some(CliSpec {
-        path: &["manager", "stop_sandbox_daemon"],
-        usage: "sandbox-cli manager stop_sandbox_daemon --sandbox-id ID",
-        examples: &["sandbox-cli manager stop_sandbox_daemon --sandbox-id sbox-1"],
-    }),
-};
-
-pub(crate) const DESCRIBE_MANAGER_OPERATIONS: OperationSpec = OperationSpec {
-    name: "describe_manager_operations",
-    summary: "Describe manager operation specs.",
-    args: &[],
-    cli: Some(CliSpec {
-        path: &["manager", "describe_manager_operations"],
-        usage: "sandbox-cli manager describe_manager_operations",
-        examples: &["sandbox-cli manager describe_manager_operations"],
-    }),
-};
-
-pub(crate) const DESCRIBE_DAEMON_OPERATIONS: OperationSpec = OperationSpec {
-    name: "describe_daemon_operations",
-    summary: "Describe runtime operation specs for a selected sandbox.",
-    args: SANDBOX_ID_ARGS,
-    cli: Some(CliSpec {
-        path: &["manager", "describe_daemon_operations"],
-        usage: "sandbox-cli manager describe_daemon_operations --sandbox-id ID",
-        examples: &["sandbox-cli manager describe_daemon_operations --sandbox-id sbox-1"],
-    }),
-};
-
 const SANDBOX_ID_ARGS: &[ArgSpec] = &[ArgSpec::required(
     "sandbox_id",
     ArgKind::String,
@@ -128,10 +84,6 @@ const SPECS: &[&OperationSpec] = &[
     &DESTROY_SANDBOX,
     &LIST_SANDBOXES,
     &INSPECT_SANDBOX,
-    &START_SANDBOX_DAEMON,
-    &STOP_SANDBOX_DAEMON,
-    &DESCRIBE_MANAGER_OPERATIONS,
-    &DESCRIBE_DAEMON_OPERATIONS,
 ];
 
 #[must_use]
