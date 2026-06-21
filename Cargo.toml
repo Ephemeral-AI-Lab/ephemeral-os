@@ -6,6 +6,7 @@ members = [
     "crates/daemon/config",
     "crates/sandbox-daemon",
     "crates/sandbox-manager",
+    "crates/sandbox-gateway-cli",
     "crates/sandbox-protocol",
     "crates/daemon/workspace",
     "crates/daemon/namespace-process",
@@ -43,6 +44,7 @@ rustix = { version = "0.38", features = ["fs", "mount", "process", "thread"] }
 nix = "0.29"
 libc = "0.2"
 anyhow = "1"
+clap = { version = "4", features = ["derive"] }
 proptest = "1"
 base64 = "0.22"
 futures-util = "0.3"
@@ -55,6 +57,7 @@ config = { path = "crates/daemon/config" }
 layerstack = { path = "crates/daemon/layerstack" }
 sandbox-runtime = { path = "crates/sandbox-runtime/operation" }
 sandbox-manager = { path = "crates/sandbox-manager" }
+sandbox-gateway-cli = { path = "crates/sandbox-gateway-cli" }
 sandbox-protocol = { path = "crates/sandbox-protocol" }
 overlay = { path = "crates/daemon/overlay" }
 namespace-process = { path = "crates/daemon/namespace-process" }

@@ -126,7 +126,7 @@ Example response:
 ```
 
 `scope` identifies the resource the operation applies to. It is not an
-implementation target and it is not the operation-space selector.
+implementation target and it is not the operation-execution-space selector.
 `OperationExecutionSpace` belongs in catalog/manual metadata only, for example
 `manager` vs `runtime`.
 

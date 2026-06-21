@@ -99,7 +99,10 @@ fn operation_catalog_exports_daemon_command_operations() {
         .map(|spec| spec.name)
         .collect::<Vec<_>>();
 
-    assert_eq!(catalog.operation_space, OperationExecutionSpace::Runtime);
+    assert_eq!(
+        catalog.operation_execution_space,
+        OperationExecutionSpace::Runtime
+    );
     assert_eq!(
         names,
         [

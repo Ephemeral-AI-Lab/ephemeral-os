@@ -356,7 +356,7 @@ Sandbox-scoped operations use the same DTO:
 
 There is no public `RoutedRequest`, `ManagerRequest`, `OperationTarget`, or
 request envelope. The manager receives `Request` and routes it by
-checking which operation-space catalog contains the operation:
+checking which operation-execution-space catalog contains the operation:
 
 ```rust
 if manager_catalog.contains(&request.op) {
@@ -576,11 +576,11 @@ expose a separate implementation-owner field:
 ```json
 {
   "manager": {
-    "operation_space": "manager",
+    "operation_execution_space": "manager",
     "operations": ["create_sandbox", "list_sandboxes"]
   },
   "runtime": {
-    "operation_space": "runtime",
+    "operation_execution_space": "runtime",
     "operations": ["exec_command", "poll_command", "cancel_command"]
   }
 }

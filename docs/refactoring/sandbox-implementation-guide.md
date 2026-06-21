@@ -605,6 +605,12 @@ Exit criteria:
 
 ## Phase 7: Stabilize Catalog And Manual Contract
 
+Prompt:
+
+```text
+docs/refactoring/sandbox-phase-7-catalog-manual-prompt.md
+```
+
 Goal:
 
 - Make manager and runtime execution spaces discoverable by agents and CLI
@@ -627,7 +633,7 @@ Implementation steps:
    - `describe_manager_operations`
    - `describe_daemon_operations`
 5. Render CLI/manual output from `OperationSpec`, not duplicated strings.
-6. Expose one catalog selector, `operation_space`, and do not include a separate
+6. Expose one catalog selector, `operation_execution_space`, and do not include a separate
    implementation-owner field in catalog output.
 
 Resulting folder structure:

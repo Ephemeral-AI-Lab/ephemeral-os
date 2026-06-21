@@ -135,7 +135,7 @@ pub const fn operation_catalog() -> OperationCatalog {
 #[must_use]
 pub(crate) fn catalog_value(catalog: OperationCatalog) -> Value {
     json!({
-        "operation_space": operation_space_name(catalog.operation_space),
+        "operation_execution_space": operation_execution_space_name(catalog.operation_execution_space),
         "operations": catalog
             .operations
             .iter()
@@ -150,6 +150,7 @@ fn operation_spec_value(spec: &OperationSpec) -> Value {
         "family": family_name(spec.family),
         "summary": spec.summary,
         "args": spec.args.iter().map(arg_spec_value).collect::<Vec<_>>(),
+        "cli": spec.cli.map(cli_spec_value),
     })
 }
 
@@ -160,11 +161,29 @@ fn arg_spec_value(spec: &ArgSpec) -> Value {
         "required": spec.required,
         "help": spec.help,
         "default": spec.default,
+        "cli": spec.cli.map(arg_cli_spec_value),
     })
 }
 
-fn operation_space_name(operation_space: OperationExecutionSpace) -> &'static str {
-    match operation_space {
+fn cli_spec_value(spec: CliSpec) -> Value {
+    json!({
+        "path": spec.path,
+        "usage": spec.usage,
+        "examples": spec.examples,
+    })
+}
+
+fn arg_cli_spec_value(spec: ArgCliSpec) -> Value {
+    json!({
+        "flag": spec.flag,
+        "positional": spec.positional,
+    })
+}
+
+fn operation_execution_space_name(
+    operation_execution_space: OperationExecutionSpace,
+) -> &'static str {
+    match operation_execution_space {
         OperationExecutionSpace::Manager => "manager",
         OperationExecutionSpace::Runtime => "runtime",
     }

@@ -138,7 +138,10 @@ fn operation_catalog_contains_only_manager_operations() {
         .map(|spec| spec.name)
         .collect::<Vec<_>>();
 
-    assert_eq!(catalog.operation_space, OperationExecutionSpace::Manager);
+    assert_eq!(
+        catalog.operation_execution_space,
+        OperationExecutionSpace::Manager
+    );
     assert_eq!(
         names,
         [
@@ -160,6 +163,25 @@ fn operation_catalog_contains_only_manager_operations() {
         .args
         .iter()
         .any(|arg| arg.name == "sandbox_id" && arg.kind == ArgKind::String)));
+}
+
+#[test]
+fn describe_manager_operations_serializes_cli_metadata() {
+    let (services, _runtime, _installer, _client) = services();
+
+    let catalog = dispatch(&services, "describe_manager_operations", json!({}));
+
+    assert_eq!(catalog["operation_execution_space"], "manager");
+    assert_eq!(catalog["operations"][0]["name"], "create_sandbox");
+    assert_eq!(
+        catalog["operations"][0]["args"][0]["cli"]["flag"],
+        "--sandbox-id"
+    );
+    assert_eq!(
+        catalog["operations"][0]["args"][0]["cli"]["positional"],
+        Value::Null
+    );
+    assert!(catalog["operations"][0]["cli"]["usage"].is_string());
 }
 
 #[test]
@@ -249,7 +271,7 @@ fn describe_daemon_operations_uses_daemon_client_trait() {
         "describe_daemon_operations",
         json!({"sandbox_id": "sbox-1"}),
     );
-    assert_eq!(catalog["operation_space"], "runtime");
+    assert_eq!(catalog["operation_execution_space"], "runtime");
     assert_eq!(catalog["operations"][0]["name"], "daemon_test_operation");
     assert_eq!(
         client.described.lock().expect("described lock").as_slice(),

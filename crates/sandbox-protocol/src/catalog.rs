@@ -8,18 +8,18 @@ pub enum OperationExecutionSpace {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OperationCatalog {
-    pub operation_space: OperationExecutionSpace,
+    pub operation_execution_space: OperationExecutionSpace,
     pub operations: &'static [&'static OperationSpec],
 }
 
 impl OperationCatalog {
     #[must_use]
     pub const fn new(
-        operation_space: OperationExecutionSpace,
+        operation_execution_space: OperationExecutionSpace,
         operations: &'static [&'static OperationSpec],
     ) -> Self {
         Self {
-            operation_space,
+            operation_execution_space,
             operations,
         }
     }
