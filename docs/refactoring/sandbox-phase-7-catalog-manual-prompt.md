@@ -36,7 +36,6 @@ Required starting state:
 - `crates/sandbox-manager` exists.
 - `crates/sandbox-manager/src/server` exists.
 - `crates/sandbox-gateway-cli` exists.
-- `crates/sandbox-gateway-cli/src/manual.rs` exists.
 - `crates/sandbox-gateway-cli/src/request_builder.rs` exists.
 - `crates/sandbox-daemon` exists.
 - `crates/sandbox-runtime/operation` exists.
@@ -123,8 +122,8 @@ Implementation steps:
    test -d crates/sandbox-daemon
    test -d crates/sandbox-runtime/operation
    test -d crates/sandbox-gateway-cli
-   test -f crates/sandbox-gateway-cli/src/manual.rs
    test -f crates/sandbox-gateway-cli/src/request_builder.rs
+   test -f crates/sandbox-protocol/src/manual.rs
    rg -n "Request|Response|OperationCatalog|OperationExecutionSpace" crates/sandbox-protocol/src
    rg -n "OperationRequest|OperationResponse|SandboxRequest|RoutedRequest|ManagerRequest|OperationTarget|invoke_sandbox_daemon" crates/sandbox-protocol/src crates/sandbox-manager/src crates/sandbox-gateway-cli/src
    ```

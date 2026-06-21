@@ -28,13 +28,6 @@ pub struct ConfigError {
     message: String,
 }
 
-impl ConfigError {
-    #[must_use]
-    pub fn message(&self) -> &str {
-        &self.message
-    }
-}
-
 impl std::fmt::Display for ConfigError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter.write_str(&self.message)

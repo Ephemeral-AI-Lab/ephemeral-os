@@ -43,29 +43,18 @@ impl std::fmt::Display for RequestBuildError {
 impl std::error::Error for RequestBuildError {}
 
 pub fn manager_catalog_request() -> Request {
-    manager_catalog_request_with_id(next_request_id())
-}
-
-pub fn manager_catalog_request_with_id(request_id: impl Into<String>) -> Request {
     Request::new(
         DESCRIBE_MANAGER_OPERATIONS,
-        request_id,
+        next_request_id(),
         OperationScope::system(),
         json!({}),
     )
 }
 
 pub fn runtime_catalog_request(sandbox_id: impl Into<String>) -> Request {
-    runtime_catalog_request_with_id(sandbox_id, next_request_id())
-}
-
-pub fn runtime_catalog_request_with_id(
-    sandbox_id: impl Into<String>,
-    request_id: impl Into<String>,
-) -> Request {
     Request::new(
         DESCRIBE_DAEMON_OPERATIONS,
-        request_id,
+        next_request_id(),
         OperationScope::system(),
         json!({ "sandbox_id": sandbox_id.into() }),
     )

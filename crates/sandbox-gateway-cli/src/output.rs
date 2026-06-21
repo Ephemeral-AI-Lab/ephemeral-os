@@ -272,7 +272,7 @@ where
     }
 }
 
-pub fn render_error<WErr>(
+fn render_error<WErr>(
     kind: &'static str,
     message: impl Into<String>,
     stderr: &mut WErr,
