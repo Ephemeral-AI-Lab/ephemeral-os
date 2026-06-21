@@ -7,7 +7,7 @@ use clap::error::ErrorKind;
 use clap::{Args, Parser, Subcommand};
 use serde_json::{json, Value};
 
-use crate::client::ManagerClient;
+use crate::client::GatewayClient;
 use crate::config::{GatewayConfig, GatewayConfigOverrides};
 use crate::request_builder::{
     build_request_from_catalog, catalog_from_response, manager_catalog_request,
@@ -24,7 +24,15 @@ const EXIT_USAGE: u8 = 2;
 #[derive(Debug, Parser)]
 #[command(name = "sandbox", disable_help_subcommand = true)]
 struct Cli {
-    #[arg(long = "manager-socket", value_name = "PATH", global = true)]
+    #[arg(long = "gateway-socket", value_name = "PATH", global = true)]
+    gateway_socket_path: Option<PathBuf>,
+
+    #[arg(
+        long = "manager-socket",
+        value_name = "PATH",
+        global = true,
+        help = "Deprecated alias for --gateway-socket."
+    )]
     manager_socket_path: Option<PathBuf>,
 
     #[arg(long = "default-sandbox-id", value_name = "SANDBOX_ID", global = true)]
@@ -103,6 +111,7 @@ where
     };
 
     let config = match GatewayConfig::discover(GatewayConfigOverrides {
+        gateway_socket_path: cli.gateway_socket_path,
         manager_socket_path: cli.manager_socket_path,
         default_sandbox_id: cli.default_sandbox_id,
     }) {
@@ -113,7 +122,7 @@ where
         }
     };
 
-    let client = ManagerClient::new(config.manager_socket_path.clone());
+    let client = GatewayClient::new(config.gateway_socket_path.clone());
 
     let request_input = match cli.command {
         Command::Manager(command) => BuildRequestInput {
@@ -166,7 +175,7 @@ where
 }
 
 async fn run_request_from_catalog<WOut, WErr>(
-    client: &ManagerClient,
+    client: &GatewayClient,
     request_input: BuildRequestInput,
     config: &GatewayConfig,
     catalog: &OperationCatalogDocument,
@@ -197,7 +206,7 @@ where
 }
 
 async fn run_manual_command<WOut, WErr>(
-    client: &ManagerClient,
+    client: &GatewayClient,
     command: ManualCommand,
     config: &GatewayConfig,
     stdout: &mut WOut,
@@ -231,7 +240,7 @@ where
 }
 
 async fn load_catalog<WErr>(
-    client: &ManagerClient,
+    client: &GatewayClient,
     request: &sandbox_protocol::Request,
     stderr: &mut WErr,
 ) -> Result<OperationCatalogDocument, u8>

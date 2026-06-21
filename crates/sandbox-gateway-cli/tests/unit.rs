@@ -2,10 +2,10 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use sandbox_gateway_cli::client::ManagerClient;
+use sandbox_gateway_cli::client::GatewayClient;
 use sandbox_gateway_cli::config::{
-    GatewayConfig, GatewayConfigOverrides, DEFAULT_MANAGER_SOCKET, SANDBOX_DEFAULT_ID_ENV,
-    SANDBOX_MANAGER_SOCKET_ENV,
+    GatewayConfig, GatewayConfigOverrides, DEFAULT_GATEWAY_SOCKET, SANDBOX_DEFAULT_ID_ENV,
+    SANDBOX_GATEWAY_SOCKET_ENV, SANDBOX_MANAGER_SOCKET_ENV,
 };
 use sandbox_gateway_cli::output::render_response;
 use sandbox_gateway_cli::request_builder::{
@@ -270,7 +270,9 @@ async fn help_writes_stdout_and_exits_successfully() -> TestResult {
     .await;
 
     assert_eq!(exit, 0);
-    assert!(String::from_utf8(stdout)?.contains("Usage: sandbox"));
+    let help = String::from_utf8(stdout)?;
+    assert!(help.contains("Usage: sandbox"));
+    assert!(help.contains("--gateway-socket"));
     assert!(stderr.is_empty());
     Ok(())
 }
@@ -279,42 +281,74 @@ async fn help_writes_stdout_and_exits_successfully() -> TestResult {
 fn config_precedence_cli_env_default() -> TestResult {
     let default_config = GatewayConfig::discover_with(GatewayConfigOverrides::default(), |_| None)?;
     assert_eq!(
-        default_config.manager_socket_path,
-        PathBuf::from(DEFAULT_MANAGER_SOCKET)
+        default_config.gateway_socket_path,
+        PathBuf::from(DEFAULT_GATEWAY_SOCKET)
     );
 
     let env_config =
         GatewayConfig::discover_with(GatewayConfigOverrides::default(), |key| match key {
-            SANDBOX_MANAGER_SOCKET_ENV => Some(OsString::from("/env/manager.sock")),
+            SANDBOX_GATEWAY_SOCKET_ENV => Some(OsString::from("/env/gateway.sock")),
             SANDBOX_DEFAULT_ID_ENV => Some(OsString::from("env-sbox")),
             _ => None,
         })?;
     assert_eq!(
-        env_config.manager_socket_path,
-        PathBuf::from("/env/manager.sock")
+        env_config.gateway_socket_path,
+        PathBuf::from("/env/gateway.sock")
     );
     assert_eq!(env_config.default_sandbox_id.as_deref(), Some("env-sbox"));
 
     let cli_config = GatewayConfig::discover_with(
         GatewayConfigOverrides {
-            manager_socket_path: Some(PathBuf::from("/cli/manager.sock")),
+            gateway_socket_path: Some(PathBuf::from("/cli/gateway.sock")),
+            manager_socket_path: None,
             default_sandbox_id: Some("cli-sbox".to_owned()),
         },
         |_| None,
     )?;
     assert_eq!(
-        cli_config.manager_socket_path,
-        PathBuf::from("/cli/manager.sock")
+        cli_config.gateway_socket_path,
+        PathBuf::from("/cli/gateway.sock")
     );
     assert_eq!(cli_config.default_sandbox_id.as_deref(), Some("cli-sbox"));
     Ok(())
 }
 
 #[tokio::test]
-async fn manager_client_sends_one_request_and_reads_one_response() -> TestResult {
+async fn deprecated_manager_socket_config_maps_to_gateway_socket() -> TestResult {
+    let alias_config = GatewayConfig::discover_with(
+        GatewayConfigOverrides {
+            gateway_socket_path: None,
+            manager_socket_path: Some(PathBuf::from("/cli/manager.sock")),
+            default_sandbox_id: None,
+        },
+        |key| match key {
+            SANDBOX_GATEWAY_SOCKET_ENV => Some(OsString::from("/env/gateway.sock")),
+            SANDBOX_MANAGER_SOCKET_ENV => Some(OsString::from("/env/manager.sock")),
+            _ => None,
+        },
+    )?;
+    assert_eq!(
+        alias_config.gateway_socket_path,
+        PathBuf::from("/env/gateway.sock")
+    );
+
+    let alias_env_config =
+        GatewayConfig::discover_with(GatewayConfigOverrides::default(), |key| match key {
+            SANDBOX_MANAGER_SOCKET_ENV => Some(OsString::from("/env/manager.sock")),
+            _ => None,
+        })?;
+    assert_eq!(
+        alias_env_config.gateway_socket_path,
+        PathBuf::from("/env/manager.sock")
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn gateway_client_sends_one_request_and_reads_one_response() -> TestResult {
     let root = unique_temp_dir("sandbox-gateway-client-test")?;
     std::fs::create_dir_all(&root)?;
-    let socket_path = root.join("manager.sock");
+    let socket_path = root.join("gateway.sock");
     let listener = UnixListener::bind(&socket_path)?;
     let (tx, rx) = tokio::sync::oneshot::channel::<Value>();
 
@@ -330,7 +364,7 @@ async fn manager_client_sends_one_request_and_reads_one_response() -> TestResult
         Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
     });
 
-    let client = ManagerClient::new(&socket_path);
+    let client = GatewayClient::new(&socket_path);
     let request = Request::new("list_sandboxes", "req-1", OperationScope::System, json!({}));
     let response = client.send(&request).await?;
     let sent = rx.await?;
@@ -383,7 +417,7 @@ fn build_runtime_request(
 
 fn config(default_sandbox_id: Option<&str>) -> GatewayConfig {
     GatewayConfig {
-        manager_socket_path: PathBuf::from("/tmp/manager.sock"),
+        gateway_socket_path: PathBuf::from("/tmp/gateway.sock"),
         default_sandbox_id: default_sandbox_id.map(str::to_owned),
     }
 }

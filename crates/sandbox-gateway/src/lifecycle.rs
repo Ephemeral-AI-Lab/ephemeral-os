@@ -4,10 +4,10 @@ use tokio::io::{AsyncWrite, AsyncWriteExt};
 use tokio::net::UnixListener;
 use tokio::sync::Semaphore;
 
-use super::{SandboxManagerServer, ServerError};
+use crate::{GatewayError, SandboxGatewayServer};
 
-impl SandboxManagerServer {
-    pub async fn serve(self) -> Result<(), ServerError> {
+impl SandboxGatewayServer {
+    pub async fn serve(self) -> Result<(), GatewayError> {
         let server = Arc::new(self);
         prepare_paths(&server).await?;
         remove_file_if_exists(&server.config.socket_path).await?;
@@ -22,7 +22,7 @@ impl SandboxManagerServer {
     }
 }
 
-async fn prepare_paths(server: &SandboxManagerServer) -> Result<(), ServerError> {
+async fn prepare_paths(server: &SandboxGatewayServer) -> Result<(), GatewayError> {
     if let Some(parent) = server.config.socket_path.parent() {
         tokio::fs::create_dir_all(parent).await?;
     }
@@ -33,17 +33,20 @@ async fn prepare_paths(server: &SandboxManagerServer) -> Result<(), ServerError>
 }
 
 async fn accept_until_shutdown(
-    server: Arc<SandboxManagerServer>,
+    server: Arc<SandboxGatewayServer>,
     listener: UnixListener,
     permits: Arc<Semaphore>,
-) -> Result<(), ServerError> {
+) -> Result<(), GatewayError> {
     loop {
         tokio::select! {
             () = server.shutdown.cancelled() => return Ok(()),
             accepted = listener.accept() => {
                 let (stream, _) = accepted?;
                 let Ok(permit) = Arc::clone(&permits).try_acquire_owned() else {
-                    tokio::spawn(reject_overloaded_connection(stream, server.config.max_concurrent_connections));
+                    tokio::spawn(reject_overloaded_connection(
+                        stream,
+                        server.config.max_concurrent_connections,
+                    ));
                     continue;
                 };
                 let server = Arc::clone(&server);
@@ -60,9 +63,9 @@ async fn reject_overloaded_connection<S>(mut stream: S, max_connections: usize)
 where
     S: AsyncWrite + Unpin,
 {
-    let response = super::error::error_response(
+    let response = crate::error::error_response(
         sandbox_protocol::error_kind::INTERNAL_ERROR,
-        "manager is at connection capacity",
+        "gateway is at connection capacity",
         serde_json::json!({ "max_concurrent_connections": max_connections }),
     );
     let _ = stream
@@ -71,7 +74,7 @@ where
     let _ = stream.shutdown().await;
 }
 
-async fn set_socket_permissions(server: &SandboxManagerServer) -> Result<(), ServerError> {
+async fn set_socket_permissions(server: &SandboxGatewayServer) -> Result<(), GatewayError> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -84,12 +87,12 @@ async fn set_socket_permissions(server: &SandboxManagerServer) -> Result<(), Ser
     Ok(())
 }
 
-async fn cleanup_paths(server: &SandboxManagerServer) {
+async fn cleanup_paths(server: &SandboxGatewayServer) {
     let _ = tokio::fs::remove_file(&server.config.pid_path).await;
     let _ = tokio::fs::remove_file(&server.config.socket_path).await;
 }
 
-async fn remove_file_if_exists(path: &std::path::Path) -> Result<(), ServerError> {
+async fn remove_file_if_exists(path: &std::path::Path) -> Result<(), GatewayError> {
     match tokio::fs::remove_file(path).await {
         Ok(()) => Ok(()),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),

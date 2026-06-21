@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use crate::error::LayerStackError;
-use crate::fs::{count_dirs, read_manifest, resolve_layer_path, storage_bytes};
+use crate::fs::{read_manifest, resolve_layer_path};
 use crate::lock::StorageWriterLockLease;
 use crate::model::{manifest_root_hash, LayerRef, Manifest};
 use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, STAGING_DIR};
@@ -37,13 +37,6 @@ pub struct SquashOutcome {
     pub lease_release_error: Option<LayerStackError>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct LayerStackStorageMetrics {
-    pub layer_dirs: usize,
-    pub staging_dirs: usize,
-    pub storage_bytes: u64,
-}
-
 #[derive(Debug)]
 pub struct LayerStack {
     pub(in crate::stack) storage_root: PathBuf,
@@ -76,15 +69,6 @@ impl LayerStack {
         &self,
     ) -> Result<Manifest, LayerStackError> {
         read_manifest(self.storage_root.join(ACTIVE_MANIFEST_FILE))
-    }
-
-    pub(crate) fn with_active_manifest<T>(
-        &self,
-        f: impl FnOnce(&Manifest) -> Result<T, LayerStackError>,
-    ) -> Result<T, LayerStackError> {
-        let _guard = self.writer_lock.shared()?;
-        let manifest = self.read_active_manifest_unlocked()?;
-        f(&manifest)
     }
 
     pub fn acquire_snapshot(&self, owner_request_id: &str) -> Result<Lease, LayerStackError> {
@@ -134,15 +118,5 @@ impl LayerStack {
     #[must_use]
     pub fn active_lease_count(&self) -> usize {
         lock_shared_registry_recover(&self.leases).active_count()
-    }
-
-    pub fn storage_metrics(&self) -> Result<LayerStackStorageMetrics, LayerStackError> {
-        let _guard = self.writer_lock.shared()?;
-        let root = &self.storage_root;
-        Ok(LayerStackStorageMetrics {
-            layer_dirs: count_dirs(&root.join(LAYERS_DIR))?,
-            staging_dirs: count_dirs(&root.join(STAGING_DIR))?,
-            storage_bytes: storage_bytes(root)?,
-        })
     }
 }

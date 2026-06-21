@@ -1,6 +1,5 @@
 #![forbid(unsafe_code)]
 
-mod commit;
 mod error;
 mod model;
 pub mod service;
@@ -15,8 +14,6 @@ pub use model::{
     LayerRef, Manifest, MANIFEST_SCHEMA_VERSION,
 };
 
-pub use commit::model::FileResult;
-pub use commit::{ChangesetResult, CommitError, CommitStatus};
 pub use error::LayerStackError;
 pub use stack::reclaim_unpinned_layers::{
     LeaseParentCompactionOutcome, ReclaimUnpinnedLayersCopyThroughOutcome,
@@ -44,7 +41,6 @@ pub(crate) const LAYER_METADATA_DIR: &str = ".layer-metadata";
 /// tests when no layerstack operations are live.
 #[doc(hidden)]
 pub fn reset_process_state_for_tests() {
-    service::reset_service_cache_for_tests();
     stack::reset_shared_registries_for_tests();
     lock::reset_storage_lock_registry_for_tests();
 }

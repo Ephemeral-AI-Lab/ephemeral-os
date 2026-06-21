@@ -6,6 +6,7 @@ members = [
     "crates/sandbox-runtime/config",
     "crates/sandbox-daemon",
     "crates/sandbox-manager",
+    "crates/sandbox-gateway",
     "crates/sandbox-gateway-cli",
     "crates/sandbox-protocol",
     "crates/sandbox-runtime/workspace",
@@ -60,6 +61,7 @@ sandbox-runtime-namespace-process = { path = "crates/sandbox-runtime/namespace-p
 sandbox-runtime-overlay = { path = "crates/sandbox-runtime/overlay" }
 sandbox-runtime-workspace = { path = "crates/sandbox-runtime/workspace" }
 sandbox-manager = { path = "crates/sandbox-manager" }
+sandbox-gateway = { path = "crates/sandbox-gateway" }
 sandbox-gateway-cli = { path = "crates/sandbox-gateway-cli" }
 sandbox-protocol = { path = "crates/sandbox-protocol" }
 sandbox-daemon = { path = "crates/sandbox-daemon" }

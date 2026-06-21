@@ -1,7 +1,5 @@
 #![forbid(unsafe_code)]
 
-#[path = "../src/commit/mod.rs"]
-mod commit;
 #[path = "../src/error.rs"]
 mod error;
 #[path = "../src/storage/fs.rs"]
@@ -19,7 +17,6 @@ mod whiteout;
 #[path = "../src/workspace_base/mod.rs"]
 mod workspace_base;
 
-pub(crate) use commit::{ChangesetResult, CommitError, CommitStatus};
 pub use error::LayerStackError;
 pub use model::{
     aggregate_layer_changes, layer_digest, manifest_root_hash, CasError, LayerChange, LayerPath,
@@ -40,9 +37,7 @@ pub(crate) const STAGING_DIR: &str = "staging";
 pub const ACTIVE_MANIFEST_FILE: &str = "manifest.json";
 pub(crate) const LAYER_METADATA_DIR: &str = ".layer-metadata";
 
-#[doc(hidden)]
 pub fn reset_process_state_for_tests() {
-    service::reset_service_cache_for_tests();
     stack::reset_shared_registries_for_tests();
     lock::reset_storage_lock_registry_for_tests();
 }
@@ -61,16 +56,10 @@ pub(crate) use stack::squash::*;
 #[path = "unit/test_fixture.rs"]
 mod test_fixture;
 
-#[path = "unit/commit/queue.rs"]
-mod commit_queue_tests;
-#[path = "unit/commit/transaction.rs"]
-mod commit_transaction_tests;
 #[path = "unit/model.rs"]
 mod model_tests;
 #[path = "unit/reclaim_unpinned_layers.rs"]
 mod reclaim_unpinned_layers_tests;
-#[path = "unit/route.rs"]
-mod route_tests;
 #[path = "unit/service.rs"]
 mod service_tests;
 #[path = "unit/squash.rs"]

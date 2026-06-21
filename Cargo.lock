@@ -905,6 +905,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "sandbox-gateway"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "sandbox-manager",
+ "sandbox-protocol",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-util",
+]
+
+[[package]]
 name = "sandbox-gateway-cli"
 version = "0.1.0"
 dependencies = [
@@ -973,7 +986,6 @@ name = "sandbox-runtime-layerstack"
 version = "0.1.0"
 dependencies = [
  "base64",
- "ignore",
  "proptest",
  "rustix 0.38.44",
  "serde",

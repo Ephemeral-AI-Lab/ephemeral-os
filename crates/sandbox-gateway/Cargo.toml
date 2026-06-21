@@ -1,20 +1,18 @@
 [package]
-name = "sandbox-runtime-layerstack"
+name = "sandbox-gateway"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
-rustix.workspace = true
-serde.workspace = true
+sandbox-manager.workspace = true
+sandbox-protocol.workspace = true
+clap.workspace = true
 serde_json.workspace = true
-sha2.workspace = true
 thiserror.workspace = true
-
-[dev-dependencies]
-base64.workspace = true
-proptest.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
 
 [lints]
 workspace = true

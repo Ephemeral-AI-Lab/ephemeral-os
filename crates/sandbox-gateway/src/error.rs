@@ -4,8 +4,8 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 #[non_exhaustive]
-pub enum ServerError {
-    #[error("manager server io error: {0}")]
+pub enum GatewayError {
+    #[error("gateway io error: {0}")]
     Io(#[from] std::io::Error),
 
     #[error("bad json: {0}")]
@@ -17,22 +17,19 @@ pub enum ServerError {
     #[error("request exceeds {limit} byte limit")]
     RequestTooLarge { limit: usize },
 
-    #[error("{message}")]
-    InvalidScope { message: String },
-
-    #[error("manager dispatch task failed: {0}")]
-    Join(#[from] tokio::task::JoinError),
+    #[error("gateway request was not newline terminated")]
+    MissingNewline,
 }
 
-impl ServerError {
+impl GatewayError {
     #[must_use]
     pub const fn response_kind(&self) -> &'static str {
         match self {
             Self::Json(_) => error_kind::BAD_JSON,
             Self::BadRequest { kind, .. } => kind,
             Self::RequestTooLarge { .. } => error_kind::REQUEST_TOO_LARGE,
-            Self::InvalidScope { .. } => error_kind::INVALID_REQUEST,
-            Self::Io(_) | Self::Join(_) => error_kind::INTERNAL_ERROR,
+            Self::MissingNewline => error_kind::INVALID_REQUEST,
+            Self::Io(_) => error_kind::INTERNAL_ERROR,
         }
     }
 

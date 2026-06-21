@@ -1,6 +1,4 @@
-use std::path::{Path, PathBuf};
-
-use crate::model::{LayerChange, Manifest};
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Snapshot {
@@ -15,27 +13,4 @@ pub struct LeasedSnapshot {
     pub manifest_version: i64,
     pub root_hash: String,
     pub layer_paths: Vec<PathBuf>,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct PublishChangesRequest<'a> {
-    pub root: &'a Path,
-    pub snapshot_manifest_version: i64,
-    pub snapshot_layer_paths: &'a [PathBuf],
-    pub changes: &'a [LayerChange],
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct CompactSnapshotLayersRequest<'a> {
-    pub root: &'a Path,
-    pub snapshot_manifest_version: i64,
-    pub snapshot_layer_paths: &'a [PathBuf],
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CompactSnapshotLayersResult {
-    pub manifest: Manifest,
-    pub layer_paths: Vec<PathBuf>,
-    pub before_layer_count: usize,
-    pub after_layer_count: usize,
 }

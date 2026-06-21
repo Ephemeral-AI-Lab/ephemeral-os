@@ -1,20 +1,17 @@
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use sandbox_manager::{
     ManagerError, ManagerServices, SandboxDaemonClient, SandboxDaemonEndpoint,
-    SandboxDaemonInstaller, SandboxId, SandboxManagerServer, SandboxRecord, SandboxRuntime,
-    SandboxState, SandboxStore, ServerConfig,
+    SandboxDaemonInstaller, SandboxId, SandboxManagerRouter, SandboxRecord, SandboxRuntime,
+    SandboxState, SandboxStore,
 };
 use sandbox_protocol::{
     error_kind, OperationCatalog, OperationExecutionSpace, OperationScope, OperationSpec, Request,
-    Response, MAX_REQUEST_BYTES,
+    Response,
 };
 use serde_json::{json, Value};
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
-static NEXT_SERVER_ID: AtomicUsize = AtomicUsize::new(1);
 static TEST_DAEMON_SPECS: &[&OperationSpec] = &[];
 
 #[derive(Default)]
@@ -94,25 +91,12 @@ fn services() -> (
     (services, store, daemon_client)
 }
 
-fn server(services: Arc<ManagerServices>) -> SandboxManagerServer {
-    let id = NEXT_SERVER_ID.fetch_add(1, Ordering::Relaxed);
-    let root = std::env::temp_dir().join(format!(
-        "sandbox-manager-server-test-{}-{id}",
-        std::process::id()
-    ));
-    SandboxManagerServer::new(
-        ServerConfig::new(root.join("manager.sock"), root.join("manager.pid"), 8),
-        services,
-    )
+fn router(services: Arc<ManagerServices>) -> SandboxManagerRouter {
+    SandboxManagerRouter::new(services)
 }
 
-fn request(op: &str, scope: OperationScope, args: Value) -> Value {
-    json!({
-        "op": op,
-        "request_id": "req-1",
-        "scope": scope,
-        "args": args,
-    })
+fn request(op: &str, scope: OperationScope, args: Value) -> Request {
+    Request::new(op, "req-1", scope, args)
 }
 
 fn sandbox_id(value: &str) -> SandboxId {
@@ -127,81 +111,51 @@ fn ready_record(value: &str, daemon: Option<SandboxDaemonEndpoint>) -> SandboxRe
     }
 }
 
-async fn send_value(server: &SandboxManagerServer, value: Value) -> Value {
-    let mut raw = serde_json::to_vec(&value).expect("serialize request");
-    raw.push(b'\n');
-    send_raw(server, &raw).await
-}
-
-async fn send_raw(server: &SandboxManagerServer, raw: &[u8]) -> Value {
-    let (client, server_stream) = tokio::io::duplex(1024);
-    let server_future = server.handle_connection(server_stream);
-    let client_future = async {
-        let (reader, mut writer) = tokio::io::split(client);
-        let _ = writer.write_all(raw).await;
-        let _ = writer.shutdown().await;
-
-        let mut response = String::new();
-        let mut reader = BufReader::new(reader);
-        reader
-            .read_line(&mut response)
-            .await
-            .expect("read response");
-        serde_json::from_str::<Value>(&response).expect("decode response")
-    };
-    let (server_result, response) = tokio::join!(server_future, client_future);
-    server_result.expect("handle connection");
-    response
-}
-
 #[tokio::test]
-async fn manager_server_dispatches_system_manager_operation_locally() {
+async fn manager_router_dispatches_system_manager_operation_locally() {
     let (services, _store, _daemon_client) = services();
-    let server = server(services);
+    let router = router(services);
 
-    let response = send_value(
-        &server,
-        request("list_sandboxes", OperationScope::System, json!({})),
-    )
-    .await;
+    let response = router
+        .dispatch_request(request("list_sandboxes", OperationScope::System, json!({})))
+        .await
+        .into_json_value();
 
     assert_eq!(response["sandboxes"], json!([]));
 }
 
 #[tokio::test]
-async fn manager_server_rejects_manager_operation_with_sandbox_scope() {
+async fn manager_router_rejects_manager_operation_with_sandbox_scope() {
     let (services, _store, _daemon_client) = services();
-    let server = server(services);
+    let router = router(services);
 
-    let response = send_value(
-        &server,
-        request(
+    let response = router
+        .dispatch_request(request(
             "list_sandboxes",
             OperationScope::sandbox("sbox-1"),
             json!({}),
-        ),
-    )
-    .await;
+        ))
+        .await
+        .into_json_value();
 
     assert_eq!(response["error"]["kind"], error_kind::INVALID_REQUEST);
 }
 
 #[tokio::test]
-async fn manager_server_unknown_system_operation_returns_unknown_op() {
+async fn manager_router_unknown_system_operation_returns_unknown_op() {
     let (services, _store, _daemon_client) = services();
-    let server = server(services);
+    let router = router(services);
 
-    let response = send_value(
-        &server,
-        request("exec_command", OperationScope::System, json!({})),
-    )
-    .await;
+    let response = router
+        .dispatch_request(request("exec_command", OperationScope::System, json!({})))
+        .await
+        .into_json_value();
 
     assert_eq!(response["error"]["kind"], "unknown_op");
 }
 
 #[tokio::test]
-async fn manager_server_forwards_sandbox_scoped_unknown_to_daemon_client() {
+async fn manager_router_forwards_sandbox_scoped_unknown_to_daemon_client() {
     let (services, store, daemon_client) = services();
     store
         .insert(ready_record(
@@ -209,17 +163,16 @@ async fn manager_server_forwards_sandbox_scoped_unknown_to_daemon_client() {
             Some(SandboxDaemonEndpoint::new("/tmp/sbox-1.sock", None)),
         ))
         .expect("insert sandbox");
-    let server = server(services);
+    let router = router(services);
 
-    let response = send_value(
-        &server,
-        request(
+    let response = router
+        .dispatch_request(request(
             "exec_command",
             OperationScope::sandbox("sbox-1"),
             json!({"cmd": "pwd"}),
-        ),
-    )
-    .await;
+        ))
+        .await
+        .into_json_value();
 
     assert_eq!(response["forwarded"], true);
     let invocations = daemon_client.invocations.lock().expect("invocations lock");
@@ -230,57 +183,38 @@ async fn manager_server_forwards_sandbox_scoped_unknown_to_daemon_client() {
 }
 
 #[tokio::test]
-async fn manager_server_rejects_sandbox_scope_when_sandbox_missing() {
+async fn manager_router_rejects_sandbox_scope_when_sandbox_missing() {
     let (services, _store, _daemon_client) = services();
-    let server = server(services);
+    let router = router(services);
 
-    let response = send_value(
-        &server,
-        request(
+    let response = router
+        .dispatch_request(request(
             "exec_command",
             OperationScope::sandbox("missing"),
             json!({}),
-        ),
-    )
-    .await;
+        ))
+        .await
+        .into_json_value();
 
     assert_eq!(response["error"]["kind"], error_kind::INVALID_REQUEST);
 }
 
 #[tokio::test]
-async fn manager_server_rejects_sandbox_scope_when_daemon_unavailable() {
+async fn manager_router_rejects_sandbox_scope_when_daemon_unavailable() {
     let (services, store, _daemon_client) = services();
     store
         .insert(ready_record("sbox-1", None))
         .expect("insert sandbox");
-    let server = server(services);
+    let router = router(services);
 
-    let response = send_value(
-        &server,
-        request("exec_command", OperationScope::sandbox("sbox-1"), json!({})),
-    )
-    .await;
+    let response = router
+        .dispatch_request(request(
+            "exec_command",
+            OperationScope::sandbox("sbox-1"),
+            json!({}),
+        ))
+        .await
+        .into_json_value();
 
     assert_eq!(response["error"]["kind"], error_kind::INVALID_REQUEST);
-}
-
-#[tokio::test]
-async fn manager_connection_rejects_bad_json() {
-    let (services, _store, _daemon_client) = services();
-    let server = server(services);
-
-    let response = send_raw(&server, b"{not json\n").await;
-
-    assert_eq!(response["error"]["kind"], error_kind::BAD_JSON);
-}
-
-#[tokio::test]
-async fn manager_connection_rejects_oversized_request() {
-    let (services, _store, _daemon_client) = services();
-    let server = server(services);
-    let oversized = vec![b'a'; MAX_REQUEST_BYTES + 1];
-
-    let response = send_raw(&server, &oversized).await;
-
-    assert_eq!(response["error"]["kind"], error_kind::REQUEST_TOO_LARGE);
 }

@@ -211,17 +211,6 @@ impl LayerChange {
             Self::Delete { .. } | Self::Symlink { .. } | Self::OpaqueDir { .. } => None,
         }
     }
-
-    #[must_use]
-    pub const fn spooled_write_size(&self) -> Option<u64> {
-        match self {
-            Self::WriteFile { size, .. } => Some(*size),
-            Self::Write { .. }
-            | Self::Delete { .. }
-            | Self::Symlink { .. }
-            | Self::OpaqueDir { .. } => None,
-        }
-    }
 }
 
 #[must_use]
