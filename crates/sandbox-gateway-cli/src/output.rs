@@ -27,14 +27,6 @@ struct Cli {
     #[arg(long = "gateway-socket", value_name = "PATH", global = true)]
     gateway_socket_path: Option<PathBuf>,
 
-    #[arg(
-        long = "manager-socket",
-        value_name = "PATH",
-        global = true,
-        help = "Deprecated alias for --gateway-socket."
-    )]
-    manager_socket_path: Option<PathBuf>,
-
     #[arg(long = "default-sandbox-id", value_name = "SANDBOX_ID", global = true)]
     default_sandbox_id: Option<String>,
 
@@ -112,7 +104,6 @@ where
 
     let config = match GatewayConfig::discover(GatewayConfigOverrides {
         gateway_socket_path: cli.gateway_socket_path,
-        manager_socket_path: cli.manager_socket_path,
         default_sandbox_id: cli.default_sandbox_id,
     }) {
         Ok(config) => config,

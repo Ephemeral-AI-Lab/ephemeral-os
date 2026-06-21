@@ -2,7 +2,6 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 
 pub const SANDBOX_GATEWAY_SOCKET_ENV: &str = "SANDBOX_GATEWAY_SOCKET";
-pub const SANDBOX_MANAGER_SOCKET_ENV: &str = "SANDBOX_MANAGER_SOCKET";
 pub const SANDBOX_DEFAULT_ID_ENV: &str = "SANDBOX_DEFAULT_ID";
 pub const DEFAULT_GATEWAY_SOCKET: &str = "/tmp/sandbox-gateway.sock";
 
@@ -15,7 +14,6 @@ pub struct GatewayConfig {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GatewayConfigOverrides {
     pub gateway_socket_path: Option<PathBuf>,
-    pub manager_socket_path: Option<PathBuf>,
     pub default_sandbox_id: Option<String>,
 }
 
@@ -42,7 +40,6 @@ impl GatewayConfig {
         env: impl Fn(&str) -> Option<OsString>,
     ) -> Result<Self, ConfigError> {
         let env_gateway_socket = env(SANDBOX_GATEWAY_SOCKET_ENV).map(PathBuf::from);
-        let env_manager_socket = env(SANDBOX_MANAGER_SOCKET_ENV).map(PathBuf::from);
         let env_default_sandbox_id = env(SANDBOX_DEFAULT_ID_ENV)
             .map(|value| value.to_string_lossy().into_owned())
             .map(non_empty_sandbox_id)
@@ -51,8 +48,6 @@ impl GatewayConfig {
         let gateway_socket_path = overrides
             .gateway_socket_path
             .or(env_gateway_socket)
-            .or(overrides.manager_socket_path)
-            .or(env_manager_socket)
             .unwrap_or_else(|| PathBuf::from(DEFAULT_GATEWAY_SOCKET));
 
         if gateway_socket_path.as_os_str().is_empty() {

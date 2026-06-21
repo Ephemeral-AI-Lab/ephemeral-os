@@ -5,7 +5,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use sandbox_gateway_cli::client::GatewayClient;
 use sandbox_gateway_cli::config::{
     GatewayConfig, GatewayConfigOverrides, DEFAULT_GATEWAY_SOCKET, SANDBOX_DEFAULT_ID_ENV,
-    SANDBOX_GATEWAY_SOCKET_ENV, SANDBOX_MANAGER_SOCKET_ENV,
+    SANDBOX_GATEWAY_SOCKET_ENV,
 };
 use sandbox_gateway_cli::output::render_response;
 use sandbox_gateway_cli::request_builder::{
@@ -300,7 +300,6 @@ fn config_precedence_cli_env_default() -> TestResult {
     let cli_config = GatewayConfig::discover_with(
         GatewayConfigOverrides {
             gateway_socket_path: Some(PathBuf::from("/cli/gateway.sock")),
-            manager_socket_path: None,
             default_sandbox_id: Some("cli-sbox".to_owned()),
         },
         |_| None,
@@ -310,37 +309,6 @@ fn config_precedence_cli_env_default() -> TestResult {
         PathBuf::from("/cli/gateway.sock")
     );
     assert_eq!(cli_config.default_sandbox_id.as_deref(), Some("cli-sbox"));
-    Ok(())
-}
-
-#[tokio::test]
-async fn deprecated_manager_socket_config_maps_to_gateway_socket() -> TestResult {
-    let alias_config = GatewayConfig::discover_with(
-        GatewayConfigOverrides {
-            gateway_socket_path: None,
-            manager_socket_path: Some(PathBuf::from("/cli/manager.sock")),
-            default_sandbox_id: None,
-        },
-        |key| match key {
-            SANDBOX_GATEWAY_SOCKET_ENV => Some(OsString::from("/env/gateway.sock")),
-            SANDBOX_MANAGER_SOCKET_ENV => Some(OsString::from("/env/manager.sock")),
-            _ => None,
-        },
-    )?;
-    assert_eq!(
-        alias_config.gateway_socket_path,
-        PathBuf::from("/env/gateway.sock")
-    );
-
-    let alias_env_config =
-        GatewayConfig::discover_with(GatewayConfigOverrides::default(), |key| match key {
-            SANDBOX_MANAGER_SOCKET_ENV => Some(OsString::from("/env/manager.sock")),
-            _ => None,
-        })?;
-    assert_eq!(
-        alias_env_config.gateway_socket_path,
-        PathBuf::from("/env/manager.sock")
-    );
     Ok(())
 }
 

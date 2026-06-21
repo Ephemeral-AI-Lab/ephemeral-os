@@ -202,15 +202,6 @@ impl LayerChange {
             | Self::OpaqueDir { path } => path,
         }
     }
-
-    #[must_use]
-    pub fn write_size(&self) -> Option<u64> {
-        match self {
-            Self::Write { content, .. } => Some(u64::try_from(content.len()).unwrap_or(u64::MAX)),
-            Self::WriteFile { size, .. } => Some(*size),
-            Self::Delete { .. } | Self::Symlink { .. } | Self::OpaqueDir { .. } => None,
-        }
-    }
 }
 
 #[must_use]
