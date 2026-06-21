@@ -46,20 +46,19 @@ mod daemon_tests {
     ));
 }
 
-mod isolated_tests {
-    pub(crate) use crate::configs::isolated::*;
-    pub(crate) use std::path::PathBuf;
-    include!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/tests/unit/configs/isolated.rs"
-    ));
-}
-
 mod runner_tests {
     pub(crate) use crate::configs::runner::*;
     pub(crate) use std::path::PathBuf;
     include!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/unit/configs/runner.rs"
+    ));
+}
+
+mod runtime_tests {
+    pub(crate) use crate::configs::runtime::*;
+    include!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/unit/configs/runtime.rs"
     ));
 }

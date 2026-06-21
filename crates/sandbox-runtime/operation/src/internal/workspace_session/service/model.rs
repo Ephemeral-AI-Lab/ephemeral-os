@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use crate::workspace_crate::{BaseRevision, WorkspaceHandle, WorkspaceSessionId};
 use crate::workspace_session::WorkspaceSessionError;
 
@@ -21,22 +19,19 @@ impl WorkspaceRemountState {
 pub struct WorkspaceSessionHandler {
     pub workspace_session_id: WorkspaceSessionId,
     pub handle: WorkspaceHandle,
-    pub layer_stack_root: PathBuf,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct WorkspaceSession {
     pub workspace_session_id: WorkspaceSessionId,
     pub handle: WorkspaceHandle,
-    pub layer_stack_root: PathBuf,
     pub remount_state: WorkspaceRemountState,
 }
 
 impl WorkspaceSession {
-    pub(crate) fn from_handle(handle: WorkspaceHandle, layer_stack_root: PathBuf) -> Self {
+    pub(crate) fn from_handle(handle: WorkspaceHandle) -> Self {
         Self {
             workspace_session_id: handle.id.clone(),
-            layer_stack_root,
             handle,
             remount_state: WorkspaceRemountState::Active,
         }
@@ -46,7 +41,6 @@ impl WorkspaceSession {
         WorkspaceSessionHandler {
             workspace_session_id: self.workspace_session_id.clone(),
             handle: self.handle.clone(),
-            layer_stack_root: self.layer_stack_root.clone(),
         }
     }
 

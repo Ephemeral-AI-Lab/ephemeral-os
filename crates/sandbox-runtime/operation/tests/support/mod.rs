@@ -13,9 +13,9 @@ use sandbox_runtime_command::process::{
 use sandbox_runtime_command::yield_wait_loop::WaitOutcome;
 use sandbox_runtime_workspace::{
     CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
-    DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef,
-    LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult,
-    WorkspaceEntry, WorkspaceError, WorkspaceHandle, WorkspaceProfile, WorkspaceRuntimeHooks,
+    DestroyWorkspaceRequest, DestroyWorkspaceResult, LayerStackSnapshotRef, LeaseId,
+    ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceEntry,
+    WorkspaceError, WorkspaceHandle, WorkspaceProfile, WorkspaceRuntimeHooks,
     WorkspaceRuntimeService, WorkspaceSessionId,
 };
 
@@ -215,10 +215,7 @@ impl FakeWorkspaceService {
         Ok(destroy_result(&handle))
     }
 
-    fn latest_snapshot(
-        &self,
-        _request: LatestSnapshotRequest,
-    ) -> Result<ReadonlySnapshotHandle, WorkspaceError> {
+    fn latest_snapshot(&self) -> Result<ReadonlySnapshotHandle, WorkspaceError> {
         Err(WorkspaceError::SnapshotAcquire {
             source: "latest snapshot not configured".to_owned(),
         })
@@ -246,7 +243,7 @@ pub(crate) fn fake_workspace_runtime(
                 let fake = Arc::clone(&fake);
                 move |handle, request| fake.destroy_workspace(handle, request)
             }),
-            latest_snapshot: Box::new(move |request| fake.latest_snapshot(request)),
+            latest_snapshot: Box::new(move || fake.latest_snapshot()),
         },
     ))
 }
@@ -270,7 +267,6 @@ pub(crate) fn build_services_with_launch_driver(
 
 pub(crate) fn create_request() -> CreateWorkspaceRequest {
     CreateWorkspaceRequest {
-        layer_stack_root: PathBuf::from("/layers"),
         profile: WorkspaceProfile::SharedNetwork,
     }
 }

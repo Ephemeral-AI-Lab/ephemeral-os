@@ -142,8 +142,8 @@ Catalog JSON exposes one execution-space selector:
 ```
 
 Do not add separate `owner`, `target`, `route`, `implementation_owner`, or
-`operation_target` fields. `OperationFamily` is only grouping metadata inside a
-catalog.
+`operation_target` fields. Do not add grouping metadata to operation specs; use
+the catalog execution space as the operation classifier.
 
 ## Dependency Rules
 

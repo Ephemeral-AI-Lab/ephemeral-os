@@ -4,13 +4,12 @@ use crate::command::{
     CommandOutputSnapshot, CommandPollOutput, CommandServiceError, CommandSessionId, CommandStatus,
     PollCommandInput,
 };
-use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationSpec};
+use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationSpec};
 use crate::SandboxRuntimeOperations;
 use sandbox_protocol::{Request, Response};
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "poll_command",
-    family: OperationFamily::Command,
     summary: "Poll a command status and recent output.",
     args: POLL_ARGS,
     cli: Some(POLL_CLI),

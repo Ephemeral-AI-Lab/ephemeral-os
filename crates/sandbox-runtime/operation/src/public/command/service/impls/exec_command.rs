@@ -11,7 +11,7 @@ use crate::command::{
     CommandServiceError, CommandSessionId, CommandTranscriptStore, CommandYield, ExecCommandInput,
     FinalizationState,
 };
-use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationSpec};
+use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationSpec};
 use crate::workspace_crate::{WorkspaceEntry, WorkspaceSessionId};
 use crate::workspace_session::WorkspaceSessionHandler;
 use crate::SandboxRuntimeOperations;
@@ -19,7 +19,6 @@ use sandbox_protocol::{Request, Response};
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "exec_command",
-    family: OperationFamily::Command,
     summary: "Start a command in a workspace.",
     args: EXEC_COMMAND_ARGS,
     cli: Some(EXEC_COMMAND_CLI),

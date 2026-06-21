@@ -3,11 +3,10 @@ use std::path::PathBuf;
 
 use sandbox_runtime_workspace::model::{
     BaseRevision, CaptureChangesRequest, CapturedWorkspaceChanges, ChangedPathKind,
-    CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
-    LayerStackSnapshotRef, LayerStackSnapshotView, LeaseId, ProtectedPathDrop,
-    ProtectedPathDropReason, ReadonlySnapshotHandle, RemountWorkspaceRequest,
-    RemountWorkspaceResult, WorkspaceEntry, WorkspaceEntryFds, WorkspaceHandle, WorkspaceProfile,
-    WorkspaceSessionId,
+    CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LayerStackSnapshotRef,
+    LayerStackSnapshotView, LeaseId, ProtectedPathDrop, ProtectedPathDropReason,
+    ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceEntry,
+    WorkspaceEntryFds, WorkspaceHandle, WorkspaceProfile, WorkspaceSessionId,
 };
 use sandbox_runtime_workspace::overlay::dirs::OverlayDirs;
 use sandbox_runtime_workspace::overlay::tree::TreeResourceStats;
@@ -170,7 +169,6 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
         format!(
             "{:?}",
             CreateWorkspaceRequest {
-                layer_stack_root: "/layers".into(),
                 profile: WorkspaceProfile::SharedNetwork,
             }
         ),
@@ -248,13 +246,6 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
         ),
         format!(
             "{:?}",
-            LatestSnapshotRequest {
-                workspace_root: "/workspace".into(),
-                owner_request_id: "request".to_owned(),
-            }
-        ),
-        format!(
-            "{:?}",
             ReadonlySnapshotHandle {
                 view_root: "/view".into(),
                 generation_key: "generation".to_owned(),
@@ -310,7 +301,6 @@ fn public_dtos_construct_clone_and_compare() {
         layer_count: 1,
     };
     let create = CreateWorkspaceRequest {
-        layer_stack_root: "/layers".into(),
         profile: WorkspaceProfile::SharedNetwork,
     };
     let handle = WorkspaceHandle::without_launch_for_test(
@@ -367,10 +357,6 @@ fn public_dtos_construct_clone_and_compare() {
     let remount = RemountWorkspaceResult {
         handle: handle.clone(),
     };
-    let latest_request = LatestSnapshotRequest {
-        workspace_root: "/workspace".into(),
-        owner_request_id: "request".to_owned(),
-    };
     let readonly_snapshot = ReadonlySnapshotHandle {
         view_root: "/view".into(),
         generation_key: "generation".to_owned(),
@@ -397,7 +383,6 @@ fn public_dtos_construct_clone_and_compare() {
     assert_eq!(destroy_request.clone(), destroy_request);
     assert_eq!(remount_request.clone(), remount_request);
     assert_eq!(remount.clone(), remount);
-    assert_eq!(latest_request.clone(), latest_request);
     assert_eq!(readonly_snapshot.clone(), readonly_snapshot);
     assert_eq!(destroy.clone(), destroy);
 }

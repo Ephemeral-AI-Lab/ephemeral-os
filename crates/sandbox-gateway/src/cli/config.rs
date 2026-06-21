@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 pub const SANDBOX_GATEWAY_SOCKET_ENV: &str = "SANDBOX_GATEWAY_SOCKET";
 pub const SANDBOX_DEFAULT_ID_ENV: &str = "SANDBOX_DEFAULT_ID";
-pub const DEFAULT_GATEWAY_SOCKET: &str = "/tmp/sandbox-gateway.sock";
+pub const DEFAULT_GATEWAY_SOCKET: &str = "/tmp/eos-gateway.sock";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GatewayConfig {

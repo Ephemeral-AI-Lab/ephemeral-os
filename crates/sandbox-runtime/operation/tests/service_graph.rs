@@ -8,7 +8,7 @@ use sandbox_runtime::workspace_remount::{
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
 use sandbox_runtime::SandboxRuntimeOperations;
 use sandbox_runtime_workspace::{
-    CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest, LatestSnapshotRequest,
+    CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest,
     RemountWorkspaceRequest, WorkspaceError, WorkspaceHandle, WorkspaceRuntimeHooks,
     WorkspaceRuntimeService, WorkspaceSessionId,
 };
@@ -46,7 +46,7 @@ fn noop_workspace_runtime() -> Arc<WorkspaceRuntimeService> {
                     })
                 },
             ),
-            latest_snapshot: Box::new(|_request: LatestSnapshotRequest| {
+            latest_snapshot: Box::new(|| {
                 Err(WorkspaceError::SnapshotAcquire {
                     source: "not configured".to_owned(),
                 })

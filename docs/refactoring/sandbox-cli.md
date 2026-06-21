@@ -59,7 +59,7 @@ src/cli/
 ## Example Commands
 
 ```text
-sandbox-cli manager create_sandbox --sandbox-id sbox-1 --workspace-root /testbed
+sandbox-cli manager create_sandbox --image ubuntu:24.04 --workspace-root /testbed
 sandbox-cli manager list_sandboxes
 sandbox-cli runtime --sandbox-id sbox-1 exec_command --workspace-session-id ws-1 "pwd"
 sandbox-cli runtime --sandbox-id sbox-1 poll_command --command-session-id cmd-1

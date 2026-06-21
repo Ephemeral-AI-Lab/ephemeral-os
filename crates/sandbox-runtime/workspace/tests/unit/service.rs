@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use serde_json::json;
 
 use sandbox_runtime_workspace::model::{
-    CreateWorkspaceRequest, DestroyWorkspaceRequest, LatestSnapshotRequest, WorkspaceProfile,
+    CreateWorkspaceRequest, DestroyWorkspaceRequest, WorkspaceProfile,
 };
 use sandbox_runtime_workspace::profile::{ResourceCaps, WorkspaceModeManager};
 use sandbox_runtime_workspace::WorkspaceRuntimeService;
@@ -15,10 +15,7 @@ fn latest_snapshot_returns_readonly_handle_without_lease(
     let fixture = Fixture::new("latest-snapshot")?;
     let service = fixture.service();
 
-    let readonly = service.latest_snapshot(LatestSnapshotRequest {
-        workspace_root: fixture.layer_stack_root.clone(),
-        owner_request_id: "reader".to_owned(),
-    })?;
+    let readonly = service.latest_snapshot()?;
 
     assert_eq!(readonly.view_root, fixture.layer_stack_root);
     assert_eq!(readonly.snapshot.manifest_version, 1);
@@ -43,7 +40,6 @@ fn runtime_service_create_and_destroy_are_backed_by_impl_files(
     let service = fixture.service();
 
     let handle = service.create_workspace(CreateWorkspaceRequest {
-        layer_stack_root: fixture.layer_stack_root.clone(),
         profile: WorkspaceProfile::SharedNetwork,
     })?;
 
@@ -101,11 +97,14 @@ impl Fixture {
     }
 
     fn service(&self) -> WorkspaceRuntimeService {
-        WorkspaceRuntimeService::new(WorkspaceModeManager::new(
-            self.workspace_root.to_string_lossy().into_owned(),
-            ResourceCaps::default(),
-            self.scratch_root.clone(),
-        ))
+        WorkspaceRuntimeService::new(
+            WorkspaceModeManager::new(
+                self.workspace_root.to_string_lossy().into_owned(),
+                ResourceCaps::default(),
+                self.scratch_root.clone(),
+            ),
+            self.layer_stack_root.clone(),
+        )
     }
 }
 

@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-pub const DEFAULT_GATEWAY_SOCKET: &str = "/tmp/sandbox-gateway.sock";
-pub const DEFAULT_GATEWAY_PID: &str = "/tmp/sandbox-gateway.pid";
+pub const DEFAULT_GATEWAY_SOCKET: &str = "/tmp/eos-gateway.sock";
+pub const DEFAULT_GATEWAY_PID: &str = "/tmp/eos-gateway.pid";
 pub const DEFAULT_MAX_CONCURRENT_CONNECTIONS: usize = 256;
 pub const SANDBOX_GATEWAY_SOCKET_ENV: &str = "SANDBOX_GATEWAY_SOCKET";
 

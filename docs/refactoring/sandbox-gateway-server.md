@@ -20,7 +20,7 @@ host-side control-plane domain library behind the gateway.
 
 ```text
 sandbox-cli
-  -> /tmp/sandbox-gateway.sock
+  -> /tmp/eos-gateway.sock
     -> sandbox-gateway server
       -> sandbox-manager control plane
         -> per-sandbox sandbox-daemon endpoint
@@ -30,7 +30,7 @@ sandbox-cli
 There is one public host-side ingress socket:
 
 ```text
-/tmp/sandbox-gateway.sock
+/tmp/eos-gateway.sock
 ```
 
 There is not a public `/tmp/sandbox-manager.sock` in the target design.
@@ -250,7 +250,7 @@ SANDBOX_DEFAULT_ID
 Target default:
 
 ```text
-/tmp/sandbox-gateway.sock
+/tmp/eos-gateway.sock
 ```
 
 Implementation notes:
@@ -330,8 +330,9 @@ sandbox-cli runtime --sandbox-id sbox-1 exec_command --workspace-session-id ws-1
 Override the gateway socket:
 
 ```sh
-start-sandbox-gateway --gateway-socket /tmp/eos-gateway.sock
-sandbox-cli --gateway-socket /tmp/eos-gateway.sock manager list_sandboxes
+export SANDBOX_GATEWAY_SOCKET=/tmp/other-eos-gateway.sock
+start-sandbox-gateway
+sandbox-cli manager list_sandboxes
 ```
 
 ## Tests
@@ -374,7 +375,7 @@ socket names should use gateway terminology.
 
 ## Acceptance Criteria
 
-- External clients connect to `/tmp/sandbox-gateway.sock` by default.
+- External clients connect to `/tmp/eos-gateway.sock` by default.
 - The installed `sandbox-cli` CLI exposes `--gateway-socket` as the canonical
   socket override.
 - `sandbox-gateway` is the only long-lived public host-side listener.

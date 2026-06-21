@@ -5,10 +5,10 @@ use std::sync::{Arc, Mutex};
 use sandbox_runtime::workspace_session::{WorkspaceSessionError, WorkspaceSessionService};
 use sandbox_runtime_workspace::{
     BaseRevision, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
-    DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef,
-    LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult,
-    WorkspaceError, WorkspaceHandle, WorkspaceProfile, WorkspaceRuntimeHooks,
-    WorkspaceRuntimeService, WorkspaceSessionId,
+    DestroyWorkspaceRequest, DestroyWorkspaceResult, LayerStackSnapshotRef, LeaseId,
+    ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceError,
+    WorkspaceHandle, WorkspaceProfile, WorkspaceRuntimeHooks, WorkspaceRuntimeService,
+    WorkspaceSessionId,
 };
 
 struct FakeWorkspaceService {
@@ -156,10 +156,7 @@ impl FakeWorkspaceService {
             .unwrap_or_else(|| Ok(destroy_result(&handle)))
     }
 
-    fn latest_snapshot(
-        &self,
-        _request: LatestSnapshotRequest,
-    ) -> Result<ReadonlySnapshotHandle, WorkspaceError> {
+    fn latest_snapshot(&self) -> Result<ReadonlySnapshotHandle, WorkspaceError> {
         Err(WorkspaceError::SnapshotAcquire {
             source: "latest snapshot not configured".to_owned(),
         })
@@ -191,7 +188,7 @@ fn fake_workspace_runtime(fake: &Arc<FakeWorkspaceService>) -> Arc<WorkspaceRunt
             }),
             latest_snapshot: Box::new({
                 let fake = Arc::clone(fake);
-                move |request| fake.latest_snapshot(request)
+                move || fake.latest_snapshot()
             }),
         },
     ))
@@ -199,7 +196,6 @@ fn fake_workspace_runtime(fake: &Arc<FakeWorkspaceService>) -> Arc<WorkspaceRunt
 
 fn create_request() -> CreateWorkspaceRequest {
     CreateWorkspaceRequest {
-        layer_stack_root: PathBuf::from("/layers"),
         profile: WorkspaceProfile::SharedNetwork,
     }
 }

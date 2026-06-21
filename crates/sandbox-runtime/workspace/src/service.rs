@@ -1,9 +1,8 @@
-use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard};
 
 use crate::error::WorkspaceError;
-use crate::profile::{WorkspaceModeId, WorkspaceModeManager};
+use crate::profile::WorkspaceModeManager;
 
 mod hooks;
 mod impls;
@@ -17,7 +16,7 @@ pub struct WorkspaceRuntimeService {
 
 pub(crate) struct WorkspaceRuntimeState {
     pub(crate) manager: WorkspaceModeManager,
-    pub(crate) layer_stack_roots: HashMap<WorkspaceModeId, PathBuf>,
+    pub(crate) layer_stack_root: PathBuf,
 }
 
 enum WorkspaceRuntimeBackend {
@@ -27,12 +26,12 @@ enum WorkspaceRuntimeBackend {
 
 impl WorkspaceRuntimeService {
     #[must_use]
-    pub fn new(manager: WorkspaceModeManager) -> Self {
+    pub fn new(manager: WorkspaceModeManager, layer_stack_root: PathBuf) -> Self {
         Self {
             backend: WorkspaceRuntimeBackend::Runtime(Box::new(Mutex::new(
                 WorkspaceRuntimeState {
                     manager,
-                    layer_stack_roots: HashMap::new(),
+                    layer_stack_root,
                 },
             ))),
         }

@@ -175,7 +175,7 @@ Focus:
 - `Request` and `Response` are the unified DTOs.
 - `OperationExecutionSpace` and `operation_execution_space` are the only
   manager-vs-runtime selector.
-- `OperationFamily` remains documentation grouping only.
+- Operation specs do not carry grouping metadata.
 - Manager and runtime catalogs are separate.
 - Gateway/manual rendering is generated from `OperationSpec` / catalog data.
 - Runtime operation names use the explicit command names.
@@ -186,7 +186,7 @@ Focus:
 Suggested commands:
 
 ```sh
-rg -n "Request|Response|OperationExecutionSpace|operation_execution_space|OperationFamily|OperationSpec|command_session_id|command_id|OperationRequest|OperationResponse|SandboxRequest|RoutedRequest|ManagerRequest|OperationTarget" docs/refactoring/sandbox-implementation-guide.md docs/refactoring/sandbox-protocol.md docs/refactoring/sandbox-manager.md docs/refactoring/sandbox-gateway-cli.md crates/sandbox-protocol crates/sandbox-manager crates/sandbox-gateway-cli crates/sandbox-runtime/operation --glob '!target/**'
+rg -n "Request|Response|OperationExecutionSpace|operation_execution_space|OperationSpec|command_session_id|command_id|OperationRequest|OperationResponse|SandboxRequest|RoutedRequest|ManagerRequest|OperationTarget" docs/refactoring/sandbox-implementation-guide.md docs/refactoring/sandbox-protocol.md docs/refactoring/sandbox-manager.md docs/refactoring/sandbox-gateway-cli.md crates/sandbox-protocol crates/sandbox-manager crates/sandbox-gateway-cli crates/sandbox-runtime/operation --glob '!target/**'
 rg -n 'name: "(exec|poll|cancel)"|"exec"|"poll"|"cancel"' crates/sandbox-runtime/operation crates/sandbox-manager crates/sandbox-gateway-cli docs/refactoring/sandbox-implementation-guide.md --glob '!target/**'
 ```
 
@@ -254,13 +254,13 @@ Focus:
 - `create_sandbox --sandbox-id` returns the container id / sandbox id as
   specified by current manager DTOs.
 - Runtime operations are selected through the runtime execution space from the
-  caller perspective, not through `OperationFamily`.
+  caller perspective, not through grouping metadata.
 - The guide makes the manager-vs-runtime split easy for future agents to use.
 
 Suggested commands:
 
 ```sh
-rg -n "sandbox-manager|sandbox-daemon|sandbox-gateway-cli|forward|SandboxDaemonClient|describe_daemon_operations|describe_manager_operations|create_sandbox|OperationExecutionSpace|operation_execution_space|OperationFamily" docs/refactoring/sandbox-implementation-guide.md docs/refactoring/sandbox-manager.md docs/refactoring/sandbox-daemon.md docs/refactoring/sandbox-gateway-cli.md crates/sandbox-manager crates/sandbox-gateway-cli crates/sandbox-daemon --glob '!target/**'
+rg -n "sandbox-manager|sandbox-daemon|sandbox-gateway-cli|forward|SandboxDaemonClient|describe_daemon_operations|describe_manager_operations|create_sandbox|OperationExecutionSpace|operation_execution_space" docs/refactoring/sandbox-implementation-guide.md docs/refactoring/sandbox-manager.md docs/refactoring/sandbox-daemon.md docs/refactoring/sandbox-gateway-cli.md crates/sandbox-manager crates/sandbox-gateway-cli crates/sandbox-daemon --glob '!target/**'
 cargo tree -p sandbox-manager --prefix depth
 cargo tree -p sandbox-gateway-cli --prefix depth
 cargo tree -p sandbox-daemon --prefix depth

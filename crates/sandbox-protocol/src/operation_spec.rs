@@ -1,12 +1,4 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum OperationFamily {
-    Command,
-    Workspace,
-    Health,
-    Run,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ArgKind {
     String,
     Integer,
@@ -77,7 +69,6 @@ pub struct CliSpec {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OperationSpec {
     pub name: &'static str,
-    pub family: OperationFamily,
     pub summary: &'static str,
     pub args: &'static [ArgSpec],
     pub cli: Option<CliSpec>,

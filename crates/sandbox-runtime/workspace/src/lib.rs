@@ -26,10 +26,9 @@ pub mod service;
 pub use error::WorkspaceError;
 pub use model::{
     BaseRevision, CaptureChangesRequest, CapturedWorkspaceChanges, ChangedPathKind,
-    CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest,
-    LayerStackSnapshotRef, LayerStackSnapshotView, LeaseId, ProtectedPathDrop,
-    ProtectedPathDropReason, ReadonlySnapshotHandle, RemountWorkspaceRequest,
-    RemountWorkspaceResult, WorkspaceEntry, WorkspaceEntryError, WorkspaceEntryFds,
-    WorkspaceHandle, WorkspaceProfile, WorkspaceSessionId,
+    CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LayerStackSnapshotRef,
+    LayerStackSnapshotView, LeaseId, ProtectedPathDrop, ProtectedPathDropReason,
+    ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceEntry,
+    WorkspaceEntryError, WorkspaceEntryFds, WorkspaceHandle, WorkspaceProfile, WorkspaceSessionId,
 };
 pub use service::{WorkspaceRuntimeHooks, WorkspaceRuntimeService};

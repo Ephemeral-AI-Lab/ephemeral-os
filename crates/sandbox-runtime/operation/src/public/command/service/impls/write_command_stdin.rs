@@ -3,13 +3,12 @@ use std::sync::Arc;
 use super::command_yield_response;
 use crate::command::service::CommandOperationService;
 use crate::command::{CommandServiceError, CommandSessionId, CommandYield, WriteCommandStdinInput};
-use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationSpec};
+use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationSpec};
 use crate::SandboxRuntimeOperations;
 use sandbox_protocol::{Request, Response};
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "write_command_stdin",
-    family: OperationFamily::Command,
     summary: "Write text to a running command stdin.",
     args: WRITE_STDIN_ARGS,
     cli: Some(WRITE_STDIN_CLI),

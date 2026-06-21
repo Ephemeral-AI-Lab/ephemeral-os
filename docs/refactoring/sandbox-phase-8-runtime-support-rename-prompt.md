@@ -199,8 +199,8 @@ Preserve these behavior contracts:
 - Manager operations remain manager-scoped.
 - Runtime operations remain daemon/runtime-scoped.
 - Agents and CLI users choose `manager` or `runtime` by
-  `OperationExecutionSpace`, not by `OperationFamily`.
-- `OperationFamily` remains documentation grouping only.
+  `OperationExecutionSpace`.
+- Operation specs do not carry grouping metadata.
 - Runtime operation names remain:
   - `exec_command`
   - `write_command_stdin`

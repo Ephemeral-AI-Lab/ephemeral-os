@@ -1,7 +1,7 @@
 use crate::error::WorkspaceError;
 use crate::model::{
     CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
-    DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, ReadonlySnapshotHandle,
+    DestroyWorkspaceRequest, DestroyWorkspaceResult, ReadonlySnapshotHandle,
     RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceHandle,
 };
 
@@ -42,9 +42,6 @@ pub struct WorkspaceRuntimeHooks {
             + Send
             + Sync,
     >,
-    pub latest_snapshot: Box<
-        dyn Fn(LatestSnapshotRequest) -> Result<ReadonlySnapshotHandle, WorkspaceError>
-            + Send
-            + Sync,
-    >,
+    pub latest_snapshot:
+        Box<dyn Fn() -> Result<ReadonlySnapshotHandle, WorkspaceError> + Send + Sync>,
 }

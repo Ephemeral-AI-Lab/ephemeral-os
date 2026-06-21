@@ -5,16 +5,6 @@ use crate::model::WorkspaceHandle;
 use crate::profile::{IsolatedNetworkError, WorkspaceModeId, WorkspaceModeSnapshot};
 use crate::service::WorkspaceRuntimeState;
 
-pub(crate) fn ensure_non_empty(value: &str, field: &'static str) -> Result<(), WorkspaceError> {
-    if value.trim().is_empty() {
-        return Err(WorkspaceError::InvalidRequest {
-            field,
-            message: "must not be empty".to_owned(),
-        });
-    }
-    Ok(())
-}
-
 pub(crate) fn ensure_absolute(path: &Path, field: &'static str) -> Result<(), WorkspaceError> {
     if !path.is_absolute() {
         return Err(WorkspaceError::InvalidRequest {

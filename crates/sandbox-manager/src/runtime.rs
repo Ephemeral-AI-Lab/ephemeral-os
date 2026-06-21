@@ -4,12 +4,20 @@ use crate::{ManagerError, SandboxId, SandboxRecord};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CreateSandboxRequest {
-    pub id: SandboxId,
+    pub image: String,
     pub workspace_root: PathBuf,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CreateSandboxResult {
+    pub id: SandboxId,
+}
+
 pub trait SandboxRuntime: Send + Sync {
-    fn create_sandbox(&self, request: &CreateSandboxRequest) -> Result<(), ManagerError>;
+    fn create_sandbox(
+        &self,
+        request: &CreateSandboxRequest,
+    ) -> Result<CreateSandboxResult, ManagerError>;
 
     fn destroy_sandbox(&self, record: &SandboxRecord) -> Result<(), ManagerError>;
 }

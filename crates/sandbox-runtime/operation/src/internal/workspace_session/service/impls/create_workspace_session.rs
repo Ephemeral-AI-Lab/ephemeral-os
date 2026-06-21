@@ -10,10 +10,9 @@ impl WorkspaceSessionService {
         &self,
         request: CreateWorkspaceRequest,
     ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {
-        let layer_stack_root = request.layer_stack_root.clone();
         let handle = self.workspace().create_workspace(request)?;
         let workspace_session_id = handle.id.clone();
-        let session = WorkspaceSession::from_handle(handle.clone(), layer_stack_root);
+        let session = WorkspaceSession::from_handle(handle.clone());
         let handler = session.handler();
 
         let insert_result = self.lock_sessions().and_then(|mut sessions| {

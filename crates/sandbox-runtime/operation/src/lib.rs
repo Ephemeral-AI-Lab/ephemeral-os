@@ -8,8 +8,7 @@ mod public;
 
 pub use internal::{workspace_remount, workspace_session};
 pub use operation::{
-    ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationCatalog, OperationExecutionSpace,
-    OperationFamily, OperationSpec,
+    ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationCatalog, OperationExecutionSpace, OperationSpec,
 };
 pub use public::command;
 

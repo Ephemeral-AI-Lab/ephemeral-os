@@ -17,15 +17,18 @@ impl SandboxRuntimeOperations {
 
     #[must_use]
     pub fn from_config(config: SandboxRuntimeConfig) -> Self {
-        let workspace_runtime = Arc::new(WorkspaceRuntimeService::new(WorkspaceModeManager::new(
-            config
-                .workspace
-                .workspace_root
-                .to_string_lossy()
-                .into_owned(),
-            config.workspace.caps.into(),
-            config.workspace.scratch_root,
-        )));
+        let workspace_runtime = Arc::new(WorkspaceRuntimeService::new(
+            WorkspaceModeManager::new(
+                config
+                    .workspace
+                    .workspace_root
+                    .to_string_lossy()
+                    .into_owned(),
+                config.workspace.caps.into(),
+                config.workspace.scratch_root,
+            ),
+            config.workspace.layer_stack_root,
+        ));
         let workspace_session = Arc::new(WorkspaceSessionService::new(workspace_runtime));
         let command = Arc::new(CommandOperationService::new(
             workspace_session,
@@ -44,6 +47,7 @@ pub struct SandboxRuntimeConfig {
 #[derive(Debug, Clone, PartialEq)]
 pub struct WorkspaceRuntimeConfig {
     pub workspace_root: std::path::PathBuf,
+    pub layer_stack_root: std::path::PathBuf,
     pub scratch_root: std::path::PathBuf,
     pub caps: WorkspaceResourceCaps,
 }

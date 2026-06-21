@@ -1,0 +1,114 @@
+//! Typed schema for the runtime section of `eos-sandbox/config/prd.yml`.
+//!
+//! The sandbox daemon loads this section and injects it into sandbox-runtime
+//! services during startup.
+
+use std::path::PathBuf;
+
+use serde::Deserialize;
+
+use crate::configs::validate::{
+    require_absolute, require_f64_at_least, require_f64_gt, require_ratio, require_u32_at_least,
+    require_u64_at_least, ConfigFieldError,
+};
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RuntimeConfig {
+    pub workspace: WorkspaceConfig,
+}
+
+impl RuntimeConfig {
+    /// Validate semantic constraints that YAML deserialization cannot express.
+    ///
+    /// # Errors
+    /// Returns an error when a field violates runtime policy.
+    pub fn validate(&self) -> Result<(), ConfigFieldError> {
+        self.workspace.validate()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WorkspaceConfig {
+    pub layer_stack_root: PathBuf,
+    pub scratch_root: PathBuf,
+    pub ttl_s: f64,
+    pub total_cap: u32,
+    pub upperdir_bytes: u64,
+    pub memavail_fraction: f64,
+    pub setup_timeout_s: f64,
+    pub exit_grace_s: f64,
+    pub rfc1918_egress: Rfc1918Egress,
+}
+
+impl Default for WorkspaceConfig {
+    fn default() -> Self {
+        Self {
+            layer_stack_root: PathBuf::from("/eos/layer-stack"),
+            scratch_root: PathBuf::from("/eos/scratch/workspace"),
+            ttl_s: 1800.0,
+            total_cap: 5,
+            upperdir_bytes: 1_073_741_824,
+            memavail_fraction: 0.5,
+            setup_timeout_s: 30.0,
+            exit_grace_s: 0.25,
+            rfc1918_egress: Rfc1918Egress::Allow,
+        }
+    }
+}
+
+impl WorkspaceConfig {
+    /// Validate semantic constraints that YAML deserialization cannot express.
+    ///
+    /// # Errors
+    /// Returns an error when a field violates workspace runtime policy.
+    pub fn validate(&self) -> Result<(), ConfigFieldError> {
+        require_absolute(&self.layer_stack_root, "runtime.workspace.layer_stack_root")?;
+        require_absolute(&self.scratch_root, "runtime.workspace.scratch_root")?;
+        require_f64_gt(self.ttl_s, 0.0, "runtime.workspace.ttl_s")?;
+        require_u32_at_least(self.total_cap, 1, "runtime.workspace.total_cap")?;
+        require_u64_at_least(self.upperdir_bytes, 1, "runtime.workspace.upperdir_bytes")?;
+        require_ratio(
+            self.memavail_fraction,
+            "runtime.workspace.memavail_fraction",
+        )?;
+        require_f64_gt(
+            self.setup_timeout_s,
+            0.0,
+            "runtime.workspace.setup_timeout_s",
+        )?;
+        require_f64_at_least(self.exit_grace_s, 0.0, "runtime.workspace.exit_grace_s")?;
+        reject_dangerous_root(&self.layer_stack_root, "runtime.workspace.layer_stack_root")?;
+        reject_dangerous_root(&self.scratch_root, "runtime.workspace.scratch_root")?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Rfc1918Egress {
+    Allow,
+    Deny,
+}
+
+fn reject_dangerous_root(
+    path: &std::path::Path,
+    field: &'static str,
+) -> Result<(), ConfigFieldError> {
+    if is_filesystem_root(path) {
+        return Err(ConfigFieldError::new(
+            field,
+            "must not be the filesystem root",
+        ));
+    }
+    Ok(())
+}
+
+fn is_filesystem_root(path: &std::path::Path) -> bool {
+    path.parent().is_none()
+        || path
+            .canonicalize()
+            .ok()
+            .is_some_and(|canonical| canonical.parent().is_none())
+}

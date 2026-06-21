@@ -54,8 +54,8 @@ must use `OperationScope::Sandbox { sandbox_id }`; the daemon rejects system
 scope at its boundary.
 
 Catalogs use `OperationExecutionSpace` through the
-`operation_execution_space` JSON field. `OperationFamily` is documentation
-grouping only, not a routing selector.
+`operation_execution_space` JSON field. Operation specs no longer carry
+grouping metadata; do not reintroduce grouping as a routing selector.
 
 Do not introduce alternate routing envelopes, owner/target fields, or retired
 request DTOs.

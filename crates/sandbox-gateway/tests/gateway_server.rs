@@ -4,7 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use sandbox_gateway::{GatewayConfig, SandboxGatewayServer};
 use sandbox_manager::{
-    CreateSandboxRequest, ManagerError, ManagerServices, SandboxDaemonClient,
+    CreateSandboxRequest, CreateSandboxResult, ManagerError, ManagerServices, SandboxDaemonClient,
     SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxId, SandboxManagerRouter, SandboxRecord,
     SandboxRuntime, SandboxState, SandboxStore,
 };
@@ -25,8 +25,13 @@ static TEST_DAEMON_SPECS: &[&OperationSpec] = &[];
 struct FakeRuntime;
 
 impl SandboxRuntime for FakeRuntime {
-    fn create_sandbox(&self, _request: &CreateSandboxRequest) -> Result<(), ManagerError> {
-        Ok(())
+    fn create_sandbox(
+        &self,
+        _request: &CreateSandboxRequest,
+    ) -> Result<CreateSandboxResult, ManagerError> {
+        Ok(CreateSandboxResult {
+            id: sandbox_id("container-1"),
+        })
     }
 
     fn destroy_sandbox(&self, _record: &SandboxRecord) -> Result<(), ManagerError> {

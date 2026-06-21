@@ -58,6 +58,16 @@ pub(crate) fn workspace_root(
     Ok(path)
 }
 
+pub(crate) fn image(
+    request: &sandbox_protocol::Request,
+) -> Result<String, sandbox_protocol::Response> {
+    let image = request.required_string("image")?;
+    if image.trim().is_empty() {
+        return Err(ManagerError::InvalidImage { value: image }.into_response());
+    }
+    Ok(image)
+}
+
 pub(crate) fn ready_record(
     services: &super::dispatch::ManagerServices,
     id: &SandboxId,

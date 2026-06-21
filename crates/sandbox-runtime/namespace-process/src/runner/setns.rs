@@ -7,13 +7,13 @@ use std::os::fd::RawFd;
 use std::path::PathBuf;
 #[cfg(target_os = "linux")]
 use std::path::{Component, Path};
-#[cfg(target_os = "linux")]
-use std::time::Instant;
 
 #[cfg(target_os = "linux")]
 use sandbox_runtime_overlay::OverlayHandle;
 
 use super::RunnerError;
+#[cfg(target_os = "linux")]
+use crate::runner::protocol::NsFds;
 use crate::runner::protocol::{NamespaceCommandRequest, RunResult};
 
 #[cfg(target_os = "linux")]
@@ -21,20 +21,9 @@ pub(crate) fn run_setns(request: &NamespaceCommandRequest) -> Result<RunResult, 
     let ns_fds = request
         .ns_fds
         .ok_or_else(|| RunnerError::InvalidRequest("setns mode requires ns_fds".to_owned()))?;
-    let mut timings = super::shell_exec::RunnerPhaseTimings::default();
-    let cgroup_start = Instant::now();
     join_cgroup(request)?;
-    timings.insert_s(
-        "workspace.cgroup_join_s",
-        cgroup_start.elapsed().as_secs_f64(),
-    );
-    let setns_start = Instant::now();
     join_namespaces(&ns_fds)?;
-    timings.insert_s(
-        "workspace.setns_join_s",
-        setns_start.elapsed().as_secs_f64(),
-    );
-    super::shell_exec::execute_shell(request, timings, Instant::now())
+    super::shell_exec::execute_shell(request)
 }
 
 #[cfg(not(target_os = "linux"))]

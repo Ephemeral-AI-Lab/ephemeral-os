@@ -16,19 +16,10 @@ impl WorkspaceRuntimeService {
         let (layer_stack_root, outcome) = {
             let mut state = self.lock_state()?;
             let mode_id = active_mode_id(&state, &handle)?;
-            let layer_stack_root =
-                state
-                    .layer_stack_roots
-                    .remove(&mode_id)
-                    .ok_or_else(|| WorkspaceError::Setup {
-                        step: format!("missing layer stack root for workspace {}", handle.id.0),
-                    })?;
+            let layer_stack_root = state.layer_stack_root.clone();
             let outcome = match state.manager.exit(&mode_id, request.grace_s) {
                 Ok(outcome) => outcome,
-                Err(error) => {
-                    state.layer_stack_roots.insert(mode_id, layer_stack_root);
-                    return Err(workspace_error_from_mode_error(error));
-                }
+                Err(error) => return Err(workspace_error_from_mode_error(error)),
             };
             (layer_stack_root, outcome)
         };

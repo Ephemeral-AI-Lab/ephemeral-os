@@ -93,7 +93,6 @@ Request
 Response
 OperationExecutionSpace
 operation_execution_space
-OperationFamily as documentation grouping only
 command_session_id
 ```
 

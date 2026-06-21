@@ -52,7 +52,7 @@ Phase goal:
 - Make `OperationCatalog` the one catalog contract for manager and runtime
   operation discovery.
 - Keep the only execution-space selector as `operation_execution_space`.
-- Keep `OperationFamily` as documentation grouping only.
+- Do not add grouping metadata to operation specs.
 - Ensure manager catalog output contains only manager operations.
 - Ensure runtime catalog output contains only runtime operations.
 - Ensure catalog JSON is produced and parsed by protocol-owned helpers rather
@@ -150,9 +150,8 @@ Implementation steps:
    {
      "operation_execution_space": "manager",
      "operations": [
-       {
+      {
          "name": "create_sandbox",
-         "family": "run",
          "summary": "Create a host-side sandbox record and runtime sandbox.",
          "args": [
            {
@@ -240,8 +239,8 @@ Implementation steps:
 
    - Runtime manual text should say runtime, not daemon, even when the manager
      operation that fetches runtime specs still talks to a daemon internally.
-   - `OperationFamily` may be shown as grouping metadata, but it must not be
-     used as the manager-vs-runtime routing selector.
+   - Grouping metadata must not be shown or used as the manager-vs-runtime
+     routing selector.
    - The only operation-execution-space selector in catalog output is
      `operation_execution_space`.
 
@@ -251,8 +250,7 @@ Implementation steps:
 
    - `catalog_to_value` emits `operation_execution_space`.
    - `catalog_from_value` rejects missing or unknown `operation_execution_space`.
-   - Serialized operation specs include `name`, `family`, `summary`, `args`,
-     and `cli`.
+   - Serialized operation specs include `name`, `summary`, `args`, and `cli`.
    - No `owner`, `target`, `route`, `implementation_owner`, or
      `operation_target` field is emitted.
 
@@ -335,6 +333,6 @@ Final response requirements:
 - State final verification commands and results.
 - Call out that agents and CLI choose `manager` or `runtime` first, then an
   operation from that catalog.
-- Call out that `OperationFamily` is documentation grouping only.
+- Call out that operation specs do not carry grouping metadata.
 - Do not claim phase 8 package renames were done.
 ```

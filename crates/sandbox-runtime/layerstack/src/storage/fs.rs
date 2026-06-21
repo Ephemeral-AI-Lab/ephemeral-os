@@ -1,8 +1,6 @@
-use std::collections::BTreeMap;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::Instant;
 
 use crate::error::LayerStackError;
 use crate::model::{LayerRef, Manifest, MANIFEST_SCHEMA_VERSION};
@@ -96,10 +94,6 @@ pub(crate) fn join_layer_path(root: &Path, rel: &str) -> PathBuf {
             path.join(part)
         }
     })
-}
-
-pub(crate) fn record_elapsed(timings: &mut BTreeMap<String, f64>, key: &str, start: Instant) {
-    timings.insert(key.to_owned(), start.elapsed().as_secs_f64());
 }
 
 pub(crate) fn check_layer_path(path: &str) -> Result<(), LayerStackError> {

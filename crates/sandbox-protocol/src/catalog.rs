@@ -1,6 +1,6 @@
 use serde_json::{json, Map, Value};
 
-use crate::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationSpec};
+use crate::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationSpec};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OperationExecutionSpace {
@@ -36,7 +36,6 @@ pub struct OperationCatalogDocument {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OperationSpecDocument {
     pub name: String,
-    pub family: OperationFamily,
     pub summary: String,
     pub args: Vec<ArgSpecDocument>,
     pub cli: Option<CliSpecDocument>,
@@ -123,15 +122,6 @@ pub const fn operation_execution_space_name(
     }
 }
 
-const fn operation_family_name(family: OperationFamily) -> &'static str {
-    match family {
-        OperationFamily::Command => "command",
-        OperationFamily::Workspace => "workspace",
-        OperationFamily::Health => "health",
-        OperationFamily::Run => "run",
-    }
-}
-
 #[must_use]
 pub(crate) const fn catalog_arg_kind_name(kind: ArgKind) -> &'static str {
     match kind {
@@ -145,7 +135,6 @@ pub(crate) const fn catalog_arg_kind_name(kind: ArgKind) -> &'static str {
 fn operation_spec_value(spec: &OperationSpec) -> Value {
     json!({
         "name": spec.name,
-        "family": operation_family_name(spec.family),
         "summary": spec.summary,
         "args": spec.args.iter().map(arg_spec_value).collect::<Vec<_>>(),
         "cli": spec.cli.map(cli_spec_value),
@@ -191,7 +180,6 @@ fn operation_spec_from_value(value: &Value) -> Result<OperationSpecDocument, Cat
         .transpose()?;
     Ok(OperationSpecDocument {
         name: required_string(object, "name")?.to_owned(),
-        family: operation_family_from_name(required_string(object, "family")?)?,
         summary: required_string(object, "summary")?.to_owned(),
         args,
         cli,
@@ -247,16 +235,6 @@ fn operation_execution_space_from_name(
         other => Err(decode_error(format!(
             "unknown operation_execution_space: {other}"
         ))),
-    }
-}
-
-fn operation_family_from_name(value: &str) -> Result<OperationFamily, CatalogDecodeError> {
-    match value {
-        "command" => Ok(OperationFamily::Command),
-        "workspace" => Ok(OperationFamily::Workspace),
-        "health" => Ok(OperationFamily::Health),
-        "run" => Ok(OperationFamily::Run),
-        other => Err(decode_error(format!("unknown operation family: {other}"))),
     }
 }
 

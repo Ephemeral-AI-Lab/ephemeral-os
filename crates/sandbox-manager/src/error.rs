@@ -10,6 +10,9 @@ pub enum ManagerError {
     #[error("invalid workspace root: {value}")]
     InvalidWorkspaceRoot { value: String },
 
+    #[error("invalid image: {value}")]
+    InvalidImage { value: String },
+
     #[error("sandbox already exists: {id}")]
     DuplicateSandbox { id: SandboxId },
 
@@ -45,6 +48,7 @@ impl ManagerError {
         match self {
             Self::InvalidSandboxId { .. }
             | Self::InvalidWorkspaceRoot { .. }
+            | Self::InvalidImage { .. }
             | Self::DuplicateSandbox { .. }
             | Self::MissingSandbox { .. }
             | Self::InvalidStateTransition { .. }

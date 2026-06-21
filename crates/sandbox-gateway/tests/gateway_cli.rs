@@ -168,7 +168,7 @@ fn manual_renders_manager_and_runtime_sections_from_catalog_documents() -> TestR
     assert!(manual.contains("Sandbox Manager Operations"));
     assert!(manual.contains("Sandbox Runtime Operations"));
     assert!(manual.contains(
-        "sandbox-cli manager create_sandbox --sandbox-id sbox-1 --workspace-root /testbed"
+        "sandbox-cli manager create_sandbox --image ubuntu:24.04 --workspace-root /testbed"
     ));
     assert!(manual.contains(
         "sandbox-cli runtime --sandbox-id sbox-1 exec_command --workspace-session-id ws-1 pwd"
@@ -178,10 +178,10 @@ fn manual_renders_manager_and_runtime_sections_from_catalog_documents() -> TestR
 }
 
 #[test]
-fn manager_execution_space_uses_system_scope_even_with_sandbox_id_arg() -> TestResult {
+fn manager_execution_space_uses_system_scope_for_create_sandbox() -> TestResult {
     let request = build_manager_request(
         "create_sandbox",
-        &["--sandbox-id", "sbox-1", "--workspace-root", "/testbed"],
+        &["--image", "ubuntu:24.04", "--workspace-root", "/testbed"],
     )?;
 
     assert_eq!(request.scope, OperationScope::System);
@@ -189,15 +189,15 @@ fn manager_execution_space_uses_system_scope_even_with_sandbox_id_arg() -> TestR
 }
 
 #[test]
-fn manager_sandbox_id_arg_remains_regular_arg() -> TestResult {
+fn create_sandbox_maps_image_and_workspace_root_args() -> TestResult {
     let request = build_manager_request(
         "create_sandbox",
-        &["--sandbox-id", "sbox-1", "--workspace-root", "/testbed"],
+        &["--image", "ubuntu:24.04", "--workspace-root", "/testbed"],
     )?;
 
     assert_eq!(
         request.args,
-        json!({ "sandbox_id": "sbox-1", "workspace_root": "/testbed" })
+        json!({ "image": "ubuntu:24.04", "workspace_root": "/testbed" })
     );
     Ok(())
 }
@@ -434,7 +434,6 @@ fn manager_catalog() -> Result<OperationCatalogDocument, Box<dyn std::error::Err
         "operations": [
             {
                 "name": "list_sandboxes",
-                "family": "workspace",
                 "summary": "List sandbox records known to the manager.",
                 "args": [],
                 "cli": {
@@ -445,17 +444,16 @@ fn manager_catalog() -> Result<OperationCatalogDocument, Box<dyn std::error::Err
             },
             {
                 "name": "create_sandbox",
-                "family": "run",
                 "summary": "Create a host-side sandbox record and runtime sandbox.",
                 "args": [
                     {
-                        "name": "sandbox_id",
+                        "name": "image",
                         "kind": "string",
                         "required": true,
-                        "help": "Sandbox id.",
+                        "help": "Container image used to create the sandbox.",
                         "default": null,
                         "cli": {
-                            "flag": "--sandbox-id",
+                            "flag": "--image",
                             "positional": null
                         }
                     },
@@ -473,8 +471,8 @@ fn manager_catalog() -> Result<OperationCatalogDocument, Box<dyn std::error::Err
                 ],
                 "cli": {
                     "path": ["manager"],
-                    "usage": "sandbox-cli manager create_sandbox --sandbox-id ID --workspace-root PATH",
-                    "examples": ["sandbox-cli manager create_sandbox --sandbox-id sbox-1 --workspace-root /testbed"]
+                    "usage": "sandbox-cli manager create_sandbox --image IMAGE --workspace-root PATH",
+                    "examples": ["sandbox-cli manager create_sandbox --image ubuntu:24.04 --workspace-root /testbed"]
                 }
             }
         ]
@@ -487,7 +485,6 @@ fn runtime_catalog() -> Result<OperationCatalogDocument, Box<dyn std::error::Err
         "operations": [
             {
                 "name": "exec_command",
-                "family": "command",
                 "summary": "Start a command in a workspace.",
                 "args": [
                     {
@@ -521,7 +518,6 @@ fn runtime_catalog() -> Result<OperationCatalogDocument, Box<dyn std::error::Err
             },
             {
                 "name": "poll_command",
-                "family": "command",
                 "summary": "Poll a command status and recent output.",
                 "args": [
                     {

@@ -385,7 +385,6 @@ struct WorkspaceLaunchFds {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CreateWorkspaceRequest {
-    pub layer_stack_root: PathBuf,
     pub profile: WorkspaceProfile,
 }
 
@@ -446,12 +445,6 @@ pub struct RemountWorkspaceRequest {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RemountWorkspaceResult {
     pub handle: WorkspaceHandle,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct LatestSnapshotRequest {
-    pub workspace_root: PathBuf,
-    pub owner_request_id: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -61,7 +61,7 @@ impl DaemonConfig {
             "daemon.server.max_worker_threads",
         )?;
         require_absolute(&self.commands.scratch_root, "daemon.commands.scratch_root")?;
-        reject_dangerous_command_scratch_root(&self.commands.scratch_root)?;
+        reject_dangerous_root(&self.commands.scratch_root, "daemon.commands.scratch_root")?;
         require_u64_at_least(
             self.idle_workspace_eviction.interval_ms,
             1,
@@ -71,12 +71,13 @@ impl DaemonConfig {
     }
 }
 
-fn reject_dangerous_command_scratch_root(
-    scratch_root: &std::path::Path,
+fn reject_dangerous_root(
+    path: &std::path::Path,
+    field: &'static str,
 ) -> Result<(), ConfigFieldError> {
-    if is_filesystem_root(scratch_root) {
+    if is_filesystem_root(path) {
         return Err(ConfigFieldError::new(
-            "daemon.commands.scratch_root",
+            field,
             "must not be the filesystem root",
         ));
     }

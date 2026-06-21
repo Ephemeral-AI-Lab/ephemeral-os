@@ -1,27 +1,24 @@
 use crate::error::WorkspaceError;
-use crate::model::{LatestSnapshotRequest, ReadonlySnapshotHandle};
-use crate::service::support::{ensure_absolute, ensure_non_empty};
+use crate::model::ReadonlySnapshotHandle;
+use crate::service::support::ensure_absolute;
 use crate::service::WorkspaceRuntimeService;
 
 impl WorkspaceRuntimeService {
-    pub fn latest_snapshot(
-        &self,
-        request: LatestSnapshotRequest,
-    ) -> Result<ReadonlySnapshotHandle, WorkspaceError> {
+    pub fn latest_snapshot(&self) -> Result<ReadonlySnapshotHandle, WorkspaceError> {
         if let Some(hooks) = self.hooks() {
-            return (hooks.latest_snapshot)(request);
+            return (hooks.latest_snapshot)();
         }
 
-        ensure_absolute(&request.workspace_root, "workspace_root")?;
-        ensure_non_empty(&request.owner_request_id, "owner_request_id")?;
+        let layer_stack_root = self.lock_state()?.layer_stack_root.clone();
+        ensure_absolute(&layer_stack_root, "layer_stack_root")?;
 
-        let snapshot = sandbox_runtime_layerstack::service::get_snapshot(&request.workspace_root)
+        let snapshot = sandbox_runtime_layerstack::service::get_snapshot(&layer_stack_root)
             .map_err(|error| WorkspaceError::SnapshotAcquire {
-            source: error.to_string(),
-        })?;
+                source: error.to_string(),
+            })?;
         let generation_key = format!("{}:{}", snapshot.manifest_version, snapshot.root_hash);
         Ok(ReadonlySnapshotHandle {
-            view_root: request.workspace_root,
+            view_root: layer_stack_root,
             generation_key,
             snapshot: snapshot.into(),
         })

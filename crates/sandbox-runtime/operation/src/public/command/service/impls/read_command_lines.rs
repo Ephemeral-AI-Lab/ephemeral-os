@@ -4,13 +4,12 @@ use crate::command::service::CommandOperationService;
 use crate::command::{
     CommandLinesOutput, CommandServiceError, CommandSessionId, CommandStatus, ReadCommandLinesInput,
 };
-use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationSpec};
+use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationSpec};
 use crate::SandboxRuntimeOperations;
 use sandbox_protocol::{Request, Response};
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "read_command_lines",
-    family: OperationFamily::Command,
     summary: "Read a retained command transcript window by line offset.",
     args: READ_LINES_ARGS,
     cli: Some(READ_LINES_CLI),

@@ -16,10 +16,10 @@ use sandbox_runtime_command::process::{CommandProcess, CommandProcessExit, Comma
 use sandbox_runtime_command::yield_wait_loop::WaitOutcome;
 use sandbox_runtime_workspace::{
     CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
-    DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef,
-    LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult,
-    WorkspaceError, WorkspaceHandle, WorkspaceProfile, WorkspaceRuntimeHooks,
-    WorkspaceRuntimeService, WorkspaceSessionId,
+    DestroyWorkspaceRequest, DestroyWorkspaceResult, LayerStackSnapshotRef, LeaseId,
+    ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceError,
+    WorkspaceHandle, WorkspaceProfile, WorkspaceRuntimeHooks, WorkspaceRuntimeService,
+    WorkspaceSessionId,
 };
 
 struct TestServices {
@@ -135,10 +135,7 @@ impl RemountWorkspaceServiceFake {
         })
     }
 
-    fn latest_snapshot(
-        &self,
-        _request: LatestSnapshotRequest,
-    ) -> Result<ReadonlySnapshotHandle, WorkspaceError> {
+    fn latest_snapshot(&self) -> Result<ReadonlySnapshotHandle, WorkspaceError> {
         Err(WorkspaceError::SnapshotAcquire {
             source: "latest snapshot not configured".to_owned(),
         })
@@ -164,7 +161,7 @@ fn fake_workspace_runtime(fake: Arc<RemountWorkspaceServiceFake>) -> Arc<Workspa
                 let fake = Arc::clone(&fake);
                 move |handle, request| fake.destroy_workspace(handle, request)
             }),
-            latest_snapshot: Box::new(move |request| fake.latest_snapshot(request)),
+            latest_snapshot: Box::new(move || fake.latest_snapshot()),
         },
     ))
 }
@@ -319,10 +316,7 @@ fn create_request() -> CreateWorkspaceRequest {
 }
 
 fn create_request_with_profile(profile: WorkspaceProfile) -> CreateWorkspaceRequest {
-    CreateWorkspaceRequest {
-        layer_stack_root: PathBuf::from("/layers"),
-        profile,
-    }
+    CreateWorkspaceRequest { profile }
 }
 
 fn exec_input(workspace_session_id: WorkspaceSessionId) -> ExecCommandInput {

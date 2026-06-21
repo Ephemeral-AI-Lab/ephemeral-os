@@ -7,7 +7,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context, Result};
 use sandbox_runtime_config::configs::{
     daemon::{DaemonConfig, DaemonServerConfig},
-    isolated::IsolatedNetworkConfig,
+    runtime::RuntimeConfig,
 };
 
 const DAEMON_AUTH_TOKEN_ENV: &str = "SANDBOX_DAEMON_AUTH_TOKEN";
@@ -57,7 +57,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
 
 struct DaemonRuntimeConfig {
     daemon: DaemonConfig,
-    isolated: IsolatedNetworkConfig,
+    runtime: RuntimeConfig,
 }
 
 fn build_runtime_operations(
@@ -67,19 +67,20 @@ fn build_runtime_operations(
     sandbox_runtime::SandboxRuntimeOperations::from_config(sandbox_runtime::SandboxRuntimeConfig {
         workspace: sandbox_runtime::WorkspaceRuntimeConfig {
             workspace_root,
-            scratch_root: config.isolated.scratch_root.clone(),
+            layer_stack_root: config.runtime.workspace.layer_stack_root.clone(),
+            scratch_root: config.runtime.workspace.scratch_root.clone(),
             caps: sandbox_runtime::WorkspaceResourceCaps {
-                ttl_s: config.isolated.ttl_s,
-                total_cap: config.isolated.total_cap,
-                upperdir_bytes: config.isolated.upperdir_bytes,
-                memavail_fraction: config.isolated.memavail_fraction,
-                setup_timeout_s: config.isolated.setup_timeout_s,
-                exit_grace_s: config.isolated.exit_grace_s,
-                rfc1918_egress: match config.isolated.rfc1918_egress {
-                    sandbox_runtime_config::configs::isolated::Rfc1918Egress::Allow => {
+                ttl_s: config.runtime.workspace.ttl_s,
+                total_cap: config.runtime.workspace.total_cap,
+                upperdir_bytes: config.runtime.workspace.upperdir_bytes,
+                memavail_fraction: config.runtime.workspace.memavail_fraction,
+                setup_timeout_s: config.runtime.workspace.setup_timeout_s,
+                exit_grace_s: config.runtime.workspace.exit_grace_s,
+                rfc1918_egress: match config.runtime.workspace.rfc1918_egress {
+                    sandbox_runtime_config::configs::runtime::Rfc1918Egress::Allow => {
                         sandbox_runtime::Rfc1918Egress::Allow
                     }
-                    sandbox_runtime_config::configs::isolated::Rfc1918Egress::Deny => {
+                    sandbox_runtime_config::configs::runtime::Rfc1918Egress::Deny => {
                         sandbox_runtime::Rfc1918Egress::Deny
                     }
                 },
@@ -98,11 +99,11 @@ fn load_runtime_config(path: &Path) -> Result<DaemonRuntimeConfig> {
         .section::<DaemonConfig>("daemon")
         .context("deserialize daemon config section")?;
     daemon.validate().context("validate daemon config")?;
-    let isolated = doc
-        .section::<IsolatedNetworkConfig>("isolated")
-        .context("deserialize isolated config section")?;
-    isolated.validate().context("validate isolated config")?;
-    Ok(DaemonRuntimeConfig { daemon, isolated })
+    let runtime = doc
+        .section::<RuntimeConfig>("runtime")
+        .context("deserialize runtime config section")?;
+    runtime.validate().context("validate runtime config")?;
+    Ok(DaemonRuntimeConfig { daemon, runtime })
 }
 
 fn daemon_worker_threads(max_worker_threads: usize) -> usize {

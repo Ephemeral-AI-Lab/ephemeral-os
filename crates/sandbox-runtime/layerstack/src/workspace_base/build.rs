@@ -1,10 +1,8 @@
-use std::collections::BTreeMap;
 use std::io::ErrorKind;
 use std::path::Path;
-use std::time::Instant;
 
 use crate::error::LayerStackError;
-use crate::fs::{read_manifest, record_elapsed, remove_path, write_layer_digest, write_manifest};
+use crate::fs::{read_manifest, remove_path, write_layer_digest, write_manifest};
 use crate::model::{Manifest, MANIFEST_SCHEMA_VERSION};
 use crate::stack::LayerStack;
 use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, STAGING_DIR};
@@ -15,12 +13,6 @@ use super::binding::{
 };
 use super::collect::collect_base_entries;
 use super::layer::write_base_layer;
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct WorkspaceBaseBuild {
-    pub binding: WorkspaceBinding,
-    pub timings: BTreeMap<String, f64>,
-}
 
 pub fn ensure_workspace_base(
     layer_stack_root: impl AsRef<Path>,
@@ -40,14 +32,14 @@ pub fn ensure_workspace_base(
         return Ok((binding, false));
     }
     let built = build_workspace_base(stack, workspace, false)?;
-    Ok((built.binding, true))
+    Ok((built, true))
 }
 
 pub fn build_workspace_base(
     layer_stack_root: impl AsRef<Path>,
     workspace_root: impl AsRef<Path>,
     reset: bool,
-) -> Result<WorkspaceBaseBuild, LayerStackError> {
+) -> Result<WorkspaceBinding, LayerStackError> {
     build_workspace_base_from_snapshot(
         layer_stack_root.as_ref(),
         layer_stack_root.as_ref(),
@@ -63,7 +55,7 @@ fn build_workspace_base_from_snapshot(
     binding_workspace_root: impl AsRef<Path>,
     snapshot_root: impl AsRef<Path>,
     reset: bool,
-) -> Result<WorkspaceBaseBuild, LayerStackError> {
+) -> Result<WorkspaceBinding, LayerStackError> {
     let stack = layer_stack_root.as_ref();
     let binding_stack = binding_layer_stack_root.as_ref();
     let binding_workspace = binding_workspace_root.as_ref();
@@ -86,38 +78,17 @@ fn build_workspace_base_from_snapshot(
         remove_path(stack)?;
     }
 
-    let mut timings = BTreeMap::new();
-    let prepare_start = Instant::now();
     let _stack_guard = LayerStack::open(stack.to_path_buf())?;
     reject_existing_base_state(stack)?;
-    record_elapsed(
-        &mut timings,
-        "workspace_base.prepare_stack_s",
-        prepare_start,
-    );
 
-    let collect_start = Instant::now();
     let (entries, root_hash) = collect_base_entries(snapshot)?;
-    record_elapsed(&mut timings, "workspace_base.collect_s", collect_start);
 
-    let write_layer_start = Instant::now();
     let layer_ref = write_base_layer(stack, &entries)?;
     write_layer_digest(stack, &layer_ref.layer_id, &root_hash)?;
-    record_elapsed(
-        &mut timings,
-        "workspace_base.write_layer_s",
-        write_layer_start,
-    );
 
     let manifest = Manifest::new(1, vec![layer_ref], MANIFEST_SCHEMA_VERSION)
         .map_err(LayerStackError::from)?;
-    let write_manifest_start = Instant::now();
     write_manifest(stack.join(ACTIVE_MANIFEST_FILE), &manifest)?;
-    record_elapsed(
-        &mut timings,
-        "workspace_base.write_manifest_s",
-        write_manifest_start,
-    );
 
     let binding = WorkspaceBinding {
         workspace_root: binding_workspace.to_string_lossy().into_owned(),
@@ -127,14 +98,8 @@ fn build_workspace_base_from_snapshot(
         base_manifest_version: manifest.version,
         base_root_hash: root_hash,
     };
-    let write_binding_start = Instant::now();
     write_workspace_binding_at(stack, &binding)?;
-    record_elapsed(
-        &mut timings,
-        "workspace_base.write_binding_s",
-        write_binding_start,
-    );
-    Ok(WorkspaceBaseBuild { binding, timings })
+    Ok(binding)
 }
 
 fn reject_existing_base_state(stack: &Path) -> Result<(), LayerStackError> {

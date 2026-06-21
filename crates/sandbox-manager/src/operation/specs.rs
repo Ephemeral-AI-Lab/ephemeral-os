@@ -1,25 +1,22 @@
 use sandbox_protocol::{
-    ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationCatalog, OperationExecutionSpace,
-    OperationFamily, OperationSpec,
+    ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationCatalog, OperationExecutionSpace, OperationSpec,
 };
 
 pub(crate) const CREATE_SANDBOX: OperationSpec = OperationSpec {
     name: "create_sandbox",
-    family: OperationFamily::Run,
     summary: "Create a host-side sandbox record and runtime sandbox.",
     args: CREATE_SANDBOX_ARGS,
     cli: Some(CliSpec {
         path: &["manager", "create_sandbox"],
-        usage: "sandbox-cli manager create_sandbox --sandbox-id ID --workspace-root PATH",
+        usage: "sandbox-cli manager create_sandbox --image IMAGE --workspace-root PATH",
         examples: &[
-            "sandbox-cli manager create_sandbox --sandbox-id sbox-1 --workspace-root /testbed",
+            "sandbox-cli manager create_sandbox --image ubuntu:24.04 --workspace-root /testbed",
         ],
     }),
 };
 
 pub(crate) const DESTROY_SANDBOX: OperationSpec = OperationSpec {
     name: "destroy_sandbox",
-    family: OperationFamily::Run,
     summary: "Destroy a host-side sandbox and remove it from the registry.",
     args: SANDBOX_ID_ARGS,
     cli: Some(CliSpec {
@@ -31,7 +28,6 @@ pub(crate) const DESTROY_SANDBOX: OperationSpec = OperationSpec {
 
 pub(crate) const LIST_SANDBOXES: OperationSpec = OperationSpec {
     name: "list_sandboxes",
-    family: OperationFamily::Workspace,
     summary: "List sandbox records known to the manager.",
     args: &[],
     cli: Some(CliSpec {
@@ -43,7 +39,6 @@ pub(crate) const LIST_SANDBOXES: OperationSpec = OperationSpec {
 
 pub(crate) const INSPECT_SANDBOX: OperationSpec = OperationSpec {
     name: "inspect_sandbox",
-    family: OperationFamily::Workspace,
     summary: "Inspect one sandbox record.",
     args: SANDBOX_ID_ARGS,
     cli: Some(CliSpec {
@@ -55,7 +50,6 @@ pub(crate) const INSPECT_SANDBOX: OperationSpec = OperationSpec {
 
 pub(crate) const START_SANDBOX_DAEMON: OperationSpec = OperationSpec {
     name: "start_sandbox_daemon",
-    family: OperationFamily::Run,
     summary: "Install and start the selected sandbox daemon.",
     args: SANDBOX_ID_ARGS,
     cli: Some(CliSpec {
@@ -67,7 +61,6 @@ pub(crate) const START_SANDBOX_DAEMON: OperationSpec = OperationSpec {
 
 pub(crate) const STOP_SANDBOX_DAEMON: OperationSpec = OperationSpec {
     name: "stop_sandbox_daemon",
-    family: OperationFamily::Run,
     summary: "Stop the selected sandbox daemon and clear its endpoint.",
     args: SANDBOX_ID_ARGS,
     cli: Some(CliSpec {
@@ -79,7 +72,6 @@ pub(crate) const STOP_SANDBOX_DAEMON: OperationSpec = OperationSpec {
 
 pub(crate) const DESCRIBE_MANAGER_OPERATIONS: OperationSpec = OperationSpec {
     name: "describe_manager_operations",
-    family: OperationFamily::Health,
     summary: "Describe manager operation specs.",
     args: &[],
     cli: Some(CliSpec {
@@ -91,7 +83,6 @@ pub(crate) const DESCRIBE_MANAGER_OPERATIONS: OperationSpec = OperationSpec {
 
 pub(crate) const DESCRIBE_DAEMON_OPERATIONS: OperationSpec = OperationSpec {
     name: "describe_daemon_operations",
-    family: OperationFamily::Health,
     summary: "Describe runtime operation specs for a selected sandbox.",
     args: SANDBOX_ID_ARGS,
     cli: Some(CliSpec {
@@ -113,11 +104,11 @@ const SANDBOX_ID_ARGS: &[ArgSpec] = &[ArgSpec::required(
 
 const CREATE_SANDBOX_ARGS: &[ArgSpec] = &[
     ArgSpec::required(
-        "sandbox_id",
+        "image",
         ArgKind::String,
-        "Sandbox id.",
+        "Container image used to create the sandbox.",
         Some(ArgCliSpec {
-            flag: Some("--sandbox-id"),
+            flag: Some("--image"),
             positional: None,
         }),
     ),

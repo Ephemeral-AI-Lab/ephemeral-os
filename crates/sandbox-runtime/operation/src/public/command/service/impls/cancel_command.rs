@@ -6,13 +6,12 @@ use crate::command::{
     CancelCommandInput, CancellationState, CommandLifecycleState, CommandServiceError,
     CommandSessionId, CommandYield,
 };
-use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationSpec};
+use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationSpec};
 use crate::SandboxRuntimeOperations;
 use sandbox_protocol::{Request, Response};
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "cancel_command",
-    family: OperationFamily::Command,
     summary: "Cancel a running command.",
     args: CANCEL_ARGS,
     cli: Some(CANCEL_CLI),

@@ -1,18 +1,18 @@
 use sandbox_protocol::manual::render_catalog_manual;
 use sandbox_protocol::{
     catalog_from_value, catalog_to_value, decode_request_value, ArgCliSpec, ArgKind, ArgSpec,
-    CliSpec, OperationCatalog, OperationExecutionSpace, OperationFamily, OperationScope,
-    OperationSpec, DAEMON_AUTH_FIELD,
+    CliSpec, OperationCatalog, OperationExecutionSpace, OperationScope, OperationSpec,
+    DAEMON_AUTH_FIELD,
 };
 use serde_json::{json, Value};
 
 static TEST_ARGS: &[ArgSpec] = &[
     ArgSpec::required(
-        "sandbox_id",
+        "image",
         ArgKind::String,
-        "Sandbox id.",
+        "Container image used to create the sandbox.",
         Some(ArgCliSpec {
-            flag: Some("--sandbox-id"),
+            flag: Some("--image"),
             positional: None,
         }),
     ),
@@ -29,14 +29,13 @@ static TEST_ARGS: &[ArgSpec] = &[
 
 static TEST_SPEC: OperationSpec = OperationSpec {
     name: "create_sandbox",
-    family: OperationFamily::Run,
     summary: "Create a sandbox.",
     args: TEST_ARGS,
     cli: Some(CliSpec {
         path: &["manager"],
-        usage: "sandbox-cli manager create_sandbox --sandbox-id ID --workspace-root PATH",
+        usage: "sandbox-cli manager create_sandbox --image IMAGE --workspace-root PATH",
         examples: &[
-            "sandbox-cli manager create_sandbox --sandbox-id sbox-1 --workspace-root /testbed",
+            "sandbox-cli manager create_sandbox --image ubuntu:24.04 --workspace-root /testbed",
         ],
     }),
 };
@@ -121,21 +120,17 @@ fn catalog_to_value_serializes_cli_metadata() {
 
     assert_eq!(value["operation_execution_space"], "manager");
     assert_eq!(value["operations"][0]["name"], "create_sandbox");
-    assert_eq!(value["operations"][0]["family"], "run");
     assert_eq!(value["operations"][0]["summary"], "Create a sandbox.");
     assert!(value["operations"][0]["args"].is_array());
     assert!(value["operations"][0]["cli"].is_object());
-    assert_eq!(value["operations"][0]["args"][0]["name"], "sandbox_id");
+    assert_eq!(value["operations"][0]["args"][0]["name"], "image");
     assert_eq!(value["operations"][0]["args"][0]["kind"], "string");
     assert_eq!(value["operations"][0]["args"][0]["required"], true);
     assert_eq!(value["operations"][0]["args"][0]["default"], Value::Null);
-    assert_eq!(
-        value["operations"][0]["args"][0]["cli"]["flag"],
-        "--sandbox-id"
-    );
+    assert_eq!(value["operations"][0]["args"][0]["cli"]["flag"], "--image");
     assert_eq!(
         value["operations"][0]["cli"]["examples"][0],
-        "sandbox-cli manager create_sandbox --sandbox-id sbox-1 --workspace-root /testbed"
+        "sandbox-cli manager create_sandbox --image ubuntu:24.04 --workspace-root /testbed"
     );
 }
 
@@ -146,7 +141,6 @@ fn catalog_from_value_decodes_cli_metadata() {
         "operations": [
             {
                 "name": "exec_command",
-                "family": "command",
                 "summary": "Start a command.",
                 "args": [
                     {
@@ -176,7 +170,6 @@ fn catalog_from_value_decodes_cli_metadata() {
         catalog.operation_execution_space,
         OperationExecutionSpace::Runtime
     );
-    assert_eq!(catalog.operations[0].family, OperationFamily::Command);
     assert_eq!(
         catalog.operations[0].args[0]
             .cli
@@ -234,7 +227,7 @@ fn render_catalog_manual_uses_catalog_documents() {
 
     assert!(manual.contains("Sandbox Manager Operations"));
     assert!(manual.contains("create_sandbox"));
-    assert!(manual.contains("--sandbox-id: string (required)"));
+    assert!(manual.contains("--image: string (required)"));
     assert!(manual.contains("--workspace-root: path (required)"));
     assert!(manual.contains("Sandbox Runtime Operations"));
     assert!(manual.contains("runtime catalog requires --sandbox-id"));

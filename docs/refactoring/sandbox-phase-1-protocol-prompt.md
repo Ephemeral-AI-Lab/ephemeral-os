@@ -39,15 +39,14 @@ Current source facts:
 - `crates/daemon/rpc_protocol/Cargo.toml` currently has:
   `name = "daemon_rpc_protocol"`.
 - `crates/daemon/operation/src/operation.rs` currently defines:
-  `OperationFamily`, `ArgKind`, `ArgCliSpec`, `ArgSpec`, `CliSpec`,
-  `OperationSpec`, dispatch function pointers, and `OperationEntry`.
+  `ArgKind`, `ArgCliSpec`, `ArgSpec`, `CliSpec`, `OperationSpec`, dispatch
+  function pointers, and `OperationEntry`.
 
 Move to `sandbox-protocol`:
 
 - `Request`.
 - `OperationScope`.
 - `Response`.
-- `OperationFamily` or a renamed `OperationGroup`.
 - `ArgKind`.
 - `ArgCliSpec`.
 - `ArgSpec`.

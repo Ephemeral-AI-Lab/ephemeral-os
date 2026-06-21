@@ -11,16 +11,17 @@ daemon:
   idle_workspace_eviction:
     interval_ms: 500
 
-isolated:
-  scratch_root: /eos/scratch/isolated
-  ttl_s: 1800
-  total_cap: 5
-  upperdir_bytes: 1073741824
-  memavail_fraction: 0.5
-  setup_timeout_s: 30
-  exit_grace_s: 0.25
-  rfc1918_egress: allow
-  sample_interval_s: 0.5
+runtime:
+  workspace:
+    layer_stack_root: /eos/layer-stack
+    scratch_root: /eos/scratch/workspace
+    ttl_s: 1800
+    total_cap: 5
+    upperdir_bytes: 1073741824
+    memavail_fraction: 0.5
+    setup_timeout_s: 30
+    exit_grace_s: 0.25
+    rfc1918_egress: allow
 
 runner:
   child_wait_poll_ms: 5

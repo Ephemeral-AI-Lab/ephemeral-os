@@ -105,12 +105,3 @@ fn request(ns_fds: Option<NsFds>) -> NamespaceCommandRequest {
         timeout_seconds: None,
     }
 }
-
-fn default_ns_fds() -> NsFds {
-    NsFds {
-        user: Some(Fd(10)),
-        mnt: Some(Fd(11)),
-        pid: Some(Fd(12)),
-        net: Some(Fd(13)),
-    }
-}

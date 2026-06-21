@@ -8,8 +8,8 @@ use sandbox_gateway::{
     DEFAULT_MAX_CONCURRENT_CONNECTIONS, SANDBOX_GATEWAY_SOCKET_ENV,
 };
 use sandbox_manager::{
-    CreateSandboxRequest, ManagerError, ManagerServices, SandboxDaemonClient,
-    SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxManagerRouter, SandboxRecord,
+    CreateSandboxRequest, CreateSandboxResult, ManagerError, ManagerServices, SandboxDaemonClient,
+    SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxId, SandboxManagerRouter, SandboxRecord,
     SandboxRuntime, SandboxStore,
 };
 use tokio_util::sync::CancellationToken;
@@ -103,8 +103,13 @@ fn default_manager_services() -> Arc<ManagerServices> {
 struct NoopRuntime;
 
 impl SandboxRuntime for NoopRuntime {
-    fn create_sandbox(&self, _request: &CreateSandboxRequest) -> Result<(), ManagerError> {
-        Ok(())
+    fn create_sandbox(
+        &self,
+        _request: &CreateSandboxRequest,
+    ) -> Result<CreateSandboxResult, ManagerError> {
+        Ok(CreateSandboxResult {
+            id: SandboxId::new(format!("noop-{}", uuid::Uuid::new_v4())).expect("valid noop id"),
+        })
     }
 
     fn destroy_sandbox(&self, _record: &SandboxRecord) -> Result<(), ManagerError> {

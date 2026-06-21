@@ -1,6 +1,5 @@
 use crate::error::WorkspaceError;
 use crate::model::{CreateWorkspaceRequest, WorkspaceHandle};
-use crate::profile::WorkspaceModeId;
 use crate::service::support::{
     ensure_absolute, mode_snapshot_from_layerstack, workspace_error_from_mode_error,
 };
@@ -15,12 +14,12 @@ impl WorkspaceRuntimeService {
             return (hooks.create_workspace)(request);
         }
 
-        ensure_absolute(&request.layer_stack_root, "layer_stack_root")?;
-
         let mut state = self.lock_state()?;
+        let layer_stack_root = state.layer_stack_root.clone();
+        ensure_absolute(&layer_stack_root, "layer_stack_root")?;
 
         let snapshot = sandbox_runtime_layerstack::service::acquire_snapshot_with_lease(
-            &request.layer_stack_root,
+            &layer_stack_root,
             "workspace-session",
         )
         .map_err(|error| WorkspaceError::SnapshotAcquire {
@@ -35,16 +34,12 @@ impl WorkspaceRuntimeService {
             Ok(handle) => handle,
             Err(error) => {
                 let _ = sandbox_runtime_layerstack::service::release_lease(
-                    &request.layer_stack_root,
+                    &layer_stack_root,
                     &lease_id,
                 );
                 return Err(workspace_error_from_mode_error(error));
             }
         };
-        let mode_id = WorkspaceModeId(mode_handle.workspace_id.0.clone());
-        state
-            .layer_stack_roots
-            .insert(mode_id, request.layer_stack_root);
         Ok(WorkspaceHandle::from(&mode_handle))
     }
 }
