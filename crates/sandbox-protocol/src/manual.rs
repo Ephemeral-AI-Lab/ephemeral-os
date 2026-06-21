@@ -1,35 +1,69 @@
-use crate::{ArgCliSpec, ArgKind, ArgSpec, OperationSpec};
+use std::fmt::Write as _;
+
+use crate::{
+    catalog_arg_kind_name, ArgSpecDocument, OperationCatalogDocument, OperationSpecDocument,
+};
 
 #[must_use]
-pub fn arg_kind_name(kind: ArgKind) -> &'static str {
-    match kind {
-        ArgKind::String => "string",
-        ArgKind::Integer => "integer",
-        ArgKind::Float => "float",
-        ArgKind::Path => "path",
+pub fn render_catalog_manual(
+    manager_catalog: &OperationCatalogDocument,
+    runtime_catalog: Option<&OperationCatalogDocument>,
+) -> String {
+    let mut text = String::new();
+    render_section(
+        &mut text,
+        "Sandbox Manager Operations",
+        &manager_catalog.operations,
+    );
+    text.push('\n');
+    match runtime_catalog {
+        Some(catalog) => {
+            render_section(&mut text, "Sandbox Runtime Operations", &catalog.operations);
+        }
+        None => {
+            let _ = writeln!(text, "Sandbox Runtime Operations");
+            let _ = writeln!(
+                text,
+                "  runtime catalog requires --sandbox-id or a default sandbox"
+            );
+        }
+    }
+    text
+}
+
+fn render_section(text: &mut String, title: &str, specs: &[OperationSpecDocument]) {
+    let _ = writeln!(text, "{title}");
+    for spec in specs {
+        let _ = writeln!(text, "  {}", spec.name);
+        let _ = writeln!(text, "    {}", spec.summary);
+        if let Some(cli) = &spec.cli {
+            let _ = writeln!(text, "    usage: {}", cli.usage);
+        }
+        for arg in &spec.args {
+            render_arg(text, arg);
+        }
+        if let Some(cli) = &spec.cli {
+            for example in &cli.examples {
+                let _ = writeln!(text, "    example: {example}");
+            }
+        }
     }
 }
 
-#[must_use]
-pub fn cli_arg_name(arg: &ArgSpec) -> &'static str {
-    match arg.cli {
-        Some(ArgCliSpec {
-            flag: Some(flag), ..
-        }) => flag,
-        Some(ArgCliSpec {
-            positional: Some(positional),
-            ..
-        }) => positional,
-        _ => arg.name,
-    }
+fn render_arg(text: &mut String, arg: &ArgSpecDocument) {
+    let required = if arg.required { "required" } else { "optional" };
+    let _ = writeln!(
+        text,
+        "    {}: {} ({required}) - {}",
+        cli_arg_name(arg),
+        catalog_arg_kind_name(arg.kind),
+        arg.help
+    );
 }
 
-#[must_use]
-pub fn operation_usage(spec: &OperationSpec) -> Option<&'static str> {
-    spec.cli.map(|cli| cli.usage)
-}
-
-#[must_use]
-pub fn operation_examples(spec: &OperationSpec) -> &'static [&'static str] {
-    spec.cli.map_or(&[], |cli| cli.examples)
+fn cli_arg_name(arg: &ArgSpecDocument) -> &str {
+    arg.cli
+        .as_ref()
+        .and_then(|cli| cli.flag.as_deref().or(cli.positional.as_deref()))
+        .unwrap_or(&arg.name)
 }

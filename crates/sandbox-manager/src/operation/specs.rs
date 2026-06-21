@@ -1,5 +1,3 @@
-use serde_json::{json, Value};
-
 use sandbox_protocol::{
     ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationCatalog, OperationExecutionSpace,
     OperationFamily, OperationSpec,
@@ -130,80 +128,4 @@ pub const fn operation_specs() -> &'static [&'static OperationSpec] {
 #[must_use]
 pub const fn operation_catalog() -> OperationCatalog {
     OperationCatalog::new(OperationExecutionSpace::Manager, operation_specs())
-}
-
-#[must_use]
-pub(crate) fn catalog_value(catalog: OperationCatalog) -> Value {
-    json!({
-        "operation_execution_space": operation_execution_space_name(catalog.operation_execution_space),
-        "operations": catalog
-            .operations
-            .iter()
-            .map(|spec| operation_spec_value(spec))
-            .collect::<Vec<_>>(),
-    })
-}
-
-fn operation_spec_value(spec: &OperationSpec) -> Value {
-    json!({
-        "name": spec.name,
-        "family": family_name(spec.family),
-        "summary": spec.summary,
-        "args": spec.args.iter().map(arg_spec_value).collect::<Vec<_>>(),
-        "cli": spec.cli.map(cli_spec_value),
-    })
-}
-
-fn arg_spec_value(spec: &ArgSpec) -> Value {
-    json!({
-        "name": spec.name,
-        "kind": arg_kind_name(spec.kind),
-        "required": spec.required,
-        "help": spec.help,
-        "default": spec.default,
-        "cli": spec.cli.map(arg_cli_spec_value),
-    })
-}
-
-fn cli_spec_value(spec: CliSpec) -> Value {
-    json!({
-        "path": spec.path,
-        "usage": spec.usage,
-        "examples": spec.examples,
-    })
-}
-
-fn arg_cli_spec_value(spec: ArgCliSpec) -> Value {
-    json!({
-        "flag": spec.flag,
-        "positional": spec.positional,
-    })
-}
-
-fn operation_execution_space_name(
-    operation_execution_space: OperationExecutionSpace,
-) -> &'static str {
-    match operation_execution_space {
-        OperationExecutionSpace::Manager => "manager",
-        OperationExecutionSpace::Runtime => "runtime",
-    }
-}
-
-fn family_name(family: OperationFamily) -> &'static str {
-    match family {
-        OperationFamily::Command => "command",
-        OperationFamily::File => "file",
-        OperationFamily::Workspace => "workspace",
-        OperationFamily::Health => "health",
-        OperationFamily::Run => "run",
-    }
-}
-
-fn arg_kind_name(kind: ArgKind) -> &'static str {
-    match kind {
-        ArgKind::String => "string",
-        ArgKind::Integer => "integer",
-        ArgKind::Float => "float",
-        ArgKind::Path => "path",
-    }
 }

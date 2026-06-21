@@ -9,9 +9,11 @@ use sandbox_gateway_cli::config::{
 };
 use sandbox_gateway_cli::output::render_response;
 use sandbox_gateway_cli::request_builder::{
-    build_request_from_catalog_with_id, catalog_from_response, BuildRequestInput, ExecutionSpace,
+    build_request_from_catalog_with_id, catalog_from_response, BuildRequestInput,
 };
-use sandbox_protocol::{OperationScope, Request};
+use sandbox_protocol::{
+    OperationCatalogDocument, OperationExecutionSpace, OperationScope, Request,
+};
 use serde_json::{json, Value};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixListener;
@@ -33,7 +35,7 @@ fn runtime_operation_requires_sandbox_without_default() -> TestResult {
     let config = config(None);
     let error = build_request_from_catalog_with_id(
         BuildRequestInput {
-            execution_space: ExecutionSpace::Runtime,
+            execution_space: OperationExecutionSpace::Runtime,
             operation: "exec_command".to_owned(),
             operation_argv: vec![
                 "--workspace-session-id".to_owned(),
@@ -117,7 +119,7 @@ fn poll_command_maps_command_session_id_flag_and_last_n_lines() -> TestResult {
     let catalog = runtime_catalog()?;
     let request = build_request_from_catalog_with_id(
         BuildRequestInput {
-            execution_space: ExecutionSpace::Runtime,
+            execution_space: OperationExecutionSpace::Runtime,
             operation: "poll_command".to_owned(),
             operation_argv: vec![
                 "--command-session-id".to_owned(),
@@ -280,7 +282,7 @@ fn build_manager_request(
     let catalog = manager_catalog()?;
     Ok(build_request_from_catalog_with_id(
         BuildRequestInput {
-            execution_space: ExecutionSpace::Manager,
+            execution_space: OperationExecutionSpace::Manager,
             operation: operation.to_owned(),
             operation_argv: argv.iter().map(ToString::to_string).collect(),
             sandbox_id: None,
@@ -298,7 +300,7 @@ fn build_runtime_request(
     let catalog = runtime_catalog()?;
     Ok(build_request_from_catalog_with_id(
         BuildRequestInput {
-            execution_space: ExecutionSpace::Runtime,
+            execution_space: OperationExecutionSpace::Runtime,
             operation: "exec_command".to_owned(),
             operation_argv: argv.iter().map(ToString::to_string).collect(),
             sandbox_id: sandbox_id.map(str::to_owned),
@@ -316,15 +318,13 @@ fn config(default_sandbox_id: Option<&str>) -> GatewayConfig {
     }
 }
 
-fn manager_catalog() -> Result<
-    sandbox_gateway_cli::request_builder::OperationCatalogDocument,
-    Box<dyn std::error::Error + Send + Sync>,
-> {
+fn manager_catalog() -> Result<OperationCatalogDocument, Box<dyn std::error::Error + Send + Sync>> {
     Ok(catalog_from_response(&json!({
         "operation_execution_space": "manager",
         "operations": [
             {
                 "name": "list_sandboxes",
+                "family": "workspace",
                 "summary": "List sandbox records known to the manager.",
                 "args": [],
                 "cli": {
@@ -335,6 +335,7 @@ fn manager_catalog() -> Result<
             },
             {
                 "name": "create_sandbox",
+                "family": "run",
                 "summary": "Create a host-side sandbox record and runtime sandbox.",
                 "args": [
                     {
@@ -359,15 +360,13 @@ fn manager_catalog() -> Result<
     }))?)
 }
 
-fn runtime_catalog() -> Result<
-    sandbox_gateway_cli::request_builder::OperationCatalogDocument,
-    Box<dyn std::error::Error + Send + Sync>,
-> {
+fn runtime_catalog() -> Result<OperationCatalogDocument, Box<dyn std::error::Error + Send + Sync>> {
     Ok(catalog_from_response(&json!({
         "operation_execution_space": "runtime",
         "operations": [
             {
                 "name": "exec_command",
+                "family": "command",
                 "summary": "Start a command in a workspace.",
                 "args": [
                     {
@@ -401,6 +400,7 @@ fn runtime_catalog() -> Result<
             },
             {
                 "name": "poll_command",
+                "family": "command",
                 "summary": "Poll a command status and recent output.",
                 "args": [
                     {

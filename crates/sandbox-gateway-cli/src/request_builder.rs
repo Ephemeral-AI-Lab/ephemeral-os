@@ -1,7 +1,10 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use sandbox_protocol::{OperationScope, Request};
+use sandbox_protocol::{
+    catalog_from_value, ArgKind, OperationCatalogDocument, OperationExecutionSpace, OperationScope,
+    OperationSpecDocument, Request,
+};
 use serde_json::{json, Map, Number, Value};
 
 use crate::config::GatewayConfig;
@@ -11,63 +14,12 @@ static REQUEST_COUNTER: AtomicU64 = AtomicU64::new(1);
 const DESCRIBE_MANAGER_OPERATIONS: &str = "describe_manager_operations";
 const DESCRIBE_DAEMON_OPERATIONS: &str = "describe_daemon_operations";
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ExecutionSpace {
-    Manager,
-    Runtime,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BuildRequestInput {
-    pub execution_space: ExecutionSpace,
+    pub execution_space: OperationExecutionSpace,
     pub operation: String,
     pub operation_argv: Vec<String>,
     pub sandbox_id: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct OperationCatalogDocument {
-    pub operation_execution_space: ExecutionSpace,
-    pub operations: Vec<OperationSpecDocument>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct OperationSpecDocument {
-    pub name: String,
-    pub summary: String,
-    pub args: Vec<ArgSpecDocument>,
-    pub cli: Option<CliSpecDocument>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ArgSpecDocument {
-    pub name: String,
-    pub kind: ArgKindDocument,
-    pub required: bool,
-    pub help: String,
-    pub default: Option<String>,
-    pub cli: Option<ArgCliSpecDocument>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ArgKindDocument {
-    String,
-    Integer,
-    Float,
-    Path,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ArgCliSpecDocument {
-    pub flag: Option<String>,
-    pub positional: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CliSpecDocument {
-    pub path: Vec<String>,
-    pub usage: String,
-    pub examples: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -136,15 +88,15 @@ pub fn build_request_from_catalog_with_id(
     if input.execution_space != catalog.operation_execution_space {
         return Err(build_error(format!(
             "loaded catalog is for {}, not {}",
-            execution_space_name(catalog.operation_execution_space),
-            execution_space_name(input.execution_space)
+            sandbox_protocol::operation_execution_space_name(catalog.operation_execution_space),
+            sandbox_protocol::operation_execution_space_name(input.execution_space)
         )));
     }
     let spec = find_operation_spec(catalog, &input.operation)?;
     let args = build_args(spec, &input.operation_argv)?;
     let scope = match input.execution_space {
-        ExecutionSpace::Manager => OperationScope::system(),
-        ExecutionSpace::Runtime => {
+        OperationExecutionSpace::Manager => OperationScope::system(),
+        OperationExecutionSpace::Runtime => {
             OperationScope::sandbox(resolve_runtime_sandbox_id(input.sandbox_id, config)?)
         }
     };
@@ -176,108 +128,7 @@ pub fn catalog_from_response(
             "operation catalog request failed: {response}"
         )));
     }
-    let object = response
-        .as_object()
-        .ok_or_else(|| build_error("operation catalog response must be an object"))?;
-    let operation_execution_space = match required_string(object, "operation_execution_space")? {
-        "manager" => ExecutionSpace::Manager,
-        "runtime" => ExecutionSpace::Runtime,
-        other => {
-            return Err(build_error(format!(
-                "unknown operation_execution_space: {other}"
-            )))
-        }
-    };
-    let operations = required_array(object, "operations")?
-        .iter()
-        .map(operation_spec_from_value)
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(OperationCatalogDocument {
-        operation_execution_space,
-        operations,
-    })
-}
-
-fn operation_spec_from_value(value: &Value) -> Result<OperationSpecDocument, RequestBuildError> {
-    let object = value
-        .as_object()
-        .ok_or_else(|| build_error("operation spec must be an object"))?;
-    let args = required_array(object, "args")?
-        .iter()
-        .map(arg_spec_from_value)
-        .collect::<Result<Vec<_>, _>>()?;
-    let cli = optional_object_value(object, "cli")?
-        .map(cli_spec_from_value)
-        .transpose()?;
-    Ok(OperationSpecDocument {
-        name: required_string(object, "name")?.to_owned(),
-        summary: required_string(object, "summary")?.to_owned(),
-        args,
-        cli,
-    })
-}
-
-fn arg_spec_from_value(value: &Value) -> Result<ArgSpecDocument, RequestBuildError> {
-    let object = value
-        .as_object()
-        .ok_or_else(|| build_error("operation arg spec must be an object"))?;
-    let kind = match required_string(object, "kind")? {
-        "string" => ArgKindDocument::String,
-        "integer" => ArgKindDocument::Integer,
-        "float" => ArgKindDocument::Float,
-        "path" => ArgKindDocument::Path,
-        other => return Err(build_error(format!("unknown arg kind: {other}"))),
-    };
-    let cli = optional_object_value(object, "cli")?
-        .map(arg_cli_spec_from_value)
-        .transpose()?;
-    Ok(ArgSpecDocument {
-        name: required_string(object, "name")?.to_owned(),
-        kind,
-        required: required_bool(object, "required")?,
-        help: required_string(object, "help")?.to_owned(),
-        default: optional_string(object, "default")?.map(str::to_owned),
-        cli,
-    })
-}
-
-fn cli_spec_from_value(value: &Value) -> Result<CliSpecDocument, RequestBuildError> {
-    let object = value
-        .as_object()
-        .ok_or_else(|| build_error("operation cli spec must be an object"))?;
-    let path = required_array(object, "path")?
-        .iter()
-        .map(|value| {
-            value
-                .as_str()
-                .map(str::to_owned)
-                .ok_or_else(|| build_error("operation cli path entries must be strings"))
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    let examples = required_array(object, "examples")?
-        .iter()
-        .map(|value| {
-            value
-                .as_str()
-                .map(str::to_owned)
-                .ok_or_else(|| build_error("operation cli examples must be strings"))
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(CliSpecDocument {
-        path,
-        usage: required_string(object, "usage")?.to_owned(),
-        examples,
-    })
-}
-
-fn arg_cli_spec_from_value(value: &Value) -> Result<ArgCliSpecDocument, RequestBuildError> {
-    let object = value
-        .as_object()
-        .ok_or_else(|| build_error("operation arg cli spec must be an object"))?;
-    Ok(ArgCliSpecDocument {
-        flag: optional_string(object, "flag")?.map(str::to_owned),
-        positional: optional_string(object, "positional")?.map(str::to_owned),
-    })
+    catalog_from_value(response).map_err(|error| build_error(error.message()))
 }
 
 fn build_args(spec: &OperationSpecDocument, argv: &[String]) -> Result<Value, RequestBuildError> {
@@ -337,7 +188,7 @@ fn build_args(spec: &OperationSpecDocument, argv: &[String]) -> Result<Value, Re
 
 fn insert_arg_value(
     values: &mut Map<String, Value>,
-    arg: &ArgSpecDocument,
+    arg: &sandbox_protocol::ArgSpecDocument,
     value: &str,
 ) -> Result<(), RequestBuildError> {
     if values.contains_key(&arg.name) {
@@ -350,10 +201,13 @@ fn insert_arg_value(
     Ok(())
 }
 
-fn parse_arg_value(arg: &ArgSpecDocument, value: &str) -> Result<Value, RequestBuildError> {
+fn parse_arg_value(
+    arg: &sandbox_protocol::ArgSpecDocument,
+    value: &str,
+) -> Result<Value, RequestBuildError> {
     match arg.kind {
-        ArgKindDocument::String | ArgKindDocument::Path => Ok(Value::String(value.to_owned())),
-        ArgKindDocument::Integer => value.parse::<u64>().map_or_else(
+        ArgKind::String | ArgKind::Path => Ok(Value::String(value.to_owned())),
+        ArgKind::Integer => value.parse::<u64>().map_or_else(
             |_| {
                 Err(build_error(format!(
                     "{} must be an unsigned integer",
@@ -362,7 +216,7 @@ fn parse_arg_value(arg: &ArgSpecDocument, value: &str) -> Result<Value, RequestB
             },
             |number| Ok(Value::Number(Number::from(number))),
         ),
-        ArgKindDocument::Float => {
+        ArgKind::Float => {
             let parsed = value.parse::<f64>().map_err(|_| {
                 build_error(format!("{} must be a finite number", cli_arg_name(arg)))
             })?;
@@ -376,7 +230,7 @@ fn parse_arg_value(arg: &ArgSpecDocument, value: &str) -> Result<Value, RequestB
 fn find_flag_arg<'a>(
     spec: &'a OperationSpecDocument,
     flag: &str,
-) -> Result<&'a ArgSpecDocument, RequestBuildError> {
+) -> Result<&'a sandbox_protocol::ArgSpecDocument, RequestBuildError> {
     spec.args
         .iter()
         .find(|arg| arg.cli.as_ref().and_then(|cli| cli.flag.as_deref()) == Some(flag))
@@ -394,69 +248,11 @@ fn find_operation_spec<'a>(
         .ok_or_else(|| build_error(format!("unknown operation: {operation}")))
 }
 
-fn cli_arg_name(arg: &ArgSpecDocument) -> &str {
+fn cli_arg_name(arg: &sandbox_protocol::ArgSpecDocument) -> &str {
     arg.cli
         .as_ref()
         .and_then(|cli| cli.flag.as_deref().or(cli.positional.as_deref()))
         .unwrap_or(&arg.name)
-}
-
-fn required_array<'a>(
-    object: &'a Map<String, Value>,
-    field: &str,
-) -> Result<&'a Vec<Value>, RequestBuildError> {
-    object
-        .get(field)
-        .and_then(Value::as_array)
-        .ok_or_else(|| build_error(format!("{field} must be an array")))
-}
-
-fn optional_object_value<'a>(
-    object: &'a Map<String, Value>,
-    field: &str,
-) -> Result<Option<&'a Value>, RequestBuildError> {
-    match object.get(field) {
-        Some(Value::Null) | None => Ok(None),
-        Some(value) if value.is_object() => Ok(Some(value)),
-        Some(_) => Err(build_error(format!("{field} must be an object or null"))),
-    }
-}
-
-fn required_string<'a>(
-    object: &'a Map<String, Value>,
-    field: &str,
-) -> Result<&'a str, RequestBuildError> {
-    object
-        .get(field)
-        .and_then(Value::as_str)
-        .ok_or_else(|| build_error(format!("{field} must be a string")))
-}
-
-fn optional_string<'a>(
-    object: &'a Map<String, Value>,
-    field: &str,
-) -> Result<Option<&'a str>, RequestBuildError> {
-    match object.get(field) {
-        Some(Value::Null) | None => Ok(None),
-        Some(value) => value
-            .as_str()
-            .map(Some)
-            .ok_or_else(|| build_error(format!("{field} must be a string or null"))),
-    }
-}
-
-fn required_bool(object: &Map<String, Value>, field: &str) -> Result<bool, RequestBuildError> {
-    object
-        .get(field)
-        .and_then(Value::as_bool)
-        .ok_or_else(|| build_error(format!("{field} must be a boolean")))
-}
-
-fn execution_space_name(execution_space: ExecutionSpace) -> &'static str {
-    match execution_space {
-        ExecutionSpace::Manager => "manager",
-        ExecutionSpace::Runtime => "runtime",
-    }
 }
 
 fn next_request_id() -> String {

@@ -1,5 +1,34 @@
-use sandbox_protocol::{decode_request_object, ArgsPresence, OperationScope};
+use sandbox_protocol::manual::render_catalog_manual;
+use sandbox_protocol::{
+    catalog_from_value, catalog_to_value, decode_request_object, ArgCliSpec, ArgKind, ArgSpec,
+    ArgsPresence, CliSpec, OperationCatalog, OperationExecutionSpace, OperationFamily,
+    OperationScope, OperationSpec,
+};
 use serde_json::json;
+
+static TEST_ARGS: &[ArgSpec] = &[ArgSpec::required(
+    "sandbox_id",
+    ArgKind::String,
+    "Sandbox id.",
+    Some(ArgCliSpec {
+        flag: Some("--sandbox-id"),
+        positional: None,
+    }),
+)];
+
+static TEST_SPEC: OperationSpec = OperationSpec {
+    name: "create_sandbox",
+    family: OperationFamily::Run,
+    summary: "Create a sandbox.",
+    args: TEST_ARGS,
+    cli: Some(CliSpec {
+        path: &["manager"],
+        usage: "sandbox manager create_sandbox --sandbox-id ID",
+        examples: &["sandbox manager create_sandbox --sandbox-id sbox-1"],
+    }),
+};
+
+static TEST_SPECS: &[&OperationSpec] = &[&TEST_SPEC];
 
 #[test]
 fn decode_request_requires_object_args_when_present() {
@@ -69,4 +98,100 @@ fn decode_request_rejects_empty_sandbox_scope_id() {
 
     assert_eq!(err.kind(), "invalid_request");
     assert_eq!(err.message(), "scope sandbox_id must be non-empty");
+}
+
+#[test]
+fn catalog_to_value_serializes_cli_metadata() {
+    let value = catalog_to_value(OperationCatalog::new(
+        OperationExecutionSpace::Manager,
+        TEST_SPECS,
+    ));
+
+    assert_eq!(value["operation_execution_space"], "manager");
+    assert_eq!(value["operations"][0]["name"], "create_sandbox");
+    assert_eq!(value["operations"][0]["family"], "run");
+    assert_eq!(
+        value["operations"][0]["args"][0]["cli"]["flag"],
+        "--sandbox-id"
+    );
+    assert_eq!(
+        value["operations"][0]["cli"]["examples"][0],
+        "sandbox manager create_sandbox --sandbox-id sbox-1"
+    );
+}
+
+#[test]
+fn catalog_from_value_decodes_cli_metadata() {
+    let value = json!({
+        "operation_execution_space": "runtime",
+        "operations": [
+            {
+                "name": "exec_command",
+                "family": "command",
+                "summary": "Start a command.",
+                "args": [
+                    {
+                        "name": "cmd",
+                        "kind": "string",
+                        "required": true,
+                        "help": "Shell command text.",
+                        "default": null,
+                        "cli": {
+                            "flag": null,
+                            "positional": "COMMAND"
+                        }
+                    }
+                ],
+                "cli": {
+                    "path": ["runtime"],
+                    "usage": "sandbox runtime exec_command COMMAND",
+                    "examples": ["sandbox runtime exec_command pwd"]
+                }
+            }
+        ]
+    });
+
+    let catalog = catalog_from_value(&value).expect("catalog decodes");
+
+    assert_eq!(
+        catalog.operation_execution_space,
+        OperationExecutionSpace::Runtime
+    );
+    assert_eq!(catalog.operations[0].family, OperationFamily::Command);
+    assert_eq!(
+        catalog.operations[0].args[0]
+            .cli
+            .as_ref()
+            .and_then(|cli| cli.positional.as_deref()),
+        Some("COMMAND")
+    );
+}
+
+#[test]
+fn catalog_from_value_rejects_unknown_execution_space() {
+    let value = json!({
+        "operation_execution_space": "daemon",
+        "operations": []
+    });
+
+    let error = catalog_from_value(&value).expect_err("unknown space rejected");
+
+    assert_eq!(error.message(), "unknown operation_execution_space: daemon");
+}
+
+#[test]
+fn render_catalog_manual_uses_catalog_documents() {
+    let manager = catalog_from_value(&catalog_to_value(OperationCatalog::new(
+        OperationExecutionSpace::Manager,
+        TEST_SPECS,
+    )))
+    .expect("manager catalog");
+
+    let manual = render_catalog_manual(&manager, None);
+
+    assert!(manual.contains("Sandbox Manager Operations"));
+    assert!(manual.contains("create_sandbox"));
+    assert!(manual.contains("--sandbox-id: string (required)"));
+    assert!(manual.contains("Sandbox Runtime Operations"));
+    assert!(manual.contains("runtime catalog requires --sandbox-id"));
 }

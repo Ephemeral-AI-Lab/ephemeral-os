@@ -13,9 +13,7 @@ pub(crate) fn dispatch(
         Err(error) => return error.into_response(),
     };
     match services.daemon_client.describe_operations(&endpoint) {
-        Ok(catalog) => {
-            sandbox_protocol::Response::ok(crate::operation::specs::catalog_value(catalog))
-        }
+        Ok(catalog) => sandbox_protocol::Response::ok(sandbox_protocol::catalog_to_value(catalog)),
         Err(error) => error.into_response(),
     }
 }

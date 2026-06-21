@@ -9,11 +9,12 @@ use serde_json::{json, Value};
 
 use crate::client::ManagerClient;
 use crate::config::{GatewayConfig, GatewayConfigOverrides};
-use crate::manual::render_manual;
 use crate::request_builder::{
     build_request_from_catalog, catalog_from_response, manager_catalog_request,
-    resolve_runtime_sandbox_id, runtime_catalog_request, BuildRequestInput, ExecutionSpace,
-    OperationCatalogDocument, RequestBuildError,
+    resolve_runtime_sandbox_id, runtime_catalog_request, BuildRequestInput, RequestBuildError,
+};
+use sandbox_protocol::{
+    manual::render_catalog_manual, OperationCatalogDocument, OperationExecutionSpace,
 };
 
 const EXIT_SUCCESS: u8 = 0;
@@ -116,7 +117,7 @@ where
 
     let request_input = match cli.command {
         Command::Manager(command) => BuildRequestInput {
-            execution_space: ExecutionSpace::Manager,
+            execution_space: OperationExecutionSpace::Manager,
             operation: command.operation,
             operation_argv: command.operation_argv,
             sandbox_id: None,
@@ -135,7 +136,7 @@ where
                 Err(exit_code) => return exit_code,
             };
             let request_input = BuildRequestInput {
-                execution_space: ExecutionSpace::Runtime,
+                execution_space: OperationExecutionSpace::Runtime,
                 operation: command.operation,
                 operation_argv: command.operation_argv,
                 sandbox_id: Some(sandbox_id),
@@ -223,7 +224,7 @@ where
         None => None,
     };
     write_manual(
-        &render_manual(&manager_catalog, runtime_catalog.as_ref()),
+        &render_catalog_manual(&manager_catalog, runtime_catalog.as_ref()),
         stdout,
         stderr,
     )

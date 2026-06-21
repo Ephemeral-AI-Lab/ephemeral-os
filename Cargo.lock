@@ -970,7 +970,6 @@ dependencies = [
 name = "sandbox-gateway-cli"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "clap",
  "sandbox-protocol",
  "serde_json",
