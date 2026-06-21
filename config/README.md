@@ -22,11 +22,8 @@ For Rust E2E tests, each integration-test crate points at one local
 `config/default.test.yml`. The harness loads `prd.yml` plus that override,
 derives Docker settings from the merged document, and uploads the same merged
 YAML to the daemon's `prd.yml` location inside the container before starting
-`sandbox-daemon`.
-
-Legacy Rust E2E selection through `e2e.toml`, `EOS_E2E_CONFIG`,
-`EOS_E2E_PROFILE`, or `EOS_E2E_*` field overrides has been removed. Use normal
-`cargo test` name filters to choose the suite or focused test.
+`sandbox-daemon`. Use normal `cargo test` name filters to choose the suite or
+focused test.
 
 ## Merge Rules
 

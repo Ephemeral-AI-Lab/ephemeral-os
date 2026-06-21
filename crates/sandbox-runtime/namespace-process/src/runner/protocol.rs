@@ -26,7 +26,6 @@ pub struct NamespaceCommandRequest {
     pub request_id: String,
     pub args: Value,
     pub workspace_root: WorkspaceRoot,
-    #[serde(default)]
     pub layer_paths: Vec<PathBuf>,
     #[serde(default)]
     pub upperdir: Option<PathBuf>,

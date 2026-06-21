@@ -102,12 +102,10 @@ fn lowerdir_verification_reports_only_available_kernel_proof() {
 }
 
 #[test]
-fn overlay_layer_paths_fall_back_to_workspace_root() {
+fn overlay_layer_paths_rejects_empty_layers() {
     let request = request(Some(default_ns_fds()));
-    assert_eq!(
-        overlay_layer_paths(&request),
-        vec![Path::new("/workspace").to_path_buf()]
-    );
+    let error = overlay_layer_paths(&request).expect_err("layer paths are required");
+    assert!(error.to_string().contains("requires layer_paths"));
 }
 
 #[test]

@@ -61,7 +61,7 @@ pub fn setns_overlay_mount(
         RunnerError::InvalidRequest("setns overlay mount requires workdir".to_owned())
     })?;
     let handle = OverlayHandle {
-        layer_paths: overlay_layer_paths(request),
+        layer_paths: overlay_layer_paths(request)?,
         upperdir: upperdir.clone(),
         workdir: workdir.clone(),
     };
@@ -611,11 +611,13 @@ fn setns_user_mnt(request: &NamespaceCommandRequest, operation: &str) -> Result<
     setns_fd("mnt", mnt.0, libc::CLONE_NEWNS)
 }
 
-pub fn overlay_layer_paths(request: &NamespaceCommandRequest) -> Vec<PathBuf> {
+pub fn overlay_layer_paths(request: &NamespaceCommandRequest) -> Result<Vec<PathBuf>, RunnerError> {
     if request.layer_paths.is_empty() {
-        vec![request.workspace_root.0.clone()]
+        Err(RunnerError::InvalidRequest(
+            "setns overlay mount requires layer_paths".to_owned(),
+        ))
     } else {
-        request.layer_paths.clone()
+        Ok(request.layer_paths.clone())
     }
 }
 

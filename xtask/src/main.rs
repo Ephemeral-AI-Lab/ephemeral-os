@@ -41,9 +41,7 @@ fn main() -> Result<()> {
         Some("check-crate-source-size") => {
             check_crate_source_size_policy(&CrateSourceSizePolicyArgs::parse(args)?)
         }
-        Some("check-inline-cfg-test" | "check-inline-tests") => {
-            check_inline_test_policy(&InlineTestPolicyArgs::parse(args)?)
-        }
+        Some("check-inline-tests") => check_inline_test_policy(&InlineTestPolicyArgs::parse(args)?),
         Some("help" | "--help" | "-h") | None => {
             print_help();
             Ok(())
@@ -1041,7 +1039,6 @@ xtask commands:
           fail if any mod.rs or lib.rs file exceeds 300 lines by default
   check-inline-tests [--root <path> ...]
           fail if production Rust sources contain forbidden inline attributes
-          alias: check-inline-cfg-test
   package [--target <triple>] [--out-dir <dir>] [--builder rust-lld|cargo|cross]
           [--profile <name> | --fast] [--no-build] [--sign --minisign-key <path>]
 

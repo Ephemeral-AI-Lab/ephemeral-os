@@ -40,6 +40,13 @@ impl SandboxDaemonServer {
     }
 
     async fn dispatch_request(&self, request: Request) -> serde_json::Value {
+        if request.scope.is_system() {
+            return super::error_response(
+                error_kind::INVALID_REQUEST,
+                "daemon operation requires sandbox scope",
+                serde_json::json!({}),
+            );
+        }
         let operations = Arc::clone(&self.operations);
         let task = tokio::task::spawn_blocking(move || {
             sandbox_runtime::dispatch_operation(&operations, &request).into_json_value()

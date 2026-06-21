@@ -27,7 +27,6 @@ pub(crate) struct TestServices {
 #[derive(Default)]
 pub(crate) struct FakeWorkspaceService {
     create_results: Mutex<VecDeque<Result<WorkspaceHandle, WorkspaceError>>>,
-    destroy_results: Mutex<VecDeque<Result<DestroyWorkspaceResult, WorkspaceError>>>,
     create_requests: Mutex<Vec<CreateWorkspaceRequest>>,
     destroy_calls: Mutex<Vec<WorkspaceSessionId>>,
 }
@@ -213,11 +212,7 @@ impl FakeWorkspaceService {
             .lock()
             .expect("test operation succeeds")
             .push(handle.id.clone());
-        self.destroy_results
-            .lock()
-            .expect("test operation succeeds")
-            .pop_front()
-            .unwrap_or_else(|| Ok(destroy_result(&handle)))
+        Ok(destroy_result(&handle))
     }
 
     fn latest_snapshot(

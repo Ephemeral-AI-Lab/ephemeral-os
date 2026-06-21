@@ -44,7 +44,7 @@ fn create_session(
 }
 
 #[test]
-fn command_exec_uses_resolved_session_without_workspace_create_or_destroy() {
+fn exec_command_uses_resolved_session_without_workspace_create_or_destroy() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let env = build_services(Arc::clone(&fake));
     let workspace_session_id = create_session(
@@ -79,7 +79,7 @@ fn command_exec_uses_resolved_session_without_workspace_create_or_destroy() {
 }
 
 #[test]
-fn command_exec_rejects_empty_command_before_workspace_resolution() {
+fn exec_command_rejects_empty_command_before_workspace_resolution() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let env = build_services(Arc::clone(&fake));
     let mut input = exec_input(WorkspaceSessionId("workspace-session".to_owned()));
@@ -99,7 +99,7 @@ fn command_exec_rejects_empty_command_before_workspace_resolution() {
 }
 
 #[test]
-fn command_exec_spawn_failure_keeps_session_workspace_alive() {
+fn exec_command_spawn_failure_keeps_session_workspace_alive() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_spawn_error(CommandServiceError::CommandIo {
@@ -133,7 +133,7 @@ fn command_exec_spawn_failure_keeps_session_workspace_alive() {
 }
 
 #[test]
-fn command_exec_passes_workspace_entry_to_spawn_paths() {
+fn exec_command_passes_workspace_entry_to_spawn_paths() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
@@ -215,7 +215,7 @@ fn command_exec_passes_workspace_entry_to_spawn_paths() {
 }
 
 #[test]
-fn command_exec_missing_launch_material_rejects_without_spawn() {
+fn exec_command_missing_launch_material_rejects_without_spawn() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let workspace_root = PathBuf::from("/workspace/session");
     fake.push_create_result(Ok(workspace_handle_without_launch(
@@ -247,7 +247,7 @@ fn command_exec_missing_launch_material_rejects_without_spawn() {
 }
 
 #[test]
-fn command_exec_unavailable_workspace_launch_rejects_without_spawn() {
+fn exec_command_unavailable_workspace_launch_rejects_without_spawn() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let workspace_root = PathBuf::from("/workspace/session");
     fake.push_create_result(Ok(workspace_handle_unavailable_launch(
@@ -279,7 +279,7 @@ fn command_exec_unavailable_workspace_launch_rejects_without_spawn() {
 }
 
 #[test]
-fn command_exec_artifact_directory_failure_keeps_session_workspace_alive() {
+fn exec_command_artifact_directory_failure_keeps_session_workspace_alive() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
@@ -312,7 +312,7 @@ fn command_exec_artifact_directory_failure_keeps_session_workspace_alive() {
 }
 
 #[test]
-fn command_exec_initial_running_yield_returns_wait_loop_output() {
+fn exec_command_initial_running_yield_returns_wait_loop_output() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_outcome(WaitOutcome::Running("hello from wait\n".to_owned()));
@@ -335,7 +335,7 @@ fn command_exec_initial_running_yield_returns_wait_loop_output() {
 }
 
 #[test]
-fn command_exec_initial_completed_session_returns_finalized_metadata() {
+fn exec_command_initial_completed_session_returns_finalized_metadata() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_outcome(WaitOutcome::Completed(success_exit("session done\n")));

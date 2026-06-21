@@ -152,7 +152,7 @@ pub fn decode_request_object(
     let scope = match object.remove("scope") {
         Some(scope) => serde_json::from_value::<OperationScope>(scope)
             .map_err(|error| invalid_request(format!("scope is invalid: {error}")))?,
-        None => OperationScope::default(),
+        None => return Err(invalid_request("scope is required")),
     };
     scope.validate().map_err(invalid_request)?;
     let args = match object.remove("args") {
