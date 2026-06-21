@@ -3,14 +3,15 @@ use std::sync::Arc;
 use crate::{SandboxDaemonClient, SandboxDaemonInstaller, SandboxRuntime, SandboxStore};
 
 #[derive(Clone, Copy)]
-pub struct ManagerOperationEntry {
-    pub spec: &'static sandbox_protocol::OperationSpec,
-    pub dispatch: fn(&ManagerServices, &sandbox_protocol::Request) -> sandbox_protocol::Response,
+pub(crate) struct ManagerOperationEntry {
+    pub(crate) spec: &'static sandbox_protocol::OperationSpec,
+    pub(crate) dispatch:
+        fn(&ManagerServices, &sandbox_protocol::Request) -> sandbox_protocol::Response,
 }
 
 impl ManagerOperationEntry {
     #[must_use]
-    pub const fn new(
+    pub(crate) const fn new(
         spec: &'static sandbox_protocol::OperationSpec,
         dispatch: fn(&ManagerServices, &sandbox_protocol::Request) -> sandbox_protocol::Response,
     ) -> Self {

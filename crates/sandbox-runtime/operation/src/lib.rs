@@ -3,13 +3,13 @@
 pub(crate) extern crate sandbox_runtime_workspace as workspace_crate;
 
 mod internal;
-pub mod operation;
+mod operation;
 mod public;
 
 pub use internal::{workspace_remount, workspace_session};
 pub use operation::{
-    ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationCatalog, OperationEntry,
-    OperationExecutionSpace, OperationFamily, OperationSpec,
+    ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationCatalog, OperationExecutionSpace,
+    OperationFamily, OperationSpec,
 };
 pub use public::command;
 

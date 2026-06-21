@@ -1,9 +1,7 @@
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
-use crate::command::{
-    CommandLaunchDriver, CommandProcessStore, ProcessGroupController, RealCommandLaunchDriver,
-};
-use crate::workspace_remount::ProcProcessGroupController;
+use crate::command::{CommandLaunchDriver, CommandProcessStore, RealCommandLaunchDriver};
+use crate::workspace_remount::{ProcProcessGroupController, ProcessGroupController};
 use crate::workspace_session::WorkspaceSessionService;
 
 pub struct CommandOperationService {

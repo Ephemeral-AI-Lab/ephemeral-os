@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value};
 
 use crate::error_kind;
 use crate::response::Response;
@@ -119,12 +119,6 @@ impl Request {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ArgsPresence {
-    Required,
-    OptionalEmptyObject,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RequestDecodeError {
     kind: &'static str,
@@ -145,7 +139,6 @@ impl RequestDecodeError {
 
 pub fn decode_request_object(
     mut object: Map<String, Value>,
-    args_presence: ArgsPresence,
 ) -> Result<Request, RequestDecodeError> {
     let op = remove_request_string(&mut object, "op")?;
     let request_id = remove_request_string(&mut object, "request_id")?;
@@ -155,15 +148,9 @@ pub fn decode_request_object(
         None => return Err(invalid_request("scope is required")),
     };
     scope.validate().map_err(invalid_request)?;
-    let args = match object.remove("args") {
-        Some(args) => args,
-        None if args_presence == ArgsPresence::OptionalEmptyObject => json!({}),
-        None => {
-            return Err(invalid_request(
-                "request must include op, request_id, and args",
-            ));
-        }
-    };
+    let args = object
+        .remove("args")
+        .ok_or_else(|| invalid_request("request must include op, request_id, and args"))?;
     if op.trim().is_empty() {
         return Err(invalid_request("op is required"));
     }
@@ -178,17 +165,14 @@ pub fn decode_request_object(
     })
 }
 
-pub fn decode_request_value(
-    value: Value,
-    args_presence: ArgsPresence,
-) -> Result<Request, RequestDecodeError> {
+pub fn decode_request_value(value: Value) -> Result<Request, RequestDecodeError> {
     let Value::Object(object) = value else {
         return Err(request_decode_error(
             error_kind::BAD_JSON,
             "request message must be a json object",
         ));
     };
-    decode_request_object(object, args_presence)
+    decode_request_object(object)
 }
 
 fn remove_request_string(

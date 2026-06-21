@@ -17,12 +17,6 @@ pub struct GatewayConfigOverrides {
     pub default_sandbox_id: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct GatewayFileConfig {
-    pub manager_socket_path: Option<PathBuf>,
-    pub default_sandbox_id: Option<String>,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConfigError {
     message: String,
@@ -38,14 +32,11 @@ impl std::error::Error for ConfigError {}
 
 impl GatewayConfig {
     pub fn discover(overrides: GatewayConfigOverrides) -> Result<Self, ConfigError> {
-        Self::discover_with(overrides, GatewayFileConfig::default(), |key| {
-            std::env::var_os(key)
-        })
+        Self::discover_with(overrides, |key| std::env::var_os(key))
     }
 
     pub fn discover_with(
         overrides: GatewayConfigOverrides,
-        file_config: GatewayFileConfig,
         env: impl Fn(&str) -> Option<OsString>,
     ) -> Result<Self, ConfigError> {
         let env_socket = env(SANDBOX_MANAGER_SOCKET_ENV).map(PathBuf::from);
@@ -57,7 +48,6 @@ impl GatewayConfig {
         let manager_socket_path = overrides
             .manager_socket_path
             .or(env_socket)
-            .or(file_config.manager_socket_path)
             .unwrap_or_else(|| PathBuf::from(DEFAULT_MANAGER_SOCKET));
 
         if manager_socket_path.as_os_str().is_empty() {
@@ -68,11 +58,7 @@ impl GatewayConfig {
             .default_sandbox_id
             .map(non_empty_sandbox_id)
             .transpose()?
-            .or(env_default_sandbox_id)
-            .or(file_config
-                .default_sandbox_id
-                .map(non_empty_sandbox_id)
-                .transpose()?);
+            .or(env_default_sandbox_id);
 
         Ok(Self {
             manager_socket_path,

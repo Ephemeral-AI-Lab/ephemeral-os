@@ -1,10 +1,6 @@
 mod error;
 mod service;
 
-pub use crate::workspace_remount::{
-    CommandRemountInspection, CommandRemountQuiesce, ProcessGroupController,
-    RemountCancellationToken, RemountSwitchState,
-};
 pub use error::CommandServiceError;
 pub use service::{
     ActiveCommandProcess, ActiveCommandRef, CancellationState, CommandCompletionStore,

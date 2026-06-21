@@ -4,8 +4,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use sandbox_gateway_cli::client::ManagerClient;
 use sandbox_gateway_cli::config::{
-    GatewayConfig, GatewayConfigOverrides, GatewayFileConfig, DEFAULT_MANAGER_SOCKET,
-    SANDBOX_DEFAULT_ID_ENV, SANDBOX_MANAGER_SOCKET_ENV,
+    GatewayConfig, GatewayConfigOverrides, DEFAULT_MANAGER_SOCKET, SANDBOX_DEFAULT_ID_ENV,
+    SANDBOX_MANAGER_SOCKET_ENV,
 };
 use sandbox_gateway_cli::output::render_response;
 use sandbox_gateway_cli::request_builder::{
@@ -276,30 +276,19 @@ async fn help_writes_stdout_and_exits_successfully() -> TestResult {
 }
 
 #[test]
-fn config_precedence_cli_env_file_default() -> TestResult {
-    let default_config = GatewayConfig::discover_with(
-        GatewayConfigOverrides::default(),
-        GatewayFileConfig::default(),
-        |_| None,
-    )?;
+fn config_precedence_cli_env_default() -> TestResult {
+    let default_config = GatewayConfig::discover_with(GatewayConfigOverrides::default(), |_| None)?;
     assert_eq!(
         default_config.manager_socket_path,
         PathBuf::from(DEFAULT_MANAGER_SOCKET)
     );
 
-    let file_config = GatewayFileConfig {
-        manager_socket_path: Some(PathBuf::from("/file/manager.sock")),
-        default_sandbox_id: Some("file-sbox".to_owned()),
-    };
-    let env_config = GatewayConfig::discover_with(
-        GatewayConfigOverrides::default(),
-        file_config.clone(),
-        |key| match key {
+    let env_config =
+        GatewayConfig::discover_with(GatewayConfigOverrides::default(), |key| match key {
             SANDBOX_MANAGER_SOCKET_ENV => Some(OsString::from("/env/manager.sock")),
             SANDBOX_DEFAULT_ID_ENV => Some(OsString::from("env-sbox")),
             _ => None,
-        },
-    )?;
+        })?;
     assert_eq!(
         env_config.manager_socket_path,
         PathBuf::from("/env/manager.sock")
@@ -311,7 +300,6 @@ fn config_precedence_cli_env_file_default() -> TestResult {
             manager_socket_path: Some(PathBuf::from("/cli/manager.sock")),
             default_sandbox_id: Some("cli-sbox".to_owned()),
         },
-        file_config,
         |_| None,
     )?;
     assert_eq!(

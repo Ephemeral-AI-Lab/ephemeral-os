@@ -2,9 +2,7 @@ use std::sync::Arc;
 
 use super::SandboxDaemonServer;
 use crate::server::error::SandboxDaemonError;
-use sandbox_protocol::{
-    decode_request_value, error_kind, ArgsPresence, Request, DAEMON_AUTH_FIELD,
-};
+use sandbox_protocol::{decode_request_value, error_kind, Request, DAEMON_AUTH_FIELD};
 use serde_json::{Map, Value};
 
 impl SandboxDaemonServer {
@@ -105,7 +103,7 @@ fn configured_token(token: Option<&str>) -> Option<&str> {
 }
 
 pub(crate) fn decode_request(value: Value) -> Result<Request, Value> {
-    decode_request_value(value, ArgsPresence::Required)
+    decode_request_value(value)
         .map_err(|err| super::error_response(err.kind(), err.message(), serde_json::json!({})))
 }
 

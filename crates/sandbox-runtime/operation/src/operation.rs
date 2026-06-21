@@ -6,15 +6,15 @@ pub use sandbox_protocol::{
 };
 
 #[derive(Clone, Copy)]
-pub struct OperationEntry {
-    pub spec: &'static OperationSpec,
-    pub dispatch:
+pub(crate) struct OperationEntry {
+    pub(crate) spec: &'static OperationSpec,
+    pub(crate) dispatch:
         fn(&SandboxRuntimeOperations, &sandbox_protocol::Request) -> sandbox_protocol::Response,
 }
 
 impl OperationEntry {
     #[must_use]
-    pub const fn new(
+    pub(crate) const fn new(
         spec: &'static OperationSpec,
         dispatch: fn(
             &SandboxRuntimeOperations,

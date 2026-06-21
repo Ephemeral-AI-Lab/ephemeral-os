@@ -1,8 +1,8 @@
 use sandbox_protocol::manual::render_catalog_manual;
 use sandbox_protocol::{
     catalog_from_value, catalog_to_value, decode_request_object, ArgCliSpec, ArgKind, ArgSpec,
-    ArgsPresence, CliSpec, OperationCatalog, OperationExecutionSpace, OperationFamily,
-    OperationScope, OperationSpec, DAEMON_AUTH_FIELD,
+    CliSpec, OperationCatalog, OperationExecutionSpace, OperationFamily, OperationScope,
+    OperationSpec, DAEMON_AUTH_FIELD,
 };
 use serde_json::{json, Value};
 
@@ -44,8 +44,7 @@ fn decode_request_requires_object_args_when_present() {
         "args": "bad",
     });
     let object = value.as_object().expect("object").clone();
-    let err = decode_request_object(object, ArgsPresence::Required)
-        .expect_err("non-object args rejected");
+    let err = decode_request_object(object).expect_err("non-object args rejected");
     assert_eq!(err.kind(), "invalid_request");
     assert_eq!(err.message(), "args must be an object");
 }
@@ -58,8 +57,7 @@ fn decode_request_rejects_missing_scope() {
         "args": {},
     });
     let object = value.as_object().expect("object").clone();
-    let err =
-        decode_request_object(object, ArgsPresence::Required).expect_err("missing scope rejected");
+    let err = decode_request_object(object).expect_err("missing scope rejected");
 
     assert_eq!(err.kind(), "invalid_request");
     assert_eq!(err.message(), "scope is required");
@@ -77,8 +75,7 @@ fn decode_request_accepts_sandbox_scope() {
         "args": {},
     });
     let object = value.as_object().expect("object").clone();
-    let request =
-        decode_request_object(object, ArgsPresence::Required).expect("request should decode");
+    let request = decode_request_object(object).expect("request should decode");
 
     assert_eq!(
         request.scope,
@@ -100,8 +97,7 @@ fn decode_request_rejects_empty_sandbox_scope_id() {
         "args": {},
     });
     let object = value.as_object().expect("object").clone();
-    let err = decode_request_object(object, ArgsPresence::Required)
-        .expect_err("empty sandbox id rejected");
+    let err = decode_request_object(object).expect_err("empty sandbox id rejected");
 
     assert_eq!(err.kind(), "invalid_request");
     assert_eq!(err.message(), "scope sandbox_id must be non-empty");

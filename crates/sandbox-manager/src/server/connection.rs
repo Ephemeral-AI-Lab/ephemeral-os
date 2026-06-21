@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use sandbox_protocol::{decode_request_value, ArgsPresence, Request};
+use sandbox_protocol::{decode_request_value, Request};
 use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::time::timeout;
@@ -62,7 +62,7 @@ where
 
 fn decode_request_bytes(bytes: &[u8]) -> Result<Request, ServerError> {
     let value = serde_json::from_slice::<Value>(bytes)?;
-    decode_request_value(value, ArgsPresence::Required).map_err(|error| ServerError::BadRequest {
+    decode_request_value(value).map_err(|error| ServerError::BadRequest {
         kind: error.kind(),
         message: error.message().to_owned(),
     })

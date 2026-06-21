@@ -60,14 +60,11 @@ fn ok_result() -> sandbox_runtime_namespace_process::runner::protocol::RunResult
 }
 
 fn load_runner_config() -> Result<sandbox_runtime_namespace_process::runner::config::RunnerConfig> {
-    let doc = match std::env::var_os(DAEMON_CONFIG_YAML_ENV) {
-        Some(path) => {
-            let path = PathBuf::from(path);
-            sandbox_runtime_config::load_path(&path)
-                .with_context(|| format!("load {}", path.display()))?
-        }
-        None => sandbox_runtime_config::load_prd().context("load eos-sandbox/config/prd.yml")?,
-    };
+    let path = std::env::var_os(DAEMON_CONFIG_YAML_ENV)
+        .map(PathBuf::from)
+        .ok_or_else(|| anyhow!("{DAEMON_CONFIG_YAML_ENV} is required for ns-runner"))?;
+    let doc = sandbox_runtime_config::load_path(&path)
+        .with_context(|| format!("load {}", path.display()))?;
     let config = doc
         .section::<sandbox_runtime_namespace_process::runner::config::RunnerConfig>("runner")
         .context("deserialize runner config section")?;

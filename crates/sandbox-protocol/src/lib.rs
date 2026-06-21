@@ -25,6 +25,6 @@ pub use catalog::{
 };
 pub use limits::{MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};
 pub use operation_spec::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationSpec};
-pub use request::{decode_request_object, decode_request_value, ArgsPresence, Request};
+pub use request::{decode_request_object, decode_request_value, Request};
 pub use response::{error_response_with_details, response_line, Response};
 pub use scope::OperationScope;
