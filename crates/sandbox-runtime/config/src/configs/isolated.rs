@@ -23,7 +23,6 @@ pub struct IsolatedNetworkConfig {
     pub setup_timeout_s: f64,
     pub exit_grace_s: f64,
     pub rfc1918_egress: Rfc1918Egress,
-    pub workspace_root: PathBuf,
     pub sample_interval_s: f64,
 }
 
@@ -46,7 +45,6 @@ impl Default for IsolatedNetworkConfig {
             setup_timeout_s: 30.0,
             exit_grace_s: 0.25,
             rfc1918_egress: Rfc1918Egress::Allow,
-            workspace_root: PathBuf::from("/testbed"),
             sample_interval_s: 0.5,
         }
     }
@@ -65,8 +63,7 @@ impl IsolatedNetworkConfig {
         require_ratio(self.memavail_fraction, "isolated.memavail_fraction")?;
         require_f64_gt(self.setup_timeout_s, 0.0, "isolated.setup_timeout_s")?;
         require_f64_at_least(self.exit_grace_s, 0.0, "isolated.exit_grace_s")?;
-        require_absolute(&self.workspace_root, "isolated.workspace_root")?;
-        reject_dangerous_scratch_root(&self.scratch_root, &self.workspace_root)?;
+        reject_dangerous_scratch_root(&self.scratch_root)?;
         if self.sample_interval_s.is_finite() && self.sample_interval_s >= 0.01 {
             Ok(())
         } else {
@@ -78,20 +75,11 @@ impl IsolatedNetworkConfig {
     }
 }
 
-fn reject_dangerous_scratch_root(
-    scratch_root: &Path,
-    workspace_root: &Path,
-) -> Result<(), ConfigFieldError> {
+fn reject_dangerous_scratch_root(scratch_root: &Path) -> Result<(), ConfigFieldError> {
     if is_filesystem_root(scratch_root) {
         return Err(ConfigFieldError::new(
             "isolated.scratch_root",
             "must not be the filesystem root",
-        ));
-    }
-    if paths_match_or_resolve_equal(scratch_root, workspace_root) {
-        return Err(ConfigFieldError::new(
-            "isolated.scratch_root",
-            "must not resolve to isolated.workspace_root",
         ));
     }
     Ok(())
@@ -103,12 +91,4 @@ fn is_filesystem_root(path: &Path) -> bool {
             .canonicalize()
             .ok()
             .is_some_and(|canonical| canonical.parent().is_none())
-}
-
-fn paths_match_or_resolve_equal(left: &Path, right: &Path) -> bool {
-    left == right
-        || match (left.canonicalize(), right.canonicalize()) {
-            (Ok(left), Ok(right)) => left == right,
-            _ => false,
-        }
 }

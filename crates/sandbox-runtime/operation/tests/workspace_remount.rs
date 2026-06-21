@@ -314,16 +314,12 @@ fn build_services_with_process_group_controller(
     }
 }
 
-fn create_request(workspace_root: PathBuf) -> CreateWorkspaceRequest {
-    create_request_with_profile(workspace_root, WorkspaceProfile::SharedNetwork)
+fn create_request() -> CreateWorkspaceRequest {
+    create_request_with_profile(WorkspaceProfile::SharedNetwork)
 }
 
-fn create_request_with_profile(
-    workspace_root: PathBuf,
-    profile: WorkspaceProfile,
-) -> CreateWorkspaceRequest {
+fn create_request_with_profile(profile: WorkspaceProfile) -> CreateWorkspaceRequest {
     CreateWorkspaceRequest {
-        workspace_root,
         layer_stack_root: PathBuf::from("/layers"),
         profile,
     }
@@ -415,10 +411,7 @@ fn workspace_remount_isolated_no_active_command_path_succeeds_and_clears_pending
     }));
     let handler = services
         .workspace
-        .create_workspace_session(create_request_with_profile(
-            workspace_root,
-            WorkspaceProfile::Isolated,
-        ))
+        .create_workspace_session(create_request_with_profile(WorkspaceProfile::Isolated))
         .expect("create isolated workspace session succeeds");
 
     let outcome = services
@@ -461,7 +454,7 @@ fn workspace_remount_no_active_command_path_succeeds_and_clears_pending() {
     }));
     let handler = services
         .workspace
-        .create_workspace_session(create_request(workspace_root))
+        .create_workspace_session(create_request())
         .expect("create workspace session succeeds");
 
     let outcome = services
@@ -510,7 +503,7 @@ fn workspace_remount_live_command_success_finishes_before_resume() {
     fake.push_remount_result(Ok(RemountWorkspaceResult { handle: remounted }));
     let handler = services
         .workspace
-        .create_workspace_session(create_request(workspace_root.clone()))
+        .create_workspace_session(create_request())
         .expect("create workspace session succeeds");
     services
         .command
@@ -555,7 +548,7 @@ fn workspace_remount_cancel_during_critical_switch_still_applies_and_resumes() {
     fake.push_remount_result(Ok(RemountWorkspaceResult { handle: remounted }));
     let handler = services
         .workspace
-        .create_workspace_session(create_request(workspace_root.clone()))
+        .create_workspace_session(create_request())
         .expect("create workspace session succeeds");
     let command_session_id = services
         .command
@@ -599,7 +592,7 @@ fn workspace_remount_blocked_inspection_marks_blocked_and_skips_resource_remount
     )));
     let handler = services
         .workspace
-        .create_workspace_session(create_request(workspace_root.clone()))
+        .create_workspace_session(create_request())
         .expect("create workspace session succeeds");
     services
         .command
@@ -637,7 +630,7 @@ fn workspace_remount_resource_failure_blocks_state_after_cleanup() {
     }));
     let handler = services
         .workspace
-        .create_workspace_session(create_request(workspace_root))
+        .create_workspace_session(create_request())
         .expect("create workspace session succeeds");
 
     let error = services

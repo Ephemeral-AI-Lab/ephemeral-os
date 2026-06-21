@@ -4,9 +4,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use sandbox_gateway::{GatewayConfig, SandboxGatewayServer};
 use sandbox_manager::{
-    ManagerError, ManagerServices, SandboxDaemonClient, SandboxDaemonEndpoint,
-    SandboxDaemonInstaller, SandboxId, SandboxManagerRouter, SandboxRecord, SandboxRuntime,
-    SandboxState, SandboxStore,
+    CreateSandboxRequest, ManagerError, ManagerServices, SandboxDaemonClient,
+    SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxId, SandboxManagerRouter, SandboxRecord,
+    SandboxRuntime, SandboxState, SandboxStore,
 };
 use sandbox_protocol::{
     error_kind, OperationCatalog, OperationExecutionSpace, OperationScope, OperationSpec, Request,
@@ -25,7 +25,7 @@ static TEST_DAEMON_SPECS: &[&OperationSpec] = &[];
 struct FakeRuntime;
 
 impl SandboxRuntime for FakeRuntime {
-    fn create_sandbox(&self, _id: &SandboxId) -> Result<(), ManagerError> {
+    fn create_sandbox(&self, _request: &CreateSandboxRequest) -> Result<(), ManagerError> {
         Ok(())
     }
 
@@ -128,6 +128,7 @@ fn sandbox_id(value: &str) -> SandboxId {
 fn ready_record(value: &str, daemon: Option<SandboxDaemonEndpoint>) -> SandboxRecord {
     SandboxRecord {
         id: sandbox_id(value),
+        workspace_root: PathBuf::from("/testbed"),
         state: SandboxState::Ready,
         daemon,
     }

@@ -43,7 +43,6 @@ fn runtime_service_create_and_destroy_are_backed_by_impl_files(
     let service = fixture.service();
 
     let handle = service.create_workspace(CreateWorkspaceRequest {
-        workspace_root: fixture.workspace_root.clone(),
         layer_stack_root: fixture.layer_stack_root.clone(),
         profile: WorkspaceProfile::SharedNetwork,
     })?;
@@ -102,11 +101,11 @@ impl Fixture {
     }
 
     fn service(&self) -> WorkspaceRuntimeService {
-        let caps = ResourceCaps {
-            workspace_root: self.workspace_root.to_string_lossy().into_owned(),
-            ..ResourceCaps::default()
-        };
-        WorkspaceRuntimeService::new(WorkspaceModeManager::new(caps, self.scratch_root.clone()))
+        WorkspaceRuntimeService::new(WorkspaceModeManager::new(
+            self.workspace_root.to_string_lossy().into_owned(),
+            ResourceCaps::default(),
+            self.scratch_root.clone(),
+        ))
     }
 }
 

@@ -20,7 +20,6 @@ isolated:
   setup_timeout_s: 30
   exit_grace_s: 0.25
   rfc1918_egress: allow
-  workspace_root: /testbed
   sample_interval_s: 0.5
 
 runner:

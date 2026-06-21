@@ -308,24 +308,30 @@ separate Cargo package.
 
 ## Commands
 
+Expose the repo-local wrappers:
+
+```sh
+export PATH="$PWD/bin:$PATH"
+```
+
 Start the long-lived gateway:
 
 ```sh
-cargo run -p sandbox-gateway -- serve
+start-sandbox-gateway
 ```
 
 Use the CLI through the gateway:
 
 ```sh
-cargo run -p sandbox-gateway --bin sandbox-cli -- manager list_sandboxes
-cargo run -p sandbox-gateway --bin sandbox-cli -- runtime --sandbox-id sbox-1 exec_command --workspace-session-id ws-1 pwd
+sandbox-cli manager list_sandboxes
+sandbox-cli runtime --sandbox-id sbox-1 exec_command --workspace-session-id ws-1 pwd
 ```
 
 Override the gateway socket:
 
 ```sh
-cargo run -p sandbox-gateway -- serve --gateway-socket /tmp/eos-gateway.sock
-cargo run -p sandbox-gateway --bin sandbox-cli -- --gateway-socket /tmp/eos-gateway.sock manager list_sandboxes
+start-sandbox-gateway --gateway-socket /tmp/eos-gateway.sock
+sandbox-cli --gateway-socket /tmp/eos-gateway.sock manager list_sandboxes
 ```
 
 ## Tests

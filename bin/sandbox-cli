@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+set -eu
+
+script_dir=$(CDPATH= cd "$(dirname "$0")" && pwd)
+repo_root=$(CDPATH= cd "$script_dir/.." && pwd)
+
+exec cargo run --quiet --manifest-path "$repo_root/Cargo.toml" -p sandbox-gateway --bin sandbox-cli -- "$@"

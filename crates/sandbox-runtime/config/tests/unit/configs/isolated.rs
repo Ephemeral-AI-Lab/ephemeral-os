@@ -22,10 +22,6 @@ fn config_validation_rejects_invalid_isolated_values() {
     assert_invalid(cfg, "isolated.scratch_root");
 
     let mut cfg = prd_config();
-    cfg.scratch_root = cfg.workspace_root.clone();
-    assert_invalid(cfg, "isolated.scratch_root");
-
-    let mut cfg = prd_config();
     cfg.total_cap = 0;
     assert_invalid(cfg, "isolated.total_cap");
 

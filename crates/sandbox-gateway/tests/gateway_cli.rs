@@ -167,7 +167,9 @@ fn manual_renders_manager_and_runtime_sections_from_catalog_documents() -> TestR
 
     assert!(manual.contains("Sandbox Manager Operations"));
     assert!(manual.contains("Sandbox Runtime Operations"));
-    assert!(manual.contains("sandbox-cli manager create_sandbox --sandbox-id sbox-1"));
+    assert!(manual.contains(
+        "sandbox-cli manager create_sandbox --sandbox-id sbox-1 --workspace-root /testbed"
+    ));
     assert!(manual.contains(
         "sandbox-cli runtime --sandbox-id sbox-1 exec_command --workspace-session-id ws-1 pwd"
     ));
@@ -177,7 +179,10 @@ fn manual_renders_manager_and_runtime_sections_from_catalog_documents() -> TestR
 
 #[test]
 fn manager_execution_space_uses_system_scope_even_with_sandbox_id_arg() -> TestResult {
-    let request = build_manager_request("create_sandbox", &["--sandbox-id", "sbox-1"])?;
+    let request = build_manager_request(
+        "create_sandbox",
+        &["--sandbox-id", "sbox-1", "--workspace-root", "/testbed"],
+    )?;
 
     assert_eq!(request.scope, OperationScope::System);
     Ok(())
@@ -185,9 +190,15 @@ fn manager_execution_space_uses_system_scope_even_with_sandbox_id_arg() -> TestR
 
 #[test]
 fn manager_sandbox_id_arg_remains_regular_arg() -> TestResult {
-    let request = build_manager_request("create_sandbox", &["--sandbox-id", "sbox-1"])?;
+    let request = build_manager_request(
+        "create_sandbox",
+        &["--sandbox-id", "sbox-1", "--workspace-root", "/testbed"],
+    )?;
 
-    assert_eq!(request.args, json!({ "sandbox_id": "sbox-1" }));
+    assert_eq!(
+        request.args,
+        json!({ "sandbox_id": "sbox-1", "workspace_root": "/testbed" })
+    );
     Ok(())
 }
 
@@ -447,12 +458,23 @@ fn manager_catalog() -> Result<OperationCatalogDocument, Box<dyn std::error::Err
                             "flag": "--sandbox-id",
                             "positional": null
                         }
+                    },
+                    {
+                        "name": "workspace_root",
+                        "kind": "path",
+                        "required": true,
+                        "help": "Absolute workspace root mounted inside this sandbox.",
+                        "default": null,
+                        "cli": {
+                            "flag": "--workspace-root",
+                            "positional": null
+                        }
                     }
                 ],
                 "cli": {
                     "path": ["manager"],
-                    "usage": "sandbox-cli manager create_sandbox --sandbox-id ID",
-                    "examples": ["sandbox-cli manager create_sandbox --sandbox-id sbox-1"]
+                    "usage": "sandbox-cli manager create_sandbox --sandbox-id ID --workspace-root PATH",
+                    "examples": ["sandbox-cli manager create_sandbox --sandbox-id sbox-1 --workspace-root /testbed"]
                 }
             }
         ]

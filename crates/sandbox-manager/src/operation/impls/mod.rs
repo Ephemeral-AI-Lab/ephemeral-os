@@ -7,6 +7,8 @@ pub(crate) mod list_sandboxes;
 pub(crate) mod start_sandbox_daemon;
 pub(crate) mod stop_sandbox_daemon;
 
+use std::path::PathBuf;
+
 use serde_json::{json, Value};
 
 use crate::{ManagerError, SandboxDaemonEndpoint, SandboxId, SandboxRecord, SandboxState};
@@ -45,6 +47,17 @@ pub(crate) fn sandbox_id(
         .and_then(|value| SandboxId::new(value).map_err(ManagerError::into_response))
 }
 
+pub(crate) fn workspace_root(
+    request: &sandbox_protocol::Request,
+) -> Result<PathBuf, sandbox_protocol::Response> {
+    let raw = request.required_string("workspace_root")?;
+    let path = PathBuf::from(&raw);
+    if !path.is_absolute() {
+        return Err(ManagerError::InvalidWorkspaceRoot { value: raw }.into_response());
+    }
+    Ok(path)
+}
+
 pub(crate) fn ready_record(
     services: &super::dispatch::ManagerServices,
     id: &SandboxId,
@@ -79,6 +92,7 @@ pub(crate) fn records_value(records: Vec<SandboxRecord>) -> Value {
 pub(crate) fn record_value(record: SandboxRecord) -> Value {
     json!({
         "id": record.id.as_str(),
+        "workspace_root": record.workspace_root.to_string_lossy(),
         "state": record.state.as_str(),
         "daemon": record.daemon.map(endpoint_value),
     })

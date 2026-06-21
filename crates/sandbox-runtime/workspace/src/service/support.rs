@@ -2,9 +2,7 @@ use std::path::Path;
 
 use crate::error::WorkspaceError;
 use crate::model::WorkspaceHandle;
-use crate::profile::{
-    IsolatedNetworkError, WorkspaceModeId, WorkspaceModeManager, WorkspaceModeSnapshot,
-};
+use crate::profile::{IsolatedNetworkError, WorkspaceModeId, WorkspaceModeSnapshot};
 use crate::service::WorkspaceRuntimeState;
 
 pub(crate) fn ensure_non_empty(value: &str, field: &'static str) -> Result<(), WorkspaceError> {
@@ -22,25 +20,6 @@ pub(crate) fn ensure_absolute(path: &Path, field: &'static str) -> Result<(), Wo
         return Err(WorkspaceError::InvalidRequest {
             field,
             message: format!("must be absolute: {}", path.display()),
-        });
-    }
-    Ok(())
-}
-
-pub(crate) fn ensure_configured_workspace_root(
-    manager: &WorkspaceModeManager,
-    requested: &Path,
-) -> Result<(), WorkspaceError> {
-    let configured = manager
-        .validated_workspace_root()
-        .map_err(workspace_error_from_mode_error)?;
-    if requested != Path::new(&configured) {
-        return Err(WorkspaceError::InvalidRequest {
-            field: "workspace_root",
-            message: format!(
-                "must match configured workspace root {configured}: {}",
-                requested.display()
-            ),
         });
     }
     Ok(())

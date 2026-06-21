@@ -170,7 +170,6 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
         format!(
             "{:?}",
             CreateWorkspaceRequest {
-                workspace_root: "/workspace".into(),
                 layer_stack_root: "/layers".into(),
                 profile: WorkspaceProfile::SharedNetwork,
             }
@@ -311,7 +310,6 @@ fn public_dtos_construct_clone_and_compare() {
         layer_count: 1,
     };
     let create = CreateWorkspaceRequest {
-        workspace_root: "/workspace".into(),
         layer_stack_root: "/layers".into(),
         profile: WorkspaceProfile::SharedNetwork,
     };

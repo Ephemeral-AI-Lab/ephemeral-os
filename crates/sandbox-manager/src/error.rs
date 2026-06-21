@@ -7,6 +7,9 @@ pub enum ManagerError {
     #[error("invalid sandbox id: {value}")]
     InvalidSandboxId { value: String },
 
+    #[error("invalid workspace root: {value}")]
+    InvalidWorkspaceRoot { value: String },
+
     #[error("sandbox already exists: {id}")]
     DuplicateSandbox { id: SandboxId },
 
@@ -41,6 +44,7 @@ impl ManagerError {
     pub const fn protocol_kind(&self) -> &'static str {
         match self {
             Self::InvalidSandboxId { .. }
+            | Self::InvalidWorkspaceRoot { .. }
             | Self::DuplicateSandbox { .. }
             | Self::MissingSandbox { .. }
             | Self::InvalidStateTransition { .. }

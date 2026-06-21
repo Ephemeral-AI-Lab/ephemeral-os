@@ -15,5 +15,5 @@ pub use error::ManagerError;
 pub use model::{SandboxDaemonEndpoint, SandboxId, SandboxRecord, SandboxState};
 pub use operation::{dispatch_operation, operation_catalog, operation_specs, ManagerServices};
 pub use router::SandboxManagerRouter;
-pub use runtime::SandboxRuntime;
+pub use runtime::{CreateSandboxRequest, SandboxRuntime};
 pub use store::SandboxStore;

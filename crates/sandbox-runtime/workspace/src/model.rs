@@ -385,7 +385,6 @@ struct WorkspaceLaunchFds {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CreateWorkspaceRequest {
-    pub workspace_root: PathBuf,
     pub layer_stack_root: PathBuf,
     pub profile: WorkspaceProfile,
 }

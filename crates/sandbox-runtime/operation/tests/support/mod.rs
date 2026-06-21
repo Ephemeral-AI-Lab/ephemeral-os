@@ -268,9 +268,8 @@ pub(crate) fn build_services_with_launch_driver(
     TestServices { workspace, command }
 }
 
-pub(crate) fn create_request(workspace_root: PathBuf) -> CreateWorkspaceRequest {
+pub(crate) fn create_request() -> CreateWorkspaceRequest {
     CreateWorkspaceRequest {
-        workspace_root,
         layer_stack_root: PathBuf::from("/layers"),
         profile: WorkspaceProfile::SharedNetwork,
     }

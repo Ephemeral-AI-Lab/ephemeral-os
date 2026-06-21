@@ -2,8 +2,9 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use sandbox_manager::{
-    ManagerError, ManagerServices, SandboxDaemonClient, SandboxDaemonEndpoint,
-    SandboxDaemonInstaller, SandboxId, SandboxRecord, SandboxRuntime, SandboxState, SandboxStore,
+    CreateSandboxRequest, ManagerError, ManagerServices, SandboxDaemonClient,
+    SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxId, SandboxRecord, SandboxRuntime,
+    SandboxState, SandboxStore,
 };
 use sandbox_protocol::{
     ArgKind, OperationCatalog, OperationExecutionSpace, OperationFamily, OperationScope,
@@ -23,16 +24,16 @@ static TEST_RUNTIME_SPECS: &[&OperationSpec] = &[&TEST_RUNTIME_SPEC];
 
 #[derive(Default)]
 struct FakeRuntime {
-    created: Mutex<Vec<String>>,
+    created: Mutex<Vec<(String, PathBuf)>>,
     destroyed: Mutex<Vec<String>>,
 }
 
 impl SandboxRuntime for FakeRuntime {
-    fn create_sandbox(&self, id: &SandboxId) -> Result<(), ManagerError> {
-        self.created
-            .lock()
-            .expect("created lock")
-            .push(id.as_str().to_owned());
+    fn create_sandbox(&self, request: &CreateSandboxRequest) -> Result<(), ManagerError> {
+        self.created.lock().expect("created lock").push((
+            request.id.as_str().to_owned(),
+            request.workspace_root.clone(),
+        ));
         Ok(())
     }
 
@@ -196,11 +197,15 @@ fn describe_manager_operations_serializes_cli_metadata() {
     );
     assert_eq!(
         catalog["operations"][0]["cli"]["usage"],
-        "sandbox-cli manager create_sandbox --sandbox-id ID"
+        "sandbox-cli manager create_sandbox --sandbox-id ID --workspace-root PATH"
     );
     assert_eq!(
         catalog["operations"][0]["cli"]["examples"][0],
-        "sandbox-cli manager create_sandbox --sandbox-id sbox-1"
+        "sandbox-cli manager create_sandbox --sandbox-id sbox-1 --workspace-root /testbed"
+    );
+    assert_eq!(
+        catalog["operations"][0]["args"][1]["cli"]["flag"],
+        "--workspace-root"
     );
 }
 
@@ -208,8 +213,13 @@ fn describe_manager_operations_serializes_cli_metadata() {
 fn create_list_inspect_destroy_sandbox_with_fake_runtime() {
     let (services, runtime, _installer, _client) = services();
 
-    let created = dispatch(&services, "create_sandbox", json!({"sandbox_id": "sbox-1"}));
+    let created = dispatch(
+        &services,
+        "create_sandbox",
+        json!({"sandbox_id": "sbox-1", "workspace_root": "/testbed"}),
+    );
     assert_eq!(created["id"], "sbox-1");
+    assert_eq!(created["workspace_root"], "/testbed");
     assert_eq!(created["state"], "ready");
 
     let listed = dispatch(&services, "list_sandboxes", json!({}));
@@ -239,7 +249,7 @@ fn create_list_inspect_destroy_sandbox_with_fake_runtime() {
     );
     assert_eq!(
         runtime.created.lock().expect("created lock").as_slice(),
-        ["sbox-1"]
+        [("sbox-1".to_owned(), PathBuf::from("/testbed"))]
     );
     assert_eq!(
         runtime.destroyed.lock().expect("destroyed lock").as_slice(),
@@ -250,7 +260,11 @@ fn create_list_inspect_destroy_sandbox_with_fake_runtime() {
 #[test]
 fn start_stop_daemon_updates_endpoint_with_fake_installer() {
     let (services, _runtime, installer, _client) = services();
-    let _ = dispatch(&services, "create_sandbox", json!({"sandbox_id": "sbox-1"}));
+    let _ = dispatch(
+        &services,
+        "create_sandbox",
+        json!({"sandbox_id": "sbox-1", "workspace_root": "/testbed"}),
+    );
 
     let started = dispatch(
         &services,
@@ -279,7 +293,11 @@ fn start_stop_daemon_updates_endpoint_with_fake_installer() {
 #[test]
 fn describe_daemon_operations_uses_daemon_client_trait() {
     let (services, _runtime, _installer, client) = services();
-    let _ = dispatch(&services, "create_sandbox", json!({"sandbox_id": "sbox-1"}));
+    let _ = dispatch(
+        &services,
+        "create_sandbox",
+        json!({"sandbox_id": "sbox-1", "workspace_root": "/testbed"}),
+    );
     let _ = dispatch(
         &services,
         "start_sandbox_daemon",
@@ -311,11 +329,15 @@ fn describe_daemon_operations_uses_daemon_client_trait() {
 fn store_duplicate_and_missing_sandbox_error_cases() {
     let store = SandboxStore::new();
     store
-        .insert(SandboxRecord::new(id("sbox-1"), SandboxState::Ready))
+        .insert(SandboxRecord::new(
+            id("sbox-1"),
+            PathBuf::from("/testbed"),
+            SandboxState::Ready,
+        ))
         .expect("insert sandbox");
 
     let duplicate = store
-        .create(id("sbox-1"))
+        .create(id("sbox-1"), PathBuf::from("/testbed"))
         .expect_err("duplicate should fail");
     assert!(matches!(duplicate, ManagerError::DuplicateSandbox { .. }));
 

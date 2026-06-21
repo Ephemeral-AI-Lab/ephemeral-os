@@ -7,11 +7,13 @@ pub(crate) const CREATE_SANDBOX: OperationSpec = OperationSpec {
     name: "create_sandbox",
     family: OperationFamily::Run,
     summary: "Create a host-side sandbox record and runtime sandbox.",
-    args: SANDBOX_ID_ARGS,
+    args: CREATE_SANDBOX_ARGS,
     cli: Some(CliSpec {
         path: &["manager", "create_sandbox"],
-        usage: "sandbox-cli manager create_sandbox --sandbox-id ID",
-        examples: &["sandbox-cli manager create_sandbox --sandbox-id sbox-1"],
+        usage: "sandbox-cli manager create_sandbox --sandbox-id ID --workspace-root PATH",
+        examples: &[
+            "sandbox-cli manager create_sandbox --sandbox-id sbox-1 --workspace-root /testbed",
+        ],
     }),
 };
 
@@ -108,6 +110,27 @@ const SANDBOX_ID_ARGS: &[ArgSpec] = &[ArgSpec::required(
         positional: None,
     }),
 )];
+
+const CREATE_SANDBOX_ARGS: &[ArgSpec] = &[
+    ArgSpec::required(
+        "sandbox_id",
+        ArgKind::String,
+        "Sandbox id.",
+        Some(ArgCliSpec {
+            flag: Some("--sandbox-id"),
+            positional: None,
+        }),
+    ),
+    ArgSpec::required(
+        "workspace_root",
+        ArgKind::Path,
+        "Absolute workspace root mounted inside this sandbox.",
+        Some(ArgCliSpec {
+            flag: Some("--workspace-root"),
+            positional: None,
+        }),
+    ),
+];
 
 const SPECS: &[&OperationSpec] = &[
     &CREATE_SANDBOX,

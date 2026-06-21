@@ -162,7 +162,7 @@ fn session_with_driver(
     let env = build_services_with_launch_driver(Arc::clone(&fake), Arc::new(driver));
     let handler = env
         .workspace
-        .create_workspace_session(create_request(workspace_root.clone()))
+        .create_workspace_session(create_request())
         .expect("session create succeeds");
 
     let output = env
@@ -461,7 +461,7 @@ fn command_transcript_rows_report_running_status_for_active_command() {
     );
     let handler = env
         .workspace
-        .create_workspace_session(create_request(workspace_root))
+        .create_workspace_session(create_request())
         .expect("session create succeeds");
     let output = env
         .command

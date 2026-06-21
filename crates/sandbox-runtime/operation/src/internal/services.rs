@@ -18,6 +18,11 @@ impl SandboxRuntimeOperations {
     #[must_use]
     pub fn from_config(config: SandboxRuntimeConfig) -> Self {
         let workspace_runtime = Arc::new(WorkspaceRuntimeService::new(WorkspaceModeManager::new(
+            config
+                .workspace
+                .workspace_root
+                .to_string_lossy()
+                .into_owned(),
             config.workspace.caps.into(),
             config.workspace.scratch_root,
         )));
@@ -38,6 +43,7 @@ pub struct SandboxRuntimeConfig {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct WorkspaceRuntimeConfig {
+    pub workspace_root: std::path::PathBuf,
     pub scratch_root: std::path::PathBuf,
     pub caps: WorkspaceResourceCaps,
 }
@@ -56,7 +62,6 @@ pub struct WorkspaceResourceCaps {
     pub setup_timeout_s: f64,
     pub exit_grace_s: f64,
     pub rfc1918_egress: Rfc1918Egress,
-    pub workspace_root: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -78,7 +83,6 @@ impl From<WorkspaceResourceCaps> for crate::workspace_crate::profile::ResourceCa
                 Rfc1918Egress::Allow => crate::workspace_crate::profile::Rfc1918Egress::Allow,
                 Rfc1918Egress::Deny => crate::workspace_crate::profile::Rfc1918Egress::Deny,
             },
-            workspace_root: caps.workspace_root,
         }
     }
 }

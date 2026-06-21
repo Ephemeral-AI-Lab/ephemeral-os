@@ -59,6 +59,15 @@ live in `crates/sandbox-runtime/operation`; CAS fixtures live with
 ## Common tasks
 
 ```sh
+# expose repo-local sandbox tools for this shell
+export PATH="$PWD/bin:$PATH"
+
+# start the public gateway socket; Ctrl-C stops it
+start-sandbox-gateway
+
+# in another shell, use the gateway client directly
+sandbox-cli manager list_sandboxes
+
 # package the in-container daemon binary for Docker/E2E iteration
 cargo run -p xtask -- package
 

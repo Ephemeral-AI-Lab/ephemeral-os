@@ -36,15 +36,17 @@ impl fmt::Display for SandboxId {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SandboxRecord {
     pub id: SandboxId,
+    pub workspace_root: PathBuf,
     pub state: SandboxState,
     pub daemon: Option<SandboxDaemonEndpoint>,
 }
 
 impl SandboxRecord {
     #[must_use]
-    pub const fn new(id: SandboxId, state: SandboxState) -> Self {
+    pub fn new(id: SandboxId, workspace_root: PathBuf, state: SandboxState) -> Self {
         Self {
             id,
+            workspace_root,
             state,
             daemon: None,
         }

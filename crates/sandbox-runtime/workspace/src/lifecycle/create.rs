@@ -11,7 +11,8 @@ use crate::namespace::NamespacePlan;
 use crate::overlay::dirs::create_overlay_dirs;
 use crate::profile::manager::IsolatedNetworkError;
 use crate::profile::{
-    WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeManager, WorkspaceModeSnapshot,
+    validate_workspace_root, WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeManager,
+    WorkspaceModeSnapshot,
 };
 
 impl WorkspaceModeManager {
@@ -147,17 +148,8 @@ impl WorkspaceModeManager {
     }
 
     pub(crate) fn validated_workspace_root(&self) -> Result<String, IsolatedNetworkError> {
-        let workspace_root = self.caps.workspace_root.trim();
-        if workspace_root.is_empty() {
-            return Err(IsolatedNetworkError::InvalidArgument(
-                "workspace_root is required".to_owned(),
-            ));
-        }
-        if !std::path::Path::new(workspace_root).is_absolute() {
-            return Err(IsolatedNetworkError::InvalidArgument(format!(
-                "workspace_root must be absolute: {workspace_root}"
-            )));
-        }
+        let workspace_root = self.workspace_root.trim();
+        validate_workspace_root(workspace_root)?;
         Ok(workspace_root.to_owned())
     }
 }

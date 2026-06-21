@@ -5,7 +5,7 @@
 //! teardown, and persistence behavior.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
@@ -19,8 +19,6 @@ pub use crate::lifecycle::remount::{RemountOverlayReport, RemountProbe, Workspac
 pub use crate::lifecycle::ExitOutcome;
 
 pub(crate) const PERSISTED_HANDLES_SCHEMA_VERSION: u32 = 1;
-
-const DEFAULT_WORKSPACE_ROOT: &str = "/testbed";
 const HOST_BUDGET_FALLBACK_BYTES: u64 = 1_u64 << 62;
 const KIB_BYTES: u64 = 1_024;
 const OWNED_SCRATCH_DIR: &str = "eos-isolated";
@@ -41,7 +39,6 @@ pub struct ResourceCaps {
     pub setup_timeout_s: f64,
     pub exit_grace_s: f64,
     pub rfc1918_egress: Rfc1918Egress,
-    pub workspace_root: String,
 }
 
 impl Default for ResourceCaps {
@@ -54,7 +51,6 @@ impl Default for ResourceCaps {
             setup_timeout_s: 30.0,
             exit_grace_s: 0.25,
             rfc1918_egress: Rfc1918Egress::Allow,
-            workspace_root: DEFAULT_WORKSPACE_ROOT.to_owned(),
         }
     }
 }
@@ -102,6 +98,7 @@ impl IsolatedNetworkError {
 }
 
 pub struct WorkspaceModeManager {
+    pub(crate) workspace_root: String,
     pub(crate) caps: ResourceCaps,
     pub(crate) runtime: NamespaceRuntime,
     pub(crate) network: IsolatedNetwork,
@@ -111,17 +108,23 @@ pub struct WorkspaceModeManager {
 
 impl WorkspaceModeManager {
     #[must_use]
-    pub fn new(caps: ResourceCaps, scratch_root: PathBuf) -> Self {
-        Self::with_runtime(caps, scratch_root, NamespaceRuntime::new())
+    pub fn new(
+        workspace_root: impl Into<String>,
+        caps: ResourceCaps,
+        scratch_root: PathBuf,
+    ) -> Self {
+        Self::with_runtime(workspace_root, caps, scratch_root, NamespaceRuntime::new())
     }
 
     pub(crate) fn with_runtime(
+        workspace_root: impl Into<String>,
         caps: ResourceCaps,
         scratch_root: PathBuf,
         runtime: NamespaceRuntime,
     ) -> Self {
         let network = IsolatedNetwork::new(caps.rfc1918_egress);
         Self {
+            workspace_root: workspace_root.into(),
             caps,
             runtime,
             network,
@@ -141,6 +144,21 @@ impl WorkspaceModeManager {
     pub(crate) fn owned_scratch_root(&self) -> PathBuf {
         self.scratch_root.join(OWNED_SCRATCH_DIR)
     }
+}
+
+pub(crate) fn validate_workspace_root(workspace_root: &str) -> Result<(), IsolatedNetworkError> {
+    let workspace_root = workspace_root.trim();
+    if workspace_root.is_empty() {
+        return Err(IsolatedNetworkError::InvalidArgument(
+            "workspace_root is required".to_owned(),
+        ));
+    }
+    if !Path::new(workspace_root).is_absolute() {
+        return Err(IsolatedNetworkError::InvalidArgument(format!(
+            "workspace_root must be absolute: {workspace_root}"
+        )));
+    }
+    Ok(())
 }
 
 fn check_host_capacity_against_budget(

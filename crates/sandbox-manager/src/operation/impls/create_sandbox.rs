@@ -1,6 +1,6 @@
-use crate::{ManagerError, SandboxState};
+use crate::{CreateSandboxRequest, ManagerError, SandboxState};
 
-use super::{record_value, sandbox_id};
+use super::{record_value, sandbox_id, workspace_root};
 
 pub(crate) fn dispatch(
     services: &crate::operation::ManagerServices,
@@ -10,10 +10,18 @@ pub(crate) fn dispatch(
         Ok(id) => id,
         Err(response) => return response,
     };
-    if let Err(error) = services.store.create(id.clone()) {
+    let workspace_root = match workspace_root(request) {
+        Ok(workspace_root) => workspace_root,
+        Err(response) => return response,
+    };
+    if let Err(error) = services.store.create(id.clone(), workspace_root.clone()) {
         return error.into_response();
     }
-    match services.runtime.create_sandbox(&id) {
+    let create_request = CreateSandboxRequest {
+        id: id.clone(),
+        workspace_root,
+    };
+    match services.runtime.create_sandbox(&create_request) {
         Ok(()) => {
             match services
                 .store

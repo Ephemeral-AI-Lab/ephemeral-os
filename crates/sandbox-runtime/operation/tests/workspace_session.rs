@@ -199,7 +199,6 @@ fn fake_workspace_runtime(fake: &Arc<FakeWorkspaceService>) -> Arc<WorkspaceRunt
 
 fn create_request() -> CreateWorkspaceRequest {
     CreateWorkspaceRequest {
-        workspace_root: PathBuf::from("/workspace"),
         layer_stack_root: PathBuf::from("/layers"),
         profile: WorkspaceProfile::SharedNetwork,
     }

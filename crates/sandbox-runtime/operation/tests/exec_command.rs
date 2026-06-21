@@ -38,7 +38,7 @@ fn create_session(
         profile,
     )));
     env.workspace
-        .create_workspace_session(create_request(workspace_root))
+        .create_workspace_session(create_request())
         .expect("session create succeeds")
         .workspace_session_id
 }
@@ -228,7 +228,7 @@ fn exec_command_missing_launch_material_rejects_without_spawn() {
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
     let workspace_session_id = env
         .workspace
-        .create_workspace_session(create_request(workspace_root))
+        .create_workspace_session(create_request())
         .expect("session create succeeds")
         .workspace_session_id;
 
@@ -260,7 +260,7 @@ fn exec_command_unavailable_workspace_launch_rejects_without_spawn() {
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
     let workspace_session_id = env
         .workspace
-        .create_workspace_session(create_request(workspace_root))
+        .create_workspace_session(create_request())
         .expect("session create succeeds")
         .workspace_session_id;
 

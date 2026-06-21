@@ -269,16 +269,12 @@ fn build_services_with_launch_driver(
     }
 }
 
-fn create_request(workspace_root: PathBuf) -> CreateWorkspaceRequest {
-    create_request_with_profile(workspace_root, WorkspaceProfile::SharedNetwork)
+fn create_request() -> CreateWorkspaceRequest {
+    create_request_with_profile(WorkspaceProfile::SharedNetwork)
 }
 
-fn create_request_with_profile(
-    workspace_root: PathBuf,
-    profile: WorkspaceProfile,
-) -> CreateWorkspaceRequest {
+fn create_request_with_profile(profile: WorkspaceProfile) -> CreateWorkspaceRequest {
     CreateWorkspaceRequest {
-        workspace_root,
         layer_stack_root: PathBuf::from("/layers"),
         profile,
     }
@@ -344,7 +340,7 @@ fn create_session_and_command() -> (
     )));
     let handler = services
         .workspace
-        .create_workspace_session(create_request(workspace_root.clone()))
+        .create_workspace_session(create_request())
         .expect("create workspace session succeeds");
     let output = services
         .command
@@ -385,10 +381,7 @@ fn command_remount_start_rejects_for_pending_isolated_workspace() {
     )));
     let handler = services
         .workspace
-        .create_workspace_session(create_request_with_profile(
-            workspace_root.clone(),
-            WorkspaceProfile::Isolated,
-        ))
+        .create_workspace_session(create_request_with_profile(WorkspaceProfile::Isolated))
         .expect("create isolated workspace session succeeds");
     services
         .workspace
@@ -419,7 +412,7 @@ fn command_remount_start_rejects_for_pending_persistent_workspace() {
     )));
     let handler = services
         .workspace
-        .create_workspace_session(create_request(workspace_root.clone()))
+        .create_workspace_session(create_request())
         .expect("create workspace session succeeds");
     services
         .workspace
@@ -460,7 +453,7 @@ fn command_remount_waits_for_in_flight_persistent_exec_admission() {
     )));
     let handler = services
         .workspace
-        .create_workspace_session(create_request(workspace_root.clone()))
+        .create_workspace_session(create_request())
         .expect("create workspace session succeeds");
 
     let exec_command = Arc::clone(&services.command);

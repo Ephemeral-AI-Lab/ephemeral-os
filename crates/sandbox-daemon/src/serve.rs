@@ -16,10 +16,10 @@ const DAEMON_CONFIG_YAML_ENV: &str = "SANDBOX_DAEMON_CONFIG_YAML";
 /// Start, spawn, or call the async RPC server.
 ///
 /// Modes:
-/// - `sandbox-daemon serve --config-yaml PATH --socket PATH --pid-file PATH ...`
+/// - `sandbox-daemon serve --config-yaml PATH --workspace-root PATH --socket PATH --pid-file PATH ...`
 ///   runs the foreground server.
-/// - `sandbox-daemon serve --spawn --config-yaml PATH --socket PATH --pid-file PATH ...` starts a
-///   detached foreground child and returns.
+/// - `sandbox-daemon serve --spawn --config-yaml PATH --workspace-root PATH --socket PATH
+///   --pid-file PATH ...` starts a detached foreground child and returns.
 pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let args = args.collect::<Vec<_>>();
     let config_path = daemon_config_path_arg(&args)?;
@@ -30,6 +30,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
         return spawn_daemon(&config);
     }
     set_runner_config_env(&config.config_yaml_path);
+    let workspace_root = config.workspace_root.clone();
     let server_config = sandbox_daemon::ServerConfig {
         socket_path: config.socket_path,
         pid_path: config.pid_path,
@@ -47,7 +48,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     runtime.block_on(async move {
         let server = sandbox_daemon::SandboxDaemonServer::new(
             server_config,
-            Arc::new(build_runtime_operations(&runtime_config)),
+            Arc::new(build_runtime_operations(&runtime_config, workspace_root)),
         );
         server.serve().await
     })?;
@@ -61,9 +62,11 @@ struct DaemonRuntimeConfig {
 
 fn build_runtime_operations(
     config: &DaemonRuntimeConfig,
+    workspace_root: PathBuf,
 ) -> sandbox_runtime::SandboxRuntimeOperations {
     sandbox_runtime::SandboxRuntimeOperations::from_config(sandbox_runtime::SandboxRuntimeConfig {
         workspace: sandbox_runtime::WorkspaceRuntimeConfig {
+            workspace_root,
             scratch_root: config.isolated.scratch_root.clone(),
             caps: sandbox_runtime::WorkspaceResourceCaps {
                 ttl_s: config.isolated.ttl_s,
@@ -80,11 +83,6 @@ fn build_runtime_operations(
                         sandbox_runtime::Rfc1918Egress::Deny
                     }
                 },
-                workspace_root: config
-                    .isolated
-                    .workspace_root
-                    .to_string_lossy()
-                    .into_owned(),
             },
         },
         command: sandbox_runtime::CommandRuntimeConfig {
@@ -117,6 +115,7 @@ fn daemon_worker_threads(max_worker_threads: usize) -> usize {
 
 pub(crate) struct DaemonCliConfig {
     pub(crate) config_yaml_path: PathBuf,
+    workspace_root: PathBuf,
     socket_path: PathBuf,
     pid_path: PathBuf,
     tcp_host: Option<String>,
@@ -132,6 +131,7 @@ impl DaemonCliConfig {
         explicit_config_path: PathBuf,
     ) -> Result<Self> {
         let mut config_yaml_path = explicit_config_path;
+        let mut workspace_root = None;
         let mut socket_path = server_defaults.socket_path.clone();
         let mut pid_path = server_defaults.pid_path.clone();
         let mut tcp_host = None;
@@ -143,6 +143,10 @@ impl DaemonCliConfig {
             match arg.as_str() {
                 "--config-yaml" => {
                     config_yaml_path = PathBuf::from(required_arg(&mut args, "--config-yaml")?);
+                }
+                "--workspace-root" => {
+                    workspace_root =
+                        Some(PathBuf::from(required_arg(&mut args, "--workspace-root")?));
                 }
                 "--socket" => socket_path = PathBuf::from(required_arg(&mut args, "--socket")?),
                 "--pid-file" => pid_path = PathBuf::from(required_arg(&mut args, "--pid-file")?),
@@ -158,15 +162,24 @@ impl DaemonCliConfig {
                 "--spawn" => spawn = true,
                 "--help" | "-h" => {
                     println!(
-                        "usage: serve [--spawn] --config-yaml PATH [--socket PATH] [--pid-file PATH] [--tcp-host HOST --tcp-port PORT --auth-token TOKEN]"
+                        "usage: serve [--spawn] --config-yaml PATH --workspace-root PATH [--socket PATH] [--pid-file PATH] [--tcp-host HOST --tcp-port PORT --auth-token TOKEN]"
                     );
                     std::process::exit(0);
                 }
                 other => return Err(anyhow!("unknown daemon flag {other:?}")),
             }
         }
+        let workspace_root =
+            workspace_root.ok_or_else(|| anyhow!("serve requires --workspace-root PATH"))?;
+        if !workspace_root.is_absolute() {
+            return Err(anyhow!(
+                "--workspace-root must be absolute: {}",
+                workspace_root.display()
+            ));
+        }
         Ok(Self {
             config_yaml_path,
+            workspace_root,
             socket_path,
             pid_path,
             tcp_host,
@@ -181,6 +194,8 @@ impl DaemonCliConfig {
             "serve".to_owned(),
             "--config-yaml".to_owned(),
             self.config_yaml_path.to_string_lossy().into_owned(),
+            "--workspace-root".to_owned(),
+            self.workspace_root.to_string_lossy().into_owned(),
             "--socket".to_owned(),
             self.socket_path.to_string_lossy().into_owned(),
             "--pid-file".to_owned(),

@@ -6,15 +6,26 @@ use sandbox_protocol::{
 };
 use serde_json::{json, Value};
 
-static TEST_ARGS: &[ArgSpec] = &[ArgSpec::required(
-    "sandbox_id",
-    ArgKind::String,
-    "Sandbox id.",
-    Some(ArgCliSpec {
-        flag: Some("--sandbox-id"),
-        positional: None,
-    }),
-)];
+static TEST_ARGS: &[ArgSpec] = &[
+    ArgSpec::required(
+        "sandbox_id",
+        ArgKind::String,
+        "Sandbox id.",
+        Some(ArgCliSpec {
+            flag: Some("--sandbox-id"),
+            positional: None,
+        }),
+    ),
+    ArgSpec::required(
+        "workspace_root",
+        ArgKind::Path,
+        "Absolute workspace root mounted inside this sandbox.",
+        Some(ArgCliSpec {
+            flag: Some("--workspace-root"),
+            positional: None,
+        }),
+    ),
+];
 
 static TEST_SPEC: OperationSpec = OperationSpec {
     name: "create_sandbox",
@@ -23,8 +34,10 @@ static TEST_SPEC: OperationSpec = OperationSpec {
     args: TEST_ARGS,
     cli: Some(CliSpec {
         path: &["manager"],
-        usage: "sandbox-cli manager create_sandbox --sandbox-id ID",
-        examples: &["sandbox-cli manager create_sandbox --sandbox-id sbox-1"],
+        usage: "sandbox-cli manager create_sandbox --sandbox-id ID --workspace-root PATH",
+        examples: &[
+            "sandbox-cli manager create_sandbox --sandbox-id sbox-1 --workspace-root /testbed",
+        ],
     }),
 };
 
@@ -122,7 +135,7 @@ fn catalog_to_value_serializes_cli_metadata() {
     );
     assert_eq!(
         value["operations"][0]["cli"]["examples"][0],
-        "sandbox-cli manager create_sandbox --sandbox-id sbox-1"
+        "sandbox-cli manager create_sandbox --sandbox-id sbox-1 --workspace-root /testbed"
     );
 }
 
@@ -222,6 +235,7 @@ fn render_catalog_manual_uses_catalog_documents() {
     assert!(manual.contains("Sandbox Manager Operations"));
     assert!(manual.contains("create_sandbox"));
     assert!(manual.contains("--sandbox-id: string (required)"));
+    assert!(manual.contains("--workspace-root: path (required)"));
     assert!(manual.contains("Sandbox Runtime Operations"));
     assert!(manual.contains("runtime catalog requires --sandbox-id"));
 }

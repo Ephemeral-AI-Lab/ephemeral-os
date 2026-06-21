@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard};
 
 use crate::{ManagerError, SandboxDaemonEndpoint, SandboxId, SandboxRecord, SandboxState};
@@ -14,12 +15,16 @@ impl SandboxStore {
         Self::default()
     }
 
-    pub fn create(&self, id: SandboxId) -> Result<SandboxRecord, ManagerError> {
+    pub fn create(
+        &self,
+        id: SandboxId,
+        workspace_root: PathBuf,
+    ) -> Result<SandboxRecord, ManagerError> {
         let mut records = self.records()?;
         if records.contains_key(&id) {
             return Err(ManagerError::DuplicateSandbox { id });
         }
-        let record = SandboxRecord::new(id.clone(), SandboxState::Creating);
+        let record = SandboxRecord::new(id.clone(), workspace_root, SandboxState::Creating);
         records.insert(id, record.clone());
         Ok(record)
     }

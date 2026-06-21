@@ -2,8 +2,7 @@ use crate::error::WorkspaceError;
 use crate::model::{CreateWorkspaceRequest, WorkspaceHandle};
 use crate::profile::WorkspaceModeId;
 use crate::service::support::{
-    ensure_absolute, ensure_configured_workspace_root, mode_snapshot_from_layerstack,
-    workspace_error_from_mode_error,
+    ensure_absolute, mode_snapshot_from_layerstack, workspace_error_from_mode_error,
 };
 use crate::service::WorkspaceRuntimeService;
 
@@ -16,11 +15,9 @@ impl WorkspaceRuntimeService {
             return (hooks.create_workspace)(request);
         }
 
-        ensure_absolute(&request.workspace_root, "workspace_root")?;
         ensure_absolute(&request.layer_stack_root, "layer_stack_root")?;
 
         let mut state = self.lock_state()?;
-        ensure_configured_workspace_root(&state.manager, &request.workspace_root)?;
 
         let snapshot = sandbox_runtime_layerstack::service::acquire_snapshot_with_lease(
             &request.layer_stack_root,
