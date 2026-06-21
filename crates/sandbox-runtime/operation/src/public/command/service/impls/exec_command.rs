@@ -202,7 +202,7 @@ impl CommandOperationService {
             CommandWorkspaceOwnership::ExistingSession
         } else {
             CommandWorkspaceOwnership::OneShot {
-                handler: handler.clone(),
+                handler: Box::new(handler.clone()),
             }
         };
         Ok(ResolvedExecWorkspace::new(handler, ownership))
@@ -280,7 +280,7 @@ impl CommandOperationService {
             CommandWorkspaceOwnership::ExistingSession => error,
             CommandWorkspaceOwnership::OneShot { handler } => match self
                 .workspace()
-                .destroy_session(handler, DestroyWorkspaceRequest::default())
+                .destroy_session(*handler, DestroyWorkspaceRequest::default())
             {
                 Ok(_) => error,
                 Err(cleanup_error) => CommandServiceError::OneShotWorkspaceCleanupFailed {

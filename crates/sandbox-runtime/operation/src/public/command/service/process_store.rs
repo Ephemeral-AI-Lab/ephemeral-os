@@ -291,7 +291,9 @@ pub(crate) struct ActiveCommandProcess {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum CommandWorkspaceOwnership {
     ExistingSession,
-    OneShot { handler: WorkspaceSessionHandler },
+    OneShot {
+        handler: Box<WorkspaceSessionHandler>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

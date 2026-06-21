@@ -52,8 +52,10 @@ impl CommandOperationService {
         match &record.workspace_ownership {
             CommandWorkspaceOwnership::ExistingSession => Ok(None),
             CommandWorkspaceOwnership::OneShot { handler } => {
-                self.workspace()
-                    .destroy_session(handler.clone(), DestroyWorkspaceRequest::default())?;
+                self.workspace().destroy_session(
+                    handler.as_ref().clone(),
+                    DestroyWorkspaceRequest::default(),
+                )?;
                 Ok(None)
             }
         }
