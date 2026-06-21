@@ -18,7 +18,16 @@ use support::{
 
 fn exec_input(workspace_session_id: WorkspaceSessionId) -> ExecCommandInput {
     ExecCommandInput {
-        workspace_session_id,
+        workspace_session_id: Some(workspace_session_id),
+        cmd: "printf ok".to_owned(),
+        timeout_seconds: None,
+        yield_time_ms: Some(0),
+    }
+}
+
+fn one_shot_exec_input() -> ExecCommandInput {
+    ExecCommandInput {
+        workspace_session_id: None,
         cmd: "printf ok".to_owned(),
         timeout_seconds: None,
         yield_time_ms: Some(0),
@@ -97,6 +106,144 @@ fn exec_command_rejects_empty_command_before_workspace_resolution() {
     ));
     assert!(fake.create_requests().is_empty());
     assert!(fake.destroy_calls().is_empty());
+}
+
+#[test]
+fn exec_command_without_workspace_session_creates_and_destroys_one_shot_on_completion() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle(
+        "one-shot-session",
+        "lease-1",
+        PathBuf::from("/workspace/one-shot"),
+        WorkspaceProfile::HostCompatible,
+    )));
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver.push_outcome(WaitOutcome::Completed(success_exit("one-shot done\n")));
+    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
+
+    let output = env
+        .command
+        .exec_command(one_shot_exec_input())
+        .expect("one-shot command completes");
+
+    assert_eq!(output.status, CommandStatus::Completed);
+    assert_eq!(output.exit_code, Some(0));
+    assert_eq!(output.output.stdout, "one-shot done\n");
+    assert!(output.finalized.is_none());
+    assert_eq!(fake.create_requests(), vec![create_request()]);
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![WorkspaceSessionId("one-shot-session".to_owned())]
+    );
+}
+
+#[test]
+fn exec_command_without_workspace_session_keeps_one_shot_until_terminal_completion() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle(
+        "one-shot-session",
+        "lease-1",
+        PathBuf::from("/workspace/one-shot"),
+        WorkspaceProfile::HostCompatible,
+    )));
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver.push_outcome(WaitOutcome::Running(String::new()));
+    launch_driver.push_outcome(WaitOutcome::Completed(success_exit("done\n")));
+    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
+
+    let command_session_id = env
+        .command
+        .exec_command(one_shot_exec_input())
+        .expect("one-shot command starts")
+        .command_session_id
+        .expect("running command session id is returned");
+    assert!(fake.destroy_calls().is_empty());
+
+    let output = env
+        .command
+        .write_command_stdin(WriteCommandStdinInput {
+            command_session_id: command_session_id.clone(),
+            stdin: "input\n".to_owned(),
+            yield_time_ms: Some(250),
+        })
+        .expect("one-shot command completes after stdin write");
+
+    assert_eq!(output.status, CommandStatus::Completed);
+    assert_eq!(output.exit_code, Some(0));
+    assert!(output.finalized.is_none());
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![WorkspaceSessionId("one-shot-session".to_owned())]
+    );
+    let poll = env
+        .command
+        .poll_command(PollCommandInput {
+            command_session_id,
+            last_n_lines: None,
+        })
+        .expect("completed one-shot command can be polled");
+    assert_eq!(poll.status, CommandStatus::Completed);
+}
+
+#[test]
+fn exec_command_without_workspace_session_destroys_one_shot_after_spawn_failure() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle(
+        "one-shot-session",
+        "lease-1",
+        PathBuf::from("/workspace/one-shot"),
+        WorkspaceProfile::HostCompatible,
+    )));
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver.push_spawn_error(CommandServiceError::CommandIo {
+        command_session_id: CommandSessionId("cmd_1".to_owned()),
+        error: "spawn failed".to_owned(),
+    });
+    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
+
+    let error = env
+        .command
+        .exec_command(one_shot_exec_input())
+        .expect_err("one-shot spawn failure rejects exec");
+
+    assert!(matches!(
+        error,
+        CommandServiceError::CommandIo { command_session_id, error }
+            if command_session_id == CommandSessionId("cmd_1".to_owned()) && error == "spawn failed"
+    ));
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![WorkspaceSessionId("one-shot-session".to_owned())]
+    );
+}
+
+#[test]
+fn exec_command_without_workspace_session_destroys_one_shot_after_launch_material_failure() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle_without_launch(
+        "one-shot-session",
+        "lease-1",
+        PathBuf::from("/workspace/one-shot"),
+        WorkspaceProfile::HostCompatible,
+    )));
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
+
+    let error = env
+        .command
+        .exec_command(one_shot_exec_input())
+        .expect_err("missing launch material rejects one-shot exec");
+
+    assert!(matches!(
+        error,
+        CommandServiceError::InvalidCommand { message }
+            if message.contains("lacks workspace entry material")
+    ));
+    assert!(launch_driver.spawn_observations().is_empty());
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![WorkspaceSessionId("one-shot-session".to_owned())]
+    );
 }
 
 #[test]
@@ -312,7 +459,7 @@ fn exec_command_initial_running_yield_returns_wait_loop_output() {
 }
 
 #[test]
-fn exec_command_initial_completed_session_returns_finalized_metadata() {
+fn exec_command_initial_completed_session_does_not_finalize_workspace() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_outcome(WaitOutcome::Completed(success_exit("session done\n")));
@@ -336,7 +483,7 @@ fn exec_command_initial_completed_session_returns_finalized_metadata() {
     assert_eq!(output.status, CommandStatus::Completed);
     assert_eq!(output.exit_code, Some(0));
     assert_eq!(output.output.stdout, "session done\n");
-    assert!(output.finalized.is_some());
+    assert!(output.finalized.is_none());
     assert!(fake.destroy_calls().is_empty());
 
     let poll = env
@@ -348,6 +495,7 @@ fn exec_command_initial_completed_session_returns_finalized_metadata() {
         .expect("completed session command can be polled");
     assert_eq!(poll.command_session_id, command_session_id);
     assert_eq!(poll.status, CommandStatus::Completed);
+    assert!(poll.finalized.is_none());
 }
 
 #[test]
@@ -417,7 +565,7 @@ fn write_command_stdin_finalizes_when_command_completes_after_write() {
     assert_eq!(output.status, CommandStatus::Completed);
     assert_eq!(output.exit_code, Some(0));
     assert_eq!(output.output.stdout, "done\n");
-    assert!(output.finalized.is_some());
+    assert!(output.finalized.is_none());
 
     let poll = env
         .command
@@ -427,4 +575,5 @@ fn write_command_stdin_finalizes_when_command_completes_after_write() {
         })
         .expect("completed command can still be polled");
     assert_eq!(poll.status, CommandStatus::Completed);
+    assert!(poll.finalized.is_none());
 }

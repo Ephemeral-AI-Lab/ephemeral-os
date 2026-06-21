@@ -295,7 +295,7 @@ impl CommandProcess {
             .runtime
             .cgroup
             .as_ref()
-            .map(|cgroup| cgroup.final_sample(&self.runtime.cgroup_monitor_config));
+            .and_then(|cgroup| cgroup.final_sample(&self.runtime.cgroup_monitor_config));
         let cgroup_cleanup = self.runtime.cgroup.as_ref().map(CommandCgroup::cleanup);
         let kill = *lock(&self.runtime.kill);
         let completion =

@@ -38,11 +38,7 @@ fn runtime_operation_requires_sandbox_without_default() -> TestResult {
         BuildRequestInput {
             execution_space: OperationExecutionSpace::Runtime,
             operation: "exec_command".to_owned(),
-            operation_argv: vec![
-                "--workspace-session-id".to_owned(),
-                "ws-1".to_owned(),
-                "pwd".to_owned(),
-            ],
+            operation_argv: vec!["pwd".to_owned()],
             sandbox_id: None,
         },
         &config,
@@ -58,7 +54,7 @@ fn runtime_operation_requires_sandbox_without_default() -> TestResult {
 
 #[test]
 fn runtime_operation_uses_default_sandbox_when_configured() -> TestResult {
-    let request = build_runtime_request(None, &["--workspace-session-id", "ws-1", "pwd"])?;
+    let request = build_runtime_request(None, &["pwd"])?;
 
     assert_eq!(
         request.scope,
@@ -182,6 +178,20 @@ fn exec_command_maps_workspace_session_id_and_command() -> TestResult {
         request.args,
         json!({
             "workspace_session_id": "ws-1",
+            "cmd": "pwd",
+        })
+    );
+    Ok(())
+}
+
+#[test]
+fn exec_command_maps_command_without_workspace_session_id() -> TestResult {
+    let request = build_runtime_request(Some("sbox-1"), &["pwd"])?;
+
+    assert_eq!(request.op, "exec_command");
+    assert_eq!(
+        request.args,
+        json!({
             "cmd": "pwd",
         })
     );

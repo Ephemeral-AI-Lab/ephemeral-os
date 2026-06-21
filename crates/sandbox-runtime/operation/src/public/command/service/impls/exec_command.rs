@@ -7,10 +7,14 @@ use super::command_yield_response;
 use crate::command::service::CommandOperationService;
 use crate::command::{
     ActiveCommandProcess, CancellationState, CommandLifecycleState, CommandServiceError,
-    CommandSessionId, CommandTranscriptStore, CommandYield, ExecCommandInput, FinalizationState,
+    CommandSessionId, CommandTranscriptStore, CommandWorkspaceOwnership, CommandYield,
+    ExecCommandInput, FinalizationState,
 };
 use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationSpec};
-use crate::workspace_crate::{WorkspaceEntry, WorkspaceSessionId};
+use crate::workspace_crate::{
+    CreateWorkspaceRequest, DestroyWorkspaceRequest, WorkspaceEntry, WorkspaceProfile,
+    WorkspaceSessionId,
+};
 use crate::workspace_session::WorkspaceSessionHandler;
 use crate::SandboxRuntimeOperations;
 use sandbox_protocol::{Request, Response};
@@ -19,7 +23,7 @@ pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "exec_command",
     family: "command",
     summary: "Start a command in a workspace.",
-    description: "Start a shell command inside an existing workspace session. If the command is still running after the initial wait, the response includes a command_session_id that can be used with poll_command, write_command_stdin, read_command_lines, or cancel_command.",
+    description: "Start a shell command inside an existing workspace session when workspace_session_id is provided, otherwise create a one-shot host-compatible workspace and destroy it when the command reaches terminal state. If the command is still running after the initial wait, the response includes a command_session_id that can be used with poll_command, write_command_stdin, read_command_lines, or cancel_command.",
     args: EXEC_COMMAND_ARGS,
     cli: Some(EXEC_COMMAND_CLI),
     related: &[
@@ -31,10 +35,11 @@ pub(crate) const SPEC: OperationSpec = OperationSpec {
 };
 
 const EXEC_COMMAND_ARGS: &[ArgSpec] = &[
-    ArgSpec::required(
+    ArgSpec::optional(
         "workspace_session_id",
         ArgKind::String,
-        "Workspace session id to run inside.",
+        "Existing workspace session id to run inside. Omit to run in a one-shot workspace.",
+        None,
         Some(ArgCliSpec {
             flag: Some("--workspace-session-id"),
             positional: None,
@@ -73,8 +78,9 @@ const EXEC_COMMAND_ARGS: &[ArgSpec] = &[
 
 const EXEC_COMMAND_CLI: CliSpec = CliSpec {
     path: &["runtime", "exec_command"],
-    usage: "sandbox-cli runtime exec_command --workspace-session-id ID COMMAND",
+    usage: "sandbox-cli runtime exec_command [--workspace-session-id ID] COMMAND",
     examples: &[
+        "sandbox-cli runtime exec_command pwd",
         "sandbox-cli runtime exec_command --workspace-session-id ws-1 pwd",
         "sandbox-cli runtime exec_command --workspace-session-id ws-1 --yield-time-ms 0 \"sleep 30\"",
     ],
@@ -90,7 +96,10 @@ pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: &Request)
 
 fn parse_input(request: &Request) -> Result<ExecCommandInput, Response> {
     Ok(ExecCommandInput {
-        workspace_session_id: WorkspaceSessionId(request.required_string("workspace_session_id")?),
+        workspace_session_id: request
+            .optional_string("workspace_session_id")?
+            .filter(|workspace_session_id| !workspace_session_id.is_empty())
+            .map(WorkspaceSessionId),
         cmd: request.required_string("cmd")?,
         timeout_seconds: request.optional_f64("timeout_seconds")?,
         yield_time_ms: request.optional_u64("yield_time_ms")?,
@@ -180,10 +189,23 @@ impl CommandOperationService {
         &self,
         input: &ExecCommandInput,
     ) -> Result<ResolvedExecWorkspace, CommandServiceError> {
-        let handler = self
-            .workspace()
-            .resolve_session(input.workspace_session_id.clone())?;
-        Ok(ResolvedExecWorkspace::new(handler))
+        let handler = if let Some(workspace_session_id) = &input.workspace_session_id {
+            self.workspace()
+                .resolve_session(workspace_session_id.clone())?
+        } else {
+            self.workspace()
+                .create_workspace_session(CreateWorkspaceRequest {
+                    profile: WorkspaceProfile::HostCompatible,
+                })?
+        };
+        let ownership = if input.workspace_session_id.is_some() {
+            CommandWorkspaceOwnership::ExistingSession
+        } else {
+            CommandWorkspaceOwnership::OneShot {
+                handler: handler.clone(),
+            }
+        };
+        Ok(ResolvedExecWorkspace::new(handler, ownership))
     }
 
     fn command_admission_guard(
@@ -245,24 +267,47 @@ impl CommandOperationService {
         } else {
             error
         };
-        drop(workspace);
-        error
+        self.cleanup_unstarted_workspace(command_session_id, workspace, error)
+    }
+
+    fn cleanup_unstarted_workspace(
+        &self,
+        command_session_id: &CommandSessionId,
+        workspace: ResolvedExecWorkspace,
+        error: CommandServiceError,
+    ) -> CommandServiceError {
+        match workspace.ownership {
+            CommandWorkspaceOwnership::ExistingSession => error,
+            CommandWorkspaceOwnership::OneShot { handler } => match self
+                .workspace()
+                .destroy_session(handler, DestroyWorkspaceRequest::default())
+            {
+                Ok(_) => error,
+                Err(cleanup_error) => CommandServiceError::OneShotWorkspaceCleanupFailed {
+                    command_session_id: command_session_id.clone(),
+                    command_error: Box::new(error),
+                    cleanup_error: cleanup_error.to_string(),
+                },
+            },
+        }
     }
 }
 
 struct ResolvedExecWorkspace {
     handler: WorkspaceSessionHandler,
     workspace_session_id: WorkspaceSessionId,
+    ownership: CommandWorkspaceOwnership,
     workspace_root: PathBuf,
 }
 
 impl ResolvedExecWorkspace {
-    fn new(handler: WorkspaceSessionHandler) -> Self {
+    fn new(handler: WorkspaceSessionHandler, ownership: CommandWorkspaceOwnership) -> Self {
         let workspace_session_id = handler.workspace_session_id.clone();
         let workspace_root = handler.handle.workspace_root.clone();
         Self {
             handler,
             workspace_session_id,
+            ownership,
             workspace_root,
         }
     }
@@ -301,6 +346,7 @@ impl StartedCommand {
         let record = ActiveCommandProcess {
             command_session_id,
             workspace_session_id: workspace.workspace_session_id.clone(),
+            workspace_ownership: workspace.ownership.clone(),
             workspace_root: workspace.workspace_root.clone(),
             process,
             transcript: CommandTranscriptStore {

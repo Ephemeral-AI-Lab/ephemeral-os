@@ -8,8 +8,8 @@ use sandbox_runtime::cgroup_monitor::{InspectCgroupMonitorInput, ReadCgroupMonit
 use sandbox_runtime::command::CommandSessionId;
 use sandbox_runtime::layerstack::LayerStackService;
 use sandbox_runtime::SandboxRuntimeOperations;
-use sandbox_runtime_workspace::{WorkspaceProfile, WorkspaceSessionId};
-use serde_json::json;
+use sandbox_runtime_workspace::{DestroyWorkspaceRequest, WorkspaceProfile, WorkspaceSessionId};
+use serde_json::{json, Value};
 
 use support::{build_services, create_request, workspace_handle_with_cgroup, FakeWorkspaceService};
 
@@ -73,12 +73,12 @@ fn cgroup_monitor_inspect_reads_session_target_without_command_payload(
     assert_eq!(response["target"]["kind"], "session");
     assert_eq!(response["latest"]["sample_kind"], "periodic");
     assert_eq!(response["latest"]["cpu"]["usage_usec"], 1200);
-    let rendered = response.to_string();
-    assert!(!rendered.contains("cmd"));
-    assert!(!rendered.contains("stdin"));
-    assert!(!rendered.contains("stdout"));
-    assert!(!rendered.contains("stderr"));
-    assert!(!rendered.contains("env"));
+    assert_forbidden_keys_absent(
+        &response,
+        &[
+            "cmd", "command", "stdin", "stdout", "stderr", "env", "args", "argv",
+        ],
+    );
 
     let _ = std::fs::remove_dir_all(fixture.root);
     Ok(())
@@ -152,6 +152,43 @@ fn cgroup_monitor_service_faults_missing_command_target(
         .expect_err("missing command target is a normal operation fault");
 
     assert!(error.to_string().contains("command session"));
+
+    let _ = std::fs::remove_dir_all(fixture.root);
+    Ok(())
+}
+
+#[test]
+fn cgroup_monitor_retained_session_cleanup_remains_readable_after_destroy(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = CgroupFixture::new("destroy-retained")?;
+    write_cgroup_files(&fixture.cgroup)?;
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle_with_cgroup(
+        "ws-cgroup",
+        "lease-1",
+        PathBuf::from("/workspace/session"),
+        WorkspaceProfile::HostCompatible,
+        Some(fixture.cgroup.clone()),
+    )));
+    let env = build_services(Arc::clone(&fake));
+    let handler = env.workspace.create_workspace_session(create_request())?;
+    env.workspace
+        .destroy_session(handler, DestroyWorkspaceRequest::default())?;
+    let monitor =
+        SandboxRuntimeOperations::new(Arc::clone(&env.command), layerstack_service(&fixture.root)?)
+            .cgroup_monitor;
+
+    let output = monitor.inspect_cgroup_monitor(InspectCgroupMonitorInput {
+        workspace_session_id: WorkspaceSessionId("ws-cgroup".to_owned()),
+        command_session_id: None,
+    })?;
+
+    assert!(output.cleanup.final_sample_recorded);
+    assert_eq!(output.cleanup.cgroup_exists_after_destroy, Some(true));
+    assert_eq!(
+        output.latest.as_ref().map(|sample| sample.sample_kind),
+        Some(sandbox_runtime_workspace::CgroupSampleKind::Cleanup)
+    );
 
     let _ = std::fs::remove_dir_all(fixture.root);
     Ok(())
@@ -260,4 +297,26 @@ fn write_cgroup_files(cgroup: &Path) -> Result<(), Box<dyn std::error::Error + S
     )?;
     std::fs::write(cgroup.join("cgroup.events"), "populated 1\nfrozen 0\n")?;
     Ok(())
+}
+
+fn assert_forbidden_keys_absent(value: &Value, forbidden: &[&str]) {
+    match value {
+        Value::Object(map) => {
+            for key in map.keys() {
+                assert!(
+                    !forbidden.contains(&key.as_str()),
+                    "forbidden key {key} leaked in {value}"
+                );
+            }
+            for child in map.values() {
+                assert_forbidden_keys_absent(child, forbidden);
+            }
+        }
+        Value::Array(values) => {
+            for child in values {
+                assert_forbidden_keys_absent(child, forbidden);
+            }
+        }
+        _ => {}
+    }
 }

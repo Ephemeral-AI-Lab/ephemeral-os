@@ -71,7 +71,8 @@ impl CommandOperationService {
             if active.process.process_group_id().is_some() {
                 if let Some(process_exit) = active.process.take_exit() {
                     drop(active);
-                    let result = self.finalize_command(command_session_id.clone(), process_exit)?;
+                    let result =
+                        self.complete_terminal_command(command_session_id.clone(), process_exit)?;
                     let completed = self.completed_command(&command_session_id)?;
                     let stdout = input.last_n_lines.map_or_else(
                         || result.stdout.clone(),

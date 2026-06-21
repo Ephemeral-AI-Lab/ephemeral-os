@@ -18,8 +18,8 @@ pub use core::CommandOperationService;
 pub use launch::{CommandLaunchDriver, RealCommandLaunchDriver};
 pub(crate) use process_store::{
     ActiveCommandProcess, ActiveCommandRef, CancellationState, CommandLifecycleState,
-    CommandProcessStore, CommandTerminalResult, CommandTranscriptStore, CompletedCommandRecord,
-    FinalizationState, RetainedCommandTranscript,
+    CommandProcessStore, CommandTerminalResult, CommandTranscriptStore, CommandWorkspaceOwnership,
+    CompletedCommandRecord, FinalizationState, RetainedCommandTranscript,
 };
 
 pub(crate) fn operation_entries() -> &'static [crate::operation::OperationEntry] {

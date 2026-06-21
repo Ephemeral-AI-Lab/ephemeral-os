@@ -164,7 +164,7 @@ fn session_with_driver(
     let output = env
         .command
         .exec_command(ExecCommandInput {
-            workspace_session_id: handler.workspace_session_id.clone(),
+            workspace_session_id: Some(handler.workspace_session_id.clone()),
             cmd: "printf rows".to_owned(),
             timeout_seconds: None,
             yield_time_ms: Some(0),
@@ -462,7 +462,7 @@ fn command_transcript_rows_report_running_status_for_active_command() {
     let output = env
         .command
         .exec_command(ExecCommandInput {
-            workspace_session_id: handler.workspace_session_id,
+            workspace_session_id: Some(handler.workspace_session_id),
             cmd: "printf rows".to_owned(),
             timeout_seconds: None,
             yield_time_ms: Some(0),

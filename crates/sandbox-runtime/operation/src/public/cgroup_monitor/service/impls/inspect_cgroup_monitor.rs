@@ -77,7 +77,10 @@ impl CgroupMonitorOperationService {
             &input.workspace_session_id,
             input.command_session_id.as_ref(),
         )?;
-        self.ensure_session_target_registered(&input.workspace_session_id)?;
+        self.ensure_target_scope_available(
+            &input.workspace_session_id,
+            input.command_session_id.as_ref(),
+        )?;
         let snapshot = self
             .registry()
             .inspect(
@@ -105,6 +108,22 @@ impl CgroupMonitorOperationService {
         self.registry()
             .register_session_from_handle(&handler.handle);
         Ok(())
+    }
+
+    pub(crate) fn ensure_target_scope_available(
+        &self,
+        workspace_session_id: &WorkspaceSessionId,
+        command_session_id: Option<&CommandSessionId>,
+    ) -> Result<(), CgroupMonitorServiceError> {
+        if self.registry().contains_target(
+            workspace_session_id,
+            command_session_id.map(|id| id.0.as_str()),
+        ) || command_session_id.is_some()
+            && self.registry().contains_target(workspace_session_id, None)
+        {
+            return Ok(());
+        }
+        self.ensure_session_target_registered(workspace_session_id)
     }
 }
 

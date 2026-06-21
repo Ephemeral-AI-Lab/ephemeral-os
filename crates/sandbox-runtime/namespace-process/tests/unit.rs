@@ -45,3 +45,13 @@ mod runner_shell_exec_request_tests {
         "/tests/unit/runner/shell_exec/request.rs"
     ));
 }
+
+#[cfg(not(target_os = "linux"))]
+mod runner_non_linux_tests {
+    #[test]
+    fn runner_live_cgroup_checks_are_linux_gated() {
+        let linux_ostype =
+            std::fs::read_to_string("/proc/sys/kernel/ostype").unwrap_or_else(|_| String::new());
+        assert_ne!(linux_ostype.trim(), "Linux");
+    }
+}

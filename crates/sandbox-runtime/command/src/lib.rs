@@ -14,7 +14,7 @@
 //! `cargo check --target x86_64-unknown-linux-gnu`.
 #![forbid(unsafe_code)]
 
-pub mod cgroup;
+mod cgroup;
 mod config;
 mod contract;
 pub mod process;
@@ -24,6 +24,7 @@ mod transcript;
 mod transcript_rows;
 pub mod yield_wait_loop;
 
+pub use cgroup::CommandCgroupTarget;
 pub use config::CommandConfig;
 pub use contract::{tail_lines, CommandError};
 pub use process::{CommandProcess, CommandProcessSpec};

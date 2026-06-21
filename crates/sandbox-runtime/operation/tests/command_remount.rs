@@ -276,7 +276,7 @@ fn create_request_with_profile(profile: WorkspaceProfile) -> CreateWorkspaceRequ
 
 fn exec_input(workspace_session_id: WorkspaceSessionId) -> ExecCommandInput {
     ExecCommandInput {
-        workspace_session_id,
+        workspace_session_id: Some(workspace_session_id),
         cmd: "echo ok".to_owned(),
         timeout_seconds: None,
         yield_time_ms: Some(0),

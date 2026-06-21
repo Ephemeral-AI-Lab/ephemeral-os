@@ -79,7 +79,7 @@ fn noop_workspace_runtime() -> Arc<WorkspaceRuntimeService> {
 }
 
 #[test]
-fn runtime_operations_exposes_only_command_as_external_lane(
+fn service_graph_runtime_operations_exposes_command_and_cgroup_monitor_lanes(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let workspace = workspace_session();
     let layerstack = layerstack_service()?;
@@ -106,7 +106,7 @@ fn runtime_operations_exposes_only_command_as_external_lane(
 #[test]
 fn command_contract_keeps_session_selector_in_exec_input() {
     let input = ExecCommandInput {
-        workspace_session_id: WorkspaceSessionId("workspace-1".to_owned()),
+        workspace_session_id: Some(WorkspaceSessionId("workspace-1".to_owned())),
         cmd: "pwd".to_owned(),
         timeout_seconds: None,
         yield_time_ms: Some(100),
@@ -114,12 +114,12 @@ fn command_contract_keeps_session_selector_in_exec_input() {
 
     assert_eq!(
         input.workspace_session_id,
-        WorkspaceSessionId("workspace-1".to_owned())
+        Some(WorkspaceSessionId("workspace-1".to_owned()))
     );
 }
 
 #[test]
-fn operation_catalog_exports_runtime_command_operations() {
+fn service_graph_operation_catalog_exports_runtime_command_and_cgroup_monitor_operations() {
     let catalog = sandbox_runtime::operation_catalog();
     let names = catalog
         .operations

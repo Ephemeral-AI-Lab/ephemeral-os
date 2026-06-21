@@ -11,6 +11,7 @@ use crate::command::{
 };
 use crate::workspace_crate::WorkspaceSessionId;
 use crate::workspace_remount::{RemountCancellationToken, RemountSwitchState};
+use crate::workspace_session::WorkspaceSessionHandler;
 
 const DEFAULT_MAX_ACTIVE_COMMANDS: usize = 256;
 
@@ -276,6 +277,7 @@ impl Deref for ActiveCommandRef<'_> {
 pub(crate) struct ActiveCommandProcess {
     pub(crate) command_session_id: CommandSessionId,
     pub(crate) workspace_session_id: WorkspaceSessionId,
+    pub(crate) workspace_ownership: CommandWorkspaceOwnership,
     pub(crate) workspace_root: PathBuf,
     pub(crate) process: Arc<::sandbox_runtime_command::CommandProcess>,
     pub(crate) transcript: CommandTranscriptStore,
@@ -284,6 +286,12 @@ pub(crate) struct ActiveCommandProcess {
     pub(crate) remount_cancellation: Option<RemountCancellationToken>,
     pub(crate) remount_switch_state: Option<RemountSwitchState>,
     pub(crate) finalization: FinalizationState,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum CommandWorkspaceOwnership {
+    ExistingSession,
+    OneShot { handler: WorkspaceSessionHandler },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

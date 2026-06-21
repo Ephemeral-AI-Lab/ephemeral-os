@@ -6,8 +6,8 @@ use crate::operation::OperationFamilySpec;
 pub use error::CommandServiceError;
 pub(crate) use service::{
     ActiveCommandProcess, ActiveCommandRef, CancellationState, CommandLifecycleState,
-    CommandProcessStore, CommandTerminalResult, CommandTranscriptStore, CompletedCommandRecord,
-    FinalizationState, RetainedCommandTranscript,
+    CommandProcessStore, CommandTerminalResult, CommandTranscriptStore, CommandWorkspaceOwnership,
+    CompletedCommandRecord, FinalizationState, RetainedCommandTranscript,
 };
 pub use service::{
     CancelCommandInput, CommandFinalizedMetadata, CommandLinesOutput, CommandOperationService,

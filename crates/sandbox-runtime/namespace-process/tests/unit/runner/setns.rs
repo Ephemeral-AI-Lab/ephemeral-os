@@ -34,6 +34,17 @@ fn namespace_order_is_user_mnt_pid_net_and_skips_missing_fds() {
     assert_eq!(order, vec![("user", 10), ("mnt", 11), ("net", 12)]);
 }
 
+#[test]
+fn runner_request_carries_cgroup_path_as_input_metadata() {
+    let mut request = request(None);
+    request.cgroup_path = Some(Path::new("/tmp/eos-cgroup-test").to_path_buf());
+
+    assert_eq!(
+        request.cgroup_path.as_deref(),
+        Some(Path::new("/tmp/eos-cgroup-test"))
+    );
+}
+
 #[cfg(target_os = "linux")]
 #[test]
 fn runner_cgroup_join_error_labels_requested_cgroup_path(

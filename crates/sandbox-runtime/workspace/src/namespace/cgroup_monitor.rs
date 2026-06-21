@@ -1,7 +1,8 @@
 use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, PoisonError};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::sync::{Arc, Mutex, OnceLock, PoisonError, Weak};
+use std::thread;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
 
@@ -189,7 +190,8 @@ pub struct CgroupSampleRequest<'a> {
 #[derive(Debug)]
 pub struct CgroupMonitorRegistry {
     config: CgroupMonitorConfig,
-    records: Mutex<HashMap<CgroupTargetKey, RetainedTarget>>,
+    records: Arc<Mutex<HashMap<CgroupTargetKey, RetainedTarget>>>,
+    sampler_started: OnceLock<()>,
 }
 
 impl CgroupMonitorRegistry {
@@ -197,7 +199,8 @@ impl CgroupMonitorRegistry {
     pub fn new(config: CgroupMonitorConfig) -> Self {
         Self {
             config,
-            records: Mutex::new(HashMap::new()),
+            records: Arc::new(Mutex::new(HashMap::new())),
+            sampler_started: OnceLock::new(),
         }
     }
 
@@ -206,25 +209,27 @@ impl CgroupMonitorRegistry {
         &self.config
     }
 
-    pub fn register_session_from_handle(&self, handle: &WorkspaceHandle) -> bool {
+    pub fn register_session_from_handle(&self, handle: &WorkspaceHandle) {
         let Ok(entry) = handle.entry() else {
-            return false;
+            return;
         };
         let Some(cgroup_path) = entry.cgroup_path else {
-            return false;
+            return;
         };
         if cgroup_path.as_os_str().is_empty() {
-            return false;
+            return;
         }
+        let key = CgroupTargetKey::session(handle.id.clone());
         self.register_target(
-            CgroupTargetKey::session(handle.id.clone()),
+            key.clone(),
             CgroupMonitorTarget {
                 kind: CgroupMonitorTargetKind::Session,
                 cgroup_path,
             },
             entry.upperdir,
         );
-        true
+        self.sample_target(&key, CgroupSampleKind::Periodic, false);
+        self.start_sampler();
     }
 
     pub fn register_command(
@@ -237,14 +242,27 @@ impl CgroupMonitorRegistry {
         if cgroup_path.as_os_str().is_empty() {
             return;
         }
+        let key = CgroupTargetKey::command(workspace_session_id, command_session_id.into());
         self.register_target(
-            CgroupTargetKey::command(workspace_session_id, command_session_id.into()),
+            key.clone(),
             CgroupMonitorTarget {
                 kind: CgroupMonitorTargetKind::Command,
                 cgroup_path,
             },
             upperdir,
         );
+        self.sample_target(&key, CgroupSampleKind::Periodic, false);
+        self.start_sampler();
+    }
+
+    pub fn contains_target(
+        &self,
+        workspace_session_id: &WorkspaceSessionId,
+        command_session_id: Option<&str>,
+    ) -> bool {
+        let records = self.records.lock().unwrap_or_else(PoisonError::into_inner);
+        let key = CgroupTargetKey::new(workspace_session_id.clone(), command_session_id);
+        records.contains_key(&key)
     }
 
     pub fn inspect(
@@ -252,10 +270,9 @@ impl CgroupMonitorRegistry {
         workspace_session_id: &WorkspaceSessionId,
         command_session_id: Option<&str>,
     ) -> Option<CgroupMonitorSnapshot> {
-        let mut records = self.records.lock().unwrap_or_else(PoisonError::into_inner);
+        let records = self.records.lock().unwrap_or_else(PoisonError::into_inner);
         let key = CgroupTargetKey::new(workspace_session_id.clone(), command_session_id);
-        let record = records.get_mut(&key)?;
-        record.sample(CgroupSampleKind::Periodic, &self.config);
+        let record = records.get(&key)?;
         Some(record.snapshot(&self.config))
     }
 
@@ -265,10 +282,9 @@ impl CgroupMonitorRegistry {
         command_session_id: Option<&str>,
         limit: usize,
     ) -> Option<CgroupMonitorSampleWindow> {
-        let mut records = self.records.lock().unwrap_or_else(PoisonError::into_inner);
+        let records = self.records.lock().unwrap_or_else(PoisonError::into_inner);
         let key = CgroupTargetKey::new(workspace_session_id.clone(), command_session_id);
-        let record = records.get_mut(&key)?;
-        record.sample(CgroupSampleKind::Periodic, &self.config);
+        let record = records.get(&key)?;
         let limit = limit.min(record.samples.len());
         let samples = record
             .samples
@@ -284,7 +300,7 @@ impl CgroupMonitorRegistry {
 
     pub fn record_session_final_from_handle(&self, handle: &WorkspaceHandle) {
         let key = CgroupTargetKey::session(handle.id.clone());
-        self.record_sample(&key, CgroupSampleKind::SessionFinal);
+        self.sample_target(&key, CgroupSampleKind::SessionFinal, true);
     }
 
     pub fn record_command_final(
@@ -299,9 +315,11 @@ impl CgroupMonitorRegistry {
         let Some(record) = records.get_mut(&key) else {
             return;
         };
-        if let Some(sample) = sample {
-            record.push_sample(sample, &self.config);
-            record.cleanup.final_sample_recorded = true;
+        if self.config.enabled {
+            if let Some(sample) = sample {
+                record.push_sample(sample, &self.config);
+                record.cleanup.final_sample_recorded = true;
+            }
         }
         if let Some(cleanup) = cleanup {
             record.cleanup.cgroup_exists_after_destroy = cleanup.cgroup_exists_after_destroy;
@@ -317,11 +335,14 @@ impl CgroupMonitorRegistry {
         last_cleanup_error: Option<String>,
     ) {
         let key = CgroupTargetKey::new(workspace_session_id.clone(), command_session_id);
+        let sample = self.build_sample_for_key(&key, CgroupSampleKind::Cleanup);
         let mut records = self.records.lock().unwrap_or_else(PoisonError::into_inner);
         let Some(record) = records.get_mut(&key) else {
             return;
         };
-        record.sample(CgroupSampleKind::Cleanup, &self.config);
+        if let Some(sample) = sample {
+            record.push_sample(sample, &self.config);
+        }
         record.cleanup.cgroup_exists_after_destroy = cgroup_exists_after_destroy;
         record.cleanup.last_cleanup_error = last_cleanup_error;
     }
@@ -342,11 +363,56 @@ impl CgroupMonitorRegistry {
             .or_insert_with(|| RetainedTarget::new(target, upperdir));
     }
 
-    fn record_sample(&self, key: &CgroupTargetKey, sample_kind: CgroupSampleKind) {
-        let mut records = self.records.lock().unwrap_or_else(PoisonError::into_inner);
-        if let Some(record) = records.get_mut(key) {
-            record.sample(sample_kind, &self.config);
+    fn start_sampler(&self) {
+        if !self.config.enabled {
+            return;
         }
+        let interval = Duration::from_millis(self.config.sample_interval_ms.max(1));
+        let records = Arc::downgrade(&self.records);
+        let config = self.config.clone();
+        self.sampler_started.get_or_init(move || {
+            let _ = thread::Builder::new()
+                .name("eos-cgroup-monitor".to_owned())
+                .spawn(move || sampler_loop(records, config, interval));
+        });
+    }
+
+    fn sample_target(
+        &self,
+        key: &CgroupTargetKey,
+        sample_kind: CgroupSampleKind,
+        mark_final: bool,
+    ) {
+        let Some(sample) = self.build_sample_for_key(key, sample_kind) else {
+            return;
+        };
+        let mut records = self.records.lock().unwrap_or_else(PoisonError::into_inner);
+        let Some(record) = records.get_mut(key) else {
+            return;
+        };
+        record.push_sample(sample, &self.config);
+        if mark_final {
+            record.cleanup.final_sample_recorded = true;
+        }
+    }
+
+    fn build_sample_for_key(
+        &self,
+        key: &CgroupTargetKey,
+        sample_kind: CgroupSampleKind,
+    ) -> Option<CgroupMonitorSample> {
+        if !self.config.enabled {
+            return None;
+        }
+        let plan = {
+            let records = self.records.lock().unwrap_or_else(PoisonError::into_inner);
+            let record = records.get(key)?;
+            if sample_kind == CgroupSampleKind::Periodic && !record.accepts_periodic_sample() {
+                return None;
+            }
+            record.sample_plan(key.clone(), sample_kind)
+        };
+        Some(build_sample_from_plan(&plan, &self.config))
     }
 }
 
@@ -391,6 +457,15 @@ impl CgroupTargetKey {
     }
 }
 
+#[derive(Debug, Clone)]
+struct CgroupSamplePlan {
+    key: CgroupTargetKey,
+    target: CgroupMonitorTarget,
+    upperdir: PathBuf,
+    previous: Option<CgroupMonitorSample>,
+    sample_kind: CgroupSampleKind,
+}
+
 #[derive(Debug)]
 struct RetainedTarget {
     target: CgroupMonitorTarget,
@@ -411,20 +486,18 @@ impl RetainedTarget {
         }
     }
 
-    fn sample(&mut self, sample_kind: CgroupSampleKind, config: &CgroupMonitorConfig) {
-        if !config.enabled {
-            return;
-        }
-        let previous = self.samples.back();
-        let sample = build_cgroup_monitor_sample(CgroupSampleRequest {
-            cgroup_path: &self.target.cgroup_path,
-            upperdir: Some(&self.upperdir),
+    fn sample_plan(&self, key: CgroupTargetKey, sample_kind: CgroupSampleKind) -> CgroupSamplePlan {
+        CgroupSamplePlan {
+            key,
+            target: self.target.clone(),
+            upperdir: self.upperdir.clone(),
+            previous: self.samples.back().cloned(),
             sample_kind,
-            interval_ms: config.sample_interval_ms,
-            previous,
-            config,
-        });
-        self.push_sample(sample, config);
+        }
+    }
+
+    fn accepts_periodic_sample(&self) -> bool {
+        !self.cleanup.final_sample_recorded && self.cleanup.cgroup_exists_after_destroy.is_none()
     }
 
     fn push_sample(&mut self, sample: CgroupMonitorSample, config: &CgroupMonitorConfig) {
@@ -456,6 +529,61 @@ impl RetainedTarget {
     }
 }
 
+fn sampler_loop(
+    records: Weak<Mutex<HashMap<CgroupTargetKey, RetainedTarget>>>,
+    config: CgroupMonitorConfig,
+    interval: Duration,
+) {
+    loop {
+        thread::sleep(interval);
+        let Some(records) = records.upgrade() else {
+            break;
+        };
+        sample_periodic_targets(&records, &config);
+    }
+}
+
+fn sample_periodic_targets(
+    records: &Arc<Mutex<HashMap<CgroupTargetKey, RetainedTarget>>>,
+    config: &CgroupMonitorConfig,
+) {
+    if !config.enabled {
+        return;
+    }
+    let plans = {
+        let records = records.lock().unwrap_or_else(PoisonError::into_inner);
+        records
+            .iter()
+            .filter(|(_, record)| record.accepts_periodic_sample())
+            .map(|(key, record)| record.sample_plan(key.clone(), CgroupSampleKind::Periodic))
+            .collect::<Vec<_>>()
+    };
+    for plan in plans {
+        let sample = build_sample_from_plan(&plan, config);
+        let mut records = records.lock().unwrap_or_else(PoisonError::into_inner);
+        let Some(record) = records.get_mut(&plan.key) else {
+            continue;
+        };
+        if record.target == plan.target && record.accepts_periodic_sample() {
+            record.push_sample(sample, config);
+        }
+    }
+}
+
+fn build_sample_from_plan(
+    plan: &CgroupSamplePlan,
+    config: &CgroupMonitorConfig,
+) -> CgroupMonitorSample {
+    build_cgroup_monitor_sample(CgroupSampleRequest {
+        cgroup_path: &plan.target.cgroup_path,
+        upperdir: Some(&plan.upperdir),
+        sample_kind: plan.sample_kind,
+        interval_ms: config.sample_interval_ms,
+        previous: plan.previous.as_ref(),
+        config,
+    })
+}
+
 #[must_use]
 pub fn session_cgroup_path(root: &Path, workspace_session_id: &WorkspaceSessionId) -> PathBuf {
     root.join("eos")
@@ -473,11 +601,14 @@ pub fn command_cgroup_path(session_cgroup_path: &Path, command_session_id: &str)
 #[must_use]
 pub fn build_cgroup_monitor_sample(request: CgroupSampleRequest<'_>) -> CgroupMonitorSample {
     let mut errors = Vec::new();
+    let sampled_at_unix_ms = unix_time_ms();
+    let interval_ms =
+        effective_interval_ms(request.previous, sampled_at_unix_ms, request.interval_ms);
     let cgroup_exists = request.cgroup_path.is_dir();
     let cpu = read_cpu_sample(
         request.cgroup_path,
         request.previous,
-        request.interval_ms,
+        interval_ms,
         &mut errors,
     );
     let memory = read_memory_sample(request.cgroup_path, &mut errors);
@@ -501,8 +632,8 @@ pub fn build_cgroup_monitor_sample(request: CgroupSampleRequest<'_>) -> CgroupMo
 
     CgroupMonitorSample {
         sample_kind: request.sample_kind,
-        sampled_at_unix_ms: unix_time_ms(),
-        interval_ms: request.interval_ms,
+        sampled_at_unix_ms,
+        interval_ms,
         cpu,
         memory,
         io,
@@ -603,10 +734,18 @@ fn read_io_sample(cgroup_path: &Path, errors: &mut Vec<String>) -> CgroupIoSampl
 fn read_pid_sample(cgroup_path: &Path, errors: &mut Vec<String>) -> CgroupPidSample {
     let sampled = read_optional_string(&cgroup_path.join("cgroup.procs"), errors)
         .map(|content| {
-            content
-                .lines()
-                .filter_map(|line| line.trim().parse::<u32>().ok())
-                .collect::<Vec<_>>()
+            let mut sampled = Vec::new();
+            for line in content.lines() {
+                let trimmed = line.trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+                match trimmed.parse::<u32>() {
+                    Ok(pid) => sampled.push(pid),
+                    Err(_) => errors.push(format!("cgroup.procs malformed pid: {trimmed}")),
+                }
+            }
+            sampled
         })
         .unwrap_or_default();
     CgroupPidSample {
@@ -765,6 +904,20 @@ fn display_name(path: &Path) -> String {
         .and_then(|name| name.to_str())
         .map(str::to_owned)
         .unwrap_or_else(|| path.display().to_string())
+}
+
+fn effective_interval_ms(
+    previous: Option<&CgroupMonitorSample>,
+    sampled_at_unix_ms: u64,
+    fallback_interval_ms: u64,
+) -> u64 {
+    previous
+        .and_then(|sample| {
+            sampled_at_unix_ms
+                .checked_sub(sample.sampled_at_unix_ms)
+                .filter(|elapsed| *elapsed > 0)
+        })
+        .unwrap_or(fallback_interval_ms)
 }
 
 fn unix_time_ms() -> u64 {

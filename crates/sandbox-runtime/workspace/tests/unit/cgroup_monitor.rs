@@ -1,8 +1,9 @@
 use std::path::{Path, PathBuf};
 
 use sandbox_runtime_workspace::{
-    build_cgroup_monitor_sample, session_cgroup_path, CgroupMonitorConfig, CgroupSampleKind,
-    CgroupSampleRequest, WorkspaceSessionId,
+    build_cgroup_monitor_sample, session_cgroup_path, CgroupCleanupState, CgroupMonitorConfig,
+    CgroupMonitorRegistry, CgroupSampleKind, CgroupSampleRequest, LayerStackSnapshotRef, LeaseId,
+    WorkspaceHandle, WorkspaceProfile, WorkspaceSessionId,
 };
 
 #[test]
@@ -119,6 +120,229 @@ fn cgroup_monitor_malformed_files_report_read_error() -> Result<(), Box<dyn std:
     Ok(())
 }
 
+#[test]
+fn cgroup_monitor_reports_malformed_pid_lines() -> Result<(), Box<dyn std::error::Error>> {
+    let root = temp_root("malformed-pids")?;
+    let cgroup = root.join("cgroup");
+    std::fs::create_dir_all(&cgroup)?;
+    write_complete_cgroup_files(&cgroup)?;
+    std::fs::write(cgroup.join("cgroup.procs"), "123\nnot-a-pid\n")?;
+
+    let sample = build_cgroup_monitor_sample(CgroupSampleRequest {
+        cgroup_path: &cgroup,
+        upperdir: None,
+        sample_kind: CgroupSampleKind::Periodic,
+        interval_ms: 1000,
+        previous: None,
+        config: &CgroupMonitorConfig::default(),
+    });
+
+    assert_eq!(sample.pids.sampled, vec![123]);
+    assert!(sample
+        .state
+        .read_error
+        .as_deref()
+        .is_some_and(|error| error.contains("cgroup.procs malformed pid")));
+
+    let _ = std::fs::remove_dir_all(root);
+    Ok(())
+}
+
+#[test]
+fn cgroup_monitor_uses_elapsed_time_for_cpu_percent() -> Result<(), Box<dyn std::error::Error>> {
+    let root = temp_root("elapsed-cpu")?;
+    let cgroup = root.join("cgroup");
+    std::fs::create_dir_all(&cgroup)?;
+    write_complete_cgroup_files(&cgroup)?;
+
+    let previous = build_cgroup_monitor_sample(CgroupSampleRequest {
+        cgroup_path: &cgroup,
+        upperdir: None,
+        sample_kind: CgroupSampleKind::Periodic,
+        interval_ms: 1000,
+        previous: None,
+        config: &CgroupMonitorConfig::default(),
+    });
+    std::thread::sleep(std::time::Duration::from_millis(20));
+    std::fs::write(
+        cgroup.join("cpu.stat"),
+        "usage_usec 2200\nuser_usec 1800\nsystem_usec 400\n",
+    )?;
+    let sample = build_cgroup_monitor_sample(CgroupSampleRequest {
+        cgroup_path: &cgroup,
+        upperdir: None,
+        sample_kind: CgroupSampleKind::Periodic,
+        interval_ms: 1000,
+        previous: Some(&previous),
+        config: &CgroupMonitorConfig::default(),
+    });
+
+    assert!(
+        sample.interval_ms < 1000,
+        "sample interval was {}",
+        sample.interval_ms
+    );
+    assert!(sample.cpu.percent_over_interval.unwrap_or_default() > 0.1);
+
+    let _ = std::fs::remove_dir_all(root);
+    Ok(())
+}
+
+#[test]
+fn cgroup_monitor_registry_samples_without_public_reads() -> Result<(), Box<dyn std::error::Error>>
+{
+    let root = temp_root("registry-loop")?;
+    let cgroup = root.join("cgroup");
+    let upper = root.join("upper");
+    std::fs::create_dir_all(&cgroup)?;
+    std::fs::create_dir_all(&upper)?;
+    write_complete_cgroup_files(&cgroup)?;
+    let registry = CgroupMonitorRegistry::new(CgroupMonitorConfig {
+        sample_interval_ms: 1,
+        retained_samples_per_target: 10,
+        include_disk: false,
+        ..CgroupMonitorConfig::default()
+    });
+    registry.register_command(
+        WorkspaceSessionId("ws-loop".to_owned()),
+        "cmd-loop",
+        cgroup.clone(),
+        upper,
+    );
+    std::fs::write(
+        cgroup.join("cpu.stat"),
+        "usage_usec 3200\nuser_usec 2800\nsystem_usec 400\n",
+    )?;
+
+    let mut saw_background_sample = false;
+    for _ in 0..50 {
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        let samples = registry
+            .read_samples(
+                &WorkspaceSessionId("ws-loop".to_owned()),
+                Some("cmd-loop"),
+                10,
+            )
+            .expect("registered target has samples")
+            .samples;
+        if samples.len() >= 2
+            && samples.last().and_then(|sample| sample.cpu.usage_usec) == Some(3200)
+        {
+            saw_background_sample = true;
+            break;
+        }
+    }
+
+    assert!(saw_background_sample);
+    drop(registry);
+    let _ = std::fs::remove_dir_all(root);
+    Ok(())
+}
+
+#[test]
+fn cgroup_monitor_public_reads_do_not_resample_finalized_targets(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let root = temp_root("final-retained")?;
+    let cgroup = root.join("cgroup");
+    let upper = root.join("upper");
+    std::fs::create_dir_all(&cgroup)?;
+    std::fs::create_dir_all(&upper)?;
+    write_complete_cgroup_files(&cgroup)?;
+    let registry = CgroupMonitorRegistry::new(CgroupMonitorConfig {
+        retained_samples_per_target: 10,
+        include_disk: false,
+        ..CgroupMonitorConfig::default()
+    });
+    let workspace_session_id = WorkspaceSessionId("ws-final".to_owned());
+    registry.register_command(
+        workspace_session_id.clone(),
+        "cmd-final",
+        cgroup.clone(),
+        upper,
+    );
+    let final_sample = build_cgroup_monitor_sample(CgroupSampleRequest {
+        cgroup_path: &cgroup,
+        upperdir: None,
+        sample_kind: CgroupSampleKind::CommandFinal,
+        interval_ms: 1000,
+        previous: None,
+        config: registry.config(),
+    });
+    std::fs::remove_dir_all(&cgroup)?;
+    registry.record_command_final(
+        &workspace_session_id,
+        "cmd-final",
+        Some(final_sample),
+        Some(CgroupCleanupState {
+            final_sample_recorded: false,
+            cgroup_exists_after_destroy: Some(false),
+            last_cleanup_error: None,
+        }),
+    );
+
+    let first = registry
+        .inspect(&workspace_session_id, Some("cmd-final"))
+        .expect("registered target is retained");
+    assert_eq!(
+        first.latest.as_ref().map(|sample| sample.sample_kind),
+        Some(CgroupSampleKind::CommandFinal)
+    );
+    assert!(first.cleanup.final_sample_recorded);
+    let sample_count = first.monitor.retained_samples;
+
+    for _ in 0..3 {
+        let snapshot = registry
+            .inspect(&workspace_session_id, Some("cmd-final"))
+            .expect("retained target remains readable");
+        assert_eq!(snapshot.monitor.retained_samples, sample_count);
+        assert_eq!(
+            snapshot.latest.as_ref().map(|sample| sample.sample_kind),
+            Some(CgroupSampleKind::CommandFinal)
+        );
+    }
+
+    drop(registry);
+    let _ = std::fs::remove_dir_all(root);
+    Ok(())
+}
+
+#[test]
+fn cgroup_monitor_session_final_marks_cleanup_state() -> Result<(), Box<dyn std::error::Error>> {
+    let root = temp_root("session-final")?;
+    let cgroup = root.join("cgroup");
+    let upper = root.join("upper");
+    let work = root.join("work");
+    std::fs::create_dir_all(&cgroup)?;
+    std::fs::create_dir_all(&upper)?;
+    std::fs::create_dir_all(&work)?;
+    write_complete_cgroup_files(&cgroup)?;
+    let handle = WorkspaceHandle::holder_backed_for_test(
+        WorkspaceSessionId("ws-session-final".to_owned()),
+        PathBuf::from("/workspace"),
+        WorkspaceProfile::HostCompatible,
+        test_snapshot(),
+        upper,
+        work,
+        Some(cgroup),
+    );
+    let registry = CgroupMonitorRegistry::default();
+    registry.register_session_from_handle(&handle);
+    registry.record_session_final_from_handle(&handle);
+
+    let snapshot = registry
+        .inspect(&WorkspaceSessionId("ws-session-final".to_owned()), None)
+        .expect("session target is retained");
+    assert!(snapshot.cleanup.final_sample_recorded);
+    assert_eq!(
+        snapshot.latest.as_ref().map(|sample| sample.sample_kind),
+        Some(CgroupSampleKind::SessionFinal)
+    );
+
+    drop(registry);
+    let _ = std::fs::remove_dir_all(root);
+    Ok(())
+}
+
 fn write_complete_cgroup_files(cgroup: &Path) -> Result<(), Box<dyn std::error::Error>> {
     std::fs::write(
         cgroup.join("cpu.stat"),
@@ -155,6 +379,24 @@ fn write_complete_cgroup_files(cgroup: &Path) -> Result<(), Box<dyn std::error::
     )?;
     std::fs::write(cgroup.join("cgroup.events"), "populated 1\nfrozen 0\n")?;
     Ok(())
+}
+
+fn test_snapshot() -> LayerStackSnapshotRef {
+    LayerStackSnapshotRef {
+        lease_id: LeaseId("lease-1".to_owned()),
+        manifest_version: 1,
+        root_hash: "root".to_owned(),
+        manifest: sandbox_runtime_layerstack::Manifest::new(
+            1,
+            vec![sandbox_runtime_layerstack::LayerRef {
+                layer_id: "L000001-test".to_owned(),
+                path: "layers/L000001-test".to_owned(),
+            }],
+            sandbox_runtime_layerstack::MANIFEST_SCHEMA_VERSION,
+        )
+        .expect("test manifest is valid"),
+        layer_paths: vec![PathBuf::from("/lower/one")],
+    }
 }
 
 fn temp_root(label: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {

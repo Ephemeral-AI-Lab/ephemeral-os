@@ -42,7 +42,7 @@ impl CommandOperationService {
         command_session_id: CommandSessionId,
         process_exit: CommandProcessExit,
     ) -> Result<CommandYield, CommandServiceError> {
-        let result = self.finalize_command(command_session_id.clone(), process_exit)?;
+        let result = self.complete_terminal_command(command_session_id.clone(), process_exit)?;
         let finalized = self
             .process_store()
             .completed(&command_session_id)

@@ -93,7 +93,10 @@ impl CgroupMonitorOperationService {
                 message: "limit must be greater than zero".to_owned(),
             });
         }
-        self.ensure_session_target_registered(&input.workspace_session_id)?;
+        self.ensure_target_scope_available(
+            &input.workspace_session_id,
+            input.command_session_id.as_ref(),
+        )?;
         let limit = input
             .limit
             .unwrap_or_else(|| self.registry().config().retained_samples_per_target);

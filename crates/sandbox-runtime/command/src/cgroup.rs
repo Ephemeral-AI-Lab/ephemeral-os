@@ -45,14 +45,16 @@ impl CommandCgroup {
         self.target.clone()
     }
 
-    pub(crate) fn final_sample(&self, config: &CgroupMonitorConfig) -> CgroupMonitorSample {
-        build_cgroup_monitor_sample(CgroupSampleRequest {
-            cgroup_path: &self.target.cgroup_path,
-            upperdir: Some(&self.target.upperdir),
-            sample_kind: CgroupSampleKind::CommandFinal,
-            interval_ms: config.sample_interval_ms,
-            previous: None,
-            config,
+    pub(crate) fn final_sample(&self, config: &CgroupMonitorConfig) -> Option<CgroupMonitorSample> {
+        config.enabled.then(|| {
+            build_cgroup_monitor_sample(CgroupSampleRequest {
+                cgroup_path: &self.target.cgroup_path,
+                upperdir: Some(&self.target.upperdir),
+                sample_kind: CgroupSampleKind::CommandFinal,
+                interval_ms: config.sample_interval_ms,
+                previous: None,
+                config,
+            })
         })
     }
 
@@ -74,7 +76,10 @@ fn create_child_cgroup_if_parent_exists(
     command_cgroup_path: &Path,
 ) -> Result<(), CommandError> {
     if !session_cgroup_path.exists() {
-        return Ok(());
+        return Err(CommandError::InvalidRequest(format!(
+            "session cgroup path does not exist: {}",
+            session_cgroup_path.display()
+        )));
     }
     std::fs::create_dir_all(command_cgroup_path)
         .map_err(|error| CommandError::artifact_write("command_cgroup", command_cgroup_path, error))

@@ -171,6 +171,65 @@ fn process_spawn_prepare_creates_command_child_cgroup_when_session_parent_exists
 }
 
 #[test]
+fn process_spawn_prepare_rejects_missing_session_cgroup_parent(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let root = std::env::temp_dir().join(format!(
+        "command-cgroup-missing-parent-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)?
+            .as_nanos()
+    ));
+    let config = CommandConfig {
+        scratch_root: root.join("commands"),
+        cgroup_monitor: sandbox_runtime_workspace::CgroupMonitorConfig::default(),
+    };
+    let mut entry = workspace_entry();
+    entry.cgroup_path = Some(root.join("eos").join("sessions").join("missing"));
+
+    let error = match CommandProcessSpawn::prepare("cmd_missing", entry, &config) {
+        Ok(_) => panic!("missing parent cgroup is a launch error"),
+        Err(error) => error,
+    };
+
+    assert!(error
+        .to_string()
+        .contains("session cgroup path does not exist"));
+    let _ = std::fs::remove_dir_all(root);
+    Ok(())
+}
+
+#[test]
+fn command_cgroup_final_sample_respects_disabled_monitor() -> Result<(), Box<dyn std::error::Error>>
+{
+    let root = std::env::temp_dir().join(format!(
+        "command-cgroup-disabled-final-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)?
+            .as_nanos()
+    ));
+    let session_cgroup = root.join("eos").join("sessions").join("ws-1");
+    std::fs::create_dir_all(&session_cgroup)?;
+    let cgroup = crate::cgroup::CommandCgroup::prepare(
+        "cmd_disabled",
+        Some(&session_cgroup),
+        root.join("upper").as_path(),
+    )?
+    .expect("command cgroup is prepared");
+
+    let sample = cgroup.final_sample(&sandbox_runtime_workspace::CgroupMonitorConfig {
+        enabled: false,
+        ..sandbox_runtime_workspace::CgroupMonitorConfig::default()
+    });
+
+    assert!(sample.is_none());
+    let _ = cgroup.cleanup();
+    let _ = std::fs::remove_dir_all(root);
+    Ok(())
+}
+
+#[test]
 fn builds_namespace_runner_request_from_command_spec_and_workspace_entry(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let request = build_namespace_command_request(

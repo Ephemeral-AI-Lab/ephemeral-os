@@ -8,7 +8,7 @@ pub struct CommandSessionId(pub String);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExecCommandInput {
-    pub workspace_session_id: WorkspaceSessionId,
+    pub workspace_session_id: Option<WorkspaceSessionId>,
     pub cmd: String,
     pub timeout_seconds: Option<f64>,
     pub yield_time_ms: Option<u64>,
