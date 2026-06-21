@@ -4,7 +4,7 @@ use std::path::Path;
 
 use serde_json::Value;
 
-pub const MAX_TRANSCRIPT_WINDOW_BYTES: u64 = 1024 * 1024;
+const MAX_TRANSCRIPT_WINDOW_BYTES: u64 = 1024 * 1024;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CommandStream {

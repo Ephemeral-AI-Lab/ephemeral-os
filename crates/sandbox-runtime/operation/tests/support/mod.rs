@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -17,13 +19,13 @@ use sandbox_runtime_workspace::{
     WorkspaceRuntimeService, WorkspaceSessionId,
 };
 
-pub struct TestServices {
-    pub workspace: Arc<WorkspaceSessionService>,
-    pub command: Arc<CommandOperationService>,
+pub(crate) struct TestServices {
+    pub(crate) workspace: Arc<WorkspaceSessionService>,
+    pub(crate) command: Arc<CommandOperationService>,
 }
 
 #[derive(Default)]
-pub struct FakeWorkspaceService {
+pub(crate) struct FakeWorkspaceService {
     create_results: Mutex<VecDeque<Result<WorkspaceHandle, WorkspaceError>>>,
     destroy_results: Mutex<VecDeque<Result<DestroyWorkspaceResult, WorkspaceError>>>,
     create_requests: Mutex<Vec<CreateWorkspaceRequest>>,
@@ -31,45 +33,45 @@ pub struct FakeWorkspaceService {
 }
 
 #[derive(Debug, Default)]
-pub struct FakeLaunchDriver {
+pub(crate) struct FakeLaunchDriver {
     outcomes: Mutex<VecDeque<WaitOutcome<CommandProcessExit>>>,
     spawn_errors: Mutex<VecDeque<CommandServiceError>>,
     spawn_observations: Mutex<Vec<SpawnObservation>>,
 }
 
 #[derive(Debug, Clone)]
-pub struct SpawnObservation {
-    pub spec_id: String,
-    pub spec_command: String,
-    pub spec_cwd: Option<PathBuf>,
-    pub spec_timeout_seconds: Option<f64>,
-    pub workspace_entry: WorkspaceEntry,
-    pub request_path: PathBuf,
-    pub output_path: PathBuf,
-    pub final_path: PathBuf,
-    pub transcript_path: PathBuf,
+pub(crate) struct SpawnObservation {
+    pub(crate) spec_id: String,
+    pub(crate) spec_command: String,
+    pub(crate) spec_cwd: Option<PathBuf>,
+    pub(crate) spec_timeout_seconds: Option<f64>,
+    pub(crate) workspace_entry: WorkspaceEntry,
+    pub(crate) request_path: PathBuf,
+    pub(crate) output_path: PathBuf,
+    pub(crate) final_path: PathBuf,
+    pub(crate) transcript_path: PathBuf,
 }
 
 impl FakeLaunchDriver {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self::default()
     }
 
-    pub fn push_outcome(&self, outcome: WaitOutcome<CommandProcessExit>) {
+    pub(crate) fn push_outcome(&self, outcome: WaitOutcome<CommandProcessExit>) {
         self.outcomes
             .lock()
             .expect("test operation succeeds")
             .push_back(outcome);
     }
 
-    pub fn push_spawn_error(&self, error: CommandServiceError) {
+    pub(crate) fn push_spawn_error(&self, error: CommandServiceError) {
         self.spawn_errors
             .lock()
             .expect("test operation succeeds")
             .push_back(error);
     }
 
-    pub fn spawn_observations(&self) -> Vec<SpawnObservation> {
+    pub(crate) fn spawn_observations(&self) -> Vec<SpawnObservation> {
         self.spawn_observations
             .lock()
             .expect("test operation succeeds")
@@ -136,25 +138,25 @@ impl CommandLaunchDriver for FakeLaunchDriver {
 }
 
 impl FakeWorkspaceService {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self::default()
     }
 
-    pub fn push_create_result(&self, result: Result<WorkspaceHandle, WorkspaceError>) {
+    pub(crate) fn push_create_result(&self, result: Result<WorkspaceHandle, WorkspaceError>) {
         self.create_results
             .lock()
             .expect("test operation succeeds")
             .push_back(result);
     }
 
-    pub fn create_requests(&self) -> Vec<CreateWorkspaceRequest> {
+    pub(crate) fn create_requests(&self) -> Vec<CreateWorkspaceRequest> {
         self.create_requests
             .lock()
             .expect("test operation succeeds")
             .clone()
     }
 
-    pub fn destroy_calls(&self) -> Vec<WorkspaceSessionId> {
+    pub(crate) fn destroy_calls(&self) -> Vec<WorkspaceSessionId> {
         self.destroy_calls
             .lock()
             .expect("test operation succeeds")
@@ -228,7 +230,9 @@ impl FakeWorkspaceService {
     }
 }
 
-pub fn fake_workspace_runtime(fake: Arc<FakeWorkspaceService>) -> Arc<WorkspaceRuntimeService> {
+pub(crate) fn fake_workspace_runtime(
+    fake: Arc<FakeWorkspaceService>,
+) -> Arc<WorkspaceRuntimeService> {
     Arc::new(WorkspaceRuntimeService::from_hooks_for_test(
         WorkspaceRuntimeHooks {
             create_workspace: Box::new({
@@ -252,11 +256,11 @@ pub fn fake_workspace_runtime(fake: Arc<FakeWorkspaceService>) -> Arc<WorkspaceR
     ))
 }
 
-pub fn build_services(fake: Arc<FakeWorkspaceService>) -> TestServices {
+pub(crate) fn build_services(fake: Arc<FakeWorkspaceService>) -> TestServices {
     build_services_with_launch_driver(fake, Arc::new(FakeLaunchDriver::new()))
 }
 
-pub fn build_services_with_launch_driver(
+pub(crate) fn build_services_with_launch_driver(
     fake: Arc<FakeWorkspaceService>,
     launch_driver: Arc<dyn CommandLaunchDriver>,
 ) -> TestServices {
@@ -269,7 +273,7 @@ pub fn build_services_with_launch_driver(
     TestServices { workspace, command }
 }
 
-pub fn create_request(workspace_root: PathBuf) -> CreateWorkspaceRequest {
+pub(crate) fn create_request(workspace_root: PathBuf) -> CreateWorkspaceRequest {
     CreateWorkspaceRequest {
         workspace_root,
         layer_stack_root: PathBuf::from("/layers"),
@@ -277,7 +281,7 @@ pub fn create_request(workspace_root: PathBuf) -> CreateWorkspaceRequest {
     }
 }
 
-pub fn workspace_handle(
+pub(crate) fn workspace_handle(
     workspace_session_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
@@ -295,7 +299,7 @@ pub fn workspace_handle(
     )
 }
 
-pub fn workspace_handle_without_launch(
+pub(crate) fn workspace_handle_without_launch(
     workspace_session_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
@@ -309,7 +313,7 @@ pub fn workspace_handle_without_launch(
     )
 }
 
-pub fn workspace_handle_unavailable_launch(
+pub(crate) fn workspace_handle_unavailable_launch(
     workspace_session_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
@@ -327,7 +331,7 @@ pub fn workspace_handle_unavailable_launch(
     )
 }
 
-pub fn destroy_result(handle: &WorkspaceHandle) -> DestroyWorkspaceResult {
+pub(crate) fn destroy_result(handle: &WorkspaceHandle) -> DestroyWorkspaceResult {
     DestroyWorkspaceResult {
         workspace_session_id: handle.id.clone(),
         evicted_upperdir_bytes: 0,
@@ -338,7 +342,7 @@ pub fn destroy_result(handle: &WorkspaceHandle) -> DestroyWorkspaceResult {
     }
 }
 
-pub fn success_exit(stdout: &str) -> CommandProcessExit {
+pub(crate) fn success_exit(stdout: &str) -> CommandProcessExit {
     CommandProcessExit {
         status: "completed".to_owned(),
         exit_code: 0,

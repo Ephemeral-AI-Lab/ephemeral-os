@@ -49,7 +49,7 @@ pub(crate) struct PtyProcessExitStatus {
 
 impl PtyProcessExitStatus {
     #[must_use]
-    pub fn unwaitable() -> Self {
+    pub(crate) fn unwaitable() -> Self {
         Self {
             exit_code: None,
             signal: None,
@@ -57,7 +57,7 @@ impl PtyProcessExitStatus {
     }
 
     #[must_use]
-    pub fn from_status(status: ExitStatus) -> Self {
+    pub(crate) fn from_status(status: ExitStatus) -> Self {
         let signal = status.signal();
         let exit_code = status
             .code()
@@ -67,12 +67,12 @@ impl PtyProcessExitStatus {
     }
 
     #[must_use]
-    pub const fn exit_code(self) -> Option<i64> {
+    pub(crate) const fn exit_code(self) -> Option<i64> {
         self.exit_code
     }
 
     #[must_use]
-    pub const fn signal(self) -> Option<i32> {
+    pub(crate) const fn signal(self) -> Option<i32> {
         self.signal
     }
 }
@@ -100,7 +100,7 @@ pub(crate) struct CommandCompletionStatus {
 
 impl CommandCompletionStatus {
     #[must_use]
-    pub fn from_process_and_runner(
+    pub(crate) fn from_process_and_runner(
         process_exit: PtyProcessExitStatus,
         runner: Option<&CommandRunnerResult>,
         kill: Option<KillReason>,
@@ -124,12 +124,12 @@ impl CommandCompletionStatus {
     }
 
     #[must_use]
-    pub fn status(&self) -> &str {
+    pub(crate) fn status(&self) -> &str {
         &self.status
     }
 
     #[must_use]
-    pub const fn exit_code(&self) -> i64 {
+    pub(crate) const fn exit_code(&self) -> i64 {
         self.exit_code
     }
 }
@@ -143,14 +143,14 @@ pub(crate) struct CommandRunnerResult {
 
 impl CommandRunnerResult {
     #[must_use]
-    pub fn read_from_path(path: &Path) -> Option<Self> {
+    pub(crate) fn read_from_path(path: &Path) -> Option<Self> {
         let bytes = std::fs::read(path).ok()?;
         let value = serde_json::from_slice::<Value>(&bytes).ok()?;
         Self::from_value(value)
     }
 
     #[must_use]
-    pub fn from_value(value: Value) -> Option<Self> {
+    pub(crate) fn from_value(value: Value) -> Option<Self> {
         let exit_code = value.get("exit_code").and_then(|value| {
             value
                 .as_i64()
@@ -170,17 +170,17 @@ impl CommandRunnerResult {
     }
 
     #[must_use]
-    pub const fn exit_code(&self) -> i64 {
+    pub(crate) const fn exit_code(&self) -> i64 {
         self.exit_code
     }
 
     #[must_use]
-    pub fn status(&self) -> Option<&str> {
+    pub(crate) fn status(&self) -> Option<&str> {
         self.status.as_deref()
     }
 
     #[must_use]
-    pub const fn value(&self) -> &Value {
+    pub(crate) const fn value(&self) -> &Value {
         &self.value
     }
 }

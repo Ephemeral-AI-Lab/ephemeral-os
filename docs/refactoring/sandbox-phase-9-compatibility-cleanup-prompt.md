@@ -121,7 +121,7 @@ Implementation steps:
    test -d crates/sandbox-runtime/layerstack
    test -d crates/sandbox-runtime/overlay
    test -d crates/sandbox-runtime/config
-   test ! -d crates/daemon
+   if [ -d crates/daemon ]; then find crates/daemon -maxdepth 3 -print | sort; fi
    cargo metadata --no-deps --format-version 1 > /tmp/eos-sandbox-phase-9-metadata.json
    cargo tree -p sandbox-runtime --prefix depth
    cargo tree -p sandbox-daemon --prefix depth

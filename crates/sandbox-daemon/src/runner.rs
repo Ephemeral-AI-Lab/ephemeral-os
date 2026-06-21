@@ -13,7 +13,7 @@ const DAEMON_CONFIG_YAML_ENV: &str = "EOS_DAEMON_CONFIG_YAML";
 /// Execute one command inside a holder namespace, reading the
 /// resolved `NamespaceCommandRequest` payload and emitting the `RunResult` JSON.
 ///
-/// This is a thin call into the `namespace-process` runner module:
+/// This is a thin call into the `sandbox-runtime-namespace-process` runner module:
 /// read the request payload from stdin or `--request <path>`, load the runner
 /// config, dispatch the selected [`RunnerCliMode`], and write the compact
 /// `RunResult` JSON to stdout or `--output <path>`.

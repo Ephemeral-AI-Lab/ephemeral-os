@@ -267,7 +267,7 @@ struct WorkspaceLaunchContext {
 }
 
 impl WorkspaceLaunchContext {
-    pub fn entry(&self) -> Result<WorkspaceEntry, WorkspaceEntryError> {
+    fn entry(&self) -> Result<WorkspaceEntry, WorkspaceEntryError> {
         Ok(WorkspaceEntry {
             workspace_root: self.workspace_root.clone(),
             layer_paths: self.layer_paths.clone(),

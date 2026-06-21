@@ -64,7 +64,7 @@ pub(crate) struct BridgeAddressPool {
 }
 
 impl BridgeAddressPool {
-    pub fn allocate(&mut self) -> Result<Ipv4Addr, IsolatedNetworkError> {
+    pub(crate) fn allocate(&mut self) -> Result<Ipv4Addr, IsolatedNetworkError> {
         for host in POOL_FIRST_HOST..=POOL_LAST_HOST {
             let ip = Ipv4Addr::new(10, 244, 0, host);
             if self.allocated.insert(ip) {
@@ -76,7 +76,7 @@ impl BridgeAddressPool {
         ))
     }
 
-    pub fn free(&mut self, ip: Ipv4Addr) {
+    pub(crate) fn free(&mut self, ip: Ipv4Addr) {
         self.allocated.remove(&ip);
     }
 }
@@ -90,7 +90,7 @@ pub(crate) struct IsolatedNetwork {
 
 impl IsolatedNetwork {
     #[must_use]
-    pub fn new(rfc1918_egress: Rfc1918Egress) -> Self {
+    pub(crate) fn new(rfc1918_egress: Rfc1918Egress) -> Self {
         Self {
             rfc1918_egress,
             pool: BridgeAddressPool::default(),
@@ -98,7 +98,7 @@ impl IsolatedNetwork {
         }
     }
 
-    pub fn initialize(&mut self) -> Result<(), IsolatedNetworkError> {
+    pub(crate) fn initialize(&mut self) -> Result<(), IsolatedNetworkError> {
         let rfc1918_egress = self.rfc1918_egress;
         #[cfg(target_os = "linux")]
         {
@@ -116,7 +116,7 @@ impl IsolatedNetwork {
         Ok(())
     }
 
-    pub fn install_veth(
+    pub(crate) fn install_veth(
         &mut self,
         workspace_handle_id: &str,
         holder_pid: i32,
@@ -159,12 +159,12 @@ impl IsolatedNetwork {
         })
     }
 
-    pub fn teardown_veth(&mut self, allocation: &VethAllocation) {
+    pub(crate) fn teardown_veth(&mut self, allocation: &VethAllocation) {
         self.teardown_host_veth(&allocation.host_name);
         self.pool.free(allocation.ns_ip);
     }
 
-    pub fn teardown_host_veth(&mut self, host_name: &str) {
+    pub(crate) fn teardown_host_veth(&mut self, host_name: &str) {
         #[cfg(not(target_os = "linux"))]
         let _ = host_name;
         #[cfg(target_os = "linux")]
