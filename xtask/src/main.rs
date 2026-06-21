@@ -18,6 +18,9 @@ use sha2::{Digest, Sha256};
 
 const AMD64_TARGET: &str = "x86_64-unknown-linux-musl";
 const ARM64_TARGET: &str = "aarch64-unknown-linux-musl";
+const DAEMON_PACKAGE: &str = "sandbox-daemon";
+const DAEMON_BINARY: &str = "sandbox-daemon";
+const DAEMON_ARTIFACT_PREFIX: &str = "sandbox-daemon";
 const DEFAULT_PACKAGE_PROFILE: &str = "package-fast";
 const FAST_PACKAGE_PROFILE: &str = "package-fast";
 const MAX_MOD_OR_LIB_LINES: usize = 300;
@@ -773,8 +776,8 @@ fn package(args: &PackageArgs) -> Result<()> {
     let built = cargo_target_dir(&root)
         .join(&args.target)
         .join(cargo_profile_dir(&args.profile))
-        .join("eosd");
-    let artifact_name = format!("eosd-linux-{arch}");
+        .join(DAEMON_BINARY);
+    let artifact_name = format!("{DAEMON_ARTIFACT_PREFIX}-linux-{arch}");
     let artifact = out_dir.join(&artifact_name);
     fs::copy(&built, &artifact)
         .with_context(|| format!("copy {} to {}", built.display(), artifact.display()))?;
@@ -871,7 +874,7 @@ fn run_build(root: &Path, builder: &str, target: &str, profile: &str) -> Result<
             command.args([
                 "build",
                 "-p",
-                "eosd",
+                DAEMON_PACKAGE,
                 "--target",
                 target,
                 "--profile",
@@ -896,7 +899,7 @@ fn cargo_build_command(target: &str, profile: &str) -> Command {
     command.args([
         "build",
         "-p",
-        "eosd",
+        DAEMON_PACKAGE,
         "--target",
         target,
         "--profile",
@@ -956,7 +959,7 @@ fn write_checksums(out_dir: &Path) -> Result<()> {
     artifacts.retain(|path| {
         path.file_name()
             .and_then(|name| name.to_str())
-            .is_some_and(|name| matches!(name, "eosd-linux-amd64" | "eosd-linux-arm64"))
+            .is_some_and(is_primary_daemon_artifact)
     });
     artifacts.sort();
 
@@ -1004,6 +1007,13 @@ fn write_manifest(
     })
 }
 
+fn is_primary_daemon_artifact(name: &str) -> bool {
+    matches!(
+        name,
+        "sandbox-daemon-linux-amd64" | "sandbox-daemon-linux-arm64"
+    )
+}
+
 fn sign_artifact(artifact: &Path, key: &Path) -> Result<()> {
     let signature = artifact.with_extension("minisig");
     let status = Command::new("minisign")
@@ -1036,8 +1046,8 @@ xtask commands:
           [--profile <name> | --fast] [--no-build] [--sign --minisign-key <path>]
 
 Targets:
-  {AMD64_TARGET} -> eosd-linux-amd64
-  {ARM64_TARGET} -> eosd-linux-arm64
+  {AMD64_TARGET} -> sandbox-daemon-linux-amd64
+  {ARM64_TARGET} -> sandbox-daemon-linux-arm64
 
 Profiles:
   package-fast  default local Docker/E2E package, no LTO + incremental rebuilds

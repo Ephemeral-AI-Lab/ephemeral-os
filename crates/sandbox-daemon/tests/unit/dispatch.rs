@@ -7,14 +7,14 @@ fn decode_request_preserves_request_fields() {
         "payload": ["large-ish", "owned", "args"],
     });
     let request = json!({
-        "op": "command.exec",
+        "op": "exec_command",
         "request_id": "req-1",
         "args": args.clone(),
     });
 
     let parsed = decode_request(request).expect("valid request parses");
 
-    assert_eq!(parsed.op, "command.exec");
+    assert_eq!(parsed.op, "exec_command");
     assert_eq!(parsed.request_id, "req-1");
     assert_eq!(parsed.args, args);
 }
@@ -22,7 +22,7 @@ fn decode_request_preserves_request_fields() {
 #[test]
 fn decode_request_rejects_non_object_args() {
     let request = json!({
-        "op": "command.exec",
+        "op": "exec_command",
         "request_id": "req-1",
         "args": "not an object",
     });

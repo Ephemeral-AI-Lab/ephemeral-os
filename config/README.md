@@ -49,7 +49,8 @@ code near their owner.
 
 ## Schema Ownership
 
-Runtime schema lives in `crates/config/src/configs/<module-name>.rs`.
+Runtime schema lives in
+`crates/sandbox-runtime/config/src/configs/<module-name>.rs`.
 Multi-word crate modules use their crate-style filename, for example
 `isolated-workspace.rs` exports the `isolated` Rust module. Runtime
 crates may re-export those typed schemas through their public modules, but they
