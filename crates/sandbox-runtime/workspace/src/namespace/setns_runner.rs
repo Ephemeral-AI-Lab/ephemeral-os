@@ -11,9 +11,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 #[cfg(target_os = "linux")]
-use ::sandbox_runtime_namespace_process::runner::protocol::{
-    NamespaceCommandRequest, RunResult, WorkspaceRoot,
-};
+use ::sandbox_runtime_namespace_process::runner::protocol::{NamespaceCommandRequest, RunResult};
 #[cfg(target_os = "linux")]
 use nix::sys::signal::{kill, Signal};
 #[cfg(target_os = "linux")]
@@ -123,7 +121,7 @@ pub(crate) fn ns_command_request(
     NamespaceCommandRequest {
         request_id: format!("isolated-{request}-{}", handle.workspace_id.0),
         args,
-        workspace_root: WorkspaceRoot(PathBuf::from(&handle.workspace_root)),
+        workspace_root: PathBuf::from(&handle.workspace_root),
         layer_paths,
         upperdir: Some(handle.dirs.upperdir.clone()),
         workdir: Some(handle.dirs.workdir.clone()),

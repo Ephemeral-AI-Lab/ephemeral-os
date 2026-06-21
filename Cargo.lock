@@ -1001,7 +1001,6 @@ dependencies = [
  "libc",
  "nix 0.29.0",
  "rustix 0.38.44",
- "sandbox-runtime-config",
  "sandbox-runtime-overlay",
  "serde",
  "serde_json",

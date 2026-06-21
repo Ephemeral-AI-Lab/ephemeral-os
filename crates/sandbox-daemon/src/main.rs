@@ -25,10 +25,9 @@
 //! status; a blanket `anyhow` fallthrough would collapse them all to `1` and
 //! silently drop the contract. The dispatcher therefore maps known codes via
 //! [`std::process::exit`]:
-//! - ns-holder: `1` (control pipe closed), `2` (unexpected token), `7` (test
-//!   crash knob) —
+//! - ns-holder: `1` (control pipe closed), `2` (unexpected token) —
 //!   `sandbox_runtime_namespace_process::holder::NsHolderError::{CONTROL_CLOSED_EXIT,
-//!   UNEXPECTED_TOKEN_EXIT, TEST_CRASH_EXIT}`.
+//!   UNEXPECTED_TOKEN_EXIT}`.
 #![forbid(unsafe_code)]
 
 mod holder;

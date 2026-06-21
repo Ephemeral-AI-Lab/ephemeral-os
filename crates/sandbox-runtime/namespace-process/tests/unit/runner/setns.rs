@@ -1,5 +1,5 @@
 use super::{overlay_layer_paths, require_ns_fds};
-use crate::runner::protocol::{Fd, NamespaceCommandRequest, NsFds, WorkspaceRoot};
+use crate::runner::protocol::{Fd, NamespaceCommandRequest, NsFds};
 use std::path::Path;
 #[cfg(target_os = "linux")]
 use std::path::PathBuf;
@@ -18,8 +18,9 @@ fn require_ns_fds_rejects_missing_setns_payload() -> Result<(), Box<dyn std::err
 fn remount_overlay_requires_setns_payload() -> Result<(), Box<dyn std::error::Error>> {
     let mut request = request(None);
     request.layer_paths = vec![Path::new("/tmp/layer").to_path_buf()];
+    let hidden_paths = [Path::new("/eos").to_path_buf()];
 
-    let Err(error) = super::remount_overlay(&request, &runner_config()) else {
+    let Err(error) = super::remount_overlay(&request, &hidden_paths) else {
         return Err("remount overlay should require setns namespace fds".into());
     };
 
@@ -112,7 +113,7 @@ fn request(ns_fds: Option<NsFds>) -> NamespaceCommandRequest {
     NamespaceCommandRequest {
         request_id: "test".to_owned(),
         args: serde_json::json!({"command": "true"}),
-        workspace_root: WorkspaceRoot(Path::new("/workspace").to_path_buf()),
+        workspace_root: Path::new("/workspace").to_path_buf(),
         layer_paths: vec![],
         upperdir: Some(Path::new("/tmp/iws/upper").to_path_buf()),
         workdir: Some(Path::new("/tmp/iws/work").to_path_buf()),
@@ -128,21 +129,5 @@ fn default_ns_fds() -> NsFds {
         mnt: Some(Fd(11)),
         pid: Some(Fd(12)),
         net: Some(Fd(13)),
-    }
-}
-
-#[cfg(target_os = "linux")]
-fn runner_config() -> crate::runner::config::RunnerConfig {
-    crate::runner::config::RunnerConfig {
-        child_wait_poll_ms: 5,
-        mount_mask: crate::runner::config::RunnerMountMaskConfig {
-            hidden_paths: vec![Path::new("/eos").to_path_buf()],
-        },
-        env: crate::runner::config::RunnerEnvConfig {
-            inherit_keys: vec![],
-            restricted_keys: vec![],
-            default_path: "/usr/bin:/bin".to_owned(),
-            testbed_path_prefix: vec![],
-        },
     }
 }

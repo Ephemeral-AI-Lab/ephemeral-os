@@ -17,10 +17,6 @@ pub mod protocol;
 pub mod setns;
 pub(crate) mod shell_exec;
 
-pub mod config {
-    pub use sandbox_runtime_config::configs::runner::*;
-}
-
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum RunnerError {

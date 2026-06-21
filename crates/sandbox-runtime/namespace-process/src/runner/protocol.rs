@@ -10,9 +10,6 @@ use serde_json::Value;
 #[repr(transparent)]
 pub struct Fd(pub RawFd);
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct WorkspaceRoot(pub PathBuf);
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NsFds {
     pub user: Option<Fd>,
@@ -25,7 +22,7 @@ pub struct NsFds {
 pub struct NamespaceCommandRequest {
     pub request_id: String,
     pub args: Value,
-    pub workspace_root: WorkspaceRoot,
+    pub workspace_root: PathBuf,
     pub layer_paths: Vec<PathBuf>,
     #[serde(default)]
     pub upperdir: Option<PathBuf>,

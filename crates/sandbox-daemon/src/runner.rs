@@ -7,6 +7,7 @@ use std::os::fd::RawFd;
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Context, Result};
+use sandbox_runtime_config::configs::runner::RunnerConfig;
 
 const DAEMON_CONFIG_YAML_ENV: &str = "SANDBOX_DAEMON_CONFIG_YAML";
 
@@ -31,7 +32,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
                 exit_code: 0,
                 payload: sandbox_runtime_namespace_process::runner::setns::remount_overlay(
                     &request,
-                    &runner_config,
+                    &runner_config.mount_mask.hidden_paths,
                 )
                 .context("ns-runner remount overlay failed")?,
             }
@@ -39,7 +40,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
         RunnerCliMode::MountOverlay => {
             sandbox_runtime_namespace_process::runner::setns::setns_overlay_mount(
                 &request,
-                &runner_config,
+                &runner_config.mount_mask.hidden_paths,
             )
             .context("ns-runner setns overlay mount failed")?;
             ok_result()
@@ -59,14 +60,14 @@ fn ok_result() -> sandbox_runtime_namespace_process::runner::protocol::RunResult
     }
 }
 
-fn load_runner_config() -> Result<sandbox_runtime_namespace_process::runner::config::RunnerConfig> {
+fn load_runner_config() -> Result<RunnerConfig> {
     let path = std::env::var_os(DAEMON_CONFIG_YAML_ENV)
         .map(PathBuf::from)
         .ok_or_else(|| anyhow!("{DAEMON_CONFIG_YAML_ENV} is required for ns-runner"))?;
     let doc = sandbox_runtime_config::load_path(&path)
         .with_context(|| format!("load {}", path.display()))?;
     let config = doc
-        .section::<sandbox_runtime_namespace_process::runner::config::RunnerConfig>("runner")
+        .section::<RunnerConfig>("runner")
         .context("deserialize runner config section")?;
     config.validate().context("validate runner config")?;
     Ok(config)

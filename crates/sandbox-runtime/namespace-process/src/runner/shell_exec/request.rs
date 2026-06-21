@@ -40,7 +40,7 @@ pub(crate) fn shell_cwd(request: &NamespaceCommandRequest) -> Result<PathBuf, Ru
         .get("cwd")
         .and_then(serde_json::Value::as_str)
         .unwrap_or(".");
-    let workspace_root = normalize_lexical(&request.workspace_root.0);
+    let workspace_root = normalize_lexical(&request.workspace_root);
     let candidate = PathBuf::from(raw);
     let resolved = if candidate.is_absolute() {
         let candidate = normalize_lexical(&candidate);

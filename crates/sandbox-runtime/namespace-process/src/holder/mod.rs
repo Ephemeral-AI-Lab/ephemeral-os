@@ -11,13 +11,11 @@ use network::{
     parse_network_config, NetworkConfig,
 };
 
-pub const NS_UP: &[u8] = b"ns-up\n";
+pub(crate) const NS_UP: &[u8] = b"ns-up\n";
 
-pub const NET_READY: &[u8] = b"net-ready";
+pub(crate) const NET_READY: &[u8] = b"net-ready";
 
-pub const READY: &[u8] = b"ready\n";
-
-pub const TEST_HOLDER_CRASH_ENV: &str = "SANDBOX_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH";
+pub(crate) const READY: &[u8] = b"ready\n";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NamespaceNetwork {
@@ -54,14 +52,11 @@ pub enum NsHolderError {
         #[source]
         source: std::io::Error,
     },
-    #[error("test holder crash injected")]
-    TestCrash,
 }
 
 impl NsHolderError {
     pub const CONTROL_CLOSED_EXIT: i32 = 1;
     pub const UNEXPECTED_TOKEN_EXIT: i32 = 2;
-    pub const TEST_CRASH_EXIT: i32 = 7;
 }
 
 #[derive(Debug)]
@@ -138,12 +133,6 @@ pub fn run(
     rbind_proc();
     let mut handshake = Handshake::new(readiness_fd, control_fd, network, namespaces);
     handshake.signal_ns_up()?;
-    if std::env::var(TEST_HOLDER_CRASH_ENV)
-        .unwrap_or_default()
-        .eq_ignore_ascii_case("true")
-    {
-        return Err(NsHolderError::TestCrash);
-    }
     if network.is_isolated() {
         handshake.await_net_ready()?;
     }

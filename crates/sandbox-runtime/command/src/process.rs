@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 
-use sandbox_runtime_namespace_process::runner::protocol::{NamespaceCommandRequest, WorkspaceRoot};
+use sandbox_runtime_namespace_process::runner::protocol::NamespaceCommandRequest;
 use sandbox_runtime_workspace::WorkspaceEntry;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -416,7 +416,7 @@ pub(crate) fn build_namespace_command_request(
             "command": spec.command.clone(),
             "cwd": cwd,
         }),
-        workspace_root: WorkspaceRoot(entry.workspace_root),
+        workspace_root: entry.workspace_root,
         layer_paths: entry.layer_paths,
         upperdir: Some(entry.upperdir),
         workdir: Some(entry.workdir),

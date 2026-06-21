@@ -1,8 +1,6 @@
 //! Namespace shell execution shared by setns runner modes.
 
 #[cfg(target_os = "linux")]
-use std::path::PathBuf;
-#[cfg(target_os = "linux")]
 use std::process::{Command, Stdio};
 #[cfg(target_os = "linux")]
 use std::time::Instant;
@@ -51,7 +49,6 @@ pub(crate) fn execute_shell(
     request: &NamespaceCommandRequest,
     mut timings: RunnerPhaseTimings,
     run_start: Instant,
-    hidden_paths: Option<&[PathBuf]>,
 ) -> Result<RunResult, RunnerError> {
     let prepare_start = Instant::now();
     let argv = shell_argv(request)?;
@@ -64,9 +61,6 @@ pub(crate) fn execute_shell(
         rustix::fs::Mode::empty(),
     )
     .ok();
-    if let Some(hidden_paths) = hidden_paths {
-        super::mask_model_shell_paths(hidden_paths)?;
-    }
     let mut command = Command::new(&argv[0]);
     command
         .args(&argv[1..])
@@ -99,19 +93,8 @@ pub(crate) fn execute_shell(
         exit_code,
         payload: serde_json::json!({
             "success": exit_code == 0,
-            "workspace": "shared",
             "timings": timings.into_json(run_start),
-            "conflict": null,
-            "conflict_reason": null,
-            "changed_paths": [],
-            "error": null,
-            "changed_path_kinds": {},
-            "mutation_source": "",
             "status": result_status(exit_code, timed_out),
-            "exit_code": exit_code,
-            "stdout": "",
-            "stderr": "",
-            "warnings": [],
         }),
     })
 }

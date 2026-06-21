@@ -32,7 +32,7 @@ pub(crate) fn run_setns(request: &NamespaceCommandRequest) -> Result<RunResult, 
         "workspace.setns_join_s",
         setns_start.elapsed().as_secs_f64(),
     );
-    super::shell_exec::execute_shell(request, timings, Instant::now(), None)
+    super::shell_exec::execute_shell(request, timings, Instant::now())
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -44,7 +44,7 @@ pub(crate) fn run_setns(_request: &NamespaceCommandRequest) -> Result<RunResult,
 #[cfg(target_os = "linux")]
 pub fn setns_overlay_mount(
     request: &NamespaceCommandRequest,
-    config: &super::config::RunnerConfig,
+    hidden_paths: &[PathBuf],
 ) -> Result<(), RunnerError> {
     setns_user_mnt(request, "setns overlay mount")?;
     let upperdir = request.upperdir.as_ref().ok_or_else(|| {
@@ -58,8 +58,8 @@ pub fn setns_overlay_mount(
         upperdir: upperdir.clone(),
         workdir: workdir.clone(),
     };
-    let guard = sandbox_runtime_overlay::mount_overlay(&request.workspace_root.0, &handle)?;
-    super::mask_model_shell_paths(&config.mount_mask.hidden_paths)?;
+    let guard = sandbox_runtime_overlay::mount_overlay(&request.workspace_root, &handle)?;
+    super::mask_model_shell_paths(hidden_paths)?;
     // The setns mount helper is a one-shot process. The mounted overlay must
     // outlive this helper and remain pinned by the target mount namespace until
     // isolated teardown, so the unmount-on-drop guard is deliberately leaked.
@@ -70,7 +70,7 @@ pub fn setns_overlay_mount(
 #[cfg(not(target_os = "linux"))]
 pub fn setns_overlay_mount(
     _request: &NamespaceCommandRequest,
-    _config: &super::config::RunnerConfig,
+    _hidden_paths: &[PathBuf],
 ) -> Result<(), RunnerError> {
     Err(RunnerError::Unsupported)
 }
@@ -79,10 +79,10 @@ pub fn setns_overlay_mount(
 #[cfg(target_os = "linux")]
 pub fn remount_overlay(
     request: &NamespaceCommandRequest,
-    config: &super::config::RunnerConfig,
+    hidden_paths: &[PathBuf],
 ) -> Result<serde_json::Value, RunnerError> {
     setns_user_mnt(request, "remount overlay")?;
-    let mut mask_guard = RemountMaskGuard::unmask(&config.mount_mask.hidden_paths)?;
+    let mut mask_guard = RemountMaskGuard::unmask(hidden_paths)?;
     let upperdir = request.upperdir.as_ref().ok_or_else(|| {
         RunnerError::InvalidRequest("remount overlay requires upperdir".to_owned())
     })?;
@@ -101,14 +101,14 @@ pub fn remount_overlay(
     };
     let telemetry = staged_remount_overlay(request, &handle, &mut mask_guard)?;
     mask_guard.restore()?;
-    let report = remount_verification_report(request, &request.workspace_root.0, &telemetry);
+    let report = remount_verification_report(request, &request.workspace_root, &telemetry);
     Ok(report)
 }
 
 #[cfg(not(target_os = "linux"))]
 pub fn remount_overlay(
     _request: &NamespaceCommandRequest,
-    _config: &super::config::RunnerConfig,
+    _hidden_paths: &[PathBuf],
 ) -> Result<serde_json::Value, RunnerError> {
     Err(RunnerError::Unsupported)
 }
@@ -226,13 +226,12 @@ fn staged_remount_overlay(
         return Ok(telemetry);
     }
 
-    sandbox_runtime_overlay::move_mountpoint(&request.workspace_root.0, &dirs.rollback)?;
+    sandbox_runtime_overlay::move_mountpoint(&request.workspace_root, &dirs.rollback)?;
     if let Err(err) =
-        sandbox_runtime_overlay::move_mountpoint(&dirs.staging, &request.workspace_root.0)
+        sandbox_runtime_overlay::move_mountpoint(&dirs.staging, &request.workspace_root)
     {
         let rollback_error =
-            sandbox_runtime_overlay::move_mountpoint(&dirs.rollback, &request.workspace_root.0)
-                .err();
+            sandbox_runtime_overlay::move_mountpoint(&dirs.rollback, &request.workspace_root).err();
         return Err(RunnerError::InvalidRequest(format!(
             "staged remount switch failed: {err}; rollback_error={rollback_error:?}"
         )));
@@ -240,14 +239,14 @@ fn staged_remount_overlay(
     telemetry.staged_switch = true;
 
     if let Err(err) = mask_guard.restore() {
-        let rollback_error = rollback_staged_switch(&request.workspace_root.0, &dirs);
+        let rollback_error = rollback_staged_switch(&request.workspace_root, &dirs);
         return Err(RunnerError::InvalidRequest(format!(
             "staged remount mask restore failed: {err}; rollback_error={rollback_error:?}"
         )));
     }
 
-    if !overlay_mount_verified(request, &request.workspace_root.0) {
-        let rollback_error = rollback_staged_switch(&request.workspace_root.0, &dirs);
+    if !overlay_mount_verified(request, &request.workspace_root) {
+        let rollback_error = rollback_staged_switch(&request.workspace_root, &dirs);
         telemetry.staged_switch = false;
         telemetry.rollback_unmount_error = rollback_error;
         return Ok(telemetry);
@@ -262,7 +261,7 @@ fn staged_remount_overlay(
         }
         Err(err) => {
             let cleanup_error = err.to_string();
-            let rollback_error = rollback_staged_switch(&request.workspace_root.0, &dirs);
+            let rollback_error = rollback_staged_switch(&request.workspace_root, &dirs);
             telemetry.staged_switch = false;
             telemetry.rollback_unmounted = Some(false);
             telemetry.rollback_unmount_error = Some(match rollback_error {
@@ -528,7 +527,7 @@ fn validated_relative_probe_path(path: &str) -> Result<PathBuf, String> {
     Ok(normalized)
 }
 
-pub fn require_ns_fds(request: &NamespaceCommandRequest) -> Result<NsFds, RunnerError> {
+pub(crate) fn require_ns_fds(request: &NamespaceCommandRequest) -> Result<NsFds, RunnerError> {
     request
         .ns_fds
         .ok_or_else(|| RunnerError::InvalidRequest("setns mode requires ns_fds".to_owned()))
@@ -562,7 +561,9 @@ fn setns_user_mnt(request: &NamespaceCommandRequest, operation: &str) -> Result<
     setns_fd("mnt", mnt.0, libc::CLONE_NEWNS)
 }
 
-pub fn overlay_layer_paths(request: &NamespaceCommandRequest) -> Result<Vec<PathBuf>, RunnerError> {
+pub(crate) fn overlay_layer_paths(
+    request: &NamespaceCommandRequest,
+) -> Result<Vec<PathBuf>, RunnerError> {
     if request.layer_paths.is_empty() {
         Err(RunnerError::InvalidRequest(
             "setns overlay mount requires layer_paths".to_owned(),

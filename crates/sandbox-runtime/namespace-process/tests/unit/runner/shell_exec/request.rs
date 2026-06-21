@@ -1,5 +1,5 @@
 use super::{normalize_lexical, shell_argv, shell_cwd};
-use crate::runner::protocol::{NamespaceCommandRequest, WorkspaceRoot};
+use crate::runner::protocol::NamespaceCommandRequest;
 use std::path::Path;
 
 #[test]
@@ -47,7 +47,7 @@ fn request(args: serde_json::Value) -> NamespaceCommandRequest {
     NamespaceCommandRequest {
         request_id: "test".to_owned(),
         args,
-        workspace_root: WorkspaceRoot(Path::new("/workspace").to_path_buf()),
+        workspace_root: Path::new("/workspace").to_path_buf(),
         layer_paths: vec![],
         upperdir: None,
         workdir: None,

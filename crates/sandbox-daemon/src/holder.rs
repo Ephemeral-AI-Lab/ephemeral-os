@@ -22,9 +22,6 @@ pub(crate) fn run(mut args: std::env::Args) -> Result<()> {
                 sandbox_runtime_namespace_process::holder::NsHolderError::UnexpectedToken => {
                     sandbox_runtime_namespace_process::holder::NsHolderError::UNEXPECTED_TOKEN_EXIT
                 }
-                sandbox_runtime_namespace_process::holder::NsHolderError::TestCrash => {
-                    sandbox_runtime_namespace_process::holder::NsHolderError::TEST_CRASH_EXIT
-                }
                 _ => return Err(anyhow::Error::new(err).context("ns-holder failed")),
             };
             std::process::exit(code);
