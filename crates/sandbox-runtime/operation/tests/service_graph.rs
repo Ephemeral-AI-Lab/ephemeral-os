@@ -131,8 +131,14 @@ fn operation_catalog_exports_runtime_command_operations() {
         catalog.operation_execution_space,
         OperationExecutionSpace::Runtime
     );
-    assert_eq!(catalog.families.len(), 1);
-    assert_eq!(catalog.families[0].title, "Command");
+    assert_eq!(
+        catalog
+            .families
+            .iter()
+            .map(|family| family.title)
+            .collect::<Vec<_>>(),
+        ["Command", "Cgroup Monitor"]
+    );
     assert_eq!(
         names,
         [
@@ -140,7 +146,9 @@ fn operation_catalog_exports_runtime_command_operations() {
             "write_command_stdin",
             "poll_command",
             "read_command_lines",
-            "cancel_command"
+            "cancel_command",
+            "inspect_cgroup_monitor",
+            "read_cgroup_monitor_samples"
         ]
     );
 }

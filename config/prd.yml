@@ -8,6 +8,13 @@ daemon:
 
   commands:
     scratch_root: /eos/scratch/commands
+  cgroup_monitor:
+    enabled: true
+    sample_interval_ms: 1000
+    retained_samples_per_target: 100
+    include_pids: true
+    include_pressure: true
+    include_disk: true
   idle_workspace_eviction:
     interval_ms: 500
 

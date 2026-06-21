@@ -22,6 +22,14 @@ retention policy expires.
 
 Use `/eos/commands`, not `/eos/commnd`.
 
+Configuration ownership must match the runtime ownership:
+
+- Command transcript storage and completed-command retention are runtime
+  settings under `runtime.commands`.
+- No command transcript storage setting remains under `daemon.commands`.
+- Daemon server/process settings stay under `daemon.server`; this migration only
+  moves command runtime storage and retention.
+
 ## Non-Goals
 
 - Do not make command transcripts durable history across daemon restarts.
@@ -55,6 +63,28 @@ daemon.commands.scratch_root = /eos/scratch/commands
 That name is now wrong: command transcripts are retained command output, not
 workspace scratch.
 
+## Storage Semantics
+
+`/eos` is the runtime-managed root. Paths under it are internal runtime storage,
+not user workspace content.
+
+`/eos/scratch` means ephemeral runtime working storage. A subsystem may use it
+for writable directories, mount work dirs, transient state, and lifecycle-owned
+runtime bookkeeping. It should not be used for retained command output.
+
+Current scratch users:
+
+- `/eos/scratch/workspace`: workspace session scratch. It contains session run
+  dirs such as `sessions/<workspace_session_id>/upper` and `work`, and
+  workspace manager state.
+- `/eos/scratch/overlay`: overlay writable root used by overlay helpers.
+- `/eos/scratch/commands`: legacy command transcript location. This migration
+  removes it.
+
+`/eos/commands` is still runtime-owned internal storage, but it is intentionally
+not under `/eos/scratch`: completed command transcripts must remain readable
+after workspace destroy until `completed_retention_s` expires.
+
 ## Target Config
 
 Move command transcript configuration under the runtime config:
@@ -80,6 +110,11 @@ Validation rules:
 The runtime command config should mirror those names:
 
 ```rust
+pub struct RuntimeConfig {
+    pub workspace: WorkspaceConfig,
+    pub commands: CommandConfig,
+}
+
 pub struct CommandRuntimeConfig {
     pub scratch_root: PathBuf,
     pub completed_retention: Duration,
@@ -102,6 +137,45 @@ Path rules:
   path construction.
 - Reject or avoid command session ids containing path separators.
 - Remove the entire command directory when the completed command expires.
+
+## Spawn Path Impact
+
+`CommandProcessSpawn` keeps the same ownership shape:
+
+```rust
+pub struct CommandProcessSpawn {
+    pub workspace_entry: WorkspaceEntry,
+    pub transcript_path: PathBuf,
+    cgroup: Option<CommandCgroup>,
+    cgroup_monitor_config: CgroupMonitorConfig,
+}
+```
+
+Only the value of `transcript_path` changes. `CommandProcessSpawn::prepare`
+continues to derive it from the command runtime config and the internally
+allocated command session id:
+
+```text
+runtime.commands.scratch_root / command_session_id / transcript.log
+```
+
+With the default config, that resolves to:
+
+```text
+/eos/commands/<command_session_id>/transcript.log
+```
+
+Do not move `transcript_path` into `WorkspaceEntry`. `WorkspaceEntry` remains
+workspace launch material: workspace root, layer paths, upper/work dirs,
+namespace FDs, and optional cgroup path. Command transcript storage must stay
+owned by the command runtime store so that workspace destroy does not remove
+retained command output.
+
+`CommandProcess::transcript_path()` should continue returning the resolved path
+from `CommandProcessSpawn`. Active and completed command records should copy
+that resolved path into `CommandTranscriptStore` and
+`RetainedCommandTranscript`; later reads must use the retained path rather than
+reconstructing it from a workspace path or request payload.
 
 ## Lifecycle Policy
 
@@ -147,6 +221,7 @@ Daemon restart:
   `runtime.commands`.
 - Keep the command root key named `scratch_root`.
 - Add `runtime.commands.completed_retention_s`.
+- Remove `DaemonConfig.commands` if no daemon-only command fields remain.
 - Update `config/prd.yml`.
 - Update config tests.
 - Remove all old `daemon.commands.scratch_root` references.
@@ -173,9 +248,19 @@ CommandRuntimeConfig {
 config.scratch_root / command_session_id / transcript.log
 ```
 
+- Keep the `CommandProcessSpawn` fields unchanged.
+- Ensure `config.scratch_root` is sourced from `runtime.commands.scratch_root`.
+- Ensure the returned `transcript_path` is exactly:
+
+```text
+/eos/commands/<command_session_id>/transcript.log
+```
+
 - Rename error context from command scratch/artifact scratch language to command
   store language where appropriate.
 - Preserve start-failure cleanup of the command directory.
+- Do not clean successful command directories from `CommandProcess`; retention
+  pruning owns successful command cleanup.
 
 4. Command store retention
 
@@ -219,6 +304,7 @@ Config:
   `runtime.workspace.scratch_root`.
 - `runtime.commands.completed_retention_s` must be greater than zero.
 - Old `daemon.commands.scratch_root` is rejected.
+- `daemon.commands` is rejected once no daemon-only command fields remain.
 
 Command process:
 
@@ -228,6 +314,20 @@ Command process:
 <scratch_root>/cmd_7/transcript.log
 ```
 
+- With the default config, `CommandProcessSpawn::prepare("cmd_7", ...)`
+  resolves:
+
+```text
+/eos/commands/cmd_7/transcript.log
+```
+
+- `CommandProcessSpawn::workspace_entry` is unchanged and does not gain a
+  transcript path.
+- `CommandProcess::transcript_path()` returns the resolved path from
+  `CommandProcessSpawn`.
+- Active command records copy the resolved path into `CommandTranscriptStore`.
+- Completed command records copy the same resolved path into
+  `RetainedCommandTranscript`.
 - Start-failure cleanup removes `<scratch_root>/cmd_7`.
 
 Retention:
@@ -292,3 +392,5 @@ git diff --check
 - Expired completed command records and transcript directories are removed.
 - Workspace destroy does not delete retained command transcripts.
 - Running commands are never evicted by completed-command retention.
+- `CommandProcessSpawn::transcript_path` remains the resolved command transcript
+  path, now rooted at `runtime.commands.scratch_root`.

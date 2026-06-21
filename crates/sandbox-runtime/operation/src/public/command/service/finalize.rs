@@ -26,6 +26,12 @@ impl CommandOperationService {
         process_exit: ::sandbox_runtime_command::process::CommandProcessExit,
     ) -> Result<CommandTerminalResult, CommandServiceError> {
         let record = self.begin_finalization(&command_session_id)?;
+        self.workspace().cgroup_monitor().record_command_final(
+            &record.workspace_session_id,
+            &command_session_id.0,
+            process_exit.cgroup_final_sample.clone(),
+            process_exit.cgroup_cleanup.clone(),
+        );
         let result = terminal_result(&process_exit);
         let finalized = self.finalize_session_command(&record, &process_exit);
 

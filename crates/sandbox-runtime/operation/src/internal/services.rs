@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::cgroup_monitor::CgroupMonitorOperationService;
 use crate::command::CommandOperationService;
 use crate::layerstack::LayerStackService;
 use crate::workspace_crate::{profile::WorkspaceModeManager, WorkspaceRuntimeService};
@@ -8,14 +9,19 @@ use crate::workspace_session::WorkspaceSessionService;
 #[derive(Clone)]
 pub struct SandboxRuntimeOperations {
     pub command: Arc<CommandOperationService>,
+    pub cgroup_monitor: Arc<CgroupMonitorOperationService>,
     pub layerstack: Arc<LayerStackService>,
 }
 
 impl SandboxRuntimeOperations {
     #[must_use]
     pub fn new(command: Arc<CommandOperationService>, layerstack: Arc<LayerStackService>) -> Self {
+        let cgroup_monitor = Arc::new(CgroupMonitorOperationService::new(Arc::clone(
+            command.workspace(),
+        )));
         Self {
             command,
+            cgroup_monitor,
             layerstack,
         }
     }
@@ -35,7 +41,12 @@ impl SandboxRuntimeOperations {
             ),
             layer_stack_root.clone(),
         ));
-        let workspace_session = Arc::new(WorkspaceSessionService::new(workspace_runtime));
+        let cgroup_monitor: ::sandbox_runtime_workspace::CgroupMonitorConfig =
+            config.cgroup_monitor.into();
+        let workspace_session = Arc::new(WorkspaceSessionService::with_cgroup_monitor(
+            workspace_runtime,
+            cgroup_monitor.clone(),
+        ));
         let layerstack = Arc::new(
             LayerStackService::new(layer_stack_root)
                 .expect("layerstack service initialization failed"),
@@ -43,7 +54,10 @@ impl SandboxRuntimeOperations {
         let command = Arc::new(CommandOperationService::new(
             workspace_session,
             Arc::clone(&layerstack),
-            config.command.into(),
+            ::sandbox_runtime_command::CommandConfig {
+                scratch_root: config.command.scratch_root,
+                cgroup_monitor,
+            },
         ));
         Self::new(command, layerstack)
     }
@@ -53,6 +67,7 @@ impl SandboxRuntimeOperations {
 pub struct SandboxRuntimeConfig {
     pub workspace: WorkspaceRuntimeConfig,
     pub command: CommandRuntimeConfig,
+    pub cgroup_monitor: CgroupMonitorRuntimeConfig,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -66,6 +81,30 @@ pub struct WorkspaceRuntimeConfig {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CommandRuntimeConfig {
     pub scratch_root: std::path::PathBuf,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CgroupMonitorRuntimeConfig {
+    pub enabled: bool,
+    pub sample_interval_ms: u64,
+    pub retained_samples_per_target: usize,
+    pub include_pids: bool,
+    pub include_pressure: bool,
+    pub include_disk: bool,
+}
+
+impl Default for CgroupMonitorRuntimeConfig {
+    fn default() -> Self {
+        let default = ::sandbox_runtime_workspace::CgroupMonitorConfig::default();
+        Self {
+            enabled: default.enabled,
+            sample_interval_ms: default.sample_interval_ms,
+            retained_samples_per_target: default.retained_samples_per_target,
+            include_pids: default.include_pids,
+            include_pressure: default.include_pressure,
+            include_disk: default.include_disk,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -106,6 +145,20 @@ impl From<CommandRuntimeConfig> for ::sandbox_runtime_command::CommandConfig {
     fn from(config: CommandRuntimeConfig) -> Self {
         Self {
             scratch_root: config.scratch_root,
+            cgroup_monitor: ::sandbox_runtime_workspace::CgroupMonitorConfig::default(),
+        }
+    }
+}
+
+impl From<CgroupMonitorRuntimeConfig> for ::sandbox_runtime_workspace::CgroupMonitorConfig {
+    fn from(config: CgroupMonitorRuntimeConfig) -> Self {
+        Self {
+            enabled: config.enabled,
+            sample_interval_ms: config.sample_interval_ms,
+            retained_samples_per_target: config.retained_samples_per_target,
+            include_pids: config.include_pids,
+            include_pressure: config.include_pressure,
+            include_disk: config.include_disk,
         }
     }
 }

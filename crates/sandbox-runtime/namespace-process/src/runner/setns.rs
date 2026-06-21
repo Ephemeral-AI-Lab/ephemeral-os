@@ -567,7 +567,17 @@ fn join_cgroup(request: &NamespaceCommandRequest) -> Result<(), RunnerError> {
         return Ok(());
     };
     let procs = cgroup_path.join("cgroup.procs");
-    fs::write(procs, format!("{}\n", std::process::id())).map_err(RunnerError::Syscall)
+    fs::write(&procs, format!("{}\n", std::process::id())).map_err(|error| {
+        let kind = error.kind();
+        RunnerError::Syscall(std::io::Error::new(
+            kind,
+            format!(
+                "join cgroup {} via {} failed: {error}",
+                cgroup_path.display(),
+                procs.display()
+            ),
+        ))
+    })
 }
 
 #[cfg(target_os = "linux")]

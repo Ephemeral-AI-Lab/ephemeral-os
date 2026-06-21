@@ -14,6 +14,7 @@
 //! `cargo check --target x86_64-unknown-linux-gnu`.
 #![forbid(unsafe_code)]
 
+pub mod cgroup;
 mod config;
 mod contract;
 pub mod process;

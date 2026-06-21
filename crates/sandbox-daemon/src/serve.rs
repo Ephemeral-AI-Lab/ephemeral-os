@@ -89,6 +89,14 @@ fn build_runtime_operations(
         command: sandbox_runtime::CommandRuntimeConfig {
             scratch_root: config.daemon.commands.scratch_root.clone(),
         },
+        cgroup_monitor: sandbox_runtime::CgroupMonitorRuntimeConfig {
+            enabled: config.daemon.cgroup_monitor.enabled,
+            sample_interval_ms: config.daemon.cgroup_monitor.sample_interval_ms,
+            retained_samples_per_target: config.daemon.cgroup_monitor.retained_samples_per_target,
+            include_pids: config.daemon.cgroup_monitor.include_pids,
+            include_pressure: config.daemon.cgroup_monitor.include_pressure,
+            include_disk: config.daemon.cgroup_monitor.include_disk,
+        },
     })
 }
 

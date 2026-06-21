@@ -12,6 +12,14 @@ fn config_validation_rejects_invalid_daemon_values() {
     let mut cfg = prd_config();
     cfg.commands.scratch_root = std::path::PathBuf::from("/");
     assert_invalid(cfg, "daemon.commands.scratch_root");
+
+    let mut cfg = prd_config();
+    cfg.cgroup_monitor.sample_interval_ms = 0;
+    assert_invalid(cfg, "daemon.cgroup_monitor.sample_interval_ms");
+
+    let mut cfg = prd_config();
+    cfg.cgroup_monitor.retained_samples_per_target = 0;
+    assert_invalid(cfg, "daemon.cgroup_monitor.retained_samples_per_target");
 }
 
 fn prd_config() -> DaemonConfig {

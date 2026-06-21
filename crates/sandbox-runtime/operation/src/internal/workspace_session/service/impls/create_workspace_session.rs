@@ -41,6 +41,8 @@ impl WorkspaceSessionService {
             return Err(insert_error);
         }
 
+        self.cgroup_monitor().register_session_from_handle(&handle);
+
         Ok(handler)
     }
 }

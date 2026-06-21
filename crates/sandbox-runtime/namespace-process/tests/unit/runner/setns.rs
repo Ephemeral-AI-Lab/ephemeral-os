@@ -36,6 +36,20 @@ fn namespace_order_is_user_mnt_pid_net_and_skips_missing_fds() {
 
 #[cfg(target_os = "linux")]
 #[test]
+fn runner_cgroup_join_error_labels_requested_cgroup_path(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut request = request(None);
+    request.cgroup_path = Some(Path::new("/tmp/eos-missing-cgroup-for-test").to_path_buf());
+
+    let error = super::join_cgroup(&request).expect_err("missing cgroup.procs should fail");
+    let message = error.to_string();
+    assert!(message.contains("join cgroup"), "{message}");
+    assert!(message.contains("cgroup.procs"), "{message}");
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+#[test]
 fn lowerdir_verification_reports_only_available_kernel_proof() {
     let expected = vec![PathBuf::from("/layers/l4"), PathBuf::from("/layers/parent")];
     assert_eq!(

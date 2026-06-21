@@ -1,8 +1,10 @@
 mod cgroup;
+pub mod cgroup_monitor;
 mod fds;
 mod holder;
 mod setns_runner;
 
+#[cfg(target_os = "linux")]
 use crate::profile::WorkspaceModeError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -80,6 +82,7 @@ impl NamespacePlan {
     }
 }
 
+#[cfg(target_os = "linux")]
 pub(crate) fn setup_error(error: impl std::fmt::Display) -> WorkspaceModeError {
     WorkspaceModeError::SetupFailed {
         step: error.to_string(),

@@ -367,6 +367,7 @@ fn command_config() -> sandbox_runtime_command::CommandConfig {
             std::process::id(),
             unique_suffix()
         )),
+        cgroup_monitor: sandbox_runtime_workspace::CgroupMonitorConfig::default(),
     }
 }
 

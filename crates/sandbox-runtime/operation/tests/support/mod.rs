@@ -344,6 +344,22 @@ pub(crate) fn workspace_handle(
     workspace_root: PathBuf,
     profile: WorkspaceProfile,
 ) -> WorkspaceHandle {
+    workspace_handle_with_cgroup(
+        workspace_session_id,
+        lease_id,
+        workspace_root,
+        profile,
+        None,
+    )
+}
+
+pub(crate) fn workspace_handle_with_cgroup(
+    workspace_session_id: &str,
+    lease_id: &str,
+    workspace_root: PathBuf,
+    profile: WorkspaceProfile,
+    cgroup_path: Option<PathBuf>,
+) -> WorkspaceHandle {
     let base_dir = test_launch_base_dir();
     WorkspaceHandle::holder_backed_for_test(
         WorkspaceSessionId(workspace_session_id.to_owned()),
@@ -352,7 +368,7 @@ pub(crate) fn workspace_handle(
         test_snapshot(lease_id),
         base_dir.join("upper"),
         base_dir.join("work"),
-        None,
+        cgroup_path,
     )
 }
 
@@ -407,6 +423,8 @@ pub(crate) fn success_exit(stdout: &str) -> CommandProcessExit {
         stdout: stdout.to_owned(),
         elapsed_s: 0.1,
         kill: None,
+        cgroup_final_sample: None,
+        cgroup_cleanup: None,
     }
 }
 
@@ -417,6 +435,7 @@ fn test_command_config() -> sandbox_runtime_command::CommandConfig {
             std::process::id(),
             unique_suffix()
         )),
+        cgroup_monitor: sandbox_runtime_workspace::CgroupMonitorConfig::default(),
     }
 }
 

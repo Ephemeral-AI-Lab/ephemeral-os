@@ -163,6 +163,14 @@ impl CommandOperationService {
                 error,
             ));
         }
+        if let Some(target) = process_for_rollback.cgroup_target() {
+            self.workspace().cgroup_monitor().register_command(
+                workspace.workspace_session_id.clone(),
+                command_session_id.0.clone(),
+                target.cgroup_path,
+                target.upperdir,
+            );
+        }
         drop(admission_guard);
 
         self.initial_exec_yield(command_session_id, input.yield_time_ms)

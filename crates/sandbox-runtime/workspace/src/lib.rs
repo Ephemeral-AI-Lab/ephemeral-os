@@ -31,4 +31,12 @@ pub use model::{
     ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceEntry,
     WorkspaceEntryError, WorkspaceEntryFds, WorkspaceHandle, WorkspaceProfile, WorkspaceSessionId,
 };
+pub use namespace::cgroup_monitor::{
+    build_cgroup_monitor_sample, command_cgroup_path, session_cgroup_path, CgroupCleanupState,
+    CgroupCpuSample, CgroupDiskSample, CgroupIoSample, CgroupMemoryEvents, CgroupMemorySample,
+    CgroupMonitorConfig, CgroupMonitorRegistry, CgroupMonitorSample, CgroupMonitorSampleWindow,
+    CgroupMonitorSnapshot, CgroupMonitorState, CgroupMonitorTarget, CgroupMonitorTargetKind,
+    CgroupPidSample, CgroupPressureSample, CgroupRuntimeState, CgroupSampleKind,
+    CgroupSampleRequest, PressureResourceSample,
+};
 pub use service::{WorkspaceRuntimeHooks, WorkspaceRuntimeService};

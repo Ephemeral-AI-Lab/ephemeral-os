@@ -7,11 +7,14 @@ use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 
 use sandbox_runtime_namespace_process::runner::protocol::NamespaceCommandRequest;
-use sandbox_runtime_workspace::WorkspaceEntry;
+use sandbox_runtime_workspace::{
+    CgroupCleanupState, CgroupMonitorConfig, CgroupMonitorSample, WorkspaceEntry,
+};
 use serde_json::json;
 
 pub use crate::pty::KillReason;
 
+use crate::cgroup::{CommandCgroup, CommandCgroupTarget};
 use crate::pty::{
     spawn_current_exe_ns_runner, CommandCompletionStatus, PtyProcess, PtyProcessExit,
 };
@@ -42,6 +45,8 @@ pub struct CommandProcessSpec {
 pub struct CommandProcessSpawn {
     pub workspace_entry: WorkspaceEntry,
     pub transcript_path: PathBuf,
+    cgroup: Option<CommandCgroup>,
+    cgroup_monitor_config: CgroupMonitorConfig,
 }
 
 /// The raw, policy-free result of a finished command process. The substrate
@@ -60,12 +65,16 @@ pub struct CommandProcessExit {
     /// exit; `Some(_)` means a kill (cancel or timeout) and the owning run
     /// DISCARDS rather than publishes.
     pub kill: Option<KillReason>,
+    pub cgroup_final_sample: Option<CgroupMonitorSample>,
+    pub cgroup_cleanup: Option<CgroupCleanupState>,
 }
 
 /// Per-command process state: the child, its paths, and the kill/exit flags.
 pub(crate) struct CommandProcessRuntime {
     process: PtyProcess,
     transcript_path: PathBuf,
+    cgroup: Option<CommandCgroup>,
+    cgroup_monitor_config: CgroupMonitorConfig,
     /// Why this process was killed, if it has been. Set once by `cancel_process`.
     kill: Mutex<Option<KillReason>>,
     /// Exit-taken guard so two pollers can't both finalize the same child.
@@ -73,10 +82,17 @@ pub(crate) struct CommandProcessRuntime {
 }
 
 impl CommandProcessRuntime {
-    pub(crate) fn new(process: PtyProcess, transcript_path: PathBuf) -> Self {
+    pub(crate) fn new(
+        process: PtyProcess,
+        transcript_path: PathBuf,
+        cgroup: Option<CommandCgroup>,
+        cgroup_monitor_config: CgroupMonitorConfig,
+    ) -> Self {
         Self {
             process,
             transcript_path,
+            cgroup,
+            cgroup_monitor_config,
             kill: Mutex::new(None),
             exit_taken: Mutex::new(false),
         }
@@ -97,7 +113,12 @@ impl CommandProcessRuntime {
             .write(true)
             .open("/dev/null")
             .expect("open /dev/null for inactive command process");
-        Self::new(PtyProcess::inactive(writer), PathBuf::new())
+        Self::new(
+            PtyProcess::inactive(writer),
+            PathBuf::new(),
+            None,
+            CgroupMonitorConfig::default(),
+        )
     }
 }
 
@@ -121,6 +142,8 @@ impl CommandProcess {
             CommandProcessRuntime::new(
                 PtyProcess::inactive_with_process_group_for_test(writer, pgid),
                 PathBuf::new(),
+                None,
+                CgroupMonitorConfig::default(),
             ),
         )
     }
@@ -138,7 +161,12 @@ impl CommandProcess {
             .expect("open /dev/null for inactive command process");
         Self::with_runtime(
             spec,
-            CommandProcessRuntime::new(PtyProcess::inactive(writer), transcript_path),
+            CommandProcessRuntime::new(
+                PtyProcess::inactive(writer),
+                transcript_path,
+                None,
+                CgroupMonitorConfig::default(),
+            ),
         )
     }
 
@@ -153,7 +181,12 @@ impl CommandProcess {
         })?;
         Ok(Self::with_runtime(
             spec,
-            CommandProcessRuntime::new(process, parts.transcript_path),
+            CommandProcessRuntime::new(
+                process,
+                parts.transcript_path,
+                parts.cgroup,
+                parts.cgroup_monitor_config,
+            ),
         ))
     }
 
@@ -196,8 +229,19 @@ impl CommandProcess {
     }
 
     pub fn cleanup_artifacts_after_start_failure(&self) -> io::Result<()> {
+        if let Some(cgroup) = self.runtime.cgroup.as_ref() {
+            let cleanup = cgroup.cleanup();
+            if let Some(error) = cleanup.last_cleanup_error {
+                return Err(io::Error::other(error));
+            }
+        }
         let artifact_dir = self.artifact_dir();
         cleanup_artifacts_dir(&artifact_dir)
+    }
+
+    #[must_use]
+    pub fn cgroup_target(&self) -> Option<CommandCgroupTarget> {
+        self.runtime.cgroup.as_ref().map(CommandCgroup::target)
     }
 
     pub fn write_process_stdin(&self, chars: &str) -> Result<(), CommandError> {
@@ -247,6 +291,12 @@ impl CommandProcess {
             .process
             .wait_for_reader_done(OUTPUT_DRAIN_GRACE);
         let runner = self.runtime.process.take_runner_result(OUTPUT_DRAIN_GRACE);
+        let cgroup_final_sample = self
+            .runtime
+            .cgroup
+            .as_ref()
+            .map(|cgroup| cgroup.final_sample(&self.runtime.cgroup_monitor_config));
+        let cgroup_cleanup = self.runtime.cgroup.as_ref().map(CommandCgroup::cleanup);
         let kill = *lock(&self.runtime.kill);
         let completion =
             CommandCompletionStatus::from_process_and_runner(process_exit, runner.as_ref(), kill);
@@ -257,6 +307,8 @@ impl CommandProcess {
             stdout: self.final_stdout(),
             elapsed_s: self.started_at.elapsed().as_secs_f64(),
             kill,
+            cgroup_final_sample,
+            cgroup_cleanup,
         })
     }
 
@@ -275,10 +327,26 @@ impl CommandProcessSpawn {
         fs::create_dir_all(&command_dir).map_err(|error| {
             CommandError::artifact_write("command_artifact_directory", &command_dir, error)
         })?;
+        let cgroup = CommandCgroup::prepare(
+            command_session_id,
+            workspace_entry.cgroup_path.as_deref(),
+            &workspace_entry.upperdir,
+        )?;
+        let mut workspace_entry = workspace_entry;
+        if let Some(cgroup) = cgroup.as_ref() {
+            workspace_entry.cgroup_path = Some(cgroup.target().cgroup_path);
+        }
         Ok(Self {
             workspace_entry,
             transcript_path: command_dir.join("transcript.log"),
+            cgroup,
+            cgroup_monitor_config: config.cgroup_monitor.clone(),
         })
+    }
+
+    #[must_use]
+    pub fn cgroup_target(&self) -> Option<CommandCgroupTarget> {
+        self.cgroup.as_ref().map(CommandCgroup::target)
     }
 
     #[must_use]
@@ -290,6 +358,12 @@ impl CommandProcessSpawn {
     }
 
     pub fn cleanup_artifacts_after_start_failure(&self) -> io::Result<()> {
+        if let Some(cgroup) = self.cgroup.as_ref() {
+            let cleanup = cgroup.cleanup();
+            if let Some(error) = cleanup.last_cleanup_error {
+                return Err(io::Error::other(error));
+            }
+        }
         cleanup_artifacts_dir(&self.artifact_dir())
     }
 }

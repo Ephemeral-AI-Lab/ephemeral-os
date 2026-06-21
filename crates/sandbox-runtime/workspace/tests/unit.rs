@@ -1,3 +1,5 @@
+#[path = "unit/cgroup_monitor.rs"]
+mod cgroup_monitor;
 #[path = "unit/model.rs"]
 mod model;
 #[path = "unit/overlay_capture.rs"]

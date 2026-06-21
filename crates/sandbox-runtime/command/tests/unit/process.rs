@@ -18,6 +18,12 @@ fn workspace_entry() -> WorkspaceEntry {
     }
 }
 
+fn workspace_entry_without_cgroup() -> WorkspaceEntry {
+    let mut entry = workspace_entry();
+    entry.cgroup_path = None;
+    entry
+}
+
 #[test]
 fn process_exposes_identity() {
     let process = CommandProcess::inactive_for_test(CommandProcessSpec {
@@ -58,6 +64,8 @@ fn take_exit_reads_transcript_and_retains_it() -> Result<(), Box<dyn std::error:
         CommandProcessRuntime::new(
             crate::pty::PtyProcess::inactive(writer),
             transcript_path.clone(),
+            None,
+            sandbox_runtime_workspace::CgroupMonitorConfig::default(),
         ),
     );
 
@@ -82,9 +90,10 @@ fn process_spawn_prepare_owns_command_artifact_layout() -> Result<(), Box<dyn st
     ));
     let config = CommandConfig {
         scratch_root: root.clone(),
+        cgroup_monitor: sandbox_runtime_workspace::CgroupMonitorConfig::default(),
     };
 
-    let spawn = CommandProcessSpawn::prepare("cmd_7", workspace_entry(), &config)?;
+    let spawn = CommandProcessSpawn::prepare("cmd_7", workspace_entry_without_cgroup(), &config)?;
 
     let command_dir = root.join("cmd_7");
     assert!(command_dir.is_dir());
@@ -108,13 +117,55 @@ fn process_spawn_cleanup_removes_prepared_artifacts() -> Result<(), Box<dyn std:
     ));
     let config = CommandConfig {
         scratch_root: root.clone(),
+        cgroup_monitor: sandbox_runtime_workspace::CgroupMonitorConfig::default(),
     };
-    let spawn = CommandProcessSpawn::prepare("cmd_8", workspace_entry(), &config)?;
+    let spawn = CommandProcessSpawn::prepare("cmd_8", workspace_entry_without_cgroup(), &config)?;
     std::fs::write(&spawn.transcript_path, b"partial output")?;
 
     spawn.cleanup_artifacts_after_start_failure()?;
 
     assert!(!root.join("cmd_8").exists());
+    let _ = std::fs::remove_dir_all(root);
+    Ok(())
+}
+
+#[test]
+fn process_spawn_prepare_creates_command_child_cgroup_when_session_parent_exists(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let root = std::env::temp_dir().join(format!(
+        "command-cgroup-prepare-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)?
+            .as_nanos()
+    ));
+    let session_cgroup = root.join("eos").join("sessions").join("ws-1");
+    std::fs::create_dir_all(&session_cgroup)?;
+    let config = CommandConfig {
+        scratch_root: root.join("commands"),
+        cgroup_monitor: sandbox_runtime_workspace::CgroupMonitorConfig::default(),
+    };
+    let mut entry = workspace_entry();
+    entry.cgroup_path = Some(session_cgroup.clone());
+
+    let spawn = CommandProcessSpawn::prepare("cmd_9", entry, &config)?;
+
+    let command_cgroup = session_cgroup.join("commands").join("cmd_9");
+    assert!(command_cgroup.is_dir());
+    assert_eq!(
+        spawn.workspace_entry.cgroup_path.as_deref(),
+        Some(command_cgroup.as_path())
+    );
+    assert_eq!(
+        spawn
+            .cgroup_target()
+            .expect("command cgroup target is retained")
+            .cgroup_path,
+        command_cgroup
+    );
+    spawn.cleanup_artifacts_after_start_failure()?;
+    assert!(!session_cgroup.join("commands").join("cmd_9").exists());
+
     let _ = std::fs::remove_dir_all(root);
     Ok(())
 }

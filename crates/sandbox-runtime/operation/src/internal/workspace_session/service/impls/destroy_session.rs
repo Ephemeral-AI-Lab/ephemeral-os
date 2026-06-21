@@ -14,9 +14,18 @@ impl WorkspaceSessionService {
             .get(&handler.workspace_session_id)
             .ok_or_else(|| WorkspaceSessionError::not_found(&handler.workspace_session_id))?;
         let handle = session.active_handle()?;
+        let cgroup_path = handle.entry().ok().and_then(|entry| entry.cgroup_path);
+        self.cgroup_monitor()
+            .record_session_final_from_handle(&handle);
 
         match self.workspace().destroy_workspace(handle, request) {
             Ok(result) => {
+                self.cgroup_monitor().record_cleanup(
+                    &handler.workspace_session_id,
+                    None,
+                    cgroup_path.as_ref().map(|path| path.exists()),
+                    None,
+                );
                 sessions.remove(&handler.workspace_session_id);
                 Ok(result)
             }

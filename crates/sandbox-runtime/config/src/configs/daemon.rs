@@ -16,6 +16,7 @@ use crate::configs::validate::{
 pub struct DaemonConfig {
     pub server: DaemonServerConfig,
     pub commands: CommandConfig,
+    pub cgroup_monitor: CgroupMonitorConfig,
     pub idle_workspace_eviction: IdleWorkspaceEvictionConfig,
 }
 
@@ -29,6 +30,30 @@ impl Default for CommandConfig {
     fn default() -> Self {
         Self {
             scratch_root: PathBuf::from("/eos/scratch/commands"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CgroupMonitorConfig {
+    pub enabled: bool,
+    pub sample_interval_ms: u64,
+    pub retained_samples_per_target: usize,
+    pub include_pids: bool,
+    pub include_pressure: bool,
+    pub include_disk: bool,
+}
+
+impl Default for CgroupMonitorConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            sample_interval_ms: 1000,
+            retained_samples_per_target: 100,
+            include_pids: true,
+            include_pressure: true,
+            include_disk: true,
         }
     }
 }
@@ -62,6 +87,16 @@ impl DaemonConfig {
         )?;
         require_absolute(&self.commands.scratch_root, "daemon.commands.scratch_root")?;
         reject_dangerous_root(&self.commands.scratch_root, "daemon.commands.scratch_root")?;
+        require_u64_at_least(
+            self.cgroup_monitor.sample_interval_ms,
+            1,
+            "daemon.cgroup_monitor.sample_interval_ms",
+        )?;
+        require_usize_at_least(
+            self.cgroup_monitor.retained_samples_per_target,
+            1,
+            "daemon.cgroup_monitor.retained_samples_per_target",
+        )?;
         require_u64_at_least(
             self.idle_workspace_eviction.interval_ms,
             1,

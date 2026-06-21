@@ -7,7 +7,6 @@ use crate::lifecycle::remount::WorkspaceRemountState;
 use crate::model::WorkspaceProfile;
 use crate::overlay::dirs::OverlayDirs;
 
-pub(crate) const HANDLE_PREFIX: &str = "eos-iws-";
 #[cfg(target_os = "linux")]
 pub(crate) const CGROUP_ROOT: &str = "/sys/fs/cgroup";
 

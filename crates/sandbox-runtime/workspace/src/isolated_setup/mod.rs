@@ -1,8 +1,8 @@
 use std::collections::BTreeSet;
 use std::net::Ipv4Addr;
 
+use crate::profile::Rfc1918Egress;
 use crate::profile::WorkspaceModeError;
-use crate::profile::{Rfc1918Egress, HANDLE_PREFIX};
 
 #[cfg(target_os = "linux")]
 mod netfilter;
@@ -34,7 +34,7 @@ pub const RFC1918_NETS: [(Ipv4Addr, u8); 3] = [
     (Ipv4Addr::new(172, 16, 0, 0), 12),
     (Ipv4Addr::new(192, 168, 0, 0), 16),
 ];
-pub(crate) const VETH_PREFIX: &str = HANDLE_PREFIX;
+pub(crate) const VETH_PREFIX: &str = "eos-iws-";
 
 #[cfg(target_os = "linux")]
 pub const BRIDGE_PREFIX_LEN: u8 = 24;

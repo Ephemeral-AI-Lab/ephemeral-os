@@ -2,6 +2,8 @@
 
 pub(crate) use time::OffsetDateTime;
 
+#[path = "../src/cgroup.rs"]
+pub mod cgroup;
 #[path = "../src/config.rs"]
 mod config;
 #[path = "../src/contract.rs"]
