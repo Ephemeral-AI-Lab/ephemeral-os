@@ -1,8 +1,7 @@
 use std::fmt::Write as _;
 
-use crate::{
-    catalog_arg_kind_name, ArgSpecDocument, OperationCatalogDocument, OperationSpecDocument,
-};
+use crate::catalog::catalog_arg_kind_name;
+use crate::{ArgSpecDocument, OperationCatalogDocument, OperationSpecDocument};
 
 #[must_use]
 pub fn render_catalog_manual(

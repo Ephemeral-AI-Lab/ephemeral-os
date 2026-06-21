@@ -91,7 +91,7 @@ fn command_contract_keeps_session_selector_in_exec_input() {
 }
 
 #[test]
-fn operation_catalog_exports_daemon_command_operations() {
+fn operation_catalog_exports_runtime_command_operations() {
     let catalog = sandbox_runtime::operation_catalog();
     let names = catalog
         .operations
@@ -113,4 +113,22 @@ fn operation_catalog_exports_daemon_command_operations() {
             "cancel_command"
         ]
     );
+}
+
+#[test]
+fn operation_catalog_cli_metadata_uses_runtime_space() {
+    let catalog = sandbox_runtime::operation_catalog();
+
+    assert!(catalog.operations.iter().all(|spec| {
+        spec.cli
+            .map(|cli| {
+                cli.path.first() == Some(&"runtime")
+                    && cli.usage.starts_with("sandbox runtime --sandbox-id ID ")
+                    && cli.examples.iter().all(|example| {
+                        example.starts_with("sandbox runtime --sandbox-id sbox-1 ")
+                            && !example.contains("daemon")
+                    })
+            })
+            .unwrap_or(true)
+    }));
 }

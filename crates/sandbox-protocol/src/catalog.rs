@@ -123,11 +123,9 @@ pub const fn operation_execution_space_name(
     }
 }
 
-#[must_use]
-pub const fn operation_family_name(family: OperationFamily) -> &'static str {
+const fn operation_family_name(family: OperationFamily) -> &'static str {
     match family {
         OperationFamily::Command => "command",
-        OperationFamily::File => "file",
         OperationFamily::Workspace => "workspace",
         OperationFamily::Health => "health",
         OperationFamily::Run => "run",
@@ -135,7 +133,7 @@ pub const fn operation_family_name(family: OperationFamily) -> &'static str {
 }
 
 #[must_use]
-pub const fn catalog_arg_kind_name(kind: ArgKind) -> &'static str {
+pub(crate) const fn catalog_arg_kind_name(kind: ArgKind) -> &'static str {
     match kind {
         ArgKind::String => "string",
         ArgKind::Integer => "integer",
@@ -255,7 +253,6 @@ fn operation_execution_space_from_name(
 fn operation_family_from_name(value: &str) -> Result<OperationFamily, CatalogDecodeError> {
     match value {
         "command" => Ok(OperationFamily::Command),
-        "file" => Ok(OperationFamily::File),
         "workspace" => Ok(OperationFamily::Workspace),
         "health" => Ok(OperationFamily::Health),
         "run" => Ok(OperationFamily::Run),

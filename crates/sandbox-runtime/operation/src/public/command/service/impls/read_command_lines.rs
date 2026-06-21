@@ -47,10 +47,10 @@ const READ_LINES_ARGS: &[ArgSpec] = &[
 ];
 
 const READ_LINES_CLI: CliSpec = CliSpec {
-    path: &["daemon", "commands", "read-command-lines"],
-    usage: "read_command_lines {\"command_session_id\":\"ID\",\"start_offset\":N,\"limit\":N}",
+    path: &["runtime", "read_command_lines"],
+    usage: "sandbox runtime --sandbox-id ID read_command_lines --command-session-id ID --start-offset N --limit N",
     examples: &[
-        "read_command_lines {\"command_session_id\":\"cmd-1\",\"start_offset\":0,\"limit\":100}",
+        "sandbox runtime --sandbox-id sbox-1 read_command_lines --command-session-id cmd-1 --start-offset 0 --limit 100",
     ],
 };
 

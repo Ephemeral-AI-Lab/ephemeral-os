@@ -11,15 +11,15 @@ use sandbox_protocol::{
 };
 use serde_json::{json, Value};
 
-static TEST_DAEMON_SPEC: OperationSpec = OperationSpec {
-    name: "daemon_test_operation",
+static TEST_RUNTIME_SPEC: OperationSpec = OperationSpec {
+    name: "runtime_test_operation",
     family: OperationFamily::Health,
-    summary: "Test daemon operation.",
+    summary: "Test runtime operation.",
     args: &[],
     cli: None,
 };
 
-static TEST_DAEMON_SPECS: &[&OperationSpec] = &[&TEST_DAEMON_SPEC];
+static TEST_RUNTIME_SPECS: &[&OperationSpec] = &[&TEST_RUNTIME_SPEC];
 
 #[derive(Default)]
 struct FakeRuntime {
@@ -88,7 +88,7 @@ impl SandboxDaemonClient for FakeClient {
             .push(endpoint.socket_path.clone());
         Ok(OperationCatalog::new(
             OperationExecutionSpace::Runtime,
-            TEST_DAEMON_SPECS,
+            TEST_RUNTIME_SPECS,
         ))
     }
 
@@ -157,12 +157,25 @@ fn operation_catalog_contains_only_manager_operations() {
     );
     assert!(catalog.operations.iter().all(|spec| !matches!(
         spec.name,
-        "exec_command" | "poll_command" | "cancel_command"
+        "exec_command"
+            | "write_command_stdin"
+            | "poll_command"
+            | "read_command_lines"
+            | "cancel_command"
     )));
     assert!(catalog.operations.iter().any(|spec| spec
         .args
         .iter()
         .any(|arg| arg.name == "sandbox_id" && arg.kind == ArgKind::String)));
+    assert!(catalog.operations.iter().all(|spec| {
+        spec.cli
+            .map(|cli| {
+                cli.examples
+                    .iter()
+                    .all(|example| example.starts_with("sandbox manager "))
+            })
+            .unwrap_or(true)
+    }));
 }
 
 #[test]
@@ -181,7 +194,14 @@ fn describe_manager_operations_serializes_cli_metadata() {
         catalog["operations"][0]["args"][0]["cli"]["positional"],
         Value::Null
     );
-    assert!(catalog["operations"][0]["cli"]["usage"].is_string());
+    assert_eq!(
+        catalog["operations"][0]["cli"]["usage"],
+        "sandbox manager create_sandbox --sandbox-id ID"
+    );
+    assert_eq!(
+        catalog["operations"][0]["cli"]["examples"][0],
+        "sandbox manager create_sandbox --sandbox-id sbox-1"
+    );
 }
 
 #[test]
@@ -272,7 +292,15 @@ fn describe_daemon_operations_uses_daemon_client_trait() {
         json!({"sandbox_id": "sbox-1"}),
     );
     assert_eq!(catalog["operation_execution_space"], "runtime");
-    assert_eq!(catalog["operations"][0]["name"], "daemon_test_operation");
+    assert_eq!(catalog["operations"][0]["name"], "runtime_test_operation");
+    assert!(catalog["operations"]
+        .as_array()
+        .expect("operations array")
+        .iter()
+        .all(|spec| !matches!(
+            spec["name"].as_str(),
+            Some("create_sandbox" | "list_sandboxes" | "destroy_sandbox")
+        )));
     assert_eq!(
         client.described.lock().expect("described lock").as_slice(),
         [PathBuf::from("/tmp/sbox-1.sock")]

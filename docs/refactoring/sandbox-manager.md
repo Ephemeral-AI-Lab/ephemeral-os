@@ -111,6 +111,14 @@ describe_daemon_operations
 `OperationSpec` comes from `sandbox-protocol`. Dispatch entries are local to
 `sandbox-manager`.
 
+`describe_manager_operations` returns the manager catalog serialized through
+`sandbox-protocol` catalog helpers with
+`operation_execution_space = "manager"`. `describe_daemon_operations` returns
+the selected sandbox runtime catalog serialized through the same protocol
+helpers with `operation_execution_space = "runtime"`. The manager catalog must
+not include runtime operations, and the runtime catalog must not include manager
+operations.
+
 ## Request Routing
 
 The manager accepts the unified `sandbox_protocol::Request` DTO.

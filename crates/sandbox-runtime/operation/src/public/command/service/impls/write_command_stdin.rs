@@ -47,9 +47,11 @@ const WRITE_STDIN_ARGS: &[ArgSpec] = &[
 ];
 
 const WRITE_STDIN_CLI: CliSpec = CliSpec {
-    path: &["daemon", "commands", "write-command-stdin"],
-    usage: "write_command_stdin {\"command_session_id\":\"ID\",\"stdin\":\"TEXT\"}",
-    examples: &["write_command_stdin {\"command_session_id\":\"cmd-1\",\"stdin\":\"hello\"}"],
+    path: &["runtime", "write_command_stdin"],
+    usage: "sandbox runtime --sandbox-id ID write_command_stdin --command-session-id ID TEXT",
+    examples: &[
+        "sandbox runtime --sandbox-id sbox-1 write_command_stdin --command-session-id cmd-1 hello",
+    ],
 };
 
 pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: &Request) -> Response {

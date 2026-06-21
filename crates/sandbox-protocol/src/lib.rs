@@ -19,10 +19,9 @@ pub mod scope;
 
 pub use auth::DAEMON_AUTH_FIELD;
 pub use catalog::{
-    catalog_arg_kind_name, catalog_from_value, catalog_to_value, operation_execution_space_name,
-    operation_family_name, ArgCliSpecDocument, ArgSpecDocument, CatalogDecodeError,
-    CliSpecDocument, OperationCatalog, OperationCatalogDocument, OperationExecutionSpace,
-    OperationSpecDocument,
+    catalog_from_value, catalog_to_value, operation_execution_space_name, ArgCliSpecDocument,
+    ArgSpecDocument, CatalogDecodeError, CliSpecDocument, OperationCatalog,
+    OperationCatalogDocument, OperationExecutionSpace, OperationSpecDocument,
 };
 pub use limits::{MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};
 pub use operation_spec::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamily, OperationSpec};

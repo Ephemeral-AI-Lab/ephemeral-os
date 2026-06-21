@@ -1,7 +1,6 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OperationFamily {
     Command,
-    File,
     Workspace,
     Health,
     Run,

@@ -53,6 +53,9 @@ src/
 - Runtime operations require `--sandbox-id SANDBOX_ID` unless config provides a
   default sandbox, and set `request.scope = sandbox`.
 - Help/manual text is generated from `OperationSpec`, not duplicated by hand.
+- Catalog responses are parsed with `sandbox-protocol` catalog document helpers.
+- Request construction validates that `sandbox manager ...` consumes a manager
+  catalog and `sandbox runtime ...` consumes a runtime catalog.
 
 ## Example Commands
 
@@ -109,6 +112,17 @@ For runtime operations:
 
 The gateway does not construct `ManagerRequest`, `RoutedRequest`, or any
 manager/runtime/daemon target envelope.
+
+Manual rendering consumes manager and runtime catalog documents and keeps the
+canonical sections:
+
+```text
+Sandbox Manager Operations
+Sandbox Runtime Operations
+```
+
+Runtime manual text says `runtime`, even though the manager may fetch those
+specs through a daemon-backed operation internally.
 
 ## Verification
 

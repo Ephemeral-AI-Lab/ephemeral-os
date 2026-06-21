@@ -28,7 +28,9 @@ Import:  sandbox_protocol
   - `CliSpec`
   - `OperationCatalog`
   - `OperationExecutionSpace`
-- Manual/help rendering helpers that operate only on `OperationSpec`.
+- Protocol-owned catalog JSON document conversion and parsing helpers for
+  `OperationCatalog` and cataloged `OperationSpec` data.
+- Manual/help rendering helpers that operate on catalog/spec documents.
 
 ## Must Not Own
 
@@ -129,6 +131,19 @@ Example response:
 implementation target and it is not the operation-execution-space selector.
 `OperationExecutionSpace` belongs in catalog/manual metadata only, for example
 `manager` vs `runtime`.
+
+Catalog JSON exposes one execution-space selector:
+
+```json
+{
+  "operation_execution_space": "manager",
+  "operations": []
+}
+```
+
+Do not add separate `owner`, `target`, `route`, `implementation_owner`, or
+`operation_target` fields. `OperationFamily` is only grouping metadata inside a
+catalog.
 
 ## Dependency Rules
 

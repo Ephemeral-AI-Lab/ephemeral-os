@@ -4,7 +4,7 @@ use sandbox_protocol::{
     ArgsPresence, CliSpec, OperationCatalog, OperationExecutionSpace, OperationFamily,
     OperationScope, OperationSpec,
 };
-use serde_json::json;
+use serde_json::{json, Value};
 
 static TEST_ARGS: &[ArgSpec] = &[ArgSpec::required(
     "sandbox_id",
@@ -110,6 +110,13 @@ fn catalog_to_value_serializes_cli_metadata() {
     assert_eq!(value["operation_execution_space"], "manager");
     assert_eq!(value["operations"][0]["name"], "create_sandbox");
     assert_eq!(value["operations"][0]["family"], "run");
+    assert_eq!(value["operations"][0]["summary"], "Create a sandbox.");
+    assert!(value["operations"][0]["args"].is_array());
+    assert!(value["operations"][0]["cli"].is_object());
+    assert_eq!(value["operations"][0]["args"][0]["name"], "sandbox_id");
+    assert_eq!(value["operations"][0]["args"][0]["kind"], "string");
+    assert_eq!(value["operations"][0]["args"][0]["required"], true);
+    assert_eq!(value["operations"][0]["args"][0]["default"], Value::Null);
     assert_eq!(
         value["operations"][0]["args"][0]["cli"]["flag"],
         "--sandbox-id"
@@ -180,6 +187,30 @@ fn catalog_from_value_rejects_unknown_execution_space() {
 }
 
 #[test]
+fn catalog_from_value_rejects_missing_execution_space() {
+    let value = json!({
+        "operations": []
+    });
+
+    let error = catalog_from_value(&value).expect_err("missing space rejected");
+
+    assert_eq!(
+        error.message(),
+        "operation_execution_space must be a string"
+    );
+}
+
+#[test]
+fn catalog_to_value_omits_legacy_owner_target_fields() {
+    let value = catalog_to_value(OperationCatalog::new(
+        OperationExecutionSpace::Manager,
+        TEST_SPECS,
+    ));
+
+    assert_no_forbidden_catalog_keys(&value);
+}
+
+#[test]
 fn render_catalog_manual_uses_catalog_documents() {
     let manager = catalog_from_value(&catalog_to_value(OperationCatalog::new(
         OperationExecutionSpace::Manager,
@@ -194,4 +225,32 @@ fn render_catalog_manual_uses_catalog_documents() {
     assert!(manual.contains("--sandbox-id: string (required)"));
     assert!(manual.contains("Sandbox Runtime Operations"));
     assert!(manual.contains("runtime catalog requires --sandbox-id"));
+}
+
+fn assert_no_forbidden_catalog_keys(value: &serde_json::Value) {
+    match value {
+        serde_json::Value::Object(object) => {
+            for key in [
+                "owner",
+                "target",
+                "route",
+                "implementation_owner",
+                "operation_target",
+            ] {
+                assert!(!object.contains_key(key), "catalog emitted forbidden {key}");
+            }
+            for child in object.values() {
+                assert_no_forbidden_catalog_keys(child);
+            }
+        }
+        serde_json::Value::Array(values) => {
+            for child in values {
+                assert_no_forbidden_catalog_keys(child);
+            }
+        }
+        serde_json::Value::Null
+        | serde_json::Value::Bool(_)
+        | serde_json::Value::Number(_)
+        | serde_json::Value::String(_) => {}
+    }
 }

@@ -68,9 +68,9 @@ const EXEC_COMMAND_ARGS: &[ArgSpec] = &[
 ];
 
 const EXEC_COMMAND_CLI: CliSpec = CliSpec {
-    path: &["daemon", "commands", "exec"],
-    usage: "exec_command {\"workspace_session_id\":\"ID\",\"cmd\":\"COMMAND\"}",
-    examples: &["exec_command {\"workspace_session_id\":\"ws-1\",\"cmd\":\"pwd\"}"],
+    path: &["runtime", "exec_command"],
+    usage: "sandbox runtime --sandbox-id ID exec_command --workspace-session-id ID COMMAND",
+    examples: &["sandbox runtime --sandbox-id sbox-1 exec_command --workspace-session-id ws-1 pwd"],
 };
 
 pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: &Request) -> Response {

@@ -39,9 +39,11 @@ const POLL_ARGS: &[ArgSpec] = &[
 ];
 
 const POLL_CLI: CliSpec = CliSpec {
-    path: &["daemon", "commands", "poll_command"],
-    usage: "poll_command {\"command_session_id\":\"ID\",\"last_n_lines\":N}",
-    examples: &["poll_command {\"command_session_id\":\"cmd-1\",\"last_n_lines\":50}"],
+    path: &["runtime", "poll_command"],
+    usage: "sandbox runtime --sandbox-id ID poll_command --command-session-id ID --last-n-lines N",
+    examples: &[
+        "sandbox runtime --sandbox-id sbox-1 poll_command --command-session-id cmd-1 --last-n-lines 50",
+    ],
 };
 
 pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: &Request) -> Response {

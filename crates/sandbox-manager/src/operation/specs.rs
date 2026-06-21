@@ -9,9 +9,9 @@ pub(crate) const CREATE_SANDBOX: OperationSpec = OperationSpec {
     summary: "Create a host-side sandbox record and runtime sandbox.",
     args: SANDBOX_ID_ARGS,
     cli: Some(CliSpec {
-        path: &["manager", "sandboxes", "create"],
-        usage: "create_sandbox {\"sandbox_id\":\"ID\"}",
-        examples: &["create_sandbox {\"sandbox_id\":\"sbox-1\"}"],
+        path: &["manager", "create_sandbox"],
+        usage: "sandbox manager create_sandbox --sandbox-id ID",
+        examples: &["sandbox manager create_sandbox --sandbox-id sbox-1"],
     }),
 };
 
@@ -21,9 +21,9 @@ pub(crate) const DESTROY_SANDBOX: OperationSpec = OperationSpec {
     summary: "Destroy a host-side sandbox and remove it from the registry.",
     args: SANDBOX_ID_ARGS,
     cli: Some(CliSpec {
-        path: &["manager", "sandboxes", "destroy"],
-        usage: "destroy_sandbox {\"sandbox_id\":\"ID\"}",
-        examples: &["destroy_sandbox {\"sandbox_id\":\"sbox-1\"}"],
+        path: &["manager", "destroy_sandbox"],
+        usage: "sandbox manager destroy_sandbox --sandbox-id ID",
+        examples: &["sandbox manager destroy_sandbox --sandbox-id sbox-1"],
     }),
 };
 
@@ -33,9 +33,9 @@ pub(crate) const LIST_SANDBOXES: OperationSpec = OperationSpec {
     summary: "List sandbox records known to the manager.",
     args: &[],
     cli: Some(CliSpec {
-        path: &["manager", "sandboxes", "list"],
-        usage: "list_sandboxes {}",
-        examples: &["list_sandboxes {}"],
+        path: &["manager", "list_sandboxes"],
+        usage: "sandbox manager list_sandboxes",
+        examples: &["sandbox manager list_sandboxes"],
     }),
 };
 
@@ -45,9 +45,9 @@ pub(crate) const INSPECT_SANDBOX: OperationSpec = OperationSpec {
     summary: "Inspect one sandbox record.",
     args: SANDBOX_ID_ARGS,
     cli: Some(CliSpec {
-        path: &["manager", "sandboxes", "inspect"],
-        usage: "inspect_sandbox {\"sandbox_id\":\"ID\"}",
-        examples: &["inspect_sandbox {\"sandbox_id\":\"sbox-1\"}"],
+        path: &["manager", "inspect_sandbox"],
+        usage: "sandbox manager inspect_sandbox --sandbox-id ID",
+        examples: &["sandbox manager inspect_sandbox --sandbox-id sbox-1"],
     }),
 };
 
@@ -57,9 +57,9 @@ pub(crate) const START_SANDBOX_DAEMON: OperationSpec = OperationSpec {
     summary: "Install and start the selected sandbox daemon.",
     args: SANDBOX_ID_ARGS,
     cli: Some(CliSpec {
-        path: &["manager", "sandboxes", "start-daemon"],
-        usage: "start_sandbox_daemon {\"sandbox_id\":\"ID\"}",
-        examples: &["start_sandbox_daemon {\"sandbox_id\":\"sbox-1\"}"],
+        path: &["manager", "start_sandbox_daemon"],
+        usage: "sandbox manager start_sandbox_daemon --sandbox-id ID",
+        examples: &["sandbox manager start_sandbox_daemon --sandbox-id sbox-1"],
     }),
 };
 
@@ -69,9 +69,9 @@ pub(crate) const STOP_SANDBOX_DAEMON: OperationSpec = OperationSpec {
     summary: "Stop the selected sandbox daemon and clear its endpoint.",
     args: SANDBOX_ID_ARGS,
     cli: Some(CliSpec {
-        path: &["manager", "sandboxes", "stop-daemon"],
-        usage: "stop_sandbox_daemon {\"sandbox_id\":\"ID\"}",
-        examples: &["stop_sandbox_daemon {\"sandbox_id\":\"sbox-1\"}"],
+        path: &["manager", "stop_sandbox_daemon"],
+        usage: "sandbox manager stop_sandbox_daemon --sandbox-id ID",
+        examples: &["sandbox manager stop_sandbox_daemon --sandbox-id sbox-1"],
     }),
 };
 
@@ -81,21 +81,21 @@ pub(crate) const DESCRIBE_MANAGER_OPERATIONS: OperationSpec = OperationSpec {
     summary: "Describe manager operation specs.",
     args: &[],
     cli: Some(CliSpec {
-        path: &["manager", "operations", "describe-manager"],
-        usage: "describe_manager_operations {}",
-        examples: &["describe_manager_operations {}"],
+        path: &["manager", "describe_manager_operations"],
+        usage: "sandbox manager describe_manager_operations",
+        examples: &["sandbox manager describe_manager_operations"],
     }),
 };
 
 pub(crate) const DESCRIBE_DAEMON_OPERATIONS: OperationSpec = OperationSpec {
     name: "describe_daemon_operations",
     family: OperationFamily::Health,
-    summary: "Describe operation specs from a selected sandbox daemon.",
+    summary: "Describe runtime operation specs for a selected sandbox.",
     args: SANDBOX_ID_ARGS,
     cli: Some(CliSpec {
-        path: &["manager", "operations", "describe-daemon"],
-        usage: "describe_daemon_operations {\"sandbox_id\":\"ID\"}",
-        examples: &["describe_daemon_operations {\"sandbox_id\":\"sbox-1\"}"],
+        path: &["manager", "describe_daemon_operations"],
+        usage: "sandbox manager describe_daemon_operations --sandbox-id ID",
+        examples: &["sandbox manager describe_daemon_operations --sandbox-id sbox-1"],
     }),
 };
 

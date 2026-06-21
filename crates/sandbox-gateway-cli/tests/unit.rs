@@ -11,6 +11,7 @@ use sandbox_gateway_cli::output::render_response;
 use sandbox_gateway_cli::request_builder::{
     build_request_from_catalog_with_id, catalog_from_response, BuildRequestInput,
 };
+use sandbox_protocol::manual::render_catalog_manual;
 use sandbox_protocol::{
     OperationCatalogDocument, OperationExecutionSpace, OperationScope, Request,
 };
@@ -79,6 +80,87 @@ fn runtime_sandbox_id_populates_sandbox_scope() -> TestResult {
             sandbox_id: "sbox-1".to_owned()
         }
     );
+    Ok(())
+}
+
+#[test]
+fn runtime_sandbox_id_remains_scope_selection_not_request_arg() -> TestResult {
+    let request =
+        build_runtime_request(Some("sbox-1"), &["--workspace-session-id", "ws-1", "pwd"])?;
+
+    assert_eq!(
+        request.args,
+        json!({
+            "workspace_session_id": "ws-1",
+            "cmd": "pwd",
+        })
+    );
+    assert!(request.args.get("sandbox_id").is_none());
+    Ok(())
+}
+
+#[test]
+fn manager_request_construction_rejects_runtime_catalog() -> TestResult {
+    let catalog = runtime_catalog()?;
+    let error = build_request_from_catalog_with_id(
+        BuildRequestInput {
+            execution_space: OperationExecutionSpace::Manager,
+            operation: "exec_command".to_owned(),
+            operation_argv: vec![],
+            sandbox_id: None,
+        },
+        &config(None),
+        &catalog,
+        "req-1",
+    )
+    .err()
+    .ok_or("manager request unexpectedly accepted runtime catalog")?;
+
+    assert_eq!(
+        error.message(),
+        "loaded catalog is for runtime, not manager"
+    );
+    Ok(())
+}
+
+#[test]
+fn runtime_request_construction_rejects_manager_catalog() -> TestResult {
+    let catalog = manager_catalog()?;
+    let error = build_request_from_catalog_with_id(
+        BuildRequestInput {
+            execution_space: OperationExecutionSpace::Runtime,
+            operation: "create_sandbox".to_owned(),
+            operation_argv: vec![],
+            sandbox_id: Some("sbox-1".to_owned()),
+        },
+        &config(None),
+        &catalog,
+        "req-1",
+    )
+    .err()
+    .ok_or("runtime request unexpectedly accepted manager catalog")?;
+
+    assert_eq!(
+        error.message(),
+        "loaded catalog is for manager, not runtime"
+    );
+    Ok(())
+}
+
+#[test]
+fn manual_renders_manager_and_runtime_sections_from_catalog_documents() -> TestResult {
+    let manager = manager_catalog()?;
+    let runtime = runtime_catalog()?;
+
+    let manual = render_catalog_manual(&manager, Some(&runtime));
+
+    assert!(manual.contains("Sandbox Manager Operations"));
+    assert!(manual.contains("Sandbox Runtime Operations"));
+    assert!(manual.contains("sandbox manager create_sandbox --sandbox-id sbox-1"));
+    assert!(manual.contains(
+        "sandbox runtime --sandbox-id sbox-1 exec_command --workspace-session-id ws-1 pwd"
+    ));
+    assert!(!manual.contains("Sandbox Daemon Operations"));
     Ok(())
 }
 

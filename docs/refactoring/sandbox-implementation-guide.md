@@ -632,8 +632,11 @@ Implementation steps:
 4. Add or verify:
    - `describe_manager_operations`
    - `describe_daemon_operations`
-5. Render CLI/manual output from `OperationSpec`, not duplicated strings.
-6. Expose one catalog selector, `operation_execution_space`, and do not include a separate
+5. Parse and emit catalog JSON through `sandbox-protocol` helpers rather than
+   manager- or gateway-local document structs.
+6. Render CLI/manual output from cataloged `OperationSpec` data, not duplicated
+   strings.
+7. Expose one catalog selector, `operation_execution_space`, and do not include a separate
    implementation-owner field in catalog output.
 
 Resulting folder structure:
@@ -675,6 +678,12 @@ Exit criteria:
   manager-vs-runtime routing selector.
 
 ## Phase 8: Rename Runtime Support Packages
+
+Prompt:
+
+```text
+docs/refactoring/sandbox-phase-8-runtime-support-rename-prompt.md
+```
 
 Goal:
 
