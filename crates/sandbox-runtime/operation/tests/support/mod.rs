@@ -28,8 +28,10 @@ pub(crate) struct TestServices {
 pub(crate) struct FakeWorkspaceService {
     create_results: Mutex<VecDeque<Result<WorkspaceHandle, WorkspaceError>>>,
     capture_results: Mutex<VecDeque<Result<CapturedWorkspaceChanges, WorkspaceError>>>,
+    remount_results: Mutex<VecDeque<Result<RemountWorkspaceResult, WorkspaceError>>>,
     create_requests: Mutex<Vec<CreateWorkspaceRequest>>,
     capture_calls: Mutex<Vec<WorkspaceSessionId>>,
+    remount_calls: Mutex<Vec<WorkspaceSessionId>>,
     destroy_calls: Mutex<Vec<WorkspaceSessionId>>,
 }
 
@@ -47,8 +49,6 @@ pub(crate) struct SpawnObservation {
     pub(crate) spec_cwd: Option<PathBuf>,
     pub(crate) spec_timeout_seconds: Option<f64>,
     pub(crate) workspace_entry: WorkspaceEntry,
-    pub(crate) output_path: PathBuf,
-    pub(crate) final_path: PathBuf,
     pub(crate) transcript_path: PathBuf,
 }
 
@@ -110,14 +110,10 @@ impl CommandLaunchDriver for FakeLaunchDriver {
                 spec_cwd: spec.cwd.clone(),
                 spec_timeout_seconds: spec.timeout_seconds,
                 workspace_entry: parts.workspace_entry.clone(),
-                output_path: parts.output_path.clone(),
-                final_path: parts.final_path.clone(),
                 transcript_path: parts.transcript_path.clone(),
             });
-        Ok(CommandProcess::inactive_with_artifacts_for_test(
+        Ok(CommandProcess::inactive_with_transcript_for_test(
             spec,
-            parts.output_path,
-            parts.final_path,
             parts.transcript_path,
         ))
     }
@@ -158,6 +154,16 @@ impl FakeWorkspaceService {
             .push_back(result);
     }
 
+    pub(crate) fn push_remount_result(
+        &self,
+        result: Result<RemountWorkspaceResult, WorkspaceError>,
+    ) {
+        self.remount_results
+            .lock()
+            .expect("test operation succeeds")
+            .push_back(result);
+    }
+
     pub(crate) fn create_requests(&self) -> Vec<CreateWorkspaceRequest> {
         self.create_requests
             .lock()
@@ -174,6 +180,13 @@ impl FakeWorkspaceService {
 
     pub(crate) fn capture_calls(&self) -> Vec<WorkspaceSessionId> {
         self.capture_calls
+            .lock()
+            .expect("test operation succeeds")
+            .clone()
+    }
+
+    pub(crate) fn remount_calls(&self) -> Vec<WorkspaceSessionId> {
+        self.remount_calls
             .lock()
             .expect("test operation succeeds")
             .clone()
@@ -222,12 +235,22 @@ impl FakeWorkspaceService {
 
     fn remount_workspace(
         &self,
-        _handle: &WorkspaceHandle,
+        handle: &WorkspaceHandle,
         _request: RemountWorkspaceRequest,
     ) -> Result<RemountWorkspaceResult, WorkspaceError> {
-        Err(WorkspaceError::Setup {
-            step: "remount result not configured".to_owned(),
-        })
+        self.remount_calls
+            .lock()
+            .expect("test operation succeeds")
+            .push(handle.id.clone());
+        self.remount_results
+            .lock()
+            .expect("test operation succeeds")
+            .pop_front()
+            .unwrap_or_else(|| {
+                Err(WorkspaceError::Setup {
+                    step: "remount result not configured".to_owned(),
+                })
+            })
     }
 
     fn destroy_workspace(
@@ -381,7 +404,6 @@ pub(crate) fn success_exit(stdout: &str) -> CommandProcessExit {
         status: "completed".to_owned(),
         exit_code: 0,
         signal: None,
-        runner_result: None,
         stdout: stdout.to_owned(),
         elapsed_s: 0.1,
         kill: None,

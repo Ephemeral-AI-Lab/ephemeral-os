@@ -90,10 +90,8 @@ impl CommandLaunchDriver for TranscriptLaunchDriver {
                 error: error.to_string(),
             }
         })?;
-        Ok(CommandProcess::inactive_with_artifacts_for_test(
+        Ok(CommandProcess::inactive_with_transcript_for_test(
             spec,
-            parts.output_path,
-            parts.final_path,
             parts.transcript_path,
         ))
     }
@@ -126,10 +124,8 @@ impl CommandLaunchDriver for MissingTranscriptLaunchDriver {
                     error: error.to_string(),
                 }
             })?;
-        Ok(CommandProcess::inactive_with_artifacts_for_test(
+        Ok(CommandProcess::inactive_with_transcript_for_test(
             spec,
-            parts.output_path,
-            parts.final_path,
             parts.transcript_path,
         ))
     }

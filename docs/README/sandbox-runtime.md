@@ -30,13 +30,24 @@ namespace, layerstack, overlay, and config primitives stay in their separate
 
 ## Runtime Operations
 
-The external runtime operation surface is:
+The external runtime operation surface is the `Command` family:
 
 - `exec_command`
 - `write_command_stdin`
 - `poll_command`
 - `read_command_lines`
 - `cancel_command`
+
+Catalog help is rendered from protocol metadata:
+
+```text
+sandbox-cli runtime help
+sandbox-cli runtime help exec_command
+```
+
+Runtime help usage and examples do not include `--sandbox-id`; sandbox
+selection is contextual CLI configuration used before the request reaches the
+runtime operation surface.
 
 `CommandOperationService` owns command admission, active/completed command
 tracking, transcript access, command launch, cancellation, and command

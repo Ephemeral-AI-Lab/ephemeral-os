@@ -8,7 +8,8 @@ mod public;
 
 pub use internal::{layerstack, workspace_remount, workspace_session};
 pub use operation::{
-    ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationCatalog, OperationExecutionSpace, OperationSpec,
+    ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationCatalog, OperationExecutionSpace,
+    OperationFamilySpec, OperationSpec,
 };
 pub use public::command;
 
@@ -24,8 +25,17 @@ pub fn operation_specs() -> &'static [&'static OperationSpec] {
 }
 
 #[must_use]
+pub fn operation_families() -> &'static [&'static OperationFamilySpec] {
+    public::operation_families()
+}
+
+#[must_use]
 pub fn operation_catalog() -> OperationCatalog {
-    OperationCatalog::new(OperationExecutionSpace::Runtime, operation_specs())
+    OperationCatalog::new(
+        OperationExecutionSpace::Runtime,
+        operation_families(),
+        operation_specs(),
+    )
 }
 
 #[must_use]

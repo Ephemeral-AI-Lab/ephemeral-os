@@ -1,6 +1,47 @@
 use crate::{CreateSandboxRequest, ManagerError, SandboxState};
 
 use super::{image, record_value, workspace_root};
+use sandbox_protocol::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationSpec};
+
+pub(crate) const SPEC: OperationSpec = OperationSpec {
+    name: "create_sandbox",
+    family: "management",
+    summary: "Create a host-side sandbox record and runtime sandbox.",
+    description:
+        "Create a host-side sandbox record, create the runtime sandbox, and start its daemon.",
+    args: CREATE_SANDBOX_ARGS,
+    cli: Some(CREATE_SANDBOX_CLI),
+    related: &["list_sandboxes", "inspect_sandbox", "destroy_sandbox"],
+};
+
+const CREATE_SANDBOX_ARGS: &[ArgSpec] = &[
+    ArgSpec::required(
+        "image",
+        ArgKind::String,
+        "Container image used to create the sandbox.",
+        Some(ArgCliSpec {
+            flag: Some("--image"),
+            positional: None,
+        }),
+    ),
+    ArgSpec::required(
+        "workspace_root",
+        ArgKind::Path,
+        "Absolute workspace root mounted inside this sandbox.",
+        Some(ArgCliSpec {
+            flag: Some("--workspace-root"),
+            positional: None,
+        }),
+    ),
+];
+
+const CREATE_SANDBOX_CLI: CliSpec = CliSpec {
+    path: &["manager", "create_sandbox"],
+    usage: "sandbox-cli manager create_sandbox --image IMAGE --workspace-root PATH",
+    examples: &[
+        "sandbox-cli manager create_sandbox --image ubuntu:24.04 --workspace-root /testbed",
+    ],
+};
 
 pub(crate) fn dispatch(
     services: &crate::operation::ManagerServices,

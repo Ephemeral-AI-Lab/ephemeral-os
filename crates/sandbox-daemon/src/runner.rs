@@ -1,6 +1,6 @@
 //! `sandbox-daemon ns-runner` subcommand adapter.
 
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 #[cfg(unix)]
 use std::os::fd::RawFd;
@@ -17,7 +17,7 @@ const DAEMON_CONFIG_YAML_ENV: &str = "SANDBOX_DAEMON_CONFIG_YAML";
 /// This is a thin call into the `sandbox-runtime-namespace-process` runner module:
 /// read the request payload from `--request-fd <fd>`, load the runner
 /// config, dispatch the selected [`RunnerCliMode`], and write the compact
-/// `RunResult` JSON to `--output <path>`.
+/// `RunResult` JSON to `--result-fd <fd>`.
 pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let config = RunnerCliConfig::parse(args)?;
     wait_for_start_ack(config.start_ack_fd)?;
@@ -25,7 +25,8 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let request: sandbox_runtime_namespace_process::runner::protocol::NamespaceCommandRequest =
         serde_json::from_str(&request_json).context("failed to decode ns-runner request JSON")?;
     let runner_config = load_runner_config()?;
-    let mut output_target = open_output(&config.output_path)?;
+    let mut result_target = open_fd_for_write(config.result_fd)
+        .with_context(|| format!("failed to open ns-runner result fd {}", config.result_fd))?;
     let result = match config.mode {
         RunnerCliMode::RemountOverlay => {
             sandbox_runtime_namespace_process::runner::protocol::RunResult {
@@ -50,7 +51,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
         }
     };
     let output = serde_json::to_vec(&result).context("failed to encode ns-runner result JSON")?;
-    write_payload(&mut output_target, &output)
+    write_payload(&mut result_target, &output)
 }
 
 fn ok_result() -> sandbox_runtime_namespace_process::runner::protocol::RunResult {
@@ -82,7 +83,7 @@ enum RunnerCliMode {
 
 pub(crate) struct RunnerCliConfig {
     request_fd: RawFd,
-    output_path: PathBuf,
+    result_fd: RawFd,
     start_ack_fd: Option<RawFd>,
     mode: RunnerCliMode,
 }
@@ -90,7 +91,7 @@ pub(crate) struct RunnerCliConfig {
 impl RunnerCliConfig {
     pub(crate) fn parse(args: impl IntoIterator<Item = String>) -> Result<Self> {
         let mut request_fd = None;
-        let mut output_path = None;
+        let mut result_fd = None;
         let mut start_ack_fd = None;
         let mut mode = None;
         let mut set_mode = |selected: RunnerCliMode| {
@@ -115,11 +116,13 @@ impl RunnerCliConfig {
                             .context("--request-fd must be an integer file descriptor")?,
                     );
                 }
-                "--output" => {
-                    output_path = Some(PathBuf::from(
+                "--result-fd" => {
+                    result_fd = Some(
                         args.next()
-                            .ok_or_else(|| anyhow!("--output requires a path"))?,
-                    ));
+                            .ok_or_else(|| anyhow!("--result-fd requires a file descriptor"))?
+                            .parse::<RawFd>()
+                            .context("--result-fd must be an integer file descriptor")?,
+                    );
                 }
                 "--start-ack-fd" => {
                     start_ack_fd = Some(
@@ -131,7 +134,7 @@ impl RunnerCliConfig {
                 }
                 "--help" | "-h" => {
                     println!(
-                        "usage: sandbox-daemon ns-runner [--mount-overlay | --remount-overlay] [--request-fd FD] [--output PATH]"
+                        "usage: sandbox-daemon ns-runner [--mount-overlay | --remount-overlay] [--request-fd FD] [--result-fd FD]"
                     );
                     std::process::exit(0);
                 }
@@ -146,10 +149,10 @@ impl RunnerCliConfig {
             }
         }
         let request_fd = request_fd.ok_or_else(|| anyhow!("ns-runner requires --request-fd FD"))?;
-        let output_path = output_path.ok_or_else(|| anyhow!("ns-runner requires --output PATH"))?;
+        let result_fd = result_fd.ok_or_else(|| anyhow!("ns-runner requires --result-fd FD"))?;
         Ok(Self {
             request_fd,
-            output_path,
+            result_fd,
             start_ack_fd,
             mode: mode.unwrap_or(RunnerCliMode::Run),
         })
@@ -176,6 +179,13 @@ fn open_fd_for_read(fd: RawFd) -> std::io::Result<File> {
     File::open(format!("/proc/self/fd/{fd}")).or_else(|_| File::open(format!("/dev/fd/{fd}")))
 }
 
+pub(crate) fn open_fd_for_write(fd: RawFd) -> std::io::Result<File> {
+    OpenOptions::new()
+        .write(true)
+        .open(format!("/proc/self/fd/{fd}"))
+        .or_else(|_| OpenOptions::new().write(true).open(format!("/dev/fd/{fd}")))
+}
+
 fn read_payload_from_fd(fd: RawFd) -> Result<String> {
     let mut payload = String::new();
     open_fd_for_read(fd)
@@ -183,18 +193,6 @@ fn read_payload_from_fd(fd: RawFd) -> Result<String> {
         .read_to_string(&mut payload)
         .with_context(|| format!("failed to read ns-runner request fd {fd}"))?;
     Ok(payload)
-}
-
-fn open_output(path: &PathBuf) -> Result<File> {
-    if let Some(parent) = path
-        .parent()
-        .filter(|parent| !parent.as_os_str().is_empty())
-    {
-        std::fs::create_dir_all(parent)
-            .with_context(|| format!("failed to create output dir {}", parent.display()))?;
-    }
-    File::create(path)
-        .with_context(|| format!("failed to create ns-runner output {}", path.display()))
 }
 
 fn write_payload(target: &mut File, payload: &[u8]) -> Result<()> {

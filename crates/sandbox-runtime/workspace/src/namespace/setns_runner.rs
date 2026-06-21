@@ -185,24 +185,19 @@ pub(crate) fn run_child(
     setup_timeout_s: f64,
 ) -> Result<Output, IsolatedNetworkError> {
     let payload = serde_json::to_vec(request).map_err(setup_error)?;
-    let suffix = mode_arg.trim_start_matches('-');
-    let output_path = std::env::temp_dir()
-        .join(format!(
-            "eos-ns-runner-{suffix}-{}-{}",
-            std::process::id(),
-            unique_suffix()
-        ))
-        .with_extension("result.json");
     let (request_read, request_write) = pipe2(OFlag::O_CLOEXEC).map_err(setup_error)?;
     clear_cloexec(request_read.as_raw_fd())?;
     let request_fd = request_read.as_raw_fd();
+    let (result_read, result_write) = pipe2(OFlag::O_CLOEXEC).map_err(setup_error)?;
+    clear_cloexec(result_write.as_raw_fd())?;
+    let result_fd = result_write.as_raw_fd();
     let mut child = Command::new(std::env::current_exe().map_err(setup_error)?)
         .arg("ns-runner")
         .arg(mode_arg)
         .arg("--request-fd")
         .arg(request_fd.to_string())
-        .arg("--output")
-        .arg(&output_path)
+        .arg("--result-fd")
+        .arg(result_fd.to_string())
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
@@ -210,25 +205,18 @@ pub(crate) fn run_child(
         .spawn()
         .map_err(setup_error)?;
     drop(request_read);
+    drop(result_write);
     let mut request_writer = File::from(request_write);
     request_writer.write_all(&payload).map_err(setup_error)?;
     drop(request_writer);
     let status = wait_for_child(&mut child, mode_arg, setup_timeout_s)?;
-    let stdout = std::fs::read(&output_path).unwrap_or_default();
+    let stdout = read_pipe(Some(File::from(result_read)))?;
     let stderr = read_pipe(child.stderr.take())?;
-    let _ = std::fs::remove_file(&output_path);
     Ok(Output {
         status,
         stdout,
         stderr,
     })
-}
-
-#[cfg(target_os = "linux")]
-fn unique_suffix() -> u128 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |duration| duration.as_nanos())
 }
 
 #[cfg(target_os = "linux")]

@@ -11,9 +11,17 @@ use sandbox_protocol::{Request, Response};
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "write_command_stdin",
+    family: "command",
     summary: "Write text to a running command stdin.",
+    description: "Append text to the stdin stream of a running command session and return a bounded output yield.",
     args: WRITE_STDIN_ARGS,
     cli: Some(WRITE_STDIN_CLI),
+    related: &[
+        "exec_command",
+        "poll_command",
+        "read_command_lines",
+        "cancel_command",
+    ],
 };
 
 const WRITE_STDIN_ARGS: &[ArgSpec] = &[
@@ -49,10 +57,8 @@ const WRITE_STDIN_ARGS: &[ArgSpec] = &[
 
 const WRITE_STDIN_CLI: CliSpec = CliSpec {
     path: &["runtime", "write_command_stdin"],
-    usage: "sandbox-cli runtime --sandbox-id ID write_command_stdin --command-session-id ID TEXT",
-    examples: &[
-        "sandbox-cli runtime --sandbox-id sbox-1 write_command_stdin --command-session-id cmd-1 hello",
-    ],
+    usage: "sandbox-cli runtime write_command_stdin --command-session-id ID TEXT",
+    examples: &["sandbox-cli runtime write_command_stdin --command-session-id cmd-1 hello"],
 };
 
 pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: &Request) -> Response {

@@ -103,6 +103,8 @@ fn operation_catalog_exports_runtime_command_operations() {
         catalog.operation_execution_space,
         OperationExecutionSpace::Runtime
     );
+    assert_eq!(catalog.families.len(), 1);
+    assert_eq!(catalog.families[0].title, "Command");
     assert_eq!(
         names,
         [
@@ -123,11 +125,11 @@ fn operation_catalog_cli_metadata_uses_runtime_space() {
         spec.cli
             .map(|cli| {
                 cli.path.first() == Some(&"runtime")
-                    && cli
-                        .usage
-                        .starts_with("sandbox-cli runtime --sandbox-id ID ")
+                    && cli.usage.starts_with("sandbox-cli runtime ")
+                    && !cli.usage.contains("--sandbox-id")
                     && cli.examples.iter().all(|example| {
-                        example.starts_with("sandbox-cli runtime --sandbox-id sbox-1 ")
+                        example.starts_with("sandbox-cli runtime ")
+                            && !example.contains("--sandbox-id")
                             && !example.contains("daemon")
                     })
             })

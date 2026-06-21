@@ -1,4 +1,31 @@
 use super::{record_value, sandbox_id};
+use sandbox_protocol::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationSpec};
+
+pub(crate) const SPEC: OperationSpec = OperationSpec {
+    name: "inspect_sandbox",
+    family: "management",
+    summary: "Inspect one sandbox record.",
+    description: "Inspect one sandbox record, including lifecycle state, workspace root, and configured daemon endpoint metadata.",
+    args: INSPECT_SANDBOX_ARGS,
+    cli: Some(INSPECT_SANDBOX_CLI),
+    related: &["list_sandboxes"],
+};
+
+const INSPECT_SANDBOX_ARGS: &[ArgSpec] = &[ArgSpec::required(
+    "sandbox_id",
+    ArgKind::String,
+    "Sandbox id.",
+    Some(ArgCliSpec {
+        flag: Some("--sandbox-id"),
+        positional: None,
+    }),
+)];
+
+const INSPECT_SANDBOX_CLI: CliSpec = CliSpec {
+    path: &["manager", "inspect_sandbox"],
+    usage: "sandbox-cli manager inspect_sandbox --sandbox-id ID",
+    examples: &["sandbox-cli manager inspect_sandbox --sandbox-id sbox-1"],
+};
 
 pub(crate) fn dispatch(
     services: &crate::operation::ManagerServices,

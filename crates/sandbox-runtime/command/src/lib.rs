@@ -2,10 +2,10 @@
 //!
 //! This crate owns the per-command process/PTY/transcript machinery: spawning
 //! the runner child, taking its exit into a policy-free [`process::CommandProcessExit`],
-//! cancelling the process group, yield-waiting on output, and persisting the
-//! final response. It carries no workspace policy: who runs on which workspace,
+//! cancelling the process group, yield-waiting on output, and retaining the
+//! transcript. It carries no workspace policy: who runs on which workspace,
 //! and what happens to the upperdir at finalization, is the command-ops tier's
-//! concern. The mode string a final response carries is opaque here.
+//! concern.
 //!
 //! Mechanism crate, like `sandbox-runtime-overlay` and
 //! `sandbox-runtime-namespace-process`. The sandbox

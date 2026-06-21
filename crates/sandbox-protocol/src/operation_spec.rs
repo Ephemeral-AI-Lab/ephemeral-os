@@ -67,9 +67,20 @@ pub struct CliSpec {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct OperationFamilySpec {
+    pub id: &'static str,
+    pub title: &'static str,
+    pub summary: &'static str,
+    pub description: &'static str,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OperationSpec {
     pub name: &'static str,
+    pub family: &'static str,
     pub summary: &'static str,
+    pub description: &'static str,
     pub args: &'static [ArgSpec],
     pub cli: Option<CliSpec>,
+    pub related: &'static [&'static str],
 }

@@ -7,11 +7,19 @@ use sandbox_manager::{
     SandboxRuntime, SandboxState, SandboxStore,
 };
 use sandbox_protocol::{
-    error_kind, OperationCatalog, OperationExecutionSpace, OperationScope, OperationSpec, Request,
-    Response,
+    error_kind, OperationCatalog, OperationExecutionSpace, OperationFamilySpec, OperationScope,
+    OperationSpec, Request, Response,
 };
 use serde_json::{json, Value};
 
+static TEST_DAEMON_FAMILY: OperationFamilySpec = OperationFamilySpec {
+    id: "test",
+    title: "Test",
+    summary: "Test runtime operations.",
+    description: "Test runtime operations.",
+};
+
+static TEST_DAEMON_FAMILIES: &[&OperationFamilySpec] = &[&TEST_DAEMON_FAMILY];
 static TEST_DAEMON_SPECS: &[&OperationSpec] = &[];
 
 #[derive(Default)]
@@ -60,6 +68,7 @@ impl SandboxDaemonClient for RecordingDaemonClient {
     ) -> Result<OperationCatalog, ManagerError> {
         Ok(OperationCatalog::new(
             OperationExecutionSpace::Runtime,
+            TEST_DAEMON_FAMILIES,
             TEST_DAEMON_SPECS,
         ))
     }

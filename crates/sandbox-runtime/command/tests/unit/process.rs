@@ -1,7 +1,6 @@
 use super::*;
 
 use sandbox_runtime_workspace::{WorkspaceEntry, WorkspaceEntryFds};
-use serde_json::json;
 
 fn workspace_entry() -> WorkspaceEntry {
     WorkspaceEntry {
@@ -33,7 +32,7 @@ fn process_exposes_identity() {
 }
 
 #[test]
-fn take_exit_reads_transcript_and_persist_removes_it() -> Result<(), Box<dyn std::error::Error>> {
+fn take_exit_reads_transcript_and_retains_it() -> Result<(), Box<dyn std::error::Error>> {
     let root = std::env::temp_dir().join(format!(
         "command-take-exit-{}-{}",
         std::process::id(),
@@ -43,7 +42,6 @@ fn take_exit_reads_transcript_and_persist_removes_it() -> Result<(), Box<dyn std
     ));
     std::fs::create_dir_all(&root)?;
     let transcript_path = root.join("transcript.log");
-    let final_path = root.join("final.json");
     std::fs::write(&transcript_path, b"captured transcript output")?;
 
     let writer = std::fs::OpenOptions::new()
@@ -59,8 +57,6 @@ fn take_exit_reads_transcript_and_persist_removes_it() -> Result<(), Box<dyn std
         },
         CommandProcessRuntime::new(
             crate::pty::PtyProcess::inactive(writer),
-            root.join("runner-result.json"),
-            final_path.clone(),
             transcript_path.clone(),
         ),
     );
@@ -69,37 +65,7 @@ fn take_exit_reads_transcript_and_persist_removes_it() -> Result<(), Box<dyn std
     assert_eq!(exit.stdout, "captured transcript output");
     assert!(exit.kill.is_none());
     assert!(process.take_exit().is_none());
-
-    let response = json!({
-        "status": "ok",
-        "exit_code": 0,
-        "output": {
-            "stdout": exit.stdout,
-            "stderr": "",
-        },
-        "command_session_id": "cmd_1",
-        "workspace": "shared",
-    });
-    let persistence = process.persist_final(&response);
-
-    assert!(final_path.exists());
-    assert_eq!(
-        persistence.final_response,
-        Some(CommandFinalResponsePersistence::Persisted {
-            path: final_path.clone(),
-            bytes: std::fs::metadata(&final_path)?.len().try_into()?,
-        })
-    );
-    assert_eq!(persistence.transcript_error, None);
-    let final_response: serde_json::Value = serde_json::from_slice(&std::fs::read(&final_path)?)?;
-    assert_eq!(
-        final_response
-            .get("output")
-            .and_then(|output| output.get("stdout"))
-            .and_then(serde_json::Value::as_str),
-        Some("captured transcript output")
-    );
-    assert!(!transcript_path.exists());
+    assert!(transcript_path.exists());
 
     let _ = std::fs::remove_dir_all(root);
     Ok(())
@@ -123,11 +89,6 @@ fn process_spawn_prepare_owns_command_artifact_layout() -> Result<(), Box<dyn st
     let command_dir = root.join("cmd_7");
     assert!(command_dir.is_dir());
     assert_eq!(spawn.artifact_dir(), command_dir);
-    assert_eq!(
-        spawn.output_path,
-        root.join("cmd_7").join("runner-result.json")
-    );
-    assert_eq!(spawn.final_path, root.join("cmd_7").join("final.json"));
     assert_eq!(
         spawn.transcript_path,
         root.join("cmd_7").join("transcript.log")
@@ -188,58 +149,5 @@ fn builds_namespace_runner_request_from_command_spec_and_workspace_entry(
     assert_eq!(request["cgroup_path"], "/sys/fs/cgroup/eos");
     assert_eq!(request["timeout_seconds"], 2.5);
 
-    Ok(())
-}
-
-#[test]
-fn persist_final_reports_final_and_transcript_failures() -> Result<(), Box<dyn std::error::Error>> {
-    let root = std::env::temp_dir().join(format!(
-        "command-persist-failures-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)?
-            .as_nanos()
-    ));
-    std::fs::create_dir_all(&root)?;
-    let final_path = root.join("final-as-dir");
-    let transcript_path = root.join("transcript-as-dir");
-    std::fs::create_dir_all(&final_path)?;
-    std::fs::create_dir_all(&transcript_path)?;
-
-    let writer = std::fs::OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open("/dev/null")?;
-    let process = CommandProcess::with_runtime(
-        CommandProcessSpec {
-            id: "cmd_1".to_owned(),
-            command: "echo ok".to_owned(),
-            cwd: None,
-            timeout_seconds: None,
-        },
-        CommandProcessRuntime::new(
-            crate::pty::PtyProcess::inactive(writer),
-            root.join("runner-result.json"),
-            final_path.clone(),
-            transcript_path.clone(),
-        ),
-    );
-
-    let persistence = process.persist_final(&json!({"status": "ok"}));
-
-    match persistence.final_response {
-        Some(CommandFinalResponsePersistence::Failed { path, error }) => {
-            assert_eq!(path, final_path);
-            assert!(!error.is_empty());
-        }
-        other => panic!("expected final persistence failure, got {other:?}"),
-    }
-    let transcript_error = persistence
-        .transcript_error
-        .expect("directory transcript removal reports failure");
-    assert_eq!(transcript_error.path, transcript_path);
-    assert!(!transcript_error.error.is_empty());
-
-    let _ = std::fs::remove_dir_all(root);
     Ok(())
 }

@@ -8,15 +8,39 @@ use std::path::PathBuf;
 use serde_json::{json, Value};
 
 use crate::operation::dispatch::ManagerOperationEntry;
-use crate::operation::specs;
 use crate::{ManagerError, SandboxDaemonEndpoint, SandboxId, SandboxRecord};
+use sandbox_protocol::{OperationFamilySpec, OperationSpec};
+
+pub(crate) const MANAGEMENT_FAMILY: OperationFamilySpec = OperationFamilySpec {
+    id: "management",
+    title: "Management",
+    summary: "Create, destroy, list, and inspect sandbox records.",
+    description: "Create, destroy, list, and inspect sandbox records. Daemons are managed as part of sandbox lifecycle behavior, not as standalone manager operations.",
+};
+
+const FAMILIES: &[&OperationFamilySpec] = &[&MANAGEMENT_FAMILY];
+
+const SPECS: &[&OperationSpec] = &[
+    &create_sandbox::SPEC,
+    &destroy_sandbox::SPEC,
+    &list_sandboxes::SPEC,
+    &inspect_sandbox::SPEC,
+];
 
 pub(crate) const OPERATIONS: &[ManagerOperationEntry] = &[
-    ManagerOperationEntry::new(&specs::CREATE_SANDBOX, create_sandbox::dispatch),
-    ManagerOperationEntry::new(&specs::DESTROY_SANDBOX, destroy_sandbox::dispatch),
-    ManagerOperationEntry::new(&specs::LIST_SANDBOXES, list_sandboxes::dispatch),
-    ManagerOperationEntry::new(&specs::INSPECT_SANDBOX, inspect_sandbox::dispatch),
+    ManagerOperationEntry::new(&create_sandbox::SPEC, create_sandbox::dispatch),
+    ManagerOperationEntry::new(&destroy_sandbox::SPEC, destroy_sandbox::dispatch),
+    ManagerOperationEntry::new(&list_sandboxes::SPEC, list_sandboxes::dispatch),
+    ManagerOperationEntry::new(&inspect_sandbox::SPEC, inspect_sandbox::dispatch),
 ];
+
+pub(crate) const fn operation_families() -> &'static [&'static OperationFamilySpec] {
+    FAMILIES
+}
+
+pub(crate) const fn operation_specs() -> &'static [&'static OperationSpec] {
+    SPECS
+}
 
 pub(crate) const fn operation_entries() -> &'static [ManagerOperationEntry] {
     OPERATIONS

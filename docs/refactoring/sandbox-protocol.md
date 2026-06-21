@@ -21,6 +21,7 @@ Import:  sandbox_protocol
 - Request size and timeout limits.
 - Protocol error kind vocabulary.
 - Operation metadata types:
+  - `OperationFamilySpec`
   - `OperationSpec`
   - `ArgSpec`
   - `ArgKind`
@@ -29,7 +30,9 @@ Import:  sandbox_protocol
 - `OperationCatalog`
 - `OperationExecutionSpace`
 - Protocol-owned catalog JSON document conversion and parsing helpers for
-  `OperationCatalog` and cataloged `OperationSpec` data.
+  `OperationCatalog`, cataloged `OperationFamilySpec` data, and cataloged
+  `OperationSpec` data.
+- Protocol-owned help rendering and operation help search helpers.
 
 ## Must Not Own
 
@@ -135,13 +138,28 @@ Catalog JSON exposes one execution-space selector:
 ```json
 {
   "operation_execution_space": "manager",
+  "families": [],
   "operations": []
 }
 ```
 
 Do not add separate `owner`, `target`, `route`, `implementation_owner`, or
-`operation_target` fields. Do not add grouping metadata to operation specs; use
-the catalog execution space as the operation classifier.
+`operation_target` fields. Families are explicit catalog metadata. Every
+operation references a family in the same catalog, and decoding rejects
+duplicate family ids, duplicate operation names, missing operation families,
+and missing `related` operation references.
+
+Help rendering uses the catalog document:
+
+```rust
+render_catalog_help(&catalog);
+render_operation_help(&catalog, "exec_command");
+search_operation_help(&catalog, "exec");
+```
+
+The protocol renderer owns grouping, detailed usage/argument/example rendering,
+and unknown-operation suggestions. CLI crates should print this output instead
+of duplicating operation help formatting.
 
 ## Dependency Rules
 

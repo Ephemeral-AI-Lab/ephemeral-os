@@ -78,6 +78,17 @@ sandbox-runtime-config
 `sandbox-manager` and `sandbox-runtime` own separate operation catalogs. Agents
 choose the catalog first, then choose an operation.
 
+Runtime catalog help is scoped to the runtime execution space:
+
+```text
+sandbox-cli runtime help
+sandbox-cli runtime help exec_command
+```
+
+The rendered runtime help usage/examples omit `--sandbox-id`; sandbox selection
+is contextual CLI configuration for reaching the runtime catalog, not an
+operation argument.
+
 ## sandbox-runtime
 
 ```text
@@ -88,7 +99,7 @@ Import:  sandbox_runtime
 
 Owns:
 
-- Daemon/runtime operation specs and catalog.
+- Daemon/runtime operation family metadata, operation specs, and catalog.
 - Daemon/runtime operation dispatch table.
 - Command operation service.
 - Internal workspace session orchestration.
@@ -136,6 +147,9 @@ src/
 Daemon/runtime operations:
 
 ```text
+Command
+  Run, interact with, inspect, and cancel commands.
+
 exec_command
 write_command_stdin
 poll_command
@@ -209,9 +223,9 @@ Dependencies:
 - Forbidden: `sandbox-protocol`, `sandbox-manager`, `sandbox-gateway`,
   `sandbox-daemon`, `sandbox-runtime-layerstack`.
 
-Command runner requests are passed to `ns-runner` through an inherited
-`--request-fd`; command artifacts stay limited to runner result, final response,
-and transcript files.
+Command runner requests and runner results are passed through inherited
+`--request-fd` and `--result-fd` pipes; command artifacts stay limited to
+transcript files.
 
 Verification:
 

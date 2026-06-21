@@ -1,5 +1,4 @@
-//! One command process: the child process, PTY transcript, kill/exit state,
-//! and final-response persistence.
+//! One command process: the child process, PTY transcript, and kill/exit state.
 
 use std::fs;
 use std::io;
@@ -9,13 +8,12 @@ use std::time::{Duration, Instant};
 
 use sandbox_runtime_namespace_process::runner::protocol::NamespaceCommandRequest;
 use sandbox_runtime_workspace::WorkspaceEntry;
-use serde_json::{json, Value};
+use serde_json::json;
 
 pub use crate::pty::KillReason;
 
 use crate::pty::{
-    spawn_current_exe_ns_runner, CommandCompletionStatus, CommandRunnerResult, PtyProcess,
-    PtyProcessExit,
+    spawn_current_exe_ns_runner, CommandCompletionStatus, PtyProcess, PtyProcessExit,
 };
 use crate::transcript::{read_full_transcript_stdout, read_transcript_since, read_transcript_tail};
 use crate::yield_wait_loop::CommandWaitTarget;
@@ -43,8 +41,6 @@ pub struct CommandProcessSpec {
 #[derive(Clone)]
 pub struct CommandProcessSpawn {
     pub workspace_entry: WorkspaceEntry,
-    pub output_path: PathBuf,
-    pub final_path: PathBuf,
     pub transcript_path: PathBuf,
 }
 
@@ -58,7 +54,6 @@ pub struct CommandProcessExit {
     pub status: String,
     pub exit_code: i64,
     pub signal: Option<i32>,
-    pub runner_result: Option<Value>,
     pub stdout: String,
     pub elapsed_s: f64,
     /// Why the substrate killed this process, if it did. `None` is a natural
@@ -67,29 +62,9 @@ pub struct CommandProcessExit {
     pub kill: Option<KillReason>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CommandPersistenceOutcome {
-    pub final_response: Option<CommandFinalResponsePersistence>,
-    pub transcript_error: Option<CommandTranscriptPersistenceError>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum CommandFinalResponsePersistence {
-    Persisted { path: PathBuf, bytes: usize },
-    Failed { path: PathBuf, error: String },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CommandTranscriptPersistenceError {
-    pub path: PathBuf,
-    pub error: String,
-}
-
 /// Per-command process state: the child, its paths, and the kill/exit flags.
 pub(crate) struct CommandProcessRuntime {
     process: PtyProcess,
-    output_path: PathBuf,
-    final_path: PathBuf,
     transcript_path: PathBuf,
     /// Why this process was killed, if it has been. Set once by `cancel_process`.
     kill: Mutex<Option<KillReason>>,
@@ -98,16 +73,9 @@ pub(crate) struct CommandProcessRuntime {
 }
 
 impl CommandProcessRuntime {
-    pub(crate) fn new(
-        process: PtyProcess,
-        output_path: PathBuf,
-        final_path: PathBuf,
-        transcript_path: PathBuf,
-    ) -> Self {
+    pub(crate) fn new(process: PtyProcess, transcript_path: PathBuf) -> Self {
         Self {
             process,
-            output_path,
-            final_path,
             transcript_path,
             kill: Mutex::new(None),
             exit_taken: Mutex::new(false),
@@ -115,7 +83,7 @@ impl CommandProcessRuntime {
     }
 
     fn artifact_dir(&self) -> PathBuf {
-        self.output_path
+        self.transcript_path
             .parent()
             .map(Path::to_path_buf)
             .unwrap_or_default()
@@ -129,12 +97,7 @@ impl CommandProcessRuntime {
             .write(true)
             .open("/dev/null")
             .expect("open /dev/null for inactive command process");
-        Self::new(
-            PtyProcess::inactive(writer),
-            PathBuf::new(),
-            PathBuf::new(),
-            PathBuf::new(),
-        )
+        Self::new(PtyProcess::inactive(writer), PathBuf::new())
     }
 }
 
@@ -158,18 +121,14 @@ impl CommandProcess {
             CommandProcessRuntime::new(
                 PtyProcess::inactive_with_process_group_for_test(writer, pgid),
                 PathBuf::new(),
-                PathBuf::new(),
-                PathBuf::new(),
             ),
         )
     }
 
     #[doc(hidden)]
     #[must_use]
-    pub fn inactive_with_artifacts_for_test(
+    pub fn inactive_with_transcript_for_test(
         spec: CommandProcessSpec,
-        output_path: PathBuf,
-        final_path: PathBuf,
         transcript_path: PathBuf,
     ) -> Self {
         let writer = std::fs::OpenOptions::new()
@@ -179,12 +138,7 @@ impl CommandProcess {
             .expect("open /dev/null for inactive command process");
         Self::with_runtime(
             spec,
-            CommandProcessRuntime::new(
-                PtyProcess::inactive(writer),
-                output_path,
-                final_path,
-                transcript_path,
-            ),
+            CommandProcessRuntime::new(PtyProcess::inactive(writer), transcript_path),
         )
     }
 
@@ -193,22 +147,13 @@ impl CommandProcess {
         parts: CommandProcessSpawn,
     ) -> Result<Self, CommandError> {
         let command_request = build_namespace_command_request(&spec, parts.workspace_entry);
-        let process = spawn_current_exe_ns_runner(
-            &command_request,
-            &parts.output_path,
-            parts.transcript_path.clone(),
-        )?;
+        let process = spawn_current_exe_ns_runner(&command_request, parts.transcript_path.clone())?;
         let process = process.allow_start().map_err(|error| {
-            CommandError::artifact_write("process_start_ack", &parts.output_path, error)
+            CommandError::artifact_write("process_start_ack", &parts.transcript_path, error)
         })?;
         Ok(Self::with_runtime(
             spec,
-            CommandProcessRuntime::new(
-                process,
-                parts.output_path,
-                parts.final_path,
-                parts.transcript_path,
-            ),
+            CommandProcessRuntime::new(process, parts.transcript_path),
         ))
     }
 
@@ -301,7 +246,7 @@ impl CommandProcess {
         self.runtime
             .process
             .wait_for_reader_done(OUTPUT_DRAIN_GRACE);
-        let runner = CommandRunnerResult::read_from_path(&self.runtime.output_path);
+        let runner = self.runtime.process.take_runner_result(OUTPUT_DRAIN_GRACE);
         let kill = *lock(&self.runtime.kill);
         let completion =
             CommandCompletionStatus::from_process_and_runner(process_exit, runner.as_ref(), kill);
@@ -309,22 +254,10 @@ impl CommandProcess {
             status: completion.status().to_owned(),
             exit_code: completion.exit_code(),
             signal: process_exit.signal(),
-            runner_result: runner.map(|runner| runner.value().clone()),
             stdout: self.final_stdout(),
             elapsed_s: self.started_at.elapsed().as_secs_f64(),
             kill,
         })
-    }
-
-    /// Persist the run's final response to `final_path` for crash recovery and
-    /// remove the transcript. Best-effort: `final_path` is only a crash-recovery
-    /// convenience, so a write failure does not undo the already-decided
-    /// publish/discard or fail the operation.
-    pub fn persist_final(&self, response: &serde_json::Value) -> CommandPersistenceOutcome {
-        CommandPersistenceOutcome {
-            final_response: persist_final_response(&self.runtime.final_path, response),
-            transcript_error: remove_transcript_file(&self.runtime.transcript_path),
-        }
     }
 
     fn final_stdout(&self) -> String {
@@ -344,15 +277,13 @@ impl CommandProcessSpawn {
         })?;
         Ok(Self {
             workspace_entry,
-            output_path: command_dir.join("runner-result.json"),
-            final_path: command_dir.join("final.json"),
             transcript_path: command_dir.join("transcript.log"),
         })
     }
 
     #[must_use]
     pub fn artifact_dir(&self) -> PathBuf {
-        self.output_path
+        self.transcript_path
             .parent()
             .map(Path::to_path_buf)
             .unwrap_or_default()
@@ -410,39 +341,6 @@ fn transcript_len(path: &Path) -> u64 {
     std::fs::metadata(path).map_or(0, |metadata| metadata.len())
 }
 
-fn persist_final_response(
-    path: &Path,
-    response: &serde_json::Value,
-) -> Option<CommandFinalResponsePersistence> {
-    if path.as_os_str().is_empty() {
-        return None;
-    }
-    match write_final_response(path, response) {
-        Ok(bytes) => Some(CommandFinalResponsePersistence::Persisted {
-            path: path.to_path_buf(),
-            bytes,
-        }),
-        Err(error) => Some(CommandFinalResponsePersistence::Failed {
-            path: path.to_path_buf(),
-            error: error.to_string(),
-        }),
-    }
-}
-
-fn remove_transcript_file(path: &Path) -> Option<CommandTranscriptPersistenceError> {
-    if path.as_os_str().is_empty() {
-        return None;
-    }
-    match std::fs::remove_file(path) {
-        Ok(()) => None,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
-        Err(error) => Some(CommandTranscriptPersistenceError {
-            path: path.to_path_buf(),
-            error: error.to_string(),
-        }),
-    }
-}
-
 fn cleanup_artifacts_dir(path: &Path) -> io::Result<()> {
     if path.as_os_str().is_empty() {
         return Ok(());
@@ -452,15 +350,6 @@ fn cleanup_artifacts_dir(path: &Path) -> io::Result<()> {
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
         Err(error) => Err(error),
     }
-}
-
-fn write_final_response(path: &Path, response: &serde_json::Value) -> Result<usize, CommandError> {
-    let bytes = serde_json::to_vec_pretty(response).map_err(|error| {
-        CommandError::InvalidRequest(format!("serialize final command response: {error}"))
-    })?;
-    let byte_len = bytes.len();
-    std::fs::write(path, bytes)?;
-    Ok(byte_len)
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {

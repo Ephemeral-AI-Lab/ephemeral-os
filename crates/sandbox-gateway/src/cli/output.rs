@@ -13,7 +13,9 @@ use crate::cli::request_builder::{
     build_request_from_catalog, manager_catalog_document, resolve_runtime_sandbox_id,
     runtime_catalog_document, BuildRequestInput, RequestBuildError,
 };
-use sandbox_protocol::{OperationCatalogDocument, OperationExecutionSpace};
+use sandbox_protocol::{
+    render_catalog_help, render_operation_help, OperationCatalogDocument, OperationExecutionSpace,
+};
 
 const EXIT_SUCCESS: u8 = 0;
 const EXIT_FAILURE: u8 = 1;
@@ -93,27 +95,58 @@ where
         }
     };
 
-    let config = match GatewayConfig::discover(GatewayConfigOverrides {
+    let config_overrides = GatewayConfigOverrides {
         gateway_socket_path: cli.gateway_socket_path,
         default_sandbox_id: cli.default_sandbox_id,
-    }) {
-        Ok(config) => config,
-        Err(error) => {
-            let _ = render_error("config_error", error.to_string(), stderr);
-            return EXIT_USAGE;
-        }
     };
 
-    let client = GatewayClient::new(config.gateway_socket_path.clone());
-
-    let request_input = match cli.command {
-        Command::Manager(command) => BuildRequestInput {
-            execution_space: OperationExecutionSpace::Manager,
-            operation: command.operation,
-            operation_argv: command.operation_argv,
-            sandbox_id: None,
-        },
+    match cli.command {
+        Command::Manager(command) => {
+            let catalog = match manager_catalog_document() {
+                Ok(catalog) => catalog,
+                Err(error) => {
+                    let _ = render_request_error(&error, stderr);
+                    return EXIT_USAGE;
+                }
+            };
+            if command.operation == "help" {
+                return render_help_command(&catalog, &command.operation_argv, stdout, stderr);
+            }
+            let config = match discover_config(config_overrides, stderr) {
+                Ok(config) => config,
+                Err(exit) => return exit,
+            };
+            let client = GatewayClient::new(config.gateway_socket_path.clone());
+            let request_input = BuildRequestInput {
+                execution_space: OperationExecutionSpace::Manager,
+                operation: command.operation,
+                operation_argv: command.operation_argv,
+                sandbox_id: None,
+            };
+            run_request_from_catalog(&client, request_input, &config, &catalog, stdout, stderr)
+                .await
+        }
         Command::Runtime(command) => {
+            let config = match discover_config(config_overrides, stderr) {
+                Ok(config) => config,
+                Err(exit) => return exit,
+            };
+            if command.operation == "help" {
+                if let Err(message) =
+                    validate_runtime_help_context(command.sandbox_id.as_deref(), &config)
+                {
+                    let _ = writeln!(stderr, "{message}");
+                    return EXIT_USAGE;
+                }
+                let catalog = match runtime_catalog_document() {
+                    Ok(catalog) => catalog,
+                    Err(error) => {
+                        let _ = render_request_error(&error, stderr);
+                        return EXIT_USAGE;
+                    }
+                };
+                return render_help_command(&catalog, &command.operation_argv, stdout, stderr);
+            }
             let sandbox_id = match resolve_runtime_sandbox_id(command.sandbox_id, &config) {
                 Ok(sandbox_id) => sandbox_id,
                 Err(error) => {
@@ -134,6 +167,7 @@ where
                 operation_argv: command.operation_argv,
                 sandbox_id: Some(sandbox_id),
             };
+            let client = GatewayClient::new(config.gateway_socket_path.clone());
             return run_request_from_catalog(
                 &client,
                 request_input,
@@ -144,17 +178,66 @@ where
             )
             .await;
         }
-    };
+    }
+}
 
-    let catalog = match manager_catalog_document() {
-        Ok(catalog) => catalog,
+fn discover_config<WErr>(
+    overrides: GatewayConfigOverrides,
+    stderr: &mut WErr,
+) -> Result<GatewayConfig, u8>
+where
+    WErr: Write,
+{
+    match GatewayConfig::discover(overrides) {
+        Ok(config) => Ok(config),
         Err(error) => {
-            let _ = render_request_error(&error, stderr);
+            let _ = render_error("config_error", error.to_string(), stderr);
+            Err(EXIT_USAGE)
+        }
+    }
+}
+
+fn render_help_command<WOut, WErr>(
+    catalog: &OperationCatalogDocument,
+    operation_argv: &[String],
+    stdout: &mut WOut,
+    stderr: &mut WErr,
+) -> u8
+where
+    WOut: Write,
+    WErr: Write,
+{
+    let rendered = match operation_argv {
+        [] => Ok(render_catalog_help(catalog)),
+        [operation] => render_operation_help(catalog, operation),
+        _ => {
+            let _ = writeln!(stderr, "help accepts at most one operation");
             return EXIT_USAGE;
         }
     };
 
-    run_request_from_catalog(&client, request_input, &config, &catalog, stdout, stderr).await
+    match rendered {
+        Ok(help) => {
+            let _ = stdout.write_all(help.as_bytes());
+            EXIT_SUCCESS
+        }
+        Err(error) => {
+            let _ = writeln!(stderr, "{error}");
+            EXIT_USAGE
+        }
+    }
+}
+
+fn validate_runtime_help_context(
+    sandbox_id: Option<&str>,
+    config: &GatewayConfig,
+) -> Result<(), &'static str> {
+    let sandbox_id = sandbox_id.or(config.default_sandbox_id.as_deref());
+    if sandbox_id.is_some_and(|value| !value.trim().is_empty()) {
+        Ok(())
+    } else {
+        Err("runtime help requires a default sandbox")
+    }
 }
 
 async fn run_request_from_catalog<WOut, WErr>(

@@ -285,6 +285,169 @@ async fn help_writes_stdout_and_exits_successfully() -> TestResult {
     Ok(())
 }
 
+#[tokio::test]
+async fn manager_help_renders_grouped_catalog_help() -> TestResult {
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    let exit = sandbox_gateway::cli::output::run_cli_with_writers(
+        ["sandbox-cli", "manager", "help"],
+        &mut stdout,
+        &mut stderr,
+    )
+    .await;
+
+    assert_eq!(exit, 0);
+    let help = String::from_utf8(stdout)?;
+    assert!(help.contains("Sandbox Manager Help"));
+    assert!(help.contains("Management"));
+    assert!(help.contains("create_sandbox"));
+    assert!(help.contains("sandbox-cli manager help OPERATION"));
+    assert!(stderr.is_empty());
+    Ok(())
+}
+
+#[tokio::test]
+async fn manager_help_operation_renders_detail_page() -> TestResult {
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    let exit = sandbox_gateway::cli::output::run_cli_with_writers(
+        ["sandbox-cli", "manager", "help", "create_sandbox"],
+        &mut stdout,
+        &mut stderr,
+    )
+    .await;
+
+    assert_eq!(exit, 0);
+    let help = String::from_utf8(stdout)?;
+    assert!(help.contains("create_sandbox"));
+    assert!(help.contains("Family\n  Management"));
+    assert!(help.contains("Usage\n  sandbox-cli manager create_sandbox"));
+    assert!(help.contains("Related Operations"));
+    assert!(stderr.is_empty());
+    Ok(())
+}
+
+#[tokio::test]
+async fn runtime_help_renders_grouped_catalog_help() -> TestResult {
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    let exit = sandbox_gateway::cli::output::run_cli_with_writers(
+        [
+            "sandbox-cli",
+            "--default-sandbox-id",
+            "sbox-1",
+            "runtime",
+            "help",
+        ],
+        &mut stdout,
+        &mut stderr,
+    )
+    .await;
+
+    assert_eq!(exit, 0);
+    let help = String::from_utf8(stdout)?;
+    assert!(help.contains("Sandbox Runtime Help"));
+    assert!(help.contains("Command"));
+    assert!(help.contains("exec_command"));
+    assert!(!help.contains("--sandbox-id"));
+    assert!(stderr.is_empty());
+    Ok(())
+}
+
+#[tokio::test]
+async fn runtime_help_operation_renders_detail_without_sandbox_id() -> TestResult {
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    let exit = sandbox_gateway::cli::output::run_cli_with_writers(
+        [
+            "sandbox-cli",
+            "--default-sandbox-id",
+            "sbox-1",
+            "runtime",
+            "help",
+            "exec_command",
+        ],
+        &mut stdout,
+        &mut stderr,
+    )
+    .await;
+
+    assert_eq!(exit, 0);
+    let help = String::from_utf8(stdout)?;
+    assert!(help.contains("exec_command"));
+    assert!(help.contains("Family\n  Command"));
+    assert!(help.contains("Usage\n  sandbox-cli runtime exec_command"));
+    assert!(help.contains("Related Operations"));
+    assert!(!help.contains("--sandbox-id"));
+    assert!(stderr.is_empty());
+    Ok(())
+}
+
+#[tokio::test]
+async fn runtime_help_unknown_operation_reports_suggestions() -> TestResult {
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    let exit = sandbox_gateway::cli::output::run_cli_with_writers(
+        [
+            "sandbox-cli",
+            "--default-sandbox-id",
+            "sbox-1",
+            "runtime",
+            "help",
+            "exec",
+        ],
+        &mut stdout,
+        &mut stderr,
+    )
+    .await;
+
+    assert_eq!(exit, 2);
+    assert!(stdout.is_empty());
+    let error = String::from_utf8(stderr)?;
+    assert!(error.contains("unknown runtime operation for help: exec"));
+    assert!(error.contains("exec_command"));
+    assert!(error.contains("sandbox-cli runtime help"));
+    Ok(())
+}
+
+#[tokio::test]
+async fn runtime_help_requires_default_sandbox() -> TestResult {
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    let exit = sandbox_gateway::cli::output::run_cli_with_writers(
+        ["sandbox-cli", "runtime", "--sandbox-id", "", "help"],
+        &mut stdout,
+        &mut stderr,
+    )
+    .await;
+
+    assert_eq!(exit, 2);
+    assert!(stdout.is_empty());
+    assert_eq!(
+        String::from_utf8(stderr)?,
+        "runtime help requires a default sandbox\n"
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn manual_command_is_rejected() -> TestResult {
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    let exit = sandbox_gateway::cli::output::run_cli_with_writers(
+        ["sandbox-cli", "manual"],
+        &mut stdout,
+        &mut stderr,
+    )
+    .await;
+
+    assert_eq!(exit, 2);
+    assert!(stdout.is_empty());
+    let error = String::from_utf8(stderr)?;
+    assert!(error.contains("unrecognized subcommand 'manual'"));
+    Ok(())
+}
+
 #[test]
 fn config_precedence_cli_env_default() -> TestResult {
     let default_config = GatewayConfig::discover_with(GatewayConfigOverrides::default(), |_| None)?;

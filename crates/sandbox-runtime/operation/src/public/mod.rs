@@ -1,7 +1,11 @@
 pub mod command;
 
 use crate::internal::services::SandboxRuntimeOperations;
-use crate::operation::OperationSpec;
+use crate::operation::{OperationFamilySpec, OperationSpec};
+
+pub(crate) fn operation_families() -> &'static [&'static OperationFamilySpec] {
+    command::operation_families()
+}
 
 pub(crate) fn operation_specs() -> &'static [&'static OperationSpec] {
     command::operation_specs()

@@ -9,7 +9,7 @@ use sandbox_runtime::command::{CommandPublishStatus, CommandServiceError, ExecCo
 use sandbox_runtime_command::yield_wait_loop::WaitOutcome;
 use sandbox_runtime_workspace::{
     BaseRevision, CapturedWorkspaceChanges, ChangedPathKind, LayerStackSnapshotRef, LeaseId,
-    WorkspaceHandle, WorkspaceProfile, WorkspaceSessionId,
+    RemountWorkspaceResult, WorkspaceHandle, WorkspaceProfile, WorkspaceSessionId,
 };
 
 use support::{
@@ -176,6 +176,9 @@ fn successful_command_finalization_publishes_captured_changes(
             content: b"command\n".to_vec(),
         }],
     )));
+    fake.push_remount_result(Ok(RemountWorkspaceResult {
+        handle: handle.clone(),
+    }));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_outcome(WaitOutcome::Completed(success_exit("done\n")));
     let env = build_services_with_launch_driver_and_layerstack(
@@ -197,6 +200,10 @@ fn successful_command_finalization_publishes_captured_changes(
     assert_eq!(publish.status, CommandPublishStatus::Published);
     assert_eq!(
         fake.capture_calls(),
+        vec![WorkspaceSessionId("workspace-session".to_owned())]
+    );
+    assert_eq!(
+        fake.remount_calls(),
         vec![WorkspaceSessionId("workspace-session".to_owned())]
     );
     assert_eq!(

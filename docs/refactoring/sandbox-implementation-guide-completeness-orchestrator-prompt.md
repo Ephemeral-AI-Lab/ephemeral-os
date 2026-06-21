@@ -216,8 +216,9 @@ Focus:
   workspace and namespace-process where needed.
 - `sandbox-runtime-layerstack` and `sandbox-runtime-config` remain lower-level
   support crates.
-- Command runner requests use `ns-runner --request-fd`; do not reintroduce an
-  on-disk command request artifact.
+- Command runner requests and results use `ns-runner --request-fd` and
+  `--result-fd`; do not reintroduce on-disk command request or result
+  artifacts.
 
 Suggested commands:
 

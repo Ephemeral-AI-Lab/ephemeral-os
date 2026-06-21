@@ -134,8 +134,9 @@ Support packages own concrete primitives:
 - `sandbox-runtime-config`: YAML loading, merging, typed schemas, and
   validation.
 
-Command runner request payloads use `ns-runner --request-fd`; do not reintroduce
-an on-disk command request artifact.
+Command runner request payloads and runner results use `ns-runner --request-fd`
+and `--result-fd`; do not reintroduce on-disk command request or result
+artifacts.
 
 ## Packaging
 

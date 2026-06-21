@@ -1,6 +1,8 @@
+use std::collections::HashSet;
+
 use serde_json::{json, Map, Value};
 
-use crate::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationSpec};
+use crate::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationFamilySpec, OperationSpec};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OperationExecutionSpace {
@@ -11,6 +13,7 @@ pub enum OperationExecutionSpace {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OperationCatalog {
     pub operation_execution_space: OperationExecutionSpace,
+    pub families: &'static [&'static OperationFamilySpec],
     pub operations: &'static [&'static OperationSpec],
 }
 
@@ -18,10 +21,12 @@ impl OperationCatalog {
     #[must_use]
     pub const fn new(
         operation_execution_space: OperationExecutionSpace,
+        families: &'static [&'static OperationFamilySpec],
         operations: &'static [&'static OperationSpec],
     ) -> Self {
         Self {
             operation_execution_space,
+            families,
             operations,
         }
     }
@@ -30,15 +35,27 @@ impl OperationCatalog {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OperationCatalogDocument {
     pub operation_execution_space: OperationExecutionSpace,
+    pub families: Vec<OperationFamilyDocument>,
     pub operations: Vec<OperationSpecDocument>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OperationFamilyDocument {
+    pub id: String,
+    pub title: String,
+    pub summary: String,
+    pub description: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OperationSpecDocument {
     pub name: String,
+    pub family: String,
     pub summary: String,
+    pub description: String,
     pub args: Vec<ArgSpecDocument>,
     pub cli: Option<CliSpecDocument>,
+    pub related: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -88,6 +105,11 @@ impl std::error::Error for CatalogDecodeError {}
 pub fn catalog_to_value(catalog: OperationCatalog) -> Value {
     json!({
         "operation_execution_space": operation_execution_space_name(catalog.operation_execution_space),
+        "families": catalog
+            .families
+            .iter()
+            .map(|family| operation_family_value(family))
+            .collect::<Vec<_>>(),
         "operations": catalog
             .operations
             .iter()
@@ -102,12 +124,18 @@ pub fn catalog_from_value(value: &Value) -> Result<OperationCatalogDocument, Cat
         .ok_or_else(|| decode_error("operation catalog response must be an object"))?;
     let operation_execution_space =
         operation_execution_space_from_name(required_string(object, "operation_execution_space")?)?;
+    let families = required_array(object, "families")?
+        .iter()
+        .map(operation_family_from_value)
+        .collect::<Result<Vec<_>, _>>()?;
     let operations = required_array(object, "operations")?
         .iter()
         .map(operation_spec_from_value)
         .collect::<Result<Vec<_>, _>>()?;
+    validate_catalog(&families, &operations)?;
     Ok(OperationCatalogDocument {
         operation_execution_space,
+        families,
         operations,
     })
 }
@@ -135,9 +163,21 @@ pub(crate) const fn catalog_arg_kind_name(kind: ArgKind) -> &'static str {
 fn operation_spec_value(spec: &OperationSpec) -> Value {
     json!({
         "name": spec.name,
+        "family": spec.family,
         "summary": spec.summary,
+        "description": spec.description,
         "args": spec.args.iter().map(arg_spec_value).collect::<Vec<_>>(),
         "cli": spec.cli.map(cli_spec_value),
+        "related": spec.related,
+    })
+}
+
+fn operation_family_value(spec: &OperationFamilySpec) -> Value {
+    json!({
+        "id": spec.id,
+        "title": spec.title,
+        "summary": spec.summary,
+        "description": spec.description,
     })
 }
 
@@ -167,6 +207,20 @@ fn arg_cli_spec_value(spec: ArgCliSpec) -> Value {
     })
 }
 
+fn operation_family_from_value(
+    value: &Value,
+) -> Result<OperationFamilyDocument, CatalogDecodeError> {
+    let object = value
+        .as_object()
+        .ok_or_else(|| decode_error("operation family spec must be an object"))?;
+    Ok(OperationFamilyDocument {
+        id: required_string(object, "id")?.to_owned(),
+        title: required_string(object, "title")?.to_owned(),
+        summary: required_string(object, "summary")?.to_owned(),
+        description: required_string(object, "description")?.to_owned(),
+    })
+}
+
 fn operation_spec_from_value(value: &Value) -> Result<OperationSpecDocument, CatalogDecodeError> {
     let object = value
         .as_object()
@@ -178,12 +232,60 @@ fn operation_spec_from_value(value: &Value) -> Result<OperationSpecDocument, Cat
     let cli = optional_object_value(object, "cli")?
         .map(cli_spec_from_value)
         .transpose()?;
+    let related = required_string_array(object, "related", "related operation entries")?;
     Ok(OperationSpecDocument {
         name: required_string(object, "name")?.to_owned(),
+        family: required_string(object, "family")?.to_owned(),
         summary: required_string(object, "summary")?.to_owned(),
+        description: required_string(object, "description")?.to_owned(),
         args,
         cli,
+        related,
     })
+}
+
+fn validate_catalog(
+    families: &[OperationFamilyDocument],
+    operations: &[OperationSpecDocument],
+) -> Result<(), CatalogDecodeError> {
+    let mut family_ids = HashSet::new();
+    for family in families {
+        if !family_ids.insert(family.id.as_str()) {
+            return Err(decode_error(format!(
+                "duplicate operation family id: {}",
+                family.id
+            )));
+        }
+    }
+
+    let mut operation_names = HashSet::new();
+    for operation in operations {
+        if !family_ids.contains(operation.family.as_str()) {
+            return Err(decode_error(format!(
+                "operation {} references unknown family: {}",
+                operation.name, operation.family
+            )));
+        }
+        if !operation_names.insert(operation.name.as_str()) {
+            return Err(decode_error(format!(
+                "duplicate operation name: {}",
+                operation.name
+            )));
+        }
+    }
+
+    for operation in operations {
+        for related in &operation.related {
+            if !operation_names.contains(related.as_str()) {
+                return Err(decode_error(format!(
+                    "operation {} references unknown related operation: {}",
+                    operation.name, related
+                )));
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn arg_spec_from_value(value: &Value) -> Result<ArgSpecDocument, CatalogDecodeError> {

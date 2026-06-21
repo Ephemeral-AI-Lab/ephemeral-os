@@ -1,6 +1,33 @@
 use crate::{ManagerError, SandboxState};
 
 use super::{record_value, sandbox_id};
+use sandbox_protocol::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationSpec};
+
+pub(crate) const SPEC: OperationSpec = OperationSpec {
+    name: "destroy_sandbox",
+    family: "management",
+    summary: "Destroy a host-side sandbox and remove it from the registry.",
+    description: "Stop the sandbox daemon, destroy the runtime sandbox, and remove the host-side sandbox record.",
+    args: DESTROY_SANDBOX_ARGS,
+    cli: Some(DESTROY_SANDBOX_CLI),
+    related: &["list_sandboxes", "inspect_sandbox"],
+};
+
+const DESTROY_SANDBOX_ARGS: &[ArgSpec] = &[ArgSpec::required(
+    "sandbox_id",
+    ArgKind::String,
+    "Sandbox id.",
+    Some(ArgCliSpec {
+        flag: Some("--sandbox-id"),
+        positional: None,
+    }),
+)];
+
+const DESTROY_SANDBOX_CLI: CliSpec = CliSpec {
+    path: &["manager", "destroy_sandbox"],
+    usage: "sandbox-cli manager destroy_sandbox --sandbox-id ID",
+    examples: &["sandbox-cli manager destroy_sandbox --sandbox-id sbox-1"],
+};
 
 pub(crate) fn dispatch(
     services: &crate::operation::ManagerServices,

@@ -1,24 +1,25 @@
-use std::io::Write;
+use std::io::{Read, Write};
+use std::os::fd::AsRawFd;
 use std::os::unix::net::UnixStream;
 
 use anyhow::{bail, Context, Result};
 
-use crate::runner_cli::{wait_for_start_ack_reader, RunnerCliConfig};
+use crate::runner_cli::{open_fd_for_write, wait_for_start_ack_reader, RunnerCliConfig};
 
 #[test]
-fn runner_cli_accepts_explicit_request_fd_and_output_path() -> Result<()> {
+fn runner_cli_accepts_explicit_request_and_result_fds() -> Result<()> {
     let _config = RunnerCliConfig::parse(vec![
         "--request-fd".to_owned(),
         "3".to_owned(),
-        "--output".to_owned(),
-        "/tmp/result.json".to_owned(),
+        "--result-fd".to_owned(),
+        "4".to_owned(),
     ])?;
 
     Ok(())
 }
 
 #[test]
-fn runner_cli_rejects_missing_output_path() -> Result<()> {
+fn runner_cli_rejects_missing_result_fd() -> Result<()> {
     let error = match RunnerCliConfig::parse(vec![
         "--request-fd".to_owned(),
         "3".to_owned(),
@@ -28,7 +29,7 @@ fn runner_cli_rejects_missing_output_path() -> Result<()> {
     };
 
     assert!(
-        error.to_string().contains("requires --output PATH"),
+        error.to_string().contains("requires --result-fd FD"),
         "{error}"
     );
     Ok(())
@@ -47,6 +48,21 @@ fn runner_cli_rejects_positional_request_fd() -> Result<()> {
             .contains("unexpected ns-runner positional argument"),
         "{error}"
     );
+    Ok(())
+}
+
+#[test]
+fn result_fd_writer_writes_to_fd_peer() -> Result<()> {
+    let (mut read_end, write_end) = UnixStream::pair().context("create result pair")?;
+    let mut writer = open_fd_for_write(write_end.as_raw_fd()).context("open result fd")?;
+
+    writer.write_all(b"{\"exit_code\":0}")?;
+    drop(writer);
+    drop(write_end);
+
+    let mut payload = String::new();
+    read_end.read_to_string(&mut payload)?;
+    assert_eq!(payload, "{\"exit_code\":0}");
     Ok(())
 }
 

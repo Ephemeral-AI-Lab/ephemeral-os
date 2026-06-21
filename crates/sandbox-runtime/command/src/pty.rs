@@ -2,7 +2,7 @@ use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Write};
 use std::os::fd::{AsRawFd, OwnedFd};
 use std::os::unix::process::{CommandExt, ExitStatusExt};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::{Child, Command, ExitStatus, Stdio};
 use std::sync::{mpsc, Mutex, MutexGuard, PoisonError};
 use std::thread;
@@ -33,6 +33,7 @@ pub(crate) struct PtyProcess {
     pgid: Option<i32>,
     writer: Mutex<File>,
     reader_done: Mutex<Option<mpsc::Receiver<()>>>,
+    runner_result_done: Mutex<Option<mpsc::Receiver<io::Result<Vec<u8>>>>>,
     child: Mutex<Option<Child>>,
 }
 
@@ -144,14 +145,12 @@ impl CommandCompletionStatus {
 pub(crate) struct CommandRunnerResult {
     exit_code: i64,
     status: Option<String>,
-    value: Value,
 }
 
 impl CommandRunnerResult {
     #[must_use]
-    pub(crate) fn read_from_path(path: &Path) -> Option<Self> {
-        let bytes = std::fs::read(path).ok()?;
-        let value = serde_json::from_slice::<Value>(&bytes).ok()?;
+    pub(crate) fn from_bytes(bytes: &[u8]) -> Option<Self> {
+        let value = serde_json::from_slice::<Value>(bytes).ok()?;
         Self::from_value(value)
     }
 
@@ -168,11 +167,7 @@ impl CommandRunnerResult {
             .and_then(|payload| payload.get("status"))
             .and_then(Value::as_str)
             .map(str::to_owned);
-        Some(Self {
-            exit_code,
-            status,
-            value,
-        })
+        Some(Self { exit_code, status })
     }
 
     #[must_use]
@@ -184,11 +179,6 @@ impl CommandRunnerResult {
     pub(crate) fn status(&self) -> Option<&str> {
         self.status.as_deref()
     }
-
-    #[must_use]
-    pub(crate) const fn value(&self) -> &Value {
-        &self.value
-    }
 }
 
 impl PtyProcess {
@@ -199,6 +189,7 @@ impl PtyProcess {
             pgid: None,
             writer: Mutex::new(writer),
             reader_done: Mutex::new(None),
+            runner_result_done: Mutex::new(None),
             child: Mutex::new(None),
         }
     }
@@ -209,6 +200,7 @@ impl PtyProcess {
             pgid: Some(pgid),
             writer: Mutex::new(writer),
             reader_done: Mutex::new(None),
+            runner_result_done: Mutex::new(None),
             child: Mutex::new(None),
         }
     }
@@ -287,6 +279,13 @@ impl PtyProcess {
             let _ = reader_done.recv_timeout(timeout);
         }
     }
+
+    #[must_use]
+    pub(crate) fn take_runner_result(&self, timeout: Duration) -> Option<CommandRunnerResult> {
+        let runner_result_done = lock(&self.runner_result_done).take();
+        let bytes = runner_result_done?.recv_timeout(timeout).ok()?.ok()?;
+        CommandRunnerResult::from_bytes(&bytes)
+    }
 }
 
 impl PendingPtyProcess {
@@ -318,12 +317,13 @@ impl RequestPayload {
 
 pub(crate) fn spawn_current_exe_ns_runner(
     command_request: &NamespaceCommandRequest,
-    output_path: &Path,
     transcript_path: PathBuf,
 ) -> Result<PendingPtyProcess, CommandError> {
     let request_bytes = encode_command_request(command_request)?;
     let (request_read, request_write) = runner_request_pipe()?;
     let request_fd = request_read.as_raw_fd();
+    let (result_read, result_write) = runner_result_pipe()?;
+    let result_fd = result_write.as_raw_fd();
     let (master, slave) = open_pty_pair()?;
     let (start_ack_read, start_ack_write) = start_ack_pipe()?;
     let start_ack_fd = start_ack_read.as_raw_fd();
@@ -335,8 +335,8 @@ pub(crate) fn spawn_current_exe_ns_runner(
         .arg("ns-runner")
         .arg("--request-fd")
         .arg(request_fd.to_string())
-        .arg("--output")
-        .arg(output_path)
+        .arg("--result-fd")
+        .arg(result_fd.to_string())
         .arg("--start-ack-fd")
         .arg(start_ack_fd.to_string())
         .stdin(Stdio::from(slave.try_clone()?))
@@ -345,6 +345,7 @@ pub(crate) fn spawn_current_exe_ns_runner(
         .process_group(0);
     let child = child_command.spawn()?;
     drop(request_read);
+    drop(result_write);
     drop(start_ack_read);
     let pgid = i32::try_from(child.id()).map_err(|_| {
         io::Error::new(
@@ -355,12 +356,14 @@ pub(crate) fn spawn_current_exe_ns_runner(
     let writer = master.try_clone()?;
     let transcript_prefixer = TranscriptTimestampPrefixer::new();
     let reader_done = spawn_command_output_reader(master, transcript_path, transcript_prefixer);
+    let runner_result_done = spawn_runner_result_reader(File::from(result_read));
 
     Ok(PendingPtyProcess {
         process: PtyProcess {
             pgid: Some(pgid),
             writer: Mutex::new(writer),
             reader_done: Mutex::new(Some(reader_done)),
+            runner_result_done: Mutex::new(Some(runner_result_done)),
             child: Mutex::new(Some(child)),
         },
         start_ack: start_ack_write,
@@ -375,6 +378,13 @@ fn runner_request_pipe() -> io::Result<(OwnedFd, OwnedFd)> {
     let (read, write) = pipe()?;
     fcntl_setfd(&read, FdFlags::empty())?;
     fcntl_setfd(&write, FdFlags::CLOEXEC)?;
+    Ok((read, write))
+}
+
+fn runner_result_pipe() -> io::Result<(OwnedFd, OwnedFd)> {
+    let (read, write) = pipe()?;
+    fcntl_setfd(&read, FdFlags::CLOEXEC)?;
+    fcntl_setfd(&write, FdFlags::empty())?;
     Ok((read, write))
 }
 
@@ -426,6 +436,16 @@ fn spawn_command_output_reader(
             }
         }
         let _ = done_tx.send(());
+    });
+    done_rx
+}
+
+fn spawn_runner_result_reader(mut reader: File) -> mpsc::Receiver<io::Result<Vec<u8>>> {
+    let (done_tx, done_rx) = mpsc::channel();
+    thread::spawn(move || {
+        let mut bytes = Vec::new();
+        let result = reader.read_to_end(&mut bytes).map(|_| bytes);
+        let _ = done_tx.send(result);
     });
     done_rx
 }

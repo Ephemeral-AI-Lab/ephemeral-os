@@ -12,9 +12,13 @@ use sandbox_protocol::{Request, Response};
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "cancel_command",
+    family: "command",
     summary: "Cancel a running command.",
+    description:
+        "Request cancellation for an active command session and return the updated command yield.",
     args: CANCEL_ARGS,
     cli: Some(CANCEL_CLI),
+    related: &["exec_command", "poll_command"],
 };
 
 const CANCEL_ARGS: &[ArgSpec] = &[ArgSpec::required(
@@ -29,10 +33,8 @@ const CANCEL_ARGS: &[ArgSpec] = &[ArgSpec::required(
 
 const CANCEL_CLI: CliSpec = CliSpec {
     path: &["runtime", "cancel_command"],
-    usage: "sandbox-cli runtime --sandbox-id ID cancel_command --command-session-id ID",
-    examples: &[
-        "sandbox-cli runtime --sandbox-id sbox-1 cancel_command --command-session-id cmd-1",
-    ],
+    usage: "sandbox-cli runtime cancel_command --command-session-id ID",
+    examples: &["sandbox-cli runtime cancel_command --command-session-id cmd-1"],
 };
 
 pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: &Request) -> Response {

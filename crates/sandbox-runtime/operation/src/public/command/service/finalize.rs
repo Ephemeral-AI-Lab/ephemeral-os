@@ -8,7 +8,8 @@ use crate::command::{
 };
 use crate::layerstack::{LayerStackRevision, PublishChangesRequest, PublishChangesResult};
 use crate::workspace_crate::{
-    BaseRevision, CaptureChangesRequest, ProtectedPathDropReason, WorkspaceSessionId,
+    BaseRevision, CaptureChangesRequest, ProtectedPathDropReason, RemountWorkspaceRequest,
+    WorkspaceSessionId,
 };
 
 use super::CommandOperationService;
@@ -94,6 +95,15 @@ impl CommandOperationService {
             changes: captured.changes,
         };
         let published = layerstack.publish_changes(request)?;
+        let remount_handler = self
+            .workspace()
+            .begin_remount(record.workspace_session_id.clone())?;
+        self.workspace().apply_and_finish_remount(
+            &remount_handler,
+            RemountWorkspaceRequest {
+                layer_paths: published.layer_paths.clone(),
+            },
+        )?;
         self.workspace().refresh_after_publish(
             record.workspace_session_id.clone(),
             base_revision_from_layerstack(&published.revision),

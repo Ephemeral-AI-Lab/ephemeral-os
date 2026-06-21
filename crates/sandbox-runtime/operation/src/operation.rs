@@ -1,7 +1,8 @@
 use crate::internal::services::SandboxRuntimeOperations;
 
 pub use sandbox_protocol::{
-    ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationCatalog, OperationExecutionSpace, OperationSpec,
+    ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationCatalog, OperationExecutionSpace,
+    OperationFamilySpec, OperationSpec,
 };
 
 #[derive(Clone, Copy)]

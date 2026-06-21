@@ -166,22 +166,6 @@ fn exec_command_passes_workspace_entry_to_spawn_paths() {
     assert_eq!(observation.spec_cwd, None);
     assert_eq!(observation.spec_timeout_seconds, Some(2.5));
     assert_eq!(
-        observation.output_path,
-        env.command
-            .config()
-            .scratch_root
-            .join("cmd_1")
-            .join("runner-result.json")
-    );
-    assert_eq!(
-        observation.final_path,
-        env.command
-            .config()
-            .scratch_root
-            .join("cmd_1")
-            .join("final.json")
-    );
-    assert_eq!(
         observation.transcript_path,
         env.command
             .config()

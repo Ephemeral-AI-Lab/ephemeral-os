@@ -63,6 +63,11 @@ pub fn build_request_from_catalog_with_id(
             sandbox_protocol::operation_execution_space_name(input.execution_space)
         )));
     }
+    if input.operation == "help" {
+        return Err(build_error(
+            "help is reserved and cannot be used as an operation name",
+        ));
+    }
     let spec = find_operation_spec(catalog, &input.operation)?;
     let args = build_args(spec, &input.operation_argv)?;
     let scope = match input.execution_space {

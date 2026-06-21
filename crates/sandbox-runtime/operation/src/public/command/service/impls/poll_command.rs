@@ -10,9 +10,12 @@ use sandbox_protocol::{Request, Response};
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "poll_command",
+    family: "command",
     summary: "Poll a command status and recent output.",
+    description: "Poll a command session for running or terminal status, finalizing completed processes and returning recent stdout.",
     args: POLL_ARGS,
     cli: Some(POLL_CLI),
+    related: &["exec_command", "read_command_lines", "cancel_command"],
 };
 
 const POLL_ARGS: &[ArgSpec] = &[
@@ -39,10 +42,8 @@ const POLL_ARGS: &[ArgSpec] = &[
 
 const POLL_CLI: CliSpec = CliSpec {
     path: &["runtime", "poll_command"],
-    usage: "sandbox-cli runtime --sandbox-id ID poll_command --command-session-id ID --last-n-lines N",
-    examples: &[
-        "sandbox-cli runtime --sandbox-id sbox-1 poll_command --command-session-id cmd-1 --last-n-lines 50",
-    ],
+    usage: "sandbox-cli runtime poll_command --command-session-id ID --last-n-lines N",
+    examples: &["sandbox-cli runtime poll_command --command-session-id cmd-1 --last-n-lines 50"],
 };
 
 pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: &Request) -> Response {

@@ -17,9 +17,17 @@ use sandbox_protocol::{Request, Response};
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "exec_command",
+    family: "command",
     summary: "Start a command in a workspace.",
+    description: "Start a shell command inside an existing workspace session. If the command is still running after the initial wait, the response includes a command_session_id that can be used with poll_command, write_command_stdin, read_command_lines, or cancel_command.",
     args: EXEC_COMMAND_ARGS,
     cli: Some(EXEC_COMMAND_CLI),
+    related: &[
+        "poll_command",
+        "write_command_stdin",
+        "read_command_lines",
+        "cancel_command",
+    ],
 };
 
 const EXEC_COMMAND_ARGS: &[ArgSpec] = &[
@@ -65,9 +73,10 @@ const EXEC_COMMAND_ARGS: &[ArgSpec] = &[
 
 const EXEC_COMMAND_CLI: CliSpec = CliSpec {
     path: &["runtime", "exec_command"],
-    usage: "sandbox-cli runtime --sandbox-id ID exec_command --workspace-session-id ID COMMAND",
+    usage: "sandbox-cli runtime exec_command --workspace-session-id ID COMMAND",
     examples: &[
-        "sandbox-cli runtime --sandbox-id sbox-1 exec_command --workspace-session-id ws-1 pwd",
+        "sandbox-cli runtime exec_command --workspace-session-id ws-1 pwd",
+        "sandbox-cli runtime exec_command --workspace-session-id ws-1 --yield-time-ms 0 \"sleep 30\"",
     ],
 };
 

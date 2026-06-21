@@ -1,7 +1,7 @@
 use sandbox_protocol::{
-    catalog_from_value, catalog_to_value, decode_request_value, ArgCliSpec, ArgKind, ArgSpec,
-    CliSpec, OperationCatalog, OperationExecutionSpace, OperationScope, OperationSpec,
-    DAEMON_AUTH_FIELD,
+    catalog_from_value, catalog_to_value, decode_request_value, render_catalog_help,
+    render_operation_help, ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationCatalog,
+    OperationExecutionSpace, OperationFamilySpec, OperationScope, OperationSpec, DAEMON_AUTH_FIELD,
 };
 use serde_json::{json, Value};
 
@@ -26,9 +26,18 @@ static TEST_ARGS: &[ArgSpec] = &[
     ),
 ];
 
+static TEST_FAMILY: OperationFamilySpec = OperationFamilySpec {
+    id: "management",
+    title: "Management",
+    summary: "Create, destroy, list, and inspect sandbox records.",
+    description: "Create, destroy, list, and inspect sandbox records.",
+};
+
 static TEST_SPEC: OperationSpec = OperationSpec {
     name: "create_sandbox",
+    family: "management",
     summary: "Create a sandbox.",
+    description: "Create a sandbox and start its daemon.",
     args: TEST_ARGS,
     cli: Some(CliSpec {
         path: &["manager"],
@@ -37,8 +46,10 @@ static TEST_SPEC: OperationSpec = OperationSpec {
             "sandbox-cli manager create_sandbox --image ubuntu:24.04 --workspace-root /testbed",
         ],
     }),
+    related: &[],
 };
 
+static TEST_FAMILIES: &[&OperationFamilySpec] = &[&TEST_FAMILY];
 static TEST_SPECS: &[&OperationSpec] = &[&TEST_SPEC];
 
 #[test]
@@ -114,12 +125,21 @@ fn decode_request_rejects_empty_sandbox_scope_id() {
 fn catalog_to_value_serializes_cli_metadata() {
     let value = catalog_to_value(OperationCatalog::new(
         OperationExecutionSpace::Manager,
+        TEST_FAMILIES,
         TEST_SPECS,
     ));
 
     assert_eq!(value["operation_execution_space"], "manager");
+    assert_eq!(value["families"][0]["id"], "management");
+    assert_eq!(value["families"][0]["title"], "Management");
     assert_eq!(value["operations"][0]["name"], "create_sandbox");
+    assert_eq!(value["operations"][0]["family"], "management");
     assert_eq!(value["operations"][0]["summary"], "Create a sandbox.");
+    assert_eq!(
+        value["operations"][0]["description"],
+        "Create a sandbox and start its daemon."
+    );
+    assert!(value["operations"][0]["related"].is_array());
     assert!(value["operations"][0]["args"].is_array());
     assert!(value["operations"][0]["cli"].is_object());
     assert_eq!(value["operations"][0]["args"][0]["name"], "image");
@@ -137,10 +157,20 @@ fn catalog_to_value_serializes_cli_metadata() {
 fn catalog_from_value_decodes_cli_metadata() {
     let value = json!({
         "operation_execution_space": "runtime",
+        "families": [
+            {
+                "id": "command",
+                "title": "Command",
+                "summary": "Run commands.",
+                "description": "Run commands in the runtime."
+            }
+        ],
         "operations": [
             {
                 "name": "exec_command",
+                "family": "command",
                 "summary": "Start a command.",
+                "description": "Start a shell command.",
                 "args": [
                     {
                         "name": "cmd",
@@ -158,7 +188,8 @@ fn catalog_from_value_decodes_cli_metadata() {
                     "path": ["runtime"],
                     "usage": "sandbox-cli runtime exec_command COMMAND",
                     "examples": ["sandbox-cli runtime exec_command pwd"]
-                }
+                },
+                "related": []
             }
         ]
     });
@@ -182,6 +213,7 @@ fn catalog_from_value_decodes_cli_metadata() {
 fn catalog_from_value_rejects_unknown_execution_space() {
     let value = json!({
         "operation_execution_space": "daemon",
+        "families": [],
         "operations": []
     });
 
@@ -193,6 +225,7 @@ fn catalog_from_value_rejects_unknown_execution_space() {
 #[test]
 fn catalog_from_value_rejects_missing_execution_space() {
     let value = json!({
+        "families": [],
         "operations": []
     });
 
@@ -205,9 +238,148 @@ fn catalog_from_value_rejects_missing_execution_space() {
 }
 
 #[test]
+fn catalog_from_value_rejects_duplicate_family_ids() {
+    let value = json!({
+        "operation_execution_space": "runtime",
+        "families": [
+            family_value("command", "Command"),
+            family_value("command", "Command Again")
+        ],
+        "operations": []
+    });
+
+    let error = catalog_from_value(&value).expect_err("duplicate family rejected");
+
+    assert_eq!(error.message(), "duplicate operation family id: command");
+}
+
+#[test]
+fn catalog_from_value_rejects_missing_operation_family() {
+    let value = json!({
+        "operation_execution_space": "runtime",
+        "families": [family_value("command", "Command")],
+        "operations": [
+            operation_value("exec_command", "missing", "Start a command.", [])
+        ]
+    });
+
+    let error = catalog_from_value(&value).expect_err("missing family rejected");
+
+    assert_eq!(
+        error.message(),
+        "operation exec_command references unknown family: missing"
+    );
+}
+
+#[test]
+fn catalog_from_value_rejects_duplicate_operation_names() {
+    let value = json!({
+        "operation_execution_space": "runtime",
+        "families": [family_value("command", "Command")],
+        "operations": [
+            operation_value("exec_command", "command", "Start a command.", []),
+            operation_value("exec_command", "command", "Start a command again.", [])
+        ]
+    });
+
+    let error = catalog_from_value(&value).expect_err("duplicate operation rejected");
+
+    assert_eq!(error.message(), "duplicate operation name: exec_command");
+}
+
+#[test]
+fn catalog_from_value_rejects_missing_related_operation() {
+    let value = json!({
+        "operation_execution_space": "runtime",
+        "families": [family_value("command", "Command")],
+        "operations": [
+            operation_value("exec_command", "command", "Start a command.", ["poll_command"])
+        ]
+    });
+
+    let error = catalog_from_value(&value).expect_err("missing related operation rejected");
+
+    assert_eq!(
+        error.message(),
+        "operation exec_command references unknown related operation: poll_command"
+    );
+}
+
+#[test]
+fn render_catalog_help_groups_operations_by_family() {
+    let catalog = catalog_from_value(&json!({
+        "operation_execution_space": "runtime",
+        "families": [
+            family_value("command", "Command"),
+            family_value("file", "File")
+        ],
+        "operations": [
+            operation_value("exec_command", "command", "Start a command.", ["poll_command"]),
+            operation_value("poll_command", "command", "Poll a command.", []),
+            operation_value("read_file", "file", "Read a file.", [])
+        ]
+    }))
+    .expect("catalog decodes");
+
+    let help = render_catalog_help(&catalog);
+
+    assert!(help.contains("Sandbox Runtime Help"));
+    assert!(
+        help.find("Command").expect("command family") < help.find("File").expect("file family")
+    );
+    assert!(
+        help.find("exec_command").expect("exec operation")
+            < help.find("poll_command").expect("poll operation")
+    );
+    assert!(help.contains("sandbox-cli runtime help OPERATION"));
+}
+
+#[test]
+fn render_operation_help_renders_detail_page() {
+    let catalog = catalog_from_value(&json!({
+        "operation_execution_space": "runtime",
+        "families": [family_value("command", "Command")],
+        "operations": [
+            operation_value("exec_command", "command", "Start a command.", [])
+        ]
+    }))
+    .expect("catalog decodes");
+
+    let help = render_operation_help(&catalog, "exec_command").expect("operation renders");
+
+    assert!(help.contains("exec_command"));
+    assert!(help.contains("Family\n  Command"));
+    assert!(help.contains("Description\n  Start a command. description"));
+    assert!(help.contains("Usage\n  sandbox-cli runtime exec_command COMMAND"));
+    assert!(help.contains("Arguments\n  COMMAND string required"));
+    assert!(help.contains("Examples\n  sandbox-cli runtime exec_command pwd"));
+}
+
+#[test]
+fn render_operation_help_unknown_returns_suggestions() {
+    let catalog = catalog_from_value(&json!({
+        "operation_execution_space": "runtime",
+        "families": [family_value("command", "Command")],
+        "operations": [
+            operation_value("exec_command", "command", "Start a command.", [])
+        ]
+    }))
+    .expect("catalog decodes");
+
+    let error = render_operation_help(&catalog, "exec").expect_err("unknown operation rejected");
+
+    assert_eq!(error.operation(), "exec");
+    assert_eq!(error.suggestions()[0].name, "exec_command");
+    assert!(error
+        .to_string()
+        .contains("unknown runtime operation for help: exec"));
+}
+
+#[test]
 fn catalog_to_value_omits_owner_target_fields() {
     let value = catalog_to_value(OperationCatalog::new(
         OperationExecutionSpace::Manager,
+        TEST_FAMILIES,
         TEST_SPECS,
     ));
 
@@ -240,4 +412,46 @@ fn assert_no_forbidden_catalog_keys(value: &serde_json::Value) {
         | serde_json::Value::Number(_)
         | serde_json::Value::String(_) => {}
     }
+}
+
+fn family_value(id: &str, title: &str) -> Value {
+    json!({
+        "id": id,
+        "title": title,
+        "summary": format!("{title} summary"),
+        "description": format!("{title} description"),
+    })
+}
+
+fn operation_value<const N: usize>(
+    name: &str,
+    family: &str,
+    summary: &str,
+    related: [&str; N],
+) -> Value {
+    json!({
+        "name": name,
+        "family": family,
+        "summary": summary,
+        "description": format!("{summary} description"),
+        "args": [
+            {
+                "name": "cmd",
+                "kind": "string",
+                "required": true,
+                "help": "Shell command text.",
+                "default": null,
+                "cli": {
+                    "flag": null,
+                    "positional": "COMMAND"
+                }
+            }
+        ],
+        "cli": {
+            "path": ["runtime", name],
+            "usage": format!("sandbox-cli runtime {name} COMMAND"),
+            "examples": [format!("sandbox-cli runtime {name} pwd")]
+        },
+        "related": related.to_vec()
+    })
 }

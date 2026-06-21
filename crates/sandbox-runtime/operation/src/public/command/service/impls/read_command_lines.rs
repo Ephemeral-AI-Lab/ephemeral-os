@@ -10,9 +10,12 @@ use sandbox_protocol::{Request, Response};
 
 pub(crate) const SPEC: OperationSpec = OperationSpec {
     name: "read_command_lines",
+    family: "command",
     summary: "Read a retained command transcript window by line offset.",
+    description: "Read retained transcript rows for a command session using stable line offsets.",
     args: READ_LINES_ARGS,
     cli: Some(READ_LINES_CLI),
+    related: &["exec_command", "poll_command"],
 };
 
 const READ_LINES_ARGS: &[ArgSpec] = &[
@@ -47,9 +50,9 @@ const READ_LINES_ARGS: &[ArgSpec] = &[
 
 const READ_LINES_CLI: CliSpec = CliSpec {
     path: &["runtime", "read_command_lines"],
-    usage: "sandbox-cli runtime --sandbox-id ID read_command_lines --command-session-id ID --start-offset N --limit N",
+    usage: "sandbox-cli runtime read_command_lines --command-session-id ID --start-offset N --limit N",
     examples: &[
-        "sandbox-cli runtime --sandbox-id sbox-1 read_command_lines --command-session-id cmd-1 --start-offset 0 --limit 100",
+        "sandbox-cli runtime read_command_lines --command-session-id cmd-1 --start-offset 0 --limit 100",
     ],
 };
 

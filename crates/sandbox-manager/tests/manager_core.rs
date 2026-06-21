@@ -7,18 +7,29 @@ use sandbox_manager::{
     SandboxState, SandboxStore,
 };
 use sandbox_protocol::{
-    ArgKind, OperationCatalog, OperationExecutionSpace, OperationScope, OperationSpec, Request,
-    Response,
+    ArgKind, OperationCatalog, OperationExecutionSpace, OperationFamilySpec, OperationScope,
+    OperationSpec, Request, Response,
 };
 use serde_json::{json, Value};
 
-static TEST_RUNTIME_SPEC: OperationSpec = OperationSpec {
-    name: "runtime_test_operation",
-    summary: "Test runtime operation.",
-    args: &[],
-    cli: None,
+static TEST_RUNTIME_FAMILY: OperationFamilySpec = OperationFamilySpec {
+    id: "test",
+    title: "Test",
+    summary: "Test runtime operations.",
+    description: "Test runtime operations.",
 };
 
+static TEST_RUNTIME_SPEC: OperationSpec = OperationSpec {
+    name: "runtime_test_operation",
+    family: "test",
+    summary: "Test runtime operation.",
+    description: "Test runtime operation.",
+    args: &[],
+    cli: None,
+    related: &[],
+};
+
+static TEST_RUNTIME_FAMILIES: &[&OperationFamilySpec] = &[&TEST_RUNTIME_FAMILY];
 static TEST_RUNTIME_SPECS: &[&OperationSpec] = &[&TEST_RUNTIME_SPEC];
 
 #[derive(Default)]
@@ -93,6 +104,7 @@ impl SandboxDaemonClient for FakeClient {
             .push(endpoint.socket_path.clone());
         Ok(OperationCatalog::new(
             OperationExecutionSpace::Runtime,
+            TEST_RUNTIME_FAMILIES,
             TEST_RUNTIME_SPECS,
         ))
     }
@@ -147,6 +159,8 @@ fn operation_catalog_contains_only_manager_operations() {
         catalog.operation_execution_space,
         OperationExecutionSpace::Manager
     );
+    assert_eq!(catalog.families.len(), 1);
+    assert_eq!(catalog.families[0].title, "Management");
     assert_eq!(
         names,
         [
@@ -164,6 +178,10 @@ fn operation_catalog_contains_only_manager_operations() {
             | "read_command_lines"
             | "cancel_command"
     )));
+    assert!(catalog
+        .operations
+        .iter()
+        .all(|spec| spec.family == "management"));
     assert!(catalog.operations.iter().any(|spec| spec
         .args
         .iter()
