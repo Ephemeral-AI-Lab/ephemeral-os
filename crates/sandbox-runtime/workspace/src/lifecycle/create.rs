@@ -156,15 +156,15 @@ impl WorkspaceModeManager {
     }
 
     pub(crate) fn validated_workspace_root(&self) -> Result<String, IsolatedNetworkError> {
-        let workspace_root = self.caps.eos_workspace_root.trim();
+        let workspace_root = self.caps.workspace_root.trim();
         if workspace_root.is_empty() {
             return Err(IsolatedNetworkError::InvalidArgument(
-                "eos_workspace_root is required".to_owned(),
+                "workspace_root is required".to_owned(),
             ));
         }
         if !std::path::Path::new(workspace_root).is_absolute() {
             return Err(IsolatedNetworkError::InvalidArgument(format!(
-                "eos_workspace_root must be absolute: {workspace_root}"
+                "workspace_root must be absolute: {workspace_root}"
             )));
         }
         Ok(workspace_root.to_owned())

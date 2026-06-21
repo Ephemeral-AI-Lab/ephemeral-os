@@ -150,12 +150,6 @@ Dependencies:
 - Forbidden: `sandbox-manager`, `sandbox-gateway-cli`, `sandbox-daemon` server
   internals.
 
-Migration source:
-
-```text
-crates/daemon/operation
-```
-
 Verification:
 
 ```sh
@@ -214,12 +208,6 @@ Dependencies:
   needed to launch a command, OS/process/PTY crates, `serde`, `serde_json`.
 - Forbidden: `sandbox-protocol`, `sandbox-manager`, `sandbox-gateway-cli`,
   `sandbox-daemon`, `sandbox-runtime-layerstack`.
-
-Migration source:
-
-```text
-crates/daemon/command
-```
 
 Keep `command-request.json` until a replacement such as `--request-fd` exists.
 
@@ -310,12 +298,6 @@ Dependencies:
 - Forbidden: `sandbox-protocol`, `sandbox-manager`, `sandbox-gateway-cli`,
   `sandbox-daemon`, `sandbox-runtime-command`.
 
-Migration source:
-
-```text
-crates/daemon/workspace
-```
-
 Verification:
 
 ```sh
@@ -376,12 +358,6 @@ Dependencies:
 - Forbidden: `sandbox-protocol`, `sandbox-manager`, `sandbox-gateway-cli`,
   `sandbox-daemon`, `sandbox-runtime`, `sandbox-runtime-workspace`.
 
-Migration source:
-
-```text
-crates/daemon/namespace-process
-```
-
 Verification:
 
 ```sh
@@ -440,12 +416,6 @@ Dependencies:
   `sandbox-daemon`, `sandbox-runtime-command`, `sandbox-runtime-workspace`,
   `sandbox-runtime-overlay`.
 
-Migration source:
-
-```text
-crates/daemon/layerstack
-```
-
 Verification:
 
 ```sh
@@ -493,12 +463,6 @@ Dependencies:
 - Forbidden: `sandbox-protocol`, `sandbox-manager`, `sandbox-gateway-cli`,
   `sandbox-daemon`, `sandbox-runtime`, `sandbox-runtime-command`,
   `sandbox-runtime-workspace`, `sandbox-runtime-layerstack`.
-
-Migration source:
-
-```text
-crates/daemon/overlay
-```
 
 Do not move overlay wholly under workspace; namespace-process also needs it for
 mount/remount syscalls inside target namespaces.
@@ -561,12 +525,6 @@ Dependencies:
 - Allowed: `serde`, `serde_path_to_error`, YAML parser crate, `thiserror`.
 - Forbidden: `sandbox-protocol`, `sandbox-manager`, `sandbox-gateway-cli`,
   `sandbox-daemon`, all runtime implementation crates.
-
-Migration source:
-
-```text
-crates/daemon/config
-```
 
 Verification:
 

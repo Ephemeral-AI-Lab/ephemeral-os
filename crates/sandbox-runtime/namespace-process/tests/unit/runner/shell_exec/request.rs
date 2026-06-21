@@ -27,26 +27,11 @@ fn shell_exec_rejects_raw_argv() -> Result<(), Box<dyn std::error::Error + Send 
 }
 
 #[test]
-fn shell_exec_rejects_external_cwd_unless_remountable() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let external = format!("/tmp/namespace-remountable-cwd-{}", std::process::id());
+fn shell_exec_rejects_external_cwd() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let external = format!("/tmp/namespace-external-cwd-{}", std::process::id());
     let rejected = request(serde_json::json!({"command": "pwd", "cwd": external}));
-    let error = shell_cwd(&rejected).expect_err("external cwd should require remountable opt-in");
+    let error = shell_cwd(&rejected).expect_err("external cwd should be rejected");
     assert!(error.to_string().contains("cwd escapes workspace"));
-    Ok(())
-}
-
-#[test]
-fn shell_exec_remountable_allows_external_cwd() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let external =
-        std::env::temp_dir().join(format!("namespace-remountable-cwd-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&external);
-    let allowed = request(serde_json::json!({
-        "command": "pwd",
-        "cwd": external,
-        "remountable": true,
-    }));
-    assert_eq!(shell_cwd(&allowed)?, external);
-    let _ = std::fs::remove_dir_all(external);
     Ok(())
 }
 

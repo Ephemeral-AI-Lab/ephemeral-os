@@ -1,8 +1,9 @@
 # Sandbox Ultra Cleanup Multi-Agent Prompt
 
 Use this prompt after the sandbox refactor package shape is compiling and you
-want a removal-first cleanup pass that aggressively deletes backward-compatible
-surfaces, aliases, fallbacks, legacy names, stale tests/docs, and unused code.
+want a source-focused cleanup pass that aggressively deletes
+backward-compatible surfaces, aliases, fallbacks, legacy names, and unused code
+from production Rust/source and tooling paths.
 
 ```text
 You are the cleanup orchestrator for EphemeralOS sandbox refactor cleanup.
@@ -13,10 +14,11 @@ Working directory:
 
 Task:
 
-Run a multi-agent ultra-cleanup pass in aggressive removal mode. Remove
+Run a multi-agent ultra-cleanup pass in aggressive source-removal mode. Remove
 backward-compatible wrappers, aliases, fallbacks, legacy surfaces, stale names,
-unused code, unused dependencies, and tests/docs that preserve retired behavior.
-The default action is deletion or caller migration followed by deletion.
+unused source code, and unused dependencies from production Rust/source and
+tooling paths. The default action is deletion or source caller migration
+followed by deletion.
 
 This is not a compatibility-preserving cleanup. The preferred outcome is one
 current path, one current name, one current protocol shape, one current package
@@ -42,10 +44,11 @@ Treat compile errors and failing tests after a tentative deletion as a migration
 map first. Fix current callers, fixtures, snapshots, and docs to the current
 contract before considering a keep decision.
 
-Tests, docs, hidden CLI aliases, public exports, package metadata, and deployment
-artifacts that preserve retired behavior are cleanup targets. Do not cite them
-as evidence to keep compatibility unless they represent the current product
-contract rather than historical compatibility.
+Production source, tooling source, hidden CLI aliases, public exports, package
+metadata, and deployment artifacts that preserve retired behavior are cleanup
+targets. Tests are secondary: update or delete them only when they preserve a
+retired source contract or fail after source cleanup. Do not let tests drive the
+cleanup scope ahead of source evidence.
 
 Prefer removing whole files, modules, traits, adapters, fixtures, dependencies,
 and empty directories over leaving narrowed wrappers behind. If only one current
@@ -96,8 +99,9 @@ read_command_lines
 cancel_command
 ```
 
-Remove or replace these stale public shapes when they appear in active code,
-active docs, tests, package metadata, CLI/manual output, or packaging:
+Remove or replace these stale public shapes when they appear in production
+source, tooling source, active docs, package metadata, CLI/manual output, or
+packaging. Test references are cleanup fallout, not the primary audit surface:
 
 ```text
 daemon_rpc_protocol
@@ -169,8 +173,8 @@ tree. Do not revert user changes.
 
 ## Multi-Agent Discovery
 
-Launch the following subagents in parallel. Discovery subagents do not edit
-files. Each subagent returns a deletion ledger with this format. Use
+Launch the following source-focused subagents in parallel. Discovery subagents
+do not edit files. Each subagent returns a deletion ledger with this format. Use
 `needs-orchestrator-decision` only as a temporary discovery state; the
 orchestrator must convert it to delete, rename, update-and-delete, or
 keep-with-evidence before implementation completes:
@@ -178,7 +182,7 @@ keep-with-evidence before implementation completes:
 ```text
 Candidate:
   Path or symbol:
-  Category: backward-compatible | alias | fallback | legacy | unused | stale-doc | stale-test | stale-dependency
+  Category: backward-compatible | alias | fallback | legacy | unused-source | stale-doc | stale-dependency | test-fallout
   Evidence:
     - file:line ...
     - command output summary ...
@@ -249,16 +253,17 @@ For every fallback, classify it:
 - Current required behavior with no replacement: keep, but recommend a follow-up
   only if the user wants to change the product behavior.
 
-### Subagent 3: Unused Rust Code, Traits, Modules, And Dependencies
+### Subagent 3: Unused Source Code, Traits, Modules, And Dependencies
 
-Find code that is unreachable or only kept alive by tests for retired behavior.
+Find production source code that is unreachable, redundant, or only exists to
+support retired behavior.
 
 Focus:
 
 - Unused dependencies.
-- Dead modules and orphaned test helpers.
+- Dead source modules.
 - One-method traits that no longer abstract anything.
-- Test-only hooks no longer used by tests.
+- Test hooks declared in production source that no longer remove complexity.
 - Re-exported symbols with no downstream use.
 - Empty modules and directories.
 - Duplicated wrappers around a single current function.
@@ -269,8 +274,8 @@ Suggested commands:
 cargo machete --with-metadata
 cargo check --workspace --all-targets
 cargo clippy --workspace --all-targets --no-deps -- -D warnings
-rg -n "pub trait|pub(crate) trait|pub use|mod .*;|TODO|unused|allow\\(|dead_code|expect\\(\"unused|test hook|hook|shim|wrapper" crates --glob '*.rs' --glob '!target/**'
-find crates -type d -empty -print | sort
+rg -n "pub trait|pub(crate) trait|pub use|mod .*;|TODO|unused|allow\\(|dead_code|expect\\(\"unused|test hook|hook|shim|wrapper" crates/*/src crates/sandbox-runtime/*/src xtask/src --glob '*.rs' --glob '!target/**'
+find crates -path '*/src/*' -type d -empty -print | sort
 ```
 
 Optional if available:
@@ -280,39 +285,46 @@ cargo +nightly udeps --workspace --all-targets
 ```
 
 Do not treat a public symbol as unused only because `rg` finds few matches.
-Use crate exports, tests, package boundaries, and compiler evidence. If the
-symbol exists only for old import paths or old request shapes, migrate any live
-callers and remove the exported compatibility surface.
+Use crate exports, production callers, package boundaries, compiler evidence,
+and dependency graphs first. Tests can confirm behavior, but they should not be
+the primary reason to keep source compatibility. If the symbol exists only for
+old import paths or old request shapes, migrate any live source callers and
+remove the exported compatibility surface.
 
-### Subagent 4: Tests That Preserve Retired Behavior
+### Subagent 4: Source Callers That Preserve Retired Behavior
 
-Find tests, fixtures, snapshots, and helpers that keep old aliases or fallback
-behavior alive.
+Find production source call sites, source adapters, source fixtures, generated
+source, and tooling source that keep old aliases or fallback behavior alive.
 
 Focus:
 
-- Tests expecting old DTO names.
-- Tests expecting old operation names.
-- Tests accepting `command_id`.
-- Tests for `eosd` artifacts if `sandbox-daemon` artifacts are now primary.
-- Fixtures under old `crates/daemon/*` paths.
-- Tests whose only purpose is compatibility with retired input.
-- Test helpers that create old request wrappers.
+- Source callers using old DTO names.
+- Source callers using old operation names.
+- Source callers accepting or emitting `command_id`.
+- Source/tooling code producing `eosd` artifacts if `sandbox-daemon` artifacts
+  are now primary.
+- Source include paths under old `crates/daemon/*` paths.
+- Adapter functions whose only purpose is compatibility with retired input.
+- Test-support code only when it lives in production `src` or keeps a retired
+  production contract alive.
 
 Suggested commands:
 
 ```sh
-rg -n "daemon_rpc_protocol|daemon_operation|crates/daemon|OperationRequest|OperationResponse|SandboxRequest|RoutedRequest|ManagerRequest|OperationTarget|operation_space|command-id|command_id\\b|eosd|exec\\b|poll\\b|cancel\\b|legacy|compat|fallback|alias" crates/**/tests crates --glob '*test*' --glob '*.rs' --glob '!target/**'
-find crates -path '*/tests/*' -type f | sort
+rg -n "daemon_rpc_protocol|daemon_operation|crates/daemon|OperationRequest|OperationResponse|SandboxRequest|RoutedRequest|ManagerRequest|OperationTarget|operation_space|command-id|command_id\\b|eosd|exec\\b|poll\\b|cancel\\b|legacy|compat|fallback|alias" crates/*/src crates/sandbox-runtime/*/src xtask/src --glob '*.rs' --glob '!target/**'
+rg -n "include!|include_str!|path =|cfg_attr|test_support|fake|fixture|stub" crates/*/src crates/sandbox-runtime/*/src xtask/src --glob '*.rs' --glob '!target/**'
+find crates -path '*/src/*' -type f | sort
 ```
 
-For each candidate, decide whether to delete the test, update it to the current
-contract, or keep it because it verifies current behavior.
+For each candidate, decide whether to migrate the source caller to the current
+contract and delete the compatibility layer, rename it to current vocabulary, or
+delete the source path entirely. List test changes only as expected fallout from
+source cleanup.
 
 ### Subagent 5: Packaging, Docs, And Deployment Artifacts
 
-Find active docs and packaging paths that preserve old names or old deployment
-artifacts.
+Find active docs and packaging/tooling source paths that preserve old names or
+old deployment artifacts.
 
 Focus:
 
@@ -329,7 +341,7 @@ Focus:
 Suggested commands:
 
 ```sh
-rg -n "daemon_rpc_protocol|daemon_operation|crates/daemon|sandbox-runtime[-_]operation|sandbox_runtime[_]operation|eosd|eosd-linux|sandbox-daemon-linux|legacy|compat|fallback|alias" README.md config docs xtask Cargo.toml Cargo.lock --glob '!docs/refactoring/sandbox-phase-[1-8]*.md'
+rg -n "daemon_rpc_protocol|daemon_operation|crates/daemon|sandbox-runtime[-_]operation|sandbox_runtime[_]operation|eosd|eosd-linux|sandbox-daemon-linux|legacy|compat|fallback|alias" README.md config docs xtask/src Cargo.toml Cargo.lock --glob '!docs/refactoring/sandbox-phase-[1-8]*.md'
 cargo run -p xtask -- help
 cargo check -p xtask
 ```
@@ -388,7 +400,7 @@ Batch 1: mechanical stale names and docs
 Batch 2: packaging aliases and artifact names
 Batch 3: protocol/operation compatibility wrappers
 Batch 4: fallback branches and config adapters
-Batch 5: unused modules, traits, dependencies, and tests
+Batch 5: unused source modules, traits, dependencies, and test fallout
 Batch 6: runtime hotspot simplification
 ```
 
@@ -400,17 +412,17 @@ tested or ruled out by a current contract:
 delete
 rename-to-current
 update-callers-then-delete
-update-test-to-current-contract
+update-tests-after-source-cleanup
 remove-dependency
 remove-empty-directory
 keep-with-evidence
 ```
 
 Do not keep "just in case" compatibility. A keep decision requires a current
-product contract, current deployment path, or failing test that represents
-intended behavior after stale tests have been updated. A live caller to a retired
-surface is not enough; migrate the caller unless the caller itself is the current
-external contract.
+product contract or current deployment path. A failing test can identify source
+fallout, but it is not keep evidence until stale expectations have been updated.
+A live caller to a retired surface is not enough; migrate the caller unless the
+caller itself is the current external contract.
 
 Before editing, print:
 
@@ -485,6 +497,9 @@ Fallbacks/Aliases Removed:
 Unused Code Removed:
 - path/symbol: proof
 
+Source Callers Migrated:
+- old source caller -> current source contract: proof
+
 Dependencies Removed:
 - crate: proof
 
@@ -509,8 +524,10 @@ Completion bar:
   Evidence".
 - Do not leave live callers on retired names when they can be migrated to current
   names in this pass.
-- Do not preserve tests, fixtures, docs, or packaging artifacts whose only job is
-  to keep retired behavior supported.
+- Do not preserve production source, tooling source, docs, or packaging
+  artifacts whose only job is to keep retired behavior supported.
+- Do not let test-only cleanup expand the scope beyond source cleanup; update or
+  delete tests only as needed to match the new source contract.
 - Do not leave removed behavior documented as supported.
 - Do not stage or commit unless explicitly asked.
 ```

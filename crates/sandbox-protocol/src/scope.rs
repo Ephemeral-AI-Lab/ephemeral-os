@@ -4,9 +4,7 @@ use serde::{Deserialize, Serialize};
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum OperationScope {
     System,
-    Sandbox {
-        sandbox_id: String,
-    },
+    Sandbox { sandbox_id: String },
 }
 
 impl OperationScope {

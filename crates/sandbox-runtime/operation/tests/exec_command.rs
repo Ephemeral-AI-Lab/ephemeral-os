@@ -69,7 +69,7 @@ fn exec_command_uses_resolved_session_without_workspace_create_or_destroy() {
     assert!(fake.destroy_calls().is_empty());
     let poll = env
         .command
-        .poll(PollCommandInput {
+        .poll_command(PollCommandInput {
             command_session_id: command_session_id.clone(),
             last_n_lines: Some(10),
         })
@@ -364,7 +364,7 @@ fn exec_command_initial_completed_session_returns_finalized_metadata() {
 
     let poll = env
         .command
-        .poll(PollCommandInput {
+        .poll_command(PollCommandInput {
             command_session_id: command_session_id.clone(),
             last_n_lines: None,
         })

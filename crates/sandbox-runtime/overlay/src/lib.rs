@@ -96,7 +96,7 @@ pub struct OverlayWritableDirs {
 /// Returns [`OverlayError::Capture`] when directory creation fails.
 #[cfg(feature = "test-root-override")]
 pub fn overlay_writable_root() -> std::result::Result<PathBuf, OverlayError> {
-    let root = std::env::var_os("EOS_OVERLAY_WRITABLE_ROOT")
+    let root = std::env::var_os("SANDBOX_OVERLAY_WRITABLE_ROOT")
         .map(PathBuf::from)
         .unwrap_or_else(|| {
             std::env::temp_dir().join(format!("overlay-writable-root-{}", std::process::id()))

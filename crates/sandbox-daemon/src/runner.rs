@@ -8,7 +8,7 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Context, Result};
 
-const DAEMON_CONFIG_YAML_ENV: &str = "EOS_DAEMON_CONFIG_YAML";
+const DAEMON_CONFIG_YAML_ENV: &str = "SANDBOX_DAEMON_CONFIG_YAML";
 
 /// Execute one command inside a holder namespace, reading the
 /// resolved `NamespaceCommandRequest` payload and emitting the `RunResult` JSON.
@@ -90,7 +90,7 @@ enum RunnerCliMode {
     ConfigureDns,
 }
 
-struct RunnerCliConfig {
+pub(crate) struct RunnerCliConfig {
     request_path: Option<PathBuf>,
     output_path: Option<PathBuf>,
     start_ack_fd: Option<RawFd>,
@@ -98,7 +98,7 @@ struct RunnerCliConfig {
 }
 
 impl RunnerCliConfig {
-    fn parse(args: std::env::Args) -> Result<Self> {
+    pub(crate) fn parse(args: impl IntoIterator<Item = String>) -> Result<Self> {
         let mut request_path = None;
         let mut output_path = None;
         let mut start_ack_fd = None;
@@ -112,8 +112,7 @@ impl RunnerCliConfig {
             mode = Some(selected);
             Ok(())
         };
-        let mut positional = Vec::new();
-        let mut args = args;
+        let mut args = args.into_iter();
         while let Some(arg) = args.next() {
             match arg.as_str() {
                 "--mount-overlay" => set_mode(RunnerCliMode::MountOverlay)?,
@@ -148,15 +147,12 @@ impl RunnerCliConfig {
                 other if other.starts_with('-') => {
                     return Err(anyhow!("unknown ns-runner flag {other:?}"));
                 }
-                other => positional.push(PathBuf::from(other)),
+                other => {
+                    return Err(anyhow!(
+                        "unexpected ns-runner positional argument {other:?}; use --request PATH"
+                    ));
+                }
             }
-        }
-        if request_path.is_none() && positional.len() == 1 {
-            request_path = positional.pop();
-        } else if !positional.is_empty() {
-            return Err(anyhow!(
-                "ns-runner accepts at most one positional request path"
-            ));
         }
         Ok(Self {
             request_path,

@@ -1,9 +1,35 @@
 use std::io::Write;
 use std::os::unix::net::UnixStream;
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 
-use crate::runner_cli::wait_for_start_ack_reader;
+use crate::runner_cli::{wait_for_start_ack_reader, RunnerCliConfig};
+
+#[test]
+fn runner_cli_accepts_explicit_request_path() -> Result<()> {
+    let _config = RunnerCliConfig::parse(vec![
+        "--request".to_owned(),
+        "/tmp/request.json".to_owned(),
+    ])?;
+
+    Ok(())
+}
+
+#[test]
+fn runner_cli_rejects_positional_request_path() -> Result<()> {
+    let error = match RunnerCliConfig::parse(vec!["/tmp/request.json".to_owned()]) {
+        Ok(_) => bail!("positional request path unexpectedly accepted"),
+        Err(error) => error,
+    };
+
+    assert!(
+        error
+            .to_string()
+            .contains("unexpected ns-runner positional argument"),
+        "{error}"
+    );
+    Ok(())
+}
 
 #[test]
 fn wait_for_start_ack_returns_after_parent_byte() -> Result<()> {

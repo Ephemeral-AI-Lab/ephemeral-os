@@ -39,7 +39,7 @@ pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: &Request)
         Ok(input) => input,
         Err(response) => return response,
     };
-    command_yield_response(operations.command.cancel(input))
+    command_yield_response(operations.command.cancel_command(input))
 }
 
 fn parse_input(request: &Request) -> Result<CancelCommandInput, Response> {
@@ -49,7 +49,10 @@ fn parse_input(request: &Request) -> Result<CancelCommandInput, Response> {
 }
 
 impl CommandOperationService {
-    pub fn cancel(&self, input: CancelCommandInput) -> Result<CommandYield, CommandServiceError> {
+    pub fn cancel_command(
+        &self,
+        input: CancelCommandInput,
+    ) -> Result<CommandYield, CommandServiceError> {
         let command_session_id = input.command_session_id;
         self.ensure_active_command(&command_session_id)?;
         let output = self

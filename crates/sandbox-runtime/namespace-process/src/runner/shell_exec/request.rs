@@ -40,11 +40,6 @@ pub(crate) fn shell_cwd(request: &NamespaceCommandRequest) -> Result<PathBuf, Ru
         .get("cwd")
         .and_then(serde_json::Value::as_str)
         .unwrap_or(".");
-    let allow_external_cwd = request
-        .args
-        .get("remountable")
-        .and_then(serde_json::Value::as_bool)
-        .unwrap_or(false);
     let workspace_root = normalize_lexical(&request.workspace_root.0);
     let candidate = PathBuf::from(raw);
     let resolved = if candidate.is_absolute() {
@@ -56,8 +51,6 @@ pub(crate) fn shell_cwd(request: &NamespaceCommandRequest) -> Result<PathBuf, Ru
                 ))
             })?;
             workspace_root.join(rel)
-        } else if allow_external_cwd {
-            candidate
         } else {
             return Err(RunnerError::InvalidRequest(format!(
                 "cwd escapes workspace replacement root: {raw}"
@@ -66,7 +59,7 @@ pub(crate) fn shell_cwd(request: &NamespaceCommandRequest) -> Result<PathBuf, Ru
     } else {
         normalize_lexical(&workspace_root.join(candidate))
     };
-    if !allow_external_cwd && !resolved.starts_with(&workspace_root) {
+    if !resolved.starts_with(&workspace_root) {
         return Err(RunnerError::InvalidRequest(format!(
             "cwd escapes workspace replacement root: {raw}"
         )));

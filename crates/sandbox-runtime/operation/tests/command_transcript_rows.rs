@@ -389,7 +389,7 @@ fn command_transcript_rows_keep_completed_rows() {
         .expect("owner can read completed rows");
     let poll = env
         .command
-        .poll(PollCommandInput {
+        .poll_command(PollCommandInput {
             command_session_id: command_session_id.clone(),
             last_n_lines: Some(10),
         })

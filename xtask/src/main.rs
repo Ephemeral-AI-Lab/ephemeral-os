@@ -211,9 +211,10 @@ impl PackageArgs {
         let mut target: Option<String> = None;
         let mut out_dir = PathBuf::from("dist");
         let mut no_build = false;
-        let mut builder = env::var("EOS_XTASK_BUILDER").unwrap_or_else(|_| "rust-lld".to_owned());
-        let mut profile =
-            env::var("EOS_XTASK_PROFILE").unwrap_or_else(|_| DEFAULT_PACKAGE_PROFILE.to_owned());
+        let mut builder =
+            env::var("SANDBOX_XTASK_BUILDER").unwrap_or_else(|_| "rust-lld".to_owned());
+        let mut profile = env::var("SANDBOX_XTASK_PROFILE")
+            .unwrap_or_else(|_| DEFAULT_PACKAGE_PROFILE.to_owned());
         let mut profile_from_arg = false;
         let mut fast = false;
         let mut sign = false;

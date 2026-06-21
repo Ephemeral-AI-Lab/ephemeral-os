@@ -40,12 +40,8 @@ impl SandboxDaemonServer {
     }
 
     async fn dispatch_request(&self, request: Request) -> serde_json::Value {
-        if request.scope.is_system() {
-            return super::error_response(
-                error_kind::INVALID_REQUEST,
-                "daemon operation requires sandbox scope",
-                serde_json::json!({}),
-            );
+        if let Err(response) = validate_daemon_scope(&request) {
+            return response;
         }
         let operations = Arc::clone(&self.operations);
         let task = tokio::task::spawn_blocking(move || {
@@ -111,4 +107,15 @@ fn configured_token(token: Option<&str>) -> Option<&str> {
 pub(crate) fn decode_request(value: Value) -> Result<Request, Value> {
     decode_request_value(value, ArgsPresence::Required)
         .map_err(|err| super::error_response(err.kind(), err.message(), serde_json::json!({})))
+}
+
+pub(crate) fn validate_daemon_scope(request: &Request) -> Result<(), Value> {
+    if request.scope.is_sandbox() {
+        return Ok(());
+    }
+    Err(super::error_response(
+        error_kind::INVALID_REQUEST,
+        "daemon requests require sandbox scope",
+        serde_json::json!({}),
+    ))
 }

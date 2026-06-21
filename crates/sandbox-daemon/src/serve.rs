@@ -11,8 +11,8 @@ use sandbox_runtime_config::configs::{
 };
 use sandbox_runtime_config::ConfigPath;
 
-const DAEMON_AUTH_TOKEN_ENV: &str = "EOS_DAEMON_AUTH_TOKEN";
-const DAEMON_CONFIG_YAML_ENV: &str = "EOS_DAEMON_CONFIG_YAML";
+const DAEMON_AUTH_TOKEN_ENV: &str = "SANDBOX_DAEMON_AUTH_TOKEN";
+const DAEMON_CONFIG_YAML_ENV: &str = "SANDBOX_DAEMON_CONFIG_YAML";
 
 /// Start, spawn, or call the async RPC server.
 ///
@@ -98,7 +98,7 @@ fn workspace_resource_caps(
             }
         },
         fallback_dns: config.fallback_dns.clone(),
-        eos_workspace_root: config.workspace_root.to_string_lossy().into_owned(),
+        workspace_root: config.workspace_root.to_string_lossy().into_owned(),
     }
 }
 

@@ -103,7 +103,7 @@ impl Fixture {
 
     fn service(&self) -> WorkspaceRuntimeService {
         let caps = ResourceCaps {
-            eos_workspace_root: self.workspace_root.to_string_lossy().into_owned(),
+            workspace_root: self.workspace_root.to_string_lossy().into_owned(),
             ..ResourceCaps::default()
         };
         WorkspaceRuntimeService::new(WorkspaceModeManager::new(caps, self.scratch_root.clone()))

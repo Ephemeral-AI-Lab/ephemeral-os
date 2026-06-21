@@ -570,7 +570,7 @@ fn workspace_remount_cancel_during_critical_switch_still_applies_and_resumes() {
     let command = Arc::clone(&services.command);
     fake.on_remount(Arc::new(move || {
         command
-            .cancel(CancelCommandInput {
+            .cancel_command(CancelCommandInput {
                 command_session_id: command_session_id.clone(),
             })
             .expect("cancel during remount is accepted");

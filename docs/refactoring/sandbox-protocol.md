@@ -160,17 +160,6 @@ Forbidden:
 - `sandbox-runtime-*`
 - `tokio` unless framing becomes explicitly async, which should be avoided.
 
-## Migration Source
-
-Move from:
-
-```text
-crates/daemon/rpc_protocol
-crates/daemon/operation/src/operation.rs protocol-neutral spec types
-```
-
-Keep implementation-specific `OperationEntry` in the owning operation crates.
-
 ## Verification
 
 ```sh

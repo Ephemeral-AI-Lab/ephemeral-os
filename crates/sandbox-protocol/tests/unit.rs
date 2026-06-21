@@ -2,7 +2,7 @@ use sandbox_protocol::manual::render_catalog_manual;
 use sandbox_protocol::{
     catalog_from_value, catalog_to_value, decode_request_object, ArgCliSpec, ArgKind, ArgSpec,
     ArgsPresence, CliSpec, OperationCatalog, OperationExecutionSpace, OperationFamily,
-    OperationScope, OperationSpec,
+    OperationScope, OperationSpec, DAEMON_AUTH_FIELD,
 };
 use serde_json::{json, Value};
 
@@ -31,10 +31,16 @@ static TEST_SPEC: OperationSpec = OperationSpec {
 static TEST_SPECS: &[&OperationSpec] = &[&TEST_SPEC];
 
 #[test]
+fn daemon_auth_field_uses_sandbox_name() {
+    assert_eq!(DAEMON_AUTH_FIELD, "_sandbox_daemon_auth_token");
+}
+
+#[test]
 fn decode_request_requires_object_args_when_present() {
     let value = json!({
         "op": "exec_command",
         "request_id": "req-1",
+        "scope": { "kind": "sandbox", "sandbox_id": "sbox-1" },
         "args": "bad",
     });
     let object = value.as_object().expect("object").clone();
@@ -52,8 +58,8 @@ fn decode_request_rejects_missing_scope() {
         "args": {},
     });
     let object = value.as_object().expect("object").clone();
-    let err = decode_request_object(object, ArgsPresence::Required)
-        .expect_err("missing scope rejected");
+    let err =
+        decode_request_object(object, ArgsPresence::Required).expect_err("missing scope rejected");
 
     assert_eq!(err.kind(), "invalid_request");
     assert_eq!(err.message(), "scope is required");

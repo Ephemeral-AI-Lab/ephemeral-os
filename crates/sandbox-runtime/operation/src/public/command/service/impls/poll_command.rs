@@ -51,7 +51,7 @@ pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: &Request)
         Ok(input) => input,
         Err(response) => return response,
     };
-    command_poll_response(operations.command.poll(input))
+    command_poll_response(operations.command.poll_command(input))
 }
 
 fn parse_input(request: &Request) -> Result<PollCommandInput, Response> {
@@ -62,7 +62,10 @@ fn parse_input(request: &Request) -> Result<PollCommandInput, Response> {
 }
 
 impl CommandOperationService {
-    pub fn poll(&self, input: PollCommandInput) -> Result<CommandPollOutput, CommandServiceError> {
+    pub fn poll_command(
+        &self,
+        input: PollCommandInput,
+    ) -> Result<CommandPollOutput, CommandServiceError> {
         let command_session_id = input.command_session_id;
         if let Some(active) = self.active_command_or_none(&command_session_id)? {
             if active.process.process_group_id().is_some() {

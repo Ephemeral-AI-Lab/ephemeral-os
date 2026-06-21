@@ -34,7 +34,7 @@ mod connection_tests {
 }
 
 mod dispatch_tests {
-    pub(crate) use crate::server::dispatch::decode_request;
+    pub(crate) use crate::server::dispatch::{decode_request, validate_daemon_scope};
     include!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/unit/dispatch.rs"

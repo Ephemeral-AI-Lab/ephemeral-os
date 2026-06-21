@@ -20,7 +20,7 @@ pub use crate::lifecycle::ExitOutcome;
 
 pub(crate) const PERSISTED_HANDLES_SCHEMA_VERSION: u32 = 1;
 
-const DEFAULT_EOS_WORKSPACE_ROOT: &str = "/testbed";
+const DEFAULT_WORKSPACE_ROOT: &str = "/testbed";
 const HOST_BUDGET_FALLBACK_BYTES: u64 = 1_u64 << 62;
 const KIB_BYTES: u64 = 1_024;
 const OWNED_SCRATCH_DIR: &str = "eos-isolated";
@@ -42,7 +42,7 @@ pub struct ResourceCaps {
     pub exit_grace_s: f64,
     pub rfc1918_egress: Rfc1918Egress,
     pub fallback_dns: String,
-    pub eos_workspace_root: String,
+    pub workspace_root: String,
 }
 
 impl Default for ResourceCaps {
@@ -56,7 +56,7 @@ impl Default for ResourceCaps {
             exit_grace_s: 0.25,
             rfc1918_egress: Rfc1918Egress::Allow,
             fallback_dns: "1.1.1.1".to_owned(),
-            eos_workspace_root: DEFAULT_EOS_WORKSPACE_ROOT.to_owned(),
+            workspace_root: DEFAULT_WORKSPACE_ROOT.to_owned(),
         }
     }
 }

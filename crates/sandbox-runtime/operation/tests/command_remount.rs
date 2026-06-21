@@ -542,7 +542,7 @@ fn command_remount_read_lines_and_poll_remain_allowed_while_pending() {
         .expect("read lines remains allowed");
     let poll = services
         .command
-        .poll(PollCommandInput {
+        .poll_command(PollCommandInput {
             command_session_id,
             last_n_lines: Some(5),
         })

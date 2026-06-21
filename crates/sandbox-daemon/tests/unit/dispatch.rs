@@ -58,3 +58,21 @@ fn decode_request_rejects_non_object_args() {
     assert_eq!(response["error"]["kind"], "invalid_request");
     assert_eq!(response["error"]["message"], "args must be an object");
 }
+
+#[test]
+fn daemon_scope_rejects_system_requests() {
+    let request = sandbox_protocol::Request::new(
+        "exec_command",
+        "req-1",
+        sandbox_protocol::OperationScope::system(),
+        json!({}),
+    );
+
+    let response = validate_daemon_scope(&request).expect_err("system scope rejected");
+
+    assert_eq!(response["error"]["kind"], "invalid_request");
+    assert_eq!(
+        response["error"]["message"],
+        "daemon requests require sandbox scope"
+    );
+}

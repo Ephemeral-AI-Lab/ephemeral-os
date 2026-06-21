@@ -7,7 +7,6 @@ starts.
 Reference specs:
 
 ```text
-docs/refactoring/sandbox-manager-daemon-split.md
 docs/refactoring/sandbox-protocol.md
 docs/refactoring/sandbox-runtime.md
 docs/refactoring/sandbox-daemon.md
