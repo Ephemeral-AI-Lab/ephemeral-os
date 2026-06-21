@@ -6,12 +6,31 @@ use anyhow::{bail, Context, Result};
 use crate::runner_cli::{wait_for_start_ack_reader, RunnerCliConfig};
 
 #[test]
-fn runner_cli_accepts_explicit_request_path() -> Result<()> {
+fn runner_cli_accepts_explicit_request_and_output_paths() -> Result<()> {
     let _config = RunnerCliConfig::parse(vec![
         "--request".to_owned(),
         "/tmp/request.json".to_owned(),
+        "--output".to_owned(),
+        "/tmp/result.json".to_owned(),
     ])?;
 
+    Ok(())
+}
+
+#[test]
+fn runner_cli_rejects_missing_output_path() -> Result<()> {
+    let error = match RunnerCliConfig::parse(vec![
+        "--request".to_owned(),
+        "/tmp/request.json".to_owned(),
+    ]) {
+        Ok(_) => bail!("missing output path unexpectedly accepted"),
+        Err(error) => error,
+    };
+
+    assert!(
+        error.to_string().contains("requires --output PATH"),
+        "{error}"
+    );
     Ok(())
 }
 

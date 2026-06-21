@@ -208,7 +208,7 @@ fn catalog_from_value_rejects_missing_execution_space() {
 }
 
 #[test]
-fn catalog_to_value_omits_legacy_owner_target_fields() {
+fn catalog_to_value_omits_owner_target_fields() {
     let value = catalog_to_value(OperationCatalog::new(
         OperationExecutionSpace::Manager,
         TEST_SPECS,

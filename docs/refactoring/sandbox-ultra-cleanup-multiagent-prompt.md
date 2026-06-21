@@ -23,22 +23,30 @@ followed by deletion.
 This is not a compatibility-preserving cleanup. The preferred outcome is one
 current path, one current name, one current protocol shape, one current package
 shape, and no hidden old entrypoints. Do not add deprecation shims. Do not keep
-old aliases unless a live call site or current deployment contract proves they
-are still required.
+old aliases. If a live caller still uses an old alias, migrate that caller. If a
+current deployment contract still requires an old alias, stop and report the
+contract blocker instead of preserving the alias in cleanup.
 
 The cleanup still must be evidence-backed, but evidence should drive removal
 rather than delay it. A name containing `legacy`, `compat`, `fallback`, `alias`,
 `old`, or `deprecated` is a cleanup candidate, not proof. Delete after
 call-site, compiler, test, cargo metadata, cargo tree, or documentation-scope
-evidence shows that the surface is retired or must now be replaced by the
+evidence shows that the surface is retired or only exists to bridge to the
 current path.
 
 ## Aggressive Removal Policy
 
 Default every candidate to `delete` or `update-callers-then-delete`. A live
 caller of a retired shape is migration work, not keep evidence. Update the
-caller to the current package, protocol, CLI, config, or runtime path, then
+caller to an already-current package, protocol, CLI, config, or runtime path, then
 delete the bridge that kept the retired shape alive.
+
+This is hard removal, not renaming. Do not rename retired APIs, modules,
+packages, files, DTOs, operations, CLI entries, or artifacts into a new
+compatibility layer. Do not add replacement wrappers. Do not keep fallback
+branches, alternate paths, deprecated aliases, or old-to-new adapters. If no
+already-current owner exists for required behavior, stop and report that as an
+explicit product/API decision instead of inventing a replacement.
 
 Treat compile errors and failing tests after a tentative deletion as a migration
 map first. Fix current callers, fixtures, snapshots, and docs to the current
@@ -55,10 +63,10 @@ and empty directories over leaving narrowed wrappers behind. If only one current
 implementation remains, inline or collapse the compatibility layer unless it
 still removes meaningful complexity.
 
-`keep-with-evidence` is exceptional. It requires a current external contract,
-current deployment path, or unavoidable runtime behavior with exact evidence.
-Do not keep code because it is public, might be used, was recently renamed, or
-would require call-site updates.
+`keep-with-evidence` is exceptional and must not be used for aliases,
+fallbacks, alternate paths, or old-to-new adapters. It requires unavoidable
+runtime behavior with exact evidence. Do not keep code because it is public,
+might be used, was recently moved, or would require call-site updates.
 
 ## Current Target Shape
 
@@ -99,7 +107,7 @@ read_command_lines
 cancel_command
 ```
 
-Remove or replace these stale public shapes when they appear in production
+Remove these stale public shapes when they appear in production
 source, tooling source, active docs, package metadata, CLI/manual output, or
 packaging. Test references are cleanup fallout, not the primary audit surface:
 
@@ -176,8 +184,9 @@ tree. Do not revert user changes.
 Launch the following source-focused subagents in parallel. Discovery subagents
 do not edit files. Each subagent returns a deletion ledger with this format. Use
 `needs-orchestrator-decision` only as a temporary discovery state; the
-orchestrator must convert it to delete, rename, update-and-delete, or
-keep-with-evidence before implementation completes:
+orchestrator must convert it to delete, update-callers-then-delete,
+remove-dependency, remove-empty-directory, or keep-with-evidence before
+implementation completes:
 
 ```text
 Candidate:
@@ -186,11 +195,11 @@ Candidate:
   Evidence:
     - file:line ...
     - command output summary ...
-  Current replacement:
+  Existing current owner, if any:
   Risk:
   Required edits:
   Required verification:
-  Decision: delete | rename-to-current | update-callers-then-delete | keep-with-evidence | needs-orchestrator-decision
+  Decision: delete | update-callers-then-delete | remove-dependency | remove-empty-directory | keep-with-evidence | needs-orchestrator-decision
 ```
 
 ### Subagent 1: Stale Names And Public Compatibility Surface
@@ -249,9 +258,11 @@ rg -n "operation_space|operation_execution_space|scope|target|owner|route|forwar
 For every fallback, classify it:
 
 - Retired compatibility: remove.
-- Current required behavior with bad name: rename to current vocabulary.
-- Current required behavior with no replacement: keep, but recommend a follow-up
-  only if the user wants to change the product behavior.
+- Current required behavior behind a retired wrapper: update callers to the
+  existing current owner, then remove the wrapper.
+- Current required behavior with no existing current owner: stop and report an
+  explicit product/API decision. Do not create a new fallback, alternate path,
+  alias, or replacement wrapper.
 
 ### Subagent 3: Unused Source Code, Traits, Modules, And Dependencies
 
@@ -316,10 +327,10 @@ rg -n "include!|include_str!|path =|cfg_attr|test_support|fake|fixture|stub" cra
 find crates -path '*/src/*' -type f | sort
 ```
 
-For each candidate, decide whether to migrate the source caller to the current
-contract and delete the compatibility layer, rename it to current vocabulary, or
-delete the source path entirely. List test changes only as expected fallout from
-source cleanup.
+For each candidate, decide whether to migrate the source caller to an existing
+current contract and delete the compatibility layer, or delete the source path
+entirely. Do not rename the retired surface into a new current-looking wrapper.
+List test changes only as expected fallout from source cleanup.
 
 ### Subagent 5: Packaging, Docs, And Deployment Artifacts
 
@@ -355,13 +366,13 @@ dist/sandbox-daemon-linux-amd64
 dist/sandbox-daemon-linux-arm64
 ```
 
-If `eosd-linux-*` still exists, it must either be deleted or explicitly
-converted to a temporary alias with a documented removal reason. Prefer
-deleting the alias unless a current deploy path proves it is required.
+If `eosd-linux-*` still exists, delete it as a primary artifact path. If a
+current deploy path still requires it, stop and report the deploy dependency as
+a blocker instead of silently preserving an alias.
 
 ### Subagent 6: Runtime Cleanup Hotspots
 
-Find cleanup candidates inside runtime crates after the package rename wave.
+Find cleanup candidates inside runtime crates after the package move wave.
 
 Focus:
 
@@ -387,9 +398,9 @@ cargo test -p sandbox-runtime-namespace-process --tests
 Important rule:
 
 If a function has a legacy-looking name but is the only current implementation
-of required behavior, do not delete behavior blindly. Either rename it to
-current vocabulary and update callers, or keep it with exact evidence and add it
-to the orchestrator's "not removable yet" list.
+of required behavior, do not rename it into another wrapper. Either remove it
+after migrating callers to an existing current owner, or stop and list it as
+blocked by missing current ownership. A keep decision needs exact evidence.
 
 ## Orchestrator Cleanup Plan
 
@@ -404,13 +415,13 @@ Batch 5: unused source modules, traits, dependencies, and test fallout
 Batch 6: runtime hotspot simplification
 ```
 
-For each candidate, choose one final action. Prefer the first five actions.
+For each candidate, choose one final action. Prefer deletion actions.
 `keep-with-evidence` is allowed only after delete or migrate-and-delete has been
-tested or ruled out by a current contract:
+tested or ruled out by a current contract. Do not use rename as a cleanup
+strategy:
 
 ```text
 delete
-rename-to-current
 update-callers-then-delete
 update-tests-after-source-cleanup
 remove-dependency
@@ -488,11 +499,8 @@ Ultra Cleanup Result
 Deleted:
 - path/symbol: reason and evidence
 
-Renamed To Current Vocabulary:
-- old -> new: reason and evidence
-
 Fallbacks/Aliases Removed:
-- path/symbol: replacement
+- path/symbol: removed bridge and existing current owner, if any
 
 Unused Code Removed:
 - path/symbol: proof
@@ -520,8 +528,9 @@ Completion bar:
 
 - Do not claim completion while compile, tests, clippy, cargo machete, or stale
   scans still have unclassified failures.
-- Do not leave compatibility aliases without naming them in "Kept With
-  Evidence".
+- Do not leave compatibility aliases, fallback branches, alternate paths, or
+  old-to-new adapters. If one cannot be removed, report it as a blocker rather
+  than marking cleanup complete.
 - Do not leave live callers on retired names when they can be migrated to current
   names in this pass.
 - Do not preserve production source, tooling source, docs, or packaging

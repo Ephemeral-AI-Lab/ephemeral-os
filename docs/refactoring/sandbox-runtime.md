@@ -286,7 +286,6 @@ src/
 
   isolated_setup/
     mod.rs
-    dns.rs
     rtnl.rs
 ```
 

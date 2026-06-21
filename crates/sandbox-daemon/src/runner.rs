@@ -14,17 +14,17 @@ const DAEMON_CONFIG_YAML_ENV: &str = "SANDBOX_DAEMON_CONFIG_YAML";
 /// resolved `NamespaceCommandRequest` payload and emitting the `RunResult` JSON.
 ///
 /// This is a thin call into the `sandbox-runtime-namespace-process` runner module:
-/// read the request payload from stdin or `--request <path>`, load the runner
+/// read the request payload from `--request <path>`, load the runner
 /// config, dispatch the selected [`RunnerCliMode`], and write the compact
-/// `RunResult` JSON to stdout or `--output <path>`.
+/// `RunResult` JSON to `--output <path>`.
 pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let config = RunnerCliConfig::parse(args)?;
     wait_for_start_ack(config.start_ack_fd)?;
-    let request_json = read_payload(config.request_path.as_ref())?;
+    let request_json = read_payload(&config.request_path)?;
     let request: sandbox_runtime_namespace_process::runner::protocol::NamespaceCommandRequest =
         serde_json::from_str(&request_json).context("failed to decode ns-runner request JSON")?;
     let runner_config = load_runner_config()?;
-    let mut output_target = OutputTarget::open(config.output_path.as_ref())?;
+    let mut output_target = open_output(&config.output_path)?;
     let result = match config.mode {
         RunnerCliMode::RemountOverlay => {
             sandbox_runtime_namespace_process::runner::protocol::RunResult {
@@ -43,13 +43,6 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
             )
             .context("ns-runner setns overlay mount failed")?;
             ok_result()
-        }
-        RunnerCliMode::ConfigureDns => {
-            sandbox_runtime_namespace_process::runner::protocol::RunResult {
-                exit_code: 0,
-                payload: sandbox_runtime_namespace_process::runner::setns::configure_dns(&request)
-                    .context("ns-runner configure dns failed")?,
-            }
         }
         RunnerCliMode::Run => {
             sandbox_runtime_namespace_process::runner::run(&request).context("ns-runner failed")?
@@ -87,12 +80,11 @@ enum RunnerCliMode {
     Run,
     MountOverlay,
     RemountOverlay,
-    ConfigureDns,
 }
 
 pub(crate) struct RunnerCliConfig {
-    request_path: Option<PathBuf>,
-    output_path: Option<PathBuf>,
+    request_path: PathBuf,
+    output_path: PathBuf,
     start_ack_fd: Option<RawFd>,
     mode: RunnerCliMode,
 }
@@ -106,7 +98,7 @@ impl RunnerCliConfig {
         let mut set_mode = |selected: RunnerCliMode| {
             if mode.is_some() {
                 return Err(anyhow!(
-                    "ns-runner accepts only one of --mount-overlay, --remount-overlay, or --configure-dns"
+                    "ns-runner accepts only one of --mount-overlay or --remount-overlay"
                 ));
             }
             mode = Some(selected);
@@ -117,7 +109,6 @@ impl RunnerCliConfig {
             match arg.as_str() {
                 "--mount-overlay" => set_mode(RunnerCliMode::MountOverlay)?,
                 "--remount-overlay" => set_mode(RunnerCliMode::RemountOverlay)?,
-                "--configure-dns" => set_mode(RunnerCliMode::ConfigureDns)?,
                 "--request" => {
                     request_path = Some(PathBuf::from(
                         args.next()
@@ -140,7 +131,7 @@ impl RunnerCliConfig {
                 }
                 "--help" | "-h" => {
                     println!(
-                        "usage: sandbox-daemon ns-runner [--mount-overlay | --remount-overlay | --configure-dns] [--request PATH] [--output PATH]"
+                        "usage: sandbox-daemon ns-runner [--mount-overlay | --remount-overlay] [--request PATH] [--output PATH]"
                     );
                     std::process::exit(0);
                 }
@@ -154,6 +145,9 @@ impl RunnerCliConfig {
                 }
             }
         }
+        let request_path =
+            request_path.ok_or_else(|| anyhow!("ns-runner requires --request PATH"))?;
+        let output_path = output_path.ok_or_else(|| anyhow!("ns-runner requires --output PATH"))?;
         Ok(Self {
             request_path,
             output_path,
@@ -183,58 +177,29 @@ fn open_fd_for_read(fd: RawFd) -> std::io::Result<File> {
     File::open(format!("/proc/self/fd/{fd}")).or_else(|_| File::open(format!("/dev/fd/{fd}")))
 }
 
-fn read_payload(path: Option<&PathBuf>) -> Result<String> {
+fn read_payload(path: &PathBuf) -> Result<String> {
     let mut payload = String::new();
-    if let Some(path) = path {
-        std::fs::File::open(path)
-            .with_context(|| format!("failed to open request payload {}", path.display()))?
-            .read_to_string(&mut payload)
-            .with_context(|| format!("failed to read request payload {}", path.display()))?;
-    } else {
-        std::io::stdin()
-            .read_to_string(&mut payload)
-            .context("failed to read request payload from stdin")?;
-    }
+    std::fs::File::open(path)
+        .with_context(|| format!("failed to open request payload {}", path.display()))?
+        .read_to_string(&mut payload)
+        .with_context(|| format!("failed to read request payload {}", path.display()))?;
     Ok(payload)
 }
 
-enum OutputTarget {
-    File(File),
-    Stdout,
+fn open_output(path: &PathBuf) -> Result<File> {
+    if let Some(parent) = path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+    {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create output dir {}", parent.display()))?;
+    }
+    File::create(path)
+        .with_context(|| format!("failed to create ns-runner output {}", path.display()))
 }
 
-impl OutputTarget {
-    fn open(path: Option<&PathBuf>) -> Result<Self> {
-        if let Some(path) = path {
-            if let Some(parent) = path
-                .parent()
-                .filter(|parent| !parent.as_os_str().is_empty())
-            {
-                std::fs::create_dir_all(parent)
-                    .with_context(|| format!("failed to create output dir {}", parent.display()))?;
-            }
-            return File::create(path)
-                .map(Self::File)
-                .with_context(|| format!("failed to create ns-runner output {}", path.display()));
-        }
-        Ok(Self::Stdout)
-    }
-}
-
-fn write_payload(target: &mut OutputTarget, payload: &[u8]) -> Result<()> {
-    match target {
-        OutputTarget::File(file) => file
-            .write_all(payload)
-            .context("failed to write ns-runner output")?,
-        OutputTarget::Stdout => {
-            let mut stdout = std::io::stdout().lock();
-            stdout
-                .write_all(payload)
-                .context("failed to write ns-runner output to stdout")?;
-            stdout
-                .write_all(b"\n")
-                .context("failed to terminate ns-runner output line")?;
-        }
-    }
-    Ok(())
+fn write_payload(target: &mut File, payload: &[u8]) -> Result<()> {
+    target
+        .write_all(payload)
+        .context("failed to write ns-runner output")
 }

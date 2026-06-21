@@ -12,7 +12,7 @@ use serde::Deserialize;
 use crate::isolated_setup::IsolatedNetwork;
 use crate::namespace::NamespaceRuntime;
 pub use crate::profile::{
-    DnsConfiguration, WorkspaceModeFds, WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeSnapshot,
+    WorkspaceModeFds, WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeSnapshot,
 };
 
 pub use crate::lifecycle::remount::{RemountOverlayReport, RemountProbe, WorkspaceRemountState};
@@ -41,7 +41,6 @@ pub struct ResourceCaps {
     pub setup_timeout_s: f64,
     pub exit_grace_s: f64,
     pub rfc1918_egress: Rfc1918Egress,
-    pub fallback_dns: String,
     pub workspace_root: String,
 }
 
@@ -55,7 +54,6 @@ impl Default for ResourceCaps {
             setup_timeout_s: 30.0,
             exit_grace_s: 0.25,
             rfc1918_egress: Rfc1918Egress::Allow,
-            fallback_dns: "1.1.1.1".to_owned(),
             workspace_root: DEFAULT_WORKSPACE_ROOT.to_owned(),
         }
     }

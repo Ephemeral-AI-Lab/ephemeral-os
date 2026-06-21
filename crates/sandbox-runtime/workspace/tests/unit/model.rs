@@ -12,7 +12,7 @@ use sandbox_runtime_workspace::model::{
 use sandbox_runtime_workspace::overlay::dirs::OverlayDirs;
 use sandbox_runtime_workspace::overlay::tree::TreeResourceStats;
 use sandbox_runtime_workspace::profile::{
-    DnsConfiguration, WorkspaceModeFds, WorkspaceModeHandle, WorkspaceModeId, WorkspaceRemountState,
+    WorkspaceModeFds, WorkspaceModeHandle, WorkspaceModeId, WorkspaceRemountState,
 };
 
 fn workspace_mode_handle() -> WorkspaceModeHandle {
@@ -40,10 +40,6 @@ fn workspace_mode_handle() -> WorkspaceModeHandle {
         control_fd: 14,
         veth: None,
         cgroup_path: Some("/sys/fs/cgroup/eos".into()),
-        dns_configuration: DnsConfiguration {
-            fallback_applied: true,
-            previous_first_nameserver: Some("127.0.0.53".to_owned()),
-        },
         remount_state: WorkspaceRemountState::Pending,
         created_at: 1.0,
         last_activity: 2.0,
@@ -299,7 +295,6 @@ fn assert_no_internal_fields(debug: &str) {
         "control_fd:",
         "cgroup_path:",
         "veth:",
-        "dns_configuration:",
     ] {
         assert!(
             !debug.contains(forbidden),

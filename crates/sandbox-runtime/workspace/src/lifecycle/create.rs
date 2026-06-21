@@ -48,7 +48,7 @@ impl WorkspaceModeManager {
         record_phase_ms(&mut phases_ms, "mount_overlay", phase_start);
 
         if handle.profile == WorkspaceProfile::Isolated {
-            self.setup_isolated_network_after_mount(handle, &mut phases_ms)?;
+            self.setup_isolated_network_after_mount(handle)?;
         }
 
         phase_start = Instant::now();
@@ -84,16 +84,8 @@ impl WorkspaceModeManager {
 
     fn setup_isolated_network_after_mount(
         &mut self,
-        handle: &mut WorkspaceModeHandle,
-        phases_ms: &mut HashMap<String, f64>,
+        handle: &WorkspaceModeHandle,
     ) -> Result<(), IsolatedNetworkError> {
-        let phase_start = Instant::now();
-        handle.dns_configuration = self.runtime.configure_dns(
-            handle,
-            &self.caps.fallback_dns,
-            self.caps.setup_timeout_s,
-        )?;
-        record_phase_ms(phases_ms, "configure_dns", phase_start);
         self.runtime
             .signal_net_ready(handle, self.caps.setup_timeout_s)
     }
@@ -135,7 +127,6 @@ impl WorkspaceModeManager {
             control_fd: -1,
             veth: None,
             cgroup_path: None,
-            dns_configuration: Default::default(),
             remount_state: WorkspaceRemountState::Active,
             created_at: now,
             last_activity: now,

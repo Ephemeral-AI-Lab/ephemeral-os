@@ -1,13 +1,9 @@
 //! Setns mode: join holder namespaces, optionally mount overlay/DNS, run a command.
 
 #[cfg(target_os = "linux")]
-use std::ffi::CString;
-#[cfg(target_os = "linux")]
 use std::fs;
 #[cfg(target_os = "linux")]
 use std::os::fd::RawFd;
-#[cfg(target_os = "linux")]
-use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
 #[cfg(target_os = "linux")]
 use std::path::{Component, Path};
@@ -19,9 +15,6 @@ use sandbox_runtime_overlay::OverlayHandle;
 
 use super::RunnerError;
 use crate::runner::protocol::{NamespaceCommandRequest, NsFds, RunResult};
-
-#[cfg(target_os = "linux")]
-const RESOLV_CONF: &str = "/etc/resolv.conf";
 
 #[cfg(target_os = "linux")]
 pub(crate) fn run_setns(request: &NamespaceCommandRequest) -> Result<RunResult, RunnerError> {
@@ -535,48 +528,6 @@ fn validated_relative_probe_path(path: &str) -> Result<PathBuf, String> {
     Ok(normalized)
 }
 
-/// Configure `/etc/resolv.conf` inside an existing workspace mount namespace.
-#[cfg(target_os = "linux")]
-pub fn configure_dns(request: &NamespaceCommandRequest) -> Result<serde_json::Value, RunnerError> {
-    let fallback_dns = request
-        .args
-        .get("fallback_dns")
-        .and_then(serde_json::Value::as_str)
-        .filter(|value| !value.trim().is_empty())
-        .ok_or_else(|| {
-            RunnerError::InvalidRequest("configure_dns requires fallback_dns".to_owned())
-        })?;
-
-    setns_user_mnt(request, "configure_dns")?;
-
-    let content = match fs::read_to_string(RESOLV_CONF) {
-        Ok(content) => content,
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-            return Ok(serde_json::json!({
-                "applied_fallback": false,
-                "previous_first_nameserver": null,
-            }));
-        }
-        Err(err) => return Err(err.into()),
-    };
-    let previous = first_nameserver(&content).map(str::to_owned);
-    let applied = previous.as_deref().is_some_and(needs_fallback_dns);
-    if applied {
-        bind_mount_resolv_conf(fallback_dns)?;
-    }
-    Ok(serde_json::json!({
-        "applied_fallback": applied,
-        "previous_first_nameserver": previous,
-    }))
-}
-
-#[cfg(not(target_os = "linux"))]
-pub const fn configure_dns(
-    _request: &NamespaceCommandRequest,
-) -> Result<serde_json::Value, RunnerError> {
-    Err(RunnerError::Unsupported)
-}
-
 pub fn require_ns_fds(request: &NamespaceCommandRequest) -> Result<NsFds, RunnerError> {
     request
         .ns_fds
@@ -619,59 +570,6 @@ pub fn overlay_layer_paths(request: &NamespaceCommandRequest) -> Result<Vec<Path
     } else {
         Ok(request.layer_paths.clone())
     }
-}
-
-pub fn first_nameserver(content: &str) -> Option<&str> {
-    content.lines().find_map(|line| {
-        let stripped = line.trim();
-        stripped
-            .strip_prefix("nameserver")
-            .and_then(|rest| rest.split_whitespace().next())
-    })
-}
-
-pub fn needs_fallback_dns(addr: &str) -> bool {
-    addr.starts_with("127.")
-}
-
-#[cfg(target_os = "linux")]
-fn bind_mount_resolv_conf(fallback_dns: &str) -> Result<(), RunnerError> {
-    let path = std::env::temp_dir().join(format!(
-        ".iws-resolv-{}-{}.conf",
-        std::process::id(),
-        unique_suffix()
-    ));
-    fs::write(&path, format!("nameserver {fallback_dns}\n"))?;
-    let source = cstring_path(&path)?;
-    let target = CString::new(RESOLV_CONF)
-        .map_err(|err| RunnerError::InvalidRequest(format!("invalid resolv.conf path: {err}")))?;
-    let fstype = CString::new("none")
-        .map_err(|err| RunnerError::InvalidRequest(format!("invalid mount fstype: {err}")))?;
-    // SAFETY: after `setns(user,mnt)` this helper has CAP_SYS_ADMIN in the
-    // target namespace. The C strings live for the call; MS_BIND ignores data.
-    let rc = unsafe {
-        libc::mount(
-            source.as_ptr(),
-            target.as_ptr(),
-            fstype.as_ptr(),
-            libc::MS_BIND,
-            std::ptr::null(),
-        )
-    };
-    if rc == 0 {
-        return Ok(());
-    }
-    Err(RunnerError::Syscall(std::io::Error::last_os_error()))
-}
-
-#[cfg(target_os = "linux")]
-fn cstring_path(path: &std::path::Path) -> Result<CString, RunnerError> {
-    CString::new(path.as_os_str().as_bytes()).map_err(|err| {
-        RunnerError::InvalidRequest(format!(
-            "path contains an interior nul byte: {} ({err})",
-            path.display()
-        ))
-    })
 }
 
 #[cfg(target_os = "linux")]

@@ -62,52 +62,35 @@ struct DaemonRuntimeConfig {
 fn build_runtime_operations(
     config: &DaemonRuntimeConfig,
 ) -> sandbox_runtime::SandboxRuntimeOperations {
-    let caps = workspace_resource_caps(&config.isolated);
-    let workspace_runtime = Arc::new(sandbox_runtime_workspace::WorkspaceRuntimeService::new(
-        sandbox_runtime_workspace::profile::WorkspaceModeManager::new(
-            caps,
-            config.isolated.scratch_root.clone(),
-        ),
-    ));
-    let workspace_session = Arc::new(
-        sandbox_runtime::workspace_session::WorkspaceSessionService::new(workspace_runtime),
-    );
-    let command = Arc::new(sandbox_runtime::CommandOperationService::new(
-        workspace_session,
-        command_config(&config.daemon.commands),
-    ));
-    sandbox_runtime::SandboxRuntimeOperations::new(command)
-}
-
-fn workspace_resource_caps(
-    config: &IsolatedNetworkConfig,
-) -> sandbox_runtime_workspace::profile::ResourceCaps {
-    sandbox_runtime_workspace::profile::ResourceCaps {
-        ttl_s: config.ttl_s,
-        total_cap: config.total_cap,
-        upperdir_bytes: config.upperdir_bytes,
-        memavail_fraction: config.memavail_fraction,
-        setup_timeout_s: config.setup_timeout_s,
-        exit_grace_s: config.exit_grace_s,
-        rfc1918_egress: match config.rfc1918_egress {
-            sandbox_runtime_config::configs::isolated::Rfc1918Egress::Allow => {
-                sandbox_runtime_workspace::profile::Rfc1918Egress::Allow
-            }
-            sandbox_runtime_config::configs::isolated::Rfc1918Egress::Deny => {
-                sandbox_runtime_workspace::profile::Rfc1918Egress::Deny
-            }
+    sandbox_runtime::SandboxRuntimeOperations::from_config(sandbox_runtime::SandboxRuntimeConfig {
+        workspace: sandbox_runtime::WorkspaceRuntimeConfig {
+            scratch_root: config.isolated.scratch_root.clone(),
+            caps: sandbox_runtime::WorkspaceResourceCaps {
+                ttl_s: config.isolated.ttl_s,
+                total_cap: config.isolated.total_cap,
+                upperdir_bytes: config.isolated.upperdir_bytes,
+                memavail_fraction: config.isolated.memavail_fraction,
+                setup_timeout_s: config.isolated.setup_timeout_s,
+                exit_grace_s: config.isolated.exit_grace_s,
+                rfc1918_egress: match config.isolated.rfc1918_egress {
+                    sandbox_runtime_config::configs::isolated::Rfc1918Egress::Allow => {
+                        sandbox_runtime::Rfc1918Egress::Allow
+                    }
+                    sandbox_runtime_config::configs::isolated::Rfc1918Egress::Deny => {
+                        sandbox_runtime::Rfc1918Egress::Deny
+                    }
+                },
+                workspace_root: config
+                    .isolated
+                    .workspace_root
+                    .to_string_lossy()
+                    .into_owned(),
+            },
         },
-        fallback_dns: config.fallback_dns.clone(),
-        workspace_root: config.workspace_root.to_string_lossy().into_owned(),
-    }
-}
-
-fn command_config(
-    config: &sandbox_runtime_config::configs::daemon::CommandConfig,
-) -> sandbox_runtime_command::CommandConfig {
-    sandbox_runtime_command::CommandConfig {
-        scratch_root: config.scratch_root.clone(),
-    }
+        command: sandbox_runtime::CommandRuntimeConfig {
+            scratch_root: config.daemon.commands.scratch_root.clone(),
+        },
+    })
 }
 
 fn load_runtime_config(path: Option<&Path>) -> Result<DaemonRuntimeConfig> {

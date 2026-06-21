@@ -136,9 +136,8 @@ Manager operations are dispatched locally. Daemon-owned operations are routed
 through `SandboxDaemonEndpoint` when the request has
 `OperationScope::Sandbox { sandbox_id }`.
 
-There is no public `invoke_sandbox_daemon` operation and no separate
-`RoutedRequest` wrapper. Forwarding is an implementation detail of the manager
-server.
+There is no public daemon-invocation operation and no separate routing wrapper.
+Forwarding is an implementation detail of the manager server.
 
 ## Dependency Rules
 

@@ -33,8 +33,7 @@ crates/
 ```
 
 Root workspace metadata should list only these sandbox packages plus `xtask`.
-Do not add compatibility workspace members, old package aliases, or hidden
-entrypoints.
+Do not add retired workspace members, old package names, or hidden entrypoints.
 
 ## Protocol Contract
 
@@ -58,8 +57,8 @@ Catalogs use `OperationExecutionSpace` through the
 `operation_execution_space` JSON field. `OperationFamily` is documentation
 grouping only, not a routing selector.
 
-Do not introduce alternate routing envelopes, owner/target fields, or
-compatibility DTOs.
+Do not introduce alternate routing envelopes, owner/target fields, or retired
+request DTOs.
 
 ## Operation Names
 
@@ -153,7 +152,7 @@ dist/sandbox-daemon-linux-amd64.json
 dist/sandbox-daemon-linux-arm64.json
 ```
 
-Do not generate old artifact names or compatibility aliases.
+Do not generate old artifact names or secondary artifact names.
 
 ## Verification
 

@@ -33,32 +33,22 @@ impl RetainedCommandTranscript {
     }
 }
 
-pub(crate) trait CommandTranscriptWindowExt {
-    fn into_output(
-        self,
-        command_session_id: CommandSessionId,
-        status: CommandStatus,
-        exit_code: Option<i64>,
-    ) -> CommandLinesOutput;
-}
-
-impl CommandTranscriptWindowExt for ::sandbox_runtime_command::CommandTranscriptWindow {
-    fn into_output(
-        self,
-        command_session_id: CommandSessionId,
-        status: CommandStatus,
-        exit_code: Option<i64>,
-    ) -> CommandLinesOutput {
-        CommandLinesOutput {
-            command_session_id,
-            status,
-            exit_code,
-            start_offset: self.offset,
-            end_offset: self.next_offset,
-            total_lines: self.total_lines,
-            truncated_before: self.truncated_before,
-            output_truncated: self.output_truncated,
-            output: self.output,
-        }
+#[must_use]
+pub(crate) fn command_lines_output(
+    window: ::sandbox_runtime_command::CommandTranscriptWindow,
+    command_session_id: CommandSessionId,
+    status: CommandStatus,
+    exit_code: Option<i64>,
+) -> CommandLinesOutput {
+    CommandLinesOutput {
+        command_session_id,
+        status,
+        exit_code,
+        start_offset: window.offset,
+        end_offset: window.next_offset,
+        total_lines: window.total_lines,
+        truncated_before: window.truncated_before,
+        output_truncated: window.output_truncated,
+        output: window.output,
     }
 }

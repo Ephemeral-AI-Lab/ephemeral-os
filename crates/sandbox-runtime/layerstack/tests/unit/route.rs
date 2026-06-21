@@ -225,14 +225,9 @@ fn protected_paths_drop_before_source_or_ignore_routing(
         ".layer-metadata/B000001-base.digest",
         "tree/.layer-metadata/state.json",
         "command-request.json",
-        "command-runner-result.json",
         "runner-result.json",
-        "metadata.json",
         "final.json",
         "transcript.log",
-        "spool/payload.bin",
-        "commands/cmd_1/transcript.log",
-        ".eos-command/cmd_1/final.json",
     ] {
         assert_eq!(route_of(&fixture, path)?, Route::Drop, "route for {path}");
     }

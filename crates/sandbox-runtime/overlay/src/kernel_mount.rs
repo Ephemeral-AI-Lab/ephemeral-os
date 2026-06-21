@@ -408,7 +408,7 @@ fn mountinfo_visible_overlay_options(
 #[cfg(target_os = "linux")]
 fn peel_unmounts(
     workspace_root: &Path,
-    allow_lazy_fallback: bool,
+    allow_lazy_unmount: bool,
 ) -> std::result::Result<(), OverlayError> {
     for _ in 0..MAX_UNMOUNT_PEELS {
         match unmount(workspace_root, UnmountFlags::empty()) {
@@ -416,7 +416,7 @@ fn peel_unmounts(
             // umount(2) reports "nothing mounted here" as EINVAL for a plain
             // directory and ENOENT when the path itself is gone.
             Err(Errno::INVAL | Errno::NOENT) => return Ok(()),
-            Err(_) if allow_lazy_fallback => {
+            Err(_) if allow_lazy_unmount => {
                 unmount(workspace_root, UnmountFlags::DETACH)
                     .map_mount_syscall("lazy umount workspace_root")?;
             }

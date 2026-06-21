@@ -11,7 +11,7 @@ use crate::stack::LayerStack;
 use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, LAYER_METADATA_DIR};
 
 const FAIL_NEXT_PUBLISH_MARKER_FILE: &str = "fail-next-publish";
-const ENABLE_TEST_FAILPOINTS_ENV: &str = "EOS_LAYERSTACK_ENABLE_TEST_FAILPOINTS";
+const ENABLE_TEST_FAILPOINTS_ENV: &str = "SANDBOX_LAYERSTACK_ENABLE_TEST_FAILPOINTS";
 
 impl LayerStack {
     pub fn publish_layer(&mut self, changes: &[LayerChange]) -> Result<Manifest, LayerStackError> {

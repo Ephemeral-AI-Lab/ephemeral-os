@@ -17,7 +17,7 @@ pub const NET_READY: &[u8] = b"net-ready";
 
 pub const READY: &[u8] = b"ready\n";
 
-pub const TEST_HOLDER_CRASH_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH";
+pub const TEST_HOLDER_CRASH_ENV: &str = "SANDBOX_ISOLATED_WORKSPACE_TEST_HOLDER_CRASH";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NamespaceNetwork {

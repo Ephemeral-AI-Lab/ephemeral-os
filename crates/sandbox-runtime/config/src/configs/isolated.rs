@@ -8,8 +8,8 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 
 use crate::configs::validate::{
-    require_absolute, require_f64_at_least, require_f64_gt, require_non_empty, require_ratio,
-    require_u32_at_least, require_u64_at_least, ConfigFieldError,
+    require_absolute, require_f64_at_least, require_f64_gt, require_ratio, require_u32_at_least,
+    require_u64_at_least, ConfigFieldError,
 };
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -23,7 +23,6 @@ pub struct IsolatedNetworkConfig {
     pub setup_timeout_s: f64,
     pub exit_grace_s: f64,
     pub rfc1918_egress: Rfc1918Egress,
-    pub fallback_dns: String,
     pub workspace_root: PathBuf,
     pub sample_interval_s: f64,
 }
@@ -36,7 +35,7 @@ pub enum Rfc1918Egress {
 }
 
 impl Default for IsolatedNetworkConfig {
-    /// Fallbacks used when no `isolated` section is injected.
+    /// Defaults used when no `isolated` section is injected.
     fn default() -> Self {
         Self {
             scratch_root: PathBuf::from("/eos/scratch/isolated"),
@@ -47,7 +46,6 @@ impl Default for IsolatedNetworkConfig {
             setup_timeout_s: 30.0,
             exit_grace_s: 0.25,
             rfc1918_egress: Rfc1918Egress::Allow,
-            fallback_dns: "1.1.1.1".to_owned(),
             workspace_root: PathBuf::from("/testbed"),
             sample_interval_s: 0.5,
         }
@@ -67,7 +65,6 @@ impl IsolatedNetworkConfig {
         require_ratio(self.memavail_fraction, "isolated.memavail_fraction")?;
         require_f64_gt(self.setup_timeout_s, 0.0, "isolated.setup_timeout_s")?;
         require_f64_at_least(self.exit_grace_s, 0.0, "isolated.exit_grace_s")?;
-        require_non_empty(&self.fallback_dns, "isolated.fallback_dns")?;
         require_absolute(&self.workspace_root, "isolated.workspace_root")?;
         reject_dangerous_scratch_root(&self.scratch_root, &self.workspace_root)?;
         if self.sample_interval_s.is_finite() && self.sample_interval_s >= 0.01 {

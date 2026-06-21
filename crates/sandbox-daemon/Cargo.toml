@@ -10,12 +10,10 @@ name = "sandbox-daemon"
 path = "src/main.rs"
 
 [dependencies]
-sandbox-runtime-command.workspace = true
 sandbox-runtime-config.workspace = true
 sandbox-runtime-namespace-process.workspace = true
 sandbox-protocol.workspace = true
 sandbox-runtime.workspace = true
-sandbox-runtime-workspace.workspace = true
 anyhow.workspace = true
 # preserve_order keeps incoming operation arguments in caller order while this
 # crate still accepts raw JSON requests.

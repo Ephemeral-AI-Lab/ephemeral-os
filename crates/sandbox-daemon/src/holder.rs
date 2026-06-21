@@ -4,7 +4,7 @@ use std::os::fd::RawFd;
 
 use anyhow::{anyhow, Context, Result};
 
-/// `<binary> ns-holder <readiness_fd> <control_fd> [shared|isolated]` becomes
+/// `<binary> ns-holder <readiness_fd> <control_fd> <shared|isolated>` becomes
 /// the single-threaded child that creates and pins a workspace namespace stack,
 /// runs the readiness handshake, then `pause()`s until `SIGTERM`.
 pub(crate) fn run(mut args: std::env::Args) -> Result<()> {
@@ -36,10 +36,13 @@ fn parse_holder_network(
     value: Option<String>,
 ) -> Result<sandbox_runtime_namespace_process::holder::NamespaceNetwork> {
     match value.as_deref() {
-        None | Some("isolated") => {
+        Some("isolated") => {
             Ok(sandbox_runtime_namespace_process::holder::NamespaceNetwork::Isolated)
         }
         Some("shared") => Ok(sandbox_runtime_namespace_process::holder::NamespaceNetwork::Shared),
+        None => Err(anyhow!(
+            "missing ns-holder network mode; expected shared or isolated"
+        )),
         Some(other) => Err(anyhow!(
             "invalid ns-holder network mode {other:?}; expected shared or isolated"
         )),

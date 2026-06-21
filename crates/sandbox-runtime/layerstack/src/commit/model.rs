@@ -52,9 +52,9 @@ pub struct FileResult {
 
 impl FileResult {
     #[must_use]
-    pub fn conflict_message<'a>(&'a self, fallback: &'a str) -> &'a str {
+    pub fn conflict_message<'a>(&'a self, default_message: &'a str) -> &'a str {
         if self.message.is_empty() {
-            fallback
+            default_message
         } else {
             self.message.as_str()
         }

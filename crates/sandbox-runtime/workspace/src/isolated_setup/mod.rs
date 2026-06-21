@@ -4,7 +4,6 @@ use std::net::Ipv4Addr;
 use crate::profile::IsolatedNetworkError;
 use crate::profile::{Rfc1918Egress, HANDLE_PREFIX};
 
-mod dns;
 #[cfg(target_os = "linux")]
 mod netfilter;
 #[cfg(target_os = "linux")]

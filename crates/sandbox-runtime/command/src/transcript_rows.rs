@@ -202,13 +202,13 @@ fn count_rows_before(file: &mut File, end: u64) -> Result<u64, String> {
     Ok(rows)
 }
 
-fn parse_transcript_rows(text: &str, fallback_start_offset: u64) -> Vec<CommandTranscriptRow> {
+fn parse_transcript_rows(text: &str, default_start_offset: u64) -> Vec<CommandTranscriptRow> {
     let mut rows = Vec::new();
     for raw_line in text.lines() {
         match parse_json_row(raw_line) {
             Ok(Some(row)) => rows.push(row),
             Ok(None) => rows.push(CommandTranscriptRow {
-                offset: fallback_start_offset
+                offset: default_start_offset
                     .saturating_add(u64::try_from(rows.len()).unwrap_or(u64::MAX)),
                 stream: CommandStream::Stdout,
                 text: strip_transcript_timestamp(raw_line).to_owned(),

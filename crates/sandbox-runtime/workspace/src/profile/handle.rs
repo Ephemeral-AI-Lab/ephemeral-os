@@ -22,12 +22,6 @@ pub struct WorkspaceModeSnapshot {
     pub layer_paths: Vec<PathBuf>,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct DnsConfiguration {
-    pub fallback_applied: bool,
-    pub previous_first_nameserver: Option<String>,
-}
-
 #[derive(Debug, Clone)]
 pub struct WorkspaceModeHandle {
     pub workspace_id: WorkspaceModeId,
@@ -44,7 +38,6 @@ pub struct WorkspaceModeHandle {
     pub control_fd: i32,
     pub veth: Option<VethAllocation>,
     pub cgroup_path: Option<PathBuf>,
-    pub dns_configuration: DnsConfiguration,
     pub remount_state: WorkspaceRemountState,
     pub created_at: f64,
     pub last_activity: f64,

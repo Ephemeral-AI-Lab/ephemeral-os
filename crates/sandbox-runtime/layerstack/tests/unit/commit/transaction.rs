@@ -75,7 +75,7 @@ fn publish_decision(
 #[test]
 fn publish_failpoint_marker_is_inert_without_test_opt_in(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let _guard = EnvVarGuard::unset("EOS_LAYERSTACK_ENABLE_TEST_FAILPOINTS");
+    let _guard = EnvVarGuard::unset("SANDBOX_LAYERSTACK_ENABLE_TEST_FAILPOINTS");
     let fixture = Fixture::new("publish_failpoint_inert")?;
     let marker = fixture
         .root

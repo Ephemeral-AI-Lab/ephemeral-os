@@ -1,4 +1,4 @@
-use super::{first_nameserver, needs_fallback_dns, overlay_layer_paths, require_ns_fds};
+use super::{overlay_layer_paths, require_ns_fds};
 use crate::runner::protocol::{Fd, NamespaceCommandRequest, NsFds, WorkspaceRoot};
 use std::path::Path;
 #[cfg(target_os = "linux")]
@@ -106,16 +106,6 @@ fn overlay_layer_paths_rejects_empty_layers() {
     let request = request(Some(default_ns_fds()));
     let error = overlay_layer_paths(&request).expect_err("layer paths are required");
     assert!(error.to_string().contains("requires layer_paths"));
-}
-
-#[test]
-fn dns_fallback_applies_only_to_loopback_first_nameserver() {
-    let content = "search local\nnameserver 127.0.0.53\nnameserver 8.8.8.8\n";
-    let nameserver = first_nameserver(content);
-    assert_eq!(nameserver, Some("127.0.0.53"));
-    assert!(needs_fallback_dns(nameserver.unwrap_or_default()));
-    assert!(!needs_fallback_dns("10.244.0.1"));
-    assert_eq!(first_nameserver("search local\n"), None);
 }
 
 fn request(ns_fds: Option<NsFds>) -> NamespaceCommandRequest {

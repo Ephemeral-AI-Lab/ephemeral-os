@@ -110,7 +110,7 @@ For runtime operations:
 }
 ```
 
-The gateway does not construct `ManagerRequest`, `RoutedRequest`, or any
+The gateway does not construct retired request wrappers or any
 manager/runtime/daemon target envelope.
 
 Manual rendering consumes manager and runtime catalog documents and keeps the

@@ -31,20 +31,6 @@ pub struct RemountOverlayReport {
 
 impl RemountOverlayReport {
     #[must_use]
-    pub fn verified_stub(layer_count: usize) -> Self {
-        Self {
-            mount_verified: true,
-            staged_switch: false,
-            mountinfo_fs_type: Some("overlay".to_owned()),
-            mountinfo_lowerdir_count: Some(layer_count),
-            mountinfo_lowerdir_expected_count: Some(layer_count),
-            mountinfo_lowerdir_count_matched: Some(true),
-            mountinfo_lowerdir_verified: Some(true),
-            ..Self::default()
-        }
-    }
-
-    #[must_use]
     pub fn from_payload(payload: &Value) -> Self {
         Self {
             mount_verified: payload

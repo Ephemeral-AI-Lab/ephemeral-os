@@ -9,9 +9,7 @@ pub mod manager;
 #[cfg(target_os = "linux")]
 pub(crate) use handle::CGROUP_ROOT;
 pub(crate) use handle::HANDLE_PREFIX;
-pub use handle::{
-    DnsConfiguration, WorkspaceModeFds, WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeSnapshot,
-};
+pub use handle::{WorkspaceModeFds, WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeSnapshot};
 pub use manager::{
     ExitOutcome, IsolatedNetworkError, RemountOverlayReport, RemountProbe, ResourceCaps,
     Rfc1918Egress, WorkspaceModeManager, WorkspaceRemountState,

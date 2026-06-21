@@ -52,35 +52,8 @@ fn protected_path_drop_reason(path: &LayerPath) -> Option<RouteDropReason> {
 }
 
 fn is_command_scratch_path(path: &str) -> bool {
-    if matches!(
-        path,
-        "command-request.json"
-            | "command-runner-result.json"
-            | "runner-result.json"
-            | "metadata.json"
-            | "final.json"
-            | "transcript.log"
-    ) {
-        return true;
-    }
-
-    let mut parts = path.split('/');
-    let Some(first) = parts.next() else {
-        return false;
-    };
     matches!(
-        first,
-        "spool"
-            | "commands"
-            | ".eos-command"
-            | ".eos-commands"
-            | ".eos-scratch"
-            | ".eos-spool"
-            | ".eos-transcripts"
-    ) || parts.any(|part| {
-        matches!(
-            part,
-            ".eos-command" | ".eos-commands" | ".eos-scratch" | ".eos-spool" | ".eos-transcripts"
-        )
-    })
+        path,
+        "command-request.json" | "runner-result.json" | "final.json" | "transcript.log"
+    )
 }

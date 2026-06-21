@@ -1,5 +1,5 @@
 use super::command_lines_response;
-use crate::command::service::transcript::CommandTranscriptWindowExt;
+use crate::command::service::transcript::command_lines_output;
 use crate::command::service::CommandOperationService;
 use crate::command::{
     CommandLinesOutput, CommandServiceError, CommandSessionId, CommandStatus, ReadCommandLinesInput,
@@ -79,19 +79,22 @@ impl CommandOperationService {
         if let Some(active) = self.active_command_or_none(&command_session_id)? {
             let transcript = active.transcript.clone();
             drop(active);
-            return Ok(transcript
-                .window(input.start_offset, input.limit)
-                .into_output(command_session_id, CommandStatus::Running, None));
+            return Ok(command_lines_output(
+                transcript.window(input.start_offset, input.limit),
+                command_session_id,
+                CommandStatus::Running,
+                None,
+            ));
         }
 
         let completed = self.completed_command(&command_session_id)?;
-        Ok(completed
-            .transcript
-            .window(&command_session_id, input.start_offset, input.limit)?
-            .into_output(
-                command_session_id,
-                completed.result.status,
-                completed.result.exit_code,
-            ))
+        Ok(command_lines_output(
+            completed
+                .transcript
+                .window(&command_session_id, input.start_offset, input.limit)?,
+            command_session_id,
+            completed.result.status,
+            completed.result.exit_code,
+        ))
     }
 }

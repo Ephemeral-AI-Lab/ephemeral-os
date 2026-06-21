@@ -14,7 +14,10 @@ pub use operation::{
 pub use public::command;
 
 pub use command::CommandOperationService;
-pub use internal::services::SandboxRuntimeOperations;
+pub use internal::services::{
+    CommandRuntimeConfig, Rfc1918Egress, SandboxRuntimeConfig, SandboxRuntimeOperations,
+    WorkspaceResourceCaps, WorkspaceRuntimeConfig,
+};
 
 #[must_use]
 pub fn operation_specs() -> &'static [&'static OperationSpec] {

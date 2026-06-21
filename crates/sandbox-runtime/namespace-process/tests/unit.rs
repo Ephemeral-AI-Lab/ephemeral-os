@@ -7,9 +7,7 @@ pub mod runner;
 
 pub(crate) use holder::network::parse_network_config;
 pub(crate) use holder::Handshake;
-pub(crate) use runner::setns::{
-    first_nameserver, needs_fallback_dns, overlay_layer_paths, require_ns_fds,
-};
+pub(crate) use runner::setns::{overlay_layer_paths, require_ns_fds};
 
 #[cfg(target_os = "linux")]
 pub(crate) use runner::setns::{

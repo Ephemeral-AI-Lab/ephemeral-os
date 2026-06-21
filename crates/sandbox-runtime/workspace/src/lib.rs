@@ -8,7 +8,7 @@
 //!
 //! The shared-network profile keeps the private workspace overlay and holder
 //! namespace stack while preserving shared network access. The isolated profile
-//! adds a dedicated network boundary with veth, DNS, and network policy.
+//! adds a dedicated network boundary with veth and network policy.
 //! `overlay` holds the filesystem and telemetry contracts both profiles share,
 //! while common lifecycle code owns holder, namespace FD, scratch, and cgroup
 //! behavior.
