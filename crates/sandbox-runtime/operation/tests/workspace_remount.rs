@@ -3,8 +3,6 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
-use command::process::{CommandProcess, CommandProcessExit, CommandProcessSpec};
-use command::yield_wait_loop::WaitOutcome;
 use sandbox_runtime::command::{
     CancelCommandInput, CommandLaunchDriver, CommandOperationService, CommandServiceError,
     ExecCommandInput,
@@ -14,7 +12,9 @@ use sandbox_runtime::workspace_remount::{
     RemountWorkspaceSession, WorkspaceRemountError, WorkspaceRemountService,
 };
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
-use workspace::{
+use sandbox_runtime_command::process::{CommandProcess, CommandProcessExit, CommandProcessSpec};
+use sandbox_runtime_command::yield_wait_loop::WaitOutcome;
+use sandbox_runtime_workspace::{
     CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef,
     LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult,
@@ -177,8 +177,8 @@ impl CommandLaunchDriver for InactiveLaunchDriver {
     fn spawn(
         &self,
         spec: CommandProcessSpec,
-        _workspace_entry: workspace::WorkspaceEntry,
-        _config: &command::CommandConfig,
+        _workspace_entry: sandbox_runtime_workspace::WorkspaceEntry,
+        _config: &sandbox_runtime_command::CommandConfig,
     ) -> Result<CommandProcess, CommandServiceError> {
         Ok(match self.process_group_id {
             Some(pgid) => CommandProcess::inactive_with_process_group_for_test(spec, pgid),
@@ -374,8 +374,8 @@ fn workspace_handle_with_profile(
     )
 }
 
-fn command_config() -> command::CommandConfig {
-    command::CommandConfig {
+fn command_config() -> sandbox_runtime_command::CommandConfig {
+    sandbox_runtime_command::CommandConfig {
         scratch_root: std::env::temp_dir().join(format!(
             "operation-service-workspace-remount-test-{}-{}",
             std::process::id(),

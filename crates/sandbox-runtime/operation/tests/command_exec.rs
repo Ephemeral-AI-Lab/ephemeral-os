@@ -3,11 +3,11 @@ mod support;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use command::yield_wait_loop::WaitOutcome;
 use sandbox_runtime::command::{
     CommandServiceError, CommandSessionId, CommandStatus, ExecCommandInput, PollCommandInput,
 };
-use workspace::{WorkspaceProfile, WorkspaceSessionId};
+use sandbox_runtime_command::yield_wait_loop::WaitOutcome;
+use sandbox_runtime_workspace::{WorkspaceProfile, WorkspaceSessionId};
 
 use support::{
     build_services, build_services_with_launch_driver, create_request, success_exit,

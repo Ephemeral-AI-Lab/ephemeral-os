@@ -6,8 +6,6 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
-use command::process::{CommandProcess, CommandProcessExit, CommandProcessSpec};
-use command::yield_wait_loop::WaitOutcome;
 use sandbox_runtime::command::{
     CommandLaunchDriver, CommandOperationService, CommandServiceError, ExecCommandInput,
     PollCommandInput, ReadCommandLinesInput, WriteCommandStdinInput,
@@ -16,7 +14,9 @@ use sandbox_runtime::workspace_remount::{
     CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountService,
 };
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
-use workspace::{
+use sandbox_runtime_command::process::{CommandProcess, CommandProcessExit, CommandProcessSpec};
+use sandbox_runtime_command::yield_wait_loop::WaitOutcome;
+use sandbox_runtime_workspace::{
     CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef,
     LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult,
@@ -163,8 +163,8 @@ impl CommandLaunchDriver for PendingGuardLaunchDriver {
     fn spawn(
         &self,
         spec: CommandProcessSpec,
-        _workspace_entry: workspace::WorkspaceEntry,
-        _config: &command::CommandConfig,
+        _workspace_entry: sandbox_runtime_workspace::WorkspaceEntry,
+        _config: &sandbox_runtime_command::CommandConfig,
     ) -> Result<CommandProcess, CommandServiceError> {
         Ok(CommandProcess::inactive_for_test(spec))
     }
@@ -197,8 +197,8 @@ impl CommandLaunchDriver for BlockingLaunchDriver {
     fn spawn(
         &self,
         spec: CommandProcessSpec,
-        _workspace_entry: workspace::WorkspaceEntry,
-        _config: &command::CommandConfig,
+        _workspace_entry: sandbox_runtime_workspace::WorkspaceEntry,
+        _config: &sandbox_runtime_command::CommandConfig,
     ) -> Result<CommandProcess, CommandServiceError> {
         if let Some(sender) = self
             .spawn_started
@@ -357,8 +357,8 @@ fn create_session_and_command() -> (
     )
 }
 
-fn command_config() -> command::CommandConfig {
-    command::CommandConfig {
+fn command_config() -> sandbox_runtime_command::CommandConfig {
+    sandbox_runtime_command::CommandConfig {
         scratch_root: std::env::temp_dir().join(format!(
             "operation-service-command-remount-test-{}-{}",
             std::process::id(),

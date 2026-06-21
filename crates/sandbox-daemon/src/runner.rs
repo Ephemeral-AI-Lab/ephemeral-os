@@ -21,51 +21,62 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let config = RunnerCliConfig::parse(args)?;
     wait_for_start_ack(config.start_ack_fd)?;
     let request_json = read_payload(config.request_path.as_ref())?;
-    let request: namespace_process::runner::protocol::NamespaceCommandRequest =
+    let request: sandbox_runtime_namespace_process::runner::protocol::NamespaceCommandRequest =
         serde_json::from_str(&request_json).context("failed to decode ns-runner request JSON")?;
     let runner_config = load_runner_config()?;
     let mut output_target = OutputTarget::open(config.output_path.as_ref())?;
     let result = match config.mode {
-        RunnerCliMode::RemountOverlay => namespace_process::runner::protocol::RunResult {
-            exit_code: 0,
-            payload: namespace_process::runner::setns::remount_overlay(&request, &runner_config)
+        RunnerCliMode::RemountOverlay => {
+            sandbox_runtime_namespace_process::runner::protocol::RunResult {
+                exit_code: 0,
+                payload: sandbox_runtime_namespace_process::runner::setns::remount_overlay(
+                    &request,
+                    &runner_config,
+                )
                 .context("ns-runner remount overlay failed")?,
-        },
+            }
+        }
         RunnerCliMode::MountOverlay => {
-            namespace_process::runner::setns::setns_overlay_mount(&request, &runner_config)
-                .context("ns-runner setns overlay mount failed")?;
+            sandbox_runtime_namespace_process::runner::setns::setns_overlay_mount(
+                &request,
+                &runner_config,
+            )
+            .context("ns-runner setns overlay mount failed")?;
             ok_result()
         }
-        RunnerCliMode::ConfigureDns => namespace_process::runner::protocol::RunResult {
-            exit_code: 0,
-            payload: namespace_process::runner::setns::configure_dns(&request)
-                .context("ns-runner configure dns failed")?,
-        },
+        RunnerCliMode::ConfigureDns => {
+            sandbox_runtime_namespace_process::runner::protocol::RunResult {
+                exit_code: 0,
+                payload: sandbox_runtime_namespace_process::runner::setns::configure_dns(&request)
+                    .context("ns-runner configure dns failed")?,
+            }
+        }
         RunnerCliMode::Run => {
-            namespace_process::runner::run(&request).context("ns-runner failed")?
+            sandbox_runtime_namespace_process::runner::run(&request).context("ns-runner failed")?
         }
     };
     let output = serde_json::to_vec(&result).context("failed to encode ns-runner result JSON")?;
     write_payload(&mut output_target, &output)
 }
 
-fn ok_result() -> namespace_process::runner::protocol::RunResult {
-    namespace_process::runner::protocol::RunResult {
+fn ok_result() -> sandbox_runtime_namespace_process::runner::protocol::RunResult {
+    sandbox_runtime_namespace_process::runner::protocol::RunResult {
         exit_code: 0,
         payload: serde_json::json!({"success": true, "status": "ok"}),
     }
 }
 
-fn load_runner_config() -> Result<namespace_process::runner::config::RunnerConfig> {
+fn load_runner_config() -> Result<sandbox_runtime_namespace_process::runner::config::RunnerConfig> {
     let doc = match std::env::var_os(DAEMON_CONFIG_YAML_ENV) {
         Some(path) => {
             let path = PathBuf::from(path);
-            config::load_path(&path).with_context(|| format!("load {}", path.display()))?
+            sandbox_runtime_config::load_path(&path)
+                .with_context(|| format!("load {}", path.display()))?
         }
-        None => config::load_prd().context("load eos-sandbox/config/prd.yml")?,
+        None => sandbox_runtime_config::load_prd().context("load eos-sandbox/config/prd.yml")?,
     };
     let config = doc
-        .section::<namespace_process::runner::config::RunnerConfig>("runner")
+        .section::<sandbox_runtime_namespace_process::runner::config::RunnerConfig>("runner")
         .context("deserialize runner config section")?;
     config.validate().context("validate runner config")?;
     Ok(config)

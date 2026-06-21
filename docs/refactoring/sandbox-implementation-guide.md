@@ -787,6 +787,12 @@ Exit criteria:
 
 ## Phase 9: Compatibility Cleanup
 
+Prompt:
+
+```text
+docs/refactoring/sandbox-phase-9-compatibility-cleanup-prompt.md
+```
+
 Goal:
 
 - Remove stale names and update packaging after the new shape works.
@@ -794,8 +800,10 @@ Goal:
 Implementation steps:
 
 1. Update README and architecture docs.
-2. Update packaging from `sandbox-daemon` to `sandbox-daemon`.
-3. Keep the packaged `sandbox-daemon` helper binary only while packaging still uses that artifact name.
+2. Update packaging from legacy `eosd` artifact names to `sandbox-daemon`
+   artifact names, or explicitly document temporary `eosd` compatibility.
+3. Keep any packaged `eosd` alias only while packaging still requires that
+   artifact name.
 4. Remove old workspace dependency entries.
 5. Run stale-name scans.
 

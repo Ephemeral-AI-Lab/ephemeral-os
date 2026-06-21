@@ -12,18 +12,18 @@ pub(crate) fn run(mut args: std::env::Args) -> Result<()> {
     let control_fd = parse_fd(args.next(), "control_fd")?;
     let network = parse_holder_network(args.next())?;
 
-    match namespace_process::holder::run(readiness_fd, control_fd, network) {
+    match sandbox_runtime_namespace_process::holder::run(readiness_fd, control_fd, network) {
         Ok(()) => Ok(()),
         Err(err) => {
             let code = match &err {
-                namespace_process::holder::NsHolderError::ControlPipeClosed => {
-                    namespace_process::holder::NsHolderError::CONTROL_CLOSED_EXIT
+                sandbox_runtime_namespace_process::holder::NsHolderError::ControlPipeClosed => {
+                    sandbox_runtime_namespace_process::holder::NsHolderError::CONTROL_CLOSED_EXIT
                 }
-                namespace_process::holder::NsHolderError::UnexpectedToken => {
-                    namespace_process::holder::NsHolderError::UNEXPECTED_TOKEN_EXIT
+                sandbox_runtime_namespace_process::holder::NsHolderError::UnexpectedToken => {
+                    sandbox_runtime_namespace_process::holder::NsHolderError::UNEXPECTED_TOKEN_EXIT
                 }
-                namespace_process::holder::NsHolderError::TestCrash => {
-                    namespace_process::holder::NsHolderError::TEST_CRASH_EXIT
+                sandbox_runtime_namespace_process::holder::NsHolderError::TestCrash => {
+                    sandbox_runtime_namespace_process::holder::NsHolderError::TEST_CRASH_EXIT
                 }
                 _ => return Err(anyhow::Error::new(err).context("ns-holder failed")),
             };
@@ -34,10 +34,12 @@ pub(crate) fn run(mut args: std::env::Args) -> Result<()> {
 
 fn parse_holder_network(
     value: Option<String>,
-) -> Result<namespace_process::holder::NamespaceNetwork> {
+) -> Result<sandbox_runtime_namespace_process::holder::NamespaceNetwork> {
     match value.as_deref() {
-        None | Some("isolated") => Ok(namespace_process::holder::NamespaceNetwork::Isolated),
-        Some("shared") => Ok(namespace_process::holder::NamespaceNetwork::Shared),
+        None | Some("isolated") => {
+            Ok(sandbox_runtime_namespace_process::holder::NamespaceNetwork::Isolated)
+        }
+        Some("shared") => Ok(sandbox_runtime_namespace_process::holder::NamespaceNetwork::Shared),
         Some(other) => Err(anyhow!(
             "invalid ns-holder network mode {other:?}; expected shared or isolated"
         )),

@@ -2,8 +2,8 @@ use std::path::PathBuf;
 use std::sync::{Arc, MutexGuard};
 use std::time::Instant;
 
-use command::process::{CommandProcess, CommandProcessExit, CommandProcessSpec};
-use command::yield_wait_loop::WaitOutcome;
+use sandbox_runtime_command::process::{CommandProcess, CommandProcessExit, CommandProcessSpec};
+use sandbox_runtime_command::yield_wait_loop::WaitOutcome;
 
 use super::command_yield_response;
 use crate::command::service::CommandOperationService;

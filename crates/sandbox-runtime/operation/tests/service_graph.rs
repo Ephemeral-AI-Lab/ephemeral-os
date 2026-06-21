@@ -7,7 +7,7 @@ use sandbox_runtime::workspace_remount::{
 };
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
 use sandbox_runtime::SandboxRuntimeOperations;
-use workspace::{
+use sandbox_runtime_workspace::{
     CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest, LatestSnapshotRequest,
     RemountWorkspaceRequest, WorkspaceError, WorkspaceHandle, WorkspaceRuntimeHooks,
     WorkspaceRuntimeService, WorkspaceSessionId,
@@ -60,7 +60,7 @@ fn runtime_operations_exposes_only_command_as_external_lane() {
     let workspace = workspace_session();
     let command = Arc::new(CommandOperationService::new(
         Arc::clone(&workspace),
-        command::CommandConfig::default(),
+        sandbox_runtime_command::CommandConfig::default(),
     ));
     let remount_workspace: Arc<dyn RemountWorkspaceSession> = workspace.clone();
     let remount_command: Arc<dyn CommandRemountCoordinator> = command.clone();

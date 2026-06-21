@@ -1,8 +1,8 @@
-use command::process::{
+use sandbox_runtime_command::process::{
     CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec,
 };
-use command::yield_wait_loop::{wait_for_yield, WaitOutcome};
-use workspace::WorkspaceEntry;
+use sandbox_runtime_command::yield_wait_loop::{wait_for_yield, WaitOutcome};
+use sandbox_runtime_workspace::WorkspaceEntry;
 
 use crate::command::{CommandServiceError, CommandSessionId};
 
@@ -11,7 +11,7 @@ pub trait CommandLaunchDriver: Send + Sync {
         &self,
         spec: CommandProcessSpec,
         workspace_entry: WorkspaceEntry,
-        config: &command::CommandConfig,
+        config: &sandbox_runtime_command::CommandConfig,
     ) -> Result<CommandProcess, CommandServiceError>;
 
     fn wait_for_initial_yield(
@@ -32,7 +32,7 @@ impl CommandLaunchDriver for RealCommandLaunchDriver {
         &self,
         spec: CommandProcessSpec,
         workspace_entry: WorkspaceEntry,
-        config: &command::CommandConfig,
+        config: &sandbox_runtime_command::CommandConfig,
     ) -> Result<CommandProcess, CommandServiceError> {
         let command_session_id = CommandSessionId(spec.id.clone());
         let parts =

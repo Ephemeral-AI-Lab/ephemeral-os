@@ -4,8 +4,12 @@ use super::process_store::{CommandTranscriptStore, RetainedCommandTranscript};
 
 impl CommandTranscriptStore {
     #[must_use]
-    pub(crate) fn window(&self, offset: u64, limit: usize) -> ::command::CommandTranscriptWindow {
-        ::command::transcript_window(self.transcript_path.as_deref(), offset, limit)
+    pub(crate) fn window(
+        &self,
+        offset: u64,
+        limit: usize,
+    ) -> ::sandbox_runtime_command::CommandTranscriptWindow {
+        ::sandbox_runtime_command::transcript_window(self.transcript_path.as_deref(), offset, limit)
     }
 }
 
@@ -15,13 +19,17 @@ impl RetainedCommandTranscript {
         command_session_id: &CommandSessionId,
         offset: u64,
         limit: usize,
-    ) -> Result<::command::CommandTranscriptWindow, CommandServiceError> {
-        ::command::required_transcript_window(self.transcript_path.as_deref(), offset, limit)
-            .map_err(|error| CommandServiceError::CommandTranscriptUnavailable {
-                command_session_id: command_session_id.clone(),
-                path: self.transcript_path.clone(),
-                error,
-            })
+    ) -> Result<::sandbox_runtime_command::CommandTranscriptWindow, CommandServiceError> {
+        ::sandbox_runtime_command::required_transcript_window(
+            self.transcript_path.as_deref(),
+            offset,
+            limit,
+        )
+        .map_err(|error| CommandServiceError::CommandTranscriptUnavailable {
+            command_session_id: command_session_id.clone(),
+            path: self.transcript_path.clone(),
+            error,
+        })
     }
 }
 
@@ -34,7 +42,7 @@ pub(crate) trait CommandTranscriptWindowExt {
     ) -> CommandLinesOutput;
 }
 
-impl CommandTranscriptWindowExt for ::command::CommandTranscriptWindow {
+impl CommandTranscriptWindowExt for ::sandbox_runtime_command::CommandTranscriptWindow {
     fn into_output(
         self,
         command_session_id: CommandSessionId,

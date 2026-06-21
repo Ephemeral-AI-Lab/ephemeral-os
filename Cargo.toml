@@ -2,16 +2,16 @@
 resolver = "2"
 members = [
     "crates/sandbox-runtime/operation",
-    "crates/daemon/command",
-    "crates/daemon/config",
+    "crates/sandbox-runtime/command",
+    "crates/sandbox-runtime/config",
     "crates/sandbox-daemon",
     "crates/sandbox-manager",
     "crates/sandbox-gateway-cli",
     "crates/sandbox-protocol",
-    "crates/daemon/workspace",
-    "crates/daemon/namespace-process",
-    "crates/daemon/layerstack",
-    "crates/daemon/overlay",
+    "crates/sandbox-runtime/workspace",
+    "crates/sandbox-runtime/namespace-process",
+    "crates/sandbox-runtime/layerstack",
+    "crates/sandbox-runtime/overlay",
     "xtask",
 ]
 
@@ -26,8 +26,9 @@ license = "MIT"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_path_to_error = "0.1"
-# YAML parser boundary. Only `crates/daemon/config/src/yaml.rs` may use this dependency
-# directly; callers stay behind `ConfigDocument` and typed section schemas.
+# YAML parser boundary. Only `crates/sandbox-runtime/config/src/yaml.rs` may use
+# this dependency directly; callers stay behind `ConfigDocument` and typed
+# section schemas.
 serde_yaml_ng = "0.10"
 sha2 = "0.10"
 prost = "0.13"
@@ -51,18 +52,17 @@ futures-util = "0.3"
 rtnetlink = "0.21"
 netlink-sys = "0.8"
 
-# Internal crates — path deps (the edges below ARE the architecture).
-command = { path = "crates/daemon/command" }
-config = { path = "crates/daemon/config" }
-layerstack = { path = "crates/daemon/layerstack" }
 sandbox-runtime = { path = "crates/sandbox-runtime/operation" }
+sandbox-runtime-command = { path = "crates/sandbox-runtime/command" }
+sandbox-runtime-config = { path = "crates/sandbox-runtime/config" }
+sandbox-runtime-layerstack = { path = "crates/sandbox-runtime/layerstack" }
+sandbox-runtime-namespace-process = { path = "crates/sandbox-runtime/namespace-process" }
+sandbox-runtime-overlay = { path = "crates/sandbox-runtime/overlay" }
+sandbox-runtime-workspace = { path = "crates/sandbox-runtime/workspace" }
 sandbox-manager = { path = "crates/sandbox-manager" }
 sandbox-gateway-cli = { path = "crates/sandbox-gateway-cli" }
 sandbox-protocol = { path = "crates/sandbox-protocol" }
-overlay = { path = "crates/daemon/overlay" }
-namespace-process = { path = "crates/daemon/namespace-process" }
 sandbox-daemon = { path = "crates/sandbox-daemon" }
-workspace = { path = "crates/daemon/workspace" }
 xtask = { path = "xtask" }
 
 [workspace.lints.clippy]

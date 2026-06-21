@@ -4,15 +4,15 @@ use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use command::process::{
-    CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec,
-};
-use command::yield_wait_loop::WaitOutcome;
 use sandbox_runtime::command::{
     CommandLaunchDriver, CommandServiceError, CommandSessionId, CommandStatus, CommandStream,
     CommandTranscriptRow, ExecCommandInput, PollCommandInput, ReadCommandLinesInput,
 };
-use workspace::{WorkspaceEntry, WorkspaceProfile};
+use sandbox_runtime_command::process::{
+    CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec,
+};
+use sandbox_runtime_command::yield_wait_loop::WaitOutcome;
+use sandbox_runtime_workspace::{WorkspaceEntry, WorkspaceProfile};
 
 use support::{
     build_services_with_launch_driver, create_request, success_exit, workspace_handle,
@@ -69,7 +69,7 @@ impl CommandLaunchDriver for TranscriptLaunchDriver {
         &self,
         spec: CommandProcessSpec,
         workspace_entry: WorkspaceEntry,
-        config: &command::CommandConfig,
+        config: &sandbox_runtime_command::CommandConfig,
     ) -> Result<CommandProcess, CommandServiceError> {
         let parts =
             CommandProcessSpawn::prepare(&spec.id, workspace_entry, config).map_err(|error| {
@@ -117,7 +117,7 @@ impl CommandLaunchDriver for MissingTranscriptLaunchDriver {
         &self,
         spec: CommandProcessSpec,
         workspace_entry: WorkspaceEntry,
-        config: &command::CommandConfig,
+        config: &sandbox_runtime_command::CommandConfig,
     ) -> Result<CommandProcess, CommandServiceError> {
         let parts =
             CommandProcessSpawn::prepare(&spec.id, workspace_entry, config).map_err(|error| {

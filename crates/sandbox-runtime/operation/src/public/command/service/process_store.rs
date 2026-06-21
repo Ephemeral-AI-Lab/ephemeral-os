@@ -102,7 +102,7 @@ impl CommandProcessStore {
     pub(crate) fn active_process(
         &self,
         command_session_id: &CommandSessionId,
-    ) -> Option<Arc<::command::CommandProcess>> {
+    ) -> Option<Arc<::sandbox_runtime_command::CommandProcess>> {
         lock(&self.active)
             .get(command_session_id)
             .map(|active| Arc::clone(&active.process))
@@ -237,7 +237,7 @@ pub struct ActiveCommandProcess {
     pub command_session_id: CommandSessionId,
     pub workspace_session_id: WorkspaceSessionId,
     pub workspace_root: PathBuf,
-    pub process: Arc<::command::CommandProcess>,
+    pub process: Arc<::sandbox_runtime_command::CommandProcess>,
     pub transcript: CommandTranscriptStore,
     pub lifecycle_state: CommandLifecycleState,
     pub cancellation: CancellationState,

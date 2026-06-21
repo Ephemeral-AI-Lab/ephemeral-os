@@ -1,6 +1,6 @@
 use crate::workspace_crate::WorkspaceSessionId;
 
-pub use command::{CommandStream, CommandTranscriptRow};
+pub use sandbox_runtime_command::{CommandStream, CommandTranscriptRow};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct CommandSessionId(pub String);

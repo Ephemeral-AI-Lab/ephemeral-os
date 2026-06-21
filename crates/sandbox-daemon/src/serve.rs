@@ -5,11 +5,11 @@ use std::process::{Command, Stdio};
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
-use config::configs::{
+use sandbox_runtime_config::configs::{
     daemon::{DaemonConfig, DaemonServerConfig},
     isolated::IsolatedNetworkConfig,
 };
-use config::ConfigPath;
+use sandbox_runtime_config::ConfigPath;
 
 const DAEMON_AUTH_TOKEN_ENV: &str = "EOS_DAEMON_AUTH_TOKEN";
 const DAEMON_CONFIG_YAML_ENV: &str = "EOS_DAEMON_CONFIG_YAML";
@@ -63,8 +63,11 @@ fn build_runtime_operations(
     config: &DaemonRuntimeConfig,
 ) -> sandbox_runtime::SandboxRuntimeOperations {
     let caps = workspace_resource_caps(&config.isolated);
-    let workspace_runtime = Arc::new(workspace::WorkspaceRuntimeService::new(
-        workspace::profile::WorkspaceModeManager::new(caps, config.isolated.scratch_root.clone()),
+    let workspace_runtime = Arc::new(sandbox_runtime_workspace::WorkspaceRuntimeService::new(
+        sandbox_runtime_workspace::profile::WorkspaceModeManager::new(
+            caps,
+            config.isolated.scratch_root.clone(),
+        ),
     ));
     let workspace_session = Arc::new(
         sandbox_runtime::workspace_session::WorkspaceSessionService::new(workspace_runtime),
@@ -76,8 +79,10 @@ fn build_runtime_operations(
     sandbox_runtime::SandboxRuntimeOperations::new(command)
 }
 
-fn workspace_resource_caps(config: &IsolatedNetworkConfig) -> workspace::profile::ResourceCaps {
-    workspace::profile::ResourceCaps {
+fn workspace_resource_caps(
+    config: &IsolatedNetworkConfig,
+) -> sandbox_runtime_workspace::profile::ResourceCaps {
+    sandbox_runtime_workspace::profile::ResourceCaps {
         ttl_s: config.ttl_s,
         total_cap: config.total_cap,
         upperdir_bytes: config.upperdir_bytes,
@@ -85,11 +90,11 @@ fn workspace_resource_caps(config: &IsolatedNetworkConfig) -> workspace::profile
         setup_timeout_s: config.setup_timeout_s,
         exit_grace_s: config.exit_grace_s,
         rfc1918_egress: match config.rfc1918_egress {
-            config::configs::isolated::Rfc1918Egress::Allow => {
-                workspace::profile::Rfc1918Egress::Allow
+            sandbox_runtime_config::configs::isolated::Rfc1918Egress::Allow => {
+                sandbox_runtime_workspace::profile::Rfc1918Egress::Allow
             }
-            config::configs::isolated::Rfc1918Egress::Deny => {
-                workspace::profile::Rfc1918Egress::Deny
+            sandbox_runtime_config::configs::isolated::Rfc1918Egress::Deny => {
+                sandbox_runtime_workspace::profile::Rfc1918Egress::Deny
             }
         },
         fallback_dns: config.fallback_dns.clone(),
@@ -97,17 +102,20 @@ fn workspace_resource_caps(config: &IsolatedNetworkConfig) -> workspace::profile
     }
 }
 
-fn command_config(config: &config::configs::daemon::CommandConfig) -> command::CommandConfig {
-    command::CommandConfig {
+fn command_config(
+    config: &sandbox_runtime_config::configs::daemon::CommandConfig,
+) -> sandbox_runtime_command::CommandConfig {
+    sandbox_runtime_command::CommandConfig {
         scratch_root: config.scratch_root.clone(),
     }
 }
 
 fn load_runtime_config(path: Option<&Path>) -> Result<DaemonRuntimeConfig> {
     let doc = if let Some(path) = path {
-        config::load_path(path).with_context(|| format!("load daemon config {}", path.display()))?
+        sandbox_runtime_config::load_path(path)
+            .with_context(|| format!("load daemon config {}", path.display()))?
     } else {
-        config::load_prd().context("load eos-sandbox/config/prd.yml")?
+        sandbox_runtime_config::load_prd().context("load eos-sandbox/config/prd.yml")?
     };
     let daemon = doc
         .section::<DaemonConfig>("daemon")

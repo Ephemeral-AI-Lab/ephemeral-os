@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
 
-pub(crate) extern crate workspace as workspace_crate;
+pub(crate) extern crate sandbox_runtime_workspace as workspace_crate;
 
 mod internal;
 pub mod operation;

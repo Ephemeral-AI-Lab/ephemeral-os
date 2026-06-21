@@ -3,13 +3,13 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
-use command::process::{
-    CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec,
-};
-use command::yield_wait_loop::WaitOutcome;
 use sandbox_runtime::command::{CommandLaunchDriver, CommandOperationService, CommandServiceError};
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
-use workspace::{
+use sandbox_runtime_command::process::{
+    CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec,
+};
+use sandbox_runtime_command::yield_wait_loop::WaitOutcome;
+use sandbox_runtime_workspace::{
     CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LatestSnapshotRequest, LayerStackSnapshotRef,
     LeaseId, ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult,
@@ -82,7 +82,7 @@ impl CommandLaunchDriver for FakeLaunchDriver {
         &self,
         spec: CommandProcessSpec,
         workspace_entry: WorkspaceEntry,
-        config: &command::CommandConfig,
+        config: &sandbox_runtime_command::CommandConfig,
     ) -> Result<CommandProcess, CommandServiceError> {
         if let Some(error) = self
             .spawn_errors
@@ -350,8 +350,8 @@ pub fn success_exit(stdout: &str) -> CommandProcessExit {
     }
 }
 
-fn test_command_config() -> command::CommandConfig {
-    command::CommandConfig {
+fn test_command_config() -> sandbox_runtime_command::CommandConfig {
+    sandbox_runtime_command::CommandConfig {
         scratch_root: std::env::temp_dir().join(format!(
             "operation-service-command-test-{}-{}",
             std::process::id(),

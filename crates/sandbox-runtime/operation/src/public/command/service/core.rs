@@ -8,7 +8,7 @@ use crate::workspace_session::WorkspaceSessionService;
 
 pub struct CommandOperationService {
     workspace: Arc<WorkspaceSessionService>,
-    config: ::command::CommandConfig,
+    config: ::sandbox_runtime_command::CommandConfig,
     process_store: Arc<CommandProcessStore>,
     launch_driver: Arc<dyn CommandLaunchDriver>,
     remount_controller: Arc<dyn ProcessGroupController>,
@@ -17,7 +17,10 @@ pub struct CommandOperationService {
 
 impl CommandOperationService {
     #[must_use]
-    pub fn new(workspace: Arc<WorkspaceSessionService>, config: ::command::CommandConfig) -> Self {
+    pub fn new(
+        workspace: Arc<WorkspaceSessionService>,
+        config: ::sandbox_runtime_command::CommandConfig,
+    ) -> Self {
         Self::from_parts(
             workspace,
             config,
@@ -30,7 +33,7 @@ impl CommandOperationService {
     #[must_use]
     pub fn with_launch_driver_for_test(
         workspace: Arc<WorkspaceSessionService>,
-        config: ::command::CommandConfig,
+        config: ::sandbox_runtime_command::CommandConfig,
         launch_driver: Arc<dyn CommandLaunchDriver>,
     ) -> Self {
         Self::from_parts(
@@ -45,7 +48,7 @@ impl CommandOperationService {
     #[must_use]
     pub fn with_launch_driver_and_remount_controller_for_test(
         workspace: Arc<WorkspaceSessionService>,
-        config: ::command::CommandConfig,
+        config: ::sandbox_runtime_command::CommandConfig,
         launch_driver: Arc<dyn CommandLaunchDriver>,
         remount_controller: Arc<dyn ProcessGroupController>,
     ) -> Self {
@@ -54,7 +57,7 @@ impl CommandOperationService {
 
     fn from_parts(
         workspace: Arc<WorkspaceSessionService>,
-        config: ::command::CommandConfig,
+        config: ::sandbox_runtime_command::CommandConfig,
         launch_driver: Arc<dyn CommandLaunchDriver>,
         remount_controller: Arc<dyn ProcessGroupController>,
     ) -> Self {
@@ -74,7 +77,7 @@ impl CommandOperationService {
     }
 
     #[must_use]
-    pub fn config(&self) -> &::command::CommandConfig {
+    pub fn config(&self) -> &::sandbox_runtime_command::CommandConfig {
         &self.config
     }
 

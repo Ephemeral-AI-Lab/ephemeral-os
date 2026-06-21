@@ -72,7 +72,9 @@ impl CommandOperationService {
                     let completed = self.completed_command(&command_session_id)?;
                     let stdout = input.last_n_lines.map_or_else(
                         || result.stdout.clone(),
-                        |last_n_lines| ::command::tail_lines(&result.stdout, last_n_lines),
+                        |last_n_lines| {
+                            ::sandbox_runtime_command::tail_lines(&result.stdout, last_n_lines)
+                        },
                     );
                     return Ok(CommandPollOutput {
                         command_session_id,
@@ -98,7 +100,9 @@ impl CommandOperationService {
         let completed = self.completed_command(&command_session_id)?;
         let stdout = input.last_n_lines.map_or_else(
             || completed.result.stdout.clone(),
-            |last_n_lines| ::command::tail_lines(&completed.result.stdout, last_n_lines),
+            |last_n_lines| {
+                ::sandbox_runtime_command::tail_lines(&completed.result.stdout, last_n_lines)
+            },
         );
         Ok(CommandPollOutput {
             command_session_id,

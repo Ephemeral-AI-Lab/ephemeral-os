@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use config::configs::daemon::DaemonServerConfig;
+use sandbox_runtime_config::configs::daemon::DaemonServerConfig;
 
 use crate::serve_cli::{daemon_config_path_arg, DaemonCliConfig};
 

@@ -8,7 +8,7 @@ use sandbox_runtime::command::{
     CommandStatus, CommandTerminalResult, CommandTranscriptStore, CompletedCommandRecord,
     FinalizationState, RetainedCommandTranscript,
 };
-use workspace::WorkspaceSessionId;
+use sandbox_runtime_workspace::WorkspaceSessionId;
 
 fn command_session_id(id: &str) -> CommandSessionId {
     CommandSessionId(id.to_owned())
@@ -18,13 +18,17 @@ fn workspace_session_id(id: &str) -> WorkspaceSessionId {
     WorkspaceSessionId(id.to_owned())
 }
 
-fn inactive_process(command_session_id: &CommandSessionId) -> command::CommandProcess {
-    command::CommandProcess::inactive_for_test(command::CommandProcessSpec {
-        id: command_session_id.0.clone(),
-        command: "echo ok".to_owned(),
-        cwd: None,
-        timeout_seconds: None,
-    })
+fn inactive_process(
+    command_session_id: &CommandSessionId,
+) -> sandbox_runtime_command::CommandProcess {
+    sandbox_runtime_command::CommandProcess::inactive_for_test(
+        sandbox_runtime_command::CommandProcessSpec {
+            id: command_session_id.0.clone(),
+            command: "echo ok".to_owned(),
+            cwd: None,
+            timeout_seconds: None,
+        },
+    )
 }
 
 fn active_record(

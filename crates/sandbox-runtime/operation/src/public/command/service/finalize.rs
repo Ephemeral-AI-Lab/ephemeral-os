@@ -20,7 +20,7 @@ impl CommandOperationService {
     pub(crate) fn finalize_command(
         &self,
         command_session_id: CommandSessionId,
-        process_exit: ::command::process::CommandProcessExit,
+        process_exit: ::sandbox_runtime_command::process::CommandProcessExit,
     ) -> Result<CommandTerminalResult, CommandServiceError> {
         let record = self.begin_finalization(&command_session_id)?;
         let result = terminal_result(&process_exit);
@@ -42,7 +42,7 @@ impl CommandOperationService {
     fn finalize_session_command(
         &self,
         _record: &ActiveFinalizationRecord,
-        _process_exit: &::command::process::CommandProcessExit,
+        _process_exit: &::sandbox_runtime_command::process::CommandProcessExit,
     ) -> Result<CommandFinalizedMetadata, CommandServiceError> {
         Ok(CommandFinalizedMetadata)
     }
@@ -141,7 +141,9 @@ impl CommandOperationService {
     }
 }
 
-fn terminal_result(process_exit: &::command::process::CommandProcessExit) -> CommandTerminalResult {
+fn terminal_result(
+    process_exit: &::sandbox_runtime_command::process::CommandProcessExit,
+) -> CommandTerminalResult {
     CommandTerminalResult {
         status: if process_exit_succeeded(process_exit) {
             CommandStatus::Completed
@@ -153,7 +155,9 @@ fn terminal_result(process_exit: &::command::process::CommandProcessExit) -> Com
     }
 }
 
-fn process_exit_succeeded(process_exit: &::command::process::CommandProcessExit) -> bool {
+fn process_exit_succeeded(
+    process_exit: &::sandbox_runtime_command::process::CommandProcessExit,
+) -> bool {
     process_exit.kill.is_none() && process_exit.exit_code == 0
 }
 

@@ -7,9 +7,9 @@
 //!
 //! - `sandbox-daemon serve` -> the async RPC server in `sandbox_daemon`.
 //! - `sandbox-daemon ns-runner` -> the single-threaded namespace runner in
-//!   `namespace_process::runner`.
+//!   `sandbox_runtime_namespace_process::runner`.
 //! - `sandbox-daemon ns-holder` -> the single-threaded namespace holder in
-//!   `namespace_process::holder`.
+//!   `sandbox_runtime_namespace_process::holder`.
 //!
 //! Three real processes, one static binary. This is the launcher chain:
 //! `serve` owns the RPC server, `ns-runner` owns setns command execution,
@@ -27,7 +27,7 @@
 //! [`std::process::exit`]:
 //! - ns-holder: `1` (control pipe closed), `2` (unexpected token), `7` (test
 //!   crash knob) —
-//!   `namespace_process::holder::NsHolderError::{CONTROL_CLOSED_EXIT,
+//!   `sandbox_runtime_namespace_process::holder::NsHolderError::{CONTROL_CLOSED_EXIT,
 //!   UNEXPECTED_TOKEN_EXIT, TEST_CRASH_EXIT}`.
 #![forbid(unsafe_code)]
 
