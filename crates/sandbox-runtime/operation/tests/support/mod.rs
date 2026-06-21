@@ -27,7 +27,9 @@ pub(crate) struct TestServices {
 #[derive(Default)]
 pub(crate) struct FakeWorkspaceService {
     create_results: Mutex<VecDeque<Result<WorkspaceHandle, WorkspaceError>>>,
+    capture_results: Mutex<VecDeque<Result<CapturedWorkspaceChanges, WorkspaceError>>>,
     create_requests: Mutex<Vec<CreateWorkspaceRequest>>,
+    capture_calls: Mutex<Vec<WorkspaceSessionId>>,
     destroy_calls: Mutex<Vec<WorkspaceSessionId>>,
 }
 
@@ -45,7 +47,6 @@ pub(crate) struct SpawnObservation {
     pub(crate) spec_cwd: Option<PathBuf>,
     pub(crate) spec_timeout_seconds: Option<f64>,
     pub(crate) workspace_entry: WorkspaceEntry,
-    pub(crate) request_path: PathBuf,
     pub(crate) output_path: PathBuf,
     pub(crate) final_path: PathBuf,
     pub(crate) transcript_path: PathBuf,
@@ -109,7 +110,6 @@ impl CommandLaunchDriver for FakeLaunchDriver {
                 spec_cwd: spec.cwd.clone(),
                 spec_timeout_seconds: spec.timeout_seconds,
                 workspace_entry: parts.workspace_entry.clone(),
-                request_path: parts.request_path.clone(),
                 output_path: parts.output_path.clone(),
                 final_path: parts.final_path.clone(),
                 transcript_path: parts.transcript_path.clone(),
@@ -148,6 +148,16 @@ impl FakeWorkspaceService {
             .push_back(result);
     }
 
+    pub(crate) fn push_capture_result(
+        &self,
+        result: Result<CapturedWorkspaceChanges, WorkspaceError>,
+    ) {
+        self.capture_results
+            .lock()
+            .expect("test operation succeeds")
+            .push_back(result);
+    }
+
     pub(crate) fn create_requests(&self) -> Vec<CreateWorkspaceRequest> {
         self.create_requests
             .lock()
@@ -157,6 +167,13 @@ impl FakeWorkspaceService {
 
     pub(crate) fn destroy_calls(&self) -> Vec<WorkspaceSessionId> {
         self.destroy_calls
+            .lock()
+            .expect("test operation succeeds")
+            .clone()
+    }
+
+    pub(crate) fn capture_calls(&self) -> Vec<WorkspaceSessionId> {
+        self.capture_calls
             .lock()
             .expect("test operation succeeds")
             .clone()
@@ -185,12 +202,22 @@ impl FakeWorkspaceService {
 
     fn capture_changes(
         &self,
-        _handle: &WorkspaceHandle,
+        handle: &WorkspaceHandle,
         _request: CaptureChangesRequest,
     ) -> Result<CapturedWorkspaceChanges, WorkspaceError> {
-        Err(WorkspaceError::Capture {
-            message: "capture result not configured".to_owned(),
-        })
+        self.capture_calls
+            .lock()
+            .expect("test operation succeeds")
+            .push(handle.id.clone());
+        self.capture_results
+            .lock()
+            .expect("test operation succeeds")
+            .pop_front()
+            .unwrap_or_else(|| {
+                Err(WorkspaceError::Capture {
+                    message: "capture result not configured".to_owned(),
+                })
+            })
     }
 
     fn remount_workspace(
@@ -262,6 +289,23 @@ pub(crate) fn build_services_with_launch_driver(
         test_command_config(),
         launch_driver,
     ));
+    TestServices { workspace, command }
+}
+
+pub(crate) fn build_services_with_launch_driver_and_layerstack(
+    fake: Arc<FakeWorkspaceService>,
+    launch_driver: Arc<dyn CommandLaunchDriver>,
+    layerstack: Arc<sandbox_runtime::layerstack::LayerStackService>,
+) -> TestServices {
+    let workspace = Arc::new(WorkspaceSessionService::new(fake_workspace_runtime(fake)));
+    let command = Arc::new(
+        CommandOperationService::with_launch_driver_and_layerstack_for_test(
+            Arc::clone(&workspace),
+            layerstack,
+            test_command_config(),
+            launch_driver,
+        ),
+    );
     TestServices { workspace, command }
 }
 
@@ -366,8 +410,21 @@ fn test_snapshot(lease_id: &str) -> LayerStackSnapshotRef {
         lease_id: LeaseId(lease_id.to_owned()),
         manifest_version: 1,
         root_hash: "root".to_owned(),
+        manifest: test_manifest(),
         layer_paths: vec![PathBuf::from("/lower/one")],
     }
+}
+
+pub(crate) fn test_manifest() -> sandbox_runtime_layerstack::Manifest {
+    sandbox_runtime_layerstack::Manifest::new(
+        1,
+        vec![sandbox_runtime_layerstack::LayerRef {
+            layer_id: "L000001-test".to_owned(),
+            path: "layers/L000001-test".to_owned(),
+        }],
+        sandbox_runtime_layerstack::MANIFEST_SCHEMA_VERSION,
+    )
+    .expect("test manifest is valid")
 }
 
 fn unique_suffix() -> u64 {

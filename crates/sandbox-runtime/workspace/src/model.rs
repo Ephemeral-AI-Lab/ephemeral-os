@@ -52,6 +52,7 @@ pub struct LayerStackSnapshotRef {
     pub lease_id: LeaseId,
     pub manifest_version: i64,
     pub root_hash: String,
+    pub manifest: sandbox_runtime_layerstack::Manifest,
     pub layer_paths: Vec<PathBuf>,
 }
 
@@ -61,6 +62,7 @@ impl fmt::Debug for LayerStackSnapshotRef {
             .field("lease_id", &self.lease_id)
             .field("manifest_version", &self.manifest_version)
             .field("root_hash", &self.root_hash)
+            .field("manifest_layer_count", &self.manifest.layers.len())
             .field("layer_count", &self.layer_paths.len())
             .finish()
     }
@@ -83,6 +85,7 @@ impl From<sandbox_runtime_layerstack::service::LeasedSnapshot> for LayerStackSna
             lease_id: LeaseId(snapshot.lease_id),
             manifest_version: snapshot.manifest_version,
             root_hash: snapshot.root_hash,
+            manifest: snapshot.manifest,
             layer_paths: snapshot.layer_paths,
         }
     }
@@ -429,6 +432,7 @@ pub struct ProtectedPathDrop {
 pub struct CapturedWorkspaceChanges {
     pub workspace_session_id: WorkspaceSessionId,
     pub base_revision: BaseRevision,
+    pub base_manifest: sandbox_runtime_layerstack::Manifest,
     pub changed_paths: Vec<String>,
     pub changed_path_kinds: BTreeMap<String, ChangedPathKind>,
     pub protected_drops: Vec<ProtectedPathDrop>,
@@ -484,6 +488,7 @@ impl From<&WorkspaceModeHandle> for WorkspaceHandle {
                 lease_id: LeaseId(handle.lease_id.clone()),
                 manifest_version: handle.manifest_version,
                 root_hash: handle.manifest_root_hash.clone(),
+                manifest: handle.base_manifest.clone(),
                 layer_paths: handle.layer_paths.clone(),
             },
             launch: Some(WorkspaceLaunchContext {

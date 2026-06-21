@@ -1,11 +1,15 @@
 use std::time::Instant;
 
 use crate::command::{
-    CommandFinalizedMetadata, CommandLifecycleState, CommandServiceError, CommandSessionId,
-    CommandStatus, CommandTerminalResult, CommandTranscriptStore, CompletedCommandRecord,
-    FinalizationState, RetainedCommandTranscript,
+    CommandFinalizedMetadata, CommandLifecycleState, CommandPublishFinalization,
+    CommandPublishStatus, CommandServiceError, CommandSessionId, CommandStatus,
+    CommandTerminalResult, CommandTranscriptStore, CompletedCommandRecord, FinalizationState,
+    RetainedCommandTranscript,
 };
-use crate::workspace_crate::WorkspaceSessionId;
+use crate::layerstack::{LayerStackRevision, PublishChangesRequest, PublishChangesResult};
+use crate::workspace_crate::{
+    BaseRevision, CaptureChangesRequest, ProtectedPathDropReason, WorkspaceSessionId,
+};
 
 use super::CommandOperationService;
 
@@ -29,22 +33,76 @@ impl CommandOperationService {
         let finalized = match finalized {
             Ok(finalized) => finalized,
             Err(error) => {
-                return self.fail_finalization(&command_session_id, error.to_string());
+                let retained = rejected_publish_metadata(&error);
+                return self.fail_finalization(&command_session_id, error.to_string(), retained);
             }
         };
 
         match self.complete_finalized_command(record, result.clone(), finalized) {
             Ok(()) => Ok(result),
-            Err(error) => self.fail_finalization(&command_session_id, error.to_string()),
+            Err(error) => self.fail_finalization(&command_session_id, error.to_string(), None),
         }
     }
 
     fn finalize_session_command(
         &self,
-        _record: &ActiveFinalizationRecord,
-        _process_exit: &::sandbox_runtime_command::process::CommandProcessExit,
+        record: &ActiveFinalizationRecord,
+        process_exit: &::sandbox_runtime_command::process::CommandProcessExit,
     ) -> Result<CommandFinalizedMetadata, CommandServiceError> {
-        Ok(CommandFinalizedMetadata)
+        if !process_exit_succeeded(process_exit) {
+            return Ok(CommandFinalizedMetadata {
+                publish: Some(CommandPublishFinalization {
+                    status: CommandPublishStatus::Skipped,
+                    rejection: None,
+                    revision: None,
+                    layer_paths: Vec::new(),
+                }),
+            });
+        }
+        let Some(layerstack) = self.layerstack() else {
+            return Ok(CommandFinalizedMetadata {
+                publish: Some(CommandPublishFinalization {
+                    status: CommandPublishStatus::Skipped,
+                    rejection: None,
+                    revision: None,
+                    layer_paths: Vec::new(),
+                }),
+            });
+        };
+
+        let handler = self
+            .workspace()
+            .resolve_session(record.workspace_session_id.clone())?;
+        let captured = self.workspace().capture_session_changes(
+            &handler,
+            CaptureChangesRequest {
+                include_stats: false,
+            },
+        )?;
+        let request = PublishChangesRequest {
+            expected_base: LayerStackRevision {
+                manifest_version: captured.base_revision.version,
+                root_hash: captured.base_revision.root_hash.clone(),
+                layer_count: captured.base_revision.layer_count,
+            },
+            base_manifest: captured.base_manifest,
+            protected_drops: captured
+                .protected_drops
+                .into_iter()
+                .map(layer_protected_drop)
+                .collect(),
+            changes: captured.changes,
+        };
+        let published = layerstack.publish_changes(request)?;
+        self.workspace().refresh_after_publish(
+            record.workspace_session_id.clone(),
+            base_revision_from_layerstack(&published.revision),
+            published.manifest.clone(),
+            published.layer_paths.clone(),
+        )?;
+        Ok(CommandFinalizedMetadata {
+            publish: Some(command_publish_finalization(published)),
+        })
     }
 
     fn begin_finalization(
@@ -61,7 +119,7 @@ impl CommandOperationService {
             return Err(CommandServiceError::CommandFinalizationFailed {
                 command_session_id: command_session_id.clone(),
                 error: error.clone(),
-                finalized: finalized.clone().map(Box::new),
+                finalized: finalized.clone(),
             });
         }
         let record = ActiveFinalizationRecord {
@@ -121,15 +179,18 @@ impl CommandOperationService {
         &self,
         command_session_id: &CommandSessionId,
         error: String,
+        finalized_override: Option<CommandFinalizedMetadata>,
     ) -> Result<T, CommandServiceError> {
         let finalized = self
             .process_store()
             .update_active(command_session_id, |active| {
-                let finalized = retained_finalized_metadata(&active.finalization);
+                let finalized = finalized_override
+                    .clone()
+                    .or_else(|| retained_finalized_metadata(&active.finalization));
                 active.lifecycle_state = CommandLifecycleState::FinalizationFailed;
                 active.finalization = FinalizationState::Failed {
                     error: error.clone(),
-                    finalized: finalized.clone(),
+                    finalized: finalized.clone().map(Box::new),
                 };
                 finalized
             });
@@ -139,6 +200,61 @@ impl CommandOperationService {
             finalized: finalized.flatten().map(Box::new),
         })
     }
+}
+
+fn layer_protected_drop(
+    drop: crate::workspace_crate::ProtectedPathDrop,
+) -> sandbox_runtime_layerstack::LayerProtectedDrop {
+    sandbox_runtime_layerstack::LayerProtectedDrop {
+        path: drop.path,
+        reason: match drop.reason {
+            ProtectedPathDropReason::UnsupportedSpecialFile => {
+                sandbox_runtime_layerstack::LayerProtectedDropReason::UnsupportedSpecialFile
+            }
+            ProtectedPathDropReason::InvalidLayerPath => {
+                sandbox_runtime_layerstack::LayerProtectedDropReason::InvalidLayerPath
+            }
+        },
+    }
+}
+
+fn base_revision_from_layerstack(revision: &LayerStackRevision) -> BaseRevision {
+    BaseRevision {
+        version: revision.manifest_version,
+        root_hash: revision.root_hash.clone(),
+        layer_count: revision.layer_count,
+    }
+}
+
+fn command_publish_finalization(published: PublishChangesResult) -> CommandPublishFinalization {
+    CommandPublishFinalization {
+        status: if published.no_op {
+            CommandPublishStatus::NoOp
+        } else {
+            CommandPublishStatus::Published
+        },
+        rejection: None,
+        revision: Some(published.revision),
+        layer_paths: published.layer_paths,
+    }
+}
+
+fn rejected_publish_metadata(error: &CommandServiceError) -> Option<CommandFinalizedMetadata> {
+    let CommandServiceError::LayerStack(error) = error else {
+        return None;
+    };
+    let crate::layerstack::LayerStackServiceError::PublishRejected { rejection } = error.as_ref()
+    else {
+        return None;
+    };
+    Some(CommandFinalizedMetadata {
+        publish: Some(CommandPublishFinalization {
+            status: CommandPublishStatus::Rejected,
+            rejection: Some(rejection.clone()),
+            revision: None,
+            layer_paths: Vec::new(),
+        }),
+    })
 }
 
 fn terminal_result(
@@ -163,7 +279,9 @@ fn process_exit_succeeded(
 
 fn retained_finalized_metadata(state: &FinalizationState) -> Option<CommandFinalizedMetadata> {
     match state {
-        FinalizationState::Failed { finalized, .. } => finalized.clone(),
+        FinalizationState::Failed { finalized, .. } => {
+            finalized.as_ref().map(|metadata| metadata.as_ref().clone())
+        }
         FinalizationState::NotStarted
         | FinalizationState::InProgress
         | FinalizationState::Complete => None,

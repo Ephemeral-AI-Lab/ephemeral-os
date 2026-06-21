@@ -306,6 +306,7 @@ fn workspace_handle_with_profile(
         lease_id: LeaseId(lease_id.to_owned()),
         manifest_version: 1,
         root_hash: "root".to_owned(),
+        manifest: test_manifest(),
         layer_paths: vec![PathBuf::from("/lower/one")],
     };
     WorkspaceHandle::holder_backed_for_test(
@@ -317,6 +318,18 @@ fn workspace_handle_with_profile(
         PathBuf::from("/tmp/command-remount-work"),
         None,
     )
+}
+
+fn test_manifest() -> sandbox_runtime_layerstack::Manifest {
+    sandbox_runtime_layerstack::Manifest::new(
+        1,
+        vec![sandbox_runtime_layerstack::LayerRef {
+            layer_id: "L000001-test".to_owned(),
+            path: "layers/L000001-test".to_owned(),
+        }],
+        sandbox_runtime_layerstack::MANIFEST_SCHEMA_VERSION,
+    )
+    .expect("test manifest is valid")
 }
 
 fn create_session_and_command() -> (

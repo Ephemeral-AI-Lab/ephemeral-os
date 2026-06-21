@@ -271,7 +271,7 @@ pub(crate) enum FinalizationState {
     Complete,
     Failed {
         error: String,
-        finalized: Option<CommandFinalizedMetadata>,
+        finalized: Option<Box<CommandFinalizedMetadata>>,
     },
 }
 

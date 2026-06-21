@@ -209,7 +209,9 @@ Dependencies:
 - Forbidden: `sandbox-protocol`, `sandbox-manager`, `sandbox-gateway`,
   `sandbox-daemon`, `sandbox-runtime-layerstack`.
 
-Keep `command-request.json` until a replacement such as `--request-fd` exists.
+Command runner requests are passed to `ns-runner` through an inherited
+`--request-fd`; command artifacts stay limited to runner result, final response,
+and transcript files.
 
 Verification:
 

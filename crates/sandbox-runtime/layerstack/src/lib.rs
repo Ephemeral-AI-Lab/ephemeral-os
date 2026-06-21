@@ -15,6 +15,11 @@ pub use model::{
 };
 
 pub use error::LayerStackError;
+pub use stack::publish::model::{
+    ContentFingerprint, LayerProtectedDrop, LayerProtectedDropReason, PublishBase,
+    PublishBaseRevision, PublishReject, PublishRejectReason, PublishRouteSummary,
+    PublishValidatedChangesRequest, PublishValidatedChangesResult, SourceConflict,
+};
 pub use stack::reclaim_unpinned_layers::{
     LeaseParentCompactionOutcome, ReclaimUnpinnedLayersCopyThroughOutcome,
     ReclaimUnpinnedLayersOutcome,

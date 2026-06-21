@@ -84,17 +84,22 @@ The catalog family model should be visible in the operation implementation tree.
 Do not leave manager operations as one flat `impls/` directory after this
 change.
 
-Target manager layout:
+Resulting manager operation layout, measured from the current checkout with
+`wc -l`:
 
 ```text
-crates/sandbox-manager/src/operation/impls/
-  mod.rs
-  management/
-    mod.rs
-    create_sandbox.rs
-    destroy_sandbox.rs
-    list_sandboxes.rs
-    inspect_sandbox.rs
+crates/sandbox-manager/src/operation/                       # 382 LOC
+  mod.rs                                                    #   6 LOC
+  dispatch.rs                                               #  57 LOC
+  specs.rs                                                  #  97 LOC
+  impls/
+    mod.rs                                                  #   7 LOC
+    management/                                             # 215 LOC
+      mod.rs                                                #  72 LOC
+      create_sandbox.rs                                     #  55 LOC
+      destroy_sandbox.rs                                    #  62 LOC
+      inspect_sandbox.rs                                    #  15 LOC
+      list_sandboxes.rs                                     #  11 LOC
 ```
 
 The folder name should map directly to the operation family id:
@@ -103,20 +108,185 @@ The folder name should map directly to the operation family id:
 management -> Management
 ```
 
-`crates/sandbox-manager/src/operation/impls/mod.rs` should become a thin family
+`crates/sandbox-manager/src/operation/impls/mod.rs` should stay a thin family
 aggregator. Each family module owns the operation implementation modules in that
 family and exposes that family's entries/spec references to the manager
 operation dispatcher/catalog builder.
 
-The runtime side should keep its current command lane shape for now:
+The runtime side should keep its current command lane shape for now. This is
+the resulting `Command` family lane, measured from the current checkout with
+`wc -l`:
 
 ```text
-crates/sandbox-runtime/operation/src/public/command/
+crates/sandbox-runtime/operation/src/public/command/         # 1,924 LOC
+  error.rs                                                  #    80 LOC
+  mod.rs                                                    #    24 LOC
+  service.rs                                                #    31 LOC
+  service/
+    contract.rs                                             #    85 LOC
+    core.rs                                                 #   102 LOC
+    finalize.rs                                             #   171 LOC
+    helpers.rs                                              #    72 LOC
+    launch.rs                                               #    62 LOC
+    process_store.rs                                        #   333 LOC
+    status_lookup.rs                                        #    58 LOC
+    transcript.rs                                           #    54 LOC
+    impls/                                                  #   852 LOC
+      mod.rs                                                #   132 LOC
+      exec_command.rs                                       #   316 LOC
+      write_command_stdin.rs                                #   109 LOC
+      poll_command.rs                                       #   117 LOC
+      read_command_lines.rs                                 #    99 LOC
+      cancel_command.rs                                     #    79 LOC
 ```
 
 When future runtime families such as `cgroup_monitor`, `file`, or `plugin` are
 added, they should be added as peer public runtime lanes rather than mixed into
 `public/command`.
+
+The first help implementation should keep its new code close to these existing
+touchpoints. These counts are a planning baseline, not acceptance limits:
+
+```text
+crates/sandbox-protocol/src/
+  operation_spec.rs                                         #  75 LOC
+  catalog.rs                                                # 322 LOC
+  help.rs                                                   # new
+  lib.rs                                                    #  29 LOC
+
+crates/sandbox-protocol/tests/
+  unit.rs                                                   # 243 LOC
+
+crates/sandbox-gateway/src/cli/
+  output.rs                                                 # 239 LOC
+  request_builder.rs                                        # 232 LOC
+
+crates/sandbox-gateway/tests/
+  gateway_cli.rs                                            # 413 LOC
+```
+
+## Family Metadata Ownership
+
+Help metadata is generic after registration, but registration is explicit Rust
+metadata, not filesystem autoloading. Adding a family or operation requires
+adding it to the owning static slice.
+
+Runtime `Command` family ownership:
+
+```text
+crates/sandbox-runtime/operation/src/public/command/mod.rs
+  owns COMMAND_FAMILY
+  exposes operation_families()
+  forwards operation_specs() to service::operation_specs()
+  forwards operation_entries() to service::operation_entries()
+
+crates/sandbox-runtime/operation/src/public/command/service/impls/mod.rs
+  owns the Command operation SPECS slice
+  owns the Command dispatch OPERATIONS slice
+
+crates/sandbox-runtime/operation/src/public/command/service/impls/*.rs
+  each operation module owns its SPEC and dispatch function
+```
+
+Target runtime family shape:
+
+```rust
+pub(crate) const COMMAND_FAMILY: OperationFamilySpec = OperationFamilySpec {
+    id: "command",
+    title: "Command",
+    summary: "Run, interact with, inspect, and cancel commands.",
+    description: "Run, interact with, inspect, and cancel commands inside the active sandbox runtime.",
+};
+
+const FAMILIES: &[&OperationFamilySpec] = &[&COMMAND_FAMILY];
+
+pub(crate) const fn operation_families() -> &'static [&'static OperationFamilySpec] {
+    FAMILIES
+}
+```
+
+Manager `Management` family ownership should mirror runtime command ownership,
+with specs moved into the family implementation modules instead of staying in a
+flat central operation-spec file:
+
+```text
+crates/sandbox-manager/src/operation/impls/management/mod.rs
+  owns MANAGEMENT_FAMILY
+  owns the Management operation SPECS slice
+  owns the Management dispatch OPERATIONS slice
+  exposes operation_families()
+  exposes operation_specs()
+  exposes operation_entries()
+
+crates/sandbox-manager/src/operation/impls/management/*.rs
+  each operation module owns its SPEC and dispatch function
+
+crates/sandbox-manager/src/operation/impls/mod.rs
+  aggregates family slices from management
+
+crates/sandbox-manager/src/operation/specs.rs
+  should stop owning individual operation specs
+  may remain only as a public catalog wiring module, or be removed if
+  operation_catalog() moves to operation/mod.rs
+```
+
+Target manager family shape:
+
+```rust
+pub(crate) const MANAGEMENT_FAMILY: OperationFamilySpec = OperationFamilySpec {
+    id: "management",
+    title: "Management",
+    summary: "Create, destroy, list, and inspect sandbox records.",
+    description: "Create, destroy, list, and inspect sandbox records. Daemons are managed as part of sandbox lifecycle behavior, not as standalone manager operations.",
+};
+
+const FAMILIES: &[&OperationFamilySpec] = &[&MANAGEMENT_FAMILY];
+const SPECS: &[&OperationSpec] = &[
+    &create_sandbox::SPEC,
+    &destroy_sandbox::SPEC,
+    &list_sandboxes::SPEC,
+    &inspect_sandbox::SPEC,
+];
+
+pub(crate) const fn operation_families() -> &'static [&'static OperationFamilySpec] {
+    FAMILIES
+}
+
+pub(crate) const fn operation_specs() -> &'static [&'static OperationSpec] {
+    SPECS
+}
+```
+
+Manager operation files should use the same local `SPEC` pattern already used by
+runtime command operations:
+
+```rust
+pub(crate) const SPEC: OperationSpec = OperationSpec {
+    name: "create_sandbox",
+    family: "management",
+    summary: "Create a host-side sandbox record and runtime sandbox.",
+    description: "Create a host-side sandbox record, create the runtime sandbox, and start its daemon.",
+    args: CREATE_SANDBOX_ARGS,
+    cli: Some(CREATE_SANDBOX_CLI),
+    related: &["list_sandboxes", "inspect_sandbox", "destroy_sandbox"],
+};
+```
+
+Catalog constructors should receive both explicit slices:
+
+```rust
+OperationCatalog::new(
+    OperationExecutionSpace::Manager,
+    impls::operation_families(),
+    impls::operation_specs(),
+)
+
+OperationCatalog::new(
+    OperationExecutionSpace::Runtime,
+    public::operation_families(),
+    public::operation_specs(),
+)
+```
 
 ## Metadata Model
 
@@ -472,15 +642,27 @@ Manager catalog:
 
 ```text
 crates/sandbox-manager/src/operation/specs.rs
+  stop owning individual operation specs; keep only catalog wiring or remove
 crates/sandbox-manager/src/operation/impls/mod.rs
+  aggregate operation_families(), operation_specs(), and operation_entries()
+crates/sandbox-manager/src/operation/impls/management/mod.rs
+  own MANAGEMENT_FAMILY plus family-local SPECS and OPERATIONS slices
 crates/sandbox-manager/src/operation/impls/management/*.rs
+  own one operation SPEC plus that operation's dispatch function
 crates/sandbox-manager/tests/manager_core.rs
 ```
 
 Runtime catalog:
 
 ```text
+crates/sandbox-runtime/operation/src/public/mod.rs
+  aggregate operation_families() from public runtime families
+crates/sandbox-runtime/operation/src/public/command/mod.rs
+  own COMMAND_FAMILY and expose operation_families()
+crates/sandbox-runtime/operation/src/public/command/service/impls/mod.rs
+  keep the Command operation SPECS and OPERATIONS slices
 crates/sandbox-runtime/operation/src/public/command/service/impls/*.rs
+  keep one operation SPEC plus that operation's dispatch function
 crates/sandbox-runtime/operation/tests/service_graph.rs
 ```
 
@@ -506,18 +688,27 @@ docs/README/sandbox-runtime.md
    document types.
 2. Rename protocol manual renderer vocabulary to help.
 3. Update catalog JSON conversion/parsing and validation.
-4. Add a manager `Management` family and attach every current manager operation
-   to that family.
-5. Move manager operation implementations under the `management` folder in
-   `crates/sandbox-manager/src/operation/impls`.
-6. Add one runtime `Command` family and attach every current runtime operation
-   to it.
-7. Replace `sandbox-cli manual` with scoped `manager help` and `runtime help`.
-8. Add exact operation help rendering.
-9. Add unknown-operation suggestions.
-10. Update usage/examples so runtime help output does not display
+4. Add a runtime `COMMAND_FAMILY` in
+   `crates/sandbox-runtime/operation/src/public/command/mod.rs` and thread
+   runtime family slices into the runtime catalog constructor.
+5. Add a manager `MANAGEMENT_FAMILY` in
+   `crates/sandbox-manager/src/operation/impls/management/mod.rs`.
+6. Move manager operation specs from
+   `crates/sandbox-manager/src/operation/specs.rs` into the matching
+   `crates/sandbox-manager/src/operation/impls/management/*.rs` operation
+   modules, using the runtime-style local `SPEC` pattern.
+7. Make `crates/sandbox-manager/src/operation/impls/management/mod.rs` own the
+   Management family `SPECS` and dispatch `OPERATIONS` slices.
+8. Make `crates/sandbox-manager/src/operation/impls/mod.rs` aggregate family
+   metadata, operation specs, and operation entries from `management`.
+9. Keep or remove `crates/sandbox-manager/src/operation/specs.rs` only after it
+   no longer owns per-operation specs.
+10. Replace `sandbox-cli manual` with scoped `manager help` and `runtime help`.
+11. Add exact operation help rendering.
+12. Add unknown-operation suggestions.
+13. Update usage/examples so runtime help output does not display
    `--sandbox-id`.
-11. Update active docs and focused tests.
+14. Update active docs and focused tests.
 
 ## Acceptance Criteria
 
@@ -534,9 +725,17 @@ docs/README/sandbox-runtime.md
 - Catalog JSON includes `families` and every operation references a valid
   family.
 - Catalog decoding rejects invalid family/related metadata.
+- Runtime `Command` family metadata is owned by `COMMAND_FAMILY` in
+  `crates/sandbox-runtime/operation/src/public/command/mod.rs`.
+- Manager `Management` family metadata is owned by `MANAGEMENT_FAMILY` in
+  `crates/sandbox-manager/src/operation/impls/management/mod.rs`.
+- Manager operation modules under `management/*.rs` own their local operation
+  `SPEC` constants and dispatch functions.
 - Manager operation implementation files are grouped under family directories
   below `crates/sandbox-manager/src/operation/impls`.
 - Manager `impls/mod.rs` is only a family aggregator, not a flat operation list.
+- `crates/sandbox-manager/src/operation/specs.rs` does not own individual
+  manager operation specs.
 - Manager exposes only `create_sandbox`, `destroy_sandbox`, `list_sandboxes`,
   and `inspect_sandbox` as manager operations.
 - Manager catalog still contains only manager operations.

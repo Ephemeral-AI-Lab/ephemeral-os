@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use sandbox_runtime::command::{
     CommandServiceError, CommandSessionId, CommandStatus, ExecCommandInput, PollCommandInput,
+    WriteCommandStdinInput,
 };
 use sandbox_runtime_command::yield_wait_loop::WaitOutcome;
 use sandbox_runtime_workspace::{WorkspaceProfile, WorkspaceSessionId};
@@ -164,14 +165,6 @@ fn exec_command_passes_workspace_entry_to_spawn_paths() {
     assert_eq!(observation.spec_command, "printf ok");
     assert_eq!(observation.spec_cwd, None);
     assert_eq!(observation.spec_timeout_seconds, Some(2.5));
-    assert_eq!(
-        observation.request_path,
-        env.command
-            .config()
-            .scratch_root
-            .join("cmd_1")
-            .join("command-request.json")
-    );
     assert_eq!(
         observation.output_path,
         env.command
@@ -370,5 +363,84 @@ fn exec_command_initial_completed_session_returns_finalized_metadata() {
         })
         .expect("completed session command can be polled");
     assert_eq!(poll.command_session_id, command_session_id);
+    assert_eq!(poll.status, CommandStatus::Completed);
+}
+
+#[test]
+fn write_command_stdin_waits_for_output_after_write() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver.push_outcome(WaitOutcome::Running(String::new()));
+    launch_driver.push_outcome(WaitOutcome::Running("after input\n".to_owned()));
+    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
+    let workspace_session_id = create_session(
+        &fake,
+        &env,
+        "workspace-session",
+        PathBuf::from("/workspace/session"),
+        WorkspaceProfile::SharedNetwork,
+    );
+    let command_session_id = env
+        .command
+        .exec_command(exec_input(workspace_session_id))
+        .expect("session command exec succeeds")
+        .command_session_id
+        .expect("running command session id is returned");
+
+    let output = env
+        .command
+        .write_command_stdin(WriteCommandStdinInput {
+            command_session_id,
+            stdin: "input\n".to_owned(),
+            yield_time_ms: Some(250),
+        })
+        .expect("stdin write waits for output");
+
+    assert_eq!(output.status, CommandStatus::Running);
+    assert_eq!(output.output.stdout, "after input\n");
+}
+
+#[test]
+fn write_command_stdin_finalizes_when_command_completes_after_write() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver.push_outcome(WaitOutcome::Running(String::new()));
+    launch_driver.push_outcome(WaitOutcome::Completed(success_exit("done\n")));
+    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
+    let workspace_session_id = create_session(
+        &fake,
+        &env,
+        "workspace-session",
+        PathBuf::from("/workspace/session"),
+        WorkspaceProfile::SharedNetwork,
+    );
+    let command_session_id = env
+        .command
+        .exec_command(exec_input(workspace_session_id))
+        .expect("session command exec succeeds")
+        .command_session_id
+        .expect("running command session id is returned");
+
+    let output = env
+        .command
+        .write_command_stdin(WriteCommandStdinInput {
+            command_session_id: command_session_id.clone(),
+            stdin: "input\n".to_owned(),
+            yield_time_ms: Some(250),
+        })
+        .expect("stdin write finalizes completed command");
+
+    assert_eq!(output.status, CommandStatus::Completed);
+    assert_eq!(output.exit_code, Some(0));
+    assert_eq!(output.output.stdout, "done\n");
+    assert!(output.finalized.is_some());
+
+    let poll = env
+        .command
+        .poll_command(PollCommandInput {
+            command_session_id,
+            last_n_lines: None,
+        })
+        .expect("completed command can still be polled");
     assert_eq!(poll.status, CommandStatus::Completed);
 }

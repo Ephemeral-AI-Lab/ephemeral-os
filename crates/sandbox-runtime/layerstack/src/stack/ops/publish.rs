@@ -7,6 +7,8 @@ use crate::fs::{
 };
 use crate::model::{try_layer_digest, LayerChange, LayerRef, Manifest};
 use crate::stack::layer::write_layer_changes;
+use crate::stack::publish::model::{PublishValidatedChangesRequest, PublishValidatedChangesResult};
+use crate::stack::publish::{plan_publish, validate_source_paths};
 use crate::stack::LayerStack;
 use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, LAYER_METADATA_DIR};
 
@@ -17,13 +19,41 @@ impl LayerStack {
     pub fn publish_layer(&mut self, changes: &[LayerChange]) -> Result<Manifest, LayerStackError> {
         let _guard = self.writer_lock.exclusive()?;
         let active = self.read_active_manifest_unlocked()?;
-        if changes.is_empty() {
-            return Ok(active);
-        }
+        self.publish_layer_unlocked(&active, changes)
+    }
 
+    pub fn publish_validated_changes(
+        &mut self,
+        request: PublishValidatedChangesRequest,
+    ) -> Result<PublishValidatedChangesResult, LayerStackError> {
+        let plan = plan_publish(&self.view, &request)?;
+        let _guard = self.writer_lock.exclusive()?;
+        let active = self.read_active_manifest_unlocked()?;
+        validate_source_paths(&self.view, &active, &plan)?;
+        let changes = plan.accepted_changes();
+        if changes.is_empty() {
+            return Ok(PublishValidatedChangesResult {
+                manifest: active,
+                route_summary: plan.route_summary(),
+                no_op: true,
+            });
+        }
+        let manifest = self.publish_layer_unlocked(&active, changes)?;
+        Ok(PublishValidatedChangesResult {
+            manifest,
+            route_summary: plan.route_summary(),
+            no_op: false,
+        })
+    }
+
+    pub(in crate::stack) fn publish_layer_unlocked(
+        &self,
+        active: &Manifest,
+        changes: &[LayerChange],
+    ) -> Result<Manifest, LayerStackError> {
         let digest = try_layer_digest(changes)?;
-        if self.head_layer_digest(&active)? == Some(digest.clone()) {
-            return Ok(active);
+        if self.head_layer_digest(active)? == Some(digest.clone()) {
+            return Ok(active.clone());
         }
 
         self.take_publish_failpoint_marker()?;
@@ -54,7 +84,7 @@ impl LayerStack {
         }
 
         let latest = self.read_active_manifest_unlocked()?;
-        if latest != active {
+        if latest != *active {
             let _ = remove_path(&layer_dir);
             let _ = std::fs::remove_file(layer_digest_path(&self.storage_root, &layer_id));
             return Err(LayerStackError::ManifestConflict {
@@ -68,7 +98,7 @@ impl LayerStack {
             layer_id: layer_id.clone(),
             path: format!("{LAYERS_DIR}/{layer_id}"),
         });
-        layers.extend(active.layers);
+        layers.extend(active.layers.clone());
         let manifest = Manifest::new(next_version, layers, active.schema_version)
             .map_err(LayerStackError::from)?;
         if let Err(err) = write_manifest(self.storage_root.join(ACTIVE_MANIFEST_FILE), &manifest) {

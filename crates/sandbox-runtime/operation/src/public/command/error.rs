@@ -10,6 +10,9 @@ pub enum CommandServiceError {
     #[error(transparent)]
     WorkspaceSession(#[from] crate::workspace_session::WorkspaceSessionError),
 
+    #[error(transparent)]
+    LayerStack(Box<crate::layerstack::LayerStackServiceError>),
+
     #[error("invalid command request: {message}")]
     InvalidCommand { message: String },
 
@@ -77,4 +80,10 @@ pub enum CommandServiceError {
         artifact_dir: PathBuf,
         cleanup_error: String,
     },
+}
+
+impl From<crate::layerstack::LayerStackServiceError> for CommandServiceError {
+    fn from(error: crate::layerstack::LayerStackServiceError) -> Self {
+        Self::LayerStack(Box::new(error))
+    }
 }

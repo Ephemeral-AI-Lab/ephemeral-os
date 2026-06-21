@@ -9,9 +9,9 @@ pub(crate) use service::{
 };
 pub use service::{
     CancelCommandInput, CommandFinalizedMetadata, CommandLinesOutput, CommandOperationService,
-    CommandOutputSnapshot, CommandPollOutput, CommandSessionId, CommandStatus, CommandStream,
-    CommandTranscriptRow, CommandYield, ExecCommandInput, PollCommandInput, ReadCommandLinesInput,
-    WriteCommandStdinInput,
+    CommandOutputSnapshot, CommandPollOutput, CommandPublishFinalization, CommandPublishStatus,
+    CommandSessionId, CommandStatus, CommandStream, CommandTranscriptRow, CommandYield,
+    ExecCommandInput, PollCommandInput, ReadCommandLinesInput, WriteCommandStdinInput,
 };
 pub use service::{CommandLaunchDriver, RealCommandLaunchDriver};
 

@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use sandbox_runtime_command::yield_wait_loop::WaitOutcome;
+
 use super::command_yield_response;
 use crate::command::service::CommandOperationService;
 use crate::command::{CommandServiceError, CommandSessionId, CommandYield, WriteCommandStdinInput};
@@ -84,20 +86,24 @@ impl CommandOperationService {
             )
         };
         self.ensure_workspace_session_not_remount_pending(&workspace_session_id)?;
-        let output = {
-            process.write_process_stdin(&input.stdin).map_err(|error| {
-                CommandServiceError::CommandIo {
-                    command_session_id: command_session_id.clone(),
-                    error: error.to_string(),
-                }
-            })?;
-            if yield_time_ms == 0 {
-                String::new()
-            } else {
-                process.read_output_since(0)
+        let start_offset = process.transcript_len();
+        process.write_process_stdin(&input.stdin).map_err(|error| {
+            CommandServiceError::CommandIo {
+                command_session_id: command_session_id.clone(),
+                error: error.to_string(),
             }
+        })?;
+
+        let outcome = if yield_time_ms == 0 {
+            WaitOutcome::Running(String::new())
+        } else {
+            self.launch_driver().wait_for_initial_yield(
+                process.as_ref(),
+                yield_time_ms,
+                start_offset,
+            )
         };
 
-        Ok(Self::running_command_yield(command_session_id, output))
+        self.command_yield_from_wait_outcome(command_session_id, outcome)
     }
 }

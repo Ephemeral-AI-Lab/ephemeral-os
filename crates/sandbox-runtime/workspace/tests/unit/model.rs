@@ -14,6 +14,18 @@ use sandbox_runtime_workspace::profile::{
     WorkspaceModeFds, WorkspaceModeHandle, WorkspaceModeId, WorkspaceRemountState,
 };
 
+fn test_manifest() -> sandbox_runtime_layerstack::Manifest {
+    sandbox_runtime_layerstack::Manifest::new(
+        1,
+        vec![sandbox_runtime_layerstack::LayerRef {
+            layer_id: "L000001-test".to_owned(),
+            path: "layers/L000001-test".to_owned(),
+        }],
+        sandbox_runtime_layerstack::MANIFEST_SCHEMA_VERSION,
+    )
+    .expect("test manifest is valid")
+}
+
 fn workspace_mode_handle() -> WorkspaceModeHandle {
     WorkspaceModeHandle {
         workspace_id: WorkspaceModeId("isolated-handle".to_owned()),
@@ -21,6 +33,7 @@ fn workspace_mode_handle() -> WorkspaceModeHandle {
         lease_id: "lease-1".to_owned(),
         manifest_version: 42,
         manifest_root_hash: "root-hash".to_owned(),
+        base_manifest: test_manifest(),
         workspace_root: "/workspace".to_owned(),
         dirs: OverlayDirs {
             run_dir: "/tmp/eos/run".into(),
@@ -63,6 +76,7 @@ fn assert_handle_projection(public: &WorkspaceHandle) {
             lease_id: LeaseId("lease-1".to_owned()),
             manifest_version: 42,
             root_hash: "root-hash".to_owned(),
+            manifest: test_manifest(),
             layer_paths: vec!["/lower/one".into(), "/lower/two".into()],
         }
     );
@@ -118,6 +132,7 @@ fn shared_network_entry_uses_holder_launch_without_network_fd() {
         lease_id: LeaseId("lease-1".to_owned()),
         manifest_version: 1,
         root_hash: "root".to_owned(),
+        manifest: test_manifest(),
         layer_paths: vec!["/lower/one".into()],
     };
     let handle = WorkspaceHandle::holder_backed_for_test(
@@ -182,6 +197,7 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
                     lease_id: LeaseId("lease".to_owned()),
                     manifest_version: 1,
                     root_hash: "root".to_owned(),
+                    manifest: test_manifest(),
                     layer_paths: vec!["/lower/one".into()],
                 },
             )
@@ -213,6 +229,7 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
             CapturedWorkspaceChanges {
                 workspace_session_id: WorkspaceSessionId("workspace".to_owned()),
                 base_revision,
+                base_manifest: test_manifest(),
                 changed_paths: Vec::new(),
                 changed_path_kinds: BTreeMap::new(),
                 protected_drops: Vec::new(),
@@ -239,6 +256,7 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
                         lease_id: LeaseId("lease".to_owned()),
                         manifest_version: 1,
                         root_hash: "root".to_owned(),
+                        manifest: test_manifest(),
                         layer_paths: vec!["/lower/one".into()],
                     },
                 ),
@@ -311,6 +329,7 @@ fn public_dtos_construct_clone_and_compare() {
             lease_id: LeaseId("lease".to_owned()),
             manifest_version: 1,
             root_hash: "root".to_owned(),
+            manifest: test_manifest(),
             layer_paths: vec!["/lower/one".into()],
         },
     );
@@ -333,6 +352,7 @@ fn public_dtos_construct_clone_and_compare() {
     let capture = CapturedWorkspaceChanges {
         workspace_session_id: WorkspaceSessionId("workspace".to_owned()),
         base_revision: base_revision.clone(),
+        base_manifest: test_manifest(),
         changed_paths: vec!["src/main.rs".to_owned()],
         changed_path_kinds: BTreeMap::from([("src/main.rs".to_owned(), ChangedPathKind::Write)]),
         protected_drops: vec![ProtectedPathDrop {

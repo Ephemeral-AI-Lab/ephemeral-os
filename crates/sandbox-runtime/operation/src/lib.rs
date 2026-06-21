@@ -6,7 +6,7 @@ mod internal;
 mod operation;
 mod public;
 
-pub use internal::{workspace_remount, workspace_session};
+pub use internal::{layerstack, workspace_remount, workspace_session};
 pub use operation::{
     ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationCatalog, OperationExecutionSpace, OperationSpec,
 };

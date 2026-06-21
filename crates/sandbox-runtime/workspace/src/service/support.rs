@@ -60,6 +60,7 @@ pub(crate) fn mode_snapshot_from_layerstack(
         lease_id: snapshot.lease_id,
         manifest_version: snapshot.manifest_version,
         manifest_root_hash: snapshot.root_hash,
+        base_manifest: snapshot.manifest,
         layer_paths: snapshot.layer_paths,
     }
 }

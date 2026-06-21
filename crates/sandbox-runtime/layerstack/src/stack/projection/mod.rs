@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::io::{ErrorKind, Read};
 use std::path::{Path, PathBuf};
 
@@ -12,6 +13,14 @@ use apply::apply_layer;
 use crate::whiteout::{is_kernel_whiteout, logical_whiteout_path_for_target, OPAQUE_MARKER};
 
 pub(in crate::stack) use apply::layer_has_boundary_markers;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum MergedEntry {
+    Absent,
+    File { bytes: Vec<u8> },
+    Symlink { target: String },
+    Directory,
+}
 
 #[derive(Debug)]
 pub struct MergedView {
@@ -38,21 +47,54 @@ impl MergedView {
         manifest: &Manifest,
         max_bytes: usize,
     ) -> Result<(Option<Vec<u8>>, bool), LayerStackError> {
+        match self.read_entry_limited(path, manifest, max_bytes)? {
+            MergedEntry::Absent => return Ok((None, false)),
+            MergedEntry::File { bytes } => return Ok((Some(bytes), true)),
+            MergedEntry::Symlink { target } => {
+                return Ok((Some(target.into_bytes()), true));
+            }
+            MergedEntry::Directory => {}
+        }
+        Err(stale_layer_error(
+            manifest.layers.first().ok_or_else(|| {
+                LayerStackError::Storage(format!("directory entry found while reading {path}"))
+            })?,
+            path,
+            None,
+        ))
+    }
+
+    pub(crate) fn read_entry(
+        &self,
+        path: &str,
+        manifest: &Manifest,
+    ) -> Result<MergedEntry, LayerStackError> {
+        self.read_entry_limited(path, manifest, usize::MAX)
+    }
+
+    pub(crate) fn read_entry_limited(
+        &self,
+        path: &str,
+        manifest: &Manifest,
+        max_bytes: usize,
+    ) -> Result<MergedEntry, LayerStackError> {
         let rel = LayerPath::parse(path)?;
         for layer in &manifest.layers {
             let layer_dir = self.layer_dir(layer)?;
             if Self::is_whiteouted(&layer_dir, rel.as_str()) {
-                return Ok((None, false));
+                return Ok(MergedEntry::Absent);
             }
             if Self::lookup_blocked_by_layer(&layer_dir, rel.as_str()) {
-                return Ok((None, false));
+                return Ok(MergedEntry::Absent);
             }
             let target = join_layer_path(&layer_dir, rel.as_str());
             match std::fs::symlink_metadata(&target) {
                 Ok(meta) if meta.file_type().is_symlink() => {
                     let target = std::fs::read_link(&target)
                         .map_err(|err| stale_layer_error(layer, rel.as_str(), Some(&err)))?;
-                    return Ok((Some(target.to_string_lossy().as_bytes().to_vec()), true));
+                    return Ok(MergedEntry::Symlink {
+                        target: target.to_string_lossy().into_owned(),
+                    });
                 }
                 Ok(meta) if meta.is_file() => {
                     let bytes = match read_file_limited(&target, &meta, max_bytes) {
@@ -60,14 +102,46 @@ impl MergedView {
                         Err(err @ LayerStackError::FileTooLarge { .. }) => return Err(err),
                         Err(err) => return Err(stale_layer_error(layer, rel.as_str(), Some(&err))),
                     };
-                    return Ok((Some(bytes), true));
+                    return Ok(MergedEntry::File { bytes });
                 }
+                Ok(meta) if meta.is_dir() => return Ok(MergedEntry::Directory),
                 Ok(_) => return Err(stale_layer_error(layer, rel.as_str(), None)),
                 Err(err) if err.kind() == ErrorKind::NotFound => {}
                 Err(err) => return Err(stale_layer_error(layer, rel.as_str(), Some(&err))),
             }
         }
-        Ok((None, false))
+        Ok(MergedEntry::Absent)
+    }
+
+    pub(crate) fn visible_descendants(
+        &self,
+        dir: &LayerPath,
+        manifest: &Manifest,
+        limit: usize,
+    ) -> Result<Vec<LayerPath>, LayerStackError> {
+        let prefix = format!("{}/", dir.as_str());
+        let mut candidates = BTreeSet::new();
+        for layer in &manifest.layers {
+            let layer_dir = self.layer_dir(layer)?;
+            collect_candidate_descendants(&layer_dir, &layer_dir, &prefix, &mut candidates)?;
+            if candidates.len() > limit {
+                break;
+            }
+        }
+
+        let mut visible = Vec::new();
+        for path in candidates {
+            if visible.len() > limit {
+                break;
+            }
+            match self.read_entry(path.as_str(), manifest)? {
+                MergedEntry::File { .. } | MergedEntry::Symlink { .. } | MergedEntry::Directory => {
+                    visible.push(path);
+                }
+                MergedEntry::Absent => {}
+            }
+        }
+        Ok(visible)
     }
 
     pub fn project(&self, destination: &Path, manifest: &Manifest) -> Result<(), LayerStackError> {
@@ -101,7 +175,7 @@ impl MergedView {
         for index in 1..parts.len() {
             let ancestor = parts[..index].join("/");
             let path = join_layer_path(layer_dir, &ancestor);
-            if is_kernel_whiteout(&path) {
+            if Self::is_whiteouted(layer_dir, &ancestor) {
                 return true;
             }
             if let Ok(meta) = std::fs::symlink_metadata(&path) {
@@ -115,6 +189,47 @@ impl MergedView {
         }
         false
     }
+}
+
+fn collect_candidate_descendants(
+    root: &Path,
+    dir: &Path,
+    prefix: &str,
+    candidates: &mut BTreeSet<LayerPath>,
+) -> Result<(), LayerStackError> {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(err) if err.kind() == ErrorKind::NotFound => return Ok(()),
+        Err(err) => return Err(err.into()),
+    };
+    for entry in entries {
+        let entry = entry?;
+        let path = entry.path();
+        let rel = path
+            .strip_prefix(root)
+            .map_err(|err| LayerStackError::Storage(err.to_string()))?;
+        let Some(rel) = rel.to_str() else {
+            continue;
+        };
+        let meta = std::fs::symlink_metadata(&path)?;
+        if meta.is_dir() {
+            collect_candidate_descendants(root, &path, prefix, candidates)?;
+            continue;
+        }
+        let name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("");
+        if name == OPAQUE_MARKER || name.starts_with(".wh.") {
+            continue;
+        }
+        if rel.starts_with(prefix) {
+            if let Ok(layer_path) = LayerPath::parse(rel) {
+                candidates.insert(layer_path);
+            }
+        }
+    }
+    Ok(())
 }
 
 fn read_file_limited(

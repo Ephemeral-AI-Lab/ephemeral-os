@@ -3,9 +3,6 @@ mod fds;
 mod holder;
 mod setns_runner;
 
-#[cfg(target_os = "linux")]
-pub(crate) use setns_runner::{ns_command_request, run_child};
-
 use crate::profile::IsolatedNetworkError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

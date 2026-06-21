@@ -1,15 +1,13 @@
 use std::path::PathBuf;
 use std::sync::{Arc, MutexGuard};
 
-use sandbox_runtime_command::process::{CommandProcess, CommandProcessExit, CommandProcessSpec};
-use sandbox_runtime_command::yield_wait_loop::WaitOutcome;
+use sandbox_runtime_command::process::{CommandProcess, CommandProcessSpec};
 
 use super::command_yield_response;
 use crate::command::service::CommandOperationService;
 use crate::command::{
-    ActiveCommandProcess, CancellationState, CommandLifecycleState, CommandOutputSnapshot,
-    CommandServiceError, CommandSessionId, CommandTranscriptStore, CommandYield, ExecCommandInput,
-    FinalizationState,
+    ActiveCommandProcess, CancellationState, CommandLifecycleState, CommandServiceError,
+    CommandSessionId, CommandTranscriptStore, CommandYield, ExecCommandInput, FinalizationState,
 };
 use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliSpec, OperationSpec};
 use crate::workspace_crate::{WorkspaceEntry, WorkspaceSessionId};
@@ -215,35 +213,7 @@ impl CommandOperationService {
             .launch_driver()
             .wait_for_initial_yield(process.as_ref(), wait_ms, 0);
 
-        match outcome {
-            WaitOutcome::Running(stdout) => {
-                Ok(Self::running_command_yield(command_session_id, stdout))
-            }
-            WaitOutcome::Completed(process_exit) => {
-                self.completed_initial_exec_yield(command_session_id, process_exit)
-            }
-        }
-    }
-
-    fn completed_initial_exec_yield(
-        &self,
-        command_session_id: CommandSessionId,
-        process_exit: CommandProcessExit,
-    ) -> Result<CommandYield, CommandServiceError> {
-        let result = self.finalize_command(command_session_id.clone(), process_exit)?;
-        let finalized = self
-            .process_store()
-            .completed(&command_session_id)
-            .and_then(|completed| completed.finalized);
-        Ok(CommandYield {
-            command_session_id: Some(command_session_id),
-            status: result.status,
-            exit_code: result.exit_code,
-            output: CommandOutputSnapshot {
-                stdout: result.stdout,
-            },
-            finalized,
-        })
+        self.command_yield_from_wait_outcome(command_session_id, outcome)
     }
 
     fn cleanup_workspace_start_failure(

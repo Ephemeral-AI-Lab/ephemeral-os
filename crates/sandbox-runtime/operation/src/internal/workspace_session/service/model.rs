@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::workspace_crate::{BaseRevision, WorkspaceHandle, WorkspaceSessionId};
 use crate::workspace_session::WorkspaceSessionError;
 
@@ -94,6 +96,19 @@ impl WorkspaceSession {
         self.handle.base_revision = base_revision;
         self.handle.snapshot.manifest_version = self.handle.base_revision.version;
         self.handle.snapshot.root_hash = self.handle.base_revision.root_hash.clone();
+    }
+
+    pub(crate) fn refresh_after_publish(
+        &mut self,
+        base_revision: BaseRevision,
+        manifest: sandbox_runtime_layerstack::Manifest,
+        layer_paths: Vec<PathBuf>,
+    ) {
+        self.handle.base_revision = base_revision;
+        self.handle.snapshot.manifest_version = self.handle.base_revision.version;
+        self.handle.snapshot.root_hash = self.handle.base_revision.root_hash.clone();
+        self.handle.snapshot.manifest = manifest;
+        self.handle.snapshot.layer_paths = layer_paths;
     }
 
     pub(crate) fn refresh_from_handle(

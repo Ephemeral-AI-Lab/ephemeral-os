@@ -200,11 +200,24 @@ fn create_request() -> CreateWorkspaceRequest {
     }
 }
 
+fn test_manifest() -> sandbox_runtime_layerstack::Manifest {
+    sandbox_runtime_layerstack::Manifest::new(
+        1,
+        vec![sandbox_runtime_layerstack::LayerRef {
+            layer_id: "L000001-test".to_owned(),
+            path: "layers/L000001-test".to_owned(),
+        }],
+        sandbox_runtime_layerstack::MANIFEST_SCHEMA_VERSION,
+    )
+    .expect("test manifest is valid")
+}
+
 fn workspace_handle(workspace_session_id: &str, lease_id: &str) -> WorkspaceHandle {
     let snapshot = LayerStackSnapshotRef {
         lease_id: LeaseId(lease_id.to_owned()),
         manifest_version: 1,
         root_hash: "root".to_owned(),
+        manifest: test_manifest(),
         layer_paths: vec![PathBuf::from("/lower/one")],
     };
     WorkspaceHandle::without_launch_for_test(
@@ -238,6 +251,7 @@ fn capture_result(
             root_hash: root_hash.to_owned(),
             layer_count: handle.snapshot.layer_paths.len(),
         },
+        base_manifest: handle.snapshot.manifest.clone(),
         changed_paths: Vec::new(),
         changed_path_kinds: Default::default(),
         protected_drops: Vec::new(),

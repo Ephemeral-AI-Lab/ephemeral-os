@@ -1,6 +1,6 @@
 use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Write};
-use std::os::fd::AsRawFd;
+use std::os::fd::{AsRawFd, OwnedFd};
 use std::os::unix::process::{CommandExt, ExitStatusExt};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, ExitStatus, Stdio};
@@ -39,6 +39,12 @@ pub(crate) struct PtyProcess {
 pub(crate) struct PendingPtyProcess {
     process: PtyProcess,
     start_ack: std::os::fd::OwnedFd,
+    request_payload: RequestPayload,
+}
+
+struct RequestPayload {
+    writer: OwnedFd,
+    bytes: Vec<u8>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -284,31 +290,40 @@ impl PtyProcess {
 }
 
 impl PendingPtyProcess {
-    #[must_use]
-    pub(crate) const fn process_group_id(&self) -> Option<i32> {
-        self.process.process_group_id()
-    }
-
-    pub(crate) fn terminate(&self) {
-        self.process.terminate();
-    }
-
     pub(crate) fn allow_start(self) -> io::Result<PtyProcess> {
-        let Self { process, start_ack } = self;
+        let Self {
+            process,
+            start_ack,
+            request_payload,
+        } = self;
         let mut start_ack = File::from(start_ack);
-        start_ack.write_all(b"1")?;
+        if let Err(error) = start_ack.write_all(b"1") {
+            process.terminate();
+            return Err(error);
+        }
+        if let Err(error) = request_payload.write() {
+            process.terminate();
+            return Err(error);
+        }
         Ok(process)
     }
 }
 
+impl RequestPayload {
+    fn write(self) -> io::Result<()> {
+        let mut writer = File::from(self.writer);
+        writer.write_all(&self.bytes)
+    }
+}
+
 pub(crate) fn spawn_current_exe_ns_runner(
-    request_path: &Path,
     command_request: &NamespaceCommandRequest,
     output_path: &Path,
     transcript_path: PathBuf,
 ) -> Result<PendingPtyProcess, CommandError> {
-    write_command_request(request_path, command_request)
-        .map_err(|error| CommandError::artifact_write("command_request", request_path, error))?;
+    let request_bytes = encode_command_request(command_request)?;
+    let (request_read, request_write) = runner_request_pipe()?;
+    let request_fd = request_read.as_raw_fd();
     let (master, slave) = open_pty_pair()?;
     let (start_ack_read, start_ack_write) = start_ack_pipe()?;
     let start_ack_fd = start_ack_read.as_raw_fd();
@@ -318,8 +333,8 @@ pub(crate) fn spawn_current_exe_ns_runner(
     let mut child_command = Command::new(std::env::current_exe()?);
     child_command
         .arg("ns-runner")
-        .arg("--request")
-        .arg(request_path)
+        .arg("--request-fd")
+        .arg(request_fd.to_string())
         .arg("--output")
         .arg(output_path)
         .arg("--start-ack-fd")
@@ -329,6 +344,7 @@ pub(crate) fn spawn_current_exe_ns_runner(
         .stderr(Stdio::from(slave))
         .process_group(0);
     let child = child_command.spawn()?;
+    drop(request_read);
     drop(start_ack_read);
     let pgid = i32::try_from(child.id()).map_err(|_| {
         io::Error::new(
@@ -348,7 +364,18 @@ pub(crate) fn spawn_current_exe_ns_runner(
             child: Mutex::new(Some(child)),
         },
         start_ack: start_ack_write,
+        request_payload: RequestPayload {
+            writer: request_write,
+            bytes: request_bytes,
+        },
     })
+}
+
+fn runner_request_pipe() -> io::Result<(OwnedFd, OwnedFd)> {
+    let (read, write) = pipe()?;
+    fcntl_setfd(&read, FdFlags::empty())?;
+    fcntl_setfd(&write, FdFlags::CLOEXEC)?;
+    Ok((read, write))
 }
 
 fn start_ack_pipe() -> io::Result<(std::os::fd::OwnedFd, std::os::fd::OwnedFd)> {
@@ -403,14 +430,10 @@ fn spawn_command_output_reader(
     done_rx
 }
 
-fn write_command_request(path: &Path, request: &NamespaceCommandRequest) -> io::Result<()> {
-    let bytes = serde_json::to_vec(request).map_err(|error| {
-        io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!("serialize command runner request: {error}"),
-        )
-    })?;
-    std::fs::write(path, bytes)
+fn encode_command_request(request: &NamespaceCommandRequest) -> Result<Vec<u8>, CommandError> {
+    serde_json::to_vec(request).map_err(|error| {
+        CommandError::InvalidRequest(format!("serialize command runner request: {error}"))
+    })
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {

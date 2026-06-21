@@ -119,6 +119,7 @@ impl WorkspaceModeManager {
             lease_id: snapshot.lease_id,
             manifest_version: snapshot.manifest_version,
             manifest_root_hash: snapshot.manifest_root_hash,
+            base_manifest: snapshot.base_manifest,
             workspace_root,
             dirs,
             layer_paths: snapshot.layer_paths,

@@ -31,7 +31,7 @@ impl CommandOperationService {
             return Err(CommandServiceError::CommandFinalizationFailed {
                 command_session_id: command_session_id.clone(),
                 error: error.clone(),
-                finalized: finalized.clone().map(Box::new),
+                finalized: finalized.clone(),
             });
         }
         Ok(Some(active))

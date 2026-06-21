@@ -6,10 +6,10 @@ use anyhow::{bail, Context, Result};
 use crate::runner_cli::{wait_for_start_ack_reader, RunnerCliConfig};
 
 #[test]
-fn runner_cli_accepts_explicit_request_and_output_paths() -> Result<()> {
+fn runner_cli_accepts_explicit_request_fd_and_output_path() -> Result<()> {
     let _config = RunnerCliConfig::parse(vec![
-        "--request".to_owned(),
-        "/tmp/request.json".to_owned(),
+        "--request-fd".to_owned(),
+        "3".to_owned(),
         "--output".to_owned(),
         "/tmp/result.json".to_owned(),
     ])?;
@@ -20,8 +20,8 @@ fn runner_cli_accepts_explicit_request_and_output_paths() -> Result<()> {
 #[test]
 fn runner_cli_rejects_missing_output_path() -> Result<()> {
     let error = match RunnerCliConfig::parse(vec![
-        "--request".to_owned(),
-        "/tmp/request.json".to_owned(),
+        "--request-fd".to_owned(),
+        "3".to_owned(),
     ]) {
         Ok(_) => bail!("missing output path unexpectedly accepted"),
         Err(error) => error,
@@ -35,9 +35,9 @@ fn runner_cli_rejects_missing_output_path() -> Result<()> {
 }
 
 #[test]
-fn runner_cli_rejects_positional_request_path() -> Result<()> {
-    let error = match RunnerCliConfig::parse(vec!["/tmp/request.json".to_owned()]) {
-        Ok(_) => bail!("positional request path unexpectedly accepted"),
+fn runner_cli_rejects_positional_request_fd() -> Result<()> {
+    let error = match RunnerCliConfig::parse(vec!["3".to_owned()]) {
+        Ok(_) => bail!("positional request fd unexpectedly accepted"),
         Err(error) => error,
     };
 

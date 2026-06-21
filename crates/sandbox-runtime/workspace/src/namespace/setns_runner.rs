@@ -1,5 +1,9 @@
 #[cfg(target_os = "linux")]
-use std::io::Read;
+use std::fs::File;
+#[cfg(target_os = "linux")]
+use std::io::{Read, Write};
+#[cfg(target_os = "linux")]
+use std::os::fd::AsRawFd;
 #[cfg(target_os = "linux")]
 use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
@@ -13,9 +17,11 @@ use std::time::{Duration, Instant};
 #[cfg(target_os = "linux")]
 use ::sandbox_runtime_namespace_process::runner::protocol::{NamespaceCommandRequest, RunResult};
 #[cfg(target_os = "linux")]
+use nix::fcntl::OFlag;
+#[cfg(target_os = "linux")]
 use nix::sys::signal::{kill, Signal};
 #[cfg(target_os = "linux")]
-use nix::unistd::Pid;
+use nix::unistd::{pipe2, Pid};
 #[cfg(target_os = "linux")]
 use serde_json::json;
 
@@ -26,7 +32,7 @@ use crate::profile::IsolatedNetworkError;
 use crate::profile::WorkspaceModeHandle;
 
 #[cfg(target_os = "linux")]
-use super::fds::{expect_line, ns_fds_from_mode, write_all_fd};
+use super::fds::{clear_cloexec, expect_line, ns_fds_from_mode, write_all_fd};
 #[cfg(target_os = "linux")]
 use super::holder::ns_holder_runtime_error;
 #[cfg(target_os = "linux")]
@@ -179,57 +185,43 @@ pub(crate) fn run_child(
     setup_timeout_s: f64,
 ) -> Result<Output, IsolatedNetworkError> {
     let payload = serde_json::to_vec(request).map_err(setup_error)?;
-    let paths = RunnerPayloadPaths::new(mode_arg);
-    std::fs::write(&paths.request_path, payload).map_err(setup_error)?;
+    let suffix = mode_arg.trim_start_matches('-');
+    let output_path = std::env::temp_dir()
+        .join(format!(
+            "eos-ns-runner-{suffix}-{}-{}",
+            std::process::id(),
+            unique_suffix()
+        ))
+        .with_extension("result.json");
+    let (request_read, request_write) = pipe2(OFlag::O_CLOEXEC).map_err(setup_error)?;
+    clear_cloexec(request_read.as_raw_fd())?;
+    let request_fd = request_read.as_raw_fd();
     let mut child = Command::new(std::env::current_exe().map_err(setup_error)?)
         .arg("ns-runner")
         .arg(mode_arg)
-        .arg("--request")
-        .arg(&paths.request_path)
+        .arg("--request-fd")
+        .arg(request_fd.to_string())
         .arg("--output")
-        .arg(&paths.output_path)
+        .arg(&output_path)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .process_group(0)
         .spawn()
         .map_err(setup_error)?;
+    drop(request_read);
+    let mut request_writer = File::from(request_write);
+    request_writer.write_all(&payload).map_err(setup_error)?;
+    drop(request_writer);
     let status = wait_for_child(&mut child, mode_arg, setup_timeout_s)?;
-    let stdout = std::fs::read(&paths.output_path).unwrap_or_default();
+    let stdout = std::fs::read(&output_path).unwrap_or_default();
     let stderr = read_pipe(child.stderr.take())?;
-    paths.cleanup();
+    let _ = std::fs::remove_file(&output_path);
     Ok(Output {
         status,
         stdout,
         stderr,
     })
-}
-
-#[cfg(target_os = "linux")]
-struct RunnerPayloadPaths {
-    request_path: PathBuf,
-    output_path: PathBuf,
-}
-
-#[cfg(target_os = "linux")]
-impl RunnerPayloadPaths {
-    fn new(mode_arg: &str) -> Self {
-        let suffix = mode_arg.trim_start_matches('-');
-        let base = std::env::temp_dir().join(format!(
-            "eos-ns-runner-{suffix}-{}-{}",
-            std::process::id(),
-            unique_suffix()
-        ));
-        Self {
-            request_path: base.with_extension("request.json"),
-            output_path: base.with_extension("result.json"),
-        }
-    }
-
-    fn cleanup(&self) {
-        let _ = std::fs::remove_file(&self.request_path);
-        let _ = std::fs::remove_file(&self.output_path);
-    }
 }
 
 #[cfg(target_os = "linux")]

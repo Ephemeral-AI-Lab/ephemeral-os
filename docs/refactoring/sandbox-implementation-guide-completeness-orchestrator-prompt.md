@@ -207,7 +207,7 @@ Focus:
 - `crates/sandbox-runtime/operation` package is named `sandbox-runtime`.
 - Support packages remain separate and are not collapsed into the facade.
 - `sandbox-runtime-command` owns process, PTY, transcript, process group, and
-  command runner request construction.
+  inherited-FD command runner request transport.
 - `sandbox-runtime-workspace` owns workspace lifecycle and workspace-level
   overlay planning.
 - `sandbox-runtime-namespace-process` owns `ns-holder`, `ns-runner`, setns, and
@@ -216,8 +216,8 @@ Focus:
   workspace and namespace-process where needed.
 - `sandbox-runtime-layerstack` and `sandbox-runtime-config` remain lower-level
   support crates.
-- `command-request.json` remains until an explicit replacement transport
-  exists.
+- Command runner requests use `ns-runner --request-fd`; do not reintroduce an
+  on-disk command request artifact.
 
 Suggested commands:
 

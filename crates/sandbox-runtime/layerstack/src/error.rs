@@ -1,6 +1,7 @@
 use thiserror::Error;
 
 use crate::model::CasError;
+use crate::stack::publish::model::PublishReject;
 
 #[derive(Debug, Error)]
 #[non_exhaustive]
@@ -22,6 +23,9 @@ pub enum LayerStackError {
 
     #[error("invalid squash plan: {0}")]
     InvalidSquashPlan(String),
+
+    #[error("layer-stack publish rejected: {0:?}")]
+    PublishRejected(Box<PublishReject>),
 
     #[error("could not allocate a unique layer id")]
     LayerIdAllocation,

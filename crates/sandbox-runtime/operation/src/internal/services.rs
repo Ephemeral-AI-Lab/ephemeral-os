@@ -1,22 +1,39 @@
 use std::sync::Arc;
 
 use crate::command::CommandOperationService;
+use crate::layerstack::LayerStackService;
 use crate::workspace_crate::{profile::WorkspaceModeManager, WorkspaceRuntimeService};
 use crate::workspace_session::WorkspaceSessionService;
 
 #[derive(Clone)]
 pub struct SandboxRuntimeOperations {
     pub command: Arc<CommandOperationService>,
+    pub layerstack: Option<Arc<LayerStackService>>,
 }
 
 impl SandboxRuntimeOperations {
     #[must_use]
     pub fn new(command: Arc<CommandOperationService>) -> Self {
-        Self { command }
+        Self {
+            command,
+            layerstack: None,
+        }
+    }
+
+    #[must_use]
+    pub fn new_with_layerstack(
+        command: Arc<CommandOperationService>,
+        layerstack: Arc<LayerStackService>,
+    ) -> Self {
+        Self {
+            command,
+            layerstack: Some(layerstack),
+        }
     }
 
     #[must_use]
     pub fn from_config(config: SandboxRuntimeConfig) -> Self {
+        let layer_stack_root = config.workspace.layer_stack_root.clone();
         let workspace_runtime = Arc::new(WorkspaceRuntimeService::new(
             WorkspaceModeManager::new(
                 config
@@ -27,14 +44,19 @@ impl SandboxRuntimeOperations {
                 config.workspace.caps.into(),
                 config.workspace.scratch_root,
             ),
-            config.workspace.layer_stack_root,
+            layer_stack_root.clone(),
         ));
         let workspace_session = Arc::new(WorkspaceSessionService::new(workspace_runtime));
-        let command = Arc::new(CommandOperationService::new(
+        let layerstack = Arc::new(
+            LayerStackService::new(layer_stack_root)
+                .expect("layerstack service initialization failed"),
+        );
+        let command = Arc::new(CommandOperationService::new_with_layerstack(
             workspace_session,
+            Arc::clone(&layerstack),
             config.command.into(),
         ));
-        Self::new(command)
+        Self::new_with_layerstack(command, layerstack)
     }
 }
 

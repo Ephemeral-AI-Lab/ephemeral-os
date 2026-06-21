@@ -22,6 +22,7 @@ pub(super) fn snapshot_from_lease(lease: Lease) -> LeasedSnapshot {
         lease_id: lease.lease_id,
         manifest_version: lease.manifest_version,
         root_hash: lease.root_hash,
+        manifest: lease.manifest,
         layer_paths: lease.layer_paths.into_iter().map(PathBuf::from).collect(),
     }
 }

@@ -6,5 +6,11 @@ pub enum WorkspaceRemountError {
     WorkspaceSession(#[from] crate::workspace_session::WorkspaceSessionError),
 
     #[error(transparent)]
-    Command(#[from] crate::command::CommandServiceError),
+    Command(Box<crate::command::CommandServiceError>),
+}
+
+impl From<crate::command::CommandServiceError> for WorkspaceRemountError {
+    fn from(error: crate::command::CommandServiceError) -> Self {
+        Self::Command(Box::new(error))
+    }
 }

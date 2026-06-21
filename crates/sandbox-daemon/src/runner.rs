@@ -15,13 +15,13 @@ const DAEMON_CONFIG_YAML_ENV: &str = "SANDBOX_DAEMON_CONFIG_YAML";
 /// resolved `NamespaceCommandRequest` payload and emitting the `RunResult` JSON.
 ///
 /// This is a thin call into the `sandbox-runtime-namespace-process` runner module:
-/// read the request payload from `--request <path>`, load the runner
+/// read the request payload from `--request-fd <fd>`, load the runner
 /// config, dispatch the selected [`RunnerCliMode`], and write the compact
 /// `RunResult` JSON to `--output <path>`.
 pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let config = RunnerCliConfig::parse(args)?;
     wait_for_start_ack(config.start_ack_fd)?;
-    let request_json = read_payload(&config.request_path)?;
+    let request_json = read_payload_from_fd(config.request_fd)?;
     let request: sandbox_runtime_namespace_process::runner::protocol::NamespaceCommandRequest =
         serde_json::from_str(&request_json).context("failed to decode ns-runner request JSON")?;
     let runner_config = load_runner_config()?;
@@ -81,7 +81,7 @@ enum RunnerCliMode {
 }
 
 pub(crate) struct RunnerCliConfig {
-    request_path: PathBuf,
+    request_fd: RawFd,
     output_path: PathBuf,
     start_ack_fd: Option<RawFd>,
     mode: RunnerCliMode,
@@ -89,7 +89,7 @@ pub(crate) struct RunnerCliConfig {
 
 impl RunnerCliConfig {
     pub(crate) fn parse(args: impl IntoIterator<Item = String>) -> Result<Self> {
-        let mut request_path = None;
+        let mut request_fd = None;
         let mut output_path = None;
         let mut start_ack_fd = None;
         let mut mode = None;
@@ -107,11 +107,13 @@ impl RunnerCliConfig {
             match arg.as_str() {
                 "--mount-overlay" => set_mode(RunnerCliMode::MountOverlay)?,
                 "--remount-overlay" => set_mode(RunnerCliMode::RemountOverlay)?,
-                "--request" => {
-                    request_path = Some(PathBuf::from(
+                "--request-fd" => {
+                    request_fd = Some(
                         args.next()
-                            .ok_or_else(|| anyhow!("--request requires a path"))?,
-                    ));
+                            .ok_or_else(|| anyhow!("--request-fd requires a file descriptor"))?
+                            .parse::<RawFd>()
+                            .context("--request-fd must be an integer file descriptor")?,
+                    );
                 }
                 "--output" => {
                     output_path = Some(PathBuf::from(
@@ -129,7 +131,7 @@ impl RunnerCliConfig {
                 }
                 "--help" | "-h" => {
                     println!(
-                        "usage: sandbox-daemon ns-runner [--mount-overlay | --remount-overlay] [--request PATH] [--output PATH]"
+                        "usage: sandbox-daemon ns-runner [--mount-overlay | --remount-overlay] [--request-fd FD] [--output PATH]"
                     );
                     std::process::exit(0);
                 }
@@ -138,16 +140,15 @@ impl RunnerCliConfig {
                 }
                 other => {
                     return Err(anyhow!(
-                        "unexpected ns-runner positional argument {other:?}; use --request PATH"
+                        "unexpected ns-runner positional argument {other:?}; use --request-fd FD"
                     ));
                 }
             }
         }
-        let request_path =
-            request_path.ok_or_else(|| anyhow!("ns-runner requires --request PATH"))?;
+        let request_fd = request_fd.ok_or_else(|| anyhow!("ns-runner requires --request-fd FD"))?;
         let output_path = output_path.ok_or_else(|| anyhow!("ns-runner requires --output PATH"))?;
         Ok(Self {
-            request_path,
+            request_fd,
             output_path,
             start_ack_fd,
             mode: mode.unwrap_or(RunnerCliMode::Run),
@@ -175,12 +176,12 @@ fn open_fd_for_read(fd: RawFd) -> std::io::Result<File> {
     File::open(format!("/proc/self/fd/{fd}")).or_else(|_| File::open(format!("/dev/fd/{fd}")))
 }
 
-fn read_payload(path: &PathBuf) -> Result<String> {
+fn read_payload_from_fd(fd: RawFd) -> Result<String> {
     let mut payload = String::new();
-    std::fs::File::open(path)
-        .with_context(|| format!("failed to open request payload {}", path.display()))?
+    open_fd_for_read(fd)
+        .with_context(|| format!("failed to open ns-runner request fd {fd}"))?
         .read_to_string(&mut payload)
-        .with_context(|| format!("failed to read request payload {}", path.display()))?;
+        .with_context(|| format!("failed to read ns-runner request fd {fd}"))?;
     Ok(payload)
 }
 

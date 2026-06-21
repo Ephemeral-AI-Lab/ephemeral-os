@@ -1,4 +1,5 @@
 use crate::workspace_crate::WorkspaceSessionId;
+use std::path::PathBuf;
 
 pub use sandbox_runtime_command::{CommandStream, CommandTranscriptRow};
 
@@ -51,7 +52,25 @@ pub struct CommandOutputSnapshot {
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct CommandFinalizedMetadata;
+pub struct CommandFinalizedMetadata {
+    pub publish: Option<CommandPublishFinalization>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommandPublishFinalization {
+    pub status: CommandPublishStatus,
+    pub rejection: Option<Box<sandbox_runtime_layerstack::PublishReject>>,
+    pub revision: Option<crate::layerstack::LayerStackRevision>,
+    pub layer_paths: Vec<PathBuf>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CommandPublishStatus {
+    Published,
+    NoOp,
+    Rejected,
+    Skipped,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandYield {

@@ -11,6 +11,7 @@ mod layer;
 mod lease;
 mod ops;
 mod projection;
+pub mod publish;
 pub(crate) mod reclaim_unpinned_layers;
 pub(crate) mod squash;
 

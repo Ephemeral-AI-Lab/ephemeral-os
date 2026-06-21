@@ -7,8 +7,8 @@ mod write_command_stdin;
 use serde_json::{json, Value};
 
 use crate::command::{
-    CommandFinalizedMetadata, CommandLinesOutput, CommandPollOutput, CommandServiceError,
-    CommandStatus, CommandStream, CommandTranscriptRow, CommandYield,
+    CommandFinalizedMetadata, CommandLinesOutput, CommandPollOutput, CommandPublishStatus,
+    CommandServiceError, CommandStatus, CommandStream, CommandTranscriptRow, CommandYield,
 };
 use crate::operation::{OperationEntry, OperationSpec};
 use sandbox_protocol::Response;
@@ -123,10 +123,54 @@ fn stream_name(stream: CommandStream) -> &'static str {
 }
 
 fn finalized_value(finalized: Option<&CommandFinalizedMetadata>) -> Value {
-    finalized.map_or(Value::Null, |_| {
+    finalized.map_or(Value::Null, |finalized| {
         json!({
             "policy": "session",
             "outcome": "session_complete",
+            "publish": finalized.publish.as_ref().map(|publish| {
+                json!({
+                    "status": publish_status_name(publish.status),
+                    "rejection": publish.rejection.as_deref().map(publish_reject_value),
+                    "revision": publish.revision.as_ref().map(|revision| {
+                        json!({
+                            "manifest_version": revision.manifest_version,
+                            "root_hash": revision.root_hash.as_str(),
+                            "layer_count": revision.layer_count,
+                        })
+                    }),
+                    "layer_paths": publish.layer_paths.iter().map(|path| path.to_string_lossy().into_owned()).collect::<Vec<_>>(),
+                })
+            }),
         })
+    })
+}
+
+fn publish_status_name(status: CommandPublishStatus) -> &'static str {
+    match status {
+        CommandPublishStatus::Published => "published",
+        CommandPublishStatus::NoOp => "no_op",
+        CommandPublishStatus::Rejected => "rejected",
+        CommandPublishStatus::Skipped => "skipped",
+    }
+}
+
+fn publish_reject_value(rejection: &sandbox_runtime_layerstack::PublishReject) -> Value {
+    json!({
+        "path": rejection.path.as_ref().map(ToString::to_string),
+        "reason": format!("{:?}", rejection.reason),
+        "source_conflict": rejection.source_conflict.as_ref().map(|conflict| {
+            json!({
+                "path": conflict.path.to_string(),
+                "expected": format!("{:?}", conflict.expected),
+                "actual": format!("{:?}", conflict.actual),
+            })
+        }),
+        "protected_drop": rejection.protected_drop.as_ref().map(|drop| {
+            json!({
+                "path": drop.path.as_str(),
+                "reason": format!("{:?}", drop.reason),
+            })
+        }),
+        "message": rejection.message.as_deref(),
     })
 }

@@ -19,6 +19,7 @@ pub struct WorkspaceModeSnapshot {
     pub lease_id: String,
     pub manifest_version: i64,
     pub manifest_root_hash: String,
+    pub base_manifest: sandbox_runtime_layerstack::Manifest,
     pub layer_paths: Vec<PathBuf>,
 }
 
@@ -29,6 +30,7 @@ pub struct WorkspaceModeHandle {
     pub lease_id: String,
     pub manifest_version: i64,
     pub manifest_root_hash: String,
+    pub base_manifest: sandbox_runtime_layerstack::Manifest,
     pub workspace_root: String,
     pub dirs: OverlayDirs,
     pub layer_paths: Vec<PathBuf>,

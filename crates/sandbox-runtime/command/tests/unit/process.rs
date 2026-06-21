@@ -106,53 +106,6 @@ fn take_exit_reads_transcript_and_persist_removes_it() -> Result<(), Box<dyn std
 }
 
 #[test]
-fn spawn_reports_command_request_artifact_write_failure() -> Result<(), Box<dyn std::error::Error>>
-{
-    let root = std::env::temp_dir().join(format!(
-        "command-spawn-artifact-failure-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)?
-            .as_nanos()
-    ));
-    let request_path = root.join("missing-parent").join("command-request.json");
-    let error = match CommandProcess::spawn(
-        CommandProcessSpec {
-            id: "cmd_1".to_owned(),
-            command: "echo ok".to_owned(),
-            cwd: None,
-            timeout_seconds: None,
-        },
-        CommandProcessSpawn {
-            workspace_entry: workspace_entry(),
-            request_path: request_path.clone(),
-            output_path: root.join("runner-result.json"),
-            final_path: root.join("final.json"),
-            transcript_path: root.join("transcript.log"),
-        },
-    ) {
-        Ok(_) => panic!("spawn should fail before opening a PTY"),
-        Err(error) => error,
-    };
-
-    match error {
-        CommandError::ArtifactWrite {
-            artifact,
-            path,
-            error,
-        } => {
-            assert_eq!(artifact, "command_request");
-            assert_eq!(path, request_path);
-            assert!(!error.is_empty());
-        }
-        other => panic!("expected artifact write failure, got {other:?}"),
-    }
-
-    let _ = std::fs::remove_dir_all(root);
-    Ok(())
-}
-
-#[test]
 fn process_spawn_prepare_owns_command_artifact_layout() -> Result<(), Box<dyn std::error::Error>> {
     let root = std::env::temp_dir().join(format!(
         "command-spawn-prepare-{}-{}",
@@ -170,10 +123,6 @@ fn process_spawn_prepare_owns_command_artifact_layout() -> Result<(), Box<dyn st
     let command_dir = root.join("cmd_7");
     assert!(command_dir.is_dir());
     assert_eq!(spawn.artifact_dir(), command_dir);
-    assert_eq!(
-        spawn.request_path,
-        root.join("cmd_7").join("command-request.json")
-    );
     assert_eq!(
         spawn.output_path,
         root.join("cmd_7").join("runner-result.json")
@@ -239,27 +188,6 @@ fn builds_namespace_runner_request_from_command_spec_and_workspace_entry(
     assert_eq!(request["cgroup_path"], "/sys/fs/cgroup/eos");
     assert_eq!(request["timeout_seconds"], 2.5);
 
-    Ok(())
-}
-
-#[test]
-fn write_process_metadata_records_process_group_id() -> Result<(), Box<dyn std::error::Error>> {
-    let root = std::env::temp_dir().join(format!(
-        "command-process-metadata-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)?
-            .as_nanos()
-    ));
-    std::fs::create_dir_all(&root)?;
-    let path = root.join(PROCESS_METADATA_FILE);
-
-    write_process_metadata(&path, Some(12345))?;
-
-    let metadata = CommandProcessMetadata::from_slice(&std::fs::read(&path)?)?;
-    assert_eq!(metadata, CommandProcessMetadata::new(Some(12345)));
-
-    let _ = std::fs::remove_dir_all(root);
     Ok(())
 }
 

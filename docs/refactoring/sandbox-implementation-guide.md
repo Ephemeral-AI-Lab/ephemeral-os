@@ -122,7 +122,7 @@ orchestration, and remount coordination.
 Support packages own concrete primitives:
 
 - `sandbox-runtime-command`: process launch, PTY, transcript, process group,
-  and command request artifacts.
+  and inherited-FD command runner request transport.
 - `sandbox-runtime-workspace`: workspace lifecycle, namespace handles, capture,
   destroy, remount, and launch entries.
 - `sandbox-runtime-namespace-process`: `ns-holder`, `ns-runner`, setns command
@@ -134,7 +134,8 @@ Support packages own concrete primitives:
 - `sandbox-runtime-config`: YAML loading, merging, typed schemas, and
   validation.
 
-Keep `command-request.json` until an explicit replacement transport exists.
+Command runner request payloads use `ns-runner --request-fd`; do not reintroduce
+an on-disk command request artifact.
 
 ## Packaging
 

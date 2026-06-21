@@ -2,14 +2,13 @@
 //! and final-response persistence.
 
 use std::fs;
-use std::io::{self, Write};
+use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 
 use sandbox_runtime_namespace_process::runner::protocol::NamespaceCommandRequest;
 use sandbox_runtime_workspace::WorkspaceEntry;
-use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 pub use crate::pty::KillReason;
@@ -44,38 +43,9 @@ pub struct CommandProcessSpec {
 #[derive(Clone)]
 pub struct CommandProcessSpawn {
     pub workspace_entry: WorkspaceEntry,
-    pub request_path: PathBuf,
     pub output_path: PathBuf,
     pub final_path: PathBuf,
     pub transcript_path: PathBuf,
-}
-
-pub const PROCESS_METADATA_FILE: &str = "process.json";
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct CommandProcessMetadata {
-    pub process_group_id: Option<i32>,
-}
-
-impl CommandProcessMetadata {
-    #[must_use]
-    pub const fn new(process_group_id: Option<i32>) -> Self {
-        Self { process_group_id }
-    }
-
-    /// Parse durable process metadata written next to command artifacts.
-    ///
-    /// # Errors
-    /// Returns an error when the bytes are not valid process metadata JSON.
-    pub fn from_slice(bytes: &[u8]) -> serde_json::Result<Self> {
-        serde_json::from_slice(bytes)
-    }
-
-    fn to_pretty_vec(self) -> Result<Vec<u8>, CommandError> {
-        serde_json::to_vec_pretty(&self).map_err(|error| {
-            CommandError::InvalidRequest(format!("serialize process metadata: {error}"))
-        })
-    }
 }
 
 /// The raw, policy-free result of a finished command process. The substrate
@@ -224,18 +194,12 @@ impl CommandProcess {
     ) -> Result<Self, CommandError> {
         let command_request = build_namespace_command_request(&spec, parts.workspace_entry);
         let process = spawn_current_exe_ns_runner(
-            &parts.request_path,
             &command_request,
             &parts.output_path,
             parts.transcript_path.clone(),
         )?;
-        let process_path = process_metadata_path(&parts.final_path)?;
-        if let Err(error) = write_process_metadata(&process_path, process.process_group_id()) {
-            process.terminate();
-            return Err(error);
-        }
         let process = process.allow_start().map_err(|error| {
-            CommandError::artifact_write("process_start_ack", &process_path, error)
+            CommandError::artifact_write("process_start_ack", &parts.output_path, error)
         })?;
         Ok(Self::with_runtime(
             spec,
@@ -380,7 +344,6 @@ impl CommandProcessSpawn {
         })?;
         Ok(Self {
             workspace_entry,
-            request_path: command_dir.join("command-request.json"),
             output_path: command_dir.join("runner-result.json"),
             final_path: command_dir.join("final.json"),
             transcript_path: command_dir.join("transcript.log"),
@@ -389,7 +352,7 @@ impl CommandProcessSpawn {
 
     #[must_use]
     pub fn artifact_dir(&self) -> PathBuf {
-        self.request_path
+        self.output_path
             .parent()
             .map(Path::to_path_buf)
             .unwrap_or_default()
@@ -498,54 +461,6 @@ fn write_final_response(path: &Path, response: &serde_json::Value) -> Result<usi
     let byte_len = bytes.len();
     std::fs::write(path, bytes)?;
     Ok(byte_len)
-}
-
-fn process_metadata_path(final_path: &Path) -> Result<PathBuf, CommandError> {
-    final_path
-        .parent()
-        .map(|parent| parent.join(PROCESS_METADATA_FILE))
-        .ok_or_else(|| {
-            CommandError::InvalidRequest(format!(
-                "final response path has no parent: {}",
-                final_path.display()
-            ))
-        })
-}
-
-pub(crate) fn write_process_metadata(
-    path: &Path,
-    process_group_id: Option<i32>,
-) -> Result<(), CommandError> {
-    let bytes = CommandProcessMetadata::new(process_group_id).to_pretty_vec()?;
-    let mut file = std::fs::OpenOptions::new()
-        .create(true)
-        .truncate(true)
-        .write(true)
-        .open(path)
-        .map_err(|error| CommandError::artifact_write("process_metadata", path, error))?;
-    file.write_all(&bytes)
-        .and_then(|()| file.sync_all())
-        .map_err(|error| CommandError::artifact_write("process_metadata", path, error))?;
-    if let Some(parent) = path.parent() {
-        sync_directory(parent)
-            .map_err(|error| CommandError::artifact_write("process_metadata_dir", parent, error))?;
-    }
-    Ok(())
-}
-
-fn sync_directory(path: &Path) -> std::io::Result<()> {
-    match std::fs::File::open(path).and_then(|file| file.sync_all()) {
-        Ok(()) => Ok(()),
-        Err(error)
-            if matches!(
-                error.kind(),
-                std::io::ErrorKind::InvalidInput | std::io::ErrorKind::Unsupported
-            ) =>
-        {
-            Ok(())
-        }
-        Err(error) => Err(error),
-    }
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {

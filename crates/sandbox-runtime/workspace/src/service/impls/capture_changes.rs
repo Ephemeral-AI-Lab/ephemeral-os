@@ -54,6 +54,7 @@ impl WorkspaceRuntimeService {
         Ok(CapturedWorkspaceChanges {
             workspace_session_id: handle.id.clone(),
             base_revision: handle.base_revision.clone(),
+            base_manifest: handle.snapshot.manifest.clone(),
             changed_paths,
             changed_path_kinds,
             protected_drops: captured.protected_drops,
