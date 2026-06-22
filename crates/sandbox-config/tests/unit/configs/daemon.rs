@@ -49,6 +49,42 @@ idle_workspace_eviction:
 }
 
 #[test]
+fn daemon_config_accepts_daemon_owned_otlp_telemetry_extension() {
+    let cfg = daemon_config(
+        r#"
+server:
+  socket_path: /eos/runtime/daemon/runtime.sock
+  pid_path: /eos/runtime/daemon/runtime.pid
+  max_worker_threads: 2
+commands:
+  scratch_root: /eos/scratch/commands
+cgroup_monitor:
+  enabled: true
+  sample_interval_ms: 1000
+  retained_samples_per_target: 10
+  include_pids: true
+  include_pressure: true
+  include_disk: true
+telemetry:
+  enabled: true
+  service_name: sandbox-daemon
+  level: info
+  sink:
+    kind: otlp
+    endpoint: http://collector:4318
+    protocol: http
+    timeout_ms: 1000
+    queue_size: 2048
+idle_workspace_eviction:
+  interval_ms: 500
+"#,
+    );
+
+    cfg.validate()
+        .expect("daemon config with daemon-owned OTLP telemetry extension validates");
+}
+
+#[test]
 fn config_validation_rejects_invalid_daemon_values() {
     let mut cfg = prd_config();
     cfg.server.max_worker_threads = 0;

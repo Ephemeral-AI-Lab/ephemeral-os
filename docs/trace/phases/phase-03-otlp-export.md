@@ -11,6 +11,8 @@ behavior, and flushes terminal spans on daemon shutdown.
 - Add exact OpenTelemetry crate versions and feature flags.
 - Extend daemon telemetry config with OTLP settings.
 - Export traces to one configured Collector endpoint.
+- Add local validation stack config for OpenTelemetry Collector, Tempo, and
+  Grafana. This stack validates trace export and trace-event visibility only.
 - Fail startup for invalid telemetry config or missing dynamic identity.
 - Fail open for protocol behavior after a valid exporter is constructed.
 - Track or drain in-flight connection/request tasks on normal daemon shutdown,
@@ -45,9 +47,19 @@ crates/sandbox-config/src/configs/
 
 crates/sandbox-config/tests/unit/configs/
   daemon.rs
+
+observability/local-stack/phase-03-traces/
+  docker-compose.yml          # collector, tempo, grafana; no loki
+  otel-collector.yaml         # trace pipeline only
+  tempo.yaml
+  grafana/
+    provisioning/
+      datasources/
+        tempo.yaml
 ```
 
-Do not add file appenders or manager/gateway RPC telemetry transport.
+Do not add file appenders, Loki, log exporters, or manager/gateway RPC
+telemetry transport.
 
 ## Struct/Class And Field Changes
 
@@ -97,6 +109,8 @@ IDs, cgroup paths, or other per-request/per-workspace high-cardinality values.
 
 - Exactly one active sink is accepted.
 - Production trace sink is OTLP only.
+- Phase 3 exports trace data only. Spans and trace events go to Tempo through
+  the collector. They are not log records and do not require Loki.
 - Stdout/stderr JSON remain local/test foreground modes only. Prefer stderr for
   manual debugging unless the test fixture explicitly captures stdout.
 - File sink is not accepted.
@@ -114,6 +128,10 @@ IDs, cgroup paths, or other per-request/per-workspace high-cardinality values.
 - Do not add sampler config until there is at least one real policy beyond the
   initial OTLP trace rollout. Initial OTLP trace sampling is always-on by
   implementation convention, not a one-variant config enum.
+- The required local validation stack is OpenTelemetry Collector plus Tempo
+  plus Grafana. Jaeger may be added as an optional trace-only smoke target, but
+  it does not replace Tempo/Grafana validation.
+- Do not configure Grafana trace-to-logs or Loki in this phase.
 
 ## LOC Estimate
 
@@ -124,8 +142,9 @@ IDs, cgroup paths, or other per-request/per-workspace high-cardinality values.
 | OTLP exporter setup | 140 to 240 |
 | Shutdown task tracking and flush integration | 90 to 160 |
 | Exporter failure/drop/resource tests | 110 to 190 |
+| Local trace validation stack/provisioning | 80 to 150 |
 | Docs/config examples | 32 to 80 |
-| Total | 520 to 910 |
+| Total | 600 to 1,060 |
 
 ## Acceptance Criteria
 
@@ -138,6 +157,10 @@ IDs, cgroup paths, or other per-request/per-workspace high-cardinality values.
 - [ ] OTLP resource attributes include `service.name`, `service.instance.id`,
       and `sandbox.id`, and exclude raw paths, root hashes, request IDs,
       command IDs, workspace session IDs, cgroup paths, and error strings.
+- [ ] Local validation stack includes OpenTelemetry Collector, Tempo, and
+      Grafana with a Tempo data source.
+- [ ] The Phase 3 local validation stack does not include Loki, log exporters,
+      or Grafana trace-to-logs configuration.
 - [ ] Invalid telemetry config fails daemon startup.
 - [ ] Collector unreachable after valid exporter construction does not alter
       runtime protocol responses.

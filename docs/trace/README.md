@@ -14,7 +14,7 @@ The goal is to make runtime execution explainable from one correlated chain:
 - which workspace/layerstack/overlay phases ran
 - how long each phase took
 - what result or rejection happened
-- which logs belong to the same operation
+- which trace events belong to the same operation
 
 ## Decision
 
@@ -26,11 +26,10 @@ Collector endpoint that is reachable from the sandbox.
 sandbox-daemon / sandbox-runtime code
   -> tracing spans and events
   -> tracing-subscriber
-  -> OTLP exporter
+  -> OTLP trace exporter
   -> host OpenTelemetry Collector
-  -> Tempo / Jaeger for traces
-  -> Loki for logs
-  -> Prometheus/Grafana for metrics
+  -> Tempo trace backend
+  -> Grafana Tempo data source
 ```
 
 Code should depend on `tracing`, not directly on a vendor SDK. OTLP export is a
@@ -38,6 +37,13 @@ daemon/config concern.
 
 Runtime crates emit spans/events only. They do not initialize subscribers,
 choose exporters, own OTLP config, or provide a custom trace abstraction layer.
+
+Use precise signal names. In this spec, `event` means a Rust `tracing` event
+emitted at a semantic trace boundary. Phase 1 through Phase 3 treat those events
+as local subscriber output or trace-attached diagnostics, not as an
+OpenTelemetry Logs signal. Do not call this "trace logs". Loki is introduced
+only in a later explicit log-export and trace-to-logs correlation phase.
+Prometheus-compatible metrics storage starts in Phase 4a.
 
 Do not implement automatic fallback between collection paths. A daemon
 deployment chooses one active sink. If the configured exporter cannot deliver
@@ -71,6 +77,12 @@ has a meaningful duration, for example `runtime.exec_command`,
 
 **Event:** point-in-time fact attached to the current span. Use events for state
 transitions, rejection reasons, selected results, and cleanup outcomes.
+Trace events are part of the trace rollout. They are not log records, they do
+not require Loki, and they must not become a hidden log-export pipeline.
+
+**Log record:** observability log signal exported to a log backend such as Loki.
+Log export is deferred until an explicit log-correlation phase. Command
+transcripts are still functional command output, not observability logs.
 
 **Metric:** aggregate counter, gauge, or histogram. Metrics can be emitted
 directly later or derived from spans/events in the collector.
@@ -424,9 +436,21 @@ missing required dynamic `sandbox_id` is a startup error; collector
 unreachability after a valid exporter is constructed is fail-open for protocol
 behavior.
 
-The canonical local trace backend is Grafana with Tempo. Loki and
-Prometheus-compatible metrics belong to later log/metrics phases. Jaeger may be
-used as a trace-only smoke target.
+The canonical Phase 3 local trace validation stack is:
+
+```text
+sandbox-daemon
+  -> host OpenTelemetry Collector
+  -> Tempo
+  -> Grafana Tempo data source
+```
+
+Jaeger may be used as an additional trace-only smoke target, but the required
+local validation path is Collector plus Tempo plus Grafana. Loki is not required
+to view spans or trace events. Loki is required only when a later phase exports
+log records and configures Grafana trace-to-logs correlation. The
+Prometheus-compatible metrics backend starts in Phase 4a and is separate from
+Tempo.
 
 ## Sandbox Deployment
 
@@ -489,8 +513,10 @@ Because the sandbox id is assigned during creation, the manager flow is:
    source containing that id.
 6. The daemon loads the id at startup and attaches `sandbox.id` and
    `service.instance.id` resource attributes.
-7. Query Grafana/Tempo/Loki by `sandbox.id`, `request_id`, or trace id. If the
-   collector also derives `container.id`, that label is only an alias.
+7. Query Grafana/Tempo by `sandbox.id`, `request_id`, or trace id. If the
+   collector also derives `container.id`, that label is only an alias. Query
+   Loki only after the later log-export phase has added log records with trace
+   correlation fields.
 
 This avoids per-sandbox host log directories and avoids needing a final sandbox
 identity before sandbox creation.
@@ -571,16 +597,10 @@ daemon:
 ```
 
 Sandbox identity is runtime state, not static telemetry config. The manager
-should pass it to the daemon outside this YAML, for example:
+must pass it to the daemon explicitly outside this YAML:
 
 ```text
 sandbox-daemon serve --sandbox-id <sandbox-id> ...
-```
-
-or:
-
-```text
-EOS_SANDBOX_ID=<sandbox-id> sandbox-daemon serve ...
 ```
 
 Config validation rules:
@@ -595,7 +615,7 @@ Config validation rules:
 - exactly one sink is active; no fallback sink list is accepted.
 - OTLP endpoints must be explicit; do not infer host networking.
 - daemon startup must fail telemetry initialization if manager-started OTLP mode
-  has no dynamic `sandbox_id` identity source.
+  has no dynamic `--sandbox-id` argument.
 - telemetry config must default to disabled; local JSON streams are allowed only
   as explicit foreground local/test modes. Prefer `stream = stderr` for manual
   debugging unless a fixture explicitly captures stdout.
@@ -625,6 +645,7 @@ Deferred scope:
 - protocol response metadata for `trace_id`
 - gateway `--trace` and `--verbose-trace` lookup UX
 - full metrics/dashboard implementation
+- Loki/log export and trace-to-logs correlation
 - custom EphemeralOS UI over backend APIs
 
 Expected file/folder structure:
@@ -725,8 +746,8 @@ wrapper types.
 
 The `SandboxDaemonInstaller` trait does not need a signature change for
 sandbox identity because `start_daemon(&SandboxRecord)` already receives the
-record id. The concrete daemon starter should pass that id to
-`sandbox-daemon serve --sandbox-id <sandbox-id>` or `EOS_SANDBOX_ID`.
+record id. The concrete daemon starter should pass that id with
+`sandbox-daemon serve --sandbox-id <sandbox-id>`.
 
 Phases 1-3 should not change `sandbox_protocol::Response`. Trace IDs in
 protocol responses are a later protocol-envelope change.
@@ -773,109 +794,19 @@ them.
 
 Detailed implementation specs with per-phase file/folder changes,
 struct/class-field changes, LOC estimates, and acceptance checklists live in
-[phases/README.md](phases/README.md).
+[phases/README.md](phases/README.md). That phase index and the individual
+phase files are the source of truth; this README keeps only the architecture
+constraints and rollout ordering.
 
-### Phase 1: Local JSON tracing
-
-- Add `tracing` to runtime crates that emit spans/events.
-- Add `tracing-subscriber` to `sandbox-daemon`.
-- Initialize a subscriber in `sandbox-daemon serve`.
-- Reject local JSON stream telemetry when `serve --spawn` would detach
-  stdout/stderr.
-- Add `daemon.request` root span around `dispatch_request`.
-- Add spans to runtime operation dispatch and command operations.
-- If a generic dispatch span is kept, name it `runtime.dispatch`; operation
-  spans keep the stable `runtime.exec_command`, `runtime.write_command_stdin`,
-  and `runtime.read_command_lines` names.
-- Make span-close timing visible in local JSON output so operation wall-clock
-  duration can be inspected without a backend.
-- Assert root spans record explicit safe fields and do not record raw request
-  args, response payloads, command text, stdin, output, environment values, or
-  auth tokens, raw paths, raw PIDs, raw root hashes, or raw DTO/error strings.
-- Keep runtime instrumentation inline in existing modules; do not add
-  `crates/sandbox-runtime/operation/src/internal/telemetry.rs`.
-- Enable `FmtSpan::CLOSE` or equivalent span-close timing.
-- Verify existing tests and add focused JSON formatting/config tests.
-
-### Phase 2: Runtime semantic spans
-
-- Add spans/events for workspace create/destroy/capture/remount at the existing
-  service methods.
-- Convert existing internal workspace create phase timers into trace events
-  while keeping `WorkspaceHandle` behavior unchanged. Preserve explicit
-  `Instant` phase timers for typed reports where they exist.
-- Emit remount verification diagnostic fields as events while preserving the
-  simplified `RemountOverlayResult` correctness surface. Do not project raw
-  namespace-process remount report JSON.
-- Emit layerstack publish route/OCC/publish result events from operation-level
-  wrappers.
-- Emit cgroup monitor trace events only for internal anomalies and final
-  summaries. Do not add spans for `inspect_cgroup_monitor` or
-  `read_cgroup_monitor_samples`.
-
-### Phase 3: OTLP export
-
-- Add optional OpenTelemetry dependencies.
-- Select exact compatible OTel crate versions and protocol features in one
-  Cargo change.
-- Add config schema for telemetry sink and OTLP endpoint.
-- Export traces to collector through one OTLP path.
-- Keep local JSON streams only as explicit foreground local/test modes.
-- Add validation that production daemon config has one sink and no fallback.
-- Add bounded exporter queue/drop policy and define collector-unreachable
-  behavior as fail-open for protocol responses after config validation.
-- Track or drain spawned request/connection tasks before flushing or shutting
-  down the telemetry provider so terminal spans/events are not lost on normal
-  daemon shutdown.
-- Add tests proving daemon startup succeeds when OTLP is disabled.
-
-### Phase 4a: Metrics and dashboards
-
-- Add latency histograms for runtime operations and workspace phases. These
-  should come from span durations or direct histogram recording, not from
-  subtracting unrelated event timestamps or reading command response timing
-  fields.
-- Add counters for publish rejection reasons, remount failures, command
-  cancellations, and cgroup monitor read errors.
-- Before dashboards depend on command final cgroup samples, regression-test the
-  deterministic final-sample-before-cleanup ordering so a post-cleanup periodic
-  sample cannot affect final CPU delta/percent enrichment.
-- Export cgroup monitor samples as metrics first. Periodic CPU, memory, pids,
-  pressure, and disk samples should not be emitted as per-sample trace events.
-- Record cgroup metrics through a daemon-owned metrics recorder or narrow
-  injected interface, not by giving runtime crates exporter/subscriber
-  ownership and not by polling public cgroup read operations.
-- Emit trace events for cgroup anomalies and final summaries only, such as read
-  failures, cleanup failures, pressure threshold crossings, and command final
-  samples.
-- Keep existing `inspect_cgroup_monitor` and `read_cgroup_monitor_samples`
-  operations temporarily, but dashboards must not depend on them.
-- Build dashboards for command latency, publish conflict rate, remount health,
-  and cgroup resource trends.
-
-### Phase 4b: Cgroup telemetry cutover
-
-- Start only after Phase 4a dashboards read cgroup stats from telemetry metrics.
-- Move `crates/sandbox-runtime/operation/src/public/cgroup_monitor` to an
-  internal service, or collapse the remaining code into internal workspace and
-  command telemetry adapters.
-- Remove `inspect_cgroup_monitor` and `read_cgroup_monitor_samples` from runtime
-  `cli_operation_specs`, CLI operation families, operation entries,
-  daemon-described runtime catalog output, and gateway runtime help/mappings.
-- Keep `CgroupMonitorSample`, final samples, cleanup state, and retained
-  internal samples as metrics sources.
-- Do not leave hidden compatibility aliases for the old cgroup monitor
-  operation names.
-
-### Phase 5: Runner context propagation
-
-- Pass trace context from daemon to `ns-runner`.
-- Cover both command launches and workspace overlay/remount setns-runner
-  launches.
-- Add runner spans for setns, cgroup join, overlay mount/remount, and command
-  execution.
-- Preserve compatibility when trace context is absent, invalid, or omitted from
-  older `NamespaceRunnerRequest` payloads.
+| Phase | Detailed Spec | Outcome |
+| --- | --- | --- |
+| 1 | [Local JSON Tracing](phases/phase-01-local-json.md) | Local subscriber, root spans, safe fields, command spans |
+| 2 | [Runtime Semantic Spans](phases/phase-02-runtime-semantic-spans.md) | Workspace, remount, publish, and cgroup anomaly/final-summary events |
+| 3 | [OTLP Export](phases/phase-03-otlp-export.md) | Single-path OTLP export with Collector + Tempo + Grafana validation |
+| 4a | [Metrics And Dashboards](phases/phase-04-metrics-dashboards.md) | Metrics-first cgroup samples and Grafana dashboards |
+| 4b | [Cgroup Telemetry Cutover](phases/phase-04b-cgroup-telemetry-cutover.md) | Remove public cgroup monitor read operations after telemetry is canonical |
+| 5 | [Runner Context Propagation](phases/phase-05-runner-context.md) | W3C context propagation into `ns-runner` |
+| 6 | [Log Export And Trace Correlation](phases/phase-06-log-export-trace-correlation.md) | Explicit Loki log export and Grafana trace-to-logs correlation |
 
 ## Verification
 
@@ -938,5 +869,7 @@ Trace assertions should verify:
 | Trace IDs in protocol responses | later only, as a versioned protocol-envelope change |
 | Cgroup monitor samples | metrics primary; trace events only for anomalies/final summaries |
 | Response simplification | telemetry owns time/resource/dashboard stats; responses keep workflow data only until a later API cleanup |
-| Canonical production OTLP trace backend | Grafana + Tempo for traces; Loki and Prometheus-compatible metrics are later phases; Jaeger is optional trace-only smoke target |
+| Canonical Phase 3 trace validation stack | OpenTelemetry Collector + Tempo + Grafana; Jaeger is optional trace-only smoke target |
+| Loki | deferred until explicit log export and Grafana trace-to-logs correlation; not needed for spans or trace events |
+| Phase 4a dashboard stack | OpenTelemetry Collector + Prometheus-compatible metrics backend + Grafana; Tempo only for trace panels/links |
 | Time measurement | span duration for operation latency, event timestamps for ordering, explicit `Instant` timers for typed phase reports |

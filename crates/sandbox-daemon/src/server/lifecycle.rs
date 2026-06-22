@@ -3,6 +3,7 @@ use std::sync::Arc;
 use tokio::io::{AsyncWrite, AsyncWriteExt};
 use tokio::net::{TcpListener, UnixListener};
 use tokio::sync::Semaphore;
+use tokio_util::task::TaskTracker;
 
 use super::SandboxDaemonServer;
 use crate::server::error::SandboxDaemonError;
@@ -11,7 +12,7 @@ const MAX_CONCURRENT_CONNECTIONS: usize = 256;
 
 impl SandboxDaemonServer {
     /// Bind the `AF_UNIX` (and optional TCP) listeners, write the pid file, install
-    /// the SIGTERM/SIGINT handlers, and serve until the shutdown token fires.
+    /// the Ctrl-C handler, and serve until the shutdown token fires.
     ///
     /// On shutdown: cancel the serve tasks, remove the pid file, and unlink the
     /// socket.
@@ -24,6 +25,7 @@ impl SandboxDaemonServer {
         let shutdown = self.shutdown.clone();
         let server = Arc::new(self);
         let connection_permits = Arc::new(Semaphore::new(MAX_CONCURRENT_CONNECTIONS));
+        let connection_tasks = TaskTracker::new();
         if let Some(parent) = server.config.socket_path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
@@ -43,9 +45,10 @@ impl SandboxDaemonServer {
         }
         tokio::fs::write(&server.config.pid_path, std::process::id().to_string()).await?;
 
-        let unix_server = {
+        let mut unix_server = {
             let server = Arc::clone(&server);
             let connection_permits = Arc::clone(&connection_permits);
+            let connection_tasks = connection_tasks.clone();
             tokio::spawn(async move {
                 loop {
                     tokio::select! {
@@ -53,11 +56,11 @@ impl SandboxDaemonServer {
                         accepted = unix_listener.accept() => {
                             let (stream, _) = accepted?;
                             let Ok(permit) = Arc::clone(&connection_permits).try_acquire_owned() else {
-                                tokio::spawn(reject_overloaded_connection(stream));
+                                connection_tasks.spawn(reject_overloaded_connection(stream));
                                 continue;
                             };
                             let server = Arc::clone(&server);
-                            tokio::spawn(async move {
+                            connection_tasks.spawn(async move {
                                 let _permit = permit;
                                 let _ = server.handle_connection(stream, false, None, None).await;
                             });
@@ -73,6 +76,7 @@ impl SandboxDaemonServer {
                 let listener = TcpListener::bind((host.as_str(), port)).await?;
                 let server = Arc::clone(&server);
                 let connection_permits = Arc::clone(&connection_permits);
+                let connection_tasks = connection_tasks.clone();
                 Some(tokio::spawn(async move {
                     loop {
                         tokio::select! {
@@ -80,12 +84,12 @@ impl SandboxDaemonServer {
                             accepted = listener.accept() => {
                                 let (stream, peer_addr) = accepted?;
                                 let Ok(permit) = Arc::clone(&connection_permits).try_acquire_owned() else {
-                                    tokio::spawn(reject_overloaded_connection(stream));
+                                    connection_tasks.spawn(reject_overloaded_connection(stream));
                                     continue;
                                 };
                                 let local_addr = stream.local_addr().ok();
                                 let server = Arc::clone(&server);
-                                tokio::spawn(async move {
+                                connection_tasks.spawn(async move {
                                     let _permit = permit;
                                     let _ = server
                                         .handle_connection(
@@ -108,9 +112,15 @@ impl SandboxDaemonServer {
         tokio::select! {
             () = shutdown.cancelled() => {}
             () = signal_shutdown() => shutdown.cancel(),
-            result = unix_server => {
-                if let Ok(Err(err)) = result {
-                    return Err(SandboxDaemonError::Io(err));
+            result = &mut unix_server => {
+                match result {
+                    Ok(Ok(())) => {}
+                    Ok(Err(err)) => return Err(SandboxDaemonError::Io(err)),
+                    Err(err) => {
+                        return Err(SandboxDaemonError::Io(std::io::Error::other(format!(
+                            "unix listener task failed: {err}"
+                        ))));
+                    }
                 }
             }
             result = async {
@@ -128,9 +138,21 @@ impl SandboxDaemonServer {
                 }
             },
         }
-        if let Some(task) = tcp_server {
-            task.abort();
+        shutdown.cancel();
+        if !unix_server.is_finished() {
+            unix_server.abort();
+            let _ = unix_server.await;
         }
+        if let Some(task) = tcp_server.as_mut() {
+            if !task.is_finished() {
+                task.abort();
+                let _ = task.await;
+            }
+        }
+        drop(tcp_server);
+        // All listener tasks have stopped accepting before the tracked
+        // request/connection tasks are allowed to drain.
+        drain_connection_tasks(&connection_tasks).await;
         let _ = tokio::fs::remove_file(&server.config.pid_path).await;
         let _ = tokio::fs::remove_file(&server.config.socket_path).await;
         Ok(())
@@ -150,6 +172,11 @@ where
     framed.push(b'\n');
     let _ = stream.write_all(&framed).await;
     let _ = stream.shutdown().await;
+}
+
+pub(crate) async fn drain_connection_tasks(connection_tasks: &TaskTracker) {
+    connection_tasks.close();
+    connection_tasks.wait().await;
 }
 
 async fn signal_shutdown() {

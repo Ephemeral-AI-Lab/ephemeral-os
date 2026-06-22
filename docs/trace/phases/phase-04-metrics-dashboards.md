@@ -20,6 +20,8 @@ remove the existing CLI/catalog-facing cgroup monitor operations yet.
   metrics.
 - Add dashboard definitions for command latency, publish conflict rate, remount
   health, and cgroup resource trends.
+- Add or extend local dashboard validation stack config for OpenTelemetry
+  Collector, a Prometheus-compatible metrics backend, and Grafana.
 - Keep `inspect_cgroup_monitor` and `read_cgroup_monitor_samples` temporarily
   until Phase 4b proves they are no longer needed as CLI/debug surfaces.
 
@@ -55,6 +57,15 @@ docs/trace/dashboards/
   publish-conflicts.json
   remount-health.json
   cgroup-resources.json
+
+observability/local-stack/phase-04a-metrics/
+  docker-compose.yml          # collector, prometheus-compatible metrics backend, grafana
+  otel-collector.yaml         # metrics pipeline; traces only if trace panels are present
+  grafana/
+    provisioning/
+      datasources/
+        metrics.yaml
+        tempo.yaml            # only when dashboards include trace panels/links
 ```
 
 If `telemetry/metrics.rs` is added, `telemetry.rs` remains daemon-owned. Runtime
@@ -116,6 +127,8 @@ feed metrics.
 - Dashboard validation must load the JSON against a chosen local Grafana stack
   with a Prometheus-compatible metrics datasource. Tempo may be used only for
   trace panels, not as the metrics datasource.
+- Loki is not part of Phase 4a. Do not add Grafana trace-to-logs, Loki derived
+  fields, or log panels until the explicit log-export phase.
 
 ## LOC Estimate
 
@@ -126,8 +139,9 @@ feed metrics.
 | Narrow runtime metrics recorder interface and call sites | 180 to 340 |
 | Cgroup metric mapping and allowlist | 160 to 300 |
 | Dashboard JSON/provisioning validation | 220 to 420 |
+| Local metrics stack/provisioning | 120 to 240 |
 | Tests | 170 to 380 |
-| Phase 4a total | 950 to 1,800 |
+| Phase 4a total | 1,070 to 2,040 |
 
 ## Acceptance Criteria
 
@@ -153,5 +167,7 @@ feed metrics.
       error strings.
 - [ ] Dashboard files load in the chosen local Grafana stack with the configured
       metrics datasource; any Tempo panels are trace-only.
+- [ ] Phase 4a does not add Loki, log exporters, trace-to-logs configuration,
+      or log panels.
 - [ ] `cargo test -p sandbox-daemon -p sandbox-runtime -p sandbox-runtime-workspace -p sandbox-runtime-command`
       passes.

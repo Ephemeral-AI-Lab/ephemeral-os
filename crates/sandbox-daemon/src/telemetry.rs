@@ -1,13 +1,26 @@
 //! Daemon-owned tracing subscriber setup.
 
-use sandbox_config::configs::validate::{require_non_empty, ConfigFieldError};
+use std::time::Duration;
+
+use opentelemetry::trace::TracerProvider as _;
+use opentelemetry::KeyValue;
+use opentelemetry_otlp::{Protocol, WithExportConfig};
+use opentelemetry_sdk::trace::{BatchConfig, BatchConfigBuilder, BatchSpanProcessor};
+use opentelemetry_sdk::{trace::SdkTracerProvider, Resource};
+use sandbox_config::configs::validate::{
+    require_non_empty, require_u64_at_least, require_usize_at_least, ConfigFieldError,
+};
 use sandbox_config::{ConfigDocument, ConfigError};
 use serde::Deserialize;
 use thiserror::Error;
 use tracing_subscriber::filter::LevelFilter;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::fmt::MakeWriter;
+use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::Layer;
+
+const OTLP_SHUTDOWN_TIMEOUT_MS: u64 = 5_000;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -38,6 +51,9 @@ impl TelemetryConfig {
     pub fn validate(&self) -> Result<(), ConfigFieldError> {
         require_non_empty(&self.service_name, "daemon.telemetry.service_name")?;
         validate_telemetry_level(&self.level)?;
+        if let Some(sink) = self.sink.as_ref() {
+            validate_telemetry_sink(sink)?;
+        }
         if self.enabled && self.sink.is_none() {
             return Err(ConfigFieldError::new(
                 "daemon.telemetry.sink",
@@ -70,12 +86,45 @@ impl TelemetryConfig {
         }
         Ok(())
     }
+
+    /// Validate serve-mode plus runtime identity requirements.
+    ///
+    /// # Errors
+    /// Returns an error when the configured sink cannot run in `mode`, or when
+    /// OTLP mode lacks the dynamic sandbox identity required for resource
+    /// attributes.
+    pub fn validate_for_daemon_startup(
+        &self,
+        mode: DaemonServeMode,
+        sandbox_id: Option<&str>,
+    ) -> Result<(), ConfigFieldError> {
+        self.validate_for_serve_mode(mode)?;
+        if self.enabled && self.uses_otlp() && !has_dynamic_sandbox_id(sandbox_id) {
+            return Err(ConfigFieldError::new(
+                "daemon.telemetry.sink",
+                "otlp telemetry requires dynamic sandbox_id",
+            ));
+        }
+        Ok(())
+    }
+
+    fn uses_otlp(&self) -> bool {
+        matches!(self.sink, Some(TelemetrySink::Otlp { .. }))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum TelemetrySink {
-    LocalJson { stream: TelemetryOutputStream },
+    LocalJson {
+        stream: TelemetryOutputStream,
+    },
+    Otlp {
+        endpoint: String,
+        protocol: OtlpProtocol,
+        timeout_ms: u64,
+        queue_size: usize,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -83,6 +132,13 @@ pub enum TelemetrySink {
 pub enum TelemetryOutputStream {
     Stdout,
     Stderr,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OtlpProtocol {
+    Http,
+    Grpc,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -106,18 +162,41 @@ pub fn from_config_document(doc: &ConfigDocument) -> Result<TelemetryConfig, Con
 /// # Errors
 /// Returns an error when the configured level is invalid or a subscriber has
 /// already been installed.
-pub fn install(config: &TelemetryConfig) -> Result<(), TelemetryInstallError> {
+pub fn install(
+    config: &TelemetryConfig,
+    sandbox_id: Option<&str>,
+) -> Result<TelemetryGuard, TelemetryInstallError> {
     if !config.enabled {
-        return Ok(());
+        return Ok(TelemetryGuard::disabled());
     }
     let level = level_filter(&config.level)?;
     match config.sink.as_ref() {
         Some(TelemetrySink::LocalJson {
             stream: TelemetryOutputStream::Stdout,
-        }) => init_json_subscriber(level, std::io::stdout),
+        }) => {
+            init_json_subscriber(level, std::io::stdout)?;
+            Ok(TelemetryGuard::disabled())
+        }
         Some(TelemetrySink::LocalJson {
             stream: TelemetryOutputStream::Stderr,
-        }) => init_json_subscriber(level, std::io::stderr),
+        }) => {
+            init_json_subscriber(level, std::io::stderr)?;
+            Ok(TelemetryGuard::disabled())
+        }
+        Some(TelemetrySink::Otlp {
+            endpoint,
+            protocol,
+            timeout_ms,
+            queue_size,
+        }) => init_otlp_subscriber(
+            level,
+            &config.service_name,
+            endpoint,
+            *protocol,
+            *timeout_ms,
+            *queue_size,
+            sandbox_id,
+        ),
         None => Err(TelemetryInstallError::MissingSink),
     }
 }
@@ -148,6 +227,65 @@ where
         .finish()
 }
 
+fn init_otlp_subscriber(
+    level: LevelFilter,
+    service_name: &str,
+    endpoint: &str,
+    protocol: OtlpProtocol,
+    timeout_ms: u64,
+    queue_size: usize,
+    sandbox_id: Option<&str>,
+) -> Result<TelemetryGuard, TelemetryInstallError> {
+    if protocol != OtlpProtocol::Http {
+        return Err(TelemetryInstallError::UnsupportedOtlpProtocol);
+    }
+    let sandbox_id = sandbox_id
+        .filter(|value| !value.trim().is_empty())
+        .ok_or(TelemetryInstallError::MissingSandboxId)?;
+    let timeout = Duration::from_millis(timeout_ms);
+    let exporter = opentelemetry_otlp::SpanExporter::builder()
+        .with_http()
+        .with_endpoint(endpoint.to_owned())
+        .with_timeout(timeout)
+        .with_protocol(Protocol::HttpBinary)
+        .build()
+        .map_err(|err| TelemetryInstallError::ExporterBuild(err.to_string()))?;
+    let processor = BatchSpanProcessor::builder(exporter)
+        .with_batch_config(otlp_batch_config(queue_size, timeout))
+        .build();
+    let provider = SdkTracerProvider::builder()
+        .with_resource(otlp_resource(service_name, sandbox_id))
+        .with_span_processor(processor)
+        .build();
+    let tracer = provider.tracer(service_name.to_owned());
+    let otel_layer = tracing_opentelemetry::layer()
+        .with_tracer(tracer)
+        .with_filter(level);
+    tracing_subscriber::registry()
+        .with(otel_layer)
+        .try_init()
+        .map_err(|_| TelemetryInstallError::SubscriberAlreadyInstalled)?;
+    Ok(TelemetryGuard::new(provider))
+}
+
+fn otlp_batch_config(queue_size: usize, scheduled_delay: Duration) -> BatchConfig {
+    BatchConfigBuilder::default()
+        .with_max_queue_size(queue_size)
+        .with_max_export_batch_size(queue_size.clamp(1, 512))
+        .with_scheduled_delay(scheduled_delay)
+        .build()
+}
+
+pub(crate) fn otlp_resource(service_name: &str, sandbox_id: &str) -> Resource {
+    Resource::builder()
+        .with_service_name(service_name.to_owned())
+        .with_attributes([
+            KeyValue::new("service.instance.id", sandbox_id.to_owned()),
+            KeyValue::new("sandbox.id", sandbox_id.to_owned()),
+        ])
+        .build()
+}
+
 fn level_filter(level: &str) -> Result<LevelFilter, TelemetryInstallError> {
     match level {
         "trace" => Ok(LevelFilter::TRACE),
@@ -156,6 +294,29 @@ fn level_filter(level: &str) -> Result<LevelFilter, TelemetryInstallError> {
         "warn" => Ok(LevelFilter::WARN),
         "error" => Ok(LevelFilter::ERROR),
         _ => Err(TelemetryInstallError::InvalidLevel),
+    }
+}
+
+fn validate_telemetry_sink(sink: &TelemetrySink) -> Result<(), ConfigFieldError> {
+    match sink {
+        TelemetrySink::LocalJson { .. } => Ok(()),
+        TelemetrySink::Otlp {
+            endpoint,
+            protocol,
+            timeout_ms,
+            queue_size,
+        } => {
+            require_non_empty(endpoint, "daemon.telemetry.sink.endpoint")?;
+            require_u64_at_least(*timeout_ms, 1, "daemon.telemetry.sink.timeout_ms")?;
+            require_usize_at_least(*queue_size, 1, "daemon.telemetry.sink.queue_size")?;
+            if *protocol != OtlpProtocol::Http {
+                return Err(ConfigFieldError::new(
+                    "daemon.telemetry.sink.protocol",
+                    "only http OTLP protocol is supported by this build",
+                ));
+            }
+            Ok(())
+        }
     }
 }
 
@@ -169,14 +330,79 @@ fn validate_telemetry_level(level: &str) -> Result<(), ConfigFieldError> {
     }
 }
 
+fn has_dynamic_sandbox_id(value: Option<&str>) -> bool {
+    value.is_some_and(|value| !value.trim().is_empty())
+}
+
+pub struct TelemetryGuard {
+    provider: Option<SdkTracerProvider>,
+    shutdown_timeout: Duration,
+}
+
+impl TelemetryGuard {
+    fn disabled() -> Self {
+        Self {
+            provider: None,
+            shutdown_timeout: Duration::from_millis(OTLP_SHUTDOWN_TIMEOUT_MS),
+        }
+    }
+
+    fn new(provider: SdkTracerProvider) -> Self {
+        Self {
+            provider: Some(provider),
+            shutdown_timeout: Duration::from_millis(OTLP_SHUTDOWN_TIMEOUT_MS),
+        }
+    }
+
+    /// Flush and shut down the daemon-owned telemetry provider.
+    ///
+    /// # Errors
+    /// Returns a bounded shutdown error reported by the OpenTelemetry SDK.
+    pub fn shutdown(&mut self) -> Result<(), TelemetryShutdownError> {
+        let Some(provider) = self.provider.take() else {
+            return Ok(());
+        };
+        provider
+            .shutdown_with_timeout(self.shutdown_timeout)
+            .map_err(|err| TelemetryShutdownError::Provider(err.to_string()))
+    }
+
+    #[cfg(test)]
+    #[allow(dead_code, reason = "used by path-included daemon integration tests")]
+    pub(crate) fn from_provider_for_test(provider: SdkTracerProvider, timeout: Duration) -> Self {
+        Self {
+            provider: Some(provider),
+            shutdown_timeout: timeout,
+        }
+    }
+}
+
+impl Drop for TelemetryGuard {
+    fn drop(&mut self) {
+        let _ = self.shutdown();
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum TelemetryInstallError {
     #[error("telemetry level is invalid")]
     InvalidLevel,
     #[error("enabled telemetry requires a sink")]
     MissingSink,
+    #[error("otlp telemetry requires dynamic sandbox_id")]
+    MissingSandboxId,
+    #[error("configured OTLP protocol is not supported by this daemon build")]
+    UnsupportedOtlpProtocol,
+    #[error("failed to build OTLP exporter: {0}")]
+    ExporterBuild(String),
     #[error("tracing subscriber is already installed")]
     SubscriberAlreadyInstalled,
+}
+
+#[derive(Debug, Error)]
+pub enum TelemetryShutdownError {
+    #[error("telemetry provider shutdown failed: {0}")]
+    Provider(String),
 }
 
 #[cfg(test)]

@@ -43,6 +43,12 @@ tokio = { version = "1", features = ["full"] }
 tokio-util = { version = "0.7", features = ["rt"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "json", "std"] }
+# Phase 3 trace export uses OTLP over HTTP/protobuf only. Keep these exact
+# generation-matched versions together.
+tracing-opentelemetry = { version = "=0.33.0", default-features = false }
+opentelemetry = { version = "=0.32.0", default-features = false, features = ["trace"] }
+opentelemetry_sdk = { version = "=0.32.1", default-features = false, features = ["trace"] }
+opentelemetry-otlp = { version = "=0.32.0", default-features = false, features = ["http-proto", "reqwest-blocking-client", "trace"] }
 rustix = { version = "0.38", features = ["fs", "mount", "process", "thread"] }
 nix = "0.29"
 libc = "0.2"

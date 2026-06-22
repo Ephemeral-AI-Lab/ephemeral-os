@@ -33,6 +33,7 @@ mod dependency_guard_tests;
 
 mod connection_tests {
     pub(crate) use crate::server::connection::read_request_line_with_timeout;
+    pub(crate) use crate::server::drain_connection_tasks;
     include!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/unit/connection.rs"

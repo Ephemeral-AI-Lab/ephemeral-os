@@ -1,17 +1,21 @@
 use std::io;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::Result;
+use opentelemetry::Key;
+use opentelemetry_sdk::error::OTelSdkResult;
+use opentelemetry_sdk::trace::{SdkTracerProvider, SpanData, SpanExporter};
 use serde_json::{json, Value};
 use tokio::runtime::Runtime;
 use tracing_subscriber::fmt::MakeWriter;
 
 use crate::server::{SandboxDaemonServer, ServerConfig};
 use crate::telemetry::{
-    DaemonServeMode, TelemetryConfig, TelemetryOutputStream, TelemetrySink,
+    DaemonServeMode, OtlpProtocol, TelemetryConfig, TelemetryOutputStream, TelemetrySink,
 };
 
 #[test]
@@ -177,6 +181,91 @@ sink:
 }
 
 #[test]
+fn telemetry_otlp_accepts_http_sink() {
+    let cfg = telemetry_config(
+        r#"
+enabled: true
+service_name: sandbox-daemon
+level: info
+sink:
+  kind: otlp
+  endpoint: http://collector:4318
+  protocol: http
+  timeout_ms: 1000
+  queue_size: 2048
+"#,
+    );
+
+    assert!(matches!(
+        cfg.sink,
+        Some(TelemetrySink::Otlp {
+            protocol: OtlpProtocol::Http,
+            timeout_ms: 1000,
+            queue_size: 2048,
+            ..
+        })
+    ));
+    cfg.validate()
+        .expect("otlp http/protobuf telemetry validates");
+}
+
+#[test]
+fn telemetry_rejects_invalid_otlp_settings() {
+    let missing_endpoint = telemetry_deserialize_error(
+        r#"
+enabled: true
+service_name: sandbox-daemon
+level: info
+sink:
+  kind: otlp
+  protocol: http
+  timeout_ms: 1000
+  queue_size: 2048
+"#,
+    );
+    assert!(
+        missing_endpoint.contains("endpoint"),
+        "unexpected error: {missing_endpoint}"
+    );
+
+    let zero_timeout = telemetry_config(
+        r#"
+enabled: true
+service_name: sandbox-daemon
+level: info
+sink:
+  kind: otlp
+  endpoint: http://collector:4318
+  protocol: http
+  timeout_ms: 0
+  queue_size: 2048
+"#,
+    );
+    assert_eq!(
+        zero_timeout.validate().expect_err("zero timeout rejected").field,
+        "daemon.telemetry.sink.timeout_ms"
+    );
+
+    let zero_queue = telemetry_config(
+        r#"
+enabled: true
+service_name: sandbox-daemon
+level: info
+sink:
+  kind: otlp
+  endpoint: http://collector:4318
+  protocol: http
+  timeout_ms: 1000
+  queue_size: 0
+"#,
+    );
+    assert_eq!(
+        zero_queue.validate().expect_err("zero queue rejected").field,
+        "daemon.telemetry.sink.queue_size"
+    );
+}
+
+#[test]
 fn telemetry_rejects_invalid_stream() {
     let err = telemetry_deserialize_error(
         r#"
@@ -221,15 +310,60 @@ enabled: true
 service_name: sandbox-daemon
 level: info
 sink:
-  kind: otlp
-  stream: stdout
+  kind: file
+  path: /tmp/sandbox-daemon-telemetry.json
 "#,
     );
 
     assert!(
-        err.contains("otlp") || err.contains("kind"),
+        err.contains("file") || err.contains("kind"),
         "unexpected error: {err}"
     );
+}
+
+#[test]
+fn telemetry_rejects_fallback_sink_list() {
+    let err = telemetry_deserialize_error(
+        r#"
+enabled: true
+service_name: sandbox-daemon
+level: info
+sink:
+  - kind: local_json
+    stream: stderr
+  - kind: otlp
+    endpoint: http://collector:4318
+    protocol: http
+    timeout_ms: 1000
+    queue_size: 2048
+"#,
+    );
+
+    assert!(
+        err.contains("sequence") || err.contains("sink"),
+        "unexpected error: {err}"
+    );
+}
+
+#[test]
+fn telemetry_rejects_unsupported_otlp_protocol() {
+    let cfg = telemetry_config(
+        r#"
+enabled: true
+service_name: sandbox-daemon
+level: info
+sink:
+  kind: otlp
+  endpoint: http://collector:4318
+  protocol: grpc
+  timeout_ms: 1000
+  queue_size: 2048
+"#,
+    );
+
+    let err = cfg.validate().expect_err("grpc protocol rejected");
+
+    assert_eq!(err.field, "daemon.telemetry.sink.protocol");
 }
 
 #[test]
@@ -250,6 +384,19 @@ level: info
 }
 
 #[test]
+fn telemetry_otlp_requires_dynamic_sandbox_id() {
+    let cfg = otlp_telemetry("http://collector:4318", 1000, 2048);
+
+    let err = cfg
+        .validate_for_daemon_startup(DaemonServeMode::Spawn, None)
+        .expect_err("otlp telemetry requires sandbox identity");
+    assert_eq!(err.field, "daemon.telemetry.sink");
+
+    cfg.validate_for_daemon_startup(DaemonServeMode::Spawn, Some("sbox-1"))
+        .expect("otlp telemetry accepts dynamic sandbox identity");
+}
+
+#[test]
 fn telemetry_rejects_local_json_in_spawn_mode() {
     let cfg = telemetry_config(
         r#"
@@ -267,6 +414,79 @@ sink:
         .expect_err("local json stdout/stderr is foreground-only");
 
     assert_eq!(err.field, "daemon.telemetry.sink");
+}
+
+#[test]
+fn otlp_resource_contains_only_daemon_and_sandbox_identity() {
+    let resource = crate::telemetry::otlp_resource("sandbox-daemon", "sbox-1");
+
+    assert_eq!(
+        resource_value(&resource, "service.name").as_deref(),
+        Some("sandbox-daemon")
+    );
+    assert_eq!(
+        resource_value(&resource, "service.instance.id").as_deref(),
+        Some("sbox-1")
+    );
+    assert_eq!(
+        resource_value(&resource, "sandbox.id").as_deref(),
+        Some("sbox-1")
+    );
+    for forbidden in [
+        "request_id",
+        "command_id",
+        "command_session_id",
+        "workspace_session_id",
+        "cgroup_path",
+        "workspace_root",
+        "root_hash",
+        "error",
+    ] {
+        assert!(
+            resource.get(&Key::from_static_str(forbidden)).is_none(),
+            "resource must not include high-cardinality attribute {forbidden}"
+        );
+    }
+}
+
+#[test]
+fn otlp_unreachable_collector_does_not_change_protocol_response() -> Result<()> {
+    let runtime = Runtime::new()?;
+    let server = test_server(Some("sbox-otlp"));
+    let request = json!({
+        "op": "unknown_op",
+        "request_id": "req-otlp",
+        "scope": { "kind": "sandbox", "sandbox_id": "scope-sbox" },
+        "args": {}
+    });
+    let request_bytes = serde_json::to_vec(&request)?;
+    let mut guard = crate::telemetry::install(
+        &otlp_telemetry("http://127.0.0.1:9", 1, 1),
+        Some("sbox-otlp"),
+    )?;
+
+    let response = runtime.block_on(server.dispatch_bytes(request_bytes, false));
+
+    assert_eq!(response["error"]["kind"], "unknown_op");
+    let _ = guard.shutdown();
+    Ok(())
+}
+
+#[test]
+fn telemetry_guard_shutdown_calls_provider() {
+    let shutdown_called = Arc::new(AtomicBool::new(false));
+    let exporter = ShutdownExporter {
+        shutdown_called: Arc::clone(&shutdown_called),
+    };
+    let provider = SdkTracerProvider::builder()
+        .with_simple_exporter(exporter)
+        .build();
+    let mut guard =
+        crate::telemetry::TelemetryGuard::from_provider_for_test(provider, Duration::from_millis(5));
+
+    guard.shutdown().expect("provider shutdown succeeds");
+
+    assert!(shutdown_called.load(Ordering::SeqCst));
 }
 
 #[derive(Clone, Default)]
@@ -313,6 +533,26 @@ fn local_json_telemetry(stream: TelemetryOutputStream) -> TelemetryConfig {
         level: "info".to_owned(),
         sink: Some(TelemetrySink::LocalJson { stream }),
     }
+}
+
+fn otlp_telemetry(endpoint: &str, timeout_ms: u64, queue_size: usize) -> TelemetryConfig {
+    TelemetryConfig {
+        enabled: true,
+        service_name: "sandbox-daemon".to_owned(),
+        level: "info".to_owned(),
+        sink: Some(TelemetrySink::Otlp {
+            endpoint: endpoint.to_owned(),
+            protocol: OtlpProtocol::Http,
+            timeout_ms,
+            queue_size,
+        }),
+    }
+}
+
+fn resource_value(resource: &opentelemetry_sdk::Resource, key: &'static str) -> Option<String> {
+    resource
+        .get(&Key::from_static_str(key))
+        .map(|value| value.to_string())
 }
 
 fn telemetry_section(yaml: &str) -> TelemetryConfig {
@@ -392,6 +632,22 @@ fn test_operations() -> sandbox_runtime::SandboxRuntimeOperations {
             include_disk: false,
         },
     })
+}
+
+#[derive(Debug)]
+struct ShutdownExporter {
+    shutdown_called: Arc<AtomicBool>,
+}
+
+impl SpanExporter for ShutdownExporter {
+    async fn export(&self, _batch: Vec<SpanData>) -> OTelSdkResult {
+        Ok(())
+    }
+
+    fn shutdown_with_timeout(&self, _timeout: Duration) -> OTelSdkResult {
+        self.shutdown_called.store(true, Ordering::SeqCst);
+        Ok(())
+    }
 }
 
 fn temp_root(label: &str) -> PathBuf {

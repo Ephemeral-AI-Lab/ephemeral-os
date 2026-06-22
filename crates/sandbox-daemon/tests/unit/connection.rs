@@ -1,4 +1,5 @@
 use tokio::io::AsyncReadExt as _;
+use tokio_util::task::TaskTracker;
 
 use crate::server::SandboxDaemonError;
 use crate::MAX_REQUEST_BYTES;
@@ -26,4 +27,21 @@ async fn read_request_line_times_out_waiting_for_line() {
         matches!(err, SandboxDaemonError::Io(ref source) if source.kind() == std::io::ErrorKind::TimedOut),
         "{err:?}"
     );
+}
+
+#[tokio::test]
+async fn drain_connection_tasks_waits_for_tracked_tasks() {
+    let tracker = TaskTracker::new();
+    let completed = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let completed_task = std::sync::Arc::clone(&completed);
+    tracker.spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        completed_task.store(true, std::sync::atomic::Ordering::SeqCst);
+    });
+
+    drain_connection_tasks(&tracker).await;
+
+    assert!(completed.load(std::sync::atomic::Ordering::SeqCst));
+    assert!(tracker.is_closed());
+    assert!(tracker.is_empty());
 }

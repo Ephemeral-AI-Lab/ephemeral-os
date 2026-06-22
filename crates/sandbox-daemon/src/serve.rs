@@ -28,12 +28,14 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let telemetry_config = &runtime_config.telemetry;
     let config = DaemonCliConfig::parse(args, &daemon_config.server, config_path)?;
     telemetry_config
-        .validate_for_serve_mode(config.serve_mode())
-        .context("validate daemon telemetry serve mode")?;
+        .validate_for_daemon_startup(config.serve_mode(), config.sandbox_id.as_deref())
+        .context("validate daemon telemetry startup")?;
     if config.spawn {
         return spawn_daemon(&config);
     }
-    sandbox_daemon::telemetry::install(telemetry_config).context("install daemon telemetry")?;
+    let mut telemetry_guard =
+        sandbox_daemon::telemetry::install(telemetry_config, config.sandbox_id.as_deref())
+            .context("install daemon telemetry")?;
     set_runner_config_env(&config.config_yaml_path);
     let workspace_root = config.workspace_root.clone();
     let server_config = sandbox_daemon::ServerConfig {
@@ -51,13 +53,16 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
         .enable_all()
         .build()
         .context("failed to build daemon tokio runtime")?;
-    runtime.block_on(async move {
+    let serve_result = runtime.block_on(async move {
         let server = sandbox_daemon::SandboxDaemonServer::new(
             server_config,
             Arc::new(build_runtime_operations(&runtime_config, workspace_root)),
         );
         server.serve().await
-    })?;
+    });
+    let telemetry_result = telemetry_guard.shutdown();
+    serve_result?;
+    telemetry_result.context("shutdown daemon telemetry")?;
     Ok(())
 }
 
