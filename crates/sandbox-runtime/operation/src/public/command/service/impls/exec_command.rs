@@ -261,6 +261,7 @@ impl CommandOperationService {
                         command: input.cmd.clone(),
                         cwd: None,
                         timeout_seconds: input.timeout_ms.map(timeout_ms_to_seconds),
+                        trace_context: self.current_trace_context(),
                     },
                     entry,
                     self.config(),

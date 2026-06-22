@@ -50,6 +50,8 @@ pub(crate) struct SpawnObservation {
     pub(crate) spec_command: String,
     pub(crate) spec_cwd: Option<PathBuf>,
     pub(crate) spec_timeout_seconds: Option<f64>,
+    pub(crate) spec_trace_context:
+        Option<sandbox_runtime_namespace_process::runner::protocol::TraceContext>,
     pub(crate) workspace_entry: WorkspaceEntry,
     pub(crate) transcript_path: PathBuf,
 }
@@ -111,6 +113,7 @@ impl CommandLaunchDriver for FakeLaunchDriver {
                 spec_command: spec.command.clone(),
                 spec_cwd: spec.cwd.clone(),
                 spec_timeout_seconds: spec.timeout_seconds,
+                spec_trace_context: spec.trace_context.clone(),
                 workspace_entry: parts.workspace_entry.clone(),
                 transcript_path: parts.transcript_path.clone(),
             });
@@ -323,18 +326,18 @@ pub(crate) fn build_services_with_launch_driver(
     TestServices { workspace, command }
 }
 
-pub(crate) fn build_services_with_launch_driver_and_layerstack(
+pub(crate) fn build_services_with_launch_driver_and_current_trace_context(
     fake: Arc<FakeWorkspaceService>,
     launch_driver: Arc<dyn CommandLaunchDriver>,
-    layerstack: Arc<sandbox_runtime::layerstack::LayerStackService>,
+    current_trace_context: sandbox_runtime_namespace_process::runner::protocol::CurrentTraceContext,
 ) -> TestServices {
     let workspace = Arc::new(WorkspaceSessionService::new(fake_workspace_runtime(fake)));
     let command = Arc::new(
-        CommandOperationService::with_launch_driver_and_layerstack_for_test(
+        CommandOperationService::with_launch_driver_and_current_trace_context_for_test(
             Arc::clone(&workspace),
-            layerstack,
             test_command_config(),
             launch_driver,
+            current_trace_context,
         ),
     );
     TestServices { workspace, command }

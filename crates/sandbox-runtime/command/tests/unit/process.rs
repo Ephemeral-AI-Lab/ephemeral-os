@@ -1,5 +1,6 @@
 use super::*;
 
+use sandbox_runtime_namespace_process::runner::protocol::TraceContext;
 use sandbox_runtime_workspace::{WorkspaceEntry, WorkspaceEntryFds};
 
 fn workspace_entry() -> WorkspaceEntry {
@@ -31,6 +32,7 @@ fn process_exposes_identity() {
         command: "echo ok".to_owned(),
         cwd: None,
         timeout_seconds: Some(0.001),
+        trace_context: None,
     });
 
     assert_eq!(process.id(), "cmd_1");
@@ -60,6 +62,7 @@ fn take_exit_reads_transcript_and_retains_it() -> Result<(), Box<dyn std::error:
             command: "echo ok".to_owned(),
             cwd: None,
             timeout_seconds: None,
+            trace_context: None,
         },
         CommandProcessRuntime::new(
             crate::pty::PtyProcess::inactive(writer),
@@ -238,6 +241,7 @@ fn builds_namespace_runner_request_from_command_spec_and_workspace_entry(
             command: "printf ok".to_owned(),
             cwd: Some("/workspace/src".into()),
             timeout_seconds: Some(2.5),
+            trace_context: None,
         },
         workspace_entry(),
     );
@@ -258,6 +262,40 @@ fn builds_namespace_runner_request_from_command_spec_and_workspace_entry(
     assert_eq!(request["ns_fds"]["net"], 13);
     assert_eq!(request["cgroup_path"], "/sys/fs/cgroup/eos");
     assert_eq!(request["timeout_seconds"], 2.5);
+    assert!(request.get("trace_context").is_none());
+
+    Ok(())
+}
+
+#[test]
+fn namespace_runner_request_serializes_w3c_trace_context_only(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let request = build_namespace_runner_request(
+        &CommandProcessSpec {
+            id: "cmd_trace".to_owned(),
+            command: "printf COMMAND_SECRET".to_owned(),
+            cwd: Some("/workspace/src".into()),
+            timeout_seconds: None,
+            trace_context: Some(TraceContext {
+                traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01".to_owned(),
+                tracestate: Some("vendor=value".to_owned()),
+            }),
+        },
+        workspace_entry(),
+    );
+
+    let request = serde_json::to_value(request)?;
+    assert_eq!(
+        request["trace_context"],
+        serde_json::json!({
+            "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+            "tracestate": "vendor=value",
+        })
+    );
+    assert!(!request["trace_context"]
+        .to_string()
+        .contains("COMMAND_SECRET"));
+    assert!(!request["trace_context"].to_string().contains("/workspace"));
 
     Ok(())
 }

@@ -11,7 +11,7 @@ use sandbox_runtime_workspace::{
 };
 
 use support::{
-    build_services_with_launch_driver_and_layerstack, create_request, success_exit,
+    build_services_with_launch_driver, create_request, success_exit,
     trace::{capture_traces, with_trace_capture_lock},
     FakeLaunchDriver, FakeWorkspaceService,
 };
@@ -141,11 +141,7 @@ fn existing_session_command_completion_does_not_publish_or_remount(
     fake.push_create_result(Ok(handle));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_outcome(WaitOutcome::Completed(success_exit("done\n")));
-    let env = build_services_with_launch_driver_and_layerstack(
-        Arc::clone(&fake),
-        launch_driver,
-        Arc::new(fixture.service()?),
-    );
+    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
     let workspace_session_id = env
         .workspace
         .create_workspace_session(create_request())?

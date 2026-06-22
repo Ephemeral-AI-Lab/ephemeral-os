@@ -1,14 +1,17 @@
 //! Daemon-owned tracing and metrics setup.
 
+use std::collections::HashMap;
 use std::time::Duration;
 
 #[path = "telemetry/metrics.rs"]
 pub(crate) mod metrics;
 
-use opentelemetry::trace::TracerProvider as _;
+use opentelemetry::propagation::TextMapPropagator;
+use opentelemetry::trace::{TraceContextExt as _, TracerProvider as _};
 use opentelemetry::KeyValue;
 use opentelemetry_otlp::{Protocol, WithExportConfig};
 use opentelemetry_sdk::metrics::SdkMeterProvider;
+use opentelemetry_sdk::propagation::TraceContextPropagator;
 use opentelemetry_sdk::trace::{BatchConfig, BatchConfigBuilder, BatchSpanProcessor};
 use opentelemetry_sdk::{trace::SdkTracerProvider, Resource};
 use sandbox_config::configs::validate::{
@@ -16,8 +19,10 @@ use sandbox_config::configs::validate::{
 };
 use sandbox_config::{ConfigDocument, ConfigError};
 use sandbox_runtime::{noop_runtime_metrics_recorder, RuntimeMetricsRecorderHandle};
+use sandbox_runtime_namespace_process::runner::protocol::TraceContext;
 use serde::Deserialize;
 use thiserror::Error;
+use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::fmt::MakeWriter;
 use tracing_subscriber::layer::SubscriberExt;
@@ -242,6 +247,88 @@ pub fn install(
         }),
         None => Err(TelemetryInstallError::MissingSink),
     }
+}
+
+/// Install runner telemetry without allowing stdout/stderr sinks to affect the
+/// runner's data pipes. Missing identity disables runner export instead of
+/// failing command execution.
+#[must_use]
+pub fn install_runner(config: &TelemetryConfig, sandbox_id: Option<&str>) -> TelemetryGuard {
+    if !config.enabled || !matches!(config.sink, Some(TelemetrySink::Otlp { .. })) {
+        return TelemetryGuard::disabled();
+    }
+    if !has_dynamic_sandbox_id(sandbox_id) || config.validate().is_err() {
+        return TelemetryGuard::disabled();
+    }
+    install(config, sandbox_id).unwrap_or_else(|_| TelemetryGuard::disabled())
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TraceContextParentStatus {
+    Absent,
+    Valid,
+    Invalid,
+}
+
+impl TraceContextParentStatus {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Absent => "absent",
+            Self::Valid => "valid",
+            Self::Invalid => "invalid",
+        }
+    }
+}
+
+#[must_use]
+pub fn current_trace_context() -> Option<TraceContext> {
+    let span = tracing::Span::current();
+    let mut carrier = HashMap::new();
+    TraceContextPropagator::new().inject_context(&span.context(), &mut carrier);
+    let traceparent = carrier.remove("traceparent")?;
+    let tracestate = carrier
+        .remove("tracestate")
+        .filter(|value| !value.trim().is_empty());
+    Some(TraceContext {
+        traceparent,
+        tracestate,
+    })
+}
+
+pub fn apply_parent_trace_context(
+    span: &tracing::Span,
+    trace_context: Option<&TraceContext>,
+) -> TraceContextParentStatus {
+    let Some(trace_context) = trace_context else {
+        return TraceContextParentStatus::Absent;
+    };
+    let parent_context = extracted_parent_context(trace_context);
+    let span_context = parent_context.span().span_context().clone();
+    if !span_context.is_valid() || !span_context.is_remote() {
+        return TraceContextParentStatus::Invalid;
+    }
+    match span.set_parent(parent_context) {
+        Ok(()) => TraceContextParentStatus::Valid,
+        Err(_) => TraceContextParentStatus::Invalid,
+    }
+}
+
+fn extracted_parent_context(trace_context: &TraceContext) -> opentelemetry::Context {
+    TraceContextPropagator::new().extract(&trace_context_carrier(trace_context))
+}
+
+fn trace_context_carrier(trace_context: &TraceContext) -> HashMap<String, String> {
+    let mut carrier = HashMap::with_capacity(2);
+    carrier.insert("traceparent".to_owned(), trace_context.traceparent.clone());
+    if let Some(tracestate) = trace_context
+        .tracestate
+        .as_ref()
+        .filter(|value| !value.trim().is_empty())
+    {
+        carrier.insert("tracestate".to_owned(), tracestate.clone());
+    }
+    carrier
 }
 
 fn init_json_subscriber<W>(filter: EnvFilter, writer: W) -> Result<(), TelemetryInstallError>

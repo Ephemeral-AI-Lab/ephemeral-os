@@ -18,12 +18,21 @@ use crate::runner::protocol::{NamespaceRunnerRequest, RunResult};
 
 #[cfg(target_os = "linux")]
 pub(crate) fn run_setns(request: &NamespaceRunnerRequest) -> Result<RunResult, RunnerError> {
-    let ns_fds = request
-        .ns_fds
-        .ok_or_else(|| RunnerError::InvalidRequest("setns mode requires ns_fds".to_owned()))?;
-    join_cgroup(request)?;
-    join_namespaces(&ns_fds)?;
-    super::shell_exec::execute_shell(request)
+    let span = tracing::info_span!(
+        "runner.setns",
+        namespace_fd_count = request
+            .ns_fds
+            .as_ref()
+            .map(namespace_fd_count)
+            .unwrap_or_default(),
+        cgroup_present = request.cgroup_path.is_some(),
+        status = tracing::field::Empty,
+        error_kind = tracing::field::Empty,
+    );
+    let _span_guard = span.enter();
+    let result = run_setns_inner(request);
+    record_runner_result(&span, &result);
+    result
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -34,6 +43,86 @@ pub(crate) fn run_setns(_request: &NamespaceRunnerRequest) -> Result<RunResult, 
 /// Mount the overlay inside an existing workspace mount namespace.
 #[cfg(target_os = "linux")]
 pub fn setns_overlay_mount(
+    request: &NamespaceRunnerRequest,
+    hidden_paths: &[PathBuf],
+) -> Result<(), RunnerError> {
+    let span = tracing::info_span!(
+        "runner.overlay_mount",
+        layer_count = request.layer_paths.len(),
+        has_upperdir = request.upperdir.is_some(),
+        has_workdir = request.workdir.is_some(),
+        hidden_path_count = hidden_paths.len(),
+        status = tracing::field::Empty,
+        error_kind = tracing::field::Empty,
+    );
+    let _span_guard = span.enter();
+    let result = setns_overlay_mount_inner(request, hidden_paths);
+    record_runner_unit_result(&span, &result);
+    result
+}
+
+#[cfg(not(target_os = "linux"))]
+pub fn setns_overlay_mount(
+    _request: &NamespaceRunnerRequest,
+    _hidden_paths: &[PathBuf],
+) -> Result<(), RunnerError> {
+    Err(RunnerError::Unsupported)
+}
+
+/// Remount an overlay inside the runner's current mount namespace.
+#[cfg(target_os = "linux")]
+pub fn remount_overlay(
+    request: &NamespaceRunnerRequest,
+    hidden_paths: &[PathBuf],
+) -> Result<serde_json::Value, RunnerError> {
+    let span = tracing::info_span!(
+        "runner.overlay_remount",
+        layer_count = request.layer_paths.len(),
+        has_upperdir = request.upperdir.is_some(),
+        has_workdir = request.workdir.is_some(),
+        has_probe = request
+            .args
+            .get("probe_path")
+            .and_then(serde_json::Value::as_str)
+            .is_some_and(|value| !value.trim().is_empty()),
+        hidden_path_count = hidden_paths.len(),
+        status = tracing::field::Empty,
+        mount_verified = tracing::field::Empty,
+        error_kind = tracing::field::Empty,
+    );
+    let _span_guard = span.enter();
+    let result = remount_overlay_inner(request, hidden_paths);
+    match &result {
+        Ok(payload) => {
+            span.record(
+                "mount_verified",
+                payload
+                    .get("mount_verified")
+                    .and_then(serde_json::Value::as_bool)
+                    .unwrap_or(false),
+            );
+            span.record("status", "ok");
+        }
+        Err(error) => {
+            span.record("status", "error");
+            span.record("error_kind", error.kind());
+        }
+    }
+    result
+}
+
+#[cfg(target_os = "linux")]
+fn run_setns_inner(request: &NamespaceRunnerRequest) -> Result<RunResult, RunnerError> {
+    let ns_fds = request
+        .ns_fds
+        .ok_or_else(|| RunnerError::InvalidRequest("setns mode requires ns_fds".to_owned()))?;
+    join_cgroup(request)?;
+    join_namespaces(&ns_fds)?;
+    super::shell_exec::execute_shell(request)
+}
+
+#[cfg(target_os = "linux")]
+fn setns_overlay_mount_inner(
     request: &NamespaceRunnerRequest,
     hidden_paths: &[PathBuf],
 ) -> Result<(), RunnerError> {
@@ -64,17 +153,8 @@ pub fn setns_overlay_mount(
     Ok(())
 }
 
-#[cfg(not(target_os = "linux"))]
-pub fn setns_overlay_mount(
-    _request: &NamespaceRunnerRequest,
-    _hidden_paths: &[PathBuf],
-) -> Result<(), RunnerError> {
-    Err(RunnerError::Unsupported)
-}
-
-/// Remount an overlay inside the runner's current mount namespace.
 #[cfg(target_os = "linux")]
-pub fn remount_overlay(
+fn remount_overlay_inner(
     request: &NamespaceRunnerRequest,
     hidden_paths: &[PathBuf],
 ) -> Result<serde_json::Value, RunnerError> {
@@ -563,6 +643,20 @@ fn unique_suffix() -> u128 {
 
 #[cfg(target_os = "linux")]
 pub(crate) fn join_cgroup(request: &NamespaceRunnerRequest) -> Result<(), RunnerError> {
+    let span = tracing::info_span!(
+        "runner.cgroup_join",
+        cgroup_present = request.cgroup_path.is_some(),
+        status = tracing::field::Empty,
+        error_kind = tracing::field::Empty,
+    );
+    let _span_guard = span.enter();
+    let result = join_cgroup_inner(request);
+    record_runner_unit_result(&span, &result);
+    result
+}
+
+#[cfg(target_os = "linux")]
+fn join_cgroup_inner(request: &NamespaceRunnerRequest) -> Result<(), RunnerError> {
     let Some(cgroup_path) = request.cgroup_path.as_ref() else {
         return Ok(());
     };
@@ -578,6 +672,57 @@ pub(crate) fn join_cgroup(request: &NamespaceRunnerRequest) -> Result<(), Runner
             ),
         ))
     })
+}
+
+#[cfg(target_os = "linux")]
+fn namespace_fd_count(ns_fds: &NsFds) -> usize {
+    [ns_fds.user, ns_fds.mnt, ns_fds.pid, ns_fds.net]
+        .into_iter()
+        .flatten()
+        .count()
+}
+
+#[cfg(target_os = "linux")]
+fn record_runner_result(span: &tracing::Span, result: &Result<RunResult, RunnerError>) {
+    match result {
+        Ok(result) => {
+            span.record("status", runner_status(result));
+        }
+        Err(error) => {
+            span.record("status", "error");
+            span.record("error_kind", error.kind());
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn record_runner_unit_result(span: &tracing::Span, result: &Result<(), RunnerError>) {
+    match result {
+        Ok(()) => {
+            span.record("status", "ok");
+        }
+        Err(error) => {
+            span.record("status", "error");
+            span.record("error_kind", error.kind());
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn runner_status(result: &RunResult) -> &'static str {
+    if result.exit_code != 0 {
+        return "error";
+    }
+    match result
+        .payload
+        .get("status")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("ok")
+    {
+        "ok" => "ok",
+        "timed_out" => "timed_out",
+        _ => "error",
+    }
 }
 
 #[cfg(target_os = "linux")]

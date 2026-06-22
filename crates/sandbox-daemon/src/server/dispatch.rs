@@ -81,9 +81,12 @@ impl SandboxDaemonServer {
         }
         let operations = Arc::clone(&self.operations);
         let request_span = span.clone();
+        let dispatcher = tracing::dispatcher::get_default(Clone::clone);
         let task = tokio::task::spawn_blocking(move || {
-            let _span_guard = request_span.enter();
-            sandbox_runtime::dispatch_operation(&operations, &request).into_json_value()
+            tracing::dispatcher::with_default(&dispatcher, || {
+                let _span_guard = request_span.enter();
+                sandbox_runtime::dispatch_operation(&operations, &request).into_json_value()
+            })
         });
         let response = match task.await {
             Ok(response) => response,

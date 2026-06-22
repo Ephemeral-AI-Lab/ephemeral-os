@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 
-use sandbox_runtime_namespace_process::runner::protocol::NamespaceRunnerRequest;
+use sandbox_runtime_namespace_process::runner::protocol::{NamespaceRunnerRequest, TraceContext};
 use sandbox_runtime_workspace::{
     CgroupCleanupState, CgroupMonitorConfig, CgroupMonitorSample, WorkspaceEntry,
 };
@@ -39,6 +39,7 @@ pub struct CommandProcessSpec {
     pub command: String,
     pub cwd: Option<PathBuf>,
     pub timeout_seconds: Option<f64>,
+    pub trace_context: Option<TraceContext>,
 }
 
 #[derive(Clone)]
@@ -386,6 +387,7 @@ pub(crate) fn build_namespace_runner_request(
         ns_fds: Some(entry.ns_fds.into()),
         cgroup_path: entry.cgroup_path,
         timeout_seconds: spec.timeout_seconds,
+        trace_context: spec.trace_context.clone(),
     }
 }
 

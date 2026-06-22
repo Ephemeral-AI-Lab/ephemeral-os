@@ -7,6 +7,7 @@ use crate::workspace_crate::{
     WorkspaceRuntimeService,
 };
 use crate::workspace_session::WorkspaceSessionService;
+use sandbox_runtime_namespace_process::runner::protocol::{no_trace_context, CurrentTraceContext};
 
 #[derive(Clone)]
 pub struct SandboxRuntimeOperations {
@@ -44,9 +45,22 @@ impl SandboxRuntimeOperations {
         config: SandboxRuntimeConfig,
         metrics: RuntimeMetricsRecorderHandle,
     ) -> Self {
+        Self::from_config_with_metrics_and_current_trace_context(
+            config,
+            metrics,
+            no_trace_context(),
+        )
+    }
+
+    #[must_use]
+    pub fn from_config_with_metrics_and_current_trace_context(
+        config: SandboxRuntimeConfig,
+        metrics: RuntimeMetricsRecorderHandle,
+        current_trace_context: CurrentTraceContext,
+    ) -> Self {
         let layer_stack_root = config.workspace.layer_stack_root.clone();
         let workspace_runtime = Arc::new(WorkspaceRuntimeService::new(
-            WorkspaceModeManager::new(
+            WorkspaceModeManager::new_with_current_trace_context(
                 config
                     .workspace
                     .workspace_root
@@ -54,6 +68,7 @@ impl SandboxRuntimeOperations {
                     .into_owned(),
                 config.workspace.caps.into(),
                 config.workspace.scratch_root,
+                Arc::clone(&current_trace_context),
             ),
             layer_stack_root.clone(),
         ));
@@ -68,15 +83,17 @@ impl SandboxRuntimeOperations {
             LayerStackService::with_metrics_recorder(layer_stack_root, Arc::clone(&metrics))
                 .expect("layerstack service initialization failed"),
         );
-        let command = Arc::new(CommandOperationService::new_with_metrics(
-            workspace_session,
-            Arc::clone(&layerstack),
-            ::sandbox_runtime_command::CommandConfig {
-                scratch_root: config.command.scratch_root,
-                cgroup_monitor,
-            },
-            Arc::clone(&metrics),
-        ));
+        let command = Arc::new(
+            CommandOperationService::new_with_metrics_and_current_trace_context(
+                workspace_session,
+                ::sandbox_runtime_command::CommandConfig {
+                    scratch_root: config.command.scratch_root,
+                    cgroup_monitor,
+                },
+                Arc::clone(&metrics),
+                current_trace_context,
+            ),
+        );
         Self::with_metrics_recorder(command, layerstack, metrics)
     }
 

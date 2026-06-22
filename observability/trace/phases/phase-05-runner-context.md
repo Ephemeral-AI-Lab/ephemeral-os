@@ -127,28 +127,32 @@ payloads, transcript rows, response shape, or cleanup behavior.
 
 ## Acceptance Criteria
 
-- [ ] Daemon command span injects valid W3C context into command runner launch
+- [x] Daemon command span injects valid W3C context into command runner launch
       material.
-- [ ] Workspace overlay/remount setns-runner launches inject valid W3C context
+- [x] Workspace overlay/remount setns-runner launches inject valid W3C context
       when a parent span exists.
-- [ ] `ns-runner` extracts context and creates child spans when context exists.
-- [ ] `ns-runner` creates standalone spans when context is absent.
-- [ ] Invalid context is ignored or reported as a telemetry diagnostic without
+- [x] `ns-runner` extracts context and creates child spans when context exists.
+- [x] `ns-runner` creates standalone spans when context is absent.
+- [x] Invalid context is ignored or reported as a telemetry diagnostic without
       failing command execution.
-- [ ] Old runner request payloads without `trace_context` still deserialize.
-- [ ] Missing or invalid context does not change command exit status, runner
+- [x] Old runner request payloads without `trace_context` still deserialize.
+- [x] Missing or invalid context does not change command exit status, runner
       result JSON, transcript rows, cleanup behavior, or
       `sandbox_protocol::Response` shape.
-- [ ] Command transcript behavior is unchanged.
-- [ ] No context propagation field leaks command payloads, env values, auth
+- [x] Command transcript behavior is unchanged.
+- [x] No context propagation field leaks command payloads, env values, auth
       tokens, raw args, raw `Debug`/`Display` errors, raw workspace roots, raw
       cgroup paths, raw layer paths, raw remount report JSON, or command output.
-- [ ] Standalone runner behavior means a valid existing FD/config launch without
+- [x] Standalone runner behavior means a valid existing FD/config launch without
       trace context, not a runner launch missing required request/result FDs or
       config env.
-- [ ] Runtime crates do not initialize subscribers, configure exporters, or own
+- [x] Runtime crates do not initialize subscribers, configure exporters, or own
       OTel SDK/provider setup.
-- [ ] `cargo test -p sandbox-daemon -p sandbox-runtime-command -p sandbox-runtime-workspace -p sandbox-runtime-namespace-process -p sandbox-runtime`
+- [x] `cargo test -p sandbox-daemon -p sandbox-runtime-command -p sandbox-runtime-workspace -p sandbox-runtime-namespace-process -p sandbox-runtime`
       passes, including focused transcript tests.
-- [ ] End-to-end command test proves daemon and runner spans share a trace when
+- [x] End-to-end command test proves daemon and runner spans share a trace when
       context propagation is enabled.
+
+Remaining work: none for this phase. Linux-only setns/remount code was compile
+checked with `cargo check --tests --target x86_64-unknown-linux-gnu` on macOS;
+privileged Linux namespace execution was not run on this host.

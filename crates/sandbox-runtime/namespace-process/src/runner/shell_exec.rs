@@ -20,6 +20,30 @@ use wait::*;
 
 #[cfg(target_os = "linux")]
 pub(crate) fn execute_shell(request: &NamespaceRunnerRequest) -> Result<RunResult, RunnerError> {
+    let span = tracing::info_span!(
+        "runner.command_execution",
+        has_timeout = request.timeout_seconds.is_some(),
+        status = tracing::field::Empty,
+        exit_code = tracing::field::Empty,
+        error_kind = tracing::field::Empty,
+    );
+    let _span_guard = span.enter();
+    let result = execute_shell_inner(request);
+    match &result {
+        Ok(result) => {
+            span.record("status", runner_status(result));
+            span.record("exit_code", result.exit_code);
+        }
+        Err(error) => {
+            span.record("status", "error");
+            span.record("error_kind", error.kind());
+        }
+    }
+    result
+}
+
+#[cfg(target_os = "linux")]
+fn execute_shell_inner(request: &NamespaceRunnerRequest) -> Result<RunResult, RunnerError> {
     let argv = shell_argv(request)?;
     let cwd = shell_cwd(request)?;
     // Open a handle to /proc before applying the mount mask, so scope-wait can
@@ -57,6 +81,23 @@ pub(crate) fn execute_shell(request: &NamespaceRunnerRequest) -> Result<RunResul
             "status": result_status(exit_code, timed_out),
         }),
     })
+}
+
+#[cfg(target_os = "linux")]
+fn runner_status(result: &RunResult) -> &'static str {
+    if result.exit_code != 0 {
+        return "error";
+    }
+    match result
+        .payload
+        .get("status")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("ok")
+    {
+        "ok" => "ok",
+        "timed_out" => "timed_out",
+        _ => "error",
+    }
 }
 
 #[cfg(target_os = "linux")]

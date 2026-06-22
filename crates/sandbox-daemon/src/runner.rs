@@ -8,8 +8,10 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Context, Result};
 use sandbox_config::configs::runner::RunnerConfig;
+use tracing::field;
 
 const DAEMON_CONFIG_YAML_ENV: &str = "SANDBOX_DAEMON_CONFIG_YAML";
+const DAEMON_SANDBOX_ID_ENV: &str = "SANDBOX_DAEMON_SANDBOX_ID";
 
 /// Execute one command inside a holder namespace, reading the
 /// resolved `NamespaceRunnerRequest` payload and emitting the `RunResult` JSON.
@@ -24,34 +26,107 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let request_json = read_payload_from_fd(config.request_fd)?;
     let request: sandbox_runtime_namespace_process::runner::protocol::NamespaceRunnerRequest =
         serde_json::from_str(&request_json).context("failed to decode ns-runner request JSON")?;
-    let runner_config = load_runner_config()?;
+    let config_doc = load_runner_config_document()?;
+    let runner_config = runner_config_from_document(&config_doc)?;
+    let telemetry_config = sandbox_daemon::telemetry::from_config_document(&config_doc)
+        .unwrap_or_else(|_| sandbox_daemon::telemetry::TelemetryConfig::default());
+    let mut telemetry_guard = sandbox_daemon::telemetry::install_runner(
+        &telemetry_config,
+        std::env::var(DAEMON_SANDBOX_ID_ENV).ok().as_deref(),
+    );
     let mut result_target = open_fd_for_write(config.result_fd)
         .with_context(|| format!("failed to open ns-runner result fd {}", config.result_fd))?;
-    let result = match config.mode {
-        RunnerCliMode::RemountOverlay => {
+    let mode = config.mode;
+    let span = tracing::info_span!(
+        "runner.request",
+        operation = mode.as_str(),
+        trace_context = field::Empty,
+        status = field::Empty,
+        error_kind = field::Empty,
+    );
+    let parent_status = sandbox_daemon::telemetry::apply_parent_trace_context(
+        &span,
+        request.trace_context.as_ref(),
+    );
+    span.record("trace_context", parent_status.as_str());
+    if parent_status == sandbox_daemon::telemetry::TraceContextParentStatus::Invalid {
+        tracing::debug!(
+            target: "sandbox_daemon::runner",
+            diagnostic = "invalid_trace_context",
+            "ignored invalid runner trace context"
+        );
+    }
+    let dispatch_result = {
+        let _span_guard = span.enter();
+        dispatch_runner_mode(mode, &request, &runner_config)
+    };
+    record_runner_dispatch_result(&span, &dispatch_result);
+    let result = dispatch_result?;
+    let output = serde_json::to_vec(&result).context("failed to encode ns-runner result JSON")?;
+    let write_result = write_payload(&mut result_target, &output);
+    drop(span);
+    let _ = telemetry_guard.shutdown();
+    write_result
+}
+
+fn dispatch_runner_mode(
+    mode: RunnerCliMode,
+    request: &sandbox_runtime_namespace_process::runner::protocol::NamespaceRunnerRequest,
+    runner_config: &RunnerConfig,
+) -> Result<sandbox_runtime_namespace_process::runner::protocol::RunResult> {
+    match mode {
+        RunnerCliMode::RemountOverlay => Ok(
             sandbox_runtime_namespace_process::runner::protocol::RunResult {
                 exit_code: 0,
                 payload: sandbox_runtime_namespace_process::runner::setns::remount_overlay(
-                    &request,
+                    request,
                     &runner_config.mount_mask.hidden_paths,
                 )
                 .context("ns-runner remount overlay failed")?,
-            }
-        }
+            },
+        ),
         RunnerCliMode::MountOverlay => {
             sandbox_runtime_namespace_process::runner::setns::setns_overlay_mount(
-                &request,
+                request,
                 &runner_config.mount_mask.hidden_paths,
             )
             .context("ns-runner setns overlay mount failed")?;
-            ok_result()
+            Ok(ok_result())
         }
         RunnerCliMode::Run => {
-            sandbox_runtime_namespace_process::runner::run(&request).context("ns-runner failed")?
+            sandbox_runtime_namespace_process::runner::run(request).context("ns-runner failed")
         }
-    };
-    let output = serde_json::to_vec(&result).context("failed to encode ns-runner result JSON")?;
-    write_payload(&mut result_target, &output)
+    }
+}
+
+fn record_runner_dispatch_result(
+    span: &tracing::Span,
+    result: &Result<sandbox_runtime_namespace_process::runner::protocol::RunResult>,
+) {
+    match result {
+        Ok(result) => {
+            span.record("status", runner_status(result.exit_code, &result.payload));
+        }
+        Err(_) => {
+            span.record("status", "error");
+            span.record("error_kind", "runner_error");
+        }
+    }
+}
+
+fn runner_status(exit_code: i32, payload: &serde_json::Value) -> &'static str {
+    if exit_code != 0 {
+        return "error";
+    }
+    match payload
+        .get("status")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("ok")
+    {
+        "ok" => "ok",
+        "timed_out" => "timed_out",
+        _ => "error",
+    }
 }
 
 fn ok_result() -> sandbox_runtime_namespace_process::runner::protocol::RunResult {
@@ -61,12 +136,14 @@ fn ok_result() -> sandbox_runtime_namespace_process::runner::protocol::RunResult
     }
 }
 
-fn load_runner_config() -> Result<RunnerConfig> {
+fn load_runner_config_document() -> Result<sandbox_config::ConfigDocument> {
     let path = std::env::var_os(DAEMON_CONFIG_YAML_ENV)
         .map(PathBuf::from)
         .ok_or_else(|| anyhow!("{DAEMON_CONFIG_YAML_ENV} is required for ns-runner"))?;
-    let doc =
-        sandbox_config::load_path(&path).with_context(|| format!("load {}", path.display()))?;
+    sandbox_config::load_path(&path).with_context(|| format!("load {}", path.display()))
+}
+
+fn runner_config_from_document(doc: &sandbox_config::ConfigDocument) -> Result<RunnerConfig> {
     let config = doc
         .section::<RunnerConfig>("runner")
         .context("deserialize runner config section")?;
@@ -75,10 +152,21 @@ fn load_runner_config() -> Result<RunnerConfig> {
 }
 
 /// Which ns-runner operation the CLI flags selected; default is command execution.
+#[derive(Clone, Copy)]
 enum RunnerCliMode {
     Run,
     MountOverlay,
     RemountOverlay,
+}
+
+impl RunnerCliMode {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::Run => "run",
+            Self::MountOverlay => "mount_overlay",
+            Self::RemountOverlay => "remount_overlay",
+        }
+    }
 }
 
 pub(crate) struct RunnerCliConfig {

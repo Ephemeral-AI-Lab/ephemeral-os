@@ -89,7 +89,6 @@ fn service_graph_runtime_operations_exposes_command_lane(
     let layerstack = layerstack_service()?;
     let command = Arc::new(CommandOperationService::new(
         Arc::clone(&workspace),
-        Arc::clone(&layerstack),
         sandbox_runtime_command::CommandConfig::default(),
     ));
     let remount_workspace: Arc<dyn RemountWorkspaceSession> = workspace.clone();
@@ -164,7 +163,6 @@ fn runtime_catalog_and_dispatch_drop_removed_cgroup_monitor_operations() {
             &SandboxRuntimeOperations::new(
                 Arc::new(CommandOperationService::new(
                     workspace_session(),
-                    layerstack_service().expect("layerstack service"),
                     sandbox_runtime_command::CommandConfig::default(),
                 )),
                 layerstack_service().expect("layerstack service"),
@@ -192,7 +190,6 @@ fn runtime_operation_metrics_use_static_command_operation_allowlist(
     let layerstack = layerstack_service()?;
     let command = Arc::new(CommandOperationService::new(
         Arc::clone(&workspace),
-        Arc::clone(&layerstack),
         sandbox_runtime_command::CommandConfig::default(),
     ));
     let metrics = Arc::new(RecordingMetrics::default());

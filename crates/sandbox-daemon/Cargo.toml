@@ -30,7 +30,9 @@ opentelemetry-otlp.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
+sandbox-runtime-command.workspace = true
 sandbox-runtime-layerstack.workspace = true
+sandbox-runtime-workspace.workspace = true
 serde_yaml_ng.workspace = true
 
 [lints]

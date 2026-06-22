@@ -5,10 +5,13 @@ use std::sync::Arc;
 
 use sandbox_runtime::command::{ExecCommandInput, ReadCommandLinesInput, WriteCommandStdinInput};
 use sandbox_runtime_command::yield_wait_loop::WaitOutcome;
+use sandbox_runtime_namespace_process::runner::protocol::TraceContext;
 use sandbox_runtime_workspace::WorkspaceProfile;
 
 use support::{
-    build_services_with_launch_driver, create_request, success_exit, trace::capture_traces,
+    build_services_with_launch_driver, build_services_with_launch_driver_and_current_trace_context,
+    create_request, success_exit,
+    trace::{capture_traces, with_trace_capture_lock},
     workspace_handle, FakeLaunchDriver, FakeWorkspaceService,
 };
 
@@ -93,4 +96,49 @@ fn command_trace_spans_omit_sensitive_values() {
             "forbidden value {forbidden} appeared in traces: {traces}"
         );
     }
+}
+
+#[test]
+fn command_spawn_receives_current_w3c_trace_context() {
+    with_trace_capture_lock(|| {
+        let fake = Arc::new(FakeWorkspaceService::new());
+        let launch_driver = Arc::new(FakeLaunchDriver::new());
+        let expected = TraceContext {
+            traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01".to_owned(),
+            tracestate: Some("vendor=value".to_owned()),
+        };
+        let env = build_services_with_launch_driver_and_current_trace_context(
+            Arc::clone(&fake),
+            launch_driver.clone(),
+            Arc::new({
+                let expected = expected.clone();
+                move || Some(expected.clone())
+            }),
+        );
+        fake.push_create_result(Ok(workspace_handle(
+            "workspace-trace",
+            "lease-trace",
+            PathBuf::from("/workspace"),
+            WorkspaceProfile::HostCompatible,
+        )));
+        let workspace_session_id = env
+            .workspace
+            .create_workspace_session(create_request())
+            .expect("session create succeeds")
+            .workspace_session_id;
+
+        let _ = env
+            .command
+            .exec_command(ExecCommandInput {
+                workspace_session_id: Some(workspace_session_id),
+                cmd: "printf ok".to_owned(),
+                timeout_ms: Some(2500),
+                yield_time_ms: Some(0),
+            })
+            .expect("command starts");
+
+        let observations = launch_driver.spawn_observations();
+        assert_eq!(observations.len(), 1);
+        assert_eq!(observations[0].spec_trace_context, Some(expected));
+    });
 }

@@ -52,7 +52,7 @@ impl NamespaceRuntime {
         }
         #[cfg(target_os = "linux")]
         {
-            let request = ns_runner_request(handle, "mount", json!({}), layer_paths.to_vec());
+            let request = self.ns_runner_request(handle, "mount", json!({}), layer_paths.to_vec());
             mount_overlay_child(&request, setup_timeout_s)?;
         }
         Ok(())
@@ -72,7 +72,7 @@ impl NamespaceRuntime {
         }
         #[cfg(target_os = "linux")]
         {
-            let request = ns_runner_request(
+            let request = self.ns_runner_request(
                 handle,
                 "remount",
                 json!({
@@ -118,11 +118,31 @@ impl NamespaceRuntime {
 }
 
 #[cfg(target_os = "linux")]
+impl NamespaceRuntime {
+    pub(crate) fn ns_runner_request(
+        &self,
+        handle: &WorkspaceModeHandle,
+        request: &str,
+        args: serde_json::Value,
+        layer_paths: Vec<PathBuf>,
+    ) -> NamespaceRunnerRequest {
+        ns_runner_request(
+            handle,
+            request,
+            args,
+            layer_paths,
+            self.current_trace_context(),
+        )
+    }
+}
+
+#[cfg(target_os = "linux")]
 pub(crate) fn ns_runner_request(
     handle: &WorkspaceModeHandle,
     request: &str,
     args: serde_json::Value,
     layer_paths: Vec<PathBuf>,
+    trace_context: Option<::sandbox_runtime_namespace_process::runner::protocol::TraceContext>,
 ) -> NamespaceRunnerRequest {
     NamespaceRunnerRequest {
         request_id: format!("isolated-{request}-{}", handle.workspace_id.0),
@@ -134,6 +154,7 @@ pub(crate) fn ns_runner_request(
         ns_fds: ns_fds_from_mode(handle.ns_fds),
         cgroup_path: handle.cgroup_path.clone(),
         timeout_seconds: None,
+        trace_context,
     }
 }
 
@@ -270,4 +291,80 @@ fn read_pipe<R: Read>(pipe: Option<R>) -> Result<Vec<u8>, WorkspaceModeError> {
     let mut bytes = Vec::new();
     pipe.read_to_end(&mut bytes).map_err(setup_error)?;
     Ok(bytes)
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    use std::sync::Arc;
+
+    use ::sandbox_runtime_namespace_process::runner::protocol::TraceContext;
+
+    use super::*;
+    use crate::lifecycle::remount::WorkspaceRemountState;
+    use crate::model::WorkspaceProfile;
+    use crate::overlay::dirs::OverlayDirs;
+    use crate::profile::{WorkspaceModeFds, WorkspaceModeHandle, WorkspaceModeId};
+
+    #[test]
+    fn workspace_setns_request_injects_current_trace_context() {
+        let expected = TraceContext {
+            traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01".to_owned(),
+            tracestate: Some("vendor=value".to_owned()),
+        };
+        let runtime = NamespaceRuntime::with_current_trace_context(Arc::new({
+            let expected = expected.clone();
+            move || Some(expected.clone())
+        }));
+
+        let request = runtime.ns_runner_request(
+            &workspace_mode_handle(),
+            "remount",
+            json!({"probe_path": "probe.txt"}),
+            vec!["/lower/next".into()],
+        );
+
+        assert_eq!(request.trace_context, Some(expected));
+        assert_eq!(request.layer_paths, vec![PathBuf::from("/lower/next")]);
+        assert_eq!(request.request_id, "isolated-remount-workspace-trace");
+    }
+
+    fn workspace_mode_handle() -> WorkspaceModeHandle {
+        WorkspaceModeHandle {
+            workspace_id: WorkspaceModeId("workspace-trace".to_owned()),
+            profile: WorkspaceProfile::HostCompatible,
+            lease_id: "lease-1".to_owned(),
+            manifest_version: 1,
+            manifest_root_hash: "root-hash".to_owned(),
+            base_manifest: sandbox_runtime_layerstack::Manifest::new(
+                1,
+                vec![sandbox_runtime_layerstack::LayerRef {
+                    layer_id: "L000001-test".to_owned(),
+                    path: "layers/L000001-test".to_owned(),
+                }],
+                sandbox_runtime_layerstack::MANIFEST_SCHEMA_VERSION,
+            )
+            .expect("test manifest is valid"),
+            workspace_root: "/workspace".to_owned(),
+            dirs: OverlayDirs {
+                run_dir: "/tmp/eos/run".into(),
+                upperdir: "/tmp/eos/upper".into(),
+                workdir: "/tmp/eos/work".into(),
+            },
+            layer_paths: vec!["/lower/base".into()],
+            ns_fds: WorkspaceModeFds {
+                user: Some(10),
+                mnt: Some(11),
+                pid: Some(12),
+                net: None,
+            },
+            holder_pid: 1234,
+            readiness_fd: 13,
+            control_fd: 14,
+            veth: None,
+            cgroup_path: Some("/sys/fs/cgroup/eos".into()),
+            remount_state: WorkspaceRemountState::Active,
+            created_at: 1.0,
+            last_activity: 2.0,
+        }
+    }
 }

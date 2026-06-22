@@ -12,6 +12,7 @@ use sandbox_config::configs::{
 
 const DAEMON_AUTH_TOKEN_ENV: &str = "SANDBOX_DAEMON_AUTH_TOKEN";
 const DAEMON_CONFIG_YAML_ENV: &str = "SANDBOX_DAEMON_CONFIG_YAML";
+const DAEMON_SANDBOX_ID_ENV: &str = "SANDBOX_DAEMON_SANDBOX_ID";
 
 /// Start, spawn, or call the async RPC server.
 ///
@@ -38,6 +39,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
             .context("install daemon telemetry")?;
     let metrics_recorder = telemetry_guard.metrics_recorder();
     set_runner_config_env(&config.config_yaml_path);
+    set_runner_sandbox_id_env(config.sandbox_id.as_deref());
     let workspace_root = config.workspace_root.clone();
     let server_config = sandbox_daemon::ServerConfig {
         socket_path: config.socket_path,
@@ -82,7 +84,7 @@ fn build_runtime_operations(
     workspace_root: PathBuf,
     metrics_recorder: sandbox_runtime::RuntimeMetricsRecorderHandle,
 ) -> sandbox_runtime::SandboxRuntimeOperations {
-    sandbox_runtime::SandboxRuntimeOperations::from_config_with_metrics(
+    sandbox_runtime::SandboxRuntimeOperations::from_config_with_metrics_and_current_trace_context(
         sandbox_runtime::SandboxRuntimeConfig {
             workspace: sandbox_runtime::WorkspaceRuntimeConfig {
                 workspace_root,
@@ -121,6 +123,7 @@ fn build_runtime_operations(
             },
         },
         metrics_recorder,
+        Arc::new(sandbox_daemon::telemetry::current_trace_context),
     )
 }
 
@@ -338,6 +341,13 @@ fn spawn_daemon(config: &DaemonCliConfig) -> Result<()> {
 
 fn set_runner_config_env(config_yaml_path: &Path) {
     std::env::set_var(DAEMON_CONFIG_YAML_ENV, config_yaml_path);
+}
+
+fn set_runner_sandbox_id_env(sandbox_id: Option<&str>) {
+    match sandbox_id {
+        Some(sandbox_id) => std::env::set_var(DAEMON_SANDBOX_ID_ENV, sandbox_id),
+        None => std::env::remove_var(DAEMON_SANDBOX_ID_ENV),
+    }
 }
 
 fn daemon_already_running(pid_path: &Path, socket_path: &Path) -> bool {

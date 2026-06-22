@@ -14,6 +14,7 @@ use crate::namespace::NamespaceRuntime;
 pub use crate::profile::{
     WorkspaceModeFds, WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeSnapshot,
 };
+use sandbox_runtime_namespace_process::runner::protocol::CurrentTraceContext;
 
 pub use crate::lifecycle::remount::{RemountOverlayResult, RemountProbe, WorkspaceRemountState};
 pub use crate::lifecycle::ExitOutcome;
@@ -109,6 +110,20 @@ impl WorkspaceModeManager {
         scratch_root: PathBuf,
     ) -> Self {
         Self::with_runtime(workspace_root, caps, scratch_root, NamespaceRuntime::new())
+    }
+
+    pub fn new_with_current_trace_context(
+        workspace_root: impl Into<String>,
+        caps: ResourceCaps,
+        scratch_root: PathBuf,
+        current_trace_context: CurrentTraceContext,
+    ) -> Self {
+        Self::with_runtime(
+            workspace_root,
+            caps,
+            scratch_root,
+            NamespaceRuntime::with_current_trace_context(current_trace_context),
+        )
     }
 
     pub(crate) fn with_runtime(

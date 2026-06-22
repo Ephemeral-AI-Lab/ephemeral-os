@@ -46,6 +46,20 @@ impl From<sandbox_runtime_overlay::OverlayError> for RunnerError {
     }
 }
 
+impl RunnerError {
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    pub(crate) const fn kind(&self) -> &'static str {
+        match self {
+            Self::Syscall(_) => "syscall",
+            Self::InvalidRequest(_) => "invalid_request",
+            Self::Overlay(_) => "overlay",
+            Self::Child(_) => "child",
+            Self::TimedOut => "timed_out",
+            Self::Unsupported => "unsupported",
+        }
+    }
+}
+
 pub fn run(request: &NamespaceRunnerRequest) -> Result<RunResult, RunnerError> {
     setns::run_setns(request)
 }

@@ -45,6 +45,13 @@ mod runner_error_tests {
     }
 }
 
+mod runner_trace_context_tests {
+    include!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/unit/runner/trace_context.rs"
+    ));
+}
+
 #[cfg(target_os = "linux")]
 mod runner_setns_tests {
     include!(concat!(

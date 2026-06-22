@@ -128,5 +128,6 @@ fn request(ns_fds: Option<NsFds>) -> NamespaceRunnerRequest {
         ns_fds,
         cgroup_path: None,
         timeout_seconds: None,
+        trace_context: None,
     }
 }

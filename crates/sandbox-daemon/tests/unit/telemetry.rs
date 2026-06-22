@@ -6,8 +6,21 @@ use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::Result;
+use sandbox_runtime::command::{
+    CommandLaunchDriver, CommandOperationService, CommandServiceError,
+};
+use sandbox_runtime::workspace_session::WorkspaceSessionService;
+use sandbox_runtime_command::process::{CommandProcess, CommandProcessExit, CommandProcessSpec};
+use sandbox_runtime_command::yield_wait_loop::WaitOutcome;
+use sandbox_runtime_namespace_process::runner::protocol::TraceContext;
+use sandbox_runtime_workspace::{
+    CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest,
+    DestroyWorkspaceResult, LayerStackSnapshotRef, LeaseId, RemountWorkspaceRequest,
+    WorkspaceError, WorkspaceHandle, WorkspaceProfile, WorkspaceRuntimeHooks,
+    WorkspaceRuntimeService, WorkspaceSessionId,
+};
 use opentelemetry::Key;
-use opentelemetry::trace::TracerProvider as _;
+use opentelemetry::trace::{SpanId, TracerProvider as _};
 use opentelemetry_sdk::error::{OTelSdkError, OTelSdkResult};
 use opentelemetry_sdk::trace::{
     BatchConfigBuilder, BatchSpanProcessor, SdkTracerProvider, SpanData, SpanExporter,
@@ -750,6 +763,167 @@ fn telemetry_guard_shutdown_surfaces_bounded_provider_error() {
     );
 }
 
+#[test]
+fn w3c_trace_context_round_trip_links_runner_span_to_daemon_span() -> Result<()> {
+    let exporter = CollectingExporter::default();
+    let exported = exporter.spans();
+    let provider = SdkTracerProvider::builder()
+        .with_simple_exporter(exporter)
+        .build();
+    let tracer = provider.tracer("sandbox-daemon");
+    let subscriber = tracing_subscriber::registry().with(
+        tracing_opentelemetry::layer()
+            .with_tracer(tracer)
+            .with_filter(tracing_subscriber::filter::LevelFilter::INFO),
+    );
+
+    tracing::subscriber::with_default(subscriber, || {
+        let daemon = tracing::info_span!("daemon.request");
+        let _daemon_guard = daemon.enter();
+        let trace_context =
+            crate::telemetry::current_trace_context().expect("daemon span injects context");
+        let runner = tracing::info_span!("runner.request");
+        assert_eq!(
+            crate::telemetry::apply_parent_trace_context(&runner, Some(&trace_context)),
+            crate::telemetry::TraceContextParentStatus::Valid
+        );
+        {
+            let _runner_guard = runner.enter();
+            let child = tracing::info_span!("runner.command_execution");
+            let _child_guard = child.enter();
+        }
+    });
+
+    provider.force_flush()?;
+    provider.shutdown()?;
+    let spans = exported.lock().expect("export lock").clone();
+    let daemon = exported_span(&spans, "daemon.request");
+    let runner = exported_span(&spans, "runner.request");
+    let child = exported_span(&spans, "runner.command_execution");
+
+    assert_eq!(runner.span_context.trace_id(), daemon.span_context.trace_id());
+    assert_eq!(child.span_context.trace_id(), daemon.span_context.trace_id());
+    assert_eq!(runner.parent_span_id, daemon.span_context.span_id());
+    assert_eq!(child.parent_span_id, runner.span_context.span_id());
+    Ok(())
+}
+
+#[test]
+fn absent_trace_context_leaves_runner_span_standalone() -> Result<()> {
+    let exporter = CollectingExporter::default();
+    let exported = exporter.spans();
+    let provider = SdkTracerProvider::builder()
+        .with_simple_exporter(exporter)
+        .build();
+    let tracer = provider.tracer("sandbox-daemon");
+    let subscriber = tracing_subscriber::registry().with(
+        tracing_opentelemetry::layer()
+            .with_tracer(tracer)
+            .with_filter(tracing_subscriber::filter::LevelFilter::INFO),
+    );
+
+    tracing::subscriber::with_default(subscriber, || {
+        let runner = tracing::info_span!("runner.request");
+        assert_eq!(
+            crate::telemetry::apply_parent_trace_context(&runner, None),
+            crate::telemetry::TraceContextParentStatus::Absent
+        );
+        let _runner_guard = runner.enter();
+        let child = tracing::info_span!("runner.command_execution");
+        let _child_guard = child.enter();
+    });
+
+    provider.force_flush()?;
+    provider.shutdown()?;
+    let spans = exported.lock().expect("export lock").clone();
+    let runner = exported_span(&spans, "runner.request");
+    let child = exported_span(&spans, "runner.command_execution");
+
+    assert_eq!(runner.parent_span_id, SpanId::INVALID);
+    assert_eq!(child.parent_span_id, runner.span_context.span_id());
+    Ok(())
+}
+
+#[test]
+fn daemon_exec_command_and_runner_spans_share_trace() -> Result<()> {
+    let exporter = CollectingExporter::default();
+    let exported = exporter.spans();
+    let provider = SdkTracerProvider::builder()
+        .with_simple_exporter(exporter)
+        .build();
+    let tracer = provider.tracer("sandbox-daemon");
+    let subscriber = tracing_subscriber::registry().with(
+        tracing_opentelemetry::layer()
+            .with_tracer(tracer)
+            .with_filter(tracing_subscriber::filter::LevelFilter::INFO),
+    );
+    let fixture = TraceCommandFixture::new()?;
+    let workspace_session_id = fixture.create_workspace_session()?;
+    let request = serde_json::to_vec(&json!({
+        "op": "exec_command",
+        "request_id": "req-trace-command",
+        "scope": { "kind": "sandbox", "sandbox_id": "scope-sbox" },
+        "args": {
+            "workspace_session_id": workspace_session_id.0,
+            "cmd": "printf COMMAND_SECRET_SENTINEL",
+            "yield_time_ms": 0
+        }
+    }))?;
+
+    let response = tracing::subscriber::with_default(subscriber, || {
+        fixture
+            .runtime
+            .block_on(fixture.server.dispatch_bytes(request, false))
+    });
+
+    assert!(
+        response.get("error").is_none(),
+        "exec_command response should succeed: {response}"
+    );
+    provider.force_flush()?;
+    provider.shutdown()?;
+    let spans = exported.lock().expect("export lock").clone();
+    let daemon = exported_span(&spans, "daemon.request");
+    let command_spawn = exported_span(&spans, "command.spawn");
+    let runner = exported_span(&spans, "runner.request");
+    let runner_child = exported_span(&spans, "runner.command_execution");
+
+    assert_eq!(
+        command_spawn.span_context.trace_id(),
+        daemon.span_context.trace_id()
+    );
+    assert_eq!(runner.span_context.trace_id(), daemon.span_context.trace_id());
+    assert_eq!(
+        runner_child.span_context.trace_id(),
+        daemon.span_context.trace_id()
+    );
+    assert_eq!(runner.parent_span_id, command_spawn.span_context.span_id());
+    assert_eq!(runner_child.parent_span_id, runner.span_context.span_id());
+    assert!(
+        !format!("{spans:#?}").contains("COMMAND_SECRET_SENTINEL"),
+        "command text must not appear in exported span debug"
+    );
+    Ok(())
+}
+
+#[test]
+fn invalid_runner_trace_context_is_ignored_without_failure() {
+    let span = tracing::info_span!("runner.request");
+    let invalid = sandbox_runtime_namespace_process::runner::protocol::TraceContext {
+        traceparent: "invalid".to_owned(),
+        tracestate: Some("secret=should-not-matter".to_owned()),
+    };
+
+    assert_eq!(
+        crate::telemetry::apply_parent_trace_context(&span, Some(&invalid)),
+        crate::telemetry::TraceContextParentStatus::Invalid
+    );
+    assert_eq!(
+        crate::telemetry::apply_parent_trace_context(&span, None),
+        crate::telemetry::TraceContextParentStatus::Absent
+    );
+}
+
 #[derive(Clone, Default)]
 struct CaptureWriter {
     bytes: Arc<Mutex<Vec<u8>>>,
@@ -995,6 +1169,215 @@ impl SpanExporter for FailingShutdownExporter {
     fn shutdown_with_timeout(&self, _timeout: Duration) -> OTelSdkResult {
         Err(OTelSdkError::InternalFailure(self.message.clone()))
     }
+}
+
+struct TraceCommandFixture {
+    runtime: Runtime,
+    server: SandboxDaemonServer,
+    workspace: Arc<WorkspaceSessionService>,
+    _base: PathBuf,
+}
+
+impl TraceCommandFixture {
+    fn new() -> Result<Self> {
+        let base = temp_root("sandbox-daemon-command-trace");
+        let workspace_root = base.join("workspace");
+        let layer_stack_root = base.join("layer-stack");
+        std::fs::create_dir_all(&workspace_root)?;
+        sandbox_runtime_layerstack::build_workspace_base(&layer_stack_root, &workspace_root, false)?;
+        let workspace = Arc::new(WorkspaceSessionService::new(Arc::new(
+            WorkspaceRuntimeService::from_hooks_for_test(WorkspaceRuntimeHooks {
+                create_workspace: Box::new({
+                    let base = base.clone();
+                    move |request| {
+                        Ok(workspace_handle_for_trace(
+                            &base,
+                            "workspace-trace",
+                            request.profile,
+                        ))
+                    }
+                }),
+                capture_changes: Box::new(|_, _: CaptureChangesRequest| {
+                    Err(WorkspaceError::Capture {
+                        message: "capture not used by trace command test".to_owned(),
+                    })
+                }),
+                remount_workspace: Box::new(|_, _: RemountWorkspaceRequest| {
+                    Err(WorkspaceError::Setup {
+                        step: "remount not used by trace command test".to_owned(),
+                    })
+                }),
+                destroy_workspace: Box::new(|handle, _: DestroyWorkspaceRequest| {
+                    Ok(DestroyWorkspaceResult {
+                        workspace_session_id: handle.id,
+                        evicted_upperdir_bytes: 0,
+                        lifetime_s: 0.0,
+                        lease_released: Some(true),
+                        lease_release_error: None,
+                        active_leases_after: 0,
+                    })
+                }),
+                latest_snapshot: Box::new(|| {
+                    Err(WorkspaceError::SnapshotAcquire {
+                        source: "snapshot not used by trace command test".to_owned(),
+                    })
+                }),
+            }),
+        )));
+        let command = Arc::new(
+            CommandOperationService::with_launch_driver_and_current_trace_context_for_test(
+                Arc::clone(&workspace),
+                sandbox_runtime_command::CommandConfig {
+                    scratch_root: base.join("command-scratch"),
+                    cgroup_monitor: sandbox_runtime_workspace::CgroupMonitorConfig::default(),
+                },
+                Arc::new(TraceCommandLaunchDriver),
+                Arc::new(crate::telemetry::current_trace_context),
+            ),
+        );
+        let layerstack = Arc::new(sandbox_runtime::layerstack::LayerStackService::new(
+            layer_stack_root,
+        )?);
+        let server = SandboxDaemonServer::new(
+            ServerConfig {
+                socket_path: base.join("runtime.sock"),
+                pid_path: base.join("runtime.pid"),
+                tcp_host: None,
+                tcp_port: None,
+                auth_token: None,
+                sandbox_id: Some("sbox-trace".to_owned()),
+            },
+            Arc::new(sandbox_runtime::SandboxRuntimeOperations::new(
+                command, layerstack,
+            )),
+        );
+        Ok(Self {
+            runtime: Runtime::new()?,
+            server,
+            workspace,
+            _base: base,
+        })
+    }
+
+    fn create_workspace_session(&self) -> Result<WorkspaceSessionId> {
+        Ok(self
+            .workspace
+            .create_workspace_session(CreateWorkspaceRequest {
+                profile: WorkspaceProfile::HostCompatible,
+            })?
+            .workspace_session_id)
+    }
+}
+
+struct TraceCommandLaunchDriver;
+
+impl CommandLaunchDriver for TraceCommandLaunchDriver {
+    fn spawn(
+        &self,
+        spec: CommandProcessSpec,
+        _workspace_entry: sandbox_runtime_workspace::WorkspaceEntry,
+        _config: &sandbox_runtime_command::CommandConfig,
+    ) -> Result<CommandProcess, CommandServiceError> {
+        emit_runner_spans(spec.trace_context.as_ref(), spec.timeout_seconds.is_some());
+        Ok(CommandProcess::inactive_for_test(spec))
+    }
+
+    fn wait_for_initial_yield(
+        &self,
+        _process: &CommandProcess,
+        _yield_time_ms: u64,
+        _start_offset: u64,
+    ) -> WaitOutcome<CommandProcessExit> {
+        WaitOutcome::Completed(CommandProcessExit {
+            status: "ok".to_owned(),
+            exit_code: 0,
+            signal: None,
+            stdout: String::new(),
+            elapsed_s: 0.0,
+            kill: None,
+            cgroup_final_sample: None,
+            cgroup_cleanup: None,
+        })
+    }
+}
+
+fn emit_runner_spans(trace_context: Option<&TraceContext>, has_timeout: bool) {
+    let runner = tracing::info_span!(
+        "runner.request",
+        operation = "run",
+        trace_context = tracing::field::Empty,
+        status = "ok",
+        error_kind = tracing::field::Empty,
+    );
+    let parent_status = crate::telemetry::apply_parent_trace_context(&runner, trace_context);
+    runner.record("trace_context", parent_status.as_str());
+    let _runner_guard = runner.enter();
+    let child = tracing::info_span!(
+        "runner.command_execution",
+        has_timeout = has_timeout,
+        status = "ok",
+        exit_code = 0_i32,
+        error_kind = tracing::field::Empty,
+    );
+    let _child_guard = child.enter();
+}
+
+fn workspace_handle_for_trace(
+    base: &std::path::Path,
+    workspace_session_id: &str,
+    profile: WorkspaceProfile,
+) -> WorkspaceHandle {
+    WorkspaceHandle::holder_backed_for_test(
+        WorkspaceSessionId(workspace_session_id.to_owned()),
+        base.join("workspace"),
+        profile,
+        LayerStackSnapshotRef {
+            lease_id: LeaseId("lease-trace".to_owned()),
+            manifest_version: 1,
+            root_hash: "root-hash".to_owned(),
+            manifest: sandbox_runtime_layerstack::Manifest::new(
+                1,
+                vec![sandbox_runtime_layerstack::LayerRef {
+                    layer_id: "L000001-test".to_owned(),
+                    path: "layers/L000001-test".to_owned(),
+                }],
+                sandbox_runtime_layerstack::MANIFEST_SCHEMA_VERSION,
+            )
+            .expect("test manifest is valid"),
+            layer_paths: vec![base.join("layer-stack").join("layers").join("L000001-test")],
+        },
+        base.join("upper"),
+        base.join("work"),
+        None,
+    )
+}
+
+#[derive(Clone, Debug, Default)]
+struct CollectingExporter {
+    spans: Arc<Mutex<Vec<SpanData>>>,
+}
+
+impl CollectingExporter {
+    fn spans(&self) -> Arc<Mutex<Vec<SpanData>>> {
+        Arc::clone(&self.spans)
+    }
+}
+
+impl SpanExporter for CollectingExporter {
+    async fn export(&self, batch: Vec<SpanData>) -> OTelSdkResult {
+        self.spans
+            .lock()
+            .expect("export lock")
+            .extend(batch);
+        Ok(())
+    }
+}
+
+fn exported_span<'a>(spans: &'a [SpanData], name: &str) -> &'a SpanData {
+    spans
+        .iter()
+        .find(|span| span.name.as_ref() == name)
+        .unwrap_or_else(|| panic!("missing span {name}; exported={spans:#?}"))
 }
 
 fn temp_root(label: &str) -> PathBuf {
