@@ -423,7 +423,7 @@ sink:
 }
 
 #[test]
-fn telemetry_rejects_fallback_sink_list() {
+fn telemetry_rejects_multiple_sink_list() {
     let err = telemetry_deserialize_error(
         r#"
 enabled: true

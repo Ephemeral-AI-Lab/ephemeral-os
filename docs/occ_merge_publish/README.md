@@ -43,7 +43,7 @@ the entire changeset.
 
 ## Decision
 
-Add a text-only auto-merge fallback during validated publish.
+Add a text-only auto-merge path during validated publish.
 
 When source-path OCC detects a fingerprint mismatch, layerstack may attempt a
 three-way merge for eligible regular-file writes:
@@ -347,7 +347,7 @@ Initial guardrails:
   cap unless implementation chooses a smaller constant
 - per-publish merge input cap: implementation-defined, required before release
 - text-only eligibility
-- conflict fallback instead of unbounded work
+- conflict rejection instead of unbounded work
 
 Metrics/tracing should count:
 

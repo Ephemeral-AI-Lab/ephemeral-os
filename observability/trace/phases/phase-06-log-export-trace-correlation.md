@@ -12,7 +12,7 @@ spans or trace events from Phase 3.
 - Add log export only for allowlisted observability records that are useful
   outside the trace timeline.
 - Reuse the existing single OTLP sink endpoint. Do not add a second production
-  endpoint or a fallback sink list.
+  endpoint or a multi-sink list.
 - Add an OpenTelemetry Collector logs pipeline that forwards logs to Loki.
 - Add Grafana provisioning for Tempo-to-Loki trace-to-logs and Loki-to-Tempo
   derived-field links.
@@ -85,7 +85,7 @@ Validation rules:
 - `export_logs = true` requires `sink = Otlp { ... }`.
 - `export_logs = true` is rejected for `LocalJson` sinks.
 - `export_logs = true` does not allow a second endpoint, file sink, stdout
-  sink, stderr sink, or fallback sink list.
+  sink, stderr sink, or multi-sink list.
 - The collector must receive logs through OTLP and forward to Loki.
 
 ## Log Rules
@@ -123,7 +123,7 @@ Validation rules:
 
 - [ ] Loki is introduced only in this phase.
 - [ ] Log export reuses the existing single OTLP sink endpoint and does not add
-      fallback sinks.
+      secondary sinks.
 - [ ] `export_logs = true` is rejected unless the active sink is OTLP.
 - [ ] Tempo stores traces and trace events; Loki stores only explicit exported
       log records.

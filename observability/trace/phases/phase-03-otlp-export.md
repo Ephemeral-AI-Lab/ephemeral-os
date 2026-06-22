@@ -157,7 +157,7 @@ IDs, cgroup paths, or other per-request/per-workspace high-cardinality values.
       flags in `Cargo.toml`; no placeholder versions, wildcard `0.x`
       declarations, or mixed-generation OTel crates remain.
 - [x] OTLP config accepts exactly one active sink.
-- [x] File sink and fallback sink lists are rejected.
+- [x] File sinks and multi-sink lists are rejected.
 - [x] OTLP mode requires dynamic `sandbox_id` for manager-started daemons.
 - [x] OTLP resource attributes include `service.name`, `service.instance.id`,
       and `sandbox.id`, and exclude raw paths, root hashes, request IDs,

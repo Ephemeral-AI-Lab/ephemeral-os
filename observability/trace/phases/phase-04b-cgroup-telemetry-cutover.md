@@ -104,7 +104,7 @@ anomalies, final summaries, cleanup status, and bounded error classes.
 - Do not remove `CgroupMonitorRegistry`, session final samples, command final
   samples, cleanup state, or retained internal samples needed for metrics.
 - Do not leave `inspect_cgroup_monitor` or `read_cgroup_monitor_samples` in
-  `cli_operation_specs` as hidden compatibility aliases.
+  `cli_operation_specs` as hidden old-name operations.
 - Do not replace the removed operations with a new response payload that mirrors
   the old cgroup sample shape. The telemetry backend is the canonical stats
   interface after this phase.
@@ -152,6 +152,6 @@ implementation should still prove metrics/final samples remain correct.
 - [ ] Command final samples and session final cleanup state still feed metrics.
 - [ ] Internal metrics/registry tests prove command final samples and session
       final cleanup state remain available to telemetry after operation removal.
-- [ ] No fallback compatibility alias is left for the old cgroup monitor
+- [ ] No hidden old-name operation is left for the old cgroup monitor
       operation names.
 - [ ] `cargo test -p sandbox-runtime -p sandbox-gateway` passes.

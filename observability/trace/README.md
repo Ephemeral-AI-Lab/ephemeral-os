@@ -45,7 +45,7 @@ OpenTelemetry Logs signal. Do not call this "trace logs". Loki is introduced
 only in a later explicit log-export and trace-to-logs correlation phase.
 Prometheus-compatible metrics storage starts in Phase 4a.
 
-Do not implement automatic fallback between collection paths. A daemon
+Do not implement automatic failover between collection paths. A daemon
 deployment chooses one active sink. If the configured exporter cannot deliver
 telemetry, runtime protocol behavior must not switch to a secondary file,
 stdout, or manager-RPC collection path.
@@ -425,7 +425,7 @@ explicit log/metric exporters are added and tested.
 
 Telemetry defaults to disabled in local development and tests. Stdout JSON can
 exist for explicit foreground debugging and fixtures, but it is a separate
-local/test mode, not a fallback from OTLP. File appenders are not a production
+local/test mode, not an alternate OTLP failure path. File appenders are not a production
 transport in this design.
 
 Telemetry delivery must not become a protocol correctness dependency. Exporter
@@ -612,7 +612,7 @@ Config validation rules:
   sampler config until there is more than one real policy; ratio, parent-based,
   and slow/error override sampling policies are deferred until response
   metadata and lookup UX exist.
-- exactly one sink is active; no fallback sink list is accepted.
+- exactly one sink is active; no multi-sink list is accepted.
 - OTLP endpoints must be explicit; do not infer host networking.
 - daemon startup must fail telemetry initialization if manager-started OTLP mode
   has no dynamic `--sandbox-id` argument.
@@ -837,7 +837,7 @@ Trace assertions should verify:
   boundaries
 - explicit phase events include `duration_ms` when they represent timed phases
 - failures emit error fields and do not suppress normal protocol errors
-- OTLP mode does not open a secondary stdout/file/manager-RPC fallback sink
+- OTLP mode does not open a secondary stdout/file/manager-RPC sink
 - OTLP shutdown flush is called on normal daemon shutdown
 - exporter failure uses bounded drop/queue behavior and does not block protocol
   responses

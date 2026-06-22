@@ -90,7 +90,7 @@ Forbidden:
 - metrics or dashboards
 - protocol request/response changes
 - telemetry DTO/report objects
-- the legacy OCC trace-event object API or any replacement runtime trace object API
+- the retired OCC trace-event object API or any replacement runtime trace object API
 - public cgroup read-op tracing for `inspect_cgroup_monitor` or
   `read_cgroup_monitor_samples`
 - spans named after private helpers such as `plan_publish`,
@@ -196,7 +196,7 @@ Check:
 - No raw path/root/hash/command/env/auth/error/DTO values can appear through
   `Debug`, `Display`, `?`, `%`, `field::debug`, or whole-object records.
 - OCC is represented as events/fields on the normal publish tracing path, not
-  as the legacy OCC trace-event object API or a replacement trace object API.
+  as the retired OCC trace-event object API or a replacement trace object API.
 - New helper methods are small, local, and consistent with existing code style.
 - Docs changed only as needed for Phase 2/OCC tracing wording.
 - Cargo changes are justified by actual runtime crate tracing usage.
