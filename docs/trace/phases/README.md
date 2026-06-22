@@ -17,8 +17,10 @@ Global constraints for every phase:
 
 - [ ] Do not add `crates/sandbox-runtime-trace/`.
 - [ ] Do not add `crates/sandbox-runtime/operation/src/internal/telemetry.rs`.
-- [ ] Put runnable local observability stack/provisioning files under
-      `observability/local-stack/`, not under `docs/trace/`.
+- [ ] Put runnable observability validation/provisioning files under
+      `observability/`, not under `docs/trace/`.
+- [ ] Keep `observability/` as one shared, evolving tree. Do not create
+      phase-specific observability directories.
 - [ ] Runtime crates emit inline `tracing` spans/events only.
 - [ ] `sandbox-daemon` owns subscriber/exporter setup.
 - [ ] Production traces use one OTLP path only.

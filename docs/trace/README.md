@@ -436,7 +436,7 @@ missing required dynamic `sandbox_id` is a startup error; collector
 unreachability after a valid exporter is constructed is fail-open for protocol
 behavior.
 
-The canonical Phase 3 local trace validation stack is:
+The canonical Phase 3 trace validation environment is:
 
 ```text
 sandbox-daemon
@@ -446,7 +446,7 @@ sandbox-daemon
 ```
 
 Jaeger may be used as an additional trace-only smoke target, but the required
-local validation path is Collector plus Tempo plus Grafana. Loki is not required
+validation path is Collector plus Tempo plus Grafana. Loki is not required
 to view spans or trace events. Loki is required only when a later phase exports
 log records and configures Grafana trace-to-logs correlation. The
 Prometheus-compatible metrics backend starts in Phase 4a and is separate from
@@ -869,7 +869,7 @@ Trace assertions should verify:
 | Trace IDs in protocol responses | later only, as a versioned protocol-envelope change |
 | Cgroup monitor samples | metrics primary; trace events only for anomalies/final summaries |
 | Response simplification | telemetry owns time/resource/dashboard stats; responses keep workflow data only until a later API cleanup |
-| Canonical Phase 3 trace validation stack | OpenTelemetry Collector + Tempo + Grafana; Jaeger is optional trace-only smoke target |
+| Canonical Phase 3 trace validation environment | OpenTelemetry Collector + Tempo + Grafana; Jaeger is optional trace-only smoke target |
 | Loki | deferred until explicit log export and Grafana trace-to-logs correlation; not needed for spans or trace events |
 | Phase 4a dashboard stack | OpenTelemetry Collector + Prometheus-compatible metrics backend + Grafana; Tempo only for trace panels/links |
 | Time measurement | span duration for operation latency, event timestamps for ordering, explicit `Instant` timers for typed phase reports |

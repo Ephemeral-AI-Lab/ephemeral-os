@@ -140,32 +140,32 @@ daemon-owned telemetry test support. Do not expose runtime telemetry DTOs.
 
 ## Acceptance Criteria
 
-- [ ] Workspace create/destroy/capture/remount spans align with live call paths.
-- [ ] Workspace create phase events use existing internal explicit `Instant`
+- [x] Workspace create/destroy/capture/remount spans align with live call paths.
+- [x] Workspace create phase events use existing internal explicit `Instant`
       phase timings and preserve `WorkspaceHandle` behavior.
-- [ ] Remount events preserve `RemountOverlayResult` behavior and read only
+- [x] Remount events preserve `RemountOverlayResult` behavior and read only
       allowlisted booleans/counts/statuses from the live setns-runner boundary.
-- [ ] No `lifecycle/remount/report.rs` file or replacement report DTO is
+- [x] No `lifecycle/remount/report.rs` file or replacement report DTO is
       introduced for telemetry.
-- [ ] Layerstack publish emits structured result/rejection/OCC events
+- [x] Layerstack publish emits structured result/rejection/OCC events
       on the normal tracing path without a runtime trace object API.
-- [ ] No span name mirrors private helper functions unless the helper has been
+- [x] No span name mirrors private helper functions unless the helper has been
       promoted to a stable diagnostic boundary in the same change.
-- [ ] Cgroup periodic samples do not emit trace events.
-- [ ] Cgroup trace events are limited to anomalies and final summaries.
-- [ ] `inspect_cgroup_monitor` and `read_cgroup_monitor_samples` are not added
+- [x] Cgroup periodic samples do not emit trace events.
+- [x] Cgroup trace events are limited to anomalies and final summaries.
+- [x] `inspect_cgroup_monitor` and `read_cgroup_monitor_samples` are not added
       as span names or new instrumentation boundaries.
-- [ ] Raw paths, raw root hashes, layer paths, cgroup paths, command text,
+- [x] Raw paths, raw root hashes, layer paths, cgroup paths, command text,
       stdin, output, env values, auth tokens, raw DTO `Debug`, raw response
       payloads, and raw error strings are not emitted.
-- [ ] `WorkspaceHandle`, `WorkspaceEntry`, `PublishChangesResult`, remount
+- [x] `WorkspaceHandle`, `WorkspaceEntry`, `PublishChangesResult`, remount
       diagnostic JSON, and cgroup monitor samples are never auto-captured as
       telemetry fields.
-- [ ] Global forbidden path/module and no-`Response`-change checks pass for this
+- [x] Global forbidden path/module and no-`Response`-change checks pass for this
       phase.
-- [ ] `cargo test -p sandbox-runtime` passes.
-- [ ] If workspace/layerstack crates are touched,
+- [x] `cargo test -p sandbox-runtime` passes.
+- [x] If workspace/layerstack crates are touched,
       `cargo test -p sandbox-runtime-workspace` and
       `cargo test -p sandbox-runtime-layerstack` pass.
-- [ ] If namespace-process remount diagnostics are touched,
+- [x] If namespace-process remount diagnostics are touched,
       `cargo test -p sandbox-runtime-namespace-process` passes.

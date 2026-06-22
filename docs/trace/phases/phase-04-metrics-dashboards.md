@@ -20,7 +20,7 @@ remove the existing CLI/catalog-facing cgroup monitor operations yet.
   metrics.
 - Add dashboard definitions for command latency, publish conflict rate, remount
   health, and cgroup resource trends.
-- Add or extend local dashboard validation stack config for OpenTelemetry
+- Add or extend dashboard validation environment config for OpenTelemetry
   Collector, a Prometheus-compatible metrics backend, and Grafana.
 - Keep `inspect_cgroup_monitor` and `read_cgroup_monitor_samples` temporarily
   until Phase 4b proves they are no longer needed as CLI/debug surfaces.
@@ -58,15 +58,18 @@ docs/trace/dashboards/
   remount-health.json
   cgroup-resources.json
 
-observability/local-stack/phase-04a-metrics/
-  docker-compose.yml          # collector, prometheus-compatible metrics backend, grafana
-  otel-collector.yaml         # metrics pipeline; traces only if trace panels are present
+observability/
+  docker-compose.yml          # extend with prometheus-compatible metrics backend
+  otel-collector.yaml         # extend with metrics pipeline
   grafana/
     provisioning/
       datasources/
-        metrics.yaml
+        metrics.yaml          # add metrics datasource
         tempo.yaml            # only when dashboards include trace panels/links
 ```
+
+Phase 4a extends the shared `observability/` tree created in Phase 3. It must
+not introduce phase-specific observability directories.
 
 If `telemetry/metrics.rs` is added, `telemetry.rs` remains daemon-owned. Runtime
 crates still must not own exporter setup. Runtime call sites may use only a
@@ -124,7 +127,7 @@ feed metrics.
   periodic samples from affecting retained final-sample enrichment.
 - Dashboards must read metrics from the collector/backend, not from
   `cli_operation_specs`.
-- Dashboard validation must load the JSON against a chosen local Grafana stack
+- Dashboard validation must load the JSON against a chosen Grafana environment
   with a Prometheus-compatible metrics datasource. Tempo may be used only for
   trace panels, not as the metrics datasource.
 - Loki is not part of Phase 4a. Do not add Grafana trace-to-logs, Loki derived
@@ -165,7 +168,7 @@ feed metrics.
       raw root hashes, command text, stdin, output, auth tokens, env values,
       raw workspace roots, raw cgroup paths, raw layer paths, and free-form
       error strings.
-- [ ] Dashboard files load in the chosen local Grafana stack with the configured
+- [ ] Dashboard files load in the chosen Grafana environment with the configured
       metrics datasource; any Tempo panels are trace-only.
 - [ ] Phase 4a does not add Loki, log exporters, trace-to-logs configuration,
       or log panels.

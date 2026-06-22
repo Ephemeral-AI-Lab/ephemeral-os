@@ -47,20 +47,23 @@ crates/sandbox-config/src/configs/
 crates/sandbox-config/tests/unit/configs/
   daemon.rs
 
-observability/local-stack/phase-06-logs/
-  docker-compose.yml          # collector, tempo, loki, grafana
-  otel-collector.yaml         # traces + logs pipelines
-  loki.yaml
-  tempo.yaml
+observability/
+  docker-compose.yml          # extend with loki
+  otel-collector.yaml         # extend with logs pipeline
+  loki.yaml                   # add log backend config
+  tempo.yaml                  # update only if trace-to-logs needs it
   grafana/
     provisioning/
       datasources/
-        tempo.yaml            # tracesToLogsV2 configured
-        loki.yaml             # derived fields configured
+        tempo.yaml            # update with tracesToLogsV2
+        loki.yaml             # add derived fields
 ```
 
 Runtime crates still emit inline `tracing` spans/events only. They do not own
 log exporters, Loki clients, or collector configuration.
+
+Phase 6 extends the shared `observability/` tree created in Phase 3 and updated
+in Phase 4a. It must not introduce phase-specific observability directories.
 
 ## Struct/Class And Field Changes
 

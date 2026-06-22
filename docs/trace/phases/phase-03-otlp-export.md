@@ -11,8 +11,9 @@ behavior, and flushes terminal spans on daemon shutdown.
 - Add exact OpenTelemetry crate versions and feature flags.
 - Extend daemon telemetry config with OTLP settings.
 - Export traces to one configured Collector endpoint.
-- Add local validation stack config for OpenTelemetry Collector, Tempo, and
-  Grafana. This stack validates trace export and trace-event visibility only.
+- Add validation environment config for OpenTelemetry Collector, Tempo, and
+  Grafana. This environment validates trace export and trace-event visibility
+  only.
 - Fail startup for invalid telemetry config or missing dynamic identity.
 - Fail open for protocol behavior after a valid exporter is constructed.
 - Track or drain in-flight connection/request tasks on normal daemon shutdown,
@@ -48,7 +49,7 @@ crates/sandbox-config/src/configs/
 crates/sandbox-config/tests/unit/configs/
   daemon.rs
 
-observability/local-stack/phase-03-traces/
+observability/
   docker-compose.yml          # collector, tempo, grafana; no loki
   otel-collector.yaml         # trace pipeline only
   tempo.yaml
@@ -57,6 +58,10 @@ observability/local-stack/phase-03-traces/
       datasources/
         tempo.yaml
 ```
+
+Phase 3 creates the shared `observability/` tree with the trace-only services
+and provisioning needed for OTLP trace validation. Later phases extend these
+same files instead of adding phase-specific observability directories.
 
 Do not add file appenders, Loki, log exporters, or manager/gateway RPC
 telemetry transport.
@@ -128,7 +133,7 @@ IDs, cgroup paths, or other per-request/per-workspace high-cardinality values.
 - Do not add sampler config until there is at least one real policy beyond the
   initial OTLP trace rollout. Initial OTLP trace sampling is always-on by
   implementation convention, not a one-variant config enum.
-- The required local validation stack is OpenTelemetry Collector plus Tempo
+- The required validation environment is OpenTelemetry Collector plus Tempo
   plus Grafana. Jaeger may be added as an optional trace-only smoke target, but
   it does not replace Tempo/Grafana validation.
 - Do not configure Grafana trace-to-logs or Loki in this phase.
@@ -142,33 +147,33 @@ IDs, cgroup paths, or other per-request/per-workspace high-cardinality values.
 | OTLP exporter setup | 140 to 240 |
 | Shutdown task tracking and flush integration | 90 to 160 |
 | Exporter failure/drop/resource tests | 110 to 190 |
-| Local trace validation stack/provisioning | 80 to 150 |
+| Trace validation environment/provisioning | 80 to 150 |
 | Docs/config examples | 32 to 80 |
 | Total | 600 to 1,060 |
 
 ## Acceptance Criteria
 
-- [ ] OTel dependencies use exact compatible versions and documented feature
+- [x] OTel dependencies use exact compatible versions and documented feature
       flags in `Cargo.toml`; no placeholder versions, wildcard `0.x`
       declarations, or mixed-generation OTel crates remain.
-- [ ] OTLP config accepts exactly one active sink.
-- [ ] File sink and fallback sink lists are rejected.
-- [ ] OTLP mode requires dynamic `sandbox_id` for manager-started daemons.
-- [ ] OTLP resource attributes include `service.name`, `service.instance.id`,
+- [x] OTLP config accepts exactly one active sink.
+- [x] File sink and fallback sink lists are rejected.
+- [x] OTLP mode requires dynamic `sandbox_id` for manager-started daemons.
+- [x] OTLP resource attributes include `service.name`, `service.instance.id`,
       and `sandbox.id`, and exclude raw paths, root hashes, request IDs,
       command IDs, workspace session IDs, cgroup paths, and error strings.
-- [ ] Local validation stack includes OpenTelemetry Collector, Tempo, and
+- [ ] Validation environment includes OpenTelemetry Collector, Tempo, and
       Grafana with a Tempo data source.
-- [ ] The Phase 3 local validation stack does not include Loki, log exporters,
+- [ ] The Phase 3 validation environment does not include Loki, log exporters,
       or Grafana trace-to-logs configuration.
-- [ ] Invalid telemetry config fails daemon startup.
-- [ ] Collector unreachable after valid exporter construction does not alter
+- [x] Invalid telemetry config fails daemon startup.
+- [x] Collector unreachable after valid exporter construction does not alter
       runtime protocol responses.
 - [ ] Exporter timeout, queue/drop behavior, and flush error behavior are
       bounded and covered by tests.
-- [ ] Normal daemon shutdown drains or cancels tracked request/connection tasks
+- [x] Normal daemon shutdown drains or cancels tracked request/connection tasks
       before flushing or shutting down the telemetry provider.
-- [ ] Stdout/stderr JSON remain foreground local/test only.
-- [ ] Local JSON stream mode is still rejected under detached `serve --spawn`.
-- [ ] No `sandbox_protocol::Response` metadata or envelope change is introduced.
-- [ ] `cargo test -p sandbox-daemon -p sandbox-config -p sandbox-protocol` passes.
+- [x] Stdout/stderr JSON remain foreground local/test only.
+- [x] Local JSON stream mode is still rejected under detached `serve --spawn`.
+- [x] No `sandbox_protocol::Response` metadata or envelope change is introduced.
+- [x] `cargo test -p sandbox-daemon -p sandbox-config -p sandbox-protocol` passes.
