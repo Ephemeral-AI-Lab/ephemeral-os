@@ -40,10 +40,10 @@ crates/sandbox-daemon/
       telemetry.rs
       serve.rs
 
-crates/sandbox-runtime/config/src/configs/
+crates/sandbox-config/src/configs/
   daemon.rs
 
-crates/sandbox-runtime/config/tests/unit/configs/
+crates/sandbox-config/tests/unit/configs/
   daemon.rs
 ```
 
@@ -148,4 +148,4 @@ IDs, cgroup paths, or other per-request/per-workspace high-cardinality values.
 - [ ] Stdout/stderr JSON remain foreground local/test only.
 - [ ] Local JSON stream mode is still rejected under detached `serve --spawn`.
 - [ ] No `sandbox_protocol::Response` metadata or envelope change is introduced.
-- [ ] `cargo test -p sandbox-daemon -p sandbox-runtime-config -p sandbox-protocol` passes.
+- [ ] `cargo test -p sandbox-daemon -p sandbox-config -p sandbox-protocol` passes.

@@ -177,7 +177,7 @@ Keep the tracing ownership narrow:
 | `sandbox-runtime-workspace` | inline spans/events at stable workspace service boundaries when needed |
 | `sandbox-runtime-layerstack` | structured results/errors; no custom trace-event objects |
 | `sandbox-runtime-overlay` | no tracing by default unless a low-level mount syscall cannot be diagnosed from callers |
-| `sandbox-runtime-config` | typed telemetry config only |
+| `sandbox-config` | typed config schemas only |
 
 Do not add a central runtime trace module for field-name constants or wrapper
 macros. Prefer direct `tracing` macros at the call site. If repetition becomes a
@@ -636,7 +636,7 @@ crates/sandbox-daemon/src/
     mod.rs
     runtime.rs
 
-crates/sandbox-runtime/config/src/configs/
+crates/sandbox-config/src/configs/
   daemon.rs
 
 crates/sandbox-runtime/operation/src/
@@ -735,8 +735,8 @@ Expected changed files for the combined Phases 1-3 trace rollout:
 | --- | --- | ---: |
 | `Cargo.toml` | workspace dependencies for `tracing`, `tracing-subscriber`, and Phase 3 OTel crates | +6 to +10 |
 | `config/prd.yml` | `daemon.telemetry` default-disabled config | +6 to +10 |
-| `crates/sandbox-runtime/config/src/configs/daemon.rs` | telemetry config structs/enums and validation | +90 to +130 |
-| `crates/sandbox-runtime/config/tests/unit/configs/daemon.rs` | config deserialize/validation tests | +35 to +60 |
+| `crates/sandbox-config/src/configs/daemon.rs` | telemetry config structs/enums and validation | +90 to +130 |
+| `crates/sandbox-config/tests/unit/configs/daemon.rs` | config deserialize/validation tests | +35 to +60 |
 | `crates/sandbox-daemon/Cargo.toml` | daemon telemetry dependencies | +6 to +10 |
 | `crates/sandbox-daemon/src/telemetry.rs` | subscriber setup, local JSON stream, Phase 3 OTLP setup, bounded exporter behavior, tracked shutdown flush, resource attributes | +220 to +340 |
 | `crates/sandbox-daemon/src/serve.rs` | parse `--sandbox-id`, init telemetry, reject local JSON streams with detached spawn, pass identity to server config | +60 to +110 |

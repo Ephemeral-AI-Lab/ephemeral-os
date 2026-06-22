@@ -1,17 +1,18 @@
 use std::io;
 use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::Result;
-use sandbox_runtime_config::configs::daemon::{
-    TelemetryConfig, TelemetryOutputStream, TelemetrySink,
-};
 use serde_json::{json, Value};
 use tokio::runtime::Runtime;
 use tracing_subscriber::fmt::MakeWriter;
 
 use crate::server::{SandboxDaemonServer, ServerConfig};
+use crate::telemetry::{
+    DaemonServeMode, TelemetryConfig, TelemetryOutputStream, TelemetrySink,
+};
 
 #[test]
 fn local_json_telemetry_formats_span_close_records() -> Result<()> {
@@ -56,8 +57,8 @@ fn daemon_request_span_records_dynamic_sandbox_id() -> Result<()> {
     let runtime = Runtime::new()?;
     let server = test_server(Some("dynamic-sbox"));
     let request = json!({
-        "op": "unknown_op",
-        "request_id": "req-sandbox-id",
+        "op": "unknown_op_OPERATION_SECRET_SENTINEL",
+        "request_id": "REQUEST_ID_SECRET_SENTINEL",
         "scope": { "kind": "sandbox", "sandbox_id": "scope-sbox" },
         "args": {}
     });
@@ -71,9 +72,16 @@ fn daemon_request_span_records_dynamic_sandbox_id() -> Result<()> {
 
     let output = writer.output();
     assert!(output.contains("dynamic-sbox"), "{output}");
-    assert!(output.contains("req-sandbox-id"), "{output}");
     assert!(output.contains("unknown_op"), "{output}");
     assert!(output.contains("sandbox"), "{output}");
+    assert!(
+        !output.contains("REQUEST_ID_SECRET_SENTINEL"),
+        "raw request_id must not appear in telemetry: {output}"
+    );
+    assert!(
+        !output.contains("unknown_op_OPERATION_SECRET_SENTINEL"),
+        "raw unknown operation must not appear in telemetry: {output}"
+    );
     Ok(())
 }
 
@@ -102,6 +110,163 @@ fn pre_decode_failure_telemetry_is_sanitized() -> Result<()> {
         "auth field names from raw payload must not appear in telemetry: {output}"
     );
     Ok(())
+}
+
+#[test]
+fn telemetry_disabled_config_deserializes_without_sink() {
+    let cfg = telemetry_config(
+        r#"
+enabled: false
+service_name: sandbox-daemon
+level: info
+"#,
+    );
+
+    assert!(!cfg.enabled);
+    assert!(cfg.sink.is_none());
+    cfg.validate().expect("disabled telemetry validates");
+    cfg.validate_for_serve_mode(DaemonServeMode::Spawn)
+        .expect("disabled telemetry is valid under spawned serve");
+}
+
+#[test]
+fn telemetry_section_defaults_to_disabled_when_omitted() {
+    let cfg = telemetry_section(
+        r#"
+server:
+  socket_path: /eos/runtime/daemon/runtime.sock
+  pid_path: /eos/runtime/daemon/runtime.pid
+  max_worker_threads: 2
+"#,
+    );
+
+    assert_eq!(cfg, TelemetryConfig::default());
+    cfg.validate()
+        .expect("omitted telemetry defaults to disabled config");
+}
+
+#[test]
+fn telemetry_loads_from_prd_config_document() {
+    let config_path = sandbox_config::ConfigPath::prd().expect("prd config path resolves");
+    let doc = sandbox_config::load_path(config_path.as_path()).expect("prd config loads");
+
+    let cfg = crate::telemetry::from_config_document(&doc).expect("daemon telemetry deserializes");
+
+    assert_eq!(cfg, TelemetryConfig::default());
+    cfg.validate().expect("prd telemetry validates");
+}
+
+#[test]
+fn telemetry_local_json_accepts_stdout_and_stderr_in_foreground_mode() {
+    for stream in ["stdout", "stderr"] {
+        let cfg = telemetry_config(&format!(
+            r#"
+enabled: true
+service_name: sandbox-daemon
+level: info
+sink:
+  kind: local_json
+  stream: {stream}
+"#
+        ));
+
+        assert!(matches!(cfg.sink, Some(TelemetrySink::LocalJson { .. })));
+        cfg.validate_for_serve_mode(DaemonServeMode::Foreground)
+            .expect("local json stream is valid in foreground mode");
+    }
+}
+
+#[test]
+fn telemetry_rejects_invalid_stream() {
+    let err = telemetry_deserialize_error(
+        r#"
+enabled: true
+service_name: sandbox-daemon
+level: info
+sink:
+  kind: local_json
+  stream: file
+"#,
+    );
+
+    assert!(
+        err.contains("stream") || err.contains("file"),
+        "unexpected error: {err}"
+    );
+}
+
+#[test]
+fn telemetry_rejects_invalid_level() {
+    let cfg = telemetry_config(
+        r#"
+enabled: true
+service_name: sandbox-daemon
+level: verbose
+sink:
+  kind: local_json
+  stream: stdout
+"#,
+    );
+
+    let err = cfg.validate().expect_err("invalid telemetry level rejected");
+
+    assert_eq!(err.field, "daemon.telemetry.level");
+}
+
+#[test]
+fn telemetry_rejects_unknown_sink_kind() {
+    let err = telemetry_deserialize_error(
+        r#"
+enabled: true
+service_name: sandbox-daemon
+level: info
+sink:
+  kind: otlp
+  stream: stdout
+"#,
+    );
+
+    assert!(
+        err.contains("otlp") || err.contains("kind"),
+        "unexpected error: {err}"
+    );
+}
+
+#[test]
+fn telemetry_enabled_config_requires_sink() {
+    let cfg = telemetry_config(
+        r#"
+enabled: true
+service_name: sandbox-daemon
+level: info
+"#,
+    );
+
+    let err = cfg
+        .validate()
+        .expect_err("enabled telemetry without sink is rejected");
+
+    assert_eq!(err.field, "daemon.telemetry.sink");
+}
+
+#[test]
+fn telemetry_rejects_local_json_in_spawn_mode() {
+    let cfg = telemetry_config(
+        r#"
+enabled: true
+service_name: sandbox-daemon
+level: info
+sink:
+  kind: local_json
+  stream: stderr
+"#,
+    );
+
+    let err = cfg
+        .validate_for_serve_mode(DaemonServeMode::Spawn)
+        .expect_err("local json stdout/stderr is foreground-only");
+
+    assert_eq!(err.field, "daemon.telemetry.sink");
 }
 
 #[derive(Clone, Default)]
@@ -148,6 +313,27 @@ fn local_json_telemetry(stream: TelemetryOutputStream) -> TelemetryConfig {
         level: "info".to_owned(),
         sink: Some(TelemetrySink::LocalJson { stream }),
     }
+}
+
+fn telemetry_section(yaml: &str) -> TelemetryConfig {
+    #[derive(serde::Deserialize)]
+    struct DaemonTelemetrySection {
+        #[serde(default)]
+        telemetry: TelemetryConfig,
+    }
+    serde_yaml_ng::from_str::<DaemonTelemetrySection>(yaml)
+        .expect("daemon telemetry section deserializes")
+        .telemetry
+}
+
+fn telemetry_config(yaml: &str) -> TelemetryConfig {
+    serde_yaml_ng::from_str(yaml).expect("telemetry config deserializes")
+}
+
+fn telemetry_deserialize_error(yaml: &str) -> String {
+    serde_yaml_ng::from_str::<TelemetryConfig>(yaml)
+        .expect_err("telemetry config should fail to deserialize")
+        .to_string()
 }
 
 fn json_lines(output: &str) -> Vec<Value> {
@@ -209,9 +395,15 @@ fn test_operations() -> sandbox_runtime::SandboxRuntimeOperations {
 }
 
 fn temp_root(label: &str) -> PathBuf {
+    static NEXT_TEMP_ROOT_ID: AtomicU64 = AtomicU64::new(1);
+
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("system time after epoch")
         .as_nanos();
-    std::env::temp_dir().join(format!("{label}-{}-{nanos}", std::process::id()))
+    let unique_id = NEXT_TEMP_ROOT_ID.fetch_add(1, Ordering::Relaxed);
+    std::env::temp_dir().join(format!(
+        "{label}-{}-{nanos}-{unique_id}",
+        std::process::id()
+    ))
 }

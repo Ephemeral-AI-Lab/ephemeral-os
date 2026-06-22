@@ -1,15 +1,14 @@
 //! Typed schema for the daemon section of `eos-sandbox/config/prd.yml`.
 //!
-//! The `sandbox-daemon` binary loads this section from the merged runtime YAML
+//! The `sandbox-daemon` binary loads this section from the merged sandbox YAML
 //! and injects it into daemon-owned subsystems during server startup.
 
 use std::path::PathBuf;
 
-use serde::Deserialize;
+use serde::{de::IgnoredAny, Deserialize, Deserializer};
 
 use crate::configs::validate::{
-    require_absolute, require_non_empty, require_u64_at_least, require_usize_at_least,
-    ConfigFieldError,
+    require_absolute, require_u64_at_least, require_usize_at_least, ConfigFieldError,
 };
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -19,7 +18,9 @@ pub struct DaemonConfig {
     pub commands: CommandConfig,
     pub cgroup_monitor: CgroupMonitorConfig,
     #[serde(default)]
-    pub telemetry: TelemetryConfig,
+    #[serde(rename = "telemetry")]
+    // `sandbox-daemon` owns the concrete schema; this keeps other unknown keys rejected.
+    _daemon_owned_telemetry: Option<DaemonTelemetrySection>,
     pub idle_workspace_eviction: IdleWorkspaceEvictionConfig,
 }
 
@@ -61,46 +62,6 @@ impl Default for CgroupMonitorConfig {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct TelemetryConfig {
-    pub enabled: bool,
-    pub service_name: String,
-    pub level: String,
-    #[serde(default)]
-    pub sink: Option<TelemetrySink>,
-}
-
-impl Default for TelemetryConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            service_name: "sandbox-daemon".to_owned(),
-            level: "info".to_owned(),
-            sink: None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
-pub enum TelemetrySink {
-    LocalJson { stream: TelemetryOutputStream },
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum TelemetryOutputStream {
-    Stdout,
-    Stderr,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DaemonServeMode {
-    Foreground,
-    Spawn,
-}
-
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DaemonServerConfig {
@@ -140,65 +101,12 @@ impl DaemonConfig {
             1,
             "daemon.cgroup_monitor.retained_samples_per_target",
         )?;
-        self.telemetry.validate()?;
         require_u64_at_least(
             self.idle_workspace_eviction.interval_ms,
             1,
             "daemon.idle_workspace_eviction.interval_ms",
         )?;
         Ok(())
-    }
-}
-
-impl TelemetryConfig {
-    /// Validate semantic constraints that YAML deserialization cannot express.
-    ///
-    /// # Errors
-    /// Returns an error when the telemetry config is internally inconsistent.
-    pub fn validate(&self) -> Result<(), ConfigFieldError> {
-        require_non_empty(&self.service_name, "daemon.telemetry.service_name")?;
-        validate_telemetry_level(&self.level)?;
-        if self.enabled && self.sink.is_none() {
-            return Err(ConfigFieldError::new(
-                "daemon.telemetry.sink",
-                "enabled telemetry requires exactly one sink",
-            ));
-        }
-        Ok(())
-    }
-
-    /// Validate serve-mode constraints for daemon-owned telemetry sinks.
-    ///
-    /// # Errors
-    /// Returns an error when the configured sink cannot run in `mode`.
-    pub fn validate_for_serve_mode(&self, mode: DaemonServeMode) -> Result<(), ConfigFieldError> {
-        self.validate()?;
-        if !self.enabled {
-            return Ok(());
-        }
-        if matches!(
-            (mode, &self.sink),
-            (
-                DaemonServeMode::Spawn,
-                Some(TelemetrySink::LocalJson { .. })
-            )
-        ) {
-            return Err(ConfigFieldError::new(
-                "daemon.telemetry.sink",
-                "local_json stdout/stderr telemetry requires foreground serve mode",
-            ));
-        }
-        Ok(())
-    }
-}
-
-fn validate_telemetry_level(level: &str) -> Result<(), ConfigFieldError> {
-    match level {
-        "trace" | "debug" | "info" | "warn" | "error" => Ok(()),
-        _ => Err(ConfigFieldError::new(
-            "daemon.telemetry.level",
-            "must be one of trace, debug, info, warn, error",
-        )),
     }
 }
 
@@ -221,4 +129,16 @@ fn is_filesystem_root(path: &std::path::Path) -> bool {
             .canonicalize()
             .ok()
             .is_some_and(|canonical| canonical.parent().is_none())
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct DaemonTelemetrySection;
+
+impl<'de> Deserialize<'de> for DaemonTelemetrySection {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        IgnoredAny::deserialize(deserializer).map(|_| Self)
+    }
 }

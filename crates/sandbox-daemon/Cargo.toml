@@ -10,11 +10,12 @@ name = "sandbox-daemon"
 path = "src/main.rs"
 
 [dependencies]
-sandbox-runtime-config.workspace = true
+sandbox-config.workspace = true
 sandbox-runtime-namespace-process.workspace = true
 sandbox-protocol.workspace = true
 sandbox-runtime.workspace = true
 anyhow.workspace = true
+serde.workspace = true
 # preserve_order keeps incoming operation arguments in caller order while this
 # crate still accepts raw JSON requests.
 serde_json = { workspace = true, features = ["preserve_order"] }
@@ -26,6 +27,7 @@ thiserror.workspace = true
 
 [dev-dependencies]
 sandbox-runtime-layerstack.workspace = true
+serde_yaml_ng.workspace = true
 
 [lints]
 workspace = true

@@ -1,9 +1,10 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use sandbox_runtime_config::configs::daemon::{
-    DaemonServeMode, DaemonServerConfig, TelemetryConfig, TelemetryOutputStream, TelemetrySink,
+use sandbox_daemon::telemetry::{
+    DaemonServeMode, TelemetryConfig, TelemetryOutputStream, TelemetrySink,
 };
+use sandbox_config::configs::daemon::DaemonServerConfig;
 
 use crate::serve_cli::{daemon_config_path_arg, DaemonCliConfig};
 

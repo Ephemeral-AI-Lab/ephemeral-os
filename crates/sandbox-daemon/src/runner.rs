@@ -7,7 +7,7 @@ use std::os::fd::RawFd;
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Context, Result};
-use sandbox_runtime_config::configs::runner::RunnerConfig;
+use sandbox_config::configs::runner::RunnerConfig;
 
 const DAEMON_CONFIG_YAML_ENV: &str = "SANDBOX_DAEMON_CONFIG_YAML";
 
@@ -65,8 +65,8 @@ fn load_runner_config() -> Result<RunnerConfig> {
     let path = std::env::var_os(DAEMON_CONFIG_YAML_ENV)
         .map(PathBuf::from)
         .ok_or_else(|| anyhow!("{DAEMON_CONFIG_YAML_ENV} is required for ns-runner"))?;
-    let doc = sandbox_runtime_config::load_path(&path)
-        .with_context(|| format!("load {}", path.display()))?;
+    let doc =
+        sandbox_config::load_path(&path).with_context(|| format!("load {}", path.display()))?;
     let config = doc
         .section::<RunnerConfig>("runner")
         .context("deserialize runner config section")?;

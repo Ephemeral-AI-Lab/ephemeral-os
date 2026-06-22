@@ -15,6 +15,7 @@ name = "sandbox-cli"
 path = "src/cli/main.rs"
 
 [dependencies]
+sandbox-config.workspace = true
 sandbox-manager.workspace = true
 sandbox-protocol.workspace = true
 sandbox-runtime.workspace = true

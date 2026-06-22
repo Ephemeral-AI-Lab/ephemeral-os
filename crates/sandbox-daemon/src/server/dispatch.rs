@@ -13,7 +13,7 @@ impl SandboxDaemonServer {
         let span = tracing::info_span!(
             "daemon.request",
             sandbox_id = field::Empty,
-            request_id = field::Empty,
+            request_id_present = field::Empty,
             operation = field::Empty,
             scope_kind = field::Empty,
             transport = if is_tcp { "tcp" } else { "unix" },
@@ -124,9 +124,20 @@ impl SandboxDaemonServer {
 }
 
 fn record_request(span: &Span, request: &Request) {
-    span.record("request_id", request.request_id.as_str());
-    span.record("operation", request.op.as_str());
+    span.record("request_id_present", !request.request_id.trim().is_empty());
+    span.record("operation", operation_trace_label(&request.op));
     span.record("scope_kind", scope_kind(&request.scope));
+}
+
+fn operation_trace_label(operation: &str) -> &'static str {
+    match operation {
+        "exec_command" => "exec_command",
+        "write_command_stdin" => "write_command_stdin",
+        "read_command_lines" => "read_command_lines",
+        "inspect_cgroup_monitor" => "inspect_cgroup_monitor",
+        "read_cgroup_monitor_samples" => "read_cgroup_monitor_samples",
+        _ => "unknown",
+    }
 }
 
 fn scope_kind(scope: &OperationScope) -> &'static str {

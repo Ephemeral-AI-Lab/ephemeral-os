@@ -20,7 +20,10 @@ sandbox-runtime
    v
 sandbox-runtime-command / sandbox-runtime-workspace /
 sandbox-runtime-layerstack / sandbox-runtime-namespace-process /
-sandbox-runtime-overlay / sandbox-runtime-config
+sandbox-runtime-overlay
+   |
+   v
+sandbox-config
 ```
 
 | Component | Kind | Job | Must never |
@@ -35,7 +38,7 @@ sandbox-runtime-overlay / sandbox-runtime-config
 | `sandbox-runtime-layerstack` | lib | content hashes, manifest/layer types, storage, leases, compaction | own command execution |
 | `sandbox-runtime-namespace-process` | lib | namespace holder/runner bodies and setns execution | own operation dispatch |
 | `sandbox-runtime-overlay` | lib | low-level overlay mount, move, and unmount primitives | own workspace lifecycle |
-| `sandbox-runtime-config` | lib | runtime YAML loading, merging, and typed config schemas | own runtime behavior |
+| `sandbox-config` | lib | sandbox YAML loading, merging, and typed gateway/manager/CLI/daemon/runtime config schemas | own runtime behavior |
 
 **Boundary law:** daemon transport vocabulary lives in
 `crates/sandbox-protocol`; daemon request dispatch lives in
@@ -51,7 +54,7 @@ live in `crates/sandbox-runtime/operation`; CAS fixtures live with
   `sandbox-manager`, `sandbox-gateway`, `sandbox-runtime/operation`,
   `sandbox-runtime/command`, `sandbox-runtime/workspace`,
   `sandbox-runtime/namespace-process`, `sandbox-runtime/layerstack`,
-  `sandbox-runtime/overlay`, and `sandbox-runtime/config`.
+  `sandbox-runtime/overlay`, and `sandbox-config`.
 - `config/prd.yml` - the single daemon config baseline (see `config/README.md`).
 - `dist/` - packaged static `sandbox-daemon` binaries uploaded into sandbox
   containers.

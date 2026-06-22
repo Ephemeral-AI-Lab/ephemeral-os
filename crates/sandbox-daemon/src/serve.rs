@@ -5,8 +5,8 @@ use std::process::{Command, Stdio};
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
-use sandbox_runtime_config::configs::{
-    daemon::{DaemonConfig, DaemonServeMode, DaemonServerConfig},
+use sandbox_config::configs::{
+    daemon::{DaemonConfig, DaemonServerConfig},
     runtime::RuntimeConfig,
 };
 
@@ -25,16 +25,15 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let config_path = daemon_config_path_arg(&args)?;
     let runtime_config = load_runtime_config(&config_path)?;
     let daemon_config = &runtime_config.daemon;
+    let telemetry_config = &runtime_config.telemetry;
     let config = DaemonCliConfig::parse(args, &daemon_config.server, config_path)?;
-    daemon_config
-        .telemetry
+    telemetry_config
         .validate_for_serve_mode(config.serve_mode())
         .context("validate daemon telemetry serve mode")?;
     if config.spawn {
         return spawn_daemon(&config);
     }
-    sandbox_daemon::telemetry::install(&daemon_config.telemetry)
-        .context("install daemon telemetry")?;
+    sandbox_daemon::telemetry::install(telemetry_config).context("install daemon telemetry")?;
     set_runner_config_env(&config.config_yaml_path);
     let workspace_root = config.workspace_root.clone();
     let server_config = sandbox_daemon::ServerConfig {
@@ -64,6 +63,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
 
 struct DaemonRuntimeConfig {
     daemon: DaemonConfig,
+    telemetry: sandbox_daemon::telemetry::TelemetryConfig,
     runtime: RuntimeConfig,
 }
 
@@ -84,10 +84,10 @@ fn build_runtime_operations(
                 setup_timeout_s: config.runtime.workspace.setup_timeout_s,
                 exit_grace_s: config.runtime.workspace.exit_grace_s,
                 rfc1918_egress: match config.runtime.workspace.rfc1918_egress {
-                    sandbox_runtime_config::configs::runtime::Rfc1918Egress::Allow => {
+                    sandbox_config::configs::runtime::Rfc1918Egress::Allow => {
                         sandbox_runtime::Rfc1918Egress::Allow
                     }
-                    sandbox_runtime_config::configs::runtime::Rfc1918Egress::Deny => {
+                    sandbox_config::configs::runtime::Rfc1918Egress::Deny => {
                         sandbox_runtime::Rfc1918Egress::Deny
                     }
                 },
@@ -108,17 +108,24 @@ fn build_runtime_operations(
 }
 
 fn load_runtime_config(path: &Path) -> Result<DaemonRuntimeConfig> {
-    let doc = sandbox_runtime_config::load_path(path)
+    let doc = sandbox_config::load_path(path)
         .with_context(|| format!("load daemon config {}", path.display()))?;
     let daemon = doc
         .section::<DaemonConfig>("daemon")
         .context("deserialize daemon config section")?;
     daemon.validate().context("validate daemon config")?;
+    let telemetry = sandbox_daemon::telemetry::from_config_document(&doc)
+        .context("deserialize daemon telemetry config")?;
+    telemetry.validate().context("validate daemon telemetry")?;
     let runtime = doc
         .section::<RuntimeConfig>("runtime")
         .context("deserialize runtime config section")?;
     runtime.validate().context("validate runtime config")?;
-    Ok(DaemonRuntimeConfig { daemon, runtime })
+    Ok(DaemonRuntimeConfig {
+        daemon,
+        telemetry,
+        runtime,
+    })
 }
 
 fn daemon_worker_threads(max_worker_threads: usize) -> usize {
@@ -245,11 +252,11 @@ impl DaemonCliConfig {
         args
     }
 
-    pub(crate) fn serve_mode(&self) -> DaemonServeMode {
+    pub(crate) fn serve_mode(&self) -> sandbox_daemon::telemetry::DaemonServeMode {
         if self.spawn {
-            DaemonServeMode::Spawn
+            sandbox_daemon::telemetry::DaemonServeMode::Spawn
         } else {
-            DaemonServeMode::Foreground
+            sandbox_daemon::telemetry::DaemonServeMode::Foreground
         }
     }
 }

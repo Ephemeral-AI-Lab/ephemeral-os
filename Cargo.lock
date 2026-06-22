@@ -905,16 +905,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "sandbox-config"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_path_to_error",
+ "serde_yaml_ng",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "sandbox-daemon"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "sandbox-config",
  "sandbox-protocol",
  "sandbox-runtime",
- "sandbox-runtime-config",
  "sandbox-runtime-layerstack",
  "sandbox-runtime-namespace-process",
+ "serde",
  "serde_json",
+ "serde_yaml_ng",
  "thiserror 2.0.18",
  "tokio",
  "tokio-util",
@@ -927,6 +939,7 @@ name = "sandbox-gateway"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "sandbox-config",
  "sandbox-manager",
  "sandbox-protocol",
  "sandbox-runtime",
@@ -941,6 +954,7 @@ dependencies = [
 name = "sandbox-manager"
 version = "0.1.0"
 dependencies = [
+ "sandbox-config",
  "sandbox-protocol",
  "serde_json",
  "thiserror 2.0.18",
@@ -979,16 +993,6 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.18",
  "time",
-]
-
-[[package]]
-name = "sandbox-runtime-config"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_path_to_error",
- "serde_yaml_ng",
- "thiserror 2.0.18",
 ]
 
 [[package]]

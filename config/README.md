@@ -1,7 +1,9 @@
 # Sandbox Config
 
-`prd.yml` is the single baseline config for the daemon runtime and sandbox test
-harness defaults.
+`prd.yml` is the single baseline config for daemon runtime behavior and sandbox
+test harness defaults. Rust config value objects live in `sandbox-config` even
+when a surface, such as the gateway CLI or manager, is not currently backed by a
+top-level YAML section.
 
 The daemon loads the runtime config from:
 
@@ -46,12 +48,12 @@ code near their owner.
 
 ## Schema Ownership
 
-Runtime schema lives in
-`crates/sandbox-runtime/config/src/configs/<module-name>.rs`.
+Shared sandbox schema lives in
+`crates/sandbox-config/src/configs/<module-name>.rs`.
 Multi-word crate modules use their crate-style filename, for example
-`isolated-workspace.rs` exports the `isolated` Rust module. Runtime
-crates may re-export those typed schemas through their public modules, but they
-do not own duplicate `src/config.rs` schema files.
+`isolated-workspace.rs` exports the `isolated` Rust module. Gateway, manager,
+daemon, and runtime crates may re-export those typed schemas through their
+public modules, but they do not own duplicate `src/config.rs` schema files.
 
 Local test `config/` folders are YAML-only override folders. They do not define
 Rust schema.

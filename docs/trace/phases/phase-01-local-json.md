@@ -29,9 +29,9 @@ Cargo.toml
 config/prd.yml
   daemon.telemetry default-disabled config
 
-crates/sandbox-runtime/config/src/configs/
+crates/sandbox-config/src/configs/
   daemon.rs
-crates/sandbox-runtime/config/tests/unit/configs/
+crates/sandbox-config/tests/unit/configs/
   daemon.rs
 
 crates/sandbox-daemon/
@@ -177,7 +177,7 @@ invalid streams, invalid levels, and local JSON stream mode under detached
 - [ ] `config/prd.yml` defaults telemetry to disabled.
 - [ ] Disabled telemetry config deserializes without a sink; enabled telemetry
       requires exactly one valid sink.
-- [ ] `cargo test -p sandbox-runtime-config` covers disabled config, local JSON
+- [ ] `cargo test -p sandbox-config` covers disabled config, local JSON
       stdout/stderr, invalid stream, invalid level, unknown sink, and spawn
       rejection validation.
 - [ ] `daemon.telemetry.sink.kind = local_json` works with
@@ -213,4 +213,4 @@ invalid streams, invalid levels, and local JSON stream mode under detached
 - [ ] Forbidden-path/module guard passes for `crates/sandbox-runtime-trace/` and
       `crates/sandbox-runtime/operation/src/internal/telemetry.rs`.
 - [ ] `cargo fmt --check` passes.
-- [ ] `cargo test -p sandbox-daemon -p sandbox-runtime -p sandbox-runtime-config -p sandbox-protocol` passes.
+- [ ] `cargo test -p sandbox-daemon -p sandbox-runtime -p sandbox-config -p sandbox-protocol` passes.

@@ -1,7 +1,8 @@
-//! Generic loader for the sandbox runtime configuration document.
+//! Shared loader for the sandbox configuration document.
 //!
 //! This crate owns file loading, path validation, YAML parsing, merge semantics,
-//! and typed schemas for the sandbox config sections.
+//! and typed schemas for gateway, manager, CLI, daemon, runner, and runtime
+//! config surfaces.
 
 pub mod configs;
 mod document;
@@ -16,7 +17,7 @@ pub use document::ConfigDocument;
 pub use error::ConfigError;
 pub use paths::ConfigPath;
 
-/// Load a runtime configuration document from an explicit path.
+/// Load a sandbox configuration document from an explicit path.
 ///
 /// # Errors
 /// Returns an error when the path cannot be read or parsed.

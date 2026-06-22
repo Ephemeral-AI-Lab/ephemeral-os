@@ -35,7 +35,7 @@ crates/sandbox-daemon/src/
   telemetry/
     metrics.rs              # daemon-owned recorder/exporter setup
 
-crates/sandbox-runtime/config/src/configs/
+crates/sandbox-config/src/configs/
   daemon.rs
 
 crates/sandbox-runtime/command/src/

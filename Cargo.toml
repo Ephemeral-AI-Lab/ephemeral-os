@@ -3,7 +3,7 @@ resolver = "2"
 members = [
     "crates/sandbox-runtime/operation",
     "crates/sandbox-runtime/command",
-    "crates/sandbox-runtime/config",
+    "crates/sandbox-config",
     "crates/sandbox-daemon",
     "crates/sandbox-manager",
     "crates/sandbox-gateway",
@@ -26,7 +26,7 @@ license = "MIT"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_path_to_error = "0.1"
-# YAML parser boundary. Only `crates/sandbox-runtime/config/src/yaml.rs` may use
+# YAML parser boundary. Only `crates/sandbox-config/src/yaml.rs` may use
 # this dependency directly; callers stay behind `ConfigDocument` and typed
 # section schemas.
 serde_yaml_ng = "0.10"
@@ -56,7 +56,7 @@ netlink-sys = "0.8"
 
 sandbox-runtime = { path = "crates/sandbox-runtime/operation" }
 sandbox-runtime-command = { path = "crates/sandbox-runtime/command" }
-sandbox-runtime-config = { path = "crates/sandbox-runtime/config" }
+sandbox-config = { path = "crates/sandbox-config" }
 sandbox-runtime-layerstack = { path = "crates/sandbox-runtime/layerstack" }
 sandbox-runtime-namespace-process = { path = "crates/sandbox-runtime/namespace-process" }
 sandbox-runtime-overlay = { path = "crates/sandbox-runtime/overlay" }
