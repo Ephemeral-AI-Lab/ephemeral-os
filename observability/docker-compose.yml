@@ -6,8 +6,21 @@ services:
       - ./otel-collector.yaml:/etc/otelcol/otel-collector.yaml:ro
     ports:
       - "4318:4318"
+      - "9464:9464"
     depends_on:
       - tempo
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=6h"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - otel-collector
 
   tempo:
     image: grafana/tempo:2.6.1
@@ -25,7 +38,9 @@ services:
       GF_AUTH_DISABLE_LOGIN_FORM: "true"
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./trace/dashboards:/var/lib/grafana/dashboards:ro
     ports:
       - "3000:3000"
     depends_on:
+      - prometheus
       - tempo

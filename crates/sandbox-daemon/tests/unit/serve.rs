@@ -215,5 +215,6 @@ fn local_json_telemetry() -> TelemetryConfig {
         sink: Some(TelemetrySink::LocalJson {
             stream: TelemetryOutputStream::Stdout,
         }),
+        metrics: None,
     }
 }

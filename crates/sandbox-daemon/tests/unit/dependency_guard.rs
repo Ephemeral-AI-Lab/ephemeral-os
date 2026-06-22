@@ -80,3 +80,138 @@ fn collect_telemetry_boundary_files(path: &std::path::Path, files: &mut Vec<std:
         }
     }
 }
+
+#[test]
+fn daemon_metric_labels_are_allowlisted_in_source() {
+    let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("workspace root");
+    let metrics = std::fs::read_to_string(
+        workspace_root.join("crates/sandbox-daemon/src/telemetry/metrics.rs"),
+    )
+    .expect("read daemon metrics source");
+
+    for expected in [
+        "KeyValue::new(\"operation\"",
+        "KeyValue::new(\"workspace_phase\"",
+        "KeyValue::new(\"cgroup_target_kind\"",
+        "KeyValue::new(\"status\"",
+        "KeyValue::new(\"bounded_reason\"",
+        "KeyValue::new(\"bounded_error_kind\"",
+        "KeyValue::new(\"resource_kind\"",
+    ] {
+        assert!(
+            metrics.contains(expected),
+            "metrics source is missing allowlisted label {expected}"
+        );
+    }
+
+    for forbidden in [
+        "request_id",
+        "workspace_session_id",
+        "command_session_id",
+        "pid_list",
+        "raw_path",
+        "root_hash",
+        "command_text",
+        "stdin",
+        "auth_token",
+        "env_value",
+        "cgroup_path",
+        "layer_path",
+    ] {
+        assert!(
+            !metrics.contains(&format!("KeyValue::new(\"{forbidden}\"")),
+            "metrics source uses forbidden label {forbidden}"
+        );
+    }
+}
+
+#[test]
+fn phase4_observability_stack_configures_metrics_without_loki() {
+    let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("workspace root");
+    for relative in [
+        "observability/docker-compose.yml",
+        "observability/otel-collector.yaml",
+        "observability/prometheus.yml",
+        "observability/grafana/provisioning/datasources/metrics.yaml",
+        "observability/grafana/provisioning/datasources/tempo.yaml",
+        "observability/grafana/provisioning/dashboards/dashboards.yaml",
+    ] {
+        let text = std::fs::read_to_string(workspace_root.join(relative))
+            .unwrap_or_else(|error| panic!("read {relative}: {error}"));
+        assert!(
+            !text.to_ascii_lowercase().contains("loki"),
+            "{relative} must not configure loki"
+        );
+        assert!(
+            !text.contains("tracesToLogs") && !text.contains("derivedFields"),
+            "{relative} must not configure trace-to-logs"
+        );
+    }
+
+    let collector =
+        std::fs::read_to_string(workspace_root.join("observability/otel-collector.yaml"))
+            .expect("read collector config");
+    assert!(collector.contains("metrics:"));
+    assert!(collector.contains("exporters: [prometheus]"));
+    let metrics_datasource = std::fs::read_to_string(
+        workspace_root.join("observability/grafana/provisioning/datasources/metrics.yaml"),
+    )
+    .expect("read metrics datasource");
+    assert!(metrics_datasource.contains("uid: prometheus"));
+    assert!(metrics_datasource.contains("type: prometheus"));
+}
+
+#[test]
+fn phase4_dashboards_load_with_metrics_datasource_without_public_cgroup_reads_or_logs() {
+    let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("workspace root");
+    for file in [
+        "command-latency.json",
+        "publish-conflicts.json",
+        "remount-health.json",
+        "cgroup-resources.json",
+    ] {
+        let path = workspace_root
+            .join("observability/trace/dashboards")
+            .join(file);
+        let text = std::fs::read_to_string(&path)
+            .unwrap_or_else(|error| panic!("read {}: {error}", path.display()));
+        for forbidden in [
+            "inspect_cgroup_monitor",
+            "read_cgroup_monitor_samples",
+            "loki",
+            "logs",
+            "traceToLogs",
+            "derivedFields",
+        ] {
+            assert!(
+                !text.contains(forbidden),
+                "{} contains forbidden dashboard reference {forbidden}",
+                path.display()
+            );
+        }
+        let dashboard: serde_json::Value =
+            serde_json::from_str(&text).expect("dashboard json parses");
+        let panels = dashboard["panels"]
+            .as_array()
+            .expect("dashboard has panel array");
+        assert!(
+            !panels.is_empty(),
+            "dashboard has panels: {}",
+            path.display()
+        );
+        for panel in panels {
+            assert_ne!(panel["type"].as_str(), Some("logs"));
+            assert_eq!(panel["datasource"]["uid"].as_str(), Some("prometheus"));
+            assert_eq!(panel["datasource"]["type"].as_str(), Some("prometheus"));
+        }
+    }
+}

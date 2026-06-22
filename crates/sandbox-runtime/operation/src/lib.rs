@@ -19,6 +19,12 @@ pub use internal::services::{
     CgroupMonitorRuntimeConfig, CommandRuntimeConfig, Rfc1918Egress, SandboxRuntimeConfig,
     SandboxRuntimeOperations, WorkspaceResourceCaps, WorkspaceRuntimeConfig,
 };
+pub use workspace_crate::{
+    noop_runtime_metrics_recorder, CgroupMonitorSample, CgroupMonitorTargetKind,
+    CgroupReadErrorKind, CommandCancellationReason, NoopRuntimeMetricsRecorder,
+    PressureResourceSample, PublishRejectionReason, RemountFailureReason, RuntimeMetricStatus,
+    RuntimeMetricsRecorder, RuntimeMetricsRecorderHandle, RuntimeOperationName, WorkspacePhase,
+};
 
 #[must_use]
 pub fn cli_operation_specs() -> &'static [&'static CliOperationSpec] {

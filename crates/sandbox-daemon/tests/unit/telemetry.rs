@@ -21,7 +21,8 @@ use tracing_subscriber::Layer;
 
 use crate::server::{SandboxDaemonServer, ServerConfig};
 use crate::telemetry::{
-    DaemonServeMode, OtlpProtocol, TelemetryConfig, TelemetryOutputStream, TelemetrySink,
+    DaemonServeMode, OtlpProtocol, TelemetryConfig, TelemetryMetricsConfig,
+    TelemetryOutputStream, TelemetrySink,
 };
 
 #[test]
@@ -210,6 +211,103 @@ sink:
     ));
     cfg.validate()
         .expect("otlp http/protobuf telemetry validates");
+}
+
+#[test]
+fn telemetry_metrics_config_requires_otlp_sink_when_enabled() {
+    let cfg = telemetry_config(
+        r#"
+enabled: true
+service_name: sandbox-daemon
+level: info
+sink:
+  kind: otlp
+  endpoint: http://collector:4318
+  protocol: http
+  timeout_ms: 1000
+  queue_size: 2048
+metrics:
+  enabled: true
+  export_interval_ms: 5000
+  cgroup_samples_enabled: true
+"#,
+    );
+
+    assert_eq!(
+        cfg.metrics,
+        Some(TelemetryMetricsConfig {
+            enabled: true,
+            export_interval_ms: 5000,
+            cgroup_samples_enabled: true,
+        })
+    );
+    cfg.validate().expect("otlp metrics config validates");
+
+    let local_json = telemetry_config(
+        r#"
+enabled: true
+service_name: sandbox-daemon
+level: info
+sink:
+  kind: local_json
+  stream: stdout
+metrics:
+  enabled: true
+  export_interval_ms: 5000
+  cgroup_samples_enabled: true
+"#,
+    );
+    let err = local_json
+        .validate()
+        .expect_err("local json metrics are rejected");
+    assert_eq!(err.field, "daemon.telemetry.metrics");
+}
+
+#[test]
+fn telemetry_metrics_config_rejects_invalid_interval_and_disabled_parent() {
+    let zero_interval = telemetry_config(
+        r#"
+enabled: true
+service_name: sandbox-daemon
+level: info
+sink:
+  kind: otlp
+  endpoint: http://collector:4318
+  protocol: http
+  timeout_ms: 1000
+  queue_size: 2048
+metrics:
+  enabled: true
+  export_interval_ms: 0
+  cgroup_samples_enabled: true
+"#,
+    );
+    assert_eq!(
+        zero_interval
+            .validate()
+            .expect_err("zero metrics interval rejected")
+            .field,
+        "daemon.telemetry.metrics.export_interval_ms"
+    );
+
+    let disabled_parent = telemetry_config(
+        r#"
+enabled: false
+service_name: sandbox-daemon
+level: info
+metrics:
+  enabled: true
+  export_interval_ms: 1000
+  cgroup_samples_enabled: false
+"#,
+    );
+    assert_eq!(
+        disabled_parent
+            .validate()
+            .expect_err("metrics require enabled telemetry")
+            .field,
+        "daemon.telemetry.metrics.enabled"
+    );
 }
 
 #[test]
@@ -636,6 +734,7 @@ fn local_json_telemetry(stream: TelemetryOutputStream) -> TelemetryConfig {
         service_name: "sandbox-daemon".to_owned(),
         level: "info".to_owned(),
         sink: Some(TelemetrySink::LocalJson { stream }),
+        metrics: None,
     }
 }
 
@@ -650,6 +749,7 @@ fn otlp_telemetry(endpoint: &str, timeout_ms: u64, queue_size: usize) -> Telemet
             timeout_ms,
             queue_size,
         }),
+        metrics: None,
     }
 }
 

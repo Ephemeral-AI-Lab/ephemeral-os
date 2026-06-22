@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
-use sandbox_protocol::OperationExecutionSpace;
+use sandbox_protocol::{OperationExecutionSpace, OperationScope, Request};
 use sandbox_runtime::command::{CommandOperationService, ExecCommandInput};
 use sandbox_runtime::layerstack::LayerStackService;
 use sandbox_runtime::workspace_remount::{
@@ -10,11 +10,15 @@ use sandbox_runtime::workspace_remount::{
 };
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
 use sandbox_runtime::SandboxRuntimeOperations;
+use sandbox_runtime::{
+    RuntimeMetricStatus, RuntimeMetricsRecorder, RuntimeMetricsRecorderHandle, RuntimeOperationName,
+};
 use sandbox_runtime_workspace::{
     CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest,
     RemountWorkspaceRequest, WorkspaceError, WorkspaceHandle, WorkspaceRuntimeHooks,
     WorkspaceRuntimeService, WorkspaceSessionId,
 };
+use serde_json::json;
 
 fn workspace_session() -> Arc<WorkspaceSessionService> {
     Arc::new(WorkspaceSessionService::new(noop_workspace_runtime()))
@@ -152,6 +156,58 @@ fn service_graph_cli_operation_catalog_exports_runtime_command_and_cgroup_monito
 }
 
 #[test]
+fn runtime_operation_metrics_use_static_operation_allowlist(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let workspace = workspace_session();
+    let layerstack = layerstack_service()?;
+    let command = Arc::new(CommandOperationService::new(
+        Arc::clone(&workspace),
+        Arc::clone(&layerstack),
+        sandbox_runtime_command::CommandConfig::default(),
+    ));
+    let metrics = Arc::new(RecordingMetrics::default());
+    let recorder: RuntimeMetricsRecorderHandle = metrics.clone();
+    let operations = SandboxRuntimeOperations::with_metrics_recorder(command, layerstack, recorder);
+
+    let response = sandbox_runtime::dispatch_operation(
+        &operations,
+        &Request::new(
+            "inspect_cgroup_monitor",
+            "req-metrics",
+            OperationScope::system(),
+            json!({ "workspace_session_id": "ws-missing" }),
+        ),
+    )
+    .into_json_value();
+    assert!(response.get("error").is_some(), "{response}");
+    assert_eq!(
+        metrics.operations(),
+        [(
+            RuntimeOperationName::InspectCgroupMonitor,
+            RuntimeMetricStatus::Error
+        )]
+    );
+
+    let _ = sandbox_runtime::dispatch_operation(
+        &operations,
+        &Request::new(
+            "RAW_UNKNOWN_OPERATION_SECRET",
+            "req-unknown",
+            OperationScope::system(),
+            json!({}),
+        ),
+    );
+    assert_eq!(
+        metrics.operations(),
+        [(
+            RuntimeOperationName::InspectCgroupMonitor,
+            RuntimeMetricStatus::Error
+        )]
+    );
+    Ok(())
+}
+
+#[test]
 fn cli_operation_catalog_metadata_uses_runtime_space() {
     let catalog = sandbox_runtime::cli_operation_catalog();
 
@@ -169,4 +225,29 @@ fn cli_operation_catalog_metadata_uses_runtime_space() {
             })
             .unwrap_or(true)
     }));
+}
+
+#[derive(Default)]
+struct RecordingMetrics {
+    operations: Mutex<Vec<(RuntimeOperationName, RuntimeMetricStatus)>>,
+}
+
+impl RecordingMetrics {
+    fn operations(&self) -> Vec<(RuntimeOperationName, RuntimeMetricStatus)> {
+        self.operations.lock().expect("metrics lock").clone()
+    }
+}
+
+impl RuntimeMetricsRecorder for RecordingMetrics {
+    fn record_runtime_latency(
+        &self,
+        operation: RuntimeOperationName,
+        status: RuntimeMetricStatus,
+        _latency: std::time::Duration,
+    ) {
+        self.operations
+            .lock()
+            .expect("metrics lock")
+            .push((operation, status));
+    }
 }

@@ -1,6 +1,6 @@
 # Trace Implementation Phase Specs
 
-These phase specs break `docs/trace/README.md` into implementation-sized
+These phase specs break `observability/trace/README.md` into implementation-sized
 batches. Each phase is intended to be implemented and reviewed independently.
 
 | Phase | Spec | Primary Outcome | Estimated Changed LOC |
@@ -19,7 +19,7 @@ Global constraints for every phase:
 - [ ] Do not add `crates/sandbox-runtime-trace/`.
 - [ ] Do not add `crates/sandbox-runtime/operation/src/internal/telemetry.rs`.
 - [ ] Put runnable observability validation/provisioning files under
-      `observability/`, not under `docs/trace/`.
+      `observability/`, not under `observability/trace/`.
 - [ ] Keep `observability/` as one shared, evolving tree. Do not create
       phase-specific observability directories.
 - [ ] Runtime crates emit inline `tracing` spans/events only.

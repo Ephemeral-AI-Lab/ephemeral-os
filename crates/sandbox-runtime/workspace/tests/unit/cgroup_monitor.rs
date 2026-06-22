@@ -1,9 +1,11 @@
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 use sandbox_runtime_workspace::{
     build_cgroup_monitor_sample, session_cgroup_path, CgroupCleanupState, CgroupMonitorConfig,
-    CgroupMonitorRegistry, CgroupSampleKind, CgroupSampleRequest, LayerStackSnapshotRef, LeaseId,
-    WorkspaceHandle, WorkspaceProfile, WorkspaceSessionId,
+    CgroupMonitorRegistry, CgroupMonitorSample, CgroupMonitorTargetKind, CgroupReadErrorKind,
+    CgroupSampleKind, CgroupSampleRequest, LayerStackSnapshotRef, LeaseId, RuntimeMetricsRecorder,
+    RuntimeMetricsRecorderHandle, WorkspaceHandle, WorkspaceProfile, WorkspaceSessionId,
 };
 
 use crate::trace_capture::capture_traces;
@@ -491,6 +493,139 @@ fn cgroup_monitor_command_final_uses_retained_previous_cpu(
 }
 
 #[test]
+fn cgroup_monitor_metrics_use_final_sample_before_cleanup() -> Result<(), Box<dyn std::error::Error>>
+{
+    let root = temp_root("command-final-metrics")?;
+    let cgroup = root.join("cgroup");
+    let upper = root.join("upper");
+    std::fs::create_dir_all(&cgroup)?;
+    std::fs::create_dir_all(&upper)?;
+    write_complete_cgroup_files(&cgroup)?;
+    let metrics = RecordingMetrics::default_handle();
+    let recorder: RuntimeMetricsRecorderHandle = metrics.clone();
+    let registry = CgroupMonitorRegistry::with_metrics_recorder(
+        CgroupMonitorConfig {
+            retained_samples_per_target: 1,
+            include_disk: false,
+            ..CgroupMonitorConfig::default()
+        },
+        recorder,
+    );
+    let workspace_session_id = WorkspaceSessionId("ws-final-metrics".to_owned());
+    registry.register_command(
+        workspace_session_id.clone(),
+        "cmd-final-metrics",
+        cgroup.clone(),
+        upper,
+    );
+    std::fs::write(
+        cgroup.join("cpu.stat"),
+        "usage_usec 2200\nuser_usec 1800\nsystem_usec 400\n",
+    )?;
+    let final_sample = build_cgroup_monitor_sample(CgroupSampleRequest {
+        cgroup_path: &cgroup,
+        upperdir: None,
+        sample_kind: CgroupSampleKind::CommandFinal,
+        interval_ms: 1000,
+        previous: None,
+        config: registry.config(),
+    });
+    std::fs::remove_dir_all(&cgroup)?;
+    registry.record_command_final(
+        &workspace_session_id,
+        "cmd-final-metrics",
+        Some(final_sample),
+        Some(CgroupCleanupState {
+            final_sample_recorded: false,
+            cgroup_exists_after_destroy: Some(false),
+            last_cleanup_error: None,
+        }),
+    );
+    registry.record_cleanup(
+        &workspace_session_id,
+        Some("cmd-final-metrics"),
+        Some(false),
+        None,
+    );
+
+    let observed = metrics.observed_samples();
+    assert_eq!(
+        observed
+            .iter()
+            .map(|(_, sample)| sample.sample_kind)
+            .collect::<Vec<_>>(),
+        [CgroupSampleKind::Periodic, CgroupSampleKind::CommandFinal]
+    );
+    let (_, final_metric_sample) = observed.last().expect("final metric sample recorded");
+    assert_eq!(final_metric_sample.cpu.usage_usec, Some(2200));
+    assert_eq!(final_metric_sample.cpu.delta_usage_usec, Some(1000));
+    assert!(final_metric_sample.cpu.percent_over_interval.is_some());
+
+    let snapshot = registry
+        .inspect(&workspace_session_id, Some("cmd-final-metrics"))
+        .expect("retained target is readable");
+    assert_eq!(snapshot.monitor.retained_samples, 1);
+    assert_eq!(
+        snapshot.latest.as_ref().map(|sample| sample.sample_kind),
+        Some(CgroupSampleKind::CommandFinal)
+    );
+    let metric_count_after_cleanup = metrics.observed_samples().len();
+    let _ = registry.inspect(&workspace_session_id, Some("cmd-final-metrics"));
+    let _ = registry.read_samples(&workspace_session_id, Some("cmd-final-metrics"), 10);
+    assert_eq!(
+        metrics.observed_samples().len(),
+        metric_count_after_cleanup,
+        "direct monitor reads must not emit cgroup sample metrics"
+    );
+
+    drop(registry);
+    let _ = std::fs::remove_dir_all(root);
+    Ok(())
+}
+
+#[test]
+fn cgroup_monitor_read_error_metrics_use_bounded_error_kind(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let root = temp_root("read-error-metrics")?;
+    let cgroup = root.join("cgroup");
+    let upper = root.join("upper");
+    std::fs::create_dir_all(&cgroup)?;
+    std::fs::create_dir_all(&upper)?;
+    std::fs::write(cgroup.join("cpu.stat"), "usage_usec nope\n")?;
+    let metrics = RecordingMetrics::default_handle();
+    let recorder: RuntimeMetricsRecorderHandle = metrics.clone();
+    let registry = CgroupMonitorRegistry::with_metrics_recorder(
+        CgroupMonitorConfig {
+            sample_interval_ms: 60_000,
+            include_disk: false,
+            include_pids: false,
+            include_pressure: false,
+            ..CgroupMonitorConfig::default()
+        },
+        recorder,
+    );
+
+    registry.register_command(
+        WorkspaceSessionId("ws-read-error-metrics".to_owned()),
+        "cmd-read-error-metrics",
+        cgroup,
+        upper,
+    );
+
+    assert_eq!(
+        metrics.read_errors(),
+        [(
+            CgroupMonitorTargetKind::Command,
+            CgroupReadErrorKind::MalformedCgroupFile
+        )]
+    );
+
+    drop(registry);
+    let _ = std::fs::remove_dir_all(root);
+    Ok(())
+}
+
+#[test]
 fn cgroup_monitor_session_final_marks_cleanup_state() -> Result<(), Box<dyn std::error::Error>> {
     let root = temp_root("session-final")?;
     let cgroup = root.join("cgroup");
@@ -577,6 +712,50 @@ fn cgroup_monitor_cleanup_state_does_not_evict_final_sample_when_retention_is_on
     drop(registry);
     let _ = std::fs::remove_dir_all(root);
     Ok(())
+}
+
+#[derive(Default)]
+struct RecordingMetrics {
+    samples: Mutex<Vec<(CgroupMonitorTargetKind, CgroupMonitorSample)>>,
+    read_errors: Mutex<Vec<(CgroupMonitorTargetKind, CgroupReadErrorKind)>>,
+}
+
+impl RecordingMetrics {
+    fn default_handle() -> Arc<Self> {
+        Arc::new(Self::default())
+    }
+
+    fn observed_samples(&self) -> Vec<(CgroupMonitorTargetKind, CgroupMonitorSample)> {
+        self.samples.lock().expect("metrics lock").clone()
+    }
+
+    fn read_errors(&self) -> Vec<(CgroupMonitorTargetKind, CgroupReadErrorKind)> {
+        self.read_errors.lock().expect("metrics lock").clone()
+    }
+}
+
+impl RuntimeMetricsRecorder for RecordingMetrics {
+    fn record_cgroup_sample(
+        &self,
+        target_kind: CgroupMonitorTargetKind,
+        sample: &CgroupMonitorSample,
+    ) {
+        self.samples
+            .lock()
+            .expect("metrics lock")
+            .push((target_kind, sample.clone()));
+    }
+
+    fn record_cgroup_read_error(
+        &self,
+        target_kind: CgroupMonitorTargetKind,
+        error_kind: CgroupReadErrorKind,
+    ) {
+        self.read_errors
+            .lock()
+            .expect("metrics lock")
+            .push((target_kind, error_kind));
+    }
 }
 
 fn write_complete_cgroup_files(cgroup: &Path) -> Result<(), Box<dyn std::error::Error>> {

@@ -36,6 +36,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let mut telemetry_guard =
         sandbox_daemon::telemetry::install(telemetry_config, config.sandbox_id.as_deref())
             .context("install daemon telemetry")?;
+    let metrics_recorder = telemetry_guard.metrics_recorder();
     set_runner_config_env(&config.config_yaml_path);
     let workspace_root = config.workspace_root.clone();
     let server_config = sandbox_daemon::ServerConfig {
@@ -56,7 +57,11 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let serve_result = runtime.block_on(async move {
         let server = sandbox_daemon::SandboxDaemonServer::new(
             server_config,
-            Arc::new(build_runtime_operations(&runtime_config, workspace_root)),
+            Arc::new(build_runtime_operations(
+                &runtime_config,
+                workspace_root,
+                metrics_recorder,
+            )),
         );
         server.serve().await
     });
@@ -75,41 +80,48 @@ struct DaemonRuntimeConfig {
 fn build_runtime_operations(
     config: &DaemonRuntimeConfig,
     workspace_root: PathBuf,
+    metrics_recorder: sandbox_runtime::RuntimeMetricsRecorderHandle,
 ) -> sandbox_runtime::SandboxRuntimeOperations {
-    sandbox_runtime::SandboxRuntimeOperations::from_config(sandbox_runtime::SandboxRuntimeConfig {
-        workspace: sandbox_runtime::WorkspaceRuntimeConfig {
-            workspace_root,
-            layer_stack_root: config.runtime.workspace.layer_stack_root.clone(),
-            scratch_root: config.runtime.workspace.scratch_root.clone(),
-            caps: sandbox_runtime::WorkspaceResourceCaps {
-                ttl_s: config.runtime.workspace.ttl_s,
-                total_cap: config.runtime.workspace.total_cap,
-                upperdir_bytes: config.runtime.workspace.upperdir_bytes,
-                memavail_fraction: config.runtime.workspace.memavail_fraction,
-                setup_timeout_s: config.runtime.workspace.setup_timeout_s,
-                exit_grace_s: config.runtime.workspace.exit_grace_s,
-                rfc1918_egress: match config.runtime.workspace.rfc1918_egress {
-                    sandbox_config::configs::runtime::Rfc1918Egress::Allow => {
-                        sandbox_runtime::Rfc1918Egress::Allow
-                    }
-                    sandbox_config::configs::runtime::Rfc1918Egress::Deny => {
-                        sandbox_runtime::Rfc1918Egress::Deny
-                    }
+    sandbox_runtime::SandboxRuntimeOperations::from_config_with_metrics(
+        sandbox_runtime::SandboxRuntimeConfig {
+            workspace: sandbox_runtime::WorkspaceRuntimeConfig {
+                workspace_root,
+                layer_stack_root: config.runtime.workspace.layer_stack_root.clone(),
+                scratch_root: config.runtime.workspace.scratch_root.clone(),
+                caps: sandbox_runtime::WorkspaceResourceCaps {
+                    ttl_s: config.runtime.workspace.ttl_s,
+                    total_cap: config.runtime.workspace.total_cap,
+                    upperdir_bytes: config.runtime.workspace.upperdir_bytes,
+                    memavail_fraction: config.runtime.workspace.memavail_fraction,
+                    setup_timeout_s: config.runtime.workspace.setup_timeout_s,
+                    exit_grace_s: config.runtime.workspace.exit_grace_s,
+                    rfc1918_egress: match config.runtime.workspace.rfc1918_egress {
+                        sandbox_config::configs::runtime::Rfc1918Egress::Allow => {
+                            sandbox_runtime::Rfc1918Egress::Allow
+                        }
+                        sandbox_config::configs::runtime::Rfc1918Egress::Deny => {
+                            sandbox_runtime::Rfc1918Egress::Deny
+                        }
+                    },
                 },
             },
+            command: sandbox_runtime::CommandRuntimeConfig {
+                scratch_root: config.daemon.commands.scratch_root.clone(),
+            },
+            cgroup_monitor: sandbox_runtime::CgroupMonitorRuntimeConfig {
+                enabled: config.daemon.cgroup_monitor.enabled,
+                sample_interval_ms: config.daemon.cgroup_monitor.sample_interval_ms,
+                retained_samples_per_target: config
+                    .daemon
+                    .cgroup_monitor
+                    .retained_samples_per_target,
+                include_pids: config.daemon.cgroup_monitor.include_pids,
+                include_pressure: config.daemon.cgroup_monitor.include_pressure,
+                include_disk: config.daemon.cgroup_monitor.include_disk,
+            },
         },
-        command: sandbox_runtime::CommandRuntimeConfig {
-            scratch_root: config.daemon.commands.scratch_root.clone(),
-        },
-        cgroup_monitor: sandbox_runtime::CgroupMonitorRuntimeConfig {
-            enabled: config.daemon.cgroup_monitor.enabled,
-            sample_interval_ms: config.daemon.cgroup_monitor.sample_interval_ms,
-            retained_samples_per_target: config.daemon.cgroup_monitor.retained_samples_per_target,
-            include_pids: config.daemon.cgroup_monitor.include_pids,
-            include_pressure: config.daemon.cgroup_monitor.include_pressure,
-            include_disk: config.daemon.cgroup_monitor.include_disk,
-        },
-    })
+        metrics_recorder,
+    )
 }
 
 fn load_runtime_config(path: &Path) -> Result<DaemonRuntimeConfig> {

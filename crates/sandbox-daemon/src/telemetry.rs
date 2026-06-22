@@ -2,6 +2,7 @@
 
 use std::time::Duration;
 
+#[path = "telemetry/metrics.rs"]
 pub(crate) mod metrics;
 
 use opentelemetry::trace::TracerProvider as _;
@@ -300,8 +301,14 @@ fn init_otlp_subscriber(
         .with_resource(otlp_resource(service_name, sandbox_id))
         .with_span_processor(processor)
         .build();
-    let (metrics_provider, metrics_recorder) =
-        init_otlp_metrics(service_name, endpoint, protocol, timeout, sandbox_id, metrics_config)?;
+    let (metrics_provider, metrics_recorder) = init_otlp_metrics(
+        service_name,
+        endpoint,
+        protocol,
+        timeout,
+        sandbox_id,
+        metrics_config,
+    )?;
     let tracer = provider.tracer(service_name.to_owned());
     let otel_layer = tracing_opentelemetry::layer()
         .with_tracer(tracer)
@@ -324,13 +331,7 @@ fn init_otlp_metrics(
     timeout: Duration,
     sandbox_id: &str,
     metrics_config: Option<&TelemetryMetricsConfig>,
-) -> Result<
-    (
-        Option<SdkMeterProvider>,
-        RuntimeMetricsRecorderHandle,
-    ),
-    TelemetryInstallError,
-> {
+) -> Result<(Option<SdkMeterProvider>, RuntimeMetricsRecorderHandle), TelemetryInstallError> {
     let Some(metrics_config) = metrics_config.filter(|config| config.enabled) else {
         return Ok((None, noop_runtime_metrics_recorder()));
     };

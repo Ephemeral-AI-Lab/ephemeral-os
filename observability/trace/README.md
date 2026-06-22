@@ -817,7 +817,7 @@ Focused checks for each implementation batch:
 cargo fmt --check
 cargo check -p sandbox-daemon -p sandbox-runtime --all-targets
 cargo test -p sandbox-daemon -p sandbox-runtime
-git diff --check -- docs/trace crates/sandbox-daemon crates/sandbox-runtime
+git diff --check -- observability/trace crates/sandbox-daemon crates/sandbox-runtime
 ```
 
 When workspace/namespace/layerstack instrumentation is touched, add:

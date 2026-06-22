@@ -52,7 +52,7 @@ crates/sandbox-runtime/operation/src/
   internal/workspace_remount/service/impls/
   internal/layerstack/service/impls/
 
-docs/trace/dashboards/
+observability/trace/dashboards/
   command-latency.json
   publish-conflicts.json
   remount-health.json
@@ -70,10 +70,6 @@ observability/
 
 Phase 4a extends the shared `observability/` tree created in Phase 3. It must
 not introduce phase-specific observability directories.
-
-Phase 4a may validate dashboard JSON and provisioning against the shared
-Grafana environment. Live sandbox workload testing, live Grafana proof, and
-sanitized example capture belong to Phase 4c after the cgroup telemetry cutover.
 
 If `telemetry/metrics.rs` is added, `telemetry.rs` remains daemon-owned. Runtime
 crates still must not own exporter setup. Runtime call sites may use only a
@@ -132,9 +128,8 @@ feed metrics.
 - Dashboards must read metrics from the collector/backend, not from
   `cli_operation_specs`.
 - Dashboard validation must load the JSON against a chosen Grafana environment
-  with a Prometheus-compatible metrics datasource. Live workload data validation
-  belongs to Phase 4c. Tempo may be used only for trace panels, not as the
-  metrics datasource.
+  with a Prometheus-compatible metrics datasource. Tempo may be used only for
+  trace panels, not as the metrics datasource.
 - Loki is not part of Phase 4a. Do not add Grafana trace-to-logs, Loki derived
   fields, or log panels until the explicit log-export phase.
 
@@ -174,8 +169,7 @@ feed metrics.
       raw workspace roots, raw cgroup paths, raw layer paths, and free-form
       error strings.
 - [ ] Dashboard files load in the chosen Grafana environment with the configured
-      metrics datasource; any Tempo panels are trace-only, and live workload
-      evidence is deferred to Phase 4c.
+      metrics datasource; any Tempo panels are trace-only.
 - [ ] Phase 4a does not add Loki, log exporters, trace-to-logs configuration,
       or log panels.
 - [ ] `cargo test -p sandbox-daemon -p sandbox-runtime -p sandbox-runtime-workspace -p sandbox-runtime-command`

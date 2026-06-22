@@ -51,7 +51,7 @@ crates/sandbox-runtime/operation/tests/
 crates/sandbox-gateway/tests/
   gateway_cli.rs                   # remove cgroup monitor CLI catalog mappings
 
-docs/trace/
+observability/trace/
   README.md
   phases/phase-04b-cgroup-telemetry-cutover.md
 
