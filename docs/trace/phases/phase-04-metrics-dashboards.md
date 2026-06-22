@@ -12,6 +12,10 @@ remove the existing CLI/catalog-facing cgroup monitor operations yet.
 - Add latency histograms for runtime operations and workspace phases.
 - Add counters for publish rejections, remount failures, command cancellations,
   and cgroup read errors.
+- Fix command final sample and cleanup ordering before using command final
+  cgroup samples as dashboard inputs. A post-cleanup periodic sample must not be
+  able to become the retained previous sample for final CPU delta/percent
+  enrichment.
 - Export periodic cgroup CPU, memory, pids, pressure, and disk samples as
   metrics.
 - Add dashboard definitions for command latency, publish conflict rate, remount
@@ -73,7 +77,9 @@ pub struct TelemetryMetricsConfig {
 No cgroup monitor API response fields are required to change in Phase 4a.
 Existing `inspect_cgroup_monitor` and `read_cgroup_monitor_samples` operations
 remain available until the Phase 4b cutover. `CgroupMonitorSample` becomes the
-typed metrics source while still supporting the existing direct read API.
+typed metrics source while still supporting the existing direct read API. The
+direct read API is not the canonical telemetry interface and dashboards must not
+depend on its response shape.
 
 ## Metric Rules
 
@@ -83,7 +89,11 @@ typed metrics source while still supporting the existing direct read API.
   `request_id`, `command_session_id`, raw paths, or raw root hashes to metric
   labels.
 - Latency metrics use span durations or direct histograms, not subtraction of
-  unrelated event timestamps.
+  unrelated event timestamps and not command response timing fields.
+- Command final cgroup metric mapping must read a deterministic final sample.
+  Record the final sample and cleanup state in an order that prevents
+  post-cleanup periodic samples from affecting retained final-sample
+  enrichment.
 - Dashboards must read metrics from the collector/backend, not from
   `cli_operation_specs`.
 
@@ -106,6 +116,8 @@ typed metrics source while still supporting the existing direct read API.
 - [ ] Publish rejection counters include bounded reason labels.
 - [ ] Remount failure counters include bounded reason labels.
 - [ ] Command cancellation counters include bounded reason labels.
+- [ ] Command final cgroup sample/cleanup ordering cannot let a post-cleanup
+      periodic sample affect final CPU delta/percent enrichment.
 - [ ] Cgroup periodic CPU/memory/pids/pressure/disk samples export as metrics.
 - [ ] No periodic cgroup sample trace events are emitted.
 - [ ] Dashboards use collector/backend metrics and do not call

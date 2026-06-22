@@ -17,11 +17,14 @@ Runtime operation requests enter through `sandbox-daemon` and are dispatched to
 external protocol caller
   -> sandbox-daemon
     -> sandbox_runtime::dispatch_operation
-      -> SandboxRuntimeOperations.command / CommandOperationService
-        -> internal WorkspaceSessionService
-        -> internal WorkspaceRemountService
-          -> sandbox-runtime-workspace
-          -> sandbox-runtime-layerstack
+      -> SandboxRuntimeOperations
+        -> command / CommandOperationService
+          -> internal WorkspaceSessionService
+          -> internal WorkspaceRemountService
+            -> sandbox-runtime-workspace
+            -> sandbox-runtime-layerstack
+        -> cgroup_monitor / CgroupMonitorOperationService
+          -> internal WorkspaceSessionService cgroup monitor reads
 ```
 
 Manager operations stay in `sandbox-manager`. Low-level command, workspace,
@@ -30,17 +33,29 @@ namespace, layerstack, overlay, and config primitives stay in their separate
 
 ## Runtime Operations
 
-The external runtime operation surface is the `Command` family:
+The external runtime operation surface currently has two families. `Command` is
+the durable runtime API:
 
 - `exec_command`
 - `write_command_stdin`
 - `read_command_lines`
+
+`Cgroup Monitor` is a temporary direct read/debug API while cgroup telemetry is
+being cut over to metrics:
+
+- `inspect_cgroup_monitor`
+- `read_cgroup_monitor_samples`
+
+The cgroup monitor operations are slated for removal in the Phase 4b telemetry
+cutover after dashboards read cgroup stats from metrics. They should not be used
+as the canonical resource telemetry interface.
 
 Catalog help is rendered from protocol metadata:
 
 ```text
 sandbox-cli runtime help
 sandbox-cli runtime help exec_command
+sandbox-cli runtime help inspect_cgroup_monitor
 ```
 
 Runtime help usage and examples do not include `--sandbox-id`; sandbox
@@ -57,7 +72,11 @@ mechanics.
 
 ## Internal Runtime Lanes
 
-`src/public/command` contains the external command operation lane.
+`src/public/command` contains the durable external command operation lane.
+
+`src/public/cgroup_monitor` contains the temporary cgroup direct read operation
+lane. It should move internal or be removed when Phase 4b removes the public
+cgroup monitor operation specs.
 
 `src/internal/workspace_session` tracks runtime workspace sessions over
 `sandbox_runtime_workspace::WorkspaceRuntimeService`. It owns session create,
@@ -89,21 +108,26 @@ The daemon-facing aggregate is intentionally small:
 ```rust
 pub struct SandboxRuntimeOperations {
     pub command: Arc<CommandOperationService>,
+    pub cgroup_monitor: Arc<CgroupMonitorOperationService>,
+    pub layerstack: Arc<LayerStackService>,
 }
 ```
 
-External dispatch code should receive `SandboxRuntimeOperations.command` or an
-even narrower command wrapper. It should not receive workspace session or
-workspace remount services as peer external operations.
+External dispatch code should receive `SandboxRuntimeOperations` or a narrower
+public operation wrapper for command/cgroup monitor dispatch. It should not
+receive workspace session, workspace remount, or layerstack services as peer
+external operation surfaces.
 
 Internal daemon setup may still construct all services:
 
 ```text
 WorkspaceRuntimeService
+  -> LayerStackService
   -> WorkspaceSessionService
   -> CommandOperationService
+  -> CgroupMonitorOperationService
   -> WorkspaceRemountService
-  -> SandboxRuntimeOperations { command }
+  -> SandboxRuntimeOperations { command, cgroup_monitor, layerstack }
 ```
 
 ## Verification

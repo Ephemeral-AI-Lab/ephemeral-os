@@ -22,3 +22,9 @@ Global constraints for every phase:
 - [ ] Do not change `sandbox_protocol::Response` before the protocol phase.
 - [ ] Do not emit raw command text, stdin, command output, auth tokens, raw env
       values, raw request args, or raw workspace roots.
+- [ ] Do not project protocol responses, raw `Debug` structs, or raw `Display`
+      error strings wholesale into telemetry.
+- [ ] Do not add trace spans for public cgroup monitor read operations; cgroup
+      trace events are internal anomalies and final summaries only.
+- [ ] Do not use command response timing fields as operation latency; use span
+      durations or direct histograms.

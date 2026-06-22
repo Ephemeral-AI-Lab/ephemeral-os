@@ -13,7 +13,8 @@ custom runtime trace infrastructure.
 - Add daemon telemetry config for disabled and local JSON stream modes.
 - Add dynamic daemon `sandbox_id` identity plumbing.
 - Add `daemon.request` and runtime command root spans.
-- Assert safe-field behavior for request and command instrumentation.
+- Assert safe-field behavior for request, response, error, and command
+  instrumentation.
 
 ## File And Folder Structure Changes
 
@@ -123,6 +124,13 @@ this phase.
   or remount child spans.
 - Use `#[instrument(skip(...))]` or explicit spans so request/input structs are
   not auto-captured.
+- Do not record `sandbox_protocol::Response`, operation response payloads,
+  `Debug` structs, or raw `Display` error strings wholesale. Record only
+  explicit safe fields such as operation status, bounded error kind, output
+  offsets/counts, and command exit status.
+- Do not treat command response timing fields as operation latency. Local JSON
+  span-close timing is the source for operation wall-clock latency in this
+  phase.
 
 ## LOC Estimate
 
@@ -147,6 +155,7 @@ this phase.
 - [ ] `daemon.request` includes `request_id`, `operation`, sanitized scope, and
       dynamic `sandbox_id` when available.
 - [ ] Root/request spans do not include raw `Request.args`.
+- [ ] Runtime spans do not include raw response payloads or raw error details.
 - [ ] Command spans do not include command text, stdin, command output, auth
       tokens, environment values, or raw workspace roots.
 - [ ] `runtime.exec_command` span only covers live command work and one-shot

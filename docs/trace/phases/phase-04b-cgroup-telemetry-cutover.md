@@ -84,6 +84,12 @@ pub struct CgroupMonitorSample {
 No `sandbox_protocol::Response` changes are required. The operations disappear
 from the catalog instead of returning a new response shape.
 
+This is the response simplification for cgroup resource data: raw targets,
+retained sample windows, PID lists, CPU/memory/IO/pressure/disk snapshots, and
+cleanup diagnostic strings stop being reachable through runtime operation
+responses. Metrics carry the resource series; trace events carry only
+anomalies, final summaries, cleanup status, and bounded error classes.
+
 ## Cutover Rules
 
 - Phase 4b starts only after Phase 4a dashboards read cgroup stats from
@@ -92,6 +98,9 @@ from the catalog instead of returning a new response shape.
   samples, cleanup state, or retained internal samples needed for metrics.
 - Do not leave `inspect_cgroup_monitor` or `read_cgroup_monitor_samples` in
   `cli_operation_specs` as hidden compatibility aliases.
+- Do not replace the removed operations with a new response payload that mirrors
+  the old cgroup sample shape. The telemetry backend is the canonical stats
+  interface after this phase.
 - If a direct debug read surface is still required, define it as a separate
   product/debug API outside the telemetry stats path before deleting the old
   operation specs.

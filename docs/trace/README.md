@@ -117,6 +117,13 @@ phase = mount_overlay
 duration_ms = 17
 ```
 
+Existing command response timing fields, such as command wall time and total
+command time, are typed command lifecycle fields. Do not use them as operation
+latency. Operation latency belongs to span durations and metrics histograms.
+Response timing fields should not be expanded to satisfy dashboards; once
+callers no longer need them for workflow display, they can be simplified in a
+separate API cleanup.
+
 For async code, instrument the future so duration covers the future from poll
 start to completion, including `.await` time. Use `#[instrument]` only where the
 function boundary is already a stable diagnostic boundary; otherwise create an
@@ -246,7 +253,7 @@ Runtime child spans should add the IDs they own:
 | `command_session_id` | command service |
 | `lease_id` | workspace/layerstack |
 | `manifest_version` | workspace/layerstack |
-| `root_hash` | workspace/layerstack |
+| `root_hash` | workspace/layerstack event field only; never a metric label |
 | `cgroup_path_present` | workspace/command |
 
 Paths should be recorded carefully. Prefer booleans, counts, hashes, redacted
@@ -255,9 +262,10 @@ paths are acceptable only in explicit local/test debug modes and must never
 include auth material, environment values, command text, stdin text, command
 output, or host-private workspace roots.
 
-## Span Names
+## Span And Semantic Event Names
 
-Use dot-separated stable names:
+Use dot-separated stable names. The cgroup monitor entries are internal event
+boundaries, not spans around public read operations:
 
 ```text
 daemon.request
@@ -273,8 +281,8 @@ layerstack.publish_changes
 command.spawn
 command.wait_initial_yield
 command.finalize
-cgroup_monitor.inspect
-cgroup_monitor.read_samples
+cgroup_monitor.anomaly
+cgroup_monitor.final_summary
 ```
 
 Avoid names that mirror temporary private helper files unless the helper is a
@@ -331,6 +339,30 @@ where they already exist:
 Do not emit command text, stdin text, command output, raw environment values,
 auth tokens, or raw request arguments as trace fields. For command I/O, emit
 lengths, offsets, counts, status, and timing only.
+
+## Response And Telemetry Boundary
+
+Protocol responses carry data that the caller needs to continue the workflow.
+Telemetry carries operation latency, phase timing, resource trends, cleanup
+health, and dashboards. Do not project `sandbox_protocol::Request`,
+`sandbox_protocol::Response`, response payloads, `Debug` structs, or raw
+`Display` error strings wholesale into spans/events.
+
+| Current payload/stat | Response role | Telemetry replacement |
+| --- | --- | --- |
+| command `status` and `exit_code` | keep typed; caller needs command state | result fields on command spans/events |
+| command `output` and transcript rows | keep typed functional command output | no raw telemetry; offsets and counts only |
+| command wall/total time fields | keep only while clients need display fields | span durations and command duration histograms |
+| workspace create/destroy phase timing maps | do not add response fields | phase events and histograms |
+| remount verification reports | keep typed success summary | booleans, counts, and bounded failure reasons |
+| publish/OCC reject payloads | keep typed correctness diagnostics | route counts, reject reason, fingerprint kind, path class/hash |
+| public cgroup monitor targets and samples | temporary direct debug/API surface | metrics and final-summary/anomaly events |
+| cleanup or runtime error strings | typed/debug diagnostics only | bounded error kind, stage, and counters |
+
+This boundary is what lets response payloads shrink over time. The first
+rollout does not change `sandbox_protocol::Response`; later protocol/API cleanup
+can remove or narrow response timing and resource fields only after dashboards
+and diagnostics read the telemetry backend instead.
 
 ## OCC Event Model
 
@@ -734,7 +766,8 @@ struct/class-field changes, LOC estimates, and acceptance checklists live in
 - Make span-close timing visible in local JSON output so operation wall-clock
   duration can be inspected without a backend.
 - Assert root spans record explicit safe fields and do not record raw request
-  args, command text, stdin, output, environment values, or auth tokens.
+  args, response payloads, command text, stdin, output, environment values, or
+  auth tokens.
 - Keep runtime instrumentation inline in existing modules; do not add
   `crates/sandbox-runtime/operation/src/internal/telemetry.rs`.
 - Enable `FmtSpan::CLOSE` or equivalent span-close timing.
@@ -751,6 +784,9 @@ struct/class-field changes, LOC estimates, and acceptance checklists live in
   simplified `RemountOverlayResult` correctness surface.
 - Emit layerstack publish route/OCC/publish result events from operation-level
   wrappers.
+- Emit cgroup monitor trace events only for internal anomalies and final
+  summaries. Do not add spans for `inspect_cgroup_monitor` or
+  `read_cgroup_monitor_samples`.
 
 ### Phase 3: OTLP export
 
@@ -771,9 +807,13 @@ struct/class-field changes, LOC estimates, and acceptance checklists live in
 
 - Add latency histograms for runtime operations and workspace phases. These
   should come from span durations or direct histogram recording, not from
-  subtracting unrelated event timestamps.
+  subtracting unrelated event timestamps or reading command response timing
+  fields.
 - Add counters for publish rejection reasons, remount failures, command
   cancellations, and cgroup monitor read errors.
+- Before dashboards depend on command final cgroup samples, make final sample
+  recording and cleanup ordering deterministic so a post-cleanup periodic sample
+  cannot affect final CPU delta/percent enrichment.
 - Export cgroup monitor samples as metrics first. Periodic CPU, memory, pids,
   pressure, and disk samples should not be emitted as per-sample trace events.
 - Emit trace events for cgroup anomalies and final summaries only, such as read
@@ -855,5 +895,6 @@ Trace assertions should verify:
 | Gateway trace mode | yes, as lookup UX only; never telemetry transport |
 | Trace IDs in protocol responses | later only, as a versioned protocol-envelope change |
 | Cgroup monitor samples | metrics primary; trace events only for anomalies/final summaries |
+| Response simplification | telemetry owns time/resource/dashboard stats; responses keep workflow data only until a later API cleanup |
 | Canonical first-rollout backend | Grafana + Tempo for traces; Loki and Prometheus-compatible metrics are later phases; Jaeger is optional trace-only smoke target |
 | Time measurement | span duration for operation latency, event timestamps for ordering, explicit `Instant` timers for typed phase reports |

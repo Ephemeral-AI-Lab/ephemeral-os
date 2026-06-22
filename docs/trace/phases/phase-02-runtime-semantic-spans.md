@@ -87,8 +87,9 @@ daemon-owned telemetry test support. Do not expose runtime telemetry DTOs.
   - `workspace.capture_changes`
   - `workspace.remount`
   - `layerstack.publish_changes`
-  - `cgroup_monitor.inspect`
-  - `cgroup_monitor.read_samples`
+- Stable cgroup event names:
+  - `cgroup_monitor.anomaly`
+  - `cgroup_monitor.final_summary`
 - Do not create spans named after private helpers such as `plan_publish`,
   `validate_source_paths`, or manifest commit internals.
 - OCC events may include counts, versions, root hashes, fingerprint kinds,
@@ -98,6 +99,9 @@ daemon-owned telemetry test support. Do not expose runtime telemetry DTOs.
 - Do not add trace work to CLI-facing cgroup operation specs if cgroup stats are
   being moved to telemetry. Keep the trace work at the internal lifecycle,
   command-final, cleanup, and anomaly boundaries.
+- Do not project command response timing fields, cgroup monitor response
+  payloads, remount diagnostic JSON, `Debug` structs, or raw `Display` errors
+  wholesale. Trace only explicit safe fields and bounded error classes.
 
 ## LOC Estimate
 
@@ -123,6 +127,8 @@ daemon-owned telemetry test support. Do not expose runtime telemetry DTOs.
       promoted to a stable diagnostic boundary in the same change.
 - [ ] Cgroup periodic samples do not emit trace events.
 - [ ] Cgroup trace events are limited to anomalies and final summaries.
+- [ ] `inspect_cgroup_monitor` and `read_cgroup_monitor_samples` are not added
+      as span names or new instrumentation boundaries.
 - [ ] Raw paths, command text, stdin, output, env values, and auth tokens are not
       emitted.
 - [ ] `cargo test -p sandbox-runtime` passes.
