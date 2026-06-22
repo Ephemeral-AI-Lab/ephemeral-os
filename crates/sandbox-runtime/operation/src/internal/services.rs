@@ -3,7 +3,10 @@ use std::sync::Arc;
 use crate::cgroup_monitor::CgroupMonitorOperationService;
 use crate::command::CommandOperationService;
 use crate::layerstack::LayerStackService;
-use crate::workspace_crate::{profile::WorkspaceModeManager, WorkspaceRuntimeService};
+use crate::workspace_crate::{
+    noop_runtime_metrics_recorder, profile::WorkspaceModeManager, RuntimeMetricsRecorderHandle,
+    WorkspaceRuntimeService,
+};
 use crate::workspace_session::WorkspaceSessionService;
 
 #[derive(Clone)]
@@ -11,11 +14,21 @@ pub struct SandboxRuntimeOperations {
     pub command: Arc<CommandOperationService>,
     pub cgroup_monitor: Arc<CgroupMonitorOperationService>,
     pub layerstack: Arc<LayerStackService>,
+    pub(crate) metrics: RuntimeMetricsRecorderHandle,
 }
 
 impl SandboxRuntimeOperations {
     #[must_use]
     pub fn new(command: Arc<CommandOperationService>, layerstack: Arc<LayerStackService>) -> Self {
+        Self::with_metrics_recorder(command, layerstack, noop_runtime_metrics_recorder())
+    }
+
+    #[must_use]
+    pub fn with_metrics_recorder(
+        command: Arc<CommandOperationService>,
+        layerstack: Arc<LayerStackService>,
+        metrics: RuntimeMetricsRecorderHandle,
+    ) -> Self {
         let cgroup_monitor = Arc::new(CgroupMonitorOperationService::new(Arc::clone(
             command.workspace(),
         )));
@@ -23,11 +36,20 @@ impl SandboxRuntimeOperations {
             command,
             cgroup_monitor,
             layerstack,
+            metrics,
         }
     }
 
     #[must_use]
     pub fn from_config(config: SandboxRuntimeConfig) -> Self {
+        Self::from_config_with_metrics(config, noop_runtime_metrics_recorder())
+    }
+
+    #[must_use]
+    pub fn from_config_with_metrics(
+        config: SandboxRuntimeConfig,
+        metrics: RuntimeMetricsRecorderHandle,
+    ) -> Self {
         let layer_stack_root = config.workspace.layer_stack_root.clone();
         let workspace_runtime = Arc::new(WorkspaceRuntimeService::new(
             WorkspaceModeManager::new(
@@ -43,23 +65,30 @@ impl SandboxRuntimeOperations {
         ));
         let cgroup_monitor: ::sandbox_runtime_workspace::CgroupMonitorConfig =
             config.cgroup_monitor.into();
-        let workspace_session = Arc::new(WorkspaceSessionService::with_cgroup_monitor(
+        let workspace_session = Arc::new(WorkspaceSessionService::with_cgroup_monitor_and_metrics(
             workspace_runtime,
             cgroup_monitor.clone(),
+            Arc::clone(&metrics),
         ));
         let layerstack = Arc::new(
-            LayerStackService::new(layer_stack_root)
+            LayerStackService::with_metrics_recorder(layer_stack_root, Arc::clone(&metrics))
                 .expect("layerstack service initialization failed"),
         );
-        let command = Arc::new(CommandOperationService::new(
+        let command = Arc::new(CommandOperationService::new_with_metrics(
             workspace_session,
             Arc::clone(&layerstack),
             ::sandbox_runtime_command::CommandConfig {
                 scratch_root: config.command.scratch_root,
                 cgroup_monitor,
             },
+            Arc::clone(&metrics),
         ));
-        Self::new(command, layerstack)
+        Self::with_metrics_recorder(command, layerstack, metrics)
+    }
+
+    #[must_use]
+    pub(crate) fn metrics(&self) -> &RuntimeMetricsRecorderHandle {
+        &self.metrics
     }
 }
 

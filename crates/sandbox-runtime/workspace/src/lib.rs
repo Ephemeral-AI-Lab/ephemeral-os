@@ -17,6 +17,7 @@
 pub mod error;
 mod isolated_setup;
 mod lifecycle;
+mod metrics;
 pub mod model;
 mod namespace;
 pub mod overlay;
@@ -24,6 +25,11 @@ pub mod profile;
 pub mod service;
 
 pub use error::WorkspaceError;
+pub use metrics::{
+    noop_runtime_metrics_recorder, CgroupReadErrorKind, CommandCancellationReason,
+    NoopRuntimeMetricsRecorder, PublishRejectionReason, RemountFailureReason, RuntimeMetricStatus,
+    RuntimeMetricsRecorder, RuntimeMetricsRecorderHandle, RuntimeOperationName, WorkspacePhase,
+};
 pub use model::{
     BaseRevision, CaptureChangesRequest, CapturedWorkspaceChanges, ChangedPathKind,
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LayerStackSnapshotRef,

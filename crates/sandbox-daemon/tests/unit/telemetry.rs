@@ -9,7 +9,9 @@ use anyhow::Result;
 use opentelemetry::Key;
 use opentelemetry::trace::TracerProvider as _;
 use opentelemetry_sdk::error::{OTelSdkError, OTelSdkResult};
-use opentelemetry_sdk::trace::{BatchSpanProcessor, SdkTracerProvider, SpanData, SpanExporter};
+use opentelemetry_sdk::trace::{
+    BatchConfigBuilder, BatchSpanProcessor, SdkTracerProvider, SpanData, SpanExporter,
+};
 use serde_json::{json, Value};
 use tokio::runtime::Runtime;
 use tokio::time::timeout;
@@ -451,21 +453,6 @@ fn otlp_resource_contains_only_daemon_and_sandbox_identity() {
 }
 
 #[test]
-fn otlp_batch_limits_apply_bounded_queue_batch_and_timeout() {
-    let delay = Duration::from_millis(750);
-
-    let limits = crate::telemetry::otlp_batch_limits(2_048, delay);
-
-    assert_eq!(limits.max_queue_size, 2_048);
-    assert_eq!(limits.max_export_batch_size, 512);
-    assert_eq!(limits.scheduled_delay, delay);
-
-    let small_limits = crate::telemetry::otlp_batch_limits(7, delay);
-    assert_eq!(small_limits.max_queue_size, 7);
-    assert_eq!(small_limits.max_export_batch_size, 7);
-}
-
-#[test]
 fn otlp_unreachable_collector_does_not_change_protocol_response() -> Result<()> {
     let runtime = Runtime::new()?;
     let server = test_server(Some("sbox-otlp"));
@@ -495,10 +482,13 @@ fn otlp_queue_full_drop_does_not_block_protocol_responses() -> Result<()> {
     let processor = BatchSpanProcessor::builder(BlockingExporter {
         state: Arc::clone(&exporter_state),
     })
-    .with_batch_config(crate::telemetry::otlp_batch_config(
-        1,
-        Duration::from_secs(60),
-    ))
+    .with_batch_config(
+        BatchConfigBuilder::default()
+            .with_max_queue_size(1)
+            .with_max_export_batch_size(1)
+            .with_scheduled_delay(Duration::from_secs(60))
+            .build(),
+    )
     .build();
     let provider = SdkTracerProvider::builder()
         .with_span_processor(processor)

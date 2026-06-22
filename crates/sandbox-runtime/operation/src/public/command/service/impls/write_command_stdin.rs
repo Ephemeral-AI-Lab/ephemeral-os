@@ -10,6 +10,7 @@ use crate::command::{
     WriteCommandStdinInput,
 };
 use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliOperationSpec, CliSpec};
+use crate::workspace_crate::CommandCancellationReason;
 use crate::SandboxRuntimeOperations;
 use sandbox_protocol::{Request, Response};
 use tracing::{field, Span};
@@ -131,6 +132,8 @@ impl CommandOperationService {
                 .ok_or_else(|| CommandServiceError::CommandNotFound {
                     command_session_id: command_session_id.clone(),
                 })?;
+            self.metrics()
+                .record_command_cancellation(CommandCancellationReason::StdinSignal);
         } else {
             process.write_process_stdin(&input.stdin).map_err(|error| {
                 CommandServiceError::CommandIo {

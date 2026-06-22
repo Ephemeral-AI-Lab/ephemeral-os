@@ -50,19 +50,18 @@ crates/sandbox-config/tests/unit/configs/
   daemon.rs
 
 observability/
-  phase-03-traces/
-    docker-compose.yml        # collector, tempo, grafana; no loki
-    otel-collector.yaml       # trace pipeline only
-    tempo.yaml
-    grafana/
-      provisioning/
-        datasources/
-          tempo.yaml
+  docker-compose.yml          # collector, tempo, grafana; no loki
+  otel-collector.yaml         # trace pipeline only
+  tempo.yaml
+  grafana/
+    provisioning/
+      datasources/
+        tempo.yaml
 ```
 
-Phase 3 creates `observability/phase-03-traces/` with the trace-only services
-and provisioning needed for OTLP trace validation. Later phases must not add
-Loki, log exporters, or trace-to-logs configuration to this Phase 3 stack.
+Phase 3 creates the shared `observability/` tree with the trace-only services
+and provisioning needed for OTLP trace validation. Later phases extend these
+same files instead of adding phase-specific observability directories.
 
 Do not add file appenders, Loki, log exporters, or manager/gateway RPC
 telemetry transport.
@@ -164,7 +163,7 @@ IDs, cgroup paths, or other per-request/per-workspace high-cardinality values.
       and `sandbox.id`, and exclude raw paths, root hashes, request IDs,
       command IDs, workspace session IDs, cgroup paths, and error strings.
 - [x] Validation environment includes OpenTelemetry Collector, Tempo, and
-      Grafana with a Tempo data source under `observability/phase-03-traces/`.
+      Grafana with a Tempo data source under `observability/`.
 - [x] The Phase 3 validation environment does not include Loki, log exporters,
       or Grafana trace-to-logs configuration.
 - [x] Invalid telemetry config fails daemon startup.

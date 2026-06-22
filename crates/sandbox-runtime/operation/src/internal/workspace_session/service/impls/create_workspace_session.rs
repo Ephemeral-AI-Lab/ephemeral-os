@@ -1,6 +1,8 @@
 use std::collections::hash_map::Entry;
+use std::time::Instant;
 
 use crate::workspace_crate::{CreateWorkspaceRequest, DestroyWorkspaceRequest};
+use crate::workspace_crate::{RuntimeMetricStatus, WorkspacePhase};
 use crate::workspace_session::{WorkspaceSessionError, WorkspaceSessionService};
 
 use super::super::model::{WorkspaceSession, WorkspaceSessionHandler};
@@ -18,7 +20,13 @@ impl WorkspaceSessionService {
             error_kind = field::Empty,
         );
         let _span_guard = span.enter();
+        let started = Instant::now();
         let result = self.create_workspace_session_inner(request);
+        self.metrics().record_workspace_phase(
+            WorkspacePhase::CreateSession,
+            workspace_status(&result),
+            started.elapsed(),
+        );
         record_create_session_result(&span, &result);
         result
     }
@@ -61,6 +69,13 @@ impl WorkspaceSessionService {
         self.cgroup_monitor().register_session_from_handle(&handle);
 
         Ok(handler)
+    }
+}
+
+fn workspace_status<T>(result: &Result<T, WorkspaceSessionError>) -> RuntimeMetricStatus {
+    match result {
+        Ok(_) => RuntimeMetricStatus::Ok,
+        Err(_) => RuntimeMetricStatus::Error,
     }
 }
 

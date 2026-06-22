@@ -13,8 +13,8 @@ use crate::command::{
 };
 use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliOperationSpec, CliSpec};
 use crate::workspace_crate::{
-    CreateWorkspaceRequest, DestroyWorkspaceRequest, WorkspaceEntry, WorkspaceProfile,
-    WorkspaceSessionId,
+    CommandCancellationReason, CreateWorkspaceRequest, DestroyWorkspaceRequest, WorkspaceEntry,
+    WorkspaceProfile, WorkspaceSessionId,
 };
 use crate::workspace_session::WorkspaceSessionHandler;
 use crate::SandboxRuntimeOperations;
@@ -172,6 +172,8 @@ impl CommandOperationService {
 
         if self.process_store().active(&command_session_id).is_some() {
             started.process.cancel_process();
+            self.metrics()
+                .record_command_cancellation(CommandCancellationReason::StartupRollback);
             return Err(self.cleanup_workspace_start_failure(
                 &command_session_id,
                 workspace,
@@ -185,6 +187,8 @@ impl CommandOperationService {
             started.into_active_record(command_session_id.clone(), &workspace);
         if let Err(error) = self.process_store().insert_active(reservation, record) {
             process_for_rollback.cancel_process();
+            self.metrics()
+                .record_command_cancellation(CommandCancellationReason::StartupRollback);
             return Err(self.cleanup_workspace_start_failure(
                 &command_session_id,
                 workspace,

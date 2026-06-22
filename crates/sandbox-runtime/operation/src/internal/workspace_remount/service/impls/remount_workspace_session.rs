@@ -1,3 +1,6 @@
+use std::time::Instant;
+
+use crate::workspace_crate::{RemountFailureReason, RuntimeMetricStatus, WorkspacePhase};
 use crate::workspace_crate::{RemountWorkspaceRequest, WorkspaceSessionId};
 use crate::workspace_remount::{
     RemountBlockReason, RemountSwitchState, WorkspaceRemountError, WorkspaceRemountOutcome,
@@ -24,7 +27,25 @@ impl WorkspaceRemountService {
             resumed = field::Empty,
         );
         let _span_guard = span.enter();
+        let started = Instant::now();
         let result = self.remount_workspace_session_inner(workspace_session_id);
+        self.metrics().record_workspace_phase(
+            WorkspacePhase::RemountWorkspace,
+            remount_status(&result),
+            started.elapsed(),
+        );
+        match &result {
+            Ok(outcome) if !outcome.remounted => {
+                if let Some(reason) = outcome.blocked_reason.as_deref() {
+                    self.metrics()
+                        .record_remount_failure(RemountFailureReason::from_block_reason(reason));
+                }
+            }
+            Err(error) => self
+                .metrics()
+                .record_remount_failure(remount_error_metric_reason(error)),
+            Ok(_) => {}
+        }
         record_remount_result(&span, &result);
         result
     }
@@ -78,6 +99,23 @@ impl WorkspaceRemountService {
                 Err(WorkspaceRemountError::WorkspaceSession(error))
             }
         }
+    }
+}
+
+fn remount_status(
+    result: &Result<WorkspaceRemountOutcome, WorkspaceRemountError>,
+) -> RuntimeMetricStatus {
+    match result {
+        Ok(outcome) if outcome.remounted => RuntimeMetricStatus::Ok,
+        Ok(_) => RuntimeMetricStatus::Blocked,
+        Err(_) => RuntimeMetricStatus::Error,
+    }
+}
+
+fn remount_error_metric_reason(error: &WorkspaceRemountError) -> RemountFailureReason {
+    match error {
+        WorkspaceRemountError::WorkspaceSession(_) => RemountFailureReason::WorkspaceSession,
+        WorkspaceRemountError::Command(_) => RemountFailureReason::Command,
     }
 }
 

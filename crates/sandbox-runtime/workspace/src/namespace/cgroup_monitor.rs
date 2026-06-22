@@ -1,4 +1,5 @@
 use std::collections::{HashMap, VecDeque};
+use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError, Weak};
 use std::thread;
@@ -6,6 +7,10 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
 
+use crate::metrics::{
+    noop_runtime_metrics_recorder, CgroupReadErrorKind, RuntimeMetricsRecorder,
+    RuntimeMetricsRecorderHandle,
+};
 use crate::model::{WorkspaceHandle, WorkspaceSessionId};
 use crate::overlay::tree::TreeResourceStats;
 
@@ -209,20 +214,39 @@ pub struct CgroupSampleRequest<'a> {
     pub config: &'a CgroupMonitorConfig,
 }
 
-#[derive(Debug)]
 pub struct CgroupMonitorRegistry {
     config: CgroupMonitorConfig,
     records: Arc<Mutex<HashMap<CgroupTargetKey, RetainedTarget>>>,
     sampler_started: Mutex<bool>,
+    metrics: RuntimeMetricsRecorderHandle,
+}
+
+impl fmt::Debug for CgroupMonitorRegistry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CgroupMonitorRegistry")
+            .field("config", &self.config)
+            .field("records", &self.records)
+            .field("sampler_started", &self.sampler_started)
+            .finish_non_exhaustive()
+    }
 }
 
 impl CgroupMonitorRegistry {
     #[must_use]
     pub fn new(config: CgroupMonitorConfig) -> Self {
+        Self::with_metrics_recorder(config, noop_runtime_metrics_recorder())
+    }
+
+    #[must_use]
+    pub fn with_metrics_recorder(
+        config: CgroupMonitorConfig,
+        metrics: RuntimeMetricsRecorderHandle,
+    ) -> Self {
         Self {
             config,
             records: Arc::new(Mutex::new(HashMap::new())),
             sampler_started: Mutex::new(false),
+            metrics,
         }
     }
 
@@ -346,7 +370,7 @@ impl CgroupMonitorRegistry {
         let Some(record) = records.get_mut(&key) else {
             return;
         };
-        record.push_sample(sample, &self.config);
+        record.push_sample(sample, &self.config, self.metrics.as_ref());
         record.cleanup.final_sample_recorded = true;
         emit_cgroup_final_summary(
             "session_final",
@@ -371,7 +395,7 @@ impl CgroupMonitorRegistry {
         if self.config.enabled {
             if let Some(mut sample) = sample {
                 enrich_final_cpu_sample(&mut sample, record.samples.back(), &self.config);
-                record.push_sample(sample, &self.config);
+                record.push_sample(sample, &self.config, self.metrics.as_ref());
                 record.cleanup.final_sample_recorded = true;
             }
         }
@@ -439,9 +463,10 @@ impl CgroupMonitorRegistry {
         let interval = Duration::from_millis(self.config.sample_interval_ms.max(1));
         let records = Arc::downgrade(&self.records);
         let config = self.config.clone();
+        let metrics = Arc::clone(&self.metrics);
         if thread::Builder::new()
             .name("eos-cgroup-monitor".to_owned())
-            .spawn(move || sampler_loop(records, config, interval))
+            .spawn(move || sampler_loop(records, config, interval, metrics))
             .is_ok()
         {
             *sampler_started = true;
@@ -461,7 +486,7 @@ impl CgroupMonitorRegistry {
         let Some(record) = records.get_mut(key) else {
             return;
         };
-        record.push_sample(sample, &self.config);
+        record.push_sample(sample, &self.config, self.metrics.as_ref());
         if mark_final {
             record.cleanup.final_sample_recorded = true;
         }
@@ -571,11 +596,20 @@ impl RetainedTarget {
         !self.cleanup.final_sample_recorded && self.cleanup.cgroup_exists_after_destroy.is_none()
     }
 
-    fn push_sample(&mut self, sample: CgroupMonitorSample, config: &CgroupMonitorConfig) {
+    fn push_sample(
+        &mut self,
+        sample: CgroupMonitorSample,
+        config: &CgroupMonitorConfig,
+        metrics: &dyn RuntimeMetricsRecorder,
+    ) {
         if sample.state.read_error.is_some() {
             self.read_error_count = self.read_error_count.saturating_add(1);
             emit_cgroup_anomaly(&self.target, &sample, self.read_error_count);
+            if let Some(error_kind) = CgroupReadErrorKind::from_sample(&sample) {
+                metrics.record_cgroup_read_error(self.target.kind, error_kind);
+            }
         }
+        metrics.record_cgroup_sample(self.target.kind, &sample);
         self.samples.push_back(sample);
         while self.samples.len() > config.retained_samples_per_target {
             self.samples.pop_front();
@@ -672,19 +706,21 @@ fn sampler_loop(
     records: Weak<Mutex<HashMap<CgroupTargetKey, RetainedTarget>>>,
     config: CgroupMonitorConfig,
     interval: Duration,
+    metrics: RuntimeMetricsRecorderHandle,
 ) {
     loop {
         thread::sleep(interval);
         let Some(records) = records.upgrade() else {
             break;
         };
-        sample_periodic_targets(&records, &config);
+        sample_periodic_targets(&records, &config, metrics.as_ref());
     }
 }
 
 fn sample_periodic_targets(
     records: &Arc<Mutex<HashMap<CgroupTargetKey, RetainedTarget>>>,
     config: &CgroupMonitorConfig,
+    metrics: &dyn RuntimeMetricsRecorder,
 ) {
     if !config.enabled {
         return;
@@ -704,7 +740,7 @@ fn sample_periodic_targets(
             continue;
         };
         if record.target == plan.target && record.accepts_periodic_sample() {
-            record.push_sample(sample, config);
+            record.push_sample(sample, config, metrics);
         }
     }
 }

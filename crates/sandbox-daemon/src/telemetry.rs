@@ -1,16 +1,20 @@
-//! Daemon-owned tracing subscriber setup.
+//! Daemon-owned tracing and metrics setup.
 
 use std::time::Duration;
+
+pub(crate) mod metrics;
 
 use opentelemetry::trace::TracerProvider as _;
 use opentelemetry::KeyValue;
 use opentelemetry_otlp::{Protocol, WithExportConfig};
+use opentelemetry_sdk::metrics::SdkMeterProvider;
 use opentelemetry_sdk::trace::{BatchConfig, BatchConfigBuilder, BatchSpanProcessor};
 use opentelemetry_sdk::{trace::SdkTracerProvider, Resource};
 use sandbox_config::configs::validate::{
     require_non_empty, require_u64_at_least, require_usize_at_least, ConfigFieldError,
 };
 use sandbox_config::{ConfigDocument, ConfigError};
+use sandbox_runtime::{noop_runtime_metrics_recorder, RuntimeMetricsRecorderHandle};
 use serde::Deserialize;
 use thiserror::Error;
 use tracing_subscriber::filter::LevelFilter;
@@ -31,6 +35,8 @@ pub struct TelemetryConfig {
     pub level: String,
     #[serde(default)]
     pub sink: Option<TelemetrySink>,
+    #[serde(default)]
+    pub metrics: Option<TelemetryMetricsConfig>,
 }
 
 impl Default for TelemetryConfig {
@@ -40,6 +46,7 @@ impl Default for TelemetryConfig {
             service_name: "sandbox-daemon".to_owned(),
             level: "info".to_owned(),
             sink: None,
+            metrics: None,
         }
     }
 }
@@ -54,6 +61,21 @@ impl TelemetryConfig {
         validate_telemetry_level(&self.level)?;
         if let Some(sink) = self.sink.as_ref() {
             validate_telemetry_sink(sink)?;
+        }
+        if let Some(metrics) = self.metrics.as_ref() {
+            validate_telemetry_metrics(metrics)?;
+            if metrics.enabled && !self.enabled {
+                return Err(ConfigFieldError::new(
+                    "daemon.telemetry.metrics.enabled",
+                    "enabled metrics require enabled telemetry",
+                ));
+            }
+            if metrics.enabled && !self.uses_otlp() {
+                return Err(ConfigFieldError::new(
+                    "daemon.telemetry.metrics",
+                    "enabled metrics require an otlp telemetry sink",
+                ));
+            }
         }
         if self.enabled && self.sink.is_none() {
             return Err(ConfigFieldError::new(
@@ -111,6 +133,24 @@ impl TelemetryConfig {
 
     fn uses_otlp(&self) -> bool {
         matches!(self.sink, Some(TelemetrySink::Otlp { .. }))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TelemetryMetricsConfig {
+    pub enabled: bool,
+    pub export_interval_ms: u64,
+    pub cgroup_samples_enabled: bool,
+}
+
+impl Default for TelemetryMetricsConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            export_interval_ms: 60_000,
+            cgroup_samples_enabled: true,
+        }
     }
 }
 
@@ -197,6 +237,7 @@ pub fn install(
             *timeout_ms,
             *queue_size,
             sandbox_id,
+            config.metrics.as_ref(),
         ),
         None => Err(TelemetryInstallError::MissingSink),
     }
@@ -236,6 +277,7 @@ fn init_otlp_subscriber(
     timeout_ms: u64,
     queue_size: usize,
     sandbox_id: Option<&str>,
+    metrics_config: Option<&TelemetryMetricsConfig>,
 ) -> Result<TelemetryGuard, TelemetryInstallError> {
     if protocol != OtlpProtocol::Http {
         return Err(TelemetryInstallError::UnsupportedOtlpProtocol);
@@ -258,6 +300,8 @@ fn init_otlp_subscriber(
         .with_resource(otlp_resource(service_name, sandbox_id))
         .with_span_processor(processor)
         .build();
+    let (metrics_provider, metrics_recorder) =
+        init_otlp_metrics(service_name, endpoint, protocol, timeout, sandbox_id, metrics_config)?;
     let tracer = provider.tracer(service_name.to_owned());
     let otel_layer = tracing_opentelemetry::layer()
         .with_tracer(tracer)
@@ -266,31 +310,47 @@ fn init_otlp_subscriber(
         .with(otel_layer)
         .try_init()
         .map_err(|_| TelemetryInstallError::SubscriberAlreadyInstalled)?;
-    Ok(TelemetryGuard::new(provider))
+    Ok(TelemetryGuard::new(
+        provider,
+        metrics_provider,
+        metrics_recorder,
+    ))
 }
 
-pub(crate) fn otlp_batch_config(queue_size: usize, scheduled_delay: Duration) -> BatchConfig {
-    let limits = otlp_batch_limits(queue_size, scheduled_delay);
+fn init_otlp_metrics(
+    service_name: &str,
+    endpoint: &str,
+    protocol: OtlpProtocol,
+    timeout: Duration,
+    sandbox_id: &str,
+    metrics_config: Option<&TelemetryMetricsConfig>,
+) -> Result<
+    (
+        Option<SdkMeterProvider>,
+        RuntimeMetricsRecorderHandle,
+    ),
+    TelemetryInstallError,
+> {
+    let Some(metrics_config) = metrics_config.filter(|config| config.enabled) else {
+        return Ok((None, noop_runtime_metrics_recorder()));
+    };
+    let (provider, recorder) = metrics::init_otlp_metrics(
+        service_name,
+        endpoint,
+        protocol,
+        timeout,
+        sandbox_id,
+        metrics_config,
+    )?;
+    Ok((Some(provider), recorder))
+}
+
+fn otlp_batch_config(queue_size: usize, scheduled_delay: Duration) -> BatchConfig {
     BatchConfigBuilder::default()
-        .with_max_queue_size(limits.max_queue_size)
-        .with_max_export_batch_size(limits.max_export_batch_size)
-        .with_scheduled_delay(limits.scheduled_delay)
+        .with_max_queue_size(queue_size)
+        .with_max_export_batch_size(queue_size.clamp(1, 512))
+        .with_scheduled_delay(scheduled_delay)
         .build()
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct OtlpBatchLimits {
-    pub(crate) max_queue_size: usize,
-    pub(crate) max_export_batch_size: usize,
-    pub(crate) scheduled_delay: Duration,
-}
-
-pub(crate) fn otlp_batch_limits(queue_size: usize, scheduled_delay: Duration) -> OtlpBatchLimits {
-    OtlpBatchLimits {
-        max_queue_size: queue_size,
-        max_export_batch_size: queue_size.clamp(1, 512),
-        scheduled_delay,
-    }
 }
 
 pub(crate) fn otlp_resource(service_name: &str, sandbox_id: &str) -> Resource {
@@ -337,6 +397,14 @@ fn validate_telemetry_sink(sink: &TelemetrySink) -> Result<(), ConfigFieldError>
     }
 }
 
+fn validate_telemetry_metrics(metrics: &TelemetryMetricsConfig) -> Result<(), ConfigFieldError> {
+    require_u64_at_least(
+        metrics.export_interval_ms,
+        1,
+        "daemon.telemetry.metrics.export_interval_ms",
+    )
+}
+
 fn validate_telemetry_level(level: &str) -> Result<(), ConfigFieldError> {
     match level {
         "trace" | "debug" | "info" | "warn" | "error" => Ok(()),
@@ -352,23 +420,38 @@ fn has_dynamic_sandbox_id(value: Option<&str>) -> bool {
 }
 
 pub struct TelemetryGuard {
-    provider: Option<SdkTracerProvider>,
+    trace_provider: Option<SdkTracerProvider>,
+    metrics_provider: Option<SdkMeterProvider>,
+    metrics_recorder: RuntimeMetricsRecorderHandle,
     shutdown_timeout: Duration,
 }
 
 impl TelemetryGuard {
     fn disabled() -> Self {
         Self {
-            provider: None,
+            trace_provider: None,
+            metrics_provider: None,
+            metrics_recorder: noop_runtime_metrics_recorder(),
             shutdown_timeout: Duration::from_millis(OTLP_SHUTDOWN_TIMEOUT_MS),
         }
     }
 
-    fn new(provider: SdkTracerProvider) -> Self {
+    fn new(
+        trace_provider: SdkTracerProvider,
+        metrics_provider: Option<SdkMeterProvider>,
+        metrics_recorder: RuntimeMetricsRecorderHandle,
+    ) -> Self {
         Self {
-            provider: Some(provider),
+            trace_provider: Some(trace_provider),
+            metrics_provider,
+            metrics_recorder,
             shutdown_timeout: Duration::from_millis(OTLP_SHUTDOWN_TIMEOUT_MS),
         }
+    }
+
+    #[must_use]
+    pub fn metrics_recorder(&self) -> RuntimeMetricsRecorderHandle {
+        std::sync::Arc::clone(&self.metrics_recorder)
     }
 
     /// Flush and shut down the daemon-owned telemetry provider.
@@ -376,19 +459,26 @@ impl TelemetryGuard {
     /// # Errors
     /// Returns a bounded shutdown error reported by the OpenTelemetry SDK.
     pub fn shutdown(&mut self) -> Result<(), TelemetryShutdownError> {
-        let Some(provider) = self.provider.take() else {
-            return Ok(());
-        };
-        provider
-            .shutdown_with_timeout(self.shutdown_timeout)
-            .map_err(|err| TelemetryShutdownError::Provider(bounded_shutdown_error(err)))
+        if let Some(metrics_provider) = self.metrics_provider.take() {
+            metrics_provider
+                .shutdown_with_timeout(self.shutdown_timeout)
+                .map_err(|err| TelemetryShutdownError::Provider(bounded_shutdown_error(err)))?;
+        }
+        if let Some(trace_provider) = self.trace_provider.take() {
+            trace_provider
+                .shutdown_with_timeout(self.shutdown_timeout)
+                .map_err(|err| TelemetryShutdownError::Provider(bounded_shutdown_error(err)))?;
+        }
+        Ok(())
     }
 
     #[cfg(test)]
     #[allow(dead_code, reason = "used by path-included daemon integration tests")]
     pub(crate) fn from_provider_for_test(provider: SdkTracerProvider, timeout: Duration) -> Self {
         Self {
-            provider: Some(provider),
+            trace_provider: Some(provider),
+            metrics_provider: None,
+            metrics_recorder: noop_runtime_metrics_recorder(),
             shutdown_timeout: timeout,
         }
     }
@@ -425,6 +515,8 @@ pub enum TelemetryInstallError {
     UnsupportedOtlpProtocol,
     #[error("failed to build OTLP exporter: {0}")]
     ExporterBuild(String),
+    #[error("failed to build OTLP metrics exporter: {0}")]
+    MetricsExporterBuild(String),
     #[error("tracing subscriber is already installed")]
     SubscriberAlreadyInstalled,
 }

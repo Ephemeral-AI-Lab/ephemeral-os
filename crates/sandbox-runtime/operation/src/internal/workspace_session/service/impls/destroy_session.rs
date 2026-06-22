@@ -1,4 +1,7 @@
+use std::time::Instant;
+
 use crate::workspace_crate::{DestroyWorkspaceRequest, DestroyWorkspaceResult};
+use crate::workspace_crate::{RuntimeMetricStatus, WorkspacePhase};
 use crate::workspace_session::{WorkspaceSessionError, WorkspaceSessionService};
 
 use super::super::model::WorkspaceSessionHandler;
@@ -23,7 +26,13 @@ impl WorkspaceSessionService {
             active_leases_after = field::Empty,
         );
         let _span_guard = span.enter();
+        let started = Instant::now();
         let result = self.destroy_session_inner(handler, request);
+        self.metrics().record_workspace_phase(
+            WorkspacePhase::DestroySession,
+            workspace_status(&result),
+            started.elapsed(),
+        );
         record_destroy_session_result(&span, &result);
         result
     }
@@ -60,6 +69,13 @@ impl WorkspaceSessionService {
             }
             Err(error) => Err(WorkspaceSessionError::Workspace(error)),
         }
+    }
+}
+
+fn workspace_status<T>(result: &Result<T, WorkspaceSessionError>) -> RuntimeMetricStatus {
+    match result {
+        Ok(_) => RuntimeMetricStatus::Ok,
+        Err(_) => RuntimeMetricStatus::Error,
     }
 }
 

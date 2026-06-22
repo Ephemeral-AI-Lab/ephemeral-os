@@ -1,7 +1,10 @@
+use std::time::Instant;
+
 use crate::layerstack::{
     LayerStackRevision, LayerStackService, LayerStackServiceError, PublishChangesRequest,
     PublishChangesResult,
 };
+use crate::workspace_crate::{PublishRejectionReason, RuntimeMetricStatus, WorkspacePhase};
 use tracing::{field, Span};
 
 impl LayerStackService {
@@ -34,7 +37,18 @@ impl LayerStackService {
             protected_drop_reason = field::Empty,
         );
         let _span_guard = span.enter();
+        let started = Instant::now();
         let result = self.publish_changes_inner(request);
+        self.metrics().record_workspace_phase(
+            WorkspacePhase::PublishChanges,
+            publish_status(&result),
+            started.elapsed(),
+        );
+        if let Err(error) = &result {
+            if let Some(reason) = publish_rejection_metric_reason(error) {
+                self.metrics().record_publish_rejection(reason);
+            }
+        }
         record_publish_result(&span, &result);
         result
     }
@@ -261,6 +275,69 @@ fn publish_reject_reason(reason: sandbox_runtime_layerstack::PublishRejectReason
         }
         sandbox_runtime_layerstack::PublishRejectReason::RoutePreparationFailed => {
             "route_preparation_failed"
+        }
+    }
+}
+
+fn publish_status(
+    result: &Result<PublishChangesResult, LayerStackServiceError>,
+) -> RuntimeMetricStatus {
+    match result {
+        Ok(_) => RuntimeMetricStatus::Ok,
+        Err(LayerStackServiceError::PublishRejected { .. }) => RuntimeMetricStatus::Rejected,
+        Err(_) => RuntimeMetricStatus::Error,
+    }
+}
+
+fn publish_rejection_metric_reason(
+    error: &LayerStackServiceError,
+) -> Option<PublishRejectionReason> {
+    match error {
+        LayerStackServiceError::InvalidBaseRevision { .. } => {
+            Some(PublishRejectionReason::InvalidBaseRevision)
+        }
+        LayerStackServiceError::PublishRejected { rejection } => {
+            Some(publish_reject_metric_reason(rejection.reason))
+        }
+        LayerStackServiceError::LayerStack { operation, error } if *operation == "publish" => {
+            match error {
+                sandbox_runtime_layerstack::LayerStackError::ManifestConflict { .. } => {
+                    Some(PublishRejectionReason::LayerStackConflict)
+                }
+                _ => None,
+            }
+        }
+        LayerStackServiceError::Init { .. } | LayerStackServiceError::LayerStack { .. } => None,
+    }
+}
+
+fn publish_reject_metric_reason(
+    reason: sandbox_runtime_layerstack::PublishRejectReason,
+) -> PublishRejectionReason {
+    match reason {
+        sandbox_runtime_layerstack::PublishRejectReason::InvalidBaseRevision => {
+            PublishRejectionReason::InvalidBaseRevision
+        }
+        sandbox_runtime_layerstack::PublishRejectReason::GitMutationForbidden => {
+            PublishRejectionReason::GitMutationForbidden
+        }
+        sandbox_runtime_layerstack::PublishRejectReason::ProtectedPath => {
+            PublishRejectionReason::ProtectedPath
+        }
+        sandbox_runtime_layerstack::PublishRejectReason::SourceConflict => {
+            PublishRejectionReason::SourceConflict
+        }
+        sandbox_runtime_layerstack::PublishRejectReason::OpaqueDirProtectedDescendant => {
+            PublishRejectionReason::OpaqueDirProtectedDescendant
+        }
+        sandbox_runtime_layerstack::PublishRejectReason::OpaqueDirMixedRoutes => {
+            PublishRejectionReason::OpaqueDirMixedRoutes
+        }
+        sandbox_runtime_layerstack::PublishRejectReason::OpaqueDirExpansionLimit => {
+            PublishRejectionReason::OpaqueDirExpansionLimit
+        }
+        sandbox_runtime_layerstack::PublishRejectReason::RoutePreparationFailed => {
+            PublishRejectionReason::RoutePreparationFailed
         }
     }
 }

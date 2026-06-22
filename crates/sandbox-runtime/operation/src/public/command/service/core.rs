@@ -2,6 +2,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 use crate::command::{CommandLaunchDriver, CommandProcessStore, RealCommandLaunchDriver};
 use crate::layerstack::LayerStackService;
+use crate::workspace_crate::{noop_runtime_metrics_recorder, RuntimeMetricsRecorderHandle};
 use crate::workspace_remount::{ProcProcessGroupController, ProcessGroupController};
 use crate::workspace_session::WorkspaceSessionService;
 
@@ -12,6 +13,7 @@ pub struct CommandOperationService {
     launch_driver: Arc<dyn CommandLaunchDriver>,
     remount_controller: Arc<dyn ProcessGroupController>,
     remount_admission: Mutex<()>,
+    metrics: RuntimeMetricsRecorderHandle,
 }
 
 impl CommandOperationService {
@@ -21,11 +23,27 @@ impl CommandOperationService {
         _layerstack: Arc<LayerStackService>,
         config: ::sandbox_runtime_command::CommandConfig,
     ) -> Self {
+        Self::new_with_metrics(
+            workspace,
+            _layerstack,
+            config,
+            noop_runtime_metrics_recorder(),
+        )
+    }
+
+    #[must_use]
+    pub fn new_with_metrics(
+        workspace: Arc<WorkspaceSessionService>,
+        _layerstack: Arc<LayerStackService>,
+        config: ::sandbox_runtime_command::CommandConfig,
+        metrics: RuntimeMetricsRecorderHandle,
+    ) -> Self {
         Self::from_parts(
             workspace,
             config,
             Arc::new(RealCommandLaunchDriver),
             Arc::new(ProcProcessGroupController),
+            metrics,
         )
     }
 
@@ -41,6 +59,7 @@ impl CommandOperationService {
             config,
             launch_driver,
             Arc::new(ProcProcessGroupController),
+            noop_runtime_metrics_recorder(),
         )
     }
 
@@ -57,6 +76,7 @@ impl CommandOperationService {
             config,
             launch_driver,
             Arc::new(ProcProcessGroupController),
+            noop_runtime_metrics_recorder(),
         )
     }
 
@@ -68,7 +88,13 @@ impl CommandOperationService {
         launch_driver: Arc<dyn CommandLaunchDriver>,
         remount_controller: Arc<dyn ProcessGroupController>,
     ) -> Self {
-        Self::from_parts(workspace, config, launch_driver, remount_controller)
+        Self::from_parts(
+            workspace,
+            config,
+            launch_driver,
+            remount_controller,
+            noop_runtime_metrics_recorder(),
+        )
     }
 
     fn from_parts(
@@ -76,6 +102,7 @@ impl CommandOperationService {
         config: ::sandbox_runtime_command::CommandConfig,
         launch_driver: Arc<dyn CommandLaunchDriver>,
         remount_controller: Arc<dyn ProcessGroupController>,
+        metrics: RuntimeMetricsRecorderHandle,
     ) -> Self {
         Self {
             workspace,
@@ -84,6 +111,7 @@ impl CommandOperationService {
             launch_driver,
             remount_controller,
             remount_admission: Mutex::new(()),
+            metrics,
         }
     }
 
@@ -110,6 +138,11 @@ impl CommandOperationService {
     #[must_use]
     pub(crate) fn remount_controller(&self) -> Arc<dyn ProcessGroupController> {
         Arc::clone(&self.remount_controller)
+    }
+
+    #[must_use]
+    pub(crate) fn metrics(&self) -> &RuntimeMetricsRecorderHandle {
+        &self.metrics
     }
 
     pub(crate) fn lock_remount_admission(&self) -> MutexGuard<'_, ()> {

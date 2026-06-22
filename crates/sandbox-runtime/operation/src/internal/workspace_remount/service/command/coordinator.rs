@@ -30,6 +30,7 @@ impl CommandRemountCoordinator for CommandOperationService {
             cancellation,
             switch_state: RemountSwitchState::Quiescing,
             controller: self.remount_controller(),
+            metrics: Arc::clone(self.metrics()),
         };
         if command_session_ids.is_empty() {
             quiesce.switch_state = RemountSwitchState::ReadyToSwitch;
