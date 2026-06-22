@@ -516,9 +516,9 @@ daemon exporter stream.
 Protocol responses may eventually expose trace lookup data as response metadata,
 not as operation-specific result fields. That is a later versioned protocol
 change because the current response contract returns the operation payload
-directly. First-rollout tracing must not depend on this shape. If telemetry is
-disabled, or if a later sampling policy decides not to sample a request,
-`trace_id` is absent. Protocol results and typed errors remain authoritative.
+directly. Phases 1-3 must not depend on this shape. If telemetry is disabled,
+or if a later sampling policy decides not to sample a request, `trace_id` is
+absent. Protocol results and typed errors remain authoritative.
 
 Illustrative future shape, not a Phase 1-3 response contract:
 
@@ -729,16 +729,16 @@ record id. The concrete daemon starter should pass that id to
 Phases 1-3 should not change `sandbox_protocol::Response`. Trace IDs in
 protocol responses are a later protocol-envelope change.
 
-Expected changed files and net LOC:
+Expected changed files for the combined Phases 1-3 trace rollout:
 
-| File | Expected Change | Net LOC |
+| File | Expected Change | Changed LOC |
 | --- | --- | ---: |
-| `Cargo.toml` | workspace dependencies for `tracing`, `tracing-subscriber`, OTel crates | +6 to +10 |
+| `Cargo.toml` | workspace dependencies for `tracing`, `tracing-subscriber`, and Phase 3 OTel crates | +6 to +10 |
 | `config/prd.yml` | `daemon.telemetry` default-disabled config | +6 to +10 |
 | `crates/sandbox-runtime/config/src/configs/daemon.rs` | telemetry config structs/enums and validation | +90 to +130 |
 | `crates/sandbox-runtime/config/tests/unit/configs/daemon.rs` | config deserialize/validation tests | +35 to +60 |
 | `crates/sandbox-daemon/Cargo.toml` | daemon telemetry dependencies | +6 to +10 |
-| `crates/sandbox-daemon/src/telemetry.rs` | subscriber setup, local JSON stream, OTLP setup, bounded exporter behavior, flush guard, resource attributes | +220 to +340 |
+| `crates/sandbox-daemon/src/telemetry.rs` | subscriber setup, local JSON stream, Phase 3 OTLP setup, bounded exporter behavior, tracked shutdown flush, resource attributes | +220 to +340 |
 | `crates/sandbox-daemon/src/serve.rs` | parse `--sandbox-id`, init telemetry, reject local JSON streams with detached spawn, pass identity to server config | +60 to +110 |
 | `crates/sandbox-daemon/src/server/runtime.rs` | `sandbox_id` on `ServerConfig` | +8 to +20 |
 | `crates/sandbox-daemon/src/server/dispatch.rs` | `daemon.request` root span and request fields | +30 to +60 |
