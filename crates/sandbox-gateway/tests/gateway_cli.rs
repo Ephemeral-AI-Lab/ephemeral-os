@@ -13,7 +13,7 @@ use sandbox_gateway::cli::request_builder::{
     BuildRequestInput,
 };
 use sandbox_protocol::{
-    CliOperationCatalogDocument, OperationExecutionSpace, OperationScope, Request,
+    CliOperationCatalogDocument, CliOperationExecutionSpace, CliOperationScope, Request,
 };
 use serde_json::{json, Value};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -25,7 +25,7 @@ type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 fn manager_operation_uses_system_scope() -> TestResult {
     let request = build_manager_request("list_sandboxes", &[])?;
 
-    assert_eq!(request.scope, OperationScope::System);
+    assert_eq!(request.scope, CliOperationScope::System);
     assert_eq!(request.args, json!({}));
     Ok(())
 }
@@ -36,7 +36,7 @@ fn runtime_operation_requires_sandbox_without_default() -> TestResult {
     let config = config(None);
     let error = build_request_from_catalog_with_id(
         BuildRequestInput {
-            execution_space: OperationExecutionSpace::Runtime,
+            execution_space: CliOperationExecutionSpace::Runtime,
             operation: "exec_command".to_owned(),
             operation_argv: vec!["pwd".to_owned()],
             sandbox_id: None,
@@ -58,7 +58,7 @@ fn runtime_operation_uses_default_sandbox_when_configured() -> TestResult {
 
     assert_eq!(
         request.scope,
-        OperationScope::Sandbox {
+        CliOperationScope::Sandbox {
             sandbox_id: "default-sbox".to_owned()
         }
     );
@@ -72,7 +72,7 @@ fn runtime_sandbox_id_populates_sandbox_scope() -> TestResult {
 
     assert_eq!(
         request.scope,
-        OperationScope::Sandbox {
+        CliOperationScope::Sandbox {
             sandbox_id: "sbox-1".to_owned()
         }
     );
@@ -100,7 +100,7 @@ fn manager_request_construction_rejects_runtime_catalog() -> TestResult {
     let catalog = runtime_catalog()?;
     let error = build_request_from_catalog_with_id(
         BuildRequestInput {
-            execution_space: OperationExecutionSpace::Manager,
+            execution_space: CliOperationExecutionSpace::Manager,
             operation: "exec_command".to_owned(),
             operation_argv: vec![],
             sandbox_id: None,
@@ -124,7 +124,7 @@ fn runtime_request_construction_rejects_manager_cli_catalog() -> TestResult {
     let catalog = manager_catalog()?;
     let error = build_request_from_catalog_with_id(
         BuildRequestInput {
-            execution_space: OperationExecutionSpace::Runtime,
+            execution_space: CliOperationExecutionSpace::Runtime,
             operation: "create_sandbox".to_owned(),
             operation_argv: vec![],
             sandbox_id: Some("sbox-1".to_owned()),
@@ -150,7 +150,7 @@ fn manager_execution_space_uses_system_scope_for_create_sandbox() -> TestResult 
         &["--image", "ubuntu:24.04", "--workspace-root", "/testbed"],
     )?;
 
-    assert_eq!(request.scope, OperationScope::System);
+    assert_eq!(request.scope, CliOperationScope::System);
     Ok(())
 }
 
@@ -203,7 +203,7 @@ fn read_command_lines_maps_command_session_id_start_offset_and_limit_flags() -> 
     let catalog = runtime_catalog()?;
     let request = build_request_from_catalog_with_id(
         BuildRequestInput {
-            execution_space: OperationExecutionSpace::Runtime,
+            execution_space: CliOperationExecutionSpace::Runtime,
             operation: "read_command_lines".to_owned(),
             operation_argv: vec![
                 "--command-session-id".to_owned(),
@@ -236,7 +236,7 @@ fn read_command_lines_omits_default_window_args_when_flags_are_absent() -> TestR
     let catalog = runtime_catalog()?;
     let request = build_request_from_catalog_with_id(
         BuildRequestInput {
-            execution_space: OperationExecutionSpace::Runtime,
+            execution_space: CliOperationExecutionSpace::Runtime,
             operation: "read_command_lines".to_owned(),
             operation_argv: vec!["--command-session-id".to_owned(), "cmd-1".to_owned()],
             sandbox_id: Some("sbox-1".to_owned()),
@@ -260,7 +260,7 @@ fn gateway_cli_maps_cgroup_monitor_args_from_runtime_catalog() -> TestResult {
     let catalog = runtime_catalog()?;
     let request = build_request_from_catalog_with_id(
         BuildRequestInput {
-            execution_space: OperationExecutionSpace::Runtime,
+            execution_space: CliOperationExecutionSpace::Runtime,
             operation: "read_cgroup_monitor_samples".to_owned(),
             operation_argv: vec![
                 "--workspace-session-id".to_owned(),
@@ -601,7 +601,12 @@ async fn gateway_client_sends_one_request_and_reads_one_response() -> TestResult
     });
 
     let client = GatewayClient::new(&socket_path);
-    let request = Request::new("list_sandboxes", "req-1", OperationScope::System, json!({}));
+    let request = Request::new(
+        "list_sandboxes",
+        "req-1",
+        CliOperationScope::System,
+        json!({}),
+    );
     let response = client.send(&request).await?;
     let sent = rx.await?;
     handle.await??;
@@ -622,7 +627,7 @@ fn build_manager_request(
     let catalog = manager_catalog()?;
     Ok(build_request_from_catalog_with_id(
         BuildRequestInput {
-            execution_space: OperationExecutionSpace::Manager,
+            execution_space: CliOperationExecutionSpace::Manager,
             operation: operation.to_owned(),
             operation_argv: argv.iter().map(ToString::to_string).collect(),
             sandbox_id: None,
@@ -640,7 +645,7 @@ fn build_runtime_request(
     let catalog = runtime_catalog()?;
     Ok(build_request_from_catalog_with_id(
         BuildRequestInput {
-            execution_space: OperationExecutionSpace::Runtime,
+            execution_space: CliOperationExecutionSpace::Runtime,
             operation: "exec_command".to_owned(),
             operation_argv: argv.iter().map(ToString::to_string).collect(),
             sandbox_id: sandbox_id.map(str::to_owned),

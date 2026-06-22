@@ -1,7 +1,7 @@
 use sandbox_protocol::{
     catalog_from_value, catalog_to_value, ArgKind, CliOperationCatalog,
-    CliOperationCatalogDocument, CliOperationSpecDocument, OperationExecutionSpace, OperationScope,
-    Request,
+    CliOperationCatalogDocument, CliOperationExecutionSpace, CliOperationScope,
+    CliOperationSpecDocument, Request,
 };
 use serde_json::{Map, Number, Value};
 
@@ -9,7 +9,7 @@ use crate::cli::config::GatewayConfig;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BuildRequestInput {
-    pub execution_space: OperationExecutionSpace,
+    pub execution_space: CliOperationExecutionSpace,
     pub operation: String,
     pub operation_argv: Vec<String>,
     pub sandbox_id: Option<String>,
@@ -72,9 +72,9 @@ pub fn build_request_from_catalog_with_id(
     let spec = find_cli_operation_spec(catalog, &input.operation)?;
     let args = build_args(spec, &input.operation_argv)?;
     let scope = match input.execution_space {
-        OperationExecutionSpace::Manager => OperationScope::system(),
-        OperationExecutionSpace::Runtime => {
-            OperationScope::sandbox(resolve_runtime_sandbox_id(input.sandbox_id, config)?)
+        CliOperationExecutionSpace::Manager => CliOperationScope::system(),
+        CliOperationExecutionSpace::Runtime => {
+            CliOperationScope::sandbox(resolve_runtime_sandbox_id(input.sandbox_id, config)?)
         }
     };
 

@@ -1,11 +1,11 @@
 use crate::catalog::catalog_arg_kind_name;
 use crate::{
     operation_execution_space_name, ArgSpecDocument, CliOperationCatalogDocument,
-    CliOperationFamilyDocument, CliOperationSpecDocument, OperationExecutionSpace,
+    CliOperationExecutionSpace, CliOperationFamilyDocument, CliOperationSpecDocument,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct OperationSearchResult {
+pub struct CliOperationSearchResult {
     pub name: String,
     pub family: String,
     pub summary: String,
@@ -13,9 +13,9 @@ pub struct OperationSearchResult {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HelpRenderError {
-    operation_execution_space: OperationExecutionSpace,
+    operation_execution_space: CliOperationExecutionSpace,
     operation: String,
-    suggestions: Vec<OperationSearchResult>,
+    suggestions: Vec<CliOperationSearchResult>,
 }
 
 impl HelpRenderError {
@@ -25,7 +25,7 @@ impl HelpRenderError {
     }
 
     #[must_use]
-    pub fn suggestions(&self) -> &[OperationSearchResult] {
+    pub fn suggestions(&self) -> &[CliOperationSearchResult] {
         &self.suggestions
     }
 }
@@ -105,7 +105,7 @@ pub fn render_operation_help(
 pub fn search_operation_help(
     catalog: &CliOperationCatalogDocument,
     query: &str,
-) -> Vec<OperationSearchResult> {
+) -> Vec<CliOperationSearchResult> {
     let query = query.trim().to_ascii_lowercase();
     if query.is_empty() {
         return Vec::new();
@@ -115,7 +115,7 @@ pub fn search_operation_help(
         .operations
         .iter()
         .filter(|operation| operation_matches_query(catalog, operation, &query))
-        .map(|operation| OperationSearchResult {
+        .map(|operation| CliOperationSearchResult {
             name: operation.name.clone(),
             family: operation.family.clone(),
             summary: operation.summary.clone(),
@@ -237,10 +237,10 @@ fn operations_for_family<'a>(
         .collect()
 }
 
-fn catalog_title(operation_execution_space: OperationExecutionSpace) -> &'static str {
+fn catalog_title(operation_execution_space: CliOperationExecutionSpace) -> &'static str {
     match operation_execution_space {
-        OperationExecutionSpace::Manager => "Sandbox Manager Help",
-        OperationExecutionSpace::Runtime => "Sandbox Runtime Help",
+        CliOperationExecutionSpace::Manager => "Sandbox Manager Help",
+        CliOperationExecutionSpace::Runtime => "Sandbox Runtime Help",
     }
 }
 

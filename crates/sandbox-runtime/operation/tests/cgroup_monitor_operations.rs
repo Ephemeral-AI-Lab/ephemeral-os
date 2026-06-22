@@ -3,7 +3,7 @@ mod support;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use sandbox_protocol::{OperationScope, Request};
+use sandbox_protocol::{CliOperationScope, Request};
 use sandbox_runtime::cgroup_monitor::{InspectCgroupMonitorInput, ReadCgroupMonitorSamplesInput};
 use sandbox_runtime::command::CommandSessionId;
 use sandbox_runtime::layerstack::LayerStackService;
@@ -61,7 +61,7 @@ fn cgroup_monitor_inspect_reads_session_target_without_command_payload(
         &Request::new(
             "inspect_cgroup_monitor",
             "req-1",
-            OperationScope::system(),
+            CliOperationScope::system(),
             json!({ "workspace_session_id": "ws-cgroup" }),
         ),
     )

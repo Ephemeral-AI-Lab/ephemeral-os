@@ -30,7 +30,7 @@ sandbox-config
 |---|---|---|---|
 | `sandbox-gateway` | bin+lib | own the public gateway listener and the `sandbox-cli` protocol client | own manager or runtime behavior |
 | `sandbox-manager` | lib | own sandbox lifecycle, daemon endpoint tracking, and manager operations | implement runtime command/workspace semantics |
-| `sandbox-protocol` | lib | own request/response DTOs, framing, catalog, and manual metadata | depend on manager, daemon, or runtime implementation crates |
+| `sandbox-protocol` | lib | own request/response DTOs, framing, catalog, and help metadata | depend on manager, daemon, or runtime implementation crates |
 | `sandbox-daemon` | bin+lib | bind daemon transport and dispatch runtime requests | know about Docker fleets |
 | `sandbox-runtime` | lib | command operation surface plus internal workspace session/remount orchestration | own low-level runtime primitives |
 | `sandbox-runtime-command` | lib | PTY, transcript, process, process-group primitives | own workspace lifecycle |

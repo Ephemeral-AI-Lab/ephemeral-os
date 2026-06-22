@@ -1,4 +1,4 @@
-use sandbox_protocol::{OperationScope, Request};
+use sandbox_protocol::{CliOperationScope, Request};
 
 use crate::{ManagerError, ManagerServices, SandboxDaemonEndpoint, SandboxId, SandboxState};
 
@@ -11,10 +11,10 @@ pub(super) fn forward_sandbox_request(
     services.daemon_client.invoke(&endpoint, request)
 }
 
-fn sandbox_id(scope: &OperationScope) -> Result<SandboxId, ManagerError> {
+fn sandbox_id(scope: &CliOperationScope) -> Result<SandboxId, ManagerError> {
     match scope {
-        OperationScope::Sandbox { sandbox_id } => SandboxId::new(sandbox_id.clone()),
-        OperationScope::System => Err(ManagerError::InvalidSandboxId {
+        CliOperationScope::Sandbox { sandbox_id } => SandboxId::new(sandbox_id.clone()),
+        CliOperationScope::System => Err(ManagerError::InvalidSandboxId {
             value: "system".to_owned(),
         }),
     }

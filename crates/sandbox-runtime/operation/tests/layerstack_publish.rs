@@ -12,7 +12,8 @@ use sandbox_runtime_workspace::{
 
 use support::{
     build_services_with_launch_driver_and_layerstack, create_request, success_exit,
-    trace::capture_traces, FakeLaunchDriver, FakeWorkspaceService,
+    trace::{capture_traces, with_trace_capture_lock},
+    FakeLaunchDriver, FakeWorkspaceService,
 };
 
 struct PublishFixture {
@@ -180,8 +181,8 @@ fn layerstack_service_rejects_invalid_base_revision(
     let base = fixture.build_base()?;
     let service = fixture.service()?;
 
-    let error = service
-        .publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
+    let error = with_trace_capture_lock(|| {
+        service.publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
             expected_base: sandbox_runtime::layerstack::LayerStackRevision {
                 manifest_version: base.version,
                 root_hash: "not-the-base-root".to_owned(),
@@ -191,7 +192,8 @@ fn layerstack_service_rejects_invalid_base_revision(
             protected_drops: Vec::new(),
             changes: Vec::new(),
         })
-        .expect_err("invalid base metadata rejects before publish");
+    })
+    .expect_err("invalid base metadata rejects before publish");
 
     assert!(matches!(
         error,
@@ -213,8 +215,8 @@ fn layerstack_service_preserves_structured_publish_rejection(
         layer_count: base.layers.len(),
     };
 
-    let error = service
-        .publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
+    let error = with_trace_capture_lock(|| {
+        service.publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
             expected_base: revision,
             base_manifest: base,
             protected_drops: Vec::new(),
@@ -223,7 +225,8 @@ fn layerstack_service_preserves_structured_publish_rejection(
                 content: b"bad\n".to_vec(),
             }],
         })
-        .expect_err("git mutation rejects publish");
+    })
+    .expect_err("git mutation rejects publish");
 
     match error {
         sandbox_runtime::layerstack::LayerStackServiceError::PublishRejected { rejection } => {
@@ -254,11 +257,13 @@ fn layerstack_service_empty_changes_return_no_op_revision(
         layer_count: base.layers.len(),
     };
 
-    let result = service.publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
-        expected_base: revision.clone(),
-        base_manifest: base.clone(),
-        protected_drops: Vec::new(),
-        changes: Vec::new(),
+    let result = with_trace_capture_lock(|| {
+        service.publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
+            expected_base: revision.clone(),
+            base_manifest: base.clone(),
+            protected_drops: Vec::new(),
+            changes: Vec::new(),
+        })
     })?;
 
     assert!(result.no_op);
@@ -282,14 +287,16 @@ fn layerstack_service_ignored_only_publish_preserves_route_summary(
         layer_count: base.layers.len(),
     };
 
-    let result = service.publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
-        expected_base: revision,
-        base_manifest: base,
-        protected_drops: Vec::new(),
-        changes: vec![sandbox_runtime_layerstack::LayerChange::Write {
-            path: lp("out.log"),
-            content: b"ignored\n".to_vec(),
-        }],
+    let result = with_trace_capture_lock(|| {
+        service.publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
+            expected_base: revision,
+            base_manifest: base,
+            protected_drops: Vec::new(),
+            changes: vec![sandbox_runtime_layerstack::LayerChange::Write {
+                path: lp("out.log"),
+                content: b"ignored\n".to_vec(),
+            }],
+        })
     })?;
 
     assert!(!result.no_op);
@@ -435,14 +442,16 @@ fn layerstack_publish_records_source_conflict_as_occ_event_without_path_leaks(
         root_hash: sandbox_runtime_layerstack::manifest_root_hash(&base),
         layer_count: base.layers.len(),
     };
-    service.publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
-        expected_base: revision.clone(),
-        base_manifest: base.clone(),
-        protected_drops: Vec::new(),
-        changes: vec![sandbox_runtime_layerstack::LayerChange::Write {
-            path: lp("README.md"),
-            content: b"active\n".to_vec(),
-        }],
+    with_trace_capture_lock(|| {
+        service.publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
+            expected_base: revision.clone(),
+            base_manifest: base.clone(),
+            protected_drops: Vec::new(),
+            changes: vec![sandbox_runtime_layerstack::LayerChange::Write {
+                path: lp("README.md"),
+                content: b"active\n".to_vec(),
+            }],
+        })
     })?;
 
     let traces = capture_traces(|| {

@@ -5,14 +5,14 @@ use serde_json::{json, Map, Value};
 use crate::{ArgCliSpec, ArgKind, ArgSpec, CliOperationFamilySpec, CliOperationSpec, CliSpec};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum OperationExecutionSpace {
+pub enum CliOperationExecutionSpace {
     Manager,
     Runtime,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CliOperationCatalog {
-    pub operation_execution_space: OperationExecutionSpace,
+    pub operation_execution_space: CliOperationExecutionSpace,
     pub families: &'static [&'static CliOperationFamilySpec],
     pub operations: &'static [&'static CliOperationSpec],
 }
@@ -20,7 +20,7 @@ pub struct CliOperationCatalog {
 impl CliOperationCatalog {
     #[must_use]
     pub const fn new(
-        operation_execution_space: OperationExecutionSpace,
+        operation_execution_space: CliOperationExecutionSpace,
         families: &'static [&'static CliOperationFamilySpec],
         operations: &'static [&'static CliOperationSpec],
     ) -> Self {
@@ -34,7 +34,7 @@ impl CliOperationCatalog {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CliOperationCatalogDocument {
-    pub operation_execution_space: OperationExecutionSpace,
+    pub operation_execution_space: CliOperationExecutionSpace,
     pub families: Vec<CliOperationFamilyDocument>,
     pub operations: Vec<CliOperationSpecDocument>,
 }
@@ -144,11 +144,11 @@ pub fn catalog_from_value(
 
 #[must_use]
 pub const fn operation_execution_space_name(
-    operation_execution_space: OperationExecutionSpace,
+    operation_execution_space: CliOperationExecutionSpace,
 ) -> &'static str {
     match operation_execution_space {
-        OperationExecutionSpace::Manager => "manager",
-        OperationExecutionSpace::Runtime => "runtime",
+        CliOperationExecutionSpace::Manager => "manager",
+        CliOperationExecutionSpace::Runtime => "runtime",
     }
 }
 
@@ -334,10 +334,10 @@ fn arg_cli_spec_from_value(value: &Value) -> Result<ArgCliSpecDocument, CatalogD
 
 fn operation_execution_space_from_name(
     value: &str,
-) -> Result<OperationExecutionSpace, CatalogDecodeError> {
+) -> Result<CliOperationExecutionSpace, CatalogDecodeError> {
     match value {
-        "manager" => Ok(OperationExecutionSpace::Manager),
-        "runtime" => Ok(OperationExecutionSpace::Runtime),
+        "manager" => Ok(CliOperationExecutionSpace::Manager),
+        "runtime" => Ok(CliOperationExecutionSpace::Runtime),
         other => Err(decode_error(format!(
             "unknown operation_execution_space: {other}"
         ))),

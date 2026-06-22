@@ -9,7 +9,7 @@ use sandbox_runtime_workspace::model::{
 use sandbox_runtime_workspace::profile::{ResourceCaps, WorkspaceModeManager};
 use sandbox_runtime_workspace::WorkspaceRuntimeService;
 
-use crate::trace_capture::capture_traces;
+use crate::trace_capture::{capture_traces, with_trace_capture_lock};
 
 #[test]
 fn latest_snapshot_returns_readonly_handle_without_lease(
@@ -38,28 +38,30 @@ fn latest_snapshot_returns_readonly_handle_without_lease(
 )]
 fn runtime_service_create_and_destroy_are_backed_by_impl_files(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let fixture = Fixture::new("create-destroy")?;
-    let service = fixture.service();
+    with_trace_capture_lock(|| {
+        let fixture = Fixture::new("create-destroy")?;
+        let service = fixture.service();
 
-    let handle = service.create_workspace(CreateWorkspaceRequest {
-        profile: WorkspaceProfile::HostCompatible,
-    })?;
+        let handle = service.create_workspace(CreateWorkspaceRequest {
+            profile: WorkspaceProfile::HostCompatible,
+        })?;
 
-    assert_eq!(handle.workspace_root, fixture.workspace_root);
-    assert_eq!(handle.profile, WorkspaceProfile::HostCompatible);
-    assert_eq!(handle.snapshot.manifest_version, 1);
-    assert_eq!(
-        sandbox_runtime_layerstack::LayerStack::open(fixture.layer_stack_root.clone())?
-            .active_lease_count(),
-        1
-    );
+        assert_eq!(handle.workspace_root, fixture.workspace_root);
+        assert_eq!(handle.profile, WorkspaceProfile::HostCompatible);
+        assert_eq!(handle.snapshot.manifest_version, 1);
+        assert_eq!(
+            sandbox_runtime_layerstack::LayerStack::open(fixture.layer_stack_root.clone())?
+                .active_lease_count(),
+            1
+        );
 
-    let destroyed = service.destroy_workspace(handle, DestroyWorkspaceRequest::default())?;
+        let destroyed = service.destroy_workspace(handle, DestroyWorkspaceRequest::default())?;
 
-    assert_eq!(destroyed.lease_released, Some(true));
-    assert_eq!(destroyed.lease_release_error, None);
-    assert_eq!(destroyed.active_leases_after, 0);
-    Ok(())
+        assert_eq!(destroyed.lease_released, Some(true));
+        assert_eq!(destroyed.lease_release_error, None);
+        assert_eq!(destroyed.active_leases_after, 0);
+        Ok(())
+    })
 }
 
 #[test]

@@ -6,6 +6,8 @@ use tracing::field::{Field, Visit};
 use tracing::span::{Attributes, Id, Record};
 use tracing::{Event, Metadata, Subscriber};
 
+static TRACE_CAPTURE_LOCK: Mutex<()> = Mutex::new(());
+
 #[derive(Clone)]
 struct TraceCapture {
     next_id: Arc<AtomicU64>,
@@ -105,9 +107,16 @@ impl Visit for TextVisitor {
     }
 }
 
+pub(crate) fn with_trace_capture_lock<T>(run: impl FnOnce() -> T) -> T {
+    let _guard = TRACE_CAPTURE_LOCK.lock().expect("trace capture lock");
+    run()
+}
+
 pub(crate) fn capture_traces(run: impl FnOnce()) -> String {
-    let capture = TraceCapture::default();
-    let reader = capture.clone();
-    tracing::subscriber::with_default(capture, run);
-    reader.output()
+    with_trace_capture_lock(|| {
+        let capture = TraceCapture::default();
+        let reader = capture.clone();
+        tracing::subscriber::with_default(capture, run);
+        reader.output()
+    })
 }

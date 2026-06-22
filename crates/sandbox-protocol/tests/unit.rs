@@ -1,8 +1,8 @@
 use sandbox_protocol::{
     catalog_from_value, catalog_to_value, decode_request_value, render_catalog_help,
     render_operation_help, ArgCliSpec, ArgKind, ArgSpec, CliOperationCatalog,
-    CliOperationFamilySpec, CliOperationSpec, CliSpec, OperationExecutionSpace, OperationScope,
-    Response, DAEMON_AUTH_FIELD,
+    CliOperationExecutionSpace, CliOperationFamilySpec, CliOperationScope, CliOperationSpec,
+    CliSpec, Response, DAEMON_AUTH_FIELD,
 };
 use serde_json::{json, Value};
 
@@ -118,7 +118,7 @@ fn decode_request_accepts_sandbox_scope() {
 
     assert_eq!(
         request.scope,
-        OperationScope::Sandbox {
+        CliOperationScope::Sandbox {
             sandbox_id: "sbox-1".to_owned()
         }
     );
@@ -144,7 +144,7 @@ fn decode_request_rejects_empty_sandbox_scope_id() {
 #[test]
 fn catalog_to_value_serializes_cli_metadata() {
     let value = catalog_to_value(CliOperationCatalog::new(
-        OperationExecutionSpace::Manager,
+        CliOperationExecutionSpace::Manager,
         TEST_FAMILIES,
         TEST_SPECS,
     ));
@@ -218,7 +218,7 @@ fn catalog_from_value_decodes_cli_metadata() {
 
     assert_eq!(
         catalog.operation_execution_space,
-        OperationExecutionSpace::Runtime
+        CliOperationExecutionSpace::Runtime
     );
     assert_eq!(
         catalog.operations[0].args[0]
@@ -403,7 +403,7 @@ fn render_operation_help_unknown_returns_suggestions() {
 #[test]
 fn catalog_to_value_omits_owner_target_fields() {
     let value = catalog_to_value(CliOperationCatalog::new(
-        OperationExecutionSpace::Manager,
+        CliOperationExecutionSpace::Manager,
         TEST_FAMILIES,
         TEST_SPECS,
     ));

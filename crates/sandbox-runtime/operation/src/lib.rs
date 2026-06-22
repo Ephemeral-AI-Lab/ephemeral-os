@@ -8,8 +8,8 @@ mod public;
 
 pub use internal::{layerstack, workspace_remount, workspace_session};
 pub use operation::{
-    ArgCliSpec, ArgKind, ArgSpec, CliOperationCatalog, CliOperationFamilySpec, CliOperationSpec,
-    CliSpec, OperationExecutionSpace,
+    ArgCliSpec, ArgKind, ArgSpec, CliOperationCatalog, CliOperationExecutionSpace,
+    CliOperationFamilySpec, CliOperationSpec, CliSpec,
 };
 pub use public::{cgroup_monitor, command};
 
@@ -39,7 +39,7 @@ pub fn cli_operation_families() -> &'static [&'static CliOperationFamilySpec] {
 #[must_use]
 pub fn cli_operation_catalog() -> CliOperationCatalog {
     CliOperationCatalog::new(
-        OperationExecutionSpace::Runtime,
+        CliOperationExecutionSpace::Runtime,
         cli_operation_families(),
         cli_operation_specs(),
     )

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use sandbox_protocol::{OperationScope, Request, Response};
+use sandbox_protocol::{CliOperationScope, Request, Response};
 
 use super::{forward::forward_sandbox_request, SandboxManagerRouter};
 
@@ -10,13 +10,15 @@ impl SandboxManagerRouter {
             .iter()
             .any(|spec| spec.name == request.op);
         match (&request.scope, manager_owned) {
-            (OperationScope::System, true) => self.dispatch_manager_request(request).await,
-            (OperationScope::System, false) => Response::unknown_op(),
-            (OperationScope::Sandbox { .. }, true) => Response::fault(
+            (CliOperationScope::System, true) => self.dispatch_manager_request(request).await,
+            (CliOperationScope::System, false) => Response::unknown_op(),
+            (CliOperationScope::Sandbox { .. }, true) => Response::fault(
                 sandbox_protocol::error_kind::INVALID_REQUEST,
                 "manager operation requires system scope",
             ),
-            (OperationScope::Sandbox { .. }, false) => self.forward_sandbox_request(request).await,
+            (CliOperationScope::Sandbox { .. }, false) => {
+                self.forward_sandbox_request(request).await
+            }
         }
     }
 

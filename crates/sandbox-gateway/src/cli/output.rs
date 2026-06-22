@@ -15,7 +15,7 @@ use crate::cli::request_builder::{
 };
 use sandbox_protocol::{
     render_catalog_help, render_operation_help, CliOperationCatalogDocument,
-    OperationExecutionSpace,
+    CliOperationExecutionSpace,
 };
 
 const EXIT_SUCCESS: u8 = 0;
@@ -119,7 +119,7 @@ where
             };
             let client = GatewayClient::new(config.gateway_socket_path.clone());
             let request_input = BuildRequestInput {
-                execution_space: OperationExecutionSpace::Manager,
+                execution_space: CliOperationExecutionSpace::Manager,
                 operation: command.operation,
                 operation_argv: command.operation_argv,
                 sandbox_id: None,
@@ -163,7 +163,7 @@ where
                 }
             };
             let request_input = BuildRequestInput {
-                execution_space: OperationExecutionSpace::Runtime,
+                execution_space: CliOperationExecutionSpace::Runtime,
                 operation: command.operation,
                 operation_argv: command.operation_argv,
                 sandbox_id: Some(sandbox_id),

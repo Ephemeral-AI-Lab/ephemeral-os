@@ -3,13 +3,13 @@ use serde_json::{Map, Value};
 
 use crate::error_kind;
 use crate::response::Response;
-use crate::scope::OperationScope;
+use crate::scope::CliOperationScope;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Request {
     pub op: String,
     pub request_id: String,
-    pub scope: OperationScope,
+    pub scope: CliOperationScope,
     pub args: Value,
 }
 
@@ -18,7 +18,7 @@ impl Request {
     pub fn new(
         op: impl Into<String>,
         request_id: impl Into<String>,
-        scope: OperationScope,
+        scope: CliOperationScope,
         args: Value,
     ) -> Self {
         Self {
@@ -141,7 +141,7 @@ fn decode_request_object(mut object: Map<String, Value>) -> Result<Request, Requ
     let op = remove_request_string(&mut object, "op")?;
     let request_id = remove_request_string(&mut object, "request_id")?;
     let scope = match object.remove("scope") {
-        Some(scope) => serde_json::from_value::<OperationScope>(scope)
+        Some(scope) => serde_json::from_value::<CliOperationScope>(scope)
             .map_err(|error| invalid_request(format!("scope is invalid: {error}")))?,
         None => return Err(invalid_request("scope is required")),
     };

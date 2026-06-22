@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
-use sandbox_protocol::{OperationExecutionSpace, OperationScope, Request};
+use sandbox_protocol::{CliOperationExecutionSpace, CliOperationScope, Request};
 use sandbox_runtime::command::{CommandOperationService, ExecCommandInput};
 use sandbox_runtime::layerstack::LayerStackService;
 use sandbox_runtime::workspace_remount::{
@@ -133,7 +133,7 @@ fn service_graph_cli_operation_catalog_exports_runtime_command_and_cgroup_monito
 
     assert_eq!(
         catalog.operation_execution_space,
-        OperationExecutionSpace::Runtime
+        CliOperationExecutionSpace::Runtime
     );
     assert_eq!(
         catalog
@@ -174,7 +174,7 @@ fn runtime_operation_metrics_use_static_operation_allowlist(
         &Request::new(
             "inspect_cgroup_monitor",
             "req-metrics",
-            OperationScope::system(),
+            CliOperationScope::system(),
             json!({ "workspace_session_id": "ws-missing" }),
         ),
     )
@@ -193,7 +193,7 @@ fn runtime_operation_metrics_use_static_operation_allowlist(
         &Request::new(
             "RAW_UNKNOWN_OPERATION_SECRET",
             "req-unknown",
-            OperationScope::system(),
+            CliOperationScope::system(),
             json!({}),
         ),
     );

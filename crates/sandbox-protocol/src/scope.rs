@@ -2,12 +2,12 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub enum OperationScope {
+pub enum CliOperationScope {
     System,
     Sandbox { sandbox_id: String },
 }
 
-impl OperationScope {
+impl CliOperationScope {
     #[must_use]
     pub const fn system() -> Self {
         Self::System

@@ -22,7 +22,7 @@ fn decode_request_preserves_request_fields() {
     assert_eq!(parsed.request_id, "req-1");
     assert_eq!(
         parsed.scope,
-        sandbox_protocol::OperationScope::sandbox("sbox-1")
+        sandbox_protocol::CliOperationScope::sandbox("sbox-1")
     );
     assert_eq!(parsed.args, args);
 }
@@ -64,7 +64,7 @@ fn daemon_scope_rejects_system_requests() {
     let request = sandbox_protocol::Request::new(
         "exec_command",
         "req-1",
-        sandbox_protocol::OperationScope::system(),
+        sandbox_protocol::CliOperationScope::system(),
         json!({}),
     );
 

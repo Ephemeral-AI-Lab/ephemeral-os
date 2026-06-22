@@ -9,8 +9,8 @@ use sandbox_manager::{
     SandboxRuntime, SandboxState, SandboxStore,
 };
 use sandbox_protocol::{
-    error_kind, CliOperationCatalog, CliOperationFamilySpec, CliOperationSpec,
-    OperationExecutionSpace, OperationScope, Request, Response, MAX_REQUEST_BYTES,
+    error_kind, CliOperationCatalog, CliOperationExecutionSpace, CliOperationFamilySpec,
+    CliOperationScope, CliOperationSpec, Request, Response, MAX_REQUEST_BYTES,
 };
 use serde_json::{json, Value};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -65,7 +65,7 @@ impl SandboxDaemonInstaller for FakeInstaller {
 
 #[derive(Default)]
 struct RecordingDaemonClient {
-    invocations: Mutex<Vec<(PathBuf, String, OperationScope)>>,
+    invocations: Mutex<Vec<(PathBuf, String, CliOperationScope)>>,
 }
 
 impl SandboxDaemonClient for RecordingDaemonClient {
@@ -74,7 +74,7 @@ impl SandboxDaemonClient for RecordingDaemonClient {
         _endpoint: &SandboxDaemonEndpoint,
     ) -> Result<CliOperationCatalog, ManagerError> {
         Ok(CliOperationCatalog::new(
-            OperationExecutionSpace::Runtime,
+            CliOperationExecutionSpace::Runtime,
             TEST_DAEMON_FAMILIES,
             TEST_DAEMON_SPECS,
         ))
@@ -126,7 +126,7 @@ fn server(
     )
 }
 
-fn request(op: &str, scope: OperationScope, args: Value) -> Value {
+fn request(op: &str, scope: CliOperationScope, args: Value) -> Value {
     json!({
         "op": op,
         "request_id": "req-1",
@@ -229,7 +229,7 @@ async fn gateway_connection_decodes_request_and_writes_response() -> TestResult 
 
     let response = send_value(
         &server,
-        request("list_sandboxes", OperationScope::System, json!({})),
+        request("list_sandboxes", CliOperationScope::System, json!({})),
     )
     .await;
 
@@ -323,7 +323,7 @@ async fn gateway_dispatches_sandbox_scope_through_manager_router() -> TestResult
         &server,
         request(
             "exec_command",
-            OperationScope::sandbox("sbox-1"),
+            CliOperationScope::sandbox("sbox-1"),
             json!({"cmd": "pwd"}),
         ),
     )
@@ -334,7 +334,7 @@ async fn gateway_dispatches_sandbox_scope_through_manager_router() -> TestResult
     assert_eq!(invocations.len(), 1);
     assert_eq!(invocations[0].0, PathBuf::from("/tmp/sbox-1.sock"));
     assert_eq!(invocations[0].1, "exec_command");
-    assert_eq!(invocations[0].2, OperationScope::sandbox("sbox-1"));
+    assert_eq!(invocations[0].2, CliOperationScope::sandbox("sbox-1"));
     Ok(())
 }
 

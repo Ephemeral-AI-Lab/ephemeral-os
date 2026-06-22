@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use sandbox_protocol::{OperationScope, Request};
+use sandbox_protocol::{CliOperationScope, Request};
 use sandbox_runtime::command::{ExecCommandInput, ReadCommandLinesInput, WriteCommandStdinInput};
 use sandbox_runtime_command::yield_wait_loop::WaitOutcome;
 use sandbox_runtime_workspace::WorkspaceProfile;
@@ -106,7 +106,7 @@ fn public_cgroup_read_operations_emit_no_trace_spans() {
         let inspect = Request::new(
             "inspect_cgroup_monitor",
             "req-inspect",
-            OperationScope::sandbox("scope-sbox"),
+            CliOperationScope::sandbox("scope-sbox"),
             json!({
                 "workspace_session_id": "workspace-secret",
                 "command_session_id": "command-secret",
@@ -115,7 +115,7 @@ fn public_cgroup_read_operations_emit_no_trace_spans() {
         let read = Request::new(
             "read_cgroup_monitor_samples",
             "req-read",
-            OperationScope::sandbox("scope-sbox"),
+            CliOperationScope::sandbox("scope-sbox"),
             json!({
                 "workspace_session_id": "workspace-secret",
                 "command_session_id": "command-secret",

@@ -148,29 +148,29 @@ feed metrics.
 
 ## Acceptance Criteria
 
-- [ ] Runtime operation latency histograms exist.
-- [ ] Workspace phase latency histograms exist.
-- [ ] Publish rejection counters include bounded reason labels.
-- [ ] Remount failure counters include bounded reason labels.
-- [ ] Command cancellation counters include bounded reason labels.
-- [ ] Command final cgroup sample/cleanup ordering cannot let a post-cleanup
+- [x] Runtime operation latency histograms exist.
+- [x] Workspace phase latency histograms exist.
+- [x] Publish rejection counters include bounded reason labels.
+- [x] Remount failure counters include bounded reason labels.
+- [x] Command cancellation counters include bounded reason labels.
+- [x] Command final cgroup sample/cleanup ordering cannot let a post-cleanup
       periodic sample affect final CPU delta/percent enrichment.
-- [ ] Cgroup periodic CPU/memory/pids/pressure/disk samples export as metrics.
-- [ ] Metrics are emitted from internal sample/finalization/cleanup boundaries,
+- [x] Cgroup periodic CPU/memory/pids/pressure/disk samples export as metrics.
+- [x] Metrics are emitted from internal sample/finalization/cleanup boundaries,
       not by polling `inspect_cgroup_monitor` or `read_cgroup_monitor_samples`.
-- [ ] No periodic cgroup sample trace events are emitted.
-- [ ] Dashboards use collector/backend metrics and do not call
+- [x] No periodic cgroup sample trace events are emitted.
+- [x] Dashboards use collector/backend metrics and do not call
       `inspect_cgroup_monitor` or `read_cgroup_monitor_samples`.
-- [ ] Existing `inspect_cgroup_monitor` and `read_cgroup_monitor_samples`
+- [x] Existing `inspect_cgroup_monitor` and `read_cgroup_monitor_samples`
       behavior is unchanged in this phase.
-- [ ] Metric labels are allowlisted and exclude raw paths, path-derived IDs,
+- [x] Metric labels are allowlisted and exclude raw paths, path-derived IDs,
       request IDs, workspace session IDs, command session IDs, PIDs, PID lists,
       raw root hashes, command text, stdin, output, auth tokens, env values,
       raw workspace roots, raw cgroup paths, raw layer paths, and free-form
       error strings.
-- [ ] Dashboard files load in the chosen Grafana environment with the configured
+- [x] Dashboard files load in the chosen Grafana environment with the configured
       metrics datasource; any Tempo panels are trace-only.
-- [ ] Phase 4a does not add Loki, log exporters, trace-to-logs configuration,
+- [x] Phase 4a does not add Loki, log exporters, trace-to-logs configuration,
       or log panels.
-- [ ] `cargo test -p sandbox-daemon -p sandbox-runtime -p sandbox-runtime-workspace -p sandbox-runtime-command`
+- [x] `cargo test -p sandbox-daemon -p sandbox-runtime -p sandbox-runtime-workspace -p sandbox-runtime-command`
       passes.

@@ -230,16 +230,16 @@ pub fn install(
             protocol,
             timeout_ms,
             queue_size,
-        }) => init_otlp_subscriber(
+        }) => init_otlp_subscriber(OtlpSubscriberConfig {
             level,
-            &config.service_name,
+            service_name: &config.service_name,
             endpoint,
-            *protocol,
-            *timeout_ms,
-            *queue_size,
+            protocol: *protocol,
+            timeout_ms: *timeout_ms,
+            queue_size: *queue_size,
             sandbox_id,
-            config.metrics.as_ref(),
-        ),
+            metrics_config: config.metrics.as_ref(),
+        }),
         None => Err(TelemetryInstallError::MissingSink),
     }
 }
@@ -270,16 +270,30 @@ where
         .finish()
 }
 
-fn init_otlp_subscriber(
+struct OtlpSubscriberConfig<'a> {
     level: LevelFilter,
-    service_name: &str,
-    endpoint: &str,
+    service_name: &'a str,
+    endpoint: &'a str,
     protocol: OtlpProtocol,
     timeout_ms: u64,
     queue_size: usize,
-    sandbox_id: Option<&str>,
-    metrics_config: Option<&TelemetryMetricsConfig>,
+    sandbox_id: Option<&'a str>,
+    metrics_config: Option<&'a TelemetryMetricsConfig>,
+}
+
+fn init_otlp_subscriber(
+    config: OtlpSubscriberConfig<'_>,
 ) -> Result<TelemetryGuard, TelemetryInstallError> {
+    let OtlpSubscriberConfig {
+        level,
+        service_name,
+        endpoint,
+        protocol,
+        timeout_ms,
+        queue_size,
+        sandbox_id,
+        metrics_config,
+    } = config;
     if protocol != OtlpProtocol::Http {
         return Err(TelemetryInstallError::UnsupportedOtlpProtocol);
     }

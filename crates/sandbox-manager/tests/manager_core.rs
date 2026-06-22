@@ -8,8 +8,8 @@ use sandbox_manager::{
     SandboxState, SandboxStore,
 };
 use sandbox_protocol::{
-    ArgKind, CliOperationCatalog, CliOperationFamilySpec, CliOperationSpec,
-    OperationExecutionSpace, OperationScope, Request, Response,
+    ArgKind, CliOperationCatalog, CliOperationExecutionSpace, CliOperationFamilySpec,
+    CliOperationScope, CliOperationSpec, Request, Response,
 };
 use serde_json::{json, Value};
 
@@ -104,7 +104,7 @@ impl SandboxDaemonClient for FakeClient {
             .expect("described lock")
             .push(endpoint.socket_path.clone());
         Ok(CliOperationCatalog::new(
-            OperationExecutionSpace::Runtime,
+            CliOperationExecutionSpace::Runtime,
             TEST_RUNTIME_FAMILIES,
             TEST_RUNTIME_SPECS,
         ))
@@ -139,7 +139,7 @@ fn services() -> (
 }
 
 fn dispatch(services: &ManagerServices, op: &str, args: Value) -> Value {
-    let request = Request::new(op, "req-1", OperationScope::System, args);
+    let request = Request::new(op, "req-1", CliOperationScope::System, args);
     sandbox_manager::dispatch_operation(services, &request).into_json_value()
 }
 
@@ -158,7 +158,7 @@ fn cli_operation_catalog_contains_only_manager_operations() {
 
     assert_eq!(
         catalog.operation_execution_space,
-        OperationExecutionSpace::Manager
+        CliOperationExecutionSpace::Manager
     );
     assert_eq!(catalog.families.len(), 1);
     assert_eq!(catalog.families[0].title, "Management");

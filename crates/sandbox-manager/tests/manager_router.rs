@@ -7,8 +7,8 @@ use sandbox_manager::{
     SandboxRuntime, SandboxState, SandboxStore,
 };
 use sandbox_protocol::{
-    error_kind, CliOperationCatalog, CliOperationFamilySpec, CliOperationSpec,
-    OperationExecutionSpace, OperationScope, Request, Response,
+    error_kind, CliOperationCatalog, CliOperationExecutionSpace, CliOperationFamilySpec,
+    CliOperationScope, CliOperationSpec, Request, Response,
 };
 use serde_json::{json, Value};
 
@@ -58,7 +58,7 @@ impl SandboxDaemonInstaller for FakeInstaller {
 
 #[derive(Default)]
 struct RecordingDaemonClient {
-    invocations: Mutex<Vec<(PathBuf, String, OperationScope)>>,
+    invocations: Mutex<Vec<(PathBuf, String, CliOperationScope)>>,
 }
 
 impl SandboxDaemonClient for RecordingDaemonClient {
@@ -67,7 +67,7 @@ impl SandboxDaemonClient for RecordingDaemonClient {
         _endpoint: &SandboxDaemonEndpoint,
     ) -> Result<CliOperationCatalog, ManagerError> {
         Ok(CliOperationCatalog::new(
-            OperationExecutionSpace::Runtime,
+            CliOperationExecutionSpace::Runtime,
             TEST_DAEMON_FAMILIES,
             TEST_DAEMON_SPECS,
         ))
@@ -109,7 +109,7 @@ fn router(services: Arc<ManagerServices>) -> SandboxManagerRouter {
     SandboxManagerRouter::new(services)
 }
 
-fn request(op: &str, scope: OperationScope, args: Value) -> Request {
+fn request(op: &str, scope: CliOperationScope, args: Value) -> Request {
     Request::new(op, "req-1", scope, args)
 }
 
@@ -132,7 +132,11 @@ async fn manager_router_dispatches_system_manager_operation_locally() {
     let router = router(services);
 
     let response = router
-        .dispatch_request(request("list_sandboxes", OperationScope::System, json!({})))
+        .dispatch_request(request(
+            "list_sandboxes",
+            CliOperationScope::System,
+            json!({}),
+        ))
         .await
         .into_json_value();
 
@@ -147,7 +151,7 @@ async fn manager_router_rejects_manager_operation_with_sandbox_scope() {
     let response = router
         .dispatch_request(request(
             "list_sandboxes",
-            OperationScope::sandbox("sbox-1"),
+            CliOperationScope::sandbox("sbox-1"),
             json!({}),
         ))
         .await
@@ -162,7 +166,11 @@ async fn manager_router_unknown_system_operation_returns_unknown_op() {
     let router = router(services);
 
     let response = router
-        .dispatch_request(request("exec_command", OperationScope::System, json!({})))
+        .dispatch_request(request(
+            "exec_command",
+            CliOperationScope::System,
+            json!({}),
+        ))
         .await
         .into_json_value();
 
@@ -183,7 +191,7 @@ async fn manager_router_forwards_sandbox_scoped_unknown_to_daemon_client() {
     let response = router
         .dispatch_request(request(
             "exec_command",
-            OperationScope::sandbox("sbox-1"),
+            CliOperationScope::sandbox("sbox-1"),
             json!({"cmd": "pwd"}),
         ))
         .await
@@ -194,7 +202,7 @@ async fn manager_router_forwards_sandbox_scoped_unknown_to_daemon_client() {
     assert_eq!(invocations.len(), 1);
     assert_eq!(invocations[0].0, PathBuf::from("/tmp/sbox-1.sock"));
     assert_eq!(invocations[0].1, "exec_command");
-    assert_eq!(invocations[0].2, OperationScope::sandbox("sbox-1"));
+    assert_eq!(invocations[0].2, CliOperationScope::sandbox("sbox-1"));
 }
 
 #[tokio::test]
@@ -205,7 +213,7 @@ async fn manager_router_rejects_sandbox_scope_when_sandbox_missing() {
     let response = router
         .dispatch_request(request(
             "exec_command",
-            OperationScope::sandbox("missing"),
+            CliOperationScope::sandbox("missing"),
             json!({}),
         ))
         .await
@@ -225,7 +233,7 @@ async fn manager_router_rejects_sandbox_scope_when_daemon_unavailable() {
     let response = router
         .dispatch_request(request(
             "exec_command",
-            OperationScope::sandbox("sbox-1"),
+            CliOperationScope::sandbox("sbox-1"),
             json!({}),
         ))
         .await

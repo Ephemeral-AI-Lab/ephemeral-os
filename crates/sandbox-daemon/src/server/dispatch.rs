@@ -3,7 +3,7 @@ use std::sync::Arc;
 use super::SandboxDaemonServer;
 use crate::server::error::SandboxDaemonError;
 use sandbox_protocol::{
-    decode_request_value, error_kind, OperationScope, Request, DAEMON_AUTH_FIELD,
+    decode_request_value, error_kind, CliOperationScope, Request, DAEMON_AUTH_FIELD,
 };
 use serde_json::{Map, Value};
 use tracing::{field, Instrument, Span};
@@ -140,10 +140,10 @@ fn operation_trace_label(operation: &str) -> &'static str {
     }
 }
 
-fn scope_kind(scope: &OperationScope) -> &'static str {
+fn scope_kind(scope: &CliOperationScope) -> &'static str {
     match scope {
-        OperationScope::System => "system",
-        OperationScope::Sandbox { .. } => "sandbox",
+        CliOperationScope::System => "system",
+        CliOperationScope::Sandbox { .. } => "sandbox",
     }
 }
 
