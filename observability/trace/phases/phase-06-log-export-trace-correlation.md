@@ -121,25 +121,25 @@ Validation rules:
 
 ## Acceptance Criteria
 
-- [ ] Loki is introduced only in this phase.
-- [ ] Log export reuses the existing single OTLP sink endpoint and does not add
+- [x] Loki is introduced only in this phase.
+- [x] Log export reuses the existing single OTLP sink endpoint and does not add
       secondary sinks.
-- [ ] `export_logs = true` is rejected unless the active sink is OTLP.
-- [ ] Tempo stores traces and trace events; Loki stores only explicit exported
+- [x] `export_logs = true` is rejected unless the active sink is OTLP.
+- [x] Tempo stores traces and trace events; Loki stores only explicit exported
       log records.
-- [ ] Grafana Tempo data source has trace-to-logs configured.
-- [ ] Grafana Loki data source has derived fields configured so log lines with
+- [x] Grafana Tempo data source has trace-to-logs configured.
+- [x] Grafana Loki data source has derived fields configured so log lines with
       trace IDs link back to Tempo.
-- [ ] Exported logs include `trace_id`, `span_id`, `service.name`, and
+- [x] Exported logs include `trace_id`, `span_id`, `service.name`, and
       `sandbox.id` when a trace context exists.
-- [ ] Exported logs exclude raw command text, stdin, stdout/stderr, command
+- [x] Exported logs exclude raw command text, stdin, stdout/stderr, command
       output, environment values, auth tokens, raw request args, raw host paths,
       raw workspace roots, raw cgroup paths, raw layer paths, raw upper/work
       dirs, transcript/artifact paths, raw PIDs, raw root hashes, raw DTO
       `Debug`, raw response payloads, and raw `Display` error strings.
-- [ ] Loki labels are allowlisted and low-cardinality.
-- [ ] `transcript.log` behavior is unchanged and command transcripts are not
+- [x] Loki labels are allowlisted and low-cardinality.
+- [x] `transcript.log` behavior is unchanged and command transcripts are not
       ingested into Loki.
-- [ ] Phase 3 trace validation and Phase 4a dashboards still pass without Loki
+- [x] Phase 3 trace validation and Phase 4a dashboards still pass without Loki
       when log export is disabled.
-- [ ] `cargo test -p sandbox-daemon -p sandbox-config` passes.
+- [x] `cargo test -p sandbox-daemon -p sandbox-config` passes.

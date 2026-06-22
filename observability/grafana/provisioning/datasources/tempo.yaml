@@ -10,3 +10,14 @@ datasources:
     editable: true
     jsonData:
       httpMethod: GET
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: "-2s"
+        spanEndTimeShift: "2s"
+        tags:
+          - key: service.name
+            value: service_name
+        filterByTraceID: true
+        filterBySpanID: false
+        customQuery: true
+        query: '{$${__tags}} | logfmt | trace_id=`$${__trace.traceId}`'

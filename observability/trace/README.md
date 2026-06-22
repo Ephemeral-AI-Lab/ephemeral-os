@@ -39,10 +39,10 @@ Runtime crates emit spans/events only. They do not initialize subscribers,
 choose exporters, own OTLP config, or provide a custom trace abstraction layer.
 
 Use precise signal names. In this spec, `event` means a Rust `tracing` event
-emitted at a semantic trace boundary. Phase 1 through Phase 3 treat those events
+emitted at a semantic trace boundary. Phase 1 through Phase 5 treat those events
 as local subscriber output or trace-attached diagnostics, not as an
 OpenTelemetry Logs signal. Do not call this "trace logs". Loki is introduced
-only in a later explicit log-export and trace-to-logs correlation phase.
+only in Phase 6 for explicit log export and trace-to-logs correlation.
 Prometheus-compatible metrics storage starts in Phase 4a.
 
 Do not implement automatic failover between collection paths. A daemon
@@ -81,8 +81,9 @@ Trace events are part of the trace rollout. They are not log records, they do
 not require Loki, and they must not become a hidden log-export pipeline.
 
 **Log record:** observability log signal exported to a log backend such as Loki.
-Log export is deferred until an explicit log-correlation phase. Command
-transcripts are still functional command output, not observability logs.
+Log export starts in Phase 6 and remains limited to explicit allowlisted
+records. Command transcripts are still functional command output, not
+observability logs.
 
 **Metric:** aggregate counter, gauge, or histogram. Metrics can be emitted
 directly later or derived from spans/events in the collector.
@@ -645,7 +646,6 @@ Deferred scope:
 - protocol response metadata for `trace_id`
 - gateway `--trace` and `--verbose-trace` lookup UX
 - full metrics/dashboard implementation
-- Loki/log export and trace-to-logs correlation
 - custom EphemeralOS UI over backend APIs
 
 Expected file/folder structure:
@@ -871,7 +871,7 @@ Trace assertions should verify:
 | Cgroup monitor samples | metrics primary; trace events only for anomalies/final summaries |
 | Response simplification | telemetry owns time/resource/dashboard stats; responses keep workflow data only until a later API cleanup |
 | Canonical Phase 3 trace validation environment | OpenTelemetry Collector + Tempo + Grafana; Jaeger is optional trace-only smoke target |
-| Loki | deferred until explicit log export and Grafana trace-to-logs correlation; not needed for spans or trace events |
+| Loki | introduced in Phase 6 for explicit log export and Grafana trace-to-logs correlation; not needed for spans or trace events |
 | Phase 4a dashboard stack | OpenTelemetry Collector + Prometheus-compatible metrics backend + Grafana; Tempo only for trace panels/links |
 | Phase 4c live validation | live Grafana/Prometheus testing and sanitized example capture happen after the Phase 4b cgroup cutover |
 | Time measurement | span duration for operation latency, event timestamps for ordering, explicit `Instant` timers for typed phase reports |

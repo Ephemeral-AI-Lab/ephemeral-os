@@ -69,6 +69,7 @@ telemetry:
   enabled: true
   service_name: sandbox-daemon
   level: info
+  export_logs: true
   sink:
     kind: otlp
     endpoint: http://collector:4318

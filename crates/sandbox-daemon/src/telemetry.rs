@@ -9,10 +9,18 @@ pub(crate) mod metrics;
 use opentelemetry::propagation::TextMapPropagator;
 use opentelemetry::trace::{TraceContextExt as _, TracerProvider as _};
 use opentelemetry::KeyValue;
+use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
 use opentelemetry_otlp::{Protocol, WithExportConfig};
+use opentelemetry_sdk::logs::{
+    BatchConfig as LogBatchConfig, BatchConfigBuilder as LogBatchConfigBuilder, BatchLogProcessor,
+    SdkLoggerProvider,
+};
 use opentelemetry_sdk::metrics::SdkMeterProvider;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
-use opentelemetry_sdk::trace::{BatchConfig, BatchConfigBuilder, BatchSpanProcessor};
+use opentelemetry_sdk::trace::{
+    BatchConfig as TraceBatchConfig, BatchConfigBuilder as TraceBatchConfigBuilder,
+    BatchSpanProcessor,
+};
 use opentelemetry_sdk::{trace::SdkTracerProvider, Resource};
 use sandbox_config::configs::validate::{
     require_non_empty, require_u64_at_least, require_usize_at_least, ConfigFieldError,
@@ -23,6 +31,7 @@ use sandbox_runtime_namespace_process::runner::protocol::TraceContext;
 use serde::Deserialize;
 use thiserror::Error;
 use tracing_opentelemetry::OpenTelemetrySpanExt as _;
+use tracing_subscriber::filter::filter_fn;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::fmt::MakeWriter;
 use tracing_subscriber::layer::SubscriberExt;
@@ -32,6 +41,7 @@ use tracing_subscriber::Layer;
 
 const OTLP_SHUTDOWN_TIMEOUT_MS: u64 = 5_000;
 const TELEMETRY_SHUTDOWN_ERROR_MAX_CHARS: usize = 512;
+pub(crate) const OBSERVABILITY_LOG_TARGET: &str = "sandbox.observability_log";
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -41,6 +51,8 @@ pub struct TelemetryConfig {
     pub level: String,
     #[serde(default)]
     pub sink: Option<TelemetrySink>,
+    #[serde(default)]
+    pub export_logs: bool,
     #[serde(default)]
     pub metrics: Option<TelemetryMetricsConfig>,
 }
@@ -52,6 +64,7 @@ impl Default for TelemetryConfig {
             service_name: "sandbox-daemon".to_owned(),
             level: "info".to_owned(),
             sink: None,
+            export_logs: false,
             metrics: None,
         }
     }
@@ -67,6 +80,18 @@ impl TelemetryConfig {
         validate_telemetry_level(&self.level)?;
         if let Some(sink) = self.sink.as_ref() {
             validate_telemetry_sink(sink)?;
+        }
+        if self.export_logs && !self.enabled {
+            return Err(ConfigFieldError::new(
+                "daemon.telemetry.export_logs",
+                "exported logs require enabled telemetry",
+            ));
+        }
+        if self.export_logs && !self.uses_otlp() {
+            return Err(ConfigFieldError::new(
+                "daemon.telemetry.export_logs",
+                "exported logs require an otlp telemetry sink",
+            ));
         }
         if let Some(metrics) = self.metrics.as_ref() {
             validate_telemetry_metrics(metrics)?;
@@ -243,6 +268,7 @@ pub fn install(
             timeout_ms: *timeout_ms,
             queue_size: *queue_size,
             sandbox_id,
+            export_logs: config.export_logs,
             metrics_config: config.metrics.as_ref(),
         }),
         None => Err(TelemetryInstallError::MissingSink),
@@ -365,6 +391,7 @@ struct OtlpSubscriberConfig<'a> {
     timeout_ms: u64,
     queue_size: usize,
     sandbox_id: Option<&'a str>,
+    export_logs: bool,
     metrics_config: Option<&'a TelemetryMetricsConfig>,
 }
 
@@ -379,6 +406,7 @@ fn init_otlp_subscriber(
         timeout_ms,
         queue_size,
         sandbox_id,
+        export_logs,
         metrics_config,
     } = config;
     if protocol != OtlpProtocol::Http {
@@ -390,6 +418,7 @@ fn init_otlp_subscriber(
     let timeout = Duration::from_millis(timeout_ms);
     let trace_endpoint = otlp_http_signal_endpoint(endpoint, "/v1/traces");
     let metrics_endpoint = otlp_http_signal_endpoint(endpoint, "/v1/metrics");
+    let logs_endpoint = otlp_http_signal_endpoint(endpoint, "/v1/logs");
     let exporter = opentelemetry_otlp::SpanExporter::builder()
         .with_http()
         .with_endpoint(trace_endpoint)
@@ -407,22 +436,39 @@ fn init_otlp_subscriber(
     let (metrics_provider, metrics_recorder) = init_otlp_metrics(
         service_name,
         &metrics_endpoint,
-        protocol,
         timeout,
         sandbox_id,
         metrics_config,
     )?;
+    let log_provider = if export_logs {
+        Some(init_otlp_logs(
+            service_name,
+            &logs_endpoint,
+            timeout,
+            sandbox_id,
+            queue_size,
+        )?)
+    } else {
+        None
+    };
     let tracer = provider.tracer(service_name.to_owned());
     let otel_layer = tracing_opentelemetry::layer()
         .with_tracer(tracer)
         .with_filter(filter);
+    let log_layer = log_provider.as_ref().map(|provider| {
+        OpenTelemetryTracingBridge::new(provider).with_filter(filter_fn(|metadata| {
+            metadata.target() == OBSERVABILITY_LOG_TARGET
+        }))
+    });
     tracing_subscriber::registry()
         .with(otel_layer)
+        .with(log_layer)
         .try_init()
         .map_err(|_| TelemetryInstallError::SubscriberAlreadyInstalled)?;
     Ok(TelemetryGuard::new(
         provider,
         metrics_provider,
+        log_provider,
         metrics_recorder,
     ))
 }
@@ -430,7 +476,6 @@ fn init_otlp_subscriber(
 fn init_otlp_metrics(
     service_name: &str,
     endpoint: &str,
-    protocol: OtlpProtocol,
     timeout: Duration,
     sandbox_id: &str,
     metrics_config: Option<&TelemetryMetricsConfig>,
@@ -438,19 +483,45 @@ fn init_otlp_metrics(
     let Some(metrics_config) = metrics_config.filter(|config| config.enabled) else {
         return Ok((None, noop_runtime_metrics_recorder()));
     };
-    let (provider, recorder) = metrics::init_otlp_metrics(
-        service_name,
-        endpoint,
-        protocol,
-        timeout,
-        sandbox_id,
-        metrics_config,
-    )?;
+    let (provider, recorder) =
+        metrics::init_otlp_metrics(service_name, endpoint, timeout, sandbox_id, metrics_config)?;
     Ok((Some(provider), recorder))
 }
 
-fn otlp_batch_config(queue_size: usize, scheduled_delay: Duration) -> BatchConfig {
-    BatchConfigBuilder::default()
+fn init_otlp_logs(
+    service_name: &str,
+    endpoint: &str,
+    timeout: Duration,
+    sandbox_id: &str,
+    queue_size: usize,
+) -> Result<SdkLoggerProvider, TelemetryInstallError> {
+    let exporter = opentelemetry_otlp::LogExporter::builder()
+        .with_http()
+        .with_endpoint(endpoint.to_owned())
+        .with_timeout(timeout)
+        .with_protocol(Protocol::HttpBinary)
+        .build()
+        .map_err(|err| TelemetryInstallError::LogExporterBuild(err.to_string()))?;
+    let processor = BatchLogProcessor::builder(exporter)
+        .with_batch_config(otlp_log_batch_config(queue_size, timeout))
+        .build();
+    let provider = SdkLoggerProvider::builder()
+        .with_resource(otlp_resource(service_name, sandbox_id))
+        .with_log_processor(processor)
+        .build();
+    Ok(provider)
+}
+
+fn otlp_batch_config(queue_size: usize, scheduled_delay: Duration) -> TraceBatchConfig {
+    TraceBatchConfigBuilder::default()
+        .with_max_queue_size(queue_size)
+        .with_max_export_batch_size(queue_size.clamp(1, 512))
+        .with_scheduled_delay(scheduled_delay)
+        .build()
+}
+
+fn otlp_log_batch_config(queue_size: usize, scheduled_delay: Duration) -> LogBatchConfig {
+    LogBatchConfigBuilder::default()
         .with_max_queue_size(queue_size)
         .with_max_export_batch_size(queue_size.clamp(1, 512))
         .with_scheduled_delay(scheduled_delay)
@@ -539,9 +610,87 @@ fn has_dynamic_sandbox_id(value: Option<&str>) -> bool {
     value.is_some_and(|value| !value.trim().is_empty())
 }
 
+pub(crate) struct DaemonRequestLog<'a> {
+    pub(crate) service_name: &'a str,
+    pub(crate) sandbox_id: &'a str,
+    pub(crate) operation: &'a str,
+    pub(crate) status: &'a str,
+    pub(crate) bounded_error_kind: &'a str,
+}
+
+pub(crate) fn emit_daemon_request_log(record: DaemonRequestLog<'_>) {
+    let trace_context = current_span_trace_fields();
+    let message = daemon_request_log_body(&record, trace_context.as_ref());
+    match trace_context {
+        Some(trace_context) => {
+            tracing::warn!(
+                target: OBSERVABILITY_LOG_TARGET,
+                event = "daemon.request.error",
+                operation = record.operation,
+                status = record.status,
+                bounded_error_kind = record.bounded_error_kind,
+                service.name = record.service_name,
+                sandbox.id = record.sandbox_id,
+                trace_id = trace_context.trace_id.as_str(),
+                span_id = trace_context.span_id.as_str(),
+                message = message.as_str(),
+            );
+        }
+        None => {
+            tracing::warn!(
+                target: OBSERVABILITY_LOG_TARGET,
+                event = "daemon.request.error",
+                operation = record.operation,
+                status = record.status,
+                bounded_error_kind = record.bounded_error_kind,
+                service.name = record.service_name,
+                sandbox.id = record.sandbox_id,
+                message = message.as_str(),
+            );
+        }
+    }
+}
+
+struct TraceLogFields {
+    trace_id: String,
+    span_id: String,
+}
+
+fn current_span_trace_fields() -> Option<TraceLogFields> {
+    let span = tracing::Span::current();
+    let context = span.context();
+    let span_context = context.span().span_context().clone();
+    span_context.is_valid().then(|| TraceLogFields {
+        trace_id: span_context.trace_id().to_string(),
+        span_id: span_context.span_id().to_string(),
+    })
+}
+
+fn daemon_request_log_body(
+    record: &DaemonRequestLog<'_>,
+    trace_context: Option<&TraceLogFields>,
+) -> String {
+    let mut body = format!(
+        "daemon_request_error operation={} status={} bounded_error_kind={} service.name={} sandbox.id={}",
+        record.operation,
+        record.status,
+        record.bounded_error_kind,
+        record.service_name,
+        record.sandbox_id
+    );
+    if let Some(trace_context) = trace_context {
+        body.push_str(" trace_id=");
+        body.push_str(&trace_context.trace_id);
+        body.push_str(" span_id=");
+        body.push_str(&trace_context.span_id);
+    }
+    body
+}
+
 pub struct TelemetryGuard {
     trace_provider: Option<SdkTracerProvider>,
     metrics_provider: Option<SdkMeterProvider>,
+    log_provider: Option<SdkLoggerProvider>,
     metrics_recorder: RuntimeMetricsRecorderHandle,
     shutdown_timeout: Duration,
 }
@@ -551,6 +700,7 @@ impl TelemetryGuard {
         Self {
             trace_provider: None,
             metrics_provider: None,
+            log_provider: None,
             metrics_recorder: noop_runtime_metrics_recorder(),
             shutdown_timeout: Duration::from_millis(OTLP_SHUTDOWN_TIMEOUT_MS),
         }
@@ -559,11 +709,13 @@ impl TelemetryGuard {
     fn new(
         trace_provider: SdkTracerProvider,
         metrics_provider: Option<SdkMeterProvider>,
+        log_provider: Option<SdkLoggerProvider>,
         metrics_recorder: RuntimeMetricsRecorderHandle,
     ) -> Self {
         Self {
             trace_provider: Some(trace_provider),
             metrics_provider,
+            log_provider,
             metrics_recorder,
             shutdown_timeout: Duration::from_millis(OTLP_SHUTDOWN_TIMEOUT_MS),
         }
@@ -579,6 +731,14 @@ impl TelemetryGuard {
     /// # Errors
     /// Returns a bounded shutdown error reported by the OpenTelemetry SDK.
     pub fn shutdown(&mut self) -> Result<(), TelemetryShutdownError> {
+        if let Some(log_provider) = self.log_provider.take() {
+            log_provider
+                .force_flush()
+                .map_err(|err| TelemetryShutdownError::Provider(bounded_shutdown_error(err)))?;
+            log_provider
+                .shutdown_with_timeout(self.shutdown_timeout)
+                .map_err(|err| TelemetryShutdownError::Provider(bounded_shutdown_error(err)))?;
+        }
         if let Some(metrics_provider) = self.metrics_provider.take() {
             metrics_provider
                 .force_flush()
@@ -604,6 +764,7 @@ impl TelemetryGuard {
         Self {
             trace_provider: Some(provider),
             metrics_provider: None,
+            log_provider: None,
             metrics_recorder: noop_runtime_metrics_recorder(),
             shutdown_timeout: timeout,
         }
@@ -643,6 +804,8 @@ pub enum TelemetryInstallError {
     ExporterBuild(String),
     #[error("failed to build OTLP metrics exporter: {0}")]
     MetricsExporterBuild(String),
+    #[error("failed to build OTLP logs exporter: {0}")]
+    LogExporterBuild(String),
     #[error("tracing subscriber is already installed")]
     SubscriberAlreadyInstalled,
 }

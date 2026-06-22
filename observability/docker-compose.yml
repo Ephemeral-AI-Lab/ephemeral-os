@@ -10,6 +10,15 @@ services:
     depends_on:
       - tempo
 
+  loki:
+    image: grafana/loki:3.1.1
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    profiles: ["logs"]
+    volumes:
+      - ./loki.yaml:/etc/loki/loki.yaml:ro
+    ports:
+      - "3100:3100"
+
   prometheus:
     image: prom/prometheus:v2.54.1
     command:

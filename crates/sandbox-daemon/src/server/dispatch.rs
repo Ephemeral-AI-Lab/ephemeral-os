@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use super::SandboxDaemonServer;
 use crate::server::error::SandboxDaemonError;
+use crate::telemetry::DaemonRequestLog;
 use sandbox_protocol::{
     decode_request_value, error_kind, CliOperationScope, Request, DAEMON_AUTH_FIELD,
 };
@@ -42,6 +43,7 @@ impl SandboxDaemonServer {
             Ok(value) => value,
             Err(err) => {
                 record_error(span, error_kind::BAD_JSON);
+                self.emit_daemon_request_error_log("unknown", error_kind::BAD_JSON);
                 return super::error_response(
                     error_kind::BAD_JSON,
                     format!("bad json: {err}"),
@@ -54,6 +56,7 @@ impl SandboxDaemonServer {
                 Ok(authenticated) => authenticated,
                 Err(err) => {
                     record_error(span, err.response_kind());
+                    self.emit_daemon_request_error_log("unknown", err.response_kind());
                     return super::error_response(
                         err.response_kind(),
                         err.to_string(),
@@ -67,7 +70,9 @@ impl SandboxDaemonServer {
         match decode_request(value) {
             Ok(request) => self.dispatch_request(request, span).await,
             Err(response) => {
-                record_response(span, &response);
+                if let Some(kind) = record_response(span, &response) {
+                    self.emit_daemon_request_error_log("unknown", kind);
+                }
                 response
             }
         }
@@ -75,8 +80,11 @@ impl SandboxDaemonServer {
 
     async fn dispatch_request(&self, request: Request, span: &Span) -> serde_json::Value {
         record_request(span, &request);
+        let operation = operation_trace_label(&request.op);
         if let Err(response) = validate_daemon_scope(&request) {
-            record_response(span, &response);
+            if let Some(kind) = record_response(span, &response) {
+                self.emit_daemon_request_error_log(operation, kind);
+            }
             return response;
         }
         let operations = Arc::clone(&self.operations);
@@ -107,7 +115,9 @@ impl SandboxDaemonServer {
                 )
             }
         };
-        record_response(span, &response);
+        if let Some(kind) = record_response(span, &response) {
+            self.emit_daemon_request_error_log(operation, kind);
+        }
         response
     }
 
@@ -123,6 +133,22 @@ impl SandboxDaemonServer {
             }
         }
         Ok(value)
+    }
+
+    fn emit_daemon_request_error_log(&self, operation: &'static str, error_kind: &str) {
+        if !self.config.export_logs {
+            return;
+        }
+        let Some(sandbox_id) = self.config.sandbox_id.as_deref() else {
+            return;
+        };
+        crate::telemetry::emit_daemon_request_log(DaemonRequestLog {
+            service_name: &self.config.telemetry_service_name,
+            sandbox_id,
+            operation,
+            status: "error",
+            bounded_error_kind: bounded_response_error_kind(error_kind),
+        });
     }
 }
 
@@ -148,11 +174,13 @@ fn scope_kind(scope: &CliOperationScope) -> &'static str {
     }
 }
 
-fn record_response(span: &Span, response: &Value) {
+fn record_response<'a>(span: &Span, response: &'a Value) -> Option<&'a str> {
     if let Some(kind) = response_error_kind(response) {
         record_error(span, kind);
+        Some(kind)
     } else {
         span.record("status", "ok");
+        None
     }
 }
 
@@ -167,6 +195,19 @@ fn response_error_kind(response: &Value) -> Option<&str> {
         .and_then(Value::as_object)
         .and_then(|error| error.get("kind"))
         .and_then(Value::as_str)
+}
+
+fn bounded_response_error_kind(kind: &str) -> &'static str {
+    match kind {
+        error_kind::BAD_JSON => error_kind::BAD_JSON,
+        error_kind::INTERNAL_ERROR => error_kind::INTERNAL_ERROR,
+        error_kind::INVALID_REQUEST => error_kind::INVALID_REQUEST,
+        error_kind::REQUEST_TOO_LARGE => error_kind::REQUEST_TOO_LARGE,
+        error_kind::UNAUTHORIZED => error_kind::UNAUTHORIZED,
+        "operation_failed" => "operation_failed",
+        "unknown_op" => "unknown_op",
+        _ => "other",
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

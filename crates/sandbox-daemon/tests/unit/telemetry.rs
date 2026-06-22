@@ -19,9 +19,13 @@ use sandbox_runtime_workspace::{
     WorkspaceError, WorkspaceHandle, WorkspaceProfile, WorkspaceRuntimeHooks,
     WorkspaceRuntimeService, WorkspaceSessionId,
 };
+use opentelemetry::logs::AnyValue;
 use opentelemetry::Key;
+use opentelemetry::InstrumentationScope;
 use opentelemetry::trace::{SpanId, TracerProvider as _};
+use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
 use opentelemetry_sdk::error::{OTelSdkError, OTelSdkResult};
+use opentelemetry_sdk::logs::{LogBatch, LogExporter, SdkLoggerProvider, SdkLogRecord};
 use opentelemetry_sdk::trace::{
     BatchConfigBuilder, BatchSpanProcessor, SdkTracerProvider, SpanData, SpanExporter,
 };
@@ -29,6 +33,7 @@ use serde_json::{json, Value};
 use tokio::runtime::Runtime;
 use tokio::time::timeout;
 use tracing_subscriber::fmt::MakeWriter;
+use tracing_subscriber::filter::filter_fn;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::Layer;
 
@@ -333,6 +338,67 @@ metrics:
         .validate()
         .expect_err("local json metrics are rejected");
     assert_eq!(err.field, "daemon.telemetry.metrics");
+}
+
+#[test]
+fn telemetry_log_export_requires_enabled_otlp_sink() {
+    let otlp = telemetry_config(
+        r#"
+enabled: true
+service_name: sandbox-daemon
+level: info
+export_logs: true
+sink:
+  kind: otlp
+  endpoint: http://collector:4318
+  protocol: http
+  timeout_ms: 1000
+  queue_size: 2048
+"#,
+    );
+    assert!(otlp.export_logs);
+    otlp.validate().expect("otlp log export validates");
+
+    let local_json = telemetry_config(
+        r#"
+enabled: true
+service_name: sandbox-daemon
+level: info
+export_logs: true
+sink:
+  kind: local_json
+  stream: stdout
+"#,
+    );
+    assert_eq!(
+        local_json
+            .validate()
+            .expect_err("local json log export rejected")
+            .field,
+        "daemon.telemetry.export_logs"
+    );
+
+    let disabled = telemetry_config(
+        r#"
+enabled: false
+service_name: sandbox-daemon
+level: info
+export_logs: true
+sink:
+  kind: otlp
+  endpoint: http://collector:4318
+  protocol: http
+  timeout_ms: 1000
+  queue_size: 2048
+"#,
+    );
+    assert_eq!(
+        disabled
+            .validate()
+            .expect_err("disabled telemetry cannot export logs")
+            .field,
+        "daemon.telemetry.export_logs"
+    );
 }
 
 #[test]
@@ -907,6 +973,112 @@ fn daemon_exec_command_and_runner_spans_share_trace() -> Result<()> {
 }
 
 #[test]
+fn exported_daemon_request_logs_are_allowlisted_and_trace_correlated() -> Result<()> {
+    let span_exporter = CollectingExporter::default();
+    let span_provider = SdkTracerProvider::builder()
+        .with_simple_exporter(span_exporter)
+        .build();
+    let tracer = span_provider.tracer("sandbox-daemon-test");
+    let log_exporter = CollectingLogExporter::default();
+    let log_provider = SdkLoggerProvider::builder()
+        .with_resource(crate::telemetry::otlp_resource(
+            "sandbox-daemon-test",
+            "sbox-log",
+        ))
+        .with_simple_exporter(log_exporter.clone())
+        .build();
+    let subscriber = tracing_subscriber::registry()
+        .with(
+            tracing_opentelemetry::layer()
+                .with_tracer(tracer)
+                .with_filter(tracing_subscriber::filter::LevelFilter::INFO),
+        )
+        .with(OpenTelemetryTracingBridge::new(&log_provider).with_filter(filter_fn(
+            |metadata| metadata.target() == crate::telemetry::OBSERVABILITY_LOG_TARGET,
+        )));
+    let runtime = Runtime::new()?;
+    let server = test_server_with_log_export(Some("sbox-log"), "sandbox-daemon-test", true);
+    let request = serde_json::to_vec(&json!({
+        "op": "unknown_op_OPERATION_SECRET_SENTINEL",
+        "request_id": "REQUEST_ID_SECRET_SENTINEL",
+        "scope": { "kind": "sandbox", "sandbox_id": "scope-sbox" },
+        "args": {
+            "cmd": "printf COMMAND_SECRET_SENTINEL",
+            "env": { "TOKEN": "ENV_SECRET_SENTINEL" },
+            "path": "/tmp/PATH_SECRET_SENTINEL/transcript.log"
+        }
+    }))?;
+
+    let response =
+        tracing::subscriber::with_default(subscriber, || runtime.block_on(server.dispatch_bytes(request, false)));
+
+    assert_eq!(response["error"]["kind"], "unknown_op");
+    span_provider.force_flush()?;
+    log_provider.force_flush()?;
+    let logs = log_exporter.logs();
+    assert_eq!(logs.len(), 1, "expected one explicit log record: {logs:#?}");
+    let log = &logs[0];
+    let record = &log.record;
+    assert_eq!(log.instrumentation.name(), "");
+    let trace_context = record
+        .trace_context()
+        .expect("exported log record carries trace context");
+    let trace_id = trace_context.trace_id.to_string();
+    let span_id = trace_context.span_id.to_string();
+    let body = log_body(record).expect("exported log record has a string body");
+
+    assert_eq!(
+        record.target().map(|target| target.as_ref()),
+        Some(crate::telemetry::OBSERVABILITY_LOG_TARGET)
+    );
+    assert_eq!(
+        log_attr(record, "event").as_deref(),
+        Some("daemon.request.error")
+    );
+    assert_eq!(log_attr(record, "operation").as_deref(), Some("unknown"));
+    assert_eq!(log_attr(record, "status").as_deref(), Some("error"));
+    assert_eq!(
+        log_attr(record, "bounded_error_kind").as_deref(),
+        Some("unknown_op")
+    );
+    assert_eq!(
+        log_attr(record, "service.name").as_deref(),
+        Some("sandbox-daemon-test")
+    );
+    assert_eq!(log_attr(record, "sandbox.id").as_deref(), Some("sbox-log"));
+    assert_eq!(log_attr(record, "trace_id").as_deref(), Some(trace_id.as_str()));
+    assert_eq!(log_attr(record, "span_id").as_deref(), Some(span_id.as_str()));
+    assert_eq!(
+        resource_value(&log.resource, "service.name").as_deref(),
+        Some("sandbox-daemon-test")
+    );
+    assert_eq!(
+        resource_value(&log.resource, "sandbox.id").as_deref(),
+        Some("sbox-log")
+    );
+    assert!(body.contains("trace_id="), "{body}");
+    assert!(body.contains(&trace_id), "{body}");
+    assert!(body.contains("span_id="), "{body}");
+    assert!(body.contains(&span_id), "{body}");
+    for forbidden in [
+        "OPERATION_SECRET_SENTINEL",
+        "REQUEST_ID_SECRET_SENTINEL",
+        "COMMAND_SECRET_SENTINEL",
+        "ENV_SECRET_SENTINEL",
+        "PATH_SECRET_SENTINEL",
+        "transcript.log",
+        "/tmp/",
+        "TOKEN",
+    ] {
+        assert!(
+            !format!("{record:#?} {body}").contains(forbidden),
+            "exported log record leaked forbidden value {forbidden}: {record:#?} body={body}"
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn invalid_runner_trace_context_is_ignored_without_failure() {
     let span = tracing::info_span!("runner.request");
     let invalid = sandbox_runtime_namespace_process::runner::protocol::TraceContext {
@@ -967,6 +1139,7 @@ fn local_json_telemetry(stream: TelemetryOutputStream) -> TelemetryConfig {
         service_name: "sandbox-daemon".to_owned(),
         level: "info".to_owned(),
         sink: Some(TelemetrySink::LocalJson { stream }),
+        export_logs: false,
         metrics: None,
     }
 }
@@ -982,6 +1155,7 @@ fn otlp_telemetry(endpoint: &str, timeout_ms: u64, queue_size: usize) -> Telemet
             timeout_ms,
             queue_size,
         }),
+        export_logs: false,
         metrics: None,
     }
 }
@@ -990,6 +1164,24 @@ fn resource_value(resource: &opentelemetry_sdk::Resource, key: &'static str) -> 
     resource
         .get(&Key::from_static_str(key))
         .map(|value| value.to_string())
+}
+
+fn log_attr(record: &SdkLogRecord, key: &'static str) -> Option<String> {
+    record
+        .attributes_iter()
+        .find(|(candidate, _)| candidate.as_str() == key)
+        .and_then(|(_, value)| any_value_string(value))
+}
+
+fn log_body(record: &SdkLogRecord) -> Option<String> {
+    record.body().and_then(any_value_string)
+}
+
+fn any_value_string(value: &AnyValue) -> Option<String> {
+    match value {
+        AnyValue::String(value) => Some(value.as_str().to_owned()),
+        _ => None,
+    }
 }
 
 fn telemetry_section(yaml: &str) -> TelemetryConfig {
@@ -1031,6 +1223,14 @@ fn unknown_operation_request_bytes(request_id: &str) -> Vec<u8> {
 }
 
 fn test_server(sandbox_id: Option<&str>) -> SandboxDaemonServer {
+    test_server_with_log_export(sandbox_id, "sandbox-daemon", false)
+}
+
+fn test_server_with_log_export(
+    sandbox_id: Option<&str>,
+    service_name: &str,
+    export_logs: bool,
+) -> SandboxDaemonServer {
     SandboxDaemonServer::new(
         ServerConfig {
             socket_path: PathBuf::from("/tmp/sandbox-daemon-test.sock"),
@@ -1039,6 +1239,8 @@ fn test_server(sandbox_id: Option<&str>) -> SandboxDaemonServer {
             tcp_port: None,
             auth_token: Some("configured-token".to_owned()),
             sandbox_id: sandbox_id.map(str::to_owned),
+            telemetry_service_name: service_name.to_owned(),
+            export_logs,
         },
         Arc::new(test_operations()),
     )
@@ -1246,6 +1448,8 @@ impl TraceCommandFixture {
                 tcp_port: None,
                 auth_token: None,
                 sandbox_id: Some("sbox-trace".to_owned()),
+                telemetry_service_name: "sandbox-daemon".to_owned(),
+                export_logs: false,
             },
             Arc::new(sandbox_runtime::SandboxRuntimeOperations::new(
                 command, layerstack,
@@ -1370,6 +1574,51 @@ impl SpanExporter for CollectingExporter {
             .expect("export lock")
             .extend(batch);
         Ok(())
+    }
+}
+
+#[derive(Clone, Debug)]
+struct CollectingLogExporter {
+    logs: Arc<Mutex<Vec<CollectedLog>>>,
+    resource: Arc<Mutex<opentelemetry_sdk::Resource>>,
+}
+
+impl Default for CollectingLogExporter {
+    fn default() -> Self {
+        Self {
+            logs: Arc::new(Mutex::new(Vec::new())),
+            resource: Arc::new(Mutex::new(opentelemetry_sdk::Resource::builder().build())),
+        }
+    }
+}
+
+impl CollectingLogExporter {
+    fn logs(&self) -> Vec<CollectedLog> {
+        self.logs.lock().expect("log export lock").clone()
+    }
+}
+
+#[derive(Clone, Debug)]
+struct CollectedLog {
+    record: SdkLogRecord,
+    instrumentation: InstrumentationScope,
+    resource: opentelemetry_sdk::Resource,
+}
+
+impl LogExporter for CollectingLogExporter {
+    async fn export(&self, batch: LogBatch<'_>) -> OTelSdkResult {
+        let resource = self.resource.lock().expect("log resource lock").clone();
+        let mut logs = self.logs.lock().expect("log export lock");
+        logs.extend(batch.iter().map(|(record, instrumentation)| CollectedLog {
+            record: record.clone(),
+            instrumentation: instrumentation.clone(),
+            resource: resource.clone(),
+        }));
+        Ok(())
+    }
+
+    fn set_resource(&mut self, resource: &opentelemetry_sdk::Resource) {
+        *self.resource.lock().expect("log resource lock") = resource.clone();
     }
 }
 

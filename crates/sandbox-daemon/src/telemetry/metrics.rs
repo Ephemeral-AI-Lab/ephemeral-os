@@ -11,19 +11,15 @@ use sandbox_runtime::{
     RuntimeMetricsRecorderHandle, RuntimeOperationName, WorkspacePhase,
 };
 
-use super::{otlp_resource, OtlpProtocol, TelemetryInstallError, TelemetryMetricsConfig};
+use super::{otlp_resource, TelemetryInstallError, TelemetryMetricsConfig};
 
 pub(crate) fn init_otlp_metrics(
     service_name: &str,
     endpoint: &str,
-    protocol: OtlpProtocol,
     timeout: Duration,
     sandbox_id: &str,
     config: &TelemetryMetricsConfig,
 ) -> Result<(SdkMeterProvider, RuntimeMetricsRecorderHandle), TelemetryInstallError> {
-    if protocol != OtlpProtocol::Http {
-        return Err(TelemetryInstallError::UnsupportedOtlpProtocol);
-    }
     let exporter = opentelemetry_otlp::MetricExporter::builder()
         .with_http()
         .with_endpoint(endpoint.to_owned())

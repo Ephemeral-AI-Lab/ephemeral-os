@@ -48,6 +48,8 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
         tcp_port: config.tcp_port,
         auth_token: config.auth_token,
         sandbox_id: config.sandbox_id,
+        telemetry_service_name: telemetry_config.service_name.clone(),
+        export_logs: telemetry_config.export_logs,
     };
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(daemon_worker_threads(

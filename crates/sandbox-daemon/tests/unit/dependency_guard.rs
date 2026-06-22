@@ -129,36 +129,30 @@ fn daemon_metric_labels_are_allowlisted_in_source() {
 }
 
 #[test]
-fn phase4_observability_stack_configures_metrics_without_loki() {
+fn phase6_observability_stack_configures_loki_without_requiring_it_for_base_stack() {
     let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .ancestors()
         .nth(2)
         .expect("workspace root");
-    for relative in [
-        "observability/docker-compose.yml",
-        "observability/otel-collector.yaml",
-        "observability/prometheus.yml",
-        "observability/grafana/provisioning/datasources/metrics.yaml",
-        "observability/grafana/provisioning/datasources/tempo.yaml",
-        "observability/grafana/provisioning/dashboards/dashboards.yaml",
-    ] {
-        let text = std::fs::read_to_string(workspace_root.join(relative))
-            .unwrap_or_else(|error| panic!("read {relative}: {error}"));
-        assert!(
-            !text.to_ascii_lowercase().contains("loki"),
-            "{relative} must not configure loki"
-        );
-        assert!(
-            !text.contains("tracesToLogs") && !text.contains("derivedFields"),
-            "{relative} must not configure trace-to-logs"
-        );
-    }
+
+    let compose = std::fs::read_to_string(workspace_root.join("observability/docker-compose.yml"))
+        .expect("read compose config");
+    assert!(compose.contains("loki:"));
+    assert!(compose.contains("profiles: [\"logs\"]"));
+    assert!(
+        !compose.contains("- loki"),
+        "base services must not depend_on loki; log export is opt-in"
+    );
 
     let collector =
         std::fs::read_to_string(workspace_root.join("observability/otel-collector.yaml"))
             .expect("read collector config");
     assert!(collector.contains("metrics:"));
     assert!(collector.contains("exporters: [prometheus]"));
+    assert!(collector.contains("otlphttp/loki:"));
+    assert!(collector.contains("endpoint: http://loki:3100/otlp"));
+    assert!(collector.contains("logs:"));
+    assert!(collector.contains("exporters: [otlphttp/loki]"));
     assert!(
         !collector.contains("resource_to_telemetry_conversion"),
         "collector must not promote resource attributes such as sandbox ids into metric labels"
@@ -169,6 +163,40 @@ fn phase4_observability_stack_configures_metrics_without_loki() {
     .expect("read metrics datasource");
     assert!(metrics_datasource.contains("uid: prometheus"));
     assert!(metrics_datasource.contains("type: prometheus"));
+
+    let tempo_datasource = std::fs::read_to_string(
+        workspace_root.join("observability/grafana/provisioning/datasources/tempo.yaml"),
+    )
+    .expect("read tempo datasource");
+    assert!(tempo_datasource.contains("tracesToLogsV2:"));
+    assert!(tempo_datasource.contains("datasourceUid: loki"));
+    assert!(tempo_datasource.contains("filterByTraceID: true"));
+
+    let loki_datasource = std::fs::read_to_string(
+        workspace_root.join("observability/grafana/provisioning/datasources/loki.yaml"),
+    )
+    .expect("read loki datasource");
+    assert!(loki_datasource.contains("type: loki"));
+    assert!(loki_datasource.contains("uid: loki"));
+    assert!(loki_datasource.contains("derivedFields:"));
+    assert!(loki_datasource.contains("datasourceUid: tempo"));
+    assert!(loki_datasource.contains("trace_id=(\\\\w+)"));
+
+    let loki = std::fs::read_to_string(workspace_root.join("observability/loki.yaml"))
+        .expect("read loki config");
+    assert!(loki.contains("allow_structured_metadata: true"));
+    assert!(loki.contains("ignore_defaults: true"));
+    assert!(loki.contains("- action: index_label"));
+    assert!(loki.contains("- service.name"));
+    let index_label_block = loki
+        .split("- action: index_label")
+        .nth(1)
+        .and_then(|tail| tail.split("- action:").next())
+        .expect("loki config has index label block");
+    assert!(
+        !index_label_block.contains("trace_id") && !index_label_block.contains("span_id"),
+        "trace/span identifiers must not be Loki index labels"
+    );
 }
 
 #[test]
