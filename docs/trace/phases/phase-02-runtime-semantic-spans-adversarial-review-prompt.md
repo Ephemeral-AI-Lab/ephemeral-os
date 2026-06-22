@@ -123,7 +123,7 @@ Check:
 - `workspace_create_phase_finished` is emitted from the existing
   `WorkspaceModeManager::initialize_handle` phase timings without changing
   `WorkspaceHandle` or setup behavior.
-- Remount telemetry uses `RemountOverlayResult` behavior and preserves
+- Remount tracing uses `RemountOverlayResult` behavior and preserves
   `failure_summary()` behavior.
 - Layerstack publish still preserves invalid-base, route, no-op, rejection, and
   OCC behavior. Trace fields must not affect publish correctness.
@@ -174,7 +174,7 @@ test ! -e crates/sandbox-runtime-trace
 test ! -e crates/sandbox-runtime/operation/src/internal/telemetry.rs
 test ! -e crates/sandbox-runtime/workspace/src/lifecycle/remount/report.rs
 git diff --exit-code -- crates/sandbox-protocol
-if rg -n "Occ""TraceEvent" docs/trace crates/sandbox-runtime; then exit 1; else exit 0; fi
+if rg -n "OccTrace(Event)" docs/trace crates/sandbox-runtime; then exit 1; else exit 0; fi
 if rg -n "info_span!|span!|event!|#\\[instrument|tracing::" crates/sandbox-runtime/operation/src/public/cgroup_monitor -g '*.rs'; then exit 1; else exit 0; fi
 ```
 
@@ -205,7 +205,7 @@ Useful commands:
 
 ```sh
 rg -n "Debug|Display|field::debug|\\?[^a-zA-Z]|%[^a-zA-Z]|WorkspaceHandle|WorkspaceEntry|PublishChangesResult|CgroupMonitorSample|RemountOverlayResult" crates/sandbox-runtime -g '*.rs'
-rg -n "sandbox-runtime-trace|internal/telemetry|remount/report|subscriber|exporter|otlp|metrics|dashboard|Occ""TraceEvent" crates/sandbox-runtime docs/trace -g '*.rs' -g '*.md'
+rg -n "sandbox-runtime-trace|internal/telemetry|remount/report|subscriber|exporter|otlp|metrics|dashboard|OccTrace(Event)" crates/sandbox-runtime docs/trace -g '*.rs' -g '*.md'
 rg -n "PATH_SECRET|ROOT_HASH_SECRET|CONTENT_SECRET|RAW_.*SECRET|AUTH_ENV_SECRET|STDIN_SECRET|STDOUT_SECRET" crates/sandbox-runtime -g '*.rs'
 ```
 
