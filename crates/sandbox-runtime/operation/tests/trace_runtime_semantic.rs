@@ -54,6 +54,10 @@ fn workspace_session_semantic_spans_use_live_call_paths_and_safe_fields() {
         "changed_path_count=1",
         "protected_drop_count=1",
         "metadata_path_count=2",
+        "lifetime_s=12.5",
+        "evicted_upperdir_bytes=4096",
+        "lease_released=true",
+        "active_leases_after=3",
     ] {
         assert!(traces.contains(expected), "missing {expected} in {traces}");
     }

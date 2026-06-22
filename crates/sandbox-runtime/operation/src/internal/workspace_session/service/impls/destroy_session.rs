@@ -17,6 +17,8 @@ impl WorkspaceSessionService {
             error_kind = field::Empty,
             cgroup_final_sample = field::Empty,
             cgroup_exists_after_destroy = field::Empty,
+            lifetime_s = field::Empty,
+            evicted_upperdir_bytes = field::Empty,
             lease_released = field::Empty,
             active_leases_after = field::Empty,
         );
@@ -68,6 +70,8 @@ fn record_destroy_session_result(
     match result {
         Ok(result) => {
             span.record("status", "ok");
+            span.record("lifetime_s", result.lifetime_s);
+            span.record("evicted_upperdir_bytes", result.evicted_upperdir_bytes);
             if let Some(lease_released) = result.lease_released {
                 span.record("lease_released", lease_released);
             }

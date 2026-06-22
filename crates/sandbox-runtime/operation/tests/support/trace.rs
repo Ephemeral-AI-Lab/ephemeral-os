@@ -103,6 +103,10 @@ impl Visit for TextVisitor {
     fn record_u64(&mut self, field: &Field, value: u64) {
         self.push_value(field, value);
     }
+
+    fn record_f64(&mut self, field: &Field, value: f64) {
+        self.push_value(field, value);
+    }
 }
 
 pub(crate) fn capture_traces(run: impl FnOnce()) -> String {

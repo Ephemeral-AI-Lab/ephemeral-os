@@ -40,7 +40,7 @@ Read these docs:
 - `docs/trace/phases/README.md`
 - `docs/trace/phases/phase-02-runtime-semantic-spans.md`
 - `docs/trace/README.md`, focusing on safe fields, span/event names, telemetry
-  boundaries, and OCC telemetry stats.
+  boundaries, and OCC events.
 
 Inspect the live diff:
 
@@ -75,7 +75,7 @@ Allowed runtime additions:
 - remount allowlisted result facts from `RemountOverlayResult` and the live
   setns-runner boundary.
 - `layerstack.publish_changes`
-- publish route/result/rejection fields and OCC telemetry stats from
+- publish route/result/rejection fields and OCC events from
   operation-level wrappers.
 - `cgroup_monitor.anomaly`
 - `cgroup_monitor.final_summary`
@@ -90,7 +90,7 @@ Forbidden:
 - metrics or dashboards
 - protocol request/response changes
 - telemetry DTO/report objects
-- `OccTraceEvent` or any replacement runtime trace object API
+- the legacy OCC trace-event object API or any replacement runtime trace object API
 - public cgroup read-op tracing for `inspect_cgroup_monitor` or
   `read_cgroup_monitor_samples`
 - spans named after private helpers such as `plan_publish`,
@@ -151,7 +151,7 @@ Check:
 - Workspace phase timing has a test proving existing `Instant` timings are
   emitted.
 - Remount tests prove behavior preservation and allowlisted trace facts only.
-- Publish/OCC tests prove structured route/result/rejection/OCC telemetry stats
+- Publish/OCC tests prove structured route/result/rejection/OCC events
   without custom trace objects.
 - Cgroup tests prove healthy periodic samples emit no trace events and
   final/anomaly events are bounded.
@@ -174,7 +174,7 @@ test ! -e crates/sandbox-runtime-trace
 test ! -e crates/sandbox-runtime/operation/src/internal/telemetry.rs
 test ! -e crates/sandbox-runtime/workspace/src/lifecycle/remount/report.rs
 git diff --exit-code -- crates/sandbox-protocol
-if rg -n "OccTraceEvent" docs/trace crates/sandbox-runtime; then exit 1; else exit 0; fi
+if rg -n "Occ""TraceEvent" docs/trace crates/sandbox-runtime; then exit 1; else exit 0; fi
 if rg -n "info_span!|span!|event!|#\\[instrument|tracing::" crates/sandbox-runtime/operation/src/public/cgroup_monitor -g '*.rs'; then exit 1; else exit 0; fi
 ```
 
@@ -195,17 +195,17 @@ Check:
 - Span/event fields are explicit and do not auto-capture large structs.
 - No raw path/root/hash/command/env/auth/error/DTO values can appear through
   `Debug`, `Display`, `?`, `%`, `field::debug`, or whole-object records.
-- OCC is represented as telemetry stats/fields on the normal publish tracing
-  path, not as `OccTraceEvent` or a replacement trace object API.
+- OCC is represented as events/fields on the normal publish tracing path, not
+  as the legacy OCC trace-event object API or a replacement trace object API.
 - New helper methods are small, local, and consistent with existing code style.
-- Docs changed only as needed for Phase 2/OCC telemetry wording.
+- Docs changed only as needed for Phase 2/OCC tracing wording.
 - Cargo changes are justified by actual runtime crate tracing usage.
 
 Useful commands:
 
 ```sh
 rg -n "Debug|Display|field::debug|\\?[^a-zA-Z]|%[^a-zA-Z]|WorkspaceHandle|WorkspaceEntry|PublishChangesResult|CgroupMonitorSample|RemountOverlayResult" crates/sandbox-runtime -g '*.rs'
-rg -n "sandbox-runtime-trace|internal/telemetry|remount/report|subscriber|exporter|otlp|metrics|dashboard|OccTraceEvent" crates/sandbox-runtime docs/trace -g '*.rs' -g '*.md'
+rg -n "sandbox-runtime-trace|internal/telemetry|remount/report|subscriber|exporter|otlp|metrics|dashboard|Occ""TraceEvent" crates/sandbox-runtime docs/trace -g '*.rs' -g '*.md'
 rg -n "PATH_SECRET|ROOT_HASH_SECRET|CONTENT_SECRET|RAW_.*SECRET|AUTH_ENV_SECRET|STDIN_SECRET|STDOUT_SECRET" crates/sandbox-runtime -g '*.rs'
 ```
 

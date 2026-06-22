@@ -96,9 +96,9 @@ pub fn remount_overlay(
         workdir: workdir.clone(),
         layer_paths: request.layer_paths.clone(),
     };
-    let telemetry = staged_remount_overlay(request, &handle, &mut mask_guard)?;
+    let switch_state = staged_remount_overlay(request, &handle, &mut mask_guard)?;
     mask_guard.restore()?;
-    let report = remount_verification_report(request, &request.workspace_root, &telemetry);
+    let report = remount_verification_report(request, &request.workspace_root, &switch_state);
     Ok(report)
 }
 
@@ -145,7 +145,7 @@ impl Drop for RemountMaskGuard<'_> {
 
 #[cfg(target_os = "linux")]
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-struct RemountSwitchTelemetry {
+struct RemountSwitchState {
     attempted: bool,
     staging_verified: Option<bool>,
     staged_switch: bool,
@@ -154,7 +154,7 @@ struct RemountSwitchTelemetry {
 }
 
 #[cfg(target_os = "linux")]
-impl RemountSwitchTelemetry {
+impl RemountSwitchState {
     fn fully_verified(&self) -> bool {
         if !self.attempted {
             return true;
@@ -211,16 +211,16 @@ fn staged_remount_overlay(
     request: &NamespaceRunnerRequest,
     handle: &OverlayHandle,
     mask_guard: &mut RemountMaskGuard<'_>,
-) -> Result<RemountSwitchTelemetry, RunnerError> {
-    let mut telemetry = RemountSwitchTelemetry {
+) -> Result<RemountSwitchState, RunnerError> {
+    let mut switch_state = RemountSwitchState {
         attempted: true,
-        ..RemountSwitchTelemetry::default()
+        ..RemountSwitchState::default()
     };
     let dirs = RemountStagingDirs::create(&handle.workdir)?;
     let staging_mount = mount_overlay_for_verified_remount(&dirs.staging, handle)?;
-    telemetry.staging_verified = Some(overlay_mount_verified(request, &dirs.staging));
-    if telemetry.staging_verified != Some(true) {
-        return Ok(telemetry);
+    switch_state.staging_verified = Some(overlay_mount_verified(request, &dirs.staging));
+    if switch_state.staging_verified != Some(true) {
+        return Ok(switch_state);
     }
 
     sandbox_runtime_overlay::move_mountpoint(&request.workspace_root, &dirs.rollback)?;
@@ -233,7 +233,7 @@ fn staged_remount_overlay(
             "staged remount switch failed: {err}; rollback_error={rollback_error:?}"
         )));
     }
-    telemetry.staged_switch = true;
+    switch_state.staged_switch = true;
 
     if let Err(err) = mask_guard.restore() {
         let rollback_error = rollback_staged_switch(&request.workspace_root, &dirs);
@@ -244,14 +244,14 @@ fn staged_remount_overlay(
 
     if !overlay_mount_verified(request, &request.workspace_root) {
         let rollback_error = rollback_staged_switch(&request.workspace_root, &dirs);
-        telemetry.staged_switch = false;
-        telemetry.rollback_unmount_error = rollback_error;
-        return Ok(telemetry);
+        switch_state.staged_switch = false;
+        switch_state.rollback_unmount_error = rollback_error;
+        return Ok(switch_state);
     }
 
     match sandbox_runtime_overlay::unmount_overlay(&dirs.rollback) {
         Ok(()) => {
-            telemetry.rollback_unmounted = Some(true);
+            switch_state.rollback_unmounted = Some(true);
             // The runner is a one-shot process; the refreshed overlay now lives
             // at workspace_root and must outlive this helper.
             std::mem::forget(staging_mount);
@@ -259,9 +259,9 @@ fn staged_remount_overlay(
         Err(err) => {
             let cleanup_error = err.to_string();
             let rollback_error = rollback_staged_switch(&request.workspace_root, &dirs);
-            telemetry.staged_switch = false;
-            telemetry.rollback_unmounted = Some(false);
-            telemetry.rollback_unmount_error = Some(match rollback_error {
+            switch_state.staged_switch = false;
+            switch_state.rollback_unmounted = Some(false);
+            switch_state.rollback_unmount_error = Some(match rollback_error {
                 Some(rollback_error) => {
                     format!("{cleanup_error}; rollback_restore_error={rollback_error}")
                 }
@@ -269,7 +269,7 @@ fn staged_remount_overlay(
             });
         }
     }
-    Ok(telemetry)
+    Ok(switch_state)
 }
 
 #[cfg(target_os = "linux")]
@@ -301,7 +301,7 @@ fn rollback_staged_switch(workspace_root: &Path, dirs: &RemountStagingDirs) -> O
 fn remount_verification_report(
     request: &NamespaceRunnerRequest,
     workspace_root: &Path,
-    telemetry: &RemountSwitchTelemetry,
+    switch_state: &RemountSwitchState,
 ) -> serde_json::Value {
     let mount_namespace = fs::read_link("/proc/self/ns/mnt")
         .ok()
@@ -319,15 +319,15 @@ fn remount_verification_report(
     let mount_verified = overlay_mounted
         && lowerdir_verified == Some(true)
         && probe_verified
-        && telemetry.fully_verified();
+        && switch_state.fully_verified();
     serde_json::json!({
         "success": true,
         "status": "ok",
         "mount_verified": mount_verified,
-        "staged_switch": telemetry.staged_switch,
-        "staging_verified": telemetry.staging_verified,
-        "rollback_unmounted": telemetry.rollback_unmounted,
-        "rollback_unmount_error": telemetry.rollback_unmount_error,
+        "staged_switch": switch_state.staged_switch,
+        "staging_verified": switch_state.staging_verified,
+        "rollback_unmounted": switch_state.rollback_unmounted,
+        "rollback_unmount_error": switch_state.rollback_unmount_error,
         "mount_namespace": mount_namespace,
         "mountinfo_mount_point": mountinfo.as_ref().map(|mountinfo| mountinfo.mount_point.clone()),
         "mountinfo_fs_type": mountinfo.as_ref().map(|mountinfo| mountinfo.fs_type.clone()),

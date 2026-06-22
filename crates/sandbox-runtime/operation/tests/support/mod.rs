@@ -415,11 +415,11 @@ pub(crate) fn workspace_handle_unavailable_launch(
 pub(crate) fn destroy_result(handle: &WorkspaceHandle) -> DestroyWorkspaceResult {
     DestroyWorkspaceResult {
         workspace_session_id: handle.id.clone(),
-        evicted_upperdir_bytes: 0,
-        lifetime_s: 0.0,
+        evicted_upperdir_bytes: 4096,
+        lifetime_s: 12.5,
         lease_released: Some(true),
         lease_release_error: None,
-        active_leases_after: 0,
+        active_leases_after: 3,
     }
 }
 
