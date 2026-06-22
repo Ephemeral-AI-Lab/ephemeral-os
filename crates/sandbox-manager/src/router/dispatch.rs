@@ -6,7 +6,7 @@ use super::{forward::forward_sandbox_request, SandboxManagerRouter};
 
 impl SandboxManagerRouter {
     pub async fn dispatch_request(&self, request: Request) -> Response {
-        let manager_owned = crate::operation_specs()
+        let manager_owned = crate::cli_operation_specs()
             .iter()
             .any(|spec| spec.name == request.op);
         match (&request.scope, manager_owned) {

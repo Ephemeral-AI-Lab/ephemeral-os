@@ -3,4 +3,4 @@ mod impls;
 pub mod specs;
 
 pub use dispatch::{dispatch_operation, ManagerServices};
-pub use specs::{operation_catalog, operation_families, operation_specs};
+pub use specs::{cli_operation_catalog, cli_operation_families, cli_operation_specs};

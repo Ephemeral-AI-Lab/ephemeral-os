@@ -791,8 +791,8 @@ struct/class-field changes, LOC estimates, and acceptance checklists live in
   internal service, or collapse the remaining code into internal workspace and
   command telemetry adapters.
 - Remove `inspect_cgroup_monitor` and `read_cgroup_monitor_samples` from runtime
-  `operation_specs`, operation families, operation entries, manager catalog
-  output, and gateway CLI mappings/help.
+  `cli_operation_specs`, CLI operation families, operation entries, manager CLI
+  catalog output, and gateway CLI mappings/help.
 - Keep `CgroupMonitorSample`, final samples, cleanup state, and retained
   internal samples as metrics sources.
 - Do not leave hidden compatibility aliases for the old cgroup monitor

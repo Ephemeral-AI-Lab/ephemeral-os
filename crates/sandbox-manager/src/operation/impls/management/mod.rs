@@ -9,16 +9,16 @@ use serde_json::{json, Value};
 
 use crate::operation::dispatch::ManagerOperationEntry;
 use crate::{ManagerError, SandboxDaemonEndpoint, SandboxId, SandboxRecord};
-use sandbox_protocol::{CliOperationSpec, OperationFamilySpec};
+use sandbox_protocol::{CliOperationFamilySpec, CliOperationSpec};
 
-pub(crate) const MANAGEMENT_FAMILY: OperationFamilySpec = OperationFamilySpec {
+pub(crate) const MANAGEMENT_FAMILY: CliOperationFamilySpec = CliOperationFamilySpec {
     id: "management",
     title: "Management",
     summary: "Create, destroy, list, and inspect sandbox records.",
     description: "Create, destroy, list, and inspect sandbox records. Daemons are managed as part of sandbox lifecycle behavior, not as standalone manager operations.",
 };
 
-const FAMILIES: &[&OperationFamilySpec] = &[&MANAGEMENT_FAMILY];
+const FAMILIES: &[&CliOperationFamilySpec] = &[&MANAGEMENT_FAMILY];
 
 const SPECS: &[&CliOperationSpec] = &[
     &create_sandbox::SPEC,
@@ -34,11 +34,11 @@ pub(crate) const OPERATIONS: &[ManagerOperationEntry] = &[
     ManagerOperationEntry::new(&inspect_sandbox::SPEC, inspect_sandbox::dispatch),
 ];
 
-pub(crate) const fn operation_families() -> &'static [&'static OperationFamilySpec] {
+pub(crate) const fn cli_operation_families() -> &'static [&'static CliOperationFamilySpec] {
     FAMILIES
 }
 
-pub(crate) const fn operation_specs() -> &'static [&'static CliOperationSpec] {
+pub(crate) const fn cli_operation_specs() -> &'static [&'static CliOperationSpec] {
     SPECS
 }
 

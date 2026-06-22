@@ -9,8 +9,8 @@ use sandbox_manager::{
     SandboxRuntime, SandboxState, SandboxStore,
 };
 use sandbox_protocol::{
-    error_kind, CliOperationSpec, OperationCatalog, OperationExecutionSpace, OperationFamilySpec,
-    OperationScope, Request, Response, MAX_REQUEST_BYTES,
+    error_kind, CliOperationCatalog, CliOperationFamilySpec, CliOperationSpec,
+    OperationExecutionSpace, OperationScope, Request, Response, MAX_REQUEST_BYTES,
 };
 use serde_json::{json, Value};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -19,14 +19,14 @@ use tokio_util::sync::CancellationToken;
 
 type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
-static TEST_DAEMON_FAMILY: OperationFamilySpec = OperationFamilySpec {
+static TEST_DAEMON_FAMILY: CliOperationFamilySpec = CliOperationFamilySpec {
     id: "test",
     title: "Test",
     summary: "Test runtime operations.",
     description: "Test runtime operations.",
 };
 
-static TEST_DAEMON_FAMILIES: &[&OperationFamilySpec] = &[&TEST_DAEMON_FAMILY];
+static TEST_DAEMON_FAMILIES: &[&CliOperationFamilySpec] = &[&TEST_DAEMON_FAMILY];
 static TEST_DAEMON_SPECS: &[&CliOperationSpec] = &[];
 
 #[derive(Default)]
@@ -72,8 +72,8 @@ impl SandboxDaemonClient for RecordingDaemonClient {
     fn describe_operations(
         &self,
         _endpoint: &SandboxDaemonEndpoint,
-    ) -> Result<OperationCatalog, ManagerError> {
-        Ok(OperationCatalog::new(
+    ) -> Result<CliOperationCatalog, ManagerError> {
+        Ok(CliOperationCatalog::new(
             OperationExecutionSpace::Runtime,
             TEST_DAEMON_FAMILIES,
             TEST_DAEMON_SPECS,

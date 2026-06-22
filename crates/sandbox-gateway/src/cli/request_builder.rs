@@ -1,6 +1,7 @@
 use sandbox_protocol::{
-    catalog_from_value, catalog_to_value, ArgKind, CliOperationSpecDocument, OperationCatalog,
-    OperationCatalogDocument, OperationExecutionSpace, OperationScope, Request,
+    catalog_from_value, catalog_to_value, ArgKind, CliOperationCatalog,
+    CliOperationCatalogDocument, CliOperationSpecDocument, OperationExecutionSpace, OperationScope,
+    Request,
 };
 use serde_json::{Map, Number, Value};
 
@@ -34,18 +35,18 @@ impl std::fmt::Display for RequestBuildError {
 
 impl std::error::Error for RequestBuildError {}
 
-pub fn manager_catalog_document() -> Result<OperationCatalogDocument, RequestBuildError> {
-    catalog_document(sandbox_manager::operation_catalog())
+pub fn manager_catalog_document() -> Result<CliOperationCatalogDocument, RequestBuildError> {
+    catalog_document(sandbox_manager::cli_operation_catalog())
 }
 
-pub fn runtime_catalog_document() -> Result<OperationCatalogDocument, RequestBuildError> {
-    catalog_document(sandbox_runtime::operation_catalog())
+pub fn runtime_catalog_document() -> Result<CliOperationCatalogDocument, RequestBuildError> {
+    catalog_document(sandbox_runtime::cli_operation_catalog())
 }
 
 pub fn build_request_from_catalog(
     input: BuildRequestInput,
     config: &GatewayConfig,
-    catalog: &OperationCatalogDocument,
+    catalog: &CliOperationCatalogDocument,
 ) -> Result<Request, RequestBuildError> {
     build_request_from_catalog_with_id(input, config, catalog, next_request_id())
 }
@@ -53,7 +54,7 @@ pub fn build_request_from_catalog(
 pub fn build_request_from_catalog_with_id(
     input: BuildRequestInput,
     config: &GatewayConfig,
-    catalog: &OperationCatalogDocument,
+    catalog: &CliOperationCatalogDocument,
     request_id: impl Into<String>,
 ) -> Result<Request, RequestBuildError> {
     if input.execution_space != catalog.operation_execution_space {
@@ -97,8 +98,8 @@ pub fn resolve_runtime_sandbox_id(
 }
 
 fn catalog_document(
-    catalog: OperationCatalog,
-) -> Result<OperationCatalogDocument, RequestBuildError> {
+    catalog: CliOperationCatalog,
+) -> Result<CliOperationCatalogDocument, RequestBuildError> {
     catalog_from_value(&catalog_to_value(catalog)).map_err(|error| build_error(error.message()))
 }
 
@@ -212,7 +213,7 @@ fn find_flag_arg<'a>(
 }
 
 fn find_cli_operation_spec<'a>(
-    catalog: &'a OperationCatalogDocument,
+    catalog: &'a CliOperationCatalogDocument,
     operation: &str,
 ) -> Result<&'a CliOperationSpecDocument, RequestBuildError> {
     catalog

@@ -4,7 +4,7 @@ pub trait SandboxDaemonClient: Send + Sync {
     fn describe_operations(
         &self,
         endpoint: &SandboxDaemonEndpoint,
-    ) -> Result<sandbox_protocol::OperationCatalog, ManagerError>;
+    ) -> Result<sandbox_protocol::CliOperationCatalog, ManagerError>;
 
     fn invoke(
         &self,

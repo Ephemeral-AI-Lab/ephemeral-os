@@ -14,7 +14,8 @@ use crate::cli::request_builder::{
     runtime_catalog_document, BuildRequestInput, RequestBuildError,
 };
 use sandbox_protocol::{
-    render_catalog_help, render_operation_help, OperationCatalogDocument, OperationExecutionSpace,
+    render_catalog_help, render_operation_help, CliOperationCatalogDocument,
+    OperationExecutionSpace,
 };
 
 const EXIT_SUCCESS: u8 = 0;
@@ -198,7 +199,7 @@ where
 }
 
 fn render_help_command<WOut, WErr>(
-    catalog: &OperationCatalogDocument,
+    catalog: &CliOperationCatalogDocument,
     operation_argv: &[String],
     stdout: &mut WOut,
     stderr: &mut WErr,
@@ -244,7 +245,7 @@ async fn run_request_from_catalog<WOut, WErr>(
     client: &GatewayClient,
     request_input: BuildRequestInput,
     config: &GatewayConfig,
-    catalog: &OperationCatalogDocument,
+    catalog: &CliOperationCatalogDocument,
     stdout: &mut WOut,
     stderr: &mut WErr,
 ) -> u8

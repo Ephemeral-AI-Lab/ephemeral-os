@@ -7,12 +7,12 @@ use sandbox_manager::{
     SandboxState, SandboxStore,
 };
 use sandbox_protocol::{
-    ArgKind, CliOperationSpec, OperationCatalog, OperationExecutionSpace, OperationFamilySpec,
-    OperationScope, Request, Response,
+    ArgKind, CliOperationCatalog, CliOperationFamilySpec, CliOperationSpec,
+    OperationExecutionSpace, OperationScope, Request, Response,
 };
 use serde_json::{json, Value};
 
-static TEST_RUNTIME_FAMILY: OperationFamilySpec = OperationFamilySpec {
+static TEST_RUNTIME_FAMILY: CliOperationFamilySpec = CliOperationFamilySpec {
     id: "test",
     title: "Test",
     summary: "Test runtime operations.",
@@ -29,7 +29,7 @@ static TEST_RUNTIME_SPEC: CliOperationSpec = CliOperationSpec {
     related: &[],
 };
 
-static TEST_RUNTIME_FAMILIES: &[&OperationFamilySpec] = &[&TEST_RUNTIME_FAMILY];
+static TEST_RUNTIME_FAMILIES: &[&CliOperationFamilySpec] = &[&TEST_RUNTIME_FAMILY];
 static TEST_RUNTIME_SPECS: &[&CliOperationSpec] = &[&TEST_RUNTIME_SPEC];
 
 #[derive(Default)]
@@ -97,12 +97,12 @@ impl SandboxDaemonClient for FakeClient {
     fn describe_operations(
         &self,
         endpoint: &SandboxDaemonEndpoint,
-    ) -> Result<OperationCatalog, ManagerError> {
+    ) -> Result<CliOperationCatalog, ManagerError> {
         self.described
             .lock()
             .expect("described lock")
             .push(endpoint.socket_path.clone());
-        Ok(OperationCatalog::new(
+        Ok(CliOperationCatalog::new(
             OperationExecutionSpace::Runtime,
             TEST_RUNTIME_FAMILIES,
             TEST_RUNTIME_SPECS,
@@ -147,8 +147,8 @@ fn id(value: &str) -> SandboxId {
 }
 
 #[test]
-fn operation_catalog_contains_only_manager_operations() {
-    let catalog = sandbox_manager::operation_catalog();
+fn cli_operation_catalog_contains_only_manager_operations() {
+    let catalog = sandbox_manager::cli_operation_catalog();
     let names = catalog
         .operations
         .iter()

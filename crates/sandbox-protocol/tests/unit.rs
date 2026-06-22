@@ -1,7 +1,7 @@
 use sandbox_protocol::{
     catalog_from_value, catalog_to_value, decode_request_value, render_catalog_help,
-    render_operation_help, ArgCliSpec, ArgKind, ArgSpec, CliOperationSpec, CliSpec,
-    OperationCatalog, OperationExecutionSpace, OperationFamilySpec, OperationScope,
+    render_operation_help, ArgCliSpec, ArgKind, ArgSpec, CliOperationCatalog,
+    CliOperationFamilySpec, CliOperationSpec, CliSpec, OperationExecutionSpace, OperationScope,
     DAEMON_AUTH_FIELD,
 };
 use serde_json::{json, Value};
@@ -27,7 +27,7 @@ static TEST_ARGS: &[ArgSpec] = &[
     ),
 ];
 
-static TEST_FAMILY: OperationFamilySpec = OperationFamilySpec {
+static TEST_FAMILY: CliOperationFamilySpec = CliOperationFamilySpec {
     id: "management",
     title: "Management",
     summary: "Create, destroy, list, and inspect sandbox records.",
@@ -50,7 +50,7 @@ static TEST_SPEC: CliOperationSpec = CliOperationSpec {
     related: &[],
 };
 
-static TEST_FAMILIES: &[&OperationFamilySpec] = &[&TEST_FAMILY];
+static TEST_FAMILIES: &[&CliOperationFamilySpec] = &[&TEST_FAMILY];
 static TEST_SPECS: &[&CliOperationSpec] = &[&TEST_SPEC];
 
 #[test]
@@ -124,7 +124,7 @@ fn decode_request_rejects_empty_sandbox_scope_id() {
 
 #[test]
 fn catalog_to_value_serializes_cli_metadata() {
-    let value = catalog_to_value(OperationCatalog::new(
+    let value = catalog_to_value(CliOperationCatalog::new(
         OperationExecutionSpace::Manager,
         TEST_FAMILIES,
         TEST_SPECS,
@@ -251,11 +251,14 @@ fn catalog_from_value_rejects_duplicate_family_ids() {
 
     let error = catalog_from_value(&value).expect_err("duplicate family rejected");
 
-    assert_eq!(error.message(), "duplicate operation family id: command");
+    assert_eq!(
+        error.message(),
+        "duplicate cli operation family id: command"
+    );
 }
 
 #[test]
-fn catalog_from_value_rejects_missing_operation_family() {
+fn catalog_from_value_rejects_missing_cli_operation_family() {
     let value = json!({
         "operation_execution_space": "runtime",
         "families": [family_value("command", "Command")],
@@ -380,7 +383,7 @@ fn render_operation_help_unknown_returns_suggestions() {
 
 #[test]
 fn catalog_to_value_omits_owner_target_fields() {
-    let value = catalog_to_value(OperationCatalog::new(
+    let value = catalog_to_value(CliOperationCatalog::new(
         OperationExecutionSpace::Manager,
         TEST_FAMILIES,
         TEST_SPECS,

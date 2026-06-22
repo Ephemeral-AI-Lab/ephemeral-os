@@ -20,11 +20,11 @@ pub mod scope;
 pub use auth::DAEMON_AUTH_FIELD;
 pub use catalog::{
     catalog_from_value, catalog_to_value, operation_execution_space_name, ArgCliSpecDocument,
-    ArgSpecDocument, CatalogDecodeError, CliOperationSpecDocument, CliSpecDocument,
-    OperationCatalog, OperationCatalogDocument, OperationExecutionSpace, OperationFamilyDocument,
+    ArgSpecDocument, CatalogDecodeError, CliOperationCatalog, CliOperationCatalogDocument,
+    CliOperationFamilyDocument, CliOperationSpecDocument, CliSpecDocument, OperationExecutionSpace,
 };
 pub use cli_operation_spec::{
-    ArgCliSpec, ArgKind, ArgSpec, CliOperationSpec, CliSpec, OperationFamilySpec,
+    ArgCliSpec, ArgKind, ArgSpec, CliOperationFamilySpec, CliOperationSpec, CliSpec,
 };
 pub use help::{
     render_catalog_help, render_operation_help, search_operation_help, HelpRenderError,

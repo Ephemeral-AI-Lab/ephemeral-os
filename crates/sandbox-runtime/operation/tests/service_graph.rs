@@ -119,8 +119,8 @@ fn command_contract_keeps_session_selector_in_exec_input() {
 }
 
 #[test]
-fn service_graph_operation_catalog_exports_runtime_command_and_cgroup_monitor_operations() {
-    let catalog = sandbox_runtime::operation_catalog();
+fn service_graph_cli_operation_catalog_exports_runtime_command_and_cgroup_monitor_operations() {
+    let catalog = sandbox_runtime::cli_operation_catalog();
     let names = catalog
         .operations
         .iter()
@@ -152,8 +152,8 @@ fn service_graph_operation_catalog_exports_runtime_command_and_cgroup_monitor_op
 }
 
 #[test]
-fn operation_catalog_cli_metadata_uses_runtime_space() {
-    let catalog = sandbox_runtime::operation_catalog();
+fn cli_operation_catalog_metadata_uses_runtime_space() {
+    let catalog = sandbox_runtime::cli_operation_catalog();
 
     assert!(catalog.operations.iter().all(|spec| {
         spec.cli

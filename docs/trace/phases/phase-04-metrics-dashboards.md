@@ -85,7 +85,7 @@ typed metrics source while still supporting the existing direct read API.
 - Latency metrics use span durations or direct histograms, not subtraction of
   unrelated event timestamps.
 - Dashboards must read metrics from the collector/backend, not from
-  `operation_specs`.
+  `cli_operation_specs`.
 
 ## LOC Estimate
 

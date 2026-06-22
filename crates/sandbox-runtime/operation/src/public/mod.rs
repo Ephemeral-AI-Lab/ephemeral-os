@@ -4,15 +4,15 @@ pub mod command;
 use std::sync::OnceLock;
 
 use crate::internal::services::SandboxRuntimeOperations;
-use crate::operation::{CliOperationSpec, OperationFamilySpec};
+use crate::operation::{CliOperationFamilySpec, CliOperationSpec};
 
-pub(crate) fn operation_families() -> &'static [&'static OperationFamilySpec] {
-    static FAMILIES: OnceLock<Box<[&'static OperationFamilySpec]>> = OnceLock::new();
+pub(crate) fn cli_operation_families() -> &'static [&'static CliOperationFamilySpec] {
+    static FAMILIES: OnceLock<Box<[&'static CliOperationFamilySpec]>> = OnceLock::new();
     FAMILIES
         .get_or_init(|| {
-            command::operation_families()
+            command::cli_operation_families()
                 .iter()
-                .chain(cgroup_monitor::operation_families().iter())
+                .chain(cgroup_monitor::cli_operation_families().iter())
                 .copied()
                 .collect::<Vec<_>>()
                 .into_boxed_slice()
@@ -20,13 +20,13 @@ pub(crate) fn operation_families() -> &'static [&'static OperationFamilySpec] {
         .as_ref()
 }
 
-pub(crate) fn operation_specs() -> &'static [&'static CliOperationSpec] {
+pub(crate) fn cli_operation_specs() -> &'static [&'static CliOperationSpec] {
     static SPECS: OnceLock<Box<[&'static CliOperationSpec]>> = OnceLock::new();
     SPECS
         .get_or_init(|| {
-            command::operation_specs()
+            command::cli_operation_specs()
                 .iter()
-                .chain(cgroup_monitor::operation_specs().iter())
+                .chain(cgroup_monitor::cli_operation_specs().iter())
                 .copied()
                 .collect::<Vec<_>>()
                 .into_boxed_slice()

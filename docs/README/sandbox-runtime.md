@@ -5,7 +5,7 @@ Crate path: `crates/sandbox-runtime/operation`
 Package: `sandbox-runtime`
 
 `sandbox-runtime` is the daemon/runtime operation facade. It owns the runtime
-operation catalog, request dispatch, typed argument parsing, response
+CLI operation catalog, request dispatch, typed argument parsing, response
 projection, and orchestration across the runtime support packages.
 
 ## Boundary Rule

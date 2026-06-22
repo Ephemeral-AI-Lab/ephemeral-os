@@ -1,7 +1,7 @@
 use crate::catalog::catalog_arg_kind_name;
 use crate::{
-    operation_execution_space_name, ArgSpecDocument, CliOperationSpecDocument,
-    OperationCatalogDocument, OperationExecutionSpace, OperationFamilyDocument,
+    operation_execution_space_name, ArgSpecDocument, CliOperationCatalogDocument,
+    CliOperationFamilyDocument, CliOperationSpecDocument, OperationExecutionSpace,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -55,7 +55,7 @@ impl std::fmt::Display for HelpRenderError {
 impl std::error::Error for HelpRenderError {}
 
 #[must_use]
-pub fn render_catalog_help(catalog: &OperationCatalogDocument) -> String {
+pub fn render_catalog_help(catalog: &CliOperationCatalogDocument) -> String {
     let space = operation_execution_space_name(catalog.operation_execution_space);
     let mut output = String::new();
     output.push_str(catalog_title(catalog.operation_execution_space));
@@ -82,7 +82,7 @@ pub fn render_catalog_help(catalog: &OperationCatalogDocument) -> String {
 }
 
 pub fn render_operation_help(
-    catalog: &OperationCatalogDocument,
+    catalog: &CliOperationCatalogDocument,
     operation: &str,
 ) -> Result<String, HelpRenderError> {
     let spec = catalog
@@ -103,7 +103,7 @@ pub fn render_operation_help(
 
 #[must_use]
 pub fn search_operation_help(
-    catalog: &OperationCatalogDocument,
+    catalog: &CliOperationCatalogDocument,
     query: &str,
 ) -> Vec<OperationSearchResult> {
     let query = query.trim().to_ascii_lowercase();
@@ -124,7 +124,7 @@ pub fn search_operation_help(
 }
 
 fn render_operation_page(
-    family: Option<&OperationFamilyDocument>,
+    family: Option<&CliOperationFamilyDocument>,
     spec: &CliOperationSpecDocument,
 ) -> String {
     let mut output = String::new();
@@ -199,7 +199,7 @@ fn push_argument(output: &mut String, arg: &ArgSpecDocument) {
 }
 
 fn operation_matches_query(
-    catalog: &OperationCatalogDocument,
+    catalog: &CliOperationCatalogDocument,
     operation: &CliOperationSpecDocument,
     query: &str,
 ) -> bool {
@@ -227,7 +227,7 @@ fn operation_matches_query(
 }
 
 fn operations_for_family<'a>(
-    catalog: &'a OperationCatalogDocument,
+    catalog: &'a CliOperationCatalogDocument,
     family_id: &str,
 ) -> Vec<&'a CliOperationSpecDocument> {
     catalog

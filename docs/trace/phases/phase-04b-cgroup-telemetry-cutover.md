@@ -15,8 +15,8 @@ inside tracing setup, OTLP export, or dashboard work.
   internal service, or collapse the remaining code into internal workspace and
   command telemetry adapters.
 - Remove `inspect_cgroup_monitor` and `read_cgroup_monitor_samples` from runtime
-  `operation_specs`, operation families, operation entries, and manager/gateway
-  catalog output.
+  `cli_operation_specs`, CLI operation families, operation entries, and
+  manager/gateway CLI catalog output.
 - Remove gateway CLI mappings and help text for cgroup monitor operations.
 - Replace public operation tests with internal registry/metrics tests.
 - Keep `CgroupMonitorSample` as an internal typed source for metrics, final
@@ -91,7 +91,7 @@ from the catalog instead of returning a new response shape.
 - Do not remove `CgroupMonitorRegistry`, session final samples, command final
   samples, cleanup state, or retained internal samples needed for metrics.
 - Do not leave `inspect_cgroup_monitor` or `read_cgroup_monitor_samples` in
-  `operation_specs` as hidden compatibility aliases.
+  `cli_operation_specs` as hidden compatibility aliases.
 - If a direct debug read surface is still required, define it as a separate
   product/debug API outside the telemetry stats path before deleting the old
   operation specs.
@@ -115,12 +115,12 @@ correct.
 
 ## Acceptance Criteria
 
-- [ ] `inspect_cgroup_monitor` is absent from runtime `operation_specs`,
-      operation families, operation entries, manager catalog output, and gateway
-      CLI help.
-- [ ] `read_cgroup_monitor_samples` is absent from runtime `operation_specs`,
-      operation families, operation entries, manager catalog output, and gateway
-      CLI help.
+- [ ] `inspect_cgroup_monitor` is absent from runtime `cli_operation_specs`,
+      CLI operation families, operation entries, manager CLI catalog output, and
+      gateway CLI help.
+- [ ] `read_cgroup_monitor_samples` is absent from runtime `cli_operation_specs`,
+      CLI operation families, operation entries, manager CLI catalog output, and
+      gateway CLI help.
 - [ ] `sandbox_runtime::cgroup_monitor` is no longer exported as a public
       operation module.
 - [ ] Existing workspace/session/command cgroup lifecycle recording still works.

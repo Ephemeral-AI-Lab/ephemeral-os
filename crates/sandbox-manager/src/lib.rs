@@ -14,7 +14,8 @@ pub use daemon_install::SandboxDaemonInstaller;
 pub use error::ManagerError;
 pub use model::{SandboxDaemonEndpoint, SandboxId, SandboxRecord, SandboxState};
 pub use operation::{
-    dispatch_operation, operation_catalog, operation_families, operation_specs, ManagerServices,
+    cli_operation_catalog, cli_operation_families, cli_operation_specs, dispatch_operation,
+    ManagerServices,
 };
 pub use router::SandboxManagerRouter;
 pub use runtime::{CreateSandboxRequest, CreateSandboxResult, SandboxRuntime};

@@ -15,7 +15,7 @@ use support::{build_services, create_request, workspace_handle_with_cgroup, Fake
 
 #[test]
 fn cgroup_monitor_catalog_metadata_is_runtime_family() {
-    let catalog = sandbox_runtime::operation_catalog();
+    let catalog = sandbox_runtime::cli_operation_catalog();
     let family = catalog
         .families
         .iter()
@@ -126,7 +126,7 @@ fn cgroup_monitor_read_samples_uses_optional_limit_without_offsets(
         sandbox_runtime_workspace::CgroupMonitorTargetKind::Command
     );
 
-    let catalog = sandbox_runtime::operation_catalog();
+    let catalog = sandbox_runtime::cli_operation_catalog();
     let read = catalog
         .operations
         .iter()

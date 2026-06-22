@@ -13,7 +13,7 @@ use sandbox_gateway::cli::request_builder::{
     BuildRequestInput,
 };
 use sandbox_protocol::{
-    OperationCatalogDocument, OperationExecutionSpace, OperationScope, Request,
+    CliOperationCatalogDocument, OperationExecutionSpace, OperationScope, Request,
 };
 use serde_json::{json, Value};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -110,7 +110,7 @@ fn manager_request_construction_rejects_runtime_catalog() -> TestResult {
         "req-1",
     )
     .err()
-    .ok_or("manager request unexpectedly accepted runtime catalog")?;
+    .ok_or("manager request unexpectedly accepted runtime CLI catalog")?;
 
     assert_eq!(
         error.message(),
@@ -120,7 +120,7 @@ fn manager_request_construction_rejects_runtime_catalog() -> TestResult {
 }
 
 #[test]
-fn runtime_request_construction_rejects_manager_catalog() -> TestResult {
+fn runtime_request_construction_rejects_manager_cli_catalog() -> TestResult {
     let catalog = manager_catalog()?;
     let error = build_request_from_catalog_with_id(
         BuildRequestInput {
@@ -134,7 +134,7 @@ fn runtime_request_construction_rejects_manager_catalog() -> TestResult {
         "req-1",
     )
     .err()
-    .ok_or("runtime request unexpectedly accepted manager catalog")?;
+    .ok_or("runtime request unexpectedly accepted manager CLI catalog")?;
 
     assert_eq!(
         error.message(),
@@ -658,11 +658,13 @@ fn config(default_sandbox_id: Option<&str>) -> GatewayConfig {
     }
 }
 
-fn manager_catalog() -> Result<OperationCatalogDocument, Box<dyn std::error::Error + Send + Sync>> {
+fn manager_catalog() -> Result<CliOperationCatalogDocument, Box<dyn std::error::Error + Send + Sync>>
+{
     Ok(manager_catalog_document()?)
 }
 
-fn runtime_catalog() -> Result<OperationCatalogDocument, Box<dyn std::error::Error + Send + Sync>> {
+fn runtime_catalog() -> Result<CliOperationCatalogDocument, Box<dyn std::error::Error + Send + Sync>>
+{
     Ok(runtime_catalog_document()?)
 }
 

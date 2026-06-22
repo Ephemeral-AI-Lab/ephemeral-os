@@ -137,7 +137,7 @@ impl SandboxDaemonClient for UnconfiguredDaemonClient {
     fn describe_operations(
         &self,
         _endpoint: &SandboxDaemonEndpoint,
-    ) -> Result<sandbox_protocol::OperationCatalog, ManagerError> {
+    ) -> Result<sandbox_protocol::CliOperationCatalog, ManagerError> {
         Err(ManagerError::ForwardingFailed {
             message: "sandbox daemon client is not configured".to_owned(),
         })

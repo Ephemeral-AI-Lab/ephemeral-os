@@ -39,7 +39,7 @@ sandbox-runtime-overlay / sandbox-runtime-config
 
 **Boundary law:** daemon transport vocabulary lives in
 `crates/sandbox-protocol`; daemon request dispatch lives in
-`crates/sandbox-daemon`; runtime operation dispatch and concrete operation specs
+`crates/sandbox-daemon`; runtime operation dispatch and concrete CLI operation specs
 live in `crates/sandbox-runtime/operation`; CAS fixtures live with
 `sandbox-runtime-layerstack`.
 

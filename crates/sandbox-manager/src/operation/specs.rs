@@ -1,24 +1,24 @@
 use sandbox_protocol::{
-    CliOperationSpec, OperationCatalog, OperationExecutionSpace, OperationFamilySpec,
+    CliOperationCatalog, CliOperationFamilySpec, CliOperationSpec, OperationExecutionSpace,
 };
 
 use super::impls;
 
 #[must_use]
-pub const fn operation_families() -> &'static [&'static OperationFamilySpec] {
-    impls::operation_families()
+pub const fn cli_operation_families() -> &'static [&'static CliOperationFamilySpec] {
+    impls::cli_operation_families()
 }
 
 #[must_use]
-pub const fn operation_specs() -> &'static [&'static CliOperationSpec] {
-    impls::operation_specs()
+pub const fn cli_operation_specs() -> &'static [&'static CliOperationSpec] {
+    impls::cli_operation_specs()
 }
 
 #[must_use]
-pub const fn operation_catalog() -> OperationCatalog {
-    OperationCatalog::new(
+pub const fn cli_operation_catalog() -> CliOperationCatalog {
+    CliOperationCatalog::new(
         OperationExecutionSpace::Manager,
-        operation_families(),
-        operation_specs(),
+        cli_operation_families(),
+        cli_operation_specs(),
     )
 }
