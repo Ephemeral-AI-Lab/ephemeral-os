@@ -8,7 +8,7 @@ batches. Each phase is intended to be implemented and reviewed independently.
 | 1 | [Local JSON Tracing](phase-01-local-json.md) | Local subscriber, root spans, safe field policy, command spans | 650 to 1,020 |
 | 2 | [Runtime Semantic Spans](phase-02-runtime-semantic-spans.md) | Workspace, remount, publish, and cgroup anomaly events | 500 to 800 |
 | 3 | [OTLP Export](phase-03-otlp-export.md) | Single-path OTLP export, bounded failure behavior, tracked shutdown flush, local Tempo/Grafana validation | 600 to 1,060 |
-| 4a | [Metrics And Dashboards](phase-04-metrics-dashboards.md) | Metrics-first cgroup samples and dashboards while keeping current public cgroup read ops | 1,070 to 2,040 |
+| 4a | [Metrics And Dashboards](phase-04-metrics-dashboards.md) | Metrics-first cgroup samples and dashboards before the cgroup read-op cutover | 1,070 to 2,040 |
 | 4b | [Cgroup Telemetry Cutover](phase-04b-cgroup-telemetry-cutover.md) | Move cgroup stats out of CLI/catalog operation specs after telemetry is canonical | 300 to 560 churn, net negative to small positive |
 | 4c | [Live Telemetry Validation](phase-04c-live-telemetry-validation.md) | Live Grafana/Prometheus validation and sanitized examples after cgroup cutover | 140 to 420 |
 | 5 | [Runner Context Propagation](phase-05-runner-context.md) | W3C context propagation into `ns-runner` | 520 to 850 |
@@ -42,8 +42,8 @@ Global constraints for every phase:
       `request_id`, `workspace_session_id`, `command_session_id`, PIDs,
       root hashes, path-derived IDs, raw paths, command payloads, env/auth
       values, or free-form error strings as labels.
-- [ ] Do not add trace spans for public cgroup monitor read operations; cgroup
-      trace events are internal anomalies and final summaries only.
+- [ ] Do not add trace spans for cgroup monitor reads; cgroup trace events are
+      internal anomalies and final summaries only.
 - [ ] Do not use command response timing fields as operation latency; use span
       durations or direct histograms.
 - [ ] Each phase that touches telemetry must include negative tests or a guard

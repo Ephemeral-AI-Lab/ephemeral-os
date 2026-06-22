@@ -279,7 +279,7 @@ telemetry.
 ## Span And Semantic Event Names
 
 Use dot-separated stable names. The cgroup monitor entries are internal event
-boundaries, not spans around public read operations:
+boundaries, not runtime operation spans:
 
 ```text
 daemon.request

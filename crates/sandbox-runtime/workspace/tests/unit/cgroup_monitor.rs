@@ -193,8 +193,8 @@ fn cgroup_monitor_uses_elapsed_time_for_cpu_percent() -> Result<(), Box<dyn std:
 }
 
 #[test]
-fn cgroup_monitor_registry_samples_without_public_reads() -> Result<(), Box<dyn std::error::Error>>
-{
+fn cgroup_monitor_registry_samples_without_operation_reads(
+) -> Result<(), Box<dyn std::error::Error>> {
     let root = temp_root("registry-loop")?;
     let cgroup = root.join("cgroup");
     let upper = root.join("upper");

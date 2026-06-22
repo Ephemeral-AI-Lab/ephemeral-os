@@ -114,8 +114,8 @@ daemon-owned telemetry test support. Do not expose runtime telemetry DTOs.
   command-final, cleanup, and anomaly boundaries.
 - Cgroup trace boundaries are the internal registry's session-final,
   command-final, cleanup, and anomaly points, plus the command finalization
-  handoff that records final samples. Periodic sampler ticks and public read
-  operations are not telemetry boundaries.
+  handoff that records final samples. Periodic sampler ticks and registry reads
+  are not telemetry boundaries.
 - Do not project command response timing fields, cgroup monitor response
   payloads, remount diagnostic JSON, `WorkspaceHandle`, `WorkspaceEntry`,
   `PublishChangesResult`, `Debug` structs, or raw `Display` errors wholesale.
