@@ -1,6 +1,9 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+const MAX_DISK_SAMPLE_NODES: usize = 1024;
+const MAX_DISK_SAMPLE_DEPTH: usize = 64;
+
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct DiskSample {
     pub(crate) upperdir_bytes: Option<i64>,
@@ -19,6 +22,22 @@ impl DiskSample {
 }
 
 pub(crate) fn sample_upperdir(path: &Path) -> DiskSample {
+    sample_upperdir_with_budget(
+        path,
+        DiskSampleBudget {
+            max_nodes: MAX_DISK_SAMPLE_NODES,
+            max_depth: MAX_DISK_SAMPLE_DEPTH,
+        },
+    )
+}
+
+#[derive(Debug, Clone, Copy)]
+struct DiskSampleBudget {
+    max_nodes: usize,
+    max_depth: usize,
+}
+
+fn sample_upperdir_with_budget(path: &Path, budget: DiskSampleBudget) -> DiskSample {
     let mut sample = DiskSample {
         upperdir_bytes: Some(0),
         file_count: Some(0),
@@ -28,9 +47,15 @@ pub(crate) fn sample_upperdir(path: &Path) -> DiskSample {
         read_error_count: Some(0),
         first_error_path: None,
     };
-    let mut stack = vec![path.to_path_buf()];
+    let mut stack = vec![(path.to_path_buf(), 0usize)];
+    let mut visited_nodes = 0usize;
 
-    while let Some(current) = stack.pop() {
+    'walk: while let Some((current, depth)) = stack.pop() {
+        if visited_nodes >= budget.max_nodes {
+            sample.truncated = Some(true);
+            break;
+        }
+        visited_nodes += 1;
         let metadata = match fs::symlink_metadata(&current) {
             Ok(metadata) => metadata,
             Err(error) => {
@@ -47,6 +72,10 @@ pub(crate) fn sample_upperdir(path: &Path) -> DiskSample {
             add(&mut sample.file_count, 1);
         } else if file_type.is_dir() {
             add(&mut sample.dir_count, 1);
+            if depth >= budget.max_depth {
+                sample.truncated = Some(true);
+                continue;
+            }
             let entries = match fs::read_dir(&current) {
                 Ok(entries) => entries,
                 Err(error) => {
@@ -56,7 +85,13 @@ pub(crate) fn sample_upperdir(path: &Path) -> DiskSample {
             };
             for entry in entries {
                 match entry {
-                    Ok(entry) => stack.push(entry.path()),
+                    Ok(entry) => {
+                        if visited_nodes.saturating_add(stack.len()) >= budget.max_nodes {
+                            sample.truncated = Some(true);
+                            break 'walk;
+                        }
+                        stack.push((entry.path(), depth.saturating_add(1)));
+                    }
                     Err(error) => record_error(&mut sample, &current, error),
                 }
             }

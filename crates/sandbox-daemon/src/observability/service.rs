@@ -193,7 +193,7 @@ impl DaemonObservability {
         let mut records = vec![self.resource_record(
             None,
             sampled_at_unix_ms,
-            CgroupSample::from_optional_path(None),
+            CgroupSample::unavailable("cgroup path unavailable"),
             DiskSample::empty(),
         )];
 
@@ -206,7 +206,7 @@ impl DaemonObservability {
             self.resource_record(
                 Some(workspace.workspace_id.0.as_str()),
                 sampled_at_unix_ms,
-                CgroupSample::from_optional_path(None),
+                CgroupSample::unavailable("cgroup path unavailable"),
                 disk,
             )
         }));
