@@ -33,18 +33,6 @@ pub struct SandboxDaemonServer {
 }
 
 impl SandboxDaemonServer {
-    /// Assemble a daemon over `config`, wiring the shutdown token.
-    #[must_use]
-    pub fn new(config: ServerConfig, operations: Arc<SandboxRuntimeOperations>) -> Self {
-        let observability = DaemonObservability::from_config(&config).map(Arc::new);
-        Self {
-            config,
-            operations,
-            observability,
-            shutdown: CancellationToken::new(),
-        }
-    }
-
     #[must_use]
     pub fn new_with_runtime_config(
         config: ServerConfig,

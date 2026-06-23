@@ -222,7 +222,7 @@ If the runtime change had to fit in 60 non-test LOC, delete these first:
 Runtime remains responsible only for neutral timing spans, the original request
 id that the daemon cannot recover after the request returns, and finalizer-local
 command facts needed to hand off the completed trace: workspace id, command id,
-finalizer status, and raw finalizer error text when present. Daemon remains
+and raw finalizer error text when present. Daemon remains
 responsible for sandbox identity, storage ids, SQLite rows, bounded strings,
 async operation names, correlation constants, and persistence. Command
 finalization must still complete when observability is disabled or when
@@ -295,7 +295,7 @@ identity and storage/query naming rules.
 
 The existing `CompletedOperationTrace` can be passed to daemon mapping with
 small command-finalization metadata: `origin_request_id`, `workspace_id`,
-`command_session_id`, finalizer status, and optional raw finalizer error text
+`command_session_id`, and optional raw finalizer error text
 for the daemon to bound. If a struct is required to keep the callback readable,
 make it command-finalization specific and do not include generic async-name or
 correlation fields.

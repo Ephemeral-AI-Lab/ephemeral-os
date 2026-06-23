@@ -54,7 +54,6 @@ pub struct CommandFinalizationTraceMetadata {
     pub origin_request_id: String,
     pub workspace_session_id: Option<WorkspaceSessionId>,
     pub command_session_id: CommandSessionId,
-    pub finalizer_status: &'static str,
     pub finalizer_error: Option<String>,
 }
 

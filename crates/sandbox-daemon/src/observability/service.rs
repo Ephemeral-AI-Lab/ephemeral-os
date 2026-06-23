@@ -146,10 +146,16 @@ impl DaemonObservability {
         metadata: CommandFinalizationTraceMetadata,
     ) -> Result<(), StoreError> {
         let trace_id = trace_id_for_command_finalization(&metadata.command_session_id.0);
+        let error_message = metadata.finalizer_error.map(bound_error);
+        let status = if error_message.is_some() {
+            "error"
+        } else {
+            "ok"
+        };
         let trace_record = TraceRecord {
             trace_id: trace_id.clone(),
             kind: "async".to_owned(),
-            status: bound_state(metadata.finalizer_status.to_owned()),
+            status: status.to_owned(),
             sandbox_id: self.sandbox_id.clone(),
             operation: COMMAND_FINALIZATION_OPERATION.to_owned(),
             request_id: None,
@@ -162,7 +168,7 @@ impl DaemonObservability {
             finished_at_unix_ms: Some(trace.finished_at_unix_ms),
             duration_ms: Some(trace.duration_ms),
             error_kind: None,
-            error_message: metadata.finalizer_error.map(bound_error),
+            error_message,
         };
         let spans = span_records_for_trace(&trace_id, trace.spans, None, None, None);
 

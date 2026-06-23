@@ -5,9 +5,7 @@ use std::time::{Duration, Instant};
 use sandbox_runtime_command::process::{CommandProcess, CommandProcessExit};
 
 use crate::command::{CommandServiceError, CommandSessionId};
-use crate::observability::{
-    AsyncTraceSink, CommandFinalizationTraceMetadata, CompletedOperationTrace, OperationTrace,
-};
+use crate::observability::{AsyncTraceSink, CommandFinalizationTraceMetadata, OperationTrace};
 use crate::workspace_session::WorkspaceSessionService;
 
 use super::finalize::complete_terminal_command_with_services;
@@ -141,51 +139,40 @@ fn finalize_completion(
     completion: CommandCompletion,
     async_trace_sink: Option<&AsyncTraceSink>,
 ) {
-    let Some(origin_request_id) = completion.origin_request_id.clone() else {
+    let CommandCompletion {
+        command_session_id,
+        origin_request_id,
+        process_exit,
+    } = completion;
+
+    let Some((origin_request_id, async_trace_sink)) = origin_request_id.zip(async_trace_sink)
+    else {
         let outcome = complete_terminal_command_with_services(
             workspace,
             process_store,
-            completion.command_session_id,
-            completion.process_exit,
-            None,
-        );
-        let _ = outcome.result;
-        return;
-    };
-    let Some(async_trace_sink) = async_trace_sink else {
-        let outcome = complete_terminal_command_with_services(
-            workspace,
-            process_store,
-            completion.command_session_id,
-            completion.process_exit,
+            command_session_id,
+            process_exit,
             None,
         );
         let _ = outcome.result;
         return;
     };
 
-    let command_session_id = completion.command_session_id.clone();
     let trace = OperationTrace::new();
     let outcome = complete_terminal_command_with_services(
         workspace,
         process_store,
-        completion.command_session_id,
-        completion.process_exit,
+        command_session_id.clone(),
+        process_exit,
         Some(&trace),
     );
     let metadata = CommandFinalizationTraceMetadata {
         origin_request_id,
         workspace_session_id: outcome.workspace_session_id.clone(),
         command_session_id,
-        finalizer_status: if outcome.result.is_ok() {
-            "ok"
-        } else {
-            "error"
-        },
         finalizer_error: outcome.result.as_ref().err().map(ToString::to_string),
     };
-    let completed_trace: CompletedOperationTrace = trace.complete();
-    async_trace_sink(completed_trace, metadata);
+    async_trace_sink(trace.complete(), metadata);
     let _ = outcome.result;
 }
 

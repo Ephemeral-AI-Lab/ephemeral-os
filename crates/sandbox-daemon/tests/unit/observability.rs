@@ -316,7 +316,6 @@ fn completed_async_command_finalization_trace_maps_error_text() -> TestResult {
             origin_request_id: "req-origin".to_owned(),
             workspace_session_id: Some(WorkspaceSessionId("workspace-1".to_owned())),
             command_session_id: CommandSessionId("cmd_1".to_owned()),
-            finalizer_status: "error",
             finalizer_error: Some("raw finalizer error".to_owned()),
         },
     )?;
@@ -704,9 +703,7 @@ async fn observability_store_failure_does_not_alter_operation_response() -> Test
 #[tokio::test]
 async fn observability_write_errors_do_not_change_operation_responses() -> TestResult {
     let root = test_root("write-error-isolated");
-    let config = server_config(&root, Some("sandbox-1"));
-    let operations = Arc::new(runtime_operations(&root)?);
-    let server = SandboxDaemonServer::new(config, operations);
+    let server = daemon_server(&root, Some("sandbox-1"))?;
     let observability = server
         .observability
         .as_ref()
@@ -787,7 +784,6 @@ fn command_finalization_metadata(
         origin_request_id: origin_request_id.to_owned(),
         workspace_session_id: Some(WorkspaceSessionId(workspace_session_id.to_owned())),
         command_session_id: CommandSessionId(command_session_id.to_owned()),
-        finalizer_status: "ok",
         finalizer_error: None,
     }
 }
@@ -930,12 +926,6 @@ fn server_config(root: &Path, sandbox_id: Option<&str>) -> ServerConfig {
         auth_token: None,
         sandbox_id: sandbox_id.map(str::to_owned),
     }
-}
-
-fn runtime_operations(root: &Path) -> TestResult<sandbox_runtime::SandboxRuntimeOperations> {
-    Ok(sandbox_runtime::SandboxRuntimeOperations::from_config(
-        runtime_config(root)?,
-    ))
 }
 
 fn runtime_config(root: &Path) -> TestResult<sandbox_runtime::SandboxRuntimeConfig> {

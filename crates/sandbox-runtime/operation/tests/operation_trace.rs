@@ -331,7 +331,6 @@ fn operation_trace_records_command_finalization_async_span_tree(
         ))
     );
     assert_eq!(metadata.command_session_id.0, "cmd_1");
-    assert_eq!(metadata.finalizer_status, "ok");
     assert!(metadata.finalizer_error.is_none());
     assert_completed_span_sequence(
         &async_trace,

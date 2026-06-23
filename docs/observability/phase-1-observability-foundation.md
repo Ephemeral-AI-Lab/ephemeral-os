@@ -71,8 +71,8 @@ the daemon server.
 ### Daemon Startup
 
 `crates/sandbox-daemon/src/serve.rs` parses `--sandbox-id`, stores it in
-`ServerConfig`, builds `SandboxRuntimeOperations`, and then calls
-`SandboxDaemonServer::new(server_config, operations)`.
+`ServerConfig`, and calls
+`SandboxDaemonServer::new_with_runtime_config(server_config, runtime_config)`.
 
 Phase 1 does not change daemon startup. Path derivation is tested in
 `sandbox-observability` with synthetic socket paths. A later daemon integration
