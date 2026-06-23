@@ -1,10 +1,13 @@
-use sandbox_runtime_command::process::{
-    CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec,
-};
-use sandbox_runtime_command::yield_wait_loop::{wait_for_yield, WaitOutcome};
+use sandbox_runtime_command::process::{CommandProcess, CommandProcessSpawn, CommandProcessSpec};
 use sandbox_runtime_workspace::WorkspaceEntry;
 
+use std::sync::Arc;
+
 use crate::command::{CommandServiceError, CommandSessionId};
+
+use super::completion::{
+    wait_for_completion_yield, CommandCompletionPromise, CommandCompletionWaitOutcome,
+};
 
 pub trait CommandLaunchDriver: Send + Sync {
     fn spawn(
@@ -14,13 +17,22 @@ pub trait CommandLaunchDriver: Send + Sync {
         config: &sandbox_runtime_command::CommandConfig,
     ) -> Result<CommandProcess, CommandServiceError>;
 
-    fn wait_for_initial_yield(
+    fn start_completion_watcher(
+        &self,
+        completion: CommandCompletionPromise,
+        process: Arc<CommandProcess>,
+    ) {
+        completion.start_watcher(process);
+    }
+
+    fn wait_for_command_yield(
         &self,
         process: &CommandProcess,
+        completion: &CommandCompletionPromise,
         yield_time_ms: u64,
         start_offset: u64,
-    ) -> WaitOutcome<CommandProcessExit> {
-        wait_for_yield(process, yield_time_ms, start_offset)
+    ) -> CommandCompletionWaitOutcome {
+        wait_for_completion_yield(process, completion, yield_time_ms, start_offset)
     }
 }
 

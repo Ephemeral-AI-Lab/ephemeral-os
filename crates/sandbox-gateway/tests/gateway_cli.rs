@@ -278,45 +278,6 @@ fn squash_maps_no_runtime_args() -> TestResult {
 }
 
 #[test]
-fn gateway_cli_runtime_catalog_rejects_removed_cgroup_monitor_operations() -> TestResult {
-    let catalog = runtime_catalog()?;
-    let names = catalog
-        .operations
-        .iter()
-        .map(|spec| spec.name.as_str())
-        .collect::<Vec<_>>();
-    let family_titles = catalog
-        .families
-        .iter()
-        .map(|family| family.title.as_str())
-        .collect::<Vec<_>>();
-
-    assert!(!family_titles.contains(&"Cgroup Monitor"));
-    for removed in ["inspect_cgroup_monitor", "read_cgroup_monitor_samples"] {
-        assert!(
-            !names.contains(&removed),
-            "{removed} still in runtime catalog"
-        );
-        let error = build_request_from_catalog_with_id(
-            BuildRequestInput {
-                execution_space: CliOperationExecutionSpace::Runtime,
-                operation: removed.to_owned(),
-                operation_argv: vec![],
-                sandbox_id: Some("sbox-1".to_owned()),
-            },
-            &config(None),
-            &catalog,
-            "req-1",
-        )
-        .err()
-        .ok_or("removed cgroup operation unexpectedly built a request")?;
-        let expected = format!("unknown operation: {removed}");
-        assert_eq!(error.message(), expected.as_str());
-    }
-    Ok(())
-}
-
-#[test]
 fn output_writes_success_to_stdout() -> TestResult {
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
@@ -443,9 +404,6 @@ async fn runtime_help_renders_grouped_catalog_help() -> TestResult {
     assert!(help.contains("exec_command"));
     assert!(help.contains("Layer Stack"));
     assert!(help.contains("squash"));
-    assert!(!help.contains("Cgroup Monitor"));
-    assert!(!help.contains("inspect_cgroup_monitor"));
-    assert!(!help.contains("read_cgroup_monitor_samples"));
     assert!(!help.contains("--sandbox-id"));
     assert!(stderr.is_empty());
     Ok(())

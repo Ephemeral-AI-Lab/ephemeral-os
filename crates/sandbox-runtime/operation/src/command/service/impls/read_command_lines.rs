@@ -83,19 +83,6 @@ impl CommandOperationService {
         let start_offset = input.start_offset.unwrap_or(0);
         let limit = validate_read_limit(input.limit)?;
         if let Some(active) = self.active_command_or_none(&command_session_id)? {
-            if active.process.process_group_id().is_some() {
-                if let Some(process_exit) = active.process.take_exit() {
-                    drop(active);
-                    self.complete_terminal_command(command_session_id.clone(), process_exit)?;
-                    let completed = self.completed_command(&command_session_id)?;
-                    return completed_command_lines_output(
-                        completed,
-                        command_session_id,
-                        start_offset,
-                        limit,
-                    );
-                }
-            }
             let transcript = active.transcript.clone();
             let elapsed = active.started_at.elapsed().as_secs_f64();
             drop(active);

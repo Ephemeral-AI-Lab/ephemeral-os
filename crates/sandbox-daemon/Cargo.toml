@@ -15,26 +15,12 @@ sandbox-runtime-namespace-process.workspace = true
 sandbox-protocol.workspace = true
 sandbox-runtime.workspace = true
 anyhow.workspace = true
-serde.workspace = true
 # preserve_order keeps incoming operation arguments in caller order while this
 # crate still accepts raw JSON requests.
 serde_json = { workspace = true, features = ["preserve_order"] }
 tokio.workspace = true
 tokio-util.workspace = true
-tracing.workspace = true
-tracing-subscriber.workspace = true
-tracing-opentelemetry.workspace = true
-opentelemetry-appender-tracing.workspace = true
-opentelemetry.workspace = true
-opentelemetry_sdk.workspace = true
-opentelemetry-otlp.workspace = true
 thiserror.workspace = true
-
-[dev-dependencies]
-sandbox-runtime-command.workspace = true
-sandbox-runtime-layerstack.workspace = true
-sandbox-runtime-workspace.workspace = true
-serde_yaml_ng.workspace = true
 
 [lints]
 workspace = true

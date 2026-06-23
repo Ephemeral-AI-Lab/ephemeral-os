@@ -10,9 +10,10 @@ pub(crate) use service::{
     CompletedCommandRecord, FinalizationState, RetainedCommandTranscript,
 };
 pub use service::{
-    CommandFinalizedMetadata, CommandLinesOutput, CommandOperationService, CommandOutputSnapshot,
-    CommandPublishFinalization, CommandPublishStatus, CommandSessionId, CommandStatus,
-    CommandYield, ExecCommandInput, ReadCommandLinesInput, WriteCommandStdinInput,
+    CommandCompletionPromise, CommandCompletionWaitOutcome, CommandFinalizedMetadata,
+    CommandLinesOutput, CommandOperationService, CommandOutputSnapshot, CommandPublishFinalization,
+    CommandPublishStatus, CommandSessionId, CommandStatus, CommandYield, ExecCommandInput,
+    ReadCommandLinesInput, WriteCommandStdinInput,
 };
 pub use service::{CommandLaunchDriver, RealCommandLaunchDriver};
 

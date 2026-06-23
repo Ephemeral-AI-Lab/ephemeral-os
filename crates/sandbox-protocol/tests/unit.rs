@@ -59,7 +59,7 @@ fn daemon_auth_field_uses_sandbox_name() {
 }
 
 #[test]
-fn responses_do_not_gain_trace_metadata_or_envelope_fields() {
+fn responses_preserve_payload_owned_shape() {
     let ok = Response::ok(json!({
         "status": "ok",
         "output": "command output remains payload-owned",
@@ -70,11 +70,9 @@ fn responses_do_not_gain_trace_metadata_or_envelope_fields() {
     assert_eq!(ok["status"], "ok");
     assert!(ok.get("result").is_none(), "{ok}");
     assert!(ok.get("meta").is_none(), "{ok}");
-    assert!(ok.get("trace_id").is_none(), "{ok}");
     assert_eq!(err["error"]["kind"], "operation_failed");
     assert!(err.get("result").is_none(), "{err}");
     assert!(err.get("meta").is_none(), "{err}");
-    assert!(err.get("trace_id").is_none(), "{err}");
 }
 
 #[test]

@@ -345,8 +345,7 @@ Keep an operation non-CLI when it is:
 - a process-store or transcript helper
 - a command finalization helper
 - an operation requiring in-memory handles that users cannot name
-- a response shape that exposes internal paths, cgroup internals, or transient
-  orchestration state
+- a response shape that exposes internal paths or transient orchestration state
 
 Examples that should remain non-CLI unless wrapped by a stable user operation:
 

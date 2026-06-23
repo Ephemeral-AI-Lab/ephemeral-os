@@ -1,3 +1,4 @@
+mod completion;
 mod contract;
 mod core;
 pub(crate) mod finalize;
@@ -8,6 +9,7 @@ mod process_store;
 mod status_lookup;
 pub(crate) mod transcript;
 
+pub use completion::{CommandCompletionPromise, CommandCompletionWaitOutcome};
 pub use contract::{
     CommandFinalizedMetadata, CommandLinesOutput, CommandOutputSnapshot,
     CommandPublishFinalization, CommandPublishStatus, CommandSessionId, CommandStatus,

@@ -13,6 +13,8 @@ use crate::workspace_crate::WorkspaceSessionId;
 use crate::workspace_remount::{RemountCancellationToken, RemountSwitchState};
 use crate::workspace_session::WorkspaceSessionHandler;
 
+use super::completion::CommandCompletionPromise;
+
 const DEFAULT_MAX_ACTIVE_COMMANDS: usize = 256;
 
 pub(crate) struct CommandProcessStore {
@@ -103,16 +105,6 @@ impl CommandProcessStore {
     }
 
     #[must_use]
-    pub(crate) fn active_process(
-        &self,
-        command_session_id: &CommandSessionId,
-    ) -> Option<Arc<::sandbox_runtime_command::CommandProcess>> {
-        lock(&self.active)
-            .get(command_session_id)
-            .map(|active| Arc::clone(&active.process))
-    }
-
-    #[must_use]
     pub(crate) fn active_command_session_ids_for_workspace_session(
         &self,
         workspace_session_id: &WorkspaceSessionId,
@@ -186,6 +178,7 @@ impl CommandProcessStore {
                 transcript: RetainedCommandTranscript {
                     transcript_path: active_record.transcript.transcript_path,
                 },
+                next_snapshot_offset: active_record.next_snapshot_offset,
                 finalization: FinalizationState::Failed {
                     error,
                     finalized: finalized.clone().map(Box::new),
@@ -282,6 +275,7 @@ pub(crate) struct ActiveCommandProcess {
     pub(crate) workspace_root: PathBuf,
     pub(crate) started_at: Instant,
     pub(crate) process: Arc<::sandbox_runtime_command::CommandProcess>,
+    pub(crate) completion: CommandCompletionPromise,
     pub(crate) transcript: CommandTranscriptStore,
     pub(crate) next_snapshot_offset: u64,
     pub(crate) lifecycle_state: CommandLifecycleState,
@@ -366,6 +360,7 @@ pub(crate) struct CompletedCommandRecord {
     pub(crate) started_at: Instant,
     pub(crate) result: CommandTerminalResult,
     pub(crate) transcript: RetainedCommandTranscript,
+    pub(crate) next_snapshot_offset: u64,
     pub(crate) finalization: FinalizationState,
     pub(crate) finalized: Option<CommandFinalizedMetadata>,
 }

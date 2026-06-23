@@ -4,11 +4,14 @@ use crate::command::{CommandLaunchDriver, CommandProcessStore, RealCommandLaunch
 use crate::workspace_remount::{ProcProcessGroupController, ProcessGroupController};
 use crate::workspace_session::WorkspaceSessionService;
 
+use super::completion::{spawn_completion_finalizer, CommandCompletionSender};
+
 pub struct CommandOperationService {
     workspace: Arc<WorkspaceSessionService>,
     config: ::sandbox_runtime_command::CommandConfig,
     process_store: Arc<CommandProcessStore>,
     launch_driver: Arc<dyn CommandLaunchDriver>,
+    completion_sender: CommandCompletionSender,
     remount_controller: Arc<dyn ProcessGroupController>,
     remount_admission: Mutex<()>,
 }
@@ -59,11 +62,15 @@ impl CommandOperationService {
         launch_driver: Arc<dyn CommandLaunchDriver>,
         remount_controller: Arc<dyn ProcessGroupController>,
     ) -> Self {
+        let process_store = Arc::new(CommandProcessStore::new());
+        let completion_sender =
+            spawn_completion_finalizer(Arc::clone(&workspace), Arc::clone(&process_store));
         Self {
             workspace,
             config,
-            process_store: Arc::new(CommandProcessStore::new()),
+            process_store,
             launch_driver,
+            completion_sender,
             remount_controller,
             remount_admission: Mutex::new(()),
         }
@@ -87,6 +94,11 @@ impl CommandOperationService {
     #[must_use]
     pub(crate) fn launch_driver(&self) -> &Arc<dyn CommandLaunchDriver> {
         &self.launch_driver
+    }
+
+    #[must_use]
+    pub(crate) fn completion_sender(&self) -> &CommandCompletionSender {
+        &self.completion_sender
     }
 
     #[must_use]

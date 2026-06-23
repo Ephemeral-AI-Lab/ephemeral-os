@@ -349,7 +349,7 @@ Initial guardrails:
 - text-only eligibility
 - conflict rejection instead of unbounded work
 
-Metrics/tracing should count:
+Operational counters should count:
 
 - auto-merge attempted
 - auto-merge clean
@@ -413,14 +413,6 @@ Do not add this unless callers need machine-readable distinction between
 5. Keep `publish_layer_unlocked` unchanged except for receiving resolved
    changes.
 
-6. Add structured tracing at the operation boundary when tracing work lands:
-
-   ```text
-   layerstack.occ.resolve_source_paths
-   layerstack.occ.auto_merge_attempted
-   layerstack.occ.auto_merge_finished
-   ```
-
 ## Test Plan
 
 Layerstack unit tests:
@@ -467,8 +459,7 @@ Lease/compaction tests:
 2. Add internal merge module and unit tests independent of layerstack publish.
 3. Wire resolver into `publish_validated_changes`.
 4. Add mixed changeset and lease/compaction coverage.
-5. Add counters/tracing fields when the runtime tracing implementation exists.
-6. Keep the feature enabled by default only after conflict, atomicity, and
+5. Keep the feature enabled by default only after conflict, atomicity, and
    performance caps are tested.
 
 ## Open Questions

@@ -1,11 +1,11 @@
 use crate::command::{
-    CommandFinalizedMetadata, CommandLifecycleState, CommandServiceError, CommandSessionId,
-    CommandStatus, CommandTerminalResult, CommandTranscriptStore, CommandWorkspaceOwnership,
-    CompletedCommandRecord, FinalizationState, RetainedCommandTranscript,
+    CommandFinalizedMetadata, CommandLifecycleState, CommandProcessStore, CommandServiceError,
+    CommandSessionId, CommandStatus, CommandTerminalResult, CommandTranscriptStore,
+    CommandWorkspaceOwnership, CompletedCommandRecord, FinalizationState,
+    RetainedCommandTranscript,
 };
 use crate::workspace_crate::{DestroyWorkspaceRequest, WorkspaceSessionId};
-
-use super::CommandOperationService;
+use crate::workspace_session::WorkspaceSessionService;
 
 #[derive(Debug, Clone)]
 pub(crate) struct ActiveCompletionRecord {
@@ -14,145 +14,150 @@ pub(crate) struct ActiveCompletionRecord {
     workspace_ownership: CommandWorkspaceOwnership,
     started_at: std::time::Instant,
     transcript: CommandTranscriptStore,
+    next_snapshot_offset: u64,
 }
 
-impl CommandOperationService {
-    pub(crate) fn complete_terminal_command(
-        &self,
-        command_session_id: CommandSessionId,
-        process_exit: ::sandbox_runtime_command::process::CommandProcessExit,
-    ) -> Result<CommandTerminalResult, CommandServiceError> {
-        let record = self.begin_terminal_completion(&command_session_id)?;
-        let result = terminal_result(&process_exit);
+pub(crate) fn complete_terminal_command_with_services(
+    workspace: &WorkspaceSessionService,
+    process_store: &CommandProcessStore,
+    command_session_id: CommandSessionId,
+    process_exit: ::sandbox_runtime_command::process::CommandProcessExit,
+) -> Result<CommandTerminalResult, CommandServiceError> {
+    let record = begin_terminal_completion(process_store, &command_session_id)?;
+    let result = terminal_result(&process_exit);
 
-        let finalized = match self.apply_workspace_completion_policy(&record) {
-            Ok(finalized) => finalized,
-            Err(error) => {
-                return self.fail_completion(&command_session_id, error.to_string(), result, None);
-            }
-        };
-
-        match self.complete_command_record(record, result.clone(), finalized) {
-            Ok(()) => Ok(result),
-            Err(error) => {
-                self.fail_completion(&command_session_id, error.to_string(), result, None)
-            }
+    let finalized = match apply_workspace_completion_policy(workspace, &record) {
+        Ok(finalized) => finalized,
+        Err(error) => {
+            return fail_completion(
+                process_store,
+                &command_session_id,
+                error.to_string(),
+                result,
+                None,
+            );
         }
-    }
+    };
 
-    fn apply_workspace_completion_policy(
-        &self,
-        record: &ActiveCompletionRecord,
-    ) -> Result<Option<CommandFinalizedMetadata>, CommandServiceError> {
-        match &record.workspace_ownership {
-            CommandWorkspaceOwnership::ExistingSession => Ok(None),
-            CommandWorkspaceOwnership::OneShot { handler } => {
-                self.workspace().destroy_session(
-                    handler.as_ref().clone(),
-                    DestroyWorkspaceRequest::default(),
-                )?;
-                Ok(None)
-            }
-        }
-    }
-
-    fn begin_terminal_completion(
-        &self,
-        command_session_id: &CommandSessionId,
-    ) -> Result<ActiveCompletionRecord, CommandServiceError> {
-        let active = self
-            .process_store()
-            .active(command_session_id)
-            .ok_or_else(|| CommandServiceError::CommandNotFound {
-                command_session_id: command_session_id.clone(),
-            })?;
-        if let FinalizationState::Failed { error, finalized } = &active.finalization {
-            return Err(CommandServiceError::CommandFinalizationFailed {
-                command_session_id: command_session_id.clone(),
-                error: error.clone(),
-                finalized: finalized.clone(),
-            });
-        }
-        let record = ActiveCompletionRecord {
-            command_session_id: active.command_session_id.clone(),
-            workspace_session_id: active.workspace_session_id.clone(),
-            workspace_ownership: active.workspace_ownership.clone(),
-            started_at: active.started_at,
-            transcript: active.transcript.clone(),
-        };
-        drop(active);
-
-        self.mark_active_completion(
-            command_session_id,
-            CommandLifecycleState::Finalizing,
-            FinalizationState::InProgress,
-        )?;
-        Ok(record)
-    }
-
-    fn complete_command_record(
-        &self,
-        record: ActiveCompletionRecord,
-        result: CommandTerminalResult,
-        finalized: Option<CommandFinalizedMetadata>,
-    ) -> Result<(), CommandServiceError> {
-        let command_session_id = record.command_session_id.clone();
-        let completed = CompletedCommandRecord {
-            command_session_id: command_session_id.clone(),
-            workspace_session_id: record.workspace_session_id,
-            started_at: record.started_at,
+    match complete_command_record(process_store, record, result.clone(), finalized) {
+        Ok(()) => Ok(result),
+        Err(error) => fail_completion(
+            process_store,
+            &command_session_id,
+            error.to_string(),
             result,
-            transcript: RetainedCommandTranscript {
-                transcript_path: record.transcript.transcript_path,
-            },
-            finalization: FinalizationState::Complete,
-            finalized,
-        };
-        let _ = self.process_store().complete_active(completed)?;
-        Ok(())
+            None,
+        ),
     }
+}
 
-    fn mark_active_completion(
-        &self,
-        command_session_id: &CommandSessionId,
-        lifecycle_state: CommandLifecycleState,
-        finalization: FinalizationState,
-    ) -> Result<(), CommandServiceError> {
-        self.process_store()
-            .update_active(command_session_id, |active| {
-                active.lifecycle_state = lifecycle_state;
-                active.finalization = finalization;
-            })
-            .ok_or_else(|| CommandServiceError::CommandNotFound {
-                command_session_id: command_session_id.clone(),
-            })
+fn apply_workspace_completion_policy(
+    workspace: &WorkspaceSessionService,
+    record: &ActiveCompletionRecord,
+) -> Result<Option<CommandFinalizedMetadata>, CommandServiceError> {
+    match &record.workspace_ownership {
+        CommandWorkspaceOwnership::ExistingSession => Ok(None),
+        CommandWorkspaceOwnership::OneShot { handler } => {
+            workspace
+                .destroy_session(handler.as_ref().clone(), DestroyWorkspaceRequest::default())?;
+            Ok(None)
+        }
     }
+}
 
-    fn fail_completion<T>(
-        &self,
-        command_session_id: &CommandSessionId,
-        error: String,
-        mut result: CommandTerminalResult,
-        finalized_override: Option<CommandFinalizedMetadata>,
-    ) -> Result<T, CommandServiceError> {
-        result.status = CommandStatus::Error;
-        let finalized = finalized_override.or_else(|| {
-            self.process_store()
-                .active(command_session_id)
-                .and_then(|active| retained_finalized_metadata(&active.finalization))
+fn begin_terminal_completion(
+    process_store: &CommandProcessStore,
+    command_session_id: &CommandSessionId,
+) -> Result<ActiveCompletionRecord, CommandServiceError> {
+    let active = process_store.active(command_session_id).ok_or_else(|| {
+        CommandServiceError::CommandNotFound {
+            command_session_id: command_session_id.clone(),
+        }
+    })?;
+    if let FinalizationState::Failed { error, finalized } = &active.finalization {
+        return Err(CommandServiceError::CommandFinalizationFailed {
+            command_session_id: command_session_id.clone(),
+            error: error.clone(),
+            finalized: finalized.clone(),
         });
-        self.process_store().fail_active(
-            command_session_id,
-            error.clone(),
-            result,
-            finalized.clone(),
-        )?;
-        Err(CommandServiceError::CommandFinalizationFailed {
-            command_session_id: command_session_id.clone(),
-            error,
-            finalized: finalized.map(Box::new),
-        })
     }
+    let record = ActiveCompletionRecord {
+        command_session_id: active.command_session_id.clone(),
+        workspace_session_id: active.workspace_session_id.clone(),
+        workspace_ownership: active.workspace_ownership.clone(),
+        started_at: active.started_at,
+        transcript: active.transcript.clone(),
+        next_snapshot_offset: active.next_snapshot_offset,
+    };
+    drop(active);
+
+    mark_active_completion(
+        process_store,
+        command_session_id,
+        CommandLifecycleState::Finalizing,
+        FinalizationState::InProgress,
+    )?;
+    Ok(record)
+}
+
+fn complete_command_record(
+    process_store: &CommandProcessStore,
+    record: ActiveCompletionRecord,
+    result: CommandTerminalResult,
+    finalized: Option<CommandFinalizedMetadata>,
+) -> Result<(), CommandServiceError> {
+    let command_session_id = record.command_session_id.clone();
+    let completed = CompletedCommandRecord {
+        command_session_id: command_session_id.clone(),
+        workspace_session_id: record.workspace_session_id,
+        started_at: record.started_at,
+        result,
+        transcript: RetainedCommandTranscript {
+            transcript_path: record.transcript.transcript_path,
+        },
+        next_snapshot_offset: record.next_snapshot_offset,
+        finalization: FinalizationState::Complete,
+        finalized,
+    };
+    let _ = process_store.complete_active(completed)?;
+    Ok(())
+}
+
+fn mark_active_completion(
+    process_store: &CommandProcessStore,
+    command_session_id: &CommandSessionId,
+    lifecycle_state: CommandLifecycleState,
+    finalization: FinalizationState,
+) -> Result<(), CommandServiceError> {
+    process_store
+        .update_active(command_session_id, |active| {
+            active.lifecycle_state = lifecycle_state;
+            active.finalization = finalization;
+        })
+        .ok_or_else(|| CommandServiceError::CommandNotFound {
+            command_session_id: command_session_id.clone(),
+        })
+}
+
+fn fail_completion<T>(
+    process_store: &CommandProcessStore,
+    command_session_id: &CommandSessionId,
+    error: String,
+    mut result: CommandTerminalResult,
+    finalized_override: Option<CommandFinalizedMetadata>,
+) -> Result<T, CommandServiceError> {
+    result.status = CommandStatus::Error;
+    let finalized = finalized_override.or_else(|| {
+        process_store
+            .active(command_session_id)
+            .and_then(|active| retained_finalized_metadata(&active.finalization))
+    });
+    process_store.fail_active(command_session_id, error.clone(), result, finalized.clone())?;
+    Err(CommandServiceError::CommandFinalizationFailed {
+        command_session_id: command_session_id.clone(),
+        error,
+        finalized: finalized.map(Box::new),
+    })
 }
 
 fn terminal_result(

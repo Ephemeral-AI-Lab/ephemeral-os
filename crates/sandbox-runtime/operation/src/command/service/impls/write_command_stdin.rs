@@ -1,8 +1,6 @@
 use std::sync::Arc;
 use std::time::Instant;
 
-use sandbox_runtime_command::yield_wait_loop::WaitOutcome;
-
 use super::command_yield_response;
 use crate::command::service::CommandOperationService;
 use crate::command::{
@@ -120,17 +118,7 @@ impl CommandOperationService {
         }
 
         let wait_time_ms = if is_kill_input { 1000 } else { yield_time_ms };
-        let outcome = if wait_time_ms == 0 {
-            WaitOutcome::Running(String::new())
-        } else {
-            self.launch_driver().wait_for_initial_yield(
-                process.as_ref(),
-                wait_time_ms,
-                start_offset,
-            )
-        };
-
-        self.command_yield_from_wait_outcome(command_session_id, outcome, true)
+        self.wait_for_command_yield(command_session_id, wait_time_ms, start_offset, true)
     }
 }
 

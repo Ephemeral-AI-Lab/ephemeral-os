@@ -1,12 +1,13 @@
 use super::core::CommandOperationService;
 
-use sandbox_runtime_command::process::CommandProcessExit;
-use sandbox_runtime_command::yield_wait_loop::WaitOutcome;
-
 use crate::command::{
     CommandOutputSnapshot, CommandServiceError, CommandSessionId, CommandStatus, CommandYield,
+    CompletedCommandRecord,
 };
 use crate::workspace_crate::WorkspaceSessionId;
+
+use super::completion::{wait_for_completed_record, CommandCompletionWaitOutcome};
+use super::transcript::command_output_snapshot;
 
 impl CommandOperationService {
     pub(crate) fn running_command_yield(
@@ -25,40 +26,87 @@ impl CommandOperationService {
         ))
     }
 
-    pub(crate) fn command_yield_from_wait_outcome(
+    pub(crate) fn wait_for_command_yield(
         &self,
         command_session_id: CommandSessionId,
-        outcome: WaitOutcome<CommandProcessExit>,
+        yield_time_ms: u64,
+        start_offset: u64,
         include_terminal_command_session_id: bool,
     ) -> Result<CommandYield, CommandServiceError> {
+        let (process, completion) = match self.active_command_or_none(&command_session_id)? {
+            Some(active) => (
+                std::sync::Arc::clone(&active.process),
+                active.completion.clone(),
+            ),
+            None => {
+                let completed = self.completed_command(&command_session_id)?;
+                return self.completed_command_yield(
+                    command_session_id,
+                    completed,
+                    include_terminal_command_session_id,
+                );
+            }
+        };
+        let outcome = self.launch_driver().wait_for_command_yield(
+            process.as_ref(),
+            &completion,
+            yield_time_ms,
+            start_offset,
+        );
         match outcome {
-            WaitOutcome::Running(stdout) => self.running_command_yield(command_session_id, stdout),
-            WaitOutcome::Completed(process_exit) => self.completed_command_yield(
+            CommandCompletionWaitOutcome::Running => self.running_or_completed_command_yield(
                 command_session_id,
-                process_exit,
                 include_terminal_command_session_id,
             ),
+            CommandCompletionWaitOutcome::Completed => {
+                let completed =
+                    wait_for_completed_record(self.process_store(), &command_session_id)?;
+                self.completed_command_yield(
+                    command_session_id,
+                    completed,
+                    include_terminal_command_session_id,
+                )
+            }
         }
     }
 
-    pub(crate) fn completed_command_yield(
+    fn running_or_completed_command_yield(
         &self,
         command_session_id: CommandSessionId,
-        process_exit: CommandProcessExit,
         include_command_session_id: bool,
     ) -> Result<CommandYield, CommandServiceError> {
-        let snapshot = self.active_command_output_snapshot(&command_session_id)?;
-        let result = self.complete_terminal_command(command_session_id.clone(), process_exit)?;
-        let completed = self.completed_command(&command_session_id)?;
-        let command_session_id =
-            (include_command_session_id || snapshot.has_more_output).then_some(command_session_id);
+        if let Some(completed) = self.process_store().completed(&command_session_id) {
+            return self.completed_command_yield(
+                command_session_id,
+                completed,
+                include_command_session_id,
+            );
+        }
+        self.running_command_yield(command_session_id, String::new())
+    }
+
+    fn completed_command_yield(
+        &self,
+        command_session_id: CommandSessionId,
+        completed: CompletedCommandRecord,
+        include_command_session_id: bool,
+    ) -> Result<CommandYield, CommandServiceError> {
+        let window = sandbox_runtime_command::transcript_window(
+            completed.transcript.transcript_path.as_deref(),
+            completed.next_snapshot_offset,
+            usize::MAX,
+        );
+        let has_more_output = window.output_truncated;
+        let snapshot = command_output_snapshot(window);
+        let returned_command_session_id =
+            (include_command_session_id || has_more_output).then_some(command_session_id);
         Ok(command_yield(
-            command_session_id,
-            result.status,
-            result.exit_code,
+            returned_command_session_id,
+            completed.result.status,
+            completed.result.exit_code,
             completed.started_at.elapsed().as_secs_f64(),
-            result.command_total_time_seconds,
-            snapshot.output,
+            completed.result.command_total_time_seconds,
+            snapshot,
         ))
     }
 
@@ -70,13 +118,11 @@ impl CommandOperationService {
             .update_active(command_session_id, |active| {
                 let start_offset = active.next_snapshot_offset;
                 let window = active.transcript.window(start_offset, usize::MAX);
-                let has_more_output = window.output_truncated;
                 let output = super::transcript::command_output_snapshot(window);
                 active.next_snapshot_offset = output.end_offset;
                 let elapsed = active.started_at.elapsed().as_secs_f64();
                 TimedCommandOutputSnapshot {
                     output,
-                    has_more_output,
                     wall_time_seconds: elapsed,
                     command_total_time_seconds: elapsed,
                 }
@@ -106,7 +152,6 @@ impl CommandOperationService {
 
 struct TimedCommandOutputSnapshot {
     output: CommandOutputSnapshot,
-    has_more_output: bool,
     wall_time_seconds: f64,
     command_total_time_seconds: f64,
 }

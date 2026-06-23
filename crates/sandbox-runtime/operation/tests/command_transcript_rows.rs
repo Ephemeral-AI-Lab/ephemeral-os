@@ -5,8 +5,9 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use sandbox_runtime::command::{
-    CommandLaunchDriver, CommandServiceError, CommandSessionId, CommandStatus, ExecCommandInput,
-    ReadCommandLinesInput, WriteCommandStdinInput,
+    CommandCompletionPromise, CommandCompletionWaitOutcome, CommandLaunchDriver,
+    CommandServiceError, CommandSessionId, CommandStatus, ExecCommandInput, ReadCommandLinesInput,
+    WriteCommandStdinInput,
 };
 use sandbox_runtime_command::process::{
     CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec,
@@ -98,17 +99,48 @@ impl CommandLaunchDriver for TranscriptLaunchDriver {
         ))
     }
 
-    fn wait_for_initial_yield(
+    fn start_completion_watcher(
         &self,
-        _process: &CommandProcess,
+        _completion: CommandCompletionPromise,
+        _process: Arc<CommandProcess>,
+    ) {
+    }
+
+    fn wait_for_command_yield(
+        &self,
+        process: &CommandProcess,
+        completion: &CommandCompletionPromise,
         _yield_time_ms: u64,
         _start_offset: u64,
-    ) -> WaitOutcome<CommandProcessExit> {
-        self.outcomes
-            .lock()
-            .expect("test operation succeeds")
-            .pop_front()
-            .unwrap_or_else(|| WaitOutcome::Running(String::new()))
+    ) -> CommandCompletionWaitOutcome {
+        wait_for_test_outcome(
+            process,
+            completion,
+            self.outcomes
+                .lock()
+                .expect("test operation succeeds")
+                .pop_front()
+                .unwrap_or_else(|| WaitOutcome::Running(String::new())),
+        )
+    }
+}
+
+fn wait_for_test_outcome(
+    process: &CommandProcess,
+    completion: &CommandCompletionPromise,
+    outcome: WaitOutcome<CommandProcessExit>,
+) -> CommandCompletionWaitOutcome {
+    match &outcome {
+        WaitOutcome::Running(output) => {
+            write_transcript_output(process, output);
+        }
+        WaitOutcome::Completed(exit) => {
+            completion.resolve(exit.clone());
+        }
+    }
+    match outcome {
+        WaitOutcome::Running(_) => CommandCompletionWaitOutcome::Running,
+        WaitOutcome::Completed(_) => CommandCompletionWaitOutcome::Completed,
     }
 }
 
@@ -132,17 +164,49 @@ impl CommandLaunchDriver for MissingTranscriptLaunchDriver {
         ))
     }
 
-    fn wait_for_initial_yield(
+    fn start_completion_watcher(
         &self,
-        _process: &CommandProcess,
+        _completion: CommandCompletionPromise,
+        _process: Arc<CommandProcess>,
+    ) {
+    }
+
+    fn wait_for_command_yield(
+        &self,
+        process: &CommandProcess,
+        completion: &CommandCompletionPromise,
         _yield_time_ms: u64,
         _start_offset: u64,
-    ) -> WaitOutcome<CommandProcessExit> {
-        self.outcomes
-            .lock()
-            .expect("test operation succeeds")
-            .pop_front()
-            .unwrap_or_else(|| WaitOutcome::Running(String::new()))
+    ) -> CommandCompletionWaitOutcome {
+        wait_for_test_outcome(
+            process,
+            completion,
+            self.outcomes
+                .lock()
+                .expect("test operation succeeds")
+                .pop_front()
+                .unwrap_or_else(|| WaitOutcome::Running(String::new())),
+        )
+    }
+}
+
+fn write_transcript_output(process: &CommandProcess, output: &str) {
+    if output.is_empty() {
+        return;
+    }
+    let Some(path) = process.transcript_path() else {
+        return;
+    };
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+    {
+        use std::io::Write as _;
+        let _ = file.write_all(output.as_bytes());
     }
 }
 
@@ -314,9 +378,14 @@ fn command_transcript_rows_allow_active_missing_transcript_as_empty_pending_wind
 
 #[test]
 fn command_transcript_rows_error_when_completed_transcript_is_missing() {
-    let (env, command_session_id) = completed_session_with_driver(
+    let (env, command_session_id) = session_with_driver(
         MissingTranscriptLaunchDriver::running_then_completed("terminal stdout\n"),
     );
+    let _ = env.command.write_command_stdin(WriteCommandStdinInput {
+        command_session_id: command_session_id.clone(),
+        stdin: "\n".to_owned(),
+        yield_time_ms: Some(1),
+    });
 
     let error = env
         .command

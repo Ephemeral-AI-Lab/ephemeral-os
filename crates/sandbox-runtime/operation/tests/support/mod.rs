@@ -5,7 +5,10 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
-use sandbox_runtime::command::{CommandLaunchDriver, CommandOperationService, CommandServiceError};
+use sandbox_runtime::command::{
+    CommandCompletionPromise, CommandCompletionWaitOutcome, CommandLaunchDriver,
+    CommandOperationService, CommandServiceError,
+};
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
 use sandbox_runtime_command::process::{
     CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec,
@@ -118,12 +121,20 @@ impl CommandLaunchDriver for FakeLaunchDriver {
         ))
     }
 
-    fn wait_for_initial_yield(
+    fn start_completion_watcher(
+        &self,
+        _completion: CommandCompletionPromise,
+        _process: Arc<CommandProcess>,
+    ) {
+    }
+
+    fn wait_for_command_yield(
         &self,
         process: &CommandProcess,
+        completion: &CommandCompletionPromise,
         _yield_time_ms: u64,
         _start_offset: u64,
-    ) -> WaitOutcome<CommandProcessExit> {
+    ) -> CommandCompletionWaitOutcome {
         let outcome = self
             .outcomes
             .lock()
@@ -132,9 +143,15 @@ impl CommandLaunchDriver for FakeLaunchDriver {
             .unwrap_or_else(|| WaitOutcome::Running(String::new()));
         match &outcome {
             WaitOutcome::Running(output) => write_transcript_output(process, output),
-            WaitOutcome::Completed(exit) => write_transcript_output(process, &exit.stdout),
+            WaitOutcome::Completed(exit) => {
+                write_transcript_output(process, &exit.stdout);
+                completion.resolve(exit.clone());
+            }
         }
-        outcome
+        match outcome {
+            WaitOutcome::Running(_) => CommandCompletionWaitOutcome::Running,
+            WaitOutcome::Completed(_) => CommandCompletionWaitOutcome::Completed,
+        }
     }
 }
 

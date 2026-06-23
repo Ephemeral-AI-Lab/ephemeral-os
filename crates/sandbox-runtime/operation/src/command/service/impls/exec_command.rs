@@ -5,6 +5,7 @@ use std::time::Instant;
 use sandbox_runtime_command::process::{CommandProcess, CommandProcessSpec};
 
 use super::command_yield_response;
+use crate::command::service::CommandCompletionPromise;
 use crate::command::service::CommandOperationService;
 use crate::command::{
     ActiveCommandProcess, CancellationState, CommandLifecycleState, CommandServiceError,
@@ -160,8 +161,12 @@ impl CommandOperationService {
                 },
             ));
         }
+        let completion = CommandCompletionPromise::new(
+            command_session_id.clone(),
+            self.completion_sender().clone(),
+        );
         let (record, process_for_rollback) =
-            started.into_active_record(command_session_id.clone(), &workspace);
+            started.into_active_record(command_session_id.clone(), &workspace, completion.clone());
         if let Err(error) = self.process_store().insert_active(reservation, record) {
             process_for_rollback.cancel_process();
             return Err(self.cleanup_workspace_start_failure(
@@ -171,6 +176,8 @@ impl CommandOperationService {
                 error,
             ));
         }
+        self.launch_driver()
+            .start_completion_watcher(completion, Arc::clone(&process_for_rollback));
         drop(admission_guard);
 
         self.initial_exec_yield(command_session_id, input.yield_time_ms)
@@ -235,18 +242,7 @@ impl CommandOperationService {
         command_session_id: CommandSessionId,
         yield_time_ms: Option<u64>,
     ) -> Result<CommandYield, CommandServiceError> {
-        let wait_ms = yield_time_ms.unwrap_or(1000);
-        let process = self
-            .process_store()
-            .active_process(&command_session_id)
-            .ok_or_else(|| CommandServiceError::CommandNotFound {
-                command_session_id: command_session_id.clone(),
-            })?;
-        let outcome = self
-            .launch_driver()
-            .wait_for_initial_yield(process.as_ref(), wait_ms, 0);
-
-        self.command_yield_from_wait_outcome(command_session_id, outcome, false)
+        self.wait_for_command_yield(command_session_id, yield_time_ms.unwrap_or(1000), 0, false)
     }
 }
 
@@ -336,6 +332,7 @@ impl StartedCommand {
         self,
         command_session_id: CommandSessionId,
         workspace: &ResolvedExecWorkspace,
+        completion: CommandCompletionPromise,
     ) -> (ActiveCommandProcess, Arc<CommandProcess>) {
         let process = Arc::new(self.process);
         let process_for_rollback = Arc::clone(&process);
@@ -346,6 +343,7 @@ impl StartedCommand {
             workspace_root: workspace.workspace_root.clone(),
             started_at: Instant::now(),
             process,
+            completion: completion.clone(),
             transcript: CommandTranscriptStore {
                 transcript_path: self.transcript_path,
             },

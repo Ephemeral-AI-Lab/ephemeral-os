@@ -38,11 +38,6 @@ runtime API:
 - `write_command_stdin`
 - `read_command_lines`
 
-Cgroup resource stats are internal telemetry inputs. Metrics are the canonical
-resource stats interface; runtime operation responses do not expose retained
-cgroup sample windows, raw cgroup paths, sampled PID lists, or cleanup
-diagnostics.
-
 Catalog help is rendered from protocol metadata:
 
 ```text
@@ -103,8 +98,8 @@ pub struct SandboxRuntimeOperations {
 
 External dispatch code should receive `SandboxRuntimeOperations` or a narrower
 public operation wrapper for command dispatch. It should not receive workspace
-session, workspace remount, layerstack, or cgroup monitor registries as peer
-external operation surfaces.
+session, workspace remount, or layerstack registries as peer external operation
+surfaces.
 
 Internal daemon setup may still construct all services:
 

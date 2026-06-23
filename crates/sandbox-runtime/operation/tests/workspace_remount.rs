@@ -4,16 +4,15 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use sandbox_runtime::command::{
-    CommandLaunchDriver, CommandOperationService, CommandServiceError, ExecCommandInput,
-    WriteCommandStdinInput,
+    CommandCompletionPromise, CommandCompletionWaitOutcome, CommandLaunchDriver,
+    CommandOperationService, CommandServiceError, ExecCommandInput, WriteCommandStdinInput,
 };
 use sandbox_runtime::workspace_remount::{
     CommandRemountCoordinator, ProcessGroupController, ProcessGroupInspection,
     RemountWorkspaceSession, WorkspaceRemountError, WorkspaceRemountService,
 };
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
-use sandbox_runtime_command::process::{CommandProcess, CommandProcessExit, CommandProcessSpec};
-use sandbox_runtime_command::yield_wait_loop::WaitOutcome;
+use sandbox_runtime_command::process::{CommandProcess, CommandProcessSpec};
 use sandbox_runtime_workspace::{
     CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LayerStackSnapshotRef, LeaseId,
@@ -183,13 +182,21 @@ impl CommandLaunchDriver for InactiveLaunchDriver {
         })
     }
 
-    fn wait_for_initial_yield(
+    fn start_completion_watcher(
+        &self,
+        _completion: CommandCompletionPromise,
+        _process: Arc<CommandProcess>,
+    ) {
+    }
+
+    fn wait_for_command_yield(
         &self,
         _process: &CommandProcess,
+        _completion: &CommandCompletionPromise,
         _yield_time_ms: u64,
         _start_offset: u64,
-    ) -> WaitOutcome<CommandProcessExit> {
-        WaitOutcome::Running(String::new())
+    ) -> CommandCompletionWaitOutcome {
+        CommandCompletionWaitOutcome::Running
     }
 }
 
