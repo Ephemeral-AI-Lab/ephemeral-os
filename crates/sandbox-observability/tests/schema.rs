@@ -361,15 +361,21 @@ fn namespace_execution_snapshot_and_completed_trace_use_typed_tables() -> TestRe
     let (_dir, paths) = test_paths("namespace-execution")?;
     let store = ObservabilityStore::open(&paths)?;
 
-    store.upsert_namespace_execution_snapshots(
+    store.replace_namespace_execution_snapshots(
         "sandbox-1",
         &[
             namespace_execution_snapshot("namespace_execution_1", "workspace-1", 1_000),
             namespace_execution_snapshot("namespace_execution_2", "workspace-1", 1_000),
         ],
     )?;
-    store
-        .prune_namespace_execution_snapshots("sandbox-1", &["namespace_execution_2".to_owned()])?;
+    store.replace_namespace_execution_snapshots(
+        "sandbox-1",
+        &[namespace_execution_snapshot(
+            "namespace_execution_2",
+            "workspace-1",
+            1_000,
+        )],
+    )?;
     store.insert_namespace_execution_trace(&NamespaceExecutionTraceRecord {
         trace_id: "namespace_execution:namespace_execution_1".to_owned(),
         sandbox_id: "sandbox-1".to_owned(),

@@ -342,7 +342,8 @@ mention them.
 - Remove calls to `upsert_execution_snapshots` and
   `prune_execution_snapshots`.
 - Continue writing `namespace_execution_snapshots` from
-  `active_namespace_executions`.
+  `active_namespace_executions` through the single active-set replacement
+  helper.
 
 `crates/sandbox-daemon/src/observability/namespace_execution.rs`
 
@@ -366,8 +367,7 @@ mention them.
 - Remove `prune_execution_snapshots`.
 - Remove `execution_snapshots_for_test`.
 - Remove production imports and SQL for `ExecutionSnapshotRecord`.
-- Keep `upsert_namespace_execution_snapshots`,
-  `prune_namespace_execution_snapshots`, and the namespace trace APIs.
+- Keep `replace_namespace_execution_snapshots` and the namespace trace APIs.
 
 `crates/sandbox-observability/src/lib.rs`
 

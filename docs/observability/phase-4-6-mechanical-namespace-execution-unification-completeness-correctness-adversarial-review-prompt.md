@@ -229,8 +229,8 @@ Verify that daemon observability:
 - destructures `RuntimeObservabilitySnapshot` without `active_executions`;
 - maps `active_namespace_executions` through
   `observability/namespace_execution.rs`;
-- writes active state only through `upsert_namespace_execution_snapshots`;
-- prunes active state only through `prune_namespace_execution_snapshots`;
+- writes and prunes active state only through
+  `replace_namespace_execution_snapshots`;
 - no longer builds `ExecutionSnapshotRecord`;
 - still records workspace snapshots, resource samples, request traces, async
   command finalization traces, and completed namespace execution traces.

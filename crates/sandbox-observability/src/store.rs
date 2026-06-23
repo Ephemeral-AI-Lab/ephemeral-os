@@ -516,14 +516,19 @@ impl ObservabilityStore {
         Ok(())
     }
 
-    pub fn upsert_namespace_execution_snapshots(
+    pub fn replace_namespace_execution_snapshots(
         &self,
         sandbox_id: &str,
         snapshots: &[NamespaceExecutionSnapshotRecord],
     ) -> Result<(), StoreError> {
+        validate_id("sandbox_id", sandbox_id)?;
         for snapshot in snapshots {
             snapshot.validate_for_sandbox(sandbox_id)?;
         }
+        let active = snapshots
+            .iter()
+            .map(|snapshot| snapshot.namespace_execution_id.as_str())
+            .collect::<HashSet<_>>();
 
         let mut connection = self.connection()?;
         let transaction = connection.transaction()?;
@@ -555,25 +560,7 @@ impl ObservabilityStore {
                 ],
             )?;
         }
-        transaction.commit()?;
-        Ok(())
-    }
 
-    pub fn prune_namespace_execution_snapshots(
-        &self,
-        sandbox_id: &str,
-        active_namespace_execution_ids: &[String],
-    ) -> Result<(), StoreError> {
-        validate_id("sandbox_id", sandbox_id)?;
-        for namespace_execution_id in active_namespace_execution_ids {
-            validate_id("namespace_execution_id", namespace_execution_id)?;
-        }
-        let active = active_namespace_execution_ids
-            .iter()
-            .collect::<HashSet<_>>();
-
-        let mut connection = self.connection()?;
-        let transaction = connection.transaction()?;
         let stale_namespace_execution_ids = {
             let mut statement = transaction.prepare(
                 "SELECT namespace_execution_id
@@ -583,7 +570,7 @@ impl ObservabilityStore {
             let rows = statement.query_map([sandbox_id], |row| row.get::<_, String>(0))?;
             rows.collect::<Result<Vec<_>, _>>()?
                 .into_iter()
-                .filter(|namespace_execution_id| !active.contains(namespace_execution_id))
+                .filter(|namespace_execution_id| !active.contains(namespace_execution_id.as_str()))
                 .collect::<Vec<_>>()
         };
 

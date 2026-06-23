@@ -1244,12 +1244,11 @@ The unified runtime hierarchy is:
 ```text
 WorkspaceSession
   NamespaceExecutionAttempt
-    kind = shell_exec | mount_overlay | remount_overlay
+    namespace_execution_id
     operation_name
-    operation_execution_id?
 ```
 
-Phase 4.5 requirements:
+Phase 4.5/4.6 requirements:
 
 - Generate a stable `namespace_execution_id` parent-side for each namespace
   execution attempt.
@@ -1257,11 +1256,10 @@ Phase 4.5 requirements:
   namespace execution records.
 - Keep `command_session_id` in command state only. Command active records may
   store `namespace_execution_id`, but generic namespace execution records should
-  use `operation_name + operation_execution_id` for operation correlation.
-- Use `execution_kind = shell_exec` for command execution and future shell-based
-  namespace operations.
-- Use `execution_kind = mount_overlay` and `execution_kind = remount_overlay`
-  for workspace mount/remount runner work. These are not shell-exec subtypes.
+  use `operation_name` for operation correlation.
+- Do not add `execution_kind`, `runner_kind`, `execution_scope`, or a
+  replacement single-value kind axis. Command work is represented by
+  `operation_name = exec_command`.
 - Do not put `command_session_id`, `workspace_session_id`, `request_id`,
   owner enums, SQLite paths, writer handles, daemon stores, or
   `sandbox-observability` types into child-visible trace context.
@@ -1445,10 +1443,9 @@ databases.
 - Add a runtime-side `NamespaceExecutionStore` keyed by parent-generated
   `namespace_execution_id`.
 - Record active and recently completed namespace executions with
-  `execution_kind = shell_exec | mount_overlay | remount_overlay`.
+  `operation_name`; do not add a replacement kind/scope axis.
 - Keep command identity in command state. Generic namespace execution records use
-  `operation_name + operation_execution_id`, not a dedicated
-  `command_session_id` field.
+  `operation_name`, not a dedicated `command_session_id` field.
 - Link command active records to namespace work by `namespace_execution_id`.
 - Project completed namespace execution lifecycle timing into daemon-owned
   observability rows.

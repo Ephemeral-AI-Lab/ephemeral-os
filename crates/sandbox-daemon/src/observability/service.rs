@@ -331,15 +331,9 @@ impl DaemonObservability {
             sampled_at_unix_ms,
         )?;
 
-        let active_namespace_execution_ids = namespace_execution_records
-            .iter()
-            .map(|execution| execution.namespace_execution_id.clone())
-            .collect::<Vec<_>>();
-        self.store
-            .upsert_namespace_execution_snapshots(&self.sandbox_id, &namespace_execution_records)?;
-        self.store.prune_namespace_execution_snapshots(
+        self.store.replace_namespace_execution_snapshots(
             &self.sandbox_id,
-            &active_namespace_execution_ids,
+            &namespace_execution_records,
         )?;
 
         self.store.insert_resource_samples(&resource_samples)?;
