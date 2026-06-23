@@ -97,9 +97,14 @@ fn service_graph_runtime_operations_exposes_command_lane(
     ));
 
     let _ = remount;
-    let operations = SandboxRuntimeOperations::new(Arc::clone(&command), Arc::clone(&layerstack));
+    let operations = SandboxRuntimeOperations::new(
+        Arc::clone(&command),
+        Arc::clone(&workspace),
+        Arc::clone(&layerstack),
+    );
 
     assert!(Arc::ptr_eq(&operations.command, &command));
+    assert!(Arc::ptr_eq(&operations.workspace_session, &workspace));
     assert!(Arc::ptr_eq(&operations.layerstack, &layerstack));
     Ok(())
 }
@@ -138,7 +143,7 @@ fn service_graph_cli_operation_catalog_exports_runtime_cli_operations() {
             .iter()
             .map(|family| family.id)
             .collect::<Vec<_>>(),
-        ["command", "layerstack"]
+        ["command", "workspace_session", "layerstack"]
     );
     assert_eq!(
         names,
@@ -146,6 +151,8 @@ fn service_graph_cli_operation_catalog_exports_runtime_cli_operations() {
             "exec_command",
             "write_command_stdin",
             "read_command_lines",
+            "create_workspace_session",
+            "destroy_workspace_session",
             "squash"
         ]
     );
@@ -189,6 +196,7 @@ fn service_graph_cli_catalog_keeps_non_cli_helpers_out() {
         "block_remount",
         "refresh_after_publish",
         "capture_session_changes",
+        "begin_workspace_destroy_admission",
         "publish_changes",
         "process_store",
         "transcript",
@@ -208,6 +216,14 @@ fn runtime_known_operation_name_uses_registered_operation_entries() {
     assert_eq!(
         sandbox_runtime::known_operation_name("squash"),
         Some("squash")
+    );
+    assert_eq!(
+        sandbox_runtime::known_operation_name("create_workspace_session"),
+        Some("create_workspace_session")
+    );
+    assert_eq!(
+        sandbox_runtime::known_operation_name("destroy_workspace_session"),
+        Some("destroy_workspace_session")
     );
     assert_eq!(
         sandbox_runtime::known_operation_name("RAW_UNKNOWN_OPERATION_SECRET"),
@@ -233,13 +249,44 @@ fn cli_operation_catalog_metadata_uses_runtime_space() {
 }
 
 #[test]
+fn service_graph_workspace_session_source_boundaries_stay_private() {
+    let workspace_session_sources = rust_sources("src/workspace_session");
+    for (path, source) in workspace_session_sources {
+        for forbidden in [
+            "sandbox_protocol::Request",
+            "sandbox_protocol::Response",
+            "CliOperationSpec",
+            "OperationEntry",
+            "CommandOperationService",
+            "crate::operation",
+        ] {
+            assert!(
+                !source.contains(forbidden),
+                "{forbidden} leaked into {}",
+                path.display()
+            );
+        }
+    }
+
+    let adapter = include_str!("../src/workspace_session_operations.rs");
+    assert!(adapter.contains("operations.workspace_session"));
+    assert!(!adapter.contains("operations.command.workspace()"));
+
+    let services = include_str!("../src/services.rs");
+    assert!(services.contains("pub workspace_session: Arc<WorkspaceSessionService>"));
+    assert!(!services.contains("pub workspace_remount:"));
+}
+
+#[test]
 fn squash_dispatch_projects_stable_no_op_json(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let workspace = workspace_session();
     let operations = SandboxRuntimeOperations::new(
         Arc::new(CommandOperationService::new(
-            workspace_session(),
+            Arc::clone(&workspace),
             sandbox_runtime_command::CommandConfig::default(),
         )),
+        workspace,
         layerstack_service()?,
     );
 
@@ -260,4 +307,23 @@ fn squash_dispatch_projects_stable_no_op_json(
     assert_eq!(response["layer_paths"], json!([]));
     assert!(response.get("lease_release_error").is_some(), "{response}");
     Ok(())
+}
+
+fn rust_sources(relative_root: &str) -> Vec<(PathBuf, String)> {
+    let mut pending = vec![PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(relative_root)];
+    let mut sources = Vec::new();
+    while let Some(path) = pending.pop() {
+        for entry in std::fs::read_dir(&path).expect("source directory is readable") {
+            let entry = entry.expect("source entry is readable");
+            let path = entry.path();
+            if path.is_dir() {
+                pending.push(path);
+            } else if path.extension().and_then(|extension| extension.to_str()) == Some("rs") {
+                let source = std::fs::read_to_string(&path).expect("source file is readable");
+                sources.push((path, source));
+            }
+        }
+    }
+    sources.sort_by(|left, right| left.0.cmp(&right.0));
+    sources
 }

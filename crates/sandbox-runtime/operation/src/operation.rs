@@ -2,7 +2,7 @@ use std::sync::OnceLock;
 
 use crate::observability::{measure_optional, OperationTrace};
 use crate::services::SandboxRuntimeOperations;
-use crate::{command, layerstack};
+use crate::{command, layerstack, workspace_session_operations};
 
 pub use sandbox_protocol::{
     ArgCliSpec, ArgKind, ArgSpec, CliOperationCatalog, CliOperationExecutionSpace,
@@ -38,8 +38,11 @@ impl OperationEntry {
     }
 }
 
-const CLI_FAMILIES: &[&CliOperationFamilySpec] =
-    &[&command::COMMAND_FAMILY, &layerstack::LAYERSTACK_FAMILY];
+const CLI_FAMILIES: &[&CliOperationFamilySpec] = &[
+    &command::COMMAND_FAMILY,
+    &workspace_session_operations::WORKSPACE_SESSION_FAMILY,
+    &layerstack::LAYERSTACK_FAMILY,
+];
 static CLI_SPECS: OnceLock<&'static [&'static CliOperationSpec]> = OnceLock::new();
 
 pub(crate) fn cli_operation_families() -> &'static [&'static CliOperationFamilySpec] {
@@ -84,9 +87,10 @@ pub(crate) fn known_operation_name(operation: &str) -> Option<&'static str> {
         .find_map(|entry| (entry.name == operation).then_some(entry.name))
 }
 
-fn operation_entry_groups() -> [&'static [OperationEntry]; 2] {
+fn operation_entry_groups() -> [&'static [OperationEntry]; 3] {
     [
         command::operation_entries(),
+        workspace_session_operations::operation_entries(),
         layerstack::operation_entries(),
     ]
 }
@@ -96,6 +100,8 @@ fn operation_dispatch_span(operation: &str) -> &'static str {
         "exec_command" => "exec_command::dispatch",
         "write_command_stdin" => "write_command_stdin::dispatch",
         "read_command_lines" => "read_command_lines::dispatch",
+        "create_workspace_session" => "create_workspace_session::dispatch",
+        "destroy_workspace_session" => "destroy_workspace_session::dispatch",
         "squash" => "squash::dispatch",
         _ => "operation::dispatch",
     }

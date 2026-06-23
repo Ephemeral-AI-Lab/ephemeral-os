@@ -9,6 +9,7 @@ mod operation;
 mod services;
 pub mod workspace_remount;
 pub mod workspace_session;
+mod workspace_session_operations;
 
 pub use command::CommandOperationService;
 pub use layerstack::LayerStackService;

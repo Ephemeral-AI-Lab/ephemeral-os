@@ -9,14 +9,20 @@ use crate::workspace_session::WorkspaceSessionService;
 #[derive(Clone)]
 pub struct SandboxRuntimeOperations {
     pub command: Arc<CommandOperationService>,
+    pub workspace_session: Arc<WorkspaceSessionService>,
     pub layerstack: Arc<LayerStackService>,
 }
 
 impl SandboxRuntimeOperations {
     #[must_use]
-    pub fn new(command: Arc<CommandOperationService>, layerstack: Arc<LayerStackService>) -> Self {
+    pub fn new(
+        command: Arc<CommandOperationService>,
+        workspace_session: Arc<WorkspaceSessionService>,
+        layerstack: Arc<LayerStackService>,
+    ) -> Self {
         Self {
             command,
+            workspace_session,
             layerstack,
         }
     }
@@ -42,17 +48,17 @@ impl SandboxRuntimeOperations {
                 .expect("layerstack service initialization failed"),
         );
         let command = Arc::new(CommandOperationService::new(
-            workspace_session,
+            Arc::clone(&workspace_session),
             ::sandbox_runtime_command::CommandConfig {
                 scratch_root: config.command.scratch_root,
             },
         ));
-        Self::new(command, layerstack)
+        Self::new(command, workspace_session, layerstack)
     }
 
     #[must_use]
     pub fn observability_snapshot(&self) -> RuntimeObservabilitySnapshot {
-        let (workspaces, mut partial_errors) = self.command.workspace().snapshot_workspaces();
+        let (workspaces, mut partial_errors) = self.workspace_session.snapshot_workspaces();
         let active_executions = match self.command.process_store().snapshot_active_executions() {
             Ok(snapshots) => snapshots,
             Err(error) => {

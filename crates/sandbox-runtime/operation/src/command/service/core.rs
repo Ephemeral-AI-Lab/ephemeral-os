@@ -1,6 +1,9 @@
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
-use crate::command::{CommandLaunchDriver, CommandProcessStore, RealCommandLaunchDriver};
+use crate::command::{
+    CommandLaunchDriver, CommandProcessStore, CommandSessionId, RealCommandLaunchDriver,
+};
+use crate::workspace_crate::WorkspaceSessionId;
 use crate::workspace_remount::{ProcProcessGroupController, ProcessGroupController};
 use crate::workspace_session::WorkspaceSessionService;
 
@@ -13,7 +16,16 @@ pub struct CommandOperationService {
     launch_driver: Arc<dyn CommandLaunchDriver>,
     completion_sender: CommandCompletionSender,
     remount_controller: Arc<dyn ProcessGroupController>,
-    remount_admission: Mutex<()>,
+    workspace_lifecycle_admission: Mutex<()>,
+}
+
+pub(crate) struct WorkspaceLifecycleAdmission<'a> {
+    _guard: MutexGuard<'a, ()>,
+}
+
+pub(crate) struct WorkspaceDestroyAdmission<'a> {
+    pub(crate) active_command_session_ids: Vec<CommandSessionId>,
+    _lifecycle_admission: WorkspaceLifecycleAdmission<'a>,
 }
 
 impl CommandOperationService {
@@ -72,12 +84,12 @@ impl CommandOperationService {
             launch_driver,
             completion_sender,
             remount_controller,
-            remount_admission: Mutex::new(()),
+            workspace_lifecycle_admission: Mutex::new(()),
         }
     }
 
     #[must_use]
-    pub(crate) fn workspace(&self) -> &Arc<WorkspaceSessionService> {
+    pub(super) fn workspace(&self) -> &Arc<WorkspaceSessionService> {
         &self.workspace
     }
 
@@ -106,9 +118,25 @@ impl CommandOperationService {
         Arc::clone(&self.remount_controller)
     }
 
-    pub(crate) fn lock_remount_admission(&self) -> MutexGuard<'_, ()> {
-        self.remount_admission
+    pub(crate) fn begin_workspace_lifecycle_admission(&self) -> WorkspaceLifecycleAdmission<'_> {
+        let guard = self
+            .workspace_lifecycle_admission
             .lock()
-            .unwrap_or_else(PoisonError::into_inner)
+            .unwrap_or_else(PoisonError::into_inner);
+        WorkspaceLifecycleAdmission { _guard: guard }
+    }
+
+    pub(crate) fn begin_workspace_destroy_admission(
+        &self,
+        workspace_session_id: &WorkspaceSessionId,
+    ) -> WorkspaceDestroyAdmission<'_> {
+        let lifecycle_admission = self.begin_workspace_lifecycle_admission();
+        let active_command_session_ids = self
+            .process_store()
+            .active_command_session_ids_for_workspace_session(workspace_session_id);
+        WorkspaceDestroyAdmission {
+            active_command_session_ids,
+            _lifecycle_admission: lifecycle_admission,
+        }
     }
 }

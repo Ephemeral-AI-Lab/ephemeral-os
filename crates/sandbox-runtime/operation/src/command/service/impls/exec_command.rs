@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use std::sync::{Arc, MutexGuard};
+use std::sync::Arc;
 use std::time::Instant;
 
 use sandbox_runtime_command::process::{CommandProcess, CommandProcessSpec};
@@ -10,7 +10,7 @@ use crate::command::service::CommandOperationService;
 use crate::command::{
     ActiveCommandProcess, CancellationState, CommandLifecycleState, CommandServiceError,
     CommandSessionId, CommandTranscriptStore, CommandWorkspaceOwnership, CommandYield,
-    ExecCommandInput, FinalizationState,
+    ExecCommandInput, FinalizationState, WorkspaceLifecycleAdmission,
 };
 use crate::observability::{measure_optional, measure_optional_if, span_keys, OperationTrace};
 use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliOperationSpec, CliSpec};
@@ -135,11 +135,16 @@ impl CommandOperationService {
         input: ExecCommandInput,
         trace: Option<&OperationTrace>,
     ) -> Result<CommandYield, CommandServiceError> {
+        let existing_session_admission = input
+            .workspace_session_id
+            .is_some()
+            .then(|| self.begin_workspace_lifecycle_admission());
         let workspace =
             measure_optional_if(trace, span_keys::COMMAND_EXEC_WORKSPACE_RESOLVE, || {
                 self.resolve_exec_workspace(&input, trace)
             })?;
-        let admission_guard = self.command_admission_guard(&workspace)?;
+        let admission_guard =
+            self.command_admission_guard(&workspace, existing_session_admission)?;
         let command_session_id = self.process_store().allocate_command_session_id();
         let reservation = match self.process_store().try_reserve() {
             Ok(reservation) => reservation,
@@ -234,11 +239,13 @@ impl CommandOperationService {
         Ok(ResolvedExecWorkspace::new(handler, ownership))
     }
 
-    fn command_admission_guard(
-        &self,
+    fn command_admission_guard<'a>(
+        &'a self,
         workspace: &ResolvedExecWorkspace,
-    ) -> Result<MutexGuard<'_, ()>, CommandServiceError> {
-        let guard = self.lock_remount_admission();
+        existing_session_admission: Option<WorkspaceLifecycleAdmission<'a>>,
+    ) -> Result<WorkspaceLifecycleAdmission<'a>, CommandServiceError> {
+        let guard = existing_session_admission
+            .unwrap_or_else(|| self.begin_workspace_lifecycle_admission());
         self.ensure_workspace_session_not_remount_pending(&workspace.workspace_session_id)?;
         Ok(guard)
     }

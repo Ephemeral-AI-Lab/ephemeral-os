@@ -14,7 +14,7 @@ impl CommandRemountCoordinator for CommandOperationService {
         &self,
         workspace_session_id: &WorkspaceSessionId,
     ) -> CommandRemountQuiesce {
-        let _admission_guard = self.lock_remount_admission();
+        let _admission_guard = self.begin_workspace_lifecycle_admission();
         let command_session_ids = self
             .process_store()
             .active_command_session_ids_for_workspace_session(workspace_session_id);

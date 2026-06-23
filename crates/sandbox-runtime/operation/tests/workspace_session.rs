@@ -1,8 +1,11 @@
 use std::collections::VecDeque;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
+use sandbox_protocol::{CliOperationScope, Request};
 use sandbox_runtime::workspace_session::{WorkspaceSessionError, WorkspaceSessionService};
+use sandbox_runtime::{CommandOperationService, LayerStackService, SandboxRuntimeOperations};
 use sandbox_runtime_workspace::{
     BaseRevision, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LayerStackSnapshotRef, LeaseId,
@@ -10,12 +13,16 @@ use sandbox_runtime_workspace::{
     WorkspaceHandle, WorkspaceProfile, WorkspaceRuntimeHooks, WorkspaceRuntimeService,
     WorkspaceSessionId,
 };
+use serde_json::json;
+
+mod support;
 
 struct FakeWorkspaceService {
     create_results: Mutex<VecDeque<Result<WorkspaceHandle, WorkspaceError>>>,
     capture_results: Mutex<VecDeque<Result<CapturedWorkspaceChanges, WorkspaceError>>>,
     remount_results: Mutex<VecDeque<Result<RemountWorkspaceResult, WorkspaceError>>>,
     destroy_results: Mutex<VecDeque<Result<DestroyWorkspaceResult, WorkspaceError>>>,
+    create_requests: Mutex<Vec<CreateWorkspaceRequest>>,
     capture_calls: Mutex<Vec<WorkspaceSessionId>>,
     remount_calls: Mutex<Vec<WorkspaceSessionId>>,
     destroy_calls: Mutex<Vec<WorkspaceSessionId>>,
@@ -28,6 +35,7 @@ impl FakeWorkspaceService {
             capture_results: Mutex::new(VecDeque::new()),
             remount_results: Mutex::new(VecDeque::new()),
             destroy_results: Mutex::new(VecDeque::new()),
+            create_requests: Mutex::new(Vec::new()),
             capture_calls: Mutex::new(Vec::new()),
             remount_calls: Mutex::new(Vec::new()),
             destroy_calls: Mutex::new(Vec::new()),
@@ -82,13 +90,24 @@ impl FakeWorkspaceService {
             .expect("test operation succeeds")
             .clone()
     }
+
+    fn create_requests(&self) -> Vec<CreateWorkspaceRequest> {
+        self.create_requests
+            .lock()
+            .expect("test operation succeeds")
+            .clone()
+    }
 }
 
 impl FakeWorkspaceService {
     fn create_workspace(
         &self,
-        _request: CreateWorkspaceRequest,
+        request: CreateWorkspaceRequest,
     ) -> Result<WorkspaceHandle, WorkspaceError> {
+        self.create_requests
+            .lock()
+            .expect("test operation succeeds")
+            .push(request);
         self.create_results
             .lock()
             .expect("test operation succeeds")
@@ -213,6 +232,18 @@ fn test_manifest() -> sandbox_runtime_layerstack::Manifest {
 }
 
 fn workspace_handle(workspace_session_id: &str, lease_id: &str) -> WorkspaceHandle {
+    workspace_handle_with_profile(
+        workspace_session_id,
+        lease_id,
+        WorkspaceProfile::HostCompatible,
+    )
+}
+
+fn workspace_handle_with_profile(
+    workspace_session_id: &str,
+    lease_id: &str,
+    profile: WorkspaceProfile,
+) -> WorkspaceHandle {
     let snapshot = LayerStackSnapshotRef {
         lease_id: LeaseId(lease_id.to_owned()),
         manifest_version: 1,
@@ -223,7 +254,7 @@ fn workspace_handle(workspace_session_id: &str, lease_id: &str) -> WorkspaceHand
     WorkspaceHandle::without_launch_for_test(
         WorkspaceSessionId(workspace_session_id.to_owned()),
         PathBuf::from("/workspace"),
-        WorkspaceProfile::HostCompatible,
+        profile,
         snapshot,
     )
 }
@@ -662,6 +693,267 @@ fn workspace_session_apply_remount_failure_blocks_and_keeps_session_available() 
 }
 
 #[test]
+fn workspace_session_create_operation_defaults_host_profile_and_projects_minimal_json(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
+    let operations = operations_with_fake(&fake)?;
+
+    let response = sandbox_runtime::dispatch_operation(
+        &operations,
+        &runtime_request("create_workspace_session", json!({})),
+        None,
+    )
+    .into_json_value();
+
+    assert_eq!(
+        response,
+        json!({
+            "workspace_session_id": "workspace-1",
+            "profile": "host_compatible",
+        })
+    );
+    assert_eq!(
+        fake.create_requests(),
+        vec![CreateWorkspaceRequest {
+            profile: WorkspaceProfile::HostCompatible,
+        }]
+    );
+    Ok(())
+}
+
+#[test]
+fn workspace_session_create_operation_accepts_isolated_profile(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle_with_profile(
+        "workspace-1",
+        "lease-1",
+        WorkspaceProfile::Isolated,
+    )));
+    let operations = operations_with_fake(&fake)?;
+
+    let response = sandbox_runtime::dispatch_operation(
+        &operations,
+        &runtime_request("create_workspace_session", json!({ "profile": "isolated" })),
+        None,
+    )
+    .into_json_value();
+
+    assert_eq!(
+        response,
+        json!({
+            "workspace_session_id": "workspace-1",
+            "profile": "isolated",
+        })
+    );
+    assert_eq!(
+        fake.create_requests(),
+        vec![CreateWorkspaceRequest {
+            profile: WorkspaceProfile::Isolated,
+        }]
+    );
+    Ok(())
+}
+
+#[test]
+fn workspace_session_create_operation_rejects_invalid_profiles(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    for args in [
+        json!({ "profile": "unknown" }),
+        json!({ "profile": "" }),
+        json!({ "profile": 7 }),
+    ] {
+        let fake = Arc::new(FakeWorkspaceService::new());
+        let operations = operations_with_fake(&fake)?;
+
+        let response = sandbox_runtime::dispatch_operation(
+            &operations,
+            &runtime_request("create_workspace_session", args),
+            None,
+        )
+        .into_json_value();
+
+        assert_eq!(response["error"]["kind"], "invalid_request");
+        assert!(fake.create_requests().is_empty());
+    }
+    Ok(())
+}
+
+#[test]
+fn workspace_session_destroy_operation_rejects_invalid_args_without_raw_destroy(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    for args in [
+        json!({}),
+        json!({ "workspace_session_id": "" }),
+        json!({ "workspace_session_id": 7 }),
+        json!({ "workspace_session_id": "workspace-1", "grace_s": -0.1 }),
+    ] {
+        let fake = Arc::new(FakeWorkspaceService::new());
+        let operations = operations_with_fake(&fake)?;
+
+        let response = sandbox_runtime::dispatch_operation(
+            &operations,
+            &runtime_request("destroy_workspace_session", args),
+            None,
+        )
+        .into_json_value();
+
+        assert_eq!(response["error"]["kind"], "invalid_request");
+        assert!(fake.destroy_calls().is_empty());
+    }
+    Ok(())
+}
+
+#[test]
+fn workspace_session_destroy_operation_unknown_session_does_not_call_raw_destroy(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let operations = operations_with_fake(&fake)?;
+
+    let response = sandbox_runtime::dispatch_operation(
+        &operations,
+        &runtime_request(
+            "destroy_workspace_session",
+            json!({ "workspace_session_id": "missing" }),
+        ),
+        None,
+    )
+    .into_json_value();
+
+    assert_eq!(response["error"]["kind"], "operation_failed");
+    assert!(fake.destroy_calls().is_empty());
+    Ok(())
+}
+
+#[test]
+fn workspace_session_destroy_operation_rejects_active_commands_without_raw_destroy(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fake = Arc::new(support::FakeWorkspaceService::new());
+    fake.push_create_result(Ok(support::workspace_handle(
+        "workspace-1",
+        "lease-1",
+        PathBuf::from("/workspace/session"),
+        WorkspaceProfile::HostCompatible,
+    )));
+    let services = support::build_services(Arc::clone(&fake));
+    let workspace_session_id = services
+        .workspace
+        .create_workspace_session(support::create_request())
+        .expect("session create succeeds")
+        .workspace_session_id;
+    let operations = SandboxRuntimeOperations::new(
+        Arc::clone(&services.command),
+        Arc::clone(&services.workspace),
+        layerstack_service()?,
+    );
+
+    let exec_response = sandbox_runtime::dispatch_operation(
+        &operations,
+        &runtime_request(
+            "exec_command",
+            json!({
+                "workspace_session_id": workspace_session_id.0.clone(),
+                "cmd": "cat",
+                "yield_time_ms": 0,
+            }),
+        ),
+        None,
+    )
+    .into_json_value();
+    assert_eq!(exec_response["command_session_id"], "cmd_1");
+
+    let destroy_response = sandbox_runtime::dispatch_operation(
+        &operations,
+        &runtime_request(
+            "destroy_workspace_session",
+            json!({ "workspace_session_id": workspace_session_id.0 }),
+        ),
+        None,
+    )
+    .into_json_value();
+
+    assert_eq!(destroy_response["error"]["kind"], "operation_failed");
+    assert_eq!(
+        destroy_response["error"]["details"]["active_command_session_ids"],
+        json!(["cmd_1"])
+    );
+    assert!(fake.destroy_calls().is_empty());
+    Ok(())
+}
+
+#[test]
+fn workspace_session_destroy_operation_success_projects_minimal_json(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
+    let operations = operations_with_fake(&fake)?;
+    operations
+        .workspace_session
+        .create_workspace_session(create_request())
+        .expect("session create succeeds");
+
+    let response = sandbox_runtime::dispatch_operation(
+        &operations,
+        &runtime_request(
+            "destroy_workspace_session",
+            json!({ "workspace_session_id": "workspace-1", "grace_s": 2.5 }),
+        ),
+        None,
+    )
+    .into_json_value();
+
+    assert_eq!(
+        response,
+        json!({
+            "workspace_session_id": "workspace-1",
+            "destroyed": true,
+        })
+    );
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![WorkspaceSessionId("workspace-1".to_owned())]
+    );
+    Ok(())
+}
+
+#[test]
+fn workspace_session_destroy_operation_failure_retains_session(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
+    fake.push_destroy_result(Err(WorkspaceError::Setup {
+        step: "destroy failed".to_owned(),
+    }));
+    let operations = operations_with_fake(&fake)?;
+    operations
+        .workspace_session
+        .create_workspace_session(create_request())
+        .expect("session create succeeds");
+
+    let response = sandbox_runtime::dispatch_operation(
+        &operations,
+        &runtime_request(
+            "destroy_workspace_session",
+            json!({ "workspace_session_id": "workspace-1" }),
+        ),
+        None,
+    )
+    .into_json_value();
+
+    assert_eq!(response["error"]["kind"], "operation_failed");
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![WorkspaceSessionId("workspace-1".to_owned())]
+    );
+    assert!(operations
+        .workspace_session
+        .resolve_session(WorkspaceSessionId("workspace-1".to_owned()))
+        .is_ok());
+    Ok(())
+}
+
+#[test]
 fn workspace_session_files_do_not_import_command_service() {
     let core = include_str!("../src/workspace_session/service/core.rs");
     let capture_session_changes =
@@ -758,4 +1050,43 @@ fn workspace_session_duplicate_destroy_does_not_call_raw_destroy_twice() {
         fake.destroy_calls(),
         vec![WorkspaceSessionId("workspace-1".to_owned())]
     );
+}
+
+fn operations_with_fake(
+    fake: &Arc<FakeWorkspaceService>,
+) -> Result<SandboxRuntimeOperations, Box<dyn std::error::Error + Send + Sync>> {
+    let workspace = Arc::new(manager_with(fake));
+    let command = Arc::new(CommandOperationService::new(
+        Arc::clone(&workspace),
+        sandbox_runtime_command::CommandConfig::default(),
+    ));
+    Ok(SandboxRuntimeOperations::new(
+        command,
+        workspace,
+        layerstack_service()?,
+    ))
+}
+
+fn runtime_request(op: &str, args: serde_json::Value) -> Request {
+    Request::new(op, "req-test", CliOperationScope::system(), args)
+}
+
+fn layerstack_service() -> Result<Arc<LayerStackService>, Box<dyn std::error::Error + Send + Sync>>
+{
+    let base = temp_root();
+    let root = base.join("layer-stack");
+    let workspace = base.join("workspace");
+    let _ = std::fs::remove_dir_all(&base);
+    std::fs::create_dir_all(&workspace)?;
+    sandbox_runtime_layerstack::build_workspace_base(&root, &workspace, false)?;
+    Ok(Arc::new(LayerStackService::new(root)?))
+}
+
+fn temp_root() -> PathBuf {
+    static NEXT_TEST: AtomicU64 = AtomicU64::new(0);
+    std::env::temp_dir().join(format!(
+        "sandbox-runtime-workspace-session-{}-{}",
+        std::process::id(),
+        NEXT_TEST.fetch_add(1, Ordering::Relaxed)
+    ))
 }

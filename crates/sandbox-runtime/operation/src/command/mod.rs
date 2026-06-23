@@ -8,6 +8,7 @@ pub(crate) use service::{
     ActiveCommandProcess, ActiveCommandRef, CancellationState, CommandLifecycleState,
     CommandProcessStore, CommandTerminalResult, CommandTranscriptStore, CommandWorkspaceOwnership,
     CompletedCommandRecord, FinalizationState, RetainedCommandTranscript,
+    WorkspaceDestroyAdmission, WorkspaceLifecycleAdmission,
 };
 pub use service::{
     CommandCompletionPromise, CommandCompletionWaitOutcome, CommandFinalizedMetadata,

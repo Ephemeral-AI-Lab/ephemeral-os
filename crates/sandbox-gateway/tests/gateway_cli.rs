@@ -201,6 +201,48 @@ fn exec_command_maps_command_without_workspace_session_id() -> TestResult {
 }
 
 #[test]
+fn create_workspace_session_maps_no_profile_to_empty_args() -> TestResult {
+    let request = build_runtime_operation_request("create_workspace_session", Some("sbox-1"), &[])?;
+
+    assert_eq!(request.op, "create_workspace_session");
+    assert_eq!(request.args, json!({}));
+    Ok(())
+}
+
+#[test]
+fn create_workspace_session_maps_profile_flag() -> TestResult {
+    let request = build_runtime_operation_request(
+        "create_workspace_session",
+        Some("sbox-1"),
+        &["--profile", "isolated"],
+    )?;
+
+    assert_eq!(request.op, "create_workspace_session");
+    assert_eq!(request.args, json!({ "profile": "isolated" }));
+    Ok(())
+}
+
+#[test]
+fn destroy_workspace_session_maps_workspace_session_id_and_grace() -> TestResult {
+    let request = build_runtime_operation_request(
+        "destroy_workspace_session",
+        Some("sbox-1"),
+        &["--workspace-session-id", "ws-1", "--grace-s", "2.5"],
+    )?;
+
+    assert_eq!(request.op, "destroy_workspace_session");
+    assert_eq!(
+        request.args,
+        json!({
+            "workspace_session_id": "ws-1",
+            "grace_s": 2.5,
+        })
+    );
+    assert!(request.args.get("sandbox_id").is_none());
+    Ok(())
+}
+
+#[test]
 fn read_command_lines_maps_command_session_id_start_offset_and_limit_flags() -> TestResult {
     let catalog = runtime_catalog()?;
     let request = build_request_from_catalog_with_id(
@@ -402,6 +444,9 @@ async fn runtime_help_renders_grouped_catalog_help() -> TestResult {
     assert!(help.contains("Sandbox Runtime Help"));
     assert!(help.contains("Command"));
     assert!(help.contains("exec_command"));
+    assert!(help.contains("Workspace Session"));
+    assert!(help.contains("create_workspace_session"));
+    assert!(help.contains("destroy_workspace_session"));
     assert!(help.contains("Layer Stack"));
     assert!(help.contains("squash"));
     assert!(!help.contains("--sandbox-id"));
@@ -426,6 +471,57 @@ async fn runtime_help_operation_renders_detail_without_sandbox_id() -> TestResul
     assert!(help.contains("Family\n  Command"));
     assert!(help.contains("Usage\n  sandbox-cli runtime exec_command"));
     assert!(help.contains("Related Operations"));
+    assert!(!help.contains("--sandbox-id"));
+    assert!(stderr.is_empty());
+    Ok(())
+}
+
+#[tokio::test]
+async fn runtime_help_create_workspace_session_renders_detail_without_sandbox_id() -> TestResult {
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    let exit = sandbox_gateway::cli::output::run_cli_with_writers(
+        ["sandbox-cli", "runtime", "help", "create_workspace_session"],
+        &mut stdout,
+        &mut stderr,
+    )
+    .await;
+
+    assert_eq!(exit, 0);
+    let help = String::from_utf8(stdout)?;
+    assert!(help.contains("create_workspace_session"));
+    assert!(help.contains("Family\n  Workspace Session"));
+    assert!(help.contains("Usage\n  sandbox-cli runtime create_workspace_session"));
+    assert!(help.contains("Examples\n  sandbox-cli runtime create_workspace_session"));
+    assert!(!help.contains("--sandbox-id"));
+    assert!(stderr.is_empty());
+    Ok(())
+}
+
+#[tokio::test]
+async fn runtime_help_destroy_workspace_session_renders_detail_without_sandbox_id() -> TestResult {
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    let exit = sandbox_gateway::cli::output::run_cli_with_writers(
+        [
+            "sandbox-cli",
+            "runtime",
+            "help",
+            "destroy_workspace_session",
+        ],
+        &mut stdout,
+        &mut stderr,
+    )
+    .await;
+
+    assert_eq!(exit, 0);
+    let help = String::from_utf8(stdout)?;
+    assert!(help.contains("destroy_workspace_session"));
+    assert!(help.contains("Family\n  Workspace Session"));
+    assert!(help.contains("Usage\n  sandbox-cli runtime destroy_workspace_session"));
+    assert!(help.contains(
+        "Examples\n  sandbox-cli runtime destroy_workspace_session --workspace-session-id ws-1"
+    ));
     assert!(!help.contains("--sandbox-id"));
     assert!(stderr.is_empty());
     Ok(())
@@ -607,11 +703,19 @@ fn build_runtime_request(
     sandbox_id: Option<&str>,
     argv: &[&str],
 ) -> Result<Request, Box<dyn std::error::Error + Send + Sync>> {
+    build_runtime_operation_request("exec_command", sandbox_id, argv)
+}
+
+fn build_runtime_operation_request(
+    operation: &str,
+    sandbox_id: Option<&str>,
+    argv: &[&str],
+) -> Result<Request, Box<dyn std::error::Error + Send + Sync>> {
     let catalog = runtime_catalog()?;
     Ok(build_request_from_catalog_with_id(
         BuildRequestInput {
             execution_space: CliOperationExecutionSpace::Runtime,
-            operation: "exec_command".to_owned(),
+            operation: operation.to_owned(),
             operation_argv: argv.iter().map(ToString::to_string).collect(),
             sandbox_id: sandbox_id.map(str::to_owned),
         },

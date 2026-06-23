@@ -12,9 +12,8 @@ The first implementation is intentionally narrow:
 - create one `command_finalization` async trace per command terminal
   finalization;
 - link it with `origin_request_id`;
-- correlate it with `correlation_kind = "command_session_id"` and
-  `correlation_id = command_session_id`;
-- populate `workspace_id` and `command_session_id`;
+- correlate it with the existing `command_session_id`;
+- populate `workspace_id` from finalizer-owned command state when available;
 - reuse `OperationTrace`, `CompletedOperationTrace`, and
   `CompletedOperationSpan` for finalizer span timing;
 - persist only through daemon-owned observability storage.
@@ -90,15 +89,17 @@ failures are ignored for the user response.
 for request traces but not enough for Phase 4 async links. In
 `crates/sandbox-observability/src/records.rs`, `TraceRecord` has `trace_id`,
 `kind`, `status`, `sandbox_id`, `operation`, optional `request_id`, timing, and
-error fields. It does not have `origin_request_id`, `async_name`,
-`correlation_kind`, `correlation_id`, `workspace_id`, or
+error fields. It does not have `origin_request_id`, `workspace_id`, or
 `command_session_id`. `SpanRecord` already has enough shape and should not
-change. In `crates/sandbox-observability/src/store.rs`,
+change. Runtime does not need to store `async_name`, `correlation_kind`, or
+`correlation_id` for the first command-finalization trace because those values
+are constants or derivable from the command id. In
+`crates/sandbox-observability/src/store.rs`,
 `ObservabilityStore::insert_trace` writes one trace and its spans in a single
 transaction, but the `traces` table and insert SQL currently lack the async
-columns. Phase 4 therefore needs a daemon/storage-only V3 migration and
-`TraceRecord` extension; it must not add a `sandbox-observability` dependency
-from `sandbox-runtime`.
+columns. Phase 4 therefore needs a daemon/storage-only V3 migration for the
+minimal command-finalization correlation fields; it must not add a
+`sandbox-observability` dependency from `sandbox-runtime`.
 
 `CommandOperationService` constructs the completion finalizer in
 `crates/sandbox-runtime/operation/src/command/service/core.rs`.
@@ -155,6 +156,9 @@ Workspace destroy and remount have different Phase 4 treatment:
 - one-shot cleanup after command start failure runs synchronously inside
   `exec_command` before a command completion promise exists, so it remains in
   the request trace and does not get a Phase 4 async trace;
+- explicit `destroy_workspace_session` requests run synchronously through the
+  workspace-session operation dispatch path, so they stay in the request trace
+  and do not get a Phase 4 async trace;
 - `WorkspaceRemountService::remount_workspace_session` currently runs
   synchronously in
   `crates/sandbox-runtime/operation/src/workspace_remount/service/impls/remount_workspace_session.rs`;
@@ -167,24 +171,26 @@ The smallest design that records one command-finalization async trace is:
 
 ```text
 origin_request_id captured by exec_command::dispatch
-optional AsyncTraceLink carried by CommandCompletionPromise and CommandCompletion
+optional origin_request_id carried by CommandCompletionPromise and CommandCompletion
 fresh OperationTrace created inside the existing completion finalizer thread
 optional daemon-owned AsyncTraceSink callback called after finalization
 DaemonObservability maps the completed async trace into storage rows
 ```
 
-This reduces to the requested minimum: one small async trace link, one optional
-trace collector around the existing finalizer path, one narrow daemon-owned
-persistence hook, and no runtime storage dependency.
+This reduces to the requested minimum: one small origin-id carrier, one
+optional trace collector around the existing finalizer path, one narrow
+daemon-owned persistence hook, and no runtime storage dependency.
 
 Existing `OperationTrace` and `CompletedOperationTrace` should be reused. Do
-not add parallel async span structs. A tiny `CompletedAsyncOperationTrace`
-wrapper is justified only to pair the existing completed trace with the async
-link and finalizer outcome.
+not add parallel async span structs. Avoid a generic
+`CompletedAsyncOperationTrace` wrapper in the first implementation; pass the
+completed trace with narrow command-finalization metadata at the daemon
+callback boundary.
 
-The existing completion channel can carry the link. Add an optional link to
-`CommandCompletionPromise` and copy it into `CommandCompletion` in `resolve`.
-Do not add a second finalizer thread or a separate async trace worker.
+The existing completion channel can carry the origin request id. Add an optional
+origin id to `CommandCompletionPromise` and copy it into `CommandCompletion` in
+`resolve`. Do not add a second finalizer thread or a separate async trace
+worker.
 
 Do not trace `completion_watcher` in Phase 4. The watcher and finalizer are
 different threads, and the live `OperationTrace` uses `RefCell` request-local
@@ -195,25 +201,32 @@ rules. The useful first trace is the finalizer.
 
 Every new runtime field has one reason to exist:
 
-- the optional sink slot lets daemon-owned observability receive completed
+- the optional sink callback lets daemon-owned observability receive completed
   async traces without exposing SQLite or `sandbox-observability` to runtime;
-- the optional link on the promise/completion preserves request and command
+- the optional origin request id on the promise/completion preserves request
   correlation until terminal finalization;
 - no field stores response JSON, daemon paths, store handles, command output,
   transcript content, or namespace-runner metadata.
 
 If the runtime change had to fit in 60 non-test LOC, delete these first:
 
+- full async link structs with constant or derivable fields;
+- generic completed async trace wrappers;
+- wrapper spans that duplicate trace-level operation metadata;
 - watcher spans;
 - per-span finalizer error attribution;
 - separate workspace destroy/remount trace types;
 - extra async task type registries;
 - any public config surface for async tracing.
 
-Runtime remains responsible only for neutral timing spans and stable runtime
-correlation identifiers. Daemon remains responsible for sandbox identity,
-storage ids, SQLite rows, bounded strings, and persistence. Command finalization
-must still complete when observability is disabled or when persistence fails.
+Runtime remains responsible only for neutral timing spans, the original request
+id that the daemon cannot recover after the request returns, and finalizer-local
+command facts needed to hand off the completed trace: workspace id, command id,
+finalizer status, and raw finalizer error text when present. Daemon remains
+responsible for sandbox identity, storage ids, SQLite rows, bounded strings,
+async operation names, correlation constants, and persistence. Command
+finalization must still complete when observability is disabled or when
+persistence fails.
 
 The design is rejected if implementation requires a global event bus, a
 registry of async task types, a second finalizer thread, a broad sink trait with
@@ -227,7 +240,7 @@ design works, so use it.
 Phase 4 includes:
 
 - one linked async trace for command finalization;
-- a storage-neutral runtime async trace link;
+- a storage-neutral runtime origin-id carrier;
 - an optional runtime callback supplied by daemon construction;
 - finalizer-thread span collection using `OperationTrace`;
 - daemon/storage mapping for async trace metadata;
@@ -254,59 +267,56 @@ Phase 4 does not implement:
 
 ## Data Model
 
-Add a runtime-neutral link type in `sandbox-runtime`:
+Do not add a full async link type in `sandbox-runtime`. For the first
+implementation, the runtime only needs to preserve the request id that started
+the command:
 
 ```text
-AsyncTraceLink
-  origin_request_id: String
-  async_name: &'static str
-  correlation_kind: &'static str
-  correlation_id: String
-  workspace_id: Option<WorkspaceSessionId>
-  command_session_id: Option<CommandSessionId>
+CommandCompletionPromise
+  origin_request_id: Option<String>
+
+CommandCompletion
+  origin_request_id: Option<String>
 ```
 
-For command finalization:
+For command finalization, daemon-owned mapping derives the async identity:
 
 ```text
-async_name = "command_finalization"
-correlation_kind = "command_session_id"
-correlation_id = command_session_id
-workspace_id = workspace_session_id
-command_session_id = command_session_id
+operation = "command_finalization"
+trace_id = "async:command_finalization:command_session_id:" + command_session_id
+workspace_id = workspace_session_id captured by begin_terminal_completion
+command_session_id = command_session_id already carried by CommandCompletion
 ```
 
-Do not put `sandbox_id` in the runtime link. The daemon-owned callback is
-installed only when daemon observability is enabled, and
-`DaemonObservability` already owns the sandbox identity needed for storage.
+Do not put `sandbox_id`, `async_name`, `correlation_kind`, or `correlation_id`
+in runtime types. The daemon-owned callback is installed only when daemon
+observability is enabled, and `DaemonObservability` already owns the sandbox
+identity and storage/query naming rules.
 
-Add a small wrapper:
-
-```text
-CompletedAsyncOperationTrace
-  link: AsyncTraceLink
-  status: "ok" | "error"
-  error_message: Option<String>
-  trace: CompletedOperationTrace
-```
-
-The wrapper reuses the existing span DTOs. `status` is the finalizer outcome,
-not a response envelope.
+The existing `CompletedOperationTrace` can be passed to daemon mapping with
+small command-finalization metadata: `origin_request_id`, `workspace_id`,
+`command_session_id`, finalizer status, and optional raw finalizer error text
+for the daemon to bound. If a struct is required to keep the callback readable,
+make it command-finalization specific and do not include generic async-name or
+correlation fields.
 
 Use a callback type rather than a trait unless implementation proves a trait is
 shorter:
 
 ```text
-AsyncTraceSink = Arc<dyn Fn(CompletedAsyncOperationTrace) + Send + Sync + 'static>
+AsyncTraceSink =
+  Arc<dyn Fn(CompletedOperationTrace, CommandFinalizationMetadata) + Send + Sync + 'static>
 ```
 
-The callback returns `()`. Daemon-side persistence errors are swallowed at the
-daemon boundary, matching current request-trace behavior.
+`CommandFinalizationMetadata` is a descriptive placeholder for the narrow
+metadata above, not a storage DTO or general async framework. The callback
+returns `()`. Daemon-side persistence errors are swallowed at the daemon
+boundary, matching current request-trace behavior.
 
-Storage trace ids:
+Storage trace ids are daemon-derived:
 
 ```text
-trace_id = "async:" + async_name + ":" + correlation_kind + ":" + correlation_id
+trace_id = "async:command_finalization:command_session_id:" + command_session_id
 span_id = trace_id + ":span:" + call_index
 ```
 
@@ -318,71 +328,72 @@ Add a V3 storage migration by extending `traces` with nullable async fields:
 
 ```text
 origin_request_id TEXT
-async_name TEXT
-correlation_kind TEXT
-correlation_id TEXT
 workspace_id TEXT
 command_session_id TEXT
 ```
 
-Add indexes only for the fields Phase 4 needs to query later:
-
-```text
-idx_traces_origin_request ON traces(sandbox_id, origin_request_id, started_at_unix_ms)
-idx_traces_correlation ON traces(sandbox_id, correlation_kind, correlation_id, started_at_unix_ms)
-```
+Do not add async trace indexes in the first implementation. Phase 4 has no
+daemon trace query API, and focused tests can read by `trace_id`. Add indexes
+with the first query path that proves the exact lookup shape.
 
 Do not add a `trace_links` table in the first Phase 4 implementation. One async
-trace has one origin request and one correlation key, so nullable trace columns
-are the smallest storage shape. A separate table can be introduced later if
-multiple links per trace become real.
+trace has one origin request and one command id, so nullable trace columns are
+the smallest storage shape. A separate table can be introduced later if multiple
+links per trace become real.
 
 ## Runtime Changes
 
 In `crates/sandbox-runtime/operation/src/observability.rs`:
 
-- add `AsyncTraceLink`;
-- add `CompletedAsyncOperationTrace`;
-- add the `AsyncTraceSink` callback alias;
+- add the `AsyncTraceSink` callback alias only if a named alias keeps public
+  signatures smaller;
 - reuse `OperationTrace::new`, `measure`, and `complete`;
-- do not add storage ids, daemon ids, SQLite types, response JSON, command
-  output, or transcript text.
+- do not add `AsyncTraceLink`, `CompletedAsyncOperationTrace`, storage ids,
+  daemon ids, SQLite types, response JSON, command output, or transcript text.
 
 In `crates/sandbox-runtime/operation/src/lib.rs`, re-export only the new
-storage-neutral async trace types needed by `sandbox-daemon`.
+storage-neutral callback type needed by `sandbox-daemon`, if construction-time
+sink wiring uses a named alias.
 
 In `crates/sandbox-runtime/operation/src/command/service/core.rs`:
 
-- add an optional async trace sink slot, preferably
-  `Arc<Mutex<Option<AsyncTraceSink>>>`, because the finalizer thread is already
-  spawned during service construction;
-- pass a clone of that slot into `spawn_completion_finalizer`;
-- add a narrow `set_async_trace_sink` method for daemon construction to install
-  or clear the callback;
+- prefer construction-time async sink wiring. The finalizer thread is spawned
+  during service construction, so pass `Option<AsyncTraceSink>` into
+  `CommandOperationService::new` / `from_parts` or an equivalent command service
+  constructor and clone it into `spawn_completion_finalizer`;
+- avoid a mutable `set_async_trace_sink` path on shared runtime operations.
+  `SandboxRuntimeOperations` is cloneable and exposes `command` as an `Arc`, so a
+  setter can replace or clear observability for other server owners;
+- add a narrow `#[doc(hidden)]` setter only if construction-time wiring proves
+  larger, and only when the daemon has unique ownership of the operations before
+  serving starts;
 - keep existing constructors defaulting to disabled async tracing.
 
-This setter is smaller than changing daemon `serve` to construct
-`DaemonObservability` outside `SandboxDaemonServer::new`, and it avoids making
-`DaemonObservability` part of the public daemon API.
+This may require daemon `serve` or a daemon-local runtime builder to create
+`DaemonObservability` before constructing `SandboxRuntimeOperations`. That extra
+construction wiring is preferable to a public mutable observability setter on a
+shared runtime service.
 
 In `crates/sandbox-runtime/operation/src/command/service/impls/exec_command.rs`:
 
 - make `dispatch` derive `origin_request_id = trace.is_some().then(|| request.request_id.clone())`;
-- pass that optional string into `CommandOperationService::exec_command`;
-- after workspace resolution and `allocate_command_session_id`, build an
-  `AsyncTraceLink` only when `origin_request_id` is present and an async sink is
-  configured;
-- pass the optional link to `CommandCompletionPromise::new`.
+- pass that optional string through a private command-start path; keep the
+  public `CommandOperationService::exec_command(input, trace)` signature
+  defaulting to no async origin unless changing it is proven smaller;
+- after `allocate_command_session_id`, pass the optional origin request id to
+  `CommandCompletionPromise::new`;
+- do not check sink availability while starting the command. The finalizer can
+  cheaply skip emission if no sink is installed.
 
 In `crates/sandbox-runtime/operation/src/command/service/completion.rs`:
 
-- add `async_trace_link: Option<AsyncTraceLink>` to
-  `CommandCompletionPromise`;
+- add `origin_request_id: Option<String>` to `CommandCompletionPromise`;
 - add the same optional field to `CommandCompletion`;
-- copy the link in `CommandCompletionPromise::resolve`;
+- copy the origin request id in `CommandCompletionPromise::resolve`;
 - keep the existing completion channel and finalizer thread;
-- when a completion has both link and sink, run finalization through a fresh
-  `OperationTrace` and emit `CompletedAsyncOperationTrace`;
+- when a completion has both origin request id and sink, run finalization through
+  a fresh `OperationTrace` and call the sink with the completed trace plus
+  command-finalization metadata;
 - when either is missing, call `complete_terminal_command_with_services` exactly
   as today with no trace object.
 
@@ -391,6 +402,9 @@ In `crates/sandbox-runtime/operation/src/command/service/finalize.rs`:
 - add `trace: Option<&OperationTrace>` only to the private finalization helper
   path;
 - wrap the selected finalizer spans with `measure_optional`;
+- return or otherwise expose the `workspace_session_id` captured from
+  `ActiveCompletionRecord` so the finalizer sink does not need it in the
+  request-time link;
 - keep command transcript and output handling unchanged.
 
 Do not add trace parameters to workspace, command, namespace, or layerstack
@@ -400,9 +414,9 @@ lower crates for Phase 4.
 
 In `crates/sandbox-daemon/src/server/runtime.rs`:
 
-- after `DaemonObservability::from_config(&config).map(Arc::new)`, install an
-  async trace sink on `operations.command`;
-- if observability is disabled, clear the sink;
+- prefer receiving operations that were already constructed with the async sink,
+  or move operations construction behind a daemon-owned builder that can create
+  `DaemonObservability` first;
 - the sink closure calls
   `DaemonObservability::insert_completed_async_operation_trace` and ignores
   errors.
@@ -414,11 +428,13 @@ In `crates/sandbox-daemon/src/observability/service.rs`:
 - set `TraceRecord.kind = "async"`;
 - set `TraceRecord.operation = "command_finalization"`;
 - set `TraceRecord.request_id = None`;
-- set `TraceRecord.origin_request_id`, `async_name`, `correlation_kind`,
-  `correlation_id`, `workspace_id`, and `command_session_id` from the link;
+- set `TraceRecord.origin_request_id`, `workspace_id`, and
+  `command_session_id` from command-finalization metadata;
 - map spans exactly like request traces, using `:span:` ids and
   `parent_call_index`;
 - bound all ids and strings with the existing daemon helpers;
+- share private span-record mapping with request traces if that avoids duplicate
+  `span_id` / `parent_span_id` logic;
 - do not update Phase 3.5 enabled deep span keys from async finalizer traces.
 
 In `crates/sandbox-observability/src/records.rs`:
@@ -429,9 +445,10 @@ In `crates/sandbox-observability/src/records.rs`:
 
 In `crates/sandbox-observability/src/store.rs`:
 
-- add a V3 migration for the nullable async fields and focused indexes;
+- add a V3 migration for the nullable async fields;
 - update `insert_trace` SQL to include the new fields;
 - keep one transaction for the trace row and spans;
+- do not add async indexes before a query API exists;
 - do not add a writer queue or runtime-facing storage API.
 
 ## Command Finalization Span Plan
@@ -439,21 +456,24 @@ In `crates/sandbox-observability/src/store.rs`:
 Use this initial span tree:
 
 ```text
-command_finalization
-  completion_finalizer
-    complete_terminal_command_with_services
-      apply_workspace_completion_policy
-      complete_command_record
+complete_terminal_command_with_services
+  apply_workspace_completion_policy
+  complete_command_record
 ```
 
 The live call path also includes `begin_terminal_completion` and
 `terminal_result`, but they should not be separate first-pass spans. They are
 small and are covered by `complete_terminal_command_with_services`.
 
+Do not add both `command_finalization` and `completion_finalizer` wrapper spans
+in the first implementation. `TraceRecord.operation = "command_finalization"`
+already names the async work, and the completion finalizer thread currently only
+receives a completion and calls `complete_terminal_command_with_services`.
+
 Do not include `completion_watcher` in Phase 4. The current watcher can attach
-the link because the promise can carry it, but tracing the watcher would require
-either cross-thread trace sharing or a second completed trace. That violates
-the small design.
+the origin request id because the promise can carry it, but tracing the watcher
+would require either cross-thread trace sharing or a second completed trace.
+That violates the small design.
 
 One-shot workspace destroy is included inside
 `apply_workspace_completion_policy`. If a one-shot command reaches terminal
@@ -473,8 +493,9 @@ command finalization trace because it runs inside
 `apply_workspace_completion_policy` on the existing completion finalizer path.
 
 Do not create separate workspace destroy async traces in Phase 4. The live
-destroy paths are either synchronous request cleanup after command start
-failure or part of command finalization.
+destroy paths are synchronous request cleanup after command start failure,
+explicit synchronous `destroy_workspace_session` requests, or part of command
+finalization.
 
 Do not create separate workspace remount async traces in Phase 4.
 `WorkspaceRemountService::remount_workspace_session` currently runs
@@ -486,40 +507,45 @@ separate linked async trace in a later phase with its own correlation key.
 
 `crates/sandbox-runtime/operation/src/observability.rs`
 
-- Add `AsyncTraceLink`, `CompletedAsyncOperationTrace`, and `AsyncTraceSink`.
+- Add `AsyncTraceSink` only if constructor signatures need a shared callback
+  alias.
 - Keep using `OperationTrace` and `CompletedOperationTrace`.
+- Do not add `AsyncTraceLink` or `CompletedAsyncOperationTrace`.
 - Do not import `sandbox-observability`.
 
 `crates/sandbox-runtime/operation/src/lib.rs`
 
-- Re-export the new runtime-neutral async trace types.
+- Re-export only the callback alias needed by daemon construction, if one is
+  added.
 
 `crates/sandbox-runtime/operation/src/command/service/core.rs`
 
-- Add the optional async sink slot.
-- Pass the sink slot to `spawn_completion_finalizer`.
-- Add `set_async_trace_sink`.
+- Add an optional construction-time async sink.
+- Pass the sink to `spawn_completion_finalizer`.
+- Avoid `set_async_trace_sink` unless construction-time wiring proves larger and
+  the daemon has unique operations ownership before serving.
 - Keep default construction disabled.
 
 `crates/sandbox-runtime/operation/src/command/service/impls/exec_command.rs`
 
 - Thread optional `origin_request_id` from `dispatch` to command start.
-- Build the command-finalization `AsyncTraceLink` after `command_session_id`
-  and `workspace_session_id` are known.
-- Pass the link into `CommandCompletionPromise`.
+- Keep the public `exec_command(input, trace)` signature unchanged unless a
+  public signature change proves smaller.
+- Pass only the optional origin request id into `CommandCompletionPromise`.
 
 `crates/sandbox-runtime/operation/src/command/service/completion.rs`
 
-- Carry the optional link through promise, completion send, and finalizer
+- Carry the optional origin request id through promise, completion send, and finalizer
   receive.
-- Create and complete the finalizer `OperationTrace` only when link and sink
-  are both present.
+- Create and complete the finalizer `OperationTrace` only when origin request id
+  and sink are both present.
 - Keep the existing finalizer thread.
 
 `crates/sandbox-runtime/operation/src/command/service/finalize.rs`
 
 - Add optional trace parameters on private helpers.
 - Instrument only the selected finalizer spans.
+- Return or expose the finalizer-owned `workspace_session_id` for sink metadata.
 
 `crates/sandbox-daemon/src/server/runtime.rs`
 
@@ -551,9 +577,9 @@ separate linked async trace in a later phase with its own correlation key.
 `crates/sandbox-runtime/operation/tests/exec_command.rs`
 
 - Add a disabled-observability test proving commands still finalize and no
-  async callback is required when no sink/link exists.
-- Update direct `exec_command` calls if its signature gains
-  `origin_request_id`.
+  async callback is required when no sink or origin request id exists.
+- Keep direct `exec_command` calls on the existing public signature unless a
+  signature change is proven smaller.
 
 `crates/sandbox-runtime/operation/tests/command_remount.rs`
 
@@ -562,15 +588,15 @@ separate linked async trace in a later phase with its own correlation key.
 `crates/sandbox-daemon/tests/unit/observability.rs`
 
 - Add a linked async trace persistence test covering `origin_request_id`,
-  `async_name`, `correlation_kind`, `correlation_id`, `workspace_id`, and
-  `command_session_id`.
+  `workspace_id`, and `command_session_id`.
 - Add a disabled observability path test if it is clearer at daemon level than
   runtime level.
 - Verify store failures do not alter command responses.
 
 `crates/sandbox-observability/tests/schema.rs`
 
-- Verify the V3 migration creates the async columns and indexes.
+- Verify the V3 migration creates the async columns and no premature async
+  indexes.
 
 ## Expected LOC
 
@@ -579,20 +605,21 @@ Expected `crates/sandbox-runtime` change: 60-110 non-test LOC, with 60-80 prefer
 Expected split:
 
 ```text
-runtime async link/sink DTOs                  15-25
-command service sink slot and setter          15-25
-completion channel link and finalizer trace   25-40
-finalize.rs selected spans                    15-25
-exec_command origin/link wiring               10-20
+runtime async sink alias, if needed             0-5
+command service construction-time sink         10-20
+completion origin id and finalizer trace       20-35
+finalize.rs selected spans and outcome         10-20
+exec_command origin-id wiring                   5-15
 ```
 
 The preferred 60-80 LOC band is reachable only if the implementation keeps the
-callback simple and does not trace the watcher. If it lands closer to 90-100
-LOC, the live-code constraint is the existing service construction shape: the
-completion finalizer thread is spawned before daemon observability exists, so a
-small shared sink slot and setter are needed to connect daemon-owned storage
-without making `DaemonObservability` public or rebuilding runtime operations in
-daemon `serve`.
+callback simple, carries only `origin_request_id` through completion state, and
+does not trace the watcher or wrapper spans. If it lands closer to 90-100 LOC,
+the live-code constraint is the existing service construction shape: the
+completion finalizer thread is spawned during command service construction, so
+daemon-owned construction may need to build observability before building
+runtime operations. Do not solve that by adding a mutable sink setter unless the
+daemon can prove unique ownership of the operations before serving starts.
 
 If runtime production changes exceed 110 non-test LOC, stop and simplify before
 implementation.
@@ -616,12 +643,11 @@ cargo test -p sandbox-observability schema
 
 Required behavior coverage:
 
-- disabled observability does not create a link, construct an async
+- disabled observability does not create a completed async trace, construct an async
   `OperationTrace`, call a sink, or change command finalization behavior;
 - enabled observability persists one async trace for command finalization;
 - async trace row has `kind = "async"`, `operation = "command_finalization"`,
-  `request_id = NULL`, and the expected origin/correlation/workspace/command
-  fields;
+  `request_id = NULL`, and the expected origin/workspace/command fields;
 - async span ids use `async:command_finalization:command_session_id:<id>:span:<call_index>`;
 - the selected finalizer span tree is recorded in call order;
 - one-shot workspace destroy is covered under

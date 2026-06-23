@@ -1,13 +1,20 @@
 mod support;
 
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{mpsc, Arc, Mutex};
+use std::time::Duration;
 
+use sandbox_protocol::{CliOperationScope, Request};
 use sandbox_runtime::command::{
+    CommandCompletionPromise, CommandCompletionWaitOutcome, CommandLaunchDriver,
     CommandServiceError, CommandSessionId, CommandStatus, ExecCommandInput, ReadCommandLinesInput,
     WriteCommandStdinInput,
 };
-use sandbox_runtime_workspace::{WorkspaceProfile, WorkspaceSessionId};
+use sandbox_runtime::{LayerStackService, SandboxRuntimeOperations};
+use sandbox_runtime_command::process::{CommandProcess, CommandProcessSpawn, CommandProcessSpec};
+use sandbox_runtime_workspace::{WorkspaceEntry, WorkspaceProfile, WorkspaceSessionId};
+use serde_json::json;
 
 use support::{
     build_services, build_services_with_launch_driver, create_request, success_exit,
@@ -320,6 +327,75 @@ fn exec_command_spawn_failure_keeps_session_workspace_alive() {
 }
 
 #[test]
+fn destroy_workspace_session_waits_for_existing_session_exec_until_active_insert(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let (spawn_entered_tx, spawn_entered_rx) = mpsc::channel();
+    let (release_spawn_tx, release_spawn_rx) = mpsc::channel();
+    let launch_driver = Arc::new(BlockingLaunchDriver::new(
+        spawn_entered_tx,
+        release_spawn_rx,
+    ));
+    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
+    let workspace_session_id = create_session(
+        &fake,
+        &env,
+        "workspace-session",
+        PathBuf::from("/workspace/session"),
+        WorkspaceProfile::HostCompatible,
+    );
+    let command = Arc::clone(&env.command);
+    let exec_workspace_session_id = workspace_session_id.clone();
+    let exec_handle = std::thread::spawn(move || {
+        command.exec_command(exec_input(exec_workspace_session_id), None)
+    });
+
+    spawn_entered_rx.recv_timeout(Duration::from_secs(1))?;
+    let operations = SandboxRuntimeOperations::new(
+        Arc::clone(&env.command),
+        Arc::clone(&env.workspace),
+        layerstack_service()?,
+    );
+    let destroy_request = Request::new(
+        "destroy_workspace_session",
+        "req-destroy-race",
+        CliOperationScope::system(),
+        json!({ "workspace_session_id": workspace_session_id.0 }),
+    );
+    let destroy_handle = std::thread::spawn(move || {
+        sandbox_runtime::dispatch_operation(&operations, &destroy_request, None).into_json_value()
+    });
+
+    std::thread::sleep(Duration::from_millis(100));
+    assert!(
+        !destroy_handle.is_finished(),
+        "destroy should wait while existing-session exec holds lifecycle admission"
+    );
+    assert!(fake.destroy_calls().is_empty());
+
+    release_spawn_tx.send(())?;
+    let exec_output = exec_handle
+        .join()
+        .map_err(|_| "exec thread panicked")?
+        .expect("exec command succeeds");
+    assert_eq!(
+        exec_output.command_session_id,
+        Some(CommandSessionId("cmd_1".to_owned()))
+    );
+
+    let destroy_response = destroy_handle
+        .join()
+        .map_err(|_| "destroy thread panicked")?;
+    assert_eq!(destroy_response["error"]["kind"], "operation_failed");
+    assert_eq!(
+        destroy_response["error"]["details"]["active_command_session_ids"],
+        json!(["cmd_1"])
+    );
+    assert!(fake.destroy_calls().is_empty());
+    Ok(())
+}
+
+#[test]
 fn exec_command_passes_workspace_entry_to_spawn_paths() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let launch_driver = Arc::new(FakeLaunchDriver::new());
@@ -473,6 +549,74 @@ fn exec_command_artifact_directory_failure_keeps_session_workspace_alive() {
     assert!(fake.destroy_calls().is_empty());
 }
 
+struct BlockingLaunchDriver {
+    spawn_entered: Mutex<Option<mpsc::Sender<()>>>,
+    release_spawn: Mutex<mpsc::Receiver<()>>,
+}
+
+impl BlockingLaunchDriver {
+    fn new(spawn_entered: mpsc::Sender<()>, release_spawn: mpsc::Receiver<()>) -> Self {
+        Self {
+            spawn_entered: Mutex::new(Some(spawn_entered)),
+            release_spawn: Mutex::new(release_spawn),
+        }
+    }
+}
+
+impl CommandLaunchDriver for BlockingLaunchDriver {
+    fn spawn(
+        &self,
+        spec: CommandProcessSpec,
+        workspace_entry: WorkspaceEntry,
+        config: &sandbox_runtime_command::CommandConfig,
+    ) -> Result<CommandProcess, CommandServiceError> {
+        if let Some(sender) = self
+            .spawn_entered
+            .lock()
+            .expect("test operation succeeds")
+            .take()
+        {
+            let _ = sender.send(());
+        }
+        self.release_spawn
+            .lock()
+            .expect("test operation succeeds")
+            .recv()
+            .map_err(|error| CommandServiceError::CommandIo {
+                command_session_id: CommandSessionId(spec.id.clone()),
+                error: error.to_string(),
+            })?;
+        let parts =
+            CommandProcessSpawn::prepare(&spec.id, workspace_entry, config).map_err(|error| {
+                CommandServiceError::CommandIo {
+                    command_session_id: CommandSessionId(spec.id.clone()),
+                    error: error.to_string(),
+                }
+            })?;
+        Ok(CommandProcess::inactive_with_transcript_for_test(
+            spec,
+            parts.transcript_path,
+        ))
+    }
+
+    fn start_completion_watcher(
+        &self,
+        _completion: CommandCompletionPromise,
+        _process: Arc<CommandProcess>,
+    ) {
+    }
+
+    fn wait_for_command_yield(
+        &self,
+        _process: &CommandProcess,
+        _completion: &CommandCompletionPromise,
+        _yield_time_ms: u64,
+        _start_offset: u64,
+    ) -> CommandCompletionWaitOutcome {
+        CommandCompletionWaitOutcome::Running
+    }
+}
+
 #[test]
 fn exec_command_initial_running_yield_returns_pending_output() {
     let fake = Arc::new(FakeWorkspaceService::new());
@@ -606,4 +750,24 @@ fn write_command_stdin_finalizes_when_command_completes_after_write() {
         })
         .expect("completed command can still be read");
     assert_eq!(lines.status, CommandStatus::Ok);
+}
+
+fn layerstack_service() -> Result<Arc<LayerStackService>, Box<dyn std::error::Error + Send + Sync>>
+{
+    let base = temp_root();
+    let root = base.join("layer-stack");
+    let workspace = base.join("workspace");
+    let _ = std::fs::remove_dir_all(&base);
+    std::fs::create_dir_all(&workspace)?;
+    sandbox_runtime_layerstack::build_workspace_base(&root, &workspace, false)?;
+    Ok(Arc::new(LayerStackService::new(root)?))
+}
+
+fn temp_root() -> PathBuf {
+    static NEXT_TEST: AtomicU64 = AtomicU64::new(0);
+    std::env::temp_dir().join(format!(
+        "sandbox-runtime-exec-command-{}-{}",
+        std::process::id(),
+        NEXT_TEST.fetch_add(1, Ordering::Relaxed)
+    ))
 }

@@ -348,8 +348,11 @@ fn operation_trace_records_selected_read_command_lines_span_set(
 #[test]
 fn operation_trace_records_selected_squash_span_set() -> Result<(), Box<dyn std::error::Error>> {
     let services = build_services(Arc::new(FakeWorkspaceService::new()));
-    let operations =
-        SandboxRuntimeOperations::new(Arc::clone(&services.command), layerstack_service()?);
+    let operations = SandboxRuntimeOperations::new(
+        Arc::clone(&services.command),
+        Arc::clone(&services.workspace),
+        layerstack_service()?,
+    );
     let trace = OperationTrace::new();
 
     let response = sandbox_runtime::dispatch_operation(
@@ -377,10 +380,100 @@ fn operation_trace_records_selected_squash_span_set() -> Result<(), Box<dyn std:
 }
 
 #[test]
+fn operation_trace_records_selected_create_workspace_session_span_set(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle(
+        "workspace-session",
+        "lease-1",
+        PathBuf::from("/workspace/session"),
+        WorkspaceProfile::HostCompatible,
+    )));
+    let services = build_services(Arc::clone(&fake));
+    let operations = SandboxRuntimeOperations::new(
+        Arc::clone(&services.command),
+        Arc::clone(&services.workspace),
+        layerstack_service()?,
+    );
+    let trace = OperationTrace::new();
+
+    let response = sandbox_runtime::dispatch_operation(
+        &operations,
+        &Request::new(
+            "create_workspace_session",
+            "req-create-workspace-session",
+            CliOperationScope::system(),
+            json!({}),
+        ),
+        Some(&trace),
+    )
+    .into_json_value();
+
+    assert_eq!(response["workspace_session_id"], "workspace-session");
+    assert_selected_span_set(
+        &trace,
+        &[
+            "dispatch_operation",
+            "create_workspace_session::dispatch",
+            "WorkspaceSessionService::create_workspace_session",
+        ],
+    );
+    Ok(())
+}
+
+#[test]
+fn operation_trace_records_selected_destroy_workspace_session_span_set(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle(
+        "workspace-session",
+        "lease-1",
+        PathBuf::from("/workspace/session"),
+        WorkspaceProfile::HostCompatible,
+    )));
+    let services = build_services(Arc::clone(&fake));
+    let handler = services
+        .workspace
+        .create_workspace_session(create_request())?;
+    let operations = SandboxRuntimeOperations::new(
+        Arc::clone(&services.command),
+        Arc::clone(&services.workspace),
+        layerstack_service()?,
+    );
+    let trace = OperationTrace::new();
+
+    let response = sandbox_runtime::dispatch_operation(
+        &operations,
+        &Request::new(
+            "destroy_workspace_session",
+            "req-destroy-workspace-session",
+            CliOperationScope::system(),
+            json!({ "workspace_session_id": handler.workspace_session_id.0 }),
+        ),
+        Some(&trace),
+    )
+    .into_json_value();
+
+    assert_eq!(response["destroyed"], true);
+    assert_selected_span_set(
+        &trace,
+        &[
+            "dispatch_operation",
+            "destroy_workspace_session::dispatch",
+            "WorkspaceSessionService::destroy_session",
+        ],
+    );
+    Ok(())
+}
+
+#[test]
 fn operation_trace_records_enabled_squash_child_spans() -> Result<(), Box<dyn std::error::Error>> {
     let services = build_services(Arc::new(FakeWorkspaceService::new()));
-    let operations =
-        SandboxRuntimeOperations::new(Arc::clone(&services.command), layerstack_service()?);
+    let operations = SandboxRuntimeOperations::new(
+        Arc::clone(&services.command),
+        Arc::clone(&services.workspace),
+        layerstack_service()?,
+    );
     let trace = OperationTrace::new_with_enabled_span_keys([
         span_keys::LAYERSTACK_SQUASH_OPEN_STACK,
         span_keys::LAYERSTACK_SQUASH_COMPACT_STACK,
@@ -465,7 +558,11 @@ fn command_operations(
         .workspace
         .create_workspace_session(create_request())?;
     Ok((
-        SandboxRuntimeOperations::new(Arc::clone(&services.command), layerstack_service()?),
+        SandboxRuntimeOperations::new(
+            Arc::clone(&services.command),
+            Arc::clone(&services.workspace),
+            layerstack_service()?,
+        ),
         handler.workspace_session_id.0,
     ))
 }
@@ -483,6 +580,7 @@ fn one_shot_command_operations(
     let services = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
     Ok(SandboxRuntimeOperations::new(
         Arc::clone(&services.command),
+        Arc::clone(&services.workspace),
         layerstack_service()?,
     ))
 }

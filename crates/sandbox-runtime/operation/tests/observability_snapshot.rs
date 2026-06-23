@@ -123,6 +123,7 @@ fn operations_for(
 ) -> Result<SandboxRuntimeOperations, Box<dyn std::error::Error + Send + Sync>> {
     Ok(SandboxRuntimeOperations::new(
         Arc::<CommandOperationService>::clone(&services.command),
+        Arc::clone(&services.workspace),
         layerstack_service()?,
     ))
 }

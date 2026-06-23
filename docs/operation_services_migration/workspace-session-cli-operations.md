@@ -26,6 +26,11 @@ The target change is to expose stable CLI operations for user-owned workspace
 session creation and destruction without exposing internal remount, capture,
 or handler details.
 
+Only `create_workspace_session` and `destroy_workspace_session` become CLI
+operations in this change. Other `WorkspaceSessionService` methods remain
+Rust-only service APIs unless a later feature introduces a separate, stable
+operation contract for them.
+
 ## Goals
 
 - Add `create_workspace_session` as a runtime CLI operation.

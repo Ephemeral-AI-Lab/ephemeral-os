@@ -16,6 +16,7 @@ pub use contract::{
     CommandYield, ExecCommandInput, ReadCommandLinesInput, WriteCommandStdinInput,
 };
 pub use core::CommandOperationService;
+pub(crate) use core::{WorkspaceDestroyAdmission, WorkspaceLifecycleAdmission};
 pub use launch::{CommandLaunchDriver, RealCommandLaunchDriver};
 pub(crate) use process_store::{
     ActiveCommandProcess, ActiveCommandRef, CancellationState, CommandLifecycleState,
