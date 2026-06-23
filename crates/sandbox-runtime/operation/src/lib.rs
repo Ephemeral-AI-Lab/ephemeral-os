@@ -53,7 +53,10 @@ pub fn known_operation_name(operation: &str) -> Option<&'static str> {
 }
 
 #[must_use]
-#[rustfmt::skip]
-pub fn dispatch_operation(operations: &SandboxRuntimeOperations, request: &sandbox_protocol::Request, trace: Option<&OperationTrace>) -> sandbox_protocol::Response {
+pub fn dispatch_operation(
+    operations: &SandboxRuntimeOperations,
+    request: &sandbox_protocol::Request,
+    trace: Option<&OperationTrace>,
+) -> sandbox_protocol::Response {
     operation::dispatch_operation(operations, request, trace)
 }

@@ -21,9 +21,14 @@ pub(crate) const SPEC: CliOperationSpec = CliOperationSpec {
     related: &[],
 };
 
-#[rustfmt::skip]
-pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, _request: &Request, trace: Option<&OperationTrace>) -> Response {
-    squash_response(measure_optional(trace, "LayerStackService::squash", || operations.layerstack.squash(trace)))
+pub(crate) fn dispatch(
+    operations: &SandboxRuntimeOperations,
+    _request: &Request,
+    trace: Option<&OperationTrace>,
+) -> Response {
+    squash_response(measure_optional(trace, "LayerStackService::squash", || {
+        operations.layerstack.squash(trace)
+    }))
 }
 
 impl LayerStackService {

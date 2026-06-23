@@ -87,10 +87,20 @@ const EXEC_COMMAND_CLI: CliSpec = CliSpec {
     ],
 };
 
-#[rustfmt::skip]
-pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: &Request, trace: Option<&OperationTrace>) -> Response {
-    let input = match parse_input(request) { Ok(input) => input, Err(response) => return response };
-    command_yield_response(measure_optional(trace, "CommandOperationService::exec_command", || operations.command.exec_command(input, trace)))
+pub(crate) fn dispatch(
+    operations: &SandboxRuntimeOperations,
+    request: &Request,
+    trace: Option<&OperationTrace>,
+) -> Response {
+    let input = match parse_input(request) {
+        Ok(input) => input,
+        Err(response) => return response,
+    };
+    command_yield_response(measure_optional(
+        trace,
+        "CommandOperationService::exec_command",
+        || operations.command.exec_command(input, trace),
+    ))
 }
 
 fn parse_input(request: &Request) -> Result<ExecCommandInput, Response> {
@@ -227,10 +237,10 @@ impl CommandOperationService {
     fn command_admission_guard(
         &self,
         workspace: &ResolvedExecWorkspace,
-    ) -> Result<Option<MutexGuard<'_, ()>>, CommandServiceError> {
+    ) -> Result<MutexGuard<'_, ()>, CommandServiceError> {
         let guard = self.lock_remount_admission();
         self.ensure_workspace_session_not_remount_pending(&workspace.workspace_session_id)?;
-        Ok(Some(guard))
+        Ok(guard)
     }
 
     fn start_command_process(

@@ -287,14 +287,53 @@ fn completed_operation_trace_marks_phase3_service_span_on_error() -> TestResult 
     assert_eq!(trace.error_kind.as_deref(), Some("operation_failed"));
     assert_eq!(trace.error_message.as_deref(), Some("command failed"));
     let spans = store.spans_for_test("request:req-error")?;
-    assert_eq!(spans[2].status, "error");
-    assert_eq!(spans[2].error_kind.as_deref(), Some("operation_failed"));
-    assert_eq!(spans[2].error_message.as_deref(), Some("command failed"));
-    assert_eq!(spans[3].status, "ok");
-    assert!(spans[3].error_kind.is_none());
-    assert_eq!(spans[4].status, "ok");
-    assert!(spans[4].error_kind.is_none());
+    let service_span = span_record(&spans, "CommandOperationService::exec_command");
+    assert_eq!(service_span.status, "error");
+    assert_eq!(service_span.error_kind.as_deref(), Some("operation_failed"));
+    assert_eq!(service_span.error_message.as_deref(), Some("command failed"));
+    for child_name in [
+        "command.exec.workspace.resolve",
+        "command.exec.process.start",
+    ] {
+        let child_span = span_record(&spans, child_name);
+        assert_eq!(child_span.status, "ok");
+        assert!(child_span.error_kind.is_none());
+    }
     assert_no_trace_text(&trace, &spans, "SECRET_OUTPUT");
+    Ok(())
+}
+
+#[test]
+fn fast_parent_spans_do_not_enable_deep_span_keys() -> TestResult {
+    let root = test_root("trace-fast-parents");
+    let config = server_config(&root, Some("sandbox-1"));
+    let observability =
+        DaemonObservability::from_config(&config).expect("sandbox id enables observability");
+
+    observability.insert_completed_operation_trace(
+        "sandbox-1".to_owned(),
+        "req-fast-command".to_owned(),
+        "exec_command".to_owned(),
+        &json!({ "status": "ok" }),
+        completed_trace_with_durations(&[
+            (None, "dispatch_operation", 0, 99.0),
+            (Some(0), "exec_command::dispatch", 1, 99.0),
+            (Some(1), "CommandOperationService::exec_command", 2, 99.0),
+        ]),
+    )?;
+    observability.insert_completed_operation_trace(
+        "sandbox-1".to_owned(),
+        "req-fast-squash".to_owned(),
+        "squash".to_owned(),
+        &json!({ "squashed": false }),
+        completed_trace_with_durations(&[
+            (None, "dispatch_operation", 0, 99.0),
+            (Some(0), "squash::dispatch", 1, 99.0),
+            (Some(1), "LayerStackService::squash", 2, 99.0),
+        ]),
+    )?;
+
+    assert!(observability.enabled_deep_span_keys().is_empty());
     Ok(())
 }
 
@@ -345,7 +384,7 @@ fn slow_layerstack_parent_enables_layerstack_deep_span_keys() -> TestResult {
         completed_trace_with_durations(&[
             (None, "dispatch_operation", 0, 20.0),
             (Some(0), "squash::dispatch", 1, 20.0),
-            (Some(1), "LayerStackService::squash", 2, 100.0),
+            (Some(1), "LayerStackService::squash", 2, 101.0),
         ]),
     )?;
 
@@ -460,6 +499,22 @@ async fn learned_deep_span_keys_apply_to_next_dispatched_request() -> TestResult
         .observability
         .as_ref()
         .expect("sandbox id enables observability");
+
+    let initial_response = server
+        .dispatch_bytes(request_bytes("squash", "req-unlearned-squash", json!({}))?, false)
+        .await;
+
+    assert_eq!(initial_response["squashed"], false);
+    let store = store_for_config(&server.config)?;
+    assert_eq!(
+        span_names(&store.spans_for_test("request:req-unlearned-squash")?),
+        vec![
+            "dispatch_operation",
+            "squash::dispatch",
+            "LayerStackService::squash",
+        ]
+    );
+
     observability.insert_completed_operation_trace(
         "sandbox-1".to_owned(),
         "req-prime-squash".to_owned(),
@@ -477,7 +532,6 @@ async fn learned_deep_span_keys_apply_to_next_dispatched_request() -> TestResult
         .await;
 
     assert_eq!(response["squashed"], false);
-    let store = store_for_config(&server.config)?;
     let spans = store.spans_for_test("request:req-learned-squash")?;
     assert_eq!(
         span_names(&spans),
@@ -615,6 +669,13 @@ fn span_key_names(keys: Vec<sandbox_runtime::SpanKey>) -> Vec<&'static str> {
     let mut names = keys.into_iter().map(|key| key.as_str()).collect::<Vec<_>>();
     names.sort_unstable();
     names
+}
+
+fn span_record<'a>(spans: &'a [SpanRecord], method_name: &str) -> &'a SpanRecord {
+    spans
+        .iter()
+        .find(|span| span.method_name == method_name)
+        .expect("span recorded")
 }
 
 fn daemon_server(root: &Path, sandbox_id: Option<&str>) -> TestResult<SandboxDaemonServer> {

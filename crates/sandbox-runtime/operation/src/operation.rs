@@ -10,11 +10,17 @@ pub use sandbox_protocol::{
 };
 
 #[derive(Clone, Copy)]
-#[rustfmt::skip]
-pub(crate) struct OperationEntry { pub(crate) name: &'static str, pub(crate) cli: Option<&'static CliOperationSpec>, pub(crate) dispatch: OperationDispatch }
+pub(crate) struct OperationEntry {
+    pub(crate) name: &'static str,
+    pub(crate) cli: Option<&'static CliOperationSpec>,
+    pub(crate) dispatch: OperationDispatch,
+}
 
-#[rustfmt::skip]
-type OperationDispatch = fn(&SandboxRuntimeOperations, &sandbox_protocol::Request, Option<&OperationTrace>) -> sandbox_protocol::Response;
+type OperationDispatch = fn(
+    &SandboxRuntimeOperations,
+    &sandbox_protocol::Request,
+    Option<&OperationTrace>,
+) -> sandbox_protocol::Response;
 
 impl OperationEntry {
     #[must_use]
@@ -53,8 +59,11 @@ pub(crate) fn cli_operation_specs() -> &'static [&'static CliOperationSpec] {
     })
 }
 
-#[rustfmt::skip]
-pub(crate) fn dispatch_operation(operations: &SandboxRuntimeOperations, request: &sandbox_protocol::Request, trace: Option<&OperationTrace>) -> sandbox_protocol::Response {
+pub(crate) fn dispatch_operation(
+    operations: &SandboxRuntimeOperations,
+    request: &sandbox_protocol::Request,
+    trace: Option<&OperationTrace>,
+) -> sandbox_protocol::Response {
     measure_optional(trace, "dispatch_operation", || {
         operation_entry_groups()
             .into_iter()
