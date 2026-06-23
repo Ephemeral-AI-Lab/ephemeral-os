@@ -172,7 +172,7 @@ fn inserts_synthetic_trace_and_spans() -> TestResult {
 }
 
 #[test]
-fn inserts_async_trace_fields_without_adding_async_indexes() -> TestResult {
+fn schema_inserts_async_trace_fields_without_adding_async_indexes() -> TestResult {
     let (_dir, paths) = test_paths("async-trace-insert")?;
     let store = ObservabilityStore::open(&paths)?;
 
