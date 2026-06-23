@@ -6,7 +6,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::Connection;
 use sandbox_observability::{
-    ObservabilityPaths, ObservabilityStore, SandboxSnapshotRecord, SpanRecord, TraceRecord,
+    ObservabilityPaths, ObservabilityStore, SandboxSnapshotRecord, SpanRecord, StoreError,
+    TraceRecord,
 };
 
 type TestResult<T = ()> = Result<T, Box<dyn Error>>;
@@ -52,6 +53,42 @@ fn schema_initialization_is_idempotent() -> TestResult {
     assert_eq!(migration_count(&connection)?, 1);
     assert!(paths.database_path().exists());
     assert!(dir.path().join("sandbox-1").join("observability").exists());
+
+    Ok(())
+}
+
+#[test]
+fn schema_initialization_rejects_migration_checksum_drift() -> TestResult {
+    let (_dir, paths) = test_paths("schema-checksum-drift")?;
+    let store = ObservabilityStore::open(&paths)?;
+    drop(store);
+
+    let connection = Connection::open(paths.database_path())?;
+    connection.execute(
+        "UPDATE schema_migrations
+             SET checksum = 'fnv1a64:0000000000000000'
+             WHERE version = 1",
+        [],
+    )?;
+    drop(connection);
+
+    let error = match ObservabilityStore::open(&paths) {
+        Ok(_) => return Err("schema initialization accepted a stale checksum".into()),
+        Err(error) => error,
+    };
+
+    match error {
+        StoreError::MigrationChecksumMismatch {
+            version,
+            expected,
+            actual,
+        } => {
+            assert_eq!(version, 1);
+            assert!(expected.starts_with("fnv1a64:"));
+            assert_eq!(actual, "fnv1a64:0000000000000000");
+        }
+        other => return Err(format!("unexpected schema initialization error: {other}").into()),
+    }
 
     Ok(())
 }

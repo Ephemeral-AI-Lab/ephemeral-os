@@ -133,6 +133,14 @@ Runtime snapshot adapters should follow that graph. The top-level runtime
 method can combine snapshots from `command` and the `WorkspaceSessionService`
 owned by `command`.
 
+This does not mean Phase 2 should create one snapshot adapter per operation
+class. Runtime process execution should have one operation-neutral execution
+snapshot lane. In the current checkout, `exec_command` is the only long-running
+operation using the namespace runner, so `CommandProcessStore` is the first
+producer for that lane. If future runtime operations use `namespace-runner`
+directly, they should register with the same shared execution snapshot owner
+rather than adding `foo_operation_snapshot()` surfaces.
+
 ### Workspace State Owner
 
 Workspace sessions are owned by
@@ -170,9 +178,9 @@ The runtime workspace crate exposes the stable workspace facts through
 Phase 2 should expose them only if a narrow runtime adapter can read the
 concrete runtime state without broadening the public workspace model.
 
-### Command State Owner
+### Current Execution State Owner
 
-Command state is owned by
+Current long-running namespace-runner execution state is owned by
 `crates/sandbox-runtime/operation/src/command/service/process_store.rs`:
 
 - `CommandProcessStore.active`;
@@ -215,6 +223,12 @@ Completed command records already retain:
 
 Phase 2 should copy these facts out through snapshot DTOs. It must not make the
 daemon reach into private command maps directly.
+
+The snapshot DTO should be named and shaped as a runtime execution snapshot, not
+as a command-only mechanism. It can include command-specific optional fields
+because `exec_command` is the only current producer, but the owning concept is
+an active runtime execution that may have been launched through
+`NamespaceRunnerRequest`.
 
 ## Non-Goals
 
@@ -271,7 +285,7 @@ SandboxDaemonServer
   ServerConfig.socket_path / pid_path
   SandboxRuntimeOperations::observability_snapshot()
       WorkspaceSessionService snapshot adapter
-      CommandProcessStore snapshot adapter
+      runtime execution snapshot adapter
   daemon-owned ResourceSampler
       disk stats from workspace upperdir paths
       cgroup stats from daemon-derived cgroup targets
@@ -305,8 +319,8 @@ Recommended DTOs:
 ```rust
 pub struct RuntimeObservabilitySnapshot {
     pub workspaces: Vec<RuntimeWorkspaceSnapshot>,
-    pub active_commands: Vec<RuntimeCommandSnapshot>,
-    pub recent_completed_commands: Vec<RuntimeCommandSnapshot>,
+    pub active_executions: Vec<RuntimeExecutionSnapshot>,
+    pub recent_completed_executions: Vec<RuntimeExecutionSnapshot>,
     pub partial_errors: Vec<RuntimeSnapshotError>,
 }
 
@@ -327,13 +341,17 @@ pub struct RuntimeWorkspaceSnapshot {
     pub last_activity_unix_ms: Option<i64>,
 }
 
-pub struct RuntimeCommandSnapshot {
-    pub command_session_id: CommandSessionId,
+pub struct RuntimeExecutionSnapshot {
+    pub execution_id: String,
+    pub execution_kind: RuntimeExecutionKind,
+    pub operation: Option<String>,
+    pub command_session_id: Option<CommandSessionId>,
     pub workspace_id: WorkspaceSessionId,
+    pub namespace_runner_request_id: Option<String>,
     pub command: Option<String>,
-    pub lifecycle_state: RuntimeCommandLifecycleState,
-    pub finalization_state: RuntimeCommandFinalizationState,
-    pub workspace_ownership: RuntimeCommandWorkspaceOwnership,
+    pub lifecycle_state: RuntimeExecutionLifecycleState,
+    pub finalization_state: RuntimeExecutionFinalizationState,
+    pub workspace_ownership: RuntimeExecutionWorkspaceOwnership,
     pub started_at_unix_ms: Option<i64>,
     pub wall_time_ms: Option<f64>,
     pub command_total_time_ms: Option<f64>,
@@ -380,24 +398,42 @@ If `WorkspaceHandle::entry()` fails because launch material is incomplete, the
 workspace row should still be returned with `upperdir`, `workdir`, and namespace
 fd count unset plus a bounded partial error.
 
-### Command Snapshot Rules
+### Execution Snapshot Rules
 
-`CommandProcessStore` should expose read-only copy-out methods colocated with
-the command state owner. It should:
+The runtime should expose one read-only execution snapshot adapter, not one
+snapshot adapter per operation class. In Phase 2, the adapter can be implemented
+against `CommandProcessStore` because it is the only current owner of active and
+recent namespace-runner command executions. If another operation starts using
+the namespace runner and retains active process state, that operation should
+feed the same execution snapshot owner or a small shared execution registry.
+
+An active execution is the parent/runtime-side tracked record for a
+namespace-runner invocation whose `shell_exec` path spawns and waits on a shell
+process inside the workspace namespace. It is not a snapshot of the
+`shell_exec` function body itself. The snapshot records observable execution
+facts such as execution id, workspace id, lifecycle/finalization state, process
+group id, transcript path, wall time, optional `NamespaceRunnerRequest.request_id`,
+and command text when `execution_kind = command`.
+
+The execution snapshot adapter should:
 
 - lock active commands briefly;
 - copy active records into DTOs;
 - copy recently completed records if retained;
-- bound the number of completed command rows returned;
-- sort active and completed rows by `command_session_id` for stable tests;
+- bound the number of completed execution rows returned;
+- sort active and completed rows by execution id for stable tests;
 - avoid reading transcript contents.
 
-Command snapshot field sources:
+Execution snapshot field sources for the current `exec_command` producer:
 
 | Field | Source |
 | --- | --- |
+| `execution_id` | `command_session_id.0` for current command executions |
+| `execution_kind` | `command` for current command executions |
+| `operation` | `exec_command` when known |
 | `command_session_id` | active/completed command record |
 | `workspace_id` | active/completed command record |
+| `namespace_runner_request_id` | `NamespaceRunnerRequest.request_id`; currently built from command id |
 | `command` | `CommandProcess::command()` for active commands; optional for completed rows |
 | `lifecycle_state` | `CommandLifecycleState` for active commands; terminal state for completed rows |
 | `finalization_state` | `FinalizationState` |
@@ -419,12 +455,14 @@ wall-clock start time beside `Instant`, the daemon can populate
 `SandboxRuntimeOperations::observability_snapshot()` should compose:
 
 - `self.command.workspace().snapshot_workspaces()`;
-- `self.command.process_store().snapshot_active_commands()`;
-- `self.command.process_store().snapshot_recent_completed_commands(limit)`.
+- the shared runtime execution snapshot adapter, currently backed by
+  `self.command.process_store()` for active and recent completed command
+  executions.
 
 The concrete method names can differ, but the ownership should stay the same:
-workspace snapshots come from `WorkspaceSessionService`, command snapshots come
-from `CommandProcessStore`, and `SandboxRuntimeOperations` only assembles DTOs.
+workspace snapshots come from `WorkspaceSessionService`, execution snapshots
+come from the shared runtime execution owner, and `SandboxRuntimeOperations`
+only assembles DTOs.
 
 The runtime method must not:
 
@@ -517,41 +555,51 @@ Recommended stale policy:
 - prefer deletion if no Phase 2 consumer needs historical workspace state;
 - keep resource history in `resource_samples` until retention deletes it.
 
-### `CommandStateSampler`
+### `ExecutionStateSampler`
 
 Input:
 
 - `sandbox_id`;
-- `RuntimeObservabilitySnapshot.active_commands`;
-- `RuntimeObservabilitySnapshot.recent_completed_commands`;
+- `RuntimeObservabilitySnapshot.active_executions`;
+- `RuntimeObservabilitySnapshot.recent_completed_executions`;
 - `sampled_at_unix_ms`.
 
 Output:
 
-- `Vec<CommandSnapshotRecord>`;
-- active command ids and retained completed command ids for stale-row cleanup.
+- `Vec<ExecutionSnapshotRecord>`;
+- active execution ids and retained completed execution ids for stale-row
+  cleanup.
 
 Source of truth:
 
-- runtime DTOs copied from `CommandProcessStore`;
-- `CommandProcess` for active process group and command text;
-- retained `CompletedCommandRecord` for recent terminal state.
+- runtime execution DTOs;
+- current command execution DTOs copied from `CommandProcessStore`;
+- `CommandProcess` for active process group and command text when
+  `execution_kind = command`;
+- retained `CompletedCommandRecord` for recent terminal state when
+  `execution_kind = command`.
 
 Failure behavior:
 
-- command snapshot errors are bounded and do not affect command execution;
+- execution snapshot errors are bounded and do not affect runtime operations;
 - missing transcript paths are allowed;
 - missing process group ids are allowed;
-- completed command rows are bounded by runtime and/or daemon policy.
+- completed execution rows are bounded by runtime and/or daemon policy.
 
 Write type:
 
-- current-row upserts into `command_snapshots`;
-- delete or mark absent command rows that are no longer active or retained.
+- current-row upserts into `execution_snapshots`;
+- delete or mark absent execution rows that are no longer active or retained.
 
-Phase 2 display should focus on active commands. Recent completed command rows
-are useful for tests and immediate post-exit visibility, but they should not
-become a method trace substitute.
+Phase 2 display can focus on active commands by filtering
+`execution_kind = command`. Recent completed execution rows are useful for tests
+and immediate post-exit visibility, but they should not become a method trace
+substitute.
+
+If a future Phase 2 implementation discovers active non-command
+namespace-runner executions, do not add a new per-operation snapshot table or
+adapter. Map them through the same execution DTO and `execution_snapshots`
+table.
 
 ### `ResourceSampler`
 
@@ -728,24 +776,21 @@ Tables to populate:
 
 - `sandbox_snapshots`;
 - `workspace_snapshots`;
-- `command_snapshots`;
+- `execution_snapshots`;
 - `resource_samples`.
 
 Table roles:
 
 - `sandbox_snapshots` is a current-state upsert table;
 - `workspace_snapshots` is a current-state upsert table;
-- `command_snapshots` is a current-state upsert table for active and retained
-  recent commands;
+- `execution_snapshots` is a current-state upsert table for active and retained
+  recent runtime executions, including command executions;
 - `resource_samples` is a time-series insert table.
 
 Resource identity:
 
 - `resource_samples.workspace_id IS NULL` means sandbox-global;
 - `resource_samples.workspace_id IS NOT NULL` means per-workspace.
-
-Do not split into `sandbox-state.sqlite` in Phase 2. The split is only a later
-optimization if write volume or retention proves it useful.
 
 ### Phase 2 Schema Additions
 
@@ -754,7 +799,7 @@ The existing Phase 1 migration already creates a minimal
 
 - adds missing `sandbox_snapshots` columns needed for live daemon state;
 - creates `workspace_snapshots`;
-- creates `command_snapshots`;
+- creates `execution_snapshots`;
 - creates `resource_samples`;
 - creates the indexes needed by store-level tests and later query APIs.
 
@@ -791,14 +836,18 @@ CREATE TABLE IF NOT EXISTS workspace_snapshots (
   PRIMARY KEY(sandbox_id, workspace_id)
 );
 
-CREATE TABLE IF NOT EXISTS command_snapshots (
+CREATE TABLE IF NOT EXISTS execution_snapshots (
   sandbox_id TEXT NOT NULL,
   workspace_id TEXT NOT NULL,
-  command_session_id TEXT NOT NULL,
+  execution_id TEXT NOT NULL,
+  execution_kind TEXT NOT NULL,
+  operation TEXT,
+  command_session_id TEXT,
+  namespace_runner_request_id TEXT,
   command TEXT,
   lifecycle_state TEXT NOT NULL,
   finalization_state TEXT NOT NULL,
-  workspace_ownership TEXT NOT NULL,
+  workspace_ownership TEXT,
   started_at_unix_ms INTEGER,
   wall_time_ms REAL,
   command_total_time_ms REAL,
@@ -806,7 +855,7 @@ CREATE TABLE IF NOT EXISTS command_snapshots (
   transcript_path TEXT,
   sampled_at_unix_ms INTEGER NOT NULL,
   error_message TEXT,
-  PRIMARY KEY(sandbox_id, command_session_id)
+  PRIMARY KEY(sandbox_id, execution_id)
 );
 
 CREATE TABLE IF NOT EXISTS resource_samples (
@@ -849,8 +898,11 @@ CREATE TABLE IF NOT EXISTS resource_samples (
 CREATE INDEX IF NOT EXISTS idx_workspace_snapshots_sandbox
   ON workspace_snapshots(sandbox_id, workspace_id);
 
-CREATE INDEX IF NOT EXISTS idx_command_snapshots_workspace
-  ON command_snapshots(sandbox_id, workspace_id);
+CREATE INDEX IF NOT EXISTS idx_execution_snapshots_workspace
+  ON execution_snapshots(sandbox_id, workspace_id);
+
+CREATE INDEX IF NOT EXISTS idx_execution_snapshots_command
+  ON execution_snapshots(sandbox_id, command_session_id);
 
 CREATE INDEX IF NOT EXISTS idx_resource_samples_workspace_time
   ON resource_samples(sandbox_id, workspace_id, sampled_at_unix_ms);
@@ -866,7 +918,7 @@ surface:
 
 ```rust
 pub struct WorkspaceSnapshotRecord { /* row-shaped */ }
-pub struct CommandSnapshotRecord { /* row-shaped */ }
+pub struct ExecutionSnapshotRecord { /* row-shaped */ }
 pub struct ResourceSampleRecord { /* row-shaped */ }
 
 impl ObservabilityStore {
@@ -887,16 +939,16 @@ impl ObservabilityStore {
         active_workspace_ids: &[String],
     ) -> Result<(), StoreError>;
 
-    pub fn upsert_command_snapshots(
+    pub fn upsert_execution_snapshots(
         &self,
         sandbox_id: &str,
-        snapshots: &[CommandSnapshotRecord],
+        snapshots: &[ExecutionSnapshotRecord],
     ) -> Result<(), StoreError>;
 
-    pub fn prune_command_snapshots(
+    pub fn prune_execution_snapshots(
         &self,
         sandbox_id: &str,
-        retained_command_session_ids: &[String],
+        retained_execution_ids: &[String],
     ) -> Result<(), StoreError>;
 
     pub fn insert_resource_samples(
@@ -911,7 +963,7 @@ must not become a raw SQL product API. Useful Phase 2 read helpers:
 
 - latest sandbox snapshot by sandbox id;
 - active workspace rows by sandbox id;
-- command rows by sandbox id and optional workspace id;
+- execution rows by sandbox id and optional workspace id;
 - latest resource sample by sandbox id and optional workspace id.
 
 Validation rules:
@@ -975,14 +1027,14 @@ Expected Phase 2 changes:
 ```text
 crates/sandbox-observability/src/records.rs
   Add WorkspaceSnapshotRecord.
-  Add CommandSnapshotRecord.
+  Add ExecutionSnapshotRecord.
   Add ResourceSampleRecord.
   Add bounded validation for ids, states, command text, paths, and errors.
 
 crates/sandbox-observability/src/store.rs
   Add phase_2_runtime_snapshots migration.
   Add workspace snapshot upsert/prune helpers.
-  Add command snapshot upsert/prune helpers.
+  Add execution snapshot upsert/prune helpers.
   Add resource sample insert helpers.
   Add test-oriented read helpers.
 
@@ -1004,7 +1056,7 @@ Expected Phase 2 additions:
 
 ```text
 crates/sandbox-runtime/operation/src/observability.rs
-  Define RuntimeObservabilitySnapshot and runtime DTOs.
+  Define RuntimeObservabilitySnapshot and operation-neutral execution DTOs.
 
 crates/sandbox-runtime/operation/src/services.rs
   Add SandboxRuntimeOperations::observability_snapshot().
@@ -1016,10 +1068,12 @@ crates/sandbox-runtime/operation/src/workspace_session/service.rs
   Add mod snapshot; keep existing public exports narrow.
 
 crates/sandbox-runtime/operation/src/command/service/snapshot.rs
-  Add CommandProcessStore or CommandOperationService read-only snapshot adapter.
+  Add the first runtime execution snapshot producer, currently backed by
+  CommandProcessStore.
 
 crates/sandbox-runtime/operation/src/command/service.rs
-  Add mod snapshot; keep command process internals private.
+  Add mod snapshot only as the current execution producer; keep command process
+  internals private.
 
 crates/sandbox-runtime/operation/src/lib.rs
   Export only the runtime snapshot DTOs and top-level method required by daemon.
@@ -1048,7 +1102,7 @@ crates/sandbox-daemon/src/observability/health.rs
 ```
 
 If the first implementation is small, `collectors.rs` can hold
-`SandboxStateSampler`, `WorkspaceStateSampler`, `CommandStateSampler`, and
+`SandboxStateSampler`, `WorkspaceStateSampler`, `ExecutionStateSampler`, and
 `ResourceSampler` before splitting into submodules.
 
 Expected daemon integration points:
@@ -1088,12 +1142,7 @@ cannot build otherwise. Do not add `get_observability_tree` in Phase 2.
 
 ## LOC Budget
 
-The parent spec currently has an inconsistency:
-
-- the runtime boundary table says Phase 2 runtime LOC: `100-180`;
-- the rollout plan says Phase 2 runtime LOC: `140-220`.
-
-Final recommended budget:
+The parent spec and this phase spec use the same final runtime budget:
 
 ```text
 sandbox-runtime non-test LOC: 100-180
@@ -1154,8 +1203,8 @@ Specific rules:
   `cgroup_error`.
 - Missing workspace `upperdir` skips disk sampling for that workspace.
 - Stale workspace rows should be removed or marked absent when no longer active.
-- Stale command rows should be removed or marked absent when no longer active or
-  retained as recent completed commands.
+- Stale execution rows should be removed or marked absent when no longer active
+  or retained as recent completed executions.
 - Observability error strings must be bounded before storage.
 - Collector panics should be prevented by ordinary error handling; if a collector
   task crashes, daemon request serving must continue.
@@ -1177,11 +1226,11 @@ cargo test -p sandbox-daemon observability
 Required behavior tests:
 
 - Phase 2 migration is idempotent.
-- `workspace_snapshots`, `command_snapshots`, and `resource_samples` are created
+- `workspace_snapshots`, `execution_snapshots`, and `resource_samples` are created
   in `observability.sqlite`.
 - Synthetic sandbox snapshot upsert updates the current row.
 - Synthetic workspace snapshot upserts rows and prunes stale rows.
-- Synthetic command snapshot upserts active/recent rows and prunes stale rows.
+- Synthetic execution snapshot upserts active/recent rows and prunes stale rows.
 - Sandbox-global resource sample writes `workspace_id = NULL`.
 - Per-workspace resource sample writes `workspace_id IS NOT NULL`.
 - Missing cgroup path writes `cgroup_available = 0`.
@@ -1197,7 +1246,7 @@ Storage:
 - [ ] `observability.sqlite` remains the only Phase 2 observability database.
 - [ ] `sandbox_snapshots` receives live daemon-root upserts.
 - [ ] `workspace_snapshots` receives live active workspace upserts.
-- [ ] `command_snapshots` receives live active/recent command upserts.
+- [ ] `execution_snapshots` receives live active/recent execution upserts.
 - [ ] `resource_samples` receives sandbox-global and per-workspace inserts.
 - [ ] `resource_samples.workspace_id IS NULL` is used only for sandbox-global
   samples.

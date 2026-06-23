@@ -451,9 +451,9 @@ Deferred schema:
 - `workspace_snapshots` must be added alongside `sandbox_snapshots` in Phase 2
   once runtime snapshot adapters expose active workspace/session state. This
   table owns the `sandbox -> workspace` hierarchy.
-- `command_snapshots` must be added in Phase 2 once command snapshot adapters
-  expose active/recent command state. This table owns active command display
-  under each workspace.
+- `execution_snapshots` must be added in Phase 2 once runtime execution snapshot
+  adapters expose active/recent execution state. This table owns active runtime
+  execution display under each workspace.
 - `resource_samples` must be added in Phase 2 once daemon-side resource
   samplers exist. This table owns sandbox-global samples
   (`workspace_id IS NULL`) and per-workspace samples (`workspace_id IS NOT NULL`).
@@ -468,7 +468,7 @@ The full target hierarchy is therefore backed by these table roles:
 sandbox_snapshots       -> sandbox root state
 workspace_snapshots     -> workspace rows under each sandbox
 resource_samples        -> sandbox-global and per-workspace resource history
-command_snapshots       -> active/recent commands under each workspace
+execution_snapshots     -> active/recent runtime executions under each workspace
 traces + spans          -> recent request/method chains
 trace_links             -> later async relationships back to requests/commands
 ```
@@ -483,7 +483,7 @@ Phase 1
 Phase 2
   sandbox_snapshots       -> live daemon sandbox-root snapshot population
   workspace_snapshots     -> live workspace rows under each sandbox
-  command_snapshots       -> live active/recent command rows
+  execution_snapshots     -> live active/recent execution rows
   resource_samples        -> live sandbox-global and per-workspace resource samples
 
 Phase 3
@@ -622,7 +622,7 @@ Storage shape:
   created in Phase 1.
 - [x] `schema_migrations`, `traces`, `spans`, and `sandbox_snapshots` are the
   only Phase 1 tables.
-- [x] `workspace_snapshots`, `command_snapshots`, `resource_samples`, and
+- [x] `workspace_snapshots`, `execution_snapshots`, `resource_samples`, and
   `trace_links` are not created in Phase 1.
 
 Path and store behavior:

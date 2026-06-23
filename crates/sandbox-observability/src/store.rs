@@ -12,14 +12,12 @@ use crate::records::{RecordValidationError, SandboxSnapshotRecord, SpanRecord, T
 struct Migration {
     version: i64,
     name: &'static str,
-    checksum: &'static str,
     sql: &'static str,
 }
 
 const MIGRATIONS: &[Migration] = &[Migration {
     version: 1,
     name: "phase_1_observability_foundation",
-    checksum: "phase-1-observability-foundation-v1",
     sql: V1_SCHEMA_SQL,
 }];
 
@@ -97,7 +95,7 @@ pub enum StoreError {
     #[error("schema migration {version} checksum mismatch: expected {expected}, found {actual}")]
     MigrationChecksumMismatch {
         version: i64,
-        expected: &'static str,
+        expected: String,
         actual: String,
     },
 }
@@ -249,6 +247,7 @@ fn apply_schema(connection: &mut Connection) -> Result<(), StoreError> {
     transaction.execute_batch(SCHEMA_MIGRATIONS_SQL)?;
 
     for migration in MIGRATIONS {
+        let expected_checksum = schema_checksum(migration.sql);
         let applied_checksum = transaction
             .query_row(
                 "SELECT checksum FROM schema_migrations WHERE version = ?1",
@@ -258,11 +257,11 @@ fn apply_schema(connection: &mut Connection) -> Result<(), StoreError> {
             .optional()?;
 
         match applied_checksum {
-            Some(checksum) if checksum == migration.checksum => {}
+            Some(checksum) if checksum == expected_checksum => {}
             Some(actual) => {
                 return Err(StoreError::MigrationChecksumMismatch {
                     version: migration.version,
-                    expected: migration.checksum,
+                    expected: expected_checksum,
                     actual,
                 });
             }
@@ -278,7 +277,7 @@ fn apply_schema(connection: &mut Connection) -> Result<(), StoreError> {
                     params![
                         migration.version,
                         migration.name,
-                        migration.checksum,
+                        &expected_checksum,
                         unix_time_ms()
                     ],
                 )?;
@@ -290,9 +289,35 @@ fn apply_schema(connection: &mut Connection) -> Result<(), StoreError> {
     Ok(())
 }
 
+fn schema_checksum(sql: &str) -> String {
+    const FNV_OFFSET: u64 = 0xcbf29ce484222325;
+    const FNV_PRIME: u64 = 0x00000100000001b3;
+
+    let mut hash = FNV_OFFSET;
+    for byte in sql.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+
+    format!("fnv1a64:{hash:016x}")
+}
+
 fn unix_time_ms() -> i64 {
     let duration = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default();
     i64::try_from(duration.as_millis()).unwrap_or(i64::MAX)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{schema_checksum, V1_SCHEMA_SQL};
+
+    #[test]
+    fn schema_checksum_changes_with_sql_text() {
+        let checksum = schema_checksum(V1_SCHEMA_SQL);
+
+        assert!(checksum.starts_with("fnv1a64:"));
+        assert_ne!(checksum, schema_checksum("SELECT 1;"));
+    }
 }

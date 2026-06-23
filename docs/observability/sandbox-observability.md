@@ -28,8 +28,8 @@ trace, event, or log pipeline.
 - Collect a current snapshot for each sandbox and each active workspace.
 - Track sandbox-global resource usage separately from per-workspace resource
   usage.
-- Track CPU, memory, disk, cgroup, time, and command activity when the data is
-  available.
+- Track CPU, memory, disk, cgroup, time, and runtime execution activity,
+  including command activity, when the data is available.
 - Record method call chains and elapsed time for each important method in an
   operation.
 - Link async lifecycle work, such as command finalization, back to the
@@ -75,7 +75,9 @@ trace, event, or log pipeline.
   ```
 
 - Workspace session state is owned by `WorkspaceSessionService`.
-- Command active/completed state is owned by `CommandProcessStore`.
+- Current command execution state is owned by `CommandProcessStore`. Future
+  namespace-runner operations should feed the same execution snapshot lane
+  instead of creating one snapshot surface per operation class.
 - Cgroup CPU/memory accounting is not currently present in `sandbox-runtime`.
   The daemon resource sampler should record cgroup data only when it can derive
   paths safely. `sandbox-runtime` should not grow a cgroup monitor for phase 1.
@@ -99,7 +101,7 @@ Later runtime adoption is split across later phases:
 | Phase | Runtime scope | Expected runtime LOC |
 | --- | --- | ---: |
 | Phase 1 | Data model and local stores outside runtime | 0 |
-| Phase 2 | Read-only snapshot adapters owned by command/workspace services | 100-180 |
+| Phase 2 | Read-only workspace and execution snapshot adapters | 100-180 |
 | Phase 3 | Request trace boundary and selected operation spans | 110-250 |
 | Phase 4 | Linked async finalization trace wiring | 60-110 |
 
@@ -129,7 +131,7 @@ Responsibilities:
 
 - Know the current `sandbox_id`.
 - Derive the local observability directory.
-- Own the two SQLite stores.
+- Own the local observability store.
 - Collect daemon-local sandbox snapshots.
 - Record method traces for requests handled by that daemon.
 - Record linked async traces for later lifecycle work.
@@ -168,7 +170,8 @@ state through explicit runtime snapshot surfaces owned by existing service
 owners:
 
 - `WorkspaceStateSampler`: active workspace sessions and remount state.
-- `CommandStateSampler`: active and recently completed commands.
+- `ExecutionStateSampler`: active and recently completed runtime executions,
+  with command executions as the current producer/display subset.
 - `ResourceSampler`: CPU, memory, cgroup, disk, and time.
 - `SandboxStateSampler`: daemon-level identity, runtime roots, and health.
 
@@ -201,9 +204,7 @@ Phase 1 creates one local SQLite foundation database:
   observability.sqlite
 ```
 
-SQLite journal/WAL files may also appear beside it. Later phases may split
-trace and state table families into separate files only after real write volume
-or retention behavior proves the split is useful.
+SQLite journal/WAL files may also appear beside it.
 
 Writes from live daemon/runtime paths must be non-critical once those paths
 exist:
@@ -249,12 +250,6 @@ or published independently of observability.
 Phase 1 creates the minimal trace tables inside `observability.sqlite`. The
 larger schema below is the Phase 3/4 target shape, after request and async trace
 producers exist.
-
-Possible later split file, only if write volume or retention proves it useful:
-
-```text
-<runtime_root>/<sandbox_id>/observability/method-trace.sqlite
-```
 
 Purpose:
 
@@ -354,18 +349,12 @@ Phase 1 creates only a minimal `sandbox_snapshots` table inside
 `observability.sqlite`. The larger schema below is the Phase 2+ target shape,
 after runtime snapshot adapters and resource samplers exist.
 
-Possible later split file, only if write volume or retention proves it useful:
-
-```text
-<runtime_root>/<sandbox_id>/observability/sandbox-state.sqlite
-```
-
 Purpose:
 
 - Current sandbox snapshot.
 - Current workspace snapshots.
 - Recent resource samples.
-- Current active command snapshots.
+- Current active runtime execution snapshots.
 
 `sandbox_snapshots` is only the root row for a sandbox. It is enough for Phase 1
 store bootstrapping, but it is not enough for the full observability hierarchy.
@@ -375,7 +364,7 @@ The complete local model needs these companion table families:
 sandbox_snapshots       -> sandbox root state
 workspace_snapshots     -> workspace rows under each sandbox
 resource_samples        -> sandbox-global and per-workspace resource history
-command_snapshots       -> active/recent commands under each workspace
+execution_snapshots     -> active/recent runtime executions under each workspace
 traces + spans          -> recent request/method chains
 trace_links             -> later async relationships back to requests/commands
 ```
@@ -390,7 +379,7 @@ Phase 1
 Phase 2
   sandbox_snapshots       -> live daemon sandbox-root snapshot population
   workspace_snapshots     -> live workspace rows under each sandbox
-  command_snapshots       -> live active/recent command rows
+  execution_snapshots     -> live active/recent execution rows
   resource_samples        -> live sandbox-global and per-workspace resource samples
 
 Phase 3
@@ -479,20 +468,25 @@ CREATE TABLE IF NOT EXISTS resource_samples (
   disk_first_error_path TEXT
 );
 
-CREATE TABLE IF NOT EXISTS command_snapshots (
+CREATE TABLE IF NOT EXISTS execution_snapshots (
   sandbox_id TEXT NOT NULL,
   workspace_id TEXT NOT NULL,
-  command_session_id TEXT NOT NULL,
+  execution_id TEXT NOT NULL,
+  execution_kind TEXT NOT NULL,    -- command | future operation-neutral kinds
+  operation TEXT,
+  command_session_id TEXT,
+  namespace_runner_request_id TEXT,
+  command TEXT,
   lifecycle_state TEXT NOT NULL,   -- running | quiesced_for_remount | finalizing | cancelled
   finalization_state TEXT NOT NULL,
-  workspace_ownership TEXT NOT NULL,
+  workspace_ownership TEXT,
   started_at_unix_ms INTEGER,
   wall_time_ms REAL,
   command_total_time_ms REAL,
   process_group_id INTEGER,
   transcript_path TEXT,
   sampled_at_unix_ms INTEGER NOT NULL,
-  PRIMARY KEY(sandbox_id, command_session_id)
+  PRIMARY KEY(sandbox_id, execution_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_workspace_snapshots_sandbox
@@ -504,13 +498,16 @@ CREATE INDEX IF NOT EXISTS idx_resource_samples_workspace_time
 CREATE INDEX IF NOT EXISTS idx_resource_samples_sandbox_time
   ON resource_samples(sandbox_id, sampled_at_unix_ms);
 
-CREATE INDEX IF NOT EXISTS idx_command_snapshots_workspace
-  ON command_snapshots(sandbox_id, workspace_id);
+CREATE INDEX IF NOT EXISTS idx_execution_snapshots_workspace
+  ON execution_snapshots(sandbox_id, workspace_id);
+
+CREATE INDEX IF NOT EXISTS idx_execution_snapshots_command
+  ON execution_snapshots(sandbox_id, command_session_id);
 ```
 
 Retention:
 
-- `sandbox_snapshots`, `workspace_snapshots`, and `command_snapshots` represent
+- `sandbox_snapshots`, `workspace_snapshots`, and `execution_snapshots` represent
   current state and are updated in place.
 - `resource_samples` is time-series data and should be retained by time window.
 - A `resource_samples` row with `workspace_id IS NULL` is the sandbox-global
@@ -541,8 +538,24 @@ pub struct WorkspaceSnapshot {
     pub profile: Option<String>,
     pub base_revision: Option<BaseRevisionView>,
     pub resources: ResourceSnapshot,
-    pub active_commands: Vec<CommandSnapshot>,
+    pub active_executions: Vec<ExecutionSnapshot>,
     pub recent_traces: Vec<TraceSummary>,
+}
+
+pub struct ExecutionSnapshot {
+    pub execution_id: String,
+    pub execution_kind: String,
+    pub operation: Option<String>,
+    pub workspace_id: String,
+    pub command_session_id: Option<String>,
+    pub namespace_runner_request_id: Option<String>,
+    pub command: Option<String>,
+    pub lifecycle_state: String,
+    pub finalization_state: String,
+    pub workspace_ownership: Option<String>,
+    pub wall_time_ms: Option<f64>,
+    pub process_group_id: Option<i32>,
+    pub transcript_path: Option<PathBuf>,
 }
 
 pub struct ResourceSnapshot {
@@ -563,7 +576,8 @@ sandbox_id
   workspace_id
     state
     resources
-    active commands
+    active executions
+    active commands (filtered from active executions)
     recent traces
 ```
 
@@ -1227,10 +1241,12 @@ databases.
 
 - Add one read-only runtime snapshot method.
 - Snapshot active workspaces from `WorkspaceSessionService` through that method.
-- Snapshot active commands from `CommandProcessStore` through that method.
+- Snapshot active and recent runtime executions through a shared execution
+  snapshot lane. `CommandProcessStore` is the current producer because
+  `exec_command` is the current long-running namespace-runner operation.
 - Add daemon-side disk stats using existing upperdir paths.
 - Add daemon-side cgroup sampler with unavailable state if paths are absent.
-- Expected `crates/sandbox-runtime` change: 140-220 non-test LOC.
+- Expected `crates/sandbox-runtime` change: 100-180 non-test LOC.
 
 ### Phase 3: Request Method Traces
 
@@ -1265,7 +1281,9 @@ databases.
     workspace_id
       state
       resources
-  ```
+      active executions
+      active commands (filtered from active executions)
+```
 - Expected `crates/sandbox-runtime` change: 0 LOC.
 
 ### Phase 6: Optional Metrics Export
@@ -1292,7 +1310,4 @@ Storage-specific tests should verify:
 - Running schema initialization twice is a no-op.
 - A synthetic request trace maps all spans to the same `trace_id`.
 - A synthetic sandbox snapshot upsert replaces the current row.
-- `get_observability_snapshot` returns one typed `SandboxSnapshot`.
-- `get_observability_tree` returns unavailable sandbox nodes for daemons that
-  cannot be reached.
 - `crates/sandbox-runtime` remains untouched by Phase 1.
