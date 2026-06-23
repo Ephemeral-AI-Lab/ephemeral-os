@@ -162,7 +162,7 @@ Phase 5 workspace DTO:
 ```rust
 pub struct WorkspaceSnapshot {
     pub workspace_id: String,
-    pub state: String,
+    pub lifecycle_state: String,
     pub remount_state: Option<String>,
     pub profile: Option<String>,
     pub sampled_at_unix_ms: Option<i64>,

@@ -16,20 +16,21 @@ trace, event, or log pipeline.
 
   ```text
   sandbox_id
-    sandbox state
+    sandbox lifecycle state
+    observability availability
     sandbox global resource usage
     workspace_id
-      workspace state
+      workspace lifecycle state
       resource usage
-      active commands
+      active namespace executions
       recent request and async method chains
   ```
 
 - Collect a current snapshot for each sandbox and each active workspace.
 - Track sandbox-global resource usage separately from per-workspace resource
   usage.
-- Track CPU, memory, disk, cgroup, time, and runtime execution activity,
-  including command activity, when the data is available.
+- Track CPU, memory, disk, cgroup, time, and runtime namespace execution
+  activity when the data is available.
 - Record method call chains and elapsed time for each important method in an
   operation.
 - Link async lifecycle work, such as command finalization, back to the
@@ -147,7 +148,8 @@ Responsibilities:
 - Collect daemon-local sandbox snapshots.
 - Record method traces for requests handled by that daemon.
 - Record linked async traces for later lifecycle work.
-- Expose the daemon query API `get_observability_snapshot`.
+- Expose the private daemon query branch `get_observability_snapshot` for
+  manager fan-out.
 
 The service runs inside the sandbox daemon because only the daemon has direct
 access to its runtime operation state.
@@ -160,7 +162,7 @@ the global display tree.
 Responsibilities:
 
 - Discover ready sandboxes from the manager store.
-- Call each sandbox daemon's observability snapshot API.
+- Call each sandbox daemon's private observability snapshot branch.
 - Combine daemon snapshots into:
 
   ```text
@@ -171,6 +173,7 @@ Responsibilities:
 - Never inspect workspace internals directly.
 - Treat unavailable daemons as unavailable sandbox snapshots, not as empty
   sandboxes.
+- Bound fan-out and per-daemon transport timeouts in the concrete daemon client.
 
 The manager may cache the aggregate in the future. Manager polling and
 aggregation belong to Phase 5, not Phase 1.
@@ -443,7 +446,7 @@ Schema:
 ```sql
 CREATE TABLE IF NOT EXISTS sandbox_snapshots (
   sandbox_id TEXT PRIMARY KEY,
-  state TEXT NOT NULL,             -- ready | unavailable | stopping | failed
+  state TEXT NOT NULL,             -- lifecycle state, not query availability
   workspace_root TEXT,
   daemon_runtime_dir TEXT,
   socket_path TEXT,
@@ -539,32 +542,35 @@ Retention:
   sample for that sandbox.
 - A `resource_samples` row with `workspace_id IS NOT NULL` is a per-workspace
   sample under that sandbox.
+- Collection partial errors are stored in bounded `error_message` fields and
+  projected as observability availability, not by changing lifecycle `state`.
 - Suggested default: retain the last 30 minutes of resource samples per sandbox.
 - Disk samples may be sampled less often than cgroup samples.
 
 ## Snapshot DTOs
 
-The daemon API should expose typed DTOs. SQLite is an implementation detail.
+The private daemon branch should expose typed DTOs to the manager. SQLite is an
+implementation detail.
 
 ```rust
 pub struct SandboxSnapshot {
     pub sandbox_id: String,
-    pub state: SandboxStateView,
-    pub resources: ResourceSnapshot,
-    pub sampled_at_unix_ms: i64,
-    pub daemon_runtime_dir: Option<PathBuf>,
-    pub workspace_root: Option<PathBuf>,
+    pub lifecycle_state: String,
+    pub availability: ObservabilityAvailability,
+    pub resources: Option<ResourceSnapshot>,
+    pub sampled_at_unix_ms: Option<i64>,
     pub workspaces: Vec<WorkspaceSnapshot>,
+    pub partial_errors: Vec<SnapshotPartialError>,
 }
 
 pub struct WorkspaceSnapshot {
     pub workspace_id: String,
-    pub state: WorkspaceStateView,
+    pub lifecycle_state: String,
     pub profile: Option<String>,
-    pub base_revision: Option<BaseRevisionView>,
-    pub resources: ResourceSnapshot,
+    pub resources: Option<ResourceSnapshot>,
     pub active_namespace_executions: Vec<NamespaceExecutionSnapshot>,
     pub recent_traces: Vec<TraceSummary>,
+    pub partial_errors: Vec<SnapshotPartialError>,
 }
 
 pub struct NamespaceExecutionSnapshot {
@@ -580,20 +586,51 @@ pub struct ResourceSnapshot {
     pub disk: DiskSnapshot,
     pub time: TimeSnapshot,
 }
+
+pub enum ObservabilityAvailability {
+    Available,
+    Partial,
+    Unavailable,
+}
+
+pub struct TraceSummary {
+    pub trace_id: String,
+    pub kind: String,
+    pub status: String,
+    pub operation: String,
+    pub started_at_unix_ms: i64,
+    pub finished_at_unix_ms: Option<i64>,
+    pub duration_ms: Option<f64>,
+    pub error_kind: Option<String>,
+    pub error_message: Option<String>,
+}
+
+pub struct SnapshotPartialError {
+    pub kind: String,
+    pub message: String,
+}
 ```
 
 The manager renders these DTOs in the required hierarchy:
 
 ```text
 sandbox_id
-  state
+  lifecycle_state
+  availability
   resources
   workspace_id
-    state
+    lifecycle_state
     resources
     active namespace executions
     recent traces
 ```
+
+`lifecycle_state` describes the sandbox or workspace lifecycle. `availability`
+describes observability query health. A ready sandbox whose daemon times out is
+serialized with `lifecycle_state = "ready"` and `availability = "unavailable"`;
+disabled observability or SQLite read failures affect `availability` and
+`partial_errors`, not lifecycle state. The summary DTO intentionally omits span
+counts and command/session identifiers until a drilldown API exists.
 
 ## Query API
 
@@ -605,7 +642,7 @@ Direct SQLite reads are allowed for local debugging, schema migration tests, and
 emergency inspection only. The stable query contract is typed DTOs over the
 existing daemon socket path.
 
-### Daemon Query: `get_observability_snapshot`
+### Private Daemon Query: `get_observability_snapshot`
 
 Execution space:
 
@@ -619,6 +656,7 @@ Purpose:
 - Return one `SandboxSnapshot`.
 - Optionally narrow to one workspace.
 - Optionally include recent traces and bounded resource history.
+- Remain a private manager-to-daemon branch, not a public CLI/catalog operation.
 
 Input:
 
@@ -642,21 +680,25 @@ pub struct GetObservabilitySnapshotOutput {
 
 Rules:
 
-- `workspace_id = None` returns sandbox-global state plus all active workspace
-  summaries.
-- `workspace_id = Some(..)` returns sandbox-global state plus only that
+- `workspace_id = None` returns sandbox-global lifecycle state plus all active
+  workspace summaries.
+- `workspace_id = Some(..)` returns sandbox-global lifecycle state plus only that
   workspace when it exists.
-- `include_resources = true` includes sandbox-global resources and workspace
-  resources.
-- `include_recent_traces = true` includes recent request and async trace
-  summaries.
-- `resource_window_ms` bounds resource time-series rows. If omitted, return
-  current/latest resources only.
+- `include_resources = true` with `resource_window_ms = None` returns the latest
+  sandbox-global resource sample where `workspace_id IS NULL` plus the latest
+  resource sample for each returned workspace id. It does not mean one global
+  latest row across all scopes.
+- `resource_window_ms = Some(..)` opts into bounded history per resource scope,
+  capped by the daemon.
+- `include_recent_traces = true` includes recent request/async trace summaries
+  and namespace execution trace summaries after separate bounded reads.
 - `trace_limit` is capped by the daemon even if the caller asks for more.
 - Missing cgroup paths return unavailable resource snapshots; they do not fail
   the query.
 - SQLite lock or read failures return a partial snapshot with bounded error
   fields when current runtime state can still be collected.
+- Do not add `CliOperationExecutionSpace::Daemon`, daemon CLI help, or gateway
+  request-builder support for this private branch in Phase 5.
 
 ### Manager Query: `get_observability_tree`
 
@@ -697,11 +739,21 @@ Rules:
 - `sandbox_ids = None` queries every ready sandbox known to the manager.
 - `sandbox_ids = Some(..)` queries only those sandboxes.
 - The manager fans out by calling `get_observability_snapshot` on each daemon.
+- The manager fans out to at most 8 daemons concurrently.
+- Each daemon request has a 1500 ms transport timeout enforced by the concrete
+  daemon client across connect, write, shutdown, read, and response decode.
 - The manager should not open per-sandbox SQLite files.
 - The manager should not maintain a manager-side mirror of
   `observability.sqlite`.
 - The manager may cache the aggregate later, but the first implementation can
   query daemons on demand.
+- The gateway/manager path must use a configured daemon client. A trait-only
+  `invoke_with_timeout` helper without a concrete timeout-capable Unix-socket
+  transport is not an implementation.
+- Endpoint auth stays inside the daemon client. If a TCP endpoint is added and
+  requires `sandbox_protocol::DAEMON_AUTH_FIELD`, inject it only into the wire
+  request immediately before sending and never project it into args, responses,
+  errors, or DTOs.
 
 ### Later Drill-Down Queries
 
@@ -1457,21 +1509,24 @@ databases.
 
 ### Phase 5: Manager Aggregation
 
-- Add daemon API `get_observability_snapshot`.
+- Add private daemon branch `get_observability_snapshot`.
 - Add manager API `get_observability_tree`.
 - Add manager aggregation across ready sandboxes by querying daemon APIs, not by
   opening or mirroring daemon SQLite stores.
+- Keep public Phase 5 surface area to `get_observability_tree`; do not add a
+  daemon catalog/help surface for the private branch.
 - Render hierarchy:
 
   ```text
   sandbox_id
-    state
+    lifecycle_state
+    availability
     resources
     workspace_id
-      state
+      lifecycle_state
       resources
-      active executions
-      active commands (filtered from active executions)
+      active namespace executions
+      recent traces
 ```
 - Expected `crates/sandbox-runtime` change: 0 LOC.
 

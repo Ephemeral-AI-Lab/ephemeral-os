@@ -251,7 +251,7 @@ fn observability_collection_bounds_rows_and_keeps_valid_rows() -> TestResult {
     let sandbox = store
         .sandbox_snapshot_for_test("sandbox-1")?
         .expect("sandbox snapshot written");
-    assert_eq!(sandbox.state, "unavailable");
+    assert_eq!(sandbox.state, "ready");
     assert!(sandbox
         .error_message
         .as_deref()

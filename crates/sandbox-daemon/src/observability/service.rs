@@ -348,11 +348,7 @@ impl DaemonObservability {
     ) -> SandboxSnapshotRecord {
         SandboxSnapshotRecord {
             sandbox_id: self.sandbox_id.clone(),
-            state: if partial_errors.is_empty() {
-                "ready".to_owned()
-            } else {
-                "unavailable".to_owned()
-            },
+            state: "ready".to_owned(),
             workspace_root: None,
             daemon_runtime_dir: Some(bound_path(path_string(self.paths.daemon_runtime_dir()))),
             socket_path: Some(bound_path(path_string(&config.socket_path))),
