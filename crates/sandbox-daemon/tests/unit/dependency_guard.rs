@@ -93,6 +93,7 @@ fn daemon_metric_labels_are_allowlisted_in_source() {
     .expect("read daemon metrics source");
 
     for expected in [
+        "KeyValue::new(\"sandbox_id\"",
         "KeyValue::new(\"operation\"",
         "KeyValue::new(\"workspace_phase\"",
         "KeyValue::new(\"cgroup_target_kind\"",

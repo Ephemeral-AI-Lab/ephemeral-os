@@ -738,24 +738,20 @@ fn workspace_session_apply_remount_failure_blocks_and_keeps_session_available() 
 
 #[test]
 fn workspace_session_files_do_not_import_command_service() {
-    let core = include_str!("../src/internal/workspace_session/service/core.rs");
+    let core = include_str!("../src/workspace_session/service/core.rs");
     let capture_session_changes =
-        include_str!("../src/internal/workspace_session/service/impls/capture_session_changes.rs");
+        include_str!("../src/workspace_session/service/impls/capture_session_changes.rs");
     let create_workspace_session =
-        include_str!("../src/internal/workspace_session/service/impls/create_workspace_session.rs");
-    let destroy_session =
-        include_str!("../src/internal/workspace_session/service/impls/destroy_session.rs");
-    let resolve_session =
-        include_str!("../src/internal/workspace_session/service/impls/resolve_session.rs");
+        include_str!("../src/workspace_session/service/impls/create_workspace_session.rs");
+    let destroy_session = include_str!("../src/workspace_session/service/impls/destroy_session.rs");
+    let resolve_session = include_str!("../src/workspace_session/service/impls/resolve_session.rs");
     let remount_apply_and_finish =
-        include_str!("../src/internal/workspace_session/service/impls/apply_and_finish_remount.rs");
-    let remount_begin =
-        include_str!("../src/internal/workspace_session/service/impls/begin_remount.rs");
-    let remount_block =
-        include_str!("../src/internal/workspace_session/service/impls/block_remount.rs");
-    let model = include_str!("../src/internal/workspace_session/service/model.rs");
-    let service = include_str!("../src/internal/workspace_session/service.rs");
-    let error = include_str!("../src/internal/workspace_session/error.rs");
+        include_str!("../src/workspace_session/service/impls/apply_and_finish_remount.rs");
+    let remount_begin = include_str!("../src/workspace_session/service/impls/begin_remount.rs");
+    let remount_block = include_str!("../src/workspace_session/service/impls/block_remount.rs");
+    let model = include_str!("../src/workspace_session/service/model.rs");
+    let service = include_str!("../src/workspace_session/service.rs");
+    let error = include_str!("../src/workspace_session/error.rs");
 
     for source in [
         core,

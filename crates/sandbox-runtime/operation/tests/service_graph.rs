@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -122,7 +123,7 @@ fn command_contract_keeps_session_selector_in_exec_input() {
 }
 
 #[test]
-fn service_graph_cli_operation_catalog_exports_runtime_command_operations_only() {
+fn service_graph_cli_operation_catalog_exports_runtime_cli_operations() {
     let catalog = sandbox_runtime::cli_operation_catalog();
     let names = catalog
         .operations
@@ -138,13 +139,82 @@ fn service_graph_cli_operation_catalog_exports_runtime_command_operations_only()
         catalog
             .families
             .iter()
-            .map(|family| family.title)
+            .map(|family| family.id)
             .collect::<Vec<_>>(),
-        ["Command"]
+        ["command", "layerstack"]
     );
     assert_eq!(
         names,
-        ["exec_command", "write_command_stdin", "read_command_lines"]
+        [
+            "exec_command",
+            "write_command_stdin",
+            "read_command_lines",
+            "squash"
+        ]
+    );
+    assert!(catalog.operations.iter().all(|spec| spec.cli.is_some()));
+}
+
+#[test]
+fn service_graph_cli_catalog_families_match_cli_operations() {
+    let catalog = sandbox_runtime::cli_operation_catalog();
+    let families = catalog
+        .families
+        .iter()
+        .map(|family| family.id)
+        .collect::<BTreeSet<_>>();
+    let used_families = catalog
+        .operations
+        .iter()
+        .map(|spec| spec.family)
+        .collect::<BTreeSet<_>>();
+
+    assert_eq!(families, used_families);
+    assert!(catalog
+        .operations
+        .iter()
+        .all(|spec| families.contains(spec.family)));
+}
+
+#[test]
+fn service_graph_cli_catalog_keeps_non_cli_helpers_out() {
+    let catalog = sandbox_runtime::cli_operation_catalog();
+    let names = catalog
+        .operations
+        .iter()
+        .map(|spec| spec.name)
+        .collect::<Vec<_>>();
+
+    for helper in [
+        "resolve_session",
+        "begin_remount",
+        "apply_and_finish_remount",
+        "block_remount",
+        "refresh_after_publish",
+        "capture_session_changes",
+        "publish_changes",
+        "process_store",
+        "transcript",
+        "status_lookup",
+        "finalize_command",
+    ] {
+        assert!(!names.contains(&helper), "{helper} leaked into catalog");
+    }
+}
+
+#[test]
+fn runtime_known_operation_name_uses_registered_operation_entries() {
+    assert_eq!(
+        sandbox_runtime::known_operation_name("exec_command"),
+        Some("exec_command")
+    );
+    assert_eq!(
+        sandbox_runtime::known_operation_name("squash"),
+        Some("squash")
+    );
+    assert_eq!(
+        sandbox_runtime::known_operation_name("RAW_UNKNOWN_OPERATION_SECRET"),
+        None
     );
 }
 
@@ -184,7 +254,7 @@ fn runtime_catalog_and_dispatch_drop_removed_cgroup_monitor_operations() {
 }
 
 #[test]
-fn runtime_operation_metrics_use_static_command_operation_allowlist(
+fn runtime_operation_metrics_use_registered_operation_names(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let workspace = workspace_session();
     let layerstack = layerstack_service()?;
@@ -210,12 +280,37 @@ fn runtime_operation_metrics_use_static_command_operation_allowlist(
     assert_eq!(
         metrics.operations(),
         [(
-            RuntimeOperationName::ReadCommandLines,
+            RuntimeOperationName::from_static_name("read_command_lines"),
             RuntimeMetricStatus::Error
         )]
     );
 
-    let _ = sandbox_runtime::dispatch_operation(
+    let response = sandbox_runtime::dispatch_operation(
+        &operations,
+        &Request::new(
+            "squash",
+            "req-squash-metrics",
+            CliOperationScope::system(),
+            json!({}),
+        ),
+    )
+    .into_json_value();
+    assert!(response.get("error").is_none(), "{response}");
+    assert_eq!(
+        metrics.operations(),
+        [
+            (
+                RuntimeOperationName::from_static_name("read_command_lines"),
+                RuntimeMetricStatus::Error
+            ),
+            (
+                RuntimeOperationName::from_static_name("squash"),
+                RuntimeMetricStatus::Ok
+            )
+        ]
+    );
+
+    let response = sandbox_runtime::dispatch_operation(
         &operations,
         &Request::new(
             "RAW_UNKNOWN_OPERATION_SECRET",
@@ -223,13 +318,21 @@ fn runtime_operation_metrics_use_static_command_operation_allowlist(
             CliOperationScope::system(),
             json!({}),
         ),
-    );
+    )
+    .into_json_value();
+    assert_eq!(response["error"]["kind"].as_str(), Some("unknown_op"));
     assert_eq!(
         metrics.operations(),
-        [(
-            RuntimeOperationName::ReadCommandLines,
-            RuntimeMetricStatus::Error
-        )]
+        [
+            (
+                RuntimeOperationName::from_static_name("read_command_lines"),
+                RuntimeMetricStatus::Error
+            ),
+            (
+                RuntimeOperationName::from_static_name("squash"),
+                RuntimeMetricStatus::Ok
+            )
+        ]
     );
     Ok(())
 }
@@ -238,20 +341,46 @@ fn runtime_operation_metrics_use_static_command_operation_allowlist(
 fn cli_operation_catalog_metadata_uses_runtime_space() {
     let catalog = sandbox_runtime::cli_operation_catalog();
 
-    assert!(catalog.operations.iter().all(|spec| {
-        spec.cli
-            .map(|cli| {
-                cli.path.first() == Some(&"runtime")
-                    && cli.usage.starts_with("sandbox-cli runtime ")
-                    && !cli.usage.contains("--sandbox-id")
-                    && cli.examples.iter().all(|example| {
-                        example.starts_with("sandbox-cli runtime ")
-                            && !example.contains("--sandbox-id")
-                            && !example.contains("daemon")
-                    })
-            })
-            .unwrap_or(true)
-    }));
+    for spec in catalog.operations {
+        let cli = spec.cli.expect("runtime catalog spec must be CLI-visible");
+        assert_eq!(cli.path.first(), Some(&"runtime"));
+        assert!(cli.usage.starts_with("sandbox-cli runtime "));
+        assert!(!cli.usage.contains("--sandbox-id"));
+        assert!(cli.examples.iter().all(|example| {
+            example.starts_with("sandbox-cli runtime ")
+                && !example.contains("--sandbox-id")
+                && !example.contains("daemon")
+        }));
+    }
+}
+
+#[test]
+fn squash_dispatch_projects_stable_no_op_json(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let operations = SandboxRuntimeOperations::new(
+        Arc::new(CommandOperationService::new(
+            workspace_session(),
+            sandbox_runtime_command::CommandConfig::default(),
+        )),
+        layerstack_service()?,
+    );
+
+    let response = sandbox_runtime::dispatch_operation(
+        &operations,
+        &Request::new(
+            "squash",
+            "req-squash",
+            CliOperationScope::system(),
+            json!({}),
+        ),
+    )
+    .into_json_value();
+
+    assert_eq!(response["squashed"], false);
+    assert!(response["revision"].is_null(), "{response}");
+    assert_eq!(response["layer_paths"], json!([]));
+    assert!(response.get("lease_release_error").is_some(), "{response}");
+    Ok(())
 }
 
 #[derive(Default)]

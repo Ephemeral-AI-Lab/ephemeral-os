@@ -23,16 +23,6 @@ pub(crate) const COMMAND_FAMILY: CliOperationFamilySpec = CliOperationFamilySpec
     description: "Run, interact with, and inspect commands inside the active sandbox runtime.",
 };
 
-const FAMILIES: &[&CliOperationFamilySpec] = &[&COMMAND_FAMILY];
-
 pub(crate) fn operation_entries() -> &'static [crate::operation::OperationEntry] {
     service::operation_entries()
-}
-
-pub(crate) const fn cli_operation_families() -> &'static [&'static CliOperationFamilySpec] {
-    FAMILIES
-}
-
-pub(crate) fn cli_operation_specs() -> &'static [&'static crate::operation::CliOperationSpec] {
-    service::cli_operation_specs()
 }

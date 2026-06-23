@@ -10,6 +10,22 @@
     "from": "now-1h",
     "to": "now"
   },
+  "templating": {
+    "list": [
+      {
+        "name": "sandbox_id",
+        "label": "Sandbox",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": "label_values(sandbox_workspace_phase_latency_ms_milliseconds_count, sandbox_id)",
+        "refresh": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": { "selected": true, "text": "All", "value": "$__all" }
+      }
+    ]
+  },
   "panels": [
     {
       "id": 1,
@@ -19,8 +35,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(sandbox_publish_rejections_total) by (bounded_reason)",
-          "legendFormat": "{{bounded_reason}}"
+          "expr": "sum(sandbox_publish_rejections_total{sandbox_id=~\"$sandbox_id\"}) by (sandbox_id, bounded_reason)",
+          "legendFormat": "{{sandbox_id}} {{bounded_reason}}"
         }
       ],
       "fieldConfig": {
@@ -37,8 +53,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (status) (sandbox_workspace_phase_latency_ms_milliseconds_sum{workspace_phase=\"publish_changes\"}) / sum by (status) (sandbox_workspace_phase_latency_ms_milliseconds_count{workspace_phase=\"publish_changes\"})",
-          "legendFormat": "{{status}}"
+          "expr": "sum by (sandbox_id, status) (sandbox_workspace_phase_latency_ms_milliseconds_sum{sandbox_id=~\"$sandbox_id\", workspace_phase=\"publish_changes\"}) / sum by (sandbox_id, status) (sandbox_workspace_phase_latency_ms_milliseconds_count{sandbox_id=~\"$sandbox_id\", workspace_phase=\"publish_changes\"})",
+          "legendFormat": "{{sandbox_id}} {{status}}"
         }
       ],
       "fieldConfig": {

@@ -36,12 +36,14 @@ pub(crate) fn init_otlp_metrics(
         .build();
     let recorder = Arc::new(OpenTelemetryRuntimeMetricsRecorder::new(
         provider.meter("sandbox-daemon"),
+        sandbox_id,
         config.cgroup_samples_enabled,
     ));
     Ok((provider, recorder))
 }
 
 struct OpenTelemetryRuntimeMetricsRecorder {
+    sandbox_id: String,
     runtime_latency_ms: Histogram<f64>,
     workspace_phase_latency_ms: Histogram<f64>,
     publish_rejections: Counter<u64>,
@@ -74,8 +76,9 @@ struct OpenTelemetryRuntimeMetricsRecorder {
 }
 
 impl OpenTelemetryRuntimeMetricsRecorder {
-    fn new(meter: Meter, cgroup_samples_enabled: bool) -> Self {
+    fn new(meter: Meter, sandbox_id: &str, cgroup_samples_enabled: bool) -> Self {
         Self {
+            sandbox_id: sandbox_id.to_owned(),
             runtime_latency_ms: meter
                 .f64_histogram("sandbox_runtime_operation_latency_ms")
                 .with_unit("ms")
@@ -175,6 +178,24 @@ impl OpenTelemetryRuntimeMetricsRecorder {
             gauge.record(value, attrs);
         }
     }
+
+    fn sandbox_attr(&self) -> KeyValue {
+        KeyValue::new("sandbox_id", self.sandbox_id.clone())
+    }
+
+    fn cgroup_resource_attrs(
+        &self,
+        target_kind: CgroupMonitorTargetKind,
+        status: RuntimeMetricStatus,
+        resource_kind: &'static str,
+    ) -> [KeyValue; 4] {
+        [
+            self.sandbox_attr(),
+            KeyValue::new("cgroup_target_kind", target_kind.as_str()),
+            KeyValue::new("status", status.as_str()),
+            KeyValue::new("resource_kind", resource_kind),
+        ]
+    }
 }
 
 impl RuntimeMetricsRecorder for OpenTelemetryRuntimeMetricsRecorder {
@@ -187,6 +208,7 @@ impl RuntimeMetricsRecorder for OpenTelemetryRuntimeMetricsRecorder {
         self.runtime_latency_ms.record(
             latency.as_secs_f64() * 1000.0,
             &[
+                self.sandbox_attr(),
                 KeyValue::new("operation", operation.as_str()),
                 KeyValue::new("status", status.as_str()),
             ],
@@ -202,6 +224,7 @@ impl RuntimeMetricsRecorder for OpenTelemetryRuntimeMetricsRecorder {
         self.workspace_phase_latency_ms.record(
             latency.as_secs_f64() * 1000.0,
             &[
+                self.sandbox_attr(),
                 KeyValue::new("workspace_phase", phase.as_str()),
                 KeyValue::new("status", status.as_str()),
             ],
@@ -221,7 +244,7 @@ impl RuntimeMetricsRecorder for OpenTelemetryRuntimeMetricsRecorder {
         } else {
             RuntimeMetricStatus::Ok
         };
-        let cpu_attrs = cgroup_resource_attrs(target_kind, status, "cpu");
+        let cpu_attrs = self.cgroup_resource_attrs(target_kind, status, "cpu");
         Self::record_optional_u64(
             &self.cgroup_cpu_usage_usec,
             sample.cpu.usage_usec,
@@ -238,7 +261,7 @@ impl RuntimeMetricsRecorder for OpenTelemetryRuntimeMetricsRecorder {
             &cpu_attrs,
         );
 
-        let memory_attrs = cgroup_resource_attrs(target_kind, status, "memory");
+        let memory_attrs = self.cgroup_resource_attrs(target_kind, status, "memory");
         Self::record_optional_u64(
             &self.cgroup_memory_current_bytes,
             sample.memory.current_bytes,
@@ -250,7 +273,7 @@ impl RuntimeMetricsRecorder for OpenTelemetryRuntimeMetricsRecorder {
             &memory_attrs,
         );
 
-        let pids_attrs = cgroup_resource_attrs(target_kind, status, "pids");
+        let pids_attrs = self.cgroup_resource_attrs(target_kind, status, "pids");
         Self::record_optional_u64(&self.cgroup_pids_current, sample.pids.current, &pids_attrs);
         Self::record_optional_u64(&self.cgroup_pids_peak, sample.pids.peak, &pids_attrs);
         self.cgroup_pids_sampled_count
@@ -260,7 +283,7 @@ impl RuntimeMetricsRecorder for OpenTelemetryRuntimeMetricsRecorder {
         record_pressure_resource(self, target_kind, status, "memory", &sample.pressure.memory);
         record_pressure_resource(self, target_kind, status, "io", &sample.pressure.io);
 
-        let disk_attrs = cgroup_resource_attrs(target_kind, status, "disk");
+        let disk_attrs = self.cgroup_resource_attrs(target_kind, status, "disk");
         self.cgroup_disk_upperdir_bytes
             .record(sample.disk.upperdir_bytes as f64, &disk_attrs);
         self.cgroup_disk_upperdir_files
@@ -278,18 +301,33 @@ impl RuntimeMetricsRecorder for OpenTelemetryRuntimeMetricsRecorder {
     }
 
     fn record_publish_rejection(&self, reason: PublishRejectionReason) {
-        self.publish_rejections
-            .add(1, &[KeyValue::new("bounded_reason", reason.as_str())]);
+        self.publish_rejections.add(
+            1,
+            &[
+                self.sandbox_attr(),
+                KeyValue::new("bounded_reason", reason.as_str()),
+            ],
+        );
     }
 
     fn record_remount_failure(&self, reason: RemountFailureReason) {
-        self.remount_failures
-            .add(1, &[KeyValue::new("bounded_reason", reason.as_str())]);
+        self.remount_failures.add(
+            1,
+            &[
+                self.sandbox_attr(),
+                KeyValue::new("bounded_reason", reason.as_str()),
+            ],
+        );
     }
 
     fn record_command_cancellation(&self, reason: CommandCancellationReason) {
-        self.command_cancellations
-            .add(1, &[KeyValue::new("bounded_reason", reason.as_str())]);
+        self.command_cancellations.add(
+            1,
+            &[
+                self.sandbox_attr(),
+                KeyValue::new("bounded_reason", reason.as_str()),
+            ],
+        );
     }
 
     fn record_cgroup_read_error(
@@ -300,23 +338,12 @@ impl RuntimeMetricsRecorder for OpenTelemetryRuntimeMetricsRecorder {
         self.cgroup_read_errors.add(
             1,
             &[
+                self.sandbox_attr(),
                 KeyValue::new("cgroup_target_kind", target_kind.as_str()),
                 KeyValue::new("bounded_error_kind", error_kind.as_str()),
             ],
         );
     }
-}
-
-fn cgroup_resource_attrs(
-    target_kind: CgroupMonitorTargetKind,
-    status: RuntimeMetricStatus,
-    resource_kind: &'static str,
-) -> [KeyValue; 3] {
-    [
-        KeyValue::new("cgroup_target_kind", target_kind.as_str()),
-        KeyValue::new("status", status.as_str()),
-        KeyValue::new("resource_kind", resource_kind),
-    ]
 }
 
 fn record_pressure_resource(
@@ -326,7 +353,7 @@ fn record_pressure_resource(
     resource_kind: &'static str,
     sample: &sandbox_runtime::PressureResourceSample,
 ) {
-    let attrs = cgroup_resource_attrs(target_kind, status, resource_kind);
+    let attrs = recorder.cgroup_resource_attrs(target_kind, status, resource_kind);
     OpenTelemetryRuntimeMetricsRecorder::record_optional_f64(
         &recorder.cgroup_pressure_some_avg10,
         sample.some_avg10,

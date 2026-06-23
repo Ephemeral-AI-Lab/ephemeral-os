@@ -2,19 +2,20 @@
 
 pub(crate) extern crate sandbox_runtime_workspace as workspace_crate;
 
-mod internal;
+pub mod command;
+pub mod layerstack;
 mod operation;
-mod public;
+mod services;
+pub mod workspace_remount;
+pub mod workspace_session;
 
-pub use internal::{layerstack, workspace_remount, workspace_session};
+pub use command::CommandOperationService;
+pub use layerstack::LayerStackService;
 pub use operation::{
     ArgCliSpec, ArgKind, ArgSpec, CliOperationCatalog, CliOperationExecutionSpace,
     CliOperationFamilySpec, CliOperationSpec, CliSpec,
 };
-pub use public::command;
-
-pub use command::CommandOperationService;
-pub use internal::services::{
+pub use services::{
     CgroupMonitorRuntimeConfig, CommandRuntimeConfig, Rfc1918Egress, SandboxRuntimeConfig,
     SandboxRuntimeOperations, WorkspaceResourceCaps, WorkspaceRuntimeConfig,
 };
@@ -24,15 +25,17 @@ pub use workspace_crate::{
     PressureResourceSample, PublishRejectionReason, RemountFailureReason, RuntimeMetricStatus,
     RuntimeMetricsRecorder, RuntimeMetricsRecorderHandle, RuntimeOperationName, WorkspacePhase,
 };
+pub use workspace_remount::WorkspaceRemountService;
+pub use workspace_session::WorkspaceSessionService;
 
 #[must_use]
 pub fn cli_operation_specs() -> &'static [&'static CliOperationSpec] {
-    public::cli_operation_specs()
+    operation::cli_operation_specs()
 }
 
 #[must_use]
 pub fn cli_operation_families() -> &'static [&'static CliOperationFamilySpec] {
-    public::cli_operation_families()
+    operation::cli_operation_families()
 }
 
 #[must_use]
@@ -45,9 +48,14 @@ pub fn cli_operation_catalog() -> CliOperationCatalog {
 }
 
 #[must_use]
+pub fn known_operation_name(operation: &str) -> Option<&'static str> {
+    operation::known_operation_name(operation)
+}
+
+#[must_use]
 pub fn dispatch_operation(
     operations: &SandboxRuntimeOperations,
     request: &sandbox_protocol::Request,
 ) -> sandbox_protocol::Response {
-    public::dispatch_operation(operations, request)
+    operation::dispatch_operation(operations, request)
 }

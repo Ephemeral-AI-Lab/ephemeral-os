@@ -10,6 +10,22 @@
     "from": "now-1h",
     "to": "now"
   },
+  "templating": {
+    "list": [
+      {
+        "name": "sandbox_id",
+        "label": "Sandbox",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": "label_values(sandbox_cgroup_cpu_percent, sandbox_id)",
+        "refresh": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": { "selected": true, "text": "All", "value": "$__all" }
+      }
+    ]
+  },
   "panels": [
     {
       "id": 1,
@@ -19,8 +35,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max(sandbox_cgroup_cpu_percent) by (cgroup_target_kind, status)",
-          "legendFormat": "{{cgroup_target_kind}} {{status}}"
+          "expr": "max(sandbox_cgroup_cpu_percent{sandbox_id=~\"$sandbox_id\"}) by (sandbox_id, cgroup_target_kind, status)",
+          "legendFormat": "{{sandbox_id}} {{cgroup_target_kind}} {{status}}"
         }
       ],
       "fieldConfig": {
@@ -37,8 +53,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max(sandbox_cgroup_memory_current_bytes) by (cgroup_target_kind, status)",
-          "legendFormat": "{{cgroup_target_kind}} {{status}}"
+          "expr": "max(sandbox_cgroup_memory_current_bytes{sandbox_id=~\"$sandbox_id\"}) by (sandbox_id, cgroup_target_kind, status)",
+          "legendFormat": "{{sandbox_id}} {{cgroup_target_kind}} {{status}}"
         }
       ],
       "fieldConfig": {
@@ -55,8 +71,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max(sandbox_cgroup_pids_current) by (cgroup_target_kind, status)",
-          "legendFormat": "{{cgroup_target_kind}} {{status}}"
+          "expr": "max(sandbox_cgroup_pids_current{sandbox_id=~\"$sandbox_id\"}) by (sandbox_id, cgroup_target_kind, status)",
+          "legendFormat": "{{sandbox_id}} {{cgroup_target_kind}} {{status}}"
         }
       ],
       "fieldConfig": {
@@ -73,8 +89,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max(sandbox_cgroup_pressure_some_avg10) by (cgroup_target_kind, resource_kind, status)",
-          "legendFormat": "{{cgroup_target_kind}} {{resource_kind}} {{status}}"
+          "expr": "max(sandbox_cgroup_pressure_some_avg10{sandbox_id=~\"$sandbox_id\"}) by (sandbox_id, cgroup_target_kind, resource_kind, status)",
+          "legendFormat": "{{sandbox_id}} {{cgroup_target_kind}} {{resource_kind}} {{status}}"
         }
       ],
       "fieldConfig": {
@@ -91,8 +107,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max(sandbox_cgroup_disk_upperdir_bytes) by (cgroup_target_kind, status)",
-          "legendFormat": "{{cgroup_target_kind}} {{status}}"
+          "expr": "max(sandbox_cgroup_disk_upperdir_bytes{sandbox_id=~\"$sandbox_id\"}) by (sandbox_id, cgroup_target_kind, status)",
+          "legendFormat": "{{sandbox_id}} {{cgroup_target_kind}} {{status}}"
         }
       ],
       "fieldConfig": {
@@ -109,8 +125,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(sandbox_cgroup_read_errors_total[5m])) by (cgroup_target_kind, bounded_error_kind)",
-          "legendFormat": "{{cgroup_target_kind}} {{bounded_error_kind}}"
+          "expr": "sum(rate(sandbox_cgroup_read_errors_total{sandbox_id=~\"$sandbox_id\"}[5m])) by (sandbox_id, cgroup_target_kind, bounded_error_kind)",
+          "legendFormat": "{{sandbox_id}} {{cgroup_target_kind}} {{bounded_error_kind}}"
         }
       ],
       "fieldConfig": {

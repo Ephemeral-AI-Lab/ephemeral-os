@@ -53,31 +53,20 @@ pub fn noop_runtime_metrics_recorder() -> RuntimeMetricsRecorderHandle {
     Arc::new(NoopRuntimeMetricsRecorder)
 }
 
+/// Static operation label recorded by the runtime operation registry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum RuntimeOperationName {
-    ExecCommand,
-    WriteCommandStdin,
-    ReadCommandLines,
-}
+pub struct RuntimeOperationName(&'static str);
 
 impl RuntimeOperationName {
+    /// Build a runtime operation label from a registered static operation name.
     #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::ExecCommand => "exec_command",
-            Self::WriteCommandStdin => "write_command_stdin",
-            Self::ReadCommandLines => "read_command_lines",
-        }
+    pub const fn from_static_name(name: &'static str) -> Self {
+        Self(name)
     }
 
     #[must_use]
-    pub fn from_static_name(name: &str) -> Option<Self> {
-        match name {
-            "exec_command" => Some(Self::ExecCommand),
-            "write_command_stdin" => Some(Self::WriteCommandStdin),
-            "read_command_lines" => Some(Self::ReadCommandLines),
-            _ => None,
-        }
+    pub const fn as_str(self) -> &'static str {
+        self.0
     }
 }
 

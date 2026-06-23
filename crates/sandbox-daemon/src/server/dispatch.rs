@@ -159,12 +159,7 @@ fn record_request(span: &Span, request: &Request) {
 }
 
 fn operation_trace_label(operation: &str) -> &'static str {
-    match operation {
-        "exec_command" => "exec_command",
-        "write_command_stdin" => "write_command_stdin",
-        "read_command_lines" => "read_command_lines",
-        _ => "unknown",
-    }
+    sandbox_runtime::known_operation_name(operation).unwrap_or("unknown")
 }
 
 fn scope_kind(scope: &CliOperationScope) -> &'static str {

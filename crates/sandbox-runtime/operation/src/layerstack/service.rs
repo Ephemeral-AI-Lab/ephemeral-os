@@ -6,3 +6,7 @@ pub use core::LayerStackService;
 pub use model::{
     LayerStackRevision, PublishChangesRequest, PublishChangesResult, SquashLayerStackResult,
 };
+
+pub(crate) fn operation_entries() -> &'static [crate::operation::OperationEntry] {
+    impls::OPERATIONS
+}

@@ -8,20 +8,18 @@ use crate::command::{
     CommandFinalizedMetadata, CommandLinesOutput, CommandPublishStatus, CommandServiceError,
     CommandStatus, CommandYield,
 };
-use crate::operation::{CliOperationSpec, OperationEntry};
+use crate::operation::OperationEntry;
 use sandbox_protocol::Response;
 
-pub(crate) const OPERATIONS: &[OperationEntry] = &[
-    OperationEntry::new(&exec_command::SPEC, exec_command::dispatch),
-    OperationEntry::new(&write_command_stdin::SPEC, write_command_stdin::dispatch),
-    OperationEntry::new(&read_command_lines::SPEC, read_command_lines::dispatch),
-];
+const EXEC_COMMAND: OperationEntry =
+    OperationEntry::cli(&exec_command::SPEC, exec_command::dispatch);
+const WRITE_COMMAND_STDIN: OperationEntry =
+    OperationEntry::cli(&write_command_stdin::SPEC, write_command_stdin::dispatch);
+const READ_COMMAND_LINES: OperationEntry =
+    OperationEntry::cli(&read_command_lines::SPEC, read_command_lines::dispatch);
 
-pub(crate) const SPECS: &[&CliOperationSpec] = &[
-    &exec_command::SPEC,
-    &write_command_stdin::SPEC,
-    &read_command_lines::SPEC,
-];
+pub(crate) const OPERATIONS: &[OperationEntry] =
+    &[EXEC_COMMAND, WRITE_COMMAND_STDIN, READ_COMMAND_LINES];
 
 pub(super) fn command_yield_response(
     result: Result<CommandYield, CommandServiceError>,

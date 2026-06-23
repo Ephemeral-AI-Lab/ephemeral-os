@@ -24,7 +24,3 @@ pub(crate) use process_store::{
 pub(crate) fn operation_entries() -> &'static [crate::operation::OperationEntry] {
     impls::OPERATIONS
 }
-
-pub(crate) fn cli_operation_specs() -> &'static [&'static crate::operation::CliOperationSpec] {
-    impls::SPECS
-}
