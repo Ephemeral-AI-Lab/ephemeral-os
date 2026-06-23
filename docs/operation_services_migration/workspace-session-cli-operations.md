@@ -40,10 +40,13 @@ or handler details.
   behavior.
 - Reject user-requested destroy while the workspace session still has active
   command sessions.
-- Keep the existing `SandboxRuntimeOperations` aggregate shape and reuse the
-  single shared workspace-session service held by `CommandOperationService`.
+- Add `WorkspaceSessionService` as an explicit peer on
+  `SandboxRuntimeOperations`, while still passing the same `Arc` into
+  `CommandOperationService`.
 - Keep `WorkspaceSessionService` and its `service/impls` files free of CLI
   protocol, operation registry, and command-service imports.
+- Keep workspace-session CLI/protocol adapters outside the
+  `workspace_session/**` lifecycle module.
 
 ## Non-Goals
 
@@ -57,11 +60,12 @@ or handler details.
 - Do not add compatibility aliases for alternate operation names.
 - Do not introduce a `{ result, meta }` response envelope.
 - Do not move workspace lifecycle ownership into `command`.
-- Do not add `workspace_session` as a peer field on `SandboxRuntimeOperations`.
 - Do not place `CliOperationSpec`, `OperationEntry`, `Request`, or `Response`
   code inside `workspace_session/service/impls`.
 - Do not expose general-purpose `CommandOperationService` accessors just so
   workspace-session CLI dispatch can reach private command internals.
+- Do not route workspace-session CLI operations through
+  `CommandOperationService::workspace()`.
 
 ## Current State
 
@@ -116,6 +120,20 @@ pub struct SandboxRuntimeOperations {
 }
 ```
 
+The target shape should add workspace-session as a peer service, not as a value
+looked up through command:
+
+```rust
+pub struct SandboxRuntimeOperations {
+    pub command: Arc<CommandOperationService>,
+    pub workspace_session: Arc<WorkspaceSessionService>,
+    pub layerstack: Arc<LayerStackService>,
+}
+```
+
+`from_config` must construct one `Arc<WorkspaceSessionService>`, pass a clone
+into `CommandOperationService`, and store the same `Arc` on the aggregate.
+
 The operation registry currently collects operation entries from:
 
 - `command::operation_entries()`;
@@ -125,6 +143,9 @@ Command execution stores active command records by `workspace_session_id`.
 `destroy_workspace_session` must check that command state before destroying a
 user-owned session. The safe launch behavior is to reject destroy when active
 commands remain, not to remove the workspace out from under running processes.
+Because live `exec_command` currently resolves the workspace before it inserts
+an active command record, the destroy admission contract must also exclude
+existing-session command launches before they resolve the session.
 
 The existing workspace-session service is intentionally command-agnostic. Keep
 that boundary: new CLI operation adapters may compose command and workspace
@@ -234,7 +255,7 @@ Dispatch must:
 4. inspect the returned active command ids;
 5. return `operation_failed` without resolving or calling workspace destroy if
    any active command sessions remain;
-6. resolve the session through `WorkspaceSessionService::resolve_session`;
+6. resolve the session through `operations.workspace_session.resolve_session`;
 7. construct `DestroyWorkspaceRequest { grace_s }`;
 8. call the existing `destroy_session(handler, request)` while the destroy
    admission guard is still held.
@@ -244,13 +265,13 @@ Response:
 ```json
 {
   "workspace_session_id": "ws-...",
-  "evicted_upperdir_bytes": 0,
-  "lifetime_s": 1.23,
-  "lease_released": true,
-  "lease_release_error": null,
-  "active_leases_after": 0
+  "destroyed": true
 }
 ```
+
+`DestroyWorkspaceResult` contains teardown diagnostics such as evicted bytes and
+lease-release status. Those are lifecycle/observability details and should not
+become part of the CLI contract for this operation.
 
 Active-command rejection should include details that make the refusal actionable:
 
@@ -262,7 +283,8 @@ Active-command rejection should include details that make the refusal actionable
 
 ## Operation Family
 
-Add a runtime CLI family:
+Add a runtime CLI family in the operation adapter module, not in
+`workspace_session/mod.rs`:
 
 ```rust
 pub(crate) const WORKSPACE_SESSION_FAMILY: CliOperationFamilySpec =
@@ -276,19 +298,21 @@ pub(crate) const WORKSPACE_SESSION_FAMILY: CliOperationFamilySpec =
 
 The family should be returned from `cli_operation_families()` only because it
 has CLI-visible operations. It must not imply that every
-`WorkspaceSessionService` method is CLI-visible.
+`WorkspaceSessionService` method is CLI-visible, and it must not turn
+`workspace_session` into a catalog/help module.
 
 ## CLI Adapter Wiring
 
-Add CLI operation adapters under `workspace_session/cli/`, not under
-`workspace_session/service/impls/`:
+Add one private operation adapter module, for example
+`src/workspace_session_operations.rs`. Do not add `workspace_session/cli/` and
+do not put these adapters under `workspace_session/service/impls/`.
 
 ```rust
 const CREATE_WORKSPACE_SESSION: OperationEntry =
-    OperationEntry::cli(&create_workspace_session::SPEC, create_workspace_session::dispatch);
+    OperationEntry::cli(&CREATE_SPEC, dispatch_create_workspace_session);
 
 const DESTROY_WORKSPACE_SESSION: OperationEntry =
-    OperationEntry::cli(&destroy_workspace_session::SPEC, destroy_workspace_session::dispatch);
+    OperationEntry::cli(&DESTROY_SPEC, dispatch_destroy_workspace_session);
 
 pub(crate) const OPERATIONS: &[OperationEntry] = &[
     CREATE_WORKSPACE_SESSION,
@@ -296,36 +320,36 @@ pub(crate) const OPERATIONS: &[OperationEntry] = &[
 ];
 ```
 
-Expose only the operation registry through `workspace_session/mod.rs`:
+Expose only the operation registry through that adapter module:
 
 ```rust
 pub(crate) fn operation_entries() -> &'static [crate::operation::OperationEntry] {
-    cli::OPERATIONS
+    OPERATIONS
 }
 ```
 
-The `workspace_session::cli` adapter may depend on:
+The operation adapter may depend on:
 
 - `SandboxRuntimeOperations`;
 - `WorkspaceSessionService` methods reached through
-  `operations.command.workspace()`;
+  `operations.workspace_session`;
 - the explicit command-owned destroy-admission API described below.
 
-It must not add CLI/parser/response code to `workspace_session/service/**`.
+It must not add CLI/parser/response code to `workspace_session/**`.
 
 Update the runtime operation registry:
 
 ```rust
 const CLI_FAMILIES: &[&CliOperationFamilySpec] = &[
     &command::COMMAND_FAMILY,
-    &workspace_session::WORKSPACE_SESSION_FAMILY,
+    &workspace_session_operations::WORKSPACE_SESSION_FAMILY,
     &layerstack::LAYERSTACK_FAMILY,
 ];
 
 fn operation_entry_groups() -> [&'static [OperationEntry]; 3] {
     [
         command::operation_entries(),
-        workspace_session::operation_entries(),
+        workspace_session_operations::operation_entries(),
         layerstack::operation_entries(),
     ]
 }
@@ -348,26 +372,31 @@ match the existing runtime operation convention:
 
 ## Runtime Aggregate Access
 
-Do not make `WorkspaceSessionService` explicit in `SandboxRuntimeOperations`.
-The aggregate should stay small:
+Make `WorkspaceSessionService` explicit in `SandboxRuntimeOperations` because
+workspace-session CLI operations are lifecycle operations, not command
+operations:
 
 ```rust
 pub struct SandboxRuntimeOperations {
     pub command: Arc<CommandOperationService>,
+    pub workspace_session: Arc<WorkspaceSessionService>,
     pub layerstack: Arc<LayerStackService>,
 }
 ```
 
 `from_config` already constructs one `Arc<WorkspaceSessionService>` and passes
-it into `CommandOperationService`. Workspace-session CLI dispatch should use
-that existing shared service through the command service's existing
-crate-local `workspace()` accessor. It must not accept or construct another
+it into `CommandOperationService`. Store that same `Arc` on the aggregate and
+pass a clone into command. Do not accept or construct another
 `Arc<WorkspaceSessionService>`.
 
-Do not use `CommandOperationService` as a generic service locator for command
-internals. Workspace-session CLI dispatch may reach only:
+Do not add `WorkspaceRemountService` to `SandboxRuntimeOperations` for this
+change. The aggregate is for services directly reached by runtime operation
+dispatch; remount remains an internal orchestration service because no remount
+operation is being exposed.
 
-- the shared `WorkspaceSessionService` through `workspace()`;
+Do not use `CommandOperationService` as a generic service locator for command
+internals. Workspace-session CLI dispatch may reach command only through:
+
 - the explicit destroy-admission API below.
 
 This is dispatch wiring only. Workspace lifecycle methods still live on
@@ -379,7 +408,10 @@ active command records, and command finalization.
 `destroy_workspace_session` must not destroy a workspace session that still has
 active commands. Active command records are the current source of truth for
 workspace-session membership, so destroy must consult the command process store
-before calling raw workspace destroy.
+before calling raw workspace destroy. Active command records alone are not
+enough, because live command launch resolves an existing workspace before it
+inserts the active command record. The admission contract must therefore also
+exclude existing-session command launch before session resolution.
 
 Rename the underlying concept from remount-specific admission to workspace
 lifecycle admission. The lock may remain physically stored in
@@ -400,9 +432,18 @@ impl CommandOperationService {
         workspace_session_id: &WorkspaceSessionId,
     ) -> WorkspaceDestroyAdmission<'_> {
         // Lock workspace lifecycle admission, then snapshot active commands.
+        // Existing-session exec_command must take the same admission before
+        // resolving the workspace session and hold it until the command is
+        // active or launch cleanup is complete.
     }
 }
 ```
+
+Update existing-session `exec_command` so it enters the same lifecycle
+admission before `WorkspaceSessionService::resolve_session` and holds it until
+the command is inserted into the active process store, or until launch failure
+cleanup completes. This is the minimal live-code change that makes destroy
+admission true instead of advisory.
 
 The operation must keep `WorkspaceDestroyAdmission` alive while it:
 
@@ -413,9 +454,10 @@ The operation must keep `WorkspaceDestroyAdmission` alive while it:
 
 The guard prevents this race:
 
-1. destroy checks for active commands and finds none;
-2. a new `exec_command --workspace-session-id` starts;
-3. destroy removes the workspace underneath the active command.
+1. `exec_command --workspace-session-id` resolves a handler but has not inserted
+   an active command record yet;
+2. destroy checks active commands and finds none;
+3. destroy removes the workspace underneath the pending command launch.
 
 Active-command rejection must leave the workspace session intact and must not
 cancel commands. Command cancellation or coordinated forced destroy is a
@@ -424,9 +466,9 @@ separate operation and is out of scope for this change.
 This keeps the ownership simple:
 
 - `WorkspaceSessionService` owns workspace lifecycle state and raw create/destroy;
-- `CommandOperationService` owns command process membership and lifecycle
-  admission;
-- `workspace_session::cli` composes the two for the CLI operation.
+- `CommandOperationService` owns command process membership and launch/destroy
+  exclusion;
+- `workspace_session_operations` composes the two for the CLI operation.
 
 ## Response Projection
 
@@ -444,17 +486,13 @@ fn create_workspace_session_value(handler: WorkspaceSessionHandler) -> Value {
 }
 ```
 
-Destroy response projection should mirror `DestroyWorkspaceResult` exactly:
+Destroy response projection should expose only the public operation result:
 
 ```rust
 fn destroy_workspace_session_value(result: DestroyWorkspaceResult) -> Value {
     json!({
         "workspace_session_id": result.workspace_session_id.0,
-        "evicted_upperdir_bytes": result.evicted_upperdir_bytes,
-        "lifetime_s": result.lifetime_s,
-        "lease_released": result.lease_released,
-        "lease_release_error": result.lease_release_error,
-        "active_leases_after": result.active_leases_after,
+        "destroyed": true,
     })
 }
 ```
@@ -489,30 +527,28 @@ Response::fault_with_details("operation_failed", error.to_string(), details)
 
 ### Phase 1: CLI Metadata and Dispatch
 
-- Add `SPEC`, arg specs, CLI examples, parse helpers, dispatch, and response
-  projection to `workspace_session/cli/create_workspace_session.rs`.
-- Add `SPEC`, arg specs, CLI examples, parse helpers, dispatch, and response
-  projection to `workspace_session/cli/destroy_workspace_session.rs`.
-- Add the active-command guard to `destroy_workspace_session::dispatch` before
-  resolving and destroying the workspace session.
+- Add `CREATE_SPEC`, `DESTROY_SPEC`, arg specs, CLI examples, parse helpers,
+  dispatch, and response projection to the private operation adapter module.
+- Add the destroy admission guard to `dispatch_destroy_workspace_session`
+  before resolving and destroying the workspace session.
 - Add coarse service spans for both dispatch functions.
 - Keep existing service methods intact.
 
 ### Phase 2: Workspace-Session Operation Family
 
-- Add `WORKSPACE_SESSION_FAMILY` to `workspace_session/mod.rs`.
-- Add `mod cli;` and `operation_entries()` to `workspace_session/mod.rs`.
-- Register create and destroy entries in `workspace_session/cli/mod.rs`.
-- Keep `workspace_session/service.rs` and `workspace_session/service/impls/**`
-  free of operation registry, request parsing, response projection, and command
-  imports.
-- Update `operation.rs` to include the new family and operation group.
+- Add `WORKSPACE_SESSION_FAMILY` and `operation_entries()` to the private
+  operation adapter module.
+- Keep all `workspace_session/**` files free of operation registry, request
+  parsing, response projection, and command imports.
+- Add the private adapter module to the crate root and update `operation.rs` to
+  include the new family and operation group.
 
 ### Phase 3: Runtime Aggregate and Destroy Admission
 
-- Keep `SandboxRuntimeOperations` unchanged.
-- Dispatch create and destroy through the workspace-session service already
-  reachable from `CommandOperationService`.
+- Add `workspace_session: Arc<WorkspaceSessionService>` to
+  `SandboxRuntimeOperations` and store the same `Arc` that is passed into
+  `CommandOperationService`.
+- Dispatch create and destroy through `operations.workspace_session`.
 - Add `CommandOperationService::begin_workspace_destroy_admission`.
 - Rename the internal guard concept from remount-only admission to workspace
   lifecycle admission, or at minimum expose the new helper using lifecycle
@@ -520,6 +556,9 @@ Response::fault_with_details("operation_failed", error.to_string(), details)
 - Reject destroy using the active command ids returned by that helper.
 - Hold `WorkspaceDestroyAdmission` across session resolution and raw workspace
   destroy.
+- Update existing-session `exec_command` to take the same admission before
+  resolving the workspace session and hold it through active-record insertion or
+  launch cleanup.
 
 ### Phase 4: Gateway, Dispatch, and Help Tests
 
@@ -548,10 +587,20 @@ Add runtime dispatch tests that prove:
 - destroy with non-finite or negative `grace_s` returns `invalid_request`;
 - destroy returns `operation_failed` with `active_command_session_ids` and does
   not call raw workspace destroy when active commands exist;
-- destroy cannot race with command launch because the active-command lookup and
-  destroy path keep `WorkspaceDestroyAdmission` alive;
-- destroy success removes the session and projects `DestroyWorkspaceResult`;
+- destroy cannot race with an existing-session `exec_command` that has resolved
+  the session but has not inserted an active command record yet;
+- destroy success removes the session and returns only `workspace_session_id`
+  plus `destroyed`;
 - destroy workspace failure returns `operation_failed` and retains the session.
+
+Add source-boundary tests that prove:
+
+- `workspace_session/**` does not import `Request`, `Response`,
+  `CliOperationSpec`, `OperationEntry`, or `CommandOperationService`;
+- workspace-session operation dispatch reaches lifecycle methods through
+  `operations.workspace_session`, not `operations.command.workspace()`;
+- `SandboxRuntimeOperations` contains `workspace_session` for direct dispatch
+  and does not add `workspace_remount` for this change.
 
 Add operation trace tests that prove the selected span set includes:
 
@@ -574,7 +623,7 @@ Add operation trace tests that prove the selected span set includes:
 - `resolve_session`, `capture_session_changes`, remount substeps, process-store
   helpers, transcript internals, and finalization helpers are absent from the
   CLI catalog.
-- `workspace_session/service/**` remains free of CLI protocol, operation
+- `workspace_session/**` remains free of CLI protocol, operation
   registry, response projection, and command-service imports.
 - `create_workspace_session --profile isolated` creates a session with
   `WorkspaceProfile::Isolated`.
@@ -591,14 +640,21 @@ Add operation trace tests that prove the selected span set includes:
 - `destroy_workspace_session` rejects active-command sessions with
   `operation_failed`, includes active command ids in details, and does not call
   raw workspace destroy.
+- `destroy_workspace_session` response exposes only `workspace_session_id` and
+  `destroyed`.
 - Destroy admission holds the lifecycle guard across active-command lookup,
   session resolution, and raw workspace destroy.
+- Existing-session `exec_command` takes the same lifecycle admission before
+  resolving the workspace session and holds it through active-record insertion
+  or launch cleanup.
 - Destroy failure retains the session.
 - CLI create/destroy and `exec_command --workspace-session-id` use the same
-  `WorkspaceSessionService` instance.
+  `WorkspaceSessionService` instance stored on `SandboxRuntimeOperations`.
+- `SandboxRuntimeOperations` does not add `WorkspaceRemountService` for this
+  change.
 - `CommandOperationService` exposes only the named destroy-admission helper for
   command-state coordination; workspace-session CLI dispatch does not use
-  process-store or admission-lock accessors directly.
+  `workspace()`, process-store, or admission-lock accessors directly.
 - Runtime trace output includes dispatch and service-method spans for both new
   operations.
 - Runtime help usage and examples do not include `--sandbox-id`.
