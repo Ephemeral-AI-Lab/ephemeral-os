@@ -75,8 +75,10 @@ Still incomplete or dirty pieces relevant to Phase 3:
 - `RuntimeExecutionSnapshot::started_at_unix_ms` is currently `None` for active
   command executions; Phase 3 request trace timing must not depend on that
   field.
-- Cgroup sampling is currently written as unavailable when the daemon does not
-  have a concrete cgroup path. This does not block request traces.
+- Cgroup sampling is currently unavailable-only: the daemon writes
+  `cgroup_available = 0` when no explicit daemon-owned cgroup target exists, and
+  live code does not yet read cgroup v2 files. This does not block request
+  traces.
 - Daemon snapshot collection errors are ignored by
   `SandboxDaemonServer::trigger_observability_collection`; Phase 3 trace
   persistence must follow the same best-effort request-safety rule.

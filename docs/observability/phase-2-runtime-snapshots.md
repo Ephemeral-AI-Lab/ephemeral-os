@@ -1,6 +1,6 @@
 # Phase 2 Runtime Snapshots
 
-Status: draft implementation spec
+Status: implemented; completion checklist verified against the current checkout
 
 Parent spec: [sandbox-observability.md](./sandbox-observability.md)
 
@@ -606,7 +606,8 @@ Input:
 
 - `sandbox_id`;
 - runtime workspace snapshots with `upperdir`;
-- daemon-derived `CgroupSampleTarget` values;
+- daemon-derived `CgroupSampleTarget` values, when explicit daemon-owned cgroup
+  paths are available;
 - sampling cache state.
 
 Output:
@@ -616,13 +617,14 @@ Output:
 Source of truth:
 
 - disk: workspace `upperdir` paths exposed by runtime snapshot DTOs;
-- cgroup: daemon-side target paths only;
+- cgroup: daemon-side target paths only; when no such target paths exist, write
+  unavailable cgroup fields instead of deriving paths from process ids;
 - sampled time: daemon clock.
 
 Failure behavior:
 
 - disk read failures become partial disk fields;
-- cgroup missing paths become unavailable cgroup fields;
+- cgroup missing or unknown paths become unavailable cgroup fields;
 - expensive sampling is rate-limited and cached;
 - sampler failures never fail user operations.
 
@@ -700,6 +702,12 @@ Failure behavior:
 
 Cgroup sampling is daemon-side only. Phase 2 uses explicit daemon-owned targets
 when they already exist:
+
+Current live code has no daemon-owned cgroup target derivation and no cgroup v2
+file reader. It writes the unavailable sample shape (`cgroup_available = 0`,
+`cgroup_error = "cgroup path unavailable"`) for sandbox-global and workspace
+resource samples. That is the accepted Phase 2 behavior until a later daemon
+change introduces explicit `CgroupSampleTarget` values.
 
 ```rust
 pub type SandboxId = String;
@@ -1227,7 +1235,9 @@ Required behavior tests:
 - Synthetic execution snapshot upserts active rows and prunes stale rows.
 - Sandbox-global resource sample writes `workspace_id = NULL`.
 - Per-workspace resource sample writes `workspace_id IS NOT NULL`.
-- Missing cgroup path writes `cgroup_available = 0`.
+- Missing or unavailable cgroup target writes `cgroup_available = 0`.
+- Phase 2 does not require cgroup v2 file reads until daemon-owned
+  `CgroupSampleTarget` values exist.
 - Disk sampler records read errors without failing collection.
 - Runtime snapshot tests do not import `sandbox-observability`.
 - Daemon collector tests prove SQLite write errors do not change operation
@@ -1235,43 +1245,51 @@ Required behavior tests:
 
 ## Phase 2 Completion Criteria
 
+The checklist below tracks implementation criteria. The verification plan above
+still expects a daemon dispatch test that proves SQLite write failures do not
+change operation responses; the current implementation isolates collection by
+returning the runtime response before asynchronous observability collection.
+
 Storage:
 
-- [ ] `observability.sqlite` remains the only Phase 2 observability database.
-- [ ] `sandbox_snapshots` receives live daemon-root upserts.
-- [ ] `workspace_snapshots` receives live active workspace upserts and bounded
+- [x] `observability.sqlite` remains the only Phase 2 observability database.
+- [x] `sandbox_snapshots` receives live daemon-root upserts.
+- [x] `workspace_snapshots` receives live active workspace upserts and bounded
   destroyed-workspace tombstones.
-- [ ] `execution_snapshots` receives live active execution upserts.
-- [ ] `resource_samples` receives sandbox-global and per-workspace inserts.
-- [ ] `resource_samples.workspace_id IS NULL` is used only for sandbox-global
+- [x] `execution_snapshots` receives live active execution upserts.
+- [x] `resource_samples` receives sandbox-global and per-workspace inserts.
+- [x] `resource_samples.workspace_id IS NULL` is used only for sandbox-global
   samples.
-- [ ] `resource_samples.workspace_id IS NOT NULL` is used for per-workspace
+- [x] `resource_samples.workspace_id IS NOT NULL` is used for per-workspace
   samples.
 
 Runtime boundary:
 
-- [ ] `sandbox-runtime` has no SQLite dependency.
-- [ ] `sandbox-runtime` has no `sandbox-observability` dependency.
-- [ ] `sandbox-runtime` does not know `sandbox_id` unless already provided by
+- [x] `sandbox-runtime` has no SQLite dependency.
+- [x] `sandbox-runtime` has no `sandbox-observability` dependency.
+- [x] `sandbox-runtime` does not know `sandbox_id` unless already provided by
   daemon context for another purpose.
-- [ ] `sandbox-runtime` does not walk disk.
-- [ ] `sandbox-runtime` does not read cgroups.
-- [ ] `sandbox-runtime` does not create `OperationTrace`.
-- [ ] `sandbox-runtime` non-test LOC is within `100-180`.
+- [x] `sandbox-runtime` does not walk disk.
+- [x] `sandbox-runtime` does not read cgroups.
+- [x] `sandbox-runtime` does not create `OperationTrace`.
+- [x] `sandbox-runtime` non-test LOC is within `100-180`.
 
 Daemon boundary:
 
-- [ ] daemon collectors own snapshot population.
-- [ ] daemon resource samplers own disk and cgroup reads.
-- [ ] observability write failures do not fail runtime operations.
-- [ ] missing `sandbox_id` disables live observability without failing daemon
+- [x] daemon collectors own snapshot population.
+- [x] daemon resource samplers own disk reads.
+- [x] daemon resource samplers own cgroup unavailable samples when no explicit
+  daemon-owned cgroup target exists.
+- [x] cgroup file reads are not required until daemon-owned cgroup targets exist.
+- [x] observability write failures do not fail runtime operations.
+- [x] missing `sandbox_id` disables live observability without failing daemon
   serving.
 
 API boundary:
 
-- [ ] no `get_observability_tree` manager aggregation is added.
-- [ ] no public daemon `get_observability_snapshot` operation is added unless
+- [x] no `get_observability_tree` manager aggregation is added.
+- [x] no public daemon `get_observability_snapshot` operation is added unless
   the parent spec is explicitly revised.
-- [ ] no raw SQL query API is exposed.
-- [ ] no Prometheus/Grafana/Loki/Tempo/OTLP integration is added.
-- [ ] no live method chains or `trace_links` population is added.
+- [x] no raw SQL query API is exposed.
+- [x] no Prometheus/Grafana/Loki/Tempo/OTLP integration is added.
+- [x] no live method chains or `trace_links` population is added.

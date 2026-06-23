@@ -84,7 +84,9 @@ trace, event, or log pipeline.
   instead of creating one snapshot surface per operation class.
 - Cgroup CPU/memory accounting is not currently present in `sandbox-runtime`.
   The daemon resource sampler should record cgroup data only when it can derive
-  paths safely. `sandbox-runtime` should not grow a cgroup monitor for phase 1.
+  paths safely. When it cannot derive daemon-owned cgroup targets, unavailable
+  cgroup samples are the expected behavior. `sandbox-runtime` should not grow a
+  cgroup monitor for phase 1.
 
 ## `sandbox-runtime` Phase Boundary
 
@@ -782,6 +784,10 @@ When cgroup paths are not known:
 - Set `cgroup_error = "cgroup path unavailable"`.
 - Do not fail the snapshot.
 
+This is the current Phase 2 implementation state: daemon resource sampling writes
+unavailable cgroup samples because no explicit daemon-owned cgroup targets are
+derived yet.
+
 Do not synthesize per-workspace cgroup usage from a sandbox-global cgroup. If
 workspace processes are not placed in distinct cgroups, record workspace cgroup
 samples as unavailable and keep only the sandbox-global cgroup sample.
@@ -1341,7 +1347,8 @@ databases.
   snapshot lane. `CommandProcessStore` is the current producer because
   `exec_command` is the current long-running namespace-runner operation.
 - Add daemon-side disk stats using existing upperdir paths.
-- Add daemon-side cgroup sampler with unavailable state if paths are absent.
+- Add daemon-side cgroup sample shape with unavailable state while explicit
+  daemon-owned cgroup targets are absent.
 - Expected `crates/sandbox-runtime` change: 100-180 non-test LOC.
 
 ### Phase 3: Coarse Request Method Traces
