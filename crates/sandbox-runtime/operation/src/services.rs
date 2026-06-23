@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::command::CommandOperationService;
 use crate::layerstack::LayerStackService;
+use crate::observability::RuntimeObservabilitySnapshot;
 use crate::workspace_crate::{profile::WorkspaceModeManager, WorkspaceRuntimeService};
 use crate::workspace_session::WorkspaceSessionService;
 
@@ -47,6 +48,24 @@ impl SandboxRuntimeOperations {
             },
         ));
         Self::new(command, layerstack)
+    }
+
+    #[must_use]
+    pub fn observability_snapshot(&self) -> RuntimeObservabilitySnapshot {
+        let (workspaces, mut partial_errors) = self.command.workspace().snapshot_workspaces();
+        let active_executions = match self.command.process_store().snapshot_active_executions() {
+            Ok(snapshots) => snapshots,
+            Err(error) => {
+                partial_errors.push(error);
+                Vec::new()
+            }
+        };
+
+        RuntimeObservabilitySnapshot {
+            workspaces,
+            active_executions,
+            partial_errors,
+        }
     }
 }
 

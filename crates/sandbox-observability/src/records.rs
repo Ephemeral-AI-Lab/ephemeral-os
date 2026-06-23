@@ -8,6 +8,8 @@ const MAX_METHOD_LENGTH: usize = 256;
 const MAX_ERROR_KIND_LENGTH: usize = 128;
 const MAX_ERROR_MESSAGE_LENGTH: usize = 4096;
 const MAX_SNAPSHOT_STATE_LENGTH: usize = 64;
+const MAX_PATH_LENGTH: usize = 4096;
+const MAX_COMMAND_LENGTH: usize = 4096;
 
 #[derive(Debug, Error)]
 pub enum RecordValidationError {
@@ -19,6 +21,12 @@ pub enum RecordValidationError {
     SpanTraceMismatch {
         trace_id: String,
         span_trace_id: String,
+    },
+    #[error("{field} sandbox_id {actual} does not match {expected}")]
+    SandboxMismatch {
+        field: &'static str,
+        expected: String,
+        actual: String,
     },
 }
 
@@ -112,6 +120,11 @@ impl SpanRecord {
 pub struct SandboxSnapshotRecord {
     pub sandbox_id: String,
     pub state: String,
+    pub workspace_root: Option<String>,
+    pub daemon_runtime_dir: Option<String>,
+    pub socket_path: Option<String>,
+    pub pid_path: Option<String>,
+    pub daemon_pid: Option<i64>,
     pub sampled_at_unix_ms: i64,
     pub error_message: Option<String>,
 }
@@ -121,12 +134,202 @@ impl SandboxSnapshotRecord {
         validate_required("sandbox_id", &self.sandbox_id, MAX_ID_LENGTH)?;
         validate_required("state", &self.state, MAX_SNAPSHOT_STATE_LENGTH)?;
         validate_optional(
+            "workspace_root",
+            self.workspace_root.as_deref(),
+            MAX_PATH_LENGTH,
+        )?;
+        validate_optional(
+            "daemon_runtime_dir",
+            self.daemon_runtime_dir.as_deref(),
+            MAX_PATH_LENGTH,
+        )?;
+        validate_optional("socket_path", self.socket_path.as_deref(), MAX_PATH_LENGTH)?;
+        validate_optional("pid_path", self.pid_path.as_deref(), MAX_PATH_LENGTH)?;
+        validate_optional(
             "error_message",
             self.error_message.as_deref(),
             MAX_ERROR_MESSAGE_LENGTH,
         )?;
 
         Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct WorkspaceSnapshotRecord {
+    pub sandbox_id: String,
+    pub workspace_id: String,
+    pub state: String,
+    pub remount_state: Option<String>,
+    pub profile: Option<String>,
+    pub workspace_root: Option<String>,
+    pub upperdir: Option<String>,
+    pub workdir: Option<String>,
+    pub namespace_fd_count: Option<i64>,
+    pub base_manifest_version: Option<i64>,
+    pub base_root_hash: Option<String>,
+    pub layer_count: Option<i64>,
+    pub sampled_at_unix_ms: i64,
+    pub error_message: Option<String>,
+}
+
+impl WorkspaceSnapshotRecord {
+    pub(crate) fn validate_for_sandbox(
+        &self,
+        sandbox_id: &str,
+    ) -> Result<(), RecordValidationError> {
+        validate_sandbox_match("workspace_snapshot", sandbox_id, &self.sandbox_id)?;
+        validate_required("workspace_id", &self.workspace_id, MAX_ID_LENGTH)?;
+        validate_required("state", &self.state, MAX_SNAPSHOT_STATE_LENGTH)?;
+        validate_optional(
+            "remount_state",
+            self.remount_state.as_deref(),
+            MAX_SNAPSHOT_STATE_LENGTH,
+        )?;
+        validate_optional("profile", self.profile.as_deref(), MAX_KIND_LENGTH)?;
+        validate_optional(
+            "workspace_root",
+            self.workspace_root.as_deref(),
+            MAX_PATH_LENGTH,
+        )?;
+        validate_optional("upperdir", self.upperdir.as_deref(), MAX_PATH_LENGTH)?;
+        validate_optional("workdir", self.workdir.as_deref(), MAX_PATH_LENGTH)?;
+        validate_optional(
+            "base_root_hash",
+            self.base_root_hash.as_deref(),
+            MAX_ID_LENGTH,
+        )?;
+        validate_optional(
+            "error_message",
+            self.error_message.as_deref(),
+            MAX_ERROR_MESSAGE_LENGTH,
+        )?;
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ExecutionSnapshotRecord {
+    pub sandbox_id: String,
+    pub workspace_id: String,
+    pub execution_id: String,
+    pub execution_kind: String,
+    pub operation: Option<String>,
+    pub command_session_id: Option<String>,
+    pub command: Option<String>,
+    pub lifecycle_state: String,
+    pub finalization_state: String,
+    pub workspace_ownership: Option<String>,
+    pub started_at_unix_ms: Option<i64>,
+    pub wall_time_ms: Option<f64>,
+    pub process_group_id: Option<i64>,
+    pub transcript_path: Option<String>,
+    pub sampled_at_unix_ms: i64,
+    pub error_message: Option<String>,
+}
+
+impl ExecutionSnapshotRecord {
+    pub(crate) fn validate_for_sandbox(
+        &self,
+        sandbox_id: &str,
+    ) -> Result<(), RecordValidationError> {
+        validate_sandbox_match("execution_snapshot", sandbox_id, &self.sandbox_id)?;
+        validate_required("workspace_id", &self.workspace_id, MAX_ID_LENGTH)?;
+        validate_required("execution_id", &self.execution_id, MAX_ID_LENGTH)?;
+        validate_required("execution_kind", &self.execution_kind, MAX_KIND_LENGTH)?;
+        validate_optional("operation", self.operation.as_deref(), MAX_OPERATION_LENGTH)?;
+        validate_optional(
+            "command_session_id",
+            self.command_session_id.as_deref(),
+            MAX_ID_LENGTH,
+        )?;
+        validate_optional("command", self.command.as_deref(), MAX_COMMAND_LENGTH)?;
+        validate_required(
+            "lifecycle_state",
+            &self.lifecycle_state,
+            MAX_SNAPSHOT_STATE_LENGTH,
+        )?;
+        validate_required(
+            "finalization_state",
+            &self.finalization_state,
+            MAX_SNAPSHOT_STATE_LENGTH,
+        )?;
+        validate_optional(
+            "workspace_ownership",
+            self.workspace_ownership.as_deref(),
+            MAX_KIND_LENGTH,
+        )?;
+        validate_optional(
+            "transcript_path",
+            self.transcript_path.as_deref(),
+            MAX_PATH_LENGTH,
+        )?;
+        validate_optional(
+            "error_message",
+            self.error_message.as_deref(),
+            MAX_ERROR_MESSAGE_LENGTH,
+        )?;
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ResourceSampleRecord {
+    pub sample_id: String,
+    pub sandbox_id: String,
+    pub workspace_id: Option<String>,
+    pub sampled_at_unix_ms: i64,
+    pub cgroup_path: Option<String>,
+    pub cgroup_available: bool,
+    pub cgroup_error: Option<String>,
+    pub cpu_usage_usec: Option<i64>,
+    pub memory_current_bytes: Option<i64>,
+    pub memory_max_bytes: Option<i64>,
+    pub memory_max_unlimited: Option<bool>,
+    pub disk_upperdir_bytes: Option<i64>,
+    pub disk_file_count: Option<i64>,
+    pub disk_dir_count: Option<i64>,
+    pub disk_symlink_count: Option<i64>,
+    pub disk_truncated: Option<bool>,
+    pub disk_read_error_count: Option<i64>,
+    pub disk_first_error_path: Option<String>,
+}
+
+impl ResourceSampleRecord {
+    pub(crate) fn validate(&self) -> Result<(), RecordValidationError> {
+        validate_required("sample_id", &self.sample_id, MAX_ID_LENGTH)?;
+        validate_required("sandbox_id", &self.sandbox_id, MAX_ID_LENGTH)?;
+        validate_optional("workspace_id", self.workspace_id.as_deref(), MAX_ID_LENGTH)?;
+        validate_optional("cgroup_path", self.cgroup_path.as_deref(), MAX_PATH_LENGTH)?;
+        validate_optional(
+            "cgroup_error",
+            self.cgroup_error.as_deref(),
+            MAX_ERROR_MESSAGE_LENGTH,
+        )?;
+        validate_optional(
+            "disk_first_error_path",
+            self.disk_first_error_path.as_deref(),
+            MAX_PATH_LENGTH,
+        )?;
+        Ok(())
+    }
+}
+
+fn validate_sandbox_match(
+    field: &'static str,
+    expected: &str,
+    actual: &str,
+) -> Result<(), RecordValidationError> {
+    validate_required("sandbox_id", expected, MAX_ID_LENGTH)?;
+    validate_required("sandbox_id", actual, MAX_ID_LENGTH)?;
+    if expected == actual {
+        Ok(())
+    } else {
+        Err(RecordValidationError::SandboxMismatch {
+            field,
+            expected: expected.to_owned(),
+            actual: actual.to_owned(),
+        })
     }
 }
 

@@ -4,6 +4,7 @@ pub(crate) extern crate sandbox_runtime_workspace as workspace_crate;
 
 pub mod command;
 pub mod layerstack;
+mod observability;
 mod operation;
 mod services;
 pub mod workspace_remount;
@@ -11,6 +12,9 @@ pub mod workspace_session;
 
 pub use command::CommandOperationService;
 pub use layerstack::LayerStackService;
+pub use observability::{
+    RuntimeExecutionSnapshot, RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot,
+};
 pub use operation::{
     ArgCliSpec, ArgKind, ArgSpec, CliOperationCatalog, CliOperationExecutionSpace,
     CliOperationFamilySpec, CliOperationSpec, CliSpec,
@@ -19,7 +23,7 @@ pub use services::{
     CommandRuntimeConfig, Rfc1918Egress, SandboxRuntimeConfig, SandboxRuntimeOperations,
     WorkspaceResourceCaps, WorkspaceRuntimeConfig,
 };
-pub use workspace_crate::WorkspaceSessionId;
+pub use workspace_crate::{WorkspaceProfile, WorkspaceSessionId};
 pub use workspace_remount::WorkspaceRemountService;
 pub use workspace_session::WorkspaceSessionService;
 

@@ -24,6 +24,11 @@ Phase 2 populates live state for:
 - sandbox-global resource samples;
 - per-workspace resource samples.
 
+Destroyed workspaces that still have retained resource samples should remain as
+bounded tombstone rows so the UI can render their cgroup/disk history. The
+resource history lives in `resource_samples`; the workspace row only anchors the
+history and records that the workspace is no longer active.
+
 The display target after Phase 2 is:
 
 ```text
@@ -227,8 +232,8 @@ The completed map supports lookup by command id, not active enumeration,
 ordering, or retention-window queries. Phase 2 should not add completed-command
 snapshot enumeration just for observability.
 
-Phase 2 should copy these facts out through snapshot DTOs. It must not make the
-daemon reach into private command maps directly.
+Phase 2 should copy active command facts out through snapshot DTOs. It must not
+make the daemon reach into private command maps directly.
 
 The snapshot DTO should be named and shaped as a runtime execution snapshot, not
 as a command-only mechanism. It can include command-specific optional fields
@@ -355,7 +360,6 @@ pub struct RuntimeExecutionSnapshot {
     pub workspace_ownership: RuntimeExecutionWorkspaceOwnership,
     pub started_at_unix_ms: Option<i64>,
     pub wall_time_ms: Option<f64>,
-    pub command_total_time_ms: Option<f64>,
     pub transcript_path: Option<PathBuf>,
     pub process_group_id: Option<i32>,
 }
@@ -435,7 +439,6 @@ Execution snapshot field sources for the current `exec_command` producer:
 | `finalization_state` | `FinalizationState` |
 | `workspace_ownership` | `CommandWorkspaceOwnership` mapped to `existing_session` or `one_shot` |
 | `wall_time_ms` | `started_at.elapsed()` for active commands |
-| `command_total_time_ms` | unset in Phase 2 active-only snapshots |
 | `transcript_path` | active `CommandTranscriptStore` |
 | `process_group_id` | `CommandProcess::process_group_id()` for active commands |
 
@@ -540,14 +543,21 @@ Failure behavior:
 Write type:
 
 - current-row upserts into `workspace_snapshots`;
-- stale rows for the same `sandbox_id` should be removed or marked absent when
-  no longer active.
+- rows that were present in a previous collection but are no longer active
+  should be marked `state = 'destroyed'` while resource history for that
+  workspace is still retained.
 
 Recommended stale policy:
 
-- delete workspace rows not present in the current active snapshot, or set
-  `state = 'absent'` with a fresh `sampled_at_unix_ms`;
-- prefer deletion if no Phase 2 consumer needs historical workspace state;
+- upsert active workspace rows from the current runtime snapshot;
+- for prior workspace rows missing from the current active snapshot, set
+  `state = 'destroyed'` with a fresh `sampled_at_unix_ms`;
+- `workspace_snapshots.state` is the destroyed/active flag; do not rewrite
+  historical `resource_samples` rows to mark them historical;
+- on a destroyed row, `sampled_at_unix_ms` means when the daemon observed the
+  workspace as gone, not the exact teardown time;
+- keep destroyed workspace rows at least as long as their retained
+  `resource_samples` rows, then delete the tombstone during resource retention;
 - keep resource history in `resource_samples` until retention deletes it.
 
 ### `ExecutionStateSampler`
@@ -579,7 +589,7 @@ Failure behavior:
 Write type:
 
 - current-row upserts into `execution_snapshots`;
-- delete or mark absent execution rows that are no longer active.
+- delete execution rows that are no longer active.
 
 Phase 2 display focuses on active commands by filtering
 `execution_kind = command`. Recent completed command visibility is deferred until
@@ -615,6 +625,20 @@ Failure behavior:
 - cgroup missing paths become unavailable cgroup fields;
 - expensive sampling is rate-limited and cached;
 - sampler failures never fail user operations.
+
+Workspace destruction behavior:
+
+- stop sampling workspace-scoped resources after the workspace disappears from
+  the runtime snapshot;
+- do not delete prior workspace-scoped resource samples during stale workspace
+  cleanup;
+- do not update a flag on existing resource samples; their historical meaning
+  comes from sample time plus the destroyed workspace tombstone;
+- use the destroyed `workspace_snapshots` row as the owner/label for retained
+  cgroup and disk sample history;
+- if a cgroup path disappears while the workspace is still active, write an
+  unavailable sample; if the workspace itself is destroyed, do not treat the
+  missing cgroup path as a sampler error.
 
 Write type:
 
@@ -674,7 +698,8 @@ Failure behavior:
 
 ### Cgroup Rules
 
-Cgroup sampling is daemon-side only. Phase 2 uses an explicit target enum:
+Cgroup sampling is daemon-side only. Phase 2 uses explicit daemon-owned targets
+when they already exist:
 
 ```rust
 pub type SandboxId = String;
@@ -700,32 +725,21 @@ Write mapping:
 - `CgroupSampleTarget::Workspace` writes `resource_samples` with
   `workspace_id` set.
 
-Read cgroup v2 files when present:
+Read this narrow cgroup v2 subset when a target path is present:
 
 - `cpu.stat`;
 - `memory.current`;
-- `memory.peak`;
-- `memory.max`;
-- `memory.events`.
+- `memory.max`.
 
 Recommended parsed fields:
 
 - `cpu_usage_usec`;
-- `cpu_user_usec`;
-- `cpu_system_usec`;
-- `cpu_nr_periods`;
-- `cpu_nr_throttled`;
-- `cpu_throttled_usec`;
 - `memory_current_bytes`;
-- `memory_peak_bytes`;
 - `memory_max_bytes`;
-- `memory_max_unlimited`;
-- `memory_low_events`;
-- `memory_high_events`;
-- `memory_max_events`;
-- `memory_oom_events`;
-- `memory_oom_kill_events`;
-- `memory_oom_group_kill_events`.
+- `memory_max_unlimited`.
+
+Defer throttling counters, `memory.peak`, and `memory.events` until a consumer
+needs them.
 
 Availability rules:
 
@@ -754,8 +768,9 @@ Target derivation:
   runtime internals;
 - workspace cgroup paths must come from explicit daemon-owned placement data if
   it exists;
-- if no explicit workspace cgroup path exists in Phase 2, write unavailable
-  workspace cgroup samples rather than guessing from process ids.
+- if no explicit workspace cgroup path exists in Phase 2, either omit
+  workspace cgroup samples or write unavailable workspace cgroup samples; do not
+  guess from process ids.
 
 ## SQLite Writes
 
@@ -771,9 +786,9 @@ Tables to populate:
 Table roles:
 
 - `sandbox_snapshots` is a current-state upsert table;
-- `workspace_snapshots` is a current-state upsert table;
-- `execution_snapshots` is a current-state upsert table for active and retained
-  recent runtime executions, including command executions;
+- `workspace_snapshots` is a current-state plus bounded tombstone upsert table;
+- `execution_snapshots` is a current-state upsert table for active runtime
+  executions, including command executions;
 - `resource_samples` is a time-series insert table.
 
 Resource identity:
@@ -790,7 +805,8 @@ The existing Phase 1 migration already creates a minimal
 - creates `workspace_snapshots`;
 - creates `execution_snapshots`;
 - creates `resource_samples`;
-- creates the indexes needed by store-level tests and later query APIs.
+- creates only the indexes needed by store-level tests. Query-only indexes wait
+  for Phase 5 API work.
 
 Recommended table shape:
 
@@ -813,13 +829,10 @@ CREATE TABLE IF NOT EXISTS workspace_snapshots (
   workspace_root TEXT,
   upperdir TEXT,
   workdir TEXT,
-  holder_pid INTEGER,
   namespace_fd_count INTEGER,
   base_manifest_version INTEGER,
   base_root_hash TEXT,
   layer_count INTEGER,
-  created_at_unix_ms INTEGER,
-  last_activity_unix_ms INTEGER,
   sampled_at_unix_ms INTEGER NOT NULL,
   error_message TEXT,
   PRIMARY KEY(sandbox_id, workspace_id)
@@ -832,14 +845,12 @@ CREATE TABLE IF NOT EXISTS execution_snapshots (
   execution_kind TEXT NOT NULL,
   operation TEXT,
   command_session_id TEXT,
-  namespace_runner_request_id TEXT,
   command TEXT,
   lifecycle_state TEXT NOT NULL,
   finalization_state TEXT NOT NULL,
   workspace_ownership TEXT,
   started_at_unix_ms INTEGER,
   wall_time_ms REAL,
-  command_total_time_ms REAL,
   process_group_id INTEGER,
   transcript_path TEXT,
   sampled_at_unix_ms INTEGER NOT NULL,
@@ -858,22 +869,10 @@ CREATE TABLE IF NOT EXISTS resource_samples (
   cgroup_error TEXT,
 
   cpu_usage_usec INTEGER,
-  cpu_user_usec INTEGER,
-  cpu_system_usec INTEGER,
-  cpu_nr_periods INTEGER,
-  cpu_nr_throttled INTEGER,
-  cpu_throttled_usec INTEGER,
 
   memory_current_bytes INTEGER,
-  memory_peak_bytes INTEGER,
   memory_max_bytes INTEGER,
   memory_max_unlimited INTEGER,
-  memory_low_events INTEGER,
-  memory_high_events INTEGER,
-  memory_max_events INTEGER,
-  memory_oom_events INTEGER,
-  memory_oom_kill_events INTEGER,
-  memory_oom_group_kill_events INTEGER,
 
   disk_upperdir_bytes INTEGER,
   disk_file_count INTEGER,
@@ -922,10 +921,11 @@ impl ObservabilityStore {
         snapshots: &[WorkspaceSnapshotRecord],
     ) -> Result<(), StoreError>;
 
-    pub fn prune_workspace_snapshots(
+    pub fn reconcile_workspace_snapshots(
         &self,
         sandbox_id: &str,
         active_workspace_ids: &[String],
+        sampled_at_unix_ms: i64,
     ) -> Result<(), StoreError>;
 
     pub fn upsert_execution_snapshots(
@@ -937,7 +937,7 @@ impl ObservabilityStore {
     pub fn prune_execution_snapshots(
         &self,
         sandbox_id: &str,
-        retained_execution_ids: &[String],
+        active_execution_ids: &[String],
     ) -> Result<(), StoreError>;
 
     pub fn insert_resource_samples(
@@ -947,11 +947,12 @@ impl ObservabilityStore {
 }
 ```
 
-Store-level read helpers are allowed for tests and later query code, but they
-must not become a raw SQL product API. Useful Phase 2 read helpers:
+Store-level read helpers should be test-only or hidden test support. They must
+not become a raw SQL product API, and Phase 5 should introduce the real daemon
+query shape. Useful Phase 2 test reads:
 
 - latest sandbox snapshot by sandbox id;
-- active workspace rows by sandbox id;
+- workspace rows by sandbox id, including destroyed tombstones;
 - execution rows by sandbox id and optional workspace id;
 - latest resource sample by sandbox id and optional workspace id.
 
@@ -1022,7 +1023,7 @@ crates/sandbox-observability/src/records.rs
 
 crates/sandbox-observability/src/store.rs
   Add phase_2_runtime_snapshots migration.
-  Add workspace snapshot upsert/prune helpers.
+  Add workspace snapshot upsert/reconcile helpers.
   Add execution snapshot upsert/prune helpers.
   Add resource sample insert helpers.
   Add test-oriented read helpers.
@@ -1191,9 +1192,10 @@ Specific rules:
 - Missing cgroup paths write `cgroup_available = 0` and bounded
   `cgroup_error`.
 - Missing workspace `upperdir` skips disk sampling for that workspace.
-- Stale workspace rows should be removed or marked absent when no longer active.
-- Stale execution rows should be removed or marked absent when no longer active
-  or retained as recent completed executions.
+- Stale workspace rows should be marked `destroyed` while retained resource
+  history still exists for that workspace.
+- Stale execution rows should be removed when no longer active because Phase 2
+  execution snapshots are active-only.
 - Observability error strings must be bounded before storage.
 - Collector panics should be prevented by ordinary error handling; if a collector
   task crashes, daemon request serving must continue.
@@ -1218,8 +1220,11 @@ Required behavior tests:
 - `workspace_snapshots`, `execution_snapshots`, and `resource_samples` are created
   in `observability.sqlite`.
 - Synthetic sandbox snapshot upsert updates the current row.
-- Synthetic workspace snapshot upserts rows and prunes stale rows.
-- Synthetic execution snapshot upserts active/recent rows and prunes stale rows.
+- Synthetic workspace snapshot upserts active rows and marks stale rows
+  `destroyed`.
+- Destroyed workspace rows remain available as anchors for retained
+  workspace-scoped resource history.
+- Synthetic execution snapshot upserts active rows and prunes stale rows.
 - Sandbox-global resource sample writes `workspace_id = NULL`.
 - Per-workspace resource sample writes `workspace_id IS NOT NULL`.
 - Missing cgroup path writes `cgroup_available = 0`.
@@ -1234,8 +1239,9 @@ Storage:
 
 - [ ] `observability.sqlite` remains the only Phase 2 observability database.
 - [ ] `sandbox_snapshots` receives live daemon-root upserts.
-- [ ] `workspace_snapshots` receives live active workspace upserts.
-- [ ] `execution_snapshots` receives live active/recent execution upserts.
+- [ ] `workspace_snapshots` receives live active workspace upserts and bounded
+  destroyed-workspace tombstones.
+- [ ] `execution_snapshots` receives live active execution upserts.
 - [ ] `resource_samples` receives sandbox-global and per-workspace inserts.
 - [ ] `resource_samples.workspace_id IS NULL` is used only for sandbox-global
   samples.

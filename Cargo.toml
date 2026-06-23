@@ -61,6 +61,7 @@ sandbox-runtime-namespace-process = { path = "crates/sandbox-runtime/namespace-p
 sandbox-runtime-overlay = { path = "crates/sandbox-runtime/overlay" }
 sandbox-runtime-workspace = { path = "crates/sandbox-runtime/workspace" }
 sandbox-manager = { path = "crates/sandbox-manager" }
+sandbox-observability = { path = "crates/sandbox-observability" }
 sandbox-gateway = { path = "crates/sandbox-gateway" }
 sandbox-protocol = { path = "crates/sandbox-protocol" }
 sandbox-daemon = { path = "crates/sandbox-daemon" }

@@ -3,6 +3,7 @@
 //! token-driven shutdown.
 #![forbid(unsafe_code)]
 
+pub(crate) mod observability;
 pub mod server;
 
 pub use server::{SandboxDaemonError, SandboxDaemonServer, ServerConfig};

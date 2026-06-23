@@ -46,7 +46,10 @@ impl SandboxDaemonServer {
             sandbox_runtime::dispatch_operation(&operations, &request).into_json_value()
         });
         match task.await {
-            Ok(response) => response,
+            Ok(response) => {
+                self.trigger_observability_collection();
+                response
+            }
             Err(err) if err.is_cancelled() => super::error_response(
                 error_kind::INTERNAL_ERROR,
                 "daemon request cancelled",

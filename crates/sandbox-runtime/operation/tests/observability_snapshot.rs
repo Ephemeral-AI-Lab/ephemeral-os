@@ -1,0 +1,145 @@
+mod support;
+
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
+
+use sandbox_runtime::command::ExecCommandInput;
+use sandbox_runtime::layerstack::LayerStackService;
+use sandbox_runtime::{CommandOperationService, SandboxRuntimeOperations};
+use sandbox_runtime_workspace::{WorkspaceProfile, WorkspaceSessionId};
+
+use support::{
+    build_services, create_request, workspace_handle, FakeWorkspaceService, TestServices,
+};
+
+#[test]
+fn observability_snapshot_copies_active_workspace_fields(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let services = build_services(Arc::clone(&fake));
+    let workspace_session_id = create_session(
+        &fake,
+        &services,
+        "workspace-session",
+        PathBuf::from("/workspace/session"),
+        WorkspaceProfile::Isolated,
+    );
+    let operations = operations_for(&services)?;
+
+    let snapshot = operations.observability_snapshot();
+
+    assert!(snapshot.partial_errors.is_empty());
+    assert_eq!(snapshot.workspaces.len(), 1);
+    let workspace = &snapshot.workspaces[0];
+    assert_eq!(workspace.workspace_id, workspace_session_id);
+    assert_eq!(workspace.remount_state, "active");
+    assert_eq!(workspace.profile, WorkspaceProfile::Isolated);
+    assert_eq!(
+        workspace.workspace_root,
+        PathBuf::from("/workspace/session")
+    );
+    assert!(workspace.upperdir.is_some());
+    assert!(workspace.workdir.is_some());
+    assert_eq!(workspace.namespace_fd_count, Some(4));
+    assert_eq!(workspace.base_manifest_version, Some(1));
+    assert_eq!(workspace.base_root_hash.as_deref(), Some("root"));
+    assert_eq!(workspace.layer_count, Some(1));
+    Ok(())
+}
+
+#[test]
+fn observability_snapshot_reports_active_command_execution(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let services = build_services(Arc::clone(&fake));
+    let workspace_session_id = create_session(
+        &fake,
+        &services,
+        "workspace-session",
+        PathBuf::from("/workspace/session"),
+        WorkspaceProfile::HostCompatible,
+    );
+    let command_yield = services.command.exec_command(ExecCommandInput {
+        workspace_session_id: Some(workspace_session_id.clone()),
+        cmd: "printf ok".to_owned(),
+        timeout_ms: None,
+        yield_time_ms: Some(0),
+    })?;
+    let command_session_id = command_yield
+        .command_session_id
+        .expect("running command has a command id");
+    let operations = operations_for(&services)?;
+
+    let snapshot = operations.observability_snapshot();
+
+    assert_eq!(snapshot.active_executions.len(), 1);
+    let execution = &snapshot.active_executions[0];
+    assert_eq!(execution.execution_id, command_session_id.0);
+    assert_eq!(execution.execution_kind, "command");
+    assert_eq!(execution.operation.as_deref(), Some("exec_command"));
+    assert_eq!(execution.workspace_id, workspace_session_id);
+    assert_eq!(execution.command.as_deref(), Some("printf ok"));
+    assert_eq!(execution.lifecycle_state, "running");
+    assert_eq!(execution.workspace_ownership, "existing_session");
+    assert!(execution.wall_time_ms.is_some());
+    assert!(execution.transcript_path.is_some());
+    assert!(execution.started_at_unix_ms.is_none());
+    Ok(())
+}
+
+#[test]
+fn runtime_observability_snapshot_keeps_observability_crate_out() {
+    let manifest = include_str!("../Cargo.toml");
+    assert!(!manifest.contains("sandbox-observability"));
+    assert!(!manifest.contains("rusqlite"));
+}
+
+fn create_session(
+    fake: &Arc<FakeWorkspaceService>,
+    services: &TestServices,
+    workspace_session_id: &str,
+    workspace_root: PathBuf,
+    profile: WorkspaceProfile,
+) -> WorkspaceSessionId {
+    fake.push_create_result(Ok(workspace_handle(
+        workspace_session_id,
+        "lease-1",
+        workspace_root,
+        profile,
+    )));
+    services
+        .workspace
+        .create_workspace_session(create_request())
+        .expect("session create succeeds")
+        .workspace_session_id
+}
+
+fn operations_for(
+    services: &TestServices,
+) -> Result<SandboxRuntimeOperations, Box<dyn std::error::Error + Send + Sync>> {
+    Ok(SandboxRuntimeOperations::new(
+        Arc::<CommandOperationService>::clone(&services.command),
+        layerstack_service()?,
+    ))
+}
+
+fn layerstack_service() -> Result<Arc<LayerStackService>, Box<dyn std::error::Error + Send + Sync>>
+{
+    let base = temp_root();
+    let root = base.join("layer-stack");
+    let workspace = base.join("workspace");
+    let _ = std::fs::remove_dir_all(&base);
+    std::fs::create_dir_all(&workspace)?;
+    sandbox_runtime_layerstack::build_workspace_base(&root, &workspace, false)?;
+    Ok(Arc::new(LayerStackService::new(root)?))
+}
+
+fn temp_root() -> PathBuf {
+    static NEXT_TEST: AtomicU64 = AtomicU64::new(0);
+    std::env::temp_dir().join(format!(
+        "sandbox-runtime-observability-{}-{}",
+        std::process::id(),
+        NEXT_TEST.fetch_add(1, Ordering::Relaxed)
+    ))
+}

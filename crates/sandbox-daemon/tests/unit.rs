@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+#[path = "../src/observability/mod.rs"]
+pub(crate) mod observability;
 #[allow(
     dead_code,
     reason = "test harness path-includes private CLI modules and exercises selected helpers"
@@ -38,6 +40,13 @@ mod dispatch_tests {
     include!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/unit/dispatch.rs"
+    ));
+}
+
+mod observability_tests {
+    include!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/unit/observability.rs"
     ));
 }
 

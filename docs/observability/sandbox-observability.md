@@ -106,8 +106,10 @@ Later runtime adoption is split across later phases:
 | --- | --- | ---: |
 | Phase 1 | Data model and local stores outside runtime | 0 |
 | Phase 2 | Read-only workspace and execution snapshot adapters | 100-180 |
-| Phase 3 | Request trace boundary and selected operation spans | 110-250 |
+| Phase 3 | Request trace boundary and coarse selected operation spans | 110-250 |
+| Phase 3.5 | Targeted in-process deep request spans | 60-130 |
 | Phase 4 | Linked async finalization trace wiring | 60-110 |
+| Phase 4.5 | Cross-process namespace-runner traces | 90-180 |
 
 Anything else belongs outside `sandbox-runtime`:
 
@@ -258,8 +260,8 @@ or published independently of observability.
 ## Target Table Family: Method Trace
 
 Phase 1 creates the minimal trace tables inside `observability.sqlite`. The
-larger schema below is the Phase 3/4 target shape, after request and async trace
-producers exist.
+larger schema below is the Phase 3/4/4.5 target shape, after request, async,
+and linked runner trace producers exist.
 
 Purpose:
 
@@ -393,10 +395,17 @@ Phase 2
   resource_samples        -> live sandbox-global and per-workspace resource samples
 
 Phase 3
-  traces + spans          -> live request/method-chain tracing from operations
+  traces + spans          -> live coarse request/method-chain tracing from operations
+
+Phase 3.5
+  traces + spans          -> targeted in-process child spans under slow request spans
 
 Phase 4
   trace_links             -> async relationships back to requests/commands
+
+Phase 4.5
+  traces + spans          -> linked namespace-runner process traces
+  trace_links             -> runner traces back to request/command ownership
 ```
 
 Phase 1 therefore establishes storage shape for `sandbox_snapshots`, `traces`,
@@ -1032,23 +1041,73 @@ exec_command request
         Response::running or Response::ok
 ```
 
-Suggested first-pass spans:
+Recommended Phase 3 coarse spans:
 
 ```text
 dispatch_operation
 exec_command::dispatch
-parse_input
 CommandOperationService::exec_command
 resolve_exec_workspace
-command_admission
 start_command_process
+initial_exec_yield
+```
+
+Phase 3 spans are inclusive timings. For example,
+`resolve_exec_workspace` may include workspace-session creation and layerstack
+work, and `start_command_process` may include namespace-runner request building
+and parent-side process spawn. Phase 3 must not record the full internal
+workspace, layerstack, command spawn, namespace runner, or shell execution call
+chain.
+
+Do not instrument these helper-sized boundaries on the first pass:
+
+```text
+parse_input
+command_admission
 register_active_command
 start_completion_watcher
-initial_exec_yield
 command_yield_response
 ```
 
-Do not instrument every small helper on the first pass.
+## Targeted Deep Request Spans
+
+Phase 3.5 may add lower-level in-process spans only when Phase 3 coarse traces
+show that a parent span is frequently slow or ambiguous. These spans stay on the
+same request trace and must still be bounded method-chain observability, not
+profiler-style tracing.
+
+Phase 3.5 candidates:
+
+```text
+resolve_exec_workspace
+  WorkspaceSessionService::resolve_session
+  WorkspaceSessionService::create_workspace_session
+  WorkspaceRuntimeService::create_workspace
+  layerstack snapshot or lease acquisition
+
+start_command_process
+  WorkspaceHandle::entry
+  CommandProcessSpawn::prepare
+  CommandProcess::spawn
+  build_namespace_runner_request
+  spawn_current_exe_ns_runner
+
+squash
+  open_layerstack
+  squash_layerstack
+```
+
+Phase 3.5 rules:
+
+- Add a child span only under a Phase 3 parent span that has proven useful to
+  split.
+- Keep each request trace readable; do not expand every helper or loop.
+- Do not pass SQLite stores, daemon paths, writer handles, or
+  `sandbox-observability` types into lower runtime crates.
+- Do not create a dependency from lower workspace, layerstack, command, or
+  namespace crates back to the operation crate just to carry trace context.
+- If a lower crate boundary cannot accept trace context cleanly, keep the span
+  at the caller-owned boundary until a dedicated design revises that API.
 
 ## Async Chains
 
@@ -1147,6 +1206,52 @@ Span ids should be trace-local monotonic ids or globally unique strings:
 span_id = trace_id + ":" + call_index
 ```
 
+## Cross-Process Namespace Runner Traces
+
+Phase 4.5 may record namespace-runner internals, but those records must be
+linked cross-process traces, not ordinary child spans that imply the daemon can
+directly observe a child process call stack.
+
+Phase 3 and Phase 3.5 parent-side request spans may record:
+
+```text
+start_command_process
+  build_namespace_runner_request
+  spawn_current_exe_ns_runner
+```
+
+Those spans stop at the parent/runtime process boundary. They must not expand
+into `runner::run`, `run_setns`, shell execution, or wait-loop internals.
+
+Phase 4.5 runner trace candidates:
+
+```text
+namespace_runner
+  runner::run
+  run_setns
+  shell_exec::execute_shell
+  wait_for_command_execution_scope
+```
+
+Phase 4.5 requirements:
+
+- Propagate bounded trace metadata through the namespace-runner request before
+  recording runner spans.
+- Link runner traces back to the original request and command using
+  `origin_request_id`, `command_session_id`, and a stable
+  `namespace_runner_request_id` or equivalent runner request id.
+- Treat a runner trace as an independent linked trace when the runner can outlive
+  the request that spawned it.
+- Keep command stdout/stderr and transcript content out of the trace database.
+- Do not make the namespace-runner child process write directly to
+  `observability.sqlite`.
+- Define the collection transport in the Phase 4.5 spec before implementation;
+  acceptable designs must be bounded and must not require OTLP, Loki, Tempo, or
+  command transcript ingestion.
+- Record method names, status, timing, and bounded errors only; do not record
+  shell command output chunks, transcript lines, environment dumps, or every
+  wait-loop iteration.
+
 ## Active vs Completed Traces
 
 This is Phase 3+ behavior, not Phase 1 behavior.
@@ -1177,7 +1282,8 @@ Recommended behavior:
 - Cgroup CPU/memory: collect at most once per second per workspace.
 - Disk upperdir stats: collect at most once every 10 to 30 seconds per
   workspace.
-- Method traces: record on request and async completion.
+- Method traces: record on request completion, async completion, and later
+  linked runner completion.
 
 Snapshot calls should return cached samples when a sampler is rate-limited.
 
@@ -1258,15 +1364,31 @@ databases.
 - Add daemon-side cgroup sampler with unavailable state if paths are absent.
 - Expected `crates/sandbox-runtime` change: 100-180 non-test LOC.
 
-### Phase 3: Request Method Traces
+### Phase 3: Coarse Request Method Traces
 
 - Create `OperationTrace` at daemon dispatch.
 - Pass the trace context into runtime dispatch.
 - Add automatic root dispatch span.
-- Add spans for `exec_command`, `write_command_stdin`, `read_command_lines`,
-  and `squash`.
+- Add coarse selected spans for `exec_command`, `write_command_stdin`,
+  `read_command_lines`, and `squash`.
 - Persist completed request traces and spans in `sandbox-daemon`.
-- Expected `crates/sandbox-runtime` change: 170-260 non-test LOC.
+- Do not expand into full workspace, layerstack, command spawn,
+  namespace-runner, or shell execution internals.
+- Expected `crates/sandbox-runtime` change: 110-250 non-test LOC.
+
+### Phase 3.5: Targeted Deep Request Spans
+
+- Split proven-slow Phase 3 parent spans into a small number of lower-level
+  in-process child spans.
+- Candidate areas are workspace session creation/resolution, workspace runtime
+  creation, layerstack snapshot or lease acquisition, parent-side command spawn,
+  namespace-runner request building, and layerstack squash internals.
+- Keep deep spans on the same request trace when the work runs in the daemon or
+  runtime process.
+- Do not push SQLite, daemon observability stores, writer handles, or
+  `sandbox-observability` types into lower runtime crates.
+- Do not add cross-process namespace-runner child execution spans in this phase.
+- Expected `crates/sandbox-runtime` change: 60-130 non-test LOC.
 
 ### Phase 4: Async Method Traces
 
@@ -1276,6 +1398,19 @@ databases.
 - Add linked traces for workspace destroy/remount if those run outside the
   original request in future code.
 - Expected `crates/sandbox-runtime` change: 60-110 non-test LOC.
+
+### Phase 4.5: Cross-Process Namespace Runner Traces
+
+- Propagate bounded trace metadata into namespace-runner requests.
+- Record linked runner traces for child-process internals such as `runner::run`,
+  `run_setns`, `shell_exec::execute_shell`, and
+  `wait_for_command_execution_scope`.
+- Link runner traces back to the original request and command by
+  `origin_request_id`, `command_session_id`, and a stable runner request id.
+- Define a bounded collection transport before implementation; the runner child
+  must not write directly to `observability.sqlite`.
+- Keep command transcripts and command output out of observability storage.
+- Expected `crates/sandbox-runtime` change: 90-180 non-test LOC.
 
 ### Phase 5: Manager Aggregation
 

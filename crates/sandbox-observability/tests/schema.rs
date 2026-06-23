@@ -6,8 +6,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::Connection;
 use sandbox_observability::{
-    ObservabilityPaths, ObservabilityStore, SandboxSnapshotRecord, SpanRecord, StoreError,
-    TraceRecord,
+    ExecutionSnapshotRecord, ObservabilityPaths, ObservabilityStore, ResourceSampleRecord,
+    SandboxSnapshotRecord, SpanRecord, StoreError, TraceRecord, WorkspaceSnapshotRecord,
 };
 
 type TestResult<T = ()> = Result<T, Box<dyn Error>>;
@@ -50,7 +50,7 @@ fn schema_initialization_is_idempotent() -> TestResult {
     let connection = Connection::open(paths.database_path())?;
     assert_eq!(table_names(&connection)?, allowed_tables());
     assert_eq!(index_names(&connection)?, allowed_indexes());
-    assert_eq!(migration_count(&connection)?, 1);
+    assert_eq!(migration_count(&connection)?, 2);
     assert!(paths.database_path().exists());
     assert!(dir
         .path()
@@ -172,12 +172,22 @@ fn upserts_synthetic_sandbox_snapshot() -> TestResult {
     store.upsert_sandbox_snapshot(&SandboxSnapshotRecord {
         sandbox_id: "sandbox-1".to_owned(),
         state: "starting".to_owned(),
+        workspace_root: None,
+        daemon_runtime_dir: Some("/tmp/daemon".to_owned()),
+        socket_path: Some("/tmp/daemon/runtime.sock".to_owned()),
+        pid_path: Some("/tmp/daemon/runtime.pid".to_owned()),
+        daemon_pid: Some(42),
         sampled_at_unix_ms: 1_000,
         error_message: Some("warming up".to_owned()),
     })?;
     store.upsert_sandbox_snapshot(&SandboxSnapshotRecord {
         sandbox_id: "sandbox-1".to_owned(),
         state: "ready".to_owned(),
+        workspace_root: Some("/workspace".to_owned()),
+        daemon_runtime_dir: Some("/tmp/daemon".to_owned()),
+        socket_path: Some("/tmp/daemon/runtime.sock".to_owned()),
+        pid_path: Some("/tmp/daemon/runtime.pid".to_owned()),
+        daemon_pid: Some(43),
         sampled_at_unix_ms: 2_000,
         error_message: None,
     })?;
@@ -185,15 +195,102 @@ fn upserts_synthetic_sandbox_snapshot() -> TestResult {
     let connection = Connection::open(paths.database_path())?;
     assert_eq!(row_count(&connection, "sandbox_snapshots")?, 1);
 
-    let snapshot: (String, i64, Option<String>) = connection.query_row(
-        "SELECT state, sampled_at_unix_ms, error_message
+    let snapshot: (String, Option<String>, i64, Option<String>) = connection.query_row(
+        "SELECT state, workspace_root, sampled_at_unix_ms, error_message
              FROM sandbox_snapshots
              WHERE sandbox_id = 'sandbox-1'",
         [],
-        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
     )?;
 
-    assert_eq!(snapshot, ("ready".to_owned(), 2_000, None));
+    assert_eq!(
+        snapshot,
+        (
+            "ready".to_owned(),
+            Some("/workspace".to_owned()),
+            2_000,
+            None
+        )
+    );
+
+    Ok(())
+}
+
+#[test]
+fn workspace_upsert_marks_stale_rows_destroyed_and_keeps_resource_history() -> TestResult {
+    let (_dir, paths) = test_paths("workspace-reconcile")?;
+    let store = ObservabilityStore::open(&paths)?;
+
+    store.upsert_workspace_snapshots(
+        "sandbox-1",
+        &[
+            workspace_snapshot("workspace-1", 1_000),
+            workspace_snapshot("workspace-2", 1_000),
+        ],
+    )?;
+    store.insert_resource_samples(&[resource_sample(
+        "sample-workspace-1",
+        Some("workspace-1"),
+        1_100,
+    )])?;
+    store.reconcile_workspace_snapshots("sandbox-1", &["workspace-2".to_owned()], 2_000)?;
+
+    let workspaces = store.workspace_snapshots_for_test("sandbox-1")?;
+    assert_eq!(workspaces.len(), 2);
+    assert_eq!(workspaces[0].workspace_id, "workspace-1");
+    assert_eq!(workspaces[0].state, "destroyed");
+    assert_eq!(workspaces[0].sampled_at_unix_ms, 2_000);
+    assert_eq!(workspaces[1].workspace_id, "workspace-2");
+    assert_eq!(workspaces[1].state, "active");
+
+    let samples = store.resource_samples_for_test("sandbox-1")?;
+    assert_eq!(samples.len(), 1);
+    assert_eq!(samples[0].workspace_id.as_deref(), Some("workspace-1"));
+
+    Ok(())
+}
+
+#[test]
+fn active_execution_upsert_and_prune_tracks_current_rows() -> TestResult {
+    let (_dir, paths) = test_paths("execution-prune")?;
+    let store = ObservabilityStore::open(&paths)?;
+
+    store.upsert_execution_snapshots(
+        "sandbox-1",
+        &[
+            execution_snapshot("exec-1", "workspace-1", 1_000),
+            execution_snapshot("exec-2", "workspace-1", 1_000),
+        ],
+    )?;
+    store.prune_execution_snapshots("sandbox-1", &["exec-2".to_owned()])?;
+
+    let executions = store.execution_snapshots_for_test("sandbox-1")?;
+    assert_eq!(executions.len(), 1);
+    assert_eq!(executions[0].execution_id, "exec-2");
+    assert_eq!(executions[0].execution_kind, "command");
+
+    Ok(())
+}
+
+#[test]
+fn resource_samples_preserve_sandbox_and_workspace_scope() -> TestResult {
+    let (_dir, paths) = test_paths("resource-scope")?;
+    let store = ObservabilityStore::open(&paths)?;
+
+    store.insert_resource_samples(&[
+        resource_sample("sample-global", None, 1_000),
+        resource_sample("sample-workspace", Some("workspace-1"), 1_001),
+    ])?;
+
+    let samples = store.resource_samples_for_test("sandbox-1")?;
+    assert_eq!(samples.len(), 2);
+    assert_eq!(samples[0].workspace_id, None);
+    assert!(!samples[0].cgroup_available);
+    assert_eq!(
+        samples[0].cgroup_error.as_deref(),
+        Some("cgroup path unavailable")
+    );
+    assert_eq!(samples[1].workspace_id.as_deref(), Some("workspace-1"));
 
     Ok(())
 }
@@ -206,17 +303,30 @@ fn test_paths(name: &str) -> TestResult<(TestDir, ObservabilityPaths)> {
 }
 
 fn allowed_tables() -> BTreeSet<String> {
-    ["schema_migrations", "sandbox_snapshots", "spans", "traces"]
-        .into_iter()
-        .map(String::from)
-        .collect()
+    [
+        "execution_snapshots",
+        "resource_samples",
+        "schema_migrations",
+        "sandbox_snapshots",
+        "spans",
+        "traces",
+        "workspace_snapshots",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect()
 }
 
 fn allowed_indexes() -> BTreeSet<String> {
     [
+        "idx_execution_snapshots_command",
+        "idx_execution_snapshots_workspace",
+        "idx_resource_samples_sandbox_time",
+        "idx_resource_samples_workspace_time",
         "idx_spans_trace_call_index",
         "idx_traces_request",
         "idx_traces_sandbox_started",
+        "idx_workspace_snapshots_sandbox",
     ]
     .into_iter()
     .map(String::from)
@@ -258,4 +368,75 @@ fn migration_count(connection: &Connection) -> rusqlite::Result<i64> {
 fn row_count(connection: &Connection, table: &str) -> rusqlite::Result<i64> {
     let sql = format!("SELECT COUNT(*) FROM {table}");
     connection.query_row(&sql, [], |row| row.get(0))
+}
+
+fn workspace_snapshot(workspace_id: &str, sampled_at_unix_ms: i64) -> WorkspaceSnapshotRecord {
+    WorkspaceSnapshotRecord {
+        sandbox_id: "sandbox-1".to_owned(),
+        workspace_id: workspace_id.to_owned(),
+        state: "active".to_owned(),
+        remount_state: Some("active".to_owned()),
+        profile: Some("host_compatible".to_owned()),
+        workspace_root: Some(format!("/workspace/{workspace_id}")),
+        upperdir: Some(format!("/workspace/{workspace_id}/upper")),
+        workdir: Some(format!("/workspace/{workspace_id}/work")),
+        namespace_fd_count: Some(3),
+        base_manifest_version: Some(7),
+        base_root_hash: Some("root-hash".to_owned()),
+        layer_count: Some(2),
+        sampled_at_unix_ms,
+        error_message: None,
+    }
+}
+
+fn execution_snapshot(
+    execution_id: &str,
+    workspace_id: &str,
+    sampled_at_unix_ms: i64,
+) -> ExecutionSnapshotRecord {
+    ExecutionSnapshotRecord {
+        sandbox_id: "sandbox-1".to_owned(),
+        workspace_id: workspace_id.to_owned(),
+        execution_id: execution_id.to_owned(),
+        execution_kind: "command".to_owned(),
+        operation: Some("exec_command".to_owned()),
+        command_session_id: Some(execution_id.to_owned()),
+        command: Some("printf ok".to_owned()),
+        lifecycle_state: "running".to_owned(),
+        finalization_state: "not_started".to_owned(),
+        workspace_ownership: Some("existing_session".to_owned()),
+        started_at_unix_ms: None,
+        wall_time_ms: Some(12.5),
+        process_group_id: Some(1234),
+        transcript_path: Some(format!("/tmp/{execution_id}/transcript.log")),
+        sampled_at_unix_ms,
+        error_message: None,
+    }
+}
+
+fn resource_sample(
+    sample_id: &str,
+    workspace_id: Option<&str>,
+    sampled_at_unix_ms: i64,
+) -> ResourceSampleRecord {
+    ResourceSampleRecord {
+        sample_id: sample_id.to_owned(),
+        sandbox_id: "sandbox-1".to_owned(),
+        workspace_id: workspace_id.map(str::to_owned),
+        sampled_at_unix_ms,
+        cgroup_path: None,
+        cgroup_available: false,
+        cgroup_error: Some("cgroup path unavailable".to_owned()),
+        cpu_usage_usec: None,
+        memory_current_bytes: None,
+        memory_max_bytes: None,
+        memory_max_unlimited: None,
+        disk_upperdir_bytes: Some(4096),
+        disk_file_count: Some(1),
+        disk_dir_count: Some(1),
+        disk_symlink_count: Some(0),
+        disk_truncated: Some(false),
+        disk_read_error_count: Some(0),
+        disk_first_error_path: None,
+    }
 }

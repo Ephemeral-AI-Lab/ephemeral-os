@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard};
@@ -7,7 +8,10 @@ use rusqlite::{params, Connection, OptionalExtension};
 use thiserror::Error;
 
 use crate::paths::ObservabilityPaths;
-use crate::records::{RecordValidationError, SandboxSnapshotRecord, SpanRecord, TraceRecord};
+use crate::records::{
+    ExecutionSnapshotRecord, RecordValidationError, ResourceSampleRecord, SandboxSnapshotRecord,
+    SpanRecord, TraceRecord, WorkspaceSnapshotRecord,
+};
 
 struct Migration {
     version: i64,
@@ -15,11 +19,18 @@ struct Migration {
     sql: &'static str,
 }
 
-const MIGRATIONS: &[Migration] = &[Migration {
-    version: 1,
-    name: "phase_1_observability_foundation",
-    sql: V1_SCHEMA_SQL,
-}];
+const MIGRATIONS: &[Migration] = &[
+    Migration {
+        version: 1,
+        name: "phase_1_observability_foundation",
+        sql: V1_SCHEMA_SQL,
+    },
+    Migration {
+        version: 2,
+        name: "phase_2_runtime_snapshots",
+        sql: V2_SCHEMA_SQL,
+    },
+];
 
 const SCHEMA_MIGRATIONS_SQL: &str = r#"
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -76,6 +87,92 @@ CREATE INDEX IF NOT EXISTS idx_traces_sandbox_started
 
 CREATE INDEX IF NOT EXISTS idx_spans_trace_call_index
   ON spans(trace_id, call_index);
+"#;
+
+const V2_SCHEMA_SQL: &str = r#"
+ALTER TABLE sandbox_snapshots ADD COLUMN workspace_root TEXT;
+ALTER TABLE sandbox_snapshots ADD COLUMN daemon_runtime_dir TEXT;
+ALTER TABLE sandbox_snapshots ADD COLUMN socket_path TEXT;
+ALTER TABLE sandbox_snapshots ADD COLUMN pid_path TEXT;
+ALTER TABLE sandbox_snapshots ADD COLUMN daemon_pid INTEGER;
+
+CREATE TABLE IF NOT EXISTS workspace_snapshots (
+  sandbox_id TEXT NOT NULL,
+  workspace_id TEXT NOT NULL,
+  state TEXT NOT NULL,
+  remount_state TEXT,
+  profile TEXT,
+  workspace_root TEXT,
+  upperdir TEXT,
+  workdir TEXT,
+  namespace_fd_count INTEGER,
+  base_manifest_version INTEGER,
+  base_root_hash TEXT,
+  layer_count INTEGER,
+  sampled_at_unix_ms INTEGER NOT NULL,
+  error_message TEXT,
+  PRIMARY KEY(sandbox_id, workspace_id)
+);
+
+CREATE TABLE IF NOT EXISTS execution_snapshots (
+  sandbox_id TEXT NOT NULL,
+  workspace_id TEXT NOT NULL,
+  execution_id TEXT NOT NULL,
+  execution_kind TEXT NOT NULL,
+  operation TEXT,
+  command_session_id TEXT,
+  command TEXT,
+  lifecycle_state TEXT NOT NULL,
+  finalization_state TEXT NOT NULL,
+  workspace_ownership TEXT,
+  started_at_unix_ms INTEGER,
+  wall_time_ms REAL,
+  process_group_id INTEGER,
+  transcript_path TEXT,
+  sampled_at_unix_ms INTEGER NOT NULL,
+  error_message TEXT,
+  PRIMARY KEY(sandbox_id, execution_id)
+);
+
+CREATE TABLE IF NOT EXISTS resource_samples (
+  sample_id TEXT PRIMARY KEY,
+  sandbox_id TEXT NOT NULL,
+  workspace_id TEXT,
+  sampled_at_unix_ms INTEGER NOT NULL,
+
+  cgroup_path TEXT,
+  cgroup_available INTEGER NOT NULL,
+  cgroup_error TEXT,
+
+  cpu_usage_usec INTEGER,
+
+  memory_current_bytes INTEGER,
+  memory_max_bytes INTEGER,
+  memory_max_unlimited INTEGER,
+
+  disk_upperdir_bytes INTEGER,
+  disk_file_count INTEGER,
+  disk_dir_count INTEGER,
+  disk_symlink_count INTEGER,
+  disk_truncated INTEGER,
+  disk_read_error_count INTEGER,
+  disk_first_error_path TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_workspace_snapshots_sandbox
+  ON workspace_snapshots(sandbox_id, workspace_id);
+
+CREATE INDEX IF NOT EXISTS idx_execution_snapshots_workspace
+  ON execution_snapshots(sandbox_id, workspace_id);
+
+CREATE INDEX IF NOT EXISTS idx_execution_snapshots_command
+  ON execution_snapshots(sandbox_id, command_session_id);
+
+CREATE INDEX IF NOT EXISTS idx_resource_samples_workspace_time
+  ON resource_samples(sandbox_id, workspace_id, sampled_at_unix_ms);
+
+CREATE INDEX IF NOT EXISTS idx_resource_samples_sandbox_time
+  ON resource_samples(sandbox_id, sampled_at_unix_ms);
 "#;
 
 #[derive(Debug, Error)]
@@ -209,22 +306,501 @@ impl ObservabilityStore {
             "INSERT INTO sandbox_snapshots (
                 sandbox_id,
                 state,
+                workspace_root,
+                daemon_runtime_dir,
+                socket_path,
+                pid_path,
+                daemon_pid,
                 sampled_at_unix_ms,
                 error_message
-            ) VALUES (?1, ?2, ?3, ?4)
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
             ON CONFLICT(sandbox_id) DO UPDATE SET
                 state = excluded.state,
+                workspace_root = excluded.workspace_root,
+                daemon_runtime_dir = excluded.daemon_runtime_dir,
+                socket_path = excluded.socket_path,
+                pid_path = excluded.pid_path,
+                daemon_pid = excluded.daemon_pid,
                 sampled_at_unix_ms = excluded.sampled_at_unix_ms,
                 error_message = excluded.error_message",
             params![
                 &snapshot.sandbox_id,
                 &snapshot.state,
+                &snapshot.workspace_root,
+                &snapshot.daemon_runtime_dir,
+                &snapshot.socket_path,
+                &snapshot.pid_path,
+                snapshot.daemon_pid,
                 snapshot.sampled_at_unix_ms,
                 &snapshot.error_message,
             ],
         )?;
 
         Ok(())
+    }
+
+    pub fn upsert_workspace_snapshots(
+        &self,
+        sandbox_id: &str,
+        snapshots: &[WorkspaceSnapshotRecord],
+    ) -> Result<(), StoreError> {
+        for snapshot in snapshots {
+            snapshot.validate_for_sandbox(sandbox_id)?;
+        }
+
+        let mut connection = self.connection()?;
+        let transaction = connection.transaction()?;
+        for snapshot in snapshots {
+            transaction.execute(
+                "INSERT INTO workspace_snapshots (
+                    sandbox_id,
+                    workspace_id,
+                    state,
+                    remount_state,
+                    profile,
+                    workspace_root,
+                    upperdir,
+                    workdir,
+                    namespace_fd_count,
+                    base_manifest_version,
+                    base_root_hash,
+                    layer_count,
+                    sampled_at_unix_ms,
+                    error_message
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
+                ON CONFLICT(sandbox_id, workspace_id) DO UPDATE SET
+                    state = excluded.state,
+                    remount_state = excluded.remount_state,
+                    profile = excluded.profile,
+                    workspace_root = excluded.workspace_root,
+                    upperdir = excluded.upperdir,
+                    workdir = excluded.workdir,
+                    namespace_fd_count = excluded.namespace_fd_count,
+                    base_manifest_version = excluded.base_manifest_version,
+                    base_root_hash = excluded.base_root_hash,
+                    layer_count = excluded.layer_count,
+                    sampled_at_unix_ms = excluded.sampled_at_unix_ms,
+                    error_message = excluded.error_message",
+                params![
+                    &snapshot.sandbox_id,
+                    &snapshot.workspace_id,
+                    &snapshot.state,
+                    &snapshot.remount_state,
+                    &snapshot.profile,
+                    &snapshot.workspace_root,
+                    &snapshot.upperdir,
+                    &snapshot.workdir,
+                    snapshot.namespace_fd_count,
+                    snapshot.base_manifest_version,
+                    &snapshot.base_root_hash,
+                    snapshot.layer_count,
+                    snapshot.sampled_at_unix_ms,
+                    &snapshot.error_message,
+                ],
+            )?;
+        }
+        transaction.commit()?;
+        Ok(())
+    }
+
+    pub fn reconcile_workspace_snapshots(
+        &self,
+        sandbox_id: &str,
+        active_workspace_ids: &[String],
+        sampled_at_unix_ms: i64,
+    ) -> Result<(), StoreError> {
+        validate_id("sandbox_id", sandbox_id)?;
+        for workspace_id in active_workspace_ids {
+            validate_id("workspace_id", workspace_id)?;
+        }
+        let active = active_workspace_ids.iter().collect::<HashSet<_>>();
+
+        let mut connection = self.connection()?;
+        let transaction = connection.transaction()?;
+        let stale_workspace_ids = {
+            let mut statement = transaction.prepare(
+                "SELECT workspace_id
+                    FROM workspace_snapshots
+                    WHERE sandbox_id = ?1
+                      AND state != 'destroyed'",
+            )?;
+            let rows = statement.query_map([sandbox_id], |row| row.get::<_, String>(0))?;
+            rows.collect::<Result<Vec<_>, _>>()?
+                .into_iter()
+                .filter(|workspace_id| !active.contains(workspace_id))
+                .collect::<Vec<_>>()
+        };
+
+        for workspace_id in stale_workspace_ids {
+            transaction.execute(
+                "UPDATE workspace_snapshots
+                    SET state = 'destroyed',
+                        sampled_at_unix_ms = ?3
+                    WHERE sandbox_id = ?1
+                      AND workspace_id = ?2",
+                params![sandbox_id, &workspace_id, sampled_at_unix_ms],
+            )?;
+        }
+        transaction.commit()?;
+        Ok(())
+    }
+
+    pub fn upsert_execution_snapshots(
+        &self,
+        sandbox_id: &str,
+        snapshots: &[ExecutionSnapshotRecord],
+    ) -> Result<(), StoreError> {
+        for snapshot in snapshots {
+            snapshot.validate_for_sandbox(sandbox_id)?;
+        }
+
+        let mut connection = self.connection()?;
+        let transaction = connection.transaction()?;
+        for snapshot in snapshots {
+            transaction.execute(
+                "INSERT INTO execution_snapshots (
+                    sandbox_id,
+                    workspace_id,
+                    execution_id,
+                    execution_kind,
+                    operation,
+                    command_session_id,
+                    command,
+                    lifecycle_state,
+                    finalization_state,
+                    workspace_ownership,
+                    started_at_unix_ms,
+                    wall_time_ms,
+                    process_group_id,
+                    transcript_path,
+                    sampled_at_unix_ms,
+                    error_message
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)
+                ON CONFLICT(sandbox_id, execution_id) DO UPDATE SET
+                    workspace_id = excluded.workspace_id,
+                    execution_kind = excluded.execution_kind,
+                    operation = excluded.operation,
+                    command_session_id = excluded.command_session_id,
+                    command = excluded.command,
+                    lifecycle_state = excluded.lifecycle_state,
+                    finalization_state = excluded.finalization_state,
+                    workspace_ownership = excluded.workspace_ownership,
+                    started_at_unix_ms = excluded.started_at_unix_ms,
+                    wall_time_ms = excluded.wall_time_ms,
+                    process_group_id = excluded.process_group_id,
+                    transcript_path = excluded.transcript_path,
+                    sampled_at_unix_ms = excluded.sampled_at_unix_ms,
+                    error_message = excluded.error_message",
+                params![
+                    &snapshot.sandbox_id,
+                    &snapshot.workspace_id,
+                    &snapshot.execution_id,
+                    &snapshot.execution_kind,
+                    &snapshot.operation,
+                    &snapshot.command_session_id,
+                    &snapshot.command,
+                    &snapshot.lifecycle_state,
+                    &snapshot.finalization_state,
+                    &snapshot.workspace_ownership,
+                    snapshot.started_at_unix_ms,
+                    snapshot.wall_time_ms,
+                    snapshot.process_group_id,
+                    &snapshot.transcript_path,
+                    snapshot.sampled_at_unix_ms,
+                    &snapshot.error_message,
+                ],
+            )?;
+        }
+        transaction.commit()?;
+        Ok(())
+    }
+
+    pub fn prune_execution_snapshots(
+        &self,
+        sandbox_id: &str,
+        active_execution_ids: &[String],
+    ) -> Result<(), StoreError> {
+        validate_id("sandbox_id", sandbox_id)?;
+        for execution_id in active_execution_ids {
+            validate_id("execution_id", execution_id)?;
+        }
+        let active = active_execution_ids.iter().collect::<HashSet<_>>();
+
+        let mut connection = self.connection()?;
+        let transaction = connection.transaction()?;
+        let stale_execution_ids = {
+            let mut statement = transaction.prepare(
+                "SELECT execution_id
+                    FROM execution_snapshots
+                    WHERE sandbox_id = ?1",
+            )?;
+            let rows = statement.query_map([sandbox_id], |row| row.get::<_, String>(0))?;
+            rows.collect::<Result<Vec<_>, _>>()?
+                .into_iter()
+                .filter(|execution_id| !active.contains(execution_id))
+                .collect::<Vec<_>>()
+        };
+
+        for execution_id in stale_execution_ids {
+            transaction.execute(
+                "DELETE FROM execution_snapshots
+                    WHERE sandbox_id = ?1
+                      AND execution_id = ?2",
+                params![sandbox_id, &execution_id],
+            )?;
+        }
+        transaction.commit()?;
+        Ok(())
+    }
+
+    pub fn insert_resource_samples(
+        &self,
+        samples: &[ResourceSampleRecord],
+    ) -> Result<(), StoreError> {
+        for sample in samples {
+            sample.validate()?;
+        }
+
+        let mut connection = self.connection()?;
+        let transaction = connection.transaction()?;
+        for sample in samples {
+            transaction.execute(
+                "INSERT INTO resource_samples (
+                    sample_id,
+                    sandbox_id,
+                    workspace_id,
+                    sampled_at_unix_ms,
+                    cgroup_path,
+                    cgroup_available,
+                    cgroup_error,
+                    cpu_usage_usec,
+                    memory_current_bytes,
+                    memory_max_bytes,
+                    memory_max_unlimited,
+                    disk_upperdir_bytes,
+                    disk_file_count,
+                    disk_dir_count,
+                    disk_symlink_count,
+                    disk_truncated,
+                    disk_read_error_count,
+                    disk_first_error_path
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
+                params![
+                    &sample.sample_id,
+                    &sample.sandbox_id,
+                    &sample.workspace_id,
+                    sample.sampled_at_unix_ms,
+                    &sample.cgroup_path,
+                    bool_to_i64(sample.cgroup_available),
+                    &sample.cgroup_error,
+                    sample.cpu_usage_usec,
+                    sample.memory_current_bytes,
+                    sample.memory_max_bytes,
+                    sample.memory_max_unlimited.map(bool_to_i64),
+                    sample.disk_upperdir_bytes,
+                    sample.disk_file_count,
+                    sample.disk_dir_count,
+                    sample.disk_symlink_count,
+                    sample.disk_truncated.map(bool_to_i64),
+                    sample.disk_read_error_count,
+                    &sample.disk_first_error_path,
+                ],
+            )?;
+        }
+        transaction.commit()?;
+        Ok(())
+    }
+
+    #[doc(hidden)]
+    pub fn sandbox_snapshot_for_test(
+        &self,
+        sandbox_id: &str,
+    ) -> Result<Option<SandboxSnapshotRecord>, StoreError> {
+        let connection = self.connection()?;
+        connection
+            .query_row(
+                "SELECT
+                    sandbox_id,
+                    state,
+                    workspace_root,
+                    daemon_runtime_dir,
+                    socket_path,
+                    pid_path,
+                    daemon_pid,
+                    sampled_at_unix_ms,
+                    error_message
+                FROM sandbox_snapshots
+                WHERE sandbox_id = ?1",
+                [sandbox_id],
+                |row| {
+                    Ok(SandboxSnapshotRecord {
+                        sandbox_id: row.get(0)?,
+                        state: row.get(1)?,
+                        workspace_root: row.get(2)?,
+                        daemon_runtime_dir: row.get(3)?,
+                        socket_path: row.get(4)?,
+                        pid_path: row.get(5)?,
+                        daemon_pid: row.get(6)?,
+                        sampled_at_unix_ms: row.get(7)?,
+                        error_message: row.get(8)?,
+                    })
+                },
+            )
+            .optional()
+            .map_err(StoreError::from)
+    }
+
+    #[doc(hidden)]
+    pub fn workspace_snapshots_for_test(
+        &self,
+        sandbox_id: &str,
+    ) -> Result<Vec<WorkspaceSnapshotRecord>, StoreError> {
+        let connection = self.connection()?;
+        let mut statement = connection.prepare(
+            "SELECT
+                sandbox_id,
+                workspace_id,
+                state,
+                remount_state,
+                profile,
+                workspace_root,
+                upperdir,
+                workdir,
+                namespace_fd_count,
+                base_manifest_version,
+                base_root_hash,
+                layer_count,
+                sampled_at_unix_ms,
+                error_message
+            FROM workspace_snapshots
+            WHERE sandbox_id = ?1
+            ORDER BY workspace_id",
+        )?;
+        let rows = statement.query_map([sandbox_id], |row| {
+            Ok(WorkspaceSnapshotRecord {
+                sandbox_id: row.get(0)?,
+                workspace_id: row.get(1)?,
+                state: row.get(2)?,
+                remount_state: row.get(3)?,
+                profile: row.get(4)?,
+                workspace_root: row.get(5)?,
+                upperdir: row.get(6)?,
+                workdir: row.get(7)?,
+                namespace_fd_count: row.get(8)?,
+                base_manifest_version: row.get(9)?,
+                base_root_hash: row.get(10)?,
+                layer_count: row.get(11)?,
+                sampled_at_unix_ms: row.get(12)?,
+                error_message: row.get(13)?,
+            })
+        })?;
+        rows.collect::<Result<_, _>>().map_err(StoreError::from)
+    }
+
+    #[doc(hidden)]
+    pub fn execution_snapshots_for_test(
+        &self,
+        sandbox_id: &str,
+    ) -> Result<Vec<ExecutionSnapshotRecord>, StoreError> {
+        let connection = self.connection()?;
+        let mut statement = connection.prepare(
+            "SELECT
+                sandbox_id,
+                workspace_id,
+                execution_id,
+                execution_kind,
+                operation,
+                command_session_id,
+                command,
+                lifecycle_state,
+                finalization_state,
+                workspace_ownership,
+                started_at_unix_ms,
+                wall_time_ms,
+                process_group_id,
+                transcript_path,
+                sampled_at_unix_ms,
+                error_message
+            FROM execution_snapshots
+            WHERE sandbox_id = ?1
+            ORDER BY execution_id",
+        )?;
+        let rows = statement.query_map([sandbox_id], |row| {
+            Ok(ExecutionSnapshotRecord {
+                sandbox_id: row.get(0)?,
+                workspace_id: row.get(1)?,
+                execution_id: row.get(2)?,
+                execution_kind: row.get(3)?,
+                operation: row.get(4)?,
+                command_session_id: row.get(5)?,
+                command: row.get(6)?,
+                lifecycle_state: row.get(7)?,
+                finalization_state: row.get(8)?,
+                workspace_ownership: row.get(9)?,
+                started_at_unix_ms: row.get(10)?,
+                wall_time_ms: row.get(11)?,
+                process_group_id: row.get(12)?,
+                transcript_path: row.get(13)?,
+                sampled_at_unix_ms: row.get(14)?,
+                error_message: row.get(15)?,
+            })
+        })?;
+        rows.collect::<Result<_, _>>().map_err(StoreError::from)
+    }
+
+    #[doc(hidden)]
+    pub fn resource_samples_for_test(
+        &self,
+        sandbox_id: &str,
+    ) -> Result<Vec<ResourceSampleRecord>, StoreError> {
+        let connection = self.connection()?;
+        let mut statement = connection.prepare(
+            "SELECT
+                sample_id,
+                sandbox_id,
+                workspace_id,
+                sampled_at_unix_ms,
+                cgroup_path,
+                cgroup_available,
+                cgroup_error,
+                cpu_usage_usec,
+                memory_current_bytes,
+                memory_max_bytes,
+                memory_max_unlimited,
+                disk_upperdir_bytes,
+                disk_file_count,
+                disk_dir_count,
+                disk_symlink_count,
+                disk_truncated,
+                disk_read_error_count,
+                disk_first_error_path
+            FROM resource_samples
+            WHERE sandbox_id = ?1
+            ORDER BY sampled_at_unix_ms, sample_id",
+        )?;
+        let rows = statement.query_map([sandbox_id], |row| {
+            Ok(ResourceSampleRecord {
+                sample_id: row.get(0)?,
+                sandbox_id: row.get(1)?,
+                workspace_id: row.get(2)?,
+                sampled_at_unix_ms: row.get(3)?,
+                cgroup_path: row.get(4)?,
+                cgroup_available: row.get::<_, i64>(5)? != 0,
+                cgroup_error: row.get(6)?,
+                cpu_usage_usec: row.get(7)?,
+                memory_current_bytes: row.get(8)?,
+                memory_max_bytes: row.get(9)?,
+                memory_max_unlimited: row.get::<_, Option<i64>>(10)?.map(|value| value != 0),
+                disk_upperdir_bytes: row.get(11)?,
+                disk_file_count: row.get(12)?,
+                disk_dir_count: row.get(13)?,
+                disk_symlink_count: row.get(14)?,
+                disk_truncated: row.get::<_, Option<i64>>(15)?.map(|value| value != 0),
+                disk_read_error_count: row.get(16)?,
+                disk_first_error_path: row.get(17)?,
+            })
+        })?;
+        rows.collect::<Result<_, _>>().map_err(StoreError::from)
     }
 
     fn connection(&self) -> Result<MutexGuard<'_, Connection>, StoreError> {
@@ -240,6 +816,21 @@ fn configure_connection(connection: &Connection) -> Result<(), StoreError> {
     connection.pragma_update(None, "synchronous", "NORMAL")?;
     connection.pragma_update(None, "foreign_keys", "ON")?;
     Ok(())
+}
+
+fn validate_id(field: &'static str, value: &str) -> Result<(), StoreError> {
+    if value.is_empty() {
+        return Err(RecordValidationError::Empty { field }.into());
+    }
+    Ok(())
+}
+
+const fn bool_to_i64(value: bool) -> i64 {
+    if value {
+        1
+    } else {
+        0
+    }
 }
 
 fn apply_schema(connection: &mut Connection) -> Result<(), StoreError> {

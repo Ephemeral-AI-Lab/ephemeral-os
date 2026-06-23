@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use crate::observability::DaemonObservability;
 pub(crate) use sandbox_protocol::{MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};
 use sandbox_runtime::SandboxRuntimeOperations;
 use serde_json::{json, Value};
@@ -27,6 +28,7 @@ pub struct ServerConfig {
 pub struct SandboxDaemonServer {
     pub(crate) config: ServerConfig,
     pub(crate) operations: Arc<SandboxRuntimeOperations>,
+    pub(crate) observability: Option<Arc<DaemonObservability>>,
     pub(crate) shutdown: CancellationToken,
 }
 
@@ -34,11 +36,25 @@ impl SandboxDaemonServer {
     /// Assemble a daemon over `config`, wiring the shutdown token.
     #[must_use]
     pub fn new(config: ServerConfig, operations: Arc<SandboxRuntimeOperations>) -> Self {
+        let observability = DaemonObservability::from_config(&config).map(Arc::new);
         Self {
             config,
             operations,
+            observability,
             shutdown: CancellationToken::new(),
         }
+    }
+
+    pub(crate) fn trigger_observability_collection(&self) {
+        let Some(observability) = self.observability.clone() else {
+            return;
+        };
+        let config = self.config.clone();
+        let operations = Arc::clone(&self.operations);
+        let handle = tokio::task::spawn_blocking(move || {
+            let _ = observability.collect(&config, &operations);
+        });
+        drop(handle);
     }
 }
 

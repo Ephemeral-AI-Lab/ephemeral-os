@@ -994,8 +994,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "sandbox-config",
+ "sandbox-observability",
  "sandbox-protocol",
  "sandbox-runtime",
+ "sandbox-runtime-layerstack",
  "sandbox-runtime-namespace-process",
  "serde_json",
  "thiserror 2.0.18",
