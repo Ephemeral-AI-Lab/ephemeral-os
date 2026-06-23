@@ -16,6 +16,8 @@ trace, event, or log pipeline.
 
   ```text
   sandbox_id
+    sandbox state
+    sandbox global resource usage
     workspace_id
       workspace state
       resource usage
@@ -24,6 +26,8 @@ trace, event, or log pipeline.
   ```
 
 - Collect a current snapshot for each sandbox and each active workspace.
+- Track sandbox-global resource usage separately from per-workspace resource
+  usage.
 - Track CPU, memory, disk, cgroup, time, and command activity when the data is
   available.
 - Record method call chains and elapsed time for each important method in an
@@ -73,13 +77,53 @@ trace, event, or log pipeline.
 - Workspace session state is owned by `WorkspaceSessionService`.
 - Command active/completed state is owned by `CommandProcessStore`.
 - Cgroup CPU/memory accounting is not currently present in `sandbox-runtime`.
-  It must be added as an optional read-only sampler, not assumed to exist.
+  The daemon resource sampler should record cgroup data only when it can derive
+  paths safely. `sandbox-runtime` should not grow a cgroup monitor for phase 1.
+
+## `sandbox-runtime` Phase Boundary
+
+The observability design must keep `crates/sandbox-runtime` as a runtime state
+owner, not a database, metrics exporter, background monitoring crate, or
+observability service host.
+
+Phase 1 is data model and local SQLite store foundation only. It must add:
+
+- `0` production LOC under `crates/sandbox-runtime`;
+- `0` test LOC under `crates/sandbox-runtime`;
+- no `sandbox-observability` dependency from `sandbox-runtime`;
+- no SQLite imports, writer handles, observability paths, snapshot methods,
+  trace context parameters, dispatch signature changes, or operation spans.
+
+Later runtime adoption is split across later phases:
+
+| Phase | Runtime scope | Expected runtime LOC |
+| --- | --- | ---: |
+| Phase 1 | Data model and local stores outside runtime | 0 |
+| Phase 2 | Read-only snapshot adapters owned by command/workspace services | 100-180 |
+| Phase 3 | Request trace boundary and selected operation spans | 110-250 |
+| Phase 4 | Linked async finalization trace wiring | 60-110 |
+
+Anything else belongs outside `sandbox-runtime`:
+
+- SQLite schema and store code live outside runtime.
+- Sandbox identity, observability path derivation, and retention are
+  daemon/observability concerns.
+- Multi-sandbox aggregation belongs to `sandbox-manager`.
+- Disk walking and cgroup file reads belong to daemon-side samplers.
+- Prometheus/Grafana/Loki/OTLP integration stays optional and outside local
+  runtime operation logic.
+
+If a later implementation needs more runtime code than the table above, revise
+the boundary before merging. The usual cause would be putting SQLite, samplers,
+or a full trace storage model into `sandbox-runtime`.
 
 ## Components
 
-### 1. Daemon Observability Service
+### 1. Future Daemon Observability Service
 
-Each sandbox daemon owns a local `DaemonObservabilityService`.
+Each sandbox daemon eventually owns a local `DaemonObservabilityService`.
+This is not a Phase 1 implementation requirement. Phase 1 only creates the
+local store foundation that the daemon can wire in later.
 
 Responsibilities:
 
@@ -89,7 +133,7 @@ Responsibilities:
 - Collect daemon-local sandbox snapshots.
 - Record method traces for requests handled by that daemon.
 - Record linked async traces for later lifecycle work.
-- Expose a daemon API such as `get_observability_snapshot`.
+- Expose the daemon query API `get_observability_snapshot`.
 
 The service runs inside the sandbox daemon because only the daemon has direct
 access to its runtime operation state.
@@ -109,16 +153,19 @@ Responsibilities:
   Vec<SandboxSnapshot>
   ```
 
+- Expose the manager query API `get_observability_tree`.
 - Never inspect workspace internals directly.
 - Treat unavailable daemons as unavailable sandbox snapshots, not as empty
   sandboxes.
 
-The manager may cache the aggregate in the future, but the first version should
-use daemon-local stores as the source of truth.
+The manager may cache the aggregate in the future. Manager polling and
+aggregation belong to Phase 5, not Phase 1.
 
-### 3. Snapshot Collectors
+### 3. Future Snapshot Collectors
 
-Snapshot collectors read current state from existing service owners:
+Snapshot collectors are daemon-owned in Phase 2 and later. They read current
+state through explicit runtime snapshot surfaces owned by existing service
+owners:
 
 - `WorkspaceStateSampler`: active workspace sessions and remount state.
 - `CommandStateSampler`: active and recently completed commands.
@@ -126,11 +173,14 @@ Snapshot collectors read current state from existing service owners:
 - `SandboxStateSampler`: daemon-level identity, runtime roots, and health.
 
 Collectors are pull-based. They should not run a high-frequency background
-monitor in the first version.
+monitor. Expensive resource sampling remains outside runtime. Phase 1 must not
+add collectors, samplers, or runtime snapshot methods.
 
-### 4. Method Trace Context
+### 4. Future Method Trace Context
 
-`OperationTrace` is a lightweight request-local context.
+`OperationTrace` is a Phase 3 request-local context. The concrete storage and
+writer should live outside `sandbox-runtime`; runtime only receives the context
+and records method boundaries while it handles a request or async finalization.
 
 Responsibilities:
 
@@ -142,25 +192,27 @@ Responsibilities:
 - Hand completed traces to the method trace writer.
 - Create linked async traces when later background work starts.
 
-### 5. SQLite Writers
+### 5. Local SQLite Store
 
-Each daemon owns two bounded SQLite databases:
+Phase 1 creates one local SQLite foundation database:
 
 ```text
 <runtime_root>/<sandbox_id>/observability/
-  method-trace.sqlite
-  sandbox-state.sqlite
+  observability.sqlite
 ```
 
-SQLite journal/WAL files may also appear beside these files.
+SQLite journal/WAL files may also appear beside it. Later phases may split
+trace and state table families into separate files only after real write volume
+or retention behavior proves the split is useful.
 
-Writes must be non-critical:
+Writes from live daemon/runtime paths must be non-critical once those paths
+exist:
 
 - A failed observability write must not fail the user request.
-- Trace writes should happen after response projection or through a bounded
-  writer queue.
-- State sample writes should be rate-limited.
-- The writer may drop observability records under pressure.
+- Trace writes should happen after response projection.
+- State sample writes should be rate-limited once samplers exist.
+- A bounded writer queue belongs to the first phase that introduces a hot live
+  producer, not to Phase 1.
 
 ## Local Disk Layout
 
@@ -179,8 +231,7 @@ Example:
   runtime.sock
   runtime.pid
   observability/
-    method-trace.sqlite
-    sandbox-state.sqlite
+    observability.sqlite
 ```
 
 Do not store observability data inside:
@@ -193,9 +244,13 @@ Do not store observability data inside:
 Those paths have functional lifecycle semantics and may be destroyed, captured,
 or published independently of observability.
 
-## SQLite Store 1: Method Trace
+## Target Table Family: Method Trace
 
-File:
+Phase 1 creates the minimal trace tables inside `observability.sqlite`. The
+larger schema below is the Phase 3/4 target shape, after request and async trace
+producers exist.
+
+Possible later split file, only if write volume or retention proves it useful:
 
 ```text
 <runtime_root>/<sandbox_id>/observability/method-trace.sqlite
@@ -228,6 +283,8 @@ CREATE TABLE IF NOT EXISTS traces (
   sandbox_id TEXT NOT NULL,
   workspace_id TEXT,
   command_session_id TEXT,
+  correlation_kind TEXT,
+  correlation_id TEXT,
   operation TEXT NOT NULL,
   request_id TEXT,
   origin_request_id TEXT,
@@ -275,6 +332,9 @@ CREATE INDEX IF NOT EXISTS idx_traces_workspace_time
 CREATE INDEX IF NOT EXISTS idx_traces_command_time
   ON traces(sandbox_id, command_session_id, started_at_unix_ms);
 
+CREATE INDEX IF NOT EXISTS idx_traces_correlation_time
+  ON traces(sandbox_id, correlation_kind, correlation_id, started_at_unix_ms);
+
 CREATE INDEX IF NOT EXISTS idx_spans_trace_call_index
   ON spans(trace_id, call_index);
 ```
@@ -288,9 +348,13 @@ Retention:
 - Delete old traces by deleting from `traces`; `spans` and `trace_links` should
   cascade.
 
-## SQLite Store 2: Sandbox State
+## Target Table Family: Sandbox State
 
-File:
+Phase 1 creates only a minimal `sandbox_snapshots` table inside
+`observability.sqlite`. The larger schema below is the Phase 2+ target shape,
+after runtime snapshot adapters and resource samplers exist.
+
+Possible later split file, only if write volume or retention proves it useful:
 
 ```text
 <runtime_root>/<sandbox_id>/observability/sandbox-state.sqlite
@@ -302,6 +366,42 @@ Purpose:
 - Current workspace snapshots.
 - Recent resource samples.
 - Current active command snapshots.
+
+`sandbox_snapshots` is only the root row for a sandbox. It is enough for Phase 1
+store bootstrapping, but it is not enough for the full observability hierarchy.
+The complete local model needs these companion table families:
+
+```text
+sandbox_snapshots       -> sandbox root state
+workspace_snapshots     -> workspace rows under each sandbox
+resource_samples        -> sandbox-global and per-workspace resource history
+command_snapshots       -> active/recent commands under each workspace
+traces + spans          -> recent request/method chains
+trace_links             -> later async relationships back to requests/commands
+```
+
+Implementation phase mapping:
+
+```text
+Phase 1
+  sandbox_snapshots       -> schema + synthetic store upsert only
+  traces + spans          -> schema + synthetic insert only
+
+Phase 2
+  sandbox_snapshots       -> live daemon sandbox-root snapshot population
+  workspace_snapshots     -> live workspace rows under each sandbox
+  command_snapshots       -> live active/recent command rows
+  resource_samples        -> live sandbox-global and per-workspace resource samples
+
+Phase 3
+  traces + spans          -> live request/method-chain tracing from operations
+
+Phase 4
+  trace_links             -> async relationships back to requests/commands
+```
+
+Phase 1 therefore establishes storage shape for `sandbox_snapshots`, `traces`,
+and `spans`, but it does not make any of them live observability producers.
 
 Recommended pragmas:
 
@@ -352,7 +452,7 @@ CREATE TABLE IF NOT EXISTS workspace_snapshots (
 CREATE TABLE IF NOT EXISTS resource_samples (
   sample_id TEXT PRIMARY KEY,
   sandbox_id TEXT NOT NULL,
-  workspace_id TEXT,
+  workspace_id TEXT,               -- NULL for sandbox-global sample
   sampled_at_unix_ms INTEGER NOT NULL,
 
   cgroup_path TEXT,
@@ -401,6 +501,9 @@ CREATE INDEX IF NOT EXISTS idx_workspace_snapshots_sandbox
 CREATE INDEX IF NOT EXISTS idx_resource_samples_workspace_time
   ON resource_samples(sandbox_id, workspace_id, sampled_at_unix_ms);
 
+CREATE INDEX IF NOT EXISTS idx_resource_samples_sandbox_time
+  ON resource_samples(sandbox_id, sampled_at_unix_ms);
+
 CREATE INDEX IF NOT EXISTS idx_command_snapshots_workspace
   ON command_snapshots(sandbox_id, workspace_id);
 ```
@@ -410,6 +513,10 @@ Retention:
 - `sandbox_snapshots`, `workspace_snapshots`, and `command_snapshots` represent
   current state and are updated in place.
 - `resource_samples` is time-series data and should be retained by time window.
+- A `resource_samples` row with `workspace_id IS NULL` is the sandbox-global
+  sample for that sandbox.
+- A `resource_samples` row with `workspace_id IS NOT NULL` is a per-workspace
+  sample under that sandbox.
 - Suggested default: retain the last 30 minutes of resource samples per sandbox.
 - Disk samples may be sampled less often than cgroup samples.
 
@@ -421,6 +528,7 @@ The daemon API should expose typed DTOs. SQLite is an implementation detail.
 pub struct SandboxSnapshot {
     pub sandbox_id: String,
     pub state: SandboxStateView,
+    pub resources: ResourceSnapshot,
     pub sampled_at_unix_ms: i64,
     pub runtime_dir: Option<PathBuf>,
     pub workspace_root: Option<PathBuf>,
@@ -450,6 +558,8 @@ The manager renders these DTOs in the required hierarchy:
 
 ```text
 sandbox_id
+  state
+  resources
   workspace_id
     state
     resources
@@ -457,11 +567,164 @@ sandbox_id
     recent traces
 ```
 
+## Query API
+
+SQLite is the daemon-local implementation detail. Product code should query
+observability through daemon and manager operations, not by opening SQLite
+directly from the host.
+
+Direct SQLite reads are allowed for local debugging, schema migration tests, and
+emergency inspection only. The stable query contract is typed DTOs over the
+existing daemon socket path.
+
+### Daemon Query: `get_observability_snapshot`
+
+Execution space:
+
+```text
+sandbox daemon over <runtime_root>/<sandbox_id>/runtime.sock
+```
+
+Purpose:
+
+- Query one sandbox daemon.
+- Return one `SandboxSnapshot`.
+- Optionally narrow to one workspace.
+- Optionally include recent traces and bounded resource history.
+
+Input:
+
+```rust
+pub struct GetObservabilitySnapshotInput {
+    pub workspace_id: Option<String>,
+    pub include_resources: bool,
+    pub include_recent_traces: bool,
+    pub resource_window_ms: Option<u64>,
+    pub trace_limit: Option<u32>,
+}
+```
+
+Output:
+
+```rust
+pub struct GetObservabilitySnapshotOutput {
+    pub sandbox: SandboxSnapshot,
+}
+```
+
+Rules:
+
+- `workspace_id = None` returns sandbox-global state plus all active workspace
+  summaries.
+- `workspace_id = Some(..)` returns sandbox-global state plus only that
+  workspace when it exists.
+- `include_resources = true` includes sandbox-global resources and workspace
+  resources.
+- `include_recent_traces = true` includes recent request and async trace
+  summaries.
+- `resource_window_ms` bounds resource time-series rows. If omitted, return
+  current/latest resources only.
+- `trace_limit` is capped by the daemon even if the caller asks for more.
+- Missing cgroup paths return unavailable resource snapshots; they do not fail
+  the query.
+- SQLite lock or read failures return a partial snapshot with bounded error
+  fields when current runtime state can still be collected.
+
+### Manager Query: `get_observability_tree`
+
+Execution space:
+
+```text
+manager on the host
+```
+
+Purpose:
+
+- Query all ready sandbox daemons.
+- Build the global display tree.
+- Represent daemon failures as unavailable sandbox nodes.
+
+Input:
+
+```rust
+pub struct GetObservabilityTreeInput {
+    pub sandbox_ids: Option<Vec<String>>,
+    pub include_resources: bool,
+    pub include_recent_traces: bool,
+    pub resource_window_ms: Option<u64>,
+    pub trace_limit: Option<u32>,
+}
+```
+
+Output:
+
+```rust
+pub struct GetObservabilityTreeOutput {
+    pub sandboxes: Vec<SandboxSnapshot>,
+}
+```
+
+Rules:
+
+- `sandbox_ids = None` queries every ready sandbox known to the manager.
+- `sandbox_ids = Some(..)` queries only those sandboxes.
+- The manager fans out by calling `get_observability_snapshot` on each daemon.
+- The manager should not open per-sandbox SQLite files.
+- The manager may cache the aggregate later, but the first implementation can
+  query daemons on demand.
+
+### Later Drill-Down Queries
+
+Do not add these until the snapshot API proves too coarse:
+
+```text
+get_method_trace(trace_id)
+list_method_traces(request_id?, workspace_id?, command_session_id?, limit?)
+get_resource_samples(workspace_id?, window_ms)
+```
+
+These later queries should still go through the daemon or manager API. They
+should not expose raw SQL to callers.
+
 ## Resource Sampling
 
 ### Cgroups
 
 Cgroup support is optional in the first implementation.
+
+Sampling has two levels:
+
+- Sandbox-global cgroup sample:
+  - `sandbox_id` is set.
+  - `workspace_id` is `NULL`.
+  - The cgroup path points at the sandbox/daemon/container-level cgroup.
+- Workspace cgroup sample:
+  - `sandbox_id` is set.
+  - `workspace_id` is set.
+  - The cgroup path points at that workspace's cgroup, when such a path exists.
+
+The daemon-side cgroup sampler should model the target explicitly:
+
+```rust
+pub type SandboxId = String;
+pub type WorkspaceId = String;
+
+pub enum CgroupSampleTarget {
+    Sandbox {
+        sandbox_id: SandboxId,
+        cgroup_path: PathBuf,
+    },
+    Workspace {
+        sandbox_id: SandboxId,
+        workspace_id: WorkspaceId,
+        cgroup_path: PathBuf,
+    },
+}
+```
+
+`CgroupSampleTarget::Sandbox` writes a `resource_samples` row with
+`workspace_id = NULL`. `CgroupSampleTarget::Workspace` writes a
+`resource_samples` row with `workspace_id` set.
 
 When cgroup paths are known:
 
@@ -481,6 +744,14 @@ When cgroup paths are not known:
 - Set `cgroup_available = 0`.
 - Set `cgroup_error = "cgroup path unavailable"`.
 - Do not fail the snapshot.
+
+Do not synthesize per-workspace cgroup usage from a sandbox-global cgroup. If
+workspace processes are not placed in distinct cgroups, record workspace cgroup
+samples as unavailable and keep only the sandbox-global cgroup sample.
+
+Do not compute sandbox-global usage by summing workspace cgroup rows unless the
+cgroup hierarchy guarantees that the workspace cgroups are exactly the full
+child set of the sandbox cgroup.
 
 ### CPU
 
@@ -773,6 +1044,8 @@ linked async trace
   kind=async
   async_name=command_finalization
   origin_request_id=req_1
+  correlation_kind=command_session_id
+  correlation_id=cmd_1
   command_session_id=cmd_1
   workspace_id=ws_1
 ```
@@ -801,11 +1074,15 @@ The link keys are:
 sandbox_id
 workspace_id
 command_session_id
+correlation_kind
+correlation_id
 origin_request_id
 ```
 
 The UI should render the async chain under the same workspace and command as
-the original request.
+the original request when those ids are present. For async work that is not
+owned by a command, the UI should use the correlation key and any available
+sandbox/workspace ids.
 
 ## Request and Async Trace IDs
 
@@ -818,14 +1095,26 @@ trace_id = "request:" + request_id
 Async trace id:
 
 ```text
-trace_id = "async:" + async_name + ":" + command_session_id
+trace_id = "async:" + async_name + ":" + correlation_kind + ":" + correlation_id
 ```
 
-If there can be multiple async traces for the same command and async name, add a
-monotonic sequence:
+The correlation key is the narrowest stable id that owns the async work.
+`command_session_id` is appropriate for command finalization, but other async
+work should use the id that best describes ownership:
 
 ```text
-async:command_finalization:cmd_1:1
+async:command_finalization:command_session_id:cmd_1
+async:workspace_destroy:workspace_id:ws_1
+async:workspace_remount:workspace_id:ws_1
+async:lease_cleanup:lease_id:lease_42
+async:sandbox_shutdown:sandbox_id:sbox_1
+```
+
+If there can be multiple async traces for the same async name and correlation
+key, add a monotonic sequence:
+
+```text
+async:command_finalization:command_session_id:cmd_1:1
 ```
 
 Span ids should be trace-local monotonic ids or globally unique strings:
@@ -835,6 +1124,8 @@ span_id = trace_id + ":" + call_index
 ```
 
 ## Active vs Completed Traces
+
+This is Phase 3+ behavior, not Phase 1 behavior.
 
 Active traces may be kept in memory and periodically flushed to SQLite with
 `status = running`.
@@ -851,6 +1142,8 @@ If the daemon crashes during a request, the next startup may leave older
 `running` traces as `dropped` after a timeout.
 
 ## Current Snapshot Collection
+
+This is Phase 2+ behavior, not Phase 1 behavior.
 
 The daemon should collect snapshots on demand and optionally on a timer.
 
@@ -870,9 +1163,10 @@ Observability must be best effort.
 
 - If a sampler fails, include the error in that sampler's fields.
 - If SQLite is locked, retry briefly and then drop the record.
-- If the writer queue is full, drop the oldest unflushed observability item.
-- If `method-trace.sqlite` fails, continue updating `sandbox-state.sqlite`.
-- If `sandbox-state.sqlite` fails, continue recording method traces.
+- If a future writer queue is full, drop the oldest unflushed observability
+  item.
+- If the local store fails, disable live observability writes until a later
+  initialization or health check succeeds.
 - Never fail `exec_command`, `write_command_stdin`, `read_command_lines`,
   `squash`, or workspace lifecycle work because observability failed.
 
@@ -887,15 +1181,14 @@ First version:
 
 Future optional integrations:
 
-- Prometheus can scrape numeric gauges/counters derived from
-  `sandbox-state.sqlite`.
+- Prometheus can scrape numeric gauges/counters derived from local state tables.
 - Grafana can visualize Prometheus metrics and possibly query SQLite through an
   adapter if needed.
 - Loki should remain out of this design unless the project explicitly wants
   searchable logs again.
 
 Prometheus is not a good storage format for method call chains. Keep method
-chains in `method-trace.sqlite`.
+chains in the local SQLite store.
 
 ## Security and Data Volume
 
@@ -922,44 +1215,58 @@ databases.
 
 ### Phase 1: Data Model and Stores
 
-- Add observability DTOs.
-- Add `DaemonObservabilityService`.
-- Create `method-trace.sqlite`.
-- Create `sandbox-state.sqlite`.
-- Add best-effort SQLite writer.
+- Add a minimal `sandbox-observability` crate.
+- Add row-shaped records for traces, spans, and sandbox snapshots.
+- Derive the observability directory from the daemon socket path.
+- Create `observability.sqlite`.
+- Add idempotent schema migration and direct synthetic-record store writes.
+- Do not wire the crate into daemon serving yet.
+- Expected `crates/sandbox-runtime` change: 0 LOC.
 
 ### Phase 2: Runtime Snapshots
 
-- Snapshot active workspaces from `WorkspaceSessionService`.
-- Snapshot active commands from `CommandProcessStore`.
-- Add disk stats using existing upperdir tree stats.
-- Add cgroup sampler with unavailable state if paths are absent.
+- Add one read-only runtime snapshot method.
+- Snapshot active workspaces from `WorkspaceSessionService` through that method.
+- Snapshot active commands from `CommandProcessStore` through that method.
+- Add daemon-side disk stats using existing upperdir paths.
+- Add daemon-side cgroup sampler with unavailable state if paths are absent.
+- Expected `crates/sandbox-runtime` change: 140-220 non-test LOC.
 
 ### Phase 3: Request Method Traces
 
-- Create `OperationTrace` at daemon/runtime dispatch.
+- Create `OperationTrace` at daemon dispatch.
+- Pass the trace context into runtime dispatch.
 - Add automatic root dispatch span.
 - Add spans for `exec_command`, `write_command_stdin`, `read_command_lines`,
   and `squash`.
-- Persist completed request traces and spans.
+- Persist completed request traces and spans in `sandbox-daemon`.
+- Expected `crates/sandbox-runtime` change: 170-260 non-test LOC.
 
 ### Phase 4: Async Method Traces
 
 - Add linked traces for command finalization.
-- Link by `origin_request_id`, `command_session_id`, and `workspace_id`.
+- Link by `origin_request_id` plus `correlation_kind` / `correlation_id`, with
+  `workspace_id` and `command_session_id` populated when known.
 - Add linked traces for workspace destroy/remount if those run outside the
   original request in future code.
+- Expected `crates/sandbox-runtime` change: 60-110 non-test LOC.
 
 ### Phase 5: Manager Aggregation
 
-- Add daemon API for observability snapshot.
+- Add daemon API `get_observability_snapshot`.
+- Add manager API `get_observability_tree`.
 - Add manager aggregation across ready sandboxes.
 - Render hierarchy:
 
   ```text
   sandbox_id
+    state
+    resources
     workspace_id
+      state
+      resources
   ```
+- Expected `crates/sandbox-runtime` change: 0 LOC.
 
 ### Phase 6: Optional Metrics Export
 
@@ -967,25 +1274,25 @@ databases.
   stable.
 - Export aggregate numeric metrics only.
 - Keep method traces in SQLite.
+- Expected `crates/sandbox-runtime` change: 0 LOC.
 
 ## Verification
 
 Focused checks after implementation should include:
 
 ```sh
-cargo fmt --check -p sandbox-runtime -p sandbox-daemon -p sandbox-manager
-cargo check -p sandbox-runtime -p sandbox-daemon -p sandbox-manager --tests
-cargo test -p sandbox-runtime exec_command
-cargo test -p sandbox-runtime workspace_session
-cargo test -p sandbox-daemon dispatch
-cargo test -p sandbox-manager manager_core
+cargo fmt --check
+cargo check -p sandbox-observability --tests
+cargo test -p sandbox-observability
 ```
 
 Storage-specific tests should verify:
 
-- SQLite schema migration creates both databases.
-- A request trace maps all spans to the same `request_id`.
-- An async command finalization trace links to `origin_request_id`.
-- A snapshot with missing cgroup paths records unavailable state.
-- Disk sampler rate limiting returns cached data.
-- Observability writer failure does not fail a runtime operation.
+- SQLite schema migration creates `observability.sqlite`.
+- Running schema initialization twice is a no-op.
+- A synthetic request trace maps all spans to the same `trace_id`.
+- A synthetic sandbox snapshot upsert replaces the current row.
+- `get_observability_snapshot` returns one typed `SandboxSnapshot`.
+- `get_observability_tree` returns unavailable sandbox nodes for daemons that
+  cannot be reached.
+- `crates/sandbox-runtime` remains untouched by Phase 1.

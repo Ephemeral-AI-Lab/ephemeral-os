@@ -1,0 +1,13 @@
+[package]
+name = "sandbox-observability"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+rusqlite.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

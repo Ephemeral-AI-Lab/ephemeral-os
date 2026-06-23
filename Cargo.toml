@@ -6,6 +6,7 @@ members = [
     "crates/sandbox-config",
     "crates/sandbox-daemon",
     "crates/sandbox-manager",
+    "crates/sandbox-observability",
     "crates/sandbox-gateway",
     "crates/sandbox-protocol",
     "crates/sandbox-runtime/workspace",
