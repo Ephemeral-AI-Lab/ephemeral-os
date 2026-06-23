@@ -111,7 +111,7 @@ Later runtime adoption is split across later phases:
 | Phase 3 | Request trace boundary and minimal selected operation spans | 70-120 |
 | Phase 3.5 | Targeted in-process deep request spans | 60-130 |
 | Phase 4 | Linked async finalization trace wiring | 60-110 |
-| Phase 4.5 | Cross-process namespace-runner traces | 90-180 |
+| Phase 4.5 | Namespace execution store and traces | 90-180 |
 
 Anything else belongs outside `sandbox-runtime`:
 
@@ -265,7 +265,7 @@ or published independently of observability.
 
 Phase 1 creates the minimal trace tables inside `observability.sqlite`. The
 larger schema below is a later target shape after request, async, hierarchy query
-paths, and linked runner trace producers exist. Phase 3 request traces use the
+paths, and namespace execution producers exist. Phase 3 request traces use the
 existing Phase 1 `traces` and `spans` shape; they do not add hierarchy columns or
 indexes.
 
@@ -291,7 +291,7 @@ Schema:
 ```sql
 CREATE TABLE IF NOT EXISTS traces (
   trace_id TEXT PRIMARY KEY,
-  kind TEXT NOT NULL,              -- request | async
+  kind TEXT NOT NULL,              -- request | async | namespace_execution
   status TEXT NOT NULL,            -- running | ok | error | dropped
   sandbox_id TEXT NOT NULL,
   workspace_id TEXT,
@@ -300,7 +300,6 @@ CREATE TABLE IF NOT EXISTS traces (
   correlation_id TEXT,
   operation TEXT NOT NULL,
   request_id TEXT,
-  origin_request_id TEXT,
   async_name TEXT,
   started_at_unix_ms INTEGER NOT NULL,
   finished_at_unix_ms INTEGER,
@@ -335,9 +334,6 @@ CREATE TABLE IF NOT EXISTS trace_links (
 
 CREATE INDEX IF NOT EXISTS idx_traces_request
   ON traces(request_id);
-
-CREATE INDEX IF NOT EXISTS idx_traces_origin_request
-  ON traces(origin_request_id);
 
 CREATE INDEX IF NOT EXISTS idx_traces_workspace_time
   ON traces(sandbox_id, workspace_id, started_at_unix_ms);
@@ -384,7 +380,7 @@ workspace_snapshots     -> workspace rows under each sandbox
 resource_samples        -> sandbox-global and per-workspace resource history
 execution_snapshots     -> active/recent runtime executions under each workspace
 traces + spans          -> recent request/method chains
-trace_links             -> later async relationships back to requests/commands
+trace_links             -> future multi-link trace relationships, if needed
 ```
 
 Implementation phase mapping:
@@ -407,11 +403,11 @@ Phase 3.5
   traces + spans          -> targeted in-process child spans under slow request spans
 
 Phase 4
-  trace_links             -> async relationships back to requests/commands
+  traces + spans          -> linked command-finalization trace rows
 
 Phase 4.5
-  traces + spans          -> linked namespace-runner process traces
-  trace_links             -> runner traces back to request/command ownership
+  execution_snapshots     -> active namespace execution rows when exposed
+  traces + spans          -> completed namespace execution lifecycle traces
 ```
 
 Phase 1 therefore establishes storage shape for `sandbox_snapshots`, `traces`,
@@ -497,10 +493,11 @@ CREATE TABLE IF NOT EXISTS execution_snapshots (
   sandbox_id TEXT NOT NULL,
   workspace_id TEXT NOT NULL,
   execution_id TEXT NOT NULL,
-  execution_kind TEXT NOT NULL,    -- command | future operation-neutral kinds
+  execution_kind TEXT NOT NULL,    -- command | namespace_execution | future kinds
   operation TEXT,
   command_session_id TEXT,
-  namespace_runner_request_id TEXT,
+  namespace_execution_id TEXT,
+  operation_execution_id TEXT,
   command TEXT,
   lifecycle_state TEXT NOT NULL,   -- running | quiesced_for_remount | finalizing | cancelled
   finalization_state TEXT NOT NULL,
@@ -573,7 +570,8 @@ pub struct ExecutionSnapshot {
     pub operation: Option<String>,
     pub workspace_id: String,
     pub command_session_id: Option<String>,
-    pub namespace_runner_request_id: Option<String>,
+    pub namespace_execution_id: Option<String>,
+    pub operation_execution_id: Option<String>,
     pub command: Option<String>,
     pub lifecycle_state: String,
     pub finalization_state: String,
@@ -860,8 +858,7 @@ file.
 A trace contains:
 
 - one `trace_id`;
-- one `request_id` for synchronous request traces;
-- optional `origin_request_id` for async traces;
+- optional `request_id` when the work came from a public request;
 - `sandbox_id`;
 - optional `workspace_id`;
 - optional `command_session_id`;
@@ -1148,7 +1145,7 @@ request trace
 linked async trace
   kind=async
   async_name=command_finalization
-  origin_request_id=req_1
+  request_id=req_1
   correlation_kind=command_session_id
   correlation_id=cmd_1
   command_session_id=cmd_1
@@ -1181,7 +1178,7 @@ workspace_id
 command_session_id
 correlation_kind
 correlation_id
-origin_request_id
+request_id
 ```
 
 The UI should render the async chain under the same workspace and command as
@@ -1228,11 +1225,14 @@ Span ids should be trace-local monotonic ids or globally unique strings:
 span_id = trace_id + ":" + call_index
 ```
 
-## Cross-Process Namespace Runner Traces
+## Namespace Execution Store and Traces
 
-Phase 4.5 may record namespace-runner internals, but those records must be
-linked cross-process traces, not ordinary child spans that imply the daemon can
-directly observe a child process call stack.
+Phase 4.5 records namespace-runner work through a generic namespace execution
+store. The root concept is a workspace-owned namespace execution attempt, not a
+command-owned trace.
+
+The detailed Phase 4.5 spec is
+`docs/observability/phase-4-5-namespace-runner-traces.md`.
 
 Phase 3 and Phase 3.5 parent-side request spans may record:
 
@@ -1242,37 +1242,49 @@ start_command_process
   spawn_current_exe_ns_runner
 ```
 
-Those spans stop at the parent/runtime process boundary. They must not expand
-into `runner::run`, `run_setns`, shell execution, or wait-loop internals.
+Those spans stop at the parent/runtime process boundary. The Phase 4.5 first
+pass records parent-observed namespace execution lifecycle timing; child method
+spans remain deferred.
 
-Phase 4.5 runner trace candidates:
+The unified runtime hierarchy is:
 
 ```text
-namespace_runner
-  runner::run
-  run_setns
-  shell_exec::execute_shell
-  wait_for_command_execution_scope
+WorkspaceSession
+  NamespaceExecutionAttempt
+    kind = shell_exec | mount_overlay | remount_overlay
+    operation_name
+    operation_execution_id?
 ```
 
 Phase 4.5 requirements:
 
-- Propagate bounded trace metadata through the namespace-runner request before
-  recording runner spans.
-- Link runner traces back to the original request and command using
-  `origin_request_id`, `command_session_id`, and a stable
-  `namespace_runner_request_id` or equivalent runner request id.
-- Treat a runner trace as an independent linked trace when the runner can outlive
-  the request that spawned it.
+- Generate a stable `namespace_execution_id` parent-side for each namespace
+  execution attempt.
+- Add a runtime-side `NamespaceExecutionStore` for active and recently completed
+  namespace execution records.
+- Keep `command_session_id` in command state only. Command active records may
+  store `namespace_execution_id`, but generic namespace execution records should
+  use `operation_name + operation_execution_id` for operation correlation.
+- Use `execution_kind = shell_exec` for command execution and future shell-based
+  namespace operations.
+- Use `execution_kind = mount_overlay` and `execution_kind = remount_overlay`
+  for workspace mount/remount runner work. These are not shell-exec subtypes.
+- Do not put `command_session_id`, `workspace_session_id`, `request_id`,
+  owner enums, SQLite paths, writer handles, daemon stores, or
+  `sandbox-observability` types into child-visible trace context.
+- Keep `request_id` optional on namespace execution records. Internal lifecycle
+  work such as remount may have no request id.
+- Do not require every namespace execution to have a command link; future
+  workspace probes, setup validation, package bootstrap, and tool/plugin
+  execution may use the same namespace execution store without command state.
 - Keep command stdout/stderr and transcript content out of the trace database.
 - Do not make the namespace-runner child process write directly to
   `observability.sqlite`.
-- Define the collection transport in the Phase 4.5 spec before implementation;
-  acceptable designs must be bounded and must not require OTLP, Loki, Tempo, or
-  command transcript ingestion.
-- Record method names, status, timing, and bounded errors only; do not record
-  shell command output chunks, transcript lines, environment dumps, or every
-  wait-loop iteration.
+- Do not extend `RunResult` with a `runner_trace` field. The first transport is
+  parent-side store updates around child-process lifecycle.
+- If child-produced spans are added later, pass only `namespace_execution_id` to
+  the child and use a separate bounded control pipe or parent envelope beside
+  `RunResult`.
 
 ## Active vs Completed Traces
 
@@ -1428,22 +1440,27 @@ databases.
 ### Phase 4: Async Method Traces
 
 - Add linked traces for command finalization.
-- Link by `origin_request_id` plus `correlation_kind` / `correlation_id`, with
+- Link by `request_id` plus `correlation_kind` / `correlation_id`, with
   `workspace_id` and `command_session_id` populated when known.
 - Add linked traces for workspace destroy/remount if those run outside the
   original request in future code.
 - Expected `crates/sandbox-runtime` change: 60-110 non-test LOC.
 
-### Phase 4.5: Cross-Process Namespace Runner Traces
+### Phase 4.5: Namespace Execution Store and Traces
 
-- Propagate bounded trace metadata into namespace-runner requests.
-- Record linked runner traces for child-process internals such as `runner::run`,
-  `run_setns`, `shell_exec::execute_shell`, and
-  `wait_for_command_execution_scope`.
-- Link runner traces back to the original request and command by
-  `origin_request_id`, `command_session_id`, and a stable runner request id.
-- Define a bounded collection transport before implementation; the runner child
-  must not write directly to `observability.sqlite`.
+- Add a runtime-side `NamespaceExecutionStore` keyed by parent-generated
+  `namespace_execution_id`.
+- Record active and recently completed namespace executions with
+  `execution_kind = shell_exec | mount_overlay | remount_overlay`.
+- Keep command identity in command state. Generic namespace execution records use
+  `operation_name + operation_execution_id`, not a dedicated
+  `command_session_id` field.
+- Link command active records to namespace work by `namespace_execution_id`.
+- Project completed namespace execution lifecycle timing into daemon-owned
+  observability rows.
+- Do not extend `RunResult` with `runner_trace`; child-produced runner spans are
+  deferred.
+- The runner child must not write directly to `observability.sqlite`.
 - Keep command transcripts and command output out of observability storage.
 - Expected `crates/sandbox-runtime` change: 90-180 non-test LOC.
 
