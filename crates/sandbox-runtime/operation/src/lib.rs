@@ -13,8 +13,8 @@ pub mod workspace_session;
 pub use command::CommandOperationService;
 pub use layerstack::LayerStackService;
 pub use observability::{
-    CompletedOperationSpan, CompletedOperationTrace, OperationTrace, RuntimeExecutionSnapshot,
-    RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot,
+    span_keys, CompletedOperationSpan, CompletedOperationTrace, OperationTrace,
+    RuntimeExecutionSnapshot, RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot, SpanKey,
 };
 pub use operation::{
     ArgCliSpec, ArgKind, ArgSpec, CliOperationCatalog, CliOperationExecutionSpace,

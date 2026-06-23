@@ -49,11 +49,15 @@ impl SandboxDaemonServer {
             .filter(|sandbox_id| !sandbox_id.is_empty())
             .cloned();
         let observability = self.observability.clone();
-        let trace = if observability.is_some() && trace_sandbox_id.is_some() {
-            Some(OperationTrace::new())
-        } else {
-            None
-        };
+        let trace =
+            observability
+                .as_ref()
+                .zip(trace_sandbox_id.as_ref())
+                .map(|(observability, _)| {
+                    OperationTrace::new_with_enabled_span_keys(
+                        observability.enabled_deep_span_keys(),
+                    )
+                });
         let trace_request_id = request.request_id.clone();
         let trace_operation = request.op.clone();
         let operations = Arc::clone(&self.operations);

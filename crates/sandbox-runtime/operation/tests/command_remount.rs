@@ -366,7 +366,7 @@ fn create_session_and_command() -> (
         .expect("create workspace session succeeds");
     let output = services
         .command
-        .exec_command(exec_input(handler.workspace_session_id.clone()))
+        .exec_command(exec_input(handler.workspace_session_id.clone()), None)
         .expect("exec command succeeds");
     (
         services,
@@ -412,7 +412,7 @@ fn command_remount_start_rejects_for_pending_isolated_workspace() {
 
     let error = services
         .command
-        .exec_command(exec_input(handler.workspace_session_id.clone()))
+        .exec_command(exec_input(handler.workspace_session_id.clone()), None)
         .expect_err("exec rejects pending isolated remount");
 
     assert!(matches!(
@@ -443,7 +443,7 @@ fn command_remount_start_rejects_for_pending_persistent_workspace() {
 
     let error = services
         .command
-        .exec_command(exec_input(handler.workspace_session_id.clone()))
+        .exec_command(exec_input(handler.workspace_session_id.clone()), None)
         .expect_err("exec rejects pending remount");
 
     assert!(matches!(
@@ -478,7 +478,7 @@ fn command_remount_start_rejects_for_blocked_workspace() {
 
     let error = services
         .command
-        .exec_command(exec_input(handler.workspace_session_id.clone()))
+        .exec_command(exec_input(handler.workspace_session_id.clone()), None)
         .expect_err("exec rejects blocked remount");
 
     assert!(matches!(
@@ -515,8 +515,9 @@ fn command_remount_waits_for_in_flight_persistent_exec_admission() {
 
     let exec_command = Arc::clone(&services.command);
     let exec_workspace_session_id = handler.workspace_session_id.clone();
-    let exec_thread =
-        thread::spawn(move || exec_command.exec_command(exec_input(exec_workspace_session_id)));
+    let exec_thread = thread::spawn(move || {
+        exec_command.exec_command(exec_input(exec_workspace_session_id), None)
+    });
     spawn_started_rx
         .recv_timeout(Duration::from_secs(1))
         .expect("exec reached blocked spawn");

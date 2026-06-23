@@ -12,7 +12,7 @@ use crate::command::{
     CommandSessionId, CommandTranscriptStore, CommandWorkspaceOwnership, CommandYield,
     ExecCommandInput, FinalizationState,
 };
-use crate::observability::{measure_optional, OperationTrace};
+use crate::observability::{measure_optional, measure_optional_if, span_keys, OperationTrace};
 use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliOperationSpec, CliSpec};
 use crate::workspace_crate::{
     CreateWorkspaceRequest, DestroyWorkspaceRequest, WorkspaceEntry, WorkspaceProfile,
@@ -90,7 +90,7 @@ const EXEC_COMMAND_CLI: CliSpec = CliSpec {
 #[rustfmt::skip]
 pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: &Request, trace: Option<&OperationTrace>) -> Response {
     let input = match parse_input(request) { Ok(input) => input, Err(response) => return response };
-    command_yield_response(measure_optional(trace, "CommandOperationService::exec_command", || operations.command.exec_command(input)))
+    command_yield_response(measure_optional(trace, "CommandOperationService::exec_command", || operations.command.exec_command(input, trace)))
 }
 
 fn parse_input(request: &Request) -> Result<ExecCommandInput, Response> {
@@ -109,6 +109,7 @@ impl CommandOperationService {
     pub fn exec_command(
         &self,
         input: ExecCommandInput,
+        trace: Option<&OperationTrace>,
     ) -> Result<CommandYield, CommandServiceError> {
         if input.cmd.trim().is_empty() {
             return Err(CommandServiceError::InvalidCommand {
@@ -116,14 +117,18 @@ impl CommandOperationService {
             });
         }
 
-        self.exec_validated_command(input)
+        self.exec_validated_command(input, trace)
     }
 
     fn exec_validated_command(
         &self,
         input: ExecCommandInput,
+        trace: Option<&OperationTrace>,
     ) -> Result<CommandYield, CommandServiceError> {
-        let workspace = self.resolve_exec_workspace(&input)?;
+        let workspace =
+            measure_optional_if(trace, span_keys::COMMAND_EXEC_WORKSPACE_RESOLVE, || {
+                self.resolve_exec_workspace(&input, trace)
+            })?;
         let admission_guard = self.command_admission_guard(&workspace)?;
         let command_session_id = self.process_store().allocate_command_session_id();
         let reservation = match self.process_store().try_reserve() {
@@ -137,17 +142,18 @@ impl CommandOperationService {
                 ));
             }
         };
-        let started = match self.start_command_process(&command_session_id, &input, &workspace) {
-            Ok(started) => started,
-            Err(error) => {
-                return Err(self.cleanup_workspace_start_failure(
-                    &command_session_id,
-                    workspace,
-                    None,
-                    error,
-                ));
-            }
-        };
+        let started =
+            match self.start_command_process(&command_session_id, &input, &workspace, trace) {
+                Ok(started) => started,
+                Err(error) => {
+                    return Err(self.cleanup_workspace_start_failure(
+                        &command_session_id,
+                        workspace,
+                        None,
+                        error,
+                    ));
+                }
+            };
 
         if self.process_store().active(&command_session_id).is_some() {
             started.process.cancel_process();
@@ -185,15 +191,28 @@ impl CommandOperationService {
     fn resolve_exec_workspace(
         &self,
         input: &ExecCommandInput,
+        trace: Option<&OperationTrace>,
     ) -> Result<ResolvedExecWorkspace, CommandServiceError> {
         let handler = if let Some(workspace_session_id) = &input.workspace_session_id {
-            self.workspace()
-                .resolve_session(workspace_session_id.clone())?
+            measure_optional_if(
+                trace,
+                span_keys::COMMAND_EXEC_WORKSPACE_RESOLVE_EXISTING_SESSION,
+                || {
+                    self.workspace()
+                        .resolve_session(workspace_session_id.clone())
+                },
+            )?
         } else {
-            self.workspace()
-                .create_workspace_session(CreateWorkspaceRequest {
-                    profile: WorkspaceProfile::HostCompatible,
-                })?
+            measure_optional_if(
+                trace,
+                span_keys::COMMAND_EXEC_WORKSPACE_CREATE_ONE_SHOT_SESSION,
+                || {
+                    self.workspace()
+                        .create_workspace_session(CreateWorkspaceRequest {
+                            profile: WorkspaceProfile::HostCompatible,
+                        })
+                },
+            )?
         };
         let ownership = if input.workspace_session_id.is_some() {
             CommandWorkspaceOwnership::ExistingSession
@@ -219,20 +238,23 @@ impl CommandOperationService {
         command_session_id: &CommandSessionId,
         input: &ExecCommandInput,
         workspace: &ResolvedExecWorkspace,
+        trace: Option<&OperationTrace>,
     ) -> Result<StartedCommand, CommandServiceError> {
-        workspace.entry().and_then(|entry| {
-            self.launch_driver()
-                .spawn(
-                    CommandProcessSpec {
-                        id: command_session_id.0.clone(),
-                        command: input.cmd.clone(),
-                        cwd: None,
-                        timeout_seconds: input.timeout_ms.map(timeout_ms_to_seconds),
-                    },
-                    entry,
-                    self.config(),
-                )
-                .map(StartedCommand::new)
+        measure_optional_if(trace, span_keys::COMMAND_EXEC_PROCESS_START, || {
+            workspace.entry().and_then(|entry| {
+                self.launch_driver()
+                    .spawn(
+                        CommandProcessSpec {
+                            id: command_session_id.0.clone(),
+                            command: input.cmd.clone(),
+                            cwd: None,
+                            timeout_seconds: input.timeout_ms.map(timeout_ms_to_seconds),
+                        },
+                        entry,
+                        self.config(),
+                    )
+                    .map(StartedCommand::new)
+            })
         })
     }
 

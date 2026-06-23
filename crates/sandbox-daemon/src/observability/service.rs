@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, MutexGuard};
@@ -11,8 +11,8 @@ use sandbox_observability::{
     MAX_OPERATION_LENGTH, MAX_PATH_LENGTH, MAX_SNAPSHOT_STATE_LENGTH,
 };
 use sandbox_runtime::{
-    CompletedOperationTrace, RuntimeExecutionSnapshot, RuntimeObservabilitySnapshot,
-    RuntimeWorkspaceSnapshot, SandboxRuntimeOperations,
+    span_keys, CompletedOperationSpan, CompletedOperationTrace, RuntimeExecutionSnapshot,
+    RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot, SandboxRuntimeOperations, SpanKey,
 };
 
 use crate::server::ServerConfig;
@@ -27,6 +27,9 @@ const SPAN_ID_SEPARATOR: &str = ":span:";
 const MAX_CALL_INDEX_TEXT_LENGTH: usize = 20;
 const MAX_TRACE_ID_LENGTH: usize =
     MAX_ID_LENGTH - SPAN_ID_SEPARATOR.len() - MAX_CALL_INDEX_TEXT_LENGTH;
+const DEEP_SPAN_PARENT_THRESHOLD_MS: f64 = 100.0;
+const COMMAND_EXEC_PARENT_SPAN: &str = "CommandOperationService::exec_command";
+const LAYERSTACK_SQUASH_PARENT_SPAN: &str = "LayerStackService::squash";
 
 pub(crate) struct DaemonObservability {
     sandbox_id: String,
@@ -34,6 +37,7 @@ pub(crate) struct DaemonObservability {
     store: ObservabilityStore,
     next_sample_id: AtomicU64,
     disk_samples: Mutex<HashMap<DiskCacheKey, CachedDiskSample>>,
+    enabled_deep_span_keys: Mutex<HashSet<SpanKey>>,
 }
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
@@ -63,6 +67,7 @@ impl DaemonObservability {
             store,
             next_sample_id: AtomicU64::new(1),
             disk_samples: Mutex::new(HashMap::new()),
+            enabled_deep_span_keys: Mutex::new(HashSet::new()),
         })
     }
 
@@ -87,17 +92,13 @@ impl DaemonObservability {
         response: &serde_json::Value,
         trace: CompletedOperationTrace,
     ) -> Result<(), StoreError> {
+        self.update_enabled_deep_span_keys(&trace);
         let trace_id = trace_id_for_request(&request_id);
         let (status, error_kind, error_message) = trace_response_status(response);
         let is_error = status == "error";
-        let error_call_index = is_error.then(|| {
-            trace
-                .spans
-                .iter()
-                .map(|span| span.call_index)
-                .max()
-                .unwrap_or_default()
-        });
+        let error_call_index = is_error
+            .then(|| response_error_call_index(&trace.spans))
+            .flatten();
         let trace_record = TraceRecord {
             trace_id: trace_id.clone(),
             kind: "request".to_owned(),
@@ -139,6 +140,27 @@ impl DaemonObservability {
             .collect::<Vec<_>>();
 
         self.store.insert_trace(&trace_record, &spans)
+    }
+
+    pub(crate) fn enabled_deep_span_keys(&self) -> Vec<SpanKey> {
+        lock_enabled_deep_span_keys(&self.enabled_deep_span_keys)
+            .iter()
+            .copied()
+            .collect()
+    }
+
+    fn update_enabled_deep_span_keys(&self, trace: &CompletedOperationTrace) {
+        let mut keys = lock_enabled_deep_span_keys(&self.enabled_deep_span_keys);
+        for span in &trace.spans {
+            if span.duration_ms < DEEP_SPAN_PARENT_THRESHOLD_MS {
+                continue;
+            }
+            match span.method_name {
+                COMMAND_EXEC_PARENT_SPAN => enable_command_exec_deep_spans(&mut keys),
+                LAYERSTACK_SQUASH_PARENT_SPAN => enable_layerstack_squash_deep_spans(&mut keys),
+                _ => {}
+            }
+        }
     }
 
     #[cfg(test)]
@@ -576,6 +598,54 @@ fn trace_response_status(response: &serde_json::Value) -> (String, Option<String
         .map(str::to_owned)
         .map(bound_error);
     ("error".to_owned(), error_kind, error_message)
+}
+
+fn response_error_call_index(spans: &[CompletedOperationSpan]) -> Option<i64> {
+    const SERVICE_METHOD_SPANS: &[&str] = &[
+        COMMAND_EXEC_PARENT_SPAN,
+        "CommandOperationService::write_command_stdin",
+        "CommandOperationService::read_command_lines",
+        LAYERSTACK_SQUASH_PARENT_SPAN,
+    ];
+    const OPERATION_DISPATCH_SPANS: &[&str] = &[
+        "exec_command::dispatch",
+        "write_command_stdin::dispatch",
+        "read_command_lines::dispatch",
+        "squash::dispatch",
+    ];
+
+    call_index_for_methods(spans, SERVICE_METHOD_SPANS)
+        .or_else(|| call_index_for_methods(spans, OPERATION_DISPATCH_SPANS))
+        .or_else(|| call_index_for_methods(spans, &["dispatch_operation"]))
+}
+
+fn call_index_for_methods(spans: &[CompletedOperationSpan], methods: &[&str]) -> Option<i64> {
+    spans
+        .iter()
+        .filter(|span| methods.contains(&span.method_name))
+        .map(|span| span.call_index)
+        .max()
+}
+
+fn enable_command_exec_deep_spans(keys: &mut HashSet<SpanKey>) {
+    keys.extend([
+        span_keys::COMMAND_EXEC_WORKSPACE_RESOLVE,
+        span_keys::COMMAND_EXEC_WORKSPACE_RESOLVE_EXISTING_SESSION,
+        span_keys::COMMAND_EXEC_WORKSPACE_CREATE_ONE_SHOT_SESSION,
+        span_keys::COMMAND_EXEC_PROCESS_START,
+    ]);
+}
+
+fn enable_layerstack_squash_deep_spans(keys: &mut HashSet<SpanKey>) {
+    keys.extend([
+        span_keys::LAYERSTACK_SQUASH_OPEN_STACK,
+        span_keys::LAYERSTACK_SQUASH_COMPACT_STACK,
+    ]);
+}
+
+fn lock_enabled_deep_span_keys(keys: &Mutex<HashSet<SpanKey>>) -> MutexGuard<'_, HashSet<SpanKey>> {
+    keys.lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 fn lock_disk_samples(

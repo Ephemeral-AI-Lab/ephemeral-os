@@ -67,7 +67,7 @@ fn exec_command_uses_resolved_session_without_workspace_create_or_destroy() {
 
     let output = env
         .command
-        .exec_command(exec_input(workspace_session_id))
+        .exec_command(exec_input(workspace_session_id), None)
         .expect("session command exec succeeds");
 
     let command_session_id = output
@@ -97,7 +97,7 @@ fn exec_command_rejects_empty_command_before_workspace_resolution() {
 
     let error = env
         .command
-        .exec_command(input)
+        .exec_command(input, None)
         .expect_err("empty command rejects exec");
 
     assert!(matches!(
@@ -125,7 +125,7 @@ fn exec_command_without_workspace_session_creates_and_destroys_one_shot_on_compl
 
     let output = env
         .command
-        .exec_command(one_shot_exec_input())
+        .exec_command(one_shot_exec_input(), None)
         .expect("one-shot command completes");
 
     assert_eq!(output.status, CommandStatus::Ok);
@@ -155,7 +155,7 @@ fn exec_command_terminal_output_returns_command_session_id_when_more_output_rema
 
     let output = env
         .command
-        .exec_command(one_shot_exec_input())
+        .exec_command(one_shot_exec_input(), None)
         .expect("one-shot command completes");
 
     let command_session_id = output
@@ -191,7 +191,7 @@ fn exec_command_without_workspace_session_keeps_one_shot_until_terminal_completi
 
     let command_session_id = env
         .command
-        .exec_command(one_shot_exec_input())
+        .exec_command(one_shot_exec_input(), None)
         .expect("one-shot command starts")
         .command_session_id
         .expect("running command session id is returned");
@@ -242,7 +242,7 @@ fn exec_command_without_workspace_session_destroys_one_shot_after_spawn_failure(
 
     let error = env
         .command
-        .exec_command(one_shot_exec_input())
+        .exec_command(one_shot_exec_input(), None)
         .expect_err("one-shot spawn failure rejects exec");
 
     assert!(matches!(
@@ -270,7 +270,7 @@ fn exec_command_without_workspace_session_destroys_one_shot_after_launch_materia
 
     let error = env
         .command
-        .exec_command(one_shot_exec_input())
+        .exec_command(one_shot_exec_input(), None)
         .expect_err("missing launch material rejects one-shot exec");
 
     assert!(matches!(
@@ -304,7 +304,7 @@ fn exec_command_spawn_failure_keeps_session_workspace_alive() {
 
     let error = env
         .command
-        .exec_command(exec_input(workspace_session_id))
+        .exec_command(exec_input(workspace_session_id), None)
         .expect_err("spawn failure rejects session exec");
 
     assert!(matches!(
@@ -337,7 +337,7 @@ fn exec_command_passes_workspace_entry_to_spawn_paths() {
 
     let output = env
         .command
-        .exec_command(input)
+        .exec_command(input, None)
         .expect("session command exec succeeds");
 
     assert_eq!(
@@ -396,7 +396,7 @@ fn exec_command_missing_launch_material_rejects_without_spawn() {
 
     let error = env
         .command
-        .exec_command(exec_input(workspace_session_id))
+        .exec_command(exec_input(workspace_session_id), None)
         .expect_err("missing launch material rejects exec");
 
     assert!(matches!(
@@ -428,7 +428,7 @@ fn exec_command_unavailable_workspace_launch_rejects_without_spawn() {
 
     let error = env
         .command
-        .exec_command(exec_input(workspace_session_id))
+        .exec_command(exec_input(workspace_session_id), None)
         .expect_err("unavailable workspace launch rejects exec");
 
     assert!(matches!(
@@ -460,7 +460,7 @@ fn exec_command_artifact_directory_failure_keeps_session_workspace_alive() {
 
     let error = env
         .command
-        .exec_command(exec_input(workspace_session_id))
+        .exec_command(exec_input(workspace_session_id), None)
         .expect_err("artifact directory failure rejects exec");
 
     assert!(matches!(
@@ -491,7 +491,7 @@ fn exec_command_initial_running_yield_returns_pending_output() {
 
     let output = env
         .command
-        .exec_command(exec_input(workspace_session_id))
+        .exec_command(exec_input(workspace_session_id), None)
         .expect("exec returns initial running yield");
 
     assert_eq!(output.status, CommandStatus::Running);
@@ -518,7 +518,7 @@ fn exec_command_initial_completed_session_does_not_finalize_workspace() {
 
     let output = env
         .command
-        .exec_command(exec_input(workspace_session_id))
+        .exec_command(exec_input(workspace_session_id), None)
         .expect("session command completes during initial yield");
 
     assert!(output.command_session_id.is_none());
@@ -544,7 +544,7 @@ fn write_command_stdin_waits_for_output_after_write() {
     );
     let command_session_id = env
         .command
-        .exec_command(exec_input(workspace_session_id))
+        .exec_command(exec_input(workspace_session_id), None)
         .expect("session command exec succeeds")
         .command_session_id
         .expect("running command session id is returned");
@@ -578,7 +578,7 @@ fn write_command_stdin_finalizes_when_command_completes_after_write() {
     );
     let command_session_id = env
         .command
-        .exec_command(exec_input(workspace_session_id))
+        .exec_command(exec_input(workspace_session_id), None)
         .expect("session command exec succeeds")
         .command_session_id
         .expect("running command session id is returned");

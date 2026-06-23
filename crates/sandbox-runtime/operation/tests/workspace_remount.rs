@@ -520,7 +520,7 @@ fn workspace_remount_live_command_success_finishes_before_resume() {
         .expect("create workspace session succeeds");
     services
         .command
-        .exec_command(exec_input(handler.workspace_session_id.clone()))
+        .exec_command(exec_input(handler.workspace_session_id.clone()), None)
         .expect("exec command succeeds");
     controller.observe_state_on_resume(
         Arc::clone(&services.workspace),
@@ -565,7 +565,7 @@ fn workspace_remount_cancel_during_critical_switch_still_applies_and_resumes() {
         .expect("create workspace session succeeds");
     let command_session_id = services
         .command
-        .exec_command(exec_input(handler.workspace_session_id.clone()))
+        .exec_command(exec_input(handler.workspace_session_id.clone()), None)
         .expect("exec command succeeds")
         .command_session_id
         .expect("running command has id");
@@ -611,7 +611,7 @@ fn workspace_remount_blocked_inspection_marks_blocked_and_skips_resource_remount
         .expect("create workspace session succeeds");
     services
         .command
-        .exec_command(exec_input(handler.workspace_session_id.clone()))
+        .exec_command(exec_input(handler.workspace_session_id.clone()), None)
         .expect("exec command succeeds");
 
     let outcome = services

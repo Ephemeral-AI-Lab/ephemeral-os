@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use sandbox_protocol::{CliOperationScope, Request};
 use sandbox_runtime::layerstack::LayerStackService;
-use sandbox_runtime::{OperationTrace, SandboxRuntimeOperations, WorkspaceProfile};
+use sandbox_runtime::{span_keys, OperationTrace, SandboxRuntimeOperations, WorkspaceProfile};
 use serde_json::json;
 
 mod support;
@@ -71,6 +71,85 @@ fn operation_trace_marks_span_closed_during_panic_unwind() {
 }
 
 #[test]
+fn operation_trace_disabled_span_key_calls_through_without_recording_child() {
+    let trace = OperationTrace::new();
+    let mut called = false;
+
+    trace.measure("parent", || {
+        trace.measure_if(span_keys::COMMAND_EXEC_WORKSPACE_RESOLVE, || {
+            called = true;
+        });
+    });
+
+    assert!(called);
+    assert_span_sequence(&trace, &[("parent", None)]);
+}
+
+#[test]
+fn operation_trace_enabled_span_key_records_child_under_current_parent() {
+    let trace =
+        OperationTrace::new_with_enabled_span_keys([span_keys::COMMAND_EXEC_WORKSPACE_RESOLVE]);
+
+    trace.measure("parent", || {
+        trace.measure_if(span_keys::COMMAND_EXEC_WORKSPACE_RESOLVE, || {});
+    });
+
+    assert_span_sequence(
+        &trace,
+        &[
+            ("parent", None),
+            ("command.exec.workspace.resolve", Some(0)),
+        ],
+    );
+}
+
+#[test]
+fn operation_trace_disabled_span_key_does_not_consume_call_index() {
+    let trace = OperationTrace::new_with_enabled_span_keys([span_keys::COMMAND_EXEC_PROCESS_START]);
+
+    trace.measure("parent", || {
+        trace.measure_if(span_keys::COMMAND_EXEC_WORKSPACE_RESOLVE, || {});
+        trace.measure("coarse_sibling", || {});
+        trace.measure_if(span_keys::COMMAND_EXEC_PROCESS_START, || {});
+    });
+
+    assert_span_sequence(
+        &trace,
+        &[
+            ("parent", None),
+            ("coarse_sibling", Some(0)),
+            ("command.exec.process.start", Some(0)),
+        ],
+    );
+}
+
+#[test]
+fn operation_trace_mixed_enabled_disabled_keys_keep_stable_ordering() {
+    let trace = OperationTrace::new_with_enabled_span_keys([
+        span_keys::COMMAND_EXEC_WORKSPACE_RESOLVE,
+        span_keys::COMMAND_EXEC_PROCESS_START,
+    ]);
+
+    trace.measure("parent", || {
+        trace.measure_if(span_keys::COMMAND_EXEC_WORKSPACE_RESOLVE, || {});
+        trace.measure_if(
+            span_keys::COMMAND_EXEC_WORKSPACE_CREATE_ONE_SHOT_SESSION,
+            || {},
+        );
+        trace.measure_if(span_keys::COMMAND_EXEC_PROCESS_START, || {});
+    });
+
+    assert_span_sequence(
+        &trace,
+        &[
+            ("parent", None),
+            ("command.exec.workspace.resolve", Some(0)),
+            ("command.exec.process.start", Some(0)),
+        ],
+    );
+}
+
+#[test]
 fn operation_trace_records_selected_exec_command_span_set() -> Result<(), Box<dyn std::error::Error>>
 {
     let launch_driver = Arc::new(FakeLaunchDriver::new());
@@ -101,6 +180,91 @@ fn operation_trace_records_selected_exec_command_span_set() -> Result<(), Box<dy
             "dispatch_operation",
             "exec_command::dispatch",
             "CommandOperationService::exec_command",
+        ],
+    );
+    Ok(())
+}
+
+#[test]
+fn operation_trace_records_enabled_exec_command_child_spans(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver.push_outcome(ScriptedCommandYield::Running(String::new()));
+    let (operations, workspace_session_id) = command_operations(launch_driver)?;
+    let trace = OperationTrace::new_with_enabled_span_keys([
+        span_keys::COMMAND_EXEC_WORKSPACE_RESOLVE,
+        span_keys::COMMAND_EXEC_WORKSPACE_RESOLVE_EXISTING_SESSION,
+        span_keys::COMMAND_EXEC_PROCESS_START,
+    ]);
+
+    let response = sandbox_runtime::dispatch_operation(
+        &operations,
+        &Request::new(
+            "exec_command",
+            "req-exec-deep",
+            CliOperationScope::system(),
+            json!({
+                "workspace_session_id": workspace_session_id,
+                "cmd": "cat",
+                "yield_time_ms": 0,
+            }),
+        ),
+        Some(&trace),
+    )
+    .into_json_value();
+
+    assert!(response["command_session_id"].is_string());
+    assert_span_sequence(
+        &trace,
+        &[
+            ("dispatch_operation", None),
+            ("exec_command::dispatch", Some(0)),
+            ("CommandOperationService::exec_command", Some(1)),
+            ("command.exec.workspace.resolve", Some(2)),
+            ("command.exec.workspace.resolve_existing_session", Some(3)),
+            ("command.exec.process.start", Some(2)),
+        ],
+    );
+    Ok(())
+}
+
+#[test]
+fn operation_trace_records_enabled_exec_command_one_shot_child_span(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver.push_outcome(ScriptedCommandYield::Running(String::new()));
+    let operations = one_shot_command_operations(launch_driver)?;
+    let trace = OperationTrace::new_with_enabled_span_keys([
+        span_keys::COMMAND_EXEC_WORKSPACE_RESOLVE,
+        span_keys::COMMAND_EXEC_WORKSPACE_CREATE_ONE_SHOT_SESSION,
+        span_keys::COMMAND_EXEC_PROCESS_START,
+    ]);
+
+    let response = sandbox_runtime::dispatch_operation(
+        &operations,
+        &Request::new(
+            "exec_command",
+            "req-exec-one-shot-deep",
+            CliOperationScope::system(),
+            json!({
+                "cmd": "cat",
+                "yield_time_ms": 0,
+            }),
+        ),
+        Some(&trace),
+    )
+    .into_json_value();
+
+    assert!(response["command_session_id"].is_string());
+    assert_span_sequence(
+        &trace,
+        &[
+            ("dispatch_operation", None),
+            ("exec_command::dispatch", Some(0)),
+            ("CommandOperationService::exec_command", Some(1)),
+            ("command.exec.workspace.resolve", Some(2)),
+            ("command.exec.workspace.create_one_shot_session", Some(3)),
+            ("command.exec.process.start", Some(2)),
         ],
     );
     Ok(())
@@ -212,6 +376,42 @@ fn operation_trace_records_selected_squash_span_set() -> Result<(), Box<dyn std:
     Ok(())
 }
 
+#[test]
+fn operation_trace_records_enabled_squash_child_spans() -> Result<(), Box<dyn std::error::Error>> {
+    let services = build_services(Arc::new(FakeWorkspaceService::new()));
+    let operations =
+        SandboxRuntimeOperations::new(Arc::clone(&services.command), layerstack_service()?);
+    let trace = OperationTrace::new_with_enabled_span_keys([
+        span_keys::LAYERSTACK_SQUASH_OPEN_STACK,
+        span_keys::LAYERSTACK_SQUASH_COMPACT_STACK,
+    ]);
+
+    let response = sandbox_runtime::dispatch_operation(
+        &operations,
+        &Request::new(
+            "squash",
+            "req-squash-deep",
+            CliOperationScope::system(),
+            json!({}),
+        ),
+        Some(&trace),
+    )
+    .into_json_value();
+
+    assert_eq!(response["squashed"], false);
+    assert_span_sequence(
+        &trace,
+        &[
+            ("dispatch_operation", None),
+            ("squash::dispatch", Some(0)),
+            ("LayerStackService::squash", Some(1)),
+            ("layerstack.squash.open_stack", Some(2)),
+            ("layerstack.squash.compact_stack", Some(2)),
+        ],
+    );
+    Ok(())
+}
+
 fn span<'a>(
     trace: &'a sandbox_runtime::CompletedOperationTrace,
     method_name: &str,
@@ -237,6 +437,19 @@ fn assert_selected_span_set(trace: &OperationTrace, expected: &[&str]) {
     assert_eq!(spans[2].parent_call_index, Some(1));
 }
 
+fn assert_span_sequence(trace: &OperationTrace, expected: &[(&str, Option<i64>)]) {
+    let completed = trace.complete();
+    let spans = completed.spans.iter().collect::<Vec<_>>();
+    let actual = spans
+        .iter()
+        .map(|span| (span.method_name, span.parent_call_index))
+        .collect::<Vec<_>>();
+    assert_eq!(actual, expected);
+    for (index, span) in spans.iter().enumerate() {
+        assert_eq!(span.call_index, index as i64);
+    }
+}
+
 fn command_operations(
     launch_driver: Arc<FakeLaunchDriver>,
 ) -> Result<(SandboxRuntimeOperations, String), Box<dyn std::error::Error>> {
@@ -254,6 +467,23 @@ fn command_operations(
     Ok((
         SandboxRuntimeOperations::new(Arc::clone(&services.command), layerstack_service()?),
         handler.workspace_session_id.0,
+    ))
+}
+
+fn one_shot_command_operations(
+    launch_driver: Arc<FakeLaunchDriver>,
+) -> Result<SandboxRuntimeOperations, Box<dyn std::error::Error>> {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle(
+        "workspace-session",
+        "lease-1",
+        PathBuf::from("/workspace/session"),
+        WorkspaceProfile::HostCompatible,
+    )));
+    let services = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
+    Ok(SandboxRuntimeOperations::new(
+        Arc::clone(&services.command),
+        layerstack_service()?,
     ))
 }
 

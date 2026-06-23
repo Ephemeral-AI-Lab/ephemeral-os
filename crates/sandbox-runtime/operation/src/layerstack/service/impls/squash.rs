@@ -1,5 +1,5 @@
 use crate::layerstack::{LayerStackService, LayerStackServiceError, SquashLayerStackResult};
-use crate::observability::{measure_optional, OperationTrace};
+use crate::observability::{measure_optional, measure_optional_if, span_keys, OperationTrace};
 use crate::operation::{CliOperationSpec, CliSpec};
 use crate::SandboxRuntimeOperations;
 use sandbox_protocol::{Request, Response};
@@ -23,18 +23,25 @@ pub(crate) const SPEC: CliOperationSpec = CliOperationSpec {
 
 #[rustfmt::skip]
 pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, _request: &Request, trace: Option<&OperationTrace>) -> Response {
-    squash_response(measure_optional(trace, "LayerStackService::squash", || operations.layerstack.squash()))
+    squash_response(measure_optional(trace, "LayerStackService::squash", || operations.layerstack.squash(trace)))
 }
 
 impl LayerStackService {
-    pub fn squash(&self) -> Result<SquashLayerStackResult, LayerStackServiceError> {
-        let mut stack = sandbox_runtime_layerstack::LayerStack::open(self.layer_stack_root.clone())
-            .map_err(|error| LayerStackServiceError::LayerStack {
-                operation: "open",
-                error,
-            })?;
-        let outcome = stack
-            .squash()
+    pub fn squash(
+        &self,
+        trace: Option<&OperationTrace>,
+    ) -> Result<SquashLayerStackResult, LayerStackServiceError> {
+        let mut stack = measure_optional_if(trace, span_keys::LAYERSTACK_SQUASH_OPEN_STACK, || {
+            sandbox_runtime_layerstack::LayerStack::open(self.layer_stack_root.clone())
+        })
+        .map_err(|error| LayerStackServiceError::LayerStack {
+            operation: "open",
+            error,
+        })?;
+        let outcome =
+            measure_optional_if(trace, span_keys::LAYERSTACK_SQUASH_COMPACT_STACK, || {
+                stack.squash()
+            })
             .map_err(|error| LayerStackServiceError::LayerStack {
                 operation: "squash",
                 error,

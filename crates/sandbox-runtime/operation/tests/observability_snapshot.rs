@@ -60,12 +60,15 @@ fn observability_snapshot_reports_active_command_execution(
         PathBuf::from("/workspace/session"),
         WorkspaceProfile::HostCompatible,
     );
-    let command_yield = services.command.exec_command(ExecCommandInput {
-        workspace_session_id: Some(workspace_session_id.clone()),
-        cmd: "printf ok".to_owned(),
-        timeout_ms: None,
-        yield_time_ms: Some(0),
-    })?;
+    let command_yield = services.command.exec_command(
+        ExecCommandInput {
+            workspace_session_id: Some(workspace_session_id.clone()),
+            cmd: "printf ok".to_owned(),
+            timeout_ms: None,
+            yield_time_ms: Some(0),
+        },
+        None,
+    )?;
     let command_session_id = command_yield
         .command_session_id
         .expect("running command has a command id");

@@ -7,7 +7,9 @@ use crate::observability::DaemonObservability;
 use crate::server::{SandboxDaemonServer, ServerConfig};
 use sandbox_observability::{ObservabilityPaths, ObservabilityStore, SpanRecord, TraceRecord};
 use sandbox_runtime::command::CommandSessionId;
-use sandbox_runtime::{CompletedOperationSpan, CompletedOperationTrace, WorkspaceSessionId};
+use sandbox_runtime::{
+    span_keys, CompletedOperationSpan, CompletedOperationTrace, WorkspaceSessionId,
+};
 use sandbox_runtime::{
     RuntimeExecutionSnapshot, RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot,
     WorkspaceProfile,
@@ -253,7 +255,7 @@ fn completed_operation_trace_maps_and_persists_success() -> TestResult {
 }
 
 #[test]
-fn completed_operation_trace_marks_deepest_span_on_error() -> TestResult {
+fn completed_operation_trace_marks_phase3_service_span_on_error() -> TestResult {
     let root = test_root("trace-error");
     let config = server_config(&root, Some("sandbox-1"));
     let observability =
@@ -274,6 +276,8 @@ fn completed_operation_trace_marks_deepest_span_on_error() -> TestResult {
             (None, "dispatch_operation", 0),
             (Some(0), "exec_command::dispatch", 1),
             (Some(1), "CommandOperationService::exec_command", 2),
+            (Some(2), "command.exec.workspace.resolve", 3),
+            (Some(2), "command.exec.process.start", 4),
         ]),
     )?;
 
@@ -286,7 +290,72 @@ fn completed_operation_trace_marks_deepest_span_on_error() -> TestResult {
     assert_eq!(spans[2].status, "error");
     assert_eq!(spans[2].error_kind.as_deref(), Some("operation_failed"));
     assert_eq!(spans[2].error_message.as_deref(), Some("command failed"));
+    assert_eq!(spans[3].status, "ok");
+    assert!(spans[3].error_kind.is_none());
+    assert_eq!(spans[4].status, "ok");
+    assert!(spans[4].error_kind.is_none());
     assert_no_trace_text(&trace, &spans, "SECRET_OUTPUT");
+    Ok(())
+}
+
+#[test]
+fn slow_command_parent_enables_command_deep_span_keys() -> TestResult {
+    let root = test_root("trace-enable-command-keys");
+    let config = server_config(&root, Some("sandbox-1"));
+    let observability =
+        DaemonObservability::from_config(&config).expect("sandbox id enables observability");
+
+    assert!(observability.enabled_deep_span_keys().is_empty());
+    observability.insert_completed_operation_trace(
+        "sandbox-1".to_owned(),
+        "req-slow-command".to_owned(),
+        "exec_command".to_owned(),
+        &json!({ "status": "ok" }),
+        completed_trace_with_durations(&[
+            (None, "dispatch_operation", 0, 20.0),
+            (Some(0), "exec_command::dispatch", 1, 20.0),
+            (Some(1), "CommandOperationService::exec_command", 2, 101.0),
+        ]),
+    )?;
+
+    assert_eq!(
+        span_key_names(observability.enabled_deep_span_keys()),
+        vec![
+            span_keys::COMMAND_EXEC_PROCESS_START.as_str(),
+            span_keys::COMMAND_EXEC_WORKSPACE_CREATE_ONE_SHOT_SESSION.as_str(),
+            span_keys::COMMAND_EXEC_WORKSPACE_RESOLVE.as_str(),
+            span_keys::COMMAND_EXEC_WORKSPACE_RESOLVE_EXISTING_SESSION.as_str(),
+        ]
+    );
+    Ok(())
+}
+
+#[test]
+fn slow_layerstack_parent_enables_layerstack_deep_span_keys() -> TestResult {
+    let root = test_root("trace-enable-layerstack-keys");
+    let config = server_config(&root, Some("sandbox-1"));
+    let observability =
+        DaemonObservability::from_config(&config).expect("sandbox id enables observability");
+
+    observability.insert_completed_operation_trace(
+        "sandbox-1".to_owned(),
+        "req-slow-squash".to_owned(),
+        "squash".to_owned(),
+        &json!({ "squashed": false }),
+        completed_trace_with_durations(&[
+            (None, "dispatch_operation", 0, 20.0),
+            (Some(0), "squash::dispatch", 1, 20.0),
+            (Some(1), "LayerStackService::squash", 2, 100.0),
+        ]),
+    )?;
+
+    assert_eq!(
+        span_key_names(observability.enabled_deep_span_keys()),
+        vec![
+            span_keys::LAYERSTACK_SQUASH_COMPACT_STACK.as_str(),
+            span_keys::LAYERSTACK_SQUASH_OPEN_STACK.as_str(),
+        ]
+    );
     Ok(())
 }
 
@@ -384,6 +453,54 @@ async fn operation_service_error_trace_persistence() -> TestResult {
 }
 
 #[tokio::test]
+async fn learned_deep_span_keys_apply_to_next_dispatched_request() -> TestResult {
+    let root = test_root("trace-learned-keys-bridge");
+    let server = daemon_server(&root, Some("sandbox-1"))?;
+    let observability = server
+        .observability
+        .as_ref()
+        .expect("sandbox id enables observability");
+    observability.insert_completed_operation_trace(
+        "sandbox-1".to_owned(),
+        "req-prime-squash".to_owned(),
+        "squash".to_owned(),
+        &json!({ "squashed": false }),
+        completed_trace_with_durations(&[
+            (None, "dispatch_operation", 0, 20.0),
+            (Some(0), "squash::dispatch", 1, 20.0),
+            (Some(1), "LayerStackService::squash", 2, 101.0),
+        ]),
+    )?;
+
+    let response = server
+        .dispatch_bytes(request_bytes("squash", "req-learned-squash", json!({}))?, false)
+        .await;
+
+    assert_eq!(response["squashed"], false);
+    let store = store_for_config(&server.config)?;
+    let spans = store.spans_for_test("request:req-learned-squash")?;
+    assert_eq!(
+        span_names(&spans),
+        vec![
+            "dispatch_operation",
+            "squash::dispatch",
+            "LayerStackService::squash",
+            "layerstack.squash.open_stack",
+            "layerstack.squash.compact_stack",
+        ]
+    );
+    assert_eq!(
+        spans[3].parent_span_id.as_deref(),
+        Some("request:req-learned-squash:span:2")
+    );
+    assert_eq!(
+        spans[4].parent_span_id.as_deref(),
+        Some("request:req-learned-squash:span:2")
+    );
+    Ok(())
+}
+
+#[tokio::test]
 async fn missing_sandbox_id_disables_trace_persistence_without_failing_request() -> TestResult {
     let root = test_root("trace-missing-sandbox-id");
     let server = daemon_server(&root, None)?;
@@ -458,23 +575,46 @@ async fn observability_write_errors_do_not_change_operation_responses() -> TestR
 }
 
 fn completed_trace(spans: &[(Option<i64>, &'static str, i64)]) -> CompletedOperationTrace {
+    completed_trace_with_durations(
+        &spans
+            .iter()
+            .map(|(parent_call_index, method_name, call_index)| {
+                (*parent_call_index, *method_name, *call_index, 10.0)
+            })
+            .collect::<Vec<_>>(),
+    )
+}
+
+fn completed_trace_with_durations(
+    spans: &[(Option<i64>, &'static str, i64, f64)],
+) -> CompletedOperationTrace {
     CompletedOperationTrace {
         started_at_unix_ms: 1_000,
         finished_at_unix_ms: 1_050,
         duration_ms: 50.0,
         spans: spans
             .iter()
-            .map(|(parent_call_index, method_name, call_index)| CompletedOperationSpan {
+            .map(
+                |(parent_call_index, method_name, call_index, duration_ms)| {
+                    CompletedOperationSpan {
                 parent_call_index: *parent_call_index,
                 method_name,
                 call_index: *call_index,
                 status: "ok",
                 started_at_unix_ms: 1_000 + *call_index,
                 finished_at_unix_ms: 1_010 + *call_index,
-                duration_ms: 10.0,
-            })
+                        duration_ms: *duration_ms,
+                    }
+                },
+            )
             .collect(),
     }
+}
+
+fn span_key_names(keys: Vec<sandbox_runtime::SpanKey>) -> Vec<&'static str> {
+    let mut names = keys.into_iter().map(|key| key.as_str()).collect::<Vec<_>>();
+    names.sort_unstable();
+    names
 }
 
 fn daemon_server(root: &Path, sandbox_id: Option<&str>) -> TestResult<SandboxDaemonServer> {

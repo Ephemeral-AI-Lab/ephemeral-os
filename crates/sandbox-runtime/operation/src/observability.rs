@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::thread;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
@@ -44,8 +45,31 @@ pub struct RuntimeExecutionSnapshot {
     pub process_group_id: Option<i32>,
 }
 
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct SpanKey(&'static str);
+
+impl SpanKey {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        self.0
+    }
+}
+
+pub mod span_keys {
+    use super::SpanKey;
+
+    pub const COMMAND_EXEC_WORKSPACE_RESOLVE: SpanKey = SpanKey("command.exec.workspace.resolve");
+    pub const COMMAND_EXEC_WORKSPACE_RESOLVE_EXISTING_SESSION: SpanKey =
+        SpanKey("command.exec.workspace.resolve_existing_session");
+    pub const COMMAND_EXEC_WORKSPACE_CREATE_ONE_SHOT_SESSION: SpanKey =
+        SpanKey("command.exec.workspace.create_one_shot_session");
+    pub const COMMAND_EXEC_PROCESS_START: SpanKey = SpanKey("command.exec.process.start");
+    pub const LAYERSTACK_SQUASH_OPEN_STACK: SpanKey = SpanKey("layerstack.squash.open_stack");
+    pub const LAYERSTACK_SQUASH_COMPACT_STACK: SpanKey = SpanKey("layerstack.squash.compact_stack");
+}
+
 #[rustfmt::skip]
-pub struct OperationTrace { state: RefCell<TraceState> }
+pub struct OperationTrace { state: RefCell<TraceState>, enabled_span_keys: HashSet<SpanKey> }
 #[rustfmt::skip]
 struct TraceState { started_at: Instant, started_at_unix_ms: i64, active_stack: Vec<i64>, completed: Vec<CompletedOperationSpan>, next_call_index: i64 }
 #[rustfmt::skip]
@@ -60,7 +84,10 @@ pub struct CompletedOperationSpan { pub parent_call_index: Option<i64>, pub meth
 #[rustfmt::skip]
 impl OperationTrace {
     #[must_use] pub fn new() -> Self {
-        Self { state: RefCell::new(TraceState { started_at: Instant::now(), started_at_unix_ms: unix_ms(), active_stack: Vec::new(), completed: Vec::new(), next_call_index: 0 }) }
+        Self::new_with_enabled_span_keys([])
+    }
+    #[must_use] pub fn new_with_enabled_span_keys(keys: impl IntoIterator<Item = SpanKey>) -> Self {
+        Self { state: RefCell::new(TraceState { started_at: Instant::now(), started_at_unix_ms: unix_ms(), active_stack: Vec::new(), completed: Vec::new(), next_call_index: 0 }), enabled_span_keys: keys.into_iter().collect() }
     }
     #[must_use] pub fn enter(&self, method_name: &'static str) -> SpanGuard<'_> {
         let started_at = Instant::now(); let started_at_unix_ms = unix_ms();
@@ -73,11 +100,20 @@ impl OperationTrace {
     pub fn measure<T>(&self, method_name: &'static str, call: impl FnOnce() -> T) -> T {
         let _span = self.enter(method_name); call()
     }
+    pub fn measure_if<T>(&self, span_key: SpanKey, call: impl FnOnce() -> T) -> T {
+        if self.enabled_span_keys.contains(&span_key) { self.measure(span_key.as_str(), call) } else { call() }
+    }
     #[must_use] pub fn complete(&self) -> CompletedOperationTrace {
         let state = self.state.borrow();
         let duration_ms = elapsed_ms(state.started_at);
         let mut spans = state.completed.clone(); spans.sort_by_key(|span| span.call_index);
         CompletedOperationTrace { started_at_unix_ms: state.started_at_unix_ms, finished_at_unix_ms: finish_unix_ms(state.started_at_unix_ms, duration_ms), duration_ms, spans }
+    }
+}
+
+impl Default for OperationTrace {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -98,6 +134,14 @@ pub(crate) fn measure_optional<T>(
     call: impl FnOnce() -> T,
 ) -> T {
     match trace { Some(trace) => trace.measure(method_name, call), None => call() }
+}
+#[rustfmt::skip]
+pub(crate) fn measure_optional_if<T>(
+    trace: Option<&OperationTrace>,
+    span_key: SpanKey,
+    call: impl FnOnce() -> T,
+) -> T {
+    match trace { Some(trace) => trace.measure_if(span_key, call), None => call() }
 }
 #[rustfmt::skip] fn elapsed_ms(started_at: Instant) -> f64 { started_at.elapsed().as_secs_f64() * 1000.0 }
 #[rustfmt::skip] fn finish_unix_ms(started_at_unix_ms: i64, duration_ms: f64) -> i64 { started_at_unix_ms.saturating_add(duration_ms.round() as i64) }
