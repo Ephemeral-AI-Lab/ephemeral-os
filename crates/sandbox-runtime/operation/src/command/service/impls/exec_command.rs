@@ -12,6 +12,7 @@ use crate::command::{
     CommandSessionId, CommandTranscriptStore, CommandWorkspaceOwnership, CommandYield,
     ExecCommandInput, FinalizationState,
 };
+use crate::observability::{measure_optional, OperationTrace};
 use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliOperationSpec, CliSpec};
 use crate::workspace_crate::{
     CreateWorkspaceRequest, DestroyWorkspaceRequest, WorkspaceEntry, WorkspaceProfile,
@@ -86,12 +87,10 @@ const EXEC_COMMAND_CLI: CliSpec = CliSpec {
     ],
 };
 
-pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: &Request) -> Response {
-    let input = match parse_input(request) {
-        Ok(input) => input,
-        Err(response) => return response,
-    };
-    command_yield_response(operations.command.exec_command(input))
+#[rustfmt::skip]
+pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: &Request, trace: Option<&OperationTrace>) -> Response {
+    let input = match parse_input(request) { Ok(input) => input, Err(response) => return response };
+    command_yield_response(measure_optional(trace, "CommandOperationService::exec_command", || operations.command.exec_command(input)))
 }
 
 fn parse_input(request: &Request) -> Result<ExecCommandInput, Response> {

@@ -4,6 +4,7 @@ use crate::command::service::CommandOperationService;
 use crate::command::{
     CommandLinesOutput, CommandServiceError, CommandSessionId, CommandStatus, ReadCommandLinesInput,
 };
+use crate::observability::{measure_optional, OperationTrace};
 use crate::operation::{ArgCliSpec, ArgKind, ArgSpec, CliOperationSpec, CliSpec};
 use crate::SandboxRuntimeOperations;
 use sandbox_protocol::{Request, Response};
@@ -58,12 +59,10 @@ const READ_LINES_CLI: CliSpec = CliSpec {
     ],
 };
 
-pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: &Request) -> Response {
-    let input = match parse_input(request) {
-        Ok(input) => input,
-        Err(response) => return response,
-    };
-    command_lines_response(operations.command.read_command_lines(input))
+#[rustfmt::skip]
+pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, request: &Request, trace: Option<&OperationTrace>) -> Response {
+    let input = match parse_input(request) { Ok(input) => input, Err(response) => return response };
+    command_lines_response(measure_optional(trace, "CommandOperationService::read_command_lines", || operations.command.read_command_lines(input)))
 }
 
 fn parse_input(request: &Request) -> Result<ReadCommandLinesInput, Response> {

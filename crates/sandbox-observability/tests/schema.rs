@@ -50,6 +50,9 @@ fn schema_initialization_is_idempotent() -> TestResult {
     let connection = Connection::open(paths.database_path())?;
     assert_eq!(table_names(&connection)?, allowed_tables());
     assert_eq!(index_names(&connection)?, allowed_indexes());
+    let trace_columns = column_names(&connection, "traces")?;
+    assert!(!trace_columns.contains("workspace_id"));
+    assert!(!trace_columns.contains("command_session_id"));
     assert_eq!(migration_count(&connection)?, 2);
     assert!(paths.database_path().exists());
     assert!(dir
@@ -356,6 +359,12 @@ fn index_names(connection: &Connection) -> rusqlite::Result<BTreeSet<String>> {
     )?;
 
     let rows = statement.query_map([], |row| row.get::<_, String>(0))?;
+    rows.collect::<Result<_, _>>()
+}
+
+fn column_names(connection: &Connection, table: &str) -> rusqlite::Result<BTreeSet<String>> {
+    let mut statement = connection.prepare(&format!("PRAGMA table_info({table})"))?;
+    let rows = statement.query_map([], |row| row.get::<_, String>(1))?;
     rows.collect::<Result<_, _>>()
 }
 

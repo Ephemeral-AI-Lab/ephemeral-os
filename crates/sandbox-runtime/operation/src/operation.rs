@@ -1,5 +1,6 @@
 use std::sync::OnceLock;
 
+use crate::observability::{measure_optional, OperationTrace};
 use crate::services::SandboxRuntimeOperations;
 use crate::{command, layerstack};
 
@@ -9,22 +10,15 @@ pub use sandbox_protocol::{
 };
 
 #[derive(Clone, Copy)]
-pub(crate) struct OperationEntry {
-    pub(crate) name: &'static str,
-    pub(crate) cli: Option<&'static CliOperationSpec>,
-    pub(crate) dispatch:
-        fn(&SandboxRuntimeOperations, &sandbox_protocol::Request) -> sandbox_protocol::Response,
-}
+#[rustfmt::skip]
+pub(crate) struct OperationEntry { pub(crate) name: &'static str, pub(crate) cli: Option<&'static CliOperationSpec>, pub(crate) dispatch: OperationDispatch }
+
+#[rustfmt::skip]
+type OperationDispatch = fn(&SandboxRuntimeOperations, &sandbox_protocol::Request, Option<&OperationTrace>) -> sandbox_protocol::Response;
 
 impl OperationEntry {
     #[must_use]
-    pub(crate) const fn cli(
-        spec: &'static CliOperationSpec,
-        dispatch: fn(
-            &SandboxRuntimeOperations,
-            &sandbox_protocol::Request,
-        ) -> sandbox_protocol::Response,
-    ) -> Self {
+    pub(crate) const fn cli(spec: &'static CliOperationSpec, dispatch: OperationDispatch) -> Self {
         Self {
             name: spec.name,
             cli: Some(spec),
@@ -59,17 +53,19 @@ pub(crate) fn cli_operation_specs() -> &'static [&'static CliOperationSpec] {
     })
 }
 
-pub(crate) fn dispatch_operation(
-    operations: &SandboxRuntimeOperations,
-    request: &sandbox_protocol::Request,
-) -> sandbox_protocol::Response {
-    operation_entry_groups()
-        .into_iter()
-        .flat_map(|entries| entries.iter())
-        .find(|entry| entry.name == request.op)
-        .map_or_else(sandbox_protocol::Response::unknown_op, |entry| {
-            (entry.dispatch)(operations, request)
-        })
+#[rustfmt::skip]
+pub(crate) fn dispatch_operation(operations: &SandboxRuntimeOperations, request: &sandbox_protocol::Request, trace: Option<&OperationTrace>) -> sandbox_protocol::Response {
+    measure_optional(trace, "dispatch_operation", || {
+        operation_entry_groups()
+            .into_iter()
+            .flat_map(|entries| entries.iter())
+            .find(|entry| entry.name == request.op)
+            .map_or_else(sandbox_protocol::Response::unknown_op, |entry| {
+                measure_optional(trace, operation_dispatch_span(entry.name), || {
+                    (entry.dispatch)(operations, request, trace)
+                })
+            })
+    })
 }
 
 pub(crate) fn known_operation_name(operation: &str) -> Option<&'static str> {
@@ -84,4 +80,14 @@ fn operation_entry_groups() -> [&'static [OperationEntry]; 2] {
         command::operation_entries(),
         layerstack::operation_entries(),
     ]
+}
+
+fn operation_dispatch_span(operation: &str) -> &'static str {
+    match operation {
+        "exec_command" => "exec_command::dispatch",
+        "write_command_stdin" => "write_command_stdin::dispatch",
+        "read_command_lines" => "read_command_lines::dispatch",
+        "squash" => "squash::dispatch",
+        _ => "operation::dispatch",
+    }
 }

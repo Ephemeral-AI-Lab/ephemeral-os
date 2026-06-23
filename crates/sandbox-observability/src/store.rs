@@ -612,6 +612,92 @@ impl ObservabilityStore {
     }
 
     #[doc(hidden)]
+    pub fn force_sqlite_write_errors_for_test(&self) -> Result<(), StoreError> {
+        let connection = self.connection()?;
+        connection.pragma_update(None, "query_only", "ON")?;
+        Ok(())
+    }
+
+    #[doc(hidden)]
+    pub fn trace_for_test(&self, trace_id: &str) -> Result<Option<TraceRecord>, StoreError> {
+        let connection = self.connection()?;
+        connection
+            .query_row(
+                "SELECT
+                    trace_id,
+                    kind,
+                    status,
+                    sandbox_id,
+                    operation,
+                    request_id,
+                    started_at_unix_ms,
+                    finished_at_unix_ms,
+                    duration_ms,
+                    error_kind,
+                    error_message
+                 FROM traces
+                 WHERE trace_id = ?1",
+                [trace_id],
+                |row| {
+                    Ok(TraceRecord {
+                        trace_id: row.get(0)?,
+                        kind: row.get(1)?,
+                        status: row.get(2)?,
+                        sandbox_id: row.get(3)?,
+                        operation: row.get(4)?,
+                        request_id: row.get(5)?,
+                        started_at_unix_ms: row.get(6)?,
+                        finished_at_unix_ms: row.get(7)?,
+                        duration_ms: row.get(8)?,
+                        error_kind: row.get(9)?,
+                        error_message: row.get(10)?,
+                    })
+                },
+            )
+            .optional()
+            .map_err(StoreError::from)
+    }
+
+    #[doc(hidden)]
+    pub fn spans_for_test(&self, trace_id: &str) -> Result<Vec<SpanRecord>, StoreError> {
+        let connection = self.connection()?;
+        let mut statement = connection.prepare(
+            "SELECT
+                span_id,
+                trace_id,
+                parent_span_id,
+                method_name,
+                call_index,
+                status,
+                started_at_unix_ms,
+                finished_at_unix_ms,
+                duration_ms,
+                error_kind,
+                error_message
+             FROM spans
+             WHERE trace_id = ?1
+             ORDER BY call_index",
+        )?;
+        let rows = statement.query_map([trace_id], |row| {
+            Ok(SpanRecord {
+                span_id: row.get(0)?,
+                trace_id: row.get(1)?,
+                parent_span_id: row.get(2)?,
+                method_name: row.get(3)?,
+                call_index: row.get(4)?,
+                status: row.get(5)?,
+                started_at_unix_ms: row.get(6)?,
+                finished_at_unix_ms: row.get(7)?,
+                duration_ms: row.get(8)?,
+                error_kind: row.get(9)?,
+                error_message: row.get(10)?,
+            })
+        })?;
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(StoreError::from)
+    }
+
+    #[doc(hidden)]
     pub fn sandbox_snapshot_for_test(
         &self,
         sandbox_id: &str,

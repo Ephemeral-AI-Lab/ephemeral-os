@@ -953,63 +953,63 @@ Suggested focused test placement:
 
 Storage:
 
-- [ ] `observability.sqlite` remains the only observability database.
-- [ ] No Phase 3 schema migration is added.
-- [ ] `traces.workspace_id` is not added in Phase 3.
-- [ ] `traces.command_session_id` is not added in Phase 3.
-- [ ] `idx_traces_workspace_time` is not added in Phase 3.
-- [ ] `idx_traces_command_time` is not added in Phase 3.
-- [ ] No `trace_links` table is created.
-- [ ] No async trace columns are added in Phase 3.
+- [x] `observability.sqlite` remains the only observability database.
+- [x] No Phase 3 schema migration is added.
+- [x] `traces.workspace_id` is not added in Phase 3.
+- [x] `traces.command_session_id` is not added in Phase 3.
+- [x] `idx_traces_workspace_time` is not added in Phase 3.
+- [x] `idx_traces_command_time` is not added in Phase 3.
+- [x] No `trace_links` table is created.
+- [x] No async trace columns are added in Phase 3.
 
 Runtime boundary:
 
-- [ ] `OperationTrace` lives under `crates/sandbox-runtime/operation`.
-- [ ] Runtime does not depend on `sandbox-observability`.
-- [ ] Runtime does not import `rusqlite`.
-- [ ] Runtime does not know daemon paths or `ObservabilityStore`.
-- [ ] Runtime DTOs do not store `trace_id`, `sandbox_id`, `request_id`,
+- [x] `OperationTrace` lives under `crates/sandbox-runtime/operation`.
+- [x] Runtime does not depend on `sandbox-observability`.
+- [x] Runtime does not import `rusqlite`.
+- [x] Runtime does not know daemon paths or `ObservabilityStore`.
+- [x] Runtime DTOs do not store `trace_id`, `sandbox_id`, `request_id`,
   operation, workspace hierarchy, command hierarchy, or response error metadata.
-- [ ] Runtime public dispatch accepts `Option<&OperationTrace>`.
-- [ ] Operation entries and selected dispatch functions accept
+- [x] Runtime public dispatch accepts `Option<&OperationTrace>`.
+- [x] Operation entries and selected dispatch functions accept
   `Option<&OperationTrace>`.
-- [ ] Public service method signatures are unchanged.
-- [ ] The root `dispatch_operation` span is automatic.
-- [ ] The selected operations contain only root, operation dispatch, and one
+- [x] Public service method signatures are unchanged.
+- [x] The root `dispatch_operation` span is automatic.
+- [x] The selected operations contain only root, operation dispatch, and one
   public service-method span.
-- [ ] Runtime non-test LOC stays within `70-120`, with `75-95` preferred.
+- [x] Runtime non-test LOC stays within `70-120`, with `75-95` preferred.
 
 Daemon boundary:
 
-- [ ] Daemon creates enabled traces only when observability is enabled and
+- [x] Daemon creates enabled traces only when observability is enabled and
   `sandbox_id` is available.
-- [ ] Daemon passes `None` when persistence is disabled.
-- [ ] Daemon persists completed traces after response projection.
-- [ ] Daemon derives trace status and bounded error metadata from projected
+- [x] Daemon passes `None` when persistence is disabled.
+- [x] Daemon persists completed traces after response projection.
+- [x] Daemon derives trace status and bounded error metadata from projected
   response JSON exactly once.
-- [ ] Daemon does not change operation response payloads.
-- [ ] Daemon-owned code maps runtime trace DTOs into `TraceRecord` and
+- [x] Daemon does not change operation response payloads.
+- [x] Daemon-owned code maps runtime trace DTOs into `TraceRecord` and
   `SpanRecord`.
-- [ ] Trace persistence failures do not change user operation responses.
-- [ ] Phase 2 snapshot collection still runs after request handling.
+- [x] Trace persistence failures do not change user operation responses.
+- [x] Phase 2 snapshot collection still runs after request handling.
 
 Data boundary:
 
-- [ ] `sandbox_protocol::Response` remains a raw payload wrapper.
-- [ ] No `{ "result": ..., "meta": ... }` response envelope is introduced.
-- [ ] Command output is not written to trace or span storage.
-- [ ] Transcript content is not written to trace or span storage.
-- [ ] External observability services are not required.
+- [x] `sandbox_protocol::Response` remains a raw payload wrapper.
+- [x] No `{ "result": ..., "meta": ... }` response envelope is introduced.
+- [x] Command output is not written to trace or span storage.
+- [x] Transcript content is not written to trace or span storage.
+- [x] External observability services are not required.
 
 Verification:
 
-- [ ] `cargo fmt --check` passes.
-- [ ] `cargo check -p sandbox-observability --tests` passes.
-- [ ] `cargo test -p sandbox-observability` passes.
-- [ ] `cargo check -p sandbox-runtime --tests` passes.
-- [ ] `cargo test -p sandbox-runtime operation_trace` passes.
-- [ ] `cargo check -p sandbox-daemon --tests` passes.
-- [ ] `cargo test -p sandbox-daemon observability` passes.
+- [x] `cargo fmt --check` passes.
+- [x] `cargo check -p sandbox-observability --tests` passes.
+- [x] `cargo test -p sandbox-observability` passes.
+- [x] `cargo check -p sandbox-runtime --tests` passes.
+- [x] `cargo test -p sandbox-runtime operation_trace` passes.
+- [x] `cargo check -p sandbox-daemon --tests` passes.
+- [x] `cargo test -p sandbox-daemon observability` passes.
 
 ## Open Questions
 

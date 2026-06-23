@@ -6,13 +6,13 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use sandbox_observability::{
     ExecutionSnapshotRecord, ObservabilityPaths, ObservabilityStore, ResourceSampleRecord,
-    SandboxSnapshotRecord, StoreError, WorkspaceSnapshotRecord, MAX_COMMAND_LENGTH,
-    MAX_ERROR_MESSAGE_LENGTH, MAX_ID_LENGTH, MAX_KIND_LENGTH, MAX_OPERATION_LENGTH,
-    MAX_PATH_LENGTH, MAX_SNAPSHOT_STATE_LENGTH,
+    SandboxSnapshotRecord, SpanRecord, StoreError, TraceRecord, WorkspaceSnapshotRecord,
+    MAX_COMMAND_LENGTH, MAX_ERROR_MESSAGE_LENGTH, MAX_ID_LENGTH, MAX_KIND_LENGTH,
+    MAX_OPERATION_LENGTH, MAX_PATH_LENGTH, MAX_SNAPSHOT_STATE_LENGTH,
 };
 use sandbox_runtime::{
-    RuntimeExecutionSnapshot, RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot,
-    SandboxRuntimeOperations,
+    CompletedOperationTrace, RuntimeExecutionSnapshot, RuntimeObservabilitySnapshot,
+    RuntimeWorkspaceSnapshot, SandboxRuntimeOperations,
 };
 
 use crate::server::ServerConfig;
@@ -21,6 +21,7 @@ use super::cgroup::CgroupSample;
 use super::disk::{self, DiskSample};
 
 const DISK_SAMPLE_MIN_INTERVAL: Duration = Duration::from_secs(10);
+const MAX_METHOD_LENGTH: usize = 256;
 
 pub(crate) struct DaemonObservability {
     sandbox_id: String,
@@ -73,6 +74,68 @@ impl DaemonObservability {
         )
     }
 
+    pub(crate) fn insert_completed_operation_trace(
+        &self,
+        sandbox_id: String,
+        request_id: String,
+        operation: String,
+        response: &serde_json::Value,
+        trace: CompletedOperationTrace,
+    ) -> Result<(), StoreError> {
+        let trace_id = format!("request:{request_id}");
+        let (status, error_kind, error_message) = trace_response_status(response);
+        let is_error = status == "error";
+        let error_call_index = is_error.then(|| {
+            trace
+                .spans
+                .iter()
+                .map(|span| span.call_index)
+                .max()
+                .unwrap_or_default()
+        });
+        let trace_record = TraceRecord {
+            trace_id: trace_id.clone(),
+            kind: "request".to_owned(),
+            status,
+            sandbox_id: bound_id(sandbox_id),
+            operation: bound_operation(operation),
+            request_id: Some(bound_id(request_id)),
+            started_at_unix_ms: trace.started_at_unix_ms,
+            finished_at_unix_ms: Some(trace.finished_at_unix_ms),
+            duration_ms: Some(trace.duration_ms),
+            error_kind: error_kind.clone(),
+            error_message: error_message.clone(),
+        };
+        let spans = trace
+            .spans
+            .into_iter()
+            .map(|span| {
+                let is_error_span = error_call_index == Some(span.call_index);
+                SpanRecord {
+                    span_id: trace_span_id(&trace_id, span.call_index),
+                    trace_id: trace_id.clone(),
+                    parent_span_id: span
+                        .parent_call_index
+                        .map(|call_index| trace_span_id(&trace_id, call_index)),
+                    method_name: bound_method(span.method_name.to_owned()),
+                    call_index: span.call_index,
+                    status: if is_error_span {
+                        "error".to_owned()
+                    } else {
+                        bound_state(span.status.to_owned())
+                    },
+                    started_at_unix_ms: span.started_at_unix_ms,
+                    finished_at_unix_ms: Some(span.finished_at_unix_ms),
+                    duration_ms: Some(span.duration_ms),
+                    error_kind: is_error_span.then(|| error_kind.clone()).flatten(),
+                    error_message: is_error_span.then(|| error_message.clone()).flatten(),
+                }
+            })
+            .collect::<Vec<_>>();
+
+        self.store.insert_trace(&trace_record, &spans)
+    }
+
     #[cfg(test)]
     #[allow(dead_code, reason = "used by path-included daemon integration tests")]
     pub(crate) fn collect_runtime_snapshot_for_test(
@@ -81,6 +144,15 @@ impl DaemonObservability {
         snapshot: RuntimeObservabilitySnapshot,
     ) -> Result<(), StoreError> {
         self.write_snapshot(config, snapshot, unix_ms(), false)
+    }
+
+    #[cfg(test)]
+    #[allow(
+        dead_code,
+        reason = "used by path-included daemon integration tests, not crate-local unit tests"
+    )]
+    pub(crate) fn force_sqlite_write_errors_for_test(&self) -> Result<(), StoreError> {
+        self.store.force_sqlite_write_errors_for_test()
     }
 
     fn write_snapshot(
@@ -426,6 +498,10 @@ fn bound_command(value: String) -> String {
     bound_string(value, MAX_COMMAND_LENGTH)
 }
 
+fn bound_method(value: String) -> String {
+    bound_string(value, MAX_METHOD_LENGTH)
+}
+
 fn bound_error(value: String) -> String {
     bound_string(value, MAX_ERROR_MESSAGE_LENGTH)
 }
@@ -444,6 +520,27 @@ fn bound_string(value: String, max_bytes: usize) -> String {
         }
         value[..end].to_owned()
     }
+}
+
+fn trace_span_id(trace_id: &str, call_index: i64) -> String {
+    format!("{trace_id}:span:{call_index}")
+}
+
+fn trace_response_status(response: &serde_json::Value) -> (String, Option<String>, Option<String>) {
+    let Some(error) = response.get("error") else {
+        return ("ok".to_owned(), None, None);
+    };
+    let error_kind = error
+        .get("kind")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_owned)
+        .map(bound_operation);
+    let error_message = error
+        .get("message")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_owned)
+        .map(bound_error);
+    ("error".to_owned(), error_kind, error_message)
 }
 
 fn lock_disk_samples(

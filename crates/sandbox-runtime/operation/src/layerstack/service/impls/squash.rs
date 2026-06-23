@@ -1,4 +1,5 @@
 use crate::layerstack::{LayerStackService, LayerStackServiceError, SquashLayerStackResult};
+use crate::observability::{measure_optional, OperationTrace};
 use crate::operation::{CliOperationSpec, CliSpec};
 use crate::SandboxRuntimeOperations;
 use sandbox_protocol::{Request, Response};
@@ -20,8 +21,9 @@ pub(crate) const SPEC: CliOperationSpec = CliOperationSpec {
     related: &[],
 };
 
-pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, _request: &Request) -> Response {
-    squash_response(operations.layerstack.squash())
+#[rustfmt::skip]
+pub(crate) fn dispatch(operations: &SandboxRuntimeOperations, _request: &Request, trace: Option<&OperationTrace>) -> Response {
+    squash_response(measure_optional(trace, "LayerStackService::squash", || operations.layerstack.squash()))
 }
 
 impl LayerStackService {

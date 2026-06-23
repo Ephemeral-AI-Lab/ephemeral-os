@@ -13,7 +13,8 @@ pub mod workspace_session;
 pub use command::CommandOperationService;
 pub use layerstack::LayerStackService;
 pub use observability::{
-    RuntimeExecutionSnapshot, RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot,
+    CompletedOperationSpan, CompletedOperationTrace, OperationTrace, RuntimeExecutionSnapshot,
+    RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot,
 };
 pub use operation::{
     ArgCliSpec, ArgKind, ArgSpec, CliOperationCatalog, CliOperationExecutionSpace,
@@ -52,9 +53,7 @@ pub fn known_operation_name(operation: &str) -> Option<&'static str> {
 }
 
 #[must_use]
-pub fn dispatch_operation(
-    operations: &SandboxRuntimeOperations,
-    request: &sandbox_protocol::Request,
-) -> sandbox_protocol::Response {
-    operation::dispatch_operation(operations, request)
+#[rustfmt::skip]
+pub fn dispatch_operation(operations: &SandboxRuntimeOperations, request: &sandbox_protocol::Request, trace: Option<&OperationTrace>) -> sandbox_protocol::Response {
+    operation::dispatch_operation(operations, request, trace)
 }

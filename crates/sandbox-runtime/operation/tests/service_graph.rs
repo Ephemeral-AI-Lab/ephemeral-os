@@ -251,6 +251,7 @@ fn squash_dispatch_projects_stable_no_op_json(
             CliOperationScope::system(),
             json!({}),
         ),
+        None,
     )
     .into_json_value();
 

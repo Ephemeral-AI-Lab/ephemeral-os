@@ -3,6 +3,7 @@ use std::sync::Arc;
 use super::SandboxDaemonServer;
 use crate::server::error::SandboxDaemonError;
 use sandbox_protocol::{decode_request_value, error_kind, Request, DAEMON_AUTH_FIELD};
+use sandbox_runtime::OperationTrace;
 use serde_json::{Map, Value};
 
 impl SandboxDaemonServer {
@@ -41,9 +42,39 @@ impl SandboxDaemonServer {
         if let Err(response) = validate_daemon_scope(&request) {
             return response;
         }
+        let trace_sandbox_id = self
+            .config
+            .sandbox_id
+            .as_ref()
+            .filter(|sandbox_id| !sandbox_id.is_empty())
+            .cloned();
+        let observability = self.observability.clone();
+        let trace = if observability.is_some() && trace_sandbox_id.is_some() {
+            Some(OperationTrace::new())
+        } else {
+            None
+        };
+        let trace_request_id = request.request_id.clone();
+        let trace_operation = request.op.clone();
         let operations = Arc::clone(&self.operations);
         let task = tokio::task::spawn_blocking(move || {
-            sandbox_runtime::dispatch_operation(&operations, &request).into_json_value()
+            let response =
+                sandbox_runtime::dispatch_operation(&operations, &request, trace.as_ref());
+            let value = response.into_json_value();
+            if let (Some(observability), Some(sandbox_id), Some(completed_trace)) = (
+                observability,
+                trace_sandbox_id,
+                trace.as_ref().map(OperationTrace::complete),
+            ) {
+                let _ = observability.insert_completed_operation_trace(
+                    sandbox_id,
+                    trace_request_id,
+                    trace_operation,
+                    &value,
+                    completed_trace,
+                );
+            }
+            value
         });
         match task.await {
             Ok(response) => {
