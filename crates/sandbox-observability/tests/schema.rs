@@ -52,7 +52,11 @@ fn schema_initialization_is_idempotent() -> TestResult {
     assert_eq!(index_names(&connection)?, allowed_indexes());
     assert_eq!(migration_count(&connection)?, 1);
     assert!(paths.database_path().exists());
-    assert!(dir.path().join("sandbox-1").join("observability").exists());
+    assert!(dir
+        .path()
+        .join("daemon-runtime")
+        .join("observability")
+        .exists());
 
     Ok(())
 }
@@ -196,7 +200,7 @@ fn upserts_synthetic_sandbox_snapshot() -> TestResult {
 
 fn test_paths(name: &str) -> TestResult<(TestDir, ObservabilityPaths)> {
     let dir = TestDir::new(name)?;
-    let socket_path = dir.path().join("sandbox-1").join("runtime.sock");
+    let socket_path = dir.path().join("daemon-runtime").join("runtime.sock");
     let paths = ObservabilityPaths::from_socket_path(socket_path)?;
     Ok((dir, paths))
 }

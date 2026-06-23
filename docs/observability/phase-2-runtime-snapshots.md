@@ -13,14 +13,14 @@ population. The deliverable is current-state observability for one sandbox
 daemon, written into the existing local database:
 
 ```text
-<runtime_root>/<sandbox_id>/observability/observability.sqlite
+<daemon_runtime_dir>/observability/observability.sqlite
 ```
 
 Phase 2 populates live state for:
 
 - sandbox root state;
 - active workspace state;
-- active and recently retained command state;
+- active command execution state;
 - sandbox-global resource samples;
 - per-workspace resource samples.
 
@@ -97,20 +97,22 @@ runtime dispatch signature changes.
 ### Manager Runtime Directory
 
 `crates/sandbox-manager/src/daemon_install.rs` is the current source of the
-per-sandbox daemon runtime directory:
+manager-launched daemon runtime directory:
 
 ```text
-<runtime_root>/<sandbox_id>/
+<manager_runtime_root>/<sandbox_id>/
   runtime.sock
   runtime.pid
 ```
 
 `LocalSandboxDaemonInstaller::launch_spec` passes `--sandbox-id record.id` to
-the daemon and derives the socket and pid paths inside that directory. Phase 2
-should keep the Phase 1 path rule:
+the daemon and derives the socket and pid paths inside that directory. That
+path shape avoids collisions across many local daemon processes; it is not an
+observability storage convention. Phase 2 should keep the Phase 1 path rule:
 
 ```text
-observability_dir = socket_path.parent().join("observability")
+daemon_runtime_dir = socket_path.parent()
+observability_dir = daemon_runtime_dir.join("observability")
 database_path = observability_dir.join("observability.sqlite")
 ```
 
@@ -175,8 +177,8 @@ The runtime workspace crate exposes the stable workspace facts through
 
 `WorkspaceModeHandle` also has `holder_pid`, `created_at`, and
 `last_activity`, but those are not currently present on `WorkspaceHandle`.
-Phase 2 should expose them only if a narrow runtime adapter can read the
-concrete runtime state without broadening the public workspace model.
+Phase 2 should defer those fields rather than broadening the public workspace
+model for observability.
 
 ### Current Execution State Owner
 
@@ -220,6 +222,10 @@ Completed command records already retain:
 - `result.command_total_time_seconds`;
 - retained transcript path;
 - finalization state.
+
+The completed map supports lookup by command id, not active enumeration,
+ordering, or retention-window queries. Phase 2 should not add completed-command
+snapshot enumeration just for observability.
 
 Phase 2 should copy these facts out through snapshot DTOs. It must not make the
 daemon reach into private command maps directly.
@@ -320,7 +326,6 @@ Recommended DTOs:
 pub struct RuntimeObservabilitySnapshot {
     pub workspaces: Vec<RuntimeWorkspaceSnapshot>,
     pub active_executions: Vec<RuntimeExecutionSnapshot>,
-    pub recent_completed_executions: Vec<RuntimeExecutionSnapshot>,
     pub partial_errors: Vec<RuntimeSnapshotError>,
 }
 
@@ -332,13 +337,10 @@ pub struct RuntimeWorkspaceSnapshot {
     pub workspace_root: PathBuf,
     pub upperdir: Option<PathBuf>,
     pub workdir: Option<PathBuf>,
-    pub holder_pid: Option<i32>,
     pub namespace_fd_count: Option<usize>,
     pub base_manifest_version: Option<i64>,
     pub base_root_hash: Option<String>,
     pub layer_count: Option<usize>,
-    pub created_at_unix_ms: Option<i64>,
-    pub last_activity_unix_ms: Option<i64>,
 }
 
 pub struct RuntimeExecutionSnapshot {
@@ -347,7 +349,6 @@ pub struct RuntimeExecutionSnapshot {
     pub operation: Option<String>,
     pub command_session_id: Option<CommandSessionId>,
     pub workspace_id: WorkspaceSessionId,
-    pub namespace_runner_request_id: Option<String>,
     pub command: Option<String>,
     pub lifecycle_state: RuntimeExecutionLifecycleState,
     pub finalization_state: RuntimeExecutionFinalizationState,
@@ -390,9 +391,6 @@ Workspace snapshot field sources:
 | `base_manifest_version` | `WorkspaceHandle.base_revision.version` |
 | `base_root_hash` | `WorkspaceHandle.base_revision.root_hash` |
 | `layer_count` | `WorkspaceHandle.base_revision.layer_count` |
-| `holder_pid` | only if exposed from concrete runtime state without broadening hot paths |
-| `created_at_unix_ms` | only if exposed from concrete runtime state |
-| `last_activity_unix_ms` | only if exposed from concrete runtime state |
 
 If `WorkspaceHandle::entry()` fails because launch material is incomplete, the
 workspace row should still be returned with `upperdir`, `workdir`, and namespace
@@ -402,26 +400,25 @@ fd count unset plus a bounded partial error.
 
 The runtime should expose one read-only execution snapshot adapter, not one
 snapshot adapter per operation class. In Phase 2, the adapter can be implemented
-against `CommandProcessStore` because it is the only current owner of active and
-recent namespace-runner command executions. If another operation starts using
-the namespace runner and retains active process state, that operation should
-feed the same execution snapshot owner or a small shared execution registry.
+against `CommandProcessStore` because it is the only current owner of active
+namespace-runner command executions. If another operation starts using the
+namespace runner and retains active process state, that operation should feed
+the same execution snapshot owner. Do not add a registry until a second live
+producer exists.
 
 An active execution is the parent/runtime-side tracked record for a
 namespace-runner invocation whose `shell_exec` path spawns and waits on a shell
 process inside the workspace namespace. It is not a snapshot of the
 `shell_exec` function body itself. The snapshot records observable execution
 facts such as execution id, workspace id, lifecycle/finalization state, process
-group id, transcript path, wall time, optional `NamespaceRunnerRequest.request_id`,
-and command text when `execution_kind = command`.
+group id, transcript path, wall time, and command text when
+`execution_kind = command`.
 
 The execution snapshot adapter should:
 
 - lock active commands briefly;
 - copy active records into DTOs;
-- copy recently completed records if retained;
-- bound the number of completed execution rows returned;
-- sort active and completed rows by execution id for stable tests;
+- sort active rows by execution id for stable tests;
 - avoid reading transcript contents.
 
 Execution snapshot field sources for the current `exec_command` producer:
@@ -431,16 +428,15 @@ Execution snapshot field sources for the current `exec_command` producer:
 | `execution_id` | `command_session_id.0` for current command executions |
 | `execution_kind` | `command` for current command executions |
 | `operation` | `exec_command` when known |
-| `command_session_id` | active/completed command record |
-| `workspace_id` | active/completed command record |
-| `namespace_runner_request_id` | `NamespaceRunnerRequest.request_id`; currently built from command id |
-| `command` | `CommandProcess::command()` for active commands; optional for completed rows |
-| `lifecycle_state` | `CommandLifecycleState` for active commands; terminal state for completed rows |
+| `command_session_id` | active command record |
+| `workspace_id` | active command record |
+| `command` | `CommandProcess::command()` |
+| `lifecycle_state` | `CommandLifecycleState` |
 | `finalization_state` | `FinalizationState` |
 | `workspace_ownership` | `CommandWorkspaceOwnership` mapped to `existing_session` or `one_shot` |
 | `wall_time_ms` | `started_at.elapsed()` for active commands |
-| `command_total_time_ms` | `CompletedCommandRecord.result.command_total_time_seconds * 1000.0` |
-| `transcript_path` | active `CommandTranscriptStore` or retained transcript |
+| `command_total_time_ms` | unset in Phase 2 active-only snapshots |
+| `transcript_path` | active `CommandTranscriptStore` |
 | `process_group_id` | `CommandProcess::process_group_id()` for active commands |
 
 The current command model stores `started_at` as `Instant`, not as wall-clock
@@ -456,8 +452,7 @@ wall-clock start time beside `Instant`, the daemon can populate
 
 - `self.command.workspace().snapshot_workspaces()`;
 - the shared runtime execution snapshot adapter, currently backed by
-  `self.command.process_store()` for active and recent completed command
-  executions.
+  `self.command.process_store()` for active command executions.
 
 The concrete method names can differ, but the ownership should stay the same:
 workspace snapshots come from `WorkspaceSessionService`, execution snapshots
@@ -497,7 +492,7 @@ Source of truth:
 
 - `ServerConfig.sandbox_id` for `sandbox_id`;
 - `ServerConfig.socket_path` and `pid_path`;
-- `socket_path.parent()` for runtime directory;
+- `socket_path.parent()` for daemon runtime directory;
 - daemon process id for `daemon_pid`;
 - collector health for `state` and bounded `error_message`.
 - workspace root only if daemon integration passes the `serve` workspace root
@@ -561,40 +556,34 @@ Input:
 
 - `sandbox_id`;
 - `RuntimeObservabilitySnapshot.active_executions`;
-- `RuntimeObservabilitySnapshot.recent_completed_executions`;
 - `sampled_at_unix_ms`.
 
 Output:
 
 - `Vec<ExecutionSnapshotRecord>`;
-- active execution ids and retained completed execution ids for stale-row
-  cleanup.
+- active execution ids for stale-row cleanup.
 
 Source of truth:
 
 - runtime execution DTOs;
 - current command execution DTOs copied from `CommandProcessStore`;
 - `CommandProcess` for active process group and command text when
-  `execution_kind = command`;
-- retained `CompletedCommandRecord` for recent terminal state when
   `execution_kind = command`.
 
 Failure behavior:
 
 - execution snapshot errors are bounded and do not affect runtime operations;
 - missing transcript paths are allowed;
-- missing process group ids are allowed;
-- completed execution rows are bounded by runtime and/or daemon policy.
+- missing process group ids are allowed.
 
 Write type:
 
 - current-row upserts into `execution_snapshots`;
-- delete or mark absent execution rows that are no longer active or retained.
+- delete or mark absent execution rows that are no longer active.
 
-Phase 2 display can focus on active commands by filtering
-`execution_kind = command`. Recent completed execution rows are useful for tests
-and immediate post-exit visibility, but they should not become a method trace
-substitute.
+Phase 2 display focuses on active commands by filtering
+`execution_kind = command`. Recent completed command visibility is deferred until
+runtime has an explicit retention/listing model.
 
 If a future Phase 2 implementation discovers active non-command
 namespace-runner executions, do not add a new per-operation snapshot table or
@@ -810,7 +799,7 @@ Recommended table shape:
 -- SQLite migration code can recreate/copy the table if ALTER support is not
 -- sufficient for the chosen implementation.
 workspace_root TEXT
-runtime_dir TEXT
+daemon_runtime_dir TEXT
 socket_path TEXT
 pid_path TEXT
 daemon_pid INTEGER

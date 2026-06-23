@@ -53,16 +53,20 @@ trace, event, or log pipeline.
   `CliOperationScope::Sandbox { sandbox_id }`.
 - `sandbox-runtime` currently owns workspace sessions, command state,
   layerstack operations, and runtime roots, but it does not own sandbox identity.
-- `sandbox-manager` creates a per-sandbox runtime directory:
+- `sandbox-manager` may create a per-sandbox daemon runtime directory when it
+  launches many local daemon processes:
 
   ```text
-  <runtime_root>/<sandbox_id>/
+  <manager_runtime_root>/<sandbox_id>/
     runtime.sock
     runtime.pid
   ```
 
+  This is a manager launch convention for avoiding socket collisions, not an
+  observability storage convention.
 - `sandbox-daemon::ServerConfig` already carries `socket_path`, `pid_path`, and
-  optional `sandbox_id`.
+  optional `sandbox_id`. The daemon runtime directory is
+  `ServerConfig.socket_path.parent()`.
 - Public runtime dispatch enters through `sandbox_runtime::dispatch_operation`.
 - The current public runtime operation catalog is small. The live runtime
   operations are:
@@ -200,7 +204,7 @@ Responsibilities:
 Phase 1 creates one local SQLite foundation database:
 
 ```text
-<runtime_root>/<sandbox_id>/observability/
+<daemon_runtime_dir>/observability/
   observability.sqlite
 ```
 
@@ -217,23 +221,29 @@ exist:
 
 ## Local Disk Layout
 
-The daemon derives its observability directory from the parent of
-`ServerConfig.socket_path`:
+The daemon derives its observability directory from its daemon runtime
+directory:
 
 ```text
-socket_path = <runtime_root>/<sandbox_id>/runtime.sock
-observability_dir = <runtime_root>/<sandbox_id>/observability
+daemon_runtime_dir = ServerConfig.socket_path.parent()
+socket_path = <daemon_runtime_dir>/runtime.sock
+observability_dir = <daemon_runtime_dir>/observability
 ```
 
-Example:
+Production config can set the daemon runtime directory under `/eos`:
 
 ```text
-/tmp/eos-daemons/container-1/
+/eos/runtime/daemon/
   runtime.sock
   runtime.pid
   observability/
     observability.sqlite
 ```
+
+When the manager launches many local sandboxes, it can choose a host-side
+daemon runtime directory such as `<manager_runtime_root>/<sandbox_id>/`. In that
+case `<sandbox_id>` belongs to the manager-selected daemon runtime directory,
+not to `sandbox-observability` path derivation.
 
 Do not store observability data inside:
 
@@ -408,7 +418,7 @@ CREATE TABLE IF NOT EXISTS sandbox_snapshots (
   sandbox_id TEXT PRIMARY KEY,
   state TEXT NOT NULL,             -- ready | unavailable | stopping | failed
   workspace_root TEXT,
-  runtime_dir TEXT,
+  daemon_runtime_dir TEXT,
   socket_path TEXT,
   pid_path TEXT,
   daemon_pid INTEGER,
@@ -527,7 +537,7 @@ pub struct SandboxSnapshot {
     pub state: SandboxStateView,
     pub resources: ResourceSnapshot,
     pub sampled_at_unix_ms: i64,
-    pub runtime_dir: Option<PathBuf>,
+    pub daemon_runtime_dir: Option<PathBuf>,
     pub workspace_root: Option<PathBuf>,
     pub workspaces: Vec<WorkspaceSnapshot>,
 }
@@ -596,7 +606,7 @@ existing daemon socket path.
 Execution space:
 
 ```text
-sandbox daemon over <runtime_root>/<sandbox_id>/runtime.sock
+sandbox daemon over <daemon_runtime_dir>/runtime.sock
 ```
 
 Purpose:
