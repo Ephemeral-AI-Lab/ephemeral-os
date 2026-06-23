@@ -2,6 +2,7 @@ use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 
 use crate::observability::DaemonObservability;
 use crate::server::{SandboxDaemonServer, ServerConfig};
@@ -73,6 +74,136 @@ fn observability_collection_writes_phase2_live_snapshot() -> TestResult {
 }
 
 #[test]
+fn observability_collection_bounds_rows_and_keeps_valid_rows() -> TestResult {
+    let root = test_root("bounds-rows");
+    let config = server_config(&root, Some("sandbox-1"));
+    let observability =
+        DaemonObservability::from_config(&config).expect("sandbox id enables observability");
+    let valid_upperdir = root.join("valid-upperdir");
+    std::fs::create_dir_all(&valid_upperdir)?;
+    std::fs::write(valid_upperdir.join("ok.txt"), b"ok")?;
+
+    let long_workspace_id = "workspace-id-that-is-too-long".repeat(20);
+    let snapshot = RuntimeObservabilitySnapshot {
+        workspaces: vec![
+            workspace_snapshot("workspace-1", Some(valid_upperdir)),
+            workspace_snapshot(&long_workspace_id, Some(root.join("missing-upperdir"))),
+            workspace_snapshot("", None),
+        ],
+        active_executions: vec![RuntimeExecutionSnapshot {
+            execution_id: "cmd_1".to_owned(),
+            execution_kind: "command".repeat(20),
+            operation: Some("exec_command".repeat(20)),
+            command_session_id: Some(CommandSessionId("cmd_1".to_owned())),
+            workspace_id: WorkspaceSessionId("workspace-1".to_owned()),
+            command: Some("x".repeat(5000)),
+            lifecycle_state: "running".to_owned(),
+            finalization_state: "not_started".to_owned(),
+            workspace_ownership: "existing_session".to_owned(),
+            started_at_unix_ms: None,
+            wall_time_ms: Some(10.0),
+            transcript_path: Some(PathBuf::from("/tmp/transcript.log")),
+            process_group_id: Some(1234),
+        }],
+        partial_errors: Vec::new(),
+    };
+
+    observability.collect_runtime_snapshot_for_test(&config, snapshot)?;
+
+    let store = store_for_config(&config)?;
+    let sandbox = store
+        .sandbox_snapshot_for_test("sandbox-1")?
+        .expect("sandbox snapshot written");
+    assert_eq!(sandbox.state, "unavailable");
+    assert!(sandbox
+        .error_message
+        .as_deref()
+        .is_some_and(|message| message.contains("workspace_id is empty")));
+    let workspaces = store.workspace_snapshots_for_test("sandbox-1")?;
+    assert!(workspaces
+        .iter()
+        .any(|workspace| workspace.workspace_id == "workspace-1"));
+    assert!(workspaces
+        .iter()
+        .all(|workspace| workspace.workspace_id.len() <= 256));
+    assert!(workspaces
+        .iter()
+        .all(|workspace| !workspace.workspace_id.is_empty()));
+
+    let executions = store.execution_snapshots_for_test("sandbox-1")?;
+    assert_eq!(executions.len(), 1);
+    assert!(executions[0].execution_kind.len() <= 64);
+    assert!(executions[0].operation.as_ref().is_some_and(|value| value.len() <= 128));
+    assert!(executions[0].command.as_ref().is_some_and(|value| value.len() <= 4096));
+    Ok(())
+}
+
+#[test]
+fn disk_samples_are_cached_until_tests_force_refresh_and_can_truncate() -> TestResult {
+    let root = test_root("disk-cache");
+    let config = server_config(&root, Some("sandbox-1"));
+    let observability =
+        DaemonObservability::from_config(&config).expect("sandbox id enables observability");
+    let upperdir = root.join("upperdir");
+    std::fs::create_dir_all(&upperdir)?;
+    std::fs::write(upperdir.join("one.txt"), b"1")?;
+
+    observability.collect_runtime_snapshot_for_test(
+        &config,
+        RuntimeObservabilitySnapshot {
+            workspaces: vec![workspace_snapshot("workspace-1", Some(upperdir.clone()))],
+            active_executions: Vec::new(),
+            partial_errors: Vec::new(),
+        },
+    )?;
+    std::fs::write(upperdir.join("two.txt"), b"2")?;
+    observability.collect_runtime_snapshot_for_test(
+        &config,
+        RuntimeObservabilitySnapshot {
+            workspaces: vec![workspace_snapshot("workspace-1", Some(upperdir.clone()))],
+            active_executions: Vec::new(),
+            partial_errors: Vec::new(),
+        },
+    )?;
+
+    let store = store_for_config(&config)?;
+    let cached = latest_workspace_sample(&store, "sandbox-1", "workspace-1")?;
+    assert_eq!(cached.disk_file_count, Some(1));
+    assert_eq!(cached.disk_truncated, Some(false));
+
+    observability.collect_runtime_snapshot_fresh_disk_for_test(
+        &config,
+        RuntimeObservabilitySnapshot {
+            workspaces: vec![workspace_snapshot("workspace-1", Some(upperdir.clone()))],
+            active_executions: Vec::new(),
+            partial_errors: Vec::new(),
+        },
+    )?;
+    let refreshed = latest_workspace_sample(&store, "sandbox-1", "workspace-1")?;
+    assert_eq!(refreshed.disk_file_count, Some(2));
+
+    let large_upperdir = root.join("large-upperdir");
+    std::fs::create_dir_all(&large_upperdir)?;
+    for index in 0..1030 {
+        std::fs::write(large_upperdir.join(format!("file-{index}")), b"x")?;
+    }
+    observability.collect_runtime_snapshot_fresh_disk_for_test(
+        &config,
+        RuntimeObservabilitySnapshot {
+            workspaces: vec![workspace_snapshot(
+                "workspace-large",
+                Some(large_upperdir.clone()),
+            )],
+            active_executions: Vec::new(),
+            partial_errors: Vec::new(),
+        },
+    )?;
+    let truncated = latest_workspace_sample(&store, "sandbox-1", "workspace-large")?;
+    assert_eq!(truncated.disk_truncated, Some(true));
+    Ok(())
+}
+
+#[test]
 fn observability_is_disabled_when_sandbox_id_is_missing() {
     let root = test_root("missing-sandbox-id");
     let config = server_config(&root, None);
@@ -84,29 +215,12 @@ fn observability_is_disabled_when_sandbox_id_is_missing() {
 async fn observability_write_errors_do_not_alter_operation_responses() -> TestResult {
     let root = test_root("write-error-response");
     let config = server_config(&root, Some("sandbox-1"));
-    let observability =
-        DaemonObservability::from_config(&config).expect("sandbox id enables observability");
-    let invalid_snapshot = RuntimeObservabilitySnapshot {
-        workspaces: vec![RuntimeWorkspaceSnapshot {
-            workspace_id: WorkspaceSessionId("workspace-id-that-is-too-long".repeat(20)),
-            remount_state: "active".to_owned(),
-            profile: WorkspaceProfile::HostCompatible,
-            workspace_root: root.join("workspace"),
-            upperdir: None,
-            workdir: None,
-            namespace_fd_count: None,
-            base_manifest_version: None,
-            base_root_hash: None,
-            layer_count: None,
-        }],
-        active_executions: Vec::new(),
-        partial_errors: Vec::new(),
-    };
-    assert!(observability
-        .collect_runtime_snapshot_for_test(&config, invalid_snapshot)
-        .is_err());
-
     let server = SandboxDaemonServer::new(config, Arc::new(runtime_operations(&root)?));
+    let observability = server
+        .observability
+        .as_ref()
+        .expect("sandbox id enables observability");
+    observability.force_next_collection_error_for_test();
     let response = server
         .dispatch_bytes(
             serde_json::to_vec(&Request::new(
@@ -119,6 +233,13 @@ async fn observability_write_errors_do_not_alter_operation_responses() -> TestRe
         )
         .await;
 
+    for _ in 0..100 {
+        if !observability.collection_error_pending_for_test() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert!(!observability.collection_error_pending_for_test());
     assert_eq!(response["error"]["kind"], "unknown_op");
     assert_eq!(response["error"]["message"], "unknown operation");
     Ok(())
@@ -126,18 +247,7 @@ async fn observability_write_errors_do_not_alter_operation_responses() -> TestRe
 
 fn runtime_snapshot(missing_upperdir: PathBuf) -> RuntimeObservabilitySnapshot {
     RuntimeObservabilitySnapshot {
-        workspaces: vec![RuntimeWorkspaceSnapshot {
-            workspace_id: WorkspaceSessionId("workspace-1".to_owned()),
-            remount_state: "active".to_owned(),
-            profile: WorkspaceProfile::HostCompatible,
-            workspace_root: PathBuf::from("/workspace/workspace-1"),
-            upperdir: Some(missing_upperdir),
-            workdir: Some(PathBuf::from("/workspace/workspace-1/work")),
-            namespace_fd_count: Some(3),
-            base_manifest_version: Some(1),
-            base_root_hash: Some("root".to_owned()),
-            layer_count: Some(1),
-        }],
+        workspaces: vec![workspace_snapshot("workspace-1", Some(missing_upperdir))],
         active_executions: vec![RuntimeExecutionSnapshot {
             execution_id: "cmd_1".to_owned(),
             execution_kind: "command".to_owned(),
@@ -155,6 +265,39 @@ fn runtime_snapshot(missing_upperdir: PathBuf) -> RuntimeObservabilitySnapshot {
         }],
         partial_errors: Vec::new(),
     }
+}
+
+fn workspace_snapshot(workspace_id: &str, upperdir: Option<PathBuf>) -> RuntimeWorkspaceSnapshot {
+    RuntimeWorkspaceSnapshot {
+        workspace_id: WorkspaceSessionId(workspace_id.to_owned()),
+        remount_state: "active".to_owned(),
+        profile: WorkspaceProfile::HostCompatible,
+        workspace_root: PathBuf::from("/workspace").join(workspace_id),
+        upperdir,
+        workdir: Some(PathBuf::from("/workspace").join(workspace_id).join("work")),
+        namespace_fd_count: Some(3),
+        base_manifest_version: Some(1),
+        base_root_hash: Some("root".to_owned()),
+        layer_count: Some(1),
+    }
+}
+
+fn store_for_config(config: &ServerConfig) -> TestResult<ObservabilityStore> {
+    let paths = ObservabilityPaths::from_socket_path(&config.socket_path)?;
+    Ok(ObservabilityStore::open(&paths)?)
+}
+
+fn latest_workspace_sample(
+    store: &ObservabilityStore,
+    sandbox_id: &str,
+    workspace_id: &str,
+) -> TestResult<sandbox_observability::ResourceSampleRecord> {
+    store
+        .resource_samples_for_test(sandbox_id)?
+        .into_iter()
+        .filter(|sample| sample.workspace_id.as_deref() == Some(workspace_id))
+        .last()
+        .ok_or_else(|| format!("missing resource sample for {workspace_id}").into())
 }
 
 fn runtime_operations(root: &Path) -> TestResult<SandboxRuntimeOperations> {

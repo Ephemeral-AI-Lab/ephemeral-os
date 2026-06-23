@@ -1,6 +1,10 @@
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+#[cfg(test)]
+use std::sync::atomic::AtomicBool;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::sync::{Mutex, MutexGuard};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use sandbox_observability::{
     ExecutionSnapshotRecord, ObservabilityPaths, ObservabilityStore, ResourceSampleRecord,
@@ -18,12 +22,38 @@ use super::disk::{self, DiskSample};
 
 const MAX_ERROR_LEN: usize = 4096;
 const MAX_PATH_LEN: usize = 4096;
+const MAX_ID_LEN: usize = 256;
+const MAX_KIND_LEN: usize = 64;
+const MAX_OPERATION_LEN: usize = 128;
+const MAX_STATE_LEN: usize = 64;
+const MAX_COMMAND_LEN: usize = 4096;
+const DISK_SAMPLE_MIN_INTERVAL: Duration = Duration::from_secs(10);
 
 pub(crate) struct DaemonObservability {
     sandbox_id: String,
     paths: ObservabilityPaths,
     store: ObservabilityStore,
     next_sample_id: AtomicU64,
+    disk_samples: Mutex<HashMap<DiskCacheKey, CachedDiskSample>>,
+    #[cfg(test)]
+    force_collection_error: AtomicBool,
+}
+
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+struct DiskCacheKey {
+    workspace_id: String,
+    upperdir: String,
+}
+
+#[derive(Debug, Clone)]
+struct CachedDiskSample {
+    sampled_at: Instant,
+    sample: DiskSample,
+}
+
+struct WorkspaceCollectionTarget<'a> {
+    workspace_id: String,
+    upperdir: Option<&'a Path>,
 }
 
 impl DaemonObservability {
@@ -36,10 +66,13 @@ impl DaemonObservability {
         let paths = ObservabilityPaths::from_socket_path(config.socket_path.clone()).ok()?;
         let store = ObservabilityStore::open(&paths).ok()?;
         Some(Self {
-            sandbox_id,
+            sandbox_id: bound_id(sandbox_id),
             paths,
             store,
             next_sample_id: AtomicU64::new(1),
+            disk_samples: Mutex::new(HashMap::new()),
+            #[cfg(test)]
+            force_collection_error: AtomicBool::new(false),
         })
     }
 
@@ -48,7 +81,17 @@ impl DaemonObservability {
         config: &ServerConfig,
         operations: &SandboxRuntimeOperations,
     ) -> Result<(), StoreError> {
-        self.write_snapshot(config, operations.observability_snapshot(), unix_ms())
+        #[cfg(test)]
+        if self.force_collection_error.swap(false, Ordering::AcqRel) {
+            return Err(StoreError::ConnectionLock);
+        }
+
+        self.write_snapshot(
+            config,
+            operations.observability_snapshot(),
+            unix_ms(),
+            false,
+        )
     }
 
     #[cfg(test)]
@@ -58,7 +101,29 @@ impl DaemonObservability {
         config: &ServerConfig,
         snapshot: RuntimeObservabilitySnapshot,
     ) -> Result<(), StoreError> {
-        self.write_snapshot(config, snapshot, unix_ms())
+        self.write_snapshot(config, snapshot, unix_ms(), false)
+    }
+
+    #[cfg(test)]
+    #[allow(dead_code, reason = "used by path-included daemon integration tests")]
+    pub(crate) fn collect_runtime_snapshot_fresh_disk_for_test(
+        &self,
+        config: &ServerConfig,
+        snapshot: RuntimeObservabilitySnapshot,
+    ) -> Result<(), StoreError> {
+        self.write_snapshot(config, snapshot, unix_ms(), true)
+    }
+
+    #[cfg(test)]
+    #[allow(dead_code, reason = "used by path-included daemon integration tests")]
+    pub(crate) fn force_next_collection_error_for_test(&self) {
+        self.force_collection_error.store(true, Ordering::Release);
+    }
+
+    #[cfg(test)]
+    #[allow(dead_code, reason = "used by path-included daemon integration tests")]
+    pub(crate) fn collection_error_pending_for_test(&self) -> bool {
+        self.force_collection_error.load(Ordering::Acquire)
     }
 
     fn write_snapshot(
@@ -66,22 +131,69 @@ impl DaemonObservability {
         config: &ServerConfig,
         snapshot: RuntimeObservabilitySnapshot,
         sampled_at_unix_ms: i64,
+        force_fresh_disk: bool,
     ) -> Result<(), StoreError> {
+        let RuntimeObservabilitySnapshot {
+            workspaces,
+            active_executions,
+            mut partial_errors,
+        } = snapshot;
+
+        let mut workspace_records = Vec::new();
+        let mut workspace_targets = Vec::new();
+        for workspace in &workspaces {
+            let Some(workspace_id) = bounded_required_id(
+                "workspace_id",
+                &workspace.workspace_id.0,
+                &mut partial_errors,
+            ) else {
+                continue;
+            };
+            workspace_records.push(self.workspace_record(
+                workspace,
+                workspace_id.clone(),
+                sampled_at_unix_ms,
+            ));
+            workspace_targets.push(WorkspaceCollectionTarget {
+                workspace_id,
+                upperdir: workspace.upperdir.as_deref(),
+            });
+        }
+
+        let mut execution_records = Vec::new();
+        for execution in &active_executions {
+            let Some(execution_id) =
+                bounded_required_id("execution_id", &execution.execution_id, &mut partial_errors)
+            else {
+                continue;
+            };
+            let Some(workspace_id) = bounded_required_id(
+                "execution_workspace_id",
+                &execution.workspace_id.0,
+                &mut partial_errors,
+            ) else {
+                continue;
+            };
+            execution_records.push(self.execution_record(
+                execution,
+                execution_id,
+                workspace_id,
+                sampled_at_unix_ms,
+            ));
+        }
+
+        let resource_samples =
+            self.resource_records(&workspace_targets, sampled_at_unix_ms, force_fresh_disk);
+
         self.store.upsert_sandbox_snapshot(&self.sandbox_record(
             config,
             sampled_at_unix_ms,
-            &snapshot.partial_errors,
+            &partial_errors,
         ))?;
 
-        let workspace_records = snapshot
-            .workspaces
+        let active_workspace_ids = workspace_records
             .iter()
-            .map(|workspace| self.workspace_record(workspace, sampled_at_unix_ms))
-            .collect::<Vec<_>>();
-        let active_workspace_ids = snapshot
-            .workspaces
-            .iter()
-            .map(|workspace| workspace.workspace_id.0.clone())
+            .map(|workspace| workspace.workspace_id.clone())
             .collect::<Vec<_>>();
         self.store
             .upsert_workspace_snapshots(&self.sandbox_id, &workspace_records)?;
@@ -91,13 +203,7 @@ impl DaemonObservability {
             sampled_at_unix_ms,
         )?;
 
-        let execution_records = snapshot
-            .active_executions
-            .iter()
-            .map(|execution| self.execution_record(execution, sampled_at_unix_ms))
-            .collect::<Vec<_>>();
-        let active_execution_ids = snapshot
-            .active_executions
+        let active_execution_ids = execution_records
             .iter()
             .map(|execution| execution.execution_id.clone())
             .collect::<Vec<_>>();
@@ -106,7 +212,6 @@ impl DaemonObservability {
         self.store
             .prune_execution_snapshots(&self.sandbox_id, &active_execution_ids)?;
 
-        let resource_samples = self.resource_records(&snapshot, sampled_at_unix_ms);
         self.store.insert_resource_samples(&resource_samples)?;
         Ok(())
     }
@@ -125,9 +230,9 @@ impl DaemonObservability {
                 "unavailable".to_owned()
             },
             workspace_root: None,
-            daemon_runtime_dir: Some(path_string(self.paths.daemon_runtime_dir())),
-            socket_path: Some(path_string(&config.socket_path)),
-            pid_path: Some(path_string(&config.pid_path)),
+            daemon_runtime_dir: Some(bound_path(path_string(self.paths.daemon_runtime_dir()))),
+            socket_path: Some(bound_path(path_string(&config.socket_path))),
+            pid_path: Some(bound_path(path_string(&config.pid_path))),
             daemon_pid: Some(i64::from(std::process::id())),
             sampled_at_unix_ms,
             error_message: error_summary(partial_errors),
@@ -137,20 +242,29 @@ impl DaemonObservability {
     fn workspace_record(
         &self,
         workspace: &RuntimeWorkspaceSnapshot,
+        workspace_id: String,
         sampled_at_unix_ms: i64,
     ) -> WorkspaceSnapshotRecord {
         WorkspaceSnapshotRecord {
             sandbox_id: self.sandbox_id.clone(),
-            workspace_id: workspace.workspace_id.0.clone(),
+            workspace_id,
             state: "active".to_owned(),
-            remount_state: Some(workspace.remount_state.clone()),
-            profile: Some(workspace.profile.as_str().to_owned()),
-            workspace_root: Some(path_string(&workspace.workspace_root)),
-            upperdir: workspace.upperdir.as_deref().map(path_string),
-            workdir: workspace.workdir.as_deref().map(path_string),
+            remount_state: Some(bound_state(workspace.remount_state.clone())),
+            profile: Some(bound_kind(workspace.profile.as_str().to_owned())),
+            workspace_root: Some(bound_path(path_string(&workspace.workspace_root))),
+            upperdir: workspace
+                .upperdir
+                .as_deref()
+                .map(path_string)
+                .map(bound_path),
+            workdir: workspace
+                .workdir
+                .as_deref()
+                .map(path_string)
+                .map(bound_path),
             namespace_fd_count: workspace.namespace_fd_count.map(usize_to_i64),
             base_manifest_version: workspace.base_manifest_version,
-            base_root_hash: workspace.base_root_hash.clone(),
+            base_root_hash: workspace.base_root_hash.clone().map(bound_id),
             layer_count: workspace.layer_count.map(usize_to_i64),
             sampled_at_unix_ms,
             error_message: None,
@@ -160,26 +274,40 @@ impl DaemonObservability {
     fn execution_record(
         &self,
         execution: &RuntimeExecutionSnapshot,
+        execution_id: String,
+        workspace_id: String,
         sampled_at_unix_ms: i64,
     ) -> ExecutionSnapshotRecord {
         ExecutionSnapshotRecord {
             sandbox_id: self.sandbox_id.clone(),
-            workspace_id: execution.workspace_id.0.clone(),
-            execution_id: execution.execution_id.clone(),
-            execution_kind: execution.execution_kind.clone(),
-            operation: execution.operation.clone(),
+            workspace_id,
+            execution_id,
+            execution_kind: bound_required_text(&execution.execution_kind, MAX_KIND_LEN, "unknown"),
+            operation: execution.operation.clone().map(bound_operation),
             command_session_id: execution
                 .command_session_id
                 .as_ref()
-                .map(|command_session_id| command_session_id.0.clone()),
-            command: execution.command.clone(),
-            lifecycle_state: execution.lifecycle_state.clone(),
-            finalization_state: execution.finalization_state.clone(),
-            workspace_ownership: Some(execution.workspace_ownership.clone()),
+                .map(|command_session_id| bound_id(command_session_id.0.clone())),
+            command: execution.command.clone().map(bound_command),
+            lifecycle_state: bound_required_text(
+                &execution.lifecycle_state,
+                MAX_STATE_LEN,
+                "unknown",
+            ),
+            finalization_state: bound_required_text(
+                &execution.finalization_state,
+                MAX_STATE_LEN,
+                "unknown",
+            ),
+            workspace_ownership: Some(bound_kind(execution.workspace_ownership.clone())),
             started_at_unix_ms: execution.started_at_unix_ms,
             wall_time_ms: execution.wall_time_ms,
             process_group_id: execution.process_group_id.map(i64::from),
-            transcript_path: execution.transcript_path.as_deref().map(path_string),
+            transcript_path: execution
+                .transcript_path
+                .as_deref()
+                .map(path_string)
+                .map(bound_path),
             sampled_at_unix_ms,
             error_message: None,
         }
@@ -187,8 +315,9 @@ impl DaemonObservability {
 
     fn resource_records(
         &self,
-        snapshot: &RuntimeObservabilitySnapshot,
+        workspace_targets: &[WorkspaceCollectionTarget<'_>],
         sampled_at_unix_ms: i64,
+        force_fresh_disk: bool,
     ) -> Vec<ResourceSampleRecord> {
         let mut records = vec![self.resource_record(
             None,
@@ -197,14 +326,13 @@ impl DaemonObservability {
             DiskSample::empty(),
         )];
 
-        records.extend(snapshot.workspaces.iter().map(|workspace| {
-            let disk = workspace
+        records.extend(workspace_targets.iter().map(|target| {
+            let disk = target
                 .upperdir
-                .as_deref()
-                .map(disk::sample_upperdir)
+                .map(|upperdir| self.disk_sample(&target.workspace_id, upperdir, force_fresh_disk))
                 .unwrap_or_else(DiskSample::empty);
             self.resource_record(
-                Some(workspace.workspace_id.0.as_str()),
+                Some(target.workspace_id.as_str()),
                 sampled_at_unix_ms,
                 CgroupSample::unavailable("cgroup path unavailable"),
                 disk,
@@ -223,7 +351,7 @@ impl DaemonObservability {
         ResourceSampleRecord {
             sample_id: self.next_sample_id(sampled_at_unix_ms),
             sandbox_id: self.sandbox_id.clone(),
-            workspace_id: workspace_id.map(str::to_owned),
+            workspace_id: workspace_id.map(str::to_owned).map(bound_id),
             sampled_at_unix_ms,
             cgroup_path: cgroup.cgroup_path.map(bound_path),
             cgroup_available: cgroup.cgroup_available,
@@ -245,6 +373,32 @@ impl DaemonObservability {
     fn next_sample_id(&self, sampled_at_unix_ms: i64) -> String {
         let next = self.next_sample_id.fetch_add(1, Ordering::Relaxed);
         format!("sample-{sampled_at_unix_ms}-{next}")
+    }
+
+    fn disk_sample(&self, workspace_id: &str, upperdir: &Path, force_fresh: bool) -> DiskSample {
+        let key = DiskCacheKey {
+            workspace_id: workspace_id.to_owned(),
+            upperdir: bound_path(path_string(upperdir)),
+        };
+        let now = Instant::now();
+        if !force_fresh {
+            let cache = lock_disk_samples(&self.disk_samples);
+            if let Some(cached) = cache.get(&key) {
+                if now.duration_since(cached.sampled_at) < DISK_SAMPLE_MIN_INTERVAL {
+                    return cached.sample.clone();
+                }
+            }
+        }
+
+        let sample = disk::sample_upperdir(upperdir);
+        lock_disk_samples(&self.disk_samples).insert(
+            key,
+            CachedDiskSample {
+                sampled_at: now,
+                sample: sample.clone(),
+            },
+        );
+        sample
     }
 }
 
@@ -276,6 +430,47 @@ fn error_summary(errors: &[String]) -> Option<String> {
     ))
 }
 
+fn bounded_required_id(
+    field: &'static str,
+    value: &str,
+    errors: &mut Vec<String>,
+) -> Option<String> {
+    if value.is_empty() {
+        errors.push(bound_error(format!("{field} is empty")));
+        None
+    } else {
+        Some(bound_id(value.to_owned()))
+    }
+}
+
+fn bound_required_text(value: &str, max_bytes: usize, fallback: &'static str) -> String {
+    if value.is_empty() {
+        fallback.to_owned()
+    } else {
+        bound_string(value.to_owned(), max_bytes)
+    }
+}
+
+fn bound_id(value: String) -> String {
+    bound_string(value, MAX_ID_LEN)
+}
+
+fn bound_kind(value: String) -> String {
+    bound_string(value, MAX_KIND_LEN)
+}
+
+fn bound_operation(value: String) -> String {
+    bound_string(value, MAX_OPERATION_LEN)
+}
+
+fn bound_state(value: String) -> String {
+    bound_string(value, MAX_STATE_LEN)
+}
+
+fn bound_command(value: String) -> String {
+    bound_string(value, MAX_COMMAND_LEN)
+}
+
 fn bound_error(value: String) -> String {
     bound_string(value, MAX_ERROR_LEN)
 }
@@ -284,10 +479,22 @@ fn bound_path(value: String) -> String {
     bound_string(value, MAX_PATH_LEN)
 }
 
-fn bound_string(value: String, max_chars: usize) -> String {
-    if value.len() <= max_chars {
+fn bound_string(value: String, max_bytes: usize) -> String {
+    if value.len() <= max_bytes {
         value
     } else {
-        value.chars().take(max_chars).collect()
+        let mut end = max_bytes;
+        while !value.is_char_boundary(end) {
+            end = end.saturating_sub(1);
+        }
+        value[..end].to_owned()
     }
+}
+
+fn lock_disk_samples(
+    cache: &Mutex<HashMap<DiskCacheKey, CachedDiskSample>>,
+) -> MutexGuard<'_, HashMap<DiskCacheKey, CachedDiskSample>> {
+    cache
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
