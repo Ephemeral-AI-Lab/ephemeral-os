@@ -1,4 +1,4 @@
-use std::sync::{mpsc, Arc, Condvar, Mutex, PoisonError};
+use std::sync::{mpsc, Arc, Mutex, PoisonError};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -39,19 +39,16 @@ pub struct CommandCompletionPromise {
 
 struct CommandCompletionState {
     inner: Mutex<CommandCompletionStateInner>,
-    changed: Condvar,
 }
 
 #[derive(Debug, Default)]
 struct CommandCompletionStateInner {
     exited: bool,
-    finalized: bool,
 }
 
 struct CommandCompletion {
     command_session_id: CommandSessionId,
     process_exit: CommandProcessExit,
-    promise: CommandCompletionPromise,
 }
 
 impl CommandCompletionPromise {
@@ -64,7 +61,6 @@ impl CommandCompletionPromise {
             sender,
             state: Arc::new(CommandCompletionState {
                 inner: Mutex::new(CommandCompletionStateInner::default()),
-                changed: Condvar::new(),
             }),
         }
     }
@@ -89,7 +85,6 @@ impl CommandCompletionPromise {
                 false
             } else {
                 inner.exited = true;
-                self.state.changed.notify_all();
                 true
             }
         };
@@ -97,19 +92,12 @@ impl CommandCompletionPromise {
             self.sender.send(CommandCompletion {
                 command_session_id: self.command_session_id.clone(),
                 process_exit,
-                promise: self.clone(),
             });
         }
     }
 
     pub(crate) fn is_exited(&self) -> bool {
         self.lock_inner().exited
-    }
-
-    fn mark_finalized(&self) {
-        let mut inner = self.lock_inner();
-        inner.finalized = true;
-        self.state.changed.notify_all();
     }
 
     fn lock_inner(&self) -> std::sync::MutexGuard<'_, CommandCompletionStateInner> {
@@ -133,7 +121,6 @@ pub(crate) fn spawn_completion_finalizer(
                 completion.command_session_id,
                 completion.process_exit,
             );
-            completion.promise.mark_finalized();
         }
     });
     CommandCompletionSender { tx }

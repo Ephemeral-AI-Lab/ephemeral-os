@@ -16,7 +16,6 @@ use crate::pty::{
     spawn_current_exe_ns_runner, CommandCompletionStatus, PtyProcess, PtyProcessExit,
 };
 use crate::transcript::{read_full_transcript_stdout, read_transcript_since};
-use crate::yield_wait_loop::CommandWaitTarget;
 use crate::{CommandConfig, CommandError};
 
 const OUTPUT_DRAIN_GRACE: Duration = Duration::from_millis(500);
@@ -311,20 +310,6 @@ pub(crate) fn build_namespace_runner_request(
         workdir: Some(entry.workdir),
         ns_fds: Some(entry.ns_fds.into()),
         timeout_seconds: spec.timeout_seconds,
-    }
-}
-
-impl CommandWaitTarget<CommandProcessExit> for CommandProcess {
-    fn take_exit(&self) -> Option<CommandProcessExit> {
-        self.take_exit()
-    }
-
-    fn transcript_len(&self) -> u64 {
-        Self::transcript_len(self)
-    }
-
-    fn read_output_since(&self, start_offset: u64) -> String {
-        Self::read_output_since(self, start_offset)
     }
 }
 

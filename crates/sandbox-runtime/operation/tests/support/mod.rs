@@ -13,7 +13,6 @@ use sandbox_runtime::workspace_session::WorkspaceSessionService;
 use sandbox_runtime_command::process::{
     CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec,
 };
-use sandbox_runtime_command::yield_wait_loop::WaitOutcome;
 use sandbox_runtime_workspace::{
     CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LayerStackSnapshotRef, LeaseId,
@@ -40,9 +39,15 @@ pub(crate) struct FakeWorkspaceService {
 
 #[derive(Debug, Default)]
 pub(crate) struct FakeLaunchDriver {
-    outcomes: Mutex<VecDeque<WaitOutcome<CommandProcessExit>>>,
+    outcomes: Mutex<VecDeque<ScriptedCommandYield>>,
     spawn_errors: Mutex<VecDeque<CommandServiceError>>,
     spawn_observations: Mutex<Vec<SpawnObservation>>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) enum ScriptedCommandYield {
+    Completed(CommandProcessExit),
+    Running(String),
 }
 
 #[derive(Debug, Clone)]
@@ -60,7 +65,7 @@ impl FakeLaunchDriver {
         Self::default()
     }
 
-    pub(crate) fn push_outcome(&self, outcome: WaitOutcome<CommandProcessExit>) {
+    pub(crate) fn push_outcome(&self, outcome: ScriptedCommandYield) {
         self.outcomes
             .lock()
             .expect("test operation succeeds")
@@ -140,17 +145,17 @@ impl CommandLaunchDriver for FakeLaunchDriver {
             .lock()
             .expect("test operation succeeds")
             .pop_front()
-            .unwrap_or_else(|| WaitOutcome::Running(String::new()));
+            .unwrap_or_else(|| ScriptedCommandYield::Running(String::new()));
         match &outcome {
-            WaitOutcome::Running(output) => write_transcript_output(process, output),
-            WaitOutcome::Completed(exit) => {
+            ScriptedCommandYield::Running(output) => write_transcript_output(process, output),
+            ScriptedCommandYield::Completed(exit) => {
                 write_transcript_output(process, &exit.stdout);
                 completion.resolve(exit.clone());
             }
         }
         match outcome {
-            WaitOutcome::Running(_) => CommandCompletionWaitOutcome::Running,
-            WaitOutcome::Completed(_) => CommandCompletionWaitOutcome::Completed,
+            ScriptedCommandYield::Running(_) => CommandCompletionWaitOutcome::Running,
+            ScriptedCommandYield::Completed(_) => CommandCompletionWaitOutcome::Completed,
         }
     }
 }

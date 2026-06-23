@@ -7,13 +7,12 @@ use sandbox_runtime::command::{
     CommandServiceError, CommandSessionId, CommandStatus, ExecCommandInput, ReadCommandLinesInput,
     WriteCommandStdinInput,
 };
-use sandbox_runtime_command::yield_wait_loop::WaitOutcome;
 use sandbox_runtime_workspace::{WorkspaceProfile, WorkspaceSessionId};
 
 use support::{
     build_services, build_services_with_launch_driver, create_request, success_exit,
     workspace_handle, workspace_handle_unavailable_launch, workspace_handle_without_launch,
-    FakeLaunchDriver, FakeWorkspaceService,
+    FakeLaunchDriver, FakeWorkspaceService, ScriptedCommandYield,
 };
 
 fn exec_input(workspace_session_id: WorkspaceSessionId) -> ExecCommandInput {
@@ -119,7 +118,9 @@ fn exec_command_without_workspace_session_creates_and_destroys_one_shot_on_compl
         WorkspaceProfile::HostCompatible,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
-    launch_driver.push_outcome(WaitOutcome::Completed(success_exit("one-shot done\n")));
+    launch_driver.push_outcome(ScriptedCommandYield::Completed(success_exit(
+        "one-shot done\n",
+    )));
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
 
     let output = env
@@ -149,7 +150,7 @@ fn exec_command_terminal_output_returns_command_session_id_when_more_output_rema
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     let stdout = format!("{}\nkept\n", "x".repeat(1024 * 1024 + 128));
-    launch_driver.push_outcome(WaitOutcome::Completed(success_exit(&stdout)));
+    launch_driver.push_outcome(ScriptedCommandYield::Completed(success_exit(&stdout)));
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
 
     let output = env
@@ -184,8 +185,8 @@ fn exec_command_without_workspace_session_keeps_one_shot_until_terminal_completi
         WorkspaceProfile::HostCompatible,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
-    launch_driver.push_outcome(WaitOutcome::Running(String::new()));
-    launch_driver.push_outcome(WaitOutcome::Completed(success_exit("done\n")));
+    launch_driver.push_outcome(ScriptedCommandYield::Running(String::new()));
+    launch_driver.push_outcome(ScriptedCommandYield::Completed(success_exit("done\n")));
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
 
     let command_session_id = env
@@ -473,10 +474,12 @@ fn exec_command_artifact_directory_failure_keeps_session_workspace_alive() {
 }
 
 #[test]
-fn exec_command_initial_running_yield_returns_wait_loop_output() {
+fn exec_command_initial_running_yield_returns_pending_output() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let launch_driver = Arc::new(FakeLaunchDriver::new());
-    launch_driver.push_outcome(WaitOutcome::Running("hello from wait\n".to_owned()));
+    launch_driver.push_outcome(ScriptedCommandYield::Running(
+        "hello from wait\n".to_owned(),
+    ));
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
     let workspace_session_id = create_session(
         &fake,
@@ -501,7 +504,9 @@ fn exec_command_initial_running_yield_returns_wait_loop_output() {
 fn exec_command_initial_completed_session_does_not_finalize_workspace() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let launch_driver = Arc::new(FakeLaunchDriver::new());
-    launch_driver.push_outcome(WaitOutcome::Completed(success_exit("session done\n")));
+    launch_driver.push_outcome(ScriptedCommandYield::Completed(success_exit(
+        "session done\n",
+    )));
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
     let workspace_session_id = create_session(
         &fake,
@@ -527,8 +532,8 @@ fn exec_command_initial_completed_session_does_not_finalize_workspace() {
 fn write_command_stdin_waits_for_output_after_write() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let launch_driver = Arc::new(FakeLaunchDriver::new());
-    launch_driver.push_outcome(WaitOutcome::Running(String::new()));
-    launch_driver.push_outcome(WaitOutcome::Running("after input\n".to_owned()));
+    launch_driver.push_outcome(ScriptedCommandYield::Running(String::new()));
+    launch_driver.push_outcome(ScriptedCommandYield::Running("after input\n".to_owned()));
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
     let workspace_session_id = create_session(
         &fake,
@@ -561,8 +566,8 @@ fn write_command_stdin_waits_for_output_after_write() {
 fn write_command_stdin_finalizes_when_command_completes_after_write() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let launch_driver = Arc::new(FakeLaunchDriver::new());
-    launch_driver.push_outcome(WaitOutcome::Running(String::new()));
-    launch_driver.push_outcome(WaitOutcome::Completed(success_exit("done\n")));
+    launch_driver.push_outcome(ScriptedCommandYield::Running(String::new()));
+    launch_driver.push_outcome(ScriptedCommandYield::Completed(success_exit("done\n")));
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
     let workspace_session_id = create_session(
         &fake,

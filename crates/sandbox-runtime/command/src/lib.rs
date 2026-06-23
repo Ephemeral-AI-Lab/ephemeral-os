@@ -21,7 +21,6 @@ pub mod process_group;
 mod pty;
 mod transcript;
 mod transcript_rows;
-pub mod yield_wait_loop;
 
 pub use config::CommandConfig;
 pub use contract::CommandError;

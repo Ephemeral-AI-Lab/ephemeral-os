@@ -9,33 +9,32 @@ use sandbox_runtime::command::{
     CommandServiceError, CommandSessionId, CommandStatus, ExecCommandInput, ReadCommandLinesInput,
     WriteCommandStdinInput,
 };
-use sandbox_runtime_command::process::{
-    CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec,
-};
-use sandbox_runtime_command::yield_wait_loop::WaitOutcome;
+use sandbox_runtime_command::process::{CommandProcess, CommandProcessSpawn, CommandProcessSpec};
 use sandbox_runtime_workspace::{WorkspaceEntry, WorkspaceProfile};
 
 use support::{
     build_services_with_launch_driver, create_request, success_exit, workspace_handle,
-    FakeWorkspaceService, TestServices,
+    FakeWorkspaceService, ScriptedCommandYield, TestServices,
 };
 
 #[derive(Debug)]
 struct TranscriptLaunchDriver {
     transcript: String,
-    outcomes: Mutex<VecDeque<WaitOutcome<CommandProcessExit>>>,
+    outcomes: Mutex<VecDeque<ScriptedCommandYield>>,
 }
 
 #[derive(Debug)]
 struct MissingTranscriptLaunchDriver {
-    outcomes: Mutex<VecDeque<WaitOutcome<CommandProcessExit>>>,
+    outcomes: Mutex<VecDeque<ScriptedCommandYield>>,
 }
 
 impl TranscriptLaunchDriver {
     fn running(transcript: &str) -> Self {
         Self {
             transcript: transcript.to_owned(),
-            outcomes: Mutex::new(VecDeque::from([WaitOutcome::Running(String::new())])),
+            outcomes: Mutex::new(VecDeque::from([ScriptedCommandYield::Running(
+                String::new(),
+            )])),
         }
     }
 
@@ -43,8 +42,8 @@ impl TranscriptLaunchDriver {
         Self {
             transcript: transcript.to_owned(),
             outcomes: Mutex::new(VecDeque::from([
-                WaitOutcome::Running(String::new()),
-                WaitOutcome::Completed(success_exit(stdout)),
+                ScriptedCommandYield::Running(String::new()),
+                ScriptedCommandYield::Completed(success_exit(stdout)),
             ])),
         }
     }
@@ -53,15 +52,17 @@ impl TranscriptLaunchDriver {
 impl MissingTranscriptLaunchDriver {
     fn running() -> Self {
         Self {
-            outcomes: Mutex::new(VecDeque::from([WaitOutcome::Running(String::new())])),
+            outcomes: Mutex::new(VecDeque::from([ScriptedCommandYield::Running(
+                String::new(),
+            )])),
         }
     }
 
     fn running_then_completed(stdout: &str) -> Self {
         Self {
             outcomes: Mutex::new(VecDeque::from([
-                WaitOutcome::Running(String::new()),
-                WaitOutcome::Completed(success_exit(stdout)),
+                ScriptedCommandYield::Running(String::new()),
+                ScriptedCommandYield::Completed(success_exit(stdout)),
             ])),
         }
     }
@@ -120,7 +121,7 @@ impl CommandLaunchDriver for TranscriptLaunchDriver {
                 .lock()
                 .expect("test operation succeeds")
                 .pop_front()
-                .unwrap_or_else(|| WaitOutcome::Running(String::new())),
+                .unwrap_or_else(|| ScriptedCommandYield::Running(String::new())),
         )
     }
 }
@@ -128,19 +129,19 @@ impl CommandLaunchDriver for TranscriptLaunchDriver {
 fn wait_for_test_outcome(
     process: &CommandProcess,
     completion: &CommandCompletionPromise,
-    outcome: WaitOutcome<CommandProcessExit>,
+    outcome: ScriptedCommandYield,
 ) -> CommandCompletionWaitOutcome {
     match &outcome {
-        WaitOutcome::Running(output) => {
+        ScriptedCommandYield::Running(output) => {
             write_transcript_output(process, output);
         }
-        WaitOutcome::Completed(exit) => {
+        ScriptedCommandYield::Completed(exit) => {
             completion.resolve(exit.clone());
         }
     }
     match outcome {
-        WaitOutcome::Running(_) => CommandCompletionWaitOutcome::Running,
-        WaitOutcome::Completed(_) => CommandCompletionWaitOutcome::Completed,
+        ScriptedCommandYield::Running(_) => CommandCompletionWaitOutcome::Running,
+        ScriptedCommandYield::Completed(_) => CommandCompletionWaitOutcome::Completed,
     }
 }
 
@@ -185,7 +186,7 @@ impl CommandLaunchDriver for MissingTranscriptLaunchDriver {
                 .lock()
                 .expect("test operation succeeds")
                 .pop_front()
-                .unwrap_or_else(|| WaitOutcome::Running(String::new())),
+                .unwrap_or_else(|| ScriptedCommandYield::Running(String::new())),
         )
     }
 }

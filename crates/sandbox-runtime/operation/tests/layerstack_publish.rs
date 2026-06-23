@@ -5,14 +5,13 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use sandbox_runtime::command::{CommandStatus, ExecCommandInput};
-use sandbox_runtime_command::yield_wait_loop::WaitOutcome;
 use sandbox_runtime_workspace::{
     LayerStackSnapshotRef, LeaseId, WorkspaceHandle, WorkspaceProfile, WorkspaceSessionId,
 };
 
 use support::{
     build_services_with_launch_driver, create_request, success_exit, FakeLaunchDriver,
-    FakeWorkspaceService,
+    FakeWorkspaceService, ScriptedCommandYield,
 };
 
 struct PublishFixture {
@@ -138,7 +137,7 @@ fn existing_session_command_completion_does_not_publish_or_remount(
     let fake = Arc::new(FakeWorkspaceService::new());
     fake.push_create_result(Ok(handle));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
-    launch_driver.push_outcome(WaitOutcome::Completed(success_exit("done\n")));
+    launch_driver.push_outcome(ScriptedCommandYield::Completed(success_exit("done\n")));
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
     let workspace_session_id = env
         .workspace
