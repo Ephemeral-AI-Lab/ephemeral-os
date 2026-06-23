@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use sandbox_protocol::{CliOperationExecutionSpace, CliOperationScope, Request};
 use sandbox_runtime::command::{CommandOperationService, ExecCommandInput};
@@ -11,9 +11,6 @@ use sandbox_runtime::workspace_remount::{
 };
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
 use sandbox_runtime::SandboxRuntimeOperations;
-use sandbox_runtime::{
-    RuntimeMetricStatus, RuntimeMetricsRecorder, RuntimeMetricsRecorderHandle, RuntimeOperationName,
-};
 use sandbox_runtime_workspace::{
     CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest,
     RemountWorkspaceRequest, WorkspaceError, WorkspaceHandle, WorkspaceRuntimeHooks,
@@ -219,125 +216,6 @@ fn runtime_known_operation_name_uses_registered_operation_entries() {
 }
 
 #[test]
-fn runtime_catalog_and_dispatch_drop_removed_cgroup_monitor_operations() {
-    let catalog = sandbox_runtime::cli_operation_catalog();
-    let names = catalog
-        .operations
-        .iter()
-        .map(|spec| spec.name)
-        .collect::<Vec<_>>();
-
-    for removed in ["inspect_cgroup_monitor", "read_cgroup_monitor_samples"] {
-        assert!(!names.contains(&removed), "{removed} still in catalog");
-        let response = sandbox_runtime::dispatch_operation(
-            &SandboxRuntimeOperations::new(
-                Arc::new(CommandOperationService::new(
-                    workspace_session(),
-                    sandbox_runtime_command::CommandConfig::default(),
-                )),
-                layerstack_service().expect("layerstack service"),
-            ),
-            &Request::new(
-                removed,
-                "req-removed",
-                CliOperationScope::system(),
-                json!({ "workspace_session_id": "ws-missing" }),
-            ),
-        )
-        .into_json_value();
-        assert_eq!(
-            response["error"]["kind"].as_str(),
-            Some("unknown_op"),
-            "{removed} response was {response}"
-        );
-    }
-}
-
-#[test]
-fn runtime_operation_metrics_use_registered_operation_names(
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let workspace = workspace_session();
-    let layerstack = layerstack_service()?;
-    let command = Arc::new(CommandOperationService::new(
-        Arc::clone(&workspace),
-        sandbox_runtime_command::CommandConfig::default(),
-    ));
-    let metrics = Arc::new(RecordingMetrics::default());
-    let recorder: RuntimeMetricsRecorderHandle = metrics.clone();
-    let operations = SandboxRuntimeOperations::with_metrics_recorder(command, layerstack, recorder);
-
-    let response = sandbox_runtime::dispatch_operation(
-        &operations,
-        &Request::new(
-            "read_command_lines",
-            "req-metrics",
-            CliOperationScope::system(),
-            json!({ "command_session_id": "cmd-missing" }),
-        ),
-    )
-    .into_json_value();
-    assert!(response.get("error").is_some(), "{response}");
-    assert_eq!(
-        metrics.operations(),
-        [(
-            RuntimeOperationName::from_static_name("read_command_lines"),
-            RuntimeMetricStatus::Error
-        )]
-    );
-
-    let response = sandbox_runtime::dispatch_operation(
-        &operations,
-        &Request::new(
-            "squash",
-            "req-squash-metrics",
-            CliOperationScope::system(),
-            json!({}),
-        ),
-    )
-    .into_json_value();
-    assert!(response.get("error").is_none(), "{response}");
-    assert_eq!(
-        metrics.operations(),
-        [
-            (
-                RuntimeOperationName::from_static_name("read_command_lines"),
-                RuntimeMetricStatus::Error
-            ),
-            (
-                RuntimeOperationName::from_static_name("squash"),
-                RuntimeMetricStatus::Ok
-            )
-        ]
-    );
-
-    let response = sandbox_runtime::dispatch_operation(
-        &operations,
-        &Request::new(
-            "RAW_UNKNOWN_OPERATION_SECRET",
-            "req-unknown",
-            CliOperationScope::system(),
-            json!({}),
-        ),
-    )
-    .into_json_value();
-    assert_eq!(response["error"]["kind"].as_str(), Some("unknown_op"));
-    assert_eq!(
-        metrics.operations(),
-        [
-            (
-                RuntimeOperationName::from_static_name("read_command_lines"),
-                RuntimeMetricStatus::Error
-            ),
-            (
-                RuntimeOperationName::from_static_name("squash"),
-                RuntimeMetricStatus::Ok
-            )
-        ]
-    );
-    Ok(())
-}
-
-#[test]
 fn cli_operation_catalog_metadata_uses_runtime_space() {
     let catalog = sandbox_runtime::cli_operation_catalog();
 
@@ -381,29 +259,4 @@ fn squash_dispatch_projects_stable_no_op_json(
     assert_eq!(response["layer_paths"], json!([]));
     assert!(response.get("lease_release_error").is_some(), "{response}");
     Ok(())
-}
-
-#[derive(Default)]
-struct RecordingMetrics {
-    operations: Mutex<Vec<(RuntimeOperationName, RuntimeMetricStatus)>>,
-}
-
-impl RecordingMetrics {
-    fn operations(&self) -> Vec<(RuntimeOperationName, RuntimeMetricStatus)> {
-        self.operations.lock().expect("metrics lock").clone()
-    }
-}
-
-impl RuntimeMetricsRecorder for RecordingMetrics {
-    fn record_runtime_latency(
-        &self,
-        operation: RuntimeOperationName,
-        status: RuntimeMetricStatus,
-        _latency: std::time::Duration,
-    ) {
-        self.operations
-            .lock()
-            .expect("metrics lock")
-            .push((operation, status));
-    }
 }

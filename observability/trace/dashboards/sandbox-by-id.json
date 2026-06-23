@@ -1,0 +1,254 @@
+{
+  "uid": "sandbox-by-id",
+  "title": "Sandbox By ID",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "tags": ["sandbox", "metrics", "ownership"],
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "sandbox_id",
+        "label": "Sandbox",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": "label_values({__name__=~\"sandbox_.*\"}, sandbox_id)",
+        "refresh": 1,
+        "multi": true,
+        "includeAll": true,
+        "current": { "selected": true, "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Sandbox $sandbox_id",
+      "type": "row",
+      "collapsed": false,
+      "repeat": "sandbox_id",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "title": "Cgroup resource - CPU percent",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(sandbox_cgroup_cpu_percent{sandbox_id=\"$sandbox_id\"}) by (cgroup_target_kind, status)",
+          "legendFormat": "{{cgroup_target_kind}} {{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "percent" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 1 }
+    },
+    {
+      "id": 3,
+      "title": "Cgroup resource - Memory current",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(sandbox_cgroup_memory_current_bytes{sandbox_id=\"$sandbox_id\"}) by (cgroup_target_kind, status)",
+          "legendFormat": "{{cgroup_target_kind}} {{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "bytes" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 1 }
+    },
+    {
+      "id": 4,
+      "title": "Cgroup resource - PIDs current",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(sandbox_cgroup_pids_current{sandbox_id=\"$sandbox_id\"}) by (cgroup_target_kind, status)",
+          "legendFormat": "{{cgroup_target_kind}} {{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 1 }
+    },
+    {
+      "id": 5,
+      "title": "Cgroup resource - Pressure avg10",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(sandbox_cgroup_pressure_some_avg10{sandbox_id=\"$sandbox_id\"}) by (cgroup_target_kind, resource_kind, status)",
+          "legendFormat": "{{cgroup_target_kind}} {{resource_kind}} {{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "percent" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 9 }
+    },
+    {
+      "id": 6,
+      "title": "Cgroup resource - Disk upperdir bytes",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(sandbox_cgroup_disk_upperdir_bytes{sandbox_id=\"$sandbox_id\"}) by (cgroup_target_kind, status)",
+          "legendFormat": "{{cgroup_target_kind}} {{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "bytes" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 9 }
+    },
+    {
+      "id": 7,
+      "title": "Cgroup resource - Read errors",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(sandbox_cgroup_read_errors_total{sandbox_id=\"$sandbox_id\"}[5m])) by (cgroup_target_kind, bounded_error_kind)",
+          "legendFormat": "{{cgroup_target_kind}} {{bounded_error_kind}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ops" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 9 }
+    },
+    {
+      "id": 8,
+      "title": "Command latency - Runtime operation average",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (operation, status) (sandbox_runtime_operation_latency_ms_milliseconds_sum{sandbox_id=\"$sandbox_id\", operation=~\"exec_command|write_command_stdin|read_command_lines\"}) / sum by (operation, status) (sandbox_runtime_operation_latency_ms_milliseconds_count{sandbox_id=\"$sandbox_id\", operation=~\"exec_command|write_command_stdin|read_command_lines\"})",
+          "legendFormat": "{{operation}} {{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ms" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 17 }
+    },
+    {
+      "id": 9,
+      "title": "Command latency - Operation rate",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(sandbox_runtime_operation_latency_ms_milliseconds_count{sandbox_id=\"$sandbox_id\", operation=~\"exec_command|write_command_stdin|read_command_lines\"}[5m])) by (operation, status)",
+          "legendFormat": "{{operation}} {{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ops" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 17 }
+    },
+    {
+      "id": 10,
+      "title": "Publish conflicts - Rejections",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(sandbox_publish_rejections_total{sandbox_id=\"$sandbox_id\"}) by (bounded_reason)",
+          "legendFormat": "{{bounded_reason}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 25 }
+    },
+    {
+      "id": 11,
+      "title": "Publish conflicts - Phase latency",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (status) (sandbox_workspace_phase_latency_ms_milliseconds_sum{sandbox_id=\"$sandbox_id\", workspace_phase=\"publish_changes\"}) / sum by (status) (sandbox_workspace_phase_latency_ms_milliseconds_count{sandbox_id=\"$sandbox_id\", workspace_phase=\"publish_changes\"})",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ms" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 25 }
+    },
+    {
+      "id": 12,
+      "title": "Remount health - Failures",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(sandbox_remount_failures_total{sandbox_id=\"$sandbox_id\"}) by (bounded_reason)",
+          "legendFormat": "{{bounded_reason}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 33 }
+    },
+    {
+      "id": 13,
+      "title": "Remount health - Phase latency",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (status) (sandbox_workspace_phase_latency_ms_milliseconds_sum{sandbox_id=\"$sandbox_id\", workspace_phase=\"remount_workspace\"}) / sum by (status) (sandbox_workspace_phase_latency_ms_milliseconds_count{sandbox_id=\"$sandbox_id\", workspace_phase=\"remount_workspace\"})",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ms" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 33 }
+    }
+  ]
+}

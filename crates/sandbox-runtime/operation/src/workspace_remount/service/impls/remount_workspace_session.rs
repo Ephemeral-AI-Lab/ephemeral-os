@@ -1,56 +1,11 @@
-use std::time::Instant;
-
-use crate::workspace_crate::{RemountFailureReason, RuntimeMetricStatus, WorkspacePhase};
 use crate::workspace_crate::{RemountWorkspaceRequest, WorkspaceSessionId};
 use crate::workspace_remount::{
     RemountBlockReason, RemountSwitchState, WorkspaceRemountError, WorkspaceRemountOutcome,
     WorkspaceRemountService,
 };
-use tracing::{field, Span};
 
 impl WorkspaceRemountService {
     pub fn remount_workspace_session(
-        &self,
-        workspace_session_id: WorkspaceSessionId,
-    ) -> Result<WorkspaceRemountOutcome, WorkspaceRemountError> {
-        let span = tracing::info_span!(
-            "workspace.remount",
-            status = field::Empty,
-            error_kind = field::Empty,
-            remounted = field::Empty,
-            blocked_reason = field::Empty,
-            active_commands = field::Empty,
-            process_count = field::Empty,
-            quiesced_process_count = field::Empty,
-            inspected = field::Empty,
-            quiesce_attempted = field::Empty,
-            resumed = field::Empty,
-        );
-        let _span_guard = span.enter();
-        let started = Instant::now();
-        let result = self.remount_workspace_session_inner(workspace_session_id);
-        self.metrics().record_workspace_phase(
-            WorkspacePhase::RemountWorkspace,
-            remount_status(&result),
-            started.elapsed(),
-        );
-        match &result {
-            Ok(outcome) if !outcome.remounted => {
-                if let Some(reason) = outcome.blocked_reason.as_deref() {
-                    self.metrics()
-                        .record_remount_failure(RemountFailureReason::from_block_reason(reason));
-                }
-            }
-            Err(error) => self
-                .metrics()
-                .record_remount_failure(remount_error_metric_reason(error)),
-            Ok(_) => {}
-        }
-        record_remount_result(&span, &result);
-        result
-    }
-
-    fn remount_workspace_session_inner(
         &self,
         workspace_session_id: WorkspaceSessionId,
     ) -> Result<WorkspaceRemountOutcome, WorkspaceRemountError> {
@@ -99,60 +54,5 @@ impl WorkspaceRemountService {
                 Err(WorkspaceRemountError::WorkspaceSession(error))
             }
         }
-    }
-}
-
-fn remount_status(
-    result: &Result<WorkspaceRemountOutcome, WorkspaceRemountError>,
-) -> RuntimeMetricStatus {
-    match result {
-        Ok(outcome) if outcome.remounted => RuntimeMetricStatus::Ok,
-        Ok(_) => RuntimeMetricStatus::Blocked,
-        Err(_) => RuntimeMetricStatus::Error,
-    }
-}
-
-fn remount_error_metric_reason(error: &WorkspaceRemountError) -> RemountFailureReason {
-    match error {
-        WorkspaceRemountError::WorkspaceSession(_) => RemountFailureReason::WorkspaceSession,
-        WorkspaceRemountError::Command(_) => RemountFailureReason::Command,
-    }
-}
-
-fn record_remount_result(
-    span: &Span,
-    result: &Result<WorkspaceRemountOutcome, WorkspaceRemountError>,
-) {
-    match result {
-        Ok(outcome) => {
-            span.record("status", "ok");
-            span.record("remounted", outcome.remounted);
-            if let Some(reason) = outcome.blocked_reason.as_deref() {
-                span.record("blocked_reason", bounded_remount_block_reason(reason));
-            }
-            let inspection = &outcome.command_inspection;
-            span.record("active_commands", inspection.active_commands as u64);
-            span.record("process_count", inspection.process_count as u64);
-            span.record(
-                "quiesced_process_count",
-                inspection.quiesced_process_count as u64,
-            );
-            span.record("inspected", inspection.inspected);
-            span.record("quiesce_attempted", inspection.quiesce_attempted);
-            span.record("resumed", inspection.resumed);
-        }
-        Err(error) => {
-            span.record("status", "error");
-            span.record("error_kind", error.kind());
-        }
-    }
-}
-
-fn bounded_remount_block_reason(reason: &str) -> &'static str {
-    match reason {
-        "active_command_missing" => "active_command_missing",
-        "process_group_unavailable" => "process_group_unavailable",
-        "remount_cancelled_before_switch" => "remount_cancelled_before_switch",
-        _ => "process_group_blocked",
     }
 }

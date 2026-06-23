@@ -6,7 +6,6 @@ use crate::command::{
 use crate::workspace_crate::{DestroyWorkspaceRequest, WorkspaceSessionId};
 
 use super::CommandOperationService;
-use tracing::{field, Span};
 
 #[derive(Debug, Clone)]
 pub(crate) struct ActiveCompletionRecord {
@@ -23,51 +22,7 @@ impl CommandOperationService {
         command_session_id: CommandSessionId,
         process_exit: ::sandbox_runtime_command::process::CommandProcessExit,
     ) -> Result<CommandTerminalResult, CommandServiceError> {
-        let span = tracing::info_span!(
-            "command.finalize",
-            status = field::Empty,
-            error_kind = field::Empty,
-            exit_code = process_exit.exit_code,
-            killed = process_exit.kill.is_some(),
-            cgroup_final_sample = process_exit.cgroup_final_sample.is_some(),
-            cgroup_cleanup_error = process_exit
-                .cgroup_cleanup
-                .as_ref()
-                .and_then(|cleanup| cleanup.last_cleanup_error.as_ref())
-                .is_some(),
-        );
-        let _span_guard = span.enter();
-        let result = self.complete_terminal_command_inner(command_session_id, process_exit);
-        record_terminal_result(&span, &result);
-        result
-    }
-
-    fn complete_terminal_command_inner(
-        &self,
-        command_session_id: CommandSessionId,
-        process_exit: ::sandbox_runtime_command::process::CommandProcessExit,
-    ) -> Result<CommandTerminalResult, CommandServiceError> {
         let record = self.begin_terminal_completion(&command_session_id)?;
-        tracing::info!(
-            name: "cgroup_monitor.final_summary",
-            boundary = "command_finalization_handoff",
-            target_kind = "command",
-            sample_available = process_exit.cgroup_final_sample.is_some(),
-            cleanup_available = process_exit.cgroup_cleanup.is_some(),
-            cleanup_error = process_exit
-                .cgroup_cleanup
-                .as_ref()
-                .and_then(|cleanup| cleanup.last_cleanup_error.as_ref())
-                .is_some(),
-            exit_code = process_exit.exit_code,
-            killed = process_exit.kill.is_some(),
-        );
-        self.workspace().cgroup_monitor().record_command_final(
-            &record.workspace_session_id,
-            &command_session_id.0,
-            process_exit.cgroup_final_sample.clone(),
-            process_exit.cgroup_cleanup.clone(),
-        );
         let result = terminal_result(&process_exit);
 
         let finalized = match self.apply_workspace_completion_policy(&record) {
@@ -197,24 +152,6 @@ impl CommandOperationService {
             error,
             finalized: finalized.map(Box::new),
         })
-    }
-}
-
-fn record_terminal_result(
-    span: &Span,
-    result: &Result<CommandTerminalResult, CommandServiceError>,
-) {
-    match result {
-        Ok(result) => {
-            span.record("status", result.status.as_str());
-            if let Some(exit_code) = result.exit_code {
-                span.record("exit_code", exit_code);
-            }
-        }
-        Err(error) => {
-            span.record("status", "error");
-            span.record("error_kind", error.kind());
-        }
     }
 }
 

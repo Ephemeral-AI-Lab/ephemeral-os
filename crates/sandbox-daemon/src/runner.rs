@@ -8,10 +8,8 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Context, Result};
 use sandbox_config::configs::runner::RunnerConfig;
-use tracing::field;
 
 const DAEMON_CONFIG_YAML_ENV: &str = "SANDBOX_DAEMON_CONFIG_YAML";
-const DAEMON_SANDBOX_ID_ENV: &str = "SANDBOX_DAEMON_SANDBOX_ID";
 
 /// Execute one command inside a holder namespace, reading the
 /// resolved `NamespaceRunnerRequest` payload and emitting the `RunResult` JSON.
@@ -28,45 +26,12 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
         serde_json::from_str(&request_json).context("failed to decode ns-runner request JSON")?;
     let config_doc = load_runner_config_document()?;
     let runner_config = runner_config_from_document(&config_doc)?;
-    let telemetry_config = sandbox_daemon::telemetry::from_config_document(&config_doc)
-        .unwrap_or_else(|_| sandbox_daemon::telemetry::TelemetryConfig::default());
-    let mut telemetry_guard = sandbox_daemon::telemetry::install_runner(
-        &telemetry_config,
-        std::env::var(DAEMON_SANDBOX_ID_ENV).ok().as_deref(),
-    );
     let mut result_target = open_fd_for_write(config.result_fd)
         .with_context(|| format!("failed to open ns-runner result fd {}", config.result_fd))?;
     let mode = config.mode;
-    let span = tracing::info_span!(
-        "runner.request",
-        operation = mode.as_str(),
-        trace_context = field::Empty,
-        status = field::Empty,
-        error_kind = field::Empty,
-    );
-    let parent_status = sandbox_daemon::telemetry::apply_parent_trace_context(
-        &span,
-        request.trace_context.as_ref(),
-    );
-    span.record("trace_context", parent_status.as_str());
-    if parent_status == sandbox_daemon::telemetry::TraceContextParentStatus::Invalid {
-        tracing::debug!(
-            target: "sandbox_daemon::runner",
-            diagnostic = "invalid_trace_context",
-            "ignored invalid runner trace context"
-        );
-    }
-    let dispatch_result = {
-        let _span_guard = span.enter();
-        dispatch_runner_mode(mode, &request, &runner_config)
-    };
-    record_runner_dispatch_result(&span, &dispatch_result);
-    let result = dispatch_result?;
+    let result = dispatch_runner_mode(mode, &request, &runner_config)?;
     let output = serde_json::to_vec(&result).context("failed to encode ns-runner result JSON")?;
-    let write_result = write_payload(&mut result_target, &output);
-    drop(span);
-    let _ = telemetry_guard.shutdown();
-    write_result
+    write_payload(&mut result_target, &output)
 }
 
 fn dispatch_runner_mode(
@@ -99,36 +64,6 @@ fn dispatch_runner_mode(
     }
 }
 
-fn record_runner_dispatch_result(
-    span: &tracing::Span,
-    result: &Result<sandbox_runtime_namespace_process::runner::protocol::RunResult>,
-) {
-    match result {
-        Ok(result) => {
-            span.record("status", runner_status(result.exit_code, &result.payload));
-        }
-        Err(_) => {
-            span.record("status", "error");
-            span.record("error_kind", "runner_error");
-        }
-    }
-}
-
-fn runner_status(exit_code: i32, payload: &serde_json::Value) -> &'static str {
-    if exit_code != 0 {
-        return "error";
-    }
-    match payload
-        .get("status")
-        .and_then(serde_json::Value::as_str)
-        .unwrap_or("ok")
-    {
-        "ok" => "ok",
-        "timed_out" => "timed_out",
-        _ => "error",
-    }
-}
-
 fn ok_result() -> sandbox_runtime_namespace_process::runner::protocol::RunResult {
     sandbox_runtime_namespace_process::runner::protocol::RunResult {
         exit_code: 0,
@@ -157,16 +92,6 @@ enum RunnerCliMode {
     Run,
     MountOverlay,
     RemountOverlay,
-}
-
-impl RunnerCliMode {
-    const fn as_str(self) -> &'static str {
-        match self {
-            Self::Run => "run",
-            Self::MountOverlay => "mount_overlay",
-            Self::RemountOverlay => "remount_overlay",
-        }
-    }
 }
 
 pub(crate) struct RunnerCliConfig {

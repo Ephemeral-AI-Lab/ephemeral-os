@@ -49,15 +49,6 @@ impl WorkspaceModeManager {
             self.setup_isolated_network_after_mount(handle)?;
         }
 
-        phase_start = Instant::now();
-        let cgroup_path = self.runtime.create_cgroup(handle)?;
-        record_create_phase_ms(&mut phases_ms, "create_cgroup", phase_start);
-        if !cgroup_path.as_os_str().is_empty() {
-            handle.cgroup_path = Some(cgroup_path);
-        }
-        phase_start = Instant::now();
-        self.runtime.join_holder_cgroup(handle)?;
-        record_create_phase_ms(&mut phases_ms, "join_holder_cgroup", phase_start);
         Ok(phases_ms)
     }
 
@@ -94,12 +85,6 @@ impl WorkspaceModeManager {
         profile: WorkspaceProfile,
     ) -> Result<WorkspaceModeHandle, WorkspaceModeError> {
         let workspace_root = self.validated_workspace_root()?;
-        let total_cap = usize::try_from(self.caps.total_cap).unwrap_or(usize::MAX);
-        if self.handles.len() >= total_cap {
-            return Err(WorkspaceModeError::QuotaExceeded {
-                total_cap: self.caps.total_cap,
-            });
-        }
         self.check_host_capacity()?;
 
         let workspace_id = WorkspaceModeId(next_handle_id());
@@ -126,7 +111,6 @@ impl WorkspaceModeManager {
             readiness_fd: -1,
             control_fd: -1,
             veth: None,
-            cgroup_path: None,
             remount_state: WorkspaceRemountState::Active,
             created_at: now,
             last_activity: now,
@@ -160,9 +144,4 @@ fn record_create_phase_ms(
 ) {
     let duration_ms = started_at.elapsed().as_secs_f64() * 1000.0;
     phases_ms.insert(phase.to_owned(), duration_ms);
-    tracing::info!(
-        name: "workspace_create_phase_finished",
-        phase = phase,
-        duration_ms = duration_ms,
-    );
 }

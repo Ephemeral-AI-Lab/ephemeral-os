@@ -158,7 +158,6 @@ impl WorkspaceHandle {
         snapshot: LayerStackSnapshotRef,
         upperdir: PathBuf,
         workdir: PathBuf,
-        cgroup_path: Option<PathBuf>,
     ) -> Self {
         Self::with_launch_for_test(
             id,
@@ -177,7 +176,6 @@ impl WorkspaceHandle {
                     pid: Some(12),
                     net: (profile == WorkspaceProfile::Isolated).then_some(13),
                 }),
-                cgroup_path,
             )),
         )
     }
@@ -191,7 +189,6 @@ impl WorkspaceHandle {
         snapshot: LayerStackSnapshotRef,
         upperdir: PathBuf,
         workdir: PathBuf,
-        cgroup_path: Option<PathBuf>,
     ) -> Self {
         Self::with_launch_for_test(
             id,
@@ -205,7 +202,6 @@ impl WorkspaceHandle {
                 upperdir,
                 workdir,
                 None,
-                cgroup_path,
             )),
         )
     }
@@ -245,7 +241,6 @@ fn launch_context_for_test(
     upperdir: PathBuf,
     workdir: PathBuf,
     holder_fds: Option<WorkspaceLaunchFds>,
-    cgroup_path: Option<PathBuf>,
 ) -> WorkspaceLaunchContext {
     WorkspaceLaunchContext {
         profile,
@@ -254,7 +249,6 @@ fn launch_context_for_test(
         upperdir,
         workdir,
         holder_fds,
-        cgroup_path,
     }
 }
 
@@ -266,7 +260,6 @@ struct WorkspaceLaunchContext {
     upperdir: PathBuf,
     workdir: PathBuf,
     holder_fds: Option<WorkspaceLaunchFds>,
-    cgroup_path: Option<PathBuf>,
 }
 
 impl WorkspaceLaunchContext {
@@ -277,7 +270,6 @@ impl WorkspaceLaunchContext {
             upperdir: self.upperdir.clone(),
             workdir: self.workdir.clone(),
             ns_fds: self.required_holder_fds()?,
-            cgroup_path: self.cgroup_path.clone(),
         })
     }
 
@@ -307,7 +299,6 @@ pub struct WorkspaceEntry {
     pub upperdir: PathBuf,
     pub workdir: PathBuf,
     pub ns_fds: WorkspaceEntryFds,
-    pub cgroup_path: Option<PathBuf>,
 }
 
 impl fmt::Debug for WorkspaceEntry {
@@ -315,7 +306,6 @@ impl fmt::Debug for WorkspaceEntry {
         f.debug_struct("WorkspaceEntry")
             .field("storage", &"<hidden>")
             .field("holder_context", &self.ns_fds)
-            .field("cgroup", &self.cgroup_path.as_ref().map(|_| "<available>"))
             .finish()
     }
 }
@@ -499,7 +489,6 @@ impl From<&WorkspaceModeHandle> for WorkspaceHandle {
                 upperdir: handle.dirs.upperdir.clone(),
                 workdir: handle.dirs.workdir.clone(),
                 holder_fds: holder_fds_from_mode(handle.ns_fds),
-                cgroup_path: handle.cgroup_path.clone(),
             }),
         }
     }

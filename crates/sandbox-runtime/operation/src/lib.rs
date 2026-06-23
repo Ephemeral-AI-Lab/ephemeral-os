@@ -16,15 +16,10 @@ pub use operation::{
     CliOperationFamilySpec, CliOperationSpec, CliSpec,
 };
 pub use services::{
-    CgroupMonitorRuntimeConfig, CommandRuntimeConfig, Rfc1918Egress, SandboxRuntimeConfig,
-    SandboxRuntimeOperations, WorkspaceResourceCaps, WorkspaceRuntimeConfig,
+    CommandRuntimeConfig, Rfc1918Egress, SandboxRuntimeConfig, SandboxRuntimeOperations,
+    WorkspaceResourceCaps, WorkspaceRuntimeConfig,
 };
-pub use workspace_crate::{
-    noop_runtime_metrics_recorder, CgroupMonitorSample, CgroupMonitorTargetKind,
-    CgroupReadErrorKind, CommandCancellationReason, NoopRuntimeMetricsRecorder,
-    PressureResourceSample, PublishRejectionReason, RemountFailureReason, RuntimeMetricStatus,
-    RuntimeMetricsRecorder, RuntimeMetricsRecorderHandle, RuntimeOperationName, WorkspacePhase,
-};
+pub use workspace_crate::WorkspaceSessionId;
 pub use workspace_remount::WorkspaceRemountService;
 pub use workspace_session::WorkspaceSessionService;
 

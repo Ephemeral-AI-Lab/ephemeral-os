@@ -1,5 +1,3 @@
-#[path = "unit/cgroup_monitor.rs"]
-mod cgroup_monitor;
 #[path = "unit/model.rs"]
 mod model;
 #[path = "unit/overlay_capture.rs"]
@@ -10,5 +8,3 @@ mod overlay_tree;
 mod remount_plan;
 #[path = "unit/service.rs"]
 mod service;
-#[path = "unit/trace_capture.rs"]
-mod trace_capture;

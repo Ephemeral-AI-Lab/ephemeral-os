@@ -2,65 +2,29 @@ use std::sync::Arc;
 
 use crate::command::CommandOperationService;
 use crate::layerstack::LayerStackService;
-use crate::workspace_crate::{
-    noop_runtime_metrics_recorder, profile::WorkspaceModeManager, RuntimeMetricsRecorderHandle,
-    WorkspaceRuntimeService,
-};
+use crate::workspace_crate::{profile::WorkspaceModeManager, WorkspaceRuntimeService};
 use crate::workspace_session::WorkspaceSessionService;
-use sandbox_runtime_namespace_process::runner::protocol::{no_trace_context, CurrentTraceContext};
 
 #[derive(Clone)]
 pub struct SandboxRuntimeOperations {
     pub command: Arc<CommandOperationService>,
     pub layerstack: Arc<LayerStackService>,
-    pub(crate) metrics: RuntimeMetricsRecorderHandle,
 }
 
 impl SandboxRuntimeOperations {
     #[must_use]
     pub fn new(command: Arc<CommandOperationService>, layerstack: Arc<LayerStackService>) -> Self {
-        Self::with_metrics_recorder(command, layerstack, noop_runtime_metrics_recorder())
-    }
-
-    #[must_use]
-    pub fn with_metrics_recorder(
-        command: Arc<CommandOperationService>,
-        layerstack: Arc<LayerStackService>,
-        metrics: RuntimeMetricsRecorderHandle,
-    ) -> Self {
         Self {
             command,
             layerstack,
-            metrics,
         }
     }
 
     #[must_use]
     pub fn from_config(config: SandboxRuntimeConfig) -> Self {
-        Self::from_config_with_metrics(config, noop_runtime_metrics_recorder())
-    }
-
-    #[must_use]
-    pub fn from_config_with_metrics(
-        config: SandboxRuntimeConfig,
-        metrics: RuntimeMetricsRecorderHandle,
-    ) -> Self {
-        Self::from_config_with_metrics_and_current_trace_context(
-            config,
-            metrics,
-            no_trace_context(),
-        )
-    }
-
-    #[must_use]
-    pub fn from_config_with_metrics_and_current_trace_context(
-        config: SandboxRuntimeConfig,
-        metrics: RuntimeMetricsRecorderHandle,
-        current_trace_context: CurrentTraceContext,
-    ) -> Self {
         let layer_stack_root = config.workspace.layer_stack_root.clone();
         let workspace_runtime = Arc::new(WorkspaceRuntimeService::new(
-            WorkspaceModeManager::new_with_current_trace_context(
+            WorkspaceModeManager::new(
                 config
                     .workspace
                     .workspace_root
@@ -68,38 +32,21 @@ impl SandboxRuntimeOperations {
                     .into_owned(),
                 config.workspace.caps.into(),
                 config.workspace.scratch_root,
-                Arc::clone(&current_trace_context),
             ),
             layer_stack_root.clone(),
         ));
-        let cgroup_monitor: ::sandbox_runtime_workspace::CgroupMonitorConfig =
-            config.cgroup_monitor.into();
-        let workspace_session = Arc::new(WorkspaceSessionService::with_cgroup_monitor_and_metrics(
-            workspace_runtime,
-            cgroup_monitor.clone(),
-            Arc::clone(&metrics),
-        ));
+        let workspace_session = Arc::new(WorkspaceSessionService::new(workspace_runtime));
         let layerstack = Arc::new(
-            LayerStackService::with_metrics_recorder(layer_stack_root, Arc::clone(&metrics))
+            LayerStackService::new(layer_stack_root)
                 .expect("layerstack service initialization failed"),
         );
-        let command = Arc::new(
-            CommandOperationService::new_with_metrics_and_current_trace_context(
-                workspace_session,
-                ::sandbox_runtime_command::CommandConfig {
-                    scratch_root: config.command.scratch_root,
-                    cgroup_monitor,
-                },
-                Arc::clone(&metrics),
-                current_trace_context,
-            ),
-        );
-        Self::with_metrics_recorder(command, layerstack, metrics)
-    }
-
-    #[must_use]
-    pub(crate) fn metrics(&self) -> &RuntimeMetricsRecorderHandle {
-        &self.metrics
+        let command = Arc::new(CommandOperationService::new(
+            workspace_session,
+            ::sandbox_runtime_command::CommandConfig {
+                scratch_root: config.command.scratch_root,
+            },
+        ));
+        Self::new(command, layerstack)
     }
 }
 
@@ -107,7 +54,6 @@ impl SandboxRuntimeOperations {
 pub struct SandboxRuntimeConfig {
     pub workspace: WorkspaceRuntimeConfig,
     pub command: CommandRuntimeConfig,
-    pub cgroup_monitor: CgroupMonitorRuntimeConfig,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -123,34 +69,8 @@ pub struct CommandRuntimeConfig {
     pub scratch_root: std::path::PathBuf,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CgroupMonitorRuntimeConfig {
-    pub enabled: bool,
-    pub sample_interval_ms: u64,
-    pub retained_samples_per_target: usize,
-    pub include_pids: bool,
-    pub include_pressure: bool,
-    pub include_disk: bool,
-}
-
-impl Default for CgroupMonitorRuntimeConfig {
-    fn default() -> Self {
-        let default = ::sandbox_runtime_workspace::CgroupMonitorConfig::default();
-        Self {
-            enabled: default.enabled,
-            sample_interval_ms: default.sample_interval_ms,
-            retained_samples_per_target: default.retained_samples_per_target,
-            include_pids: default.include_pids,
-            include_pressure: default.include_pressure,
-            include_disk: default.include_disk,
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct WorkspaceResourceCaps {
-    pub ttl_s: f64,
-    pub total_cap: u32,
     pub upperdir_bytes: u64,
     pub memavail_fraction: f64,
     pub setup_timeout_s: f64,
@@ -167,8 +87,6 @@ pub enum Rfc1918Egress {
 impl From<WorkspaceResourceCaps> for crate::workspace_crate::profile::ResourceCaps {
     fn from(caps: WorkspaceResourceCaps) -> Self {
         Self {
-            ttl_s: caps.ttl_s,
-            total_cap: caps.total_cap,
             upperdir_bytes: caps.upperdir_bytes,
             memavail_fraction: caps.memavail_fraction,
             setup_timeout_s: caps.setup_timeout_s,
@@ -177,19 +95,6 @@ impl From<WorkspaceResourceCaps> for crate::workspace_crate::profile::ResourceCa
                 Rfc1918Egress::Allow => crate::workspace_crate::profile::Rfc1918Egress::Allow,
                 Rfc1918Egress::Deny => crate::workspace_crate::profile::Rfc1918Egress::Deny,
             },
-        }
-    }
-}
-
-impl From<CgroupMonitorRuntimeConfig> for ::sandbox_runtime_workspace::CgroupMonitorConfig {
-    fn from(config: CgroupMonitorRuntimeConfig) -> Self {
-        Self {
-            enabled: config.enabled,
-            sample_interval_ms: config.sample_interval_ms,
-            retained_samples_per_target: config.retained_samples_per_target,
-            include_pids: config.include_pids,
-            include_pressure: config.include_pressure,
-            include_disk: config.include_disk,
         }
     }
 }

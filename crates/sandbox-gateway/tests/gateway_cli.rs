@@ -430,13 +430,7 @@ async fn runtime_help_renders_grouped_catalog_help() -> TestResult {
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
     let exit = sandbox_gateway::cli::output::run_cli_with_writers(
-        [
-            "sandbox-cli",
-            "--default-sandbox-id",
-            "sbox-1",
-            "runtime",
-            "help",
-        ],
+        ["sandbox-cli", "runtime", "help"],
         &mut stdout,
         &mut stderr,
     )
@@ -462,14 +456,7 @@ async fn runtime_help_operation_renders_detail_without_sandbox_id() -> TestResul
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
     let exit = sandbox_gateway::cli::output::run_cli_with_writers(
-        [
-            "sandbox-cli",
-            "--default-sandbox-id",
-            "sbox-1",
-            "runtime",
-            "help",
-            "exec_command",
-        ],
+        ["sandbox-cli", "runtime", "help", "exec_command"],
         &mut stdout,
         &mut stderr,
     )
@@ -491,14 +478,7 @@ async fn runtime_help_squash_operation_renders_detail_without_sandbox_id() -> Te
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
     let exit = sandbox_gateway::cli::output::run_cli_with_writers(
-        [
-            "sandbox-cli",
-            "--default-sandbox-id",
-            "sbox-1",
-            "runtime",
-            "help",
-            "squash",
-        ],
+        ["sandbox-cli", "runtime", "help", "squash"],
         &mut stdout,
         &mut stderr,
     )
@@ -520,14 +500,7 @@ async fn runtime_help_unknown_operation_reports_suggestions() -> TestResult {
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
     let exit = sandbox_gateway::cli::output::run_cli_with_writers(
-        [
-            "sandbox-cli",
-            "--default-sandbox-id",
-            "sbox-1",
-            "runtime",
-            "help",
-            "exec",
-        ],
+        ["sandbox-cli", "runtime", "help", "exec"],
         &mut stdout,
         &mut stderr,
     )
@@ -543,7 +516,7 @@ async fn runtime_help_unknown_operation_reports_suggestions() -> TestResult {
 }
 
 #[tokio::test]
-async fn runtime_help_requires_default_sandbox() -> TestResult {
+async fn runtime_help_accepts_empty_sandbox_context() -> TestResult {
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
     let exit = sandbox_gateway::cli::output::run_cli_with_writers(
@@ -553,12 +526,11 @@ async fn runtime_help_requires_default_sandbox() -> TestResult {
     )
     .await;
 
-    assert_eq!(exit, 2);
-    assert!(stdout.is_empty());
-    assert_eq!(
-        String::from_utf8(stderr)?,
-        "runtime help requires a default sandbox\n"
-    );
+    assert_eq!(exit, 0);
+    let help = String::from_utf8(stdout)?;
+    assert!(help.contains("Sandbox Runtime Help"));
+    assert!(help.contains("exec_command"));
+    assert!(stderr.is_empty());
     Ok(())
 }
 

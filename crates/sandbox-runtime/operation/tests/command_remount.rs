@@ -316,7 +316,6 @@ fn workspace_handle_with_profile(
         snapshot,
         PathBuf::from("/tmp/command-remount-upper"),
         PathBuf::from("/tmp/command-remount-work"),
-        None,
     )
 }
 
@@ -367,7 +366,6 @@ fn command_config() -> sandbox_runtime_command::CommandConfig {
             std::process::id(),
             unique_suffix()
         )),
-        cgroup_monitor: sandbox_runtime_workspace::CgroupMonitorConfig::default(),
     }
 }
 

@@ -50,9 +50,10 @@ sandbox-cli runtime help
 sandbox-cli runtime help exec_command
 ```
 
-Runtime help usage and examples do not include `--sandbox-id`; sandbox
-selection is contextual CLI configuration used before the request reaches the
-runtime operation surface.
+Runtime help usage and examples do not include `--sandbox-id`; help renders from
+the local CLI catalog without sandbox selection. Non-help runtime operations
+still require sandbox selection before the request reaches the runtime operation
+surface.
 
 `CommandOperationService` owns command admission, active/completed command
 tracking, transcript access, command launch, cancellation, and command

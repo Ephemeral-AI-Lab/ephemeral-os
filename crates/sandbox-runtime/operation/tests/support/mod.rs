@@ -1,7 +1,5 @@
 #![allow(dead_code)]
 
-pub(crate) mod trace;
-
 use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -50,8 +48,6 @@ pub(crate) struct SpawnObservation {
     pub(crate) spec_command: String,
     pub(crate) spec_cwd: Option<PathBuf>,
     pub(crate) spec_timeout_seconds: Option<f64>,
-    pub(crate) spec_trace_context:
-        Option<sandbox_runtime_namespace_process::runner::protocol::TraceContext>,
     pub(crate) workspace_entry: WorkspaceEntry,
     pub(crate) transcript_path: PathBuf,
 }
@@ -113,7 +109,6 @@ impl CommandLaunchDriver for FakeLaunchDriver {
                 spec_command: spec.command.clone(),
                 spec_cwd: spec.cwd.clone(),
                 spec_timeout_seconds: spec.timeout_seconds,
-                spec_trace_context: spec.trace_context.clone(),
                 workspace_entry: parts.workspace_entry.clone(),
                 transcript_path: parts.transcript_path.clone(),
             });
@@ -326,23 +321,6 @@ pub(crate) fn build_services_with_launch_driver(
     TestServices { workspace, command }
 }
 
-pub(crate) fn build_services_with_launch_driver_and_current_trace_context(
-    fake: Arc<FakeWorkspaceService>,
-    launch_driver: Arc<dyn CommandLaunchDriver>,
-    current_trace_context: sandbox_runtime_namespace_process::runner::protocol::CurrentTraceContext,
-) -> TestServices {
-    let workspace = Arc::new(WorkspaceSessionService::new(fake_workspace_runtime(fake)));
-    let command = Arc::new(
-        CommandOperationService::with_launch_driver_and_current_trace_context_for_test(
-            Arc::clone(&workspace),
-            test_command_config(),
-            launch_driver,
-            current_trace_context,
-        ),
-    );
-    TestServices { workspace, command }
-}
-
 pub(crate) fn create_request() -> CreateWorkspaceRequest {
     CreateWorkspaceRequest {
         profile: WorkspaceProfile::HostCompatible,
@@ -355,22 +333,6 @@ pub(crate) fn workspace_handle(
     workspace_root: PathBuf,
     profile: WorkspaceProfile,
 ) -> WorkspaceHandle {
-    workspace_handle_with_cgroup(
-        workspace_session_id,
-        lease_id,
-        workspace_root,
-        profile,
-        None,
-    )
-}
-
-pub(crate) fn workspace_handle_with_cgroup(
-    workspace_session_id: &str,
-    lease_id: &str,
-    workspace_root: PathBuf,
-    profile: WorkspaceProfile,
-    cgroup_path: Option<PathBuf>,
-) -> WorkspaceHandle {
     let base_dir = test_launch_base_dir();
     WorkspaceHandle::holder_backed_for_test(
         WorkspaceSessionId(workspace_session_id.to_owned()),
@@ -379,7 +341,6 @@ pub(crate) fn workspace_handle_with_cgroup(
         test_snapshot(lease_id),
         base_dir.join("upper"),
         base_dir.join("work"),
-        cgroup_path,
     )
 }
 
@@ -411,7 +372,6 @@ pub(crate) fn workspace_handle_unavailable_launch(
         test_snapshot(lease_id),
         base_dir.join("upper"),
         base_dir.join("work"),
-        None,
     )
 }
 
@@ -434,8 +394,6 @@ pub(crate) fn success_exit(stdout: &str) -> CommandProcessExit {
         stdout: stdout.to_owned(),
         elapsed_s: 0.1,
         kill: None,
-        cgroup_final_sample: None,
-        cgroup_cleanup: None,
     }
 }
 
@@ -466,7 +424,6 @@ fn test_command_config() -> sandbox_runtime_command::CommandConfig {
             std::process::id(),
             unique_suffix()
         )),
-        cgroup_monitor: sandbox_runtime_workspace::CgroupMonitorConfig::default(),
     }
 }
 

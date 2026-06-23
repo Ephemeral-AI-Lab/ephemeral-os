@@ -1,6 +1,5 @@
 use super::*;
 
-use sandbox_runtime_namespace_process::runner::protocol::TraceContext;
 use sandbox_runtime_workspace::{WorkspaceEntry, WorkspaceEntryFds};
 
 fn workspace_entry() -> WorkspaceEntry {
@@ -15,14 +14,7 @@ fn workspace_entry() -> WorkspaceEntry {
             pid: 12,
             net: Some(13),
         },
-        cgroup_path: Some("/sys/fs/cgroup/eos".into()),
     }
-}
-
-fn workspace_entry_without_cgroup() -> WorkspaceEntry {
-    let mut entry = workspace_entry();
-    entry.cgroup_path = None;
-    entry
 }
 
 #[test]
@@ -32,7 +24,6 @@ fn process_exposes_identity() {
         command: "echo ok".to_owned(),
         cwd: None,
         timeout_seconds: Some(0.001),
-        trace_context: None,
     });
 
     assert_eq!(process.id(), "cmd_1");
@@ -62,13 +53,10 @@ fn take_exit_reads_transcript_and_retains_it() -> Result<(), Box<dyn std::error:
             command: "echo ok".to_owned(),
             cwd: None,
             timeout_seconds: None,
-            trace_context: None,
         },
         CommandProcessRuntime::new(
             crate::pty::PtyProcess::inactive(writer),
             transcript_path.clone(),
-            None,
-            sandbox_runtime_workspace::CgroupMonitorConfig::default(),
         ),
     );
 
@@ -93,10 +81,9 @@ fn process_spawn_prepare_owns_command_artifact_layout() -> Result<(), Box<dyn st
     ));
     let config = CommandConfig {
         scratch_root: root.clone(),
-        cgroup_monitor: sandbox_runtime_workspace::CgroupMonitorConfig::default(),
     };
 
-    let spawn = CommandProcessSpawn::prepare("cmd_7", workspace_entry_without_cgroup(), &config)?;
+    let spawn = CommandProcessSpawn::prepare("cmd_7", workspace_entry(), &config)?;
 
     let command_dir = root.join("cmd_7");
     assert!(command_dir.is_dir());
@@ -120,114 +107,13 @@ fn process_spawn_cleanup_removes_prepared_artifacts() -> Result<(), Box<dyn std:
     ));
     let config = CommandConfig {
         scratch_root: root.clone(),
-        cgroup_monitor: sandbox_runtime_workspace::CgroupMonitorConfig::default(),
     };
-    let spawn = CommandProcessSpawn::prepare("cmd_8", workspace_entry_without_cgroup(), &config)?;
+    let spawn = CommandProcessSpawn::prepare("cmd_8", workspace_entry(), &config)?;
     std::fs::write(&spawn.transcript_path, b"partial output")?;
 
     spawn.cleanup_artifacts_after_start_failure()?;
 
     assert!(!root.join("cmd_8").exists());
-    let _ = std::fs::remove_dir_all(root);
-    Ok(())
-}
-
-#[test]
-fn process_spawn_prepare_creates_command_child_cgroup_when_session_parent_exists(
-) -> Result<(), Box<dyn std::error::Error>> {
-    let root = std::env::temp_dir().join(format!(
-        "command-cgroup-prepare-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)?
-            .as_nanos()
-    ));
-    let session_cgroup = root.join("eos").join("sessions").join("ws-1");
-    std::fs::create_dir_all(&session_cgroup)?;
-    let config = CommandConfig {
-        scratch_root: root.join("commands"),
-        cgroup_monitor: sandbox_runtime_workspace::CgroupMonitorConfig::default(),
-    };
-    let mut entry = workspace_entry();
-    entry.cgroup_path = Some(session_cgroup.clone());
-
-    let spawn = CommandProcessSpawn::prepare("cmd_9", entry, &config)?;
-
-    let command_cgroup = session_cgroup.join("commands").join("cmd_9");
-    assert!(command_cgroup.is_dir());
-    assert_eq!(
-        spawn.workspace_entry.cgroup_path.as_deref(),
-        Some(command_cgroup.as_path())
-    );
-    assert_eq!(
-        spawn
-            .cgroup_target()
-            .expect("command cgroup target is retained")
-            .cgroup_path,
-        command_cgroup
-    );
-    spawn.cleanup_artifacts_after_start_failure()?;
-    assert!(!session_cgroup.join("commands").join("cmd_9").exists());
-
-    let _ = std::fs::remove_dir_all(root);
-    Ok(())
-}
-
-#[test]
-fn process_spawn_prepare_rejects_missing_session_cgroup_parent(
-) -> Result<(), Box<dyn std::error::Error>> {
-    let root = std::env::temp_dir().join(format!(
-        "command-cgroup-missing-parent-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)?
-            .as_nanos()
-    ));
-    let config = CommandConfig {
-        scratch_root: root.join("commands"),
-        cgroup_monitor: sandbox_runtime_workspace::CgroupMonitorConfig::default(),
-    };
-    let mut entry = workspace_entry();
-    entry.cgroup_path = Some(root.join("eos").join("sessions").join("missing"));
-
-    let error = match CommandProcessSpawn::prepare("cmd_missing", entry, &config) {
-        Ok(_) => panic!("missing parent cgroup is a launch error"),
-        Err(error) => error,
-    };
-
-    assert!(error
-        .to_string()
-        .contains("session cgroup path does not exist"));
-    let _ = std::fs::remove_dir_all(root);
-    Ok(())
-}
-
-#[test]
-fn command_cgroup_final_sample_respects_disabled_monitor() -> Result<(), Box<dyn std::error::Error>>
-{
-    let root = std::env::temp_dir().join(format!(
-        "command-cgroup-disabled-final-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)?
-            .as_nanos()
-    ));
-    let session_cgroup = root.join("eos").join("sessions").join("ws-1");
-    std::fs::create_dir_all(&session_cgroup)?;
-    let cgroup = crate::cgroup::CommandCgroup::prepare(
-        "cmd_disabled",
-        Some(&session_cgroup),
-        root.join("upper").as_path(),
-    )?
-    .expect("command cgroup is prepared");
-
-    let sample = cgroup.final_sample(&sandbox_runtime_workspace::CgroupMonitorConfig {
-        enabled: false,
-        ..sandbox_runtime_workspace::CgroupMonitorConfig::default()
-    });
-
-    assert!(sample.is_none());
-    let _ = cgroup.cleanup();
     let _ = std::fs::remove_dir_all(root);
     Ok(())
 }
@@ -241,7 +127,6 @@ fn builds_namespace_runner_request_from_command_spec_and_workspace_entry(
             command: "printf ok".to_owned(),
             cwd: Some("/workspace/src".into()),
             timeout_seconds: Some(2.5),
-            trace_context: None,
         },
         workspace_entry(),
     );
@@ -260,42 +145,6 @@ fn builds_namespace_runner_request_from_command_spec_and_workspace_entry(
     assert_eq!(request["ns_fds"]["mnt"], 11);
     assert_eq!(request["ns_fds"]["pid"], 12);
     assert_eq!(request["ns_fds"]["net"], 13);
-    assert_eq!(request["cgroup_path"], "/sys/fs/cgroup/eos");
     assert_eq!(request["timeout_seconds"], 2.5);
-    assert!(request.get("trace_context").is_none());
-
-    Ok(())
-}
-
-#[test]
-fn namespace_runner_request_serializes_w3c_trace_context_only(
-) -> Result<(), Box<dyn std::error::Error>> {
-    let request = build_namespace_runner_request(
-        &CommandProcessSpec {
-            id: "cmd_trace".to_owned(),
-            command: "printf COMMAND_SECRET".to_owned(),
-            cwd: Some("/workspace/src".into()),
-            timeout_seconds: None,
-            trace_context: Some(TraceContext {
-                traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01".to_owned(),
-                tracestate: Some("vendor=value".to_owned()),
-            }),
-        },
-        workspace_entry(),
-    );
-
-    let request = serde_json::to_value(request)?;
-    assert_eq!(
-        request["trace_context"],
-        serde_json::json!({
-            "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
-            "tracestate": "vendor=value",
-        })
-    );
-    assert!(!request["trace_context"]
-        .to_string()
-        .contains("COMMAND_SECRET"));
-    assert!(!request["trace_context"].to_string().contains("/workspace"));
-
     Ok(())
 }

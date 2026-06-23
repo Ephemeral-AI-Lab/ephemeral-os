@@ -21,10 +21,6 @@ pub struct ServerConfig {
     pub auth_token: Option<String>,
     /// Dynamic sandbox identity supplied by the process manager or serve CLI.
     pub sandbox_id: Option<String>,
-    /// Daemon telemetry service name used on explicit exported log records.
-    pub telemetry_service_name: String,
-    /// Whether daemon dispatch should emit explicit OpenTelemetry log records.
-    pub export_logs: bool,
 }
 
 /// The running sandbox daemon: request dispatch state and shutdown token.

@@ -7,9 +7,6 @@ use crate::lifecycle::remount::WorkspaceRemountState;
 use crate::model::WorkspaceProfile;
 use crate::overlay::dirs::OverlayDirs;
 
-#[cfg(target_os = "linux")]
-pub(crate) const CGROUP_ROOT: &str = "/sys/fs/cgroup";
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct WorkspaceModeId(pub String);
 
@@ -38,7 +35,6 @@ pub struct WorkspaceModeHandle {
     pub readiness_fd: i32,
     pub control_fd: i32,
     pub veth: Option<VethAllocation>,
-    pub cgroup_path: Option<PathBuf>,
     pub remount_state: WorkspaceRemountState,
     pub created_at: f64,
     pub last_activity: f64,

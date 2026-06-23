@@ -1,8 +1,8 @@
 //! Workspace profile manager.
 //!
-//! The manager owns admission policy, quotas, persistence, and the lifecycle
-//! modules own profile-specific setup, shared holder, overlay, cgroup,
-//! teardown, and persistence behavior.
+//! The manager owns admission policy, persistence, and the lifecycle
+//! modules own profile-specific setup, shared holder, overlay, teardown, and
+//! persistence behavior.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -14,7 +14,6 @@ use crate::namespace::NamespaceRuntime;
 pub use crate::profile::{
     WorkspaceModeFds, WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeSnapshot,
 };
-use sandbox_runtime_namespace_process::runner::protocol::CurrentTraceContext;
 
 pub use crate::lifecycle::remount::{RemountOverlayResult, RemountProbe, WorkspaceRemountState};
 pub use crate::lifecycle::ExitOutcome;
@@ -32,8 +31,6 @@ pub enum Rfc1918Egress {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResourceCaps {
-    pub ttl_s: f64,
-    pub total_cap: u32,
     pub upperdir_bytes: u64,
     pub memavail_fraction: f64,
     pub setup_timeout_s: f64,
@@ -44,8 +41,6 @@ pub struct ResourceCaps {
 impl Default for ResourceCaps {
     fn default() -> Self {
         Self {
-            ttl_s: 1800.0,
-            total_cap: 5,
             upperdir_bytes: 1_073_741_824,
             memavail_fraction: 0.5,
             setup_timeout_s: 30.0,
@@ -63,9 +58,6 @@ pub enum WorkspaceModeError {
 
     #[error("workspace session is not open")]
     NotOpen,
-
-    #[error("workspace session cap reached")]
-    QuotaExceeded { total_cap: u32 },
 
     #[error("host RAM gate refuses new workspace session")]
     HostRamPressure {
@@ -86,7 +78,6 @@ impl WorkspaceModeError {
         match self {
             Self::InvalidArgument(_) => "invalid_argument",
             Self::NotOpen => "not_open",
-            Self::QuotaExceeded { .. } => "quota_exceeded",
             Self::HostRamPressure { .. } => "host_ram_pressure",
             Self::SetupFailed { .. } | Self::NetworkUnavailable(_) => "setup_failed",
         }
@@ -110,20 +101,6 @@ impl WorkspaceModeManager {
         scratch_root: PathBuf,
     ) -> Self {
         Self::with_runtime(workspace_root, caps, scratch_root, NamespaceRuntime::new())
-    }
-
-    pub fn new_with_current_trace_context(
-        workspace_root: impl Into<String>,
-        caps: ResourceCaps,
-        scratch_root: PathBuf,
-        current_trace_context: CurrentTraceContext,
-    ) -> Self {
-        Self::with_runtime(
-            workspace_root,
-            caps,
-            scratch_root,
-            NamespaceRuntime::with_current_trace_context(current_trace_context),
-        )
     }
 
     pub(crate) fn with_runtime(

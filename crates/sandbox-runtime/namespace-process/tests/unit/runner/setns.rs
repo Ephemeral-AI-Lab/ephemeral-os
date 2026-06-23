@@ -34,31 +34,6 @@ fn namespace_order_is_user_mnt_pid_net_and_skips_missing_fds() {
     assert_eq!(order, vec![("user", 10), ("mnt", 11), ("net", 12)]);
 }
 
-#[test]
-fn runner_request_carries_cgroup_path_as_input_metadata() {
-    let mut request = request(None);
-    request.cgroup_path = Some(Path::new("/tmp/eos-cgroup-test").to_path_buf());
-
-    assert_eq!(
-        request.cgroup_path.as_deref(),
-        Some(Path::new("/tmp/eos-cgroup-test"))
-    );
-}
-
-#[cfg(target_os = "linux")]
-#[test]
-fn runner_cgroup_join_error_labels_requested_cgroup_path(
-) -> Result<(), Box<dyn std::error::Error>> {
-    let mut request = request(None);
-    request.cgroup_path = Some(Path::new("/tmp/eos-missing-cgroup-for-test").to_path_buf());
-
-    let error = super::join_cgroup(&request).expect_err("missing cgroup.procs should fail");
-    let message = error.to_string();
-    assert!(message.contains("join cgroup"), "{message}");
-    assert!(message.contains("cgroup.procs"), "{message}");
-    Ok(())
-}
-
 #[cfg(target_os = "linux")]
 #[test]
 fn lowerdir_verification_reports_only_available_kernel_proof() {
@@ -126,8 +101,6 @@ fn request(ns_fds: Option<NsFds>) -> NamespaceRunnerRequest {
         upperdir: Some(Path::new("/tmp/iws/upper").to_path_buf()),
         workdir: Some(Path::new("/tmp/iws/work").to_path_buf()),
         ns_fds,
-        cgroup_path: None,
         timeout_seconds: None,
-        trace_context: None,
     }
 }

@@ -1,34 +1,16 @@
 use std::collections::hash_map::Entry;
-use std::time::Instant;
 
 use crate::workspace_crate::{CreateWorkspaceRequest, DestroyWorkspaceRequest};
-use crate::workspace_crate::{RuntimeMetricStatus, WorkspacePhase};
 use crate::workspace_session::{WorkspaceSessionError, WorkspaceSessionService};
 
 use super::super::model::{WorkspaceSession, WorkspaceSessionHandler};
-use tracing::{field, Span};
 
 impl WorkspaceSessionService {
     pub fn create_workspace_session(
         &self,
         request: CreateWorkspaceRequest,
     ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {
-        let span = tracing::info_span!(
-            "workspace.create_session",
-            profile = request.profile.as_str(),
-            status = field::Empty,
-            error_kind = field::Empty,
-        );
-        let _span_guard = span.enter();
-        let started = Instant::now();
-        let result = self.create_workspace_session_inner(request);
-        self.metrics().record_workspace_phase(
-            WorkspacePhase::CreateSession,
-            workspace_status(&result),
-            started.elapsed(),
-        );
-        record_create_session_result(&span, &result);
-        result
+        self.create_workspace_session_inner(request)
     }
 
     fn create_workspace_session_inner(
@@ -66,30 +48,6 @@ impl WorkspaceSessionService {
             return Err(insert_error);
         }
 
-        self.cgroup_monitor().register_session_from_handle(&handle);
-
         Ok(handler)
-    }
-}
-
-fn workspace_status<T>(result: &Result<T, WorkspaceSessionError>) -> RuntimeMetricStatus {
-    match result {
-        Ok(_) => RuntimeMetricStatus::Ok,
-        Err(_) => RuntimeMetricStatus::Error,
-    }
-}
-
-fn record_create_session_result(
-    span: &Span,
-    result: &Result<WorkspaceSessionHandler, WorkspaceSessionError>,
-) {
-    match result {
-        Ok(_) => {
-            span.record("status", "ok");
-        }
-        Err(error) => {
-            span.record("status", "error");
-            span.record("error_kind", error.kind());
-        }
     }
 }

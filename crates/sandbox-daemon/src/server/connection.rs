@@ -3,7 +3,6 @@ use std::time::Duration;
 
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::time::timeout;
-use tracing::field;
 
 use super::{error_response, SandboxDaemonServer, MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};
 use crate::server::error::SandboxDaemonError;
@@ -38,21 +37,7 @@ impl SandboxDaemonServer {
         Ok(())
     }
 
-    fn read_error_response(&self, err: SandboxDaemonError, is_tcp: bool) -> serde_json::Value {
-        let span = tracing::info_span!(
-            "daemon.request",
-            sandbox_id = field::Empty,
-            request_id = field::Empty,
-            operation = field::Empty,
-            scope_kind = field::Empty,
-            transport = if is_tcp { "tcp" } else { "unix" },
-            status = "error",
-            error_kind = err.response_kind(),
-        );
-        if let Some(sandbox_id) = self.config.sandbox_id.as_deref() {
-            span.record("sandbox_id", sandbox_id);
-        }
-        let _span_guard = span.enter();
+    fn read_error_response(&self, err: SandboxDaemonError, _is_tcp: bool) -> serde_json::Value {
         match err {
             err @ SandboxDaemonError::RequestTooLarge { .. } => error_response(
                 err.response_kind(),

@@ -2,7 +2,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use crate::command::{CommandLifecycleState, CommandProcessStore, CommandSessionId};
-use crate::workspace_crate::{CommandCancellationReason, RuntimeMetricsRecorderHandle};
 use sandbox_runtime_command::process_group::{ProcessGroupController, ProcessGroupInspection};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -106,7 +105,6 @@ pub struct CommandRemountQuiesce {
     pub(crate) cancellation: RemountCancellationToken,
     pub(crate) switch_state: RemountSwitchState,
     pub(crate) controller: Arc<dyn ProcessGroupController>,
-    pub(crate) metrics: RuntimeMetricsRecorderHandle,
 }
 
 impl std::fmt::Debug for CommandRemountQuiesce {
@@ -197,9 +195,6 @@ impl CommandRemountQuiesce {
                     if cancellation.is_cancelled() {
                         active.process.cancel_process();
                         active.lifecycle_state = CommandLifecycleState::Cancelled;
-                        self.metrics.record_command_cancellation(
-                            CommandCancellationReason::RemountCancellation,
-                        );
                     } else {
                         active.lifecycle_state = CommandLifecycleState::Running;
                     }

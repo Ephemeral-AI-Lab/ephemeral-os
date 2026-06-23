@@ -128,17 +128,7 @@ where
                 .await
         }
         Command::Runtime(command) => {
-            let config = match discover_config(config_overrides, stderr) {
-                Ok(config) => config,
-                Err(exit) => return exit,
-            };
             if command.operation == "help" {
-                if let Err(message) =
-                    validate_runtime_help_context(command.sandbox_id.as_deref(), &config)
-                {
-                    let _ = writeln!(stderr, "{message}");
-                    return EXIT_USAGE;
-                }
                 let catalog = match runtime_catalog_document() {
                     Ok(catalog) => catalog,
                     Err(error) => {
@@ -148,6 +138,10 @@ where
                 };
                 return render_help_command(&catalog, &command.operation_argv, stdout, stderr);
             }
+            let config = match discover_config(config_overrides, stderr) {
+                Ok(config) => config,
+                Err(exit) => return exit,
+            };
             let sandbox_id = match resolve_runtime_sandbox_id(command.sandbox_id, &config) {
                 Ok(sandbox_id) => sandbox_id,
                 Err(error) => {
@@ -226,18 +220,6 @@ where
             let _ = writeln!(stderr, "{error}");
             EXIT_USAGE
         }
-    }
-}
-
-fn validate_runtime_help_context(
-    sandbox_id: Option<&str>,
-    config: &GatewayConfig,
-) -> Result<(), &'static str> {
-    let sandbox_id = sandbox_id.or(config.default_sandbox_id.as_deref());
-    if sandbox_id.is_some_and(|value| !value.trim().is_empty()) {
-        Ok(())
-    } else {
-        Err("runtime help requires a default sandbox")
     }
 }
 

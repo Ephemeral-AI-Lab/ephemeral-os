@@ -22,9 +22,6 @@ pub(crate) fn workspace_error_from_mode_error(error: WorkspaceModeError) -> Work
             message,
         },
         WorkspaceModeError::NotOpen => WorkspaceError::NotOpen,
-        WorkspaceModeError::QuotaExceeded { total_cap } => {
-            WorkspaceError::QuotaExceeded { total_cap }
-        }
         WorkspaceModeError::HostRamPressure {
             required_bytes,
             budget_bytes,

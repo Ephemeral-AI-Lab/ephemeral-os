@@ -11,9 +11,8 @@ use sandbox_runtime_workspace::{
 };
 
 use support::{
-    build_services_with_launch_driver, create_request, success_exit,
-    trace::{capture_traces, with_trace_capture_lock},
-    FakeLaunchDriver, FakeWorkspaceService,
+    build_services_with_launch_driver, create_request, success_exit, FakeLaunchDriver,
+    FakeWorkspaceService,
 };
 
 struct PublishFixture {
@@ -102,7 +101,6 @@ fn workspace_handle(
         snapshot,
         std::env::temp_dir().join("operation-layerstack-publish-upper"),
         std::env::temp_dir().join("operation-layerstack-publish-work"),
-        None,
     )
 }
 
@@ -177,8 +175,8 @@ fn layerstack_service_rejects_invalid_base_revision(
     let base = fixture.build_base()?;
     let service = fixture.service()?;
 
-    let error = with_trace_capture_lock(|| {
-        service.publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
+    let error = service
+        .publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
             expected_base: sandbox_runtime::layerstack::LayerStackRevision {
                 manifest_version: base.version,
                 root_hash: "not-the-base-root".to_owned(),
@@ -188,8 +186,7 @@ fn layerstack_service_rejects_invalid_base_revision(
             protected_drops: Vec::new(),
             changes: Vec::new(),
         })
-    })
-    .expect_err("invalid base metadata rejects before publish");
+        .expect_err("invalid base metadata rejects before publish");
 
     assert!(matches!(
         error,
@@ -211,8 +208,8 @@ fn layerstack_service_preserves_structured_publish_rejection(
         layer_count: base.layers.len(),
     };
 
-    let error = with_trace_capture_lock(|| {
-        service.publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
+    let error = service
+        .publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
             expected_base: revision,
             base_manifest: base,
             protected_drops: Vec::new(),
@@ -221,8 +218,7 @@ fn layerstack_service_preserves_structured_publish_rejection(
                 content: b"bad\n".to_vec(),
             }],
         })
-    })
-    .expect_err("git mutation rejects publish");
+        .expect_err("git mutation rejects publish");
 
     match error {
         sandbox_runtime::layerstack::LayerStackServiceError::PublishRejected { rejection } => {
@@ -253,13 +249,11 @@ fn layerstack_service_empty_changes_return_no_op_revision(
         layer_count: base.layers.len(),
     };
 
-    let result = with_trace_capture_lock(|| {
-        service.publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
-            expected_base: revision.clone(),
-            base_manifest: base.clone(),
-            protected_drops: Vec::new(),
-            changes: Vec::new(),
-        })
+    let result = service.publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
+        expected_base: revision.clone(),
+        base_manifest: base.clone(),
+        protected_drops: Vec::new(),
+        changes: Vec::new(),
     })?;
 
     assert!(result.no_op);
@@ -283,16 +277,14 @@ fn layerstack_service_ignored_only_publish_preserves_route_summary(
         layer_count: base.layers.len(),
     };
 
-    let result = with_trace_capture_lock(|| {
-        service.publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
-            expected_base: revision,
-            base_manifest: base,
-            protected_drops: Vec::new(),
-            changes: vec![sandbox_runtime_layerstack::LayerChange::Write {
-                path: lp("out.log"),
-                content: b"ignored\n".to_vec(),
-            }],
-        })
+    let result = service.publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
+        expected_base: revision,
+        base_manifest: base,
+        protected_drops: Vec::new(),
+        changes: vec![sandbox_runtime_layerstack::LayerChange::Write {
+            path: lp("out.log"),
+            content: b"ignored\n".to_vec(),
+        }],
     })?;
 
     assert!(!result.no_op);
@@ -302,191 +294,6 @@ fn layerstack_service_ignored_only_publish_preserves_route_summary(
         read_text(&fixture, "out.log")?,
         Some("ignored\n".to_owned())
     );
-    Ok(())
-}
-
-#[test]
-fn layerstack_publish_span_records_route_result_without_payload_leaks(
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let fixture = PublishFixture::new("trace-route-result")?;
-    std::fs::write(fixture.workspace.join("README.md"), "base\n")?;
-    let base = fixture.build_base()?;
-    let service = fixture.service()?;
-    let revision = sandbox_runtime::layerstack::LayerStackRevision {
-        manifest_version: base.version,
-        root_hash: sandbox_runtime_layerstack::manifest_root_hash(&base),
-        layer_count: base.layers.len(),
-    };
-
-    let traces = capture_traces(|| {
-        service
-            .publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
-                expected_base: revision,
-                base_manifest: base,
-                protected_drops: Vec::new(),
-                changes: vec![sandbox_runtime_layerstack::LayerChange::Write {
-                    path: lp("publish/SECRET_PATH_SENTINEL.txt"),
-                    content: b"CONTENT_SECRET_SENTINEL".to_vec(),
-                }],
-            })
-            .expect("publish succeeds");
-    });
-
-    for expected in [
-        "span layerstack.publish_changes",
-        "event layerstack.expected_base_checked",
-        "event layerstack.source_paths_checked",
-        "event layerstack.manifest_commit_checked",
-        "result=committed",
-        "status=ok",
-        "route_source_count=1",
-        "route_ignored_count=0",
-        "checked_count=1",
-        "no_op=false",
-        "result_layer_count=2",
-    ] {
-        assert!(traces.contains(expected), "missing {expected} in {traces}");
-    }
-    for forbidden in [
-        "SECRET_PATH_SENTINEL",
-        "CONTENT_SECRET_SENTINEL",
-        "PublishChangesResult",
-        "LayerPath",
-        "layers/",
-    ] {
-        assert!(
-            !traces.contains(forbidden),
-            "forbidden value {forbidden} appeared in traces: {traces}"
-        );
-    }
-    Ok(())
-}
-
-#[test]
-fn layerstack_publish_span_records_occ_and_rejection_facts_without_trace_objects(
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let fixture = PublishFixture::new("trace-occ-reject")?;
-    std::fs::write(fixture.workspace.join("README.md"), "base\n")?;
-    let base = fixture.build_base()?;
-    let service = fixture.service()?;
-    let valid_revision = sandbox_runtime::layerstack::LayerStackRevision {
-        manifest_version: base.version,
-        root_hash: sandbox_runtime_layerstack::manifest_root_hash(&base),
-        layer_count: base.layers.len(),
-    };
-
-    let traces = capture_traces(|| {
-        let _ = service.publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
-            expected_base: sandbox_runtime::layerstack::LayerStackRevision {
-                manifest_version: base.version,
-                root_hash: "ROOT_HASH_SECRET_SENTINEL".to_owned(),
-                layer_count: base.layers.len(),
-            },
-            base_manifest: base.clone(),
-            protected_drops: Vec::new(),
-            changes: Vec::new(),
-        });
-        let _ = service.publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
-            expected_base: valid_revision,
-            base_manifest: base,
-            protected_drops: Vec::new(),
-            changes: vec![sandbox_runtime_layerstack::LayerChange::Write {
-                path: lp(".git/SECRET_PATH_SENTINEL"),
-                content: b"CONTENT_SECRET_SENTINEL".to_vec(),
-            }],
-        });
-    });
-
-    for expected in [
-        "span layerstack.publish_changes",
-        "event layerstack.expected_base_checked",
-        "result=mismatch",
-        "error_kind=invalid_base_revision",
-        "root_hash_matched=false",
-        "error_kind=publish_rejected",
-        "rejection_reason=git_mutation_forbidden",
-        "rejection_has_path=true",
-    ] {
-        assert!(traces.contains(expected), "missing {expected} in {traces}");
-    }
-    for forbidden in [
-        "ROOT_HASH_SECRET_SENTINEL",
-        "SECRET_PATH_SENTINEL",
-        "CONTENT_SECRET_SENTINEL",
-        "PublishReject",
-        "PublishChangesResult",
-        "plan_publish",
-        "validate_source_paths",
-    ] {
-        assert!(
-            !traces.contains(forbidden),
-            "forbidden value {forbidden} appeared in traces: {traces}"
-        );
-    }
-    Ok(())
-}
-
-#[test]
-fn layerstack_publish_records_source_conflict_as_occ_event_without_path_leaks(
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let fixture = PublishFixture::new("trace-occ-source-conflict")?;
-    std::fs::write(fixture.workspace.join("README.md"), "base\n")?;
-    let base = fixture.build_base()?;
-    let service = fixture.service()?;
-    let revision = sandbox_runtime::layerstack::LayerStackRevision {
-        manifest_version: base.version,
-        root_hash: sandbox_runtime_layerstack::manifest_root_hash(&base),
-        layer_count: base.layers.len(),
-    };
-    with_trace_capture_lock(|| {
-        service.publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
-            expected_base: revision.clone(),
-            base_manifest: base.clone(),
-            protected_drops: Vec::new(),
-            changes: vec![sandbox_runtime_layerstack::LayerChange::Write {
-                path: lp("README.md"),
-                content: b"active\n".to_vec(),
-            }],
-        })
-    })?;
-
-    let traces = capture_traces(|| {
-        let _ = service.publish_changes(sandbox_runtime::layerstack::PublishChangesRequest {
-            expected_base: revision,
-            base_manifest: base,
-            protected_drops: Vec::new(),
-            changes: vec![sandbox_runtime_layerstack::LayerChange::Write {
-                path: lp("README.md"),
-                content: b"CONTENT_SECRET_SENTINEL".to_vec(),
-            }],
-        });
-    });
-
-    for expected in [
-        "event layerstack.expected_base_checked",
-        "event layerstack.source_paths_checked",
-        "result=conflict",
-        "source_conflict=true",
-        "conflict_path_present=true",
-        "expected_fingerprint_kind=file",
-        "actual_fingerprint_kind=file",
-        "error_kind=publish_rejected",
-        "rejection_reason=source_conflict",
-    ] {
-        assert!(traces.contains(expected), "missing {expected} in {traces}");
-    }
-    for forbidden in [
-        "README.md",
-        "CONTENT_SECRET_SENTINEL",
-        "SourceConflict",
-        "PublishReject",
-        "PublishChangesResult",
-    ] {
-        assert!(
-            !traces.contains(forbidden),
-            "forbidden value {forbidden} appeared in traces: {traces}"
-        );
-    }
     Ok(())
 }
 

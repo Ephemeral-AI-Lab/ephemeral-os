@@ -52,8 +52,6 @@ fn request(args: serde_json::Value) -> NamespaceRunnerRequest {
         upperdir: None,
         workdir: None,
         ns_fds: None,
-        cgroup_path: None,
         timeout_seconds: None,
-        trace_context: None,
     }
 }

@@ -26,18 +26,10 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let config_path = daemon_config_path_arg(&args)?;
     let runtime_config = load_runtime_config(&config_path)?;
     let daemon_config = &runtime_config.daemon;
-    let telemetry_config = &runtime_config.telemetry;
     let config = DaemonCliConfig::parse(args, &daemon_config.server, config_path)?;
-    telemetry_config
-        .validate_for_daemon_startup(config.serve_mode(), config.sandbox_id.as_deref())
-        .context("validate daemon telemetry startup")?;
     if config.spawn {
         return spawn_daemon(&config);
     }
-    let mut telemetry_guard =
-        sandbox_daemon::telemetry::install(telemetry_config, config.sandbox_id.as_deref())
-            .context("install daemon telemetry")?;
-    let metrics_recorder = telemetry_guard.metrics_recorder();
     set_runner_config_env(&config.config_yaml_path);
     set_runner_sandbox_id_env(config.sandbox_id.as_deref());
     let workspace_root = config.workspace_root.clone();
@@ -48,8 +40,6 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
         tcp_port: config.tcp_port,
         auth_token: config.auth_token,
         sandbox_id: config.sandbox_id,
-        telemetry_service_name: telemetry_config.service_name.clone(),
-        export_logs: telemetry_config.export_logs,
     };
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(daemon_worker_threads(
@@ -61,72 +51,47 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let serve_result = runtime.block_on(async move {
         let server = sandbox_daemon::SandboxDaemonServer::new(
             server_config,
-            Arc::new(build_runtime_operations(
-                &runtime_config,
-                workspace_root,
-                metrics_recorder,
-            )),
+            Arc::new(build_runtime_operations(&runtime_config, workspace_root)),
         );
         server.serve().await
     });
-    let telemetry_result = telemetry_guard.shutdown();
     serve_result?;
-    telemetry_result.context("shutdown daemon telemetry")?;
     Ok(())
 }
 
 struct DaemonRuntimeConfig {
     daemon: DaemonConfig,
-    telemetry: sandbox_daemon::telemetry::TelemetryConfig,
     runtime: RuntimeConfig,
 }
 
 fn build_runtime_operations(
     config: &DaemonRuntimeConfig,
     workspace_root: PathBuf,
-    metrics_recorder: sandbox_runtime::RuntimeMetricsRecorderHandle,
 ) -> sandbox_runtime::SandboxRuntimeOperations {
-    sandbox_runtime::SandboxRuntimeOperations::from_config_with_metrics_and_current_trace_context(
-        sandbox_runtime::SandboxRuntimeConfig {
-            workspace: sandbox_runtime::WorkspaceRuntimeConfig {
-                workspace_root,
-                layer_stack_root: config.runtime.workspace.layer_stack_root.clone(),
-                scratch_root: config.runtime.workspace.scratch_root.clone(),
-                caps: sandbox_runtime::WorkspaceResourceCaps {
-                    ttl_s: config.runtime.workspace.ttl_s,
-                    total_cap: config.runtime.workspace.total_cap,
-                    upperdir_bytes: config.runtime.workspace.upperdir_bytes,
-                    memavail_fraction: config.runtime.workspace.memavail_fraction,
-                    setup_timeout_s: config.runtime.workspace.setup_timeout_s,
-                    exit_grace_s: config.runtime.workspace.exit_grace_s,
-                    rfc1918_egress: match config.runtime.workspace.rfc1918_egress {
-                        sandbox_config::configs::runtime::Rfc1918Egress::Allow => {
-                            sandbox_runtime::Rfc1918Egress::Allow
-                        }
-                        sandbox_config::configs::runtime::Rfc1918Egress::Deny => {
-                            sandbox_runtime::Rfc1918Egress::Deny
-                        }
-                    },
+    sandbox_runtime::SandboxRuntimeOperations::from_config(sandbox_runtime::SandboxRuntimeConfig {
+        workspace: sandbox_runtime::WorkspaceRuntimeConfig {
+            workspace_root,
+            layer_stack_root: config.runtime.workspace.layer_stack_root.clone(),
+            scratch_root: config.runtime.workspace.scratch_root.clone(),
+            caps: sandbox_runtime::WorkspaceResourceCaps {
+                upperdir_bytes: config.runtime.workspace.upperdir_bytes,
+                memavail_fraction: config.runtime.workspace.memavail_fraction,
+                setup_timeout_s: config.runtime.workspace.setup_timeout_s,
+                exit_grace_s: config.runtime.workspace.exit_grace_s,
+                rfc1918_egress: match config.runtime.workspace.rfc1918_egress {
+                    sandbox_config::configs::runtime::Rfc1918Egress::Allow => {
+                        sandbox_runtime::Rfc1918Egress::Allow
+                    }
+                    sandbox_config::configs::runtime::Rfc1918Egress::Deny => {
+                        sandbox_runtime::Rfc1918Egress::Deny
+                    }
                 },
             },
-            command: sandbox_runtime::CommandRuntimeConfig {
-                scratch_root: config.daemon.commands.scratch_root.clone(),
-            },
-            cgroup_monitor: sandbox_runtime::CgroupMonitorRuntimeConfig {
-                enabled: config.daemon.cgroup_monitor.enabled,
-                sample_interval_ms: config.daemon.cgroup_monitor.sample_interval_ms,
-                retained_samples_per_target: config
-                    .daemon
-                    .cgroup_monitor
-                    .retained_samples_per_target,
-                include_pids: config.daemon.cgroup_monitor.include_pids,
-                include_pressure: config.daemon.cgroup_monitor.include_pressure,
-                include_disk: config.daemon.cgroup_monitor.include_disk,
-            },
         },
-        metrics_recorder,
-        Arc::new(sandbox_daemon::telemetry::current_trace_context),
-    )
+        command: sandbox_runtime::CommandRuntimeConfig {
+            scratch_root: config.daemon.commands.scratch_root.clone(),
+        },
+    })
 }
 
 fn load_runtime_config(path: &Path) -> Result<DaemonRuntimeConfig> {
@@ -136,18 +101,11 @@ fn load_runtime_config(path: &Path) -> Result<DaemonRuntimeConfig> {
         .section::<DaemonConfig>("daemon")
         .context("deserialize daemon config section")?;
     daemon.validate().context("validate daemon config")?;
-    let telemetry = sandbox_daemon::telemetry::from_config_document(&doc)
-        .context("deserialize daemon telemetry config")?;
-    telemetry.validate().context("validate daemon telemetry")?;
     let runtime = doc
         .section::<RuntimeConfig>("runtime")
         .context("deserialize runtime config section")?;
     runtime.validate().context("validate runtime config")?;
-    Ok(DaemonRuntimeConfig {
-        daemon,
-        telemetry,
-        runtime,
-    })
+    Ok(DaemonRuntimeConfig { daemon, runtime })
 }
 
 fn daemon_worker_threads(max_worker_threads: usize) -> usize {
@@ -272,14 +230,6 @@ impl DaemonCliConfig {
             args.push(sandbox_id.clone());
         }
         args
-    }
-
-    pub(crate) fn serve_mode(&self) -> sandbox_daemon::telemetry::DaemonServeMode {
-        if self.spawn {
-            sandbox_daemon::telemetry::DaemonServeMode::Spawn
-        } else {
-            sandbox_daemon::telemetry::DaemonServeMode::Foreground
-        }
     }
 }
 

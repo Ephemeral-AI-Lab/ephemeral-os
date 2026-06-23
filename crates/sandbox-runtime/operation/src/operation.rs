@@ -1,8 +1,6 @@
 use std::sync::OnceLock;
-use std::time::Instant;
 
 use crate::services::SandboxRuntimeOperations;
-use crate::workspace_crate::{RuntimeMetricStatus, RuntimeOperationName};
 use crate::{command, layerstack};
 
 pub use sandbox_protocol::{
@@ -70,14 +68,7 @@ pub(crate) fn dispatch_operation(
         .flat_map(|entries| entries.iter())
         .find(|entry| entry.name == request.op)
         .map_or_else(sandbox_protocol::Response::unknown_op, |entry| {
-            let started = Instant::now();
-            let response = (entry.dispatch)(operations, request);
-            operations.metrics().record_runtime_latency(
-                RuntimeOperationName::from_static_name(entry.name),
-                response_status(&response),
-                started.elapsed(),
-            );
-            response
+            (entry.dispatch)(operations, request)
         })
 }
 
@@ -93,13 +84,4 @@ fn operation_entry_groups() -> [&'static [OperationEntry]; 2] {
         command::operation_entries(),
         layerstack::operation_entries(),
     ]
-}
-
-fn response_status(response: &sandbox_protocol::Response) -> RuntimeMetricStatus {
-    let value = response.clone().into_json_value();
-    if value.get("error").is_some() {
-        RuntimeMetricStatus::Error
-    } else {
-        RuntimeMetricStatus::Ok
-    }
 }

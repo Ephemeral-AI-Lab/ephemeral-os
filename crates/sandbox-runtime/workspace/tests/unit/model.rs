@@ -51,7 +51,6 @@ fn workspace_mode_handle() -> WorkspaceModeHandle {
         readiness_fd: 13,
         control_fd: 14,
         veth: None,
-        cgroup_path: Some("/sys/fs/cgroup/eos".into()),
         remount_state: WorkspaceRemountState::Pending,
         created_at: 1.0,
         last_activity: 2.0,
@@ -92,7 +91,6 @@ fn assert_handle_projection(public: &WorkspaceHandle) {
     assert_eq!(entry.ns_fds.mnt, 11);
     assert_eq!(entry.ns_fds.pid, 12);
     assert_eq!(entry.ns_fds.net, Some(13));
-    assert_eq!(entry.cgroup_path, Some(PathBuf::from("/sys/fs/cgroup/eos")));
 }
 
 #[test]
@@ -142,7 +140,6 @@ fn host_compatible_entry_uses_holder_launch_without_network_fd() {
         snapshot,
         "/upper/shared".into(),
         "/work/shared".into(),
-        Some("/sys/fs/cgroup/eos-shared".into()),
     );
 
     let entry = handle.entry().expect("host-compatible launch is valid");
@@ -151,7 +148,6 @@ fn host_compatible_entry_uses_holder_launch_without_network_fd() {
     assert_eq!(entry.ns_fds.mnt, 11);
     assert_eq!(entry.ns_fds.pid, 12);
     assert_eq!(entry.ns_fds.net, None);
-    assert_eq!(entry.cgroup_path, Some("/sys/fs/cgroup/eos-shared".into()));
 }
 
 #[test]
@@ -215,7 +211,6 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
                     pid: 12,
                     net: Some(13),
                 },
-                cgroup_path: Some("/sys/fs/cgroup/eos".into()),
             }
         ),
         format!(
@@ -301,7 +296,6 @@ fn assert_no_internal_fields(debug: &str) {
         "holder_pid:",
         "readiness_fd:",
         "control_fd:",
-        "cgroup_path:",
         "veth:",
     ] {
         assert!(
@@ -344,7 +338,6 @@ fn public_dtos_construct_clone_and_compare() {
             pid: 12,
             net: Some(13),
         },
-        cgroup_path: Some("/sys/fs/cgroup/eos".into()),
     };
     let capture_request = CaptureChangesRequest {
         include_stats: true,

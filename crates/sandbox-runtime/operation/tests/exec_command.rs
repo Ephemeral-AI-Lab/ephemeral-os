@@ -373,7 +373,6 @@ fn exec_command_passes_workspace_entry_to_spawn_paths() {
     assert_eq!(entry.ns_fds.mnt, 11);
     assert_eq!(entry.ns_fds.pid, 12);
     assert_eq!(entry.ns_fds.net, Some(13));
-    assert!(entry.cgroup_path.is_none());
 }
 
 #[test]

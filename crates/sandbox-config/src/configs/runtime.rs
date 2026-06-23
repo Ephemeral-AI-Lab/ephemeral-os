@@ -8,8 +8,8 @@ use std::path::PathBuf;
 use serde::Deserialize;
 
 use crate::configs::validate::{
-    require_absolute, require_f64_at_least, require_f64_gt, require_ratio, require_u32_at_least,
-    require_u64_at_least, ConfigFieldError,
+    require_absolute, require_f64_at_least, require_f64_gt, require_ratio, require_u64_at_least,
+    ConfigFieldError,
 };
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -33,8 +33,6 @@ impl RuntimeConfig {
 pub struct WorkspaceConfig {
     pub layer_stack_root: PathBuf,
     pub scratch_root: PathBuf,
-    pub ttl_s: f64,
-    pub total_cap: u32,
     pub upperdir_bytes: u64,
     pub memavail_fraction: f64,
     pub setup_timeout_s: f64,
@@ -47,8 +45,6 @@ impl Default for WorkspaceConfig {
         Self {
             layer_stack_root: PathBuf::from("/eos/layer-stack"),
             scratch_root: PathBuf::from("/eos/scratch/workspace"),
-            ttl_s: 1800.0,
-            total_cap: 5,
             upperdir_bytes: 1_073_741_824,
             memavail_fraction: 0.5,
             setup_timeout_s: 30.0,
@@ -66,8 +62,6 @@ impl WorkspaceConfig {
     pub fn validate(&self) -> Result<(), ConfigFieldError> {
         require_absolute(&self.layer_stack_root, "runtime.workspace.layer_stack_root")?;
         require_absolute(&self.scratch_root, "runtime.workspace.scratch_root")?;
-        require_f64_gt(self.ttl_s, 0.0, "runtime.workspace.ttl_s")?;
-        require_u32_at_least(self.total_cap, 1, "runtime.workspace.total_cap")?;
         require_u64_at_least(self.upperdir_bytes, 1, "runtime.workspace.upperdir_bytes")?;
         require_ratio(
             self.memavail_fraction,

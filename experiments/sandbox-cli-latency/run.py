@@ -52,14 +52,8 @@ DEFAULT_CASES = [
     ),
     Case(
         name="runtime_help_exec_command",
-        args=[
-            "--default-sandbox-id",
-            "latency-probe",
-            "runtime",
-            "help",
-            "exec_command",
-        ],
-        description="Runtime operation help render with explicit default sandbox; no gateway required.",
+        args=["runtime", "help", "exec_command"],
+        description="Runtime operation help render; no gateway or sandbox context required.",
     ),
 ]
 

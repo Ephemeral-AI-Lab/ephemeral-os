@@ -1,12 +1,9 @@
-pub mod cgroup;
-pub mod cgroup_monitor;
 mod fds;
 mod holder;
 mod setns_runner;
 
 #[cfg(target_os = "linux")]
 use crate::profile::WorkspaceModeError;
-use sandbox_runtime_namespace_process::runner::protocol::{no_trace_context, CurrentTraceContext};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum NamespaceNetwork {
@@ -91,9 +88,7 @@ pub(crate) fn setup_error(error: impl std::fmt::Display) -> WorkspaceModeError {
 }
 
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
-pub(crate) struct NamespaceRuntime {
-    current_trace_context: CurrentTraceContext,
-}
+pub(crate) struct NamespaceRuntime;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct HolderKillReport {
@@ -105,19 +100,6 @@ pub(crate) struct HolderKillReport {
 
 impl NamespaceRuntime {
     pub(crate) fn new() -> Self {
-        Self::with_current_trace_context(no_trace_context())
-    }
-
-    pub(crate) fn with_current_trace_context(current_trace_context: CurrentTraceContext) -> Self {
-        Self {
-            current_trace_context,
-        }
-    }
-
-    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
-    pub(crate) fn current_trace_context(
-        &self,
-    ) -> Option<sandbox_runtime_namespace_process::runner::protocol::TraceContext> {
-        (self.current_trace_context)()
+        Self
     }
 }

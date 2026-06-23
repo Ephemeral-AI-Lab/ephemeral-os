@@ -43,15 +43,9 @@ impl WorkspaceModeManager {
         close_handle_fds(handle);
         self.teardown_isolated_network(handle, &mut phases_ms);
         let phase_start = Instant::now();
-        if let Some(cgroup_path) = handle.cgroup_path.as_ref() {
-            let _ = remove_cgroup_tree(cgroup_path);
-        }
-        record_phase_ms(&mut phases_ms, "cgroup_rmdir", phase_start);
-        let phase_start = Instant::now();
         let _ = std::fs::remove_dir_all(&handle.dirs.run_dir);
         record_phase_ms(&mut phases_ms, "rmtree_scratch", phase_start);
 
-        let cgroup_exists_after = handle.cgroup_path.as_ref().map(|path| path.exists());
         let inspection = json!({
             "handle_registered_after": self.handles.contains_key(&handle.workspace_id),
             "open_handle_count_after": self.handles.len(),
@@ -66,11 +60,6 @@ impl WorkspaceModeManager {
             "control_fd_was_open": handle.control_fd >= 0,
             "veth_host_name": handle.veth.as_ref().map(|veth| veth.host_name.as_str()),
             "veth_ns_name": handle.veth.as_ref().map(|veth| veth.ns_name.as_str()),
-            "cgroup_path": handle
-                .cgroup_path
-                .as_ref()
-                .map(|path| path.to_string_lossy().into_owned()),
-            "cgroup_exists_after": cgroup_exists_after,
             "scratch_dir": handle.dirs.run_dir.to_string_lossy(),
             "scratch_exists_after": handle.dirs.run_dir.exists(),
             "upperdir_exists_after": handle.dirs.upperdir.exists(),
@@ -128,20 +117,6 @@ impl WorkspaceModeManager {
             inspection,
         })
     }
-}
-
-fn remove_cgroup_tree(path: &Path) -> std::io::Result<()> {
-    if !path.exists() {
-        return Ok(());
-    }
-    for entry in std::fs::read_dir(path)? {
-        let entry = entry?;
-        let child = entry.path();
-        if child.is_dir() {
-            remove_cgroup_tree(&child)?;
-        }
-    }
-    std::fs::remove_dir(path)
 }
 
 fn close_handle_fds(handle: &WorkspaceModeHandle) {
