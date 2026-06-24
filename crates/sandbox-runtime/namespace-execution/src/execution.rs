@@ -9,8 +9,7 @@ pub struct ExecutionHandle<T> {
 }
 
 impl<T> ExecutionHandle<T> {
-    #[cfg_attr(not(test), allow(dead_code))]
-    pub(crate) fn new(id: NamespaceExecutionId, promise: CompletionPromise<T>) -> Self {
+    pub fn new(id: NamespaceExecutionId, promise: CompletionPromise<T>) -> Self {
         Self { id, promise }
     }
 
@@ -35,8 +34,7 @@ pub struct InteractiveExecution<T> {
 }
 
 impl<T> InteractiveExecution<T> {
-    #[cfg_attr(not(test), allow(dead_code))]
-    pub(crate) fn new(exec: ExecutionHandle<T>) -> Self {
+    pub fn new(exec: ExecutionHandle<T>) -> Self {
         Self { exec }
     }
 
@@ -54,28 +52,5 @@ impl<T> InteractiveExecution<T> {
 
     pub fn wait(self) -> Result<T, NamespaceExecutionError> {
         self.exec.wait()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{ExecutionHandle, InteractiveExecution};
-    use crate::id::NamespaceExecutionId;
-    use crate::promise::CompletionPromise;
-
-    #[test]
-    fn interactive_forwards_to_inner_handle() {
-        let promise = CompletionPromise::<u32>::new();
-        assert!(promise.resolve(Ok(7)));
-        let handle = ExecutionHandle::new(
-            NamespaceExecutionId("namespace_execution_1".to_owned()),
-            promise,
-        );
-        let interactive = InteractiveExecution::new(handle);
-
-        assert_eq!(interactive.id().0, "namespace_execution_1");
-        assert_eq!(interactive.execution().id().0, "namespace_execution_1");
-        assert!(interactive.is_finished());
-        assert_eq!(interactive.wait().expect("resolved Ok"), 7);
     }
 }
