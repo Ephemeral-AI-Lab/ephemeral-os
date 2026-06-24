@@ -17,25 +17,15 @@ use rustix::pty::{grantpt, openpt, unlockpt, OpenptFlags};
 
 use crate::transcript::TranscriptTimestampPrefixer;
 
-/// Cap on how long a single `write_stdin` pushes bytes into the PTY before
-/// returning a structured backpressure error. The master is non-blocking, so a
-/// consumer that never drains its stdin cannot wedge the writer past this bound.
 const STDIN_WRITE_DEADLINE: Duration = Duration::from_secs(2);
 
-/// Cap on a single file-backed `read_output_since` read window.
 const MAX_OUTPUT_READ_BYTES: u64 = 1024 * 1024;
 
-/// Where the PTY reader drains output. A `File` sink persists timestamp-prefixed
-/// bytes for the command's file-backed transcript (the row reader lives in the
-/// `command` crate); a `Memory` sink keeps the Phase-2 in-memory buffer for ops
-/// that do not need persistence.
 enum TranscriptSink {
     Memory(Arc<Mutex<Vec<u8>>>),
     File(PathBuf),
 }
 
-/// The master side of a PTY: a non-blocking stdin writer, a transcript drained by
-/// a reader thread (in-memory or file-backed), and a cancel action.
 pub struct PtyMaster {
     pgid: Option<i32>,
     writer: Mutex<File>,
@@ -44,9 +34,6 @@ pub struct PtyMaster {
 }
 
 impl PtyMaster {
-    /// Wrap a PTY master: clone the writer, mark the OFD non-blocking, and spawn
-    /// the output reader. `transcript_path` selects the sink (file vs in-memory);
-    /// `cancel` is the independent teardown action (killpg for the fork backing).
     pub fn spawn(
         master: File,
         pgid: Option<i32>,
@@ -84,16 +71,10 @@ impl PtyMaster {
         self.pgid
     }
 
-    /// A cloneable cancel action, so a caller can release the registry lock
-    /// before invoking it (`terminate_process_group` blocks for the SIGTERM grace
-    /// period, which must not be held under the registry lock).
     pub fn cancel_handle(&self) -> Arc<dyn Fn() + Send + Sync> {
         Arc::clone(&self.cancel)
     }
 
-    /// Push `bytes` to stdin without blocking unbounded. The master is
-    /// non-blocking; when the consumer stops draining, this waits for writability
-    /// only up to `STDIN_WRITE_DEADLINE` before a structured backpressure error.
     pub fn write_stdin(&self, bytes: &[u8]) -> io::Result<()> {
         let mut writer = self.writer.lock().expect("pty writer mutex poisoned");
         let deadline = Instant::now() + STDIN_WRITE_DEADLINE;
@@ -222,8 +203,6 @@ fn read_file_since(path: &Path, offset: u64) -> String {
     String::from_utf8_lossy(&bytes).into_owned()
 }
 
-/// Open a master/slave PTY pair; runs on darwin via the `cfg(not(linux))`
-/// `ptsname` branch and on linux via `ioctl_tiocgptpeer`.
 pub fn open_pty_pair() -> io::Result<(File, File)> {
     let flags = OpenptFlags::RDWR | OpenptFlags::NOCTTY;
     #[cfg(target_os = "linux")]
@@ -246,9 +225,6 @@ pub fn open_pty_pair() -> io::Result<(File, File)> {
     Ok((File::from(master), slave))
 }
 
-/// SIGTERM then (after a grace period) SIGKILL the process group — the cancel
-/// action for the fork backing. The runner runs in its own group, so this
-/// unblocks the watcher's `wait` without the watcher mediating.
 pub(crate) fn terminate_process_group(pgid: i32) {
     if killpg(Pid::from_raw(pgid), Signal::SIGTERM).is_ok() {
         thread::sleep(Duration::from_millis(50));

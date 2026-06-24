@@ -1,11 +1,3 @@
-//! Daemon-side namespace execution engine.
-//!
-//! Workspace-agnostic: callers pass a `NamespaceTarget`, never a workspace type,
-//! so this crate sits below `workspace` in the dependency graph.
-//!
-//! `NamespaceExecutionEngine` drives both families over one dispatch flow:
-//! reserve, spawn, mark running, wait, finalize, complete, resolve, and mark
-//! terminal. The launcher, promise, and PTY substrate stay `pub(crate)`.
 
 mod engine;
 mod error;

@@ -1,4 +1,3 @@
-//! `sandbox-daemon ns-runner` subcommand adapter.
 
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
@@ -10,13 +9,6 @@ use sandbox_config::configs::runner::RunnerConfig;
 
 const DAEMON_CONFIG_YAML_ENV: &str = "SANDBOX_DAEMON_CONFIG_YAML";
 
-/// Execute one command inside a holder namespace, reading the
-/// resolved `NamespaceRunnerRequest` payload and emitting the `RunResult` JSON.
-///
-/// This is a thin call into the `sandbox-runtime-namespace-process` runner module:
-/// read the request payload from `--request-fd <fd>`, load the runner
-/// config, dispatch the selected [`NsRunnerOperation`], and write the compact
-/// `RunResult` JSON to `--result-fd <fd>`.
 pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let config = RunnerCliConfig::parse(args)?;
     let request_json = read_payload_from_fd(config.request_fd)?;
@@ -96,7 +88,6 @@ fn runner_config_from_document(doc: &sandbox_config::ConfigDocument) -> Result<R
     Ok(config)
 }
 
-/// Which ns-runner operation the flags selected; default is command execution.
 #[derive(Clone, Copy)]
 enum NsRunnerOperation {
     Run,

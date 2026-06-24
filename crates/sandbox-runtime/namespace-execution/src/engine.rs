@@ -19,10 +19,6 @@ use crate::shell::{RunnerOutcome, ShellOperation};
 use crate::status::NamespaceExecutionTerminalStatus;
 use crate::target::NamespaceTarget;
 
-/// Strategy + Template-Method core: holds the registry, observer, and boxed
-/// launcher (the Bridge seam, §2.1). Both entry points share one dispatch spine;
-/// the engine knows nothing of shell-vs-mount beyond which launcher method and
-/// finalizer it is handed.
 pub struct NamespaceExecutionEngine<V = ()> {
     registry: Arc<ExecutionRegistry<V>>,
     observer: Arc<dyn ExecutionObserver>,
@@ -90,7 +86,6 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         self.registry.live_values(f)
     }
 
-    /// PTY-backed shell execution. The runner runs in `Run` mode (no mode flag).
     pub fn run_shell_interactive<S: ShellOperation>(
         &self,
         op: S,
@@ -120,7 +115,7 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
             child,
             Arc::clone(&promise),
             cancelled,
-            MountExitHandling::AllowNonZero,
+            None,
             move |outcome| op.finalize(outcome),
         );
         Ok(InteractiveExecution::new(
@@ -129,8 +124,6 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         ))
     }
 
-    /// Pipe-backed mount/remount execution. `mode_flag` selects the runner mode
-    /// (`--mount-overlay` / `--remount-overlay`); `parse` projects the outcome.
     pub fn run_mount<O: Send + 'static>(
         &self,
         mode_flag: &'static str,
@@ -158,22 +151,19 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
             child,
             Arc::clone(&promise),
             Arc::new(AtomicBool::new(false)),
-            MountExitHandling::ShortCircuitNonZero { mode_flag },
+            Some(mode_flag),
             parse,
         );
         Ok(ExecutionHandle::new(id, promise))
     }
 
-    /// The watcher thread: one blocking `wait_completion`, then finalize inline,
-    /// `complete` BEFORE `resolve` (so promise-resolved ⟹ the completed entry
-    /// exists), then `on_terminal`. No poll loops.
     fn spawn_watcher<O: Send + 'static>(
         &self,
         id: NamespaceExecutionId,
         mut child: Box<dyn RunnerChild>,
         promise: Arc<CompletionPromise<O>>,
         cancelled: Arc<AtomicBool>,
-        mount_exit_handling: MountExitHandling,
+        mount_error_mode: Option<&'static str>,
         finalize: impl FnOnce(RunnerOutcome) -> Result<O, NamespaceExecutionError> + Send + 'static,
     ) {
         let registry = Arc::clone(&self.registry);
@@ -185,22 +175,14 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
                         .with_cancelled(cancelled.load(Ordering::Acquire));
                     let status = outcome.status();
                     let exit_code = Some(outcome.exit_code());
-                    if let Some(error) = mount_exit_handling.short_circuit_error(&outcome) {
-                        (
-                            Err(error),
-                            NamespaceExecutionTerminalStatus::Error,
-                            exit_code,
-                        )
+                    let result = mount_exit_error(mount_error_mode, &outcome)
+                        .map_or_else(|| finalize_outcome(finalize, outcome), Err);
+                    let status = if result.is_ok() {
+                        status
                     } else {
-                        match finalize_outcome(finalize, outcome) {
-                            Ok(output) => (Ok(output), status, exit_code),
-                            Err(error) => (
-                                Err(error),
-                                NamespaceExecutionTerminalStatus::Error,
-                                exit_code,
-                            ),
-                        }
-                    }
+                        NamespaceExecutionTerminalStatus::Error
+                    };
+                    (result, status, exit_code)
                 }
                 Err(error) => (Err(error), NamespaceExecutionTerminalStatus::Error, None),
             };
@@ -234,26 +216,19 @@ fn panic_payload_message(payload: &(dyn Any + Send)) -> String {
     }
 }
 
-#[derive(Clone, Copy)]
-enum MountExitHandling {
-    AllowNonZero,
-    ShortCircuitNonZero { mode_flag: &'static str },
-}
-
-impl MountExitHandling {
-    fn short_circuit_error(&self, outcome: &RunnerOutcome) -> Option<NamespaceExecutionError> {
-        match self {
-            Self::AllowNonZero => None,
-            Self::ShortCircuitNonZero { mode_flag } if outcome.exit_code() != 0 => {
-                Some(NamespaceExecutionError::Finalize(format!(
-                    "namespace runner {mode_flag} failed with exit code {}: {}",
-                    outcome.exit_code(),
-                    mount_failure_detail(outcome.payload())
-                )))
-            }
-            Self::ShortCircuitNonZero { .. } => None,
-        }
-    }
+fn mount_exit_error(
+    mode_flag: Option<&str>,
+    outcome: &RunnerOutcome,
+) -> Option<NamespaceExecutionError> {
+    let mode_flag = mode_flag?;
+    (outcome.exit_code() != 0).then(|| {
+        NamespaceExecutionError::Finalize(format!(
+            "namespace runner {} failed with exit code {}: {}",
+            mode_flag,
+            outcome.exit_code(),
+            mount_failure_detail(outcome.payload())
+        ))
+    })
 }
 
 fn mount_failure_detail(payload: &Value) -> String {

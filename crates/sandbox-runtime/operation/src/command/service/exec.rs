@@ -1,6 +1,3 @@
-//! `ExecCommand` — the command's `ShellOperation` strategy. It owns the one-shot
-//! session-destroy policy and the finalization observability trace, both of which
-//! run inline on the engine watcher thread (where no other command code reaches).
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -18,8 +15,6 @@ use crate::workspace_session::{
     WorkspaceSessionError, WorkspaceSessionHandler, WorkspaceSessionService,
 };
 
-/// Who owns the workspace session after the command finishes: an existing session
-/// the caller keeps, or a one-shot session this command must destroy.
 pub(crate) enum SessionDisposition {
     ExistingSession,
     OneShot {
@@ -27,9 +22,6 @@ pub(crate) enum SessionDisposition {
     },
 }
 
-/// The async finalization-trace context carried into `finalize` so the watcher
-/// thread can emit the `complete_terminal_command_with_services` span + metadata
-/// that the daemon's observability surface asserts.
 pub(crate) struct CommandFinalizationTrace {
     pub(crate) sink: AsyncTraceSink,
     pub(crate) origin_request_id: String,

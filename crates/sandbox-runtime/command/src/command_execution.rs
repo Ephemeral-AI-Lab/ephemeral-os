@@ -1,6 +1,3 @@
-//! `CommandExecution` — the single per-command handle retained in the engine
-//! registry keyed by id. It serves live reads (write/yield) and terminal reads
-//! (transcript window + result), distinguished by the promise.
 
 use std::io;
 use std::path::PathBuf;
@@ -18,11 +15,6 @@ use crate::transcript_rows::{
     required_transcript_window, transcript_window, CommandTranscriptWindow,
 };
 
-/// The live + terminal residue of a command: the engine handle (id + promise +
-/// PTY), the transcript file path, the owning workspace session, the start
-/// instant, and the read cursor. The cursor is `AtomicU64` because the registry
-/// hands out `&CommandExecution` under its lock and the yield path advances it
-/// through a shared reference.
 pub struct CommandExecution {
     exec: InteractiveExecution<CommandTerminalResult>,
     transcript_path: Option<PathBuf>,
@@ -63,7 +55,6 @@ impl CommandExecution {
         &self.workspace_session_id
     }
 
-    /// The spawned process group, for remount process-group inspection/cancel.
     #[must_use]
     pub fn pgid(&self) -> Option<i32> {
         self.exec.pgid()
@@ -73,8 +64,6 @@ impl CommandExecution {
         self.exec.write_stdin(bytes)
     }
 
-    /// A cloneable cancel action, so the caller can drop the registry lock before
-    /// the kill's SIGTERM grace period.
     #[must_use]
     pub fn cancel_handle(&self) -> Arc<dyn Fn() + Send + Sync> {
         self.exec.cancel_handle()
@@ -90,8 +79,6 @@ impl CommandExecution {
         self.started_at.elapsed().as_secs_f64()
     }
 
-    /// The terminal result via the non-consuming promise peek; `None` while the
-    /// command is still running. `is_finished() == true` implies `Some`.
     #[must_use]
     pub fn terminal_result(
         &self,
@@ -99,8 +86,6 @@ impl CommandExecution {
         self.exec.resolved()
     }
 
-    /// A lock-free waiter cloned from this command's promise, so the yield loop can
-    /// block on completion without holding the registry lock.
     #[must_use]
     pub fn completion(&self) -> Arc<dyn CompletionWaiter> {
         self.exec.completion()
@@ -115,15 +100,11 @@ impl CommandExecution {
         self.next_snapshot_offset.store(next, Ordering::Release);
     }
 
-    /// A transcript window over the file, infallible (empty when the file is
-    /// missing) — the running/terminal yield read.
     #[must_use]
     pub fn transcript_window(&self, start: u64, limit: usize) -> CommandTranscriptWindow {
         transcript_window(self.transcript_path.as_deref(), start, limit)
     }
 
-    /// A transcript window that fails when the retained transcript is missing —
-    /// the terminal `read_command_lines` read.
     pub fn required_transcript_window(
         &self,
         start: u64,

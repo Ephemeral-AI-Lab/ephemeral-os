@@ -6,8 +6,6 @@ use crate::id::NamespaceExecutionId;
 use crate::promise::{CompletionPromise, CompletionWaiter};
 use crate::pty::PtyMaster;
 
-/// Genus: id + completion promise. The promise is shared (`Arc`) with the
-/// watcher thread, which resolves it after the runner completes.
 pub struct ExecutionHandle<T> {
     id: NamespaceExecutionId,
     promise: Arc<CompletionPromise<T>>,
@@ -26,8 +24,6 @@ impl<T> ExecutionHandle<T> {
         self.promise.is_resolved()
     }
 
-    /// A lock-free waiter cloned from this handle's promise — the yield loop waits
-    /// on it without holding the registry lock.
     pub fn completion(&self) -> Arc<dyn CompletionWaiter>
     where
         T: Send + 'static,
@@ -47,16 +43,12 @@ impl<T> ExecutionHandle<T> {
     }
 }
 
-/// Unsize a concrete completion promise to the type-erased waiter (the coercion
-/// site that lets a generic handle hand out an `Arc<dyn CompletionWaiter>`).
 fn upcast_waiter<T: Send + 'static>(
     promise: Arc<CompletionPromise<T>>,
 ) -> Arc<dyn CompletionWaiter> {
     promise
 }
 
-/// Species: an `ExecutionHandle` plus interactive (PTY) capability — stdin,
-/// output streaming, and cancel, forwarded to the `PtyMaster`.
 pub struct InteractiveExecution<T> {
     exec: ExecutionHandle<T>,
     pty: PtyMaster,
@@ -75,7 +67,6 @@ impl<T> InteractiveExecution<T> {
         self.exec.is_finished()
     }
 
-    /// A lock-free waiter cloned from this execution's promise (yield loop).
     pub fn completion(&self) -> Arc<dyn CompletionWaiter>
     where
         T: Send + 'static,
@@ -110,8 +101,6 @@ impl<T> InteractiveExecution<T> {
         self.pty.cancel();
     }
 
-    /// A cloneable cancel action — the caller invokes it after releasing the
-    /// registry lock (the kill blocks for a grace period).
     pub fn cancel_handle(&self) -> Arc<dyn Fn() + Send + Sync> {
         self.pty.cancel_handle()
     }

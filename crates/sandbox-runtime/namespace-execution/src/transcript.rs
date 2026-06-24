@@ -1,9 +1,5 @@
 use time::OffsetDateTime;
 
-/// Write-side transcript prefixer: stamps each line of PTY output with an
-/// `[RFC3339] ` prefix as it is appended to the file sink. The read side lives
-/// in the `command` crate (`transcript_rows`), which strips this prefix; the two
-/// share the format across the crate boundary.
 pub(crate) struct TranscriptTimestampPrefixer {
     at_line_start: bool,
 }

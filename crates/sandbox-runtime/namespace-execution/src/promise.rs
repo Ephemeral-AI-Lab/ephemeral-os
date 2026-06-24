@@ -3,11 +3,6 @@ use std::time::{Duration, Instant};
 
 use crate::error::NamespaceExecutionError;
 
-/// A type-erased block-until-resolved capability. The command yield loop clones an
-/// `Arc<dyn CompletionWaiter>` out of the registry (under its lock), then waits on
-/// it with **no** lock held — so the watcher can still acquire the registry lock
-/// to `complete` and resolve the promise. (Lock-order rule: registry lock and
-/// promise lock are never held simultaneously.)
 pub trait CompletionWaiter: Send + Sync {
     fn wait_timeout(&self, timeout: Duration) -> bool;
 }
@@ -18,10 +13,6 @@ impl<T: Send> CompletionWaiter for CompletionPromise<T> {
     }
 }
 
-/// Write-once completion cell: the single internal "done?" truth, backed by a
-/// `Mutex` + `Condvar`. `wait` takes the value (single-consumer); `resolved`
-/// peeks a clone without consuming, so the registry-retained handle can serve
-/// repeated terminal reads.
 pub struct CompletionPromise<T> {
     slot: Mutex<Option<Result<T, NamespaceExecutionError>>>,
     ready: Condvar,
@@ -41,7 +32,6 @@ impl<T> CompletionPromise<T> {
         }
     }
 
-    /// Pending → resolved, then `notify_all`. Returns `false` if already resolved.
     pub fn resolve(&self, outcome: Result<T, NamespaceExecutionError>) -> bool {
         let mut slot = self.slot.lock().expect("completion promise mutex poisoned");
         if slot.is_none() {
@@ -58,7 +48,6 @@ impl<T> CompletionPromise<T> {
         slot.is_some()
     }
 
-    /// Block until resolved, then take the value (single-consumer).
     pub fn wait(&self) -> Result<T, NamespaceExecutionError> {
         let mut slot = self.slot.lock().expect("completion promise mutex poisoned");
         while slot.is_none() {
@@ -71,8 +60,6 @@ impl<T> CompletionPromise<T> {
             .expect("wait loop exits only once the slot is resolved")
     }
 
-    /// Block up to `timeout` for resolution. `true` once resolved, `false` on
-    /// timeout. Does not consume the value — it stays for `wait`/`resolved`.
     pub fn wait_timeout(&self, timeout: Duration) -> bool {
         let mut slot = self.slot.lock().expect("completion promise mutex poisoned");
         let deadline = Instant::now() + timeout;
@@ -93,8 +80,6 @@ impl<T> CompletionPromise<T> {
         true
     }
 
-    /// Non-consuming snapshot of the resolved outcome, or `None` while pending.
-    /// The slot is never taken, so repeated terminal reads each get a clone.
     pub fn resolved(&self) -> Option<Result<T, NamespaceExecutionError>>
     where
         T: Clone,

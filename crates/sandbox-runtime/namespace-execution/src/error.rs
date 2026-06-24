@@ -1,17 +1,11 @@
 use std::fmt;
 
-/// Failures surfaced by the namespace execution engine.
 #[derive(Debug, Clone)]
 pub enum NamespaceExecutionError {
-    /// The runner could not be launched (fork/pipe/PTY setup).
     Spawn(String),
-    /// The runner launched but did not produce a usable completion envelope.
     Completion(String),
-    /// A piped setup operation exceeded its setup deadline.
     Timeout { mode_flag: &'static str },
-    /// An operation's `finalize` rejected the runner outcome.
     Finalize(String),
-    /// Admission refused because `max_active` live executions are in flight.
     Admission { max_active: usize },
 }
 

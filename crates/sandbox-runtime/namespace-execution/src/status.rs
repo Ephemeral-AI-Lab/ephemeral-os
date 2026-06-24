@@ -1,4 +1,3 @@
-/// The four terminal states a namespace execution resolves to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NamespaceExecutionTerminalStatus {
     Ok,

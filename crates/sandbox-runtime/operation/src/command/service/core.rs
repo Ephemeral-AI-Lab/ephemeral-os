@@ -17,18 +17,10 @@ use crate::workspace_session::{
     WorkspaceSessionError, WorkspaceSessionHandler, WorkspaceSessionService,
 };
 
-/// Command admission ceiling (relocated `DEFAULT_MAX_ACTIVE_COMMANDS`).
 const MAX_ACTIVE_COMMANDS: usize = 256;
 
-/// Setup timeout handed to the engine constructor. The command path is PTY-backed
-/// (`run_shell_interactive`), which never consumes it — only the piped mount path
-/// does — so its value is immaterial here; a finite default keeps the ctor happy.
 const COMMAND_ENGINE_SETUP_TIMEOUT_S: f64 = 30.0;
 
-/// The command service: a thin façade over one `NamespaceExecutionEngine`
-/// instance whose registry retains the live + terminal command handles
-/// (`CommandExecution`) and whose observer is the shared ledger. It owns no
-/// spawn/PTY/promise/finalizer machinery and no poll loop.
 pub struct CommandOperationService {
     workspace: Arc<WorkspaceSessionService>,
     config: ::sandbox_runtime_command::CommandConfig,
@@ -139,8 +131,6 @@ impl CommandOperationService {
         self.async_trace_sink.clone()
     }
 
-    /// The live command sessions in a workspace (sorted) — the workspace→command
-    /// reverse lookup, served from the engine registry (no second per-session map).
     #[must_use]
     pub(crate) fn live_command_session_ids_for_workspace(
         &self,
@@ -240,12 +230,10 @@ fn build_engine(
     ))
 }
 
-/// The execution id underlying a public command-session id (`csid.0 == id.0`).
 pub(crate) fn execution_id(command_session_id: &CommandSessionId) -> NamespaceExecutionId {
     NamespaceExecutionId(command_session_id.0.clone())
 }
 
-/// The public command-session id wrapping an execution id.
 pub(crate) fn command_session_id(id: &NamespaceExecutionId) -> CommandSessionId {
     CommandSessionId(id.0.clone())
 }

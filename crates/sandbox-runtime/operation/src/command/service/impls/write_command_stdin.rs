@@ -49,8 +49,6 @@ impl CommandOperationService {
         }
 
         if is_kill_input {
-            // Clone the cancel action out from under the registry lock, then kill
-            // with no lock held (the kill blocks for a SIGTERM grace period).
             match self
                 .engine()
                 .with_value(&id, CommandExecution::cancel_handle)

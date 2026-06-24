@@ -10,14 +10,9 @@ use super::transcript::command_output;
 use crate::command::{CommandOutput, CommandServiceError, CommandSessionId, CommandStatus};
 use crate::workspace_crate::WorkspaceSessionId;
 
-/// Settle window: once output has appeared, return Running after this much quiet.
 const QUIET_MS: Duration = Duration::from_millis(50);
 
 impl CommandOperationService {
-    /// The settle-or-timeout yield. Running-vs-terminal is the engine promise (not
-    /// a poll); the wait blocks on the promise condvar, waking immediately on
-    /// completion yet re-checking transcript length each ≤50 ms slice. The waiter
-    /// is cloned out of the registry so the wait holds no registry lock.
     pub(crate) fn wait_for_command_yield(
         &self,
         command_session_id: CommandSessionId,
@@ -163,7 +158,6 @@ pub(crate) const fn command_status(status: NamespaceExecutionTerminalStatus) -> 
     }
 }
 
-/// Map a resolved-`Err` promise (finalize failure) to the command-facing error.
 pub(crate) fn finalization_failed(
     command_session_id: CommandSessionId,
     error: &NamespaceExecutionError,
@@ -174,8 +168,6 @@ pub(crate) fn finalization_failed(
     }
 }
 
-/// The underlying finalize-failure message (unwrapping the engine's `Finalize`
-/// prefix so the command-facing error preserves the workspace error text).
 pub(crate) fn finalize_message(error: &NamespaceExecutionError) -> String {
     match error {
         NamespaceExecutionError::Finalize(message) => message.clone(),

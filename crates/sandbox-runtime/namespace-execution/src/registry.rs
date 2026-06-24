@@ -5,10 +5,6 @@ use crate::error::NamespaceExecutionError;
 use crate::id::NamespaceExecutionId;
 use crate::status::NamespaceExecutionTerminalStatus;
 
-/// Executions keyed by `NamespaceExecutionId`, generic over the caller value `V`
-/// the registry retains for the live and terminal phases. The watcher thread
-/// calls `complete`, which touches only the terminal projection, never `V`, so an
-/// `attach` racing a `complete` is benign.
 pub struct ExecutionRegistry<V> {
     inner: Mutex<RegistryState<V>>,
     max_active: usize,
@@ -54,10 +50,6 @@ impl<V> ExecutionRegistry<V> {
         self.max_active
     }
 
-    /// Atomically reserve a live slot keyed by `id`; `Err(Admission)` if full.
-    /// The capacity check and the insert happen under one lock, so concurrent
-    /// `run_*` calls cannot both admit the last slot. The entry's `value` is
-    /// filled later by `attach`.
     pub fn try_reserve(&self, id: &NamespaceExecutionId) -> Result<(), NamespaceExecutionError> {
         let mut state = self.lock();
         if state.active >= self.max_active {
@@ -70,16 +62,12 @@ impl<V> ExecutionRegistry<V> {
         Ok(())
     }
 
-    /// Attach the caller value to a reserved (or already terminal) slot. Filling
-    /// `value` regardless of terminal state is what makes the attach/complete
-    /// race benign: the watcher may `complete` before the caller `attach`es.
     pub fn attach(&self, id: &NamespaceExecutionId, value: V) {
         if let Some(entry) = self.lock().entries.get_mut(id) {
             entry.value = Some(value);
         }
     }
 
-    /// Release a reservation on spawn failure.
     pub fn abort(&self, id: &NamespaceExecutionId) {
         let mut state = self.lock();
         if let Some(entry) = state.entries.remove(id) {
@@ -89,9 +77,6 @@ impl<V> ExecutionRegistry<V> {
         }
     }
 
-    /// Mark an execution terminal and release its admission slot. Idempotent and
-    /// generic: it never reads or writes `V`, so the retained value stays
-    /// readable through `with_value`/`live_values` for both phases.
     pub fn complete(
         &self,
         id: &NamespaceExecutionId,
@@ -109,7 +94,6 @@ impl<V> ExecutionRegistry<V> {
         }
     }
 
-    /// Read the retained value under the registry lock, if present.
     pub fn with_value<R>(&self, id: &NamespaceExecutionId, f: impl FnOnce(&V) -> R) -> Option<R> {
         self.lock()
             .entries
@@ -134,9 +118,6 @@ impl<V> ExecutionRegistry<V> {
             .is_some_and(|entry| entry.terminal)
     }
 
-    /// Project every live execution's retained value through `f`, collecting the
-    /// `Some` results. The Phase-5 hook for "live interactive executions in a
-    /// workspace" (pgid/cancel) without a second per-session map.
     pub fn live_values<R>(&self, f: impl Fn(&V) -> Option<R>) -> Vec<R> {
         self.lock()
             .entries

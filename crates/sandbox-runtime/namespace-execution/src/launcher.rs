@@ -20,8 +20,6 @@ use sandbox_runtime_namespace_process::runner::protocol::{NamespaceRunnerRequest
 use crate::error::NamespaceExecutionError;
 use crate::pty::{open_pty_pair, terminate_process_group, PtyMaster};
 
-/// Fork the in-namespace runner and yield a completion event, plus a `PtyMaster`
-/// for the interactive path.
 pub trait NsRunnerLauncher: Send + Sync {
     fn spawn_pty(
         &self,
@@ -38,12 +36,10 @@ pub trait NsRunnerLauncher: Send + Sync {
     ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError>;
 }
 
-/// The completion event: one blocking wait, no poll, no result-fd reader thread.
 pub trait RunnerChild: Send {
     fn wait_completion(&mut self) -> Result<RunResult, NamespaceExecutionError>;
 }
 
-/// Real fork backing: `current_exe ns-runner ...`.
 pub(crate) struct ForkRunnerLauncher;
 
 struct ForkRunnerChild {
