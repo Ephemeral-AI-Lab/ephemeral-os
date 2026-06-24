@@ -40,7 +40,7 @@ pub(crate) fn trace_record(
         namespace_execution_id: bound_id(execution.namespace_execution_id.0.clone()),
         workspace_session_id: bound_id(execution.workspace_session_id.0.clone()),
         operation: bound_operation(execution.operation_name.clone()),
-        request_id: execution.request_id.clone().map(bound_id),
+        request_id: execution.origin_request_id.clone().map(bound_id),
         status: execution
             .terminal_status
             .map(terminal_status)

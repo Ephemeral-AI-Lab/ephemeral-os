@@ -49,8 +49,17 @@ impl CommandStatus {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct CommandOutputSnapshot {
+/// The single command output DTO: the merge of the former `CommandYield`,
+/// `CommandLinesOutput`, and `CommandOutputSnapshot`. `command_session_id` is
+/// `Option` (the superset): yields include it only when the command is still
+/// running or has more output to drain; `read_command_lines` always sets it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CommandOutput {
+    pub command_session_id: Option<CommandSessionId>,
+    pub status: CommandStatus,
+    pub exit_code: Option<i64>,
+    pub wall_time_seconds: f64,
+    pub command_total_time_seconds: f64,
     pub start_offset: u64,
     pub end_offset: u64,
     pub total_lines: u64,
@@ -77,32 +86,4 @@ pub enum CommandPublishStatus {
     NoOp,
     Rejected,
     Skipped,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct CommandYield {
-    pub command_session_id: Option<CommandSessionId>,
-    pub status: CommandStatus,
-    pub exit_code: Option<i64>,
-    pub wall_time_seconds: f64,
-    pub command_total_time_seconds: f64,
-    pub start_offset: u64,
-    pub end_offset: u64,
-    pub total_lines: u64,
-    pub original_token_count: u64,
-    pub output: String,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct CommandLinesOutput {
-    pub command_session_id: CommandSessionId,
-    pub status: CommandStatus,
-    pub exit_code: Option<i64>,
-    pub wall_time_seconds: f64,
-    pub command_total_time_seconds: f64,
-    pub start_offset: u64,
-    pub end_offset: u64,
-    pub total_lines: u64,
-    pub original_token_count: u64,
-    pub output: String,
 }

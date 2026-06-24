@@ -1,70 +1,26 @@
-use crate::command::{
-    CommandLinesOutput, CommandOutputSnapshot, CommandServiceError, CommandSessionId, CommandStatus,
-};
+use sandbox_runtime_command::{CommandTranscriptRow, CommandTranscriptWindow};
 
-use super::process_store::{CommandTranscriptStore, RetainedCommandTranscript};
+use crate::command::{CommandOutput, CommandSessionId, CommandStatus};
 
-impl CommandTranscriptStore {
-    #[must_use]
-    pub(crate) fn window(
-        &self,
-        offset: u64,
-        limit: usize,
-    ) -> ::sandbox_runtime_command::CommandTranscriptWindow {
-        ::sandbox_runtime_command::transcript_window(self.transcript_path.as_deref(), offset, limit)
-    }
-}
-
-impl RetainedCommandTranscript {
-    pub(crate) fn window(
-        &self,
-        command_session_id: &CommandSessionId,
-        offset: u64,
-        limit: usize,
-    ) -> Result<::sandbox_runtime_command::CommandTranscriptWindow, CommandServiceError> {
-        ::sandbox_runtime_command::required_transcript_window(
-            self.transcript_path.as_deref(),
-            offset,
-            limit,
-        )
-        .map_err(|error| CommandServiceError::CommandTranscriptUnavailable {
-            command_session_id: command_session_id.clone(),
-            path: self.transcript_path.clone(),
-            error,
-        })
-    }
-}
-
+/// Build the merged `CommandOutput` DTO from a transcript window plus the
+/// status/exit/timing projection. `command_session_id` is `Some` for running
+/// reads and terminal reads that still have output to drain.
 #[must_use]
-pub(crate) fn command_lines_output(
-    window: ::sandbox_runtime_command::CommandTranscriptWindow,
-    command_session_id: CommandSessionId,
+pub(crate) fn command_output(
+    window: CommandTranscriptWindow,
+    command_session_id: Option<CommandSessionId>,
     status: CommandStatus,
     exit_code: Option<i64>,
     wall_time_seconds: f64,
     command_total_time_seconds: f64,
-) -> CommandLinesOutput {
-    let output = command_output_snapshot(window);
-    CommandLinesOutput {
+) -> CommandOutput {
+    let output = render_transcript_text(&window.output);
+    CommandOutput {
         command_session_id,
         status,
         exit_code,
         wall_time_seconds,
         command_total_time_seconds,
-        start_offset: output.start_offset,
-        end_offset: output.end_offset,
-        total_lines: output.total_lines,
-        original_token_count: output.original_token_count,
-        output: output.output,
-    }
-}
-
-#[must_use]
-pub(crate) fn command_output_snapshot(
-    window: ::sandbox_runtime_command::CommandTranscriptWindow,
-) -> CommandOutputSnapshot {
-    let output = render_transcript_text(&window.output);
-    CommandOutputSnapshot {
         start_offset: window.offset,
         end_offset: window.next_offset,
         total_lines: window.total_lines,
@@ -82,7 +38,7 @@ pub(crate) fn estimate_token_count(chars: usize) -> u64 {
     }
 }
 
-fn render_transcript_text(rows: &[::sandbox_runtime_command::CommandTranscriptRow]) -> String {
+fn render_transcript_text(rows: &[CommandTranscriptRow]) -> String {
     rows.iter()
         .map(|row| row.text.as_str())
         .collect::<Vec<_>>()

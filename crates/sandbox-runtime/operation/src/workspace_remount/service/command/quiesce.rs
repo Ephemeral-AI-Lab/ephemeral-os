@@ -1,8 +1,11 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use crate::command::{CommandLifecycleState, CommandProcessStore, CommandSessionId};
 use sandbox_runtime_command::process_group::{ProcessGroupController, ProcessGroupInspection};
+use sandbox_runtime_command::CommandExecution;
+use sandbox_runtime_namespace_execution::{NamespaceExecutionEngine, NamespaceExecutionId};
+
+use crate::command::CommandSessionId;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CommandRemountInspection {
@@ -101,7 +104,7 @@ pub struct CommandRemountQuiesce {
     pub(crate) inspection: CommandRemountInspection,
     pub(crate) held_process_group_ids: Vec<i32>,
     pub(crate) command_session_ids: Vec<CommandSessionId>,
-    pub(crate) process_store: Arc<CommandProcessStore>,
+    pub(crate) engine: Arc<NamespaceExecutionEngine<CommandExecution>>,
     pub(crate) cancellation: RemountCancellationToken,
     pub(crate) switch_state: RemountSwitchState,
     pub(crate) controller: Arc<dyn ProcessGroupController>,
@@ -136,20 +139,10 @@ impl CommandRemountQuiesce {
     }
 
     pub fn set_switch_state(&mut self, state: RemountSwitchState) {
+        // The coordinator owns the live token + switch state; the Phase-3 minimal
+        // severing drops the redundant per-command mirror writes (Phase 5 reworks
+        // quiesce onto the registry properly).
         self.switch_state = state;
-        for command_session_id in &self.command_session_ids {
-            let cancellation = self.cancellation.clone();
-            self.process_store
-                .update_active(command_session_id, |active| {
-                    if active
-                        .remount_cancellation
-                        .as_ref()
-                        .is_some_and(|token| token.same_token(&cancellation))
-                    {
-                        active.remount_switch_state = Some(state);
-                    }
-                });
-        }
     }
 
     #[must_use]
@@ -179,26 +172,23 @@ impl CommandRemountQuiesce {
     }
 
     fn resume_command_records(&self) {
-        for command_session_id in &self.command_session_ids {
-            let cancellation = self.cancellation.clone();
-            self.process_store
-                .update_active(command_session_id, |active| {
-                    if !active
-                        .remount_cancellation
-                        .as_ref()
-                        .is_some_and(|token| token.same_token(&cancellation))
-                    {
-                        return;
-                    }
-                    active.remount_cancellation = None;
-                    active.remount_switch_state = None;
-                    if cancellation.is_cancelled() {
-                        active.process.cancel_process();
-                        active.lifecycle_state = CommandLifecycleState::Cancelled;
-                    } else {
-                        active.lifecycle_state = CommandLifecycleState::Running;
-                    }
-                });
+        // A cancelled remount cancels its quiesced commands; an uncancelled resume
+        // simply releases them (no per-command mirror to clear post-severing).
+        if !self.cancellation.is_cancelled() {
+            return;
+        }
+        // Clone the cancel actions out from under the registry lock, then kill with
+        // no lock held (the kill blocks for a SIGTERM grace period).
+        let cancels = self
+            .command_session_ids
+            .iter()
+            .filter_map(|command_session_id| {
+                let id = NamespaceExecutionId(command_session_id.0.clone());
+                self.engine.with_value(&id, CommandExecution::cancel_handle)
+            })
+            .collect::<Vec<_>>();
+        for cancel in cancels {
+            cancel();
         }
     }
 }

@@ -1,77 +1,41 @@
 use std::sync::Arc;
 
-use crate::namespace_execution::NamespaceExecutionStore;
+use sandbox_runtime_command::CommandExecution;
+use sandbox_runtime_namespace_execution::NamespaceExecutionEngine;
+
+use crate::namespace_execution::NamespaceExecutionLedger;
 use crate::observability::AsyncTraceSink;
 use crate::workspace_remount::{ProcProcessGroupController, ProcessGroupController};
 use crate::workspace_session::WorkspaceSessionService;
 
 use super::core::CommandOperationService;
-use super::launch::CommandLaunchDriver;
 
+/// The production `/proc`-backed remount controller, for harnesses that do not
+/// inject their own (`ProcProcessGroupController` itself is crate-private).
 #[must_use]
-pub fn command_service_with_launch_driver(
-    workspace: Arc<WorkspaceSessionService>,
-    config: ::sandbox_runtime_command::CommandConfig,
-    launch_driver: Arc<dyn CommandLaunchDriver>,
-) -> CommandOperationService {
-    CommandOperationService::from_parts(
-        workspace,
-        config,
-        Arc::new(NamespaceExecutionStore::new()),
-        launch_driver,
-        Arc::new(ProcProcessGroupController),
-        None,
-    )
+pub fn default_remount_controller() -> Arc<dyn ProcessGroupController> {
+    Arc::new(ProcProcessGroupController)
 }
 
+/// Build a command service over a caller-supplied engine. The test harness builds
+/// the engine from the `test-support` fake launcher (which it can reach as a
+/// `tests/` consumer); this façade only assembles the service parts, so it needs
+/// no `test-support`-gated engine surface in the library build.
 #[must_use]
-pub fn command_service_with_launch_driver_and_remount_controller(
+pub fn command_service_from_engine(
     workspace: Arc<WorkspaceSessionService>,
     config: ::sandbox_runtime_command::CommandConfig,
-    launch_driver: Arc<dyn CommandLaunchDriver>,
+    engine: Arc<NamespaceExecutionEngine<CommandExecution>>,
+    namespace_execution: Arc<NamespaceExecutionLedger>,
+    async_trace_sink: Option<AsyncTraceSink>,
     remount_controller: Arc<dyn ProcessGroupController>,
 ) -> CommandOperationService {
     CommandOperationService::from_parts(
         workspace,
         config,
-        Arc::new(NamespaceExecutionStore::new()),
-        launch_driver,
-        remount_controller,
-        None,
-    )
-}
-
-#[must_use]
-pub fn command_service_with_launch_driver_and_async_trace_sink(
-    workspace: Arc<WorkspaceSessionService>,
-    config: ::sandbox_runtime_command::CommandConfig,
-    launch_driver: Arc<dyn CommandLaunchDriver>,
-    async_trace_sink: Option<AsyncTraceSink>,
-) -> CommandOperationService {
-    CommandOperationService::from_parts(
-        workspace,
-        config,
-        Arc::new(NamespaceExecutionStore::new()),
-        launch_driver,
-        Arc::new(ProcProcessGroupController),
-        async_trace_sink,
-    )
-}
-
-#[must_use]
-pub fn command_service_with_launch_driver_namespace_store_and_async_trace_sink(
-    workspace: Arc<WorkspaceSessionService>,
-    config: ::sandbox_runtime_command::CommandConfig,
-    launch_driver: Arc<dyn CommandLaunchDriver>,
-    namespace_execution: Arc<NamespaceExecutionStore>,
-    async_trace_sink: Option<AsyncTraceSink>,
-) -> CommandOperationService {
-    CommandOperationService::from_parts(
-        workspace,
-        config,
+        engine,
         namespace_execution,
-        launch_driver,
-        Arc::new(ProcProcessGroupController),
         async_trace_sink,
+        remount_controller,
     )
 }

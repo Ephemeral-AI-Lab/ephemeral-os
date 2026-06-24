@@ -1,135 +1,144 @@
-use super::core::CommandOperationService;
+use std::time::{Duration, Instant};
 
-use crate::command::{
-    CommandOutputSnapshot, CommandServiceError, CommandSessionId, CommandStatus, CommandYield,
-    CompletedCommandRecord,
+use sandbox_runtime_command::CommandExecution;
+use sandbox_runtime_namespace_execution::{
+    NamespaceExecutionError, NamespaceExecutionTerminalStatus,
 };
+
+use super::core::{execution_id, CommandOperationService};
+use super::transcript::command_output;
+use crate::command::{CommandOutput, CommandServiceError, CommandSessionId, CommandStatus};
 use crate::workspace_crate::WorkspaceSessionId;
 
-use super::completion::{wait_for_completed_record, CommandCompletionWaitOutcome};
-use super::transcript::command_output_snapshot;
+/// Settle window: once output has appeared, return Running after this much quiet.
+const QUIET_MS: Duration = Duration::from_millis(50);
 
 impl CommandOperationService {
-    pub(crate) fn running_command_yield(
-        &self,
-        command_session_id: CommandSessionId,
-        _observed_output: String,
-    ) -> Result<CommandYield, CommandServiceError> {
-        let snapshot = self.active_command_output_snapshot(&command_session_id)?;
-        Ok(command_yield(
-            Some(command_session_id),
-            CommandStatus::Running,
-            None,
-            snapshot.wall_time_seconds,
-            snapshot.command_total_time_seconds,
-            snapshot.output,
-        ))
-    }
-
+    /// The settle-or-timeout yield. Running-vs-terminal is the engine promise (not
+    /// a poll); the wait blocks on the promise condvar, waking immediately on
+    /// completion yet re-checking transcript length each ≤50 ms slice. The waiter
+    /// is cloned out of the registry so the wait holds no registry lock.
     pub(crate) fn wait_for_command_yield(
         &self,
         command_session_id: CommandSessionId,
         yield_time_ms: u64,
         start_offset: u64,
         include_terminal_command_session_id: bool,
-    ) -> Result<CommandYield, CommandServiceError> {
-        let (process, completion) = match self.active_command_or_none(&command_session_id)? {
-            Some(active) => (
-                std::sync::Arc::clone(&active.process),
-                active.completion.clone(),
-            ),
-            None => {
-                let completed = self.completed_command(&command_session_id)?;
-                return self.completed_command_yield(
+    ) -> Result<CommandOutput, CommandServiceError> {
+        let id = execution_id(&command_session_id);
+        let deadline = Instant::now() + Duration::from_millis(yield_time_ms);
+        let mut last_offset = start_offset;
+        let mut last_change = Instant::now();
+        loop {
+            match self.engine().with_value(&id, CommandExecution::is_finished) {
+                None => {
+                    return Err(CommandServiceError::CommandNotFound { command_session_id });
+                }
+                Some(true) => {
+                    return self.completed_command_output(
+                        command_session_id,
+                        include_terminal_command_session_id,
+                    );
+                }
+                Some(false) => {}
+            }
+            let now = Instant::now();
+            let offset = self
+                .engine()
+                .with_value(&id, CommandExecution::output_len)
+                .unwrap_or(last_offset);
+            if offset != last_offset {
+                last_offset = offset;
+                last_change = now;
+            }
+            let settled = offset > start_offset && now.duration_since(last_change) >= QUIET_MS;
+            if settled || now >= deadline {
+                return self.running_or_completed_command_output(
                     command_session_id,
-                    completed,
                     include_terminal_command_session_id,
                 );
             }
-        };
-        let outcome = self.launch_driver().wait_for_command_yield(
-            process.as_ref(),
-            &completion,
-            yield_time_ms,
-            start_offset,
-        );
-        match outcome {
-            CommandCompletionWaitOutcome::Running => self.running_or_completed_command_yield(
-                command_session_id,
-                include_terminal_command_session_id,
-            ),
-            CommandCompletionWaitOutcome::Completed => {
-                let completed =
-                    wait_for_completed_record(self.process_store(), &command_session_id)?;
-                self.completed_command_yield(
-                    command_session_id,
-                    completed,
-                    include_terminal_command_session_id,
-                )
+            let slice = QUIET_MS.min(deadline.saturating_duration_since(now));
+            match self.engine().with_value(&id, CommandExecution::completion) {
+                Some(waiter) => {
+                    waiter.wait_timeout(slice);
+                }
+                None => {
+                    return Err(CommandServiceError::CommandNotFound { command_session_id });
+                }
             }
         }
     }
 
-    fn running_or_completed_command_yield(
+    fn running_or_completed_command_output(
         &self,
         command_session_id: CommandSessionId,
-        include_command_session_id: bool,
-    ) -> Result<CommandYield, CommandServiceError> {
-        if let Some(completed) = self.process_store().completed(&command_session_id) {
-            return self.completed_command_yield(
-                command_session_id,
-                completed,
-                include_command_session_id,
-            );
+        include_terminal_command_session_id: bool,
+    ) -> Result<CommandOutput, CommandServiceError> {
+        let id = execution_id(&command_session_id);
+        match self.engine().with_value(&id, CommandExecution::is_finished) {
+            Some(true) => self
+                .completed_command_output(command_session_id, include_terminal_command_session_id),
+            Some(false) => self.running_command_output(command_session_id),
+            None => Err(CommandServiceError::CommandNotFound { command_session_id }),
         }
-        self.running_command_yield(command_session_id, String::new())
     }
 
-    fn completed_command_yield(
+    fn running_command_output(
         &self,
         command_session_id: CommandSessionId,
-        completed: CompletedCommandRecord,
-        include_command_session_id: bool,
-    ) -> Result<CommandYield, CommandServiceError> {
-        let window = sandbox_runtime_command::transcript_window(
-            completed.transcript.transcript_path.as_deref(),
-            completed.next_snapshot_offset,
-            usize::MAX,
-        );
-        let has_more_output = window.output_truncated;
-        let snapshot = command_output_snapshot(window);
-        let returned_command_session_id =
-            (include_command_session_id || has_more_output).then_some(command_session_id);
-        Ok(command_yield(
-            returned_command_session_id,
-            completed.result.status,
-            completed.result.exit_code,
-            completed.started_at.elapsed().as_secs_f64(),
-            completed.result.command_total_time_seconds,
-            snapshot,
-        ))
+    ) -> Result<CommandOutput, CommandServiceError> {
+        let id = execution_id(&command_session_id);
+        let output = self.engine().with_value(&id, |command| {
+            let start = command.take_snapshot_offset();
+            let window = command.transcript_window(start, usize::MAX);
+            command.advance_snapshot_offset(window.next_offset);
+            let elapsed = command.elapsed_seconds();
+            command_output(window, None, CommandStatus::Running, None, elapsed, elapsed)
+        });
+        match output {
+            Some(mut output) => {
+                output.command_session_id = Some(command_session_id);
+                Ok(output)
+            }
+            None => Err(CommandServiceError::CommandNotFound { command_session_id }),
+        }
     }
 
-    fn active_command_output_snapshot(
+    pub(crate) fn completed_command_output(
         &self,
-        command_session_id: &CommandSessionId,
-    ) -> Result<TimedCommandOutputSnapshot, CommandServiceError> {
-        self.process_store()
-            .update_active(command_session_id, |active| {
-                let start_offset = active.next_snapshot_offset;
-                let window = active.transcript.window(start_offset, usize::MAX);
-                let output = super::transcript::command_output_snapshot(window);
-                active.next_snapshot_offset = output.end_offset;
-                let elapsed = active.started_at.elapsed().as_secs_f64();
-                TimedCommandOutputSnapshot {
-                    output,
-                    wall_time_seconds: elapsed,
-                    command_total_time_seconds: elapsed,
-                }
-            })
-            .ok_or_else(|| CommandServiceError::CommandNotFound {
-                command_session_id: command_session_id.clone(),
-            })
+        command_session_id: CommandSessionId,
+        include_terminal_command_session_id: bool,
+    ) -> Result<CommandOutput, CommandServiceError> {
+        let id = execution_id(&command_session_id);
+        let read = self.engine().with_value(&id, |command| {
+            let result = command.terminal_result();
+            let start = command.take_snapshot_offset();
+            let window = command.transcript_window(start, usize::MAX);
+            let elapsed = command.elapsed_seconds();
+            (result, window, elapsed)
+        });
+        let Some((result, window, elapsed)) = read else {
+            return Err(CommandServiceError::CommandNotFound { command_session_id });
+        };
+        let result = match result {
+            Some(Ok(result)) => result,
+            Some(Err(error)) => {
+                return Err(finalization_failed(command_session_id, &error));
+            }
+            None => return Err(CommandServiceError::CommandNotFound { command_session_id }),
+        };
+        let has_more_output = window.output_truncated;
+        let returned_command_session_id =
+            (include_terminal_command_session_id || has_more_output).then_some(command_session_id);
+        Ok(command_output(
+            window,
+            returned_command_session_id,
+            command_status(result.status),
+            Some(result.exit_code),
+            elapsed,
+            result.command_total_time_seconds,
+        ))
     }
 
     pub(crate) fn ensure_workspace_session_not_remount_pending(
@@ -150,30 +159,32 @@ impl CommandOperationService {
     }
 }
 
-struct TimedCommandOutputSnapshot {
-    output: CommandOutputSnapshot,
-    wall_time_seconds: f64,
-    command_total_time_seconds: f64,
+pub(crate) const fn command_status(status: NamespaceExecutionTerminalStatus) -> CommandStatus {
+    match status {
+        NamespaceExecutionTerminalStatus::Ok => CommandStatus::Ok,
+        NamespaceExecutionTerminalStatus::Error => CommandStatus::Error,
+        NamespaceExecutionTerminalStatus::TimedOut => CommandStatus::TimedOut,
+        NamespaceExecutionTerminalStatus::Cancelled => CommandStatus::Cancelled,
+    }
 }
 
-pub(crate) fn command_yield(
-    command_session_id: Option<CommandSessionId>,
-    status: CommandStatus,
-    exit_code: Option<i64>,
-    wall_time_seconds: f64,
-    command_total_time_seconds: f64,
-    output: CommandOutputSnapshot,
-) -> CommandYield {
-    CommandYield {
+/// Map a resolved-`Err` promise (finalize failure) to the command-facing error.
+pub(crate) fn finalization_failed(
+    command_session_id: CommandSessionId,
+    error: &NamespaceExecutionError,
+) -> CommandServiceError {
+    CommandServiceError::CommandFinalizationFailed {
         command_session_id,
-        status,
-        exit_code,
-        wall_time_seconds,
-        command_total_time_seconds,
-        start_offset: output.start_offset,
-        end_offset: output.end_offset,
-        total_lines: output.total_lines,
-        original_token_count: output.original_token_count,
-        output: output.output,
+        error: finalize_message(error),
+        finalized: None,
+    }
+}
+
+/// The underlying finalize-failure message (unwrapping the engine's `Finalize`
+/// prefix so the command-facing error preserves the workspace error text).
+pub(crate) fn finalize_message(error: &NamespaceExecutionError) -> String {
+    match error {
+        NamespaceExecutionError::Finalize(message) => message.clone(),
+        other => other.to_string(),
     }
 }

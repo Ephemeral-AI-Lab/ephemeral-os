@@ -3,6 +3,8 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Mutex, MutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use sandbox_runtime_namespace_execution::ExecutionObserver;
+
 use crate::workspace_crate::WorkspaceSessionId;
 
 pub use sandbox_runtime_namespace_execution::{
@@ -15,7 +17,7 @@ const DEFAULT_MAX_PARTIAL_ERRORS: usize = 32;
 const MAX_ERROR_FIELD_BYTES: usize = 4096;
 
 #[derive(Debug)]
-pub struct NamespaceExecutionStore {
+pub struct NamespaceExecutionLedger {
     inner: Mutex<NamespaceExecutionState>,
     next_id: AtomicU64,
     force_mutation_errors: AtomicBool,
@@ -37,7 +39,7 @@ pub struct NamespaceExecutionRecord {
     pub namespace_execution_id: NamespaceExecutionId,
     pub workspace_session_id: WorkspaceSessionId,
     pub operation_name: String,
-    pub request_id: Option<String>,
+    pub origin_request_id: Option<String>,
     pub lifecycle_state: NamespaceExecutionLifecycle,
     pub started_at_unix_ms: i64,
     pub finished_at_unix_ms: Option<i64>,
@@ -70,7 +72,7 @@ impl NamespaceExecutionLifecycle {
 pub struct BeginNamespaceExecution {
     pub workspace_session_id: WorkspaceSessionId,
     pub operation_name: String,
-    pub request_id: Option<String>,
+    pub origin_request_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -90,7 +92,7 @@ pub struct RuntimeNamespaceExecutionSnapshot {
     pub started_at_unix_ms: i64,
 }
 
-impl NamespaceExecutionStore {
+impl NamespaceExecutionLedger {
     #[must_use]
     pub fn new() -> Self {
         Self::with_limits(
@@ -153,7 +155,7 @@ impl NamespaceExecutionStore {
             namespace_execution_id: namespace_execution_id.clone(),
             workspace_session_id: begin.workspace_session_id,
             operation_name: begin.operation_name,
-            request_id: begin.request_id,
+            origin_request_id: begin.origin_request_id,
             lifecycle_state: NamespaceExecutionLifecycle::Starting,
             started_at_unix_ms: unix_ms(),
             finished_at_unix_ms: None,
@@ -331,9 +333,36 @@ impl NamespaceExecutionStore {
     }
 }
 
-impl Default for NamespaceExecutionStore {
+impl Default for NamespaceExecutionLedger {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// The engine drives the ledger's running/terminal transitions through this
+/// observer; `begin` stays with the operation layer (it owns the
+/// `WorkspaceSessionId`), so the `Starting → Running → Terminal` chain is
+/// preserved: begin (operation) → `on_running` → `on_terminal` (both engine).
+impl ExecutionObserver for NamespaceExecutionLedger {
+    fn on_running(&self, id: &NamespaceExecutionId) {
+        let _ = self.mark_namespace_execution_running(id);
+    }
+
+    fn on_terminal(
+        &self,
+        id: &NamespaceExecutionId,
+        status: NamespaceExecutionTerminalStatus,
+        exit_code: Option<i64>,
+    ) {
+        let _ = self.complete_namespace_execution(
+            id,
+            CompleteNamespaceExecution {
+                terminal_status: status,
+                exit_code,
+                error_kind: None,
+                error_message: None,
+            },
+        );
     }
 }
 

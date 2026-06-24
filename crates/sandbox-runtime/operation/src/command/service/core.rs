@@ -1,11 +1,12 @@
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
-use crate::command::{
-    CommandLaunchDriver, CommandProcessStore, CommandSessionId, RealCommandLaunchDriver,
+use sandbox_runtime_command::CommandExecution;
+use sandbox_runtime_namespace_execution::{
+    ExecutionObserver, NamespaceExecutionEngine, NamespaceExecutionId,
 };
-use crate::namespace_execution::{
-    NamespaceExecutionId, NamespaceExecutionRecord, NamespaceExecutionStore,
-};
+
+use crate::command::CommandSessionId;
+use crate::namespace_execution::{NamespaceExecutionLedger, NamespaceExecutionRecord};
 use crate::observability::AsyncTraceSink;
 use crate::workspace_crate::{
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, WorkspaceProfile,
@@ -16,15 +17,24 @@ use crate::workspace_session::{
     WorkspaceSessionError, WorkspaceSessionHandler, WorkspaceSessionService,
 };
 
-use super::completion::{spawn_completion_finalizer, CommandCompletionSender};
+/// Command admission ceiling (relocated `DEFAULT_MAX_ACTIVE_COMMANDS`).
+const MAX_ACTIVE_COMMANDS: usize = 256;
 
+/// Setup timeout handed to the engine constructor. The command path is PTY-backed
+/// (`run_shell_interactive`), which never consumes it — only the piped mount path
+/// does — so its value is immaterial here; a finite default keeps the ctor happy.
+const COMMAND_ENGINE_SETUP_TIMEOUT_S: f64 = 30.0;
+
+/// The command service: a thin façade over one `NamespaceExecutionEngine`
+/// instance whose registry retains the live + terminal command handles
+/// (`CommandExecution`) and whose observer is the shared ledger. It owns no
+/// spawn/PTY/promise/finalizer machinery and no poll loop.
 pub struct CommandOperationService {
     workspace: Arc<WorkspaceSessionService>,
     config: ::sandbox_runtime_command::CommandConfig,
-    process_store: Arc<CommandProcessStore>,
-    namespace_execution: Arc<NamespaceExecutionStore>,
-    launch_driver: Arc<dyn CommandLaunchDriver>,
-    completion_sender: CommandCompletionSender,
+    engine: Arc<NamespaceExecutionEngine<CommandExecution>>,
+    namespace_execution: Arc<NamespaceExecutionLedger>,
+    async_trace_sink: Option<AsyncTraceSink>,
     remount_controller: Arc<dyn ProcessGroupController>,
     workspace_lifecycle_admission: Mutex<()>,
 }
@@ -39,13 +49,15 @@ impl CommandOperationService {
         workspace: Arc<WorkspaceSessionService>,
         config: ::sandbox_runtime_command::CommandConfig,
     ) -> Self {
+        let namespace_execution = Arc::new(NamespaceExecutionLedger::new());
+        let engine = build_engine(Arc::clone(&namespace_execution));
         Self::from_parts(
             workspace,
             config,
-            Arc::new(NamespaceExecutionStore::new()),
-            Arc::new(RealCommandLaunchDriver),
-            Arc::new(ProcProcessGroupController),
+            engine,
+            namespace_execution,
             None,
+            Arc::new(ProcProcessGroupController),
         )
     }
 
@@ -53,41 +65,34 @@ impl CommandOperationService {
     pub(crate) fn new_with_async_trace_sink(
         workspace: Arc<WorkspaceSessionService>,
         config: ::sandbox_runtime_command::CommandConfig,
-        namespace_execution: Arc<NamespaceExecutionStore>,
+        namespace_execution: Arc<NamespaceExecutionLedger>,
         async_trace_sink: Option<AsyncTraceSink>,
     ) -> Self {
+        let engine = build_engine(Arc::clone(&namespace_execution));
         Self::from_parts(
             workspace,
             config,
+            engine,
             namespace_execution,
-            Arc::new(RealCommandLaunchDriver),
-            Arc::new(ProcProcessGroupController),
             async_trace_sink,
+            Arc::new(ProcProcessGroupController),
         )
     }
 
     pub(super) fn from_parts(
         workspace: Arc<WorkspaceSessionService>,
         config: ::sandbox_runtime_command::CommandConfig,
-        namespace_execution: Arc<NamespaceExecutionStore>,
-        launch_driver: Arc<dyn CommandLaunchDriver>,
-        remount_controller: Arc<dyn ProcessGroupController>,
+        engine: Arc<NamespaceExecutionEngine<CommandExecution>>,
+        namespace_execution: Arc<NamespaceExecutionLedger>,
         async_trace_sink: Option<AsyncTraceSink>,
+        remount_controller: Arc<dyn ProcessGroupController>,
     ) -> Self {
-        let process_store = Arc::new(CommandProcessStore::new());
-        let completion_sender = spawn_completion_finalizer(
-            Arc::clone(&workspace),
-            Arc::clone(&process_store),
-            Arc::clone(&namespace_execution),
-            async_trace_sink,
-        );
         Self {
             workspace,
             config,
-            process_store,
+            engine,
             namespace_execution,
-            launch_driver,
-            completion_sender,
+            async_trace_sink,
             remount_controller,
             workspace_lifecycle_admission: Mutex::new(()),
         }
@@ -104,13 +109,13 @@ impl CommandOperationService {
     #[must_use]
     pub(crate) fn shares_namespace_execution_store(
         &self,
-        namespace_execution: &Arc<NamespaceExecutionStore>,
+        namespace_execution: &Arc<NamespaceExecutionLedger>,
     ) -> bool {
         Arc::ptr_eq(&self.namespace_execution, namespace_execution)
     }
 
     #[must_use]
-    pub(crate) fn namespace_execution_store(&self) -> &Arc<NamespaceExecutionStore> {
+    pub(crate) fn namespace_execution_store(&self) -> &Arc<NamespaceExecutionLedger> {
         &self.namespace_execution
     }
 
@@ -129,8 +134,28 @@ impl CommandOperationService {
     }
 
     #[must_use]
-    pub(crate) fn process_store(&self) -> &Arc<CommandProcessStore> {
-        &self.process_store
+    pub(crate) fn engine(&self) -> &Arc<NamespaceExecutionEngine<CommandExecution>> {
+        &self.engine
+    }
+
+    #[must_use]
+    pub(crate) fn async_trace_sink(&self) -> Option<AsyncTraceSink> {
+        self.async_trace_sink.clone()
+    }
+
+    /// The live command sessions in a workspace (sorted) — the workspace→command
+    /// reverse lookup, served from the engine registry (no second per-session map).
+    #[must_use]
+    pub(crate) fn live_command_session_ids_for_workspace(
+        &self,
+        workspace_session_id: &WorkspaceSessionId,
+    ) -> Vec<CommandSessionId> {
+        let mut ids = self.engine.live_values(|command| {
+            (command.workspace_session_id() == workspace_session_id)
+                .then(|| CommandSessionId(command.id().0.clone()))
+        });
+        ids.sort();
+        ids
     }
 
     #[doc(hidden)]
@@ -138,24 +163,8 @@ impl CommandOperationService {
         &self,
         command_session_id: &CommandSessionId,
     ) -> Option<NamespaceExecutionId> {
-        self.process_store
-            .active(command_session_id)
-            .map(|active| active.namespace_execution_id.clone())
-            .or_else(|| {
-                self.process_store
-                    .completed(command_session_id)
-                    .map(|completed| completed.namespace_execution_id)
-            })
-    }
-
-    #[must_use]
-    pub(crate) fn launch_driver(&self) -> &Arc<dyn CommandLaunchDriver> {
-        &self.launch_driver
-    }
-
-    #[must_use]
-    pub(crate) fn completion_sender(&self) -> &CommandCompletionSender {
-        &self.completion_sender
+        let id = execution_id(command_session_id);
+        (self.engine.is_live(&id) || self.engine.is_completed(&id)).then_some(id)
     }
 
     #[must_use]
@@ -177,9 +186,8 @@ impl CommandOperationService {
         dispatch: impl FnOnce(&[CommandSessionId]) -> R,
     ) -> R {
         let _lifecycle_admission = self.begin_workspace_lifecycle_admission();
-        let active_command_session_ids = self
-            .process_store()
-            .active_command_session_ids_for_workspace_session(workspace_session_id);
+        let active_command_session_ids =
+            self.live_command_session_ids_for_workspace(workspace_session_id);
         dispatch(&active_command_session_ids)
     }
 
@@ -207,6 +215,10 @@ impl CommandOperationService {
             .destroy_session(handler, DestroyWorkspaceRequest::default())
     }
 
+    pub(super) fn workspace_handle(&self) -> &Arc<WorkspaceSessionService> {
+        &self.workspace
+    }
+
     pub(super) fn workspace_remount_pending(
         &self,
         workspace_session_id: &WorkspaceSessionId,
@@ -220,4 +232,24 @@ impl CommandOperationService {
     ) -> bool {
         self.workspace.is_remount_blocked(workspace_session_id)
     }
+}
+
+fn build_engine(
+    namespace_execution: Arc<NamespaceExecutionLedger>,
+) -> Arc<NamespaceExecutionEngine<CommandExecution>> {
+    Arc::new(NamespaceExecutionEngine::new(
+        namespace_execution as Arc<dyn ExecutionObserver>,
+        MAX_ACTIVE_COMMANDS,
+        COMMAND_ENGINE_SETUP_TIMEOUT_S,
+    ))
+}
+
+/// The execution id underlying a public command-session id (`csid.0 == id.0`).
+pub(crate) fn execution_id(command_session_id: &CommandSessionId) -> NamespaceExecutionId {
+    NamespaceExecutionId(command_session_id.0.clone())
+}
+
+/// The public command-session id wrapping an execution id.
+pub(crate) fn command_session_id(id: &NamespaceExecutionId) -> CommandSessionId {
+    CommandSessionId(id.0.clone())
 }

@@ -14,5 +14,8 @@ serde_json.workspace = true
 thiserror.workspace = true
 sandbox-runtime-workspace.workspace = true
 
+[dev-dependencies]
+sandbox-runtime-namespace-process.workspace = true
+
 [lints]
 workspace = true

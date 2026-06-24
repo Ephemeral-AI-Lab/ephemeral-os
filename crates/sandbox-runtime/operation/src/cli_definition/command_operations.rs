@@ -4,8 +4,8 @@ use crate::cli_definition::{
     ArgCliSpec, ArgKind, ArgSpec, CliOperationFamilySpec, CliOperationSpec, CliSpec,
 };
 use crate::command::{
-    CommandFinalizedMetadata, CommandLinesOutput, CommandPublishStatus, CommandServiceError,
-    CommandSessionId, CommandStatus, CommandYield, ExecCommandInput, ReadCommandLinesInput,
+    CommandFinalizedMetadata, CommandOutput, CommandPublishStatus, CommandServiceError,
+    CommandSessionId, CommandStatus, ExecCommandInput, ReadCommandLinesInput,
     WriteCommandStdinInput,
 };
 use crate::observability::{measure_optional, OperationTrace};
@@ -202,7 +202,7 @@ fn dispatch_exec_command(
         Err(response) => return response,
     };
     let origin_request_id = Some(request.request_id.clone());
-    command_yield_response(measure_optional(
+    command_output_response(measure_optional(
         trace,
         "CommandOperationService::exec_command",
         || {
@@ -234,7 +234,7 @@ fn dispatch_write_command_stdin(
         Ok(input) => input,
         Err(response) => return response,
     };
-    command_yield_response(measure_optional(
+    command_output_response(measure_optional(
         trace,
         "CommandOperationService::write_command_stdin",
         || operations.command.write_command_stdin(input),
@@ -258,7 +258,7 @@ fn dispatch_read_command_lines(
         Ok(input) => input,
         Err(response) => return response,
     };
-    command_lines_response(measure_optional(
+    command_output_response(measure_optional(
         trace,
         "CommandOperationService::read_command_lines",
         || operations.command.read_command_lines(input),
@@ -273,22 +273,12 @@ fn parse_read_command_lines_input(request: &Request) -> Result<ReadCommandLinesI
     })
 }
 
-fn command_yield_response(result: Result<CommandYield, CommandServiceError>) -> Response {
+fn command_output_response(result: Result<CommandOutput, CommandServiceError>) -> Response {
     match result {
         Ok(output) if output.status == CommandStatus::Running => {
-            Response::running(command_yield_value(output))
+            Response::running(command_output_value(output))
         }
-        Ok(output) => Response::ok(command_yield_value(output)),
-        Err(error) => command_service_error_response(error),
-    }
-}
-
-fn command_lines_response(result: Result<CommandLinesOutput, CommandServiceError>) -> Response {
-    match result {
-        Ok(output) if output.status == CommandStatus::Running => {
-            Response::running(command_lines_value(output))
-        }
-        Ok(output) => Response::ok(command_lines_value(output)),
+        Ok(output) => Response::ok(command_output_value(output)),
         Err(error) => command_service_error_response(error),
     }
 }
@@ -321,7 +311,7 @@ fn command_error_details(error: &CommandServiceError) -> Value {
     }
 }
 
-fn command_yield_value(output: CommandYield) -> Value {
+fn command_output_value(output: CommandOutput) -> Value {
     let mut value = json!({
         "status": status_name(output.status),
         "exit_code": output.exit_code,
@@ -337,21 +327,6 @@ fn command_yield_value(output: CommandYield) -> Value {
         value["command_session_id"] = Value::String(command_session_id.0);
     }
     value
-}
-
-fn command_lines_value(output: CommandLinesOutput) -> Value {
-    json!({
-        "command_session_id": output.command_session_id.0,
-        "status": status_name(output.status),
-        "exit_code": output.exit_code,
-        "wall_time_seconds": output.wall_time_seconds,
-        "command_total_time_seconds": output.command_total_time_seconds,
-        "start_offset": output.start_offset,
-        "end_offset": output.end_offset,
-        "total_lines": output.total_lines,
-        "original_token_count": output.original_token_count,
-        "output": output.output,
-    })
 }
 
 fn status_name(status: CommandStatus) -> &'static str {

@@ -92,7 +92,7 @@ pub enum CommandServiceError {
     #[error(
         "one-shot workspace cleanup failed for {command_session_id:?}: command error: {command_error}; cleanup error: {cleanup_error}"
     )]
-    OneShotWorkspaceCleanupFailed {
+    OneShotSessionCleanupFailed {
         command_session_id: CommandSessionId,
         command_error: Box<CommandServiceError>,
         cleanup_error: String,

@@ -1069,6 +1069,7 @@ dependencies = [
  "sandbox-runtime-command",
  "sandbox-runtime-layerstack",
  "sandbox-runtime-namespace-execution",
+ "sandbox-runtime-namespace-process",
  "sandbox-runtime-workspace",
  "serde_json",
  "thiserror 2.0.18",
@@ -1080,6 +1081,7 @@ version = "0.1.0"
 dependencies = [
  "nix 0.29.0",
  "rustix 0.38.44",
+ "sandbox-runtime-namespace-execution",
  "sandbox-runtime-namespace-process",
  "sandbox-runtime-workspace",
  "serde_json",

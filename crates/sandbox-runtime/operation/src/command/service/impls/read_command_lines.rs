@@ -1,33 +1,77 @@
-use crate::command::service::transcript::command_lines_output;
-use crate::command::service::CommandOperationService;
+use sandbox_runtime_command::CommandExecution;
+
+use crate::command::service::helpers::{command_status, finalize_message};
+use crate::command::service::transcript::command_output;
+use crate::command::service::{execution_id, CommandOperationService};
 use crate::command::{
-    CommandLinesOutput, CommandServiceError, CommandSessionId, CommandStatus, ReadCommandLinesInput,
+    CommandOutput, CommandServiceError, CommandSessionId, CommandStatus, ReadCommandLinesInput,
 };
 
 impl CommandOperationService {
     pub fn read_command_lines(
         &self,
         input: ReadCommandLinesInput,
-    ) -> Result<CommandLinesOutput, CommandServiceError> {
+    ) -> Result<CommandOutput, CommandServiceError> {
         let command_session_id = input.command_session_id;
         let start_offset = input.start_offset.unwrap_or(0);
         let limit = validate_read_limit(input.limit)?;
-        if let Some(active) = self.active_command_or_none(&command_session_id)? {
-            let transcript = active.transcript.clone();
-            let elapsed = active.started_at.elapsed().as_secs_f64();
-            drop(active);
-            return Ok(command_lines_output(
-                transcript.window(start_offset, limit),
-                command_session_id,
-                CommandStatus::Running,
-                None,
-                elapsed,
-                elapsed,
-            ));
-        }
+        let id = execution_id(&command_session_id);
 
-        let completed = self.completed_command(&command_session_id)?;
-        completed_command_lines_output(completed, command_session_id, start_offset, limit)
+        let read = self.engine().with_value(&id, |command| {
+            read_command_window(command, &command_session_id, start_offset, limit)
+        });
+        match read {
+            Some(result) => result,
+            None => Err(CommandServiceError::CommandNotFound { command_session_id }),
+        }
+    }
+}
+
+fn read_command_window(
+    command: &CommandExecution,
+    command_session_id: &CommandSessionId,
+    start_offset: u64,
+    limit: usize,
+) -> Result<CommandOutput, CommandServiceError> {
+    if !command.is_finished() {
+        let window = command.transcript_window(start_offset, limit);
+        let elapsed = command.elapsed_seconds();
+        return Ok(command_output(
+            window,
+            Some(command_session_id.clone()),
+            CommandStatus::Running,
+            None,
+            elapsed,
+            elapsed,
+        ));
+    }
+    match command.terminal_result() {
+        Some(Ok(result)) => {
+            let window = command
+                .required_transcript_window(start_offset, limit)
+                .map_err(|error| CommandServiceError::CommandTranscriptUnavailable {
+                    command_session_id: command_session_id.clone(),
+                    path: None,
+                    error,
+                })?;
+            let elapsed = command.elapsed_seconds();
+            Ok(command_output(
+                window,
+                Some(command_session_id.clone()),
+                command_status(result.status),
+                Some(result.exit_code),
+                elapsed,
+                result.command_total_time_seconds,
+            ))
+        }
+        Some(Err(error)) => Err(CommandServiceError::CommandFinalizationFailed {
+            command_session_id: command_session_id.clone(),
+            error: finalize_message(&error),
+            finalized: None,
+        }),
+        None => Err(CommandServiceError::CommandNotFound {
+            command_session_id: command_session_id.clone(),
+        }),
     }
 }
 
@@ -41,22 +85,4 @@ fn validate_read_limit(limit: Option<usize>) -> Result<usize, CommandServiceErro
         }),
         limit => Ok(limit),
     }
-}
-
-fn completed_command_lines_output(
-    completed: crate::command::CompletedCommandRecord,
-    command_session_id: CommandSessionId,
-    start_offset: u64,
-    limit: usize,
-) -> Result<CommandLinesOutput, CommandServiceError> {
-    Ok(command_lines_output(
-        completed
-            .transcript
-            .window(&command_session_id, start_offset, limit)?,
-        command_session_id,
-        completed.result.status,
-        completed.result.exit_code,
-        completed.started_at.elapsed().as_secs_f64(),
-        completed.result.command_total_time_seconds,
-    ))
 }

@@ -5,26 +5,31 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
+mod fake_launcher;
+pub use fake_launcher::{FakeLauncher, FakeRunnerScript};
+use sandbox_runtime_namespace_execution::{
+    ExecutionObserver, NamespaceExecutionEngine, NamespaceExecutionError,
+};
+use sandbox_runtime_namespace_process::runner::protocol::{NamespaceRunnerRequest, RunResult};
+
 use sandbox_runtime::command::test_support::{
-    command_service_with_launch_driver_and_async_trace_sink,
-    command_service_with_launch_driver_namespace_store_and_async_trace_sink,
+    command_service_from_engine, default_remount_controller,
 };
-use sandbox_runtime::command::{
-    CommandCompletionPromise, CommandCompletionWaitOutcome, CommandLaunchDriver,
-    CommandOperationService, CommandServiceError,
-};
+use sandbox_runtime::command::{CommandOperationService, CommandServiceError};
+use sandbox_runtime::workspace_remount::ProcessGroupController;
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
-use sandbox_runtime::{AsyncTraceSink, NamespaceExecutionStore};
-use sandbox_runtime_command::process::{
-    CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec,
-};
+use sandbox_runtime::{AsyncTraceSink, NamespaceExecutionLedger};
+use sandbox_runtime_command::process::CommandProcessExit;
 use sandbox_runtime_workspace::{
     CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LayerStackSnapshotRef, LeaseId,
-    ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceEntry,
-    WorkspaceError, WorkspaceHandle, WorkspaceProfile, WorkspaceRuntimeHooks,
-    WorkspaceRuntimeService, WorkspaceSessionId,
+    ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceError,
+    WorkspaceHandle, WorkspaceProfile, WorkspaceRuntimeHooks, WorkspaceRuntimeService,
+    WorkspaceSessionId,
 };
+
+const MAX_ACTIVE_COMMANDS: usize = 256;
+const SETUP_TIMEOUT_S: f64 = 30.0;
 
 pub(crate) struct TestServices {
     pub(crate) workspace: Arc<WorkspaceSessionService>,
@@ -43,27 +48,20 @@ pub(crate) struct FakeWorkspaceService {
     destroy_calls: Mutex<Vec<WorkspaceSessionId>>,
 }
 
-#[derive(Debug, Default)]
-pub(crate) struct FakeLaunchDriver {
-    outcomes: Mutex<VecDeque<ScriptedCommandYield>>,
-    spawn_errors: Mutex<VecDeque<CommandServiceError>>,
-    spawn_observations: Mutex<Vec<SpawnObservation>>,
-}
-
+/// A scripted command outcome (kept for the suites that script per yield). It is
+/// translated to a `FakeRunnerScript` applied by the engine's fake launcher.
 #[derive(Debug, Clone)]
 pub(crate) enum ScriptedCommandYield {
     Completed(CommandProcessExit),
     Running(String),
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct SpawnObservation {
-    pub(crate) spec_id: String,
-    pub(crate) spec_command: String,
-    pub(crate) spec_cwd: Option<PathBuf>,
-    pub(crate) spec_timeout_seconds: Option<f64>,
-    pub(crate) workspace_entry: WorkspaceEntry,
-    pub(crate) transcript_path: PathBuf,
+/// A scripting façade over the engine `FakeLauncher`: `push_outcome` enqueues a
+/// runner behavior, and the recorded requests/transcript paths back the suites'
+/// spawn assertions.
+#[derive(Default)]
+pub(crate) struct FakeLaunchDriver {
+    launcher: FakeLauncher,
 }
 
 impl FakeLaunchDriver {
@@ -72,97 +70,46 @@ impl FakeLaunchDriver {
     }
 
     pub(crate) fn push_outcome(&self, outcome: ScriptedCommandYield) {
-        self.outcomes
-            .lock()
-            .expect("test operation succeeds")
-            .push_back(outcome);
+        self.launcher.push_script(script_from_yield(outcome));
     }
 
-    pub(crate) fn push_spawn_error(&self, error: CommandServiceError) {
-        self.spawn_errors
-            .lock()
-            .expect("test operation succeeds")
-            .push_back(error);
+    pub(crate) fn push_spawn_error(&self, _error: CommandServiceError) {
+        self.launcher.push_script(FakeRunnerScript::spawn_error(
+            NamespaceExecutionError::Spawn("scripted spawn failure".to_owned()),
+        ));
     }
 
-    pub(crate) fn spawn_observations(&self) -> Vec<SpawnObservation> {
-        self.spawn_observations
-            .lock()
-            .expect("test operation succeeds")
-            .clone()
+    pub(crate) fn recorded_requests(&self) -> Vec<NamespaceRunnerRequest> {
+        self.launcher.recorded_requests()
+    }
+
+    pub(crate) fn recorded_request_ids(&self) -> Vec<String> {
+        self.launcher.recorded_request_ids()
+    }
+
+    pub(crate) fn recorded_transcript_paths(&self) -> Vec<Option<PathBuf>> {
+        self.launcher.recorded_transcript_paths()
+    }
+
+    pub(crate) fn launcher(&self) -> FakeLauncher {
+        self.launcher.clone()
     }
 }
 
-impl CommandLaunchDriver for FakeLaunchDriver {
-    fn spawn(
-        &self,
-        spec: CommandProcessSpec,
-        workspace_entry: WorkspaceEntry,
-        config: &sandbox_runtime_command::CommandConfig,
-    ) -> Result<CommandProcess, CommandServiceError> {
-        if let Some(error) = self
-            .spawn_errors
-            .lock()
-            .expect("test operation succeeds")
-            .pop_front()
-        {
-            return Err(error);
-        }
-        let parts =
-            CommandProcessSpawn::prepare(&spec.id, workspace_entry, config).map_err(|error| {
-                CommandServiceError::CommandIo {
-                    command_session_id: sandbox_runtime::command::CommandSessionId(spec.id.clone()),
-                    error: error.to_string(),
-                }
-            })?;
-        self.spawn_observations
-            .lock()
-            .expect("test operation succeeds")
-            .push(SpawnObservation {
-                spec_id: spec.id.clone(),
-                spec_command: spec.command.clone(),
-                spec_cwd: spec.cwd.clone(),
-                spec_timeout_seconds: spec.timeout_seconds,
-                workspace_entry: parts.workspace_entry.clone(),
-                transcript_path: parts.transcript_path.clone(),
-            });
-        Ok(CommandProcess::inactive_with_transcript_for_test(
-            spec,
-            parts.transcript_path,
-        ))
+fn script_from_yield(outcome: ScriptedCommandYield) -> FakeRunnerScript {
+    match outcome {
+        ScriptedCommandYield::Running(output) => FakeRunnerScript::running(output.into_bytes()),
+        ScriptedCommandYield::Completed(exit) => FakeRunnerScript::completes_with_output(
+            exit.stdout.clone().into_bytes(),
+            run_result_from_exit(&exit),
+        ),
     }
+}
 
-    fn start_completion_watcher(
-        &self,
-        _completion: CommandCompletionPromise,
-        _process: Arc<CommandProcess>,
-    ) {
-    }
-
-    fn wait_for_command_yield(
-        &self,
-        process: &CommandProcess,
-        completion: &CommandCompletionPromise,
-        _yield_time_ms: u64,
-        _start_offset: u64,
-    ) -> CommandCompletionWaitOutcome {
-        let outcome = self
-            .outcomes
-            .lock()
-            .expect("test operation succeeds")
-            .pop_front()
-            .unwrap_or_else(|| ScriptedCommandYield::Running(String::new()));
-        match &outcome {
-            ScriptedCommandYield::Running(output) => write_transcript_output(process, output),
-            ScriptedCommandYield::Completed(exit) => {
-                write_transcript_output(process, &exit.stdout);
-                completion.resolve(exit.clone());
-            }
-        }
-        match outcome {
-            ScriptedCommandYield::Running(_) => CommandCompletionWaitOutcome::Running,
-            ScriptedCommandYield::Completed(_) => CommandCompletionWaitOutcome::Completed,
-        }
+fn run_result_from_exit(exit: &CommandProcessExit) -> RunResult {
+    RunResult {
+        exit_code: i32::try_from(exit.exit_code).unwrap_or(1),
+        payload: serde_json::json!({ "status": exit.status }),
     }
 }
 
@@ -235,9 +182,7 @@ impl FakeWorkspaceService {
             .expect("test operation succeeds")
             .clone()
     }
-}
 
-impl FakeWorkspaceService {
     fn create_workspace(
         &self,
         request: CreateWorkspaceRequest,
@@ -352,42 +297,66 @@ pub(crate) fn build_services(fake: Arc<FakeWorkspaceService>) -> TestServices {
 
 pub(crate) fn build_services_with_launch_driver(
     fake: Arc<FakeWorkspaceService>,
-    launch_driver: Arc<dyn CommandLaunchDriver>,
+    launch_driver: Arc<FakeLaunchDriver>,
 ) -> TestServices {
     build_services_with_launch_driver_and_async_trace_sink(fake, launch_driver, None)
 }
 
 pub(crate) fn build_services_with_launch_driver_and_async_trace_sink(
     fake: Arc<FakeWorkspaceService>,
-    launch_driver: Arc<dyn CommandLaunchDriver>,
+    launch_driver: Arc<FakeLaunchDriver>,
     async_trace_sink: Option<AsyncTraceSink>,
 ) -> TestServices {
     let workspace = Arc::new(WorkspaceSessionService::new(fake_workspace_runtime(fake)));
-    let command = Arc::new(command_service_with_launch_driver_and_async_trace_sink(
-        Arc::clone(&workspace),
-        test_command_config(),
-        launch_driver,
+    let namespace_execution = Arc::new(NamespaceExecutionLedger::new());
+    let command = Arc::new(build_command_service(
+        &workspace,
+        &launch_driver,
+        namespace_execution,
         async_trace_sink,
+        default_remount_controller(),
     ));
     TestServices { workspace, command }
 }
 
 pub(crate) fn build_services_with_launch_driver_namespace_store(
     fake: Arc<FakeWorkspaceService>,
-    launch_driver: Arc<dyn CommandLaunchDriver>,
-    namespace_execution: Arc<NamespaceExecutionStore>,
+    launch_driver: Arc<FakeLaunchDriver>,
+    namespace_execution: Arc<NamespaceExecutionLedger>,
 ) -> TestServices {
     let workspace = Arc::new(WorkspaceSessionService::new(fake_workspace_runtime(fake)));
-    let command = Arc::new(
-        command_service_with_launch_driver_namespace_store_and_async_trace_sink(
-            Arc::clone(&workspace),
-            test_command_config(),
-            launch_driver,
-            namespace_execution,
-            None,
-        ),
-    );
+    let command = Arc::new(build_command_service(
+        &workspace,
+        &launch_driver,
+        namespace_execution,
+        None,
+        default_remount_controller(),
+    ));
     TestServices { workspace, command }
+}
+
+/// Build a command service over an engine wired to the driver's fake launcher.
+pub(crate) fn build_command_service(
+    workspace: &Arc<WorkspaceSessionService>,
+    launch_driver: &FakeLaunchDriver,
+    namespace_execution: Arc<NamespaceExecutionLedger>,
+    async_trace_sink: Option<AsyncTraceSink>,
+    remount_controller: Arc<dyn ProcessGroupController>,
+) -> CommandOperationService {
+    let engine = Arc::new(NamespaceExecutionEngine::with_launcher(
+        Box::new(launch_driver.launcher()),
+        Arc::clone(&namespace_execution) as Arc<dyn ExecutionObserver>,
+        MAX_ACTIVE_COMMANDS,
+        SETUP_TIMEOUT_S,
+    ));
+    command_service_from_engine(
+        Arc::clone(workspace),
+        test_command_config(),
+        engine,
+        namespace_execution,
+        async_trace_sink,
+        remount_controller,
+    )
 }
 
 pub(crate) fn create_request() -> CreateWorkspaceRequest {
@@ -463,26 +432,6 @@ pub(crate) fn success_exit(stdout: &str) -> CommandProcessExit {
         stdout: stdout.to_owned(),
         elapsed_s: 0.1,
         kill: None,
-    }
-}
-
-fn write_transcript_output(process: &CommandProcess, output: &str) {
-    if output.is_empty() {
-        return;
-    }
-    let Some(path) = process.transcript_path() else {
-        return;
-    };
-    if let Some(parent) = path.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
-    if let Ok(mut file) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(path)
-    {
-        use std::io::Write as _;
-        let _ = file.write_all(output.as_bytes());
     }
 }
 

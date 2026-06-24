@@ -16,8 +16,20 @@ pub struct RunnerOutcome {
 }
 
 impl RunnerOutcome {
-    pub fn new(result: RunResult, cancelled: bool) -> Self {
-        Self { result, cancelled }
+    pub fn new(result: RunResult) -> Self {
+        Self {
+            result,
+            cancelled: false,
+        }
+    }
+
+    /// Mark this outcome as cancelled (the engine-side cancel knowledge), so
+    /// `status()`/`exit_code()` override to `Cancelled`/`130`. Kept off the
+    /// constructor so the mount family's `RunnerOutcome::new` stays unchanged.
+    #[must_use]
+    pub fn with_cancelled(mut self, cancelled: bool) -> Self {
+        self.cancelled = cancelled;
+        self
     }
 
     pub fn exit_code(&self) -> i64 {

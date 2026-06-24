@@ -4,7 +4,7 @@ use crate::command::CommandOperationService;
 use crate::layerstack::LayerStackService;
 use crate::namespace_execution::{
     BeginNamespaceExecution, CompleteNamespaceExecution, NamespaceExecutionId,
-    NamespaceExecutionRecord, NamespaceExecutionStore,
+    NamespaceExecutionLedger, NamespaceExecutionRecord,
 };
 use crate::observability::{AsyncTraceSink, RuntimeObservabilitySnapshot};
 use crate::workspace_crate::{profile::WorkspaceModeManager, WorkspaceRuntimeService};
@@ -15,7 +15,7 @@ pub struct SandboxRuntimeOperations {
     pub command: Arc<CommandOperationService>,
     pub workspace_session: Arc<WorkspaceSessionService>,
     pub layerstack: Arc<LayerStackService>,
-    namespace_execution: Arc<NamespaceExecutionStore>,
+    namespace_execution: Arc<NamespaceExecutionLedger>,
 }
 
 impl SandboxRuntimeOperations {
@@ -40,7 +40,7 @@ impl SandboxRuntimeOperations {
         command: Arc<CommandOperationService>,
         workspace_session: Arc<WorkspaceSessionService>,
         layerstack: Arc<LayerStackService>,
-        namespace_execution: Arc<NamespaceExecutionStore>,
+        namespace_execution: Arc<NamespaceExecutionLedger>,
     ) -> Self {
         assert!(
             command.shares_workspace_session(&workspace_session),
@@ -83,7 +83,7 @@ impl SandboxRuntimeOperations {
             layer_stack_root.clone(),
         ));
         let workspace_session = Arc::new(WorkspaceSessionService::new(workspace_runtime));
-        let namespace_execution = Arc::new(NamespaceExecutionStore::new());
+        let namespace_execution = Arc::new(NamespaceExecutionLedger::new());
         let layerstack = Arc::new(
             LayerStackService::new(layer_stack_root)
                 .expect("layerstack service initialization failed"),

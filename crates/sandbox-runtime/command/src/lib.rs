@@ -14,6 +14,7 @@
 //! `cargo check --target x86_64-unknown-linux-gnu`.
 #![forbid(unsafe_code)]
 
+mod command_execution;
 mod config;
 mod contract;
 pub mod process;
@@ -22,8 +23,9 @@ mod pty;
 mod transcript;
 mod transcript_rows;
 
+pub use command_execution::CommandExecution;
 pub use config::CommandConfig;
-pub use contract::CommandError;
+pub use contract::{CommandError, CommandTerminalResult};
 pub use process::{CommandProcess, CommandProcessSpec};
 pub use transcript_rows::{
     required_transcript_window, transcript_window, CommandStream, CommandTranscriptRow,

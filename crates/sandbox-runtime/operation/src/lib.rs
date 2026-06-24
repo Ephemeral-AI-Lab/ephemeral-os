@@ -20,7 +20,7 @@ pub use command::CommandOperationService;
 pub use layerstack::LayerStackService;
 pub use namespace_execution::{
     BeginNamespaceExecution, CompleteNamespaceExecution, NamespaceExecutionId,
-    NamespaceExecutionLifecycle, NamespaceExecutionRecord, NamespaceExecutionStore,
+    NamespaceExecutionLedger, NamespaceExecutionLifecycle, NamespaceExecutionRecord,
     NamespaceExecutionTerminalStatus, RuntimeNamespaceExecutionSnapshot,
 };
 pub use observability::{
