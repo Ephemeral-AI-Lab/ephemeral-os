@@ -1,5 +1,6 @@
 use std::fs::{File, OpenOptions};
-use std::io::{self, Read, Write};
+use std::io::{self, Read, Seek, SeekFrom, Write};
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -14,44 +15,74 @@ use rustix::pty::ioctl_tiocgptpeer;
 use rustix::pty::ptsname;
 use rustix::pty::{grantpt, openpt, unlockpt, OpenptFlags};
 
+use crate::transcript::TranscriptTimestampPrefixer;
+
 /// Cap on how long a single `write_stdin` pushes bytes into the PTY before
 /// returning a structured backpressure error. The master is non-blocking, so a
 /// consumer that never drains its stdin cannot wedge the writer past this bound.
 const STDIN_WRITE_DEADLINE: Duration = Duration::from_secs(2);
 
-/// The master side of a PTY: a non-blocking stdin writer, an in-memory transcript
-/// drained by a reader thread, and a cancel action. Workspace-agnostic — the
-/// transcript sink is an in-memory buffer (file persistence/truncation is Phase 3).
+/// Cap on a single file-backed `read_output_since` read window.
+const MAX_OUTPUT_READ_BYTES: u64 = 1024 * 1024;
+
+/// Where the PTY reader drains output. A `File` sink persists timestamp-prefixed
+/// bytes for the command's file-backed transcript (the row reader lives in the
+/// `command` crate); a `Memory` sink keeps the Phase-2 in-memory buffer for ops
+/// that do not need persistence.
+enum TranscriptSink {
+    Memory(Arc<Mutex<Vec<u8>>>),
+    File(PathBuf),
+}
+
+/// The master side of a PTY: a non-blocking stdin writer, a transcript drained by
+/// a reader thread (in-memory or file-backed), and a cancel action.
 pub struct PtyMaster {
     pgid: Option<i32>,
     writer: Mutex<File>,
-    transcript: Arc<Mutex<Vec<u8>>>,
-    cancel: Box<dyn Fn() + Send + Sync>,
+    sink: TranscriptSink,
+    cancel: Arc<dyn Fn() + Send + Sync>,
 }
 
 impl PtyMaster {
     /// Wrap a PTY master: clone the writer, mark the OFD non-blocking, and spawn
-    /// the output reader. `cancel` is the independent teardown action (killpg for
-    /// the fork backing).
+    /// the output reader. `transcript_path` selects the sink (file vs in-memory);
+    /// `cancel` is the independent teardown action (killpg for the fork backing).
     pub fn spawn(
         master: File,
         pgid: Option<i32>,
+        transcript_path: Option<PathBuf>,
         cancel: Box<dyn Fn() + Send + Sync>,
     ) -> io::Result<Self> {
         set_nonblocking(&master)?;
         let writer = master.try_clone()?;
-        let transcript = Arc::new(Mutex::new(Vec::new()));
-        spawn_output_reader(master, Arc::clone(&transcript));
+        let sink = match transcript_path {
+            Some(path) => {
+                spawn_file_output_reader(master, path.clone());
+                TranscriptSink::File(path)
+            }
+            None => {
+                let transcript = Arc::new(Mutex::new(Vec::new()));
+                spawn_memory_output_reader(master, Arc::clone(&transcript));
+                TranscriptSink::Memory(transcript)
+            }
+        };
         Ok(Self {
             pgid,
             writer: Mutex::new(writer),
-            transcript,
-            cancel,
+            sink,
+            cancel: Arc::from(cancel),
         })
     }
 
     pub fn pgid(&self) -> Option<i32> {
         self.pgid
+    }
+
+    /// A cloneable cancel action, so a caller can release the registry lock
+    /// before invoking it (`terminate_process_group` blocks for the SIGTERM grace
+    /// period, which must not be held under the registry lock).
+    pub fn cancel_handle(&self) -> Arc<dyn Fn() + Send + Sync> {
+        Arc::clone(&self.cancel)
     }
 
     /// Push `bytes` to stdin without blocking unbounded. The master is
@@ -88,22 +119,28 @@ impl PtyMaster {
     }
 
     pub fn read_output_since(&self, offset: u64) -> String {
-        let transcript = self
-            .transcript
-            .lock()
-            .expect("pty transcript mutex poisoned");
-        let start = usize::try_from(offset)
-            .unwrap_or(usize::MAX)
-            .min(transcript.len());
-        String::from_utf8_lossy(&transcript[start..]).into_owned()
+        match &self.sink {
+            TranscriptSink::Memory(transcript) => {
+                let transcript = transcript.lock().expect("pty transcript mutex poisoned");
+                let start = usize::try_from(offset)
+                    .unwrap_or(usize::MAX)
+                    .min(transcript.len());
+                String::from_utf8_lossy(&transcript[start..]).into_owned()
+            }
+            TranscriptSink::File(path) => read_file_since(path, offset),
+        }
     }
 
     pub fn output_len(&self) -> u64 {
-        let transcript = self
-            .transcript
-            .lock()
-            .expect("pty transcript mutex poisoned");
-        u64::try_from(transcript.len()).unwrap_or(u64::MAX)
+        match &self.sink {
+            TranscriptSink::Memory(transcript) => {
+                let transcript = transcript.lock().expect("pty transcript mutex poisoned");
+                u64::try_from(transcript.len()).unwrap_or(u64::MAX)
+            }
+            TranscriptSink::File(path) => {
+                std::fs::metadata(path).map_or(0, |metadata| metadata.len())
+            }
+        }
     }
 
     pub fn cancel(&self) {
@@ -111,17 +148,12 @@ impl PtyMaster {
     }
 }
 
-fn spawn_output_reader(mut master: File, transcript: Arc<Mutex<Vec<u8>>>) {
+fn spawn_memory_output_reader(mut master: File, transcript: Arc<Mutex<Vec<u8>>>) {
     thread::spawn(move || {
         let mut buf = [0_u8; 8192];
         loop {
-            {
-                let mut fds = [PollFd::new(&master, PollFlags::IN)];
-                match poll(&mut fds, -1) {
-                    Ok(_) => {}
-                    Err(rustix::io::Errno::INTR) => continue,
-                    Err(_) => break,
-                }
+            if !poll_readable(&master) {
+                break;
             }
             match master.read(&mut buf) {
                 Ok(0) => break,
@@ -135,6 +167,74 @@ fn spawn_output_reader(mut master: File, transcript: Arc<Mutex<Vec<u8>>>) {
             }
         }
     });
+}
+
+fn spawn_file_output_reader(mut master: File, transcript_path: PathBuf) {
+    thread::spawn(move || {
+        let mut transcript = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(transcript_path)
+            .ok();
+        let mut prefixer = TranscriptTimestampPrefixer::new();
+        let mut buf = [0_u8; 8192];
+        loop {
+            if !poll_readable(&master) {
+                break;
+            }
+            match master.read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => {
+                    let bytes = prefixer.prefix(&buf[..n]);
+                    if let Some(file) = transcript.as_mut() {
+                        if file.write_all(&bytes).is_err() {
+                            transcript = None;
+                        }
+                    }
+                }
+                Err(err) if err.kind() == io::ErrorKind::WouldBlock => {}
+                Err(err) if err.kind() == io::ErrorKind::Interrupted => {}
+                Err(_) => break,
+            }
+        }
+    });
+}
+
+/// Block until the master is readable or hangs up. `false` once the poll itself
+/// fails (slave closed → reader should stop).
+fn poll_readable(master: &File) -> bool {
+    loop {
+        let mut fds = [PollFd::new(master, PollFlags::IN)];
+        match poll(&mut fds, -1) {
+            Ok(_) => return true,
+            Err(rustix::io::Errno::INTR) => continue,
+            Err(_) => return false,
+        }
+    }
+}
+
+fn read_file_since(path: &Path, offset: u64) -> String {
+    let Ok(mut file) = File::open(path) else {
+        return String::new();
+    };
+    let Ok(metadata) = file.metadata() else {
+        return String::new();
+    };
+    let len = metadata.len();
+    let start = offset.min(len);
+    let bounded_start = start.max(len.saturating_sub(MAX_OUTPUT_READ_BYTES));
+    if file.seek(SeekFrom::Start(bounded_start)).is_err() {
+        return String::new();
+    }
+    let mut bytes = Vec::new();
+    if file
+        .take(MAX_OUTPUT_READ_BYTES)
+        .read_to_end(&mut bytes)
+        .is_err()
+    {
+        return String::new();
+    }
+    String::from_utf8_lossy(&bytes).into_owned()
 }
 
 /// Open a master/slave PTY pair; runs on darwin via the `cfg(not(linux))`

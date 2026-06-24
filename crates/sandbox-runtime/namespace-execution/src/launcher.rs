@@ -4,8 +4,10 @@ use std::io;
 use std::io::{Read, Write};
 use std::os::fd::{AsRawFd, OwnedFd, RawFd};
 use std::os::unix::process::{CommandExt, ExitStatusExt};
+use std::path::PathBuf;
 use std::process::{Child, Command, ExitStatus, Stdio};
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -25,6 +27,8 @@ pub trait NsRunnerLauncher: Send + Sync {
     fn spawn_pty(
         &self,
         request: NamespaceRunnerRequest,
+        transcript_path: Option<PathBuf>,
+        cancelled: Arc<AtomicBool>,
     ) -> Result<(Box<dyn RunnerChild>, PtyMaster), NamespaceExecutionError>;
 
     fn spawn_piped(
@@ -63,6 +67,8 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
     fn spawn_pty(
         &self,
         request: NamespaceRunnerRequest,
+        transcript_path: Option<PathBuf>,
+        cancelled: Arc<AtomicBool>,
     ) -> Result<(Box<dyn RunnerChild>, PtyMaster), NamespaceExecutionError> {
         let request_bytes = encode_request(&request)?;
         let (mut child, result_read, start_ack_write, request_write, master, pgid) = {
@@ -102,12 +108,12 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
                 pgid,
             )
         };
-        let pty = PtyMaster::spawn(
-            master,
-            Some(pgid),
-            Box::new(move || terminate_process_group(pgid)),
-        )
-        .map_err(spawn_error);
+        let cancel: Box<dyn Fn() + Send + Sync> = Box::new(move || {
+            cancelled.store(true, Ordering::Release);
+            terminate_process_group(pgid);
+        });
+        let pty =
+            PtyMaster::spawn(master, Some(pgid), transcript_path, cancel).map_err(spawn_error);
         let pty = match pty {
             Ok(pty) => pty,
             Err(error) => {
@@ -190,7 +196,11 @@ impl RunnerChild for ForkRunnerChild {
             )?,
             None => self.child.wait().map_err(spawn_error)?,
         };
-        run_result_from_child_status(status, &self.result_read)
+        let bytes = read_result_fd(&self.result_read).unwrap_or_default();
+        if let Ok(result) = serde_json::from_slice::<RunResult>(&bytes) {
+            return Ok(result);
+        }
+        Ok(synthesize_result(status))
     }
 }
 
@@ -248,25 +258,6 @@ fn read_result_fd(result_read: &OwnedFd) -> io::Result<Vec<u8>> {
     Ok(bytes)
 }
 
-fn run_result_from_child_status(
-    status: ExitStatus,
-    result_read: &OwnedFd,
-) -> Result<RunResult, NamespaceExecutionError> {
-    match read_result_fd(result_read) {
-        Ok(bytes) => match serde_json::from_slice::<RunResult>(&bytes) {
-            Ok(result) => Ok(result),
-            Err(error) if status.success() => Err(NamespaceExecutionError::Completion(format!(
-                "decode runner result JSON: {error}"
-            ))),
-            Err(_) => Ok(synthesize_result(status)),
-        },
-        Err(error) if status.success() => Err(NamespaceExecutionError::Completion(format!(
-            "read runner result fd: {error}"
-        ))),
-        Err(_) => Ok(synthesize_result(status)),
-    }
-}
-
 fn synthesize_result(status: ExitStatus) -> RunResult {
     let exit_code = status
         .code()
@@ -280,7 +271,7 @@ fn synthesize_result(status: ExitStatus) -> RunResult {
 
 fn wait_for_child_with_timeout(
     child: &mut Child,
-    mode_flag: &'static str,
+    mode_flag: &str,
     setup_timeout_s: f64,
 ) -> Result<ExitStatus, NamespaceExecutionError> {
     let deadline = Instant::now() + setup_timeout_duration(setup_timeout_s);
@@ -334,8 +325,8 @@ fn terminate_spawned_child(child: &mut Child, pgid: Option<i32>) {
     let _ = child.wait();
 }
 
-fn timeout_error(mode_flag: &'static str) -> NamespaceExecutionError {
-    NamespaceExecutionError::Timeout { mode_flag }
+fn timeout_error(mode_flag: &str) -> NamespaceExecutionError {
+    NamespaceExecutionError::Spawn(format!("ns-runner {mode_flag} timed out"))
 }
 
 fn encode_request(request: &NamespaceRunnerRequest) -> Result<Vec<u8>, NamespaceExecutionError> {
@@ -368,3 +359,4 @@ fn start_ack_pipe() -> Result<(OwnedFd, OwnedFd), NamespaceExecutionError> {
 fn spawn_error(error: impl std::fmt::Display) -> NamespaceExecutionError {
     NamespaceExecutionError::Spawn(error.to_string())
 }
+

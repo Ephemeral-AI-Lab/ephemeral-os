@@ -20,6 +20,7 @@ mod registry;
 mod shell;
 mod status;
 mod target;
+mod transcript;
 
 pub use engine::NamespaceExecutionEngine;
 pub use error::NamespaceExecutionError;
@@ -30,3 +31,6 @@ pub use registry::ExecutionRegistry;
 pub use shell::{RunnerOutcome, ShellOperation};
 pub use status::NamespaceExecutionTerminalStatus;
 pub use target::NamespaceTarget;
+pub use launcher::{NsRunnerLauncher, RunnerChild};
+pub use promise::{CompletionPromise, CompletionWaiter};
+pub use pty::{open_pty_pair, PtyMaster};

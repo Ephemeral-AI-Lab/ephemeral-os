@@ -3,6 +3,21 @@ use std::time::{Duration, Instant};
 
 use crate::error::NamespaceExecutionError;
 
+/// A type-erased block-until-resolved capability. The command yield loop clones an
+/// `Arc<dyn CompletionWaiter>` out of the registry (under its lock), then waits on
+/// it with **no** lock held — so the watcher can still acquire the registry lock
+/// to `complete` and resolve the promise. (Lock-order rule: registry lock and
+/// promise lock are never held simultaneously.)
+pub trait CompletionWaiter: Send + Sync {
+    fn wait_timeout(&self, timeout: Duration) -> bool;
+}
+
+impl<T: Send> CompletionWaiter for CompletionPromise<T> {
+    fn wait_timeout(&self, timeout: Duration) -> bool {
+        CompletionPromise::wait_timeout(self, timeout)
+    }
+}
+
 /// Write-once completion cell: the single internal "done?" truth, backed by a
 /// `Mutex` + `Condvar`. `wait` takes the value (single-consumer); `resolved`
 /// peeks a clone without consuming, so the registry-retained handle can serve

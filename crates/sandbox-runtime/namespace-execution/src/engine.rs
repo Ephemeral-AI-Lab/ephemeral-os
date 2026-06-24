@@ -1,6 +1,7 @@
 use std::any::Any;
 use std::panic::{catch_unwind, AssertUnwindSafe};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::path::Path;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::thread;
 
@@ -46,10 +47,35 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         }
     }
 
+    pub fn with_launcher(
+        launcher: Box<dyn NsRunnerLauncher>,
+        observer: Arc<dyn ExecutionObserver>,
+        max_active: usize,
+        setup_timeout_s: f64,
+    ) -> Self {
+        Self {
+            registry: Arc::new(ExecutionRegistry::new(max_active)),
+            observer,
+            launcher,
+            next_id: AtomicU64::new(1),
+            setup_timeout_s,
+        }
+    }
+
     #[must_use]
     pub fn allocate_id(&self) -> NamespaceExecutionId {
         let next_id = self.next_id.fetch_add(1, Ordering::Relaxed);
         NamespaceExecutionId(format!("namespace_execution_{next_id}"))
+    }
+
+    #[must_use]
+    pub fn is_live(&self, id: &NamespaceExecutionId) -> bool {
+        self.registry.is_live(id)
+    }
+
+    #[must_use]
+    pub fn is_completed(&self, id: &NamespaceExecutionId) -> bool {
+        self.registry.is_completed(id)
     }
 
     pub fn attach(&self, id: &NamespaceExecutionId, value: V) {
@@ -73,20 +99,27 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
     ) -> Result<InteractiveExecution<S::Output>, NamespaceExecutionError> {
         self.registry.try_reserve(&id)?;
         let request = build_request(&target, &id, shell_args(op.command()), op.timeout_seconds());
+        let transcript_path = op.transcript_path().map(Path::to_path_buf);
+        let cancelled = Arc::new(AtomicBool::new(false));
         let op = Box::new(op);
-        let (child, pty) = match self.launcher.spawn_pty(request) {
-            Ok(spawned) => spawned,
-            Err(error) => {
-                self.registry.abort(&id);
-                return Err(error);
-            }
-        };
+        let (child, pty) =
+            match self
+                .launcher
+                .spawn_pty(request, transcript_path, Arc::clone(&cancelled))
+            {
+                Ok(spawned) => spawned,
+                Err(error) => {
+                    self.registry.abort(&id);
+                    return Err(error);
+                }
+            };
         self.observer.on_running(&id);
         let promise = Arc::new(CompletionPromise::new());
         self.spawn_watcher(
             id.clone(),
             child,
             Arc::clone(&promise),
+            cancelled,
             MountExitHandling::AllowNonZero,
             move |outcome| op.finalize(outcome),
         );
@@ -124,6 +157,7 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
             id.clone(),
             child,
             Arc::clone(&promise),
+            Arc::new(AtomicBool::new(false)),
             MountExitHandling::ShortCircuitNonZero { mode_flag },
             parse,
         );
@@ -138,6 +172,7 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         id: NamespaceExecutionId,
         mut child: Box<dyn RunnerChild>,
         promise: Arc<CompletionPromise<O>>,
+        cancelled: Arc<AtomicBool>,
         mount_exit_handling: MountExitHandling,
         finalize: impl FnOnce(RunnerOutcome) -> Result<O, NamespaceExecutionError> + Send + 'static,
     ) {
@@ -146,7 +181,7 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         thread::spawn(move || {
             let (result, status, exit_code) = match child.wait_completion() {
                 Ok(run_result) => {
-                    let outcome = RunnerOutcome::new(run_result);
+                    let outcome = RunnerOutcome::new(run_result, cancelled.load(Ordering::Acquire));
                     let status = outcome.status();
                     let exit_code = Some(outcome.exit_code());
                     if let Some(error) = mount_exit_handling.short_circuit_error(&outcome) {

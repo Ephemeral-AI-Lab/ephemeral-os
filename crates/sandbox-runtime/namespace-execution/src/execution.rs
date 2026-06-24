@@ -1,9 +1,10 @@
 use std::io;
 use std::sync::Arc;
+use std::time::Duration;
 
 use crate::error::NamespaceExecutionError;
 use crate::id::NamespaceExecutionId;
-use crate::promise::CompletionPromise;
+use crate::promise::{CompletionPromise, CompletionWaiter};
 use crate::pty::PtyMaster;
 
 /// Genus: id + completion promise. The promise is shared (`Arc`) with the
@@ -26,9 +27,37 @@ impl<T> ExecutionHandle<T> {
         self.promise.is_resolved()
     }
 
+    pub fn wait_timeout(&self, timeout: Duration) -> bool {
+        self.promise.wait_timeout(timeout)
+    }
+
+    /// A lock-free waiter cloned from this handle's promise — the yield loop waits
+    /// on it without holding the registry lock.
+    pub fn completion(&self) -> Arc<dyn CompletionWaiter>
+    where
+        T: Send + 'static,
+    {
+        upcast_waiter(Arc::clone(&self.promise))
+    }
+
+    pub fn resolved(&self) -> Option<Result<T, NamespaceExecutionError>>
+    where
+        T: Clone,
+    {
+        self.promise.resolved()
+    }
+
     pub fn wait(self) -> Result<T, NamespaceExecutionError> {
         self.promise.wait()
     }
+}
+
+/// Unsize a concrete completion promise to the type-erased waiter (the coercion
+/// site that lets a generic handle hand out an `Arc<dyn CompletionWaiter>`).
+fn upcast_waiter<T: Send + 'static>(
+    promise: Arc<CompletionPromise<T>>,
+) -> Arc<dyn CompletionWaiter> {
+    promise
 }
 
 /// Species: an `ExecutionHandle` plus interactive (PTY) capability — stdin,
@@ -55,8 +84,31 @@ impl<T> InteractiveExecution<T> {
         self.exec.is_finished()
     }
 
+    pub fn wait_timeout(&self, timeout: Duration) -> bool {
+        self.exec.wait_timeout(timeout)
+    }
+
+    /// A lock-free waiter cloned from this execution's promise (yield loop).
+    pub fn completion(&self) -> Arc<dyn CompletionWaiter>
+    where
+        T: Send + 'static,
+    {
+        self.exec.completion()
+    }
+
+    pub fn resolved(&self) -> Option<Result<T, NamespaceExecutionError>>
+    where
+        T: Clone,
+    {
+        self.exec.resolved()
+    }
+
     pub fn write_stdin(&self, bytes: &[u8]) -> io::Result<()> {
         self.pty.write_stdin(bytes)
+    }
+
+    pub fn pgid(&self) -> Option<i32> {
+        self.pty.pgid()
     }
 
     pub fn read_output_since(&self, offset: u64) -> String {
@@ -69,6 +121,12 @@ impl<T> InteractiveExecution<T> {
 
     pub fn cancel(&self) {
         self.pty.cancel();
+    }
+
+    /// A cloneable cancel action — the caller invokes it after releasing the
+    /// registry lock (the kill blocks for a grace period).
+    pub fn cancel_handle(&self) -> Arc<dyn Fn() + Send + Sync> {
+        self.pty.cancel_handle()
     }
 
     pub fn wait(self) -> Result<T, NamespaceExecutionError> {

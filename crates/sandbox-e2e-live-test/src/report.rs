@@ -508,33 +508,8 @@ fn project_recent_trace(value: &Value) -> ObsRecentTrace {
 }
 
 fn project_p1(sandbox_id: &str, latest: Option<&ObsResourceSample>) -> (P1, Option<String>) {
-    let Some(sample) = latest else {
-        return (
-            P1 {
-                available: false,
-                cpu_usage_usec: None,
-                memory_current_bytes: None,
-                memory_max_bytes: None,
-                memory_max_unlimited: None,
-                reason: Some("no resource sample".to_owned()),
-            },
-            Some(format!(
-                "P1 unavailable for {sandbox_id}: no resource sample"
-            )),
-        );
-    };
-    let cgroup = &sample.cgroup;
-    let cpu_usage_usec = cgroup.get("cpu_usage_usec").and_then(Value::as_i64);
-    let memory_current_bytes = cgroup.get("memory_current_bytes").and_then(Value::as_i64);
-    let memory_max_bytes = cgroup.get("memory_max_bytes").and_then(Value::as_i64);
-    let memory_max_unlimited = cgroup.get("memory_max_unlimited").and_then(Value::as_bool);
-
-    if cgroup.get("available").and_then(Value::as_bool) != Some(true) {
-        let reason = match cgroup.get("error").and_then(Value::as_str) {
-            Some(error) => format!("cgroup unavailable: {error}"),
-            None => "cgroup unavailable".to_owned(),
-        };
-        return (
+    let unavailable = |reason: String, detail: &str| {
+        (
             P1 {
                 available: false,
                 cpu_usage_usec: None,
@@ -543,36 +518,43 @@ fn project_p1(sandbox_id: &str, latest: Option<&ObsResourceSample>) -> (P1, Opti
                 memory_max_unlimited: None,
                 reason: Some(reason),
             },
-            Some(format!(
-                "P1 unavailable for {sandbox_id}: cgroup unavailable"
-            )),
-        );
+            Some(format!("P1 unavailable for {sandbox_id}: {detail}")),
+        )
+    };
+
+    let Some(sample) = latest else {
+        return unavailable("no resource sample".to_owned(), "no resource sample");
+    };
+    let cgroup = &sample.cgroup;
+    if cgroup.get("available").and_then(Value::as_bool) != Some(true) {
+        let reason = match cgroup.get("error").and_then(Value::as_str) {
+            Some(error) => format!("cgroup unavailable: {error}"),
+            None => "cgroup unavailable".to_owned(),
+        };
+        return unavailable(reason, "cgroup unavailable");
     }
 
-    if cpu_usage_usec.is_none() && memory_current_bytes.is_none() {
-        return (
-            P1 {
-                available: false,
-                cpu_usage_usec,
-                memory_current_bytes,
-                memory_max_bytes,
-                memory_max_unlimited,
-                reason: Some("cgroup available but counters absent".to_owned()),
-            },
+    let cpu_usage_usec = cgroup.get("cpu_usage_usec").and_then(Value::as_i64);
+    let memory_current_bytes = cgroup.get("memory_current_bytes").and_then(Value::as_i64);
+    let counters_present = cpu_usage_usec.is_some() || memory_current_bytes.is_some();
+    let (reason, warning) = if counters_present {
+        (None, None)
+    } else {
+        (
+            Some("cgroup available but counters absent".to_owned()),
             Some(format!("P1 partial for {sandbox_id}: counters absent")),
-        );
-    }
-
+        )
+    };
     (
         P1 {
-            available: true,
+            available: counters_present,
             cpu_usage_usec,
             memory_current_bytes,
-            memory_max_bytes,
-            memory_max_unlimited,
-            reason: None,
+            memory_max_bytes: cgroup.get("memory_max_bytes").and_then(Value::as_i64),
+            memory_max_unlimited: cgroup.get("memory_max_unlimited").and_then(Value::as_bool),
+            reason,
         },
-        None,
+        warning,
     )
 }
 
