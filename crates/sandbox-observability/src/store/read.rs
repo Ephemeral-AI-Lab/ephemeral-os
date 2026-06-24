@@ -39,7 +39,6 @@ pub(super) fn read_active_workspace_snapshots(
         "SELECT
             workspace_id,
             state,
-            remount_state,
             profile,
             namespace_fd_count,
             base_manifest_version,
@@ -249,14 +248,13 @@ fn workspace_snapshot_from_row(
     Ok(ObservabilityWorkspaceSnapshotRow {
         workspace_id: row.get(0)?,
         state: row.get(1)?,
-        remount_state: row.get(2)?,
-        profile: row.get(3)?,
-        namespace_fd_count: row.get(4)?,
-        base_manifest_version: row.get(5)?,
-        base_root_hash: row.get(6)?,
-        layer_count: row.get(7)?,
-        sampled_at_unix_ms: row.get(8)?,
-        error_message: row.get(9)?,
+        profile: row.get(2)?,
+        namespace_fd_count: row.get(3)?,
+        base_manifest_version: row.get(4)?,
+        base_root_hash: row.get(5)?,
+        layer_count: row.get(6)?,
+        sampled_at_unix_ms: row.get(7)?,
+        error_message: row.get(8)?,
     })
 }
 

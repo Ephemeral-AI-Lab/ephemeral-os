@@ -1,6 +1,7 @@
 use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -20,7 +21,7 @@ use crate::transcript::TranscriptTimestampPrefixer;
 const STDIN_WRITE_DEADLINE: Duration = Duration::from_secs(2);
 
 enum TranscriptSink {
-    Memory(Arc<Mutex<Vec<u8>>>),
+    Memory(Arc<AtomicU64>),
     File(PathBuf),
 }
 
@@ -46,15 +47,12 @@ impl PtyMaster {
                 TranscriptSink::File(path)
             }
             None => {
-                let transcript = Arc::new(Mutex::new(Vec::new()));
-                let reader_transcript = Arc::clone(&transcript);
+                let len = Arc::new(AtomicU64::new(0));
+                let reader_len = Arc::clone(&len);
                 spawn_output_reader(master, move |bytes| {
-                    reader_transcript
-                        .lock()
-                        .expect("pty transcript mutex poisoned")
-                        .extend_from_slice(bytes);
+                    reader_len.fetch_add(bytes.len() as u64, Ordering::Relaxed);
                 });
-                TranscriptSink::Memory(transcript)
+                TranscriptSink::Memory(len)
             }
         };
         Ok(Self {
@@ -105,18 +103,11 @@ impl PtyMaster {
 
     pub fn output_len(&self) -> u64 {
         match &self.sink {
-            TranscriptSink::Memory(transcript) => {
-                let transcript = transcript.lock().expect("pty transcript mutex poisoned");
-                u64::try_from(transcript.len()).unwrap_or(u64::MAX)
-            }
+            TranscriptSink::Memory(len) => len.load(Ordering::Relaxed),
             TranscriptSink::File(path) => {
                 std::fs::metadata(path).map_or(0, |metadata| metadata.len())
             }
         }
-    }
-
-    pub fn cancel(&self) {
-        (self.cancel)();
     }
 }
 

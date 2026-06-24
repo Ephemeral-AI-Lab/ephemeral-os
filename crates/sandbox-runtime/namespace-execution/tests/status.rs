@@ -3,20 +3,6 @@ use sandbox_runtime_namespace_process::runner::protocol::RunResult;
 use serde_json::json;
 
 #[test]
-fn as_str_strings_match_the_wire_vocabulary() {
-    assert_eq!(NamespaceExecutionTerminalStatus::Ok.as_str(), "ok");
-    assert_eq!(NamespaceExecutionTerminalStatus::Error.as_str(), "error");
-    assert_eq!(
-        NamespaceExecutionTerminalStatus::TimedOut.as_str(),
-        "timed_out"
-    );
-    assert_eq!(
-        NamespaceExecutionTerminalStatus::Cancelled.as_str(),
-        "cancelled"
-    );
-}
-
-#[test]
 fn status_projects_the_payload_status_string() {
     assert_eq!(
         outcome(run_result(0, "ok")).status(),

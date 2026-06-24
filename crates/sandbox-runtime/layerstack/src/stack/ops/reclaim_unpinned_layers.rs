@@ -10,9 +10,9 @@ use crate::stack::layer::{read_layer_dir, write_layer_changes};
 use crate::stack::lease::{lock_shared_registry, remove_unreferenced_layer_candidates_locked};
 use crate::stack::projection::layer_has_boundary_markers;
 use crate::stack::reclaim_unpinned_layers::{
-    plan_reclaim_unpinned_layers, LeaseParentCompactionOutcome,
-    ReclaimUnpinnedLayersCheckpointMode, ReclaimUnpinnedLayersCopyThroughOutcome,
-    ReclaimUnpinnedLayersOutcome, ReclaimUnpinnedLayersPlanEntry, ReclaimingInterval,
+    plan_reclaim_unpinned_layers, ReclaimUnpinnedLayersCheckpointMode,
+    ReclaimUnpinnedLayersCopyThroughOutcome, ReclaimUnpinnedLayersOutcome,
+    ReclaimUnpinnedLayersPlanEntry, ReclaimingInterval,
 };
 use crate::stack::squash::{CheckpointSegment, LayerCheckpointSquasher};
 use crate::stack::LayerStack;
@@ -220,140 +220,6 @@ impl LayerStack {
     }
 
     #[doc(hidden)]
-    pub fn compact_leased_parent_for_remount(
-        &mut self,
-        lease_id: &str,
-        min_parent_layers: usize,
-    ) -> Result<LeaseParentCompactionOutcome, LayerStackError> {
-        if min_parent_layers == 0 {
-            return Err(LayerStackError::InvalidSquashPlan(
-                "min_parent_layers must be positive".to_owned(),
-            ));
-        }
-        let _guard = self.writer_lock.exclusive()?;
-        let active = self.read_active_manifest_unlocked()?;
-        let lease_manifest = {
-            let leases = lock_shared_registry(&self.leases)?;
-            leases.manifest(lease_id).ok_or_else(|| {
-                LayerStackError::InvalidLeaseOwner(format!("lease not found: {lease_id}"))
-            })?
-        };
-        let lease_depth_before = lease_manifest.depth();
-        let active_depth_before = active.depth();
-        if lease_manifest.layers.len() <= 1
-            || lease_manifest.layers.len().saturating_sub(1) < min_parent_layers
-        {
-            return Ok(LeaseParentCompactionOutcome {
-                lease_manifest: None,
-                active_manifest: None,
-                compact_parent_layer: None,
-                compacted_parent_layer_count: 0,
-                removed_layer_count: 0,
-                bytes_added: 0,
-                lease_depth_before,
-                lease_depth_after: lease_depth_before,
-                active_depth_before,
-                active_depth_after: active_depth_before,
-            });
-        }
-        let Some(lease_start) = find_layer_sequence(&active.layers, &lease_manifest.layers) else {
-            return Err(LayerStackError::InvalidSquashPlan(format!(
-                "lease {lease_id} manifest is not a contiguous active-manifest suffix"
-            )));
-        };
-        if lease_start + lease_manifest.layers.len() != active.layers.len() {
-            return Err(LayerStackError::InvalidSquashPlan(format!(
-                "lease {lease_id} manifest is not an active-manifest suffix"
-            )));
-        }
-
-        let protected_head = lease_manifest.layers[0].clone();
-        let parent_layers = lease_manifest.layers[1..].to_vec();
-        let parent_manifest = Manifest::new(
-            lease_manifest.version,
-            parent_layers.clone(),
-            lease_manifest.schema_version,
-        )
-        .map_err(LayerStackError::from)?;
-        let compact_parent_layer = self.build_copy_through_checkpoint(&parent_manifest)?;
-        let compact_parent_path =
-            resolve_layer_path(&self.storage_root, &compact_parent_layer.path);
-        let bytes_added = storage_bytes(&compact_parent_path)?;
-
-        let lease_manifest_after = Manifest::new(
-            lease_manifest.version,
-            vec![protected_head.clone(), compact_parent_layer.clone()],
-            lease_manifest.schema_version,
-        )
-        .map_err(LayerStackError::from)?;
-
-        let mut active_layers_after =
-            Vec::with_capacity(active.layers.len() - parent_layers.len() + 1);
-        active_layers_after.extend_from_slice(&active.layers[..lease_start]);
-        active_layers_after.push(protected_head);
-        active_layers_after.push(compact_parent_layer.clone());
-        active_layers_after
-            .extend_from_slice(&active.layers[lease_start + lease_manifest.layers.len()..]);
-        let active_manifest_after = Manifest::new(
-            active.version + 1,
-            active_layers_after,
-            active.schema_version,
-        )
-        .map_err(LayerStackError::from)?;
-
-        let current = self.read_active_manifest_unlocked()?;
-        if current != active {
-            let _ = remove_path(&compact_parent_path);
-            let _ = std::fs::remove_file(layer_digest_path(
-                &self.storage_root,
-                &compact_parent_layer.layer_id,
-            ));
-            return Err(LayerStackError::ManifestConflict {
-                expected: active.version,
-                found: current.version,
-            });
-        }
-        if let Err(err) = write_manifest(
-            self.storage_root.join(ACTIVE_MANIFEST_FILE),
-            &active_manifest_after,
-        ) {
-            let _ = remove_path(&compact_parent_path);
-            let _ = std::fs::remove_file(layer_digest_path(
-                &self.storage_root,
-                &compact_parent_layer.layer_id,
-            ));
-            return Err(err);
-        }
-
-        let removed = {
-            let mut leases = lock_shared_registry(&self.leases)?;
-            let Some(old_lease) = leases.retarget(lease_id, lease_manifest_after.clone()) else {
-                return Err(LayerStackError::InvalidLeaseOwner(format!(
-                    "lease not found after parent compaction: {lease_id}"
-                )));
-            };
-            remove_unreferenced_layer_candidates_locked(
-                &self.storage_root,
-                &leases,
-                &old_lease.manifest.layers,
-            )?
-        };
-
-        Ok(LeaseParentCompactionOutcome {
-            lease_manifest: Some(lease_manifest_after),
-            active_manifest: Some(active_manifest_after.clone()),
-            compact_parent_layer: Some(compact_parent_layer),
-            compacted_parent_layer_count: parent_layers.len(),
-            removed_layer_count: removed.len(),
-            bytes_added,
-            lease_depth_before,
-            lease_depth_after: 2,
-            active_depth_before,
-            active_depth_after: active_manifest_after.depth(),
-        })
-    }
-
-    #[doc(hidden)]
     pub fn copy_through_active_for_depth_guard(
         &mut self,
         max_depth: usize,
@@ -426,15 +292,6 @@ fn apply_delta_change(by_path: &mut BTreeMap<LayerPath, LayerChange>, change: La
         by_path.retain(|candidate, _| !is_same_or_descendant(candidate, &path));
     }
     by_path.insert(path, change);
-}
-
-fn find_layer_sequence(haystack: &[LayerRef], needle: &[LayerRef]) -> Option<usize> {
-    if needle.is_empty() {
-        return Some(0);
-    }
-    haystack
-        .windows(needle.len())
-        .position(|window| window == needle)
 }
 
 fn is_same_or_descendant(candidate: &LayerPath, ancestor: &LayerPath) -> bool {

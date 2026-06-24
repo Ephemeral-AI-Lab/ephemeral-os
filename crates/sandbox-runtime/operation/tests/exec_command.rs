@@ -638,7 +638,6 @@ fn destroy_workspace_session_waits_for_existing_session_exec_until_active_insert
             engine,
             Arc::clone(&namespace_execution),
             None,
-            sandbox_runtime::command::test_support::default_remount_controller(),
         ),
     );
     let env = TestServices {

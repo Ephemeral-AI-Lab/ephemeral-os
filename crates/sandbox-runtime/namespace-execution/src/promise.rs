@@ -1,5 +1,5 @@
 use std::sync::{Condvar, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use crate::error::NamespaceExecutionError;
 
@@ -49,35 +49,24 @@ impl<T> CompletionPromise<T> {
     }
 
     pub fn wait(&self) -> Result<T, NamespaceExecutionError> {
-        let mut slot = self.slot.lock().expect("completion promise mutex poisoned");
-        while slot.is_none() {
-            slot = self
-                .ready
-                .wait(slot)
-                .expect("completion promise mutex poisoned");
-        }
+        let mut slot = self
+            .ready
+            .wait_while(
+                self.slot.lock().expect("completion promise mutex poisoned"),
+                |slot| slot.is_none(),
+            )
+            .expect("completion promise mutex poisoned");
         slot.take()
             .expect("wait loop exits only once the slot is resolved")
     }
 
     pub fn wait_timeout(&self, timeout: Duration) -> bool {
-        let mut slot = self.slot.lock().expect("completion promise mutex poisoned");
-        let deadline = Instant::now() + timeout;
-        while slot.is_none() {
-            let remaining = deadline.saturating_duration_since(Instant::now());
-            if remaining.is_zero() {
-                return false;
-            }
-            let (next, outcome) = self
-                .ready
-                .wait_timeout(slot, remaining)
-                .expect("completion promise mutex poisoned");
-            slot = next;
-            if outcome.timed_out() && slot.is_none() {
-                return false;
-            }
-        }
-        true
+        let slot = self.slot.lock().expect("completion promise mutex poisoned");
+        self.ready
+            .wait_timeout_while(slot, timeout, |slot| slot.is_none())
+            .expect("completion promise mutex poisoned")
+            .0
+            .is_some()
     }
 
     pub fn resolved(&self) -> Option<Result<T, NamespaceExecutionError>>

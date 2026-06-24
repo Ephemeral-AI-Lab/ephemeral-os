@@ -18,8 +18,6 @@ struct RegistryState<V> {
 struct Entry<V> {
     value: Option<V>,
     terminal: bool,
-    status: Option<NamespaceExecutionTerminalStatus>,
-    exit: Option<i64>,
 }
 
 impl<V> Entry<V> {
@@ -27,8 +25,6 @@ impl<V> Entry<V> {
         Self {
             value: None,
             terminal: false,
-            status: None,
-            exit: None,
         }
     }
 }
@@ -75,15 +71,13 @@ impl<V> ExecutionRegistry<V> {
     pub fn complete(
         &self,
         id: &NamespaceExecutionId,
-        status: NamespaceExecutionTerminalStatus,
-        exit: Option<i64>,
+        _status: NamespaceExecutionTerminalStatus,
+        _exit: Option<i64>,
     ) {
         let mut state = self.lock();
         if let Some(entry) = state.entries.get_mut(id) {
             if !entry.terminal {
                 entry.terminal = true;
-                entry.status = Some(status);
-                entry.exit = exit;
                 state.active = state.active.saturating_sub(1);
             }
         }

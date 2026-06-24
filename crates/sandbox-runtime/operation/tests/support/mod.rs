@@ -12,19 +12,15 @@ use sandbox_runtime_namespace_execution::{
 };
 use sandbox_runtime_namespace_process::runner::protocol::{NamespaceRunnerRequest, RunResult};
 
-use sandbox_runtime::command::test_support::{
-    command_service_from_engine, default_remount_controller,
-};
+use sandbox_runtime::command::test_support::command_service_from_engine;
 use sandbox_runtime::command::{CommandOperationService, CommandServiceError};
-use sandbox_runtime::workspace_remount::ProcessGroupController;
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
 use sandbox_runtime::{AsyncTraceSink, NamespaceExecutionLedger};
 use sandbox_runtime_workspace::{
     CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LayerStackSnapshotRef, LeaseId,
-    ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceError,
-    WorkspaceHandle, WorkspaceProfile, WorkspaceRuntimeHooks, WorkspaceRuntimeService,
-    WorkspaceSessionId,
+    ReadonlySnapshotHandle, WorkspaceError, WorkspaceHandle, WorkspaceProfile,
+    WorkspaceRuntimeHooks, WorkspaceRuntimeService, WorkspaceSessionId,
 };
 
 const MAX_ACTIVE_COMMANDS: usize = 256;
@@ -39,11 +35,9 @@ pub(crate) struct TestServices {
 pub(crate) struct FakeWorkspaceService {
     create_results: Mutex<VecDeque<Result<WorkspaceHandle, WorkspaceError>>>,
     capture_results: Mutex<VecDeque<Result<CapturedWorkspaceChanges, WorkspaceError>>>,
-    remount_results: Mutex<VecDeque<Result<RemountWorkspaceResult, WorkspaceError>>>,
     destroy_results: Mutex<VecDeque<Result<DestroyWorkspaceResult, WorkspaceError>>>,
     create_requests: Mutex<Vec<CreateWorkspaceRequest>>,
     capture_calls: Mutex<Vec<WorkspaceSessionId>>,
-    remount_calls: Mutex<Vec<WorkspaceSessionId>>,
     destroy_calls: Mutex<Vec<WorkspaceSessionId>>,
 }
 
@@ -141,16 +135,6 @@ impl FakeWorkspaceService {
             .push_back(result);
     }
 
-    pub(crate) fn push_remount_result(
-        &self,
-        result: Result<RemountWorkspaceResult, WorkspaceError>,
-    ) {
-        self.remount_results
-            .lock()
-            .expect("test operation succeeds")
-            .push_back(result);
-    }
-
     pub(crate) fn push_destroy_result(
         &self,
         result: Result<DestroyWorkspaceResult, WorkspaceError>,
@@ -177,13 +161,6 @@ impl FakeWorkspaceService {
 
     pub(crate) fn capture_calls(&self) -> Vec<WorkspaceSessionId> {
         self.capture_calls
-            .lock()
-            .expect("test operation succeeds")
-            .clone()
-    }
-
-    pub(crate) fn remount_calls(&self) -> Vec<WorkspaceSessionId> {
-        self.remount_calls
             .lock()
             .expect("test operation succeeds")
             .clone()
@@ -228,26 +205,6 @@ impl FakeWorkspaceService {
             })
     }
 
-    fn remount_workspace(
-        &self,
-        handle: &WorkspaceHandle,
-        _request: RemountWorkspaceRequest,
-    ) -> Result<RemountWorkspaceResult, WorkspaceError> {
-        self.remount_calls
-            .lock()
-            .expect("test operation succeeds")
-            .push(handle.id.clone());
-        self.remount_results
-            .lock()
-            .expect("test operation succeeds")
-            .pop_front()
-            .unwrap_or_else(|| {
-                Err(WorkspaceError::Setup {
-                    step: "remount result not configured".to_owned(),
-                })
-            })
-    }
-
     fn destroy_workspace(
         &self,
         handle: WorkspaceHandle,
@@ -284,10 +241,6 @@ pub(crate) fn fake_workspace_runtime(
                 let fake = Arc::clone(&fake);
                 move |handle, request| fake.capture_changes(handle, request)
             }),
-            remount_workspace: Box::new({
-                let fake = Arc::clone(&fake);
-                move |handle, request| fake.remount_workspace(handle, request)
-            }),
             destroy_workspace: Box::new({
                 let fake = Arc::clone(&fake);
                 move |handle, request| fake.destroy_workspace(handle, request)
@@ -320,7 +273,6 @@ pub(crate) fn build_services_with_launch_driver_and_async_trace_sink(
         &launch_driver,
         namespace_execution,
         async_trace_sink,
-        default_remount_controller(),
     ));
     TestServices { workspace, command }
 }
@@ -336,7 +288,6 @@ pub(crate) fn build_services_with_launch_driver_namespace_store(
         &launch_driver,
         namespace_execution,
         None,
-        default_remount_controller(),
     ));
     TestServices { workspace, command }
 }
@@ -347,7 +298,6 @@ pub(crate) fn build_command_service(
     launch_driver: &FakeLaunchDriver,
     namespace_execution: Arc<NamespaceExecutionLedger>,
     async_trace_sink: Option<AsyncTraceSink>,
-    remount_controller: Arc<dyn ProcessGroupController>,
 ) -> CommandOperationService {
     let engine = Arc::new(NamespaceExecutionEngine::with_launcher(
         Box::new(launch_driver.launcher()),
@@ -361,7 +311,6 @@ pub(crate) fn build_command_service(
         engine,
         namespace_execution,
         async_trace_sink,
-        remount_controller,
     )
 }
 

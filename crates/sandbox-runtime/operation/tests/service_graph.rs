@@ -6,15 +6,11 @@ use std::sync::Arc;
 use sandbox_protocol::{CliOperationExecutionSpace, CliOperationScope, Request};
 use sandbox_runtime::command::{CommandOperationService, ExecCommandInput};
 use sandbox_runtime::layerstack::LayerStackService;
-use sandbox_runtime::workspace_remount::{
-    CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountService,
-};
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
 use sandbox_runtime::SandboxRuntimeOperations;
 use sandbox_runtime_workspace::{
-    CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest,
-    RemountWorkspaceRequest, WorkspaceError, WorkspaceHandle, WorkspaceRuntimeHooks,
-    WorkspaceRuntimeService, WorkspaceSessionId,
+    CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest, WorkspaceError,
+    WorkspaceHandle, WorkspaceRuntimeHooks, WorkspaceRuntimeService, WorkspaceSessionId,
 };
 use serde_json::json;
 
@@ -57,13 +53,6 @@ fn noop_workspace_runtime() -> Arc<WorkspaceRuntimeService> {
                     })
                 },
             ),
-            remount_workspace: Box::new(
-                |_handle: &WorkspaceHandle, _request: RemountWorkspaceRequest| {
-                    Err(WorkspaceError::Setup {
-                        step: "not configured".to_owned(),
-                    })
-                },
-            ),
             destroy_workspace: Box::new(
                 |_handle: WorkspaceHandle, _request: DestroyWorkspaceRequest| {
                     Err(WorkspaceError::Setup {
@@ -89,14 +78,6 @@ fn service_graph_runtime_operations_exposes_command_lane(
         Arc::clone(&workspace),
         sandbox_runtime_command::CommandConfig::default(),
     ));
-    let remount_workspace: Arc<dyn RemountWorkspaceSession> = workspace.clone();
-    let remount_command: Arc<dyn CommandRemountCoordinator> = command.clone();
-    let remount = Arc::new(WorkspaceRemountService::new(
-        remount_workspace,
-        remount_command,
-    ));
-
-    let _ = remount;
     let operations = SandboxRuntimeOperations::new(
         Arc::clone(&command),
         Arc::clone(&workspace),
@@ -207,9 +188,6 @@ fn service_graph_cli_catalog_keeps_non_cli_helpers_out() {
 
     for helper in [
         "resolve_session",
-        "begin_remount",
-        "apply_and_finish_remount",
-        "block_remount",
         "refresh_after_publish",
         "capture_session_changes",
         "with_workspace_destroy_admission",
@@ -299,7 +277,6 @@ fn service_graph_workspace_session_source_boundaries_stay_private() {
 
     let services = include_str!("../src/services.rs");
     assert!(services.contains("pub workspace_session: Arc<WorkspaceSessionService>"));
-    assert!(!services.contains("pub workspace_remount:"));
 }
 
 #[test]

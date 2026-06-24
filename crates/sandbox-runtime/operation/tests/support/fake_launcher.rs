@@ -149,7 +149,7 @@ impl FakeRunnerScript {
         }
     }
 
-    /// Give the spawned `PtyMaster` a process group id (remount inspection reads it).
+    /// Give the spawned `PtyMaster` a process group id.
     #[must_use]
     pub fn with_pgid(mut self, pgid: i32) -> Self {
         self.pgid = Some(pgid);

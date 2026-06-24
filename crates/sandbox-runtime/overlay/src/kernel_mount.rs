@@ -11,8 +11,6 @@
 //! [`OverlayError::Unsupported`] so non-Linux `cargo check` stays green.
 
 #[cfg(target_os = "linux")]
-use std::ffi::CString;
-#[cfg(target_os = "linux")]
 use std::fs::{self, File};
 #[cfg(target_os = "linux")]
 use std::os::fd::AsRawFd;
@@ -28,8 +26,8 @@ use rustix::fs::{Mode, OFlags};
 use rustix::io::Errno;
 #[cfg(target_os = "linux")]
 use rustix::mount::{
-    fsconfig_create, fsconfig_set_string, fsmount, fsopen, mount, move_mount, unmount,
-    FsMountFlags, FsOpenFlags, MountAttrFlags, MountFlags, MoveMountFlags, UnmountFlags,
+    fsconfig_create, fsconfig_set_string, fsmount, fsopen, move_mount, unmount, FsMountFlags,
+    FsOpenFlags, MountAttrFlags, MoveMountFlags, UnmountFlags,
 };
 
 use crate::OverlayError;
@@ -157,97 +155,6 @@ pub fn mount_overlay(
     })
 }
 
-/// Mount an overlay with options that remain visible in mountinfo.
-///
-/// Remount verification needs `lowerdir=` in mountinfo before retargeting a
-/// live workspace lease. Normal overlay creation should use [`mount_overlay`]
-/// so it keeps the stronger new-mount API ordering and fd validation behavior.
-///
-/// # Errors
-///
-/// Returns [`OverlayError`] when mount inputs are invalid or the mount syscall
-/// fails.
-#[cfg(target_os = "linux")]
-pub fn mount_overlay_with_visible_options(
-    workspace_root: &Path,
-    handle: &OverlayHandle,
-) -> std::result::Result<OverlayMount, OverlayError> {
-    let inputs = ValidatedMountInputs::open(workspace_root, handle)?;
-    let data = mountinfo_visible_overlay_options(&inputs, handle)?;
-    mount(
-        "overlay",
-        &inputs.workspace_root,
-        "overlay",
-        MountFlags::empty(),
-        data.as_c_str(),
-    )
-    .map_mount_syscall("mount overlay with visible options")?;
-    Ok(OverlayMount {
-        workspace_root: Some(inputs.workspace_root),
-    })
-}
-
-/// Unmount every overlay stacked at `workspace_root`.
-///
-/// A single `umount` peels only the top mount. This helper loops until
-/// `workspace_root` is no longer a mountpoint. If a normal unmount fails, it
-/// falls back to `MNT_DETACH` so long-lived services with open descriptors can
-/// be refreshed safely.
-///
-/// # Errors
-///
-/// Returns [`OverlayError::MountSyscall`] when the mountpoint cannot be
-/// detached.
-#[cfg(target_os = "linux")]
-pub fn unmount_overlay(workspace_root: &Path) -> std::result::Result<(), OverlayError> {
-    peel_unmounts(workspace_root, true)
-}
-
-/// Move a mounted tree from `source` to `target`.
-///
-/// This is used by staged live remounts: build the replacement overlay at a
-/// private mountpoint, then move it into the visible workspace root only after
-/// the mount exists.
-///
-/// # Errors
-///
-/// Returns [`OverlayError::MountSyscall`] when the kernel refuses the mount
-/// move.
-#[cfg(target_os = "linux")]
-pub fn move_mountpoint(source: &Path, target: &Path) -> std::result::Result<(), OverlayError> {
-    move_mount(
-        rustix::fs::CWD,
-        source,
-        rustix::fs::CWD,
-        target,
-        MoveMountFlags::empty(),
-    )
-    .map_mount_syscall("move_mount mountpoint")
-}
-
-/// Non-Linux unsupported path: mount moves do not exist off Linux.
-///
-/// # Errors
-///
-/// Always returns [`OverlayError::Unsupported`].
-#[cfg(not(target_os = "linux"))]
-pub const fn move_mountpoint(
-    _source: &Path,
-    _target: &Path,
-) -> std::result::Result<(), OverlayError> {
-    Err(OverlayError::Unsupported)
-}
-
-/// Non-Linux unsupported path: overlayfs unmount syscalls do not exist off Linux.
-///
-/// # Errors
-///
-/// Always returns [`OverlayError::Unsupported`].
-#[cfg(not(target_os = "linux"))]
-pub const fn unmount_overlay(_workspace_root: &Path) -> std::result::Result<(), OverlayError> {
-    Err(OverlayError::Unsupported)
-}
-
 /// Non-Linux unsupported path: overlayfs mount syscalls do not exist off Linux.
 ///
 /// # Errors
@@ -255,19 +162,6 @@ pub const fn unmount_overlay(_workspace_root: &Path) -> std::result::Result<(), 
 /// Always returns [`OverlayError::Unsupported`].
 #[cfg(not(target_os = "linux"))]
 pub const fn mount_overlay(
-    _workspace_root: &Path,
-    _handle: &OverlayHandle,
-) -> std::result::Result<OverlayMount, OverlayError> {
-    Err(OverlayError::Unsupported)
-}
-
-/// Non-Linux unsupported path: overlayfs mount syscalls do not exist off Linux.
-///
-/// # Errors
-///
-/// Always returns [`OverlayError::Unsupported`].
-#[cfg(not(target_os = "linux"))]
-pub const fn mount_overlay_with_visible_options(
     _workspace_root: &Path,
     _handle: &OverlayHandle,
 ) -> std::result::Result<OverlayMount, OverlayError> {
@@ -378,31 +272,6 @@ fn open_dir_no_follow(path: &Path) -> std::result::Result<File, OverlayError> {
 #[cfg(target_os = "linux")]
 fn fd_path(file: &File) -> PathBuf {
     PathBuf::from(format!("/proc/self/fd/{}", file.as_raw_fd()))
-}
-
-#[cfg(target_os = "linux")]
-fn mountinfo_visible_overlay_options(
-    inputs: &ValidatedMountInputs,
-    handle: &OverlayHandle,
-) -> std::result::Result<CString, OverlayError> {
-    let mut data = Vec::new();
-    data.extend_from_slice(b"lowerdir=");
-    // mountinfo-visible options cannot use the fd-backed lower paths used by
-    // the new mount API. These original paths were already validated/opened
-    // above.
-    for (index, layer) in handle.layer_paths.iter().enumerate() {
-        if index > 0 {
-            data.push(b':');
-        }
-        data.extend_from_slice(layer.as_os_str().as_bytes());
-    }
-    data.extend_from_slice(b",upperdir=");
-    data.extend_from_slice(inputs.upperdir.as_os_str().as_bytes());
-    data.extend_from_slice(b",workdir=");
-    data.extend_from_slice(inputs.workdir.as_os_str().as_bytes());
-    CString::new(data).map_err(|err| {
-        OverlayError::InvalidMountInput(format!("overlay mount data contains nul: {err}"))
-    })
 }
 
 #[cfg(target_os = "linux")]

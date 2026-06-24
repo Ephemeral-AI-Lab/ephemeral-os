@@ -104,7 +104,6 @@ CREATE TABLE IF NOT EXISTS workspace_snapshots (
   sandbox_id TEXT NOT NULL,
   workspace_id TEXT NOT NULL,
   state TEXT NOT NULL,
-  remount_state TEXT,
   profile TEXT,
   workspace_root TEXT,
   upperdir TEXT,

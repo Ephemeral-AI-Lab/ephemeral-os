@@ -136,7 +136,7 @@ fn cancel_unblocks_the_blocked_watcher() {
 
     // The watcher is blocked in wait_completion; cancel trips the fake completion
     // (a real concurrent unblock), and the promise resolves promptly.
-    exec.cancel();
+    (exec.cancel_handle())();
     assert_eq!(exec.wait().expect("resolved after cancel"), 130);
     let (status, _exit) = observer.await_terminal();
     assert_eq!(status, NamespaceExecutionTerminalStatus::Cancelled);
@@ -207,14 +207,14 @@ fn mount_parse_error_resolves_terminal_error() {
 
     let handle = engine
         .run_mount(
-            "--remount-overlay",
+            "--mount-overlay",
             sample_target(),
             id("mount_err"),
             json!({}),
-            |_outcome| Err::<i64, _>(NamespaceExecutionError::Finalize("bad probe".to_owned())),
+            |_outcome| Err::<i64, _>(NamespaceExecutionError::Finalize("bad parse".to_owned())),
         )
         .expect("admitted");
-    assert_eq!(fake.recorded_piped_mode_flags(), vec!["--remount-overlay"]);
+    assert_eq!(fake.recorded_piped_mode_flags(), vec!["--mount-overlay"]);
     fake.complete_latest(run_result(0, "ok"));
 
     let error = handle.wait().expect_err("parse error surfaced");
@@ -288,13 +288,12 @@ fn run_mount_passes_args_to_the_runner_request() {
     let target = sample_target();
     let id = id("args");
     let args = json!({
-        "probe_path": "/tmp/remount-probe",
-        "probe_content": "expected",
+        "check": "expected",
     });
 
     let handle = engine
         .run_mount(
-            "--remount-overlay",
+            "--mount-overlay",
             target.clone(),
             id.clone(),
             args.clone(),
@@ -308,7 +307,7 @@ fn run_mount_passes_args_to_the_runner_request() {
     assert_request_target_fields(request, &target, &id);
     assert_eq!(request.args, args);
     assert_eq!(request.timeout_seconds, None);
-    assert_eq!(fake.recorded_piped_mode_flags(), vec!["--remount-overlay"]);
+    assert_eq!(fake.recorded_piped_mode_flags(), vec!["--mount-overlay"]);
     fake.complete_latest(run_result(0, "ok"));
     handle.wait().expect("resolved");
 }

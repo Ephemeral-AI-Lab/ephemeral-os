@@ -21,8 +21,7 @@ pub use stack::publish::model::{
     PublishValidatedChangesRequest, PublishValidatedChangesResult, SourceConflict,
 };
 pub use stack::reclaim_unpinned_layers::{
-    LeaseParentCompactionOutcome, ReclaimUnpinnedLayersCopyThroughOutcome,
-    ReclaimUnpinnedLayersOutcome,
+    ReclaimUnpinnedLayersCopyThroughOutcome, ReclaimUnpinnedLayersOutcome,
 };
 pub use stack::{LayerStack, Lease, MergedView, SquashOutcome};
 pub use workspace_base::{

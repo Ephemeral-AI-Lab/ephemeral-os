@@ -23,10 +23,7 @@ use thiserror::Error;
 
 pub mod kernel_mount;
 
-pub use kernel_mount::{
-    mount_overlay, mount_overlay_with_visible_options, move_mountpoint, unmount_overlay,
-    OverlayHandle, OverlayMount,
-};
+pub use kernel_mount::{mount_overlay, OverlayHandle, OverlayMount};
 
 /// Failures raised by the overlay kernel-mount and writable-dir paths.
 #[derive(Debug, Error)]

@@ -35,10 +35,8 @@ pub mod launcher {
             let mut runner = ForkRunnerChild {
                 child,
                 result_read,
-                timeout: Some(PipedCompletionTimeout {
-                    mode_flag: "--mount-overlay",
-                    setup_timeout_s: 0.01,
-                }),
+                mode_flag: Some("--mount-overlay"),
+                setup_timeout_s: 0.01,
             };
 
             let error = runner.wait_completion().expect_err("timeout");
@@ -64,7 +62,8 @@ pub mod launcher {
             let mut runner = ForkRunnerChild {
                 child,
                 result_read,
-                timeout: None,
+                mode_flag: None,
+                setup_timeout_s: 0.0,
             };
 
             let error = runner
@@ -92,7 +91,8 @@ pub mod launcher {
             let mut runner = ForkRunnerChild {
                 child,
                 result_read,
-                timeout: None,
+                mode_flag: None,
+                setup_timeout_s: 0.0,
             };
 
             let result = runner

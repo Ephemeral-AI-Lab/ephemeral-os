@@ -210,7 +210,6 @@ impl ObservabilityStore {
                     sandbox_id,
                     workspace_id,
                     state,
-                    remount_state,
                     profile,
                     workspace_root,
                     upperdir,
@@ -221,10 +220,9 @@ impl ObservabilityStore {
                     layer_count,
                     sampled_at_unix_ms,
                     error_message
-                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
                 ON CONFLICT(sandbox_id, workspace_id) DO UPDATE SET
                     state = excluded.state,
-                    remount_state = excluded.remount_state,
                     profile = excluded.profile,
                     workspace_root = excluded.workspace_root,
                     upperdir = excluded.upperdir,
@@ -239,7 +237,6 @@ impl ObservabilityStore {
                     &snapshot.sandbox_id,
                     &snapshot.workspace_id,
                     &snapshot.state,
-                    &snapshot.remount_state,
                     &snapshot.profile,
                     &snapshot.workspace_root,
                     &snapshot.upperdir,

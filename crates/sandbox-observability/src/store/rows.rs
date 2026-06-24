@@ -32,7 +32,6 @@ pub struct ObservabilitySandboxSnapshotRow {
 pub struct ObservabilityWorkspaceSnapshotRow {
     pub workspace_id: String,
     pub state: String,
-    pub remount_state: Option<String>,
     pub profile: Option<String>,
     pub namespace_fd_count: Option<i64>,
     pub base_manifest_version: Option<i64>,

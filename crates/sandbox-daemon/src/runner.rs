@@ -29,16 +29,6 @@ fn dispatch_runner_mode(
     runner_config: &RunnerConfig,
 ) -> Result<sandbox_runtime_namespace_process::runner::protocol::RunResult> {
     match operation {
-        NsRunnerOperation::RemountOverlay => Ok(
-            sandbox_runtime_namespace_process::runner::protocol::RunResult {
-                exit_code: 0,
-                payload: sandbox_runtime_namespace_process::runner::setns::remount_overlay(
-                    request,
-                    &runner_config.mount_mask.hidden_paths,
-                )
-                .context("ns-runner remount overlay failed")?,
-            },
-        ),
         NsRunnerOperation::MountOverlay => Ok(mount_overlay_result(
             sandbox_runtime_namespace_process::runner::setns::setns_overlay_mount(
                 request,
@@ -91,7 +81,6 @@ fn runner_config_from_document(doc: &sandbox_config::ConfigDocument) -> Result<R
 enum NsRunnerOperation {
     Run,
     MountOverlay,
-    RemountOverlay,
 }
 
 pub(crate) struct RunnerCliConfig {
@@ -107,9 +96,7 @@ impl RunnerCliConfig {
         let mut mode = None;
         let mut set_mode = |selected: NsRunnerOperation| {
             if mode.is_some() {
-                return Err(anyhow!(
-                    "ns-runner accepts only one of --mount-overlay or --remount-overlay"
-                ));
+                return Err(anyhow!("ns-runner accepts only one mode flag"));
             }
             mode = Some(selected);
             Ok(())
@@ -118,7 +105,6 @@ impl RunnerCliConfig {
         while let Some(arg) = args.next() {
             match arg.as_str() {
                 "--mount-overlay" => set_mode(NsRunnerOperation::MountOverlay)?,
-                "--remount-overlay" => set_mode(NsRunnerOperation::RemountOverlay)?,
                 "--request-fd" => {
                     request_fd = Some(
                         args.next()
@@ -137,7 +123,7 @@ impl RunnerCliConfig {
                 }
                 "--help" | "-h" => {
                     println!(
-                        "usage: sandbox-daemon ns-runner [--mount-overlay | --remount-overlay] [--request-fd FD] [--result-fd FD]"
+                        "usage: sandbox-daemon ns-runner [--mount-overlay] [--request-fd FD] [--result-fd FD]"
                     );
                     std::process::exit(0);
                 }

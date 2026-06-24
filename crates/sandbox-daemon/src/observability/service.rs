@@ -378,7 +378,6 @@ impl DaemonObservability {
             sandbox_id: self.sandbox_id.clone(),
             workspace_id,
             state: "active".to_owned(),
-            remount_state: Some(bound_state(workspace.remount_state.clone())),
             profile: Some(bound_kind(workspace.profile.as_str().to_owned())),
             workspace_root: Some(bound_path(path_string(&workspace.workspace_root))),
             upperdir: workspace
@@ -579,7 +578,6 @@ fn workspace_value(
     json!({
         "workspace_id": workspace.workspace_id.as_str(),
         "lifecycle_state": workspace.state.as_str(),
-        "remount_state": workspace.remount_state.as_deref(),
         "profile": workspace.profile.as_deref(),
         "sampled_at_unix_ms": workspace.sampled_at_unix_ms,
         "errors": error_list(workspace.error_message.as_deref()),

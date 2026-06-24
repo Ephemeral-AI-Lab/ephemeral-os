@@ -7,8 +7,7 @@ use sandbox_runtime::workspace_session::{WorkspaceSessionError, WorkspaceSession
 use sandbox_runtime::{CommandOperationService, LayerStackService, SandboxRuntimeOperations};
 use sandbox_runtime_workspace::{
     BaseRevision, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
-    DestroyWorkspaceRequest, LeaseId, RemountWorkspaceRequest, RemountWorkspaceResult,
-    WorkspaceError, WorkspaceHandle, WorkspaceProfile, WorkspaceSessionId,
+    DestroyWorkspaceRequest, WorkspaceError, WorkspaceHandle, WorkspaceProfile, WorkspaceSessionId,
 };
 use serde_json::json;
 
@@ -235,235 +234,6 @@ fn workspace_session_capture_updates_handler_snapshot_consistently() {
         .expect("test operation succeeds");
     assert_eq!(resolved.handle.snapshot.manifest_version, 2);
     assert_eq!(resolved.handle.snapshot.root_hash, "root-2");
-}
-
-#[test]
-fn workspace_session_begin_remount_marks_pending_and_rejects_duplicate_begin() {
-    let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
-    let manager = manager_with(&fake);
-    manager
-        .create_workspace_session(create_request())
-        .expect("test operation succeeds");
-
-    manager
-        .begin_remount(WorkspaceSessionId("workspace-1".to_owned()))
-        .expect("begin remount succeeds");
-
-    assert!(manager.is_remount_pending(&WorkspaceSessionId("workspace-1".to_owned())));
-    let duplicate = manager
-        .begin_remount(WorkspaceSessionId("workspace-1".to_owned()))
-        .expect_err("duplicate begin is rejected");
-    assert!(matches!(
-        duplicate,
-        WorkspaceSessionError::RemountAlreadyPending { workspace_session_id }
-            if workspace_session_id == WorkspaceSessionId("workspace-1".to_owned())
-    ));
-}
-
-#[test]
-fn workspace_session_apply_and_finish_remount_returns_session_to_active() {
-    let fake = Arc::new(FakeWorkspaceService::new());
-    let handle = workspace_handle("workspace-1", "lease-1");
-    let layer_paths = handle.snapshot.layer_paths.clone();
-    fake.push_create_result(Ok(handle.clone()));
-    fake.push_remount_result(Ok(RemountWorkspaceResult { handle }));
-    let manager = manager_with(&fake);
-    manager
-        .create_workspace_session(create_request())
-        .expect("test operation succeeds");
-    let handler = manager
-        .begin_remount(WorkspaceSessionId("workspace-1".to_owned()))
-        .expect("begin remount succeeds");
-
-    manager
-        .apply_and_finish_remount(&handler, RemountWorkspaceRequest { layer_paths })
-        .expect("apply and finish remount succeeds");
-
-    assert!(!manager.is_remount_pending(&WorkspaceSessionId("workspace-1".to_owned())));
-}
-
-#[test]
-fn workspace_session_block_remount_clears_pending() {
-    let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
-    let manager = manager_with(&fake);
-    manager
-        .create_workspace_session(create_request())
-        .expect("test operation succeeds");
-    manager
-        .begin_remount(WorkspaceSessionId("workspace-1".to_owned()))
-        .expect("begin remount succeeds");
-
-    manager
-        .block_remount(WorkspaceSessionId("workspace-1".to_owned()))
-        .expect("block remount succeeds");
-
-    assert!(!manager.is_remount_pending(&WorkspaceSessionId("workspace-1".to_owned())));
-    assert!(manager.is_remount_blocked(&WorkspaceSessionId("workspace-1".to_owned())));
-
-    let handler = manager
-        .resolve_session(WorkspaceSessionId("workspace-1".to_owned()))
-        .expect("blocked session remains inspectable");
-    let capture_error = manager
-        .capture_session_changes(
-            &handler,
-            CaptureChangesRequest {
-                include_stats: false,
-            },
-        )
-        .expect_err("capture rejects blocked remount");
-    assert!(matches!(
-        capture_error,
-        WorkspaceSessionError::RemountBlocked { workspace_session_id }
-            if workspace_session_id == WorkspaceSessionId("workspace-1".to_owned())
-    ));
-
-    let destroy_error = manager
-        .destroy_session(handler, DestroyWorkspaceRequest::default())
-        .expect_err("destroy rejects blocked remount");
-    assert!(matches!(
-        destroy_error,
-        WorkspaceSessionError::RemountBlocked { workspace_session_id }
-            if workspace_session_id == WorkspaceSessionId("workspace-1".to_owned())
-    ));
-    assert!(fake.capture_calls().is_empty());
-    assert!(fake.destroy_calls().is_empty());
-}
-
-#[test]
-fn workspace_session_capture_rejects_pending_remount_before_raw_capture() {
-    let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
-    let manager = manager_with(&fake);
-    let handler = manager
-        .create_workspace_session(create_request())
-        .expect("test operation succeeds");
-    manager
-        .begin_remount(handler.workspace_session_id.clone())
-        .expect("begin remount succeeds");
-
-    let error = manager
-        .capture_session_changes(
-            &handler,
-            CaptureChangesRequest {
-                include_stats: false,
-            },
-        )
-        .expect_err("capture rejects pending remount");
-
-    assert!(matches!(
-        error,
-        WorkspaceSessionError::RemountAlreadyPending { workspace_session_id }
-            if workspace_session_id == WorkspaceSessionId("workspace-1".to_owned())
-    ));
-    assert!(fake.capture_calls().is_empty());
-    assert!(manager.is_remount_pending(&WorkspaceSessionId("workspace-1".to_owned())));
-}
-
-#[test]
-fn workspace_session_destroy_rejects_pending_remount_before_raw_destroy() {
-    let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
-    let manager = manager_with(&fake);
-    let handler = manager
-        .create_workspace_session(create_request())
-        .expect("test operation succeeds");
-    manager
-        .begin_remount(handler.workspace_session_id.clone())
-        .expect("begin remount succeeds");
-
-    let error = manager
-        .destroy_session(handler, DestroyWorkspaceRequest::default())
-        .expect_err("destroy rejects pending remount");
-
-    assert!(matches!(
-        error,
-        WorkspaceSessionError::RemountAlreadyPending { workspace_session_id }
-            if workspace_session_id == WorkspaceSessionId("workspace-1".to_owned())
-    ));
-    assert!(fake.destroy_calls().is_empty());
-    assert!(manager.is_remount_pending(&WorkspaceSessionId("workspace-1".to_owned())));
-}
-
-#[test]
-fn workspace_session_apply_remount_refreshes_canonical_handle() {
-    let fake = Arc::new(FakeWorkspaceService::new());
-    let handle = workspace_handle("workspace-1", "lease-1");
-    let mut remounted = workspace_handle("workspace-1", "lease-2");
-    remounted.snapshot.manifest_version = 2;
-    remounted.snapshot.root_hash = "root-2".to_owned();
-    remounted.snapshot.layer_paths = vec![PathBuf::from("/lower/two")];
-    remounted.base_revision = remounted.snapshot.base_revision();
-    fake.push_create_result(Ok(handle));
-    fake.push_remount_result(Ok(RemountWorkspaceResult {
-        handle: remounted.clone(),
-    }));
-    let manager = manager_with(&fake);
-    manager
-        .create_workspace_session(create_request())
-        .expect("test operation succeeds");
-    let handler = manager
-        .begin_remount(WorkspaceSessionId("workspace-1".to_owned()))
-        .expect("begin remount succeeds");
-
-    let updated = manager
-        .apply_and_finish_remount(
-            &handler,
-            RemountWorkspaceRequest {
-                layer_paths: vec![PathBuf::from("/lower/two")],
-            },
-        )
-        .expect("apply remount succeeds");
-
-    assert_eq!(
-        updated.handle.snapshot.lease_id,
-        LeaseId("lease-2".to_owned())
-    );
-    assert_eq!(updated.handle.snapshot.manifest_version, 2);
-    assert_eq!(
-        updated.handle.snapshot.layer_paths,
-        vec![PathBuf::from("/lower/two")]
-    );
-    assert_eq!(
-        fake.remount_calls(),
-        vec![WorkspaceSessionId("workspace-1".to_owned())]
-    );
-    assert!(!manager.is_remount_pending(&WorkspaceSessionId("workspace-1".to_owned())));
-}
-
-#[test]
-fn workspace_session_apply_remount_failure_blocks_and_keeps_session_available() {
-    let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
-    fake.push_remount_result(Err(WorkspaceError::Setup {
-        step: "remount failed".to_owned(),
-    }));
-    let manager = manager_with(&fake);
-    manager
-        .create_workspace_session(create_request())
-        .expect("test operation succeeds");
-    let handler = manager
-        .begin_remount(WorkspaceSessionId("workspace-1".to_owned()))
-        .expect("begin remount succeeds");
-
-    let error = manager
-        .apply_and_finish_remount(
-            &handler,
-            RemountWorkspaceRequest {
-                layer_paths: vec![PathBuf::from("/lower/two")],
-            },
-        )
-        .expect_err("apply remount fails");
-
-    assert!(matches!(
-        error,
-        WorkspaceSessionError::Workspace(WorkspaceError::Setup { .. })
-    ));
-    assert!(!manager.is_remount_pending(&WorkspaceSessionId("workspace-1".to_owned())));
-    assert!(manager
-        .resolve_session(WorkspaceSessionId("workspace-1".to_owned()))
-        .is_ok());
 }
 
 #[test]
@@ -737,10 +507,6 @@ fn workspace_session_files_do_not_import_command_service() {
         include_str!("../src/workspace_session/service/impls/create_workspace_session.rs");
     let destroy_session = include_str!("../src/workspace_session/service/impls/destroy_session.rs");
     let resolve_session = include_str!("../src/workspace_session/service/impls/resolve_session.rs");
-    let remount_apply_and_finish =
-        include_str!("../src/workspace_session/service/impls/apply_and_finish_remount.rs");
-    let remount_begin = include_str!("../src/workspace_session/service/impls/begin_remount.rs");
-    let remount_block = include_str!("../src/workspace_session/service/impls/block_remount.rs");
     let model = include_str!("../src/workspace_session/service/model.rs");
     let service = include_str!("../src/workspace_session/service.rs");
     let error = include_str!("../src/workspace_session/error.rs");
@@ -751,57 +517,13 @@ fn workspace_session_files_do_not_import_command_service() {
         create_workspace_session,
         destroy_session,
         resolve_session,
-        remount_apply_and_finish,
-        remount_begin,
-        remount_block,
         model,
         service,
         error,
     ] {
         assert!(!source.contains("crate::command"));
         assert!(!source.contains("CommandOperationService"));
-        assert!(!source.contains("CommandRemount"));
     }
-}
-
-#[test]
-fn workspace_session_rejects_remount_workspace_session_id_mismatch() {
-    let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
-    fake.push_remount_result(Ok(RemountWorkspaceResult {
-        handle: workspace_handle("workspace-2", "lease-2"),
-    }));
-    let manager = manager_with(&fake);
-    let handler = manager
-        .create_workspace_session(create_request())
-        .expect("test operation succeeds");
-    let handler = manager
-        .begin_remount(handler.workspace_session_id)
-        .expect("test operation succeeds");
-
-    let error = manager
-        .apply_and_finish_remount(
-            &handler,
-            RemountWorkspaceRequest {
-                layer_paths: vec![PathBuf::from("/lower/two")],
-            },
-        )
-        .expect_err("test operation fails");
-
-    assert!(matches!(
-        error,
-        WorkspaceSessionError::RemountWorkspaceSessionIdMismatch { expected, actual }
-            if expected == WorkspaceSessionId("workspace-1".to_owned())
-                && actual == WorkspaceSessionId("workspace-2".to_owned())
-    ));
-    assert_eq!(
-        fake.remount_calls(),
-        vec![WorkspaceSessionId("workspace-1".to_owned())]
-    );
-    assert!(!manager.is_remount_pending(&WorkspaceSessionId("workspace-1".to_owned())));
-    assert!(manager
-        .resolve_session(WorkspaceSessionId("workspace-1".to_owned()))
-        .is_ok());
 }
 
 #[test]

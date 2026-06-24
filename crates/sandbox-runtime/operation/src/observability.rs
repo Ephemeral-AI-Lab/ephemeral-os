@@ -20,7 +20,6 @@ pub struct RuntimeObservabilitySnapshot {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RuntimeWorkspaceSnapshot {
     pub workspace_id: WorkspaceSessionId,
-    pub remount_state: String,
     pub profile: WorkspaceProfile,
     pub workspace_root: PathBuf,
     pub upperdir: Option<PathBuf>,

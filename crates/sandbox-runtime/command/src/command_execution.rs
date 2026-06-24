@@ -63,10 +63,6 @@ impl CommandExecution {
         self.exec.write_stdin(bytes)
     }
 
-    pub fn cancel(&self) {
-        self.exec.cancel();
-    }
-
     #[must_use]
     pub fn cancel_handle(&self) -> Arc<dyn Fn() + Send + Sync> {
         self.exec.cancel_handle()

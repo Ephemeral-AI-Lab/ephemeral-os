@@ -45,7 +45,8 @@ pub(crate) struct ForkRunnerLauncher;
 struct ForkRunnerChild {
     child: Child,
     result_read: OwnedFd,
-    timeout: Option<PipedCompletionTimeout>,
+    mode_flag: Option<&'static str>,
+    setup_timeout_s: f64,
 }
 
 struct SpawnedRunner {
@@ -53,12 +54,6 @@ struct SpawnedRunner {
     result_read: OwnedFd,
     request_write: OwnedFd,
     pgid: i32,
-}
-
-#[derive(Clone, Copy)]
-struct PipedCompletionTimeout {
-    mode_flag: &'static str,
-    setup_timeout_s: f64,
 }
 
 static SPAWN_CRITICAL_SECTION: Mutex<()> = Mutex::new(());
@@ -94,7 +89,10 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
                 return Err(error);
             }
         };
-        Ok((Box::new(spawned.into_child(&request_bytes, None)?), pty))
+        Ok((
+            Box::new(spawned.into_child(&request_bytes, None, 0.0)?),
+            pty,
+        ))
     }
 
     fn spawn_piped(
@@ -114,10 +112,8 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
         })?;
         Ok(Box::new(spawned.into_child(
             &request_bytes,
-            Some(PipedCompletionTimeout {
-                mode_flag,
-                setup_timeout_s,
-            }),
+            Some(mode_flag),
+            setup_timeout_s,
         )?))
     }
 }
@@ -126,7 +122,8 @@ impl SpawnedRunner {
     fn into_child(
         self,
         request_bytes: &[u8],
-        timeout: Option<PipedCompletionTimeout>,
+        mode_flag: Option<&'static str>,
+        setup_timeout_s: f64,
     ) -> Result<ForkRunnerChild, NamespaceExecutionError> {
         let SpawnedRunner {
             mut child,
@@ -141,7 +138,8 @@ impl SpawnedRunner {
         Ok(ForkRunnerChild {
             child,
             result_read,
-            timeout,
+            mode_flag,
+            setup_timeout_s,
         })
     }
 }
@@ -182,12 +180,10 @@ fn spawn_locked<R>(
 
 impl RunnerChild for ForkRunnerChild {
     fn wait_completion(&mut self) -> Result<RunResult, NamespaceExecutionError> {
-        let status = match self.timeout {
-            Some(timeout) => wait_for_child_with_timeout(
-                &mut self.child,
-                timeout.mode_flag,
-                timeout.setup_timeout_s,
-            )?,
+        let status = match self.mode_flag {
+            Some(mode_flag) => {
+                wait_for_child_with_timeout(&mut self.child, mode_flag, self.setup_timeout_s)?
+            }
             None => self.child.wait().map_err(spawn_error)?,
         };
         let bytes = read_result_fd(&self.result_read).unwrap_or_default();

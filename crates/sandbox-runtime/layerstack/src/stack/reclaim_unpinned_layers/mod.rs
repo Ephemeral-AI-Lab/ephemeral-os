@@ -58,20 +58,6 @@ pub struct ReclaimUnpinnedLayersCopyThroughOutcome {
     pub active_depth_after: usize,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct LeaseParentCompactionOutcome {
-    pub lease_manifest: Option<Manifest>,
-    pub active_manifest: Option<Manifest>,
-    pub compact_parent_layer: Option<LayerRef>,
-    pub compacted_parent_layer_count: usize,
-    pub removed_layer_count: usize,
-    pub bytes_added: u64,
-    pub lease_depth_before: usize,
-    pub lease_depth_after: usize,
-    pub active_depth_before: usize,
-    pub active_depth_after: usize,
-}
-
 pub(crate) fn plan_reclaim_unpinned_layers(
     active_manifest: &Manifest,
     protected_layers: &[LayerRef],

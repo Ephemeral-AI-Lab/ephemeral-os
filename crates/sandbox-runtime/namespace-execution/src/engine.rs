@@ -34,13 +34,12 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         max_active: usize,
         setup_timeout_s: f64,
     ) -> Self {
-        Self {
-            registry: Arc::new(ExecutionRegistry::new(max_active)),
+        Self::with_launcher(
+            Box::new(ForkRunnerLauncher),
             observer,
-            launcher: Box::new(ForkRunnerLauncher),
-            next_id: AtomicU64::new(1),
+            max_active,
             setup_timeout_s,
-        }
+        )
     }
 
     pub fn with_launcher(
@@ -92,22 +91,14 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         target: NamespaceTarget,
         id: NamespaceExecutionId,
     ) -> Result<InteractiveExecution<S::Output>, NamespaceExecutionError> {
-        self.registry.try_reserve(&id)?;
         let request = build_request(&target, &id, shell_args(op.command()), op.timeout_seconds());
         let transcript_path = op.transcript_path().map(Path::to_path_buf);
         let cancelled = Arc::new(AtomicBool::new(false));
         let op = Box::new(op);
-        let (child, pty) =
-            match self
-                .launcher
+        let (child, pty) = self.reserve_spawn(&id, || {
+            self.launcher
                 .spawn_pty(request, transcript_path, Arc::clone(&cancelled))
-            {
-                Ok(spawned) => spawned,
-                Err(error) => {
-                    self.registry.abort(&id);
-                    return Err(error);
-                }
-            };
+        })?;
         self.observer.on_running(&id);
         let promise = Arc::new(CompletionPromise::new());
         self.spawn_watcher(
@@ -132,18 +123,11 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         args: Value,
         parse: impl FnOnce(RunnerOutcome) -> Result<O, NamespaceExecutionError> + Send + 'static,
     ) -> Result<ExecutionHandle<O>, NamespaceExecutionError> {
-        self.registry.try_reserve(&id)?;
         let request = build_request(&target, &id, args, None);
-        let child = match self
-            .launcher
-            .spawn_piped(mode_flag, request, self.setup_timeout_s)
-        {
-            Ok(child) => child,
-            Err(error) => {
-                self.registry.abort(&id);
-                return Err(error);
-            }
-        };
+        let child = self.reserve_spawn(&id, || {
+            self.launcher
+                .spawn_piped(mode_flag, request, self.setup_timeout_s)
+        })?;
         self.observer.on_running(&id);
         let promise = Arc::new(CompletionPromise::new());
         self.spawn_watcher(
@@ -155,6 +139,21 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
             parse,
         );
         Ok(ExecutionHandle::new(id, promise))
+    }
+
+    fn reserve_spawn<R>(
+        &self,
+        id: &NamespaceExecutionId,
+        spawn: impl FnOnce() -> Result<R, NamespaceExecutionError>,
+    ) -> Result<R, NamespaceExecutionError> {
+        self.registry.try_reserve(id)?;
+        match spawn() {
+            Ok(spawned) => Ok(spawned),
+            Err(error) => {
+                self.registry.abort(id);
+                Err(error)
+            }
+        }
     }
 
     fn spawn_watcher<O: Send + 'static>(
@@ -207,13 +206,11 @@ fn finalize_outcome<O>(
 }
 
 fn panic_payload_message(payload: &(dyn Any + Send)) -> String {
-    if let Some(message) = payload.downcast_ref::<&str>() {
-        (*message).to_owned()
-    } else if let Some(message) = payload.downcast_ref::<String>() {
-        message.clone()
-    } else {
-        "non-string panic payload".to_owned()
-    }
+    payload
+        .downcast_ref::<&str>()
+        .map(|message| (*message).to_owned())
+        .or_else(|| payload.downcast_ref::<String>().cloned())
+        .unwrap_or_else(|| "non-string panic payload".to_owned())
 }
 
 fn mount_exit_error(

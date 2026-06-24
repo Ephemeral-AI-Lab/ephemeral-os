@@ -123,7 +123,7 @@ fn lp(path: &str) -> sandbox_runtime_layerstack::LayerPath {
 }
 
 #[test]
-fn existing_session_command_completion_does_not_publish_or_remount(
+fn existing_session_command_completion_does_not_publish(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = PublishFixture::new("existing-session-no-publish")?;
     std::fs::write(fixture.workspace.join("README.md"), "base\n")?;
@@ -150,7 +150,6 @@ fn existing_session_command_completion_does_not_publish_or_remount(
 
     assert_eq!(output.status, CommandStatus::Ok);
     assert!(fake.capture_calls().is_empty());
-    assert!(fake.remount_calls().is_empty());
     assert!(fake.destroy_calls().is_empty());
     assert_eq!(read_text(&fixture, "README.md")?, Some("base\n".to_owned()));
     let resolved = env
