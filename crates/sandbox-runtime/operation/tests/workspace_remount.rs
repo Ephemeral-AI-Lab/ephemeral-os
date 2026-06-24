@@ -3,7 +3,10 @@ mod support;
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Duration;
 
 use sandbox_runtime::command::test_support::{
     command_service_from_engine, default_remount_controller,
@@ -173,14 +176,20 @@ fn fake_workspace_runtime(fake: Arc<RemountWorkspaceServiceFake>) -> Arc<Workspa
 /// process group id (the remount inspection reads the pgid; `None` ⇒ blocked
 /// with `process_group_unavailable`).
 fn inactive_launcher(process_group_id: Option<i32>) -> FakeLauncher {
+    inactive_launcher_for_process_groups([process_group_id])
+}
+
+fn inactive_launcher_for_process_groups(
+    process_group_ids: impl IntoIterator<Item = Option<i32>>,
+) -> FakeLauncher {
     let launcher = FakeLauncher::new();
-    let mut script = FakeRunnerScript::pending();
-    if let Some(pgid) = process_group_id {
-        script = script.with_pgid(pgid);
+    for process_group_id in process_group_ids {
+        let mut script = FakeRunnerScript::pending();
+        if let Some(pgid) = process_group_id {
+            script = script.with_pgid(pgid);
+        }
+        launcher.push_script(script);
     }
-    // One script per exec the suites run; extras are unused, missing ones default
-    // to a pgid-less pending command.
-    launcher.push_script(script);
     launcher
 }
 
@@ -189,9 +198,17 @@ struct FakeProcessGroupController {
     resumed: Mutex<Vec<i32>>,
     resume_pending: Mutex<Vec<bool>>,
     state_probe: Mutex<Option<(Arc<WorkspaceSessionService>, WorkspaceSessionId)>>,
+    reports: Mutex<Vec<(i32, ProcessGroupInspection)>>,
 }
 
 impl FakeProcessGroupController {
+    fn set_report(&self, pgid: i32, report: ProcessGroupInspection) {
+        self.reports
+            .lock()
+            .expect("test operation succeeds")
+            .push((pgid, report));
+    }
+
     fn observe_state_on_resume(
         &self,
         workspace: Arc<WorkspaceSessionService>,
@@ -219,9 +236,18 @@ impl FakeProcessGroupController {
 impl ProcessGroupController for FakeProcessGroupController {
     fn inspect_command_process_group(
         &self,
-        _pgid: i32,
+        pgid: i32,
         _workspace_root: &Path,
     ) -> ProcessGroupInspection {
+        if let Some((_, report)) = self
+            .reports
+            .lock()
+            .expect("test operation succeeds")
+            .iter()
+            .find(|(configured_pgid, _)| *configured_pgid == pgid)
+        {
+            return report.clone();
+        }
         ProcessGroupInspection {
             process_count: 1,
             quiesced_process_count: 1,
@@ -521,6 +547,85 @@ fn workspace_remount_live_command_success_finishes_before_resume() {
 }
 
 #[test]
+fn workspace_remount_second_remount_rejected_while_first_in_flight() {
+    let fake = Arc::new(RemountWorkspaceServiceFake::default());
+    let controller = Arc::new(FakeProcessGroupController::default());
+    let services =
+        build_services_with_process_group_controller(Arc::clone(&fake), controller.clone(), 101);
+    let workspace_root = PathBuf::from("/workspace");
+    let mut remounted = workspace_handle("workspace-1", "lease-2", workspace_root.clone());
+    remounted.snapshot.manifest_version = 2;
+    remounted.snapshot.root_hash = "root-2".to_owned();
+    remounted.snapshot.layer_paths = vec![PathBuf::from("/lower/two")];
+    remounted.base_revision = remounted.snapshot.base_revision();
+    fake.push_create_result(Ok(workspace_handle(
+        "workspace-1",
+        "lease-1",
+        workspace_root.clone(),
+    )));
+    fake.push_remount_result(Ok(RemountWorkspaceResult { handle: remounted }));
+    let handler = services
+        .workspace
+        .create_workspace_session(create_request())
+        .expect("create workspace session succeeds");
+    services
+        .command
+        .exec_command(exec_input(handler.workspace_session_id.clone()), None)
+        .expect("exec command succeeds");
+
+    let (entered_tx, entered_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let release_rx = Arc::new(Mutex::new(release_rx));
+    fake.on_remount(Arc::new({
+        let release_rx = Arc::clone(&release_rx);
+        move || {
+            entered_tx.send(()).expect("test receiver is alive");
+            release_rx
+                .lock()
+                .expect("test operation succeeds")
+                .recv()
+                .expect("test releases remount");
+        }
+    }));
+
+    let remount = Arc::clone(&services.workspace_remount);
+    let workspace_session_id = handler.workspace_session_id.clone();
+    let first_remount =
+        thread::spawn(move || remount.remount_workspace_session(workspace_session_id));
+    entered_rx
+        .recv_timeout(Duration::from_secs(1))
+        .expect("first remount enters critical switch");
+
+    let second_error = services
+        .workspace_remount
+        .remount_workspace_session(handler.workspace_session_id.clone())
+        .expect_err("second remount is rejected while first is pending");
+
+    assert!(matches!(
+        second_error,
+        WorkspaceRemountError::WorkspaceSession(
+            sandbox_runtime::workspace_session::WorkspaceSessionError::RemountAlreadyPending {
+                workspace_session_id
+            }
+        ) if workspace_session_id == handler.workspace_session_id
+    ));
+    assert_eq!(
+        fake.remount_calls(),
+        vec![handler.workspace_session_id.clone()]
+    );
+
+    release_tx.send(()).expect("first remount thread is alive");
+    let first_outcome = first_remount
+        .join()
+        .expect("first remount thread does not panic")
+        .expect("first remount succeeds");
+
+    assert!(first_outcome.remounted);
+    assert_eq!(fake.remount_calls(), vec![handler.workspace_session_id]);
+    assert_eq!(controller.resumed(), vec![101]);
+}
+
+#[test]
 fn workspace_remount_cancel_during_critical_switch_still_applies_and_resumes() {
     let fake = Arc::new(RemountWorkspaceServiceFake::default());
     let controller = Arc::new(FakeProcessGroupController::default());
@@ -572,6 +677,152 @@ fn workspace_remount_cancel_during_critical_switch_still_applies_and_resumes() {
     assert_eq!(fake.remount_calls(), vec![handler.workspace_session_id]);
     assert_eq!(controller.resumed(), vec![101]);
     assert_eq!(controller.resume_pending(), vec![false]);
+}
+
+#[test]
+fn quiesce_resume_cancels_only_affected_via_registry() {
+    let fake = Arc::new(RemountWorkspaceServiceFake::default());
+    let controller = Arc::new(FakeProcessGroupController::default());
+    let launcher = inactive_launcher_for_process_groups([Some(101), Some(202)]);
+    let services = build_services_with(Arc::clone(&fake), launcher.clone(), controller.clone());
+    let workspace_root = PathBuf::from("/workspace");
+    fake.push_create_result(Ok(workspace_handle(
+        "workspace-1",
+        "lease-1",
+        workspace_root.clone(),
+    )));
+    fake.push_create_result(Ok(workspace_handle(
+        "workspace-2",
+        "lease-2",
+        workspace_root.clone(),
+    )));
+    let handler_one = services
+        .workspace
+        .create_workspace_session(create_request())
+        .expect("create first workspace session succeeds");
+    let handler_two = services
+        .workspace
+        .create_workspace_session(create_request())
+        .expect("create second workspace session succeeds");
+    let command_one = services
+        .command
+        .exec_command(exec_input(handler_one.workspace_session_id.clone()), None)
+        .expect("exec first command succeeds")
+        .command_session_id
+        .expect("first running command has id");
+    let command_two = services
+        .command
+        .exec_command(exec_input(handler_two.workspace_session_id.clone()), None)
+        .expect("exec second command succeeds")
+        .command_session_id
+        .expect("second running command has id");
+    services
+        .workspace
+        .begin_remount(handler_one.workspace_session_id.clone())
+        .expect("begin remount succeeds");
+
+    let quiesce = services
+        .command
+        .begin_workspace_remount_quiesce(&handler_one.workspace_session_id);
+    let cancellation = quiesce.cancellation();
+    cancellation.request_cancel();
+    let inspection = quiesce.finish();
+
+    assert!(inspection.process_group.resumed);
+    assert_eq!(controller.resumed(), vec![101]);
+    let cancelled = launcher.recorded_cancel_request_ids();
+    assert_eq!(cancelled, vec![command_one.0]);
+    assert!(!cancelled.contains(&command_two.0));
+}
+
+#[test]
+fn quiesce_inspection_sums_across_two_commands() {
+    let fake = Arc::new(RemountWorkspaceServiceFake::default());
+    let controller = Arc::new(FakeProcessGroupController::default());
+    controller.set_report(
+        202,
+        ProcessGroupInspection {
+            process_count: 2,
+            quiesced_process_count: 2,
+            pinned_cwd_count: 1,
+            pinned_root_count: 2,
+            pinned_fd_count: 3,
+            pinned_mapped_file_count: 4,
+            mountinfo_checked_count: 5,
+            inspected: true,
+            quiesce_attempted: true,
+            ..ProcessGroupInspection::default()
+        },
+    );
+    controller.set_report(
+        101,
+        ProcessGroupInspection {
+            process_count: 3,
+            quiesced_process_count: 3,
+            pinned_cwd_count: 10,
+            pinned_root_count: 20,
+            pinned_fd_count: 30,
+            pinned_mapped_file_count: 40,
+            mountinfo_checked_count: 50,
+            inspected: true,
+            quiesce_attempted: true,
+            resumed: true,
+            ..ProcessGroupInspection::default()
+        },
+    );
+    let services = build_services_with(
+        Arc::clone(&fake),
+        inactive_launcher_for_process_groups([Some(202), Some(101)]),
+        controller,
+    );
+    let workspace_root = PathBuf::from("/workspace");
+    fake.push_create_result(Ok(workspace_handle(
+        "workspace-1",
+        "lease-1",
+        workspace_root.clone(),
+    )));
+    let handler = services
+        .workspace
+        .create_workspace_session(create_request())
+        .expect("create workspace session succeeds");
+    let command_one = services
+        .command
+        .exec_command(exec_input(handler.workspace_session_id.clone()), None)
+        .expect("exec first command succeeds")
+        .command_session_id
+        .expect("first running command has id");
+    let command_two = services
+        .command
+        .exec_command(exec_input(handler.workspace_session_id.clone()), None)
+        .expect("exec second command succeeds")
+        .command_session_id
+        .expect("second running command has id");
+    services
+        .workspace
+        .begin_remount(handler.workspace_session_id.clone())
+        .expect("begin remount succeeds");
+
+    let quiesce = services
+        .command
+        .begin_workspace_remount_quiesce(&handler.workspace_session_id);
+    let inspection = quiesce.inspection().clone();
+    let mut expected_command_ids = vec![command_one, command_two];
+    expected_command_ids.sort();
+
+    assert_eq!(inspection.active_commands, 2);
+    assert_eq!(inspection.command_session_ids, expected_command_ids);
+    assert_eq!(inspection.process_group_ids, vec![101, 202]);
+    assert_eq!(inspection.process_group.process_count, 5);
+    assert_eq!(inspection.process_group.quiesced_process_count, 5);
+    assert_eq!(inspection.process_group.pinned_cwd_count, 11);
+    assert_eq!(inspection.process_group.pinned_root_count, 22);
+    assert_eq!(inspection.process_group.pinned_fd_count, 33);
+    assert_eq!(inspection.process_group.pinned_mapped_file_count, 44);
+    assert_eq!(inspection.process_group.mountinfo_checked_count, 55);
+    assert!(inspection.process_group.inspected);
+    assert!(inspection.process_group.quiesce_attempted);
+    assert!(inspection.process_group.resumed);
+    assert!(inspection.can_live_remount());
 }
 
 #[test]

@@ -191,7 +191,7 @@ impl CommandOperationService {
         dispatch(&active_command_session_ids)
     }
 
-    pub(super) fn resolve_workspace_session(
+    pub(crate) fn resolve_workspace_session(
         &self,
         workspace_session_id: WorkspaceSessionId,
     ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {

@@ -161,6 +161,7 @@ impl FakeRunnerScript {
 struct FakeLauncherState {
     requests: Vec<NamespaceRunnerRequest>,
     request_ids: Vec<String>,
+    cancel_request_ids: Vec<String>,
     transcript_paths: Vec<Option<PathBuf>>,
     completions: Vec<Arc<FakeCompletion>>,
     scripts: VecDeque<FakeRunnerScript>,
@@ -191,6 +192,11 @@ impl FakeLauncher {
     #[must_use]
     pub fn recorded_request_ids(&self) -> Vec<String> {
         self.lock().request_ids.clone()
+    }
+
+    #[must_use]
+    pub fn recorded_cancel_request_ids(&self) -> Vec<String> {
+        self.lock().cancel_request_ids.clone()
     }
 
     #[must_use]
@@ -272,8 +278,15 @@ impl NsRunnerLauncher for FakeLauncher {
             open_pty_pair().map_err(|error| NamespaceExecutionError::Spawn(error.to_string()))?;
         let cancel = {
             let completion = Arc::clone(&completion);
+            let state = Arc::clone(&self.state);
+            let request_id = request.request_id.clone();
             move || {
                 cancelled.store(true, Ordering::Release);
+                state
+                    .lock()
+                    .expect("fake launcher mutex poisoned")
+                    .cancel_request_ids
+                    .push(request_id.clone());
                 completion.cancel();
             }
         };

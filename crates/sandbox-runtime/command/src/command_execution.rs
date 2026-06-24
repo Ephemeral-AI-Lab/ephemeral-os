@@ -77,6 +77,12 @@ impl CommandExecution {
         self.exec.pgid()
     }
 
+    /// The spawned process group, under the remount coordinator naming.
+    #[must_use]
+    pub fn process_group_id(&self) -> Option<i32> {
+        self.exec.pgid()
+    }
+
     pub fn write_stdin(&self, bytes: &[u8]) -> io::Result<()> {
         self.exec.write_stdin(bytes)
     }

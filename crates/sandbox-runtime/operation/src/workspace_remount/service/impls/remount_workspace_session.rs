@@ -14,7 +14,7 @@ impl WorkspaceRemountService {
             .command
             .begin_workspace_remount_quiesce(&workspace_session_id);
 
-        let blocked_reason = quiesce.inspection().blocked_reason.clone().or_else(|| {
+        let blocked_reason = quiesce.inspection().blocked_reason().or_else(|| {
             quiesce
                 .cancellation_requested()
                 .then(|| RemountBlockReason::RemountCancelledBeforeSwitch.to_string())

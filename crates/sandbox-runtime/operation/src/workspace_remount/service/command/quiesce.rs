@@ -12,18 +12,7 @@ pub struct CommandRemountInspection {
     pub active_commands: usize,
     pub command_session_ids: Vec<CommandSessionId>,
     pub process_group_ids: Vec<i32>,
-    pub process_count: usize,
-    pub quiesced_process_count: usize,
-    pub pinned_cwd_count: usize,
-    pub pinned_root_count: usize,
-    pub pinned_fd_count: usize,
-    pub pinned_mapped_file_count: usize,
-    pub mountinfo_checked_count: usize,
-    pub blocked_reason: Option<String>,
-    pub inspected: bool,
-    pub quiesce_attempted: bool,
-    pub resumed: bool,
-    pub detail: Option<String>,
+    pub process_group: ProcessGroupInspection,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,15 +42,41 @@ impl CommandRemountInspection {
     #[must_use]
     pub fn can_live_remount(&self) -> bool {
         self.active_commands > 0
-            && self.blocked_reason.is_none()
-            && self.inspected
-            && self.quiesce_attempted
-            && self.quiesced_process_count == self.process_count
+            && self.process_group.blocked_reason.is_none()
+            && self.process_group.inspected
+            && self.process_group.quiesce_attempted
+            && self.process_group.quiesced_process_count == self.process_group.process_count
+    }
+
+    #[must_use]
+    pub fn blocked_reason(&self) -> Option<String> {
+        self.process_group.blocked_reason.clone()
     }
 
     pub(crate) fn block_if_clear(&mut self, reason: RemountBlockReason) {
-        self.blocked_reason
+        self.process_group
+            .blocked_reason
             .get_or_insert_with(|| reason.to_string());
+    }
+
+    pub(crate) fn accumulate(&mut self, report: ProcessGroupInspection) {
+        let process_group = &mut self.process_group;
+        process_group.process_count += report.process_count;
+        process_group.quiesced_process_count += report.quiesced_process_count;
+        process_group.pinned_cwd_count += report.pinned_cwd_count;
+        process_group.pinned_root_count += report.pinned_root_count;
+        process_group.pinned_fd_count += report.pinned_fd_count;
+        process_group.pinned_mapped_file_count += report.pinned_mapped_file_count;
+        process_group.mountinfo_checked_count += report.mountinfo_checked_count;
+        process_group.inspected |= report.inspected;
+        process_group.quiesce_attempted |= report.quiesce_attempted;
+        process_group.resumed |= report.resumed;
+        if process_group.blocked_reason.is_none() {
+            process_group.blocked_reason = report.blocked_reason;
+        }
+        if process_group.detail.is_none() {
+            process_group.detail = report.detail;
+        }
     }
 }
 
@@ -93,17 +108,12 @@ impl RemountCancellationToken {
     pub fn is_cancelled(&self) -> bool {
         self.cancelled.load(Ordering::Acquire)
     }
-
-    #[must_use]
-    pub fn same_token(&self, other: &Self) -> bool {
-        Arc::ptr_eq(&self.cancelled, &other.cancelled)
-    }
 }
 
 pub struct CommandRemountQuiesce {
     pub(crate) inspection: CommandRemountInspection,
     pub(crate) held_process_group_ids: Vec<i32>,
-    pub(crate) command_session_ids: Vec<CommandSessionId>,
+    pub(crate) affected: Vec<NamespaceExecutionId>,
     pub(crate) engine: Arc<NamespaceExecutionEngine<CommandExecution>>,
     pub(crate) cancellation: RemountCancellationToken,
     pub(crate) switch_state: RemountSwitchState,
@@ -115,7 +125,7 @@ impl std::fmt::Debug for CommandRemountQuiesce {
         f.debug_struct("CommandRemountQuiesce")
             .field("inspection", &self.inspection)
             .field("held_process_group_ids", &self.held_process_group_ids)
-            .field("command_session_ids", &self.command_session_ids)
+            .field("affected", &self.affected)
             .field("cancellation", &self.cancellation)
             .field("switch_state", &self.switch_state)
             .finish_non_exhaustive()
@@ -154,7 +164,7 @@ impl CommandRemountQuiesce {
 
     pub fn resume(&mut self) -> bool {
         if self.switch_state == RemountSwitchState::Finished {
-            return self.inspection.resumed;
+            return self.inspection.process_group.resumed;
         }
         self.set_switch_state(RemountSwitchState::Resuming);
         let had_held_process_groups = !self.held_process_group_ids.is_empty();
@@ -162,30 +172,18 @@ impl CommandRemountQuiesce {
         for pgid in self.held_process_group_ids.drain(..) {
             all_resumed &= self.controller.resume_process_group_id(pgid);
         }
-        self.resume_command_records();
+        self.resume_affected_commands();
         self.switch_state = RemountSwitchState::Finished;
-        self.inspection.resumed |= had_held_process_groups && all_resumed;
+        self.inspection.process_group.resumed |= had_held_process_groups && all_resumed;
         all_resumed
     }
 
-    fn resume_command_records(&self) {
-        // A cancelled remount cancels its quiesced commands; an uncancelled resume
-        // simply releases them (no per-command mirror to clear post-severing).
+    fn resume_affected_commands(&self) {
         if !self.cancellation.is_cancelled() {
             return;
         }
-        // Clone the cancel actions out from under the registry lock, then kill with
-        // no lock held (the kill blocks for a SIGTERM grace period).
-        let cancels = self
-            .command_session_ids
-            .iter()
-            .filter_map(|command_session_id| {
-                let id = NamespaceExecutionId(command_session_id.0.clone());
-                self.engine.with_value(&id, CommandExecution::cancel_handle)
-            })
-            .collect::<Vec<_>>();
-        for cancel in cancels {
-            cancel();
+        for id in &self.affected {
+            self.engine.with_value(id, CommandExecution::cancel);
         }
     }
 }
@@ -193,24 +191,5 @@ impl CommandRemountQuiesce {
 impl Drop for CommandRemountQuiesce {
     fn drop(&mut self) {
         let _ = self.resume();
-    }
-}
-
-pub(crate) fn merge_report(target: &mut CommandRemountInspection, source: ProcessGroupInspection) {
-    target.process_count += source.process_count;
-    target.quiesced_process_count += source.quiesced_process_count;
-    target.pinned_cwd_count += source.pinned_cwd_count;
-    target.pinned_root_count += source.pinned_root_count;
-    target.pinned_fd_count += source.pinned_fd_count;
-    target.pinned_mapped_file_count += source.pinned_mapped_file_count;
-    target.mountinfo_checked_count += source.mountinfo_checked_count;
-    target.inspected |= source.inspected;
-    target.quiesce_attempted |= source.quiesce_attempted;
-    target.resumed |= source.resumed;
-    if target.blocked_reason.is_none() {
-        target.blocked_reason = source.blocked_reason;
-    }
-    if target.detail.is_none() {
-        target.detail = source.detail;
     }
 }
