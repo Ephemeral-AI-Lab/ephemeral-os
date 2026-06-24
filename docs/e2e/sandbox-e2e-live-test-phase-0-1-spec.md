@@ -39,8 +39,8 @@ the single NDJSON response line, locate `error` on stdout-or-stderr),
 `--gateway-socket` path, no spawn), `src/assertion.rs` (only `ok`, `field`, and
 the negative/exit helper the leaves need), `tests/support/mod.rs` (skip-safe
 harness surface), the `build.rs` per-leaf `#[path]` include generation, and two
-leaf tests: `tests/manager/lifecycle/create_sandbox.rs` (matrix **M1**) and
-`tests/runtime/command/exec_command.rs` (matrix **R1**). **Acceptance:** the crate
+leaf tests: `tests/manager/lifecycle/create_sandbox/returns_ready.rs` (matrix **M1**) and
+`tests/runtime/command/exec_command/one_shot.rs` (matrix **R1**). **Acceptance:** the crate
 compiles; a bare `cargo test -p sandbox-e2e-live-test` with `EOS_E2E_RUN_ROOT`
 unset **skips cleanly** (no panic); with `EOS_E2E_RUN_ROOT` pointing at a
 hand-written `run-manifest.json` for a real-runtime gateway, the two leaves run
@@ -88,10 +88,10 @@ Phase 0 change. "Responsibility" is the single job of the stub.
 | `tests/manager.rs` | Manager test binary: `#[path] mod support;` + `include!(concat!(env!("OUT_DIR"), "/manager_mods.rs"))`. |
 | `tests/runtime.rs` | Runtime test binary: `#[path] mod support;` + `include!(concat!(env!("OUT_DIR"), "/runtime_mods.rs"))`. |
 
-The leaf-test directories (`tests/manager/lifecycle/`,
-`tests/runtime/command/`) and the two leaf files are created in **Phase 1**; in
-Phase 0 the generated include lists are empty and the two root binaries compile
-to empty test binaries.
+The leaf-test directories (`tests/manager/lifecycle/create_sandbox/`,
+`tests/runtime/command/exec_command/`) and the two leaf case files are created in
+**Phase 1**; in Phase 0 the generated include lists are empty and the two root
+binaries compile to empty test binaries.
 
 ### `Cargo.toml` (resolved to confirmed workspace deps)
 
@@ -544,15 +544,15 @@ an operation is adding one file, with no hand-maintained registry.
   `tests/<scope>/**/*.rs`, collecting every leaf file. Skip `tests/support/`
   (it is `#[path]`-included directly by the root binaries) and skip the root
   `tests/<scope>.rs` files themselves.
-- **Module slug (collision-free `<family>_<operation>`).** A leaf lives at
-  `tests/<scope>/<family>/<operation>.rs`; the slug is
-  `<family>_<operation>` (e.g. `tests/manager/lifecycle/create_sandbox.rs` →
-  `lifecycle_create_sandbox`; `tests/runtime/command/exec_command.rs` →
-  `command_exec_command`). Because the on-disk path
-  `<scope>/<family>/<operation>` is unique per file, the derived slug is unique
-  within a scope; two authors adding different operations cannot collide. A
-  deeper nesting (`<scope>/<family>/<sub>/<operation>.rs`) joins all
-  path components after `<scope>` with `_`, preserving uniqueness.
+- **Module slug (collision-free `<family>_<operation>_<case>`).** A leaf lives
+  at `tests/<scope>/<family>/<operation>/<case>.rs`; the slug joins every
+  path component after `<scope>` with `_`, i.e. `<family>_<operation>_<case>`
+  (e.g. `tests/manager/lifecycle/create_sandbox/returns_ready.rs` →
+  `lifecycle_create_sandbox_returns_ready`;
+  `tests/runtime/command/exec_command/one_shot.rs` → `command_exec_command_one_shot`).
+  Because the on-disk path `<scope>/<family>/<operation>/<case>` is unique per
+  file, the derived slug is unique within a scope; two authors adding different
+  cases cannot collide. Any depth is joined the same way, preserving uniqueness.
 - **Output.** Write `$OUT_DIR/<scope>_mods.rs`, one line per leaf:
   `#[path = "<absolute path to leaf>"] mod <slug>;`. Using `OUT_DIR` matches the
   generated-include idiom; the repo's hand-written includes use
@@ -575,7 +575,7 @@ an operation is adding one file, with no hand-maintained registry.
 fn main();
 // for scope in ["manager","runtime"]: generate_scope_includes(manifest_dir, out_dir, scope)
 fn generate_scope_includes(manifest_dir: &std::path::Path, out_dir: &std::path::Path, scope: &str);
-fn module_slug(scope_relative_path: &std::path::Path) -> String; // family_operation
+fn module_slug(scope_relative_path: &std::path::Path) -> String; // family_operation_case
 ```
 
 ---
@@ -616,10 +616,10 @@ Both are success-path leaves. They open with the skip guard, provision via the
 fixture, drive one operation, and assert typed JSON fields read through
 `assertion::field`. The RAII `Sandbox` reaps on drop.
 
-### `tests/manager/lifecycle/create_sandbox.rs` — matrix **M1**
+### `tests/manager/lifecycle/create_sandbox/returns_ready.rs` — matrix **M1**
 
 ```rust
-// build.rs slug => `lifecycle_create_sandbox`, mounted by tests/manager.rs.
+// build.rs slug => `lifecycle_create_sandbox_returns_ready`, mounted by tests/manager.rs.
 #[test]
 fn create_sandbox_returns_ready_with_daemon_socket() {
     let Some(h) = support::harness() else { return };   // skip when not under eos-e2e
@@ -650,10 +650,10 @@ fn create_sandbox_returns_ready_with_daemon_socket() {
 > `/daemon/socket_path` non-null (`mod.rs:88-95,97-100`), no top-level `error`
 > (`output.rs:266-272`).
 
-### `tests/runtime/command/exec_command.rs` — matrix **R1**
+### `tests/runtime/command/exec_command/one_shot.rs` — matrix **R1**
 
 ```rust
-// build.rs slug => `command_exec_command`, mounted by tests/runtime.rs.
+// build.rs slug => `command_exec_command_one_shot`, mounted by tests/runtime.rs.
 #[test]
 fn one_shot_exec_returns_ok_and_zero_exit() {
     let Some(h) = support::harness() else { return };   // skip when not under eos-e2e

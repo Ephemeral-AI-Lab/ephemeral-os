@@ -126,10 +126,10 @@ the live-green path is documented but blocked (see Honest Gate).
 - `tests/support/mod.rs` — `harness() -> Option<&'static Harness>` skip-safe entry
   (spec L499-534).
 - `build.rs` — per-scope `$OUT_DIR/<scope>_mods.rs` include generation,
-  `family_operation` slug, `rerun-if-changed` triggers, empty-tree-builds (spec
+  `family_operation_case` slug, `rerun-if-changed` triggers, empty-tree-builds (spec
   L536-579).
-- Two leaves: `tests/manager/lifecycle/create_sandbox.rs` (M1) and
-  `tests/runtime/command/exec_command.rs` (R1) (spec L613-679).
+- Two leaves: `tests/manager/lifecycle/create_sandbox/returns_ready.rs` (M1) and
+  `tests/runtime/command/exec_command/one_shot.rs` (R1) (spec L613-679).
 
 ### OUT — Phases 2–4 (named here as out-of-scope; do NOT build)
 
@@ -197,9 +197,9 @@ deps: **exactly `anyhow` + `serde` + `serde_json`**, each via `dep.workspace = t
 | 4 | `src/fixtures.rs` | Lazy `OnceLock` `Harness`; `provision_sandbox` reads `/id`; RAII `Sandbox` drop → `destroy_sandbox`. | L385-449 |
 | 5 | `src/assertion.rs` | `ok` (no top-level `error`) + `field` (JSON-pointer get-or-panic) only. | L478-497 |
 | 6 | `tests/support/mod.rs` | Re-surface harness; `harness()` forwards `Harness::get()`. | L499-534 |
-| 7 | `build.rs` (full) | Walk `tests/<scope>/**/*.rs`; `family_operation` slug; emit `#[path]` lines; rerun-if-changed; empty-tree builds. | L536-579 |
-| 8 | `tests/manager/lifecycle/create_sandbox.rs` | Leaf **M1**: provision once, assert `/id` charset, `/state == "ready"`, `/daemon/socket_path` non-null. | L619-651 |
-| 9 | `tests/runtime/command/exec_command.rs` | Leaf **R1**: provision, `runtime exec_command pwd`, assert `/status == "ok"`, `/exit_code == 0`, `command_session_id` absent. | L653-679 |
+| 7 | `build.rs` (full) | Walk `tests/<scope>/**/*.rs`; `family_operation_case` slug; emit `#[path]` lines; rerun-if-changed; empty-tree builds. | L536-579 |
+| 8 | `tests/manager/lifecycle/create_sandbox/returns_ready.rs` | Leaf **M1**: provision once, assert `/id` charset, `/state == "ready"`, `/daemon/socket_path` non-null. | L619-651 |
+| 9 | `tests/runtime/command/exec_command/one_shot.rs` | Leaf **R1**: provision, `runtime exec_command pwd`, assert `/status == "ok"`, `/exit_code == 0`, `command_session_id` absent. | L653-679 |
 
 ## Acceptance Gates
 

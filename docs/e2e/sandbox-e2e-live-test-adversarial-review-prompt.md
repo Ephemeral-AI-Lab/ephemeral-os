@@ -15,7 +15,7 @@ as fixed and correct:
 - a **black-box** live E2E runner that drives real Docker-container sandboxes
   **only** through the public `sandbox-cli` → `sandbox-gateway` boundary;
 - crate shape = **harness library (`src/`) + per-operation integration tests
-  (`tests/[manager|runtime]/<family>/<operation>.rs`) + orchestrator bin
+  (`tests/[manager|runtime]/<family>/<operation>/<case>.rs`) + orchestrator bin
   `eos-e2e`**;
 - three settled product decisions (the "Ownership Boundary"): sandbox/image ops
   performed by `sandbox-cli`; **no** manager-side observability sink; **Linux +
@@ -277,7 +277,7 @@ registration tax.
 
 **Seed hunt list (find more):**
 
-- **Add one runtime operation**: new leaf `tests/runtime/<family>/<op>.rs` *plus*
+- **Add one runtime operation**: new leaf `tests/runtime/<family>/<op>/<case>.rs` *plus*
   a `#[path = "..."] mod ...;` line in `tests/runtime.rs`. The path-include is a
   **manual registration point** that scales linearly with op count. Across dozens
   of ops, is this a real tax? Is there a leaner convention (e.g. a single
@@ -420,7 +420,7 @@ win:
   classification axis (monitoring is `get_observability_tree` + daemon spans only);
 - any **non-Linux / non-Docker** code path;
 - collapsing the crate back to **bin-only** or abandoning the per-operation
-  `tests/[manager|runtime]/<family>/<operation>.rs` layout (the crate shape is
+  `tests/[manager|runtime]/<family>/<operation>/<case>.rs` layout (the crate shape is
   fixed) — internal mechanisms may still be challenged;
 - new layers/indirection/abstraction whose only justification is "cleaner";
 - compatibility shims, aliases, or dual provisioning paths.

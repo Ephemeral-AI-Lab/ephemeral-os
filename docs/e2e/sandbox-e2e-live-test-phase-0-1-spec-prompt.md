@@ -108,8 +108,8 @@ must be one you verified.
   `field`, and the negative/exit helper if a Phase 1 leaf exercises it).
 - `tests/support/mod.rs` — surface the harness to tests; skip-safe entry.
 - `build.rs` — generate the per-leaf `#[path]` include list into `$OUT_DIR`.
-- Two leaf tests: `tests/manager/lifecycle/create_sandbox.rs` and
-  `tests/runtime/command/exec_command.rs`.
+- Two leaf tests: `tests/manager/lifecycle/create_sandbox/returns_ready.rs` and
+  `tests/runtime/command/exec_command/one_shot.rs`.
 - Acceptance: the crate compiles; `cargo test -p sandbox-e2e-live-test` with no
   `EOS_E2E_RUN_ROOT` **skips cleanly** (no panic); with `EOS_E2E_RUN_ROOT` pointing
   at a hand-written `run-manifest.json` for a real-runtime gateway, the two leaves
@@ -130,7 +130,7 @@ must be one you verified.
   `SandboxRuntime`, no internal manager/runtime crate dependency on the black-box
   path. No manager-side observability sink. Linux + Docker only.
 - Crate shape is fixed: harness lib `src/` + per-op tests
-  `tests/[manager|runtime]/<family>/<operation>.rs` + orchestrator bin `eos-e2e`.
+  `tests/[manager|runtime]/<family>/<operation>/<case>.rs` + orchestrator bin `eos-e2e`.
 - One cross-process env contract: **`EOS_E2E_RUN_ROOT`**; gateway socket, `run_id`,
   and image are read from `{run_root}/run-manifest.json`.
 - Sandbox ids are **runtime-assigned** — capture `/id` from the create response and
@@ -160,7 +160,7 @@ each, citing live code:
    `EOS_E2E_RUN_ROOT` is unset, so a bare `cargo test` on a non-E2E machine does not
    fail. Specify what (if anything) is written when skipping.
 5. **`build.rs` include generation** — how it walks `tests/<scope>/**/*.rs`, the
-   deterministic `<family>_<operation>` module-slug derivation (collision-free),
+   deterministic `<family>_<operation>_<case>` module-slug derivation (collision-free),
    the `$OUT_DIR/<scope>_mods.rs` output, the `rerun-if-changed` triggers, and how
    it stays within the repo's `#[path]` + `include!` convention. Confirm the empty
    Phase 0 tree still builds (generated list may be empty).

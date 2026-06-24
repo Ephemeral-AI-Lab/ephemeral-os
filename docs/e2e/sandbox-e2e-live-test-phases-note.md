@@ -66,8 +66,8 @@ against a real gateway, and skip-safe without one.
 - `tests/support/mod.rs` — skip-safe harness entry (returns `Option`; tests
   early-return and record `skipped` when `EOS_E2E_RUN_ROOT` is unset).
 - `build.rs` — generate `$OUT_DIR/<scope>_mods.rs` from `tests/<scope>/**/*.rs`.
-- Leaf tests: `tests/manager/lifecycle/create_sandbox.rs` (M1),
-  `tests/runtime/command/exec_command.rs` (R1).
+- Leaf tests: `tests/manager/lifecycle/create_sandbox/returns_ready.rs` (M1),
+  `tests/runtime/command/exec_command/one_shot.rs` (R1).
 
 **Acceptance**
 - Crate compiles; bare `cargo test -p sandbox-e2e-live-test` (no env) **skips
@@ -81,15 +81,15 @@ against a real gateway, and skip-safe without one.
 
 ## Phase 2 — Full per-operation tree + assertions
 
-**Goal:** complete black-box coverage of the public surface, one leaf per op.
+**Goal:** complete black-box coverage of the public surface, one leaf file per test case.
 
 **Deliverables**
-- All manager leaves: `lifecycle/{create,inspect,list,destroy}_sandbox.rs`,
-  `observability/get_observability_tree.rs` (M1–M5).
+- All manager leaves: `lifecycle/{create,inspect,list,destroy}_sandbox/<case>.rs`,
+  `observability/get_observability_tree/<case>.rs` (M1–M5).
 - All runtime leaves: `command/{exec_command,write_command_stdin,
-  read_command_lines}.rs`, `workspace_session/{create,destroy}_workspace_session.rs`
-  (clean + busy), `layerstack/squash.rs` (R1–R8).
-- Negatives in `tests/<scope>/routing/scope_and_dispatch.rs` (N1 unknown system op
+  read_command_lines}/<case>.rs`, `workspace_session/{create,destroy}_workspace_session/<case>.rs`
+  (clean + busy), `layerstack/squash/<case>.rs` (R1–R8).
+- Negatives in `tests/<scope>/routing/scope_and_dispatch/<case>.rs` (N1 unknown system op
   → `unknown_op`/exit 1; N2 runtime op without sandbox id → exit 2/stderr).
 - Full `assertion.rs`: `err_kind_at`, `err_detail` (runtime `operation_failed`
   details), `offsets_monotonic`, `non_decreasing`.
@@ -154,5 +154,5 @@ classification axis; gateway/manager/forwarding spans + manager trace store.
 - Black-box only: all sandbox/runtime ops via `sandbox-cli` over the gateway socket.
 - Runtime-assigned sandbox ids, captured from the create response and round-tripped.
 - Single env contract `EOS_E2E_RUN_ROOT`; everything else from `run-manifest.json`.
-- Add-an-operation = add one leaf file (the `#[path]` include list is generated).
+- Add-a-test-case = add one leaf file (the `#[path]` include list is generated).
 - Linux + Docker only; off-Linux/no-Docker exits `2` at preflight.
