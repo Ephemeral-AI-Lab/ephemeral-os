@@ -74,12 +74,12 @@ structural change to the harness beyond authoring those files.
   live Phase 0–1 print-and-exit stub; Phase 2 runs are by hand
   (`EOS_E2E_RUN_ROOT` + `cargo test`). **Phase 3.**
 - `result.json`, `summary.json`, report-dir aggregation, timing/cleanup
-  sub-objects. Phase 2 introduces **only** `exchange.jsonl`. The live skip path
+  sub-objects. Stage 1 introduces **only** `exchange.jsonl`. The live skip path
   writes nothing and stays a bare `return`. **Phase 3.**
 - Observability polling, `observability.json`, P1/P2. **Phase 4.**
 - Spawn-mode gateway, label-based cleanup, `--rerun-failed-from`. **Phase 3.**
 - `build.rs` changes — **none needed**; the live walker discovers each new leaf
-  (Design Question 9). No new Cargo dependency — Phase 2 reuses
+  (Design Question 9). No new Cargo dependency — Stage 1 reuses
   `anyhow`/`serde`/`serde_json` already in `Cargo.toml`.
 
 **Honest gates.** Stage 1 is green only against an externally started real-runtime
@@ -346,19 +346,19 @@ Stage 1 adds no manifest field.
 
 ## 8. Anchor ledger
 
-Every `file:line` the spec relies on, re-opened in this run. R-series rows marked
-**re-verify at Stage 2** (authored against the migrated runtime's settled shapes).
+Every `file:line` this **Stage 1** spec relies on, re-opened in this run. The
+runtime (R-series) and N2 anchors move to the Stage 2 spec (§1) and are not listed
+here.
 
 | Anchor | Verdict | Confirmed fact |
 |--------|---------|----------------|
 | `Cargo.toml:18` | confirmed | `"crates/sandbox-e2e-live-test"` is a workspace member (after `"xtask"` :17). |
 | `Cargo.toml:73` | confirmed | `[workspace.lints.clippy]`. |
 | `Cargo.toml:81-83` | confirmed | `unwrap_used="warn"` (:81), `dbg_macro="warn"` (:82), `undocumented_unsafe_blocks="deny"` (:83). |
-| `crates/sandbox-e2e-live-test/Cargo.toml` | confirmed | deps = `anyhow`,`serde`,`serde_json` only; `[lints] workspace=true`. Phase 2 adds none. |
+| `crates/sandbox-e2e-live-test/Cargo.toml` | confirmed | deps = `anyhow`,`serde`,`serde_json` only; `[lints] workspace=true`. Stage 1 adds none. |
 | `…/src/cli_client.rs:11-19` | confirmed | `CallRecord{argv,request_json:Option,response_json,exit_code,stdout,stderr,latency_ms}`. |
 | `…/src/cli_client.rs:13,81` | confirmed | `request_json: Option<Value>` field (:13); assigned `None` (:81) — `request` is `null` on the black-box path. |
-| `…/src/cli_client.rs:37-53` | confirmed | `manager(op,args)` (:37-41) / `runtime(sandbox_id,op,args)` (:43-53) verbs (reused; Stage 1 needs no new verb). |
-| `…/src/cli_client.rs:44-52` | confirmed | `runtime` body unconditionally emits `--sandbox-id` (`sandbox_id: &str` non-optional) — the new S2 `runtime_without_id` mirrors this minus the id (N2). |
+| `…/src/cli_client.rs:37-41` | confirmed | `manager(op,args)` verb — the only verb Stage 1 uses (M2–M5, N1); reused, no new verb added. |
 | `…/src/cli_client.rs:62-67` | confirmed | wall-clock `latency_ms` around `Command::output()`. |
 | `…/src/cli_client.rs:72-77` | confirmed | `carrier = exit==0 ? stdout : stderr`; `response_json` parsed from carrier. |
 | `…/src/cli_client.rs:96-99` | confirmed | `CallRecord::response()` returns `&response_json`. |
@@ -368,7 +368,7 @@ Every `file:line` the spec relies on, re-opened in this run. R-series rows marke
 | `…/src/fixtures.rs:59-88` | confirmed | `provision_sandbox(slug,image)->(Sandbox,CallRecord)`; one `create_sandbox`; id from `/id`. |
 | `…/src/fixtures.rs:61-74` | confirmed | workspace root `{run_root}/work/{run_id}-{slug}` created + canonicalized (absolute). |
 | `…/src/fixtures.rs:94-107` | confirmed | `Sandbox{id,workspace_root}`; `Drop` → `destroy_sandbox --sandbox-id id` (best-effort). |
-| `…/src/assertion.rs:4-16` | confirmed | only `ok` (:4-9) and `field` (:12-16) exist today; Phase 2 adds the four helpers. |
+| `…/src/assertion.rs:4-16` | confirmed | only `ok` (:4-9) and `field` (:12-16) exist today; Stage 1 adds `err_kind_at`. |
 | `…/src/config.rs:21-27` | confirmed | manifest fields `schema_version,gateway_socket,run_id,image`; schema_version 1. |
 | `…/src/gateway.rs:12-26` | confirmed | `await_ready` attach-only socket readiness (no spawn). |
 | `…/tests/support/mod.rs:3-9` | confirmed | re-exports `assertion` + `Harness`; `harness()->Option`; the ONLY skip path. |
@@ -392,41 +392,23 @@ Every `file:line` the spec relies on, re-opened in this run. R-series rows marke
 | `sandbox-protocol/src/response.rs:41-49` | confirmed | error shape `{error:{kind,message,details}}`. |
 | `sandbox-protocol/src/error_kind.rs:2-3` | confirmed | `INTERNAL_ERROR="internal_error"`, `INVALID_REQUEST="invalid_request"`. |
 | `sandbox-gateway/src/cli/output.rs:21-23` | confirmed | EXIT_SUCCESS=0, EXIT_FAILURE=1, EXIT_USAGE=2. |
-| `sandbox-gateway/src/cli/output.rs:84-96` | confirmed | clap parse error → stderr + exit 2. |
-| `sandbox-gateway/src/cli/output.rs:145-151` | confirmed | runtime sandbox-id resolution error → `render_request_error` (stderr) + EXIT_USAGE(2) — **before** the socket (N2). |
 | `sandbox-gateway/src/cli/output.rs:266-272` | confirmed | `render_response`: error→stderr+EXIT_FAILURE(1); ok→stdout+EXIT_SUCCESS(0). |
-| `sandbox-gateway/src/cli/output.rs:287-292` | confirmed | `render_request_error` renders kind `invalid_request` to stderr. |
-| `sandbox-gateway/src/cli/request_builder.rs:84-91` | confirmed | N2: missing id → `"runtime operations require --sandbox-id or SANDBOX_DEFAULT_ID"`. |
 | `sandbox-gateway/src/gateway/main.rs:94-100,103-146` | confirmed | `default_manager_services` wires `UnconfiguredRuntime`(:97,103)/`UnconfiguredDaemonInstaller`(:98,122); create_sandbox errors `"sandbox runtime is not configured"` (:110-112). |
-| `sandbox-runtime/operation/src/cli_definition/command_operations.rs:34-74` | confirmed · **re-verify at Stage 2** | exec args: opt `--workspace-session-id`, req positional `cmd`(COMMAND), opt `--timeout-ms`, opt `--yield-time-ms`. |
-| `…/command_operations.rs:96-125` | confirmed · **re-verify at Stage 2** | write_command_stdin: req `--command-session-id`, req positional `stdin`(TEXT), opt `--yield-time-ms`. |
-| `…/command_operations.rs:143-173` | confirmed · **re-verify at Stage 2** | read_command_lines: req `--command-session-id`, opt `--start-offset`, opt `--limit`. |
-| `…/command_operations.rs:278-281` | confirmed · **re-verify at Stage 2** | Running→`Response::running`, else `Response::ok`. |
-| `…/command_operations.rs:324-340` | confirmed · **re-verify at Stage 2** | yield value: `status,exit_code,start_offset,end_offset,total_lines,output,…`; `command_session_id` set iff `Some` (:336-337). |
-| `…/command_operations.rs:342-355` | confirmed · **re-verify at Stage 2** | lines value: always `command_session_id` (:344) + offset fields. |
-| `…/command_operations.rs:296-298` | confirmed · **re-verify at Stage 2** | command errors → `operation_failed` (no `active_command_session_ids` here). |
-| `command/service/contract.rs:41-44` | confirmed · **re-verify at Stage 2** | `CommandStatus::as_str`: Running→"running"(:43), Ok→"ok"(:44). |
-| `workspace_session_operations.rs:42-51,231-236` | confirmed · **re-verify at Stage 2** | R2: opt `--profile`; returns `{workspace_session_id,profile}`. |
-| `workspace_session_operations.rs:70-90,238-243` | confirmed · **re-verify at Stage 2** | R7a: req `--workspace-session-id`, opt `--grace-s`; clean → `{workspace_session_id,destroyed:true}`. |
-| `workspace_session_operations.rs:132-138,218-229` | confirmed · **re-verify at Stage 2** | R7b: active-command admission → `operation_failed` + `error.details.active_command_session_ids` (array). |
-| `workspace/src/model.rs:113-116` | confirmed · **re-verify at Stage 2** | `WorkspaceProfile::HostCompatible→"host_compatible"`(:115), Isolated→"isolated"(:116). |
-| `layerstack_operations.rs:22,59-80` | confirmed · **re-verify at Stage 2** | R8 squash: no args; returns `{squashed,revision:{manifest_version,root_hash,layer_count}|null,layer_paths,lease_release_error}`. |
-| `layerstack_operations.rs:48-56` | confirmed · **re-verify at Stage 2** | squash error → `operation_failed` + `{kind}`. |
 
 ---
 
 ## 9. Conventions checklist
 
 - **SRP / one job per unit.** New `report.rs` = `exchange.jsonl` writing only (no
-  result/summary/observability). New helpers each assert one invariant. New
-  `WorkspaceSession` = one runtime-session lifecycle. The `Sandbox` exchange sink
-  is the id↔file binding on the object that owns the id — not on the shared
-  `CliClient`. Each leaf file owns exactly one matrix case.
+  result/summary/observability). The new `err_kind_at` helper asserts one
+  invariant (kind + exit). The `Sandbox` exchange sink is the id↔file binding on
+  the object that owns the id — not on the shared `CliClient`. Each leaf file owns
+  exactly one matrix case.
 - **No inline comments in production code.** `src/` additions (`report.rs`,
   fixture/assertion/cli_client deltas) carry only `///`/`//!` doc comments on
   public items. Leaf tests may carry intent comments (tests only, per CLAUDE.md),
   as the live M1/R1 leaves already do.
-- **Workspace deps via `dep.workspace = true`.** Phase 2 introduces **no new
+- **Workspace deps via `dep.workspace = true`.** Stage 1 introduces **no new
   dependency**; `exchange.jsonl` uses `serde_json` + `std::fs` already present
   (`crates/sandbox-e2e-live-test/Cargo.toml`). No version is pinned in the member.
 - **`#[path]` / `include!` + generated list.** Every new leaf is discovered by the
@@ -448,14 +430,14 @@ Every `file:line` the spec relies on, re-opened in this run. R-series rows marke
 | DQ | Resolved in | One-line resolution |
 |----|-------------|---------------------|
 | 1 stream/exit & `err_kind_at` | §4 | `err_kind_at(rec,kind,exit)` reads `rec.response()` (carrier-parsed) + `rec.exit_code`; parent "stdout (exit 1)" note is STALE. |
-| 2 `exchange.jsonl` owner/key/flush | §5 | Owned by `Sandbox`, keyed by runtime id, seeded with the create record, flushed on drop to `reports/{id}/exchange.jsonl`; N1/N2 write nothing. |
-| 3 stateful id round-trip | §3 pseudocode | R4 captures `/command_session_id`; R5/R6 feed it; R6 re-reads from prior `/end_offset`; R3 threads `workspace_session_id`. |
-| 4 `with_workspace_session` | §6 | `WorkspaceSession` RAII (create host_compatible, capture id, destroy on drop); R7a/R7b use the inline form to own the destroy. |
-| 5 conditional fixtures | §3 pseudocode | R7b keeps `cat` live via `--yield-time-ms 0`; R8 writes a file one-shot before squash. |
+| 2 `exchange.jsonl` owner/key/flush | §5 | Owned by `Sandbox`, keyed by runtime id, seeded with the create record, flushed on drop to `reports/{id}/exchange.jsonl`; N1 (sandbox-less) writes nothing. |
+| 3 stateful id round-trip | — | **Deferred to Stage 2** (runtime `command_session_id`/`workspace_session_id` round-trips). |
+| 4 `with_workspace_session` | — | **Deferred to Stage 2** (runtime workspace-session RAII fixture). |
+| 5 conditional fixtures | — | **Deferred to Stage 2** (R7b live-command / R8 squash-after-mutation fixtures). |
 | 6 M2–M5 contracts | §3 + ledger | Confirmed arg sets + readers; M5 follow-up inspect asserts `err_kind_at(_,"invalid_request",1)`. |
-| 7 N1/N2 contracts | §3 + §4 | N1 `unknown_op`/exit1/stderr; N2 `invalid_request`/exit2/stderr, never reaches socket. |
-| 8 staging mechanics | §1 + §7 | Stage 1 green = `cargo test --test manager` with zero runtime calls; R2–R8 not authored until Stage 2; bare `cargo test` skips clean both stages. |
-| 9 `build.rs` unchanged | §2 + ledger | Live walker + slug derivation discovers all new nested families collision-free; slugs listed. |
+| 7 N1 contract (N2 deferred) | §3 + §4 | N1 `unknown_op`/exit1/stderr. N2 (`invalid_request`/exit2/stderr) is **deferred to Stage 2**. |
+| 8 staging mechanics | §1 + §7 | Stage 1 green = `cargo test --test manager` with zero runtime calls; the runtime leaves are deferred to Stage 2; bare `cargo test` skips clean. |
+| 9 `build.rs` unchanged | §2 + ledger | Live walker + slug derivation discovers all new manager families collision-free; slugs listed. |
 | 10 workspace-root/slug at scale | §3 + ledger | `{run_root}/work/{run_id}-{slug}` per leaf stays unique (slug derived from the case path); absolute-path check (`mod.rs:68`) satisfied by canonicalize. |
 | 11 parallel-safety | §5 | Each leaf owns one `Sandbox`, writes only under its own id; `RefCell` buffer is leaf-local; no shared mutable state added. |
 
