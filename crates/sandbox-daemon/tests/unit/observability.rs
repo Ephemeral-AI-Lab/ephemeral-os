@@ -5,7 +5,9 @@ use std::sync::Arc;
 
 use crate::observability::DaemonObservability;
 use crate::server::{SandboxDaemonServer, ServerConfig};
-use sandbox_observability::{ObservabilityPaths, ObservabilityStore, SpanRecord, TraceRecord};
+use sandbox_observability::{
+    ObservabilityPaths, ObservabilityStore, SpanRecord, StoreError, TraceRecord,
+};
 use sandbox_runtime::command::CommandSessionId;
 use sandbox_runtime::{
     span_keys, BeginNamespaceExecution, CommandFinalizationTraceMetadata,
@@ -20,6 +22,42 @@ use sandbox_runtime::{
 use serde_json::{json, Value};
 
 type TestResult<T = ()> = Result<T, Box<dyn Error + Send + Sync>>;
+
+/// Snapshot-capture and fault-injection helpers the integration suite drives
+/// against the path-included `DaemonObservability`; they stay in the test crate
+/// so production carries no test-only surface.
+trait DaemonObservabilityTestExt {
+    fn collect_runtime_snapshot_for_test(
+        &self,
+        config: &ServerConfig,
+        snapshot: RuntimeObservabilitySnapshot,
+    ) -> Result<(), StoreError>;
+
+    fn force_sqlite_write_errors_for_test(&self) -> Result<(), StoreError>;
+}
+
+impl DaemonObservabilityTestExt for DaemonObservability {
+    fn collect_runtime_snapshot_for_test(
+        &self,
+        config: &ServerConfig,
+        snapshot: RuntimeObservabilitySnapshot,
+    ) -> Result<(), StoreError> {
+        self.write_snapshot(config, snapshot, test_unix_ms(), false)
+            .map(|_| ())
+    }
+
+    fn force_sqlite_write_errors_for_test(&self) -> Result<(), StoreError> {
+        self.store.force_sqlite_write_errors_for_test()
+    }
+}
+
+fn test_unix_ms() -> i64 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let duration = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default();
+    i64::try_from(duration.as_millis()).unwrap_or(i64::MAX)
+}
 
 #[test]
 fn observability_collection_writes_namespace_only_live_snapshot() -> TestResult {

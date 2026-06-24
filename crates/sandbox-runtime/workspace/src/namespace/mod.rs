@@ -87,8 +87,8 @@ pub(crate) fn setup_error(error: impl std::fmt::Display) -> WorkspaceModeError {
     }
 }
 
-#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
-pub(crate) struct NamespaceRuntime;
+#[derive(Default)]
+pub struct NamespaceRuntime;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct HolderKillReport {
@@ -99,7 +99,7 @@ pub(crate) struct HolderKillReport {
 }
 
 impl NamespaceRuntime {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self
     }
 }

@@ -1137,6 +1137,7 @@ dependencies = [
  "rustix 0.38.44",
  "sandbox-runtime-layerstack",
  "sandbox-runtime-namespace-process",
+ "sandbox-runtime-workspace",
  "serde",
  "serde_json",
  "thiserror 2.0.18",

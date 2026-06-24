@@ -19,5 +19,13 @@ rtnetlink.workspace = true
 tokio.workspace = true
 futures-util.workspace = true
 
+[features]
+test-support = []
+
+[dev-dependencies]
+sandbox-runtime-workspace = { path = ".", features = ["test-support"] }
+sandbox-runtime-layerstack.workspace = true
+serde_json.workspace = true
+
 [lints]
 workspace = true

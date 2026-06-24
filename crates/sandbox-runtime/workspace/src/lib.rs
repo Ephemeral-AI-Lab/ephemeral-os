@@ -31,3 +31,11 @@ pub use model::{
     WorkspaceEntryError, WorkspaceEntryFds, WorkspaceHandle, WorkspaceProfile, WorkspaceSessionId,
 };
 pub use service::{WorkspaceRuntimeHooks, WorkspaceRuntimeService};
+
+/// Internal namespace types surfaced to this crate's `tests/` suites; available
+/// only under the `test-support` feature.
+#[cfg(feature = "test-support")]
+pub mod test_support {
+    pub use crate::lifecycle::remount::WorkspaceRemountState;
+    pub use crate::namespace::NamespaceRuntime;
+}

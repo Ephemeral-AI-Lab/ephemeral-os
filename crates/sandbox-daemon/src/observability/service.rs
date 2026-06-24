@@ -52,10 +52,10 @@ const LAYERSTACK_SQUASH_DEEP_SPAN_KEYS: [SpanKey; 2] = [
     span_keys::LAYERSTACK_SQUASH_COMPACT_STACK,
 ];
 
-pub(crate) struct DaemonObservability {
+pub struct DaemonObservability {
     sandbox_id: String,
     paths: ObservabilityPaths,
-    store: ObservabilityStore,
+    pub(crate) store: ObservabilityStore,
     next_sample_id: AtomicU64,
     disk_samples: Mutex<HashMap<DiskCacheKey, CachedDiskSample>>,
     enabled_deep_span_keys: Mutex<HashSet<SpanKey>>,
@@ -242,27 +242,7 @@ impl DaemonObservability {
         }
     }
 
-    #[cfg(test)]
-    #[allow(dead_code, reason = "used by path-included daemon integration tests")]
-    pub(crate) fn collect_runtime_snapshot_for_test(
-        &self,
-        config: &ServerConfig,
-        snapshot: RuntimeObservabilitySnapshot,
-    ) -> Result<(), StoreError> {
-        self.write_snapshot(config, snapshot, unix_ms(), false)
-            .map(|_| ())
-    }
-
-    #[cfg(test)]
-    #[allow(
-        dead_code,
-        reason = "used by path-included daemon integration tests, not crate-local unit tests"
-    )]
-    pub(crate) fn force_sqlite_write_errors_for_test(&self) -> Result<(), StoreError> {
-        self.store.force_sqlite_write_errors_for_test()
-    }
-
-    fn write_snapshot(
+    pub(crate) fn write_snapshot(
         &self,
         config: &ServerConfig,
         snapshot: RuntimeObservabilitySnapshot,

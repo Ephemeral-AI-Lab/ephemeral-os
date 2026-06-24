@@ -119,7 +119,7 @@ impl NamespaceRuntime {
 
 #[cfg(target_os = "linux")]
 impl NamespaceRuntime {
-    pub(crate) fn ns_runner_request(
+    pub fn ns_runner_request(
         &self,
         handle: &WorkspaceModeHandle,
         request: &str,
@@ -282,66 +282,4 @@ fn read_pipe<R: Read>(pipe: Option<R>) -> Result<Vec<u8>, WorkspaceModeError> {
     let mut bytes = Vec::new();
     pipe.read_to_end(&mut bytes).map_err(setup_error)?;
     Ok(bytes)
-}
-
-#[cfg(all(test, target_os = "linux"))]
-mod tests {
-    use super::*;
-    use crate::lifecycle::remount::WorkspaceRemountState;
-    use crate::model::WorkspaceProfile;
-    use crate::overlay::dirs::OverlayDirs;
-    use crate::profile::{WorkspaceModeFds, WorkspaceModeHandle, WorkspaceModeId};
-
-    #[test]
-    fn workspace_setns_request_carries_mount_material() {
-        let runtime = NamespaceRuntime::new();
-        let request = runtime.ns_runner_request(
-            &workspace_mode_handle(),
-            "remount",
-            json!({"probe_path": "probe.txt"}),
-            vec!["/lower/next".into()],
-        );
-
-        assert_eq!(request.layer_paths, vec![PathBuf::from("/lower/next")]);
-        assert_eq!(request.request_id, "isolated-remount-workspace");
-    }
-
-    fn workspace_mode_handle() -> WorkspaceModeHandle {
-        WorkspaceModeHandle {
-            workspace_id: WorkspaceModeId("workspace".to_owned()),
-            profile: WorkspaceProfile::HostCompatible,
-            lease_id: "lease-1".to_owned(),
-            manifest_version: 1,
-            manifest_root_hash: "root-hash".to_owned(),
-            base_manifest: sandbox_runtime_layerstack::Manifest::new(
-                1,
-                vec![sandbox_runtime_layerstack::LayerRef {
-                    layer_id: "L000001-test".to_owned(),
-                    path: "layers/L000001-test".to_owned(),
-                }],
-                sandbox_runtime_layerstack::MANIFEST_SCHEMA_VERSION,
-            )
-            .expect("test manifest is valid"),
-            workspace_root: "/workspace".to_owned(),
-            dirs: OverlayDirs {
-                run_dir: "/tmp/eos/run".into(),
-                upperdir: "/tmp/eos/upper".into(),
-                workdir: "/tmp/eos/work".into(),
-            },
-            layer_paths: vec!["/lower/base".into()],
-            ns_fds: WorkspaceModeFds {
-                user: Some(10),
-                mnt: Some(11),
-                pid: Some(12),
-                net: None,
-            },
-            holder_pid: 1234,
-            readiness_fd: 13,
-            control_fd: 14,
-            veth: None,
-            remount_state: WorkspaceRemountState::Active,
-            created_at: 1.0,
-            last_activity: 2.0,
-        }
-    }
 }
