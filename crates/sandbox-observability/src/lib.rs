@@ -15,3 +15,6 @@ pub use store::{
     ObservabilitySnapshotReadOptions, ObservabilitySnapshotRows, ObservabilityStore,
     ObservabilityWorkspaceSnapshotRow, StoreError,
 };
+
+#[cfg(any(test, feature = "test-support"))]
+pub use store::{schema_checksum, V1_SCHEMA_SQL};

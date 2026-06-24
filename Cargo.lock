@@ -1046,6 +1046,7 @@ name = "sandbox-observability"
 version = "0.1.0"
 dependencies = [
  "rusqlite",
+ "sandbox-observability",
  "thiserror 2.0.18",
 ]
 

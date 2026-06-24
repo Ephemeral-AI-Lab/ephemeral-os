@@ -49,7 +49,10 @@ impl LocalSandboxDaemonInstaller {
         }
     }
 
-    fn launch_spec(&self, record: &SandboxRecord) -> Result<SandboxDaemonLaunchSpec, ManagerError> {
+    pub(crate) fn launch_spec(
+        &self,
+        record: &SandboxRecord,
+    ) -> Result<SandboxDaemonLaunchSpec, ManagerError> {
         validate_absolute(&record.workspace_root, "workspace_root")?;
         validate_absolute(&self.runtime_root, "daemon runtime root")?;
         let sandbox_runtime_dir = self.runtime_root.join(record.id.as_str());
@@ -141,11 +144,11 @@ impl SandboxDaemonInstaller for LocalSandboxDaemonInstaller {
 }
 
 #[derive(Debug)]
-struct SandboxDaemonLaunchSpec {
-    executable: PathBuf,
-    args: Vec<String>,
-    socket_path: PathBuf,
-    pid_path: PathBuf,
+pub(crate) struct SandboxDaemonLaunchSpec {
+    pub(crate) executable: PathBuf,
+    pub(crate) args: Vec<String>,
+    pub(crate) socket_path: PathBuf,
+    pub(crate) pid_path: PathBuf,
 }
 
 fn validate_absolute(path: &Path, label: &'static str) -> Result<(), ManagerError> {
@@ -286,50 +289,4 @@ fn remove_daemon_file(path: &Path) -> Result<(), ManagerError> {
 
 fn daemon_install_error(message: String) -> ManagerError {
     ManagerError::DaemonInstallFailed { message }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::path::PathBuf;
-
-    use crate::{SandboxId, SandboxRecord, SandboxState};
-
-    use super::*;
-
-    #[test]
-    fn launch_spec_passes_dynamic_sandbox_id() {
-        let installer = LocalSandboxDaemonInstaller::new(
-            "/bin/sandbox-daemon",
-            "/etc/eos/prd.yml",
-            "/tmp/eos-daemons",
-        );
-        let record = SandboxRecord::new(
-            SandboxId::new("container-1").expect("valid sandbox id"),
-            PathBuf::from("/testbed"),
-            SandboxState::Ready,
-        );
-
-        let spec = installer
-            .launch_spec(&record)
-            .expect("launch spec builds from record");
-
-        assert_eq!(spec.executable, PathBuf::from("/bin/sandbox-daemon"));
-        assert_eq!(
-            spec.socket_path,
-            PathBuf::from("/tmp/eos-daemons/container-1/runtime.sock")
-        );
-        assert_eq!(
-            spec.pid_path,
-            PathBuf::from("/tmp/eos-daemons/container-1/runtime.pid")
-        );
-        assert!(spec
-            .args
-            .windows(2)
-            .any(|window| window[0] == "--sandbox-id" && window[1] == "container-1"));
-        assert!(spec
-            .args
-            .windows(2)
-            .any(|window| window[0] == "--workspace-root" && window[1] == "/testbed"));
-        assert!(!spec.args.iter().any(|arg| arg == "secret-token"));
-    }
 }

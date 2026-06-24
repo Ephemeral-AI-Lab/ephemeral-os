@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 );
 "#;
 
-const V1_SCHEMA_SQL: &str = r#"
+pub(crate) const V1_SCHEMA_SQL: &str = r#"
 CREATE TABLE IF NOT EXISTS traces (
   trace_id TEXT PRIMARY KEY,
   kind TEXT NOT NULL,
@@ -1563,7 +1563,7 @@ fn apply_schema(connection: &mut Connection) -> Result<(), StoreError> {
     Ok(())
 }
 
-fn schema_checksum(sql: &str) -> String {
+pub(crate) fn schema_checksum(sql: &str) -> String {
     const FNV_OFFSET: u64 = 0xcbf29ce484222325;
     const FNV_PRIME: u64 = 0x00000100000001b3;
 
@@ -1581,17 +1581,4 @@ fn unix_time_ms() -> i64 {
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default();
     i64::try_from(duration.as_millis()).unwrap_or(i64::MAX)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{schema_checksum, V1_SCHEMA_SQL};
-
-    #[test]
-    fn schema_checksum_changes_with_sql_text() {
-        let checksum = schema_checksum(V1_SCHEMA_SQL);
-
-        assert!(checksum.starts_with("fnv1a64:"));
-        assert_ne!(checksum, schema_checksum("SELECT 1;"));
-    }
 }

@@ -6,9 +6,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::Connection;
 use sandbox_observability::{
-    NamespaceExecutionSnapshotRecord, NamespaceExecutionTraceRecord, ObservabilityPaths,
-    ObservabilitySnapshotReadOptions, ObservabilityStore, ResourceSampleRecord,
+    schema_checksum, NamespaceExecutionSnapshotRecord, NamespaceExecutionTraceRecord,
+    ObservabilityPaths, ObservabilitySnapshotReadOptions, ObservabilityStore, ResourceSampleRecord,
     SandboxSnapshotRecord, SpanRecord, StoreError, TraceRecord, WorkspaceSnapshotRecord,
+    V1_SCHEMA_SQL,
 };
 
 type TestResult<T = ()> = Result<T, Box<dyn Error>>;
@@ -123,6 +124,14 @@ fn schema_initialization_rejects_migration_checksum_drift() -> TestResult {
     }
 
     Ok(())
+}
+
+#[test]
+fn schema_checksum_changes_with_sql_text() {
+    let checksum = schema_checksum(V1_SCHEMA_SQL);
+
+    assert!(checksum.starts_with("fnv1a64:"));
+    assert_ne!(checksum, schema_checksum("SELECT 1;"));
 }
 
 #[test]
