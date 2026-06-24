@@ -30,23 +30,25 @@ impl CommandOperationService {
         let mut last_offset = start_offset;
         let mut last_change = Instant::now();
         loop {
-            match self.engine().with_value(&id, CommandExecution::is_finished) {
-                None => {
-                    return Err(CommandServiceError::CommandNotFound { command_session_id });
-                }
-                Some(true) => {
-                    return self.completed_command_output(
-                        command_session_id,
-                        include_terminal_command_session_id,
-                    );
-                }
-                Some(false) => {}
+            let Some((finished, offset, waiter)) = self
+                .engine()
+                .with_value(&id, |command| {
+                    (
+                        command.is_finished(),
+                        command.output_len(),
+                        command.completion(),
+                    )
+                })
+            else {
+                return Err(CommandServiceError::CommandNotFound { command_session_id });
+            };
+            if finished {
+                return self.completed_command_output(
+                    command_session_id,
+                    include_terminal_command_session_id,
+                );
             }
             let now = Instant::now();
-            let offset = self
-                .engine()
-                .with_value(&id, CommandExecution::output_len)
-                .unwrap_or(last_offset);
             if offset != last_offset {
                 last_offset = offset;
                 last_change = now;
@@ -59,14 +61,7 @@ impl CommandOperationService {
                 );
             }
             let slice = QUIET_MS.min(deadline.saturating_duration_since(now));
-            match self.engine().with_value(&id, CommandExecution::completion) {
-                Some(waiter) => {
-                    waiter.wait_timeout(slice);
-                }
-                None => {
-                    return Err(CommandServiceError::CommandNotFound { command_session_id });
-                }
-            }
+            waiter.wait_timeout(slice);
         }
     }
 

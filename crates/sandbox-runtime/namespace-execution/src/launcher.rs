@@ -52,6 +52,13 @@ struct ForkRunnerChild {
     timeout: Option<PipedCompletionTimeout>,
 }
 
+struct SpawnedRunner {
+    child: Child,
+    result_read: OwnedFd,
+    request_write: OwnedFd,
+    pgid: i32,
+}
+
 #[derive(Clone, Copy)]
 struct PipedCompletionTimeout {
     mode_flag: &'static str,
@@ -68,30 +75,16 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
         cancelled: Arc<AtomicBool>,
     ) -> Result<(Box<dyn RunnerChild>, PtyMaster), NamespaceExecutionError> {
         let request_bytes = encode_request(&request)?;
-        let (mut child, result_read, request_write, master, pgid) = {
-            let _spawn_guard = spawn_lock();
-            let (request_read, request_write) = request_pipe()?;
-            let (result_read, result_write) = result_pipe()?;
+        let (mut spawned, master) = spawn_locked(None, |command| {
             let (master, slave) = open_pty_pair().map_err(spawn_error)?;
-            let mut command =
-                ns_runner_command(None, request_read.as_raw_fd(), result_write.as_raw_fd())?;
             command
                 .stdin(Stdio::from(slave.try_clone().map_err(spawn_error)?))
                 .stdout(Stdio::from(slave.try_clone().map_err(spawn_error)?))
                 .stderr(Stdio::from(slave))
                 .process_group(0);
-            let mut child = command.spawn().map_err(spawn_error)?;
-            drop(request_read);
-            drop(result_write);
-            let pgid = match child_pgid(&child) {
-                Ok(pgid) => pgid,
-                Err(error) => {
-                    terminate_spawned_child(&mut child, None);
-                    return Err(error);
-                }
-            };
-            (child, result_read, request_write, master, pgid)
-        };
+            Ok(master)
+        })?;
+        let pgid = spawned.pgid;
         let cancel: Box<dyn Fn() + Send + Sync> = Box::new(move || {
             cancelled.store(true, Ordering::Release);
             terminate_process_group(pgid);
@@ -101,22 +94,11 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
         let pty = match pty {
             Ok(pty) => pty,
             Err(error) => {
-                terminate_spawned_child(&mut child, Some(pgid));
+                terminate_spawned_child(&mut spawned.child, Some(pgid));
                 return Err(error);
             }
         };
-        if let Err(error) = write_request(request_write, &request_bytes) {
-            terminate_spawned_child(&mut child, Some(pgid));
-            return Err(error);
-        }
-        Ok((
-            Box::new(ForkRunnerChild {
-                child,
-                result_read,
-                timeout: None,
-            }),
-            pty,
-        ))
+        Ok((Box::new(spawned.into_child(&request_bytes, None)?), pty))
     }
 
     fn spawn_piped(
@@ -126,45 +108,80 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
         setup_timeout_s: f64,
     ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
         let request_bytes = encode_request(&request)?;
-        let (mut child, result_read, request_write, pgid) = {
-            let _spawn_guard = spawn_lock();
-            let (request_read, request_write) = request_pipe()?;
-            let (result_read, result_write) = result_pipe()?;
-            let mut command = ns_runner_command(
-                Some(mode_flag),
-                request_read.as_raw_fd(),
-                result_write.as_raw_fd(),
-            )?;
+        let (spawned, ()) = spawn_locked(Some(mode_flag), |command| {
             command
                 .stdin(Stdio::null())
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
                 .process_group(0);
-            let mut child = command.spawn().map_err(spawn_error)?;
-            drop(request_read);
-            drop(result_write);
-            let pgid = match child_pgid(&child) {
-                Ok(pgid) => pgid,
-                Err(error) => {
-                    terminate_spawned_child(&mut child, None);
-                    return Err(error);
-                }
-            };
-            (child, result_read, request_write, pgid)
-        };
-        if let Err(error) = write_request(request_write, &request_bytes) {
-            terminate_spawned_child(&mut child, Some(pgid));
-            return Err(error);
-        }
-        Ok(Box::new(ForkRunnerChild {
-            child,
-            result_read,
-            timeout: Some(PipedCompletionTimeout {
+            Ok(())
+        })?;
+        Ok(Box::new(spawned.into_child(
+            &request_bytes,
+            Some(PipedCompletionTimeout {
                 mode_flag,
                 setup_timeout_s,
             }),
-        }))
+        )?))
     }
+}
+
+impl SpawnedRunner {
+    fn into_child(
+        self,
+        request_bytes: &[u8],
+        timeout: Option<PipedCompletionTimeout>,
+    ) -> Result<ForkRunnerChild, NamespaceExecutionError> {
+        let SpawnedRunner {
+            mut child,
+            result_read,
+            request_write,
+            pgid,
+        } = self;
+        if let Err(error) = write_request(request_write, request_bytes) {
+            terminate_spawned_child(&mut child, Some(pgid));
+            return Err(error);
+        }
+        Ok(ForkRunnerChild {
+            child,
+            result_read,
+            timeout,
+        })
+    }
+}
+
+fn spawn_locked<R>(
+    mode_flag: Option<&'static str>,
+    configure: impl FnOnce(&mut Command) -> Result<R, NamespaceExecutionError>,
+) -> Result<(SpawnedRunner, R), NamespaceExecutionError> {
+    let _spawn_guard = spawn_lock();
+    let (request_read, request_write) = request_pipe()?;
+    let (result_read, result_write) = result_pipe()?;
+    let mut command = ns_runner_command(
+        mode_flag,
+        request_read.as_raw_fd(),
+        result_write.as_raw_fd(),
+    )?;
+    let resource = configure(&mut command)?;
+    let mut child = command.spawn().map_err(spawn_error)?;
+    drop(request_read);
+    drop(result_write);
+    let pgid = match child_pgid(&child) {
+        Ok(pgid) => pgid,
+        Err(error) => {
+            terminate_spawned_child(&mut child, None);
+            return Err(error);
+        }
+    };
+    Ok((
+        SpawnedRunner {
+            child,
+            result_read,
+            request_write,
+            pgid,
+        },
+        resource,
+    ))
 }
 
 impl RunnerChild for ForkRunnerChild {

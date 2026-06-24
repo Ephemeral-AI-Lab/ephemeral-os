@@ -6,7 +6,7 @@ use std::io;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use sandbox_runtime_namespace_execution::{
     CompletionWaiter, InteractiveExecution, NamespaceExecutionError, NamespaceExecutionId,
@@ -73,12 +73,6 @@ impl CommandExecution {
         self.exec.write_stdin(bytes)
     }
 
-    /// Cancel the command (caller-side `killpg`); the watcher then reports it as
-    /// terminal `Cancelled`/130.
-    pub fn cancel(&self) {
-        self.exec.cancel();
-    }
-
     /// A cloneable cancel action, so the caller can drop the registry lock before
     /// the kill's SIGTERM grace period.
     #[must_use]
@@ -103,11 +97,6 @@ impl CommandExecution {
         &self,
     ) -> Option<Result<CommandTerminalResult, NamespaceExecutionError>> {
         self.exec.resolved()
-    }
-
-    /// Block up to `timeout` for completion — the yield loop's condvar wait.
-    pub fn wait_timeout(&self, timeout: Duration) -> bool {
-        self.exec.wait_timeout(timeout)
     }
 
     /// A lock-free waiter cloned from this command's promise, so the yield loop can

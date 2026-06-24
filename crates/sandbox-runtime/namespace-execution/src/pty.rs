@@ -57,12 +57,18 @@ impl PtyMaster {
         let writer = master.try_clone()?;
         let sink = match transcript_path {
             Some(path) => {
-                spawn_file_output_reader(master, path.clone());
+                spawn_file_output_reader(master, &path);
                 TranscriptSink::File(path)
             }
             None => {
                 let transcript = Arc::new(Mutex::new(Vec::new()));
-                spawn_memory_output_reader(master, Arc::clone(&transcript));
+                let reader_transcript = Arc::clone(&transcript);
+                spawn_output_reader(master, move |bytes| {
+                    reader_transcript
+                        .lock()
+                        .expect("pty transcript mutex poisoned")
+                        .extend_from_slice(bytes);
+                });
                 TranscriptSink::Memory(transcript)
             }
         };
@@ -148,19 +154,31 @@ impl PtyMaster {
     }
 }
 
-fn spawn_memory_output_reader(mut master: File, transcript: Arc<Mutex<Vec<u8>>>) {
+fn spawn_file_output_reader(master: File, transcript_path: &Path) {
+    let mut transcript = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(transcript_path)
+        .ok();
+    let mut prefixer = TranscriptTimestampPrefixer::new();
+    spawn_output_reader(master, move |bytes| {
+        let prefixed = prefixer.prefix(bytes);
+        if transcript
+            .as_mut()
+            .is_some_and(|file| file.write_all(&prefixed).is_err())
+        {
+            transcript = None;
+        }
+    });
+}
+
+fn spawn_output_reader(mut master: File, mut sink: impl FnMut(&[u8]) + Send + 'static) {
     thread::spawn(move || {
         let mut buf = [0_u8; 8192];
-        loop {
-            if !poll_readable(&master) {
-                break;
-            }
+        while poll_readable(&master) {
             match master.read(&mut buf) {
                 Ok(0) => break,
-                Ok(n) => transcript
-                    .lock()
-                    .expect("pty transcript mutex poisoned")
-                    .extend_from_slice(&buf[..n]),
+                Ok(n) => sink(&buf[..n]),
                 Err(err) if err.kind() == io::ErrorKind::WouldBlock => {}
                 Err(err) if err.kind() == io::ErrorKind::Interrupted => {}
                 Err(_) => break,
@@ -169,39 +187,6 @@ fn spawn_memory_output_reader(mut master: File, transcript: Arc<Mutex<Vec<u8>>>)
     });
 }
 
-fn spawn_file_output_reader(mut master: File, transcript_path: PathBuf) {
-    thread::spawn(move || {
-        let mut transcript = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(transcript_path)
-            .ok();
-        let mut prefixer = TranscriptTimestampPrefixer::new();
-        let mut buf = [0_u8; 8192];
-        loop {
-            if !poll_readable(&master) {
-                break;
-            }
-            match master.read(&mut buf) {
-                Ok(0) => break,
-                Ok(n) => {
-                    let bytes = prefixer.prefix(&buf[..n]);
-                    if let Some(file) = transcript.as_mut() {
-                        if file.write_all(&bytes).is_err() {
-                            transcript = None;
-                        }
-                    }
-                }
-                Err(err) if err.kind() == io::ErrorKind::WouldBlock => {}
-                Err(err) if err.kind() == io::ErrorKind::Interrupted => {}
-                Err(_) => break,
-            }
-        }
-    });
-}
-
-/// Block until the master is readable or hangs up. `false` once the poll itself
-/// fails (slave closed → reader should stop).
 fn poll_readable(master: &File) -> bool {
     loop {
         let mut fds = [PollFd::new(master, PollFlags::IN)];

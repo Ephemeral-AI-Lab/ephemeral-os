@@ -49,15 +49,11 @@ impl CommandOperationService {
         workspace: Arc<WorkspaceSessionService>,
         config: ::sandbox_runtime_command::CommandConfig,
     ) -> Self {
-        let namespace_execution = Arc::new(NamespaceExecutionLedger::new());
-        let engine = build_engine(Arc::clone(&namespace_execution));
-        Self::from_parts(
+        Self::new_with_async_trace_sink(
             workspace,
             config,
-            engine,
-            namespace_execution,
+            Arc::new(NamespaceExecutionLedger::new()),
             None,
-            Arc::new(ProcProcessGroupController),
         )
     }
 
@@ -152,7 +148,7 @@ impl CommandOperationService {
     ) -> Vec<CommandSessionId> {
         let mut ids = self.engine.live_values(|command| {
             (command.workspace_session_id() == workspace_session_id)
-                .then(|| CommandSessionId(command.id().0.clone()))
+                .then(|| command_session_id(command.id()))
         });
         ids.sort();
         ids

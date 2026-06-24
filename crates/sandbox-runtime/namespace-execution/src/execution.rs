@@ -1,6 +1,5 @@
 use std::io;
 use std::sync::Arc;
-use std::time::Duration;
 
 use crate::error::NamespaceExecutionError;
 use crate::id::NamespaceExecutionId;
@@ -25,10 +24,6 @@ impl<T> ExecutionHandle<T> {
 
     pub fn is_finished(&self) -> bool {
         self.promise.is_resolved()
-    }
-
-    pub fn wait_timeout(&self, timeout: Duration) -> bool {
-        self.promise.wait_timeout(timeout)
     }
 
     /// A lock-free waiter cloned from this handle's promise — the yield loop waits
@@ -72,20 +67,12 @@ impl<T> InteractiveExecution<T> {
         Self { exec, pty }
     }
 
-    pub fn execution(&self) -> &ExecutionHandle<T> {
-        &self.exec
-    }
-
     pub fn id(&self) -> &NamespaceExecutionId {
         self.exec.id()
     }
 
     pub fn is_finished(&self) -> bool {
         self.exec.is_finished()
-    }
-
-    pub fn wait_timeout(&self, timeout: Duration) -> bool {
-        self.exec.wait_timeout(timeout)
     }
 
     /// A lock-free waiter cloned from this execution's promise (yield loop).
