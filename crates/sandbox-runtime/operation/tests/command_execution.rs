@@ -5,12 +5,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
-use sandbox_runtime_command::{CommandExecution, CommandTerminalResult};
+use sandbox_runtime::command::{CommandExecution, CommandTerminalResult};
+use sandbox_runtime::WorkspaceSessionId;
 use sandbox_runtime_namespace_execution::{
     open_pty_pair, CompletionPromise, ExecutionHandle, InteractiveExecution, NamespaceExecutionId,
     NamespaceExecutionTerminalStatus, PtyMaster,
 };
-use sandbox_runtime_workspace::WorkspaceSessionId;
 
 struct Fixture {
     command: CommandExecution,

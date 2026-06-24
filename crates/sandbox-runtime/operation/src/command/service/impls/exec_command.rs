@@ -1,12 +1,11 @@
 use std::path::PathBuf;
 use std::time::Instant;
 
-use sandbox_runtime_command::CommandExecution;
 use sandbox_runtime_namespace_execution::{NamespaceExecutionId, NamespaceTarget};
 
 use crate::command::service::exec::{CommandFinalizationTrace, ExecCommand, SessionDisposition};
 use crate::command::service::{command_session_id, CommandOperationService};
-use crate::command::{CommandOutput, CommandServiceError, ExecCommandInput};
+use crate::command::{CommandExecution, CommandOutput, CommandServiceError, ExecCommandInput};
 use crate::namespace_execution::{
     BeginNamespaceExecution, CompleteNamespaceExecution, NamespaceExecutionTerminalStatus,
 };

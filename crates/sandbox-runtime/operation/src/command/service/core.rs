@@ -1,11 +1,10 @@
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
-use sandbox_runtime_command::CommandExecution;
 use sandbox_runtime_namespace_execution::{
     ExecutionObserver, NamespaceExecutionEngine, NamespaceExecutionId,
 };
 
-use crate::command::CommandSessionId;
+use crate::command::{CommandConfig, CommandExecution, CommandSessionId};
 use crate::namespace_execution::{NamespaceExecutionLedger, NamespaceExecutionRecord};
 use crate::observability::AsyncTraceSink;
 use crate::workspace_crate::{
@@ -22,7 +21,7 @@ const COMMAND_ENGINE_SETUP_TIMEOUT_S: f64 = 30.0;
 
 pub struct CommandOperationService {
     workspace: Arc<WorkspaceSessionService>,
-    config: ::sandbox_runtime_command::CommandConfig,
+    config: CommandConfig,
     engine: Arc<NamespaceExecutionEngine<CommandExecution>>,
     namespace_execution: Arc<NamespaceExecutionLedger>,
     async_trace_sink: Option<AsyncTraceSink>,
@@ -33,10 +32,7 @@ pub(crate) type WorkspaceLifecycleAdmission<'a> = MutexGuard<'a, ()>;
 
 impl CommandOperationService {
     #[must_use]
-    pub fn new(
-        workspace: Arc<WorkspaceSessionService>,
-        config: ::sandbox_runtime_command::CommandConfig,
-    ) -> Self {
+    pub fn new(workspace: Arc<WorkspaceSessionService>, config: CommandConfig) -> Self {
         Self::new_with_async_trace_sink(
             workspace,
             config,
@@ -48,7 +44,7 @@ impl CommandOperationService {
     #[must_use]
     pub(crate) fn new_with_async_trace_sink(
         workspace: Arc<WorkspaceSessionService>,
-        config: ::sandbox_runtime_command::CommandConfig,
+        config: CommandConfig,
         namespace_execution: Arc<NamespaceExecutionLedger>,
         async_trace_sink: Option<AsyncTraceSink>,
     ) -> Self {
@@ -69,7 +65,7 @@ impl CommandOperationService {
 
     pub(super) fn from_parts(
         workspace: Arc<WorkspaceSessionService>,
-        config: ::sandbox_runtime_command::CommandConfig,
+        config: CommandConfig,
         engine: Arc<NamespaceExecutionEngine<CommandExecution>>,
         namespace_execution: Arc<NamespaceExecutionLedger>,
         async_trace_sink: Option<AsyncTraceSink>,
@@ -115,7 +111,7 @@ impl CommandOperationService {
     }
 
     #[must_use]
-    pub fn config(&self) -> &::sandbox_runtime_command::CommandConfig {
+    pub fn config(&self) -> &CommandConfig {
         &self.config
     }
 

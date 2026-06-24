@@ -1,4 +1,4 @@
-use sandbox_runtime_command::{CommandTranscriptRow, CommandTranscriptWindow};
+use sandbox_runtime_namespace_execution::{CommandTranscriptRow, CommandTranscriptWindow};
 
 use crate::command::{CommandOutput, CommandSessionId, CommandStatus};
 

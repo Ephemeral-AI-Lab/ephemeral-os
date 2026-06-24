@@ -2,10 +2,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Instant;
 
-use sandbox_runtime_command::CommandTerminalResult;
 use sandbox_runtime_namespace_execution::{NamespaceExecutionError, RunnerOutcome, ShellOperation};
 
-use crate::command::CommandSessionId;
+use crate::command::{CommandSessionId, CommandTerminalResult};
 use crate::observability::{
     measure_optional, AsyncTraceSink, CommandFinalizationTraceMetadata, OperationTrace,
 };

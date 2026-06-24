@@ -93,6 +93,10 @@ impl<T> InteractiveExecution<T> {
         self.pty.output_len()
     }
 
+    pub fn cancel(&self) {
+        self.pty.cancel();
+    }
+
     pub fn cancel_handle(&self) -> Arc<dyn Fn() + Send + Sync> {
         self.pty.cancel_handle()
     }

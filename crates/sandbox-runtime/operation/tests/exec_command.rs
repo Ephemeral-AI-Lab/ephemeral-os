@@ -621,7 +621,7 @@ fn destroy_workspace_session_waits_for_existing_session_exec_until_active_insert
             30.0,
         ),
     );
-    let config = sandbox_runtime_command::CommandConfig {
+    let config = sandbox_runtime::command::CommandConfig {
         scratch_root: std::env::temp_dir().join(format!(
             "blocking-launcher-test-{}-{}",
             std::process::id(),

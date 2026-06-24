@@ -5,14 +5,12 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use sandbox_runtime_namespace_execution::{
-    CompletionWaiter, InteractiveExecution, NamespaceExecutionError, NamespaceExecutionId,
+    required_transcript_window, transcript_window, CommandTranscriptWindow, CompletionWaiter,
+    InteractiveExecution, NamespaceExecutionError, NamespaceExecutionId,
 };
-use sandbox_runtime_workspace::WorkspaceSessionId;
 
-use crate::contract::CommandTerminalResult;
-use crate::transcript_rows::{
-    required_transcript_window, transcript_window, CommandTranscriptWindow,
-};
+use super::result::CommandTerminalResult;
+use crate::workspace_crate::WorkspaceSessionId;
 
 pub struct CommandExecution {
     exec: InteractiveExecution<CommandTerminalResult>,
@@ -54,18 +52,12 @@ impl CommandExecution {
         &self.workspace_session_id
     }
 
-    #[must_use]
-    pub fn pgid(&self) -> Option<i32> {
-        self.exec.pgid()
-    }
-
     pub fn write_stdin(&self, bytes: &[u8]) -> io::Result<()> {
         self.exec.write_stdin(bytes)
     }
 
-    #[must_use]
-    pub fn cancel_handle(&self) -> Arc<dyn Fn() + Send + Sync> {
-        self.exec.cancel_handle()
+    pub fn cancel(&self) {
+        self.exec.cancel();
     }
 
     #[must_use]

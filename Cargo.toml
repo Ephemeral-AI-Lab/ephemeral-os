@@ -2,7 +2,6 @@
 resolver = "2"
 members = [
     "crates/sandbox-runtime/operation",
-    "crates/sandbox-runtime/command",
     "crates/sandbox-config",
     "crates/sandbox-daemon",
     "crates/sandbox-manager",
@@ -56,7 +55,6 @@ rtnetlink = "0.21"
 netlink-sys = "0.8"
 
 sandbox-runtime = { path = "crates/sandbox-runtime/operation" }
-sandbox-runtime-command = { path = "crates/sandbox-runtime/command" }
 sandbox-config = { path = "crates/sandbox-config" }
 sandbox-runtime-layerstack = { path = "crates/sandbox-runtime/layerstack" }
 sandbox-runtime-namespace-process = { path = "crates/sandbox-runtime/namespace-process" }

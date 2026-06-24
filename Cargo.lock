@@ -1066,22 +1066,12 @@ name = "sandbox-runtime"
 version = "0.1.0"
 dependencies = [
  "sandbox-protocol",
- "sandbox-runtime-command",
  "sandbox-runtime-layerstack",
  "sandbox-runtime-namespace-execution",
  "sandbox-runtime-namespace-process",
  "sandbox-runtime-workspace",
  "serde_json",
  "thiserror 2.0.18",
-]
-
-[[package]]
-name = "sandbox-runtime-command"
-version = "0.1.0"
-dependencies = [
- "sandbox-runtime-namespace-execution",
- "sandbox-runtime-workspace",
- "serde_json",
 ]
 
 [[package]]

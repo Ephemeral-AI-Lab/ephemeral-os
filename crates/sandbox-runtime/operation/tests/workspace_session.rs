@@ -555,7 +555,7 @@ fn operations_with_fake(
     let workspace = Arc::new(manager_with(fake));
     let command = Arc::new(CommandOperationService::new(
         Arc::clone(&workspace),
-        sandbox_runtime_command::CommandConfig::default(),
+        sandbox_runtime::command::CommandConfig::default(),
     ));
     Ok(SandboxRuntimeOperations::new(
         command,

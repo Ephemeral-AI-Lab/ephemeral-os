@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use sandbox_runtime_command::CommandExecution;
 use sandbox_runtime_namespace_execution::NamespaceExecutionEngine;
 
+use crate::command::{CommandConfig, CommandExecution};
 use crate::namespace_execution::NamespaceExecutionLedger;
 use crate::observability::AsyncTraceSink;
 use crate::workspace_session::WorkspaceSessionService;
@@ -14,7 +14,7 @@ use super::core::CommandOperationService;
 #[must_use]
 pub fn command_service_from_engine(
     workspace: Arc<WorkspaceSessionService>,
-    config: ::sandbox_runtime_command::CommandConfig,
+    config: CommandConfig,
     engine: Arc<NamespaceExecutionEngine<CommandExecution>>,
     namespace_execution: Arc<NamespaceExecutionLedger>,
     async_trace_sink: Option<AsyncTraceSink>,

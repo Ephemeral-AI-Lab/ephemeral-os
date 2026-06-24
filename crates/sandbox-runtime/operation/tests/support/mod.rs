@@ -387,8 +387,8 @@ pub(crate) fn success_exit(stdout: &str) -> ScriptedCommandExit {
     }
 }
 
-fn test_command_config() -> sandbox_runtime_command::CommandConfig {
-    sandbox_runtime_command::CommandConfig {
+fn test_command_config() -> sandbox_runtime::command::CommandConfig {
+    sandbox_runtime::command::CommandConfig {
         scratch_root: std::env::temp_dir().join(format!(
             "operation-service-command-test-{}-{}",
             std::process::id(),

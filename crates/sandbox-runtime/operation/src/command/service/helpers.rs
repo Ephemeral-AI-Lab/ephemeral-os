@@ -1,12 +1,12 @@
 use std::time::{Duration, Instant};
 
-use sandbox_runtime_command::CommandExecution;
 use sandbox_runtime_namespace_execution::{
     NamespaceExecutionError, NamespaceExecutionTerminalStatus,
 };
 
 use super::core::{execution_id, CommandOperationService};
 use super::transcript::command_output;
+use crate::command::CommandExecution;
 use crate::command::{CommandOutput, CommandServiceError, CommandSessionId, CommandStatus};
 
 const QUIET_MS: Duration = Duration::from_millis(50);

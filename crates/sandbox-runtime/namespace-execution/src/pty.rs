@@ -71,6 +71,10 @@ impl PtyMaster {
         Arc::clone(&self.cancel)
     }
 
+    pub fn cancel(&self) {
+        (self.cancel)();
+    }
+
     pub fn write_stdin(&self, bytes: &[u8]) -> io::Result<()> {
         let mut writer = self.writer.lock().expect("pty writer mutex poisoned");
         let deadline = Instant::now() + STDIN_WRITE_DEADLINE;

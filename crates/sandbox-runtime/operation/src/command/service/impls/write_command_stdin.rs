@@ -1,8 +1,8 @@
-use sandbox_runtime_command::CommandExecution;
-
 use crate::command::service::helpers::{command_not_found, finalize_message};
 use crate::command::service::{execution_id, CommandOperationService};
-use crate::command::{CommandOutput, CommandServiceError, WriteCommandStdinInput};
+use crate::command::{
+    CommandExecution, CommandOutput, CommandServiceError, WriteCommandStdinInput,
+};
 
 impl CommandOperationService {
     pub fn write_command_stdin(
@@ -40,11 +40,8 @@ impl CommandOperationService {
         };
 
         if is_kill_input {
-            match self
-                .engine()
-                .with_value(&id, CommandExecution::cancel_handle)
-            {
-                Some(cancel) => cancel(),
+            match self.engine().with_value(&id, CommandExecution::cancel) {
+                Some(()) => {}
                 None => return command_not_found(command_session_id),
             }
         } else {

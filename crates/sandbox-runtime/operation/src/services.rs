@@ -90,7 +90,7 @@ impl SandboxRuntimeOperations {
         );
         let command = Arc::new(CommandOperationService::new_with_async_trace_sink(
             Arc::clone(&workspace_session),
-            ::sandbox_runtime_command::CommandConfig {
+            crate::command::CommandConfig {
                 scratch_root: config.command.scratch_root,
             },
             Arc::clone(&namespace_execution),

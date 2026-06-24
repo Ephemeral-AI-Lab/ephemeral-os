@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use sandbox_protocol::{CliOperationExecutionSpace, CliOperationScope, Request};
-use sandbox_runtime::command::{CommandOperationService, ExecCommandInput};
+use sandbox_runtime::command::{CommandConfig, CommandOperationService, ExecCommandInput};
 use sandbox_runtime::layerstack::LayerStackService;
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
 use sandbox_runtime::SandboxRuntimeOperations;
@@ -76,7 +76,7 @@ fn service_graph_runtime_operations_exposes_command_lane(
     let layerstack = layerstack_service()?;
     let command = Arc::new(CommandOperationService::new(
         Arc::clone(&workspace),
-        sandbox_runtime_command::CommandConfig::default(),
+        CommandConfig::default(),
     ));
     let operations = SandboxRuntimeOperations::new(
         Arc::clone(&command),
@@ -99,7 +99,7 @@ fn service_graph_runtime_operations_rejects_mismatched_workspace_session_arc() {
     let aggregate_workspace = workspace_session();
     let command = Arc::new(CommandOperationService::new(
         command_workspace,
-        sandbox_runtime_command::CommandConfig::default(),
+        CommandConfig::default(),
     ));
     let layerstack = layerstack_service().expect("layerstack service builds");
 
@@ -286,7 +286,7 @@ fn squash_dispatch_projects_stable_no_op_json(
     let operations = SandboxRuntimeOperations::new(
         Arc::new(CommandOperationService::new(
             Arc::clone(&workspace),
-            sandbox_runtime_command::CommandConfig::default(),
+            CommandConfig::default(),
         )),
         workspace,
         layerstack_service()?,
