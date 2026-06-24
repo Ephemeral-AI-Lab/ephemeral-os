@@ -2,12 +2,13 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::time::Instant;
 
-use serde_json::Value;
+use serde_json::{json, Value};
 
 /// One captured `sandbox-cli` invocation. `request_json` is `None` on the
 /// black-box path because the CLI never echoes the wire request to stdio (it is
 /// written only to the socket); the field exists for parity with the parent
 /// record and future request-constructing callers.
+#[derive(Clone)]
 pub struct CallRecord {
     pub argv: Vec<String>,
     pub request_json: Option<Value>,
@@ -96,5 +97,22 @@ impl CallRecord {
     #[must_use]
     pub fn response(&self) -> &Value {
         &self.response_json
+    }
+
+    /// One `exchange.jsonl` row mapping this record 1:1: `argv`, the always-null
+    /// black-box `request`, the parsed `response`, `exit_code`, both captured
+    /// streams, and `latency_ms`. Centralizing the field names here keeps
+    /// `report.rs` from duplicating them.
+    #[must_use]
+    pub fn to_exchange_line(&self) -> Value {
+        json!({
+            "argv": self.argv,
+            "request": self.request_json,
+            "response": self.response_json,
+            "exit_code": self.exit_code,
+            "stdout": self.stdout,
+            "stderr": self.stderr,
+            "latency_ms": self.latency_ms,
+        })
     }
 }

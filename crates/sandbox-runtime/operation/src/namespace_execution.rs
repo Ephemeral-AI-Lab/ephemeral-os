@@ -5,7 +5,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::workspace_crate::WorkspaceSessionId;
 
-pub use sandbox_runtime_namespace_execution::NamespaceExecutionId;
+pub use sandbox_runtime_namespace_execution::{
+    NamespaceExecutionId, NamespaceExecutionTerminalStatus,
+};
 
 const DEFAULT_MAX_PENDING_PROJECTION: usize = 256;
 const DEFAULT_MAX_RECENT_PROJECTED: usize = 256;
@@ -60,26 +62,6 @@ impl NamespaceExecutionLifecycle {
             Self::Starting => "starting",
             Self::Running => "running",
             Self::Terminal => "terminal",
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NamespaceExecutionTerminalStatus {
-    Ok,
-    Error,
-    TimedOut,
-    Cancelled,
-}
-
-impl NamespaceExecutionTerminalStatus {
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Ok => "ok",
-            Self::Error => "error",
-            Self::TimedOut => "timed_out",
-            Self::Cancelled => "cancelled",
         }
     }
 }

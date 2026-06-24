@@ -1,0 +1,211 @@
+use std::env;
+use std::fs::File;
+use std::io;
+use std::io::{Read, Write};
+use std::os::fd::{AsRawFd, OwnedFd, RawFd};
+use std::os::unix::process::{CommandExt, ExitStatusExt};
+use std::process::{Child, Command, ExitStatus, Stdio};
+
+use rustix::io::{fcntl_setfd, FdFlags};
+use rustix::pipe::pipe;
+use sandbox_runtime_namespace_process::runner::protocol::{NamespaceRunnerRequest, RunResult};
+
+use crate::error::NamespaceExecutionError;
+use crate::pty::{open_pty_pair, terminate_process_group, PtyMaster};
+
+/// The launcher Bridge seam: fork the in-namespace runner and yield a completion
+/// event (plus a `PtyMaster` for the interactive path). The fork backing is the
+/// only impl in Phase 2; a persistent-server backend would be another `impl`.
+pub trait NsRunnerLauncher: Send + Sync {
+    fn spawn_pty(
+        &self,
+        request: NamespaceRunnerRequest,
+    ) -> Result<(Box<dyn RunnerChild>, PtyMaster), NamespaceExecutionError>;
+
+    fn spawn_piped(
+        &self,
+        mode_flag: &'static str,
+        request: NamespaceRunnerRequest,
+    ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError>;
+}
+
+/// The Bridge's completion event: one blocking wait — no poll, no result-fd
+/// reader thread.
+pub trait RunnerChild: Send {
+    fn wait_completion(&mut self) -> Result<RunResult, NamespaceExecutionError>;
+}
+
+/// Real fork backing — `current_exe ns-runner …`. Compile-coverage on darwin;
+/// exercised at runtime once a real caller wires it (Phase 3/4).
+pub(crate) struct ForkRunnerLauncher;
+
+struct ForkRunnerChild {
+    child: Child,
+    result_read: OwnedFd,
+}
+
+impl NsRunnerLauncher for ForkRunnerLauncher {
+    fn spawn_pty(
+        &self,
+        request: NamespaceRunnerRequest,
+    ) -> Result<(Box<dyn RunnerChild>, PtyMaster), NamespaceExecutionError> {
+        let request_bytes = encode_request(&request)?;
+        let (request_read, request_write) = request_pipe()?;
+        let (result_read, result_write) = result_pipe()?;
+        let (start_ack_read, start_ack_write) = start_ack_pipe()?;
+        let (master, slave) = open_pty_pair().map_err(spawn_error)?;
+        let mut command = ns_runner_command(
+            None,
+            request_read.as_raw_fd(),
+            result_write.as_raw_fd(),
+            start_ack_read.as_raw_fd(),
+        )?;
+        command
+            .stdin(Stdio::from(slave.try_clone().map_err(spawn_error)?))
+            .stdout(Stdio::from(slave.try_clone().map_err(spawn_error)?))
+            .stderr(Stdio::from(slave))
+            .process_group(0);
+        let child = command.spawn().map_err(spawn_error)?;
+        drop(request_read);
+        drop(result_write);
+        drop(start_ack_read);
+        let pgid = child_pgid(&child)?;
+        let pty = PtyMaster::spawn(
+            master,
+            Some(pgid),
+            Box::new(move || terminate_process_group(pgid)),
+        )
+        .map_err(spawn_error)?;
+        release_start_ack(start_ack_write, request_write, &request_bytes)?;
+        Ok((Box::new(ForkRunnerChild { child, result_read }), pty))
+    }
+
+    fn spawn_piped(
+        &self,
+        mode_flag: &'static str,
+        request: NamespaceRunnerRequest,
+    ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
+        let request_bytes = encode_request(&request)?;
+        let (request_read, request_write) = request_pipe()?;
+        let (result_read, result_write) = result_pipe()?;
+        let (start_ack_read, start_ack_write) = start_ack_pipe()?;
+        let mut command = ns_runner_command(
+            Some(mode_flag),
+            request_read.as_raw_fd(),
+            result_write.as_raw_fd(),
+            start_ack_read.as_raw_fd(),
+        )?;
+        command
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .process_group(0);
+        let child = command.spawn().map_err(spawn_error)?;
+        drop(request_read);
+        drop(result_write);
+        drop(start_ack_read);
+        release_start_ack(start_ack_write, request_write, &request_bytes)?;
+        Ok(Box::new(ForkRunnerChild { child, result_read }))
+    }
+}
+
+impl RunnerChild for ForkRunnerChild {
+    fn wait_completion(&mut self) -> Result<RunResult, NamespaceExecutionError> {
+        let status = self.child.wait().map_err(spawn_error)?;
+        let bytes = read_result_fd(&self.result_read).unwrap_or_default();
+        if let Ok(result) = serde_json::from_slice::<RunResult>(&bytes) {
+            return Ok(result);
+        }
+        Ok(synthesize_result(status))
+    }
+}
+
+fn ns_runner_command(
+    mode_flag: Option<&str>,
+    request_fd: RawFd,
+    result_fd: RawFd,
+    start_ack_fd: RawFd,
+) -> Result<Command, NamespaceExecutionError> {
+    let mut command = Command::new(env::current_exe().map_err(spawn_error)?);
+    command.arg("ns-runner");
+    if let Some(mode_flag) = mode_flag {
+        command.arg(mode_flag);
+    }
+    command
+        .arg("--request-fd")
+        .arg(request_fd.to_string())
+        .arg("--result-fd")
+        .arg(result_fd.to_string())
+        .arg("--start-ack-fd")
+        .arg(start_ack_fd.to_string());
+    Ok(command)
+}
+
+/// KEEP start-ack (Phase 6 removes it): release the in-namespace child by writing
+/// the ack byte, then write the request. The child `read_exact`s the ack first.
+fn release_start_ack(
+    start_ack: OwnedFd,
+    request: OwnedFd,
+    request_bytes: &[u8],
+) -> Result<(), NamespaceExecutionError> {
+    File::from(start_ack).write_all(b"1").map_err(spawn_error)?;
+    File::from(request)
+        .write_all(request_bytes)
+        .map_err(spawn_error)?;
+    Ok(())
+}
+
+fn child_pgid(child: &Child) -> Result<i32, NamespaceExecutionError> {
+    i32::try_from(child.id()).map_err(|_| {
+        NamespaceExecutionError::Spawn(format!("child pid does not fit i32: {}", child.id()))
+    })
+}
+
+fn read_result_fd(result_read: &OwnedFd) -> io::Result<Vec<u8>> {
+    let mut file = File::from(result_read.try_clone()?);
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes)?;
+    Ok(bytes)
+}
+
+fn synthesize_result(status: ExitStatus) -> RunResult {
+    let exit_code = status
+        .code()
+        .or_else(|| status.signal().map(|signal| -signal))
+        .unwrap_or(1);
+    RunResult {
+        exit_code,
+        payload: serde_json::json!({ "status": "error" }),
+    }
+}
+
+fn encode_request(request: &NamespaceRunnerRequest) -> Result<Vec<u8>, NamespaceExecutionError> {
+    serde_json::to_vec(request).map_err(|error| {
+        NamespaceExecutionError::Spawn(format!("serialize runner request: {error}"))
+    })
+}
+
+fn request_pipe() -> Result<(OwnedFd, OwnedFd), NamespaceExecutionError> {
+    let (read, write) = pipe().map_err(spawn_error)?;
+    fcntl_setfd(&read, FdFlags::empty()).map_err(spawn_error)?;
+    fcntl_setfd(&write, FdFlags::CLOEXEC).map_err(spawn_error)?;
+    Ok((read, write))
+}
+
+fn result_pipe() -> Result<(OwnedFd, OwnedFd), NamespaceExecutionError> {
+    let (read, write) = pipe().map_err(spawn_error)?;
+    fcntl_setfd(&read, FdFlags::CLOEXEC).map_err(spawn_error)?;
+    fcntl_setfd(&write, FdFlags::empty()).map_err(spawn_error)?;
+    Ok((read, write))
+}
+
+fn start_ack_pipe() -> Result<(OwnedFd, OwnedFd), NamespaceExecutionError> {
+    let (read, write) = pipe().map_err(spawn_error)?;
+    fcntl_setfd(&read, FdFlags::empty()).map_err(spawn_error)?;
+    fcntl_setfd(&write, FdFlags::CLOEXEC).map_err(spawn_error)?;
+    Ok((read, write))
+}
+
+fn spawn_error(error: impl std::fmt::Display) -> NamespaceExecutionError {
+    NamespaceExecutionError::Spawn(error.to_string())
+}

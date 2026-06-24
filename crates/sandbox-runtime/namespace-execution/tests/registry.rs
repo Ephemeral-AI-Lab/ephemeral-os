@@ -1,6 +1,63 @@
-use sandbox_runtime_namespace_execution::test_support::ExecutionRegistry;
+use sandbox_runtime_namespace_execution::{
+    CompletedExecution, ExecutionRegistry, NamespaceExecutionError, NamespaceExecutionId,
+    NamespaceExecutionTerminalStatus,
+};
+
+fn id(n: u32) -> NamespaceExecutionId {
+    NamespaceExecutionId(format!("namespace_execution_{n}"))
+}
 
 #[test]
 fn reports_configured_capacity() {
     assert_eq!(ExecutionRegistry::new(2).max_active(), 2);
+}
+
+#[test]
+fn admits_up_to_capacity_then_refuses() {
+    let registry = ExecutionRegistry::new(2);
+    registry.try_reserve(&id(1)).expect("first slot");
+    registry.try_reserve(&id(2)).expect("second slot");
+    let refused = registry.try_reserve(&id(3)).expect_err("over capacity");
+    assert!(matches!(
+        refused,
+        NamespaceExecutionError::Admission { max_active: 2 }
+    ));
+}
+
+#[test]
+fn complete_moves_live_to_completed() {
+    let registry = ExecutionRegistry::new(1);
+    registry.try_reserve(&id(1)).expect("slot");
+    assert!(registry.is_live(&id(1)));
+    assert!(!registry.is_completed(&id(1)));
+
+    registry.complete(
+        &id(1),
+        CompletedExecution {
+            status: NamespaceExecutionTerminalStatus::Ok,
+            exit_code: Some(0),
+        },
+    );
+
+    assert!(!registry.is_live(&id(1)));
+    assert!(registry.is_completed(&id(1)));
+}
+
+#[test]
+fn attach_records_the_process_group() {
+    let registry = ExecutionRegistry::new(1);
+    registry.try_reserve(&id(1)).expect("slot");
+    registry.attach(&id(1), Some(4321));
+    assert_eq!(registry.live_pgid(&id(1)), Some(4321));
+}
+
+#[test]
+fn abort_releases_a_reservation() {
+    let registry = ExecutionRegistry::new(1);
+    registry.try_reserve(&id(1)).expect("slot");
+    registry.abort(&id(1));
+    assert!(!registry.is_live(&id(1)));
+    registry
+        .try_reserve(&id(2))
+        .expect("slot freed after abort");
 }

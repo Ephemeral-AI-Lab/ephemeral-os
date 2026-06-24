@@ -1,4 +1,6 @@
 use std::sync::{Condvar, Mutex};
+#[cfg(feature = "test-support")]
+use std::time::{Duration, Instant};
 
 use crate::error::NamespaceExecutionError;
 
@@ -51,5 +53,31 @@ impl<T> CompletionPromise<T> {
         }
         slot.take()
             .expect("wait loop exits only once the slot is resolved")
+    }
+}
+
+#[cfg(feature = "test-support")]
+impl<T> CompletionPromise<T> {
+    /// Block up to `timeout` for resolution. `true` once resolved, `false` on
+    /// timeout. Does not consume the value — the single-consumer `wait` still
+    /// takes it. (The peeking `Option<&T>` form is Phase 3.)
+    pub fn wait_timeout(&self, timeout: Duration) -> bool {
+        let mut slot = self.slot.lock().expect("completion promise mutex poisoned");
+        let deadline = Instant::now() + timeout;
+        while slot.is_none() {
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            if remaining.is_zero() {
+                return false;
+            }
+            let (next, outcome) = self
+                .ready
+                .wait_timeout(slot, remaining)
+                .expect("completion promise mutex poisoned");
+            slot = next;
+            if outcome.timed_out() && slot.is_none() {
+                return false;
+            }
+        }
+        true
     }
 }

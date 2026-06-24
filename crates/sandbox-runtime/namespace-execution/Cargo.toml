@@ -7,6 +7,9 @@ license.workspace = true
 
 [dependencies]
 sandbox-runtime-namespace-process.workspace = true
+serde_json.workspace = true
+rustix = { workspace = true, features = ["pty", "event", "pipe"] }
+nix = { workspace = true, features = ["signal"] }
 
 [features]
 test-support = []
