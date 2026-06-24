@@ -377,7 +377,9 @@ fn derive_run_id(clock: &str) -> anyhow::Result<String> {
     Ok(format!("r{clock}-{slug}"))
 }
 
-fn git_head() -> anyhow::Result<String> {
+/// `git rev-parse HEAD` for the working tree, recorded in `run-manifest.json`
+/// and `summary.json` and folded into the deterministic `run_id` digest.
+pub fn git_head() -> anyhow::Result<String> {
     let output = std::process::Command::new("git")
         .args(["rev-parse", "HEAD"])
         .output()
