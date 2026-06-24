@@ -6,9 +6,9 @@
 //! `NamespaceExecutionEngine` drives both families over one Template-Method
 //! dispatch (reserve → spawn → `on_running` → watcher{ wait → finalize →
 //! `complete` → `resolve` → `on_terminal` }) against a `pub(crate)` launcher
-//! Bridge seam. The seam, registry, promise, and PTY substrate stay `pub(crate)`;
-//! they are exercised through this crate's `tests/` suites via the
-//! `test-support`-gated `test_support` facade (fakes included).
+//! Bridge seam. The seam, promise, and PTY substrate stay `pub(crate)`; they are
+//! surfaced to this crate's `tests/` suites (whose fakes live in `tests/support`)
+//! through the `test-support`-gated `test_support` re-export facade.
 
 mod engine;
 mod error;
@@ -23,9 +23,6 @@ mod shell;
 mod status;
 mod target;
 
-#[cfg(feature = "test-support")]
-mod fakes;
-
 pub use engine::NamespaceExecutionEngine;
 pub use error::NamespaceExecutionError;
 pub use execution::{ExecutionHandle, InteractiveExecution};
@@ -36,15 +33,12 @@ pub use shell::{RunnerOutcome, ShellOperation};
 pub use status::NamespaceExecutionTerminalStatus;
 pub use target::NamespaceTarget;
 
-/// Internal seam surfaced to this crate's `tests/` suites — the `pub(crate)`
-/// launcher Bridge, promise, PTY substrate, and the fakes that drive them.
-/// Available only under the `test-support` feature.
+/// The `pub(crate)` production seam surfaced to this crate's `tests/` suites —
+/// the launcher Bridge, completion promise, and PTY substrate that the fakes in
+/// `tests/support` build on. A re-export facade only (no test logic); available
+/// solely under the `test-support` feature.
 #[cfg(feature = "test-support")]
 pub mod test_support {
-    pub use crate::fakes::{
-        outcome, run_result, run_result_without_status, sample_target, ErrShellOp, FakeLauncher,
-        FakeObserver, ObserverEvent, OkShellOp,
-    };
     pub use crate::launcher::{NsRunnerLauncher, RunnerChild};
     pub use crate::promise::CompletionPromise;
     pub use crate::pty::{open_pty_pair, PtyMaster};

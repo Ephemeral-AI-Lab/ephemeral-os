@@ -1,26 +1,27 @@
-//! In-crate test scaffolding for the engine's `tests/` suites — fakes for the
-//! `pub(crate)` launcher seam plus small constructors. Gated on `test-support`
-//! (never shipped), so it reaches the crate internals an integration test cannot.
+//! Shared test fixtures for the engine suites: fakes for the `pub(crate)`
+//! launcher seam (surfaced via the crate's `test_support` facade) plus small
+//! constructors. Each integration binary that needs them does `mod support;`,
+//! so unused-in-one-binary items are expected — hence `allow(dead_code)`.
+
+#![allow(dead_code)]
 
 use std::path::PathBuf;
 use std::sync::{Arc, Condvar, Mutex};
 
+use sandbox_runtime_namespace_execution::test_support::{
+    open_pty_pair, NsRunnerLauncher, PtyMaster, RunnerChild,
+};
+use sandbox_runtime_namespace_execution::{
+    ExecutionObserver, NamespaceExecutionError, NamespaceExecutionId,
+    NamespaceExecutionTerminalStatus, NamespaceTarget, RunnerOutcome, ShellOperation,
+};
 use sandbox_runtime_namespace_process::runner::protocol::{
     NamespaceRunnerRequest, NsFds, RunResult,
 };
 
-use crate::error::NamespaceExecutionError;
-use crate::id::NamespaceExecutionId;
-use crate::launcher::{NsRunnerLauncher, RunnerChild};
-use crate::observer::ExecutionObserver;
-use crate::pty::{open_pty_pair, PtyMaster};
-use crate::shell::{RunnerOutcome, ShellOperation};
-use crate::status::NamespaceExecutionTerminalStatus;
-use crate::target::NamespaceTarget;
-
 /// A controllable completion cell the test drives. `complete`/`cancel` unblock a
 /// `FakeRunnerChild` blocked in `wait_completion` — a real concurrent unblock.
-pub struct FakeCompletion {
+struct FakeCompletion {
     slot: Mutex<Option<RunResult>>,
     ready: Condvar,
 }
@@ -33,7 +34,7 @@ impl FakeCompletion {
         }
     }
 
-    pub fn complete(&self, result: RunResult) {
+    fn complete(&self, result: RunResult) {
         let mut slot = self.slot.lock().expect("fake completion mutex poisoned");
         if slot.is_none() {
             *slot = Some(result);
@@ -41,8 +42,7 @@ impl FakeCompletion {
         }
     }
 
-    /// Trip the cell with a cancelled result — the cancel action the fake PTY runs.
-    pub fn cancel(&self) {
+    fn cancel(&self) {
         self.complete(RunResult {
             exit_code: 130,
             payload: serde_json::json!({ "status": "cancelled" }),

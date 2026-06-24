@@ -8,7 +8,7 @@ use crate::status::NamespaceExecutionTerminalStatus;
 pub struct RunnerOutcome(RunResult);
 
 impl RunnerOutcome {
-    pub(crate) fn new(result: RunResult) -> Self {
+    pub fn new(result: RunResult) -> Self {
         Self(result)
     }
 

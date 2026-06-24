@@ -1,7 +1,7 @@
-use sandbox_runtime_namespace_execution::test_support::{
-    outcome, run_result, run_result_without_status,
-};
+mod support;
+
 use sandbox_runtime_namespace_execution::NamespaceExecutionTerminalStatus;
+use support::{outcome, run_result, run_result_without_status};
 
 #[test]
 fn as_str_strings_match_the_wire_vocabulary() {

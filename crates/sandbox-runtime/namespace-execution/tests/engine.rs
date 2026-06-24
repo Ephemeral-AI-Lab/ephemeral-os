@@ -1,14 +1,16 @@
 //! Behavioral coverage of the engine dispatch + watcher against the fake
 //! launcher — the authoritative Phase 2 signal (runs on darwin; no real fork).
 
+mod support;
+
 use std::sync::Arc;
 
-use sandbox_runtime_namespace_execution::test_support::{
-    run_result, sample_target, ErrShellOp, FakeLauncher, FakeObserver, ObserverEvent, OkShellOp,
-};
 use sandbox_runtime_namespace_execution::{
     NamespaceExecutionEngine, NamespaceExecutionError, NamespaceExecutionId,
     NamespaceExecutionTerminalStatus,
+};
+use support::{
+    run_result, sample_target, ErrShellOp, FakeLauncher, FakeObserver, ObserverEvent, OkShellOp,
 };
 
 fn id(suffix: &str) -> NamespaceExecutionId {
