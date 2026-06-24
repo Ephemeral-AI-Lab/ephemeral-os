@@ -409,6 +409,21 @@ fn external_test() {}
 }
 
 #[test]
+fn workspace_production_sources_are_free_of_inline_tests() {
+    let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .arg("check-inline-tests")
+        .output()
+        .expect("xtask command should run");
+
+    assert!(
+        output.status.success(),
+        "production Rust sources must stay free of inline test scaffolding; \
+move unit tests into crate-root tests/ suites:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
 fn allows_crate_root_benches_directory() {
     let root = temp_root("crate-benches");
     let crate_root = root.join("crate");

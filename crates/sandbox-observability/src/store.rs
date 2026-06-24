@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 );
 "#;
 
-pub(crate) const V1_SCHEMA_SQL: &str = r#"
+pub const V1_SCHEMA_SQL: &str = r#"
 CREATE TABLE IF NOT EXISTS traces (
   trace_id TEXT PRIMARY KEY,
   kind TEXT NOT NULL,
@@ -840,7 +840,7 @@ impl ObservabilityStore {
         })
     }
 
-    #[cfg(any(test, feature = "test-support"))]
+    #[cfg(feature = "test-support")]
     #[doc(hidden)]
     pub fn force_sqlite_write_errors_for_test(&self) -> Result<(), StoreError> {
         let connection = self.connection()?;
@@ -848,7 +848,7 @@ impl ObservabilityStore {
         Ok(())
     }
 
-    #[cfg(any(test, feature = "test-support"))]
+    #[cfg(feature = "test-support")]
     #[doc(hidden)]
     pub fn trace_for_test(&self, trace_id: &str) -> Result<Option<TraceRecord>, StoreError> {
         let connection = self.connection()?;
@@ -895,7 +895,7 @@ impl ObservabilityStore {
             .map_err(StoreError::from)
     }
 
-    #[cfg(any(test, feature = "test-support"))]
+    #[cfg(feature = "test-support")]
     #[doc(hidden)]
     pub fn spans_for_test(&self, trace_id: &str) -> Result<Vec<SpanRecord>, StoreError> {
         let connection = self.connection()?;
@@ -935,7 +935,7 @@ impl ObservabilityStore {
             .map_err(StoreError::from)
     }
 
-    #[cfg(any(test, feature = "test-support"))]
+    #[cfg(feature = "test-support")]
     #[doc(hidden)]
     pub fn sandbox_snapshot_for_test(
         &self,
@@ -975,7 +975,7 @@ impl ObservabilityStore {
             .map_err(StoreError::from)
     }
 
-    #[cfg(any(test, feature = "test-support"))]
+    #[cfg(feature = "test-support")]
     #[doc(hidden)]
     pub fn workspace_snapshots_for_test(
         &self,
@@ -1023,7 +1023,7 @@ impl ObservabilityStore {
         rows.collect::<Result<_, _>>().map_err(StoreError::from)
     }
 
-    #[cfg(any(test, feature = "test-support"))]
+    #[cfg(feature = "test-support")]
     #[doc(hidden)]
     pub fn namespace_execution_snapshots_for_test(
         &self,
@@ -1057,7 +1057,7 @@ impl ObservabilityStore {
         rows.collect::<Result<_, _>>().map_err(StoreError::from)
     }
 
-    #[cfg(any(test, feature = "test-support"))]
+    #[cfg(feature = "test-support")]
     #[doc(hidden)]
     pub fn namespace_execution_traces_for_test(
         &self,
@@ -1103,7 +1103,7 @@ impl ObservabilityStore {
         rows.collect::<Result<_, _>>().map_err(StoreError::from)
     }
 
-    #[cfg(any(test, feature = "test-support"))]
+    #[cfg(feature = "test-support")]
     #[doc(hidden)]
     pub fn resource_samples_for_test(
         &self,
@@ -1563,7 +1563,7 @@ fn apply_schema(connection: &mut Connection) -> Result<(), StoreError> {
     Ok(())
 }
 
-pub(crate) fn schema_checksum(sql: &str) -> String {
+pub fn schema_checksum(sql: &str) -> String {
     const FNV_OFFSET: u64 = 0xcbf29ce484222325;
     const FNV_PRIME: u64 = 0x00000100000001b3;
 
