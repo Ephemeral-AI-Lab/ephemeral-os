@@ -24,6 +24,11 @@ crosses them is wrong even if it compiles.
   if code needs an inline comment to be understood, restructure it instead.
   Doc comments (`///`/`//!`) on public items are fine. Inline comments are
   acceptable only in tests, where they explain intent of a scenario.
+- **No test code in `src/`.** Keep `src/` production-only. Inline test modules
+  (`#[cfg(test)] mod tests`), test support/helpers, and fakes/mocks/stubs belong
+  in the crate's `tests/` directory, never under `src/`. Move any such code to
+  `tests/`; share fixtures through a `tests/` support module, not a `src` item
+  gated behind `cfg(test)`.
 - **Parallel workers.** Other agents may be editing this repo concurrently. Only
   touch what your task requires, never revert or overwrite changes you did not
   make, and prefer additive, localized edits.
