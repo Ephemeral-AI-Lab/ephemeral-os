@@ -91,6 +91,8 @@ impl NamespaceExecutionEngine {
         mode_flag: &'static str,
         target: NamespaceTarget,
         id: NamespaceExecutionId,
+        args: serde_json::Value,   // ← §5.1.1/§12-D refinement (the prompt's signature omits this);
+                                   //    required to carry the remount probe. Mount passes json!({}).
         parse: impl FnOnce(RunnerOutcome) -> Result<O, NamespaceExecutionError> + Send + 'static,
     ) -> Result<ExecutionHandle<O>, NamespaceExecutionError>;
 }
@@ -416,6 +418,18 @@ let target = NamespaceTarget::from(entry);                                // the
   `WorkspaceModeFds::is_empty`, `handle.rs:56-58`) is **excluded** by `entry()`, which
   errors via `required_holder_fds()` (`model.rs:276-292`) if fds are incomplete.
 
+**Rejected alternative — a direct `From<&WorkspaceModeHandle> for NamespaceTarget`.** It is
+orphan-legal in `workspace` (`&WorkspaceModeHandle` is local) and skips the `WorkspaceHandle`
+clone, but (a) `From` is *infallible*, so it must map `WorkspaceModeFds → NsFds` without the
+`entry()` completeness gate — forcing a `ns_fds_from_mode(...).unwrap_or(empty)` or a panic
+for the incomplete-fds case the gate would have rejected; (b) it would be a *new*
+fds-mapping site (or a reuse of `ns_fds_from_mode`, whose `Option<NsFds>` return mismatches
+`NamespaceTarget`'s non-optional `ns_fds`), versus the chosen path's zero new mapping; (c)
+the design names `From<WorkspaceEntry>` as the seam shared with Phase 3
+(`namespace-execution.md:542-543`). The `WorkspaceHandle` clone is cheap relative to a
+process fork and runs only at workspace create / remount (infrequent), so correctness +
+reuse win over avoiding the clone.
+
 ### 4.3 Behavior-equivalence of the new `entry()` failure path
 
 `entry()` is fallible; today's `ns_runner_request` is not (`setns_runner.rs:134-150`,
@@ -456,10 +470,11 @@ handshake (`write_all_fd`/`expect_line`), **not** `run_child`.
 
 ```rust
 // (#[cfg(target_os = "linux")] arm of) mount_overlay
+// `json!({})` is the `args` argument of the §5.1.1/§12-D run_mount refinement.
 let id = self.engine.allocate_id();
 let entry = WorkspaceHandle::from(handle).entry().map_err(setup_error)?;
 self.engine
-    .run_mount("--mount-overlay", NamespaceTarget::from(entry), id, |_| Ok(()))
+    .run_mount("--mount-overlay", NamespaceTarget::from(entry), id, serde_json::json!({}), |_| Ok(()))
     .map_err(setup_error)?
     .wait()
     .map_err(setup_error)?;
@@ -468,11 +483,17 @@ Ok(())
 
 ```rust
 // (#[cfg(target_os = "linux")] arm of) remount_overlay
+// NOTE: the `probe_args` argument requires the run_mount `args` refinement of §5.1.1/§12-D.
+// If that refinement is not taken, see §5.1.1 for the (rejected) alternatives.
 let id = self.engine.allocate_id();
 let entry = WorkspaceHandle::from(handle).entry().map_err(setup_error)?;
+let probe_args = serde_json::json!({
+    "probe_path": probe.path.as_ref().map(|p| p.to_string_lossy().into_owned()),
+    "probe_content": probe.expected_content.as_deref(),
+});
 let result = self
     .engine
-    .run_mount("--remount-overlay", NamespaceTarget::from(entry), id, |outcome| {
+    .run_mount("--remount-overlay", NamespaceTarget::from(entry), id, probe_args, |outcome| {
         Ok(RemountOverlayResult::from_payload(outcome.payload()))
     })
     .map_err(setup_error)?
@@ -597,6 +618,19 @@ pub fn new(workspace_root: impl Into<String>, caps: ResourceCaps, scratch_root: 
 
 `caps.setup_timeout_s` is in scope (`ResourceCaps`, `manager.rs:33-39`). `services.rs:74`
 is **unchanged** (it calls the same 3-arg `new`). *(P4-R8, P4-R12)*
+
+#### 5.4.1 Mount/remount call-site updates (drop the redundant timeout arg)
+
+- `crates/sandbox-runtime/workspace/src/lifecycle/create.rs:43-45` —
+  `self.runtime.mount_overlay(handle, &layer_paths, self.caps.setup_timeout_s)?`
+  → `self.runtime.mount_overlay(handle, &layer_paths)?`.
+- `crates/sandbox-runtime/workspace/src/lifecycle/remount/transaction.rs:49-54` —
+  `self.runtime.remount_overlay(&handle, &layer_paths, probe, self.caps.setup_timeout_s)?`
+  → `self.runtime.remount_overlay(&handle, &layer_paths, probe)?`.
+
+Both are the **only** callers of these two methods (grounded grep §5.1 "Deletion safety";
+`create.rs:45`, `transaction.rs:49`). `signal_net_ready`'s caller (`create.rs:78-79`) is
+**unchanged**. *(P4-R12)*
 
 ### 5.5 `crates/sandbox-runtime/workspace/Cargo.toml`
 
@@ -804,10 +838,15 @@ below are integration-suite tests.
 
 ### 9.2 New workspace tests (`tests/`, Linux-gated as today)
 
-These exercise the mount family through the engine. Because the real `ns-runner` re-exec
-requires Linux namespaces, they run on Linux and/or against a **fake `NsRunnerLauncher`**
-if Phase 2 exposes one for downstream crates; otherwise they assert the *call-site wiring*
-and the parse/contract logic at unit granularity. Pin:
+These exercise the mount family through the engine. **Reality check:** the deleted
+`tests/setns_runner.rs` was `#![cfg(target_os = "linux")]` and tested only the *request
+builder*, never a real mount (`workspace/tests/setns_runner.rs:1, 12-24`); a real
+overlay-mount/live-remount needs a Linux namespace environment and is validated by the
+**Linux e2e/live suite** (`docs/e2e/`), not a dev-host unit test. So the workspace-crate
+tests below assert what is unit-testable off-Linux — the `From<WorkspaceEntry>` conversion,
+the parse closure (`RemountOverlayResult::from_payload`), the `Err`-vs-`Ok(false)` boundary,
+and (if Phase 2 exposes a **fake `NsRunnerLauncher`** to downstream crates) the call-site
+wiring — while W1/W2's real-syscall success is owned by the e2e suite. Pin:
 
 - **W1** — overlay mount success: `mount_overlay` returns `Ok(())` when the runner reports
   `exit_code 0`. *(P4-R4)*
