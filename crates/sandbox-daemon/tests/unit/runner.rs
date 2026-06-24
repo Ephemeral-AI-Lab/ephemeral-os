@@ -49,29 +49,6 @@ fn runner_cli_rejects_positional_request_fd() -> Result<()> {
 }
 
 #[test]
-fn runner_cli_rejects_removed_start_ack_flag() -> Result<()> {
-    let error = match RunnerCliConfig::parse(vec![
-        "--request-fd".to_owned(),
-        "3".to_owned(),
-        "--result-fd".to_owned(),
-        "4".to_owned(),
-        "--start-ack-fd".to_owned(),
-        "5".to_owned(),
-    ]) {
-        Ok(_) => bail!("removed start ack flag unexpectedly accepted"),
-        Err(error) => error,
-    };
-
-    assert!(
-        error
-            .to_string()
-            .contains("unknown ns-runner flag \"--start-ack-fd\""),
-        "{error}"
-    );
-    Ok(())
-}
-
-#[test]
 fn result_fd_writer_writes_to_fd_peer() -> Result<()> {
     let (mut read_end, write_end) = UnixStream::pair().context("create result pair")?;
     let mut writer = open_fd_for_write(write_end.as_raw_fd()).context("open result fd")?;

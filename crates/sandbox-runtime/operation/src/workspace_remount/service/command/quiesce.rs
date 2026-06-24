@@ -139,9 +139,6 @@ impl CommandRemountQuiesce {
     }
 
     pub fn set_switch_state(&mut self, state: RemountSwitchState) {
-        // The coordinator owns the live token + switch state; the Phase-3 minimal
-        // severing drops the redundant per-command mirror writes (Phase 5 reworks
-        // quiesce onto the registry properly).
         self.switch_state = state;
     }
 

@@ -1,5 +1,5 @@
-//! Behavioral coverage of the engine dispatch + watcher against the fake
-//! launcher — the authoritative Phase 2 signal (runs on darwin; no real fork).
+//! Behavioral coverage of the engine dispatch and watcher against the fake
+//! launcher.
 
 include!("support/namespace_execution_src.rs");
 

@@ -6,10 +6,9 @@ use crate::id::NamespaceExecutionId;
 use crate::status::NamespaceExecutionTerminalStatus;
 
 /// Executions keyed by `NamespaceExecutionId`, generic over the caller value `V`
-/// the registry retains for the live + terminal phases (the command handle in
-/// Phase 3; `()` for mount). Shared as `Arc<ExecutionRegistry<V>>`; the watcher
-/// thread calls `complete`, which touches only the terminal projection — never
-/// `V` — so an `attach` racing a `complete` is benign.
+/// the registry retains for the live and terminal phases. The watcher thread
+/// calls `complete`, which touches only the terminal projection, never `V`, so an
+/// `attach` racing a `complete` is benign.
 pub struct ExecutionRegistry<V> {
     inner: Mutex<RegistryState<V>>,
     max_active: usize,

@@ -1,12 +1,11 @@
-//! Daemon-side namespace execution engine (Phase 2).
+//! Daemon-side namespace execution engine.
 //!
 //! Workspace-agnostic: callers pass a `NamespaceTarget`, never a workspace type,
 //! so this crate sits below `workspace` in the dependency graph.
 //!
-//! `NamespaceExecutionEngine` drives both families over one Template-Method
-//! dispatch (reserve → spawn → `on_running` → watcher{ wait → finalize →
-//! `complete` → `resolve` → `on_terminal` }) against a `pub(crate)` launcher
-//! Bridge seam. The seam, promise, and PTY substrate stay `pub(crate)`.
+//! `NamespaceExecutionEngine` drives both families over one dispatch flow:
+//! reserve, spawn, mark running, wait, finalize, complete, resolve, and mark
+//! terminal. The launcher, promise, and PTY substrate stay `pub(crate)`.
 
 mod engine;
 mod error;
