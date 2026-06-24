@@ -282,12 +282,12 @@ fn wait_for_child_with_timeout(
 }
 
 fn setup_timeout_duration(setup_timeout_s: f64) -> Duration {
-    let finite_seconds = if setup_timeout_s.is_finite() {
-        setup_timeout_s.max(0.0)
-    } else {
-        0.0
-    };
-    Duration::from_secs_f64(finite_seconds)
+    Duration::from_secs_f64(
+        setup_timeout_s
+            .is_finite()
+            .then(|| setup_timeout_s.max(0.0))
+            .unwrap_or_default(),
+    )
 }
 
 fn terminate_child(child: &mut Child, signal: Signal) {

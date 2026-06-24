@@ -14,8 +14,6 @@ use crate::observability::{measure_optional_if, span_keys, OperationTrace};
 use crate::workspace_crate::{WorkspaceEntry, WorkspaceSessionId};
 use crate::workspace_session::WorkspaceSessionHandler;
 
-use super::super::core::WorkspaceLifecycleAdmission;
-
 impl CommandOperationService {
     pub fn exec_command(
         &self,
@@ -44,8 +42,8 @@ impl CommandOperationService {
             measure_optional_if(trace, span_keys::COMMAND_EXEC_WORKSPACE_RESOLVE, || {
                 self.resolve_exec_workspace(&input, trace)
             })?;
-        let admission_guard =
-            self.command_admission_guard(&workspace, existing_session_admission)?;
+        let admission_guard = existing_session_admission
+            .unwrap_or_else(|| self.begin_workspace_lifecycle_admission());
 
         let id = self.engine().allocate_id();
         let _ = self.namespace_execution_store().begin_namespace_execution(
@@ -130,20 +128,11 @@ impl CommandOperationService {
                 || self.create_one_shot_workspace_session(),
             )?
         };
-        Ok(ResolvedExecWorkspace::new(
+        Ok(ResolvedExecWorkspace {
+            workspace_session_id: handler.workspace_session_id.clone(),
             handler,
-            input.workspace_session_id.is_none(),
-        ))
-    }
-
-    fn command_admission_guard<'a>(
-        &'a self,
-        workspace: &ResolvedExecWorkspace,
-        existing_session_admission: Option<WorkspaceLifecycleAdmission<'a>>,
-    ) -> Result<WorkspaceLifecycleAdmission<'a>, CommandServiceError> {
-        let guard = existing_session_admission
-            .unwrap_or_else(|| self.begin_workspace_lifecycle_admission());
-        Ok(guard)
+            one_shot: input.workspace_session_id.is_none(),
+        })
     }
 
     fn finalization_trace(
@@ -219,15 +208,6 @@ struct ResolvedExecWorkspace {
 }
 
 impl ResolvedExecWorkspace {
-    fn new(handler: WorkspaceSessionHandler, one_shot: bool) -> Self {
-        let workspace_session_id = handler.workspace_session_id.clone();
-        Self {
-            handler,
-            workspace_session_id,
-            one_shot,
-        }
-    }
-
     fn entry(&self) -> Result<WorkspaceEntry, CommandServiceError> {
         self.handler
             .handle

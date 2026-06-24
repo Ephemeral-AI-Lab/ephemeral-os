@@ -6,14 +6,12 @@ use sandbox_runtime_workspace::model::{
     BaseRevision, CaptureChangesRequest, CapturedWorkspaceChanges, ChangedPathKind,
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LayerStackSnapshotRef,
     LayerStackSnapshotView, LeaseId, ProtectedPathDrop, ProtectedPathDropReason,
-    ReadonlySnapshotHandle, RemountWorkspaceRequest, RemountWorkspaceResult, WorkspaceEntry,
-    WorkspaceEntryFds, WorkspaceHandle, WorkspaceProfile, WorkspaceSessionId,
+    ReadonlySnapshotHandle, WorkspaceEntry, WorkspaceEntryFds, WorkspaceHandle, WorkspaceProfile,
+    WorkspaceSessionId,
 };
 use sandbox_runtime_workspace::overlay::dirs::OverlayDirs;
 use sandbox_runtime_workspace::overlay::tree::TreeResourceStats;
-use sandbox_runtime_workspace::profile::{
-    WorkspaceModeFds, WorkspaceModeHandle, WorkspaceModeId, WorkspaceRemountState,
-};
+use sandbox_runtime_workspace::profile::{WorkspaceModeFds, WorkspaceModeHandle, WorkspaceModeId};
 
 fn test_manifest() -> sandbox_runtime_layerstack::Manifest {
     sandbox_runtime_layerstack::Manifest::new(
@@ -52,7 +50,6 @@ fn workspace_mode_handle() -> WorkspaceModeHandle {
         readiness_fd: 13,
         control_fd: 14,
         veth: None,
-        remount_state: WorkspaceRemountState::Pending,
         created_at: 1.0,
         last_activity: 2.0,
     }
@@ -267,29 +264,6 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
         format!("{:?}", DestroyWorkspaceRequest { grace_s: Some(1.0) }),
         format!(
             "{:?}",
-            RemountWorkspaceRequest {
-                layer_paths: vec!["/lower/one".into()],
-            }
-        ),
-        format!(
-            "{:?}",
-            RemountWorkspaceResult {
-                handle: WorkspaceHandle::without_launch_for_test(
-                    WorkspaceSessionId("workspace".to_owned()),
-                    "/workspace".into(),
-                    WorkspaceProfile::HostCompatible,
-                    LayerStackSnapshotRef {
-                        lease_id: LeaseId("lease".to_owned()),
-                        manifest_version: 1,
-                        root_hash: "root".to_owned(),
-                        manifest: test_manifest(),
-                        layer_paths: vec!["/lower/one".into()],
-                    },
-                ),
-            }
-        ),
-        format!(
-            "{:?}",
             ReadonlySnapshotHandle {
                 view_root: "/view".into(),
                 generation_key: "generation".to_owned(),
@@ -395,12 +369,6 @@ fn public_dtos_construct_clone_and_compare() {
         metadata_path_count: 1,
     };
     let destroy_request = DestroyWorkspaceRequest { grace_s: Some(1.0) };
-    let remount_request = RemountWorkspaceRequest {
-        layer_paths: vec!["/lower/one".into()],
-    };
-    let remount = RemountWorkspaceResult {
-        handle: handle.clone(),
-    };
     let readonly_snapshot = ReadonlySnapshotHandle {
         view_root: "/view".into(),
         generation_key: "generation".to_owned(),
@@ -425,8 +393,6 @@ fn public_dtos_construct_clone_and_compare() {
     assert_eq!(capture_request.clone(), capture_request);
     assert_eq!(capture.clone(), capture);
     assert_eq!(destroy_request.clone(), destroy_request);
-    assert_eq!(remount_request.clone(), remount_request);
-    assert_eq!(remount.clone(), remount);
     assert_eq!(readonly_snapshot.clone(), readonly_snapshot);
     assert_eq!(destroy.clone(), destroy);
 }

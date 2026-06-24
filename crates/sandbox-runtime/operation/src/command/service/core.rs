@@ -54,7 +54,12 @@ impl CommandOperationService {
         namespace_execution: Arc<NamespaceExecutionLedger>,
         async_trace_sink: Option<AsyncTraceSink>,
     ) -> Self {
-        let engine = build_engine(Arc::clone(&namespace_execution));
+        let observer = Arc::clone(&namespace_execution) as Arc<dyn ExecutionObserver>;
+        let engine = Arc::new(NamespaceExecutionEngine::new(
+            observer,
+            MAX_ACTIVE_COMMANDS,
+            COMMAND_ENGINE_SETUP_TIMEOUT_S,
+        ));
         Self::from_parts(
             workspace,
             config,
@@ -126,19 +131,6 @@ impl CommandOperationService {
         self.async_trace_sink.clone()
     }
 
-    #[must_use]
-    pub(crate) fn live_command_session_ids_for_workspace(
-        &self,
-        workspace_session_id: &WorkspaceSessionId,
-    ) -> Vec<CommandSessionId> {
-        let mut ids = self.engine.live_values(|command| {
-            (command.workspace_session_id() == workspace_session_id)
-                .then(|| command_session_id(command.id()))
-        });
-        ids.sort();
-        ids
-    }
-
     #[doc(hidden)]
     pub fn namespace_execution_id_for_command_for_test(
         &self,
@@ -162,8 +154,11 @@ impl CommandOperationService {
         dispatch: impl FnOnce(&[CommandSessionId]) -> R,
     ) -> R {
         let _lifecycle_admission = self.begin_workspace_lifecycle_admission();
-        let active_command_session_ids =
-            self.live_command_session_ids_for_workspace(workspace_session_id);
+        let mut active_command_session_ids = self.engine.live_values(|command| {
+            (command.workspace_session_id() == workspace_session_id)
+                .then(|| command_session_id(command.id()))
+        });
+        active_command_session_ids.sort();
         dispatch(&active_command_session_ids)
     }
 
@@ -194,16 +189,6 @@ impl CommandOperationService {
     pub(super) fn workspace_handle(&self) -> &Arc<WorkspaceSessionService> {
         &self.workspace
     }
-}
-
-fn build_engine(
-    namespace_execution: Arc<NamespaceExecutionLedger>,
-) -> Arc<NamespaceExecutionEngine<CommandExecution>> {
-    Arc::new(NamespaceExecutionEngine::new(
-        namespace_execution as Arc<dyn ExecutionObserver>,
-        MAX_ACTIVE_COMMANDS,
-        COMMAND_ENGINE_SETUP_TIMEOUT_S,
-    ))
 }
 
 pub(crate) fn execution_id(command_session_id: &CommandSessionId) -> NamespaceExecutionId {

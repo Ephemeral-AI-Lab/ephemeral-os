@@ -46,27 +46,17 @@ impl CommandOperationService {
             }
             let settled = offset > start_offset && now.duration_since(last_change) >= QUIET_MS;
             if settled || now >= deadline {
-                return self.running_or_completed_command_output(
-                    command_session_id,
-                    include_terminal_command_session_id,
-                );
+                return match self.engine().with_value(&id, CommandExecution::is_finished) {
+                    Some(true) => self.completed_command_output(
+                        command_session_id,
+                        include_terminal_command_session_id,
+                    ),
+                    Some(false) => self.running_command_output(command_session_id),
+                    None => command_not_found(command_session_id),
+                };
             }
             let slice = QUIET_MS.min(deadline.saturating_duration_since(now));
             waiter.wait_timeout(slice);
-        }
-    }
-
-    fn running_or_completed_command_output(
-        &self,
-        command_session_id: CommandSessionId,
-        include_terminal_command_session_id: bool,
-    ) -> Result<CommandOutput, CommandServiceError> {
-        let id = execution_id(&command_session_id);
-        match self.engine().with_value(&id, CommandExecution::is_finished) {
-            Some(true) => self
-                .completed_command_output(command_session_id, include_terminal_command_session_id),
-            Some(false) => self.running_command_output(command_session_id),
-            None => command_not_found(command_session_id),
         }
     }
 

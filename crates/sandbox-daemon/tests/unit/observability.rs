@@ -186,7 +186,6 @@ impl TestObservabilityStore {
                 sandbox_id,
                 workspace_id,
                 state,
-                remount_state,
                 profile,
                 workspace_root,
                 upperdir,
@@ -206,17 +205,16 @@ impl TestObservabilityStore {
                 sandbox_id: row.get(0)?,
                 workspace_id: row.get(1)?,
                 state: row.get(2)?,
-                remount_state: row.get(3)?,
-                profile: row.get(4)?,
-                workspace_root: row.get(5)?,
-                upperdir: row.get(6)?,
-                workdir: row.get(7)?,
-                namespace_fd_count: row.get(8)?,
-                base_manifest_version: row.get(9)?,
-                base_root_hash: row.get(10)?,
-                layer_count: row.get(11)?,
-                sampled_at_unix_ms: row.get(12)?,
-                error_message: row.get(13)?,
+                profile: row.get(3)?,
+                workspace_root: row.get(4)?,
+                upperdir: row.get(5)?,
+                workdir: row.get(6)?,
+                namespace_fd_count: row.get(7)?,
+                base_manifest_version: row.get(8)?,
+                base_root_hash: row.get(9)?,
+                layer_count: row.get(10)?,
+                sampled_at_unix_ms: row.get(11)?,
+                error_message: row.get(12)?,
             })
         })?;
         Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
@@ -386,7 +384,6 @@ fn observability_collection_writes_namespace_only_live_snapshot() -> TestResult 
     assert_eq!(workspaces.len(), 1);
     assert_eq!(workspaces[0].workspace_id, "workspace-1");
     assert_eq!(workspaces[0].state, "active");
-    assert_eq!(workspaces[0].remount_state.as_deref(), Some("active"));
 
     let namespace_executions = store.namespace_execution_snapshots_for_test("sandbox-1")?;
     assert_eq!(namespace_executions.len(), 1);
@@ -1499,7 +1496,6 @@ fn runtime_snapshot(missing_upperdir: PathBuf) -> RuntimeObservabilitySnapshot {
 fn workspace_snapshot(workspace_id: &str, upperdir: Option<PathBuf>) -> RuntimeWorkspaceSnapshot {
     RuntimeWorkspaceSnapshot {
         workspace_id: WorkspaceSessionId(workspace_id.to_owned()),
-        remount_state: "active".to_owned(),
         profile: WorkspaceProfile::HostCompatible,
         workspace_root: PathBuf::from("/workspace").join(workspace_id),
         upperdir,
