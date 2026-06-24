@@ -1,8 +1,6 @@
 use crate::observability::RuntimeWorkspaceSnapshot;
 use crate::workspace_session::WorkspaceSessionService;
 
-use super::model::WorkspaceRemountState;
-
 impl WorkspaceSessionService {
     pub(crate) fn snapshot_workspaces(&self) -> (Vec<RuntimeWorkspaceSnapshot>, Vec<String>) {
         let sessions = match self.lock_sessions() {
@@ -31,7 +29,6 @@ impl WorkspaceSessionService {
 
                 RuntimeWorkspaceSnapshot {
                     workspace_id: session.workspace_session_id.clone(),
-                    remount_state: map_remount_state(&session.remount_state).to_owned(),
                     profile: session.handle.profile,
                     workspace_root: session.handle.workspace_root.clone(),
                     upperdir,
@@ -45,13 +42,5 @@ impl WorkspaceSessionService {
             .collect::<Vec<_>>();
         snapshots.sort_by(|left, right| left.workspace_id.0.cmp(&right.workspace_id.0));
         (snapshots, errors)
-    }
-}
-
-fn map_remount_state(state: &WorkspaceRemountState) -> &'static str {
-    match state {
-        WorkspaceRemountState::Active => "active",
-        WorkspaceRemountState::RemountPending => "remount_pending",
-        WorkspaceRemountState::RemountBlocked => "remount_blocked",
     }
 }

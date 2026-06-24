@@ -1,9 +1,8 @@
 use sandbox_runtime_command::CommandExecution;
 
-use crate::command::service::helpers::finalize_message;
+use crate::command::service::helpers::{command_not_found, finalize_message};
 use crate::command::service::{execution_id, CommandOperationService};
 use crate::command::{CommandOutput, CommandServiceError, WriteCommandStdinInput};
-use crate::workspace_crate::WorkspaceSessionId;
 
 impl CommandOperationService {
     pub fn write_command_stdin(
@@ -18,7 +17,6 @@ impl CommandOperationService {
         let target = self.engine().with_value(&id, |command| {
             if !command.is_finished() {
                 return WriteTarget::Live {
-                    workspace_session_id: command.workspace_session_id().clone(),
                     start_offset: command.output_len(),
                 };
             }
@@ -27,8 +25,8 @@ impl CommandOperationService {
                 _ => WriteTarget::AlreadyCompleted,
             }
         });
-        let (workspace_session_id, start_offset) = match target {
-            None => return Err(CommandServiceError::CommandNotFound { command_session_id }),
+        let start_offset = match target {
+            None => return command_not_found(command_session_id),
             Some(WriteTarget::AlreadyCompleted) => {
                 return Err(CommandServiceError::CommandAlreadyCompleted { command_session_id });
             }
@@ -38,15 +36,8 @@ impl CommandOperationService {
                     error,
                 });
             }
-            Some(WriteTarget::Live {
-                workspace_session_id,
-                start_offset,
-            }) => (workspace_session_id, start_offset),
+            Some(WriteTarget::Live { start_offset }) => start_offset,
         };
-
-        if !is_kill_input {
-            self.ensure_workspace_session_not_remount_pending(&workspace_session_id)?;
-        }
 
         if is_kill_input {
             match self
@@ -54,7 +45,7 @@ impl CommandOperationService {
                 .with_value(&id, CommandExecution::cancel_handle)
             {
                 Some(cancel) => cancel(),
-                None => return Err(CommandServiceError::CommandNotFound { command_session_id }),
+                None => return command_not_found(command_session_id),
             }
         } else {
             match self
@@ -68,7 +59,7 @@ impl CommandOperationService {
                         error: error.to_string(),
                     });
                 }
-                None => return Err(CommandServiceError::CommandNotFound { command_session_id }),
+                None => return command_not_found(command_session_id),
             }
         }
 
@@ -78,10 +69,7 @@ impl CommandOperationService {
 }
 
 enum WriteTarget {
-    Live {
-        workspace_session_id: WorkspaceSessionId,
-        start_offset: u64,
-    },
+    Live { start_offset: u64 },
     AlreadyCompleted,
     FinalizationFailed(String),
 }

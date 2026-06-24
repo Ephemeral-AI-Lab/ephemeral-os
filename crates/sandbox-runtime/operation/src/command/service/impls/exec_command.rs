@@ -36,15 +36,6 @@ impl CommandOperationService {
                 message: "cmd must be non-empty".to_owned(),
             });
         }
-        self.exec_validated_command(input, trace, origin_request_id)
-    }
-
-    fn exec_validated_command(
-        &self,
-        input: ExecCommandInput,
-        trace: Option<&OperationTrace>,
-        origin_request_id: Option<String>,
-    ) -> Result<CommandOutput, CommandServiceError> {
         let existing_session_admission = input
             .workspace_session_id
             .is_some()
@@ -66,19 +57,18 @@ impl CommandOperationService {
             },
         );
 
-        let entry = match workspace.entry() {
-            Ok(entry) => entry,
-            Err(error) => return Err(self.fail_command_start(&id, workspace, error)),
-        };
-        let transcript_path = match self.prepare_transcript_path(&id) {
-            Ok(transcript_path) => transcript_path,
+        let (entry, transcript_path) = match workspace
+            .entry()
+            .and_then(|entry| self.prepare_transcript_path(&id).map(|path| (entry, path)))
+        {
+            Ok(pair) => pair,
             Err(error) => return Err(self.fail_command_start(&id, workspace, error)),
         };
 
         let started_at = Instant::now();
         let exec_command = ExecCommand::new(
             input.cmd.clone(),
-            input.timeout_ms.map(timeout_ms_to_seconds),
+            input.timeout_ms.map(|ms| ms as f64 / 1000.0),
             transcript_path.clone(),
             workspace.session_disposition(),
             self.workspace_handle().clone(),
@@ -153,7 +143,6 @@ impl CommandOperationService {
     ) -> Result<WorkspaceLifecycleAdmission<'a>, CommandServiceError> {
         let guard = existing_session_admission
             .unwrap_or_else(|| self.begin_workspace_lifecycle_admission());
-        self.ensure_workspace_session_not_remount_pending(&workspace.workspace_session_id)?;
         Ok(guard)
     }
 
@@ -209,15 +198,6 @@ impl CommandOperationService {
                     ),
                 },
             );
-        self.cleanup_unstarted_workspace(id, workspace, error)
-    }
-
-    fn cleanup_unstarted_workspace(
-        &self,
-        id: &NamespaceExecutionId,
-        workspace: ResolvedExecWorkspace,
-        error: CommandServiceError,
-    ) -> CommandServiceError {
         if !workspace.one_shot {
             return error;
         }
@@ -259,15 +239,9 @@ impl ResolvedExecWorkspace {
 
     fn session_disposition(&self) -> SessionDisposition {
         if self.one_shot {
-            SessionDisposition::OneShot {
-                handler: Box::new(self.handler.clone()),
-            }
+            SessionDisposition::OneShot(Box::new(self.handler.clone()))
         } else {
             SessionDisposition::ExistingSession
         }
     }
-}
-
-fn timeout_ms_to_seconds(timeout_ms: u64) -> f64 {
-    timeout_ms as f64 / 1000.0
 }

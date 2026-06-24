@@ -30,16 +30,6 @@ pub enum CommandServiceError {
         actual: WorkspaceSessionId,
     },
 
-    #[error("workspace session remount pending: {workspace_session_id:?}")]
-    WorkspaceSessionRemountPending {
-        workspace_session_id: WorkspaceSessionId,
-    },
-
-    #[error("workspace session remount blocked: {workspace_session_id:?}")]
-    WorkspaceSessionRemountBlocked {
-        workspace_session_id: WorkspaceSessionId,
-    },
-
     #[error("command already completed: {command_session_id:?}")]
     CommandAlreadyCompleted {
         command_session_id: CommandSessionId,

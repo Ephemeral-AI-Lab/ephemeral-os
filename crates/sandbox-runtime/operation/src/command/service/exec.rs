@@ -1,4 +1,3 @@
-
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Instant;
@@ -17,9 +16,7 @@ use crate::workspace_session::{
 
 pub(crate) enum SessionDisposition {
     ExistingSession,
-    OneShot {
-        handler: Box<WorkspaceSessionHandler>,
-    },
+    OneShot(Box<WorkspaceSessionHandler>),
 }
 
 pub(crate) struct CommandFinalizationTrace {
@@ -137,7 +134,7 @@ fn apply_disposition(
 ) -> Result<(), WorkspaceSessionError> {
     match disposition {
         SessionDisposition::ExistingSession => Ok(()),
-        SessionDisposition::OneShot { handler } => workspace
+        SessionDisposition::OneShot(handler) => workspace
             .destroy_session(*handler, DestroyWorkspaceRequest::default())
             .map(|_| ()),
     }

@@ -8,7 +8,6 @@ use sandbox_runtime_namespace_execution::{
 use super::core::{execution_id, CommandOperationService};
 use super::transcript::command_output;
 use crate::command::{CommandOutput, CommandServiceError, CommandSessionId, CommandStatus};
-use crate::workspace_crate::WorkspaceSessionId;
 
 const QUIET_MS: Duration = Duration::from_millis(50);
 
@@ -25,17 +24,14 @@ impl CommandOperationService {
         let mut last_offset = start_offset;
         let mut last_change = Instant::now();
         loop {
-            let Some((finished, offset, waiter)) = self
-                .engine()
-                .with_value(&id, |command| {
-                    (
-                        command.is_finished(),
-                        command.output_len(),
-                        command.completion(),
-                    )
-                })
-            else {
-                return Err(CommandServiceError::CommandNotFound { command_session_id });
+            let Some((finished, offset, waiter)) = self.engine().with_value(&id, |command| {
+                (
+                    command.is_finished(),
+                    command.output_len(),
+                    command.completion(),
+                )
+            }) else {
+                return command_not_found(command_session_id);
             };
             if finished {
                 return self.completed_command_output(
@@ -70,7 +66,7 @@ impl CommandOperationService {
             Some(true) => self
                 .completed_command_output(command_session_id, include_terminal_command_session_id),
             Some(false) => self.running_command_output(command_session_id),
-            None => Err(CommandServiceError::CommandNotFound { command_session_id }),
+            None => command_not_found(command_session_id),
         }
     }
 
@@ -91,7 +87,7 @@ impl CommandOperationService {
                 output.command_session_id = Some(command_session_id);
                 Ok(output)
             }
-            None => Err(CommandServiceError::CommandNotFound { command_session_id }),
+            None => command_not_found(command_session_id),
         }
     }
 
@@ -109,14 +105,14 @@ impl CommandOperationService {
             (result, window, elapsed)
         });
         let Some((result, window, elapsed)) = read else {
-            return Err(CommandServiceError::CommandNotFound { command_session_id });
+            return command_not_found(command_session_id);
         };
         let result = match result {
             Some(Ok(result)) => result,
             Some(Err(error)) => {
                 return Err(finalization_failed(command_session_id, &error));
             }
-            None => return Err(CommandServiceError::CommandNotFound { command_session_id }),
+            None => return command_not_found(command_session_id),
         };
         let has_more_output = window.output_truncated;
         let returned_command_session_id =
@@ -129,23 +125,6 @@ impl CommandOperationService {
             elapsed,
             result.command_total_time_seconds,
         ))
-    }
-
-    pub(crate) fn ensure_workspace_session_not_remount_pending(
-        &self,
-        workspace_session_id: &WorkspaceSessionId,
-    ) -> Result<(), CommandServiceError> {
-        if self.workspace_remount_pending(workspace_session_id) {
-            return Err(CommandServiceError::WorkspaceSessionRemountPending {
-                workspace_session_id: workspace_session_id.clone(),
-            });
-        }
-        if self.workspace_remount_blocked(workspace_session_id) {
-            return Err(CommandServiceError::WorkspaceSessionRemountBlocked {
-                workspace_session_id: workspace_session_id.clone(),
-            });
-        }
-        Ok(())
     }
 }
 
@@ -166,6 +145,12 @@ pub(crate) fn finalization_failed(
         command_session_id,
         error: finalize_message(error),
     }
+}
+
+pub(crate) fn command_not_found<T>(
+    command_session_id: CommandSessionId,
+) -> Result<T, CommandServiceError> {
+    Err(CommandServiceError::CommandNotFound { command_session_id })
 }
 
 pub(crate) fn finalize_message(error: &NamespaceExecutionError) -> String {

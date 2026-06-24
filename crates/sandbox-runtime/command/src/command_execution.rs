@@ -1,4 +1,3 @@
-
 use std::io;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -62,6 +61,10 @@ impl CommandExecution {
 
     pub fn write_stdin(&self, bytes: &[u8]) -> io::Result<()> {
         self.exec.write_stdin(bytes)
+    }
+
+    pub fn cancel(&self) {
+        self.exec.cancel();
     }
 
     #[must_use]

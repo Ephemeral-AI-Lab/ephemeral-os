@@ -20,27 +20,6 @@ pub enum WorkspaceSessionError {
         workspace_session_id: WorkspaceSessionId,
     },
 
-    #[error("workspace remount already pending: {workspace_session_id:?}")]
-    RemountAlreadyPending {
-        workspace_session_id: WorkspaceSessionId,
-    },
-
-    #[error("workspace remount blocked after failure: {workspace_session_id:?}")]
-    RemountBlocked {
-        workspace_session_id: WorkspaceSessionId,
-    },
-
-    #[error("workspace remount is not pending: {workspace_session_id:?}")]
-    RemountNotPending {
-        workspace_session_id: WorkspaceSessionId,
-    },
-
-    #[error("workspace remount returned mismatched workspace session id: expected {expected:?}, actual {actual:?}")]
-    RemountWorkspaceSessionIdMismatch {
-        expected: WorkspaceSessionId,
-        actual: WorkspaceSessionId,
-    },
-
     #[error(
         "workspace session publish captured changes failed for {workspace_session_id:?}: {error}"
     )]

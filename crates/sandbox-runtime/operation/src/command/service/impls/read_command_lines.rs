@@ -1,6 +1,6 @@
 use sandbox_runtime_command::CommandExecution;
 
-use crate::command::service::helpers::{command_status, finalize_message};
+use crate::command::service::helpers::{command_not_found, command_status, finalize_message};
 use crate::command::service::transcript::command_output;
 use crate::command::service::{execution_id, CommandOperationService};
 use crate::command::{
@@ -22,7 +22,7 @@ impl CommandOperationService {
         });
         match read {
             Some(result) => result,
-            None => Err(CommandServiceError::CommandNotFound { command_session_id }),
+            None => command_not_found(command_session_id),
         }
     }
 }

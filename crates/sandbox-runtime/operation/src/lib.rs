@@ -9,7 +9,6 @@ mod namespace_execution;
 mod observability;
 mod operation;
 mod services;
-pub mod workspace_remount;
 pub mod workspace_session;
 
 pub use cli_definition::{
@@ -33,7 +32,6 @@ pub use services::{
     WorkspaceResourceCaps, WorkspaceRuntimeConfig,
 };
 pub use workspace_crate::{WorkspaceProfile, WorkspaceSessionId};
-pub use workspace_remount::WorkspaceRemountService;
 pub use workspace_session::WorkspaceSessionService;
 
 #[must_use]

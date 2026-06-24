@@ -12,7 +12,6 @@ use crate::workspace_crate::{
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, WorkspaceProfile,
     WorkspaceSessionId,
 };
-use crate::workspace_remount::{ProcProcessGroupController, ProcessGroupController};
 use crate::workspace_session::{
     WorkspaceSessionError, WorkspaceSessionHandler, WorkspaceSessionService,
 };
@@ -27,7 +26,6 @@ pub struct CommandOperationService {
     engine: Arc<NamespaceExecutionEngine<CommandExecution>>,
     namespace_execution: Arc<NamespaceExecutionLedger>,
     async_trace_sink: Option<AsyncTraceSink>,
-    remount_controller: Arc<dyn ProcessGroupController>,
     workspace_lifecycle_admission: Mutex<()>,
 }
 
@@ -63,7 +61,6 @@ impl CommandOperationService {
             engine,
             namespace_execution,
             async_trace_sink,
-            Arc::new(ProcProcessGroupController),
         )
     }
 
@@ -73,7 +70,6 @@ impl CommandOperationService {
         engine: Arc<NamespaceExecutionEngine<CommandExecution>>,
         namespace_execution: Arc<NamespaceExecutionLedger>,
         async_trace_sink: Option<AsyncTraceSink>,
-        remount_controller: Arc<dyn ProcessGroupController>,
     ) -> Self {
         Self {
             workspace,
@@ -81,7 +77,6 @@ impl CommandOperationService {
             engine,
             namespace_execution,
             async_trace_sink,
-            remount_controller,
             workspace_lifecycle_admission: Mutex::new(()),
         }
     }
@@ -153,11 +148,6 @@ impl CommandOperationService {
         (self.engine.is_live(&id) || self.engine.is_completed(&id)).then_some(id)
     }
 
-    #[must_use]
-    pub(crate) fn remount_controller(&self) -> Arc<dyn ProcessGroupController> {
-        Arc::clone(&self.remount_controller)
-    }
-
     pub(crate) fn begin_workspace_lifecycle_admission(&self) -> WorkspaceLifecycleAdmission<'_> {
         let guard = self
             .workspace_lifecycle_admission
@@ -203,20 +193,6 @@ impl CommandOperationService {
 
     pub(super) fn workspace_handle(&self) -> &Arc<WorkspaceSessionService> {
         &self.workspace
-    }
-
-    pub(super) fn workspace_remount_pending(
-        &self,
-        workspace_session_id: &WorkspaceSessionId,
-    ) -> bool {
-        self.workspace.is_remount_pending(workspace_session_id)
-    }
-
-    pub(super) fn workspace_remount_blocked(
-        &self,
-        workspace_session_id: &WorkspaceSessionId,
-    ) -> bool {
-        self.workspace.is_remount_blocked(workspace_session_id)
     }
 }
 
