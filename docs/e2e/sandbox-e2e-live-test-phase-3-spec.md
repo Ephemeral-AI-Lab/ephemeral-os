@@ -105,7 +105,7 @@ files under `{run_root}`; and reuses the synchronous `gateway::await_ready`
 
 | # | Phase | Inputs | Outputs / side effects | Exit-code semantics |
 |---|---|---|---|---|
-| 1 | **Preflight** | `RunConfig` (OS, `--gateway-socket`, `--image`, scratch dir) | none (probe is side-effect-free, §6) | any check fails → process exits **2** with the exact message (§6). All pass → continue. |
+| 1 | **Preflight** | `RunConfig` (OS, `--gateway-socket`, `--image`, scratch dir) | none persistent — the probe creates and removes a scratch dir + a probe sandbox, staying side-effect-free (§3.2.1) | any check fails → process exits **2** with the exact message (§3.2 checks 1–4). All pass → continue. |
 | 2 | **Manifest** | `RunConfig`, git HEAD, clock | creates `{run_root}` and `{run_root}/run-manifest.json` (§5.1); constructs `RunGuard` owning `run_root` (§7) | I/O failure (cannot create run_root / write manifest) → exit **2**. |
 | 3 | **Phase A — Build** | `BuildSource` | builds `sandbox-gateway`/`sandbox-cli` (own `Instant`s → `timing.build`, §8). **Skipped** when `BuildSource::Prebuilt` **or** `--gateway-socket` given (attach-only ⇒ all `*_ms = 0`). | build command non-zero → exit **2** (cannot proceed to run). |
 | 4 | **Phase B — Run** | `run-manifest.json`, `gateway_socket`, `STAGE1_DEFAULT_TARGET`, `TestSelection`, `max_parallel` | runner clock starts; `gateway::await_ready(socket)` (records `gateway_attach_ms`); exports **`EOS_E2E_RUN_ROOT={run_root}`** (the sole env contract); runs the `cargo test` child (records `test_process_ms`); captures the child's **exit code** | `await_ready` fails → exit **2**. cargo child cannot be spawned → run `status = error`, exit **2**. cargo child runs → its exit code is captured (the pass/fail gate); pipeline continues to Aggregate regardless. |
@@ -119,10 +119,41 @@ code**, never libtest stdout. `summary.tests[]` is built **solely** by globbing
 
 ### 3.2 `preflight` subcommand
 
-Runs checks 1–4 of §6 against `RunConfig` (Linux → docker reachable → image
-present → real-runtime probe). Exit **0** if all pass, **2** on the first failure
-with that check's exact message. No `run_root` is created; no manifest, no build,
-no tests, no cleanup.
+Runs the four ordered checks below against `RunConfig`. Exit **0** if all pass,
+**2** on the first failure with that check's exact message. No `run_root` is
+created; no manifest, no build, no tests, no cleanup. (The same four checks run as
+pipeline step 1 of `run`, §3.1.)
+
+| # | Check | Pass condition | Exit-2 message on failure |
+|---|---|---|---|
+| 1 | Linux | `std::env::consts::OS == "linux"` | `EphemeralOS E2E is Linux+Docker only; current OS={os}` |
+| 2 | Docker reachable | `docker version` exits 0 | `Docker daemon not reachable at $DOCKER_HOST` |
+| 3 | Image present | `docker image inspect {image}` exits 0 | ``image {image} not present; run `docker pull {image}` `` |
+| 4 | Real-runtime probe | the §3.2.1 probe succeeds or fails on a non-runtime cause | see §3.2.1 |
+
+#### 3.2.1 Real-runtime probe (the one black-box call that exercises the runtime trait)
+
+Only `create_sandbox`/`destroy_sandbox` route to the `SandboxRuntime` trait
+(`gateway/main.rs:105-119`); store-only manager ops (`list_sandboxes`,
+`inspect_sandbox`, `get_observability_tree`) never reach `UnconfiguredRuntime`, so
+they **cannot** detect an unconfigured runtime. The probe therefore issues a
+`create_sandbox`, the only black-box call that trips the runtime trait. Because
+`create_sandbox` **requires** both `--image` and `--workspace-root`
+(`create_sandbox.rs:17-44`), the probe supplies its own scratch workspace, not the
+run_root (preflight creates no run_root).
+
+1. **Scratch workspace.** Create `std::env::temp_dir().join("eos-e2e-preflight")`
+   (an absolute dir, the create_sandbox absolute-path requirement); use it as
+   `--workspace-root`. Remove it after the probe.
+2. Issue `sandbox-cli manager create_sandbox --image {image} --workspace-root
+   {scratch}` against `--gateway-socket`.
+3. **Unconfigured gateway:** the carried error message contains the substring
+   `runtime is not configured` (`gateway/main.rs:111`) → exit **2** with the long
+   message naming the missing real-runtime gateway and `gateway/main.rs:94-146`.
+4. **Real gateway (success):** capture `/id` from the response and immediately
+   `sandbox-cli manager destroy_sandbox --sandbox-id {id}` so the probe leaves no
+   container behind.
+5. **Any other error:** exit **2** with that error's message.
 
 ### 3.3 `--clean-run {run_id}` subcommand
 
@@ -225,7 +256,7 @@ run_id = "r{ts}-{ sha256(git_HEAD ‖ test_manifest_hash ‖ EOS_E2E_RUN_SALT)[.
 
 | Component | Definition | Source |
 |---|---|---|
-| `ts` | colon-free UTC stamp, format `%Y%m%dT%H%M%SZ` (e.g. `20260625T140312Z`); colons would violate the charset. Pinnable via **`EOS_E2E_RUN_CLOCK`** for byte-stable reruns. | `time` crate |
+| `ts` | colon-free UTC stamp built by a **manual `format!`** over `OffsetDateTime::now_utc()` field accessors — **not** a `time` format string. `%Y%m%dT%H%M%SZ` is strftime/chrono syntax that `time` does not accept, and `time`'s own `format_description!`/`Display` formatting is feature-gated off: workspace `time = "0.3"` (root `Cargo.toml:43`) carries only default features (`std`/`alloc`) — no `formatting`/`macros`/`parsing` — and the e2e crate has zero internal deps so inherits nothing extra. Format exactly: `format!("{year:04}{month:02}{day:02}T{hour:02}{minute:02}{second:02}Z", year = now.year(), month = now.month() as u8, day = now.day(), hour = now.hour(), minute = now.minute(), second = now.second())` over `now = OffsetDateTime::now_utc()`, which needs only the default `std` feature. Pinnable via **`EOS_E2E_RUN_CLOCK`** (a pre-formatted, colon-free value) for byte-stable reruns. **In-tree precedent (same reason — formatting features off):** `crates/sandbox-runtime/command/src/transcript.rs:42-53` field-formats `OffsetDateTime::now_utc()` by hand. | `time` (`OffsetDateTime` accessors) |
 | `git_HEAD` | output of `git rev-parse HEAD`. | `std::process::Command` |
 | `test_manifest_hash` | sha256 over the **newline-joined, sorted** list of `tests/<scope>/**/*.rs` leaf **relative paths** — the same leaf set `build.rs` discovers (`build.rs:34-46`). Identity changes only when a test is **added/removed**; file **contents are excluded** (keeps reruns byte-stable). | `sha2` |
 | `EOS_E2E_RUN_SALT` | optional disambiguator; **defaults to empty string**. | env |
@@ -500,9 +531,13 @@ pub const STAGE1_DEFAULT_TARGET: &[&str] = &["--test", "manager"];
 - `{N}` = `max_parallel`, precedence `--max-parallel` > `EOS_E2E_MAX_PARALLEL` >
   `available_parallelism().min(8)`.
 - Filters are the `module_slug::fn` thread names (e.g.
-  `lifecycle_list_sandboxes_lists_ready::lists_ready`), matching libtest's name
-  filter semantics — the same value recorded in `result.json.test_name` (§5.2),
-  so `failed_tests[]` round-trips into the next run's filters.
+  `lifecycle_list_sandboxes_lists_ready::list_sandboxes_contains_ready_sandbox` —
+  module slug `lifecycle_list_sandboxes_lists_ready` `::` the leaf's `#[test]` fn
+  `list_sandboxes_contains_ready_sandbox`, `tests/manager/lifecycle/list_sandboxes/lists_ready.rs:5`;
+  `lists_ready` is the module-leaf slug component, **not** the fn), matching
+  libtest's name filter semantics — the same value recorded in
+  `result.json.test_name` (§5.2), so `failed_tests[]` round-trips into the next
+  run's filters.
 - **Stage 2 flip:** drop `--test manager` from `STAGE1_DEFAULT_TARGET` so the full
   suite (`--test manager` **and** `--test runtime`) runs. Nothing else changes.
 
@@ -550,11 +585,11 @@ fan-out** — `cargo test` owns thread parallelism via `--test-threads`. Therefo
 | `src/cli_client.rs:38-54` | `manager(op,args)`, `runtime(id,op,args)` | **confirmed** |
 | `src/cli_client.rs:63-78` | `latency_ms` via Instant; carrier = `exit_code==0 ? stdout : stderr`; parse `unwrap_or_default()` | **confirmed** |
 | `src/assertion.rs:6-36` | `ok`/`field`/`err_kind_at` — add thread-local counter bump to each | **confirmed** |
-| `src/lib.rs:1-9` | `pub mod {assertion,cli_client,config,fixtures,gateway,report}`; no `cleanup` — add `pub mod cleanup;` | **confirmed** |
-| `build.rs:34-46` | walks `tests/<scope>/**/*.rs`, slug = components joined by `_` minus `.rs`; no Phase 3 edit | **confirmed** |
+| `src/lib.rs:1-8` (`pub mod` list `:3-8`) | `pub mod {assertion,cli_client,config,fixtures,gateway,report}`; no `cleanup` — add `pub mod cleanup;` | **confirmed / corrected** (file is 8 lines; `:1-9` overran) |
+| `build.rs:34-46` (`collect_leaves`) / `build.rs:48-55` (`module_slug`) | `collect_leaves` (`:34-46`) walks `tests/<scope>/**/*.rs`; `module_slug` (`:48-55`) derives the slug = path relative to the scope dir, components joined by `_`, minus `.rs` (scope name excluded); no Phase 3 edit | **confirmed / corrected** (slug derivation is `:48-55`, not `:34-46`) |
 | `tests/support/mod.rs:7-9` | `harness() = Harness::get()`; sole skip path; leaf does bare `return`, writes nothing on skip | **confirmed** |
 | `gateway/main.rs:94-101` | `default_manager_services()` wires `UnconfiguredRuntime` (`:97`) + `UnconfiguredDaemonInstaller` (`:98`) | **confirmed** |
-| `gateway/main.rs:103-120` | `UnconfiguredRuntime`; `"sandbox runtime is not configured"` at `:111` (`create_sandbox`) and `:118` (`destroy_sandbox`); **only `create_sandbox`/`destroy_sandbox` reach the runtime trait** — store-only ops can't detect it → preflight probe must `create_sandbox` | **confirmed** |
+| `gateway/main.rs:103-120` | `UnconfiguredRuntime`; `"sandbox runtime is not configured"` at `:111` (`create_sandbox`) and `:117` (`destroy_sandbox`); **only `create_sandbox`/`destroy_sandbox` reach the runtime trait** — store-only ops can't detect it → preflight probe must `create_sandbox` | **confirmed / corrected** (the destroy string is at `:117`; `:118` is `})`) |
 | `gateway/main.rs:122-146` | `UnconfiguredDaemonInstaller` ("sandbox daemon installer is not configured") | **confirmed** |
 | `cli/output.rs:21-23` | `EXIT_SUCCESS=0`, `EXIT_FAILURE=1`, `EXIT_USAGE=2` | **confirmed** |
 | `cli/output.rs:257-273` (`render_response`) | carried `error` → stderr + exit 1 (`:266-268`); clean → stdout + exit 0 (`:269-271`) | **confirmed** (parent cited `:266-272`; `render_response` spans `:257-273`) |
