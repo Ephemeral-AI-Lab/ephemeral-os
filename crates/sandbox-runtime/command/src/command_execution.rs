@@ -3,7 +3,7 @@
 //! (transcript window + result), distinguished by the promise.
 
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -27,7 +27,6 @@ pub struct CommandExecution {
     exec: InteractiveExecution<CommandTerminalResult>,
     transcript_path: Option<PathBuf>,
     workspace_session_id: WorkspaceSessionId,
-    workspace_root: PathBuf,
     started_at: Instant,
     next_snapshot_offset: AtomicU64,
 }
@@ -38,14 +37,12 @@ impl CommandExecution {
         exec: InteractiveExecution<CommandTerminalResult>,
         transcript_path: Option<PathBuf>,
         workspace_session_id: WorkspaceSessionId,
-        workspace_root: PathBuf,
         started_at: Instant,
     ) -> Self {
         Self {
             exec,
             transcript_path,
             workspace_session_id,
-            workspace_root,
             started_at,
             next_snapshot_offset: AtomicU64::new(0),
         }
@@ -66,20 +63,9 @@ impl CommandExecution {
         &self.workspace_session_id
     }
 
-    #[must_use]
-    pub fn workspace_root(&self) -> &Path {
-        &self.workspace_root
-    }
-
     /// The spawned process group, for remount process-group inspection/cancel.
     #[must_use]
     pub fn pgid(&self) -> Option<i32> {
-        self.exec.pgid()
-    }
-
-    /// The spawned process group, under the remount coordinator naming.
-    #[must_use]
-    pub fn process_group_id(&self) -> Option<i32> {
         self.exec.pgid()
     }
 

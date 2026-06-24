@@ -38,7 +38,6 @@ fn fixture(suffix: &str) -> Fixture {
         exec,
         Some(transcript_path.clone()),
         WorkspaceSessionId("workspace-session".to_owned()),
-        PathBuf::from("/workspace/session"),
         Instant::now(),
     );
     Fixture {
@@ -95,15 +94,11 @@ fn terminal_read_resolves_without_consuming() {
 }
 
 #[test]
-fn workspace_identity_is_exposed_for_reverse_lookup() {
+fn workspace_session_identity_is_exposed_for_reverse_lookup() {
     let fixture = fixture("identity");
     assert_eq!(
         fixture.command.workspace_session_id(),
         &WorkspaceSessionId("workspace-session".to_owned())
-    );
-    assert_eq!(
-        fixture.command.workspace_root(),
-        std::path::Path::new("/workspace/session")
     );
     assert_eq!(fixture.command.id().0, "namespace_execution_1");
 }

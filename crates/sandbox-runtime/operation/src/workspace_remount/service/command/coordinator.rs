@@ -22,7 +22,7 @@ impl CommandRemountCoordinator for CommandOperationService {
             .ok();
         let mut live = self.engine().live_values(|command| {
             (command.workspace_session_id() == workspace_session_id)
-                .then(|| (command.id().clone(), command.process_group_id()))
+                .then(|| (command.id().clone(), command.pgid()))
         });
         live.sort_by(|left, right| left.0.cmp(&right.0));
         let cancellation = RemountCancellationToken::new();

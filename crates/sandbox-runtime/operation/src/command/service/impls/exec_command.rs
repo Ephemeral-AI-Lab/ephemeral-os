@@ -109,7 +109,6 @@ impl CommandOperationService {
                 exec,
                 Some(transcript_path),
                 workspace.workspace_session_id.clone(),
-                workspace.workspace_root.clone(),
                 started_at,
             ),
         );
@@ -237,18 +236,15 @@ struct ResolvedExecWorkspace {
     handler: WorkspaceSessionHandler,
     workspace_session_id: WorkspaceSessionId,
     one_shot: bool,
-    workspace_root: PathBuf,
 }
 
 impl ResolvedExecWorkspace {
     fn new(handler: WorkspaceSessionHandler, one_shot: bool) -> Self {
         let workspace_session_id = handler.workspace_session_id.clone();
-        let workspace_root = handler.handle.workspace_root.clone();
         Self {
             handler,
             workspace_session_id,
             one_shot,
-            workspace_root,
         }
     }
 
