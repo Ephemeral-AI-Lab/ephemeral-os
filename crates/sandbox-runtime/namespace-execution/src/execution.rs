@@ -9,6 +9,7 @@ pub struct ExecutionHandle<T> {
 }
 
 impl<T> ExecutionHandle<T> {
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn new(id: NamespaceExecutionId, promise: CompletionPromise<T>) -> Self {
         Self { id, promise }
     }
@@ -27,13 +28,14 @@ impl<T> ExecutionHandle<T> {
 }
 
 /// Species: an `ExecutionHandle` plus interactive (PTY) capability.
-/// Phase 1 carries the handle only; the PTY field + stdin/stream/cancel land in
-/// Phase 2 with `PtyMaster`.
+/// Phase 1 carries the handle only; the PTY field + stdin/stream/cancel are
+/// deferred to Phase 2.
 pub struct InteractiveExecution<T> {
     exec: ExecutionHandle<T>,
 }
 
 impl<T> InteractiveExecution<T> {
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn new(exec: ExecutionHandle<T>) -> Self {
         Self { exec }
     }

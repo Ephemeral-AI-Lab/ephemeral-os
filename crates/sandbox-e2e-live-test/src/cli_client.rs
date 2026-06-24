@@ -63,9 +63,7 @@ impl CliClient {
         let output = Command::new(&self.cli_path)
             .args(&argv)
             .output()
-            .unwrap_or_else(|error| {
-                panic!("failed to spawn {}: {error}", self.cli_path.display())
-            });
+            .unwrap_or_else(|error| panic!("failed to spawn {}: {error}", self.cli_path.display()));
         let latency_ms = started.elapsed().as_millis();
 
         let exit_code = output.status.code().unwrap_or(-1);

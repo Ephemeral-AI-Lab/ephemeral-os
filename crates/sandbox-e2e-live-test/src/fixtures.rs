@@ -68,9 +68,9 @@ impl Harness {
                 workspace_root.display()
             )
         });
-        let workspace_root = workspace_root.canonicalize().unwrap_or_else(|error| {
-            panic!("failed to canonicalize workspace root: {error}")
-        });
+        let workspace_root = workspace_root
+            .canonicalize()
+            .unwrap_or_else(|error| panic!("failed to canonicalize workspace root: {error}"));
         let workspace_root_arg = workspace_root.to_string_lossy().into_owned();
 
         let record = self.cli.manager(
@@ -84,13 +84,7 @@ impl Harness {
             .expect("create_sandbox response /id is a string")
             .to_owned();
 
-        (
-            Sandbox {
-                id,
-                workspace_root,
-            },
-            record,
-        )
+        (Sandbox { id, workspace_root }, record)
     }
 }
 

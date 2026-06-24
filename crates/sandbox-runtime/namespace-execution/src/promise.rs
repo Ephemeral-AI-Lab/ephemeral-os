@@ -10,6 +10,7 @@ pub(crate) struct CompletionPromise<T> {
     ready: Condvar,
 }
 
+#[cfg_attr(not(test), allow(dead_code))]
 enum Slot<T> {
     Pending,
     Ready(Result<T, NamespaceExecutionError>),
@@ -17,6 +18,7 @@ enum Slot<T> {
 }
 
 impl<T> CompletionPromise<T> {
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn new() -> Self {
         Self {
             slot: Mutex::new(Slot::Pending),
@@ -25,6 +27,7 @@ impl<T> CompletionPromise<T> {
     }
 
     /// `Pending` → `Ready`, then `notify_all`. Returns `false` if already resolved.
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn resolve(&self, outcome: Result<T, NamespaceExecutionError>) -> bool {
         let mut slot = self.slot.lock().expect("completion promise mutex poisoned");
         if matches!(*slot, Slot::Pending) {
@@ -59,6 +62,7 @@ impl<T> CompletionPromise<T> {
     }
 
     /// Block up to `timeout`; return `is_resolved()` at wake-up.
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn wait_timeout(&self, timeout: Duration) -> bool {
         let slot = self.slot.lock().expect("completion promise mutex poisoned");
         if !matches!(*slot, Slot::Pending) {
