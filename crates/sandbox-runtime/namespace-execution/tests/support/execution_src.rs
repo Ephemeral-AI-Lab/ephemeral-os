@@ -11,9 +11,25 @@ pub mod promise {
 }
 
 pub mod pty {
-    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/pty.rs"));
+    use std::io;
 
-    const _TERMINATE_PROCESS_GROUP_REF: fn(i32) = terminate_process_group;
+    pub struct PtyMaster;
+
+    impl PtyMaster {
+        pub fn write_stdin(&self, _bytes: &[u8]) -> io::Result<()> {
+            Ok(())
+        }
+
+        pub fn read_output_since(&self, _offset: u64) -> String {
+            String::new()
+        }
+
+        pub fn output_len(&self) -> u64 {
+            0
+        }
+
+        pub fn cancel(&self) {}
+    }
 }
 
 pub mod execution {
