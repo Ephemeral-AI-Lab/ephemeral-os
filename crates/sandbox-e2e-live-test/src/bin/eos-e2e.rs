@@ -1,6 +1,9 @@
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode, Stdio};
-use std::time::Instant;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use clap::Parser as _;
 use serde_json::Value;
@@ -18,6 +21,21 @@ const STAGE1_DEFAULT_TARGET: &[&str] = &["--test", "manager"];
 
 const RUN_ROOT_ENV: &str = "EOS_E2E_RUN_ROOT";
 const RUN_MANIFEST_FILE: &str = "run-manifest.json";
+
+/// Wall interval between observability poll cycles (§3.1); a fixed const, not a CLI knob.
+const OBS_POLL_INTERVAL_MS: u64 = 1000;
+/// The four confirmed `get_observability_tree` flags the poller issues (§3.2). No
+/// `--sandbox-id`, so it polls the whole tree and keys by the returned `sandbox_id`.
+const OBS_TREE_ARGS: [&str; 6] = [
+    "--include-recent-traces",
+    "1",
+    "--trace-limit",
+    "100",
+    "--resource-window-ms",
+    "60000",
+];
+/// Upper bound on distinct run-level observability warnings folded into the summary.
+const OBS_RUN_WARNING_CAP: usize = 64;
 
 const UNCONFIGURED_GATEWAY_MESSAGE: &str = "the attached gateway has no real Docker runtime: \
 create_sandbox returned \"sandbox runtime is not configured\". The shipped sandbox-gateway wires \
@@ -143,9 +161,37 @@ fn run_pipeline(args: &RunArgs) -> ExitCode {
         Err(error) => return fail_usage(&format!("{error:#}")),
     };
 
+    let obs_stop = Arc::new(AtomicBool::new(false));
+    let obs_poller = {
+        let stop = Arc::clone(&obs_stop);
+        let socket = config.gateway_socket.clone();
+        let run_root = config.run_root.clone();
+        std::thread::spawn(move || {
+            let cli = CliClient::new(PathBuf::from(CLI_BIN), socket);
+            poll_observability(
+                &cli,
+                &run_root,
+                &stop,
+                Duration::from_millis(OBS_POLL_INTERVAL_MS),
+            )
+        })
+    };
+
     let test_start = Instant::now();
     let cargo_status = run_cargo_test(&config, &filters);
     let test_process_ms = test_start.elapsed().as_millis();
+
+    obs_stop.store(true, Ordering::Relaxed);
+    let observability = obs_poller
+        .join()
+        .unwrap_or_else(|_| report::ObservabilitySummary {
+            schema_version: report::OBSERVABILITY_SCHEMA_VERSION,
+            poll_cycles: 0,
+            poll_errors: 0,
+            snapshots_written: 0,
+            p1_available: false,
+            warnings: vec!["observability poller thread panicked".to_owned()],
+        });
 
     let tests = report::build_tests(&config.run_root);
     let counts = report::Counts::tally(&tests);
@@ -200,6 +246,7 @@ fn run_pipeline(args: &RunArgs) -> ExitCode {
             per_test,
         },
         cleanup: guard.plan(),
+        observability,
     };
     let _ = report::write_summary(&config.run_root, &summary);
 
@@ -303,6 +350,113 @@ fn interpret_probe(cli: &CliClient, record: &CallRecord) -> Result<(), String> {
     } else {
         Err(message)
     }
+}
+
+/// Poll the whole manager observability tree on a fixed interval until `stop` is
+/// set, writing one latest-only `observability.json` per observed `sandbox_id`
+/// (§3). Runs on its own thread spanning the `cargo test` child and is joined
+/// before aggregation/cleanup. Every degraded shape is a recorded warning;
+/// nothing here gates the run.
+fn poll_observability(
+    cli: &CliClient,
+    run_root: &Path,
+    stop: &AtomicBool,
+    interval: Duration,
+) -> report::ObservabilitySummary {
+    let mut poll_cycles: u64 = 0;
+    let mut poll_errors: u64 = 0;
+    let mut warnings: Vec<String> = Vec::new();
+    let mut observed: BTreeMap<String, u64> = BTreeMap::new();
+    let mut written: BTreeSet<String> = BTreeSet::new();
+    let mut p1_available = false;
+
+    loop {
+        let stopping = stop.load(Ordering::Relaxed);
+        let cycle_index = poll_cycles;
+        poll_cycles += 1;
+
+        let record = cli.manager("get_observability_tree", &OBS_TREE_ARGS);
+        if record.exit_code != 0 {
+            poll_errors += 1;
+            warnings.push(format!("get_observability_tree exit {}", record.exit_code));
+        } else if let Some(nodes) = record.response().get("sandboxes").and_then(Value::as_array) {
+            let captured_at = config::utc_stamp();
+            for node in nodes {
+                let Some(sandbox_id) = node.get("sandbox_id").and_then(Value::as_str) else {
+                    warnings.push("malformed node: missing sandbox_id".to_owned());
+                    continue;
+                };
+                let sandbox_id = sandbox_id.to_owned();
+                let counter = observed.entry(sandbox_id.clone()).or_insert(0);
+                *counter += 1;
+                let cycles_observed = *counter;
+
+                let (node_dto, p1, node_warnings) =
+                    report::observability_node_from_tree(&sandbox_id, node);
+                if node_dto
+                    .resources
+                    .latest
+                    .as_ref()
+                    .and_then(|sample| sample.cgroup.get("available"))
+                    .and_then(Value::as_bool)
+                    == Some(true)
+                {
+                    p1_available = true;
+                }
+
+                let snapshot = report::ObservabilitySnapshot {
+                    schema_version: report::OBSERVABILITY_SCHEMA_VERSION,
+                    sandbox_id: sandbox_id.clone(),
+                    captured_at: captured_at.clone(),
+                    source_call: report::ObsSourceCall {
+                        argv: record.argv.clone(),
+                        exit_code: record.exit_code,
+                        latency_ms: record.latency_ms,
+                    },
+                    poll_meta: report::ObsPollMeta {
+                        cycles_observed,
+                        last_cycle_index: cycle_index,
+                    },
+                    node: node_dto,
+                    p1,
+                    warnings: node_warnings,
+                };
+                if let Err(error) = report::write_observability(run_root, &snapshot) {
+                    warnings.push(format!(
+                        "write observability for {sandbox_id} failed: {error}"
+                    ));
+                } else {
+                    written.insert(sandbox_id);
+                }
+            }
+        } else {
+            poll_errors += 1;
+            warnings.push("malformed tree: no sandboxes array".to_owned());
+        }
+
+        if stopping {
+            break;
+        }
+        std::thread::sleep(interval);
+    }
+
+    dedup_and_cap(&mut warnings);
+    report::ObservabilitySummary {
+        schema_version: report::OBSERVABILITY_SCHEMA_VERSION,
+        poll_cycles,
+        poll_errors,
+        snapshots_written: written.len(),
+        p1_available,
+        warnings,
+    }
+}
+
+/// Collapse repeated run-level warnings to their first occurrence and bound the
+/// count folded into `summary.observability` (§4.4).
+fn dedup_and_cap(warnings: &mut Vec<String>) {
+    let mut seen = HashSet::new();
+    warnings.retain(|warning| seen.insert(warning.clone()));
+    warnings.truncate(OBS_RUN_WARNING_CAP);
 }
 
 fn run_cargo_test(config: &RunConfig, filters: &[String]) -> Option<i32> {

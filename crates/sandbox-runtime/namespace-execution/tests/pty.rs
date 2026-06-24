@@ -4,7 +4,9 @@ use std::io::{Read, Write};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use sandbox_runtime_namespace_execution::test_support::{open_pty_pair, PtyMaster};
+include!("support/namespace_execution_src.rs");
+
+use crate::pty::{open_pty_pair, PtyMaster};
 
 #[test]
 fn reader_drains_slave_output_into_the_transcript() {

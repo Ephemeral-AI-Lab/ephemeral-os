@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
-use sandbox_runtime_namespace_execution::test_support::CompletionPromise;
-use sandbox_runtime_namespace_execution::{ExecutionHandle, NamespaceExecutionId};
+include!("support/namespace_execution_src.rs");
+
+use crate::promise::CompletionPromise;
 
 #[test]
 fn handle_reports_resolved_value() {

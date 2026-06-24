@@ -46,32 +46,10 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         }
     }
 
-    #[cfg(feature = "test-support")]
-    pub fn with_launcher(
-        launcher: Box<dyn NsRunnerLauncher>,
-        observer: Arc<dyn ExecutionObserver>,
-        max_active: usize,
-        setup_timeout_s: f64,
-    ) -> Self {
-        Self {
-            registry: Arc::new(ExecutionRegistry::new(max_active)),
-            observer,
-            launcher,
-            next_id: AtomicU64::new(1),
-            setup_timeout_s,
-        }
-    }
-
     #[must_use]
     pub fn allocate_id(&self) -> NamespaceExecutionId {
         let next_id = self.next_id.fetch_add(1, Ordering::Relaxed);
         NamespaceExecutionId(format!("namespace_execution_{next_id}"))
-    }
-
-    #[cfg(feature = "test-support")]
-    #[must_use]
-    pub fn registry_is_completed(&self, id: &NamespaceExecutionId) -> bool {
-        self.registry.is_completed(id)
     }
 
     pub fn attach(&self, id: &NamespaceExecutionId, value: V) {

@@ -1,15 +1,13 @@
 //! Behavioral coverage of the engine dispatch + watcher against the fake
 //! launcher — the authoritative Phase 2 signal (runs on darwin; no real fork).
 
+include!("support/namespace_execution_src.rs");
+
 mod support;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use sandbox_runtime_namespace_execution::{
-    NamespaceExecutionEngine, NamespaceExecutionError, NamespaceExecutionId,
-    NamespaceExecutionTerminalStatus, NamespaceTarget, NoopObserver,
-};
 use sandbox_runtime_namespace_process::runner::protocol::NamespaceRunnerRequest;
 use serde_json::json;
 use support::{

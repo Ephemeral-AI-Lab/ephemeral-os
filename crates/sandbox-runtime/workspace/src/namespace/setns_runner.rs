@@ -1,11 +1,14 @@
 use std::path::PathBuf;
 
+#[cfg(target_os = "linux")]
 use sandbox_runtime_namespace_execution::NamespaceTarget;
+#[cfg(target_os = "linux")]
 use serde_json::json;
 
 #[cfg(target_os = "linux")]
 use crate::isolated_setup::{BRIDGE_PREFIX_LEN, GATEWAY};
 use crate::lifecycle::remount::{RemountOverlayResult, RemountProbe};
+#[cfg(target_os = "linux")]
 use crate::model::WorkspaceHandle;
 use crate::profile::WorkspaceModeError;
 use crate::profile::WorkspaceModeHandle;
@@ -14,6 +17,7 @@ use crate::profile::WorkspaceModeHandle;
 use super::fds::{expect_line, write_all_fd};
 #[cfg(target_os = "linux")]
 use super::holder::ns_holder_runtime_error;
+#[cfg(target_os = "linux")]
 use super::setup_error;
 use super::NamespaceRuntime;
 
@@ -25,11 +29,7 @@ impl NamespaceRuntime {
     ) -> Result<(), WorkspaceModeError> {
         #[cfg(not(target_os = "linux"))]
         {
-            #[cfg(feature = "test-support")]
-            if self.force_engine_for_test {
-                return self.mount_overlay_via_engine(handle, layer_paths);
-            }
-            let _ = (handle, layer_paths);
+            let _ = (&self.engine, handle, layer_paths);
             Ok(())
         }
         #[cfg(target_os = "linux")]
@@ -46,11 +46,7 @@ impl NamespaceRuntime {
     ) -> Result<RemountOverlayResult, WorkspaceModeError> {
         #[cfg(not(target_os = "linux"))]
         {
-            #[cfg(feature = "test-support")]
-            if self.force_engine_for_test {
-                return self.remount_overlay_via_engine(handle, layer_paths, probe);
-            }
-            let _ = (handle, layer_paths, probe);
+            let _ = (&self.engine, handle, layer_paths, probe);
             Ok(RemountOverlayResult::verified())
         }
         #[cfg(target_os = "linux")]
@@ -59,6 +55,7 @@ impl NamespaceRuntime {
         }
     }
 
+    #[cfg(target_os = "linux")]
     pub(crate) fn mount_overlay_via_engine(
         &self,
         handle: &WorkspaceModeHandle,
@@ -80,6 +77,7 @@ impl NamespaceRuntime {
             .map_err(setup_error)
     }
 
+    #[cfg(target_os = "linux")]
     pub(crate) fn remount_overlay_via_engine(
         &self,
         handle: &WorkspaceModeHandle,

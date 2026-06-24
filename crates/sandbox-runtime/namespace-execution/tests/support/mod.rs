@@ -1,17 +1,16 @@
 //! Shared test fixtures for the engine suites: fakes for the `pub(crate)`
-//! launcher seam (surfaced via the crate's `test_support` facade) plus small
-//! constructors. Each integration binary that needs them does `mod support;`,
-//! so unused-in-one-binary items are expected — hence `allow(dead_code)`.
+//! launcher seam plus small constructors. Each integration binary that needs
+//! them does `mod support;`, so unused-in-one-binary items are expected —
+//! hence `allow(dead_code)`.
 
 #![allow(dead_code)]
 
 use std::path::PathBuf;
 use std::sync::{Arc, Condvar, Mutex};
 
-use sandbox_runtime_namespace_execution::test_support::{
-    open_pty_pair, NsRunnerLauncher, PtyMaster, RunnerChild,
-};
-use sandbox_runtime_namespace_execution::{
+use crate::launcher::{NsRunnerLauncher, RunnerChild};
+use crate::pty::{open_pty_pair, PtyMaster};
+use crate::{
     ExecutionObserver, NamespaceExecutionError, NamespaceExecutionId,
     NamespaceExecutionTerminalStatus, NamespaceTarget, RunnerOutcome, ShellOperation,
 };

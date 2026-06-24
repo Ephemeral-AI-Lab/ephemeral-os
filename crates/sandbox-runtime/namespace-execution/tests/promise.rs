@@ -2,7 +2,9 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
-use sandbox_runtime_namespace_execution::test_support::CompletionPromise;
+include!("support/namespace_execution_src.rs");
+
+use crate::promise::CompletionPromise;
 
 #[test]
 fn resolve_then_wait_yields_value() {

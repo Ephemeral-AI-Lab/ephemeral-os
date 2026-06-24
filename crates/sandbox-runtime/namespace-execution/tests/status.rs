@@ -1,6 +1,6 @@
-mod support;
+include!("support/namespace_execution_src.rs");
 
-use sandbox_runtime_namespace_execution::NamespaceExecutionTerminalStatus;
+mod support;
 use serde_json::json;
 use support::{outcome, run_result, run_result_payload, run_result_without_status};
 

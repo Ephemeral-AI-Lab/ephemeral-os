@@ -232,6 +232,11 @@ pub(crate) fn wait_for_completed_record(
                 });
             }
         } else {
+            // The finalizer can move the record after the completed check while
+            // this waiter is blocked on the active map lock.
+            if let Some(completed) = process_store.completed(command_session_id) {
+                return Ok(completed);
+            }
             return Err(CommandServiceError::CommandNotFound {
                 command_session_id: command_session_id.clone(),
             });
