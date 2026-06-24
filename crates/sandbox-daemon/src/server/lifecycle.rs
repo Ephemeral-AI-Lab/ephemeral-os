@@ -1,3 +1,4 @@
+use std::os::unix::fs::PermissionsExt as _;
 use std::sync::Arc;
 
 use tokio::io::{AsyncWrite, AsyncWriteExt};
@@ -34,15 +35,11 @@ impl SandboxDaemonServer {
         }
         let _ = tokio::fs::remove_file(&server.config.socket_path).await;
         let unix_listener = UnixListener::bind(&server.config.socket_path)?;
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            tokio::fs::set_permissions(
-                &server.config.socket_path,
-                std::fs::Permissions::from_mode(0o600),
-            )
-            .await?;
-        }
+        tokio::fs::set_permissions(
+            &server.config.socket_path,
+            std::fs::Permissions::from_mode(0o600),
+        )
+        .await?;
         tokio::fs::write(&server.config.pid_path, std::process::id().to_string()).await?;
 
         let mut unix_server = {

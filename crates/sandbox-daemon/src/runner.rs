@@ -2,7 +2,6 @@
 
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
-#[cfg(unix)]
 use std::os::fd::RawFd;
 use std::path::PathBuf;
 

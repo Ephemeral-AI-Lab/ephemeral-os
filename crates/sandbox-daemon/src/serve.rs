@@ -311,12 +311,14 @@ fn daemon_already_running(pid_path: &Path, socket_path: &Path) -> bool {
     let Ok(pid) = raw.trim().parse::<u32>() else {
         return false;
     };
-    #[cfg(target_os = "linux")]
-    {
-        PathBuf::from(format!("/proc/{pid}")).exists()
-    }
-    #[cfg(not(target_os = "linux"))]
-    {
+    process_is_live(pid)
+}
+
+fn process_is_live(pid: u32) -> bool {
+    let proc_root = Path::new("/proc");
+    if proc_root.is_dir() {
+        proc_root.join(pid.to_string()).exists()
+    } else {
         pid > 0
     }
 }

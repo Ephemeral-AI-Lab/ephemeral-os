@@ -42,6 +42,7 @@ fn main() -> Result<()> {
             check_crate_source_size_policy(&CrateSourceSizePolicyArgs::parse(args)?)
         }
         Some("check-inline-tests") => check_inline_test_policy(&InlineTestPolicyArgs::parse(args)?),
+        Some("check-cfg") => check_cfg_policy(&CfgPolicyArgs::parse(args)?),
         Some("help" | "--help" | "-h") | None => {
             print_help();
             Ok(())
@@ -52,6 +53,11 @@ fn main() -> Result<()> {
 
 #[derive(Debug)]
 struct InlineTestPolicyArgs {
+    roots: Vec<PathBuf>,
+}
+
+#[derive(Debug)]
+struct CfgPolicyArgs {
     roots: Vec<PathBuf>,
 }
 
@@ -79,6 +85,13 @@ struct InlineTestPolicyViolation {
     line_number: usize,
     line: String,
     kind: InlineTestPolicyViolationKind,
+}
+
+#[derive(Debug)]
+struct CfgPolicyViolation {
+    path: PathBuf,
+    line_number: usize,
+    line: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -115,6 +128,33 @@ impl InlineTestPolicyArgs {
         }
         if roots.is_empty() {
             roots.extend([PathBuf::from("crates"), PathBuf::from("xtask")]);
+        }
+        Ok(Self { roots })
+    }
+}
+
+impl CfgPolicyArgs {
+    fn parse<I>(args: I) -> Result<Self>
+    where
+        I: IntoIterator<Item = OsString>,
+    {
+        let mut roots = Vec::new();
+        let mut iter = args.into_iter();
+        while let Some(arg) = iter.next() {
+            let arg = arg
+                .into_string()
+                .map_err(|_| anyhow::anyhow!("xtask arguments must be valid UTF-8"))?;
+            match arg.as_str() {
+                "--root" => roots.push(PathBuf::from(next_string(&mut iter, "--root")?)),
+                "--help" | "-h" => {
+                    print_help();
+                    std::process::exit(0);
+                }
+                other => bail!("unknown check-cfg option {other:?}"),
+            }
+        }
+        if roots.is_empty() {
+            roots.push(PathBuf::from("crates/sandbox-daemon"));
         }
         Ok(Self { roots })
     }
@@ -318,6 +358,47 @@ attributes are forbidden in production Rust sources."
     )
 }
 
+fn check_cfg_policy(args: &CfgPolicyArgs) -> Result<()> {
+    let root = workspace_root()?;
+    let mut violations = Vec::new();
+    for scan_root in &args.roots {
+        let scan_root = absolutize(&root, scan_root);
+        for entry in WalkBuilder::new(&scan_root).build() {
+            let entry = entry.with_context(|| format!("walk {}", scan_root.display()))?;
+            let path = entry.path();
+            if !entry
+                .file_type()
+                .is_some_and(|file_type| file_type.is_file())
+                || !is_rust_source(path)
+                || is_under_crate_dir(path, "tests")
+                || is_under_crate_dir(path, "benches")
+            {
+                continue;
+            }
+            collect_cfg_policy_violations(path, &mut violations)?;
+        }
+    }
+
+    if violations.is_empty() {
+        println!("no #[cfg]/#[cfg_attr] attributes found in scanned production Rust sources");
+        return Ok(());
+    }
+
+    eprintln!(
+        "conditional-compilation attributes (#[cfg]/#[cfg_attr]) are forbidden in scanned \
+production Rust sources; keep platform- and feature-specific code out of src."
+    );
+    for violation in &violations {
+        eprintln!(
+            "{}:{}: {}",
+            relative_to(&root, &violation.path).display(),
+            violation.line_number,
+            violation.line.trim(),
+        );
+    }
+    bail!("found {} forbidden #[cfg] attributes", violations.len())
+}
+
 fn check_mod_lib_size_policy(args: &ModLibSizePolicyArgs) -> Result<()> {
     let root = workspace_root()?;
     let mut violations = Vec::new();
@@ -421,6 +502,37 @@ fn collect_inline_test_policy_violations(
     path: &Path,
     violations: &mut Vec<InlineTestPolicyViolation>,
 ) -> Result<()> {
+    for_each_attribute(path, |line_number, raw_attribute, compact_attribute| {
+        if let Some(kind) = compact_attribute_violation_kind(compact_attribute) {
+            violations.push(InlineTestPolicyViolation {
+                path: path.to_path_buf(),
+                line_number,
+                line: raw_attribute.to_owned(),
+                kind,
+            });
+        }
+    })
+}
+
+fn collect_cfg_policy_violations(
+    path: &Path,
+    violations: &mut Vec<CfgPolicyViolation>,
+) -> Result<()> {
+    for_each_attribute(path, |line_number, raw_attribute, compact_attribute| {
+        if compact_attribute_is_cfg(compact_attribute) {
+            violations.push(CfgPolicyViolation {
+                path: path.to_path_buf(),
+                line_number,
+                line: raw_attribute.to_owned(),
+            });
+        }
+    })
+}
+
+fn for_each_attribute<F>(path: &Path, mut visit: F) -> Result<()>
+where
+    F: FnMut(usize, &str, &str),
+{
     let body = fs::read_to_string(path).with_context(|| format!("read {}", path.display()))?;
     let mut pending_attribute: Option<(usize, String, String)> = None;
     for (line_index, line) in body.lines().enumerate() {
@@ -429,13 +541,7 @@ fn collect_inline_test_policy_violations(
             raw_attribute.push_str(line.trim());
             compact_attribute.push_str(&compact_attribute_text(line));
             if compact_attribute.contains(']') {
-                push_inline_test_policy_violation(
-                    path,
-                    *start_line,
-                    raw_attribute,
-                    compact_attribute,
-                    violations,
-                );
+                visit(*start_line, raw_attribute, compact_attribute);
                 pending_attribute = None;
             }
             continue;
@@ -448,13 +554,7 @@ fn collect_inline_test_policy_violations(
         let raw_attribute = trimmed.to_owned();
         let compact_attribute = compact_attribute_text(trimmed);
         if compact_attribute.contains(']') {
-            push_inline_test_policy_violation(
-                path,
-                line_index + 1,
-                &raw_attribute,
-                &compact_attribute,
-                violations,
-            );
+            visit(line_index + 1, &raw_attribute, &compact_attribute);
         } else {
             pending_attribute = Some((line_index + 1, raw_attribute, compact_attribute));
         }
@@ -462,22 +562,12 @@ fn collect_inline_test_policy_violations(
     Ok(())
 }
 
-fn push_inline_test_policy_violation(
-    path: &Path,
-    line_number: usize,
-    raw_attribute: &str,
-    compact_attribute: &str,
-    violations: &mut Vec<InlineTestPolicyViolation>,
-) {
-    let Some(kind) = compact_attribute_violation_kind(compact_attribute) else {
-        return;
+fn compact_attribute_is_cfg(compact: &str) -> bool {
+    let Some(attribute) = attribute_body(compact) else {
+        return false;
     };
-    violations.push(InlineTestPolicyViolation {
-        path: path.to_path_buf(),
-        line_number,
-        line: raw_attribute.to_owned(),
-        kind,
-    });
+    let (path, _args) = attribute_path_and_args(attribute);
+    path == "cfg" || path == "cfg_attr"
 }
 
 fn is_attribute_start(trimmed: &str) -> bool {
@@ -1040,6 +1130,9 @@ xtask commands:
           fail if any mod.rs or lib.rs file exceeds 300 lines by default
   check-inline-tests [--root <path> ...]
           fail if production Rust sources contain forbidden inline attributes
+  check-cfg [--root <path> ...]
+          fail if production Rust sources contain #[cfg]/#[cfg_attr] attributes
+          (defaults to crates/sandbox-daemon)
   package [--target <triple>] [--out-dir <dir>] [--builder rust-lld|cargo|cross]
           [--profile <name> | --fast] [--no-build] [--sign --minisign-key <path>]
 
