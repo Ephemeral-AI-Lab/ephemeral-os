@@ -85,7 +85,10 @@ impl RunGuard {
                     removed_run_root = true;
                 }
                 Err(error) => {
-                    errors.push(format!("remove_dir_all {}: {error}", self.run_root.display()));
+                    errors.push(format!(
+                        "remove_dir_all {}: {error}",
+                        self.run_root.display()
+                    ));
                 }
             }
         }

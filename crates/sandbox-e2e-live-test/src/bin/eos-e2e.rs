@@ -37,11 +37,19 @@ fn main() -> ExitCode {
 }
 
 fn run_preflight(args: &RunArgs) -> ExitCode {
-    let config = match RunConfig::resolve(args) {
-        Ok(config) => config,
+    let image = match config::resolve_image(args) {
+        Ok(image) => image,
         Err(error) => return fail_usage(&format!("configuration error: {error:#}")),
     };
-    match preflight(&config) {
+    if let Err(message) = preflight_environment(&image) {
+        eprintln!("{message}");
+        return ExitCode::from(2);
+    }
+    let socket = match config::resolve_gateway_socket(args) {
+        Ok(socket) => socket,
+        Err(error) => return fail_usage(&format!("configuration error: {error:#}")),
+    };
+    match preflight_probe(&image, &socket) {
         Ok(()) => ExitCode::SUCCESS,
         Err(message) => {
             eprintln!("{message}");
@@ -83,7 +91,11 @@ fn run_pipeline(args: &RunArgs) -> ExitCode {
         Err(error) => return fail_usage(&format!("configuration error: {error:#}")),
     };
 
-    if let Err(message) = preflight(&config) {
+    if let Err(message) = preflight_environment(&config.image) {
+        eprintln!("{message}");
+        return ExitCode::from(2);
+    }
+    if let Err(message) = preflight_probe(&config.image, &config.gateway_socket) {
         eprintln!("{message}");
         return ExitCode::from(2);
     }
@@ -259,7 +271,10 @@ fn interpret_probe(cli: &CliClient, record: &CallRecord) -> Result<(), String> {
             record.response()
         ));
     }
-    if record.response().to_string().contains("runtime is not configured")
+    if record
+        .response()
+        .to_string()
+        .contains("runtime is not configured")
         || record.stderr.contains("runtime is not configured")
     {
         return Err(UNCONFIGURED_GATEWAY_MESSAGE.to_owned());
@@ -298,10 +313,12 @@ fn test_filters(tests: &TestSelection) -> anyhow::Result<Vec<String>> {
         TestSelection::All => Ok(Vec::new()),
         TestSelection::Names(names) => Ok(names.clone()),
         TestSelection::RerunFailedFrom(path) => {
-            let bytes = std::fs::read(path)
-                .map_err(|error| anyhow::anyhow!("reading rerun summary {}: {error}", path.display()))?;
-            let summary: Value = serde_json::from_slice(&bytes)
-                .map_err(|error| anyhow::anyhow!("parsing rerun summary {}: {error}", path.display()))?;
+            let bytes = std::fs::read(path).map_err(|error| {
+                anyhow::anyhow!("reading rerun summary {}: {error}", path.display())
+            })?;
+            let summary: Value = serde_json::from_slice(&bytes).map_err(|error| {
+                anyhow::anyhow!("parsing rerun summary {}: {error}", path.display())
+            })?;
             let failed = summary
                 .get("failed_tests")
                 .and_then(Value::as_array)

@@ -29,7 +29,7 @@ fn test_manifest() -> sandbox_runtime_layerstack::Manifest {
 
 fn workspace_mode_handle() -> WorkspaceModeHandle {
     WorkspaceModeHandle {
-        workspace_id: WorkspaceModeId("isolated-handle".to_owned()),
+        workspace_id: WorkspaceModeId("namespace-handle".to_owned()),
         profile: WorkspaceProfile::Isolated,
         lease_id: "lease-1".to_owned(),
         manifest_version: 42,
@@ -59,7 +59,7 @@ fn workspace_mode_handle() -> WorkspaceModeHandle {
 }
 
 fn assert_handle_projection(public: &WorkspaceHandle) {
-    assert_eq!(public.id, WorkspaceSessionId("isolated-handle".to_owned()));
+    assert_eq!(public.id, WorkspaceSessionId("namespace-handle".to_owned()));
     assert_eq!(public.workspace_root, PathBuf::from("/workspace"));
     assert_eq!(public.profile, WorkspaceProfile::Isolated);
     assert_eq!(

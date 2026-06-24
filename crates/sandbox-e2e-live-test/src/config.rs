@@ -128,7 +128,10 @@ impl BuildSource {
 /// else (including `--clean-run`/`--rerun-failed-from`) is a flag on the default
 /// `run` path, so the shared [`RunArgs`] are flattened and global.
 #[derive(clap::Parser)]
-#[command(name = "eos-e2e", about = "EphemeralOS black-box live E2E orchestrator")]
+#[command(
+    name = "eos-e2e",
+    about = "EphemeralOS black-box live E2E orchestrator"
+)]
 pub struct Args {
     #[command(subcommand)]
     pub command: Option<Command>,
@@ -219,7 +222,11 @@ impl RunConfig {
 
         let max_parallel = args
             .max_parallel
-            .or_else(|| std::env::var(MAX_PARALLEL_ENV).ok().and_then(|v| v.parse().ok()))
+            .or_else(|| {
+                std::env::var(MAX_PARALLEL_ENV)
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+            })
             .unwrap_or_else(default_parallelism)
             .max(1);
 
@@ -231,21 +238,9 @@ impl RunConfig {
             TestSelection::Names(args.test_names.clone())
         };
 
-        let image = args
-            .image
-            .clone()
-            .unwrap_or_else(|| DEFAULT_IMAGE.to_owned());
-        if image.trim().is_empty() {
-            anyhow::bail!("--image must not be empty");
-        }
-
+        let image = resolve_image(args)?;
         let run_root = resolve_run_root_base(args).join(&run_id);
-
-        let gateway_socket = args
-            .gateway_socket
-            .clone()
-            .or_else(|| std::env::var_os(GATEWAY_SOCKET_ENV).map(PathBuf::from))
-            .context("--gateway-socket (or SANDBOX_GATEWAY_SOCKET) is required in attach-only v1")?;
+        let gateway_socket = resolve_gateway_socket(args)?;
 
         let build = match &args.prebuilt_bin_dir {
             Some(dir) => BuildSource::Prebuilt(dir.clone()),
@@ -289,9 +284,33 @@ impl RunConfig {
     }
 }
 
-/// Resolve the run-root base (precedence `--run-root` > `EOS_E2E_RUN_ROOT_BASE`
-/// > `${TMPDIR:-/tmp}/eos-e2e`). The resolved run root is `{base}/{run_id}`;
-/// this base is distinct from the cross-process `EOS_E2E_RUN_ROOT` export.
+/// Resolve the sandbox image (precedence `--image` > default `ubuntu:24.04`).
+/// Needs no gateway socket, so preflight checks 1–3 can run without one.
+pub fn resolve_image(args: &RunArgs) -> anyhow::Result<String> {
+    let image = args
+        .image
+        .clone()
+        .unwrap_or_else(|| DEFAULT_IMAGE.to_owned());
+    if image.trim().is_empty() {
+        anyhow::bail!("--image must not be empty");
+    }
+    Ok(image)
+}
+
+/// Resolve the gateway socket (precedence `--gateway-socket` >
+/// `SANDBOX_GATEWAY_SOCKET`). Required in attach-only v1; only the run pipeline
+/// and the preflight probe (check 4) demand it.
+pub fn resolve_gateway_socket(args: &RunArgs) -> anyhow::Result<PathBuf> {
+    args.gateway_socket
+        .clone()
+        .or_else(|| std::env::var_os(GATEWAY_SOCKET_ENV).map(PathBuf::from))
+        .context("--gateway-socket (or SANDBOX_GATEWAY_SOCKET) is required in attach-only v1")
+}
+
+/// Resolve the run-root base (precedence `--run-root`, then
+/// `EOS_E2E_RUN_ROOT_BASE`, then `${TMPDIR:-/tmp}/eos-e2e`). The resolved run
+/// root is `{base}/{run_id}`; this base is distinct from the cross-process
+/// `EOS_E2E_RUN_ROOT` export.
 #[must_use]
 pub fn resolve_run_root_base(args: &RunArgs) -> PathBuf {
     if let Some(base) = &args.run_root {
@@ -353,7 +372,7 @@ fn default_parallelism() -> usize {
 }
 
 fn positive_duration(secs: f64, flag: &str) -> anyhow::Result<Duration> {
-    if !(secs > 0.0) || !secs.is_finite() {
+    if !secs.is_finite() || secs <= 0.0 {
         anyhow::bail!("{flag} must be > 0 (got {secs})");
     }
     Ok(Duration::from_secs_f64(secs))
@@ -397,7 +416,11 @@ fn test_manifest_hash() -> String {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let mut leaves = Vec::new();
     for scope in ["manager", "runtime"] {
-        collect_test_leaves(&manifest_dir.join("tests").join(scope), manifest_dir, &mut leaves);
+        collect_test_leaves(
+            &manifest_dir.join("tests").join(scope),
+            manifest_dir,
+            &mut leaves,
+        );
     }
     leaves.sort();
     let joined = leaves.join("\n");
