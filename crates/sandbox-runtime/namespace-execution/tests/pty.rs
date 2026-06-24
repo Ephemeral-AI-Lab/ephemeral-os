@@ -6,11 +6,11 @@ use std::time::{Duration, Instant};
 
 include!("support/pty_src.rs");
 
-use crate::pty::{open_pty_pair, terminate_process_group_for_test, PtyMaster};
+use crate::pty::{open_pty_pair, terminate_pgid_for_test, PtyMaster};
 
 #[test]
 fn reader_drains_slave_output_into_the_transcript() {
-    let _teardown_hook: fn(i32) = terminate_process_group_for_test();
+    let _teardown_hook: fn(i32) = terminate_pgid_for_test();
     let (master, mut slave) = open_pty_pair().expect("openpt pair");
     let pty = PtyMaster::spawn(master, None, None, Box::new(|| {})).expect("pty master");
 

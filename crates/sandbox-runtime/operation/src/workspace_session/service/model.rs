@@ -52,5 +52,4 @@ impl WorkspaceSession {
         self.handle.snapshot.manifest = manifest;
         self.handle.snapshot.layer_paths = layer_paths;
     }
-
 }

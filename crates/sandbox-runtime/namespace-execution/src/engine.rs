@@ -15,8 +15,7 @@ use crate::launcher::{ForkRunnerLauncher, NsRunnerLauncher, RunnerChild};
 use crate::observer::ExecutionObserver;
 use crate::promise::CompletionPromise;
 use crate::registry::ExecutionRegistry;
-use crate::shell::{RunnerOutcome, ShellOperation};
-use crate::status::NamespaceExecutionTerminalStatus;
+use crate::shell::{NamespaceExecutionTerminalStatus, RunnerOutcome, ShellOperation};
 use crate::target::NamespaceTarget;
 
 pub struct NamespaceExecutionEngine<V = ()> {

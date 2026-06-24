@@ -4,7 +4,9 @@ use std::os::fd::BorrowedFd;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use rustix::process::{getpgrp, kill_process_group, Pid, Signal};
+use nix::sys::signal::{kill, Signal};
+use nix::unistd::Pid;
+use rustix::process::getpgrp;
 
 use crate::runner::RunnerError;
 
@@ -26,16 +28,13 @@ pub(super) fn wait_for_command_execution_scope(
             }
         }
         if root_exit_code.is_some() {
-            let has_other_live_members =
-                process_group_has_other_live_members(pgid, self_pid, proc_dir);
+            let has_other_live_members = pgid_has_other_live_members(pgid, self_pid, proc_dir);
             if !has_other_live_members {
                 return Ok(root_exit_code.unwrap_or(0));
             }
         }
         if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
-            if let Some(pid) = Pid::from_raw(pgid) {
-                let _ = kill_process_group(pid, Signal::Kill);
-            }
+            let _ = kill(Pid::from_raw(-pgid), Signal::SIGKILL);
             let _ = child.wait();
             return Err(RunnerError::TimedOut);
         }
@@ -58,13 +57,9 @@ fn exit_code(status: std::process::ExitStatus) -> i32 {
         .unwrap_or(128)
 }
 
-fn process_group_has_other_live_members(
-    pgid: i32,
-    self_pid: i32,
-    proc_dir: Option<BorrowedFd>,
-) -> bool {
+fn pgid_has_other_live_members(pgid: i32, self_pid: i32, proc_dir: Option<BorrowedFd>) -> bool {
     let Some(proc_dir) = proc_dir else {
-        return process_group_has_other_live_members_by_path(pgid, self_pid);
+        return pgid_has_other_live_members_by_path(pgid, self_pid);
     };
     let Ok(dir) = rustix::fs::Dir::read_from(proc_dir) else {
         return false;
@@ -82,7 +77,7 @@ fn process_group_has_other_live_members(
         if pid == self_pid {
             continue;
         }
-        if proc_stat_process_group_at(proc_dir, pid)
+        if proc_stat_pgid_at(proc_dir, pid)
             .is_some_and(|(entry_pgid, state)| entry_pgid == pgid && state != 'Z')
         {
             return true;
@@ -91,7 +86,7 @@ fn process_group_has_other_live_members(
     false
 }
 
-fn process_group_has_other_live_members_by_path(pgid: i32, self_pid: i32) -> bool {
+fn pgid_has_other_live_members_by_path(pgid: i32, self_pid: i32) -> bool {
     let Ok(entries) = fs::read_dir("/proc") else {
         return false;
     };
@@ -113,7 +108,7 @@ fn process_group_has_other_live_members_by_path(pgid: i32, self_pid: i32) -> boo
     })
 }
 
-fn proc_stat_process_group_at(proc_dir: BorrowedFd, pid: i32) -> Option<(i32, char)> {
+fn proc_stat_pgid_at(proc_dir: BorrowedFd, pid: i32) -> Option<(i32, char)> {
     let fd = rustix::fs::openat(
         proc_dir,
         format!("{pid}/stat"),

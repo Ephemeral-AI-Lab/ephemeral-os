@@ -130,7 +130,6 @@ CREATE TABLE IF NOT EXISTS execution_snapshots (
   workspace_ownership TEXT,
   started_at_unix_ms INTEGER,
   wall_time_ms REAL,
-  process_group_id INTEGER,
   transcript_path TEXT,
   sampled_at_unix_ms INTEGER NOT NULL,
   error_message TEXT,

@@ -27,36 +27,13 @@ pub(crate) struct CommandFinalizationTrace {
 }
 
 pub(crate) struct ExecCommand {
-    command: String,
-    timeout_seconds: Option<f64>,
-    transcript_path: PathBuf,
-    session_disposition: SessionDisposition,
-    workspace: Arc<WorkspaceSessionService>,
-    started_at: Instant,
-    finalization_trace: Option<CommandFinalizationTrace>,
-}
-
-impl ExecCommand {
-    #[allow(clippy::too_many_arguments)]
-    pub(crate) fn new(
-        command: String,
-        timeout_seconds: Option<f64>,
-        transcript_path: PathBuf,
-        session_disposition: SessionDisposition,
-        workspace: Arc<WorkspaceSessionService>,
-        started_at: Instant,
-        finalization_trace: Option<CommandFinalizationTrace>,
-    ) -> Self {
-        Self {
-            command,
-            timeout_seconds,
-            transcript_path,
-            session_disposition,
-            workspace,
-            started_at,
-            finalization_trace,
-        }
-    }
+    pub(crate) command: String,
+    pub(crate) timeout_seconds: Option<f64>,
+    pub(crate) transcript_path: PathBuf,
+    pub(crate) session_disposition: SessionDisposition,
+    pub(crate) workspace: Arc<WorkspaceSessionService>,
+    pub(crate) started_at: Instant,
+    pub(crate) finalization_trace: Option<CommandFinalizationTrace>,
 }
 
 impl ShellOperation for ExecCommand {

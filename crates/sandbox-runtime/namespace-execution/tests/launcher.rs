@@ -23,15 +23,15 @@ pub mod launcher {
         fn piped_completion_timeout_terminates_and_reaps_child() {
             let (result_read, result_write) = result_pipe().expect("result pipe");
             drop(result_write);
-            let child = Command::new("sh")
+            let mut command = Command::new("sh");
+            command
                 .arg("-c")
                 .arg("trap 'exit 0' TERM; while true; do sleep 1; done")
                 .stdin(Stdio::null())
                 .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .process_group(0)
-                .spawn()
-                .expect("spawn child");
+                .stderr(Stdio::null());
+            install_pgid_leader_hook(&mut command);
+            let child = command.spawn().expect("spawn child");
             let mut runner = ForkRunnerChild {
                 child,
                 result_read,

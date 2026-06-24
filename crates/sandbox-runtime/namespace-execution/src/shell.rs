@@ -4,7 +4,14 @@ use sandbox_runtime_namespace_process::runner::protocol::RunResult;
 use serde_json::Value;
 
 use crate::error::NamespaceExecutionError;
-use crate::status::NamespaceExecutionTerminalStatus;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NamespaceExecutionTerminalStatus {
+    Ok,
+    Error,
+    TimedOut,
+    Cancelled,
+}
 
 pub struct RunnerOutcome {
     result: RunResult,

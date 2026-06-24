@@ -8,7 +8,6 @@ mod promise;
 mod pty;
 mod registry;
 mod shell;
-mod status;
 mod target;
 mod transcript;
 
@@ -21,6 +20,5 @@ pub use observer::{ExecutionObserver, NoopObserver};
 pub use promise::{CompletionPromise, CompletionWaiter};
 pub use pty::{open_pty_pair, PtyMaster};
 pub use registry::ExecutionRegistry;
-pub use shell::{RunnerOutcome, ShellOperation};
-pub use status::NamespaceExecutionTerminalStatus;
+pub use shell::{NamespaceExecutionTerminalStatus, RunnerOutcome, ShellOperation};
 pub use target::NamespaceTarget;

@@ -64,15 +64,19 @@ impl CommandOperationService {
         };
 
         let started_at = Instant::now();
-        let exec_command = ExecCommand::new(
-            input.cmd.clone(),
-            input.timeout_ms.map(|ms| ms as f64 / 1000.0),
-            transcript_path.clone(),
-            workspace.session_disposition(),
-            self.workspace_handle().clone(),
+        let exec_command = ExecCommand {
+            command: input.cmd.clone(),
+            timeout_seconds: input.timeout_ms.map(|ms| ms as f64 / 1000.0),
+            transcript_path: transcript_path.clone(),
+            session_disposition: workspace.session_disposition(),
+            workspace: self.workspace_handle().clone(),
             started_at,
-            self.finalization_trace(&id, &workspace, origin_request_id.as_deref()),
-        );
+            finalization_trace: self.finalization_trace(
+                &id,
+                &workspace,
+                origin_request_id.as_deref(),
+            ),
+        };
         let target = NamespaceTarget::from(entry);
 
         let exec = measure_optional_if(trace, span_keys::COMMAND_EXEC_PROCESS_START, || {

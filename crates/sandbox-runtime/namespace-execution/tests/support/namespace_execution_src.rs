@@ -42,10 +42,6 @@ pub mod shell {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/shell.rs"));
 }
 
-pub mod status {
-    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/status.rs"));
-}
-
 pub mod target {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/target.rs"));
 }
@@ -56,6 +52,5 @@ pub use execution::{ExecutionHandle, InteractiveExecution};
 pub use id::NamespaceExecutionId;
 pub use observer::{ExecutionObserver, NoopObserver};
 pub use registry::ExecutionRegistry;
-pub use shell::{RunnerOutcome, ShellOperation};
-pub use status::NamespaceExecutionTerminalStatus;
+pub use shell::{NamespaceExecutionTerminalStatus, RunnerOutcome, ShellOperation};
 pub use target::NamespaceTarget;

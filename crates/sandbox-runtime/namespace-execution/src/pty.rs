@@ -177,7 +177,7 @@ pub fn open_pty_pair() -> io::Result<(File, File)> {
     Ok((File::from(master), slave))
 }
 
-pub(crate) fn terminate_process_group(pgid: i32) {
+pub(crate) fn terminate_pgid(pgid: i32) {
     if killpg(Pid::from_raw(pgid), Signal::SIGTERM).is_ok() {
         thread::sleep(Duration::from_millis(50));
         let _ = killpg(Pid::from_raw(pgid), Signal::SIGKILL);

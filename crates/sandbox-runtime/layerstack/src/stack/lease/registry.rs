@@ -87,12 +87,6 @@ impl LeaseRegistry {
         Some(old)
     }
 
-    pub(in crate::stack) fn manifest(&self, lease_id: &str) -> Option<Manifest> {
-        self.leases
-            .get(lease_id)
-            .map(|lease| lease.manifest.clone())
-    }
-
     pub(in crate::stack) fn leased_layers(&self) -> Vec<LayerRef> {
         self.refcounts.keys().cloned().collect()
     }

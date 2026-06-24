@@ -29,9 +29,7 @@ pub struct CommandOperationService {
     workspace_lifecycle_admission: Mutex<()>,
 }
 
-pub(crate) struct WorkspaceLifecycleAdmission<'a> {
-    _guard: MutexGuard<'a, ()>,
-}
+pub(crate) type WorkspaceLifecycleAdmission<'a> = MutexGuard<'a, ()>;
 
 impl CommandOperationService {
     #[must_use]
@@ -141,11 +139,9 @@ impl CommandOperationService {
     }
 
     pub(crate) fn begin_workspace_lifecycle_admission(&self) -> WorkspaceLifecycleAdmission<'_> {
-        let guard = self
-            .workspace_lifecycle_admission
+        self.workspace_lifecycle_admission
             .lock()
-            .unwrap_or_else(PoisonError::into_inner);
-        WorkspaceLifecycleAdmission { _guard: guard }
+            .unwrap_or_else(PoisonError::into_inner)
     }
 
     pub(crate) fn with_workspace_destroy_admission<R>(

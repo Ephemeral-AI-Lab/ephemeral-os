@@ -1,5 +1,5 @@
 use crate::id::NamespaceExecutionId;
-use crate::status::NamespaceExecutionTerminalStatus;
+use crate::shell::NamespaceExecutionTerminalStatus;
 
 pub trait ExecutionObserver: Send + Sync {
     fn on_running(&self, id: &NamespaceExecutionId);

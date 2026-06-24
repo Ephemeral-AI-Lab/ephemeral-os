@@ -3,7 +3,7 @@ use std::sync::Mutex;
 
 use crate::error::NamespaceExecutionError;
 use crate::id::NamespaceExecutionId;
-use crate::status::NamespaceExecutionTerminalStatus;
+use crate::shell::NamespaceExecutionTerminalStatus;
 
 pub struct ExecutionRegistry<V> {
     inner: Mutex<RegistryState<V>>,

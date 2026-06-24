@@ -18,7 +18,7 @@ use rustix::pipe::pipe;
 use sandbox_runtime_namespace_process::runner::protocol::{NamespaceRunnerRequest, RunResult};
 
 use crate::error::NamespaceExecutionError;
-use crate::pty::{open_pty_pair, terminate_process_group, PtyMaster};
+use crate::pty::{open_pty_pair, terminate_pgid, PtyMaster};
 
 pub trait NsRunnerLauncher: Send + Sync {
     fn spawn_pty(
@@ -71,14 +71,14 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
             command
                 .stdin(Stdio::from(slave.try_clone().map_err(spawn_error)?))
                 .stdout(Stdio::from(slave.try_clone().map_err(spawn_error)?))
-                .stderr(Stdio::from(slave))
-                .process_group(0);
+                .stderr(Stdio::from(slave));
+            install_pgid_leader_hook(command);
             Ok(master)
         })?;
         let pgid = spawned.pgid;
         let cancel: Box<dyn Fn() + Send + Sync> = Box::new(move || {
             cancelled.store(true, Ordering::Release);
-            terminate_process_group(pgid);
+            terminate_pgid(pgid);
         });
         let pty =
             PtyMaster::spawn(master, Some(pgid), transcript_path, cancel).map_err(spawn_error);
@@ -106,8 +106,8 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
             command
                 .stdin(Stdio::null())
                 .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .process_group(0);
+                .stderr(Stdio::null());
+            install_pgid_leader_hook(command);
             Ok(())
         })?;
         Ok(Box::new(spawned.into_child(
@@ -225,6 +225,21 @@ fn child_pgid(child: &Child) -> Result<i32, NamespaceExecutionError> {
     })
 }
 
+fn install_pgid_leader_hook(command: &mut Command) {
+    // SAFETY: `pre_exec` runs in the forked child immediately before `exec`.
+    // The closure only calls async-signal-safe `setpgid(2)` and returns the
+    // OS error if it fails; it does not touch shared Rust state.
+    unsafe {
+        command.pre_exec(|| {
+            if libc::setpgid(0, 0) == 0 {
+                Ok(())
+            } else {
+                Err(io::Error::last_os_error())
+            }
+        });
+    }
+}
+
 fn spawn_lock() -> std::sync::MutexGuard<'static, ()> {
     SPAWN_CRITICAL_SECTION
         .lock()
@@ -282,12 +297,12 @@ fn wait_for_child_with_timeout(
 }
 
 fn setup_timeout_duration(setup_timeout_s: f64) -> Duration {
-    Duration::from_secs_f64(
-        setup_timeout_s
-            .is_finite()
-            .then(|| setup_timeout_s.max(0.0))
-            .unwrap_or_default(),
-    )
+    let seconds = if setup_timeout_s.is_finite() {
+        setup_timeout_s.max(0.0)
+    } else {
+        0.0
+    };
+    Duration::from_secs_f64(seconds)
 }
 
 fn terminate_child(child: &mut Child, signal: Signal) {
@@ -303,7 +318,7 @@ fn terminate_child(child: &mut Child, signal: Signal) {
 
 fn terminate_spawned_child(child: &mut Child, pgid: Option<i32>) {
     if let Some(pgid) = pgid {
-        terminate_process_group(pgid);
+        terminate_pgid(pgid);
     } else {
         terminate_child(child, Signal::SIGKILL);
     }

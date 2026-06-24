@@ -11,6 +11,7 @@ serde_json.workspace = true
 rustix = { workspace = true, features = ["pty", "event", "pipe"] }
 nix = { workspace = true, features = ["signal"] }
 time.workspace = true
+libc.workspace = true
 
 [dev-dependencies]
 sandbox-runtime-namespace-process.workspace = true
