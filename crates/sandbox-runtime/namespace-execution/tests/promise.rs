@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
-include!("support/namespace_execution_src.rs");
+include!("support/promise_src.rs");
 
 use crate::promise::CompletionPromise;
 

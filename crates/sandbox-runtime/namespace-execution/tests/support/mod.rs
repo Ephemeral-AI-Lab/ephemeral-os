@@ -1,9 +1,5 @@
-//! Shared test fixtures for the engine suites: fakes for the `pub(crate)`
-//! launcher seam plus small constructors. Each integration binary that needs
-//! them does `mod support;`, so unused-in-one-binary items are expected —
-//! hence `allow(dead_code)`.
-
-#![allow(dead_code)]
+//! Shared test fixtures for the engine suite: fakes for the `pub(crate)`
+//! launcher seam plus small constructors.
 
 use std::path::PathBuf;
 use std::sync::{Arc, Condvar, Mutex};
@@ -404,24 +400,6 @@ pub fn run_result(exit_code: i32, status: &str) -> RunResult {
         exit_code,
         payload: serde_json::json!({ "status": status }),
     }
-}
-
-#[must_use]
-pub fn run_result_without_status(exit_code: i32) -> RunResult {
-    RunResult {
-        exit_code,
-        payload: serde_json::json!({}),
-    }
-}
-
-#[must_use]
-pub fn run_result_payload(exit_code: i32, payload: serde_json::Value) -> RunResult {
-    RunResult { exit_code, payload }
-}
-
-#[must_use]
-pub fn outcome(result: RunResult) -> RunnerOutcome {
-    RunnerOutcome::new(result)
 }
 
 #[must_use]

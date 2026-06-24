@@ -1,13 +1,13 @@
-#![allow(dead_code)]
-
 pub mod error {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/error.rs"));
 }
 
+#[allow(dead_code)]
 pub mod pty {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/pty.rs"));
 }
 
+#[allow(dead_code)]
 pub mod launcher {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/launcher.rs"));
 

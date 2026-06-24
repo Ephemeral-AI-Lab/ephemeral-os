@@ -4,7 +4,7 @@ use std::io::{Read, Write};
 use std::thread;
 use std::time::{Duration, Instant};
 
-include!("support/namespace_execution_src.rs");
+include!("support/pty_src.rs");
 
 use crate::pty::{open_pty_pair, PtyMaster};
 

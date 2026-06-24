@@ -26,13 +26,11 @@ struct FakeLauncherState {
     outcomes: VecDeque<Result<RunResult, NamespaceExecutionError>>,
     requests: Vec<NamespaceRunnerRequest>,
     mode_flags: Vec<&'static str>,
-    setup_timeouts: Vec<f64>,
 }
 
 struct TestNamespaceRuntime {
     launcher: FakeLauncher,
     next_id: AtomicU64,
-    setup_timeout_s: f64,
 }
 
 impl FakeLauncher {
@@ -66,11 +64,9 @@ impl FakeLauncher {
         &self,
         mode_flag: &'static str,
         request: NamespaceRunnerRequest,
-        setup_timeout_s: f64,
     ) -> Result<RunResult, NamespaceExecutionError> {
         let mut state = self.state.lock().expect("fake launcher mutex poisoned");
         state.mode_flags.push(mode_flag);
-        state.setup_timeouts.push(setup_timeout_s);
         state.requests.push(request);
         state.outcomes.pop_front().unwrap_or_else(|| {
             Err(NamespaceExecutionError::Completion(
@@ -81,11 +77,10 @@ impl FakeLauncher {
 }
 
 impl TestNamespaceRuntime {
-    fn new(launcher: FakeLauncher, setup_timeout_s: f64) -> Self {
+    fn new(launcher: FakeLauncher) -> Self {
         Self {
             launcher,
             next_id: AtomicU64::new(1),
-            setup_timeout_s,
         }
     }
 
@@ -138,7 +133,7 @@ impl TestNamespaceRuntime {
         let request = build_request(&target, &id, args);
         let result = self
             .launcher
-            .spawn_piped(mode_flag, request, self.setup_timeout_s)
+            .spawn_piped(mode_flag, request)
             .map_err(setup_error)?;
         let outcome = RunnerOutcome::new(result);
         if outcome.exit_code() != 0 {
@@ -273,7 +268,7 @@ fn mount_overlay_failure_is_setup_failed_with_payload_detail() {
 }
 
 fn runtime_with_fake_launcher(fake: &FakeLauncher) -> TestNamespaceRuntime {
-    TestNamespaceRuntime::new(fake.clone(), 12.0)
+    TestNamespaceRuntime::new(fake.clone())
 }
 
 fn remount_with_layers_for_test(

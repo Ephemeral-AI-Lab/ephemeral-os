@@ -1,8 +1,6 @@
-include!("support/namespace_execution_src.rs");
-
-mod support;
+use sandbox_runtime_namespace_execution::{NamespaceExecutionTerminalStatus, RunnerOutcome};
+use sandbox_runtime_namespace_process::runner::protocol::RunResult;
 use serde_json::json;
-use support::{outcome, run_result, run_result_payload, run_result_without_status};
 
 #[test]
 fn as_str_strings_match_the_wire_vocabulary() {
@@ -68,4 +66,26 @@ fn payload_exposes_the_raw_value() {
         outcome(run_result(0, "ok")).payload().to_string(),
         r#"{"status":"ok"}"#
     );
+}
+
+fn run_result(exit_code: i32, status: &str) -> RunResult {
+    RunResult {
+        exit_code,
+        payload: serde_json::json!({ "status": status }),
+    }
+}
+
+fn run_result_without_status(exit_code: i32) -> RunResult {
+    RunResult {
+        exit_code,
+        payload: serde_json::json!({}),
+    }
+}
+
+fn run_result_payload(exit_code: i32, payload: serde_json::Value) -> RunResult {
+    RunResult { exit_code, payload }
+}
+
+fn outcome(result: RunResult) -> RunnerOutcome {
+    RunnerOutcome::new(result)
 }
