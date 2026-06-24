@@ -29,7 +29,7 @@ impl NamespaceRuntime {
     ) -> Result<(), WorkspaceModeError> {
         #[cfg(not(target_os = "linux"))]
         {
-            let _ = (handle, layer_paths);
+            let _ = (&self.engine, handle, layer_paths);
         }
         #[cfg(target_os = "linux")]
         {
@@ -59,7 +59,7 @@ impl NamespaceRuntime {
     ) -> Result<RemountOverlayResult, WorkspaceModeError> {
         #[cfg(not(target_os = "linux"))]
         {
-            let _ = (handle, layer_paths, probe);
+            let _ = (&self.engine, handle, layer_paths, probe);
             Ok(RemountOverlayResult::default())
         }
         #[cfg(target_os = "linux")]

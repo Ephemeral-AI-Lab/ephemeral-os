@@ -361,7 +361,8 @@ fn run_mount_short_circuits_nonzero_exit_before_parse() {
 fn run_mount_passes_setup_timeout_to_piped_launcher() {
     let fake = FakeLauncher::new();
     let observer = Arc::new(FakeObserver::new());
-    let engine = NamespaceExecutionEngine::with_launcher(Box::new(fake.clone()), observer, 4, 12.5);
+    let engine: NamespaceExecutionEngine =
+        NamespaceExecutionEngine::with_launcher(Box::new(fake.clone()), observer, 4, 12.5);
 
     let handle = engine
         .run_mount(
@@ -380,7 +381,8 @@ fn run_mount_passes_setup_timeout_to_piped_launcher() {
 
 #[test]
 fn engine_allocates_monotonic_namespace_execution_ids() {
-    let engine = NamespaceExecutionEngine::new(Arc::new(NoopObserver), 4, 30.0);
+    let engine: NamespaceExecutionEngine =
+        NamespaceExecutionEngine::new(Arc::new(NoopObserver), 4, 30.0);
 
     assert_eq!(engine.allocate_id().0, "namespace_execution_1");
     assert_eq!(engine.allocate_id().0, "namespace_execution_2");

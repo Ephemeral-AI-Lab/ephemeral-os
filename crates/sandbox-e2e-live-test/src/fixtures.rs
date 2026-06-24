@@ -1,10 +1,11 @@
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
+use std::time::Instant;
 
 use crate::assertion;
 use crate::cli_client::{CallRecord, CliClient};
-use crate::config::RunConfig;
+use crate::config::ManifestConfig;
 use crate::gateway;
 use crate::report;
 
@@ -30,7 +31,7 @@ impl Harness {
     }
 
     fn init() -> Option<Harness> {
-        let config = match RunConfig::from_env() {
+        let config = match ManifestConfig::from_env() {
             Ok(config) => config?,
             Err(error) => panic!("invalid EOS_E2E_RUN_ROOT run-manifest.json: {error:#}"),
         };
@@ -94,9 +95,15 @@ impl Harness {
             .expect("create_sandbox response /id is a string")
             .to_owned();
 
+        let test_name = std::thread::current()
+            .name()
+            .map(str::to_owned)
+            .unwrap_or_else(|| slug.to_owned());
         let sandbox = Sandbox {
             id,
             workspace_root,
+            started: Instant::now(),
+            test_name,
             exchange: RefCell::new(vec![record.clone()]),
         };
         (sandbox, record)
@@ -110,6 +117,8 @@ impl Harness {
 pub struct Sandbox {
     pub id: String,
     pub workspace_root: PathBuf,
+    started: Instant,
+    test_name: String,
     exchange: RefCell<Vec<CallRecord>>,
 }
 
@@ -128,6 +137,23 @@ impl Drop for Sandbox {
         if let Some(harness) = Harness::get() {
             let records = self.exchange.borrow();
             let _ = report::write_exchange(harness.run_root(), &self.id, &records);
+
+            let panicking = std::thread::panicking();
+            let outcome = report::TestOutcome {
+                schema_version: report::RESULT_SCHEMA_VERSION,
+                test_name: self.test_name.clone(),
+                sandbox_id: self.id.clone(),
+                status: if panicking { "failed" } else { "passed" }.to_owned(),
+                duration_ms: self.started.elapsed().as_millis(),
+                workspace_root: self.workspace_root.to_string_lossy().into_owned(),
+                assertions: report::Assertions {
+                    total: assertion::assertion_count(),
+                    failed: u64::from(panicking),
+                },
+                failure: panicking.then(|| "assertion panicked".to_owned()),
+            };
+            let _ = report::write_result(harness.run_root(), &outcome);
+
             let _ = harness
                 .cli()
                 .manager("destroy_sandbox", &["--sandbox-id", &self.id]);
