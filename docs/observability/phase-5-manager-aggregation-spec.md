@@ -21,8 +21,9 @@ The current checkout has these relevant shapes:
 - Manager operation cataloging is rooted at
   `crates/sandbox-manager/src/operation/specs.rs`.
 - Manager sandbox lifecycle state is owned by `SandboxStore`.
-- Manager daemon forwarding uses `SandboxDaemonClient::invoke`, which currently
-  has no timeout argument or transport deadline contract.
+- Manager daemon forwarding uses `SandboxDaemonClient::invoke_with_timeout` for
+  sandbox-scoped operations, with the protocol default timeout on normal
+  forwarding and a Phase 5 timeout on observability fan-out.
 - Daemon request dispatch enters through
   `crates/sandbox-daemon/src/server/dispatch.rs`.
 - Daemon observability collection and writes live under
@@ -77,8 +78,9 @@ Expected ownership by file:
   selected sandbox discovery, fan-out orchestration, and response assembly.
 - `management/mod.rs`: registration of the manager operation in the existing
   manager operation family.
-- `daemon_client.rs`: timeout-capable daemon transport boundary. The current
-  `invoke` method is not sufficient for bounded fan-out.
+- `daemon_client.rs`: timeout-capable daemon transport boundary. The trait
+  should expose a single timeout-aware invoke method, and must not keep a plain
+  blocking invoke wrapper.
 - `server/dispatch.rs`: private daemon request recognition and routing to the
   daemon observability service. This branch is not cataloged as a daemon CLI
   operation.
@@ -138,11 +140,11 @@ Argument rules:
 - `sandbox_id` present means one sandbox selected by manager id.
 - `include_recent_traces` defaults to `false` for cheap polling; UI callers may
   set it to `true`.
-- `trace_limit` defaults to `20` and is capped by the manager before daemon
-  fan-out.
+- `trace_limit` is forwarded only when supplied; the daemon applies the default
+  and cap.
 - `resource_window_ms = null` means latest resources only.
 - `resource_window_ms = Some(n)` opts into bounded resource history and is
-  capped by the manager and daemon.
+  capped by the daemon.
 
 Current CLI limitation:
 
@@ -175,8 +177,14 @@ Execution scope:
 CliOperationScope::Sandbox { sandbox_id }
 ```
 
-This private request may reuse the existing daemon request frame, but it must
-not appear in:
+This private request may reuse the existing daemon request frame for
+manager-generated fan-out calls, but it must not be accepted as a user-facing
+raw request. The manager router and gateway path must reject externally supplied
+sandbox-scoped `get_observability_snapshot` requests before daemon forwarding.
+Hiding the operation from generated help or catalog output is not sufficient by
+itself.
+
+It also must not appear in:
 
 - daemon CLI help;
 - daemon operation catalog output;
@@ -209,18 +217,23 @@ pub struct ObservabilitySnapshotReadOptions {
 }
 
 pub struct ObservabilitySnapshotRows {
-    pub sandbox: Option<SandboxSnapshotRecord>,
-    pub workspaces: Vec<WorkspaceSnapshotRecord>,
-    pub active_namespace_executions: Vec<NamespaceExecutionSnapshotRecord>,
-    pub latest_resources: Vec<ResourceSampleRecord>,
-    pub resource_history: Vec<ResourceSampleRecord>,
-    pub recent_request_traces: Vec<TraceRecord>,
-    pub recent_namespace_traces: Vec<NamespaceExecutionTraceRecord>,
+    pub sandbox: Option<ObservabilitySandboxSnapshotRow>,
+    pub workspaces: Vec<ObservabilityWorkspaceSnapshotRow>,
+    pub active_namespace_executions: Vec<ObservabilityNamespaceExecutionSnapshotRow>,
+    pub latest_resources: Vec<ObservabilityResourceSampleRow>,
+    pub resource_history: Vec<ObservabilityResourceSampleRow>,
+    pub recent_request_traces: Vec<ObservabilityRequestTraceRow>,
+    pub recent_namespace_traces: Vec<ObservabilityNamespaceExecutionTraceRow>,
 }
 ```
 
 Rules:
 
+- The `Observability*Row` read DTOs are sanitized projections, not write-side
+  storage records. They must omit storage-only fields that are not rendered in
+  the snapshot, including raw workspace roots, upper/work dirs, sample ids,
+  cgroup paths, command session ids, origin request ids, span fields, and raw
+  payloads.
 - `latest_resources` contains one latest sandbox-level sample where
   `workspace_id = None`, plus one latest sample per returned workspace id.
 - `resource_history` is empty unless `resource_window_ms` is present.
@@ -229,6 +242,10 @@ Rules:
 - `SpanRecord` is never returned by the Phase 5 snapshot read.
 - Raw `rusqlite::Connection` and raw SQL never leave `store.rs`.
 - The manager never imports `sandbox-observability`.
+- The aggregate store read may remain all-or-error for SQL/query failures.
+  Row-level `error_message` fields and unavailable resource fields produce
+  partial observability. A failed required store query makes the daemon snapshot
+  unusable for that sandbox.
 
 Avoid adding many public helpers such as:
 
@@ -250,12 +267,12 @@ summary objects.
 
 | Source | Include | Exclude |
 | --- | --- | --- |
-| `SandboxSnapshotRecord` | `sandbox_id`, `state` as lifecycle state, `sampled_at_unix_ms`, bounded `error_message`, daemon runtime metadata for diagnostics | raw SQLite path, manager-derived availability |
-| `WorkspaceSnapshotRecord` | `workspace_id`, `state`, `remount_state`, `profile`, `sampled_at_unix_ms`, `namespace_fd_count`, layer summary, bounded `error_message` | `upperdir` and `workdir` as primary UI fields |
-| `NamespaceExecutionSnapshotRecord` | `namespace_execution_id`, `workspace_session_id`, `operation`, `lifecycle_state`, `sampled_at_unix_ms`, bounded `error_message` | command text, command session id, finalizer output |
-| `ResourceSampleRecord` | latest sandbox sample, latest per-workspace sample, optional bounded history, cgroup availability, CPU, memory, disk summary, bounded resource errors | manager-side aggregation over raw SQLite, unbounded history |
-| `TraceRecord` | trace id, kind, operation, status, request id, workspace id, start/finish/duration, bounded error summary | span rows, command output, raw request/response payloads |
-| `NamespaceExecutionTraceRecord` | trace id, namespace execution id, workspace id, operation, status, exit code, start/finish/duration, bounded error summary | spans, transcript path, stdout, stderr |
+| `ObservabilitySandboxSnapshotRow` | `sandbox_id`, `state` as lifecycle state, `sampled_at_unix_ms`, bounded `error_message`, daemon runtime metadata for diagnostics | `workspace_root`, raw SQLite details, manager-derived availability |
+| `ObservabilityWorkspaceSnapshotRow` | `workspace_id`, `state`, `remount_state`, `profile`, `sampled_at_unix_ms`, `namespace_fd_count`, layer summary, bounded `error_message` | `workspace_root`, `upperdir`, `workdir` |
+| `ObservabilityNamespaceExecutionSnapshotRow` | `namespace_execution_id`, `workspace_session_id`, `operation`, `lifecycle_state`, `sampled_at_unix_ms`, bounded `error_message` | command text, command session id, finalizer output |
+| `ObservabilityResourceSampleRow` | latest sandbox sample, latest per-workspace sample, optional bounded history, cgroup availability, CPU, memory, disk summary, bounded resource errors | `sample_id`, `cgroup_path`, manager-side aggregation over raw SQLite, unbounded history |
+| `ObservabilityRequestTraceRow` | public/sanitized trace id, kind, operation, status, request id, workspace id, start/finish/duration, bounded error summary | span rows, span method names, origin request id, command session id, command text, command output, raw request/response payloads |
+| `ObservabilityNamespaceExecutionTraceRow` | trace id, namespace execution id, workspace id, operation, status, exit code, start/finish/duration, bounded error summary | spans, span method names, command text, command session id, transcript path, stdout, stderr |
 
 `SpanRecord` remains out of the Phase 5 manager tree. A later drilldown API can
 decide whether spans are needed.
@@ -383,8 +400,9 @@ Response field rules:
   if the daemon cannot read any resource sample for that scope.
 - `resources.history` is empty unless resource history is requested.
 - `recent_traces` contains summaries only. It never contains spans.
-- The response does not contain command output, transcript paths, stdin, env,
-  stdout, stderr, or raw request/response payloads.
+- The response does not contain command output, command text, command session
+  ids, span rows, span method names, transcript paths, stdin, env, stdout,
+  stderr, or raw request/response payloads.
 
 ## Availability Rules
 
@@ -395,11 +413,13 @@ available
   daemon responded and required snapshot sections were read
 
 partial
-  daemon responded, but one or more bounded snapshot sections failed
+  daemon responded with a usable root snapshot, but stored row-level partial
+  errors or unavailable optional resource/sampler fields exist
 
 unavailable
   daemon was unreachable, timed out, returned malformed data, rejected the
-  private request, or could not return a usable root snapshot
+  private request, hit a required store read failure, or could not return a
+  usable root snapshot
 ```
 
 Resource-level unavailability is more granular:
@@ -421,7 +441,7 @@ Explicitly requested non-ready sandboxes:
 
 ## Fan-Out And Timeout Requirements
 
-Constants for the first implementation:
+Daemon constants for the first implementation:
 
 ```text
 MAX_CONCURRENT_DAEMON_SNAPSHOT_REQUESTS = 8
@@ -434,11 +454,9 @@ MAX_RESOURCE_WINDOW_MS = 600000
 The manager must bound concurrent daemon requests. One daemon failure becomes
 one unavailable or partial node and must not fail the whole tree.
 
-Transport timeout prerequisite:
+Transport timeout requirement:
 
-The current `SandboxDaemonClient::invoke` trait has no timeout contract. Before
-real Phase 5 aggregation lands, introduce the smallest concrete daemon-client
-transport capability that enforces one deadline across:
+`SandboxDaemonClient::invoke_with_timeout` must enforce one deadline across:
 
 - Unix socket connect;
 - request write;
@@ -446,8 +464,8 @@ transport capability that enforces one deadline across:
 - response read;
 - response decode.
 
-A trait helper that accepts a timeout but calls the current blocking `invoke`
-path is not sufficient.
+A trait helper that accepts a timeout but calls a separate blocking invoke path
+is not sufficient, and the trait must not provide such a default implementation.
 
 ## UI Spec
 
@@ -529,6 +547,8 @@ UI exclusions:
 - no drilldown links until a separate drilldown API exists;
 - no command text;
 - no command session id as a primary label;
+- no command session id in trace summaries;
+- no span method names or span identifiers;
 - no transcript path;
 - no stdin, env, stdout, or stderr;
 - no raw SQL or raw row dump display.
@@ -553,16 +573,26 @@ Implementation must prove these constraints:
 - `sandbox-runtime` has no dependency on `sandbox-observability` or `rusqlite`.
 - No runtime production file is added for Phase 5 aggregation.
 - The manager never opens `observability.sqlite`.
-- The daemon private snapshot branch is callable by the manager but not visible
-  in CLI/help/catalog output.
+- The daemon private snapshot branch is callable only through manager-internal
+  fan-out; raw public sandbox-scoped `get_observability_snapshot` requests
+  through the gateway/manager router are rejected before daemon forwarding.
+- The daemon private snapshot branch is not visible in CLI/help/catalog output.
 - Store snapshot reads return latest sandbox resources plus latest per-workspace
   resources, not one global latest resource row.
 - Resource history is empty unless `resource_window_ms` is requested.
 - Recent traces are summaries and contain no spans.
+- `Response::ok` returns the manager tree directly; successful responses do not
+  introduce `{ "result": ..., "meta": ... }`.
+- `SandboxDaemonClient` exposes only timeout-aware daemon invocation, and the
+  Unix client enforces the deadline over connect, write, shutdown, read, and
+  decode.
 - One daemon timeout becomes one unavailable node.
-- One daemon store partial read becomes one partial node.
-- Command output, transcript paths, stdin, env, stdout, and stderr do not appear
-  in manager tree responses.
+- Row-level partial observability errors become one partial node.
+- Required daemon store read failures become one unavailable node, not a
+  whole-tree failure.
+- Command output, command text, command session ids, span method names,
+  transcript paths, stdin, env, stdout, and stderr do not appear in manager tree
+  responses.
 
 Suggested verification commands:
 
@@ -570,11 +600,16 @@ Suggested verification commands:
 rg -n "CliOperationExecutionSpace::Daemon|daemon catalog|daemon help" crates
 rg -n "get_observability_tree|get_observability_snapshot" crates/sandbox-runtime
 rg -n "sandbox-observability|rusqlite" crates/sandbox-runtime/operation/Cargo.toml
+cargo test -p sandbox-protocol responses_preserve_payload_owned_shape
 cargo test -p sandbox-manager
+cargo test -p sandbox-manager manager_router_rejects_private_observability_snapshot_forwarding
 cargo test -p sandbox-daemon observability
+cargo test -p sandbox-daemon private_observability_snapshot_dispatch_returns_summary_tree
 cargo test -p sandbox-observability
+cargo test -p sandbox-runtime runtime_observability_snapshot_keeps_observability_crate_out
 ```
 
 The exact test names may differ, but the proof must cover manager aggregation,
-daemon partial failure behavior, store latest-resource selection, and the
-absence of runtime/storage boundary leaks.
+raw private-request rejection, timeout enforcement, daemon partial/unavailable
+failure behavior, direct response shape, store latest-resource selection, trace
+summary privacy, and the absence of runtime/storage boundary leaks.

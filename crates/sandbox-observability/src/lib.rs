@@ -10,5 +10,8 @@ pub use records::{
     MAX_PATH_LENGTH, MAX_SNAPSHOT_STATE_LENGTH,
 };
 pub use store::{
-    ObservabilitySnapshotReadOptions, ObservabilitySnapshotRows, ObservabilityStore, StoreError,
+    ObservabilityNamespaceExecutionSnapshotRow, ObservabilityNamespaceExecutionTraceRow,
+    ObservabilityRequestTraceRow, ObservabilityResourceSampleRow, ObservabilitySandboxSnapshotRow,
+    ObservabilitySnapshotReadOptions, ObservabilitySnapshotRows, ObservabilityStore,
+    ObservabilityWorkspaceSnapshotRow, StoreError,
 };

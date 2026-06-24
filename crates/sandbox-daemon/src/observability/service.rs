@@ -5,11 +5,12 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use sandbox_observability::{
-    NamespaceExecutionSnapshotRecord, NamespaceExecutionTraceRecord, ObservabilityPaths,
+    ObservabilityNamespaceExecutionSnapshotRow, ObservabilityNamespaceExecutionTraceRow,
+    ObservabilityPaths, ObservabilityRequestTraceRow, ObservabilityResourceSampleRow,
     ObservabilitySnapshotReadOptions, ObservabilitySnapshotRows, ObservabilityStore,
-    ResourceSampleRecord, SandboxSnapshotRecord, SpanRecord, StoreError, TraceRecord,
-    WorkspaceSnapshotRecord, MAX_ERROR_MESSAGE_LENGTH, MAX_ID_LENGTH, MAX_KIND_LENGTH,
-    MAX_OPERATION_LENGTH, MAX_PATH_LENGTH, MAX_SNAPSHOT_STATE_LENGTH,
+    ObservabilityWorkspaceSnapshotRow, ResourceSampleRecord, SandboxSnapshotRecord, SpanRecord,
+    StoreError, TraceRecord, WorkspaceSnapshotRecord, MAX_ERROR_MESSAGE_LENGTH, MAX_ID_LENGTH,
+    MAX_KIND_LENGTH, MAX_OPERATION_LENGTH, MAX_PATH_LENGTH, MAX_SNAPSHOT_STATE_LENGTH,
 };
 use sandbox_runtime::{
     span_keys, AsyncTraceSink, CommandFinalizationTraceMetadata, CompletedOperationSpan,
@@ -591,7 +592,10 @@ fn snapshot_has_partial_errors(rows: &ObservabilitySnapshotRows) -> bool {
             .any(|execution| execution.error_message.is_some())
 }
 
-fn workspace_value(workspace: &WorkspaceSnapshotRecord, rows: &ObservabilitySnapshotRows) -> Value {
+fn workspace_value(
+    workspace: &ObservabilityWorkspaceSnapshotRow,
+    rows: &ObservabilitySnapshotRows,
+) -> Value {
     json!({
         "workspace_id": workspace.workspace_id.as_str(),
         "lifecycle_state": workspace.state.as_str(),
@@ -615,7 +619,7 @@ fn workspace_value(workspace: &WorkspaceSnapshotRecord, rows: &ObservabilitySnap
     })
 }
 
-fn namespace_execution_value(execution: &NamespaceExecutionSnapshotRecord) -> Value {
+fn namespace_execution_value(execution: &ObservabilityNamespaceExecutionSnapshotRow) -> Value {
     json!({
         "namespace_execution_id": execution.namespace_execution_id.as_str(),
         "operation": execution.operation.as_str(),
@@ -644,7 +648,7 @@ fn resource_bundle_value(scope: Option<&str>, rows: &ObservabilitySnapshotRows) 
     })
 }
 
-fn resource_sample_value(sample: &ResourceSampleRecord) -> Value {
+fn resource_sample_value(sample: &ObservabilityResourceSampleRow) -> Value {
     json!({
         "sampled_at_unix_ms": sample.sampled_at_unix_ms,
         "cgroup": {
@@ -679,7 +683,7 @@ fn recent_trace_values(rows: &ObservabilitySnapshotRows) -> Vec<Value> {
         .collect()
 }
 
-fn request_trace_value(trace: &TraceRecord) -> Value {
+fn request_trace_value(trace: &ObservabilityRequestTraceRow) -> Value {
     json!({
         "trace_id": public_trace_id(trace),
         "kind": trace.kind.as_str(),
@@ -696,7 +700,7 @@ fn request_trace_value(trace: &TraceRecord) -> Value {
     })
 }
 
-fn public_trace_id(trace: &TraceRecord) -> String {
+fn public_trace_id(trace: &ObservabilityRequestTraceRow) -> String {
     trace
         .trace_id
         .strip_prefix(ASYNC_COMMAND_FINALIZATION_TRACE_PREFIX)
@@ -711,7 +715,7 @@ fn public_trace_id(trace: &TraceRecord) -> String {
         )
 }
 
-fn namespace_trace_value(trace: &NamespaceExecutionTraceRecord) -> Value {
+fn namespace_trace_value(trace: &ObservabilityNamespaceExecutionTraceRow) -> Value {
     json!({
         "trace_id": trace.trace_id.as_str(),
         "kind": "namespace_execution",

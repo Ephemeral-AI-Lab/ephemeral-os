@@ -10,20 +10,12 @@ use tokio::net::UnixStream;
 const MAX_RESPONSE_BYTES: usize = sandbox_protocol::MAX_REQUEST_BYTES;
 
 pub trait SandboxDaemonClient: Send + Sync {
-    fn invoke(
-        &self,
-        endpoint: &SandboxDaemonEndpoint,
-        request: sandbox_protocol::Request,
-    ) -> Result<sandbox_protocol::Response, ManagerError>;
-
     fn invoke_with_timeout(
         &self,
         endpoint: &SandboxDaemonEndpoint,
         request: sandbox_protocol::Request,
-        _timeout: Duration,
-    ) -> Result<sandbox_protocol::Response, ManagerError> {
-        self.invoke(endpoint, request)
-    }
+        timeout: Duration,
+    ) -> Result<sandbox_protocol::Response, ManagerError>;
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -37,18 +29,6 @@ impl UnixSandboxDaemonClient {
 }
 
 impl SandboxDaemonClient for UnixSandboxDaemonClient {
-    fn invoke(
-        &self,
-        endpoint: &SandboxDaemonEndpoint,
-        request: sandbox_protocol::Request,
-    ) -> Result<sandbox_protocol::Response, ManagerError> {
-        self.invoke_with_timeout(
-            endpoint,
-            request,
-            Duration::from_secs_f64(sandbox_protocol::REQUEST_READ_TIMEOUT_S),
-        )
-    }
-
     fn invoke_with_timeout(
         &self,
         endpoint: &SandboxDaemonEndpoint,

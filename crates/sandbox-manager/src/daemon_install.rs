@@ -13,7 +13,6 @@ use nix::unistd::Pid;
 
 use crate::{ManagerError, SandboxDaemonEndpoint, SandboxRecord};
 
-const DAEMON_AUTH_TOKEN_ENV: &str = "SANDBOX_DAEMON_AUTH_TOKEN";
 const DAEMON_READY_TIMEOUT: Duration = Duration::from_secs(2);
 const DAEMON_READY_POLL: Duration = Duration::from_millis(20);
 const DAEMON_STOP_TIMEOUT: Duration = Duration::from_secs(2);
@@ -34,8 +33,6 @@ pub struct LocalSandboxDaemonInstaller {
     executable: PathBuf,
     config_yaml_path: PathBuf,
     runtime_root: PathBuf,
-    auth_token: Option<String>,
-    ready_timeout: Duration,
 }
 
 impl LocalSandboxDaemonInstaller {
@@ -44,27 +41,15 @@ impl LocalSandboxDaemonInstaller {
         executable: impl Into<PathBuf>,
         config_yaml_path: impl Into<PathBuf>,
         runtime_root: impl Into<PathBuf>,
-        auth_token: Option<String>,
     ) -> Self {
         Self {
             executable: executable.into(),
             config_yaml_path: config_yaml_path.into(),
             runtime_root: runtime_root.into(),
-            auth_token,
-            ready_timeout: DAEMON_READY_TIMEOUT,
         }
     }
 
-    #[must_use]
-    pub const fn with_ready_timeout(mut self, ready_timeout: Duration) -> Self {
-        self.ready_timeout = ready_timeout;
-        self
-    }
-
-    pub fn launch_spec(
-        &self,
-        record: &SandboxRecord,
-    ) -> Result<SandboxDaemonLaunchSpec, ManagerError> {
+    fn launch_spec(&self, record: &SandboxRecord) -> Result<SandboxDaemonLaunchSpec, ManagerError> {
         validate_absolute(&record.workspace_root, "workspace_root")?;
         validate_absolute(&self.runtime_root, "daemon runtime root")?;
         let sandbox_runtime_dir = self.runtime_root.join(record.id.as_str());
@@ -89,7 +74,6 @@ impl LocalSandboxDaemonInstaller {
             args,
             socket_path,
             pid_path,
-            auth_token: self.auth_token.clone(),
         })
     }
 }
@@ -106,9 +90,6 @@ impl SandboxDaemonInstaller for LocalSandboxDaemonInstaller {
         let spec = self.launch_spec(record)?;
         let mut command = Command::new(&spec.executable);
         command.args(&spec.args);
-        if let Some(auth_token) = spec.auth_token.as_deref() {
-            command.env(DAEMON_AUTH_TOKEN_ENV, auth_token);
-        }
         command.stdin(Stdio::null());
         let status = command.status().map_err(|error| {
             daemon_install_error(format!(
@@ -122,10 +103,7 @@ impl SandboxDaemonInstaller for LocalSandboxDaemonInstaller {
                 record.id
             )));
         }
-        Ok(SandboxDaemonEndpoint::new(
-            spec.socket_path,
-            spec.auth_token,
-        ))
+        Ok(SandboxDaemonEndpoint::new(spec.socket_path))
     }
 
     fn stop_daemon(&self, record: &SandboxRecord) -> Result<(), ManagerError> {
@@ -148,7 +126,7 @@ impl SandboxDaemonInstaller for LocalSandboxDaemonInstaller {
     }
 
     fn check_daemon(&self, endpoint: &SandboxDaemonEndpoint) -> Result<(), ManagerError> {
-        let deadline = Instant::now() + self.ready_timeout;
+        let deadline = Instant::now() + DAEMON_READY_TIMEOUT;
         while Instant::now() < deadline {
             if endpoint.socket_path.exists() {
                 return Ok(());
@@ -162,13 +140,12 @@ impl SandboxDaemonInstaller for LocalSandboxDaemonInstaller {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SandboxDaemonLaunchSpec {
-    pub executable: PathBuf,
-    pub args: Vec<String>,
-    pub socket_path: PathBuf,
-    pub pid_path: PathBuf,
-    pub auth_token: Option<String>,
+#[derive(Debug)]
+struct SandboxDaemonLaunchSpec {
+    executable: PathBuf,
+    args: Vec<String>,
+    socket_path: PathBuf,
+    pid_path: PathBuf,
 }
 
 fn validate_absolute(path: &Path, label: &'static str) -> Result<(), ManagerError> {
@@ -309,4 +286,50 @@ fn remove_daemon_file(path: &Path) -> Result<(), ManagerError> {
 
 fn daemon_install_error(message: String) -> ManagerError {
     ManagerError::DaemonInstallFailed { message }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use crate::{SandboxId, SandboxRecord, SandboxState};
+
+    use super::*;
+
+    #[test]
+    fn launch_spec_passes_dynamic_sandbox_id() {
+        let installer = LocalSandboxDaemonInstaller::new(
+            "/bin/sandbox-daemon",
+            "/etc/eos/prd.yml",
+            "/tmp/eos-daemons",
+        );
+        let record = SandboxRecord::new(
+            SandboxId::new("container-1").expect("valid sandbox id"),
+            PathBuf::from("/testbed"),
+            SandboxState::Ready,
+        );
+
+        let spec = installer
+            .launch_spec(&record)
+            .expect("launch spec builds from record");
+
+        assert_eq!(spec.executable, PathBuf::from("/bin/sandbox-daemon"));
+        assert_eq!(
+            spec.socket_path,
+            PathBuf::from("/tmp/eos-daemons/container-1/runtime.sock")
+        );
+        assert_eq!(
+            spec.pid_path,
+            PathBuf::from("/tmp/eos-daemons/container-1/runtime.pid")
+        );
+        assert!(spec
+            .args
+            .windows(2)
+            .any(|window| window[0] == "--sandbox-id" && window[1] == "container-1"));
+        assert!(spec
+            .args
+            .windows(2)
+            .any(|window| window[0] == "--workspace-root" && window[1] == "/testbed"));
+        assert!(!spec.args.iter().any(|arg| arg == "secret-token"));
+    }
 }

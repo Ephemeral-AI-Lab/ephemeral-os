@@ -97,6 +97,5 @@ fn record_value(record: SandboxRecord) -> Value {
 fn endpoint_value(endpoint: SandboxDaemonEndpoint) -> Value {
     json!({
         "socket_path": endpoint.socket_path.to_string_lossy(),
-        "auth_token_configured": endpoint.auth_token.as_ref().is_some_and(|token| !token.is_empty()),
     })
 }

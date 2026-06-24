@@ -36,7 +36,10 @@ This private daemon capability must not become a new public daemon operation
 family. Do not add `CliOperationExecutionSpace::Daemon`, daemon catalog output,
 daemon CLI help, protocol help pages, or gateway request-builder expansion for
 it. The manager may call the daemon directly through the configured daemon
-client, but the user-facing operation surface stays manager-only.
+client, but the user-facing operation surface stays manager-only. Raw
+sandbox-scoped `get_observability_snapshot` requests that enter through the
+gateway or manager router must be rejected before daemon forwarding; hiding the
+operation from catalog/help output is not enough.
 
 ## Resulting Code Shape
 
@@ -117,7 +120,8 @@ daemon.
 2. The manager reads its sandbox records and selects ready sandboxes, or the
    requested ready subset.
 3. For each selected sandbox, the manager calls the daemon's private snapshot
-   retrieval capability through that sandbox's daemon endpoint.
+   retrieval capability through that sandbox's daemon endpoint using
+   manager-internal fan-out.
 4. Each daemon builds its response from daemon-owned state:
    - latest daemon-local sandbox snapshot row,
    - active workspace snapshots,
@@ -301,7 +305,10 @@ Failure rules:
 
 - One daemon failure becomes one unavailable sandbox node, not a whole-tree
   failure.
-- Partial daemon reads become partial nodes with bounded error details.
+- Stored row-level partial errors and unavailable optional resource fields become
+  partial nodes with bounded error details.
+- Required daemon store read failures make that sandbox node unavailable, not the
+  whole tree.
 - Missing resource paths become unavailable resource fields, not failed tree
   aggregation.
 - Unknown or non-ready sandbox ids requested explicitly should be reported as
@@ -310,17 +317,17 @@ Failure rules:
 - The manager response may fail only for manager-owned problems, such as an
   invalid request, an unreadable manager store, or an internal aggregation bug.
 
-## Required Infrastructure Gap
+## Daemon Client Timeout Contract
 
 Bounded fan-out requires real per-daemon transport timeouts. The current
-`SandboxDaemonClient::invoke` trait is synchronous and has no timeout contract.
-Existing gateway and daemon server request-read timeouts do not make manager
-fan-out bounded.
+daemon-client calls must carry an explicit timeout contract. Existing gateway
+and daemon server request-read timeouts do not make manager fan-out bounded.
 
-Before implementing Phase 5 aggregation, add the smallest concrete daemon-client
-transport capability that enforces a per-daemon deadline across connect, write,
-shutdown, read, and response decode. A trait-only helper that accepts a timeout
-but delegates to the current blocking `invoke` path is not sufficient.
+Phase 5 aggregation requires the smallest concrete daemon-client transport
+capability that enforces a per-daemon deadline across connect, write, shutdown,
+read, and response decode. A trait-only helper that accepts a timeout but
+delegates to a separate blocking invoke path is not sufficient, and the trait
+must not provide such a default fallback.
 
 ## Non-Goals
 

@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use sandbox_manager::{
     CreateSandboxRequest, CreateSandboxResult, ManagerError, ManagerServices, SandboxDaemonClient,
@@ -34,10 +35,10 @@ impl SandboxDaemonInstaller for FakeInstaller {
     }
 
     fn start_daemon(&self, record: &SandboxRecord) -> Result<SandboxDaemonEndpoint, ManagerError> {
-        Ok(SandboxDaemonEndpoint::new(
-            PathBuf::from(format!("/tmp/{}.sock", record.id.as_str())),
-            None,
-        ))
+        Ok(SandboxDaemonEndpoint::new(PathBuf::from(format!(
+            "/tmp/{}.sock",
+            record.id.as_str()
+        ))))
     }
 
     fn stop_daemon(&self, _record: &SandboxRecord) -> Result<(), ManagerError> {
@@ -55,10 +56,11 @@ struct RecordingDaemonClient {
 }
 
 impl SandboxDaemonClient for RecordingDaemonClient {
-    fn invoke(
+    fn invoke_with_timeout(
         &self,
         endpoint: &SandboxDaemonEndpoint,
         request: Request,
+        _timeout: Duration,
     ) -> Result<Response, ManagerError> {
         self.invocations.lock().expect("invocations lock").push((
             endpoint.socket_path.clone(),
@@ -165,7 +167,7 @@ async fn manager_router_forwards_sandbox_scoped_unknown_to_daemon_client() {
     store
         .insert(ready_record(
             "sbox-1",
-            Some(SandboxDaemonEndpoint::new("/tmp/sbox-1.sock", None)),
+            Some(SandboxDaemonEndpoint::new("/tmp/sbox-1.sock")),
         ))
         .expect("insert sandbox");
     let router = router(services);
@@ -185,6 +187,38 @@ async fn manager_router_forwards_sandbox_scoped_unknown_to_daemon_client() {
     assert_eq!(invocations[0].0, PathBuf::from("/tmp/sbox-1.sock"));
     assert_eq!(invocations[0].1, "exec_command");
     assert_eq!(invocations[0].2, CliOperationScope::sandbox("sbox-1"));
+}
+
+#[tokio::test]
+async fn manager_router_rejects_private_observability_snapshot_forwarding() {
+    let (services, store, daemon_client) = services();
+    store
+        .insert(ready_record(
+            "sbox-1",
+            Some(SandboxDaemonEndpoint::new("/tmp/sbox-1.sock")),
+        ))
+        .expect("insert sandbox");
+    let router = router(services);
+
+    let response = router
+        .dispatch_request(request(
+            "get_observability_snapshot",
+            CliOperationScope::sandbox("sbox-1"),
+            json!({}),
+        ))
+        .await
+        .into_json_value();
+
+    assert_eq!(response["error"]["kind"], error_kind::INVALID_REQUEST);
+    assert!(response["error"]["message"]
+        .as_str()
+        .expect("message")
+        .contains("manager-internal"));
+    assert!(daemon_client
+        .invocations
+        .lock()
+        .expect("invocations lock")
+        .is_empty());
 }
 
 #[tokio::test]

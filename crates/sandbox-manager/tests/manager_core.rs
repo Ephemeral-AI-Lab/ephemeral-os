@@ -59,10 +59,10 @@ impl SandboxDaemonInstaller for FakeInstaller {
             .lock()
             .expect("started lock")
             .push(record.id.as_str().to_owned());
-        Ok(SandboxDaemonEndpoint::new(
-            PathBuf::from(format!("/tmp/{}.sock", record.id.as_str())),
-            Some("token".to_owned()),
-        ))
+        Ok(SandboxDaemonEndpoint::new(PathBuf::from(format!(
+            "/tmp/{}.sock",
+            record.id.as_str()
+        ))))
     }
 
     fn stop_daemon(&self, record: &SandboxRecord) -> Result<(), ManagerError> {
@@ -81,10 +81,11 @@ impl SandboxDaemonInstaller for FakeInstaller {
 struct FakeClient;
 
 impl SandboxDaemonClient for FakeClient {
-    fn invoke(
+    fn invoke_with_timeout(
         &self,
         _endpoint: &SandboxDaemonEndpoint,
         _request: sandbox_protocol::Request,
+        _timeout: Duration,
     ) -> Result<Response, ManagerError> {
         Ok(Response::ok(json!({"forwarded": true})))
     }
@@ -130,14 +131,6 @@ impl RecordingTreeClient {
 }
 
 impl SandboxDaemonClient for RecordingTreeClient {
-    fn invoke(
-        &self,
-        endpoint: &SandboxDaemonEndpoint,
-        request: Request,
-    ) -> Result<Response, ManagerError> {
-        self.invoke_with_timeout(endpoint, request, Duration::from_millis(30_000))
-    }
-
     fn invoke_with_timeout(
         &self,
         endpoint: &SandboxDaemonEndpoint,
@@ -193,14 +186,6 @@ impl SlowTreeClient {
 }
 
 impl SandboxDaemonClient for SlowTreeClient {
-    fn invoke(
-        &self,
-        endpoint: &SandboxDaemonEndpoint,
-        request: Request,
-    ) -> Result<Response, ManagerError> {
-        self.invoke_with_timeout(endpoint, request, Duration::from_millis(30_000))
-    }
-
     fn invoke_with_timeout(
         &self,
         _endpoint: &SandboxDaemonEndpoint,
@@ -258,7 +243,7 @@ fn id(value: &str) -> SandboxId {
 }
 
 fn endpoint(value: &str) -> SandboxDaemonEndpoint {
-    SandboxDaemonEndpoint::new(PathBuf::from(format!("/tmp/{value}.sock")), None)
+    SandboxDaemonEndpoint::new(PathBuf::from(format!("/tmp/{value}.sock")))
 }
 
 fn sandbox_record(
@@ -305,6 +290,15 @@ fn temp_root(label: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
             .duration_since(std::time::UNIX_EPOCH)?
             .as_nanos()
     )))
+}
+
+#[cfg(unix)]
+fn daemon_file_paths(runtime_root: &std::path::Path, sandbox_id: &str) -> (PathBuf, PathBuf) {
+    let runtime_dir = runtime_root.join(sandbox_id);
+    (
+        runtime_dir.join("runtime.sock"),
+        runtime_dir.join("runtime.pid"),
+    )
 }
 
 #[test]
@@ -367,8 +361,10 @@ fn create_list_inspect_destroy_sandbox_with_fake_runtime() {
     assert_eq!(created["id"], "container-1");
     assert_eq!(created["workspace_root"], "/testbed");
     assert_eq!(created["state"], "ready");
-    assert_eq!(created["daemon"]["socket_path"], "/tmp/container-1.sock");
-    assert_eq!(created["daemon"]["auth_token_configured"], true);
+    assert_eq!(
+        created["daemon"],
+        json!({"socket_path": "/tmp/container-1.sock"})
+    );
 
     let listed = dispatch(&services, "list_sandboxes", json!({}));
     assert_eq!(listed["sandboxes"][0]["id"], "container-1");
@@ -477,10 +473,10 @@ fn get_observability_tree_aggregates_ready_sandboxes_with_private_daemon_request
         .all(|invocation| invocation.args["include_recent_traces"] == true));
     assert!(invocations
         .iter()
-        .all(|invocation| invocation.args["trace_limit"] == 100));
+        .all(|invocation| invocation.args["trace_limit"] == 500));
     assert!(invocations
         .iter()
-        .all(|invocation| invocation.args["resource_window_ms"] == 600_000));
+        .all(|invocation| invocation.args["resource_window_ms"] == 999_999));
     assert!(invocations
         .iter()
         .all(|invocation| invocation.timeout == Duration::from_millis(1_500)));
@@ -490,7 +486,7 @@ fn get_observability_tree_aggregates_ready_sandboxes_with_private_daemon_request
 fn get_observability_tree_converts_one_daemon_failure_to_one_unavailable_node() {
     let client = Arc::new(RecordingTreeClient::default());
     client.fail_sandbox("sbox-2");
-    let (services, store) = services_with_client(client);
+    let (services, store) = services_with_client(client.clone());
     store
         .insert(sandbox_record(
             "sbox-1",
@@ -519,6 +515,10 @@ fn get_observability_tree_converts_one_daemon_failure_to_one_unavailable_node() 
         .as_str()
         .expect("error text")
         .contains("daemon sbox-2 timed out"));
+    assert!(client.invocations().iter().all(|invocation| invocation
+        .args
+        .as_object()
+        .is_some_and(|args| args.is_empty())));
 }
 
 #[test]
@@ -599,45 +599,6 @@ fn get_observability_tree_bounds_daemon_fanout_concurrency() {
     );
 }
 
-#[test]
-fn local_daemon_installer_launch_spec_passes_dynamic_sandbox_id() {
-    let installer = LocalSandboxDaemonInstaller::new(
-        "/bin/sandbox-daemon",
-        "/etc/eos/prd.yml",
-        "/tmp/eos-daemons",
-        Some("secret-token".to_owned()),
-    );
-    let record = SandboxRecord::new(
-        id("container-1"),
-        PathBuf::from("/testbed"),
-        SandboxState::Ready,
-    );
-
-    let spec = installer
-        .launch_spec(&record)
-        .expect("launch spec builds from record");
-
-    assert_eq!(spec.executable, PathBuf::from("/bin/sandbox-daemon"));
-    assert_eq!(
-        spec.socket_path,
-        PathBuf::from("/tmp/eos-daemons/container-1/runtime.sock")
-    );
-    assert_eq!(
-        spec.pid_path,
-        PathBuf::from("/tmp/eos-daemons/container-1/runtime.pid")
-    );
-    assert!(spec
-        .args
-        .windows(2)
-        .any(|window| window[0] == "--sandbox-id" && window[1] == "container-1"));
-    assert!(spec
-        .args
-        .windows(2)
-        .any(|window| window[0] == "--workspace-root" && window[1] == "/testbed"));
-    assert!(!spec.args.iter().any(|arg| arg == "secret-token"));
-    assert_eq!(spec.auth_token.as_deref(), Some("secret-token"));
-}
-
 #[cfg(unix)]
 #[test]
 fn local_daemon_installer_stop_daemon_terminates_pid_file_process(
@@ -649,18 +610,17 @@ fn local_daemon_installer_stop_daemon_terminates_pid_file_process(
     let installer = LocalSandboxDaemonInstaller::new(
         "/bin/sandbox-daemon",
         root.join("config.yml"),
-        runtime_root,
-        None,
+        runtime_root.clone(),
     );
     let record = SandboxRecord::new(id("container-1"), workspace_root, SandboxState::Ready);
-    let spec = installer.launch_spec(&record)?;
-    std::fs::create_dir_all(spec.pid_path.parent().expect("pid path parent"))?;
-    std::fs::write(&spec.socket_path, b"socket placeholder")?;
+    let (socket_path, pid_path) = daemon_file_paths(&runtime_root, "container-1");
+    std::fs::create_dir_all(pid_path.parent().expect("pid path parent"))?;
+    std::fs::write(&socket_path, b"socket placeholder")?;
 
     let child = Command::new("/bin/sleep").arg("30").spawn()?;
     let pid = child.id();
     let _cleanup = ChildCleanup::new(child);
-    std::fs::write(&spec.pid_path, pid.to_string())?;
+    std::fs::write(&pid_path, pid.to_string())?;
 
     installer.stop_daemon(&record)?;
 
@@ -668,8 +628,8 @@ fn local_daemon_installer_stop_daemon_terminates_pid_file_process(
         !pid_exists(pid),
         "daemon pid {pid} should be gone after stop_daemon"
     );
-    assert!(!spec.pid_path.exists());
-    assert!(!spec.socket_path.exists());
+    assert!(!pid_path.exists());
+    assert!(!socket_path.exists());
 
     let _ = std::fs::remove_dir_all(root);
     Ok(())
@@ -686,13 +646,12 @@ fn local_daemon_installer_stop_daemon_rejects_socket_without_pid_file(
     let installer = LocalSandboxDaemonInstaller::new(
         "/bin/sandbox-daemon",
         root.join("config.yml"),
-        runtime_root,
-        None,
+        runtime_root.clone(),
     );
     let record = SandboxRecord::new(id("container-1"), workspace_root, SandboxState::Ready);
-    let spec = installer.launch_spec(&record)?;
-    std::fs::create_dir_all(spec.socket_path.parent().expect("socket path parent"))?;
-    std::fs::write(&spec.socket_path, b"socket placeholder")?;
+    let (socket_path, _pid_path) = daemon_file_paths(&runtime_root, "container-1");
+    std::fs::create_dir_all(socket_path.parent().expect("socket path parent"))?;
+    std::fs::write(&socket_path, b"socket placeholder")?;
 
     let error = installer
         .stop_daemon(&record)
@@ -703,7 +662,7 @@ fn local_daemon_installer_stop_daemon_rejects_socket_without_pid_file(
         "unexpected error: {error}"
     );
     assert!(
-        spec.socket_path.exists(),
+        socket_path.exists(),
         "socket artifact should remain for failed stop diagnosis"
     );
 

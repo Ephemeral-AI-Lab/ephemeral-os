@@ -499,9 +499,13 @@ fn aggregate_snapshot_read_returns_latest_resources_per_scope() -> TestResult {
     assert_eq!(
         rows.latest_resources
             .iter()
-            .map(|sample| sample.sample_id.as_str())
+            .map(|sample| (sample.workspace_id.as_deref(), sample.sampled_at_unix_ms))
             .collect::<Vec<_>>(),
-        ["global-new", "workspace-1-new", "workspace-2-only"]
+        [
+            (None, 2_000),
+            (Some("workspace-1"), 2_100),
+            (Some("workspace-2"), 1_500)
+        ]
     );
     assert!(rows.resource_history.is_empty());
     assert!(rows.recent_request_traces.is_empty());
@@ -598,13 +602,10 @@ fn aggregate_snapshot_read_history_and_traces_are_opt_in() -> TestResult {
             resource_window_ms: Some(1_000),
         },
     )?;
+    assert_eq!(requested_rows.resource_history.len(), 1);
     assert_eq!(
-        requested_rows
-            .resource_history
-            .iter()
-            .map(|sample| sample.sample_id.as_str())
-            .collect::<Vec<_>>(),
-        ["history-recent"]
+        requested_rows.resource_history[0].sampled_at_unix_ms,
+        now.saturating_sub(100)
     );
     assert_eq!(requested_rows.recent_request_traces.len(), 1);
     assert_eq!(requested_rows.recent_namespace_traces.len(), 1);

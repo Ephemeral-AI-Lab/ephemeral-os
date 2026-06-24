@@ -9,13 +9,8 @@ use sandbox_protocol::{
     ArgCliSpec, ArgKind, ArgSpec, CliOperationScope, CliOperationSpec, CliSpec, Request, Response,
 };
 use serde_json::{json, Map, Value};
-
-const PRIVATE_DAEMON_OBSERVABILITY_SNAPSHOT_OP: &str = "get_observability_snapshot";
 const MAX_CONCURRENT_DAEMON_SNAPSHOT_REQUESTS: usize = 8;
 const DEFAULT_DAEMON_SNAPSHOT_TIMEOUT_MS: u64 = 1_500;
-const DEFAULT_TRACE_LIMIT: usize = 20;
-const MAX_TRACE_LIMIT: usize = 100;
-const MAX_RESOURCE_WINDOW_MS: u64 = 600_000;
 const MAX_NODE_ERROR_BYTES: usize = 4_096;
 
 pub(crate) const SPEC: CliOperationSpec = CliOperationSpec {
@@ -52,7 +47,7 @@ const GET_OBSERVABILITY_TREE_ARGS: &[ArgSpec] = &[
     ArgSpec::optional(
         "trace_limit",
         ArgKind::Integer,
-        "Maximum recent trace summaries per daemon before manager and daemon caps.",
+        "Maximum recent trace summaries per daemon before daemon caps.",
         Some("20"),
         Some(ArgCliSpec {
             flag: Some("--trace-limit"),
@@ -85,8 +80,8 @@ const GET_OBSERVABILITY_TREE_CLI: CliSpec = CliSpec {
 #[derive(Clone, Debug)]
 struct TreeOptions {
     sandbox_id: Option<SandboxId>,
-    include_recent_traces: bool,
-    trace_limit: usize,
+    include_recent_traces: Option<bool>,
+    trace_limit: Option<usize>,
     resource_window_ms: Option<u64>,
 }
 
@@ -119,14 +114,11 @@ fn tree_options(request: &Request) -> Result<TreeOptions, Response> {
         .map_err(ManagerError::into_response)?;
     Ok(TreeOptions {
         sandbox_id,
-        include_recent_traces: request.optional_u64("include_recent_traces")?.unwrap_or(0) != 0,
-        trace_limit: request
-            .optional_usize("trace_limit")?
-            .unwrap_or(DEFAULT_TRACE_LIMIT)
-            .min(MAX_TRACE_LIMIT),
-        resource_window_ms: request
-            .optional_u64("resource_window_ms")?
-            .map(|window_ms| window_ms.min(MAX_RESOURCE_WINDOW_MS)),
+        include_recent_traces: request
+            .optional_u64("include_recent_traces")?
+            .map(|value| value != 0),
+        trace_limit: request.optional_usize("trace_limit")?,
+        resource_window_ms: request.optional_u64("resource_window_ms")?,
     })
 }
 
@@ -218,19 +210,28 @@ fn private_snapshot_request(
     options: &TreeOptions,
     request_id: &str,
 ) -> Request {
+    let mut args = Map::new();
+    if let Some(include_recent_traces) = options.include_recent_traces {
+        args.insert(
+            "include_recent_traces".to_owned(),
+            json!(include_recent_traces),
+        );
+    }
+    if let Some(trace_limit) = options.trace_limit {
+        args.insert("trace_limit".to_owned(), json!(trace_limit));
+    }
+    if let Some(resource_window_ms) = options.resource_window_ms {
+        args.insert("resource_window_ms".to_owned(), json!(resource_window_ms));
+    }
     Request::new(
-        PRIVATE_DAEMON_OBSERVABILITY_SNAPSHOT_OP,
+        crate::operation::PRIVATE_DAEMON_OBSERVABILITY_SNAPSHOT_OP,
         format!(
             "{}:{}:observability_snapshot",
             request_id,
             record.id.as_str()
         ),
         CliOperationScope::sandbox(record.id.as_str()),
-        json!({
-            "include_recent_traces": options.include_recent_traces,
-            "trace_limit": options.trace_limit,
-            "resource_window_ms": options.resource_window_ms,
-        }),
+        Value::Object(args),
     )
 }
 

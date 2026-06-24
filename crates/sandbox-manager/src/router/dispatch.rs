@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use sandbox_protocol::{CliOperationScope, Request, Response};
+use sandbox_protocol::{error_kind, CliOperationScope, Request, Response};
 
 use super::{forward::forward_sandbox_request, SandboxManagerRouter};
 
@@ -13,9 +13,17 @@ impl SandboxManagerRouter {
             (CliOperationScope::System, true) => self.dispatch_manager_request(request).await,
             (CliOperationScope::System, false) => Response::unknown_op(),
             (CliOperationScope::Sandbox { .. }, true) => Response::fault(
-                sandbox_protocol::error_kind::INVALID_REQUEST,
+                error_kind::INVALID_REQUEST,
                 "manager operation requires system scope",
             ),
+            (CliOperationScope::Sandbox { .. }, false)
+                if request.op == crate::operation::PRIVATE_DAEMON_OBSERVABILITY_SNAPSHOT_OP =>
+            {
+                Response::fault(
+                    error_kind::INVALID_REQUEST,
+                    "private daemon operation is manager-internal",
+                )
+            }
             (CliOperationScope::Sandbox { .. }, false) => {
                 self.forward_sandbox_request(request).await
             }
@@ -29,7 +37,7 @@ impl SandboxManagerRouter {
         {
             Ok(response) => response,
             Err(error) => Response::fault(
-                sandbox_protocol::error_kind::INTERNAL_ERROR,
+                error_kind::INTERNAL_ERROR,
                 format!("manager operation task failed: {error}"),
             ),
         }
@@ -42,7 +50,7 @@ impl SandboxManagerRouter {
             Ok(Ok(response)) => response,
             Ok(Err(error)) => error.into_response(),
             Err(error) => Response::fault(
-                sandbox_protocol::error_kind::INTERNAL_ERROR,
+                error_kind::INTERNAL_ERROR,
                 format!("manager forwarding task failed: {error}"),
             ),
         }

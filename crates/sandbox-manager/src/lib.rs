@@ -1,18 +1,16 @@
 #![forbid(unsafe_code)]
 
-pub mod daemon_client;
-pub mod daemon_install;
-pub mod error;
-pub mod model;
-pub mod operation;
-pub mod router;
-pub mod runtime;
-pub mod store;
+mod daemon_client;
+mod daemon_install;
+mod error;
+mod model;
+mod operation;
+mod router;
+mod runtime;
+mod store;
 
 pub use daemon_client::{SandboxDaemonClient, UnixSandboxDaemonClient};
-pub use daemon_install::{
-    LocalSandboxDaemonInstaller, SandboxDaemonInstaller, SandboxDaemonLaunchSpec,
-};
+pub use daemon_install::{LocalSandboxDaemonInstaller, SandboxDaemonInstaller};
 pub use error::ManagerError;
 pub use model::{SandboxDaemonEndpoint, SandboxId, SandboxRecord, SandboxState};
 pub use operation::{

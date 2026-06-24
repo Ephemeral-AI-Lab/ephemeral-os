@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use sandbox_protocol::{CliOperationScope, Request};
 
 use crate::{ManagerError, ManagerServices, SandboxDaemonEndpoint, SandboxId, SandboxState};
@@ -8,7 +10,11 @@ pub(super) fn forward_sandbox_request(
 ) -> Result<sandbox_protocol::Response, ManagerError> {
     let id = sandbox_id(&request.scope)?;
     let endpoint = daemon_endpoint(services, &id)?;
-    services.daemon_client.invoke(&endpoint, request)
+    services.daemon_client.invoke_with_timeout(
+        &endpoint,
+        request,
+        Duration::from_secs_f64(sandbox_protocol::REQUEST_READ_TIMEOUT_S),
+    )
 }
 
 fn sandbox_id(scope: &CliOperationScope) -> Result<SandboxId, ManagerError> {

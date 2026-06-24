@@ -4,6 +4,6 @@
 #![forbid(unsafe_code)]
 
 pub(crate) mod observability;
-pub mod server;
+mod server;
 
 pub use server::{SandboxDaemonError, SandboxDaemonServer, ServerConfig};

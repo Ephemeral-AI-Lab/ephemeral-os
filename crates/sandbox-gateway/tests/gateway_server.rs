@@ -3,6 +3,7 @@ use std::sync::{
     atomic::{AtomicU64, Ordering},
     Arc, Mutex,
 };
+use std::time::Duration;
 
 use sandbox_gateway::{GatewayConfig, SandboxGatewayServer};
 use sandbox_manager::{
@@ -45,10 +46,10 @@ impl SandboxDaemonInstaller for FakeInstaller {
     }
 
     fn start_daemon(&self, record: &SandboxRecord) -> Result<SandboxDaemonEndpoint, ManagerError> {
-        Ok(SandboxDaemonEndpoint::new(
-            PathBuf::from(format!("/tmp/{}.sock", record.id.as_str())),
-            None,
-        ))
+        Ok(SandboxDaemonEndpoint::new(PathBuf::from(format!(
+            "/tmp/{}.sock",
+            record.id.as_str()
+        ))))
     }
 
     fn stop_daemon(&self, _record: &SandboxRecord) -> Result<(), ManagerError> {
@@ -66,10 +67,11 @@ struct RecordingDaemonClient {
 }
 
 impl SandboxDaemonClient for RecordingDaemonClient {
-    fn invoke(
+    fn invoke_with_timeout(
         &self,
         endpoint: &SandboxDaemonEndpoint,
         request: Request,
+        _timeout: Duration,
     ) -> Result<Response, ManagerError> {
         self.invocations.lock().expect("invocations lock").push((
             endpoint.socket_path.clone(),
@@ -294,7 +296,7 @@ async fn gateway_dispatches_sandbox_scope_through_manager_router() -> TestResult
     store
         .insert(ready_record(
             "sbox-1",
-            Some(SandboxDaemonEndpoint::new("/tmp/sbox-1.sock", None)),
+            Some(SandboxDaemonEndpoint::new("/tmp/sbox-1.sock")),
         ))
         .expect("insert sandbox");
     let server = server(
