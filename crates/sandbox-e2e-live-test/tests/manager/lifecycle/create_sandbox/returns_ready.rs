@@ -1,6 +1,6 @@
 use crate::support::{self, assertion as assert};
 
-// build.rs slug => `lifecycle_create_sandbox`, mounted by tests/manager.rs.
+// build.rs slug => `lifecycle_create_sandbox_returns_ready`, mounted by tests/manager.rs.
 #[test]
 fn create_sandbox_returns_ready_with_daemon_socket() {
     let Some(h) = support::harness() else {

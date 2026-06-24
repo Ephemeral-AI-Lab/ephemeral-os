@@ -1,6 +1,6 @@
 use crate::support::{self, assertion as assert};
 
-// build.rs slug => `command_exec_command`, mounted by tests/runtime.rs.
+// build.rs slug => `command_exec_command_one_shot`, mounted by tests/runtime.rs.
 #[test]
 fn one_shot_exec_returns_ok_and_zero_exit() {
     let Some(h) = support::harness() else {

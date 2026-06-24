@@ -143,8 +143,9 @@ binary**, not bin-only. This matches how the repo already organizes tests
   `eos-e2e`. (`report` owns artifact writing *and* the outcome DTOs *and*
   observability snapshotting; `cleanup` owns the run guard *and* Docker reaping —
   the thin single-job wrappers are merged into their sole consumer.)
-- `tests/` holds the **per-operation tests**, one leaf file per operation,
-  organized `[manager|runtime]/<operation_family>/<operation>.rs`, plus a
+- `tests/` holds the **per-operation tests**, one directory per operation with
+  one leaf file per test case, organized
+  `[manager|runtime]/<operation_family>/<operation>/<case>.rs`, plus a
   `routing/` slot for cross-cutting negative/contract cases.
 - Operation families mirror the source grouping exactly: manager =
   `lifecycle` + `observability` (`operation/impls/management/*.rs`); runtime =
@@ -189,35 +190,52 @@ crates/sandbox-e2e-live-test/
     manager.rs                           # test binary: mod support; include!(generated manager mods)
     manager/
       lifecycle/
-        create_sandbox.rs                # #[test] fns
-        inspect_sandbox.rs
-        list_sandboxes.rs
-        destroy_sandbox.rs
+        create_sandbox/                  # one dir per operation; one file per case
+          returns_ready.rs               # M1 — one #[test] fn per case file
+        inspect_sandbox/
+          returns_record.rs              # M3
+        list_sandboxes/
+          lists_ready.rs                 # M2
+        destroy_sandbox/
+          removes_sandbox.rs             # M5
       observability/
-        get_observability_tree.rs
+        get_observability_tree/
+          returns_tree.rs                # M4
       routing/
-        scope_and_dispatch.rs            # negative/contract: unknown_op, etc.
+        scope_and_dispatch/
+          unknown_op.rs                  # negative/contract: N1
     runtime.rs                           # test binary: mod support; include!(generated runtime mods)
     runtime/
       command/
-        exec_command.rs
-        write_command_stdin.rs
-        read_command_lines.rs
+        exec_command/                    # several test files per operation
+          one_shot.rs                    # R1
+          in_session.rs                  # R3
+          long_running.rs                # R4
+        write_command_stdin/
+          echoes_input.rs                # R5
+        read_command_lines/
+          monotonic_offsets.rs           # R6
       workspace_session/
-        create_workspace_session.rs
-        destroy_workspace_session.rs
+        create_workspace_session/
+          host_compatible.rs             # R2
+        destroy_workspace_session/
+          clean.rs                       # R7a
+          busy.rs                        # R7b
       layerstack/
-        squash.rs
+        squash/
+          after_mutation.rs              # R8
       routing/
-        scope_and_dispatch.rs            # negative/contract: missing --sandbox-id, etc.
+        scope_and_dispatch/
+          missing_sandbox_id.rs          # negative/contract: N2
 ```
 
 Module wiring follows the repo convention (`crates/sandbox-daemon/tests/unit.rs`
 uses `#[path]` + `include!`), but the per-leaf include list is **generated**, not
 hand-maintained: `build.rs` walks `tests/<scope>/**/*.rs` and emits
 `$OUT_DIR/<scope>_mods.rs` containing one `#[path = "..."] mod <slug>;` line per
-leaf. Each root test binary stays a stable two lines, so **adding an operation is
-adding one file** — no registry edit:
+leaf. Each root test binary stays a stable two lines, so **adding a test case is
+adding one file** (a new operation is a new directory; its first case is still one
+file) — no registry edit:
 
 ```rust
 // tests/manager.rs
@@ -226,7 +244,7 @@ include!(concat!(env!("OUT_DIR"), "/manager_mods.rs"));
 ```
 
 Module slugs are derived deterministically from the leaf path
-(`<family>_<operation>`), so two authors cannot collide.
+(`<family>_<operation>_<case>`), so two authors cannot collide.
 
 `Cargo.toml` (lib + orchestrator bin; tests drive the system over the socket, so
 no manager/runtime internal crates are needed for the black-box path):
@@ -348,7 +366,7 @@ struct RunConfig {
                                //   Passed to cargo test as --test-threads=N.
     tests: TestSelection,      // All | Names(Vec<String>) | RerunFailedFrom(PathBuf).
                                //   Mapped to `cargo test --test {manager|runtime}`
-                               //   plus libtest name filters (scope::family::operation).
+                               //   plus libtest name filters (family_operation_case).
     image: String,             // --image (e.g. "ubuntu:24.04"); default for provisioning
     run_root: PathBuf,         // ${EOS_E2E_RUN_ROOT:-$TMPDIR/eos-e2e}/{run_id}
     gateway_socket: PathBuf,   // --gateway-socket; v1 is attach-only (required)
@@ -378,9 +396,10 @@ namespaces the run root and artifact paths.
 
 ## Test Layout and Fixtures
 
-Each operation gets its own leaf file under
-`tests/<scope>/<operation_family>/<operation>.rs`, holding the `#[test]` fns for
-that operation. A test is: provision via fixture → drive the operation under test
+Each operation gets its own directory under
+`tests/<scope>/<operation_family>/<operation>/`, holding one leaf file per test
+case (`<case>.rs`), each carrying the `#[test]` fn for that case. A test is:
+provision via fixture → drive the operation under test
 plus its minimal precondition calls → assert typed response fields → (RAII) tear
 down. No central suite registry; the test tree *is* the registry, discovered by
 `cargo test` and wired through the generated include list.
@@ -434,7 +453,7 @@ the cross-read offset invariant a single-response check cannot.
 A leaf test reads like:
 
 ```rust
-// tests/runtime/command/exec_command.rs
+// tests/runtime/command/exec_command/one_shot.rs
 #[test]
 fn one_shot_exec_returns_ok_and_zero_exit() {
     let Some(h) = support::harness() else { return };          // skip when not under eos-e2e
@@ -480,7 +499,7 @@ fields, never string formatting.
 | N1 | unknown system op                | gateway up              | `manager <unknown-op>`                                                              | `err_kind_at(rec, "unknown_op", 1)` (error on stderr, exit 1)                                        |
 | N2 | runtime op, no sandbox id        | gateway up              | `runtime <op>` without `--sandbox-id`/`--default-sandbox-id`                        | exit `2`; error on stderr; message "runtime operations require --sandbox-id or SANDBOX_DEFAULT_ID"   |
 
-The negatives live under `tests/<scope>/routing/scope_and_dispatch.rs`. The former
+The negatives live under `tests/<scope>/routing/scope_and_dispatch/<case>.rs`. The former
 "manager op forced into Sandbox scope" case is **dropped**: the CLI fixes scope
 from the subcommand (`request_builder.rs:74-79`), so that fault is only reachable
 by hand-forging a protocol request, which violates the black-box boundary. Scope
@@ -625,7 +644,7 @@ recorded per call inside `exchange.jsonl`.
 `summary.json`:
 `{ schema_version, run_id, git_head, started_at, finished_at, max_parallel,
 status (passed|failed|error), counts{total,passed,failed,skipped,errored},
-tests[]{ name (scope::family::operation::fn), sandbox_id, status, duration_ms,
+tests[]{ name (scope::family::operation::case::fn), sandbox_id, status, duration_ms,
 workspace_root, report_dir, assertions{total,failed}, failure }, failed_tests[],
 artifacts_root, timing{...}, cleanup{...} }`. The orchestrator builds `tests[]`
 solely by globbing each test's `reports/*/result.json`; a missing `result.json` is
@@ -722,13 +741,13 @@ what a conforming attach gateway must be started with.
   `fixtures.rs` (`provision_sandbox` reading `/id`, RAII `Sandbox`),
   `tests/support/mod.rs`, `gateway.rs` (attach mode via `--gateway-socket`),
   `build.rs` include generation, and one leaf test
-  `tests/runtime/command/exec_command.rs` plus
-  `tests/manager/lifecycle/create_sandbox.rs`. Verify against a gateway wired with
+  `tests/runtime/command/exec_command/one_shot.rs` plus
+  `tests/manager/lifecycle/create_sandbox/returns_ready.rs`. Verify against a gateway wired with
   the real Docker runtime by setting `EOS_E2E_RUN_ROOT` (with a `run-manifest.json`
   inside) and running `cargo test -p sandbox-e2e-live-test -- --test-threads=1`.
 - **Phase 2 — Full per-operation tree + assertions.** All leaf files under
   `tests/manager/...` and `tests/runtime/...` covering M1-M5, R1-R8, plus
-  `routing/scope_and_dispatch.rs` for N1-N2; `assertion.rs` helpers
+  `routing/scope_and_dispatch/` for N1-N2; `assertion.rs` helpers
   (`err_kind_at`, `err_detail`, `non_decreasing`); per-test `exchange.jsonl`
   capture.
 - **Phase 3 — Orchestrator, reproducibility, artifacts, cleanup.**
@@ -750,7 +769,7 @@ cargo clippy -p sandbox-e2e-live-test --all-targets -- -D warnings
 # orchestrator (PROOF below), or set EOS_E2E_RUN_ROOT (with a run-manifest.json
 # inside, pointing at a real-runtime gateway socket) for a focused run:
 EOS_E2E_RUN_ROOT=<dir> \
-  cargo test -p sandbox-e2e-live-test --test runtime -- command::exec_command --test-threads=4
+  cargo test -p sandbox-e2e-live-test --test runtime -- command_exec_command --test-threads=4
 
 # PROOF (self-contained; no Makefile in repo). Requires a Linux host with Docker
 # and an externally started gateway wired with the real Docker runtime, attached
