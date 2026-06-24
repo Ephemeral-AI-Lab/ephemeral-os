@@ -1,7 +1,7 @@
-/goal Implement Phase 2 of the Namespace Execution Engine migration — launcher + engine dispatch + watcher — making the engine functional end to end against a fake launcher, fully unit-tested before any real caller depends on it.
+/goal Implement Phase 2 of the Namespace Execution Engine migration — launcher + engine dispatch + watcher — making the engine functional end to end against a fake launcher.
 
 ## Contract
-Build to green against `docs/namespace_execution_migration/phase-2-spec.md` (authoritative). Phase contract: `migration-phases.md` §"Phase 2". `namespace-execution.md` shows FINAL (Phase 3-6) shapes — do not pull them forward. Build ON the live Phase 1 skeleton in `crates/sandbox-runtime/namespace-execution/`; live code wins over the design doc on conflict. Spec-only decisions are already settled — implement as written, don't re-derive.
+Build to green against `docs/namespace_execution_migration/phase-2-spec.md` (authoritative). Phase contract: `migration-phases.md` §"Phase 2". `namespace-execution.md` shows FINAL (Phase 3-6) shapes — do not pull them forward. Build ON the live Phase 1 skeleton in `crates/sandbox-runtime/namespace-execution/`; live code wins over the design doc. Decisions are settled in the spec — implement as written, don't re-derive.
 
 ## Scope — touch ONLY the engine crate + one re-export shim
 Add `engine.rs`, `launcher.rs`, `pty.rs`, `status.rs`. Fill in `registry.rs`, `execution.rs`, `shell.rs`, `observer.rs`, `promise.rs`, `lib.rs`, `Cargo.toml`. Edit exactly ONE operation file: `operation/src/namespace_execution.rs` (terminal-status relocation).
