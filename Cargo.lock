@@ -1006,6 +1006,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "sandbox-e2e-live-test"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "sandbox-gateway"
 version = "0.1.0"
 dependencies = [
@@ -1055,6 +1064,7 @@ dependencies = [
  "sandbox-protocol",
  "sandbox-runtime-command",
  "sandbox-runtime-layerstack",
+ "sandbox-runtime-namespace-execution",
  "sandbox-runtime-workspace",
  "serde_json",
  "thiserror 2.0.18",
@@ -1085,6 +1095,13 @@ dependencies = [
  "serde_json",
  "sha2",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "sandbox-runtime-namespace-execution"
+version = "0.1.0"
+dependencies = [
+ "sandbox-runtime-namespace-process",
 ]
 
 [[package]]

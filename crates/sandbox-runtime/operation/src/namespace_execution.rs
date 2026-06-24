@@ -5,13 +5,12 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::workspace_crate::WorkspaceSessionId;
 
+pub use sandbox_runtime_namespace_execution::NamespaceExecutionId;
+
 const DEFAULT_MAX_PENDING_PROJECTION: usize = 256;
 const DEFAULT_MAX_RECENT_PROJECTED: usize = 256;
 const DEFAULT_MAX_PARTIAL_ERRORS: usize = 32;
 const MAX_ERROR_FIELD_BYTES: usize = 4096;
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct NamespaceExecutionId(pub String);
 
 #[derive(Debug)]
 pub struct NamespaceExecutionStore {

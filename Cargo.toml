@@ -11,9 +11,11 @@ members = [
     "crates/sandbox-protocol",
     "crates/sandbox-runtime/workspace",
     "crates/sandbox-runtime/namespace-process",
+    "crates/sandbox-runtime/namespace-execution",
     "crates/sandbox-runtime/layerstack",
     "crates/sandbox-runtime/overlay",
     "xtask",
+    "crates/sandbox-e2e-live-test",
 ]
 
 [workspace.package]
@@ -58,6 +60,7 @@ sandbox-runtime-command = { path = "crates/sandbox-runtime/command" }
 sandbox-config = { path = "crates/sandbox-config" }
 sandbox-runtime-layerstack = { path = "crates/sandbox-runtime/layerstack" }
 sandbox-runtime-namespace-process = { path = "crates/sandbox-runtime/namespace-process" }
+sandbox-runtime-namespace-execution = { path = "crates/sandbox-runtime/namespace-execution" }
 sandbox-runtime-overlay = { path = "crates/sandbox-runtime/overlay" }
 sandbox-runtime-workspace = { path = "crates/sandbox-runtime/workspace" }
 sandbox-manager = { path = "crates/sandbox-manager" }

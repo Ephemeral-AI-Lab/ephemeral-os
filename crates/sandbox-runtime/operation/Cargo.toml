@@ -7,6 +7,7 @@ license.workspace = true
 
 [dependencies]
 sandbox-runtime-command.workspace = true
+sandbox-runtime-namespace-execution.workspace = true
 sandbox-runtime-layerstack.workspace = true
 sandbox-protocol.workspace = true
 serde_json.workspace = true
