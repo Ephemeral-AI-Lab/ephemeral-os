@@ -72,7 +72,7 @@ fn exec_input(workspace_session_id: WorkspaceSessionId) -> ExecCommandInput {
         workspace_session_id: Some(workspace_session_id),
         cmd: "printf ok".to_owned(),
         timeout_ms: None,
-        yield_time_ms: Some(0),
+        yield_time_ms: Some(250),
     }
 }
 

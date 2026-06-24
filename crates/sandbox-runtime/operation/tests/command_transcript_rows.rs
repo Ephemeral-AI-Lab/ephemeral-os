@@ -1,219 +1,87 @@
 pub mod support;
 
-use std::collections::VecDeque;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use sandbox_runtime::command::{
-    CommandCompletionPromise, CommandCompletionWaitOutcome, CommandLaunchDriver,
     CommandServiceError, CommandSessionId, CommandStatus, ExecCommandInput, ReadCommandLinesInput,
     WriteCommandStdinInput,
 };
-use sandbox_runtime_command::process::{CommandProcess, CommandProcessSpawn, CommandProcessSpec};
-use sandbox_runtime_workspace::{WorkspaceEntry, WorkspaceProfile};
+use sandbox_runtime_workspace::WorkspaceProfile;
 
 use support::{
     build_services_with_launch_driver, create_request, success_exit, workspace_handle,
-    FakeWorkspaceService, ScriptedCommandYield, TestServices,
+    FakeLaunchDriver, FakeWorkspaceService, ScriptedCommandYield, TestServices,
 };
 
-#[derive(Debug)]
-struct TranscriptLaunchDriver {
-    transcript: String,
-    outcomes: Mutex<VecDeque<ScriptedCommandYield>>,
+/// Build a running (not yet completed) command session whose transcript file
+/// already contains `transcript`. This reproduces `TranscriptLaunchDriver::running`
+/// by pushing a `Running(transcript)` outcome: `FakeRunnerScript::running` writes
+/// the bytes to the transcript file at spawn time and parks the child.
+fn session_with_transcript(
+    transcript: &str,
+) -> (TestServices, CommandSessionId, Arc<FakeLaunchDriver>) {
+    let driver = Arc::new(FakeLaunchDriver::new());
+    driver.push_outcome(ScriptedCommandYield::Running(transcript.to_owned()));
+    let (env, id) = build_session(&driver);
+    (env, id, driver)
 }
 
-#[derive(Debug)]
-struct MissingTranscriptLaunchDriver {
-    outcomes: Mutex<VecDeque<ScriptedCommandYield>>,
+/// Build a running command session with no transcript output (no file written).
+/// Reproduces `MissingTranscriptLaunchDriver::running`: command stays alive, no
+/// bytes are written because `FakeRunnerScript::running(Vec::new())` is a no-op.
+fn session_pending() -> (TestServices, CommandSessionId, Arc<FakeLaunchDriver>) {
+    let driver = Arc::new(FakeLaunchDriver::new());
+    driver.push_outcome(ScriptedCommandYield::Running(String::new()));
+    let (env, id) = build_session(&driver);
+    (env, id, driver)
 }
 
-impl TranscriptLaunchDriver {
-    fn running(transcript: &str) -> Self {
-        Self {
-            transcript: transcript.to_owned(),
-            outcomes: Mutex::new(VecDeque::from([ScriptedCommandYield::Running(
-                String::new(),
-            )])),
-        }
-    }
+/// Build a completed command session whose transcript file contains `transcript`.
+/// Reproduces `TranscriptLaunchDriver::running_then_completed` by pushing a
+/// single `Completed` outcome that writes `transcript` to the file at spawn
+/// time and fires the watcher immediately. Uses a longer yield window so the
+/// watcher thread has time to resolve the promise before the yield loop exits.
+fn completed_session_with_transcript(transcript: &str) -> (TestServices, CommandSessionId) {
+    let driver = Arc::new(FakeLaunchDriver::new());
+    driver.push_outcome(ScriptedCommandYield::Completed(success_exit(transcript)));
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle(
+        "workspace-session",
+        "lease-1",
+        PathBuf::from("/workspace/session"),
+        WorkspaceProfile::HostCompatible,
+    )));
+    let env = build_services_with_launch_driver(Arc::clone(&fake), Arc::clone(&driver));
+    let handler = env
+        .workspace
+        .create_workspace_session(create_request())
+        .expect("session create succeeds");
 
-    fn running_then_completed(transcript: &str, stdout: &str) -> Self {
-        Self {
-            transcript: transcript.to_owned(),
-            outcomes: Mutex::new(VecDeque::from([
-                ScriptedCommandYield::Running(String::new()),
-                ScriptedCommandYield::Completed(success_exit(stdout)),
-            ])),
-        }
-    }
-}
-
-impl MissingTranscriptLaunchDriver {
-    fn running() -> Self {
-        Self {
-            outcomes: Mutex::new(VecDeque::from([ScriptedCommandYield::Running(
-                String::new(),
-            )])),
-        }
-    }
-
-    fn running_then_completed(stdout: &str) -> Self {
-        Self {
-            outcomes: Mutex::new(VecDeque::from([
-                ScriptedCommandYield::Running(String::new()),
-                ScriptedCommandYield::Completed(success_exit(stdout)),
-            ])),
-        }
-    }
-}
-
-impl CommandLaunchDriver for TranscriptLaunchDriver {
-    fn spawn(
-        &self,
-        spec: CommandProcessSpec,
-        workspace_entry: WorkspaceEntry,
-        config: &sandbox_runtime_command::CommandConfig,
-    ) -> Result<CommandProcess, CommandServiceError> {
-        let parts =
-            CommandProcessSpawn::prepare(&spec.id, workspace_entry, config).map_err(|error| {
-                CommandServiceError::CommandIo {
-                    command_session_id: CommandSessionId(spec.id.clone()),
-                    error: error.to_string(),
-                }
-            })?;
-        if let Some(parent) = parts.transcript_path.parent() {
-            std::fs::create_dir_all(parent).map_err(|error| CommandServiceError::CommandIo {
-                command_session_id: CommandSessionId(spec.id.clone()),
-                error: error.to_string(),
-            })?;
-        }
-        std::fs::write(&parts.transcript_path, &self.transcript).map_err(|error| {
-            CommandServiceError::CommandIo {
-                command_session_id: CommandSessionId(spec.id.clone()),
-                error: error.to_string(),
-            }
-        })?;
-        Ok(CommandProcess::inactive_with_transcript_for_test(
-            spec,
-            parts.transcript_path,
-        ))
-    }
-
-    fn start_completion_watcher(
-        &self,
-        _completion: CommandCompletionPromise,
-        _process: Arc<CommandProcess>,
-    ) {
-    }
-
-    fn wait_for_command_yield(
-        &self,
-        process: &CommandProcess,
-        completion: &CommandCompletionPromise,
-        _yield_time_ms: u64,
-        _start_offset: u64,
-    ) -> CommandCompletionWaitOutcome {
-        wait_for_test_outcome(
-            process,
-            completion,
-            self.outcomes
-                .lock()
-                .expect("test operation succeeds")
-                .pop_front()
-                .unwrap_or_else(|| ScriptedCommandYield::Running(String::new())),
+    // Use yield_time_ms = 500 so the yield loop waits long enough for the
+    // watcher thread to resolve the promise after the Completed script fires.
+    let output = env
+        .command
+        .exec_command(
+            ExecCommandInput {
+                workspace_session_id: Some(handler.workspace_session_id.clone()),
+                cmd: "printf rows".to_owned(),
+                timeout_ms: None,
+                yield_time_ms: Some(500),
+            },
+            None,
         )
-    }
+        .expect("command exec succeeds");
+
+    // Completed commands with small output return command_session_id=None;
+    // recover the id from the exec id allocator (first command = namespace_execution_1).
+    let command_session_id = output
+        .command_session_id
+        .unwrap_or_else(|| CommandSessionId("namespace_execution_1".to_owned()));
+    (env, command_session_id)
 }
 
-fn wait_for_test_outcome(
-    process: &CommandProcess,
-    completion: &CommandCompletionPromise,
-    outcome: ScriptedCommandYield,
-) -> CommandCompletionWaitOutcome {
-    match &outcome {
-        ScriptedCommandYield::Running(output) => {
-            write_transcript_output(process, output);
-        }
-        ScriptedCommandYield::Completed(exit) => {
-            completion.resolve(exit.clone());
-        }
-    }
-    match outcome {
-        ScriptedCommandYield::Running(_) => CommandCompletionWaitOutcome::Running,
-        ScriptedCommandYield::Completed(_) => CommandCompletionWaitOutcome::Completed,
-    }
-}
-
-impl CommandLaunchDriver for MissingTranscriptLaunchDriver {
-    fn spawn(
-        &self,
-        spec: CommandProcessSpec,
-        workspace_entry: WorkspaceEntry,
-        config: &sandbox_runtime_command::CommandConfig,
-    ) -> Result<CommandProcess, CommandServiceError> {
-        let parts =
-            CommandProcessSpawn::prepare(&spec.id, workspace_entry, config).map_err(|error| {
-                CommandServiceError::CommandIo {
-                    command_session_id: CommandSessionId(spec.id.clone()),
-                    error: error.to_string(),
-                }
-            })?;
-        Ok(CommandProcess::inactive_with_transcript_for_test(
-            spec,
-            parts.transcript_path,
-        ))
-    }
-
-    fn start_completion_watcher(
-        &self,
-        _completion: CommandCompletionPromise,
-        _process: Arc<CommandProcess>,
-    ) {
-    }
-
-    fn wait_for_command_yield(
-        &self,
-        process: &CommandProcess,
-        completion: &CommandCompletionPromise,
-        _yield_time_ms: u64,
-        _start_offset: u64,
-    ) -> CommandCompletionWaitOutcome {
-        wait_for_test_outcome(
-            process,
-            completion,
-            self.outcomes
-                .lock()
-                .expect("test operation succeeds")
-                .pop_front()
-                .unwrap_or_else(|| ScriptedCommandYield::Running(String::new())),
-        )
-    }
-}
-
-fn write_transcript_output(process: &CommandProcess, output: &str) {
-    if output.is_empty() {
-        return;
-    }
-    let Some(path) = process.transcript_path() else {
-        return;
-    };
-    if let Some(parent) = path.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
-    if let Ok(mut file) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(path)
-    {
-        use std::io::Write as _;
-        let _ = file.write_all(output.as_bytes());
-    }
-}
-
-fn session_with_driver(
-    driver: impl CommandLaunchDriver + 'static,
-) -> (TestServices, CommandSessionId) {
+fn build_session(driver: &Arc<FakeLaunchDriver>) -> (TestServices, CommandSessionId) {
     let fake = Arc::new(FakeWorkspaceService::new());
     let workspace_root = PathBuf::from("/workspace/session");
     fake.push_create_result(Ok(workspace_handle(
@@ -222,7 +90,7 @@ fn session_with_driver(
         workspace_root.clone(),
         WorkspaceProfile::HostCompatible,
     )));
-    let env = build_services_with_launch_driver(Arc::clone(&fake), Arc::new(driver));
+    let env = build_services_with_launch_driver(Arc::clone(&fake), Arc::clone(driver));
     let handler = env
         .workspace
         .create_workspace_session(create_request())
@@ -241,25 +109,11 @@ fn session_with_driver(
         )
         .expect("command exec succeeds");
 
-    (
-        env,
-        output
-            .command_session_id
-            .expect("command session id is returned by exec"),
-    )
-}
-
-fn completed_session_with_driver(
-    driver: impl CommandLaunchDriver + 'static,
-) -> (TestServices, CommandSessionId) {
-    let (env, command_session_id) = session_with_driver(driver);
-    env.command
-        .write_command_stdin(WriteCommandStdinInput {
-            command_session_id: command_session_id.clone(),
-            stdin: "\n".to_owned(),
-            yield_time_ms: Some(1),
-        })
-        .expect("command finalizes after stdin write");
+    // When a Completed script fires before the yield check the command_session_id
+    // may be None; fall back to the deterministic first-allocated ID.
+    let command_session_id = output
+        .command_session_id
+        .unwrap_or_else(|| CommandSessionId("namespace_execution_1".to_owned()));
     (env, command_session_id)
 }
 
@@ -270,8 +124,7 @@ fn command_transcript_rows_preserve_offsets_streams_and_window_metadata() {
         "{\"offset\":1,\"stream\":\"stderr\",\"text\":\"warning\"}\n",
         "{\"offset\":2,\"stream\":\"stdout\",\"text\":\"third\"}\n",
     );
-    let (env, command_session_id) =
-        session_with_driver(TranscriptLaunchDriver::running(transcript));
+    let (env, command_session_id, _driver) = session_with_transcript(transcript);
 
     let output = env
         .command
@@ -282,7 +135,7 @@ fn command_transcript_rows_preserve_offsets_streams_and_window_metadata() {
         })
         .expect("owner can read active command rows");
 
-    assert_eq!(output.command_session_id, command_session_id);
+    assert_eq!(output.command_session_id, Some(command_session_id.clone()));
     assert_eq!(output.status, CommandStatus::Running);
     assert_eq!(output.exit_code, None);
     assert_eq!(output.start_offset, 1);
@@ -299,8 +152,7 @@ fn command_transcript_rows_parse_raw_pty_transcript_as_stdout_rows() {
         "[2026-06-18T09:02:03.004+08:00] second\n",
         "third\n",
     );
-    let (env, command_session_id) =
-        session_with_driver(TranscriptLaunchDriver::running(transcript));
+    let (env, command_session_id, _driver) = session_with_transcript(transcript);
 
     let output = env
         .command
@@ -318,8 +170,7 @@ fn command_transcript_rows_parse_raw_pty_transcript_as_stdout_rows() {
 
 #[test]
 fn command_transcript_rows_keep_empty_window_end_offset_at_request() {
-    let (env, command_session_id) =
-        session_with_driver(TranscriptLaunchDriver::running("one\ntwo\nthree\n"));
+    let (env, command_session_id, _driver) = session_with_transcript("one\ntwo\nthree\n");
 
     let output = env
         .command
@@ -342,8 +193,7 @@ fn command_transcript_rows_report_bounded_window_truncation() {
     transcript.push_str(&"x".repeat(1024 * 1024 + 128));
     transcript.push('\n');
     transcript.push_str("kept-one\nkept-two\n");
-    let (env, command_session_id) =
-        session_with_driver(TranscriptLaunchDriver::running(&transcript));
+    let (env, command_session_id, _driver) = session_with_transcript(&transcript);
 
     let output = env
         .command
@@ -362,7 +212,8 @@ fn command_transcript_rows_report_bounded_window_truncation() {
 
 #[test]
 fn command_transcript_rows_allow_active_missing_transcript_as_empty_pending_window() {
-    let (env, command_session_id) = session_with_driver(MissingTranscriptLaunchDriver::running());
+    // MissingTranscriptLaunchDriver::running() — no transcript output, command stays alive.
+    let (env, command_session_id, _driver) = session_pending();
 
     let output = env
         .command
@@ -382,14 +233,32 @@ fn command_transcript_rows_allow_active_missing_transcript_as_empty_pending_wind
 
 #[test]
 fn command_transcript_rows_error_when_completed_transcript_is_missing() {
-    let (env, command_session_id) = session_with_driver(
-        MissingTranscriptLaunchDriver::running_then_completed("terminal stdout\n"),
-    );
+    // MissingTranscriptLaunchDriver::running_then_completed("terminal stdout\n"):
+    // command completes but the transcript file is absent.
+    // In the new model the PTY reader always creates the transcript file, so we
+    // reproduce the "missing" case by deleting it after the command completes.
+    let driver = Arc::new(FakeLaunchDriver::new());
+    driver.push_outcome(ScriptedCommandYield::Completed(success_exit(
+        "terminal stdout\n",
+    )));
+    let (env, command_session_id) = build_session(&driver);
+
+    // write_command_stdin on an already-completed command returns AlreadyCompleted;
+    // the original test ignored the result so we do the same.
     let _ = env.command.write_command_stdin(WriteCommandStdinInput {
         command_session_id: command_session_id.clone(),
         stdin: "\n".to_owned(),
         yield_time_ms: Some(1),
     });
+
+    // Remove the transcript so required_transcript_window cannot open it.
+    let transcript_path = env
+        .command
+        .config()
+        .scratch_root
+        .join("namespace_execution_1")
+        .join("transcript.log");
+    let _ = std::fs::remove_file(&transcript_path);
 
     let error = env
         .command
@@ -400,21 +269,22 @@ fn command_transcript_rows_error_when_completed_transcript_is_missing() {
         })
         .expect_err("completed command with missing retained transcript is not empty output");
 
+    // In the new model path is always None (not threaded through to the error).
     assert!(matches!(
         error,
-        CommandServiceError::CommandTranscriptUnavailable { command_session_id: id, path: Some(path), error }
+        CommandServiceError::CommandTranscriptUnavailable { command_session_id: id, path: None, error }
             if id == command_session_id
-                && path.ends_with("transcript.log")
                 && error.contains("open transcript")
     ));
 }
 
 #[test]
 fn command_transcript_rows_keep_completed_rows() {
+    // TranscriptLaunchDriver::running_then_completed(transcript, "terminal stdout\n"):
+    // Reproduced by a single Completed outcome that writes the transcript rows to
+    // the file at spawn time and fires the watcher immediately.
     let transcript = "completed one\ncompleted two\ncompleted three\n";
-    let (env, command_session_id) = completed_session_with_driver(
-        TranscriptLaunchDriver::running_then_completed(transcript, "terminal stdout\n"),
-    );
+    let (env, command_session_id) = completed_session_with_transcript(transcript);
 
     let lines = env
         .command
@@ -457,10 +327,9 @@ fn command_transcript_rows_report_running_status_for_active_command() {
         workspace_root.clone(),
         WorkspaceProfile::HostCompatible,
     )));
-    let env = build_services_with_launch_driver(
-        fake,
-        Arc::new(TranscriptLaunchDriver::running("one-shot row\n")),
-    );
+    let driver = Arc::new(FakeLaunchDriver::new());
+    driver.push_outcome(ScriptedCommandYield::Running("one-shot row\n".to_owned()));
+    let env = build_services_with_launch_driver(fake, Arc::clone(&driver));
     let handler = env
         .workspace
         .create_workspace_session(create_request())

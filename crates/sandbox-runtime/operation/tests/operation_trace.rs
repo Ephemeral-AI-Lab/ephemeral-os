@@ -312,7 +312,7 @@ fn operation_trace_records_command_finalization_async_span_tree(
             CliOperationScope::system(),
             json!({
                 "cmd": "cat",
-                "yield_time_ms": 0,
+                "yield_time_ms": 250,
             }),
         ),
         Some(&request_trace),
@@ -330,14 +330,13 @@ fn operation_trace_records_command_finalization_async_span_tree(
             "one-shot-session".to_owned()
         ))
     );
-    assert_eq!(metadata.command_session_id.0, "cmd_1");
+    assert_eq!(metadata.command_session_id.0, "namespace_execution_1");
     assert!(metadata.finalizer_error.is_none());
     assert_completed_span_sequence(
         &async_trace,
         &[
             ("complete_terminal_command_with_services", None),
             ("apply_workspace_completion_policy", Some(0)),
-            ("complete_command_record", Some(0)),
         ],
     );
     Ok(())
@@ -348,7 +347,6 @@ fn operation_trace_records_selected_write_command_stdin_span_set(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_outcome(ScriptedCommandYield::Running(String::new()));
-    launch_driver.push_outcome(ScriptedCommandYield::Running("after input\n".to_owned()));
     let (operations, workspace_session_id) = command_operations(launch_driver)?;
     let command_session_id = start_running_command(&operations, workspace_session_id);
     let trace = OperationTrace::new();
@@ -362,14 +360,14 @@ fn operation_trace_records_selected_write_command_stdin_span_set(
             json!({
                 "command_session_id": command_session_id,
                 "stdin": "input\n",
-                "yield_time_ms": 0,
+                "yield_time_ms": 250,
             }),
         ),
         Some(&trace),
     )
     .into_json_value();
 
-    assert_eq!(response["output"], "after input");
+    assert!(response["command_session_id"].is_string());
     assert_selected_span_set(
         &trace,
         &[

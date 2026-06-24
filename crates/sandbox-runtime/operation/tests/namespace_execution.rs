@@ -1,11 +1,11 @@
 use sandbox_runtime::{
-    BeginNamespaceExecution, CompleteNamespaceExecution, NamespaceExecutionLifecycle,
-    NamespaceExecutionStore, NamespaceExecutionTerminalStatus, WorkspaceSessionId,
+    BeginNamespaceExecution, CompleteNamespaceExecution, NamespaceExecutionLedger,
+    NamespaceExecutionLifecycle, NamespaceExecutionTerminalStatus, WorkspaceSessionId,
 };
 
 #[test]
 fn namespace_store_lifecycle_duplicate_completion_and_ack() {
-    let store = NamespaceExecutionStore::new();
+    let store = NamespaceExecutionLedger::new();
     let id = store.allocate_namespace_execution_id();
     assert_eq!(id.0, "namespace_execution_1");
 
@@ -15,7 +15,7 @@ fn namespace_store_lifecycle_duplicate_completion_and_ack() {
             BeginNamespaceExecution {
                 workspace_session_id: WorkspaceSessionId("workspace-session".to_owned()),
                 operation_name: "exec_command".to_owned(),
-                request_id: Some("req-parent".to_owned()),
+                origin_request_id: Some("req-parent".to_owned()),
             },
         )
         .expect("begin succeeds");
@@ -108,7 +108,7 @@ fn namespace_store_lifecycle_duplicate_completion_and_ack() {
 
 #[test]
 fn namespace_id_allocation_survives_forced_mutation_failure() {
-    let store = NamespaceExecutionStore::new();
+    let store = NamespaceExecutionLedger::new();
     let id = store.allocate_namespace_execution_id();
     store.set_force_mutation_errors_for_test(true);
 
@@ -118,7 +118,7 @@ fn namespace_id_allocation_survives_forced_mutation_failure() {
             BeginNamespaceExecution {
                 workspace_session_id: WorkspaceSessionId("workspace-session".to_owned()),
                 operation_name: "exec_command".to_owned(),
-                request_id: None,
+                origin_request_id: None,
             },
         )
         .expect_err("forced mutation failure rejects begin");
@@ -138,7 +138,7 @@ fn namespace_id_allocation_survives_forced_mutation_failure() {
 
 #[test]
 fn namespace_store_retention_drop_records_partial_error() {
-    let store = NamespaceExecutionStore::with_limits(1, 4, 4);
+    let store = NamespaceExecutionLedger::with_limits(1, 4, 4);
     let first = complete_success(&store, "workspace-one");
     let second = complete_success(&store, "workspace-two");
 
@@ -158,7 +158,7 @@ fn namespace_store_retention_drop_records_partial_error() {
 }
 
 fn complete_success(
-    store: &NamespaceExecutionStore,
+    store: &NamespaceExecutionLedger,
     workspace_session_id: &str,
 ) -> sandbox_runtime::NamespaceExecutionId {
     let id = store.allocate_namespace_execution_id();
@@ -168,7 +168,7 @@ fn complete_success(
             BeginNamespaceExecution {
                 workspace_session_id: WorkspaceSessionId(workspace_session_id.to_owned()),
                 operation_name: "exec_command".to_owned(),
-                request_id: None,
+                origin_request_id: None,
             },
         )
         .expect("begin succeeds");

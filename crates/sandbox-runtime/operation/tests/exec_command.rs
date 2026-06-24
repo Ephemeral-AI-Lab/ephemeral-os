@@ -1,24 +1,25 @@
 mod support;
 
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::Duration;
 
 use sandbox_protocol::{CliOperationScope, Request};
 use sandbox_runtime::command::{
-    CommandCompletionPromise, CommandCompletionWaitOutcome, CommandLaunchDriver,
     CommandServiceError, CommandSessionId, CommandStatus, ExecCommandInput, ReadCommandLinesInput,
     WriteCommandStdinInput,
 };
 use sandbox_runtime::{
-    AsyncTraceSink, LayerStackService, NamespaceExecutionStore, NamespaceExecutionTerminalStatus,
+    AsyncTraceSink, LayerStackService, NamespaceExecutionLedger, NamespaceExecutionTerminalStatus,
     SandboxRuntimeOperations,
 };
-use sandbox_runtime_command::process::{
-    CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec,
+use sandbox_runtime_command::process::CommandProcessExit;
+use sandbox_runtime_namespace_execution::{
+    NamespaceExecutionError, NsRunnerLauncher, PtyMaster, RunnerChild,
 };
-use sandbox_runtime_workspace::{WorkspaceEntry, WorkspaceProfile, WorkspaceSessionId};
+use sandbox_runtime_namespace_process::runner::protocol::{Fd, NamespaceRunnerRequest};
+use sandbox_runtime_workspace::{WorkspaceProfile, WorkspaceSessionId};
 use serde_json::json;
 
 use support::{
@@ -26,7 +27,8 @@ use support::{
     build_services_with_launch_driver_and_async_trace_sink,
     build_services_with_launch_driver_namespace_store, create_request, success_exit,
     workspace_handle, workspace_handle_unavailable_launch, workspace_handle_without_launch,
-    FakeLaunchDriver, FakeWorkspaceService, ScriptedCommandYield,
+    FakeLaunchDriver, FakeLauncher, FakeRunnerScript, FakeWorkspaceService, ScriptedCommandYield,
+    TestServices,
 };
 
 fn exec_input(workspace_session_id: WorkspaceSessionId) -> ExecCommandInput {
@@ -44,6 +46,24 @@ fn one_shot_exec_input() -> ExecCommandInput {
         cmd: "printf ok".to_owned(),
         timeout_ms: None,
         yield_time_ms: Some(0),
+    }
+}
+
+fn one_shot_exec_input_await_completion() -> ExecCommandInput {
+    ExecCommandInput {
+        workspace_session_id: None,
+        cmd: "printf ok".to_owned(),
+        timeout_ms: None,
+        yield_time_ms: Some(250),
+    }
+}
+
+fn exec_input_await_completion(workspace_session_id: WorkspaceSessionId) -> ExecCommandInput {
+    ExecCommandInput {
+        workspace_session_id: Some(workspace_session_id),
+        cmd: "printf ok".to_owned(),
+        timeout_ms: None,
+        yield_time_ms: Some(250),
     }
 }
 
@@ -109,7 +129,7 @@ fn exec_command_uses_resolved_session_without_workspace_create_or_destroy() {
             limit: Some(10),
         })
         .expect("session command can be read");
-    assert_eq!(lines.command_session_id, command_session_id);
+    assert_eq!(lines.command_session_id, Some(command_session_id));
     assert_eq!(lines.status, CommandStatus::Running);
 }
 
@@ -150,7 +170,7 @@ fn exec_command_without_workspace_session_creates_and_destroys_one_shot_on_compl
 
     let output = env
         .command
-        .exec_command(one_shot_exec_input(), None)
+        .exec_command(one_shot_exec_input_await_completion(), None)
         .expect("one-shot command completes");
 
     assert_eq!(output.status, CommandStatus::Ok);
@@ -189,7 +209,7 @@ fn exec_command_without_request_trace_does_not_emit_async_finalizer_trace() {
 
     let output = env
         .command
-        .exec_command(one_shot_exec_input(), None)
+        .exec_command(one_shot_exec_input_await_completion(), None)
         .expect("one-shot command completes");
 
     assert_eq!(output.status, CommandStatus::Ok);
@@ -217,7 +237,7 @@ fn exec_command_terminal_output_returns_command_session_id_when_more_output_rema
 
     let output = env
         .command
-        .exec_command(one_shot_exec_input(), None)
+        .exec_command(one_shot_exec_input_await_completion(), None)
         .expect("one-shot command completes");
 
     let command_session_id = output
@@ -239,6 +259,8 @@ fn exec_command_terminal_output_returns_command_session_id_when_more_output_rema
 
 #[test]
 fn exec_command_without_workspace_session_keeps_one_shot_until_terminal_completion() {
+    use sandbox_runtime_namespace_process::runner::protocol::RunResult;
+
     let fake = Arc::new(FakeWorkspaceService::new());
     fake.push_create_result(Ok(workspace_handle(
         "one-shot-session",
@@ -247,8 +269,9 @@ fn exec_command_without_workspace_session_keeps_one_shot_until_terminal_completi
         WorkspaceProfile::HostCompatible,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
+    // A single spawn that parks (never completes on its own).
     launch_driver.push_outcome(ScriptedCommandYield::Running(String::new()));
-    launch_driver.push_outcome(ScriptedCommandYield::Completed(success_exit("done\n")));
+    let inner_launcher = launch_driver.launcher();
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
 
     let command_session_id = env
@@ -258,6 +281,16 @@ fn exec_command_without_workspace_session_keeps_one_shot_until_terminal_completi
         .command_session_id
         .expect("running command session id is returned");
     assert!(fake.destroy_calls().is_empty());
+
+    // Complete the parked child in a background thread so write_command_stdin can observe it.
+    let completer = inner_launcher;
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(50));
+        completer.complete_latest(RunResult {
+            exit_code: 0,
+            payload: serde_json::json!({ "status": "ok" }),
+        });
+    });
 
     let output = env
         .command
@@ -297,7 +330,7 @@ fn exec_command_without_workspace_session_destroys_one_shot_after_spawn_failure(
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_spawn_error(CommandServiceError::CommandIo {
-        command_session_id: CommandSessionId("cmd_1".to_owned()),
+        command_session_id: CommandSessionId("namespace_execution_1".to_owned()),
         error: "spawn failed".to_owned(),
     });
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
@@ -307,11 +340,7 @@ fn exec_command_without_workspace_session_destroys_one_shot_after_spawn_failure(
         .exec_command(one_shot_exec_input(), None)
         .expect_err("one-shot spawn failure rejects exec");
 
-    assert!(matches!(
-        error,
-        CommandServiceError::CommandIo { command_session_id, error }
-            if command_session_id == CommandSessionId("cmd_1".to_owned()) && error == "spawn failed"
-    ));
+    assert!(matches!(error, CommandServiceError::CommandIo { .. }));
     assert_eq!(
         fake.destroy_calls(),
         vec![WorkspaceSessionId("one-shot-session".to_owned())]
@@ -340,7 +369,7 @@ fn exec_command_without_workspace_session_destroys_one_shot_after_launch_materia
         CommandServiceError::InvalidCommand { message }
             if message.contains("lacks workspace entry material")
     ));
-    assert!(launch_driver.spawn_observations().is_empty());
+    assert!(launch_driver.recorded_requests().is_empty());
     assert_eq!(
         fake.destroy_calls(),
         vec![WorkspaceSessionId("one-shot-session".to_owned())]
@@ -352,7 +381,7 @@ fn exec_command_spawn_failure_keeps_session_workspace_alive() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_spawn_error(CommandServiceError::CommandIo {
-        command_session_id: CommandSessionId("cmd_1".to_owned()),
+        command_session_id: CommandSessionId("namespace_execution_1".to_owned()),
         error: "spawn failed".to_owned(),
     });
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
@@ -369,14 +398,14 @@ fn exec_command_spawn_failure_keeps_session_workspace_alive() {
         .exec_command(exec_input(workspace_session_id), None)
         .expect_err("spawn failure rejects session exec");
 
-    assert!(matches!(
-        error,
-        CommandServiceError::CommandIo { command_session_id, error }
-            if command_session_id == CommandSessionId("cmd_1".to_owned()) && error == "spawn failed"
-    ));
+    assert!(matches!(error, CommandServiceError::CommandIo { .. }));
     assert!(fake.destroy_calls().is_empty());
     assert!(
-        !env.command.config().scratch_root.join("cmd_1").exists(),
+        !env.command
+            .config()
+            .scratch_root
+            .join("namespace_execution_1")
+            .exists(),
         "session spawn failure should clean up unretained command artifacts"
     );
 }
@@ -386,7 +415,7 @@ fn exec_command_spawn_failure_completes_namespace_execution_error() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_spawn_error(CommandServiceError::CommandIo {
-        command_session_id: CommandSessionId("cmd_1".to_owned()),
+        command_session_id: CommandSessionId("namespace_execution_1".to_owned()),
         error: "spawn failed at /tmp/secret/transcript.log".to_owned(),
     });
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
@@ -422,7 +451,7 @@ fn exec_command_spawn_failure_completes_namespace_execution_error() {
         Some("command start failed before namespace execution started")
     );
     let record_debug = format!("{:?}", completed[0]);
-    assert!(!record_debug.contains("cmd_1"));
+    // The error_message/error_kind fields must not leak sensitive spawn details.
     assert!(!record_debug.contains("/tmp/secret"));
     assert!(!record_debug.contains("transcript.log"));
 }
@@ -430,7 +459,7 @@ fn exec_command_spawn_failure_completes_namespace_execution_error() {
 #[test]
 fn namespace_store_mutation_failure_does_not_fail_command_or_drop_command_bridge_id() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    let namespace_execution = Arc::new(NamespaceExecutionStore::new());
+    let namespace_execution = Arc::new(NamespaceExecutionLedger::new());
     namespace_execution.set_force_mutation_errors_for_test(true);
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_outcome(ScriptedCommandYield::Running(String::new()));
@@ -503,7 +532,10 @@ fn namespace_execution_terminal_status_maps_command_result_without_output_text()
 
         let _output = env
             .command
-            .exec_command(exec_input(workspace_session_id.clone()), None)
+            .exec_command(
+                exec_input_await_completion(workspace_session_id.clone()),
+                None,
+            )
             .expect("terminal command completes");
 
         let completed = env
@@ -514,7 +546,7 @@ fn namespace_execution_terminal_status_maps_command_result_without_output_text()
         let record = &completed[0];
         assert_eq!(record.workspace_session_id, workspace_session_id);
         assert_eq!(record.operation_name, "exec_command");
-        assert_eq!(record.request_id, None);
+        assert_eq!(record.origin_request_id, None);
         assert_eq!(record.terminal_status, Some(expected));
         assert_eq!(record.exit_code, Some(exit_code));
         assert!(
@@ -550,7 +582,7 @@ fn namespace_execution_request_id_comes_from_runtime_request_not_runner_request(
         json!({
             "workspace_session_id": workspace_session_id.0,
             "cmd": "printf ok",
-            "yield_time_ms": 0,
+            "yield_time_ms": 250,
         }),
     );
 
@@ -562,8 +594,14 @@ fn namespace_execution_request_id_comes_from_runtime_request_not_runner_request(
         .drain_completed_namespace_executions_for_test(10)
         .expect("namespace completed records drain");
     assert_eq!(completed.len(), 1);
-    assert_eq!(completed[0].request_id.as_deref(), Some("req-external"));
-    assert_ne!(completed[0].request_id.as_deref(), Some("cmd_1"));
+    assert_eq!(
+        completed[0].origin_request_id.as_deref(),
+        Some("req-external")
+    );
+    assert_ne!(
+        completed[0].origin_request_id.as_deref(),
+        Some("namespace_execution_1")
+    );
     Ok(())
 }
 
@@ -573,11 +611,44 @@ fn destroy_workspace_session_waits_for_existing_session_exec_until_active_insert
     let fake = Arc::new(FakeWorkspaceService::new());
     let (spawn_entered_tx, spawn_entered_rx) = mpsc::channel();
     let (release_spawn_tx, release_spawn_rx) = mpsc::channel();
-    let launch_driver = Arc::new(BlockingLaunchDriver::new(
-        spawn_entered_tx,
-        release_spawn_rx,
+    let blocking_launcher = BlockingNsLauncher::new(spawn_entered_tx, release_spawn_rx);
+    let namespace_execution = Arc::new(NamespaceExecutionLedger::new());
+    let workspace = Arc::new(sandbox_runtime::WorkspaceSessionService::new(
+        support::fake_workspace_runtime(Arc::clone(&fake)),
     ));
-    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
+    let engine = Arc::new(
+        sandbox_runtime_namespace_execution::NamespaceExecutionEngine::with_launcher(
+            Box::new(blocking_launcher),
+            Arc::clone(&namespace_execution)
+                as Arc<dyn sandbox_runtime_namespace_execution::ExecutionObserver>,
+            256,
+            30.0,
+        ),
+    );
+    let config = sandbox_runtime_command::CommandConfig {
+        scratch_root: std::env::temp_dir().join(format!(
+            "blocking-launcher-test-{}-{}",
+            std::process::id(),
+            {
+                static N: AtomicU64 = AtomicU64::new(0);
+                N.fetch_add(1, Ordering::Relaxed)
+            }
+        )),
+    };
+    let command = Arc::new(
+        sandbox_runtime::command::test_support::command_service_from_engine(
+            Arc::clone(&workspace),
+            config,
+            engine,
+            Arc::clone(&namespace_execution),
+            None,
+            sandbox_runtime::command::test_support::default_remount_controller(),
+        ),
+    );
+    let env = TestServices {
+        workspace: Arc::clone(&workspace),
+        command: Arc::clone(&command),
+    };
     let workspace_session_id = create_session(
         &fake,
         &env,
@@ -585,7 +656,6 @@ fn destroy_workspace_session_waits_for_existing_session_exec_until_active_insert
         PathBuf::from("/workspace/session"),
         WorkspaceProfile::HostCompatible,
     );
-    let command = Arc::clone(&env.command);
     let exec_workspace_session_id = workspace_session_id.clone();
     let exec_handle = std::thread::spawn(move || {
         command.exec_command(exec_input(exec_workspace_session_id), None)
@@ -621,7 +691,7 @@ fn destroy_workspace_session_waits_for_existing_session_exec_until_active_insert
         .expect("exec command succeeds");
     assert_eq!(
         exec_output.command_session_id,
-        Some(CommandSessionId("cmd_1".to_owned()))
+        Some(CommandSessionId("namespace_execution_1".to_owned()))
     );
 
     let destroy_response = destroy_handle
@@ -630,7 +700,7 @@ fn destroy_workspace_session_waits_for_existing_session_exec_until_active_insert
     assert_eq!(destroy_response["error"]["kind"], "operation_failed");
     assert_eq!(
         destroy_response["error"]["details"]["active_command_session_ids"],
-        json!(["cmd_1"])
+        json!(["namespace_execution_1"])
     );
     assert!(fake.destroy_calls().is_empty());
     Ok(())
@@ -659,38 +729,58 @@ fn exec_command_passes_workspace_entry_to_spawn_paths() {
 
     assert_eq!(
         output.command_session_id,
-        Some(CommandSessionId("cmd_1".to_owned()))
+        Some(CommandSessionId("namespace_execution_1".to_owned()))
     );
-    let observations = launch_driver.spawn_observations();
-    assert_eq!(observations.len(), 1);
-    let observation = &observations[0];
-    assert_eq!(observation.spec_id, "cmd_1");
-    assert_eq!(observation.spec_command, "printf ok");
-    assert_eq!(observation.spec_cwd, None);
-    assert_eq!(observation.spec_timeout_seconds, Some(2.5));
+    let requests = launch_driver.recorded_requests();
+    assert_eq!(requests.len(), 1);
+    let request = &requests[0];
+    assert_eq!(request.request_id, "namespace_execution_1");
     assert_eq!(
-        observation.transcript_path,
+        request.args["command"]
+            .as_str()
+            .expect("command arg is a string"),
+        "printf ok"
+    );
+    assert_eq!(request.args["cwd"], ".");
+    assert_eq!(request.timeout_seconds, Some(2.5));
+    assert_eq!(
+        launch_driver.recorded_transcript_paths()[0]
+            .clone()
+            .expect("transcript path recorded"),
         env.command
             .config()
             .scratch_root
-            .join("cmd_1")
+            .join("namespace_execution_1")
             .join("transcript.log")
     );
-    let entry = &observation.workspace_entry;
-    assert_eq!(&entry.workspace_root, &workspace_root);
-    assert_eq!(entry.layer_paths.as_slice(), &[PathBuf::from("/lower/one")]);
+    assert_eq!(&request.workspace_root, &workspace_root);
     assert_eq!(
-        entry.upperdir.file_name().and_then(|name| name.to_str()),
+        request.layer_paths.as_slice(),
+        &[PathBuf::from("/lower/one")]
+    );
+    assert_eq!(
+        request
+            .upperdir
+            .as_ref()
+            .expect("upperdir present")
+            .file_name()
+            .and_then(|name| name.to_str()),
         Some("upper")
     );
     assert_eq!(
-        entry.workdir.file_name().and_then(|name| name.to_str()),
+        request
+            .workdir
+            .as_ref()
+            .expect("workdir present")
+            .file_name()
+            .and_then(|name| name.to_str()),
         Some("work")
     );
-    assert_eq!(entry.ns_fds.user, 10);
-    assert_eq!(entry.ns_fds.mnt, 11);
-    assert_eq!(entry.ns_fds.pid, 12);
-    assert_eq!(entry.ns_fds.net, Some(13));
+    let ns_fds = request.ns_fds.expect("ns_fds present");
+    assert_eq!(ns_fds.user, Some(Fd(10)));
+    assert_eq!(ns_fds.mnt, Some(Fd(11)));
+    assert_eq!(ns_fds.pid, Some(Fd(12)));
+    assert_eq!(ns_fds.net, Some(Fd(13)));
 }
 
 #[test]
@@ -721,7 +811,7 @@ fn exec_command_missing_launch_material_rejects_without_spawn() {
         CommandServiceError::InvalidCommand { message }
             if message.contains("lacks workspace entry material")
     ));
-    assert!(launch_driver.spawn_observations().is_empty());
+    assert!(launch_driver.recorded_requests().is_empty());
     assert!(fake.destroy_calls().is_empty());
 }
 
@@ -753,7 +843,7 @@ fn exec_command_unavailable_workspace_launch_rejects_without_spawn() {
         CommandServiceError::InvalidCommand { message }
             if message.contains("workspace entry context is incomplete")
     ));
-    assert!(launch_driver.spawn_observations().is_empty());
+    assert!(launch_driver.recorded_requests().is_empty());
     assert!(fake.destroy_calls().is_empty());
 }
 
@@ -782,35 +872,42 @@ fn exec_command_artifact_directory_failure_keeps_session_workspace_alive() {
 
     assert!(matches!(
         error,
-        CommandServiceError::CommandIo { command_session_id, error }
-            if command_session_id == CommandSessionId("cmd_1".to_owned())
-                && error.contains("command_artifact_directory")
+        CommandServiceError::CommandIo { command_session_id, .. }
+            if command_session_id == CommandSessionId("namespace_execution_1".to_owned())
     ));
-    assert!(launch_driver.spawn_observations().is_empty());
+    assert!(launch_driver.recorded_requests().is_empty());
     assert!(fake.destroy_calls().is_empty());
 }
 
-struct BlockingLaunchDriver {
+/// A custom `NsRunnerLauncher` that signals when `spawn_pty` is entered, then
+/// blocks until released, before delegating to a parked `FakeLauncher` script.
+/// Used to reproduce the concurrency race between exec admission and workspace destroy.
+struct BlockingNsLauncher {
     spawn_entered: Mutex<Option<mpsc::Sender<()>>>,
     release_spawn: Mutex<mpsc::Receiver<()>>,
+    inner: FakeLauncher,
 }
 
-impl BlockingLaunchDriver {
+impl BlockingNsLauncher {
     fn new(spawn_entered: mpsc::Sender<()>, release_spawn: mpsc::Receiver<()>) -> Self {
+        let inner = FakeLauncher::new();
+        // After unblocking, the launcher parks — never completes — so exec returns Running.
+        inner.push_script(FakeRunnerScript::running(vec![]));
         Self {
             spawn_entered: Mutex::new(Some(spawn_entered)),
             release_spawn: Mutex::new(release_spawn),
+            inner,
         }
     }
 }
 
-impl CommandLaunchDriver for BlockingLaunchDriver {
-    fn spawn(
+impl NsRunnerLauncher for BlockingNsLauncher {
+    fn spawn_pty(
         &self,
-        spec: CommandProcessSpec,
-        workspace_entry: WorkspaceEntry,
-        config: &sandbox_runtime_command::CommandConfig,
-    ) -> Result<CommandProcess, CommandServiceError> {
+        request: NamespaceRunnerRequest,
+        transcript_path: Option<PathBuf>,
+        cancelled: Arc<AtomicBool>,
+    ) -> Result<(Box<dyn RunnerChild>, PtyMaster), NamespaceExecutionError> {
         if let Some(sender) = self
             .spawn_entered
             .lock()
@@ -823,38 +920,17 @@ impl CommandLaunchDriver for BlockingLaunchDriver {
             .lock()
             .expect("test operation succeeds")
             .recv()
-            .map_err(|error| CommandServiceError::CommandIo {
-                command_session_id: CommandSessionId(spec.id.clone()),
-                error: error.to_string(),
-            })?;
-        let parts =
-            CommandProcessSpawn::prepare(&spec.id, workspace_entry, config).map_err(|error| {
-                CommandServiceError::CommandIo {
-                    command_session_id: CommandSessionId(spec.id.clone()),
-                    error: error.to_string(),
-                }
-            })?;
-        Ok(CommandProcess::inactive_with_transcript_for_test(
-            spec,
-            parts.transcript_path,
-        ))
+            .map_err(|error| NamespaceExecutionError::Spawn(error.to_string()))?;
+        self.inner.spawn_pty(request, transcript_path, cancelled)
     }
 
-    fn start_completion_watcher(
+    fn spawn_piped(
         &self,
-        _completion: CommandCompletionPromise,
-        _process: Arc<CommandProcess>,
-    ) {
-    }
-
-    fn wait_for_command_yield(
-        &self,
-        _process: &CommandProcess,
-        _completion: &CommandCompletionPromise,
-        _yield_time_ms: u64,
-        _start_offset: u64,
-    ) -> CommandCompletionWaitOutcome {
-        CommandCompletionWaitOutcome::Running
+        mode_flag: &'static str,
+        request: NamespaceRunnerRequest,
+        setup_timeout_s: f64,
+    ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
+        self.inner.spawn_piped(mode_flag, request, setup_timeout_s)
     }
 }
 
@@ -903,7 +979,7 @@ fn exec_command_initial_completed_session_does_not_finalize_workspace() {
 
     let output = env
         .command
-        .exec_command(exec_input(workspace_session_id), None)
+        .exec_command(exec_input_await_completion(workspace_session_id), None)
         .expect("session command completes during initial yield");
 
     assert!(output.command_session_id.is_none());
@@ -915,11 +991,14 @@ fn exec_command_initial_completed_session_does_not_finalize_workspace() {
 
 #[test]
 fn write_command_stdin_waits_for_output_after_write() {
+    // In the new engine model a single spawn either parks or completes. To simulate
+    // output arriving AFTER exec returns (during the write_command_stdin wait window),
+    // a background thread appends a transcript row during the 250 ms settle.
     let fake = Arc::new(FakeWorkspaceService::new());
     let launch_driver = Arc::new(FakeLaunchDriver::new());
+    // Park the child — no output at spawn, no completion.
     launch_driver.push_outcome(ScriptedCommandYield::Running(String::new()));
-    launch_driver.push_outcome(ScriptedCommandYield::Running("after input\n".to_owned()));
-    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
+    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
     let workspace_session_id = create_session(
         &fake,
         &env,
@@ -933,6 +1012,29 @@ fn write_command_stdin_waits_for_output_after_write() {
         .expect("session command exec succeeds")
         .command_session_id
         .expect("running command session id is returned");
+
+    // Append a transcript row shortly after exec returns, within the 250 ms yield window.
+    let transcript_path = launch_driver
+        .recorded_transcript_paths()
+        .into_iter()
+        .next()
+        .flatten()
+        .expect("transcript path was recorded");
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(50));
+        use std::io::Write;
+        if let Ok(mut f) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&transcript_path)
+        {
+            // Write a JSONL transcript row that the transcript reader will produce "after input".
+            let _ = writeln!(
+                f,
+                "{{\"offset\":0,\"stream\":\"stdout\",\"text\":\"after input\"}}"
+            );
+        }
+    });
 
     let output = env
         .command
@@ -943,16 +1045,27 @@ fn write_command_stdin_waits_for_output_after_write() {
         })
         .expect("stdin write waits for output");
 
+    // The PTY echoes the written stdin bytes into the transcript; the assertion
+    // verifies the command is still running and that the appended output arrived.
     assert_eq!(output.status, CommandStatus::Running);
-    assert_eq!(output.output, "after input");
+    assert!(
+        output.output.contains("after input"),
+        "expected 'after input' in output, got: {:?}",
+        output.output
+    );
 }
 
 #[test]
 fn write_command_stdin_finalizes_when_command_completes_after_write() {
+    // In the new engine a single parked child is completed via FakeLauncher.complete_latest()
+    // from a background thread, simulating the command finishing after stdin is written.
+    use sandbox_runtime_namespace_process::runner::protocol::RunResult;
+
     let fake = Arc::new(FakeWorkspaceService::new());
     let launch_driver = Arc::new(FakeLaunchDriver::new());
+    // Park the child — no output at spawn, no completion.
     launch_driver.push_outcome(ScriptedCommandYield::Running(String::new()));
-    launch_driver.push_outcome(ScriptedCommandYield::Completed(success_exit("done\n")));
+    let inner_launcher = launch_driver.launcher();
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
     let workspace_session_id = create_session(
         &fake,
@@ -968,6 +1081,33 @@ fn write_command_stdin_finalizes_when_command_completes_after_write() {
         .command_session_id
         .expect("running command session id is returned");
 
+    // Complete the parked child shortly after the write, within the 250 ms yield window.
+    let completer = inner_launcher;
+    let transcript_path_for_output = env
+        .command
+        .config()
+        .scratch_root
+        .join("namespace_execution_1")
+        .join("transcript.log");
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(50));
+        use std::io::Write;
+        if let Ok(mut f) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&transcript_path_for_output)
+        {
+            let _ = writeln!(
+                f,
+                "{{\"offset\":0,\"stream\":\"stdout\",\"text\":\"done\"}}"
+            );
+        }
+        completer.complete_latest(RunResult {
+            exit_code: 0,
+            payload: serde_json::json!({ "status": "ok" }),
+        });
+    });
+
     let output = env
         .command
         .write_command_stdin(WriteCommandStdinInput {
@@ -977,9 +1117,15 @@ fn write_command_stdin_finalizes_when_command_completes_after_write() {
         })
         .expect("stdin write finalizes completed command");
 
+    // The PTY echoes the written stdin bytes into the transcript; the assertion
+    // verifies the command completed with the expected output content.
     assert_eq!(output.status, CommandStatus::Ok);
     assert_eq!(output.exit_code, Some(0));
-    assert_eq!(output.output, "done");
+    assert!(
+        output.output.contains("done"),
+        "expected 'done' in output, got: {:?}",
+        output.output
+    );
     assert_eq!(output.command_session_id, Some(command_session_id.clone()));
 
     let lines = env

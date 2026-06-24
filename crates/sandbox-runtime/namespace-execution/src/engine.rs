@@ -181,7 +181,8 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         thread::spawn(move || {
             let (result, status, exit_code) = match child.wait_completion() {
                 Ok(run_result) => {
-                    let outcome = RunnerOutcome::new(run_result).with_cancelled(cancelled.load(Ordering::Acquire));
+                    let outcome = RunnerOutcome::new(run_result)
+                        .with_cancelled(cancelled.load(Ordering::Acquire));
                     let status = outcome.status();
                     let exit_code = Some(outcome.exit_code());
                     if let Some(error) = mount_exit_handling.short_circuit_error(&outcome) {

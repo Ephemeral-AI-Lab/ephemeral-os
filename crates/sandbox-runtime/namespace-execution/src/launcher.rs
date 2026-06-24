@@ -200,7 +200,7 @@ impl RunnerChild for ForkRunnerChild {
         if let Ok(result) = serde_json::from_slice::<RunResult>(&bytes) {
             return Ok(result);
         }
-        Ok(synthesize_result(status))
+        synthesize_result(status)
     }
 }
 
@@ -258,15 +258,20 @@ fn read_result_fd(result_read: &OwnedFd) -> io::Result<Vec<u8>> {
     Ok(bytes)
 }
 
-fn synthesize_result(status: ExitStatus) -> RunResult {
+fn synthesize_result(status: ExitStatus) -> Result<RunResult, NamespaceExecutionError> {
     let exit_code = status
         .code()
         .or_else(|| status.signal().map(|signal| -signal))
         .unwrap_or(1);
-    RunResult {
+    if exit_code == 0 {
+        return Err(NamespaceExecutionError::Completion(
+            "runner exited successfully without a valid result envelope".to_owned(),
+        ));
+    }
+    Ok(RunResult {
         exit_code,
         payload: serde_json::json!({ "status": "error" }),
-    }
+    })
 }
 
 fn wait_for_child_with_timeout(
@@ -359,4 +364,3 @@ fn start_ack_pipe() -> Result<(OwnedFd, OwnedFd), NamespaceExecutionError> {
 fn spawn_error(error: impl std::fmt::Display) -> NamespaceExecutionError {
     NamespaceExecutionError::Spawn(error.to_string())
 }
-

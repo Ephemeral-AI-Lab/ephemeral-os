@@ -28,7 +28,15 @@ pub mod pty {
             0
         }
 
+        pub fn pgid(&self) -> Option<i32> {
+            None
+        }
+
         pub fn cancel(&self) {}
+
+        pub fn cancel_handle(&self) -> std::sync::Arc<dyn Fn() + Send + Sync> {
+            std::sync::Arc::new(|| {})
+        }
     }
 }
 

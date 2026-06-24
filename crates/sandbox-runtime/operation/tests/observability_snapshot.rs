@@ -7,7 +7,7 @@ use std::sync::Arc;
 use sandbox_runtime::command::ExecCommandInput;
 use sandbox_runtime::layerstack::LayerStackService;
 use sandbox_runtime::{
-    CommandOperationService, NamespaceExecutionLifecycle, NamespaceExecutionStore,
+    CommandOperationService, NamespaceExecutionLedger, NamespaceExecutionLifecycle,
     SandboxRuntimeOperations,
 };
 use sandbox_runtime_workspace::{RemountWorkspaceRequest, RemountWorkspaceResult};
@@ -166,7 +166,7 @@ fn runtime_operations_enforce_shared_namespace_execution_store() {
         Arc::<CommandOperationService>::clone(&services.command),
         Arc::clone(&services.workspace),
         layerstack_service().expect("layerstack service"),
-        Arc::new(NamespaceExecutionStore::new()),
+        Arc::new(NamespaceExecutionLedger::new()),
     );
 }
 

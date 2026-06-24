@@ -636,7 +636,7 @@ fn workspace_session_destroy_operation_rejects_active_commands_without_raw_destr
         None,
     )
     .into_json_value();
-    assert_eq!(exec_response["command_session_id"], "cmd_1");
+    assert_eq!(exec_response["command_session_id"], "namespace_execution_1");
 
     let destroy_response = sandbox_runtime::dispatch_operation(
         &operations,
@@ -651,7 +651,7 @@ fn workspace_session_destroy_operation_rejects_active_commands_without_raw_destr
     assert_eq!(destroy_response["error"]["kind"], "operation_failed");
     assert_eq!(
         destroy_response["error"]["details"]["active_command_session_ids"],
-        json!(["cmd_1"])
+        json!(["namespace_execution_1"])
     );
     assert!(fake.destroy_calls().is_empty());
     Ok(())

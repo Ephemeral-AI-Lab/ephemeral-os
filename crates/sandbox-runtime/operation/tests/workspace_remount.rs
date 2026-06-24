@@ -1,21 +1,21 @@
+mod support;
+
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use sandbox_runtime::command::test_support::{
-    command_service_with_launch_driver, command_service_with_launch_driver_and_remount_controller,
+    command_service_from_engine, default_remount_controller,
 };
-use sandbox_runtime::command::{
-    CommandCompletionPromise, CommandCompletionWaitOutcome, CommandLaunchDriver,
-    CommandOperationService, CommandServiceError, ExecCommandInput, WriteCommandStdinInput,
-};
+use sandbox_runtime::command::{CommandOperationService, ExecCommandInput, WriteCommandStdinInput};
 use sandbox_runtime::workspace_remount::{
     CommandRemountCoordinator, ProcessGroupController, ProcessGroupInspection,
     RemountWorkspaceSession, WorkspaceRemountError, WorkspaceRemountService,
 };
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
-use sandbox_runtime_command::process::{CommandProcess, CommandProcessSpec};
+use sandbox_runtime::NamespaceExecutionLedger;
+use sandbox_runtime_namespace_execution::{ExecutionObserver, NamespaceExecutionEngine};
 use sandbox_runtime_workspace::{
     CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LayerStackSnapshotRef, LeaseId,
@@ -23,6 +23,7 @@ use sandbox_runtime_workspace::{
     WorkspaceHandle, WorkspaceProfile, WorkspaceRuntimeHooks, WorkspaceRuntimeService,
     WorkspaceSessionId,
 };
+use support::{FakeLauncher, FakeRunnerScript};
 
 struct TestServices {
     workspace: Arc<WorkspaceSessionService>,
@@ -168,39 +169,19 @@ fn fake_workspace_runtime(fake: Arc<RemountWorkspaceServiceFake>) -> Arc<Workspa
     ))
 }
 
-struct InactiveLaunchDriver {
-    process_group_id: Option<i32>,
-}
-
-impl CommandLaunchDriver for InactiveLaunchDriver {
-    fn spawn(
-        &self,
-        spec: CommandProcessSpec,
-        _workspace_entry: sandbox_runtime_workspace::WorkspaceEntry,
-        _config: &sandbox_runtime_command::CommandConfig,
-    ) -> Result<CommandProcess, CommandServiceError> {
-        Ok(match self.process_group_id {
-            Some(pgid) => CommandProcess::inactive_with_process_group_for_test(spec, pgid),
-            None => CommandProcess::inactive_for_test(spec),
-        })
+/// A fake launcher that parks each command as still-running with an optional
+/// process group id (the remount inspection reads the pgid; `None` ⇒ blocked
+/// with `process_group_unavailable`).
+fn inactive_launcher(process_group_id: Option<i32>) -> FakeLauncher {
+    let launcher = FakeLauncher::new();
+    let mut script = FakeRunnerScript::pending();
+    if let Some(pgid) = process_group_id {
+        script = script.with_pgid(pgid);
     }
-
-    fn start_completion_watcher(
-        &self,
-        _completion: CommandCompletionPromise,
-        _process: Arc<CommandProcess>,
-    ) {
-    }
-
-    fn wait_for_command_yield(
-        &self,
-        _process: &CommandProcess,
-        _completion: &CommandCompletionPromise,
-        _yield_time_ms: u64,
-        _start_offset: u64,
-    ) -> CommandCompletionWaitOutcome {
-        CommandCompletionWaitOutcome::Running
-    }
+    // One script per exec the suites run; extras are unused, missing ones default
+    // to a pgid-less pending command.
+    launcher.push_script(script);
+    launcher
 }
 
 #[derive(Default)]
@@ -271,25 +252,7 @@ impl ProcessGroupController for FakeProcessGroupController {
 }
 
 fn build_services(fake: Arc<RemountWorkspaceServiceFake>) -> TestServices {
-    let workspace = Arc::new(WorkspaceSessionService::new(fake_workspace_runtime(fake)));
-    let command = Arc::new(command_service_with_launch_driver(
-        Arc::clone(&workspace),
-        command_config(),
-        Arc::new(InactiveLaunchDriver {
-            process_group_id: None,
-        }),
-    ));
-    let remount_workspace: Arc<dyn RemountWorkspaceSession> = workspace.clone();
-    let remount_command: Arc<dyn CommandRemountCoordinator> = command.clone();
-    let remount = Arc::new(WorkspaceRemountService::new(
-        remount_workspace,
-        remount_command,
-    ));
-    TestServices {
-        workspace,
-        command,
-        workspace_remount: remount,
-    }
+    build_services_with(fake, inactive_launcher(None), default_remount_controller())
 }
 
 fn build_services_with_process_group_controller(
@@ -297,13 +260,28 @@ fn build_services_with_process_group_controller(
     controller: Arc<dyn ProcessGroupController>,
     process_group_id: i32,
 ) -> TestServices {
+    build_services_with(fake, inactive_launcher(Some(process_group_id)), controller)
+}
+
+fn build_services_with(
+    fake: Arc<RemountWorkspaceServiceFake>,
+    launcher: FakeLauncher,
+    controller: Arc<dyn ProcessGroupController>,
+) -> TestServices {
     let workspace = Arc::new(WorkspaceSessionService::new(fake_workspace_runtime(fake)));
-    let command = Arc::new(command_service_with_launch_driver_and_remount_controller(
+    let namespace_execution = Arc::new(NamespaceExecutionLedger::new());
+    let engine = Arc::new(NamespaceExecutionEngine::with_launcher(
+        Box::new(launcher),
+        Arc::clone(&namespace_execution) as Arc<dyn ExecutionObserver>,
+        256,
+        30.0,
+    ));
+    let command = Arc::new(command_service_from_engine(
         Arc::clone(&workspace),
         command_config(),
-        Arc::new(InactiveLaunchDriver {
-            process_group_id: Some(process_group_id),
-        }),
+        engine,
+        namespace_execution,
+        None,
         controller,
     ));
     let remount_workspace: Arc<dyn RemountWorkspaceSession> = workspace.clone();

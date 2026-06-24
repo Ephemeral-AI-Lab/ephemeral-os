@@ -1,27 +1,5 @@
 pub mod engine {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/engine.rs"));
-
-    impl<V: Send + 'static> NamespaceExecutionEngine<V> {
-        pub(crate) fn with_launcher(
-            launcher: Box<dyn crate::launcher::NsRunnerLauncher>,
-            observer: std::sync::Arc<dyn crate::observer::ExecutionObserver>,
-            max_active: usize,
-            setup_timeout_s: f64,
-        ) -> Self {
-            Self {
-                registry: std::sync::Arc::new(crate::registry::ExecutionRegistry::new(max_active)),
-                observer,
-                launcher,
-                next_id: std::sync::atomic::AtomicU64::new(1),
-                setup_timeout_s,
-            }
-        }
-
-        #[must_use]
-        pub(crate) fn registry_is_completed(&self, id: &crate::id::NamespaceExecutionId) -> bool {
-            self.registry.is_completed(id)
-        }
-    }
 }
 
 pub mod error {
@@ -46,6 +24,10 @@ pub mod observer {
 
 pub mod promise {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/promise.rs"));
+}
+
+pub mod transcript {
+    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/transcript.rs"));
 }
 
 pub mod pty {

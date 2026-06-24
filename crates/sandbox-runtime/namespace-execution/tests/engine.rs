@@ -95,7 +95,7 @@ fn shell_finalize_panic_resolves_terminal_error_and_completes_registry() {
         error,
         NamespaceExecutionError::Finalize(detail) if detail.contains("panic shell op")
     ));
-    assert!(engine.registry_is_completed(&id));
+    assert!(engine.is_completed(&id));
     let (status, exit_code) = observer.await_terminal();
     assert_eq!(status, NamespaceExecutionTerminalStatus::Error);
     assert_eq!(exit_code, Some(0));
@@ -118,7 +118,7 @@ fn wait_completion_error_resolves_terminal_error_and_completes_registry() {
         error,
         NamespaceExecutionError::Spawn(detail) if detail == "result fd read failed"
     ));
-    assert!(engine.registry_is_completed(&id));
+    assert!(engine.is_completed(&id));
     let (status, exit_code) = observer.await_terminal();
     assert_eq!(status, NamespaceExecutionTerminalStatus::Error);
     assert_eq!(exit_code, None);
@@ -164,7 +164,7 @@ fn admission_refuses_when_full_then_readmits_after_completion() {
     // complete-before-resolve ⟹ the slot is freed by the time wait() returns.
     fake.complete_latest(run_result(0, "ok"));
     assert_eq!(first.wait().expect("first resolved"), 0);
-    assert!(engine.registry_is_completed(&first_id));
+    assert!(engine.is_completed(&first_id));
 
     let third = engine
         .run_shell_interactive(OkShellOp, sample_target(), id("3"))
@@ -248,7 +248,7 @@ fn mount_parse_panic_resolves_terminal_error_and_completes_registry() {
         error,
         NamespaceExecutionError::Finalize(detail) if detail.contains("panic mount parse")
     ));
-    assert!(engine.registry_is_completed(&id));
+    assert!(engine.is_completed(&id));
     let (status, exit_code) = observer.await_terminal();
     assert_eq!(status, NamespaceExecutionTerminalStatus::Error);
     assert_eq!(exit_code, Some(0));

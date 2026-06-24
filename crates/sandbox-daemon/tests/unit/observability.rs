@@ -1364,7 +1364,7 @@ fn completed_namespace_execution(
         namespace_execution_id: NamespaceExecutionId(namespace_execution_id.to_owned()),
         workspace_session_id: WorkspaceSessionId(workspace_session_id.to_owned()),
         operation_name: operation_name.to_owned(),
-        request_id: request_id.map(str::to_owned),
+        origin_request_id: request_id.map(str::to_owned),
         lifecycle_state: NamespaceExecutionLifecycle::Terminal,
         started_at_unix_ms: 1_000,
         finished_at_unix_ms: Some(1_025),
@@ -1388,7 +1388,7 @@ fn seed_completed_namespace_execution(
             BeginNamespaceExecution {
                 workspace_session_id: WorkspaceSessionId("workspace-1".to_owned()),
                 operation_name: operation_name.to_owned(),
-                request_id: Some("req-parent".to_owned()),
+                origin_request_id: Some("req-parent".to_owned()),
             },
         )
         .expect("begin namespace execution succeeds");

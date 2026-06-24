@@ -1,7 +1,13 @@
 //! Shared test fixtures for the engine suite: fakes for the `pub(crate)`
 //! launcher seam plus small constructors.
 
-use std::path::PathBuf;
+#![allow(dead_code)]
+
+use std::collections::VecDeque;
+use std::fs::{File, OpenOptions};
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
 
 use crate::launcher::{NsRunnerLauncher, RunnerChild};
@@ -78,6 +84,7 @@ impl FakeCompletion {
 
 struct FakeRunnerChild {
     completion: Arc<FakeCompletion>,
+    _slave: Option<File>,
 }
 
 impl RunnerChild for FakeRunnerChild {
@@ -86,11 +93,69 @@ impl RunnerChild for FakeRunnerChild {
     }
 }
 
+/// One scripted `spawn_pty` outcome, applied at spawn time so callers can
+/// observe running, completed, failed-spawn, and process-group states.
+#[derive(Default)]
+pub struct FakeRunnerScript {
+    output: Vec<u8>,
+    completion: Option<RunResult>,
+    pgid: Option<i32>,
+    spawn_error: Option<NamespaceExecutionError>,
+}
+
+impl FakeRunnerScript {
+    #[must_use]
+    pub fn running(output: impl Into<Vec<u8>>) -> Self {
+        Self {
+            output: output.into(),
+            ..Self::default()
+        }
+    }
+
+    #[must_use]
+    pub fn completes(result: RunResult) -> Self {
+        Self {
+            completion: Some(result),
+            ..Self::default()
+        }
+    }
+
+    #[must_use]
+    pub fn completes_with_output(output: impl Into<Vec<u8>>, result: RunResult) -> Self {
+        Self {
+            output: output.into(),
+            completion: Some(result),
+            ..Self::default()
+        }
+    }
+
+    #[must_use]
+    pub fn pending() -> Self {
+        Self::default()
+    }
+
+    #[must_use]
+    pub fn spawn_error(error: NamespaceExecutionError) -> Self {
+        Self {
+            spawn_error: Some(error),
+            ..Self::default()
+        }
+    }
+
+    #[must_use]
+    pub fn with_pgid(mut self, pgid: i32) -> Self {
+        self.pgid = Some(pgid);
+        self
+    }
+}
+
 #[derive(Default)]
 struct FakeLauncherState {
     requests: Vec<NamespaceRunnerRequest>,
     request_ids: Vec<String>,
+    transcript_paths: Vec<Option<PathBuf>>,
     completions: Vec<Arc<FakeCompletion>>,
+    scripts: VecDeque<FakeRunnerScript>,
     piped_mode_flags: Vec<&'static str>,
     piped_setup_timeouts: Vec<f64>,
 }
@@ -110,52 +175,38 @@ impl FakeLauncher {
         Self::default()
     }
 
+    pub fn push_script(&self, script: FakeRunnerScript) {
+        self.lock().scripts.push_back(script);
+    }
+
     #[must_use]
     pub fn recorded_request_ids(&self) -> Vec<String> {
-        self.state
-            .lock()
-            .expect("fake launcher mutex poisoned")
-            .request_ids
-            .clone()
+        self.lock().request_ids.clone()
     }
 
     #[must_use]
     pub fn recorded_requests(&self) -> Vec<NamespaceRunnerRequest> {
-        self.state
-            .lock()
-            .expect("fake launcher mutex poisoned")
-            .requests
-            .clone()
+        self.lock().requests.clone()
+    }
+
+    #[must_use]
+    pub fn recorded_transcript_paths(&self) -> Vec<Option<PathBuf>> {
+        self.lock().transcript_paths.clone()
     }
 
     #[must_use]
     pub fn piped_setup_timeouts(&self) -> Vec<f64> {
-        self.state
-            .lock()
-            .expect("fake launcher mutex poisoned")
-            .piped_setup_timeouts
-            .clone()
+        self.lock().piped_setup_timeouts.clone()
     }
 
     #[must_use]
     pub fn recorded_piped_mode_flags(&self) -> Vec<&'static str> {
-        self.state
-            .lock()
-            .expect("fake launcher mutex poisoned")
-            .piped_mode_flags
-            .clone()
+        self.lock().piped_mode_flags.clone()
     }
 
     /// Complete the most recently spawned execution.
     pub fn complete_latest(&self, result: RunResult) {
-        let completion = self
-            .state
-            .lock()
-            .expect("fake launcher mutex poisoned")
-            .completions
-            .last()
-            .map(Arc::clone);
-        if let Some(completion) = completion {
+        if let Some(completion) = self.latest_completion() {
             completion.complete(result);
         }
     }
@@ -163,25 +214,32 @@ impl FakeLauncher {
     /// Fail the most recently spawned execution's `wait_completion`.
     pub fn fail_latest_wait(&self, detail: impl Into<String>) {
         let detail = detail.into();
-        let completion = self
-            .state
-            .lock()
-            .expect("fake launcher mutex poisoned")
-            .completions
-            .last()
-            .map(Arc::clone);
-        if let Some(completion) = completion {
+        if let Some(completion) = self.latest_completion() {
             completion.fail(detail);
         }
     }
 
-    fn record(&self, request: &NamespaceRunnerRequest) -> Arc<FakeCompletion> {
+    fn latest_completion(&self) -> Option<Arc<FakeCompletion>> {
+        self.lock().completions.last().map(Arc::clone)
+    }
+
+    fn record(
+        &self,
+        request: &NamespaceRunnerRequest,
+        transcript_path: Option<PathBuf>,
+    ) -> (Arc<FakeCompletion>, FakeRunnerScript) {
         let completion = Arc::new(FakeCompletion::new());
-        let mut state = self.state.lock().expect("fake launcher mutex poisoned");
+        let mut state = self.lock();
         state.requests.push(request.clone());
         state.request_ids.push(request.request_id.clone());
+        state.transcript_paths.push(transcript_path);
         state.completions.push(Arc::clone(&completion));
-        completion
+        let script = state.scripts.pop_front().unwrap_or_default();
+        (completion, script)
+    }
+
+    fn lock(&self) -> std::sync::MutexGuard<'_, FakeLauncherState> {
+        self.state.lock().expect("fake launcher mutex poisoned")
     }
 }
 
@@ -189,15 +247,39 @@ impl NsRunnerLauncher for FakeLauncher {
     fn spawn_pty(
         &self,
         request: NamespaceRunnerRequest,
+        transcript_path: Option<PathBuf>,
+        cancelled: Arc<AtomicBool>,
     ) -> Result<(Box<dyn RunnerChild>, PtyMaster), NamespaceExecutionError> {
-        let completion = self.record(&request);
+        let (completion, script) = self.record(&request, transcript_path.clone());
+        if let Some(error) = script.spawn_error {
+            return Err(error);
+        }
+        if !script.output.is_empty() {
+            if let Some(path) = transcript_path.as_deref() {
+                append_transcript(path, &script.output);
+            }
+        }
         let (master, slave) =
             open_pty_pair().map_err(|error| NamespaceExecutionError::Spawn(error.to_string()))?;
-        let cancel = Arc::clone(&completion);
-        let pty = PtyMaster::spawn(master, None, Box::new(move || cancel.cancel()))
+        let cancel = {
+            let completion = Arc::clone(&completion);
+            move || {
+                cancelled.store(true, Ordering::Release);
+                completion.cancel();
+            }
+        };
+        let pty = PtyMaster::spawn(master, script.pgid, transcript_path, Box::new(cancel))
             .map_err(|error| NamespaceExecutionError::Spawn(error.to_string()))?;
-        drop(slave);
-        Ok((Box::new(FakeRunnerChild { completion }), pty))
+        if let Some(result) = script.completion {
+            completion.complete(result);
+        }
+        Ok((
+            Box::new(FakeRunnerChild {
+                completion,
+                _slave: Some(slave),
+            }),
+            pty,
+        ))
     }
 
     fn spawn_piped(
@@ -206,11 +288,23 @@ impl NsRunnerLauncher for FakeLauncher {
         request: NamespaceRunnerRequest,
         setup_timeout_s: f64,
     ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
-        let completion = self.record(&request);
-        let mut state = self.state.lock().expect("fake launcher mutex poisoned");
+        let (completion, _script) = self.record(&request, None);
+        let mut state = self.lock();
         state.piped_mode_flags.push(mode_flag);
         state.piped_setup_timeouts.push(setup_timeout_s);
-        Ok(Box::new(FakeRunnerChild { completion }))
+        Ok(Box::new(FakeRunnerChild {
+            completion,
+            _slave: None,
+        }))
+    }
+}
+
+fn append_transcript(path: &Path, bytes: &[u8]) {
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(path) {
+        let _ = file.write_all(bytes);
     }
 }
 

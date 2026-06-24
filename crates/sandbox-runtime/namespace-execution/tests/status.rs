@@ -61,6 +61,18 @@ fn status_defaults_to_error_for_non_string_or_non_object_payloads() {
 }
 
 #[test]
+fn cancelled_outcome_overrides_status_and_exit_code() {
+    // Even when the wire result reports a clean exit, a cancelled execution
+    // reports Cancelled/130 (the engine knows the cancel; the wire does not).
+    let outcome = RunnerOutcome::new(run_result(0, "ok")).with_cancelled(true);
+    assert_eq!(
+        outcome.status(),
+        NamespaceExecutionTerminalStatus::Cancelled
+    );
+    assert_eq!(outcome.exit_code(), 130);
+}
+
+#[test]
 fn payload_exposes_the_raw_value() {
     assert_eq!(
         outcome(run_result(0, "ok")).payload().to_string(),

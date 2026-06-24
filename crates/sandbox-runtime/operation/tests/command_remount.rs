@@ -1,14 +1,17 @@
+mod support;
+
 use std::collections::VecDeque;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
-use sandbox_runtime::command::test_support::command_service_with_launch_driver;
+use sandbox_runtime::command::test_support::{
+    command_service_from_engine, default_remount_controller,
+};
 use sandbox_runtime::command::{
-    CommandCompletionPromise, CommandCompletionWaitOutcome, CommandLaunchDriver,
     CommandOperationService, CommandServiceError, ExecCommandInput, ReadCommandLinesInput,
     WriteCommandStdinInput,
 };
@@ -16,7 +19,12 @@ use sandbox_runtime::workspace_remount::{
     CommandRemountCoordinator, RemountWorkspaceSession, WorkspaceRemountService,
 };
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
-use sandbox_runtime_command::process::{CommandProcess, CommandProcessSpec};
+use sandbox_runtime::NamespaceExecutionLedger;
+use sandbox_runtime_namespace_execution::{
+    open_pty_pair, ExecutionObserver, NamespaceExecutionEngine, NamespaceExecutionError,
+    NsRunnerLauncher, PtyMaster, RunnerChild,
+};
+use sandbox_runtime_namespace_process::runner::protocol::{NamespaceRunnerRequest, RunResult};
 use sandbox_runtime_workspace::{
     CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LayerStackSnapshotRef, LeaseId,
@@ -24,6 +32,7 @@ use sandbox_runtime_workspace::{
     WorkspaceHandle, WorkspaceProfile, WorkspaceRuntimeHooks, WorkspaceRuntimeService,
     WorkspaceSessionId,
 };
+use support::FakeLauncher;
 
 struct TestServices {
     workspace: Arc<WorkspaceSessionService>,
@@ -59,9 +68,7 @@ impl PendingGuardWorkspaceService {
             .expect("test operation succeeds")
             .clone()
     }
-}
 
-impl PendingGuardWorkspaceService {
     fn create_workspace(
         &self,
         _request: CreateWorkspaceRequest,
@@ -155,42 +162,27 @@ fn fake_workspace_runtime(fake: Arc<PendingGuardWorkspaceService>) -> Arc<Worksp
     ))
 }
 
-struct PendingGuardLaunchDriver;
+/// A runner child that never completes — the command stays live for the duration
+/// of the test (the watcher thread parks).
+struct NeverCompletes;
 
-impl CommandLaunchDriver for PendingGuardLaunchDriver {
-    fn spawn(
-        &self,
-        spec: CommandProcessSpec,
-        _workspace_entry: sandbox_runtime_workspace::WorkspaceEntry,
-        _config: &sandbox_runtime_command::CommandConfig,
-    ) -> Result<CommandProcess, CommandServiceError> {
-        Ok(CommandProcess::inactive_for_test(spec))
-    }
-
-    fn start_completion_watcher(
-        &self,
-        _completion: CommandCompletionPromise,
-        _process: Arc<CommandProcess>,
-    ) {
-    }
-
-    fn wait_for_command_yield(
-        &self,
-        _process: &CommandProcess,
-        _completion: &CommandCompletionPromise,
-        _yield_time_ms: u64,
-        _start_offset: u64,
-    ) -> CommandCompletionWaitOutcome {
-        CommandCompletionWaitOutcome::Running
+impl RunnerChild for NeverCompletes {
+    fn wait_completion(&mut self) -> Result<RunResult, NamespaceExecutionError> {
+        loop {
+            thread::park();
+        }
     }
 }
 
-struct BlockingLaunchDriver {
+/// A launcher whose `spawn_pty` blocks until released — the engine holds the
+/// workspace-lifecycle admission across the spawn, so a remount cannot scan past
+/// the in-flight exec. After release the spawned command has no process group.
+struct BlockingNsLauncher {
     spawn_started: Mutex<Option<mpsc::Sender<()>>>,
     release_spawn: Mutex<mpsc::Receiver<()>>,
 }
 
-impl BlockingLaunchDriver {
+impl BlockingNsLauncher {
     fn new(spawn_started: mpsc::Sender<()>, release_spawn: mpsc::Receiver<()>) -> Self {
         Self {
             spawn_started: Mutex::new(Some(spawn_started)),
@@ -199,13 +191,13 @@ impl BlockingLaunchDriver {
     }
 }
 
-impl CommandLaunchDriver for BlockingLaunchDriver {
-    fn spawn(
+impl NsRunnerLauncher for BlockingNsLauncher {
+    fn spawn_pty(
         &self,
-        spec: CommandProcessSpec,
-        _workspace_entry: sandbox_runtime_workspace::WorkspaceEntry,
-        _config: &sandbox_runtime_command::CommandConfig,
-    ) -> Result<CommandProcess, CommandServiceError> {
+        _request: NamespaceRunnerRequest,
+        transcript_path: Option<PathBuf>,
+        _cancelled: Arc<AtomicBool>,
+    ) -> Result<(Box<dyn RunnerChild>, PtyMaster), NamespaceExecutionError> {
         if let Some(sender) = self
             .spawn_started
             .lock()
@@ -219,56 +211,47 @@ impl CommandLaunchDriver for BlockingLaunchDriver {
             .expect("test operation succeeds")
             .recv()
             .expect("test releases spawn");
-        Ok(CommandProcess::inactive_for_test(spec))
+        let (master, slave) =
+            open_pty_pair().map_err(|error| NamespaceExecutionError::Spawn(error.to_string()))?;
+        let pty = PtyMaster::spawn(master, None, transcript_path, Box::new(|| {}))
+            .map_err(|error| NamespaceExecutionError::Spawn(error.to_string()))?;
+        drop(slave);
+        Ok((Box::new(NeverCompletes), pty))
     }
 
-    fn start_completion_watcher(
+    fn spawn_piped(
         &self,
-        _completion: CommandCompletionPromise,
-        _process: Arc<CommandProcess>,
-    ) {
-    }
-
-    fn wait_for_command_yield(
-        &self,
-        _process: &CommandProcess,
-        _completion: &CommandCompletionPromise,
-        _yield_time_ms: u64,
-        _start_offset: u64,
-    ) -> CommandCompletionWaitOutcome {
-        CommandCompletionWaitOutcome::Running
+        _mode_flag: &'static str,
+        _request: NamespaceRunnerRequest,
+        _setup_timeout_s: f64,
+    ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
+        Ok(Box::new(NeverCompletes))
     }
 }
 
 fn build_services(fake: Arc<PendingGuardWorkspaceService>) -> TestServices {
-    let workspace = Arc::new(WorkspaceSessionService::new(fake_workspace_runtime(fake)));
-    let command = Arc::new(command_service_with_launch_driver(
-        Arc::clone(&workspace),
-        command_config(),
-        Arc::new(PendingGuardLaunchDriver),
-    ));
-    let remount_workspace: Arc<dyn RemountWorkspaceSession> = workspace.clone();
-    let remount_command: Arc<dyn CommandRemountCoordinator> = command.clone();
-    let remount = Arc::new(WorkspaceRemountService::new(
-        remount_workspace,
-        remount_command,
-    ));
-    TestServices {
-        workspace,
-        command,
-        workspace_remount: remount,
-    }
+    build_services_with_launcher(fake, Box::new(FakeLauncher::new()))
 }
 
-fn build_services_with_launch_driver(
+fn build_services_with_launcher(
     fake: Arc<PendingGuardWorkspaceService>,
-    launch_driver: Arc<dyn CommandLaunchDriver>,
+    launcher: Box<dyn NsRunnerLauncher>,
 ) -> TestServices {
     let workspace = Arc::new(WorkspaceSessionService::new(fake_workspace_runtime(fake)));
-    let command = Arc::new(command_service_with_launch_driver(
+    let namespace_execution = Arc::new(NamespaceExecutionLedger::new());
+    let engine = Arc::new(NamespaceExecutionEngine::with_launcher(
+        launcher,
+        Arc::clone(&namespace_execution) as Arc<dyn ExecutionObserver>,
+        256,
+        30.0,
+    ));
+    let command = Arc::new(command_service_from_engine(
         Arc::clone(&workspace),
         command_config(),
-        launch_driver,
+        engine,
+        namespace_execution,
+        None,
+        default_remount_controller(),
     ));
     let remount_workspace: Arc<dyn RemountWorkspaceSession> = workspace.clone();
     let remount_command: Arc<dyn CommandRemountCoordinator> = command.clone();
@@ -496,12 +479,9 @@ fn command_remount_waits_for_in_flight_persistent_exec_admission() {
     let (release_spawn_tx, release_spawn_rx) = mpsc::channel();
     let (remount_called_tx, remount_called_rx) = mpsc::channel();
     fake.notify_on_remount(remount_called_tx);
-    let services = build_services_with_launch_driver(
+    let services = build_services_with_launcher(
         Arc::clone(&fake),
-        Arc::new(BlockingLaunchDriver::new(
-            spawn_started_tx,
-            release_spawn_rx,
-        )),
+        Box::new(BlockingNsLauncher::new(spawn_started_tx, release_spawn_rx)),
     );
     let workspace_root = PathBuf::from("/workspace");
     fake.push_create_result(Ok(workspace_handle(

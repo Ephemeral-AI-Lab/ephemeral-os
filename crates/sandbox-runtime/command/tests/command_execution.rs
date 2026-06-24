@@ -6,11 +6,9 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use sandbox_runtime_command::{CommandExecution, CommandTerminalResult};
-use sandbox_runtime_namespace_execution::test_support::{
-    open_pty_pair, CompletionPromise, PtyMaster,
-};
 use sandbox_runtime_namespace_execution::{
-    ExecutionHandle, InteractiveExecution, NamespaceExecutionId, NamespaceExecutionTerminalStatus,
+    open_pty_pair, CompletionPromise, ExecutionHandle, InteractiveExecution, NamespaceExecutionId,
+    NamespaceExecutionTerminalStatus, PtyMaster,
 };
 use sandbox_runtime_workspace::WorkspaceSessionId;
 
