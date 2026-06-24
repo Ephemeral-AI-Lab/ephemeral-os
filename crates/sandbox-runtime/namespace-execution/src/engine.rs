@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::thread;
 
@@ -23,15 +24,23 @@ pub struct NamespaceExecutionEngine {
     registry: Arc<ExecutionRegistry>,
     observer: Arc<dyn ExecutionObserver>,
     launcher: Box<dyn NsRunnerLauncher>,
+    next_id: AtomicU64,
+    setup_timeout_s: f64,
 }
 
 impl NamespaceExecutionEngine {
     #[must_use]
-    pub fn new(observer: Arc<dyn ExecutionObserver>, max_active: usize) -> Self {
+    pub fn new(
+        observer: Arc<dyn ExecutionObserver>,
+        max_active: usize,
+        setup_timeout_s: f64,
+    ) -> Self {
         Self {
             registry: Arc::new(ExecutionRegistry::new(max_active)),
             observer,
             launcher: Box::new(ForkRunnerLauncher),
+            next_id: AtomicU64::new(1),
+            setup_timeout_s,
         }
     }
 
@@ -40,12 +49,21 @@ impl NamespaceExecutionEngine {
         launcher: Box<dyn NsRunnerLauncher>,
         observer: Arc<dyn ExecutionObserver>,
         max_active: usize,
+        setup_timeout_s: f64,
     ) -> Self {
         Self {
             registry: Arc::new(ExecutionRegistry::new(max_active)),
             observer,
             launcher,
+            next_id: AtomicU64::new(1),
+            setup_timeout_s,
         }
+    }
+
+    #[must_use]
+    pub fn allocate_id(&self) -> NamespaceExecutionId {
+        let next_id = self.next_id.fetch_add(1, Ordering::Relaxed);
+        NamespaceExecutionId(format!("namespace_execution_{next_id}"))
     }
 
     /// PTY-backed shell execution. The runner runs in `Run` mode (no mode flag).
@@ -68,9 +86,13 @@ impl NamespaceExecutionEngine {
         self.registry.attach(&id, pty.pgid());
         self.observer.on_running(&id);
         let promise = Arc::new(CompletionPromise::new());
-        self.spawn_watcher(id.clone(), child, Arc::clone(&promise), move |outcome| {
-            op.finalize(outcome)
-        });
+        self.spawn_watcher(
+            id.clone(),
+            child,
+            Arc::clone(&promise),
+            MountExitHandling::AllowNonZero,
+            move |outcome| op.finalize(outcome),
+        );
         Ok(InteractiveExecution::new(
             ExecutionHandle::new(id, promise),
             pty,
@@ -84,11 +106,15 @@ impl NamespaceExecutionEngine {
         mode_flag: &'static str,
         target: NamespaceTarget,
         id: NamespaceExecutionId,
+        args: Value,
         parse: impl FnOnce(RunnerOutcome) -> Result<O, NamespaceExecutionError> + Send + 'static,
     ) -> Result<ExecutionHandle<O>, NamespaceExecutionError> {
         self.registry.try_reserve(&id)?;
-        let request = build_request(&target, &id, Value::Object(serde_json::Map::new()), None);
-        let child = match self.launcher.spawn_piped(mode_flag, request) {
+        let request = build_request(&target, &id, args, None);
+        let child = match self
+            .launcher
+            .spawn_piped(mode_flag, request, self.setup_timeout_s)
+        {
             Ok(child) => child,
             Err(error) => {
                 self.registry.abort(&id);
@@ -98,7 +124,13 @@ impl NamespaceExecutionEngine {
         self.registry.attach(&id, None);
         self.observer.on_running(&id);
         let promise = Arc::new(CompletionPromise::new());
-        self.spawn_watcher(id.clone(), child, Arc::clone(&promise), parse);
+        self.spawn_watcher(
+            id.clone(),
+            child,
+            Arc::clone(&promise),
+            MountExitHandling::ShortCircuitNonZero { mode_flag },
+            parse,
+        );
         Ok(ExecutionHandle::new(id, promise))
     }
 
@@ -110,6 +142,7 @@ impl NamespaceExecutionEngine {
         id: NamespaceExecutionId,
         mut child: Box<dyn RunnerChild>,
         promise: Arc<CompletionPromise<O>>,
+        mount_exit_handling: MountExitHandling,
         finalize: impl FnOnce(RunnerOutcome) -> Result<O, NamespaceExecutionError> + Send + 'static,
     ) {
         let registry = Arc::clone(&self.registry);
@@ -120,13 +153,21 @@ impl NamespaceExecutionEngine {
                     let outcome = RunnerOutcome::new(run_result);
                     let status = outcome.status();
                     let exit_code = Some(outcome.exit_code());
-                    match finalize(outcome) {
-                        Ok(output) => (Ok(output), status, exit_code),
-                        Err(error) => (
+                    if let Some(error) = mount_exit_handling.short_circuit_error(&outcome) {
+                        (
                             Err(error),
                             NamespaceExecutionTerminalStatus::Error,
                             exit_code,
-                        ),
+                        )
+                    } else {
+                        match finalize(outcome) {
+                            Ok(output) => (Ok(output), status, exit_code),
+                            Err(error) => (
+                                Err(error),
+                                NamespaceExecutionTerminalStatus::Error,
+                                exit_code,
+                            ),
+                        }
                     }
                 }
                 Err(error) => (Err(error), NamespaceExecutionTerminalStatus::Error, None),
@@ -136,6 +177,36 @@ impl NamespaceExecutionEngine {
             observer.on_terminal(&id, status, exit_code);
         });
     }
+}
+
+#[derive(Clone, Copy)]
+enum MountExitHandling {
+    AllowNonZero,
+    ShortCircuitNonZero { mode_flag: &'static str },
+}
+
+impl MountExitHandling {
+    fn short_circuit_error(&self, outcome: &RunnerOutcome) -> Option<NamespaceExecutionError> {
+        match self {
+            Self::AllowNonZero => None,
+            Self::ShortCircuitNonZero { mode_flag } if outcome.exit_code() != 0 => {
+                Some(NamespaceExecutionError::Finalize(format!(
+                    "namespace runner {mode_flag} failed with exit code {}: {}",
+                    outcome.exit_code(),
+                    mount_failure_detail(outcome.payload())
+                )))
+            }
+            Self::ShortCircuitNonZero { .. } => None,
+        }
+    }
+}
+
+fn mount_failure_detail(payload: &Value) -> String {
+    payload
+        .get("error")
+        .and_then(Value::as_str)
+        .map(str::to_owned)
+        .unwrap_or_else(|| payload.to_string())
 }
 
 fn shell_args(command: &str) -> Value {

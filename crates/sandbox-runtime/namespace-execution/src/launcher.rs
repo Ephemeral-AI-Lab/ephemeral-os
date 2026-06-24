@@ -5,7 +5,11 @@ use std::io::{Read, Write};
 use std::os::fd::{AsRawFd, OwnedFd, RawFd};
 use std::os::unix::process::{CommandExt, ExitStatusExt};
 use std::process::{Child, Command, ExitStatus, Stdio};
+use std::thread;
+use std::time::{Duration, Instant};
 
+use nix::sys::signal::{kill, Signal};
+use nix::unistd::Pid;
 use rustix::io::{fcntl_setfd, FdFlags};
 use rustix::pipe::pipe;
 use sandbox_runtime_namespace_process::runner::protocol::{NamespaceRunnerRequest, RunResult};
@@ -26,6 +30,7 @@ pub trait NsRunnerLauncher: Send + Sync {
         &self,
         mode_flag: &'static str,
         request: NamespaceRunnerRequest,
+        setup_timeout_s: f64,
     ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError>;
 }
 
@@ -42,6 +47,13 @@ pub(crate) struct ForkRunnerLauncher;
 struct ForkRunnerChild {
     child: Child,
     result_read: OwnedFd,
+    timeout: Option<PipedCompletionTimeout>,
+}
+
+#[derive(Clone, Copy)]
+struct PipedCompletionTimeout {
+    mode_flag: &'static str,
+    setup_timeout_s: f64,
 }
 
 impl NsRunnerLauncher for ForkRunnerLauncher {
@@ -77,13 +89,21 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
         )
         .map_err(spawn_error)?;
         release_start_ack(start_ack_write, request_write, &request_bytes)?;
-        Ok((Box::new(ForkRunnerChild { child, result_read }), pty))
+        Ok((
+            Box::new(ForkRunnerChild {
+                child,
+                result_read,
+                timeout: None,
+            }),
+            pty,
+        ))
     }
 
     fn spawn_piped(
         &self,
         mode_flag: &'static str,
         request: NamespaceRunnerRequest,
+        setup_timeout_s: f64,
     ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
         let request_bytes = encode_request(&request)?;
         let (request_read, request_write) = request_pipe()?;
@@ -105,13 +125,27 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
         drop(result_write);
         drop(start_ack_read);
         release_start_ack(start_ack_write, request_write, &request_bytes)?;
-        Ok(Box::new(ForkRunnerChild { child, result_read }))
+        Ok(Box::new(ForkRunnerChild {
+            child,
+            result_read,
+            timeout: Some(PipedCompletionTimeout {
+                mode_flag,
+                setup_timeout_s,
+            }),
+        }))
     }
 }
 
 impl RunnerChild for ForkRunnerChild {
     fn wait_completion(&mut self) -> Result<RunResult, NamespaceExecutionError> {
-        let status = self.child.wait().map_err(spawn_error)?;
+        let status = match self.timeout {
+            Some(timeout) => wait_for_child_with_timeout(
+                &mut self.child,
+                timeout.mode_flag,
+                timeout.setup_timeout_s,
+            )?,
+            None => self.child.wait().map_err(spawn_error)?,
+        };
         let bytes = read_result_fd(&self.result_read).unwrap_or_default();
         if let Ok(result) = serde_json::from_slice::<RunResult>(&bytes) {
             return Ok(result);
@@ -179,6 +213,57 @@ fn synthesize_result(status: ExitStatus) -> RunResult {
     }
 }
 
+fn wait_for_child_with_timeout(
+    child: &mut Child,
+    mode_flag: &str,
+    setup_timeout_s: f64,
+) -> Result<ExitStatus, NamespaceExecutionError> {
+    let deadline = Instant::now() + setup_timeout_duration(setup_timeout_s);
+    loop {
+        if let Some(status) = child.try_wait().map_err(spawn_error)? {
+            return Ok(status);
+        }
+        if Instant::now() >= deadline {
+            terminate_child(child, Signal::SIGTERM);
+            let grace_deadline = Instant::now() + Duration::from_millis(100);
+            while Instant::now() < grace_deadline {
+                if child.try_wait().map_err(spawn_error)?.is_some() {
+                    return Err(timeout_error(mode_flag));
+                }
+                thread::sleep(Duration::from_millis(10));
+            }
+            terminate_child(child, Signal::SIGKILL);
+            let _ = child.wait();
+            return Err(timeout_error(mode_flag));
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+}
+
+fn setup_timeout_duration(setup_timeout_s: f64) -> Duration {
+    let finite_seconds = if setup_timeout_s.is_finite() {
+        setup_timeout_s.max(0.0)
+    } else {
+        0.0
+    };
+    Duration::from_secs_f64(finite_seconds)
+}
+
+fn terminate_child(child: &mut Child, signal: Signal) {
+    let Ok(pid) = i32::try_from(child.id()) else {
+        if signal == Signal::SIGKILL {
+            let _ = child.kill();
+        }
+        return;
+    };
+    let _ = kill(Pid::from_raw(-pid), signal);
+    let _ = kill(Pid::from_raw(pid), signal);
+}
+
+fn timeout_error(mode_flag: &str) -> NamespaceExecutionError {
+    NamespaceExecutionError::Spawn(format!("ns-runner {mode_flag} timed out"))
+}
+
 fn encode_request(request: &NamespaceRunnerRequest) -> Result<Vec<u8>, NamespaceExecutionError> {
     serde_json::to_vec(request).map_err(|error| {
         NamespaceExecutionError::Spawn(format!("serialize runner request: {error}"))
@@ -208,4 +293,39 @@ fn start_ack_pipe() -> Result<(OwnedFd, OwnedFd), NamespaceExecutionError> {
 
 fn spawn_error(error: impl std::fmt::Display) -> NamespaceExecutionError {
     NamespaceExecutionError::Spawn(error.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn piped_completion_timeout_terminates_and_reaps_child() {
+        let (result_read, result_write) = result_pipe().expect("result pipe");
+        drop(result_write);
+        let child = Command::new("sh")
+            .arg("-c")
+            .arg("trap 'exit 0' TERM; while true; do sleep 1; done")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .process_group(0)
+            .spawn()
+            .expect("spawn child");
+        let mut runner = ForkRunnerChild {
+            child,
+            result_read,
+            timeout: Some(PipedCompletionTimeout {
+                mode_flag: "--mount-overlay",
+                setup_timeout_s: 0.01,
+            }),
+        };
+
+        let error = runner.wait_completion().expect_err("timeout");
+
+        assert!(error
+            .to_string()
+            .contains("ns-runner --mount-overlay timed out"));
+        assert!(runner.child.try_wait().expect("child state").is_some());
+    }
 }

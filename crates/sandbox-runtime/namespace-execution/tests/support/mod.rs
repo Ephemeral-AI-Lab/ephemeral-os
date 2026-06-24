@@ -74,8 +74,10 @@ impl RunnerChild for FakeRunnerChild {
 
 #[derive(Default)]
 struct FakeLauncherState {
+    requests: Vec<NamespaceRunnerRequest>,
     request_ids: Vec<String>,
     completions: Vec<Arc<FakeCompletion>>,
+    piped_setup_timeouts: Vec<f64>,
 }
 
 /// A fake `NsRunnerLauncher`: records each request, hands back a `FakeRunnerChild`
@@ -102,6 +104,24 @@ impl FakeLauncher {
             .clone()
     }
 
+    #[must_use]
+    pub fn recorded_requests(&self) -> Vec<NamespaceRunnerRequest> {
+        self.state
+            .lock()
+            .expect("fake launcher mutex poisoned")
+            .requests
+            .clone()
+    }
+
+    #[must_use]
+    pub fn piped_setup_timeouts(&self) -> Vec<f64> {
+        self.state
+            .lock()
+            .expect("fake launcher mutex poisoned")
+            .piped_setup_timeouts
+            .clone()
+    }
+
     /// Complete the most recently spawned execution.
     pub fn complete_latest(&self, result: RunResult) {
         let completion = self
@@ -119,6 +139,7 @@ impl FakeLauncher {
     fn record(&self, request: &NamespaceRunnerRequest) -> Arc<FakeCompletion> {
         let completion = Arc::new(FakeCompletion::new());
         let mut state = self.state.lock().expect("fake launcher mutex poisoned");
+        state.requests.push(request.clone());
         state.request_ids.push(request.request_id.clone());
         state.completions.push(Arc::clone(&completion));
         completion
@@ -144,8 +165,14 @@ impl NsRunnerLauncher for FakeLauncher {
         &self,
         _mode_flag: &'static str,
         request: NamespaceRunnerRequest,
+        setup_timeout_s: f64,
     ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
         let completion = self.record(&request);
+        self.state
+            .lock()
+            .expect("fake launcher mutex poisoned")
+            .piped_setup_timeouts
+            .push(setup_timeout_s);
         Ok(Box::new(FakeRunnerChild { completion }))
     }
 }
