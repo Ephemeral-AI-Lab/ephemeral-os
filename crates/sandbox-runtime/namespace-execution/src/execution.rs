@@ -2,9 +2,9 @@ use std::io;
 use std::sync::Arc;
 
 use crate::error::NamespaceExecutionError;
-use crate::types::NamespaceExecutionId;
 use crate::promise::{CompletionPromise, CompletionWaiter};
 use crate::pty::PtyMaster;
+use crate::types::NamespaceExecutionId;
 
 pub struct ExecutionHandle<T> {
     id: NamespaceExecutionId,

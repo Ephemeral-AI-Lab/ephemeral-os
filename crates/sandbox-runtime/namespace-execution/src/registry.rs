@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 use crate::error::NamespaceExecutionError;
-use crate::types::NamespaceExecutionId;
 use crate::shell::NamespaceExecutionTerminalStatus;
+use crate::types::NamespaceExecutionId;
 
 pub struct ExecutionRegistry<V> {
     inner: Mutex<RegistryState<V>>,

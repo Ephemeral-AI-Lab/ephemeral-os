@@ -17,8 +17,8 @@ pub use promise::{CompletionPromise, CompletionWaiter};
 pub use pty::{open_pty_pair, PtyMaster};
 pub use registry::ExecutionRegistry;
 pub use shell::{NamespaceExecutionTerminalStatus, RunnerOutcome, ShellOperation};
-pub use types::{ExecutionObserver, NamespaceExecutionId, NamespaceTarget, NoopObserver};
 pub use transcript_rows::{
     required_transcript_window, transcript_window, CommandStream, CommandTranscriptRow,
     CommandTranscriptWindow,
 };
+pub use types::{ExecutionObserver, NamespaceExecutionId, NamespaceTarget, NoopObserver};
